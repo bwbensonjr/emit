@@ -141,6 +141,59 @@ hard-code bit layouts.
 > hard to make fast on LLVM. We keep the LLVM layer dynamically typed on purpose —
 > eyes open about the cost.
 
+> ABI split, know it: the tagged-word layout currently has **two owners**. The C
+> runtime (`src/runtime/runtime.c`) owns fixnum/pair/box arithmetic and the tag
+> constants; the emitter (`src/emit.ss`) independently hardcodes the *same* layout in
+> `encode-const` (fixnum `<<3`, `#t`=9, `#f`=1, `()`=2), closure tagging (`or …, 4`),
+> and untagging (`and …, -8`). Any change to the representation must touch both. The
+> higher-value cleanup, whenever the representation next moves, is to document the
+> tagged-word ABI as one authoritative spec both sides cite rather than to add a third
+> owner.
+
+### Runtime primitives — defined in C, not IR
+
+Primitives (`+ - * = <`, `cons`/`car`/`cdr`, `null?`/`pair?`/`eq?`, `box`/`unbox`/`set-box!`)
+are C functions in `src/runtime/runtime.c`; the emitter declares them and lowers each
+`(primcall op …)` to a `call i64 @rt_op(…)`. **This is a deliberate decision, not an
+interim shortcut.** The alternative — open-coding primitives as inline LLVM IR (or a
+hand-written `.ll` runtime) — was considered and rejected for phase 1:
+
+- **Simplicity/transparency (the project's stated goal).** `val rt_car(val v) { return
+  as_ptr(v)[0]; }` is self-documenting; the IR equivalent scatters bit-layout knowledge
+  into `emit.ss` as string-built `and`/`inttoptr`/`getelementptr`/`load`. C wins plainly
+  on arithmetic too.
+- **A C runtime exists regardless.** Allocation (`GC_MALLOC` via `rt_cons`/`rt_box`/
+  `rt_alloc_words`), `main`/`GC_INIT`, and the `rt_write` printer cannot leave C. Since
+  `runtime.c` must exist for those, the leaf primitives ride along at ~zero marginal
+  complexity.
+- **Self-hosting is unaffected.** The runtime is not the compiler. The compiler's
+  *output* already has no Chez dependency, and clang stays in the toolchain either way.
+  Rewriting the runtime in `.ll` advances self-hosting by nothing, so the usual "get off
+  the host" argument does not apply here.
+
+The one genuine cost is call overhead: every `rt_add`/`rt_lt`/`rt_car` is an un-inlined
+cross-translation-unit call (the current `clang` link in `src/compile.ss` passes no `-O`
+/ `-flto`), so a hot tail loop pays a call per primitive. See below for how to buy that
+back without giving up readable C.
+
+### Deferred: inline the C primitives via bitcode/LTO
+
+When a benchmark shows primitive call overhead matters (**not before** — M1 is
+explicitly "no optimization passes"), the fix is *not* to hand-write IR primitives. It is
+to let LLVM inline the C ones:
+
+- Compile the runtime to bitcode and link at the IR level (`clang -O2 -emit-llvm -c
+  runtime.c`), or mark the leaf primitives `__attribute__((always_inline))` and build
+  with `-flto`. Then `opt`/LTO folds `rt_add` down to `shl`/`add`/`ashr` at the call
+  site — open-coded primitives, zero call overhead, source stays readable C.
+
+This is strictly better than IR-authored primitives (same codegen, none of the
+maintenance cost) and is a pure build-pipeline change, not a codegen change. If a few
+primitives ever *do* warrant inline IR, restrict it to the non-allocating tag tests and
+fixnum ops (`null?`, `pair?`, `eq?`, `+`, `-`, `<`) — worst work-to-call-overhead ratio —
+and treat it explicitly as an optimization, not the default lowering. Tracking: no
+OpenSpec change filed yet; open one when acting on this.
+
 ### Closures
 
 Closure conversion runs before codegen. A closure is a heap object of
