@@ -51,9 +51,48 @@
       (dump "convert-assignments" b) (dump "convert-closures" c) (dump "lower" d))
     (let ([out (open-output-file ll 'replace)]) (display text out) (close-port out))))
 
+;; --- backends -----------------------------------------------------------
+;; One emitted OUT.ll drives three exits.  AOT stays on the system clang
+;; (unchanged).  The JIT and bitcode exits use the pinned LLVM 22 tools by
+;; absolute path (Homebrew keg, off PATH).
+(define llvm-bin "/opt/homebrew/opt/llvm@22/bin/")
+(define (tool t) (string-append llvm-bin t))
+(define gc-dylib (string-append gc-lib "/libgc.dylib"))
+(define (sh who cmd)
+  (unless (zero? (system cmd)) (error 'compile (string-append who " failed") cmd)))
+
+(define (require-llvm-tools)
+  (for-each
+    (lambda (t)
+      (unless (file-exists? (tool t))
+        (error 'compile
+               (string-append "required LLVM 22 tool not found: " (tool t)
+                              "  (install with: brew install llvm@22)"))))
+    '("lli" "llvm-as" "llvm-link" "clang")))
+
+;; AOT (default): textual IR -> native exe via the system clang.  Unchanged.
 (define (link ll exe)
-  (let ([cmd (string-append "clang -I" gc-inc " -L" gc-lib " " runtime-c " " ll " -lgc -o " exe)])
-    (unless (zero? (system cmd)) (error 'compile "clang failed" cmd))))
+  (sh "clang" (string-append "clang -I" gc-inc " -L" gc-lib " " runtime-c " " ll " -lgc -o " exe)))
+
+;; Bitcode: assemble OUT.ll -> OUT.bc (the inspectable/opt-able artifact),
+;; then codegen the .bc + runtime to a native exe (LLVM 22 clang).
+(define (emit-bitcode ll bc)
+  (sh "llvm-as" (string-append (tool "llvm-as") " " ll " -o " bc)))
+(define (build-bitcode-exe bc exe)
+  (sh "clang(bc)"
+      (string-append (tool "clang") " -I" gc-inc " -L" gc-lib " " runtime-c " " bc " -lgc -o " exe)))
+
+;; JIT: assemble the program, compile the runtime to bitcode, llvm-link them
+;; (so the C main + rt_* join the module), and run in-process via lli with
+;; libgc loaded.  lli executes the linked module's main.
+(define (run-jit ll base)
+  (let ([pbc (string-append base ".bc")]
+        [rbc (string-append base ".rt.bc")]
+        [cbc (string-append base ".combined.bc")])
+    (sh "llvm-as"    (string-append (tool "llvm-as") " " ll " -o " pbc))
+    (sh "clang-emit" (string-append (tool "clang") " -I" gc-inc " -emit-llvm -c " runtime-c " -o " rbc))
+    (sh "llvm-link"  (string-append (tool "llvm-link") " " pbc " " rbc " -o " cbc))
+    (sh "lli"        (string-append (tool "lli") " -load=" gc-dylib " " cbc))))
 
 (define (strip-ext s)
   (let ([i (let loop ([i (- (string-length s) 1)])
@@ -62,16 +101,29 @@
 
 ;; --- argument handling ---
 (define (main args)
-  (let loop ([args args] [src #f] [out #f] [dump? #f])
+  (let loop ([args args] [src #f] [out #f] [dump? #f] [backend "aot"])
     (cond
       [(null? args)
-       (unless src (error 'compile "usage: compile.ss SRC.scm [-o OUT] [--dump]"))
+       (unless src (error 'compile "usage: compile.ss SRC.scm [-o OUT] [--dump] [--backend aot|jit|bitcode]"))
        (let* ([out (or out (strip-ext src))] [ll (string-append out ".ll")])
          (compile-file src ll dump?)
-         (link ll out)
-         (fprintf (current-error-port) "wrote ~a and ~a\n" ll out))]
-      [(string=? (car args) "-o") (loop (cddr args) src (cadr args) dump?)]
-      [(string=? (car args) "--dump") (loop (cdr args) src out #t)]
-      [else (loop (cdr args) (car args) out dump?)])))
+         (case (string->symbol backend)
+           [(aot)
+            (link ll out)
+            (fprintf (current-error-port) "wrote ~a and ~a\n" ll out)]
+           [(bitcode)
+            (require-llvm-tools)
+            (let ([bc (string-append out ".bc")])
+              (emit-bitcode ll bc)
+              (build-bitcode-exe bc out)
+              (fprintf (current-error-port) "wrote ~a, ~a and ~a\n" ll bc out))]
+           [(jit)
+            (require-llvm-tools)
+            (run-jit ll out)]
+           [else (error 'compile "unknown backend (want aot|jit|bitcode)" backend)]))]
+      [(string=? (car args) "-o") (loop (cddr args) src (cadr args) dump? backend)]
+      [(string=? (car args) "--dump") (loop (cdr args) src out #t backend)]
+      [(string=? (car args) "--backend") (loop (cddr args) src out dump? (cadr args))]
+      [else (loop (cdr args) (car args) out dump? backend)])))
 
 (main (command-line-arguments))

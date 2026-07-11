@@ -264,16 +264,27 @@ its control and GC story, not its surface language.
 
 One frontend, three exits from the IR. All three should stay working — the
 "one frontend, many backends" property is a core project thesis and a regression
-test target.
+test target. **All three are implemented** (`src/compile.ss --backend aot|jit|bitcode`,
+default `aot`) and kept honest by `demos/run-backends.sh`, which runs every demo through
+all three and asserts byte-identical output.
 
 1. **AOT (default, phase 1).** Emit `.ll` (or `.bc`), then compile and link with
    `clang` against the runtime + GC to produce a native executable. This is what
    `akeep/scheme-to-llvm` does and what the first milestone uses.
-2. **JIT.** Phase 1 pragmatic option: run emitted IR with `lli`, or re-invoke the
-   toolchain per form (clunky, fine for early bring-up). Phase 2: in-process ORC via
-   the C-API FFI backend. ORC is the current LLVM JIT API; MCJIT is retired and not a
-   target here.
-3. **Bitcode.** Emit `.bc` for `opt`, inspection, or downstream tooling.
+2. **JIT (phase 1, `lli`).** Assemble the program to `.bc`, `llvm-link` it with the
+   runtime compiled to bitcode (so the C `main` + `rt_*` join the module — `lli` runs the
+   *input module's* `main`), and run in-process via `lli` with `libgc` loaded
+   (`-load=…/libgc.dylib`). `musttail` and Boehm GC both work under `lli` (verified by the
+   10M-iteration `countdown` and the allocation-heavy demos in the equivalence harness).
+   Phase 2: in-process ORC via the C-API FFI backend. ORC is the current LLVM JIT API;
+   MCJIT is retired and not a target here.
+3. **Bitcode.** Emit `.bc` (`llvm-as`) for `opt`, inspection, or downstream tooling; the
+   bitcode backend also codegens it to a native exe (LLVM 22 `clang`) so the harness can
+   execute it.
+
+> The JIT/bitcode exits use the pinned **LLVM 22** Homebrew keg
+> (`/opt/homebrew/opt/llvm@22/bin/`), driven by absolute path since the keg is off
+> `PATH`; the AOT exit uses the system clang. See `src/TOOLCHAIN.md`.
 
 The LLVM Kaleidoscope tutorial maps onto these even though it is C++: chapter 3 (IR
 generation), chapter 4 (JIT + optimizer), chapter 8 (object files); the separate
