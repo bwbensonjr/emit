@@ -208,6 +208,29 @@ convention), which lets us (a) mark tail calls `musttail` reliably and (b) pin
 runtime registers if we later adopt a CPS-with-registers scheme. C-visible entry
 points (runtime primitives, FFI) use the C convention and are bridged explicitly.
 
+**Shape.** Today (M1) every function shares one prototype
+`tailcc i64 (i64 self, i64 a0 … i64 a{K-1})`, `K` = whole-program max arity, calls padded
+with `0`. This is fixed-arity only: it cannot express dotted rest params, variadic
+`lambda`, or `apply` (padding is ambiguous with a real `0`, there is no arg count, and
+`apply` over a list longer than `K` is impossible).
+
+**Decided convention (from the calling-convention spike; not yet implemented in
+`emit.ss`).** Widen the shared prototype to
+`tailcc i64 (i64 self, i64 argc, i64 a0 … i64 a{K-1}, ptr overflow)`:
+
+- `argc` — real argument count; fixed-arity callees ignore it.
+- `a0..a{K-1}` — positional slots (`K` = whole-program max fixed arity, as today).
+- `overflow` — pointer to a heap vector of args beyond `K` (or null). Dotted-rest callees
+  collect `rest` from `a[fixed..min(argc,K))` ++ `overflow[0..]`; `apply` fills the
+  positional slots then spills the tail into `overflow`, so it is unbounded.
+
+The spike (`spike/calling-convention/`, real LLVM 22 IR, 100e6 tail iterations) showed
+this preserves `musttail`/bounded stack, costs ~0 on the fixed-arity hot path vs. today's
+convention (~0.5 ns/call for both), and expresses rest + unbounded `apply`. An
+arg-vector-only convention was ~5.4× slower on the hot path and rejected; a hybrid
+fast/slow scheme was deemed unnecessary since the overhead is already ~0. Full data and
+rationale: `spike/calling-convention/RESULTS.md`.
+
 If/when we go the register-pinning route, the reference is Manticore's "JWA"
 convention: fixed argument positions for runtime state (e.g. the allocation pointer
 is always argument 0), threading allocator state through SSA values. See references.
@@ -226,6 +249,11 @@ compile-time error. Constraints codegen must respect:
 - Caller and callee prototypes must match; pointer pointee types may differ but not
   address spaces.
 - `musttail` calls may not access caller-provided allocas or varargs.
+
+The decided variadic convention (above) keeps a **single uniform prototype** and passes
+overflow args through an explicit `ptr` to a heap vector — **not** LLVM `varargs` and not
+a caller alloca — so all of these constraints continue to hold; the spike confirmed
+`musttail` at 100e6 iterations under the wider prototype.
 
 `musttail` is guaranteed only where the target supports it — fine on our
 x86_64/AArch64 targets; some targets (e.g. WASM without the tail-call extension)

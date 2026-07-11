@@ -94,3 +94,34 @@ The spike's job is to make this a *measured* conclusion.
 - **Decision must not contradict `LLVM.md`** → the "Calling convention" and "Tail calls"
   sections are updated as part of capture, keeping docs consistent (as the nanopass spike
   did for the pass framework).
+
+## Verdict (recorded after the spike)
+
+**Chosen: Candidate 2 — argc + overflow spill.** Uniform prototype
+`tailcc i64 (i64 self, i64 argc, i64 a0 … i64 a{K-1}, ptr overflow)`:
+`argc` = real arg count (fixed-arity callees ignore it), `a0..a{K-1}` = positional slots
+(`K` = whole-program max fixed arity, as today), `overflow` = pointer to a heap vector of
+args beyond `K` (or null). Rest params collect `a[fixed..min(argc,K))` ++ `overflow[0..]`;
+`apply` fills positional slots then spills the tail into `overflow`, so it is unbounded.
+
+Evidence (`spike/calling-convention/`, real LLVM 22 IR, 100e6 tail iterations, Apple
+silicon — full data in that dir's `RESULTS.md`):
+
+| candidate | 100e6 completes (musttail/bounded stack) | ns/call | rest | unbounded apply |
+|-----------|:---:|---------|:---:|:---:|
+| 0 fixed max-arity (today) | ✅ | ~0.51–0.58 | ✗ | ✗ |
+| **2 argc + overflow (chosen)** | ✅ | ~0.50–0.53 (**≈0 vs baseline**) | ✅ | ✅ |
+| 3 single arg-vector | ✅ | ~2.75–2.80 (**~5.4×**) | ✅ | ✅ |
+
+`sumv` under the candidate-2 prototype returned 30 for `(2; 10,20)` (empty rest) and 15
+for `(5; 1,2,[3,4,5])` (apply spreading 5 args across 2 slots + a 3-element overflow),
+confirming feasibility.
+
+Rejected: **1** (no overflow → `apply` capped at `K`); **3** (~5.4× hot-loop overhead from
+per-call memory traffic); **4 hybrid** (unnecessary — candidate 2's hot-path overhead is
+already ~0, so the extra fast/slow-path complexity buys nothing; held in reserve only if a
+post-GC re-measurement shows overflow threading matters).
+
+**Not implemented here.** Lowering this convention in `src/emit.ss` (widening the shared
+prototype, generating rest-collection and `apply`) is a separate future change; the
+3-backend equivalence harness will guard that cross-cutting codegen change.
