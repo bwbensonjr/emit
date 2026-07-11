@@ -50,6 +50,37 @@ is redundant against LLVM's SSA/mem2reg. So the minimal pipeline follows Chez's
 correctly tied to `call/cc`, which is a phase-2 concern; it does not belong in the minimal
 frontend.
 
+**Confirmed empirically** by the `core-lambda-slice` build (`src/`): emitting directly
+from lambda-lifted closures and relying on LLVM's SSA needed no ANF or normalize step —
+`if` lowers to branches with a `phi`, everything else to straight-line calls, and
+`mem2reg` cleans up. No `remove-complex-opera*` analogue was written.
+
+## Realized pipeline (`core-lambda-slice`)
+
+The first production slice (`src/`) implements the spine as hand-rolled `match` passes,
+one observable intermediate language per stage (`--dump`):
+
+```
+read (host) → parse+rename → recognize-let → convert-assignments
+            → convert-closures → lambda-lift+lower → emit .ll → clang(+runtime,+libgc)
+```
+
+| stage | IL shape (s-expr) | file |
+|-------|-------------------|------|
+| core | `(const d)｜x｜(if …)｜(lambda (x…) e)｜(call e e…)｜(primcall op e…)｜(let/letrec …)｜(seq …)｜(set! x e)` | `src/parse.ss` |
+| recognize-let | + `(let …)` from `(call (lambda …) …)` | `src/passes/recognize-let.ss` |
+| convert-assignments | − `set!`; `+ (primcall box/unbox/set-box! …)` | `src/passes/convert-assignments.ss` |
+| convert-closures | − `letrec`; `+ (closures ([x (fv…) le]…) body)` | `src/passes/convert-closures.ss` |
+| lambda-lift + lower | `(program (code …) entry)` with `(local x)｜(free-ref i)｜(make-closure …)｜(closure-block …)｜(app f (a…))` | `src/passes/lower.ss` |
+| emit | textual LLVM IR (opaque `ptr`, `tailcc`, `musttail`) | `src/emit.ss` |
+
+Two passes beyond the spike's three were new here: **lambda-lift + lowering** (hoist code,
+make closures explicit heap objects, calls indirect through `code_ptr`). Codegen upholds
+`LLVM.md`'s conventions: tagged-pointer values, heap closures, one uniform calling
+convention so tail calls can be `musttail`, Boehm GC. Verified end to end by
+`demos/run-tests.sh` (recursion, allocation, captured-mutable boxing, and 10M-iteration
+tail recursion in bounded stack).
+
 ---
 
 ## How the passes are written: nanopass vs. hand-rolled `match`
