@@ -205,6 +205,59 @@ static int utf8_encode(intptr_t cp, unsigned char *buf) {
   return 4;
 }
 
+/* number of bytes in the UTF-8 sequence with lead byte b (assumes well-formed) */
+static int utf8_seq_len(unsigned char b) {
+  if (b < 0x80) return 1;
+  if ((b >> 5) == 0x6) return 2;   /* 110xxxxx */
+  if ((b >> 4) == 0xE) return 3;   /* 1110xxxx */
+  return 4;                        /* 11110xxx */
+}
+
+/* decode the codepoint at byte offset i of s */
+static intptr_t utf8_decode_at(const unsigned char *s, intptr_t i) {
+  unsigned char b = s[i];
+  switch (utf8_seq_len(b)) {
+    case 1:  return b;
+    case 2:  return ((b & 0x1F) << 6) | (s[i+1] & 0x3F);
+    case 3:  return ((b & 0x0F) << 12) | ((s[i+1] & 0x3F) << 6) | (s[i+2] & 0x3F);
+    default: return ((b & 0x07) << 18) | ((s[i+1] & 0x3F) << 12)
+                    | ((s[i+2] & 0x3F) << 6) | (s[i+3] & 0x3F);
+  }
+}
+
+/* byte offset of the cp-th codepoint of s (byte length blen); clamps at blen */
+static intptr_t utf8_offset(const unsigned char *s, intptr_t blen, intptr_t cp) {
+  intptr_t i = 0, k = 0;
+  while (i < blen && k < cp) { i += utf8_seq_len(s[i]); k++; }
+  return i;
+}
+
+/* --- character operations ---------------------------------------------- */
+val rt_char_to_integer(val c) { return FIX(char_cp(c)); }
+val rt_integer_to_char(val n) { return rt_make_char(UNFIX(n)); }
+
+/* --- string operations (codepoint-indexed over UTF-8 storage, design D1) --- */
+val rt_string_length(val s) {
+  const unsigned char *b = (const unsigned char *)str_bytes(s);
+  intptr_t blen = str_len(s), i = 0, k = 0;
+  while (i < blen) { i += utf8_seq_len(b[i]); k++; }
+  return FIX(k);
+}
+val rt_string_ref(val s, val idx) {
+  const unsigned char *b = (const unsigned char *)str_bytes(s);
+  intptr_t off = utf8_offset(b, str_len(s), UNFIX(idx));
+  return rt_make_char(utf8_decode_at(b, off));
+}
+val rt_substring(val s, val start, val end) {
+  const unsigned char *b = (const unsigned char *)str_bytes(s);
+  intptr_t blen = str_len(s);
+  intptr_t so = utf8_offset(b, blen, UNFIX(start));
+  intptr_t eo = utf8_offset(b, blen, UNFIX(end));
+  return rt_make_string((const char *)(b + so), eo - so);
+}
+/* intern the string's bytes (NUL-terminated; safe for source identifiers) */
+val rt_string_to_symbol(val s) { return rt_intern(str_bytes(s)); }
+
 /* --- value printer (tag-walking, design R1) ---------------------------- */
 void rt_write(val v) {
   switch (tag_of(v)) {

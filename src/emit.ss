@@ -109,7 +109,10 @@
   '((+ "rt_add") (- "rt_sub") (* "rt_mul") (= "rt_num_eq") (< "rt_lt")
     (cons "rt_cons") (car "rt_car") (cdr "rt_cdr")
     (null? "rt_null_p") (pair? "rt_pair_p") (eq? "rt_eq_p")
-    (box "rt_box") (unbox "rt_unbox") (set-box! "rt_set_box")))
+    (box "rt_box") (unbox "rt_unbox") (set-box! "rt_set_box")
+    (char->integer "rt_char_to_integer") (integer->char "rt_integer_to_char")
+    (string-length "rt_string_length") (string-ref "rt_string_ref")
+    (substring "rt_substring") (string->symbol "rt_string_to_symbol")))
 
 ;; --- string helpers ---
 (define (comma-join lst)
@@ -349,6 +352,12 @@
    "declare i64 @rt_intern(ptr)\n"
    "declare i64 @rt_make_string(ptr, i64)\n"
    "declare i64 @rt_make_char(i64)\n"
+   "declare i64 @rt_char_to_integer(i64)\n"
+   "declare i64 @rt_integer_to_char(i64)\n"
+   "declare i64 @rt_string_length(i64)\n"
+   "declare i64 @rt_string_ref(i64, i64)\n"
+   "declare i64 @rt_substring(i64, i64, i64)\n"
+   "declare i64 @rt_string_to_symbol(i64)\n"
    "declare i64 @rt_list_length(i64)\n"
    "declare i64 @rt_build_rest(i64, i64, i64, ptr, ptr)\n"
    "declare ptr @rt_apply_argv(i64, ptr, i64, i64)\n"

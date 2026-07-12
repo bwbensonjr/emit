@@ -8,7 +8,9 @@
 ;;;
 ;;; Primitive names are reserved keywords (not rebindable) in the M1 subset.
 
-(define *prims* '(+ - * = < cons car cdr null? pair? eq?))
+(define *prims* '(+ - * = < cons car cdr null? pair? eq?
+                  char->integer integer->char
+                  string-length string-ref substring string->symbol))
 (define (prim? op) (and (memq op *prims*) #t))
 
 ;; ---- variadic parameter lists ----

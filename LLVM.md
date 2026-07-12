@@ -187,9 +187,12 @@ hard-code bit layouts.
 
 ### Runtime primitives — defined in C, not IR
 
-Primitives (`+ - * = <`, `cons`/`car`/`cdr`, `null?`/`pair?`/`eq?`, `box`/`unbox`/`set-box!`)
-are C functions in `src/runtime/runtime.c`; the emitter declares them and lowers each
-`(primcall op …)` to a `call i64 @rt_op(…)`. **This is a deliberate decision, not an
+Primitives (`+ - * = <`, `cons`/`car`/`cdr`, `null?`/`pair?`/`eq?`, `box`/`unbox`/`set-box!`,
+and the string/char accessors `char->integer`/`integer->char`, `string-length`/`string-ref`/
+`substring`, `string->symbol`) are C functions in `src/runtime/runtime.c`; the emitter
+declares them and lowers each `(primcall op …)` to a `call i64 @rt_op(…)`. The string
+accessors are codepoint-indexed over the UTF-8 storage (decode on access; O(n) indexing for
+now). **This is a deliberate decision, not an
 interim shortcut.** The alternative — open-coding primitives as inline LLVM IR (or a
 hand-written `.ll` runtime) — was considered and rejected for phase 1:
 

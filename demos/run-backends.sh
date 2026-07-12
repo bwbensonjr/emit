@@ -84,6 +84,9 @@ run3 strlit    demos/string-lit.scm      '"hello"'          # self-evaluating st
 run3 charlit   demos/char-lit.scm        '#\a'              # self-evaluating char literal
 run3 strchar   demos/string-char.scm     '(a "b" #\c)'      # strings/chars in quoted structure
 run3 unicode   demos/unicode.scm         '("héllo 日本語" #\λ)'  # UTF-8 round-trip, byte-for-byte
+run3 strops    demos/string-ops.scm      '(65 3 #\b "ell" foo)'  # char/string accessors
+run3 strsym    demos/string-symbol.scm   '#t'                    # string->symbol interns
+run3 struni    demos/string-unicode.scm  '(5 #\é "日本")'         # codepoint indexing, non-ASCII
 
 echo "-------------------------------------------"
 echo "$pass passed, $fail failed"

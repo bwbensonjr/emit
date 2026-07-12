@@ -64,6 +64,11 @@ check charlit demos/char-lit.scm       '#\a'              # self-evaluating char
 check strchar demos/string-char.scm    '(a "b" #\c)'      # strings/chars in quoted structure
 check unicode demos/unicode.scm        '("héllo 日本語" #\λ)'  # UTF-8 string + char round-trip
 
+echo "string / char operations demos"
+check strops  demos/string-ops.scm     '(65 3 #\b "ell" foo)'  # char->integer/length/ref/substring/->symbol
+check strsym  demos/string-symbol.scm  '#t'                    # string->symbol interns (eq? to literal)
+check struni  demos/string-unicode.scm '(5 #\é "日本")'         # codepoint-indexed ops over non-ASCII
+
 echo "-------------------------------------------"
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]
