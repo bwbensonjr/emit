@@ -30,6 +30,7 @@
         [(letrec) (expand-let-form 'letrec (cadr e) (cddr e))]
         [(lambda) `(lambda ,(cadr e) ,@(map expand (cddr e)))]
         [(+ - *) (expand-arith (car e) (cdr e))]
+        [(= < > <= >=) (expand-compare (car e) (cdr e))]
         ;; if / begin / set! / primcall / application: recurse into every
         ;; position (operators and operands, never binding lists).
         [else     (map expand e)])))
@@ -60,6 +61,54 @@
     (if (null? rest)
         acc
         (loop (list op acc (car rest)) (cdr rest)))))
+
+;; N-ary comparisons -> single-evaluation chained (pairwise) comparisons.
+;; Operands are expanded first, then each is bound to a fresh temp (interior
+;; operands appear in two pairs, and <=/>= reference each operand twice, so
+;; every operand is bound exactly once to guarantee single, left-to-right
+;; evaluation -- the same reason `or` binds a temp).  The chain is the
+;; short-circuiting conjunction of the adjacent pairwise tests; each pairwise
+;; test reduces to the existing binary `<` / `=` primitives (> swaps operands;
+;; <=/>= combine the two).  Fewer than two operands compare vacuously true.
+(define (expand-compare op args)
+  (let ([xs (map expand args)])
+    (if (or (null? xs) (null? (cdr xs)))
+        #t                                  ; (op) or (op a) -> #t
+        (let ([temps (map (lambda (x) (fresh-name 'cmp)) xs)])
+          (bind-temps temps xs (compare-chain op temps))))))
+
+;; Nested single-binding lets so operands evaluate strictly left to right:
+;; (let ([t1 e1]) (let ([t2 e2]) ... body)).
+(define (bind-temps temps exprs body)
+  (if (null? temps)
+      body
+      `(let ([,(car temps) ,(car exprs)])
+         ,(bind-temps (cdr temps) (cdr exprs) body))))
+
+;; Short-circuiting conjunction of the pairwise tests over adjacent temps.
+(define (compare-chain op temps)
+  (and-core
+    (let loop ([ts temps])
+      (if (null? (cdr ts))
+          '()
+          (cons (cmp-pair op (car ts) (cadr ts)) (loop (cdr ts)))))))
+
+;; `and` over already-core boolean expressions, lowered to an `if` chain
+;; (mirrors expand-and but its operands are final, so it is not re-expanded).
+(define (and-core ps)
+  (cond [(null? ps) #t]
+        [(null? (cdr ps)) (car ps)]
+        [else `(if ,(car ps) ,(and-core (cdr ps)) #f)]))
+
+;; One pairwise comparison of two temp variables, reduced to `<` / `=`.  The
+;; temps may be referenced twice (<=/>=) without re-evaluating operands.
+(define (cmp-pair op x y)
+  (case op
+    [(=)  `(= ,x ,y)]
+    [(<)  `(< ,x ,y)]
+    [(>)  `(< ,y ,x)]
+    [(<=) `(if (< ,x ,y) #t (= ,x ,y))]
+    [(>=) `(if (< ,y ,x) #t (= ,x ,y))]))
 
 (define (expand-cond clauses)
   (if (null? clauses)

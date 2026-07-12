@@ -173,10 +173,14 @@
     (emit! (string-append cmp " = icmp ne i64 " tv ", 1"))   ; != FALSE_V
     (emit! (string-append "br i1 " cmp ", label %" tl ", label %" el))
     (start-bb tl)
-    (let ([bv (ev b env cp tc?)] [bbb current-bb])
+    ;; let* (not let): the arm must be emitted BEFORE reading current-bb, or
+    ;; the phi records the arm-entry block instead of the block the arm ends in
+    ;; (a nested if moves current-bb to its own merge block).  Chez evaluates
+    ;; parallel let inits right-to-left, which would capture the stale block.
+    (let* ([bv (ev b env cp tc?)] [bbb current-bb])
       (emit! (string-append "br label %" ml))
       (start-bb el)
-      (let ([cv (ev c env cp tc?)] [bbc current-bb])
+      (let* ([cv (ev c env cp tc?)] [bbc current-bb])
         (emit! (string-append "br label %" ml))
         (start-bb ml)
         (let ([r (fresh-temp)])

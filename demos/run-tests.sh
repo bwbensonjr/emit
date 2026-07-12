@@ -44,6 +44,7 @@ check toplevel  demos/toplevel.scm  102   # multi-define program (letrec desugar
 check derived   demos/derived.scm   180   # cond/and/or/when/unless/let*/named-let
 check namedloop demos/named-let-loop.scm 42  # named-let tail loop, bounded stack
 check naryarith demos/nary-arith.scm 43  # n-ary + - *, unary negation, identities
+check narycmp   demos/nary-compare.scm 11111101  # n-ary/chained < = > <= >=, single-eval
 
 echo "variadic / apply demos"
 check varrest  demos/variadic-rest.scm "(3 4)"   # dotted rest parameter

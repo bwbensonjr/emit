@@ -71,6 +71,7 @@ run3 toplevel  demos/toplevel.scm       102
 run3 derived   demos/derived.scm        180
 run3 namedloop demos/named-let-loop.scm 42
 run3 naryarith demos/nary-arith.scm      43    # n-ary + - *, unary neg, identities
+run3 narycmp   demos/nary-compare.scm    11111101  # chained < = > <= >=, single-eval
 run3 varrest   demos/variadic-rest.scm   "(3 4)"   # dotted rest parameter
 run3 varall    demos/variadic-all.scm    "(1 2 3)" # all-args variadic
 run3 apply     demos/apply.scm           45        # apply spreads overflow; variadic musttail
