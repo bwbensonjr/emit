@@ -4,7 +4,7 @@ Experiment with compiling Scheme into LLVM IR.
 
 A **Chez-hosted Scheme→LLVM compiler**: a hand-rolled frontend pipeline that emits textual
 LLVM IR, a small C runtime under Boehm GC, and **three backends** (AOT, JIT, bitcode) that
-are checked to agree byte-for-byte. **29 demos pass, all three backends in agreement.**
+are checked to agree byte-for-byte. **34 demos pass, all three backends in agreement.**
 The compiler is written in Scheme (bootstrapped with Chez), with an eventual self-hosting
 goal, and prioritizes simple, transparent stages (see `CLAUDE.md`). Development is
 OpenSpec-driven — 14 changes shipped so far, tracked under `openspec/`.
@@ -59,7 +59,10 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
 **Language**
 - Core: `lambda`, `if`, `let`/`letrec`, `begin`, `set!`, application, top-level `define`,
   multi-form programs.
-- Derived forms: `cond`, `and`, `or`, `when`, `unless`, `let*`, named `let`.
+- Derived forms: `cond` (with `else`/`=>`/bare-test clauses), `and`, `or`, `when`, `unless`,
+  `let*` — realized as `syntax-rules` macros in the prelude; named `let` (hand-written).
+- **Macros**: `define-syntax` + `syntax-rules` (literals, `_`, ellipsis), a fixpoint
+  `expand` stage, hygienic for macro-introduced identifiers.
 - Arithmetic: n-ary `+ - *`; binary `= <`.
 - Variadic `lambda`, dotted rest parameters, `apply`, and runtime arity checking — on the
   uniform `argc`+`overflow` calling convention, preserving `musttail`.
@@ -93,8 +96,9 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
 - Reader extensions: string escapes, named characters, dotted pairs, quasiquote, vectors.
 
 **Larger language features**
-- **Macros / `syntax-rules`** — `expand` is currently hand-written per form; a general
-  hygienic expander is the big frontend milestone.
+- **Macros (follow-ons)** — `let-syntax`/`letrec-syntax` (local macros), procedural /
+  `syntax-case` macros, and full referential-transparency hygiene (the current expander is
+  hygienic for macro-introduced identifiers only).
 - **Numeric tower** — fixnums only; no bignums/flonums/rationals, no `quotient`/`remainder`/
   `/`, no overflow handling.
 - **Control**: `call/cc`, `values`/`call-with-values`, exceptions/`guard`, `dynamic-wind`.

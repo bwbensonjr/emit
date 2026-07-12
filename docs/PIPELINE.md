@@ -68,9 +68,25 @@ read (host) → prepend prelude → collect-toplevel → expand → parse+rename
 
 **Prelude.** Before `collect-toplevel`, the driver prepends the forms of `src/prelude.scm`
 (a small standard library: `not`, `list`, `length`, `reverse`, `append`, `map`, `memq`,
-`assq`) to the user program's forms, with **user-wins shadowing** (a user define of the same
-name drops the prelude's). This gives reusable Scheme code — and the reader — a home without
-a module system. `--no-prelude` compiles a program's forms alone.
+`assq`, plus the derived-form macros below) to the user program's forms, with **user-wins
+shadowing** (a user define of the same name drops the prelude's). This gives reusable Scheme
+code — and the reader — a home without a module system. `--no-prelude` compiles a program's
+forms alone; because the derived forms now live in the prelude, they are unavailable then.
+
+**Macros (`expand`).** `expand` is a fixpoint `syntax-rules` macro expander. Before
+`collect-toplevel`, the driver lifts every top-level `(define-syntax name (syntax-rules …))`
+out of the form sequence into a macro environment (from both the prelude and the program);
+`expand` then rewrites each macro use by its first matching rule and re-expands the result
+until only core forms and known primitive heads remain. Expansion is **hygienic for
+macro-introduced identifiers** — a template identifier that is not a pattern variable and
+does not name a known binding is consistently renamed per expansion, so a macro's
+temporaries cannot capture (or be captured by) user code; the shared `fresh-name` counter
+supplies the names. The branching/binding derived forms (`cond` — with `else`/`=>`/bare
+tests — `and`, `or`, `when`, `unless`, `let*`) are ordinary prelude macros; **named `let`**
+is still hand-written in `expand.ss` because it overloads the core `let` keyword, as are the
+arity-driven n-ary arithmetic (`+ - *`) and comparison (`= < > <= >= eq? eqv?`) desugarings.
+A depth guard reports non-terminating macros instead of looping. Deferred: `let-syntax`,
+procedural macros, and full referential-transparency hygiene.
 
 **Reader (`read`).** The `read (host)` box above is still Chez's `read`, which turns the
 *source file* into forms at compile time. But the pipeline's own `read` now also exists **in

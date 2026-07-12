@@ -69,8 +69,14 @@ The compiler SHALL accept the derived forms `cond`, `and`, `or`, `when`, `unless
 `let*`, and named `let`, and SHALL compile each with the same semantics as its expansion
 into the core language — including short-circuit evaluation for `and`/`or`, single
 evaluation of each `or` operand, and preservation of tail position for the final form of
-a selected branch. These forms SHALL be expanded by a source→source `expand` stage prior
-to core parsing.
+a selected branch. `cond`, `and`, `or`, `when`, `unless`, and `let*` SHALL be realized as
+`syntax-rules` macros carried by the standard prelude and rewritten by the source→source
+`expand` stage prior to core parsing (rather than hardwired into `expand`); `cond` SHALL
+additionally support `else`, `=>`, and bare-test clauses. Named `let` SHALL be recognized
+structurally by `expand` (it overloads the core `let` keyword and so cannot be a distinct
+macro). `define-syntax` and `syntax-rules` are reserved keywords. Because the macro-based
+forms are supplied by the prelude, compiling with the prelude disabled does not provide
+them.
 
 #### Scenario: Multi-way cond
 
@@ -78,6 +84,13 @@ to core parsing.
   clauses
 - **THEN** the executable selects the first clause whose test is true (or the `else`
   clause) and produces that clause body's value
+
+#### Scenario: cond => and bare-test clauses
+
+- **WHEN** a program uses a `(cond (test => proc) ...)` clause or a bare-test `(cond
+  (test) ...)` clause
+- **THEN** the `=>` clause applies `proc` to the test value (evaluated once) when the test
+  is true, and the bare-test clause yields the test value when it is true
 
 #### Scenario: Short-circuit and / or
 

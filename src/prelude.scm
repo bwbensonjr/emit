@@ -7,6 +7,45 @@
 ;;; equality available yet; member/assoc arrive with equal?).  not/eq?/eqv?
 ;;; are primitives (see prim-table), so they are not defined here.
 
+;;; --- derived syntactic forms (syntax-rules macros) ------------------------
+;;; cond/and/or/when/unless/let* are macros expanded by src/passes/expand.ss.
+;;; Named `let` is still hand-written there (it overloads the core `let`
+;;; keyword).  `t` in `or`/`cond` is a macro-introduced temporary and is renamed
+;;; hygienically per expansion, so it cannot capture user identifiers.
+
+(define-syntax and
+  (syntax-rules ()
+    ((_) #t)
+    ((_ e) e)
+    ((_ e1 e2 ...) (if e1 (and e2 ...) #f))))
+
+(define-syntax or
+  (syntax-rules ()
+    ((_) #f)
+    ((_ e) e)
+    ((_ e1 e2 ...) (let ((t e1)) (if t t (or e2 ...))))))
+
+(define-syntax when
+  (syntax-rules ()
+    ((_ test e ...) (if test (begin e ...) #f))))
+
+(define-syntax unless
+  (syntax-rules ()
+    ((_ test e ...) (if test #f (begin e ...)))))
+
+(define-syntax let*
+  (syntax-rules ()
+    ((_ () body ...) (begin body ...))
+    ((_ ((x v) rest ...) body ...) (let ((x v)) (let* (rest ...) body ...)))))
+
+(define-syntax cond
+  (syntax-rules (else =>)
+    ((_) #f)
+    ((_ (else e ...)) (begin e ...))
+    ((_ (test => proc) rest ...) (let ((t test)) (if t (proc t) (cond rest ...))))
+    ((_ (test) rest ...) (let ((t test)) (if t t (cond rest ...))))
+    ((_ (test e ...) rest ...) (if test (begin e ...) (cond rest ...)))))
+
 (define (list . xs) xs)
 
 (define (length xs)

@@ -54,25 +54,35 @@
               prelude-forms)
       user-forms)))
 
+;; names bound at the top level (prelude + program), used both as the hygiene
+;; "known bindings" set and, with the fixed keyword/primitive sets, to decide
+;; which template identifiers a macro is allowed to introduce.
+(define (compute-known macro-env runtime-forms)
+  (union* (list *core-keywords* *prims* *extra-op-keywords*
+                (map car macro-env)
+                (filter (lambda (x) x) (map define-name runtime-forms)))))
+
 (define (compile-file src ll dump? prelude?)
   (reset-counter!)
   (let* ([user-forms (read-program src)]
          [forms (if prelude?
                     (with-prelude (read-program prelude-path) user-forms)
-                    user-forms)]
-         [top   (collect-toplevel forms)]
-         [expd  (expand top)]
-         [core  (rename-program (parse-program expd))]
-         [a     (recognize-let core)]
-         [b     (convert-assignments a)]
-         [c     (convert-closures b)]
-         [d     (lower-program c)]
-         [text  (emit-program d)])
-    (when dump?
-      (dump "collect-toplevel" top) (dump "expand" expd)
-      (dump "parse+rename" core) (dump "recognize-let" a)
-      (dump "convert-assignments" b) (dump "convert-closures" c) (dump "lower" d))
-    (let ([out (open-output-file ll 'replace)]) (display text out) (close-port out))))
+                    user-forms)])
+    (let-values ([(macro-env runtime-forms) (collect-define-syntax forms)])
+      (let* ([known (compute-known macro-env runtime-forms)]
+             [top   (collect-toplevel runtime-forms)]
+             [expd  (expand top macro-env known)]
+             [core  (rename-program (parse-program expd))]
+             [a     (recognize-let core)]
+             [b     (convert-assignments a)]
+             [c     (convert-closures b)]
+             [d     (lower-program c)]
+             [text  (emit-program d)])
+        (when dump?
+          (dump "collect-toplevel" top) (dump "expand" expd)
+          (dump "parse+rename" core) (dump "recognize-let" a)
+          (dump "convert-assignments" b) (dump "convert-closures" c) (dump "lower" d))
+        (let ([out (open-output-file ll 'replace)]) (display text out) (close-port out))))))
 
 ;; --- backends -----------------------------------------------------------
 ;; One emitted OUT.ll drives three exits.  AOT stays on the system clang
