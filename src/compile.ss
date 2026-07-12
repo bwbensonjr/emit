@@ -22,6 +22,27 @@
 (define gc-inc "/opt/homebrew/include")
 (define gc-lib "/opt/homebrew/lib")
 
+;; Module header: the `target datalayout`/`target triple` lines for the host.
+;; Without them clang fills in its own effective triple when it loads our IR and
+;; warns (-Woverride-module).  We ask the system clang what it would emit for an
+;; empty translation unit -- the canonical, portable way to learn the host's
+;; exact triple (which -print-target-triple does not report on macOS).
+(define (host-target-header)
+  (let* ([pipes (process "clang -S -emit-llvm -x c -o - - 2>/dev/null")]
+         [from (car pipes)]
+         [to   (cadr pipes)])
+    (put-string to "int __scheme_llvm_probe;\n")
+    (close-port to)
+    (let loop ([acc '()])
+      (let ([ln (get-line from)])
+        (cond
+          [(eof-object? ln)
+           (close-port from)
+           (apply string-append (reverse acc))]
+          [(and (>= (string-length ln) 7) (string=? (substring ln 0 7) "target "))
+           (loop (cons (string-append ln "\n") acc))]
+          [else (loop acc)])))))
+
 (define (read-program path)   ; -> ordered list of all top-level forms
   (let ([p (open-input-file path)])
     (let loop ([forms '()])
@@ -77,7 +98,7 @@
              [b     (convert-assignments a)]
              [c     (convert-closures b)]
              [d     (lower-program c)]
-             [text  (emit-program d)])
+             [text  (string-append (host-target-header) (emit-program d))])
         (when dump?
           (dump "collect-toplevel" top) (dump "expand" expd)
           (dump "parse+rename" core) (dump "recognize-let" a)
