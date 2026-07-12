@@ -39,6 +39,8 @@
   (cond
     [(and (integer? e) (exact? e)) `(const ,e)]
     [(boolean? e) `(const ,e)]
+    [(string? e) `(const ,e)]              ; string literals are self-evaluating
+    [(char? e) `(const ,e)]                ; char literals are self-evaluating
     [(null? e) `(const ())]
     [(symbol? e) e]
     [(pair? e)

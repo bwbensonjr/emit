@@ -58,6 +58,12 @@ check qlist   demos/quote-list.scm     "(a (b c) 1)"  # materialized nested stru
 check qtrav   demos/quote-traverse.scm "(b c)"     # car/cdr over quoted structure
 check symgc   demos/symbol-gc.scm      "#t"        # intern table survives GC
 
+echo "strings / characters demos"
+check strlit  demos/string-lit.scm     '"hello"'          # self-evaluating string literal
+check charlit demos/char-lit.scm       '#\a'              # self-evaluating char literal
+check strchar demos/string-char.scm    '(a "b" #\c)'      # strings/chars in quoted structure
+check unicode demos/unicode.scm        '("héllo 日本語" #\λ)'  # UTF-8 string + char round-trip
+
 echo "-------------------------------------------"
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

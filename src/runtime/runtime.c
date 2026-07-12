@@ -31,6 +31,12 @@ typedef intptr_t val;
 #define TAG_CLOSURE 4
 #define TAG_BOX     5
 #define TAG_SYMBOL  6
+#define TAG_EXT     7   /* extended heap object; first word = a header code */
+
+/* header codes for TAG_EXT objects (tags 0-6 are exhausted, so new heap types
+ * live under tag 7 and are discriminated by this header word) */
+#define HDR_STRING  0
+#define HDR_CHAR    1
 
 #define FIX(n)     ((val)(((intptr_t)(n)) << 3))
 #define UNFIX(v)   (((intptr_t)(v)) >> 3)
@@ -151,6 +157,54 @@ val rt_intern(const char *name) {
   return s;
 }
 
+/* --- extended heap objects: strings and characters (tag 7) ------------- */
+/* An extended object is a heap block whose first word is a small header code
+ * discriminating its type.  Further heap types (vectors, ...) add header codes
+ * without needing a new primary tag. */
+static intptr_t ext_hdr(val v) { return as_ptr(v)[0]; }
+
+/* string: { HDR_STRING, byte-length, char *bytes } -- UTF-8, explicit length so
+ * embedded NULs are fine (the trailing NUL is for C-side convenience only). */
+val rt_make_string(const char *bytes, intptr_t len) {
+  char *copy = (char *)GC_MALLOC_ATOMIC((size_t)len + 1);
+  memcpy(copy, bytes, (size_t)len);
+  copy[len] = '\0';
+  val *p = (val *)GC_MALLOC(3 * sizeof(val));
+  p[0] = HDR_STRING; p[1] = len; p[2] = (val)copy;
+  return tag_ptr(p, TAG_EXT);
+}
+static intptr_t    str_len(val v)   { return as_ptr(v)[1]; }
+static const char *str_bytes(val v) { return (const char *)as_ptr(v)[2]; }
+
+/* char: { HDR_CHAR, codepoint } -- the full Unicode scalar value */
+val rt_make_char(intptr_t codepoint) {
+  val *p = (val *)GC_MALLOC(2 * sizeof(val));
+  p[0] = HDR_CHAR; p[1] = codepoint;
+  return tag_ptr(p, TAG_EXT);
+}
+static intptr_t char_cp(val v) { return as_ptr(v)[1]; }
+
+/* encode a Unicode codepoint as UTF-8 into buf (>= 4 bytes); return byte count */
+static int utf8_encode(intptr_t cp, unsigned char *buf) {
+  if (cp < 0x80) { buf[0] = (unsigned char)cp; return 1; }
+  if (cp < 0x800) {
+    buf[0] = (unsigned char)(0xC0 | (cp >> 6));
+    buf[1] = (unsigned char)(0x80 | (cp & 0x3F));
+    return 2;
+  }
+  if (cp < 0x10000) {
+    buf[0] = (unsigned char)(0xE0 | (cp >> 12));
+    buf[1] = (unsigned char)(0x80 | ((cp >> 6) & 0x3F));
+    buf[2] = (unsigned char)(0x80 | (cp & 0x3F));
+    return 3;
+  }
+  buf[0] = (unsigned char)(0xF0 | (cp >> 18));
+  buf[1] = (unsigned char)(0x80 | ((cp >> 12) & 0x3F));
+  buf[2] = (unsigned char)(0x80 | ((cp >> 6) & 0x3F));
+  buf[3] = (unsigned char)(0x80 | (cp & 0x3F));
+  return 4;
+}
+
 /* --- value printer (tag-walking, design R1) ---------------------------- */
 void rt_write(val v) {
   switch (tag_of(v)) {
@@ -173,6 +227,28 @@ void rt_write(val v) {
     case TAG_CLOSURE: printf("#<procedure>"); break;
     case TAG_BOX:     printf("#<box>"); break;
     case TAG_SYMBOL:  printf("%s", sym_name(v)); break;
+    case TAG_EXT:
+      switch (ext_hdr(v)) {
+        case HDR_STRING:
+          putchar('"');
+          fwrite(str_bytes(v), 1, (size_t)str_len(v), stdout);
+          putchar('"');
+          break;
+        case HDR_CHAR: {
+          intptr_t cp = char_cp(v);
+          if (cp == ' ')       printf("#\\space");
+          else if (cp == '\n') printf("#\\newline");
+          else {
+            unsigned char buf[4];
+            int n = utf8_encode(cp, buf);
+            printf("#\\");
+            fwrite(buf, 1, (size_t)n, stdout);
+          }
+          break;
+        }
+        default: printf("#<ext:%ld>", (long)ext_hdr(v));
+      }
+      break;
     default:          printf("#<unknown:%ld>", (long)v);
   }
 }

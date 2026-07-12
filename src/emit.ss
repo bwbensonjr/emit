@@ -23,12 +23,13 @@
 (define (start-bb name) (emit! (string-append name ":")) (set! current-bb name))
 (define (reset-emit!) (set! temp-n 0) (set! lbl-n 0) (set! emit-lines '()) (set! current-bb "entry"))
 
-;; --- symbol string constants (module-level globals, reset per program) ---
-;; A quoted symbol becomes a private string-constant global plus a per-use
-;; rt_intern call.  Globals are deduped by name and accumulated here, then
-;; prepended to the module by emit-program.
-(define sym-globals '())          ; list of "@.str.sym.N = ..." definition lines
-(define sym-table '())            ; alist: name-string -> "@.str.sym.N"
+;; --- private byte-array constants (module-level globals, reset per program) ---
+;; Symbol names and string literals both become private constant globals holding
+;; their UTF-8 bytes; a symbol adds a per-use rt_intern call, a string a per-use
+;; rt_make_string.  Globals are accumulated here and prepended to the module by
+;; emit-program.
+(define sym-globals '())          ; list of "@.str.*.N = ..." definition lines
+(define sym-table '())            ; alist: symbol name-string -> "@.str.sym.N"
 (define sym-n 0)
 (define (reset-symbols!) (set! sym-globals '()) (set! sym-table '()) (set! sym-n 0))
 (define (symbol-globals) (apply string-append (reverse sym-globals)))
@@ -52,18 +53,24 @@
                             (string-append "\\" (hex2 b)))
                         acc)))))))
 
-(define (symbol-global name)      ; intern the name's global, return its @operand
+;; emit a private constant global (prefix + counter) holding s's UTF-8 bytes and
+;; a trailing NUL; return (values @global byte-length-without-NUL).
+(define (emit-cstring-global prefix s)
+  (let-values ([(esc len) (llvm-cstring s)])   ; len includes the trailing NUL
+    (let* ([g (string-append prefix (number->string sym-n))]
+           [def (string-append g " = private unnamed_addr constant ["
+                               (number->string len) " x i8] c\"" esc "\\00\"\n")])
+      (set! sym-n (+ sym-n 1))
+      (set! sym-globals (cons def sym-globals))
+      (values g (- len 1)))))
+
+(define (symbol-global name)      ; dedup the name's global, return its @operand
   (cond
     [(assoc name sym-table) => cdr]
     [else
-     (let-values ([(esc len) (llvm-cstring name)])
-       (let* ([g (string-append "@.str.sym." (number->string sym-n))]
-              [def (string-append g " = private unnamed_addr constant ["
-                                  (number->string len) " x i8] c\"" esc "\\00\"\n")])
-         (set! sym-n (+ sym-n 1))
-         (set! sym-table (cons (cons name g) sym-table))
-         (set! sym-globals (cons def sym-globals))
-         g))]))
+     (let-values ([(g len) (emit-cstring-global "@.str.sym." name)])
+       (set! sym-table (cons (cons name g) sym-table))
+       g)]))
 
 ;; --- constants and primitives (must match runtime.c tags) ---
 ;; Immediates encode inline to an operand with no emission; a symbol emits an
@@ -78,6 +85,17 @@
     [(symbol? d)
      (let ([g (symbol-global (symbol->string d))] [t (fresh-temp)])
        (emit! (string-append t " = call i64 @rt_intern(ptr " g ")"))
+       t)]
+    [(string? d)                                              ; UTF-8 bytes + rt_make_string
+     (let-values ([(g len) (emit-cstring-global "@.str.lit." d)])
+       (let ([t (fresh-temp)])
+         (emit! (string-append t " = call i64 @rt_make_string(ptr " g ", i64 "
+                               (number->string len) ")"))
+         t))]
+    [(char? d)                                                ; Unicode codepoint
+     (let ([t (fresh-temp)])
+       (emit! (string-append t " = call i64 @rt_make_char(i64 "
+                             (number->string (char->integer d)) ")"))
        t)]
     [(pair? d)                                                ; materialize at runtime
      (let* ([a  (encode-const (car d))]
@@ -329,6 +347,8 @@
    "declare i64 @rt_pair_p(i64)\n"
    "declare i64 @rt_eq_p(i64, i64)\n"
    "declare i64 @rt_intern(ptr)\n"
+   "declare i64 @rt_make_string(ptr, i64)\n"
+   "declare i64 @rt_make_char(i64)\n"
    "declare i64 @rt_list_length(i64)\n"
    "declare i64 @rt_build_rest(i64, i64, i64, ptr, ptr)\n"
    "declare ptr @rt_apply_argv(i64, ptr, i64, i64)\n"

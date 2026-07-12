@@ -129,9 +129,10 @@ objects, standard Scheme practice.
 - All runtime primitives dispatch on the tag.
 
 **Current tag assignments (3-bit tag, `src/runtime/runtime.c`).** `0` fixnum, `1`
-boolean, `2` nil, `3` pair, `4` closure, `5` box, `6` **symbol**. Only tag `7`
-remains — the next heap type past that needs a header-word scheme (note for
-strings/vectors/chars).
+boolean, `2` nil, `3` pair, `4` closure, `5` box, `6` symbol, `7` **extended object**.
+All eight primary tags are now assigned: tag `7` is a header-word "extended" heap object
+whose first word is a small type code, so every further heap type (strings, characters,
+and later vectors/bytevectors/flonums) adds a header code with **no new primary tag**.
 
 **Symbols (tag 6, interned).** A symbol is a heap object holding its name; `rt_intern`
 canonicalizes by name through a process-wide table so equal names are pointer-identical,
@@ -142,13 +143,25 @@ pointer into the GC heap is *not* sufficient: under `lli`'s ORC JIT the module's
 segment is not a registered Boehm root, so the table array would be collected mid-run
 (caught by the `symbol-gc` demo across all three backends).
 
+**Strings and characters (tag 7, header-word).** A string is an extended object
+`{HDR_STRING, byte-length, char *bytes}` and a character is `{HDR_CHAR, codepoint}`.
+Both are **Unicode-capable**: a string stores UTF-8 bytes with an explicit byte length
+(so embedded NULs are fine), and a character holds the full Unicode scalar value.
+`rt_write` prints a string write-style between quotes (its bytes verbatim) and a character
+as `#\` followed by the codepoint UTF-8-encoded, with a small named-char set
+(`#\space`, `#\newline`). String literals reuse the symbol constant-emitter path: a private
+byte-array global (`@.str.lit.N`) plus a per-use `rt_make_string(ptr, len)`; character
+literals emit `rt_make_char(codepoint)`. Strings/chars are **not interned** — like quoted
+lists they carry no `eq?` identity (deferred with `eqv?` and the string/char operation
+library, which also owns the byte-vs-codepoint length/indexing decision).
+
 **Quoted structure is materialized at runtime.** `(quote sym)` emits a private
 string-constant global (`@.str.sym.N = private … c"name\00"`) plus a per-use
 `rt_intern` call; `(quote (a . d))` emits `rt_cons` over the recursively encoded car/cdr,
-with immediates (fixnum/bool/`()`) still encoded inline. Consequence: a quoted list literal
-is rebuilt on each evaluation, so two evaluations are `equal?` but not `eq?` — only symbols
-guarantee `eq?`. Hoisting a literal into a build-once global (for identity + speed) is a
-noted future optimization.
+with immediates (fixnum/bool/`()`) still encoded inline and strings/chars via their
+extended-object encoders. Consequence: a quoted list literal is rebuilt on each evaluation,
+so two evaluations are `equal?` but not `eq?` — only symbols guarantee `eq?`. Hoisting a
+literal into a build-once global (for identity + speed) is a noted future optimization.
 
 Alternatives considered and *not* used by default: NaN-boxing (attractive only if
 float-heavy) and a tagged struct/union (simplest to emit, worst on space/cache). Keep

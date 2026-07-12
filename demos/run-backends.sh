@@ -80,6 +80,10 @@ run3 symeq     demos/symbol-eq.scm       "#t"          # interned symbol eq? ide
 run3 qlist     demos/quote-list.scm      "(a (b c) 1)" # materialized quoted structure
 run3 qtrav     demos/quote-traverse.scm  "(b c)"       # car/cdr over quoted structure
 run3 symgc     demos/symbol-gc.scm       "#t"          # intern table survives GC
+run3 strlit    demos/string-lit.scm      '"hello"'          # self-evaluating string literal
+run3 charlit   demos/char-lit.scm        '#\a'              # self-evaluating char literal
+run3 strchar   demos/string-char.scm     '(a "b" #\c)'      # strings/chars in quoted structure
+run3 unicode   demos/unicode.scm         '("héllo 日本語" #\λ)'  # UTF-8 round-trip, byte-for-byte
 
 echo "-------------------------------------------"
 echo "$pass passed, $fail failed"
