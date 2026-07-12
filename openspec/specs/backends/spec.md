@@ -3,22 +3,28 @@
 ## Purpose
 
 Defines the "one frontend, many backends" property: a single emitted LLVM IR module
-drives three interchangeable exits — a native executable (AOT), in-process JIT execution
-via `lli`, and a bitcode artifact — and the requirement that the three produce identical
-results, verified by a standing regression harness.
+drives three interchangeable whole-program exits — a native executable (AOT), in-process
+batch JIT execution via `lli`, and a bitcode artifact — the requirement that the three
+produce identical results (verified by a standing regression harness), and an additional
+interactive exit that adds per-form modules to a persistent LLVM ORC/LLJIT host.
 
 ## Requirements
 
 ### Requirement: One emitted IR drives AOT, JIT, and bitcode exits
 
-The compiler SHALL take a single emitted LLVM IR module to three interchangeable exits —
-a native executable (AOT), in-process JIT execution via `lli`, and a bitcode artifact —
-without changes to the emitted IR or the C runtime between exits. AOT SHALL remain the
-default exit.
+The compiler SHALL take a single emitted LLVM IR module to three interchangeable
+whole-program exits — a native executable (AOT), in-process batch JIT execution via
+`lli`, and a bitcode artifact — without changes to the emitted IR or the C runtime
+between exits. AOT SHALL remain the default exit. In addition, the compiler SHALL support
+an interactive exit in which per-form IR modules are added incrementally to a single
+long-lived LLVM ORC/LLJIT host process (see the `interactive-repl` capability); this
+interactive exit is distinct from the batch `lli` exit, which runs one whole-program
+module and terminates. A REPL session and a batch build SHALL produce the same value for
+the same sequence of forms.
 
 #### Scenario: JIT execution via lli
 
-- **WHEN** a demo program is built with the JIT backend selected
+- **WHEN** a demo program is built with the batch JIT backend selected
 - **THEN** the compiler links the runtime into the program IR at the IR level and runs it
   via `lli` (resolving `libgc`), and the run reports the program's value — the same value
   the AOT executable reports
@@ -33,6 +39,13 @@ default exit.
 
 - **WHEN** a program is compiled with no backend explicitly selected
 - **THEN** the compiler produces a native executable exactly as before this change
+
+#### Scenario: Interactive exit matches batch value
+
+- **WHEN** a sequence of top-level forms is evaluated form-by-form in the interactive
+  ORC/LLJIT REPL, and the same sequence is compiled and run as a single whole-program
+  batch build
+- **THEN** the value reported for the final form is identical between the two exits
 
 ### Requirement: Backends produce identical results (regression harness)
 
