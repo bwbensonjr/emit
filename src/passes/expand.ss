@@ -30,7 +30,7 @@
         [(letrec) (expand-let-form 'letrec (cadr e) (cddr e))]
         [(lambda) `(lambda ,(cadr e) ,@(map expand (cddr e)))]
         [(+ - *) (expand-arith (car e) (cdr e))]
-        [(= < > <= >=) (expand-compare (car e) (cdr e))]
+        [(= < > <= >= eq? eqv?) (expand-compare (car e) (cdr e))]
         ;; if / begin / set! / primcall / application: recurse into every
         ;; position (operators and operands, never binding lists).
         [else     (map expand e)])))
@@ -63,13 +63,14 @@
         (loop (list op acc (car rest)) (cdr rest)))))
 
 ;; N-ary comparisons -> single-evaluation chained (pairwise) comparisons.
-;; Operands are expanded first, then each is bound to a fresh temp (interior
-;; operands appear in two pairs, and <=/>= reference each operand twice, so
-;; every operand is bound exactly once to guarantee single, left-to-right
-;; evaluation -- the same reason `or` binds a temp).  The chain is the
-;; short-circuiting conjunction of the adjacent pairwise tests; each pairwise
-;; test reduces to the existing binary `<` / `=` primitives (> swaps operands;
-;; <=/>= combine the two).  Fewer than two operands compare vacuously true.
+;; Handles the ordering/numeric operators (= < > <= >=) and the identity
+;; predicates (eq? eqv?).  Operands are expanded first, then each is bound to a
+;; fresh temp (interior operands appear in two pairs, and <=/>= reference each
+;; operand twice, so every operand is bound exactly once to guarantee single,
+;; left-to-right evaluation -- the same reason `or` binds a temp).  The chain is
+;; the short-circuiting conjunction of the adjacent pairwise tests; each pairwise
+;; test reduces to a binary primitive (> swaps operands; <=/>= combine < and =;
+;; eq?/eqv? are symmetric single prims).  Fewer than two operands compare true.
 (define (expand-compare op args)
   (let ([xs (map expand args)])
     (if (or (null? xs) (null? (cdr xs)))
@@ -100,15 +101,18 @@
         [(null? (cdr ps)) (car ps)]
         [else `(if ,(car ps) ,(and-core (cdr ps)) #f)]))
 
-;; One pairwise comparison of two temp variables, reduced to `<` / `=`.  The
-;; temps may be referenced twice (<=/>=) without re-evaluating operands.
+;; One pairwise comparison of two temp variables, reduced to the binary prims
+;; `<` / `=` / `eq?` / `eqv?`.  The temps may be referenced twice (<=/>=)
+;; without re-evaluating operands.
 (define (cmp-pair op x y)
   (case op
-    [(=)  `(= ,x ,y)]
-    [(<)  `(< ,x ,y)]
-    [(>)  `(< ,y ,x)]
-    [(<=) `(if (< ,x ,y) #t (= ,x ,y))]
-    [(>=) `(if (< ,y ,x) #t (= ,x ,y))]))
+    [(=)    `(= ,x ,y)]
+    [(<)    `(< ,x ,y)]
+    [(>)    `(< ,y ,x)]
+    [(<=)   `(if (< ,x ,y) #t (= ,x ,y))]
+    [(>=)   `(if (< ,y ,x) #t (= ,x ,y))]
+    [(eq?)  `(eq? ,x ,y)]
+    [(eqv?) `(eqv? ,x ,y)]))
 
 (define (expand-cond clauses)
   (if (null? clauses)

@@ -77,6 +77,11 @@ val rt_lt(val a, val b)     { return truthy(UNFIX(a) <  UNFIX(b)); }
 val rt_null_p(val v)       { return truthy(v == NIL_V); }
 val rt_pair_p(val v)       { return truthy(tag_of(v) == TAG_PAIR); }
 val rt_eq_p(val a, val b)  { return truthy(a == b); }
+/* eqv?: same-object identity.  == suffices while every value eqv? can
+ * distinguish is immediate (fixnums, chars) or interned (symbols); this
+ * diverges from rt_eq_p only once non-immediate numbers (flonums/bignums) exist. */
+val rt_eqv_p(val a, val b) { return truthy(a == b); }
+val rt_not(val x)          { return truthy(x == FALSE_V); }  /* only #f is false */
 
 /* --- variadic / apply support ------------------------------------------ */
 intptr_t rt_list_length(val lst) {

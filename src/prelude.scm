@@ -4,9 +4,8 @@
 ;;; (src/compile.ss) prepends these top-level defines to each program, with
 ;;; user-wins shadowing (a user define of the same name drops the prelude's).
 ;;; See openspec prelude-mechanism.  memq/assq compare with eq? (the only
-;;; equality available yet; member/assoc arrive with equal?).
-
-(define (not x) (if x #f #t))
+;;; equality available yet; member/assoc arrive with equal?).  not/eq?/eqv?
+;;; are primitives (see prim-table), so they are not defined here.
 
 (define (list . xs) xs)
 
