@@ -45,3 +45,34 @@ Under the hood the AOT link is:
 
 The 3-way equivalence harness (`demos/run-backends.sh`) runs every demo through all
 three backends and asserts identical results.
+
+## Interactive REPL: the persistent ORC/LLJIT host
+
+The interactive REPL (change `interactive-repl`) executes entered forms in a long-lived
+process built on **LLVM 22 ORC v2 / LLJIT** (`src/repl/host.cpp`). It requires the
+LLVM 22 **development** install (headers + `llvm-config`), already provided by the
+`llvm@22` keg used for the JIT/bitcode backends:
+
+    src/repl/build-host.sh            # -> build/repl-host
+
+The build:
+
+- compiles the C runtime (`src/runtime/runtime.c`) with `-DRT_NO_MAIN` so its standalone
+  `main` is omitted (the host supplies its own);
+- compiles `host.cpp` against `$(llvm-config --cxxflags)`;
+- links with `$(llvm-config --ldflags --libs orcjit native --system-libs)` plus `-lgc`,
+  and **`-rdynamic`** so the JIT resolves `rt_*` / GC symbols from the host process via
+  `DynamicLibrarySearchGenerator::GetForCurrentProcess`.
+
+The host reads a simple wire protocol on stdin — `"<entry-symbol> <byte-count>\n"` then
+that many bytes of IR — adds each form's module to the running JIT, looks up its
+`@__repl_N` thunk, calls it, and prints the value with `rt_write` (or `!<error>` on a
+compile/JIT failure or a runtime trap). Runtime traps (e.g. arity errors) `longjmp` back
+to the host loop via the `rt_trap` hook in `runtime.c`, so the session survives; when
+`rt_trap` is null (the standalone executables) a trap still `exit(1)`s as before.
+
+Drive it with the batch frame generator (a stand-in for the Group 5 interactive driver):
+
+    chez --libdirs src --script test/repl-frames.ss <session>.scm | build/repl-host
+
+End-to-end host tests: `test/repl-host-tests.sh`.

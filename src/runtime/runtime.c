@@ -19,9 +19,17 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <setjmp.h>
 #include <gc/gc.h>
 
 typedef intptr_t val;
+
+/* Trap escape hook.  A runtime trap (e.g. an arity error) aborts the process
+ * in the AOT/batch model.  A persistent host (the ORC/LLJIT REPL) instead sets
+ * rt_trap to a jmp_buf and setjmp()s before calling into JIT'd code, so a trap
+ * longjmps back to the host loop and the session survives.  NULL => exit(1),
+ * preserving the standalone-executable behavior. */
+jmp_buf *rt_trap = NULL;
 
 #define TAG_MASK    7
 #define TAG_FIXNUM  0
@@ -123,6 +131,7 @@ val *rt_apply_argv(intptr_t n, val *pre, val lst, intptr_t K) {
 void rt_arity_error(intptr_t expected, intptr_t got) {
   fprintf(stderr, "arity error: expected %ld argument(s), got %ld\n",
           (long)expected, (long)got);
+  if (rt_trap) longjmp(*rt_trap, 1);
   exit(1);
 }
 
@@ -353,7 +362,11 @@ void rt_write(val v) {
   }
 }
 
-/* --- entry: exit code = ran/failed, stdout = value (design R1) ---------- */
+/* --- entry: exit code = ran/failed, stdout = value (design R1) ----------
+ * The standalone AOT/JIT executables use this main.  The persistent REPL host
+ * provides its own main and drives scheme code itself, so it compiles the
+ * runtime with -DRT_NO_MAIN to omit this (and the scheme_entry it expects). */
+#ifndef RT_NO_MAIN
 extern val scheme_entry(void);
 
 int main(void) {
@@ -363,3 +376,4 @@ int main(void) {
   printf("\n");
   return 0;
 }
+#endif

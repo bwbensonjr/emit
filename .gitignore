@@ -5,4 +5,6 @@
 # build artifacts
 spike/calling-convention/spike
 *.bc
+*.o
+/build/
 

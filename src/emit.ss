@@ -537,3 +537,33 @@
                (loop (cdr ps) (+ n 1)
                      (cons body bodies) (cons thunk thunks)
                      (union defd fd) (cons call calls) r))])))))
+
+;; Emit ONE form as its own module for the persistent ORC/LLJIT host: globals it
+;; defines get a slot definition, globals it only references (defined by earlier
+;; forms) are declared `external` and resolve in the JIT to the module that
+;; defined them.  The single entry thunk @__repl_N returns the form's value.
+;; Returns (values module-text entry-name defined-globals).
+(define (emit-repl-module prog n)
+  (reset-emit!) (reset-symbols!)
+  (set! *arity* repl-arity)
+  (repl-check-arity prog)
+  (let-values ([(defd refd) (repl-scan-globals prog)])
+    (let ([external (diff refd defd)]
+          [name (string-append "__repl_" (number->string n))])
+      (match prog
+        [(program ,cdefs ,entry)
+         ;; emit bodies first so symbol-globals is populated before it is read
+         (let* ([body  (apply string-append
+                         (map (lambda (d) (emit-code-def d repl-arity)) cdefs))]
+                [thunk (emit-named-entry entry name)]
+                [exts  (apply string-append
+                         (map (lambda (s) (string-append (global-operand s)
+                                            " = external global i64\n"))
+                              external))]
+                [slots (apply string-append
+                         (map (lambda (s) (string-append (global-operand s)
+                                            " = global i64 0\n"))
+                              defd))])
+           (values (string-append (rt-declarations) exts slots (symbol-globals)
+                                  body thunk)
+                   name defd))]))))

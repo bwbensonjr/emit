@@ -20,12 +20,12 @@
 
 ## 4. Persistent LLVM ORC / LLJIT host
 
-- [ ] 4.1 Create a C++ ORC v2 / LLJIT host that calls `GC_INIT()` once and stands up a persistent `LLJIT` instance.
-- [ ] 4.2 Link `runtime.c` + libgc into the host and expose process symbols to the JIT via `DynamicLibrarySearchGenerator::GetForCurrentProcess()` so `rt_*` resolve without re-adding the runtime per form.
-- [ ] 4.3 Implement the host request loop: read IR text for one form, `parseIR`, `addIRModule`, `lookup("__repl_N")`, cast to `val(*)()`, call, and report the result.
-- [ ] 4.4 Have the host print results via the runtime `rt_write` printer.
-- [ ] 4.5 Isolate runtime traps (e.g. arity errors) so a failing form reports and the host stays alive for the next form.
-- [ ] 4.6 Document the LLVM 22 ORC build/link requirements in `TOOLCHAIN.md`.
+- [x] 4.1 Create a C++ ORC v2 / LLJIT host that calls `GC_INIT()` once and stands up a persistent `LLJIT` instance. (`src/repl/host.cpp`)
+- [x] 4.2 Link `runtime.c` + libgc into the host and expose process symbols to the JIT via `DynamicLibrarySearchGenerator::GetForCurrentProcess()` so `rt_*` resolve without re-adding the runtime per form. (`-rdynamic`; runtime built `-DRT_NO_MAIN`)
+- [x] 4.3 Implement the host request loop: read IR text for one form (framed on stdin), `parseIR`, `addIRModule`, `lookup("__repl_N")`, cast to `intptr_t(*)()`, call, and report the result. Also added `emit-repl-module` (per-form single module with `external` prior globals) and `test/repl-frames.ss` (frame generator).
+- [x] 4.4 Have the host print results via the runtime `rt_write` printer.
+- [x] 4.5 Isolate runtime traps (arity errors) so a failing form reports (`!trap`) and the host stays alive; `rt_trap` `longjmp` hook in `runtime.c`, null in standalone exes (still `exit(1)`).
+- [x] 4.6 Document the LLVM 22 ORC build/link requirements in `TOOLCHAIN.md`. (`test/repl-host-tests.sh`, 7 cases passing end-to-end.)
 
 ## 5. REPL driver (Chez) and host transport
 
