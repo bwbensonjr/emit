@@ -165,7 +165,14 @@
     (emit! (string-append code " = load i64, ptr " bp))
     (emit! (string-append fp " = inttoptr i64 " code " to ptr"))
     (let* ([args (pad-args aops *arity*)]
-           [callargs (comma-join (cons (string-append "i64 " fop) (map (lambda (o) (string-append "i64 " o)) args)))]
+           ;; argc+overflow calling convention: self, argc (actual arg count),
+           ;; a0..a{K-1} (padded), overflow (null until variadic/apply exist).
+           [callargs (comma-join
+                       (append
+                         (list (string-append "i64 " fop)
+                               (string-append "i64 " (number->string (length aops))))
+                         (map (lambda (o) (string-append "i64 " o)) args)
+                         (list "ptr null")))]
            [r (fresh-temp)])
       (if tail?
           (begin
@@ -206,8 +213,11 @@
   (match def
     [(code ,label ,self ,params ,body)
      (set! emit-lines '()) (set! current-bb "entry")
-     (let ([argdecls (comma-join (cons "i64 %self"
-                       (map (lambda (i) (string-append "i64 %a" (number->string i))) (iota k))))]
+     (let ([argdecls (comma-join
+                       (append
+                         (list "i64 %self" "i64 %argc")
+                         (map (lambda (i) (string-append "i64 %a" (number->string i))) (iota k))
+                         (list "ptr %overflow")))]  ; argc+overflow CC; both unused until variadic/apply
            [env (map (lambda (p i) (cons p (string-append "%a" (number->string i))))
                      params (iota (length params)))])
        (start-bb "entry")

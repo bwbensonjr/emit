@@ -208,14 +208,14 @@ convention), which lets us (a) mark tail calls `musttail` reliably and (b) pin
 runtime registers if we later adopt a CPS-with-registers scheme. C-visible entry
 points (runtime primitives, FFI) use the C convention and are bridged explicitly.
 
-**Shape.** Today (M1) every function shares one prototype
+**Shape.** The original M1 convention shared one prototype
 `tailcc i64 (i64 self, i64 a0 … i64 a{K-1})`, `K` = whole-program max arity, calls padded
-with `0`. This is fixed-arity only: it cannot express dotted rest params, variadic
+with `0`. That was fixed-arity only: it could not express dotted rest params, variadic
 `lambda`, or `apply` (padding is ambiguous with a real `0`, there is no arg count, and
 `apply` over a list longer than `K` is impossible).
 
-**Decided convention (from the calling-convention spike; not yet implemented in
-`emit.ss`).** Widen the shared prototype to
+**Emitted convention (decided by the calling-convention spike; now implemented in
+`emit.ss`).** Every Scheme function shares the widened prototype
 `tailcc i64 (i64 self, i64 argc, i64 a0 … i64 a{K-1}, ptr overflow)`:
 
 - `argc` — real argument count; fixed-arity callees ignore it.
@@ -223,6 +223,12 @@ with `0`. This is fixed-arity only: it cannot express dotted rest params, variad
 - `overflow` — pointer to a heap vector of args beyond `K` (or null). Dotted-rest callees
   collect `rest` from `a[fixed..min(argc,K))` ++ `overflow[0..]`; `apply` fills the
   positional slots then spills the tail into `overflow`, so it is unbounded.
+
+The **prototype/ABI is emitted now**: `emit.ss` widens every `define` and every call to
+this shape, passing the true `argc` and `ptr null` overflow. All functions are still
+fixed-arity, so `argc`/`overflow` are currently inert (callees ignore them). The
+`overflow`/`argc`-*consuming* features — dotted rest params, variadic `lambda`, `apply` —
+are a separate follow-on that builds additively on this ABI.
 
 The spike (`spike/calling-convention/`, real LLVM 22 IR, 100e6 tail iterations) showed
 this preserves `musttail`/bounded stack, costs ~0 on the fixed-arity hot path vs. today's
