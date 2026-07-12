@@ -87,6 +87,7 @@ run3 unicode   demos/unicode.scm         '("héllo 日本語" #\λ)'  # UTF-8 ro
 run3 strops    demos/string-ops.scm      '(65 3 #\b "ell" foo)'  # char/string accessors
 run3 strsym    demos/string-symbol.scm   '#t'                    # string->symbol interns
 run3 struni    demos/string-unicode.scm  '(5 #\é "日本")'         # codepoint indexing, non-ASCII
+run3 prelude   demos/prelude.scm          '(1 4 9 6 5 4)'  # standard library procedures
 
 echo "-------------------------------------------"
 echo "$pass passed, $fail failed"

@@ -35,9 +35,32 @@
   (pretty-print form (current-error-port))
   (newline (current-error-port)))
 
-(define (compile-file src ll dump?)
+;; --- prelude (standard library prepended to every program) ---------------
+(define prelude-path "src/prelude.scm")
+
+;; name defined by a top-level (define ...) form, or #f for a non-define form
+(define (define-name f)
+  (and (pair? f) (eq? (car f) 'define)
+       (let ([sig (cadr f)]) (if (pair? sig) (car sig) sig))))
+
+;; prepend prelude forms to the user's, dropping any prelude define whose name
+;; the user also defines (user-wins shadowing, so the prelude never clobbers).
+(define (with-prelude prelude-forms user-forms)
+  (let ([user-names (filter (lambda (x) x) (map define-name user-forms))])
+    (append
+      (filter (lambda (f)
+                (let ([n (define-name f)])
+                  (not (and n (memq n user-names)))))
+              prelude-forms)
+      user-forms)))
+
+(define (compile-file src ll dump? prelude?)
   (reset-counter!)
-  (let* ([top   (collect-toplevel (read-program src))]
+  (let* ([user-forms (read-program src)]
+         [forms (if prelude?
+                    (with-prelude (read-program prelude-path) user-forms)
+                    user-forms)]
+         [top   (collect-toplevel forms)]
          [expd  (expand top)]
          [core  (rename-program (parse-program expd))]
          [a     (recognize-let core)]
@@ -101,12 +124,12 @@
 
 ;; --- argument handling ---
 (define (main args)
-  (let loop ([args args] [src #f] [out #f] [dump? #f] [backend "aot"])
+  (let loop ([args args] [src #f] [out #f] [dump? #f] [backend "aot"] [prelude? #t])
     (cond
       [(null? args)
-       (unless src (error 'compile "usage: compile.ss SRC.scm [-o OUT] [--dump] [--backend aot|jit|bitcode]"))
+       (unless src (error 'compile "usage: compile.ss SRC.scm [-o OUT] [--dump] [--backend aot|jit|bitcode] [--no-prelude]"))
        (let* ([out (or out (strip-ext src))] [ll (string-append out ".ll")])
-         (compile-file src ll dump?)
+         (compile-file src ll dump? prelude?)
          (case (string->symbol backend)
            [(aot)
             (link ll out)
@@ -121,9 +144,10 @@
             (require-llvm-tools)
             (run-jit ll out)]
            [else (error 'compile "unknown backend (want aot|jit|bitcode)" backend)]))]
-      [(string=? (car args) "-o") (loop (cddr args) src (cadr args) dump? backend)]
-      [(string=? (car args) "--dump") (loop (cdr args) src out #t backend)]
-      [(string=? (car args) "--backend") (loop (cddr args) src out dump? (cadr args))]
-      [else (loop (cdr args) (car args) out dump? backend)])))
+      [(string=? (car args) "-o") (loop (cddr args) src (cadr args) dump? backend prelude?)]
+      [(string=? (car args) "--dump") (loop (cdr args) src out #t backend prelude?)]
+      [(string=? (car args) "--backend") (loop (cddr args) src out dump? (cadr args) prelude?)]
+      [(string=? (car args) "--no-prelude") (loop (cdr args) src out dump? backend #f)]
+      [else (loop (cdr args) (car args) out dump? backend prelude?)])))
 
 (main (command-line-arguments))

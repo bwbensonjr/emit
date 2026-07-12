@@ -61,9 +61,16 @@ The first production slice (`src/`) implements the spine as hand-rolled `match` 
 one observable intermediate language per stage (`--dump`):
 
 ```
-read (host) → parse+rename → recognize-let → convert-assignments
-            → convert-closures → lambda-lift+lower → emit .ll → clang(+runtime,+libgc)
+read (host) → prepend prelude → collect-toplevel → expand → parse+rename → recognize-let
+            → convert-assignments → convert-closures → lambda-lift+lower
+            → emit .ll → clang(+runtime,+libgc)
 ```
+
+**Prelude.** Before `collect-toplevel`, the driver prepends the forms of `src/prelude.scm`
+(a small standard library: `not`, `list`, `length`, `reverse`, `append`, `map`, `memq`,
+`assq`) to the user program's forms, with **user-wins shadowing** (a user define of the same
+name drops the prelude's). This gives reusable Scheme code — and, later, the reader — a home
+without a module system. `--no-prelude` compiles a program's forms alone.
 
 | stage | IL shape (s-expr) | file |
 |-------|-------------------|------|
