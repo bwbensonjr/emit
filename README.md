@@ -49,7 +49,8 @@ test/repl-batch-tests.sh        # persistent globals via batch build (redefiniti
 ### Interactive REPL
 
 `--repl` runs a read-eval-print loop backed by a **persistent LLVM ORC/LLJIT host**
-(`src/repl/host.cpp`, built via `src/repl/build-host.sh` — automatically on first use). Each
+(`src/repl/host.cpp`, built via `make build/repl-host` — automatically, and rebuilt whenever
+the runtime or host sources change). Each
 entered form is compiled to its own module and added to a long-lived JIT in which the GC
 heap, symbol table, and runtime stay alive, so definitions, closures, and heap values
 persist across forms and top-level names can be redefined. Runtime traps (e.g. arity errors)
@@ -62,7 +63,8 @@ whole-program batch letrec supports) is not available interactively.
 
 - `src/` — the compiler: `compile.ss` (driver + `--repl`), `parse.ss`, `passes/`, `emit.ss`,
   `runtime/runtime.c`, and `prelude.scm` (standard library, prepended to every program).
-- `src/repl/` — the persistent REPL host: `host.cpp` (LLVM ORC/LLJIT) and `build-host.sh`.
+- `src/repl/` — the persistent REPL host: `host.cpp` (LLVM ORC/LLJIT); built by the
+  top-level `Makefile` (`build-host.sh` is a thin wrapper over `make build/repl-host`).
 - `demos/` — example programs and the `run-tests.sh` / `run-backends.sh` harnesses.
 - `test/` — REPL test harnesses and the front-end unit tests.
 - `run-all-tests.sh` — top-level runner that invokes every `demos/` and `test/`

@@ -161,11 +161,14 @@
 ;; all session state rolled back so the next form is unaffected.
 (define repl-host-path "build/repl-host")
 
+;; Rebuild the host whenever the runtime/host sources or the recipe changed, not
+;; merely when the binary is missing: the host links a runtime snapshot and the
+;; JIT resolves rt_* from the host process, so a stale binary silently lacks any
+;; rt_* added since it was built (change: fix-stale-repl-host-rebuild).  `make`
+;; no-ops when the host is already up to date.
 (define (ensure-host)
-  (unless (file-exists? repl-host-path)
-    (fprintf (current-error-port) "building REPL host (src/repl/build-host.sh)...\n")
-    (unless (zero? (system "src/repl/build-host.sh"))
-      (error 'repl "failed to build the REPL host"))))
+  (unless (zero? (system "make build/repl-host 1>&2"))
+    (error 'repl "failed to build the REPL host")))
 
 (define (repl-frame text name)          ; host wire frame: "<name> <bytes>\n<ir>"
   (string-append name " "

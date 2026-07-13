@@ -10,9 +10,9 @@ set -u
 cd "$(dirname "$0")/.."
 
 HOST=build/repl-host
-if [ ! -x "$HOST" ]; then
-  echo "building host..."; src/repl/build-host.sh >/dev/null || { echo "host build failed"; exit 1; }
-fi
+# Rebuild the host if the runtime/host sources changed (not just if it is
+# missing): make no-ops when it is already up to date.
+make build/repl-host >/dev/null || { echo "host build failed"; exit 1; }
 
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 pass=0; fail=0

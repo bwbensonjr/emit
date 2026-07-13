@@ -53,7 +53,15 @@ process built on **LLVM 22 ORC v2 / LLJIT** (`src/repl/host.cpp`). It requires t
 LLVM 22 **development** install (headers + `llvm-config`), already provided by the
 `llvm@22` keg used for the JIT/bitcode backends:
 
-    src/repl/build-host.sh            # -> build/repl-host
+    make build/repl-host              # dependency-driven; rebuilds when sources change
+
+The top-level `Makefile` owns the recipe (per-object rules for `runtime-host.o` and
+`host.o`, each also depending on the `Makefile`), so the host is rebuilt whenever
+`src/runtime/runtime.c`, `src/repl/host.cpp`, or the recipe changes — a stale host would
+otherwise silently lack any `rt_*` added since it was last built, breaking the prelude.
+`src/repl/build-host.sh` remains as a thin wrapper over `make build/repl-host`. Staleness
+is by mtime, so a `git checkout`/`clone` that sets source mtimes behind an existing binary
+may not trigger a rebuild; recover with `touch` on the source or `make clean`.
 
 The build:
 
