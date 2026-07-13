@@ -102,6 +102,10 @@ run3 rdquote   demos/reader-quote.scm     '(quote x)'               # reader: co
 run3 rdlex     demos/reader-lexical.scm   '(3 9 65 32 10 (a . b) (x y . z))'  # reader: escapes, named chars, dotted pairs
 run3 macrouser demos/macro-user.scm       '(3 10 10 11)'            # define-syntax + ellipsis
 run3 macrohyg  demos/macro-hygiene.scm    '(2 1 99 5 5)'            # macro hygiene
+run3 qqunq     demos/qq-unquote.scm       '(a 2 b)'                 # quasiquote: unquote a value
+run3 qqspl     demos/qq-splice.scm        '(0 1 2 3)'               # quasiquote: unquote-splicing -> append
+run3 qqplain   demos/qq-plain.scm         '(a b c)'                 # quasiquote: constant (no unquotes)
+run3 qqnest    demos/qq-nested.scm        a                         # quasiquote: nested, inner intact
 
 echo "-------------------------------------------"
 echo "$pass passed, $fail failed"

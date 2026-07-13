@@ -90,6 +90,12 @@ echo "macro demos"
 check macrouser demos/macro-user.scm    '(3 10 10 11)'  # define-syntax: swap!/ellipsis/my-let
 check macrohyg  demos/macro-hygiene.scm '(2 1 99 5 5)'  # hygiene: introduced temps don't capture
 
+echo "quasiquote demos"
+check qqunq   demos/qq-unquote.scm '(a 2 b)'    # `,x unquote splices a value
+check qqspl   demos/qq-splice.scm  '(0 1 2 3)'  # `,@ys unquote-splicing -> append
+check qqplain demos/qq-plain.scm   '(a b c)'    # quasiquote, no unquotes -> constant
+check qqnest  demos/qq-nested.scm  a            # nested quasiquote left intact
+
 echo "-------------------------------------------"
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

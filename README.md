@@ -101,7 +101,9 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
   structural `equal?`.
 - Variadic `lambda`, dotted rest parameters, `apply`, and runtime arity checking — on the
   uniform `argc`+`overflow` calling convention, preserving `musttail`.
-- `quote` of symbols and arbitrary nested structure.
+- `quote` of symbols and arbitrary nested structure; `quasiquote` (`` ` ``/`,`/`,@`) over
+  list structure with nesting-level tracking — a built-in expander transformer that lowers
+  to `cons`/`append`/`list`/`quote`.
 
 **Data & runtime**
 - Fixnums, booleans, `()`, pairs, closures, boxes; **interned symbols and characters**
@@ -120,7 +122,7 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
 - `read-from-string` — a recursive-descent Scheme reader (integers, symbols, lists,
   dotted/improper lists, `#t`/`#f`, characters incl. named `#\newline`/`#\space`/…,
   `"strings"` with `\n`/`\t`/`\r`/`\\`/`\"`/`\xHH;` escapes, `#(...)` vectors, `'`-quote
-  sugar, `;` comments).
+  and `` ` ``/`,`/`,@` quasiquote sugar, `;` comments).
 
 **Backends & process**
 - AOT / JIT / bitcode from one emitted `.ll`, with a 3-way equivalence harness.
@@ -132,9 +134,6 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
 - OpenSpec-driven changes; decisions (framework, calling convention) backed by spikes.
 
 ## Not yet done
-
-**Near-term (additive)**
-- Reader/derived form: `quasiquote` (`` ` ``/`,`/`,@`).
 
 **Larger language features**
 - **Macros (follow-ons)** — `let-syntax`/`letrec-syntax` (local macros), procedural /

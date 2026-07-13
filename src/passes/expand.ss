@@ -18,9 +18,13 @@
 (define *ellipsis* '...)
 (define *wildcard* '_)
 
-;; core forms recursed into structurally (never treated as macros)
+;; core forms recursed into structurally (never treated as macros).
+;; quasiquote/unquote/unquote-splicing are intercepted by `exp` (rewritten to
+;; core forms before parse); they appear here only so hygiene's `known` set
+;; leaves them un-renamed.
 (define *core-keywords* '(quote if lambda let letrec begin set! define apply
-                          define-syntax syntax-rules))
+                          define-syntax syntax-rules
+                          quasiquote unquote unquote-splicing))
 ;; comparison heads handled by the hand-written desugar but not in *prims*
 (define *extra-op-keywords* '(> <= >=))
 
@@ -217,6 +221,10 @@
         (let ([h (car e)])
           (cond
             [(eq? h 'quote) e]                    ; do not descend into quoted data
+            [(eq? h 'quasiquote)                  ; rewrite, then re-expand the unquoted holes
+             (exp1 (qq (cadr e) 1))]
+            [(memq h '(unquote unquote-splicing))
+             (error 'expand "unquote/unquote-splicing outside quasiquote" e)]
             [(macro-lookup h) => (lambda (entry) (exp (apply-macro entry e) (+ depth 1)))]
             [(eq? h 'lambda) `(lambda ,(cadr e) ,@(map exp1 (cddr e)))]
             [(eq? h 'let)
@@ -237,6 +245,29 @@
 (define (rewrite-named-let name binds body)
   `(letrec ([,name (lambda ,(map car binds) ,@body)])
      (,name ,@(map cadr binds))))
+
+;; quasiquote: rewrite a quasiquoted datum `d` at nesting `level` into core forms
+;; (cons/append/list/quote).  Unquoted expressions are emitted as-is; the caller
+;; re-expands the whole result, so they are expanded within the fixpoint (D2).
+;; This is the standard R7RS quasiquote algorithm restricted to list structure.
+(define (qq d level)
+  (cond
+    [(and (pair? d) (eq? (car d) 'unquote))               ; (unquote x)
+     (if (= level 1)
+         (cadr d)                                          ; level 1: splice the expression
+         `(list (quote unquote) ,(qq (cadr d) (- level 1))))]  ; nested: keep structurally
+    [(and (pair? d) (eq? (car d) 'unquote-splicing))      ; bare (unquote-splicing x)
+     (if (= level 1)
+         (error 'expand "unquote-splicing not in list context" d)
+         `(list (quote unquote-splicing) ,(qq (cadr d) (- level 1))))]
+    [(and (pair? d) (eq? (car d) 'quasiquote))            ; nested quasiquote: level+1
+     `(list (quote quasiquote) ,(qq (cadr d) (+ level 1)))]
+    [(and (pair? d) (pair? (car d))                       ; list with leading splice
+          (eq? (car (car d)) 'unquote-splicing) (= level 1))
+     `(append ,(cadr (car d)) ,(qq (cdr d) level))]
+    [(pair? d)                                            ; general pair
+     `(cons ,(qq (car d) level) ,(qq (cdr d) level))]
+    [else `(quote ,d)]))                                  ; atom / () / boolean
 
 ;; ---- hand-written arithmetic / comparison desugaring ---------------------
 ;; N-ary arithmetic -> nested binary forms.  Operands are expanded first, then

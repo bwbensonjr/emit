@@ -128,7 +128,8 @@
 ;;; as (datum . next-index) pairs.  Characters are classified by codepoint
 ;;; (char->integer) because char literals are not interned (so eq? on them does
 ;;; not hold).  v1 reads integers, symbols, lists, #t/#f, #\char, "strings"
-;;; (no escapes), and 'quote sugar, skipping whitespace and ; line comments.
+;;; (no escapes), 'quote and `/,/,@ quasiquote sugar, skipping whitespace and
+;;; ; line comments.
 
 (define (rd-ws? c)                       ; space, tab, newline, return
   (let ([k (char->integer c)])
@@ -254,6 +255,20 @@
     (let ([r (rd-datum s n j)])
       (cons (list (quote quote) (car r)) (cdr r)))))
 
+(define (rd-quasi s n i)                 ; `x -> (quasiquote x)
+  (let ([j (rd-skip-ws s n i)])
+    (let ([r (rd-datum s n j)])
+      (cons (list (quote quasiquote) (car r)) (cdr r)))))
+
+(define (rd-unquote s n i)               ; ,x -> (unquote x); ,@x -> (unquote-splicing x)
+  (if (and (< i n) (= (char->integer (string-ref s i)) 64))     ; @  -> splicing
+      (let ([j (rd-skip-ws s n (+ i 1))])
+        (let ([r (rd-datum s n j)])
+          (cons (list (quote unquote-splicing) (car r)) (cdr r))))
+      (let ([j (rd-skip-ws s n i)])
+        (let ([r (rd-datum s n j)])
+          (cons (list (quote unquote) (car r)) (cdr r))))))
+
 (define (rd-dot? s n j)                  ; a standalone `.` token at j (dotted-pair marker)
   (and (= (char->integer (string-ref s j)) 46)      ; .
        (= (rd-token-end s n (+ j 1)) (+ j 1))))      ; next char is a delimiter -> lone .
@@ -277,6 +292,8 @@
     (cond
       [(= k 40) (rd-list s n (+ i 1) (quote ()))]          ; (
       [(= k 39) (rd-quote s n (+ i 1))]                    ; '
+      [(= k 96) (rd-quasi s n (+ i 1))]                    ; `
+      [(= k 44) (rd-unquote s n (+ i 1))]                  ; ,
       [(= k 34) (rd-string s n (+ i 1))]                   ; "
       [(= k 35) (rd-hash s n (+ i 1))]                     ; #
       [else (rd-atom s n i)])))
