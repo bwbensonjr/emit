@@ -72,6 +72,7 @@ check strops  demos/string-ops.scm     '(65 3 #\b "ell" foo)'  # char->integer/l
 check strsym  demos/string-symbol.scm  '#t'                    # string->symbol interns (eq? to literal)
 check struni  demos/string-unicode.scm '(5 #\é "日本")'         # codepoint-indexed ops over non-ASCII
 check strchlib demos/string-char-lib.scm '(#t #f #t #f "foobar" "xxx" (#\a #\b) "héllo")'  # char cmp + string ctor library
+check strmut  demos/string-mutation.scm '("aba" (2 #\é) #\y #\x)'  # string-set! (splice, alias) + string-copy
 
 echo "prelude demos"
 check prelude demos/prelude.scm        '(1 4 9 6 5 4)'  # standard library: list/map/reverse/append

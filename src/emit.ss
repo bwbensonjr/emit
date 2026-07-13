@@ -117,6 +117,7 @@
     (string=? "rt_string_eq") (string-append "rt_string_append")
     (symbol->string "rt_symbol_to_string") (list->string "rt_list_to_string")
     (make-string "rt_make_string_fill")
+    (string-set! "rt_string_set") (string-copy "rt_string_copy")
     (make-vector "rt_make_vector") (vector-ref "rt_vector_ref")
     (vector-set! "rt_vector_set") (vector-length "rt_vector_length")
     (vector? "rt_vector_p")))
@@ -385,6 +386,8 @@
    "declare i64 @rt_symbol_to_string(i64)\n"
    "declare i64 @rt_list_to_string(i64)\n"
    "declare i64 @rt_make_string_fill(i64, i64)\n"
+   "declare i64 @rt_string_set(i64, i64, i64)\n"
+   "declare i64 @rt_string_copy(i64)\n"
    "declare i64 @rt_make_vector(i64, i64)\n"
    "declare i64 @rt_vector_ref(i64, i64)\n"
    "declare i64 @rt_vector_set(i64, i64, i64)\n"

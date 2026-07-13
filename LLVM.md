@@ -153,7 +153,10 @@ as `#\` followed by the codepoint UTF-8-encoded, with a small named-char set
 byte-array global (`@.str.lit.N`) plus a per-use `rt_make_string(ptr, len)`; character
 literals emit `rt_make_char(codepoint)`. Strings/chars are **not interned** — like quoted
 lists they carry no `eq?` identity (deferred with `eqv?` and the string/char operation
-library, which also owns the byte-vs-codepoint length/indexing decision).
+library, which also owns the byte-vs-codepoint length/indexing decision). Strings are
+**mutable**: `string-set!` (`rt_string_set`) splices the UTF-8 buffer for the new codepoint
+and rewrites the object's length/pointer words in place, so the identity is preserved and
+aliases observe the change (O(n) per set); `string-copy` gives an independent duplicate.
 
 **Vectors (tag 7, header-word).** A vector is an extended object
 `{HDR_VECTOR, length, elem0, …}` — mutable and fixed-length, each element a tagged `i64`.

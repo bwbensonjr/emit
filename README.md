@@ -106,10 +106,11 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
 **Data & runtime**
 - Fixnums, booleans, `()`, pairs, closures, boxes; **interned symbols and characters**
   (`eq?` / `eqv?` by identity); **strings and characters** that are Unicode-capable (UTF-8
-  storage, codepoint-indexed operations); **vectors** (mutable, fixed-length, `#(...)` syntax).
+  storage, codepoint-indexed operations, in-place `string-set!`); **vectors** (mutable,
+  fixed-length, `#(...)` syntax).
 - Primitives: `+ - * = < cons car cdr null? pair? eq? eqv? equal? not char->integer
   integer->char string-length string-ref substring string->symbol string=? string-append
-  symbol->string list->string make-string`.
+  symbol->string list->string make-string string-set! string-copy`.
 - C runtime under Boehm GC; a tag-walking value printer.
 
 **Library & reader**
@@ -133,7 +134,6 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
 ## Not yet done
 
 **Near-term (additive)**
-- String mutation: `string-set!` (and `string-copy`) — the one deferred string op.
 - Reader/derived form: `quasiquote` (`` ` ``/`,`/`,@`).
 
 **Larger language features**

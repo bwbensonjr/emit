@@ -360,6 +360,33 @@ val rt_make_string_fill(val k, val ch) {
   return rt_make_string(buf, len1 * n);
 }
 
+/* --- string mutation (string-mutation change) --------------------------- */
+/* string-set!: replace codepoint `idx` with `ch` in place.  UTF-8 is variable
+ * width, so splice: rebuild the byte buffer with ch's bytes in place of the old
+ * codepoint's, then overwrite the object's byte-length (word 1) and bytes
+ * pointer (word 2) so the identity (and every alias) sees the update.  O(n).
+ * The old buffer and `s` stay reachable across the allocation (s is live and
+ * word 2 still points at the old bytes until the final store). */
+val rt_string_set(val s, val idx, val ch) {
+  const unsigned char *b = (const unsigned char *)str_bytes(s);
+  intptr_t blen = str_len(s);
+  intptr_t so = utf8_offset(b, blen, UNFIX(idx));
+  intptr_t eo = so + utf8_seq_len(b[so]);          /* byte range of the old codepoint */
+  unsigned char enc[4];
+  int le = utf8_encode(char_cp(ch), enc);
+  intptr_t newlen = blen - (eo - so) + le;
+  char *buf = (char *)GC_MALLOC_ATOMIC((size_t)newlen + 1);
+  memcpy(buf, b, (size_t)so);                       /* prefix */
+  memcpy(buf + so, enc, (size_t)le);                /* replacement */
+  memcpy(buf + so + le, b + eo, (size_t)(blen - eo)); /* suffix */
+  buf[newlen] = '\0';
+  as_ptr(s)[1] = (val)newlen;
+  as_ptr(s)[2] = (val)buf;
+  return NIL_V;
+}
+/* string-copy: a fresh string object over a fresh copy of the bytes. */
+val rt_string_copy(val s) { return rt_make_string(str_bytes(s), str_len(s)); }
+
 /* --- vectors (tag-7 HDR_VECTOR: { HDR_VECTOR, length, elem... }) --------- */
 static intptr_t vec_len(val v) { return (intptr_t)as_ptr(v)[1]; }
 val rt_make_vector(val k, val fill) {
