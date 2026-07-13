@@ -33,13 +33,17 @@ chez --libdirs src --script src/compile.ss --repl --no-prelude # faster start, n
 #   scheme> (sq 9)          => 81
 #   scheme> (define sq 100) => 100   ; redefinition; later forms see the new binding
 
-# test harnesses
+# run every harness below in one shot, with a roll-up summary
+./run-all-tests.sh
+
+# test harnesses (each also runnable on its own)
 demos/run-tests.sh              # compile+run every demo, compare to expected values
 demos/run-backends.sh           # assert AOT = JIT = bitcode for each demo
 test/repl-frontend.ss           # REPL front-end unit tests (chez --script)
 test/repl-host-tests.sh         # persistent host, end-to-end
 test/repl-interactive-tests.sh  # interactive `--repl`, end-to-end
 test/repl-equiv-tests.sh        # REPL final value == batch build value
+test/repl-batch-tests.sh        # persistent globals via batch build (redefinition, recursion)
 ```
 
 ### Interactive REPL
@@ -61,6 +65,8 @@ whole-program batch letrec supports) is not available interactively.
 - `src/repl/` — the persistent REPL host: `host.cpp` (LLVM ORC/LLJIT) and `build-host.sh`.
 - `demos/` — example programs and the `run-tests.sh` / `run-backends.sh` harnesses.
 - `test/` — REPL test harnesses and the front-end unit tests.
+- `run-all-tests.sh` — top-level runner that invokes every `demos/` and `test/`
+  harness and prints a pass/fail roll-up.
 - `openspec/` — specs (`specs/`), archived changes (`changes/archive/`), and forward-looking
   notes (`explorations/`).
 - `LLVM.md`, `docs/PIPELINE.md` — value representation / calling convention, and the pass
