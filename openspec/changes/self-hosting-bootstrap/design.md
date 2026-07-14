@@ -111,6 +111,51 @@ reusable assembly script, and each recorded gap becomes its own small prerequisi
 Land `internal-defines` (G1) and `emit-cstring-in-language` (G2) as new prerequisite changes,
 resolve the G3 path-C-vs-A fork, then resume at task 2.1.
 
+## Gap sweep results (2026-07-14, [[self-host-gap-sweep]])
+
+The sweep is done: `tools/assemble-core.ss` produces `build/core-self.scm` (the whole core as
+one program; sanity-checked byte-identical to the reference core, task 1.1–1.2), and that file
+was compiled with scheme-llvm, applying minimum shims and logging each gap until it **compiled
+clean end-to-end** (exit 0, ~1.98 MB of IR that `llvm-as` parses). The backlog below is now
+finite and sized. Method note: the shims lived in a throwaway sandbox (`build/sweep/`), never
+in `src/`; the assembly script's one real transform beyond de-`library`ing is renaming `match`'s
+library-internal helper `match-pat` (it collides with `expand.ss`'s `match-pat` function once
+flattened) — done in the script, not the core.
+
+**Status of previously-listed gaps:**
+
+- **G4 (apply over binary `string-append`)** — subsumed by **G8** below; it is one instance of
+  the general "primitive used as a first-class value" gap.
+- **G5 (reader / `#x` literals)** — ✅ **effectively CLOSED for the core.** No `#x`/`#b`/`#o`
+  literals remain in any core source (`emit-cstring-in-language` removed the last ones), and the
+  in-language `read-all-from-string` reads **all 149 forms of `core-self.scm` and all of
+  `prelude.scm`** exactly as Chez does — `[...]` brackets, dotted pairs, negative numbers,
+  `#\name` chars, and `#;` datum comments all work. The only unsupported reader feature is
+  `#| ... |#` block comments, and the core uses none. No reader change is needed to self-host.
+
+**Newly enumerated gaps (G6–G10), each sized + fix path:**
+
+| Gap | Construct | Where | Class | Fix path | Size |
+|-----|-----------|-------|-------|----------|------|
+| **G6** | scheme-llvm's quasiquote expander `qq` crashes (`cadr` on a bare `(unquote)`) when a quasiquote template contains the literal symbols `unquote`/`unquote-splicing`/`quasiquote` as list *data* — e.g. `` `(list (quote unquote) ,x) `` | `src/passes/expand.ss` `qq` (lines ~281–290); the crashing source is the expander's own nested-quasiquote handling | unsupported special form (expander bug) | **grow language**: guard each head check with `(pair? (cdr d))` so a bare `(unquote)` falls through to general-pair building | tiny (3-line guard) |
+| **G7** | 2-armed `if` (`(if c t)`, no else) | `parse-expr` accepts only `(if a b c)`. Hit by the `(if #f #f)` void idiom (`core.ss` `no-dump`, one `emit.ss` site) **and pervasively by the `case` macro's no-`else` default** (`prelude.scm` `case` base case `((_ k) (if #f #f))`, used by `expand-arith`/`cmp-pair`) | unsupported special form | **grow parser** (default a missing else to the unspecified value) — cleanest, fixes `case` too. Alt: patch the `case` macro + rewrite the ~2 void-idiom sites | small |
+| **G8** | Primitives used as first-class values: `car`, `cons`, `string-append` passed to `map`/`apply` (`(map car …)`, `(map cons …)`, `(apply string-append …)`). Prims are reserved keywords, so a bare reference is unbound. Subsumes **G4**. | `parse.ss`, `emit.ss`, `expand.ss`, `convert-*` (all the `(map car binds)` sites); `apply string-append` throughout `emit.ss` | missing prelude proc / language | **grow prelude**: eta-expanding wrappers named after the prims — `(define (car x) (car x))`, `(define (cons a b) (cons a b))` — plus a **variadic `string-append`** that folds the binary primcall (a 2-arg call in its body stays a primcall). Bare refs then resolve to the wrapper; call sites keep the fast primcall | small–medium |
+| **G9** | Missing type-predicate primitives: `symbol?`, `string?`, `char?`, `boolean?`, `integer?`, `exact?` | `parse-expr`'s literal/self-eval dispatch and `param-*`/`rename` use them pervasively | missing primitive (needs runtime tag check) | **grow language + runtime**: add `rt_*_p` primitives and `prim-table`/`*prims*` entries (mirror the existing `pair?`/`null?`/`vector?`) | medium (6 preds + runtime) |
+| **G10** | Missing prelude list/utility procedures: `andmap`, `memp`, `for-each`, `cadddr`, `list?`, `list-ref`, `list-tail`, `list-head`, `make-list`, `iota`, `max`, `zero?`, `void`, and the 1-char `string` constructor | used across `parse.ss` (`andmap`), `expand.ss` (`memp`, `for-each`, `iota`), `emit.ss` (`string`, `for-each`, list ops) | missing prelude proc | **grow prelude**: all expressible in pure Scheme over existing prims (straightforward) | small each; ~14 procs |
+
+**No deep gap reshapes the plan.** The core uses **no records** (no `define-record`), **no
+hashtables/`sort`/`random`** (confirms the clean nondeterminism audit — the fixed point stays
+attainable), and **no `call/cc`/`dynamic-wind`/`values`**. The full pipeline emitted valid IR
+without any tail-call-depth or closure-limit complaint at compile time. **Path C stays viable**;
+nothing here argues for path A. (Runtime tail-call behavior of the *self-compiled* core is still
+unverified — that is the actual stage-1 build + triple test, task 2.x.)
+
+**Suggested ordering for the stage-1 build (task 2.1):** G6 → G7 → G9 (unblock the front end),
+then G8 + G10 (grow the prelude), then G3 (path-C I/O shell). None are large; each becomes its
+own small prerequisite change, exactly as G1/G2 were. The assembly script
+(`tools/assemble-core.ss`, sanity `tools/assemble-sanity.ss`) is reused by task 2.1 to build the
+real `schemec`.
+
 ## Open Questions
 
 - Stage-0 artifact policy (D3).
