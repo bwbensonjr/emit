@@ -115,33 +115,36 @@ A and C are gated on the same milestone; B sidesteps it at the cost of the proje
 ```
   ✅ match off Chez              (syntax-rules ,x matcher — done)
   ✅ vectors + runtime prims     (done)
-  ───────────────────────────── remaining ─────────────────────────────
-  0. core/driver decomposition   (pure forms→IR text  ⟂  I/O + subprocess driver)
-  1. cheap prelude wins          (cxr combinators; `case` macro)
-  2. number formatting           (quotient/remainder prims; then number->string)
-  3. multiple values             (grow `let-values`/`values`, or avoid via pairs)
-  4. error/guard downgrade       (diagnose+abort on the rt_trap hook)
-  5. reader from stdin           (extend read-from-string to a full stream)
-  6. self-apply                  → path C (subprocess), then embed → path A
+  ────── remaining (each is now a proposed change) ──────
+  0. core/driver decomposition   → decompose-core-driver
+  1. cheap prelude wins          → prelude-cxr-and-case
+  2. number formatting           → integer-division-number-format
+  3. multiple values             → multiple-values
+  4. error/guard downgrade       → error-and-guard-conditions
+  5. reader from stdin           → stdin-source-reader
+  6. self-apply (fixed point)    → self-hosting-bootstrap  (gated on 0–5)
 ```
 
-0. **Core/driver decomposition** *(new, highest-leverage structural move)* — split the
+0. **Core/driver decomposition** (`decompose-core-driver`) *(highest-leverage structural
+   move)* — split the
    compiler into a **pure core** (forms → IR text; needs only lists/symbols/strings/vectors)
    and a **driver** (file I/O, `process`/clang, ports). Self-hosting then targets the *core*
    (read source on stdin → IR on stdout), and the whole filesystem/subprocess surface drops
    out of the target — the driver can stay Chez/bash indefinitely. The REPL host already
    speaks text-in→IR, and `read-from-string` already exists, so both endpoints are in place.
-1. **Cheap prelude wins** — `cadr`/`caddr`/… and a `case` macro; afternoon-sized, no runtime
-   changes. Good momentum after the structural split.
-2. **Number formatting** — add `quotient`/`remainder` runtime primitives, then
-   `number->string` in-language (unblocks `emit.ss`, which is all `string-append` +
-   `number->string`).
-3. **Multiple values** — the ~21 `let-values` sites: grow real `values`/`call-with-values`,
-   or refactor to return pairs.
-4. **`error`/`guard`** — downgrade to diagnose+abort on the existing `rt_trap` hook (only ~1
-   real R6RS `guard` site — REPL recovery — now that the matcher owns its own `guard` clause).
-5. **Reader** — extend `read-from-string` to consume a full stdin stream.
-6. **Self-apply** — compile the core with itself → path C (subprocess), then embed → A.
+1. **Cheap prelude wins** (`prelude-cxr-and-case`) — `cadr`/`caddr`/… and a `case` macro;
+   afternoon-sized, no runtime changes. Good momentum after the structural split.
+2. **Number formatting** (`integer-division-number-format`) — add `quotient`/`remainder`
+   runtime primitives, then `number->string` in-language (unblocks `emit.ss`, which is all
+   `string-append` + `number->string`).
+3. **Multiple values** (`multiple-values`) — the ~21 `let-values` sites: grow real
+   `values`/`call-with-values`, or (recommended) refactor to return pairs.
+4. **`error`/`guard`** (`error-and-guard-conditions`) — downgrade to diagnose+abort on the
+   existing `rt_trap` hook (only ~1 real R6RS `guard` site — REPL recovery — now that the
+   matcher owns its own `guard` clause).
+5. **Reader** (`stdin-source-reader`) — extend `read-from-string` to read a whole program.
+6. **Self-apply** (`self-hosting-bootstrap`) — compile the core with itself → path C
+   (subprocess), then embed → A; the triple test is the acceptance criterion.
 
 **Validation at first light (the triple test).** Compile the core with Chez, use *that*
 binary to compile the core again, and check the two IR outputs are byte-identical. A stable
@@ -163,6 +166,6 @@ fixed point is the proof that self-hosting actually holds.
 
 ## Not in scope here
 
-This is a roadmap, not a change. Each numbered step above is a candidate for its own
-OpenSpec change when the time comes. `interactive-repl` (Groups 5–6 remaining) does not
+This is the roadmap; the numbered steps are now each a proposed OpenSpec change (see the
+ordering above). They are the backlog, applied roughly in order (0 first, 6 last). `interactive-repl` (Groups 5–6 remaining) does not
 depend on any of this — it completes the Chez-hosted REPL first.
