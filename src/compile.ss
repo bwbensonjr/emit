@@ -10,13 +10,10 @@
 
 (import (chezscheme) (match) (util))
 
-(include "src/parse.ss")
-(include "src/passes/expand.ss")
-(include "src/passes/recognize-let.ss")
-(include "src/passes/convert-assignments.ss")
-(include "src/passes/convert-closures.ss")
-(include "src/passes/lower.ss")
-(include "src/emit.ss")
+;; The pure forms->IR core (reader/expander/passes/emit) lives in core.ss.  This
+;; file is the driver: it owns every effect -- file reads/writes, the host target
+;; header, and the toolchain/JIT -- and delegates the forms->IR step to the core.
+(include "src/core.ss")
 
 (define runtime-c "src/runtime/runtime.c")
 (define gc-inc "/opt/homebrew/include")
@@ -43,13 +40,11 @@
            (loop (cons (string-append ln "\n") acc))]
           [else (loop acc)])))))
 
-(define (read-program path)   ; -> ordered list of all top-level forms
-  (let ([p (open-input-file path)])
-    (let loop ([forms '()])
-      (let ([e (read p)])
-        (if (eof-object? e)
-            (begin (close-port p) (reverse forms))
-            (loop (cons e forms)))))))
+(define (read-program path)   ; -> ordered list of all top-level forms (file I/O)
+  (let* ([p (open-input-file path)]
+         [forms (read-forms p)])
+    (close-port p)
+    forms))
 
 (define (dump stage form)
   (fprintf (current-error-port) ";; ==== after ~a ====\n" stage)
@@ -57,53 +52,25 @@
   (newline (current-error-port)))
 
 ;; --- prelude (standard library prepended to every program) ---------------
+;; The prelude is a *file*, so reading it is the driver's job; the pure core's
+;; `with-prelude` merges the already-read forms (user-wins shadowing).
 (define prelude-path "src/prelude.scm")
 
-;; name defined by a top-level (define ...) form, or #f for a non-define form
-(define (define-name f)
-  (and (pair? f) (eq? (car f) 'define)
-       (let ([sig (cadr f)]) (if (pair? sig) (car sig) sig))))
+;; Read source (+ prelude) and assemble the ordered form list the core compiles.
+(define (program-forms src prelude?)
+  (let ([user-forms (read-program src)])
+    (if prelude?
+        (with-prelude (read-program prelude-path) user-forms)
+        user-forms)))
 
-;; prepend prelude forms to the user's, dropping any prelude define whose name
-;; the user also defines (user-wins shadowing, so the prelude never clobbers).
-(define (with-prelude prelude-forms user-forms)
-  (let ([user-names (filter (lambda (x) x) (map define-name user-forms))])
-    (append
-      (filter (lambda (f)
-                (let ([n (define-name f)])
-                  (not (and n (memq n user-names)))))
-              prelude-forms)
-      user-forms)))
-
-;; names bound at the top level (prelude + program), used both as the hygiene
-;; "known bindings" set and, with the fixed keyword/primitive sets, to decide
-;; which template identifiers a macro is allowed to introduce.
-(define (compute-known macro-env runtime-forms)
-  (union* (list *core-keywords* *prims* *extra-op-keywords*
-                (map car macro-env)
-                (filter (lambda (x) x) (map define-name runtime-forms)))))
-
+;; Driver: assemble forms, run the pure core, prepend the host target header,
+;; and write the .ll.  The header (a clang subprocess) is an effect and stays
+;; here so the core stays pure and host-agnostic.
 (define (compile-file src ll dump? prelude?)
-  (reset-counter!)
-  (let* ([user-forms (read-program src)]
-         [forms (if prelude?
-                    (with-prelude (read-program prelude-path) user-forms)
-                    user-forms)])
-    (let-values ([(macro-env runtime-forms) (collect-define-syntax forms)])
-      (let* ([known (compute-known macro-env runtime-forms)]
-             [top   (collect-toplevel runtime-forms)]
-             [expd  (expand top macro-env known)]
-             [core  (rename-program (parse-program expd))]
-             [a     (recognize-let core)]
-             [b     (convert-assignments a)]
-             [c     (convert-closures b)]
-             [d     (lower-program c)]
-             [text  (string-append (host-target-header) (emit-program d))])
-        (when dump?
-          (dump "collect-toplevel" top) (dump "expand" expd)
-          (dump "parse+rename" core) (dump "recognize-let" a)
-          (dump "convert-assignments" b) (dump "convert-closures" c) (dump "lower" d))
-        (let ([out (open-output-file ll 'replace)]) (display text out) (close-port out))))))
+  (let* ([forms (program-forms src prelude?)]
+         [ir    (compile-forms forms (if dump? dump no-dump))]
+         [text  (string-append (host-target-header) ir)])
+    (let ([out (open-output-file ll 'replace)]) (display text out) (close-port out))))
 
 ;; --- backends -----------------------------------------------------------
 ;; One emitted OUT.ll drives three exits.  AOT stays on the system clang
@@ -178,10 +145,8 @@
 (define (condition->string e)
   (with-output-to-string (lambda () (display-condition e))))
 
-;; lower one core-IL expression through the shared back half of the pipeline.
-(define (repl-lcode il)
-  (lower-program (convert-closures (convert-assignments (recognize-let il)))))
-
+;; `repl-lcode` (the shared back half of the pipeline for one core-IL
+;; expression) lives in core.ss -- it is the entry point the REPL overlaps with.
 (define (run-repl prelude?)
   (ensure-host)
   (reset-counter!)
@@ -270,16 +235,31 @@
               (begin (fprintf err "\n") (close-port to) (exit 0))
               (begin (feed form) (loop))))))))
 
+;; --- core filter mode: stdin source text -> stdout IR text ---------------
+;; The self-hosting-facing shape of the core (design D2): read all of stdin as
+;; source, run the pure pipeline, and write IR to stdout.  The target header and
+;; toolchain are intentionally left to the driver/host, so a future self-hosted
+;; core runs as a plain text filter without any filesystem/subprocess surface.
+(define (emit-ir-filter prelude?)
+  (let* ([user-forms (read-forms (current-input-port))]
+         [forms (if prelude?
+                    (with-prelude (read-program prelude-path) user-forms)
+                    user-forms)]
+         [ir (compile-forms forms no-dump)])
+    (display ir (current-output-port))
+    (flush-output-port (current-output-port))))
+
 ;; --- argument handling ---
 (define (main args)
   (let loop ([args args] [src #f] [out #f] [dump? #f] [backend "aot"] [prelude? #t]
-             [repl? #f])
+             [repl? #f] [emit-ir? #f])
     (cond
       [(null? args)
        (cond
          [repl? (run-repl prelude?)]
+         [emit-ir? (emit-ir-filter prelude?)]
          [else
-          (unless src (error 'compile "usage: compile.ss SRC.scm [-o OUT] [--dump] [--backend aot|jit|bitcode] [--no-prelude]\n   or: compile.ss --repl [--no-prelude]"))
+          (unless src (error 'compile "usage: compile.ss SRC.scm [-o OUT] [--dump] [--backend aot|jit|bitcode] [--no-prelude]\n   or: compile.ss --repl [--no-prelude]\n   or: compile.ss --emit-ir [--no-prelude] < SRC.scm  (IR text on stdout)"))
           (let* ([out (or out (strip-ext src))] [ll (string-append out ".ll")])
             (compile-file src ll dump? prelude?)
             (case (string->symbol backend)
@@ -296,11 +276,12 @@
                (require-llvm-tools)
                (run-jit ll out)]
               [else (error 'compile "unknown backend (want aot|jit|bitcode)" backend)]))])]
-      [(string=? (car args) "-o") (loop (cddr args) src (cadr args) dump? backend prelude? repl?)]
-      [(string=? (car args) "--dump") (loop (cdr args) src out #t backend prelude? repl?)]
-      [(string=? (car args) "--backend") (loop (cddr args) src out dump? (cadr args) prelude? repl?)]
-      [(string=? (car args) "--no-prelude") (loop (cdr args) src out dump? backend #f repl?)]
-      [(string=? (car args) "--repl") (loop (cdr args) src out dump? backend prelude? #t)]
-      [else (loop (cdr args) (car args) out dump? backend prelude? repl?)])))
+      [(string=? (car args) "-o") (loop (cddr args) src (cadr args) dump? backend prelude? repl? emit-ir?)]
+      [(string=? (car args) "--dump") (loop (cdr args) src out #t backend prelude? repl? emit-ir?)]
+      [(string=? (car args) "--backend") (loop (cddr args) src out dump? (cadr args) prelude? repl? emit-ir?)]
+      [(string=? (car args) "--no-prelude") (loop (cdr args) src out dump? backend #f repl? emit-ir?)]
+      [(string=? (car args) "--repl") (loop (cdr args) src out dump? backend prelude? #t emit-ir?)]
+      [(string=? (car args) "--emit-ir") (loop (cdr args) src out dump? backend prelude? repl? #t)]
+      [else (loop (cdr args) (car args) out dump? backend prelude? repl? emit-ir?)])))
 
 (main (command-line-arguments))
