@@ -4,17 +4,23 @@
 - [x] 1.2 Compile the core with scheme-llvm; for any residual unsupported construct, loop back to the relevant prerequisite change and record the gap. — **gaps found (see design.md "Gate-check findings"): G1 internal defines unsupported, G2 emit.ss byte/hex/UTF-8 escaping, G3 path-C I/O shell. Blocks tasks 2–3.**
 - [x] 1.3 Audit for output nondeterminism (gensym counter, ordering) that would break the fixed point. — clean: only the reset-per-compile counter; no hashtables/sort/random.
 
-## 2. Stage-1 build (path C)  — BLOCKED on a codegen bug ([[fix-high-arity-call-convention]])
+## 2. Stage-1 build (path C)  — BLOCKED on a codegen bug ([[fix-closure-self-compilation]])
 
-G3 ([[self-host-io-strategy]]) is now closed and G1/G2/G6–G10 are landed. Attempting task 2.1
-(below) surfaced a **new blocker**: the self-compiled `schemec` builds (2 MB IR, links) but
-hangs/crashes at runtime. Root-caused to a **calling-convention bug**: calls pass `K+3` args
-(`self`, `argc`, `a0..a{K-1}`, `overflow`); at max-arity `K ≥ 6` that is ≥ 9 args, exceeding
-arm64's 8 argument registers, and `tailcc` non-tail calls mishandle the stack-passed arg,
-corrupting the caller's live arguments. The core has arity-7 functions (`ev-if`/`et-if`), so it
-trips this pervasively; all demos are `K ≤ 5`, which is why the suite never caught it (verified
-independent of `-O0`/`-O2`). Fix tracked in [[fix-high-arity-call-convention]]; resume 2.1 once
-it lands. Prelude, toggle, and REPL-scope decisions are D4/D5 in design.md.
+G3 ([[self-host-io-strategy]]) is closed and G1/G2/G6–G10 are landed. Building `schemec`
+surfaced two self-application miscompilations, both invisible to the demo suite (which only
+checks scheme-llvm's *output* for small programs, never scheme-llvm compiling *itself*):
+
+1. **Calling-convention bug — FIXED ([[fix-high-arity-call-convention]], landed).** Calls
+   passed `K+3` args (`self`, `argc`, `a0..a{K-1}`, `overflow`); at max-arity `K ≥ 6` that
+   exceeds arm64's 8 argument registers and `tailcc` non-tail calls corrupted the caller's
+   live args. Fixed by emitting `fastcc`. After this, `schemec` builds and compiles
+   closure-free programs byte-identically.
+2. **Closure miscompilation — OPEN ([[fix-closure-self-compilation]]).** `schemec` fails on any
+   program that produces a closure (`lambda`/`let`/`letrec`/define-of-procedure) with
+   `arity error: expected 2, got 3` raised in its own execution, and segfaults on recursive
+   `letrec`. A distinct self-application bug in the compiler's closure path; blocks 2.1.
+
+Resume 2.1 once (2) lands. Prelude, toggle, and REPL-scope decisions are D4/D5 in design.md.
 
 - [~] 2.1 Build the core AOT to a native `schemec` using the Chez-hosted compiler: assemble the
       core with `tools/assemble-core.ss`, append the `(display (compile-source-string
