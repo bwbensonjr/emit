@@ -217,7 +217,7 @@ Two clarifying observations:
   1b. Path A embedding — incremental REPL  (repl-embedded-incremental)
        Port run-repl's stateful orchestration (persistent env, per-form
        modules, compile-error rollback) into the embedded compiler; retire
-       Chez from --repl. Gated on the error/guard downgrade for rollback.
+       Chez from --repl. Gated on r7rs-exceptions-subset (in-language guard) for rollback.
        ← reuses 1a's primitives; adds the per-form entry-name handshake.
          Do NOT hardcode one flat world.
 

@@ -17,9 +17,9 @@ dev→ship fidelity for the primary development loop.
   entry-thunk name), reusing the entry-name handshake (the compiler returns the per-form
   thunk symbol it chose).
 - Confront **compile-error rollback**: preserve "a bad form is reported and the session
-  survives" for compile-time errors, which depends on the `error`/`guard` downgrade
-  (`openspec/explorations/chez-free-repl.md`). Either land that downgrade first or scope a
-  minimal in-language rollback.
+  survives" for compile-time errors, which depends on in-language `guard` — delivered by the
+  `r7rs-exceptions-subset` change (the R7RS-small §6.11 subset: `guard`/`raise`/`error`
+  objects). Land that first, then the rollback is expressible in compiled Scheme.
 - Update `src/repl/host.cpp` to drive the embedded compiler in-process (source text in, no
   IR frame protocol) and `src/compile.ss --repl` to stop shelling out to Chez.
 - Extend the host staleness graph to the embedded compiler; keep the text-IR seam.
@@ -40,7 +40,7 @@ dev→ship fidelity for the primary development loop.
 ## Impact
 
 - **Depends on:** `path-a-embedding` (embedding primitives) and, for graceful compile-error
-  recovery, the `error`/`guard` downgrade.
+  recovery, `r7rs-exceptions-subset` (in-language `guard`/`raise`/error objects).
 - **Code:** the core (ported `run-repl` orchestration + stateful entry), `src/repl/host.cpp`,
   `src/compile.ss` (`--repl` driver), `Makefile`.
 - **Tests:** the REPL end-to-end, interactive, equivalence, and batch harnesses must pass
