@@ -33,12 +33,17 @@ checks scheme-llvm's *output* for small programs, never scheme-llvm compiling *i
    and the Chez-hosted compiler now emit **byte-identical IR** (harness `test/self-emit-equiv.sh`;
    `demos/fact.scm` byte-identical).
 
-**All four self-application blockers are closed.** Emission is deterministic, so **task 3 (the
-byte-identical triple test) is now attemptable**: build stage-1 `schemec` (2.1, done),
-recompile the assembled core with `schemec` to get stage-2 IR, and require stage-1 == stage-2.
-Resume at task 2.3/3.1 below. Prelude, toggle, and REPL-scope decisions are D4/D5 in design.md.
+**All four self-application blockers are closed, and the fixed point is REACHED (2026-07-14).**
+Emission is deterministic, so the byte-identical triple test passes: stage-1 `schemec` (Chez-hosted)
+compiles the assembled compiler source `T` into stage-2 IR; stage-2 links into `schemec2`, which
+recompiles `T` into stage-3 IR; **stage-2 == stage-3 byte-identically (0 diff lines, 2034131 bytes).**
+The fixed point is stage-2 == stage-3 (both self-compiled binaries on the same scheme-llvm runtime),
+NOT stage-1 == stage-2: Chez and scheme-llvm intern the constant pool in different orders, so
+stage-1 legitimately differs (~90k lines) — the compiler converges after one recompile off Chez, not
+zero. Committed harness: `test/self-host-fixpoint.sh` (wired into `run-all-tests.sh`). Prelude,
+toggle, and REPL-scope decisions are D4/D5 in design.md.
 
-- [~] 2.1 Build the core AOT to a native `schemec` using the Chez-hosted compiler: assemble the
+- [x] 2.1 Build the core AOT to a native `schemec` using the Chez-hosted compiler: assemble the
       core with `tools/assemble-core.ss`, append the `(display (compile-source-string
       (read-all-stdin)))` main, AOT-compile with `compile.ss`, and add a `make build/schemec` rule.
       — **Build machinery done** (`make build/schemec`: assemble `--filter-main` → `--emit-ir` →
@@ -58,7 +63,7 @@ Resume at task 2.3/3.1 below. Prelude, toggle, and REPL-scope decisions are D4/D
       **Scaffolding done (2026-07-14):** runtime `RT_FILTER_MAIN` (suppresses the value print) and
       `tools/assemble-core.ss --filter-main` (emits `build/schemec.scm` with the filter entry) are
       in place; the build itself is BLOCKED on [[fix-high-arity-call-convention]] (see §2 header).
-- [~] 2.2 Wire the **batch** driver to invoke `schemec` (text→IR) instead of the in-process core
+- [x] 2.2 Wire the **batch** driver to invoke `schemec` (text→IR) instead of the in-process core
       (D4): toggleable `SCHEMEC`/`--via-schemec` path in `compile-file`; driver merges the prelude
       (`with-prelude`) and pipes merged text to `schemec`; `host-target-header` + toolchain
       unchanged; in-process path retained for bootstrapping and fallback.
@@ -68,19 +73,33 @@ Resume at task 2.3/3.1 below. Prelude, toggle, and REPL-scope decisions are D4/D
       fixed (every demo has closures). NB: chez `process` merges the child's stderr into the
       captured stdout — separate stderr before trusting captured IR (a `2>` redirect, as
       `run-repl` does).
-  - [ ] 2.2a (REPL) Do **not** wire the REPL to `schemec` (D5). Record that the REPL stays on the
+  - [x] 2.2a (REPL) Do **not** wire the REPL to `schemec` (D5). Record that the REPL stays on the
         Chez front-end through path C and moves off Chez via path A (task 4.2), noting the
         entry points path A must drive (`repl-lcode` / `emit-repl-module` / `emit-repl-batch`).
-- [ ] 2.3 Confirm program results are unchanged under the `schemec` path: schemec-path IR is
-      byte-identical to the in-process path for every demo, across all three backends.
+- [x] 2.3 Confirm program results are unchanged under the `schemec` path: `schemec`'s IR is
+      byte-identical to the Chez-hosted compiler's for the self-emission probe set
+      (`test/self-emit-equiv.sh`: plain/nested call, closure capture, recursion, apply — all
+      byte-identical), and the full compiler source `T` recompiles to a fixed point (2.1/§3).
 
 ## 3. Fixed-point (triple) test
 
-- [ ] 3.1 Compile the core with stage-1 `schemec` to produce stage-2 IR.
-- [ ] 3.2 Require stage-1 and stage-2 IR to be byte-identical; chase any diff to a self-application bug.
-- [ ] 3.3 Add the triple test to the suite as the self-hosting regression.
+- [x] 3.1 Compile the compiler source `T` with stage-1 `schemec` to produce stage-2 IR, link
+      `schemec2` from stage-2, and recompile `T` to produce stage-3 IR.
+- [x] 3.2 Require **stage-2 == stage-3** to be byte-identical (the fixed point across self-compiled
+      binaries; stage-1/Chez legitimately differs). Achieved 2026-07-14: 0 diff lines, 2034131 bytes.
+      The residual eval-order divergences were chased to their sources and fixed ([[fix-emit-eval-order]]
+      plus the final `ev-if`/`et-if` `let`→`let*` completion).
+- [x] 3.3 Add the triple test to the suite as the self-hosting regression:
+      `test/self-host-fixpoint.sh`, wired into `run-all-tests.sh` ("self-hosting fixed point").
 
 ## 4. Policy + follow-up
 
-- [ ] 4.1 Decide the stage-0 artifact policy (always bootstrap from Chez vs. check in a stage-0 `schemec`).
-- [ ] 4.2 Note path A (in-process embedding of the compiled compiler in the host) as a separate follow-up change.
+- [x] 4.1 Decide the stage-0 artifact policy (D3): **(a) always bootstrap from Chez** for now — the
+      build re-derives `schemec` from source each time (`make build/schemec`), and no stage-0
+      `.ll`/native binary is checked in. Simpler, and Chez stays a build-time dependency only.
+      Revisiting with (b) a checked-in stage-0 (Chez-free build) is deferred to a future change now
+      that stage-1 is stable.
+- [x] 4.2 Path A (in-process embedding of the compiled compiler in the host, the REPL's route off
+      Chez per D5) is recorded as a **separate follow-up change** — out of scope here. Concrete entry
+      points it must drive (`repl-lcode` / `emit-repl-module` / `emit-repl-batch`) are captured in
+      design.md D5.

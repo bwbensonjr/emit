@@ -237,9 +237,13 @@
     [else (emit! (string-append "ret i64 " (ev e env cp tc?)))]))
 
 (define (ev-if a b c env cp tc?)
-  (let ([tv (ev a env cp tc?)]
-        [tl (fresh-bb "then")] [el (fresh-bb "else")] [ml (fresh-bb "merge")]
-        [cmp (fresh-temp)])
+  ;; let* (not let): emit the test, then allocate labels/cmp, in a fixed order --
+  ;; a parallel `let` would evaluate these side-effecting inits in host order
+  ;; (Chez right-to-left vs scheme-llvm left-to-right), diverging temp/label
+  ;; numbering (fix-emit-eval-order, ev-if/et-if sites).
+  (let* ([tv (ev a env cp tc?)]
+         [tl (fresh-bb "then")] [el (fresh-bb "else")] [ml (fresh-bb "merge")]
+         [cmp (fresh-temp)])
     (emit! (string-append cmp " = icmp ne i64 " tv ", 1"))   ; != FALSE_V
     (emit! (string-append "br i1 " cmp ", label %" tl ", label %" el))
     (start-bb tl)
@@ -258,8 +262,8 @@
           r)))))
 
 (define (et-if a b c env cp tc?)
-  (let ([tv (ev a env cp tc?)]
-        [tl (fresh-bb "then")] [el (fresh-bb "else")] [cmp (fresh-temp)])
+  (let* ([tv (ev a env cp tc?)]                ; operands-order fixed (see ev-if)
+         [tl (fresh-bb "then")] [el (fresh-bb "else")] [cmp (fresh-temp)])
     (emit! (string-append cmp " = icmp ne i64 " tv ", 1"))
     (emit! (string-append "br i1 " cmp ", label %" tl ", label %" el))
     (start-bb tl) (et b env cp tc?)
