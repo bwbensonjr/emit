@@ -1,175 +1,155 @@
 ## Context
 
-The REPL has two halves in two processes: **compilation** (`chez compile.ss --repl`
-reads a form, runs the pass pipeline, emits a per-form IR module) and **execution**
-(`build/repl-host`, a C++ ORC/LLJIT process that `parseIR`s the module, `addIRModule`s
-it, looks up the form's thunk, and calls it). They are coupled by a stdin frame protocol:
-`"<entry> <byte-count>\n"` then that many bytes of IR (`src/repl/host.cpp:118`).
+Every way of running Scheme today spawns a process: AOT/bitcode link with `clang`, JIT
+runs `lli`, and `--repl` runs a Chez front end (`run-repl`, `src/compile.ss:179`) that
+frames per-form IR to `build/repl-host` (a C++ ORC/LLJIT executor). The batch compiler is
+already Chez-free as a subprocess (`build/schemec`, the assembled core wrapped by
+`tools/assemble-core.ss --filter-main` as `(display (compile-source-string
+(read-all-stdin)))`).
 
-The batch path already has a Chez-free compiler: `build/schemec`, the assembled core
-compiled to native by the Chez-hosted compiler, wrapped by `tools/assemble-core.ss
---filter-main` as `(display (compile-source-string (read-all-stdin)))` — a stdin→stdout
-IR filter. That same assembled core is what we now want to call *in-process* from the
-host. The FFI surface is one function: build a Scheme string from the entered text, call
-`compile-source-string`, hand back the result string's bytes.
+Two facts make an in-process **batch** runner small and clean:
 
-Constraints: keep the text-IR seam (the host still `parseIR`s text); preserve every
-observable REPL behavior; do not foreclose the module-scoped namespaces of the follow-on
-modules work (`openspec/explorations/modules-and-embedding.md`).
+- The emitted whole-program entry `@scheme_entry` is **ccc** and returns a tagged `val`
+  (`src/emit.ss:519`, `src/runtime/runtime.c:619`). So the embedded compiler can be called
+  as an ordinary linked C symbol, and a JIT'd user program's entry is reached with
+  `JIT->lookup("scheme_entry")`.
+- `rt_make_string`, `str_bytes`, `str_len` already exist (`runtime.c:211`), and
+  `with-prelude` lives in the core (`core.ss:41`) — so prelude-correct, file-I/O-free
+  compilation runs fully in-language.
+
+The interactive REPL, by contrast, needs *stateful, incremental* compilation (persistent
+`env`/`macro-env`/`known`/`n`, per-form modules, compile-error rollback) — orchestration
+that lives in the Chez driver, not the core, and whose rollback depends on the unfinished
+`error`/`guard` downgrade. That is deferred to `repl-embedded-incremental`; this change
+proves the mechanism on the whole-program path.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Remove Chez from `--repl`; compile each form in one process via the embedded compiler.
-- Guarantee dev→ship fidelity: `--repl` and batch use the same compiler core.
-- Add a callable `rt_compile` C-ABI entry as a sibling of the existing `--filter-main`.
-- Preserve all observable REPL behavior and keep both REPL test harnesses green.
+- One binary that compiles *and* runs a whole Scheme program in-process — no Chez, no
+  `clang`/`lli`, no subprocess.
+- Establish the reusable embedding primitives: a C-callable compiler entry that returns IR
+  text, exported string accessors, and the parse→add→lookup→call→print loop.
+- Prelude-correct compilation (user-wins shadowing) with zero file I/O in the compiler.
+- dev→ship fidelity: the embedded runner and the batch AOT path agree on emitted IR /
+  observable output.
 
 **Non-Goals:**
-- Modules / namespaces / `.exports` (the follow-on; only *don't preclude* them here).
-- Loading the compiler *into the JIT* at runtime (A-jit) or user-redefinable compiler.
-- Moving off textual IR toward LLVM-C IR building.
-- Changing batch/AOT/JIT/bitcode paths, or the value representation / calling convention.
+- The interactive, incremental REPL (persistent env, per-form modules, rollback) — that is
+  `repl-embedded-incremental`.
+- Modules / namespaces (`.exports`), A-jit (loading the compiler into the JIT), and moving
+  off textual IR.
+- Changing AOT/JIT/bitcode or the existing `--repl`.
 
 ## Decisions
 
 ### D1: A-link (static link) over A-jit
 
-Statically link the compiled compiler into the host: `clang compiler.ll runtime.c
-host.cpp → build/repl-host`, and call `rt_compile` as a plain C function pointer.
+Link the embedded compiler (`embed.ll`) natively into `build/scheme-run` and call its
+`scheme_entry` as a plain C symbol. A-jit (loading the compiler *into* the JIT) costs
+whole-compiler materialization at startup and shares the JITDylib with user code, for no
+benefit here. Choose A-link.
 
-*Alternative — A-jit* (host `parseIR`s `compiler.ll` into its own LLJIT at startup and
-`lookup`s `rt_compile`): more "live" (compiler is another module in the world) but costs
-whole-compiler materialization at every REPL startup and shares the JITDylib between
-compiler and user code. A-link has zero startup cost and the host is *already* rebuilt
-whenever the runtime changes (the Makefile staleness graph), so "rebuild when the
-compiler changes too" is a natural extension, not a new mechanism. A-jit is only needed
-for a user-redefinable compiler — out of scope. Choose A-link.
+### D2: `--embed-entry` — the compiler returns IR as a value (no stdin/stdout `display`)
 
-### D2: `--repl-entry` — a callable C-ABI shim, sibling of `--filter-main`
+Add an `--embed-entry` mode to `tools/assemble-core.ss` that ends the assembled core with
+`(compile-source-string/prelude *prelude-source* (read-all-stdin))` — so the program's
+ccc `scheme_entry` **returns** the IR string instead of `display`ing it. The runner calls
+`scheme_entry()` and reads the returned string's bytes. Reading source via `read-all-stdin`
+(rather than a `char*` parameter) means the entry keeps the existing zero-argument ccc
+shape — no new emitter capability for parameterized entries. The single program's source
+arrives on the runner's own stdin.
 
-Add a `--repl-entry` mode to `tools/assemble-core.ss` that ends the assembled core with a
-C-ABI entry instead of a stdin→stdout main. The entry, `char* rt_compile(const char*
-src, size_t len)`, builds a Scheme string from `(src,len)` with the runtime's existing
-string constructor, calls `compile-source-string`, and returns a pointer to the result
-string's bytes (NUL-terminated or paired with an out-length). The core proper is
-unchanged — this is purely an alternate entry, exactly as `--filter-main` is.
+*Alternative — a `char* rt_compile(char*, size_t)` shim*: would require emitting a
+parameterized ccc wrapper (new emitter work) or a C→tailcc trampoline. Returning a value
+from the existing zero-arg entry and taking input on stdin avoids both. (The follow-on
+REPL change, which must feed many forms, revisits a parameterized entry.)
 
-*Alternative — call `compile-source-string` (a `tailcc` closure) directly from C++*:
-forces the host to construct closure/argc/overflow frames and speak the internal calling
-convention. The shim keeps the ABI crossing in one generated Scheme-side function and
-gives C++ a stable plain-C symbol. Choose the shim.
+### D3: Prelude baked in; `with-prelude` runs in-language
 
-### D3: The host owns the loop; source text in, no frame protocol
+Add `compile-source-string/prelude` to the core:
+`(compile-forms (with-prelude (read-forms-from-string prelude) (read-forms-from-string user)) no-dump)`.
+The `--embed-entry` assembly bakes the prelude text into the program as a string constant
+(`*prelude-source*`), read at build time by Chez and present at runtime as an ordinary
+string. This reproduces the batch driver's user-wins shadowing (`program-forms` →
+`with-prelude`) without the compiler ever touching the filesystem, and makes `scheme-run`
+a self-contained standalone binary (supports the standalone-exe niche).
 
-`src/repl/host.cpp` reads a whole form's *source text* from stdin (the driver just relays
-keystrokes/lines), calls `rt_compile` to get IR text, then runs its existing
-`parseIR → addIRModule → lookup → call → rt_write` path. The `"<name> <count>\n"+IR`
-frame protocol and the Chez compile step in `src/compile.ss --repl` are removed.
+*Alternative — the runner concatenates prelude + user text*: simple, but text
+concatenation double-defines any prelude name the user overrides, breaking user-wins
+shadowing and dev→ship fidelity. Rejected.
 
-Each per-form module must expose a **distinct** entry thunk symbol, because every module
-is added to the same JITDylib and duplicate definitions collide — the compiler already
-names them `@__repl_1`, `@__repl_2`, … via an internal counter (`emit-repl-module`),
-which now lives in the persistent embedded compiler (D4).
+### D4: The runner owns the JIT loop; entry symbols do not collide
 
-### D3a: Entry-name handshake — the compiler returns the name
+`src/run.cpp`: `GC_INIT`, init native target, create `LLJIT`, add a process-symbol
+generator (resolves `rt_*` from the linked runtime, as `host.cpp` does). Call the
+linked-in `scheme_entry()` (the embedded compiler; it reads stdin) → IR string; copy its
+bytes via `rt_string_bytes`/`rt_string_len`; `parseIR` → `setDataLayout` → `addIRModule`;
+`JIT->lookup("scheme_entry")` (resolves to the *JIT'd* module's definition, not the linked
+compiler's — module-defined symbols are served from the JITDylib, the process generator is
+only a fallback for unresolved names); call it; `rt_write` the result + newline (matching
+the AOT `main`, `runtime.c:626`). Reuse `setjmp`/`rt_trap` isolation so a runtime trap is
+reported rather than aborting.
 
-The host learns the entry symbol from `rt_compile`'s output rather than predicting it:
-`rt_compile` reports the name it chose (a companion nullary `rt_compile_entry_name()`
-returning the most recently compiled form's symbol — natural given persistent state — or
-`rt_compile` returning `{ir, entry}`), and the host looks up exactly that string. This is
-today's design relocated in-process: the frame header's `name` field
-(`src/compile.ss:226`) becomes a return value.
+### D5: Build graph and staleness
 
-*Alternative — fixed scheme (host predicts the name)*: either a single fixed symbol
-(`@__repl_entry` every form — rejected, it collides across modules in one JITDylib) or a
-**lockstep counter** where the host maintains its own `N` in parallel with the compiler.
-The lockstep counter works but creates two counters that must never drift: it couples the
-host to the compiler's counting rule, and forces both sides to agree on whether `N`
-advances when a form fails to compile. The handshake keeps one source of truth (the
-compiler), decouples the host from naming internals, and makes compile-failure trivially
-correct (no name returned → the host looks up nothing). Choose the handshake; the only
-cost is one extra return value / companion call.
+`bootstrap/embed.ll` is generated by assembling the core with `--embed-entry`
+(`build/embed.scm`) and compiling it with prelude via `chez … compile.ss --emit-ir` (the
+compiler program itself uses prelude procedures, so it is built *with* prelude, exactly as
+`schemec.ll` is). `build/scheme-run` links `bootstrap/embed.ll` + `runtime.c` (`RT_NO_MAIN`)
++ `run.cpp`, and lists the runtime/host/`embed.ll` (and the core sources behind it) as
+prerequisites so a source change rebuilds it, mirroring the `repl-host` staleness graph and
+its mtime caveat.
 
-*Alternative — keep the driver, embed only the compiler*: leaves two processes and a
-protocol for no benefit once Chez is gone. Fold the loop into the host.
+### D6: Check in `bootstrap/embed.ll` as the stage-0 artifact
 
-### D4: Persistent compiler state is a feature, kept in-process
-
-The embedded compiler's globals (gensym counter, rename environment, interned symbols)
-persist across `rt_compile` calls within the one host process — exactly what incremental
-per-form compilation needs (a subprocess would start fresh each form). Determinism
-within a session is preserved because the gensym counter advances monotonically; no
-`reset-counter!` between forms.
-
-### D5: Host build tracks the compiler source (staleness graph extension)
-
-`compiler.ll` becomes a build input to `build/repl-host`. The Makefile gains a rule to
-produce `compiler.ll` from the core sources (via `schemec`/Chez) and lists it — and the
-core sources behind it — as prerequisites of the host, so a compiler-source change
-rebuilds the host before next use, mirroring the existing runtime/host staleness handling
-(and its documented mtime caveat).
-
-### D6: Check in `compiler.ll` as the stage-0 artifact
-
-Commit `compiler.ll` to the repo rather than regenerating it on every host build. This is
-safe because the compiler core emits **host-agnostic IR** — the `target datalayout`/
-`triple` header is prepended by the *driver* (`host-target-header`, `src/compile.ss`), not
-the core — so the checked-in IR carries no platform lock-in and clang applies the native
-target when linking `build/repl-host` on any host. This resolves the stage-0 policy
-reopened by D3 of self-hosting-bootstrap: a `chez`-free checkout can build the REPL host
-from the committed `compiler.ll`, and the Makefile rule that regenerates it stays as the
-way to refresh it after a compiler-source change (the D5 staleness graph still points the
-host at the sources behind it).
-
-*Alternative — regenerate each build*: cleaner in that no generated file is tracked, but
-requires Chez/`schemec` at host-build time and slows every host build. The cross-platform
-property of the emitted IR removes the usual objection to committing a build artifact, so
-prefer checking it in.
+Commit `embed.ll` at a tracked path (`/build/` is gitignored). It is safe to commit because
+the core emits **host-agnostic IR** — no `target datalayout`/`triple` (those come from the
+driver, not the core; the `--emit-ir` path omits them). So the committed IR is
+cross-platform: `clang` applies the native target when linking, and `run.cpp` sets the JIT
+data layout. A Chez-free checkout can build `scheme-run` from the committed artifact; the
+D5 rule refreshes it after a compiler-source change. Resolves self-hosting-bootstrap D3.
 
 ## Risks / Trade-offs
 
-- **Global-name collision between compiler and user globals in one process** → the
-  compiler's internals are lambda-lifted/mangled, but audit for any *unmangled* top-level
-  global that could clash with a user `define`; keep a compiler-private prefix and do not
-  assume a shared flat namespace (also the seam for future modules).
-- **String-ownership / lifetime across the FFI** → `rt_compile` returns a GC-managed
-  Scheme string; the host must consume its bytes (copy into the `parseIR` buffer) before
-  the next allocation-heavy call. Document that the pointer is valid until the next
-  `rt_compile`.
-- **GC pressure: compiler now allocates in the heap it compiles into** → single
-  `GC_INIT()` unchanged; Boehm is conservative so no frame unwinding needed. Watch
-  session-long heap growth; acceptable for a dev REPL.
-- **Bootstrap: `compiler.ll` must exist at host-build time** → regenerate via
-  `schemec`/Chez each build (clean but slower) vs. commit a stage-0 artifact (fast,
-  checked-in generated file). Reopens self-hosting-bootstrap D3; see Open Questions.
-- **mtime staleness caveat** inherited from the existing host graph → same recovery
-  (`touch` / `rm build/repl-host`); accepted limitation.
+- **Prelude literal escaping** → bake `*prelude-source*` with correct escaping of `\` and
+  `"` (and newlines) so Chez reads it back at build time and the emitter emits a valid LLVM
+  string global; verify by diffing embedded-vs-batch IR on a prelude-using demo.
+- **`scheme_entry` name appears both linked and JIT'd** → the linked compiler entry is
+  called by C symbol; the user program's entry is reached only via `JIT->lookup`, served
+  from its module. No external `scheme_entry` reference exists in user IR, so the process
+  generator never shadows it. Verified by running a demo end-to-end.
+- **IR-string lifetime across the call** → `rt_string_bytes` returns a GC-managed buffer;
+  the runner copies it into the `parseIR` `MemoryBuffer` immediately (before further
+  allocation). Documented at the call site.
+- **Committed `embed.ll` drift** → the D5 staleness graph rebuilds from source when core
+  sources are newer; the mtime caveat (checkout timestamps) is the same accepted limitation
+  as the existing host graph (`touch`/`rm` to recover).
+- **GC in one heap** → `GC_INIT()` once; conservative GC needs no unwinding. The embedded
+  compiler and the JIT'd program share the heap; acceptable for a one-shot runner.
 
 ## Migration Plan
 
-1. Add `--repl-entry` to `tools/assemble-core.ss`; verify it assembles the same core with
-   the `rt_compile` entry (sanity: assemble + compile, no pipeline change).
-2. Add the runtime-side glue if needed (string in/out helpers already exist for
-   `read-all-stdin`/`display`; reuse them).
-3. Makefile: rule for `compiler.ll` from the core; link it into `build/repl-host`; add
-   compiler sources to the host's prerequisites.
-4. `src/repl/host.cpp`: read source text, call `rt_compile`, feed the returned IR into the
-   existing parse/add/lookup/call path; drop the frame reader.
-5. `src/compile.ss`: `--repl` launches the host and relays source text; remove the Chez
-   compile step and frame writer.
-6. Run REPL end-to-end, interactive, equivalence, and batch harnesses; require a
-   Chez-free `--repl` to pass all.
-7. **Rollback:** the change is confined to the `--repl` path and the host build; reverting
-   restores the Chez frame protocol. Batch/AOT/JIT/bitcode are untouched throughout.
+1. `runtime.c`: add exported `rt_string_bytes` / `rt_string_len`.
+2. `core.ss`: add `compile-source-string/prelude`.
+3. `assemble-core.ss`: add `--embed-entry` (bakes `*prelude-source*`, emits the value-
+   returning entry) → `build/embed.scm`.
+4. Makefile: `build/embed.scm` → `bootstrap/embed.ll` (assemble + `--emit-ir`); link
+   `build/scheme-run` from `embed.ll` + `runtime.c` + `run.cpp`; add staleness prerequisites.
+5. `src/run.cpp`: the JIT runner (D4).
+6. Commit `bootstrap/embed.ll` (D6).
+7. Verify: `build/scheme-run < demos/fact.scm` ⇒ `120`; new harness runs all demos through
+   `scheme-run` and matches expected/AOT; wire into `run-all-tests.sh`; update README.
+8. **Rollback:** the change is additive (new mode, new file, new binary); removing
+   `scheme-run` and its Makefile/README stanzas restores the prior state. AOT/JIT/bitcode
+   and `--repl` are untouched throughout.
 
 ## Open Questions
 
-- ~~**Stage-0 artifact policy**~~ **Resolved (D6):** check in `compiler.ll`; the emitted
-  core IR is host-agnostic, so the committed artifact is cross-platform.
-- ~~**Entry-name handshake**~~ **Resolved (D3a):** the compiler returns the entry symbol
-  name; the host looks up exactly that string.
-- **Result-string convention**: NUL-terminated `char*` vs. `(ptr,len)` pair — the latter
-  is safer if emitted IR could ever contain a NUL (it should not, but be explicit).
-- **Compiler-private namespace prefix**: what prefix guarantees no clash with user
-  globals, and does it double as the first step toward module-scoped names?
+- ~~Stage-0 artifact policy~~ **Resolved (D6):** commit `bootstrap/embed.ll` (host-agnostic).
+- ~~Entry-name handshake~~ **Not needed for batch:** the whole-program entry is the fixed
+  `scheme_entry`. (Reopens in the follow-on REPL change, which emits per-form thunks.)
+- **Result-string convention** for the *follow-on* parameterized entry: `char*` vs
+  `(ptr,len)`. Here the value is a Scheme string read via `rt_string_len`, so N/A.
+- **Where `scheme-run` prepends the prelude long-term** — baked-in text (this change) vs. a
+  separately-compiled prelude module once modules land.

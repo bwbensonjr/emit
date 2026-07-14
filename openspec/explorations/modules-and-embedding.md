@@ -207,12 +207,19 @@ Two clarifying observations:
 ```
   ✅ Path C batch fixed point            (self-hosting-bootstrap — done)
   ────── remaining ──────
-  1. Path A embedding (minimum viable)
-       A-link the compiled core into repl-host + a `--repl-entry` C-ABI shim.
-       Retire Chez from --repl. REPL = embedded compiler (persistent state)
-       + addIRModule + JITDylib.
-       ← establishes "compiler is a callable library in the host," the SAME
-         loading mechanism modules use. Do NOT hardcode one flat world.
+  1a. Path A embedding — mechanism  (path-a-embedding)
+       A-link the compiled core into an in-process runner (build/scheme-run);
+       the embedded compiler returns IR text, the runner JIT-runs a whole
+       program. No Chez, no clang/lli, no subprocess. Batch path only.
+       ← establishes the embedding primitives (C-callable compiler entry,
+         exported string accessors, parse→add→lookup→call loop).
+
+  1b. Path A embedding — incremental REPL  (repl-embedded-incremental)
+       Port run-repl's stateful orchestration (persistent env, per-form
+       modules, compile-error rollback) into the embedded compiler; retire
+       Chez from --repl. Gated on the error/guard downgrade for rollback.
+       ← reuses 1a's primitives; adds the per-form entry-name handshake.
+         Do NOT hardcode one flat world.
 
   2. Modules v0 — procedures only  (R7RS-small subset)
        define-library / export / import with only/except/prefix/rename;

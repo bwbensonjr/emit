@@ -2,81 +2,97 @@
 
 ### Requirement: Compiler core assembles into a callable in-process entry
 
-The project SHALL provide a way to assemble the compiler core into a unit exposing a
-C-ABI-callable entry that compiles Scheme source text to LLVM IR text in-process — a
-sibling of the existing stdin→stdout filter entry — so the compiler can be invoked as a
-function rather than run as a program. The entry SHALL accept the source text of one or
-more forms and SHALL return the emitted core IR text, using the same compiler core as the
-stdin→stdout filter and the batch compiler.
+The project SHALL provide a way to assemble the compiler core into a program whose
+C-callable entry compiles Scheme source text to LLVM IR text in-process and returns that
+IR as a value, using the same compiler core as the batch compiler. The assembly SHALL bake
+in the standard prelude so the embedded compiler performs prelude-correct compilation with
+no filesystem access.
 
-#### Scenario: Assembling the core with the callable entry
+#### Scenario: The assembled entry returns emitted IR
 
-- **WHEN** the assembly step runs over the core sources in callable-entry mode
-- **THEN** it produces a unit whose entry, given the bytes of a Scheme form, returns the
-  same core IR text the batch compiler emits for that form (modulo the target header and
-  prelude, which remain the driver's responsibility)
+- **WHEN** the core is assembled in embedded-entry mode, linked, and its entry is called
+  with a Scheme program supplied as source text
+- **THEN** the entry returns a string whose contents are the emitted core IR for that
+  program (with the prelude applied), and no target header is included
 
-#### Scenario: The callable entry shares the batch compiler core
+#### Scenario: The embedded entry shares the batch compiler core
 
-- **WHEN** the callable entry and the batch compiler are each given the same source
-- **THEN** both produce byte-identical core IR, because they are the same assembled core
-  with different entry points
+- **WHEN** the embedded entry and the batch compiler are each given the same program
+- **THEN** they produce the same core IR, because they are the same assembled core with
+  different entry points
 
-### Requirement: The persistent JIT host embeds the compiler and compiles in-process
+#### Scenario: Prelude shadowing matches the batch driver
 
-The persistent JIT host SHALL embed the compiled compiler and SHALL compile each entered
-form by calling the compiler in-process, with no Chez Scheme process and no per-form
-subprocess. For each entered form the host SHALL obtain the emitted IR from the embedded
-compiler and then add and execute it through the host's existing add-module / lookup /
-call path.
+- **WHEN** a program redefines a name also defined by the prelude and is compiled by the
+  embedded entry
+- **THEN** the user's definition wins (user-wins shadowing), identically to the batch
+  driver's `with-prelude` behavior
 
-#### Scenario: A form is compiled and evaluated without Chez
+### Requirement: A runner compiles and runs a whole program in one process
 
-- **WHEN** a form is entered in `--repl` and no Chez Scheme process is running
-- **THEN** the host compiles the form via the embedded compiler, executes the resulting
-  IR, and prints the form's value
+The project SHALL provide a runner that embeds the compiled compiler and executes a whole
+Scheme program in a single process: it SHALL obtain the program's IR from the embedded
+compiler in-process, JIT-compile and run that IR, and print the program's value — with no
+Chez Scheme process, no `clang`/`lli`, and no per-run subprocess.
 
-#### Scenario: No per-form subprocess is spawned
+#### Scenario: A program is compiled and run in-process
 
-- **WHEN** a sequence of forms is entered in one REPL session
-- **THEN** each form is compiled by a function call within the host process, with no
-  process fork/exec per form
+- **WHEN** a Scheme program is supplied to the runner as source
+- **THEN** the runner prints the program's value, having compiled it via the embedded
+  compiler and JIT-executed the emitted IR without spawning Chez, `clang`, `lli`, or any
+  other subprocess
 
-### Requirement: Embedded compiler state persists across forms
+#### Scenario: The runner reads IR bytes from the embedded compiler
 
-The embedded compiler's mutable compilation state — including its name-generation counter
-and interned symbols — SHALL persist across successive compile calls within one REPL
-session, so that incremental per-form compilation composes without reinitializing the
-compiler between forms.
+- **WHEN** the embedded compiler returns the emitted IR as a string value
+- **THEN** the runner reads that string's bytes through the runtime's exported string
+  accessors and parses them into an LLVM module for JIT execution
 
-#### Scenario: Generated names do not collide across forms
+#### Scenario: A runtime trap is reported without aborting abruptly
 
-- **WHEN** two forms that each cause the compiler to generate fresh internal names are
-  entered in the same session
-- **THEN** the names generated for the second form do not collide with those generated for
-  the first, because the compiler's name counter advanced rather than resetting
+- **WHEN** the running program triggers a runtime trap (for example an arity error)
+- **THEN** the runner reports the trap message rather than crashing the process silently
 
-### Requirement: REPL and batch compilation share one compiler core (dev→ship fidelity)
+### Requirement: The embedded runner agrees with the batch path (dev→ship fidelity)
 
-Interactive (`--repl`) and batch compilation SHALL use the same compiler core, so that
-code developed and tested interactively compiles to a standalone executable with the same
-core IR. There SHALL NOT be a separate REPL-only compilation path.
+The in-process runner and the batch AOT path SHALL produce the same observable result for
+the same program, because they share one compiler core. There SHALL NOT be a separate
+compilation path for the runner.
 
-#### Scenario: Interactive and batch agree on emitted IR
+#### Scenario: Runner output matches AOT output
 
-- **WHEN** the same top-level definition is compiled once via the embedded REPL compiler
-  and once via the batch compiler
-- **THEN** the emitted core IR for that definition is identical (modulo the target header
-  and prelude supplied by the driver)
+- **WHEN** the same program is run through the in-process runner and compiled-and-run
+  through the batch AOT path
+- **THEN** both print the same value
 
-### Requirement: The compiler still emits textual IR consumed by the host
+### Requirement: The embedded compiler still emits textual IR
 
-The embedded compiler SHALL return LLVM IR as text, and the host SHALL parse that text
-into a module. Embedding SHALL NOT replace the textual-IR boundary with direct in-memory
-IR construction.
+The embedded compiler SHALL return LLVM IR as text, and the runner SHALL parse that text
+into a module. Embedding SHALL NOT replace the textual-IR boundary with direct in-memory IR
+construction.
 
 #### Scenario: Emitted IR remains inspectable text
 
-- **WHEN** the embedded compiler compiles a form
-- **THEN** its output is LLVM IR text that the host parses with the IR text parser, the
-  same form of IR the batch path emits and `--dump` exposes
+- **WHEN** the embedded compiler compiles a program
+- **THEN** its output is LLVM IR text — the same form of IR the batch path emits and
+  `--dump` exposes — which the runner parses with the IR text parser
+
+### Requirement: The embedded compiler artifact is host-agnostic and committed
+
+The generated embedded-compiler IR artifact SHALL contain no host target header, so it is
+cross-platform, and it SHALL be committed to the repository at a tracked path so a checkout
+without Chez can build the runner from it. The build SHALL regenerate the artifact when the
+compiler core sources change.
+
+#### Scenario: A Chez-free checkout builds the runner
+
+- **WHEN** the repository is checked out on a supported platform without Chez available and
+  the runner is built
+- **THEN** the build links the committed embedded-compiler IR and produces a working runner,
+  because the committed IR carries no platform-specific target header
+
+#### Scenario: A compiler-source change regenerates the artifact
+
+- **WHEN** a compiler core source is changed and the runner is rebuilt
+- **THEN** the embedded-compiler IR artifact is regenerated from the updated sources before
+  the runner is linked
