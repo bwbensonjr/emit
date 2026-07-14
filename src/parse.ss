@@ -13,7 +13,8 @@
                   string-length string-ref substring string->symbol
                   string=? string-append symbol->string list->string make-string
                   string-set! string-copy
-                  make-vector vector-ref vector-set! vector-length vector?))
+                  make-vector vector-ref vector-set! vector-length vector?
+                  %error-abort))
 (define (prim? op) (and (memq op *prims*) #t))
 
 ;; ---- variadic parameter lists ----

@@ -54,6 +54,7 @@ check varrest  demos/variadic-rest.scm "(3 4)"   # dotted rest parameter
 check varall   demos/variadic-all.scm  "(1 2 3)" # all-args variadic (bare symbol param)
 check apply    demos/apply.scm         45        # apply over a list longer than K
 check_fail arityerr demos/arity-error.scm        # fixed-arity mismatch aborts non-zero
+check_fail errorabort demos/error-abort.scm      # (error ...) aborts non-zero standalone
 
 echo "symbols / quote demos"
 check qsym    demos/quote-symbol.scm   hello       # quoted symbol prints by name

@@ -124,7 +124,8 @@
     (string-set! "rt_string_set") (string-copy "rt_string_copy")
     (make-vector "rt_make_vector") (vector-ref "rt_vector_ref")
     (vector-set! "rt_vector_set") (vector-length "rt_vector_length")
-    (vector? "rt_vector_p")))
+    (vector? "rt_vector_p")
+    (%error-abort "rt_error")))
 
 ;; --- string helpers ---
 (define (comma-join lst)
@@ -404,7 +405,8 @@
    "declare i64 @rt_list_length(i64)\n"
    "declare i64 @rt_build_rest(i64, i64, i64, ptr, ptr)\n"
    "declare ptr @rt_apply_argv(i64, ptr, i64, i64)\n"
-   "declare void @rt_arity_error(i64, i64)\n\n"))
+   "declare void @rt_arity_error(i64, i64)\n"
+   "declare i64 @rt_error(i64, i64)\n\n"))
 
 ;; entry arity check: fixed callee requires argc == f, variadic requires
 ;; argc >= f; a mismatch calls rt_arity_error (which aborts).  Leaves emission

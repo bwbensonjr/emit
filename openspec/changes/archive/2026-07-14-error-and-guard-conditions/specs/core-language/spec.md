@@ -19,15 +19,8 @@ nonzero status. A general resumable condition system is NOT provided.
 - **WHEN** a standalone (AOT) program evaluates `(error 'oops "no")`
 - **THEN** the program terminates with a nonzero exit status after reporting the diagnostic
 
-### Requirement: minimal single-level guard (if required by the core)
+<!-- Guard requirement dropped (D2, 2026-07-14): the only R6RS `guard` site is the
+     REPL recovery in the driver (compile.ss), not the pure core; decompose-core-driver
+     (archived) confirmed the split. No in-language `guard` is required by the core, so
+     this change adds `error` only. See design.md D2. -->
 
-Where the compiler core needs to recover from an aborted computation, the language SHALL
-provide a single-level `guard` form `(guard (var clause ...) body ...)` that evaluates
-`body`, and on an abort runs the first matching clause with `var` bound to the diagnostic.
-This is a single, non-resumable catch, not a general handler stack. (If the core needs no
-recovery — recovery living in the driver/host — this requirement does not apply.)
-
-#### Scenario: guard recovers from an abort
-
-- **WHEN** `(guard (e (#t 'recovered)) (error 'x "boom"))` is evaluated
-- **THEN** the result is `'recovered` (the handler ran on the abort)

@@ -96,6 +96,15 @@ check in-language-reader "" "$(printf '(a (b c) 42)')" <<'EOF'
 (read-from-string "(a (b c) 42)")
 EOF
 
+# spec (error-and-guard-conditions): (error who msg irritant) reports the
+# who/message/irritant diagnostic (echoed as !trap: ...) and the session
+# survives, so the following form still yields its value (7).
+check error-reports-and-survives "" "$(printf '#<procedure>\n!trap: parse: bad expression x\n7')" <<'EOF'
+(define (boom) (error 'parse "bad expression" 'x))
+(boom)
+(+ 3 4)
+EOF
+
 # spec: end-of-input ends the session cleanly (exit code 0)
 printf '(+ 1 2)\n' | chez --libdirs src --script src/compile.ss --repl --no-prelude >/dev/null 2>&1
 if [ "$?" -eq 0 ]; then

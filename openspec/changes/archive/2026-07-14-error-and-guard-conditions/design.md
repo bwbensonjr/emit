@@ -23,7 +23,13 @@ the message; standalone it `exit(1)`s. Register `error` as a primitive-like form
 lowers it to the runtime call. Message formatting uses the string primitives + `number->string`
 ([[integer-division-number-format]]) so it stays in-language.
 
-### D2: `guard` — minimal or eliminated
+### D2: `guard` — minimal or eliminated (RESOLVED 2026-07-14: eliminated)
+
+**Resolution:** No in-language `guard` is required. The only R6RS `(guard …)` in the source
+is the REPL error-recovery in the **driver** (`compile.ss`), not the pure core; every other
+`guard` is the `,x` matcher's own clause syntax. [[decompose-core-driver]] (archived)
+confirmed the core/driver split, so recovery is a driver/host concern. This change ships
+`error` only; the guard requirement was dropped from the spec delta.
 
 Prefer to first check (via [[decompose-core-driver]]) whether the pure core needs `guard` at
 all: the REPL recovery that uses it may live in the driver, not the core. If the core needs

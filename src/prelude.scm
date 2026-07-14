@@ -165,6 +165,16 @@
     [(< n 0) (list->string (cons #\- (ns-digits n (quote ()))))]
     [else    (list->string (ns-digits (- 0 n) (quote ())))]))
 
+;;; --- error: report a diagnostic and abort (error-and-guard-conditions) -----
+;;; (error who message irritant ...) reports "who: message irritant ..." and
+;;; aborts the current computation via the runtime trap hook: under the REPL host
+;;; the session survives and prints the message; standalone it exits non-zero.
+;;; The who/message prefix is formatted here in-language with string primitives;
+;;; %error-abort hands it to the runtime, which renders the irritants and traps.
+(define (error who msg . irritants)
+  (%error-abort (string-append (symbol->string who) (string-append ": " msg))
+                irritants))
+
 ;;; --- vector constructors (vectors change) ---------------------------------
 ;;; make-vector/vector-ref/vector-set!/vector-length/vector? are primitives;
 ;;; the variadic constructor and list conversion are prelude Scheme over them.

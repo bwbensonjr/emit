@@ -452,6 +452,60 @@ val rt_equal(val a, val b) {
   return FALSE_V;
 }
 
+/* --- error: report who/message/irritants and abort (error-and-guard-conditions)
+ * The prelude formats "who: message" in-language and passes it as `prefix`; the
+ * irritants (arbitrary values) are rendered here into rt_trap_msg with the same
+ * tag-walking as rt_write, then we trap exactly like rt_arity_error -- under the
+ * REPL host the longjmp unwinds and the session survives; standalone we exit(1).
+ * Rendering is bounded by rt_trap_msg's capacity (a compact, possibly truncated
+ * diagnostic; design: "compact form" over a full writer). */
+static void err_put(char *buf, size_t cap, size_t *off, const char *s, size_t n) {
+  for (size_t i = 0; i < n && *off + 1 < cap; i++) buf[(*off)++] = s[i];
+  buf[*off] = '\0';
+}
+static void err_write(char *buf, size_t cap, size_t *off, val v) {
+  char tmp[32];
+  switch (tag_of(v)) {
+    case TAG_FIXNUM:
+      err_put(buf, cap, off, tmp, (size_t)snprintf(tmp, sizeof tmp, "%ld", (long)UNFIX(v)));
+      break;
+    case TAG_BOOL: err_put(buf, cap, off, v == FALSE_V ? "#f" : "#t", 2); break;
+    case TAG_NIL:  err_put(buf, cap, off, "()", 2); break;
+    case TAG_PAIR: {
+      err_put(buf, cap, off, "(", 1);
+      val cur = v; int first = 1;
+      while (tag_of(cur) == TAG_PAIR) {
+        if (!first) err_put(buf, cap, off, " ", 1);
+        first = 0;
+        err_write(buf, cap, off, as_ptr(cur)[0]);
+        cur = as_ptr(cur)[1];
+      }
+      if (cur != NIL_V) { err_put(buf, cap, off, " . ", 3); err_write(buf, cap, off, cur); }
+      err_put(buf, cap, off, ")", 1);
+      break;
+    }
+    case TAG_SYMBOL: err_put(buf, cap, off, sym_name(v), strlen(sym_name(v))); break;
+    case TAG_EXT:
+      if (ext_hdr(v) == HDR_STRING) { err_put(buf, cap, off, str_bytes(v), (size_t)str_len(v)); break; }
+      err_put(buf, cap, off, "#<obj>", 6);
+      break;
+    default: err_put(buf, cap, off, "#<obj>", 6); break;
+  }
+}
+
+val rt_error(val prefix, val irritants) {
+  size_t off = 0, cap = sizeof rt_trap_msg;
+  err_put(rt_trap_msg, cap, &off, str_bytes(prefix), (size_t)str_len(prefix));
+  for (val cur = irritants; tag_of(cur) == TAG_PAIR; cur = as_ptr(cur)[1]) {
+    err_put(rt_trap_msg, cap, &off, " ", 1);
+    err_write(rt_trap_msg, cap, &off, as_ptr(cur)[0]);
+  }
+  fprintf(stderr, "%s\n", rt_trap_msg);
+  if (rt_trap) longjmp(*rt_trap, 1);
+  exit(1);
+  return NIL_V;   /* unreachable; keeps the i64-returning call site well-typed */
+}
+
 /* --- value printer (tag-walking, design R1) ---------------------------- */
 void rt_write(val v) {
   switch (tag_of(v)) {
