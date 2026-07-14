@@ -145,6 +145,26 @@
   (let loop ([i (- (string-length s) 1)] [acc (quote ())])
     (if (< i 0) acc (loop (- i 1) (cons (string-ref s i) acc)))))
 
+;;; --- number->string (base-10 signed integers) -----------------------------
+;;; Inverse of the reader's integer parsing (rd-parse-int), so it round-trips.
+;;; Digits are peeled from the NON-POSITIVE magnitude of n via quotient/remainder
+;;; by 10: for m <= 0, (remainder m 10) is in -9..0 so (- 0 (remainder m 10)) is
+;;; the 0..9 digit, and (quotient m 10) truncates toward zero.  Working on the
+;;; negative side (never negating the whole value) means the full fixnum range is
+;;; handled exactly, INCLUDING the most-negative fixnum -- whose magnitude has no
+;;; positive fixnum representation, so a negate-first approach would overflow.
+(define (ns-digits m acc)                ; m <= 0 -> chars of |m|, prepended to acc
+  (let ([ch (integer->char (+ 48 (- 0 (remainder m 10))))]
+        [rest (quotient m 10)])
+    (if (= rest 0)
+        (cons ch acc)
+        (ns-digits rest (cons ch acc)))))
+(define (number->string n)
+  (cond
+    [(= n 0) "0"]
+    [(< n 0) (list->string (cons #\- (ns-digits n (quote ()))))]
+    [else    (list->string (ns-digits (- 0 n) (quote ())))]))
+
 ;;; --- vector constructors (vectors change) ---------------------------------
 ;;; make-vector/vector-ref/vector-set!/vector-length/vector? are primitives;
 ;;; the variadic constructor and list conversion are prelude Scheme over them.

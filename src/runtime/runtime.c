@@ -81,9 +81,31 @@ val rt_unbox(val b)        { return as_ptr(b)[0]; }
 val rt_set_box(val b, val v) { as_ptr(b)[0] = v; return NIL_V; }
 
 /* --- arithmetic and predicates ----------------------------------------- */
+/* Report a fatal runtime error the same way rt_arity_error does: record the
+ * message, print it, and longjmp back to the REPL host if one is installed
+ * (else exit non-zero for the standalone executable). */
+static void rt_fatal(const char *msg) {
+  snprintf(rt_trap_msg, sizeof rt_trap_msg, "%s", msg);
+  fprintf(stderr, "%s\n", rt_trap_msg);
+  if (rt_trap) longjmp(*rt_trap, 1);
+  exit(1);
+}
+
 val rt_add(val a, val b) { return FIX(UNFIX(a) + UNFIX(b)); }
 val rt_sub(val a, val b) { return FIX(UNFIX(a) - UNFIX(b)); }
 val rt_mul(val a, val b) { return FIX(UNFIX(a) * UNFIX(b)); }
+/* quotient/remainder: C integer division truncates toward zero, which is
+ * exactly R7RS quotient/remainder.  Division by zero traps. */
+val rt_quotient(val a, val b) {
+  intptr_t d = UNFIX(b);
+  if (d == 0) rt_fatal("division by zero: quotient");
+  return FIX(UNFIX(a) / d);
+}
+val rt_remainder(val a, val b) {
+  intptr_t d = UNFIX(b);
+  if (d == 0) rt_fatal("division by zero: remainder");
+  return FIX(UNFIX(a) % d);
+}
 val rt_num_eq(val a, val b) { return truthy(UNFIX(a) == UNFIX(b)); }
 val rt_lt(val a, val b)     { return truthy(UNFIX(a) <  UNFIX(b)); }
 val rt_null_p(val v)       { return truthy(v == NIL_V); }

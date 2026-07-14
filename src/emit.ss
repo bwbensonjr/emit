@@ -106,7 +106,9 @@
     [else (error 'emit "bad const" d)]))
 
 (define prim-table
-  '((+ "rt_add") (- "rt_sub") (* "rt_mul") (= "rt_num_eq") (< "rt_lt")
+  '((+ "rt_add") (- "rt_sub") (* "rt_mul")
+    (quotient "rt_quotient") (remainder "rt_remainder")
+    (= "rt_num_eq") (< "rt_lt")
     (cons "rt_cons") (car "rt_car") (cdr "rt_cdr")
     (null? "rt_null_p") (pair? "rt_pair_p") (eq? "rt_eq_p")
     (eqv? "rt_eqv_p") (equal? "rt_equal") (not "rt_not")
@@ -364,6 +366,8 @@
    "declare i64 @rt_add(i64, i64)\n"
    "declare i64 @rt_sub(i64, i64)\n"
    "declare i64 @rt_mul(i64, i64)\n"
+   "declare i64 @rt_quotient(i64, i64)\n"
+   "declare i64 @rt_remainder(i64, i64)\n"
    "declare i64 @rt_num_eq(i64, i64)\n"
    "declare i64 @rt_lt(i64, i64)\n"
    "declare i64 @rt_null_p(i64)\n"
