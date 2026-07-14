@@ -14,6 +14,7 @@
                   string=? string-append symbol->string list->string make-string
                   string-set! string-copy
                   make-vector vector-ref vector-set! vector-length vector?
+                  symbol? string? char? boolean? integer? exact?
                   %error-abort))
 (define (prim? op) (and (memq op *prims*) #t))
 

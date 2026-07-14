@@ -425,6 +425,18 @@ val rt_vector_p(val v) {
   return truthy(tag_of(v) == TAG_EXT && ext_hdr(v) == HDR_VECTOR);
 }
 
+/* --- type predicates (self-hosting gap G9) -------------------------------- */
+/* Each returns #t/#f by inspecting the tag (and, for tag-7 heap objects, the
+ * header code -- guard the ext_hdr deref behind the TAG_EXT check, as vector? does).
+ * The subset has a single number type (fixnums), so integer? and exact? coincide;
+ * they are kept as distinct names for forward compatibility. */
+val rt_symbol_p(val v)  { return truthy(tag_of(v) == TAG_SYMBOL); }
+val rt_boolean_p(val v) { return truthy(tag_of(v) == TAG_BOOL); }
+val rt_integer_p(val v) { return truthy(tag_of(v) == TAG_FIXNUM); }
+val rt_exact_p(val v)   { return truthy(tag_of(v) == TAG_FIXNUM); }
+val rt_string_p(val v)  { return truthy(tag_of(v) == TAG_EXT && ext_hdr(v) == HDR_STRING); }
+val rt_char_p(val v)    { return truthy(tag_of(v) == TAG_EXT && ext_hdr(v) == HDR_CHAR); }
+
 /* structural equality: eqv? fast path (immediates, interned symbols/chars, same
  * object), then recurse into pairs, compare string content by bytes (UTF-8, so
  * byte equality == codepoint equality), and recurse element-wise into vectors.
