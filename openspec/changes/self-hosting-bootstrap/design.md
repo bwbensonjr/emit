@@ -103,8 +103,9 @@ static scan + spot compiles; these surface only at a full core compile / the tri
 - Likely more of the same class (e.g. `andmap` and other R6RS list procs the passes assume) —
   enumerate them with a full assembled-core compile once G3/G4/G5 are in.
 
-A dedicated gap-sweep (assemble the whole core, compile, fix the first error, repeat) should
-precede task 2.1; each new gap becomes its own small prerequisite change.
+A dedicated gap-sweep ([[self-host-gap-sweep]] — assemble the whole core, compile, log each
+error, repeat) should precede task 2.1; it produces the complete G3–Gn backlog and the
+reusable assembly script, and each recorded gap becomes its own small prerequisite change.
 
 **Recommendation:** this umbrella change is correctly gated and should stay open/blocked.
 Land `internal-defines` (G1) and `emit-cstring-in-language` (G2) as new prerequisite changes,
