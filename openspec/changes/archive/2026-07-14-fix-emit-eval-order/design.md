@@ -47,14 +47,32 @@ Chez-hosted IR is unchanged (no re-baseline of every demo `.ll`) and only `schem
 match. Apply the same to `et` (tail) and to the `apply` variants. `emit-app`/`emit-apply`
 themselves already consume `fop`/`aops` in a fixed internal order, so no change there.
 
-### D2: Audit other multi-sub-emission sites
+### D2: Audit other multi-sub-emission sites — RESULT
 
-Enumerate every place two or more `fresh-temp`/`emit!`-producing expressions are arguments to
-one call, and confirm each is either already sequenced (`let*`, `seq`) or made so. Known-safe:
-`(emit-primcall op (map …))` (single operand list; `map` element order is left-to-right on both
-hosts), the `let`/`letrec` `(let* ([ops (map …)] …) …)` stages, `emit-make-closure`/
-`emit-closure-block` (single `map`/`for-each` each). The triple test is the backstop: any missed
-site shows up as a residual diff.
+The audit found a **second class beyond the call/apply sites**: `let` (parallel) bindings whose
+inits each call `fresh-temp`/`fresh-bb`. Scheme leaves parallel-`let` init order unspecified —
+Chez evaluates right-to-left, scheme-llvm left-to-right — so a binding like
+`(let ([raw (fresh-temp)] [p (fresh-temp)]) …)` numbers `raw`/`p` differently per host. Five
+such sites were converted to `let*` (sequential, left-to-right on both hosts; the bindings are
+independent, so this is meaning-preserving):
+
+- `emit-alloc-closure` — `[raw (fresh-temp)] [p (fresh-temp)]`
+- `emit-load-code` — `[b …] [bp …] [code …] [fp …]`
+- `emit-make-closure`'s helper — `[b …] [p …] [g …] [v …]`
+- `emit-spill` — `[raw …] [p …] [len …]`
+- `emit-arity-check` — `[ok (fresh-temp)] [errbb (fresh-bb …)] [okbb (fresh-bb …)]`
+
+Confirmed-safe (no change): `(emit-primcall op (map …))` and other single-`map` sites (`map`
+element order is left-to-right on both hosts); already-`let*`/`seq`-sequenced stages; single
+`fresh-temp` `let`s (`(let ([entry (assq …)] [t (fresh-temp)]) …)` — only one side-effecting
+init). The self-emission harness (D3) and the eventual triple test are the backstop for any
+missed site.
+
+**Correction to D1:** because these `let`→`let*` conversions also fix the *Chez-hosted* order
+(Chez was right-to-left), the Chez-hosted `.ll` output **does change** (temporaries renumber) —
+D1's "operands-first keeps the Chez output unchanged" holds only for the call/apply sites, not
+the `let` sites. The demo suite checks values and AOT/JIT/bitcode agreement (not `.ll` text), so
+it stays green; the change is that both hosts now emit the same deterministic left-to-right IR.
 
 ### D3: Verify with a direct byte-identical harness
 

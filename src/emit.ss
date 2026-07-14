@@ -205,9 +205,16 @@
     [(closure-block ,entries ,body)
      (ev body (emit-closure-block entries env cp tc?) cp tc?)]
     [(apply-app ,f ,args)
-     (emit-apply (ev f env cp tc?) (map (lambda (a) (ev a env cp tc?)) args) #f tc?)]
+     ;; sequence operands then callee explicitly (fix-emit-eval-order): don't
+     ;; rely on host argument-evaluation order, so schemec and the Chez-hosted
+     ;; compiler emit temps in the same order.  Operands-first matches Chez.
+     (let* ([aops (map (lambda (a) (ev a env cp tc?)) args)]
+            [fop  (ev f env cp tc?)])
+       (emit-apply fop aops #f tc?))]
     [(app ,f ,args)
-     (emit-app (ev f env cp tc?) (map (lambda (a) (ev a env cp tc?)) args) #f tc?)]))
+     (let* ([aops (map (lambda (a) (ev a env cp tc?)) args)]
+            [fop  (ev f env cp tc?)])
+       (emit-app fop aops #f tc?))]))
 
 (define (et e env cp tc?)
   (match e
@@ -219,10 +226,14 @@
        (et body env2 cp tc?))]
     [(closure-block ,entries ,body)
      (et body (emit-closure-block entries env cp tc?) cp tc?)]
-    [(apply-app ,f ,args)
-     (emit-apply (ev f env cp tc?) (map (lambda (a) (ev a env cp tc?)) args) #t tc?)]
+    [(apply-app ,f ,args)                          ; operands-first (fix-emit-eval-order)
+     (let* ([aops (map (lambda (a) (ev a env cp tc?)) args)]
+            [fop  (ev f env cp tc?)])
+       (emit-apply fop aops #t tc?))]
     [(app ,f ,args)
-     (emit-app (ev f env cp tc?) (map (lambda (a) (ev a env cp tc?)) args) #t tc?)]
+     (let* ([aops (map (lambda (a) (ev a env cp tc?)) args)]
+            [fop  (ev f env cp tc?)])
+       (emit-app fop aops #t tc?))]
     [else (emit! (string-append "ret i64 " (ev e env cp tc?)))]))
 
 (define (ev-if a b c env cp tc?)
@@ -255,7 +266,7 @@
     (start-bb el) (et c env cp tc?)))
 
 (define (load-free cp i)
-  (let ([b (fresh-temp)] [p (fresh-temp)] [g (fresh-temp)] [v (fresh-temp)])
+  (let* ([b (fresh-temp)] [p (fresh-temp)] [g (fresh-temp)] [v (fresh-temp)])
     (emit! (string-append b " = and i64 " cp ", -8"))
     (emit! (string-append p " = inttoptr i64 " b " to ptr"))
     (emit! (string-append g " = getelementptr i64, ptr " p ", i64 " (number->string (+ i 1))))
@@ -270,7 +281,7 @@
 
 ;; allocate {code_ptr, cap...}, tag TAG_CLOSURE (4)
 (define (emit-alloc-closure label caps-count)
-  (let ([raw (fresh-temp)] [p (fresh-temp)])
+  (let* ([raw (fresh-temp)] [p (fresh-temp)])
     (emit! (string-append raw " = call i64 @rt_alloc_words(i64 " (number->string (+ caps-count 1)) ")"))
     (emit! (string-append p " = inttoptr i64 " raw " to ptr"))
     (emit! (string-append "store i64 ptrtoint (ptr @" label " to i64), ptr " p))
@@ -309,7 +320,7 @@
 
 ;; load the code pointer out of a (tagged) closure value; returns the fn operand
 (define (emit-load-code fop)
-  (let ([b (fresh-temp)] [bp (fresh-temp)] [code (fresh-temp)] [fp (fresh-temp)])
+  (let* ([b (fresh-temp)] [bp (fresh-temp)] [code (fresh-temp)] [fp (fresh-temp)])
     (emit! (string-append b " = and i64 " fop ", -8"))
     (emit! (string-append bp " = inttoptr i64 " b " to ptr"))
     (emit! (string-append code " = load i64, ptr " bp))
@@ -330,7 +341,7 @@
 
 ;; spill i64 operands into a fresh GC-allocated array; returns a ptr operand.
 (define (emit-spill ops)
-  (let ([raw (fresh-temp)] [p (fresh-temp)] [len (length ops)])
+  (let* ([raw (fresh-temp)] [p (fresh-temp)] [len (length ops)])
     (emit! (string-append raw " = call i64 @rt_alloc_words(i64 " (number->string len) ")"))
     (emit! (string-append p " = inttoptr i64 " raw " to ptr"))
     (let loop ([i 0] [os ops])
@@ -458,7 +469,7 @@
 ;; argc >= f; a mismatch calls rt_arity_error (which aborts).  Leaves emission
 ;; positioned in a fresh "ok" block.
 (define (emit-arity-check f rest?)
-  (let ([ok (fresh-temp)] [errbb (fresh-bb "arityerr")] [okbb (fresh-bb "argok")])
+  (let* ([ok (fresh-temp)] [errbb (fresh-bb "arityerr")] [okbb (fresh-bb "argok")])
     (emit! (string-append ok " = icmp " (if rest? "sge" "eq") " i64 %argc, " (number->string f)))
     (emit! (string-append "br i1 " ok ", label %" okbb ", label %" errbb))
     (start-bb errbb)

@@ -25,15 +25,18 @@ checks scheme-llvm's *output* for small programs, never scheme-llvm compiling *i
    `rd-datum` had no case for `[` (char 91), so `[...]` syntax mis-read and `schemec` segfaulted
    on the ~529-bracket core. Fixed by accepting `[`/`]` as list syntax. `schemec` now compiles
    bracket programs (incl. `demos/fact.scm`) to correct, runnable IR (fact → 120).
-4. **Evaluation-order divergence — OPEN ([[fix-emit-eval-order]], next).** `schemec`'s IR is
-   correct but **not byte-identical** to the Chez-hosted compiler's: temps come out in a
-   different order because `(emit-app (ev f …) (map … args) …)` and similar rely on host
-   argument-evaluation order (Chez right-to-left vs scheme-llvm left-to-right). This breaks the
-   byte-identical fixed point (task 3), so it must close before the triple test — it is the
-   long-standing open question "does any pass rely on Chez evaluation order?" made concrete.
+4. **Evaluation-order divergence — FIXED ([[fix-emit-eval-order]], landed).** `schemec`'s IR was
+   correct but not byte-identical: temps came out in a different order because the emitter
+   sequenced call operands/callee and parallel `let` `fresh-temp` bindings in host
+   argument-evaluation order (Chez right-to-left vs scheme-llvm left-to-right). Fixed by
+   `let*`-sequencing the call/apply sites and five `emit-*` `let`→`let*` conversions. `schemec`
+   and the Chez-hosted compiler now emit **byte-identical IR** (harness `test/self-emit-equiv.sh`;
+   `demos/fact.scm` byte-identical).
 
-Resume 2.1 (full build) once (4) lands; the driver wiring (2.2) already works on non-brackets.
-Prelude, toggle, and REPL-scope decisions are D4/D5 in design.md.
+**All four self-application blockers are closed.** Emission is deterministic, so **task 3 (the
+byte-identical triple test) is now attemptable**: build stage-1 `schemec` (2.1, done),
+recompile the assembled core with `schemec` to get stage-2 IR, and require stage-1 == stage-2.
+Resume at task 2.3/3.1 below. Prelude, toggle, and REPL-scope decisions are D4/D5 in design.md.
 
 - [~] 2.1 Build the core AOT to a native `schemec` using the Chez-hosted compiler: assemble the
       core with `tools/assemble-core.ss`, append the `(display (compile-source-string
