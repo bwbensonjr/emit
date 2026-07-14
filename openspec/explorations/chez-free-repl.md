@@ -1,8 +1,10 @@
 # Exploration: a Chez-free REPL (self-hosting the compiler)
 
-Status: exploration / roadmap (not an actionable change yet)
-Related: `openspec/changes/interactive-repl` (the ORC/LLJIT host this builds on)
-Captured: 2026-07-12
+Status: exploration / living roadmap (individual steps become their own changes)
+Related: `openspec/changes/archive/2026-07-12-interactive-repl` (the ORC/LLJIT host this
+builds on); `openspec/changes/archive/2026-07-13-select-syntax-rules-matcher` and
+`…-port-match-to-syntax-rules` (the `match` step, done)
+Captured: 2026-07-12 · Updated: 2026-07-13
 
 ## The framing
 
@@ -24,13 +26,30 @@ The C++ host (`src/repl/host.cpp`) JITs arbitrary IR; it has no idea Chez exists
 So "REPL without Chez" reduces to one thing: **make the compiler itself run without
 Chez.** That is exactly the project's stated self-hosting goal.
 
+## Progress (updated 2026-07-13)
+
+Two ends have to meet: the language scheme-llvm *accepts* grows up, and/or the compiler's
+own source shrinks to fit it. Each remaining dependency below gets one of three verdicts —
+**grow** the language to it, **avoid** it by rewriting the compiler, or **downgrade** it to a
+weaker form a batch compiler can live with.
+
+| Step | Status |
+|---|---|
+| `match` off Chez (syntax-rules `,x` matcher; `syntax-case` removed) | ✅ **done** — verified the matcher also expands under our own expander |
+| vectors + runtime vector primitives | ✅ **done** (archived `2026-07-13-vectors`) |
+| ellipsis in the matcher | ⏸️ **shelved** — current passes use none; needs custom-ellipsis expander support; revive only if a pass wants it |
+| everything below | ❌ **not yet proposed** |
+
+The biggest single blocker (`match`/`syntax-case`) is cleared, but the structural foundation
+(the core/driver split) and the remaining "cheap" and "medium" rocks are still unwritten.
+
 ## Dependency inventory — what the front end leans on Chez for
 
 Gathered by grepping `src/*.ss` + `src/passes/*.ss` (usage counts approximate):
 
 | Dependency | Uses | Off-Chez path |
 |---|---:|---|
-| `match` (`(match)` library) | pervasive | **Biggest lever.** Reimplement as `syntax-rules` macros (expander is already in-language) or a small pattern-compiler pass |
+| `match` (`(match)` library) | pervasive | ✅ **done** — reimplemented as a `syntax-rules` `,x` matcher (`src/match.sls`, `(rnrs)` only), verified expandable by our own expander |
 | `string-append` | 122 | Runtime primitive (emit builds all IR text this way) |
 | `number->string` | 34 | Runtime primitive / in-language over digit math |
 | `symbol->string` | 4 | Runtime primitive (inverse of the existing `string->symbol`) |
@@ -38,9 +57,13 @@ Gathered by grepping `src/*.ss` + `src/passes/*.ss` (usage counts approximate):
 | `map` / `for-each` / `fold-left` / `filter` | ~150 | In-language library — `prelude.scm` already started this |
 | `reverse` / `append` / `assq` / `memq` / `list-ref/head/tail` / `iota` | ~60 | In-language library (mostly trivial) |
 | `apply` | 41 | Already a supported form (the compiler emits `apply`) |
-| `vector` / `vector-ref` / `vector-set!` | ~10 | Add vector primitives to the runtime (M1 has none yet) |
-| `error` / `guard` | ~38 | Ride on the **`rt_trap` longjmp hook** already built for the host |
-| `read` (source reader) | 6 | **Already partly bootstrapped:** `read-from-string` (`prelude.scm:171`) walks a string via M1 `string-ref` |
+| `vector` / `vector-ref` / `vector-set!` | ~10 | ✅ **done** — runtime vector primitives added (`2026-07-13-vectors`) |
+| `cadr`/`caddr`/`cddr`/… (cxr combinators) | ~78 | **grow** — trivial `prelude.scm` defs over `car`/`cdr` |
+| `number->string` | 34 | **grow** — needs integer division (`quotient`/`remainder`) primitives first; then in-language over digit math |
+| `case` (used in the passes) | 3 | **grow** — a small `syntax-rules` macro in the prelude (like `cond`/`when`) |
+| multiple values (`let-values` / `values`) | ~21 | **grow** the runtime, *or* **avoid** by returning/destructuring pairs |
+| `error` / `guard` | ~38 (mostly now the matcher's own `guard` clause syntax) | **downgrade** — real R6RS `guard` is ~1 site (REPL recovery); a batch core can make `error` = diagnose+abort on the `rt_trap` hook |
+| `read` (source reader) | 6 | **Already partly bootstrapped:** `read-from-string` (`prelude.scm`) walks a string via M1 `string-ref` |
 | `process` | 2 | Disappears — only used for the target header, which the C++ host already knows |
 | `open-input-file` / `open-output-file` / `command-line-arguments` | few | Entry-point I/O; a REPL reads stdin, not files |
 
@@ -90,25 +113,45 @@ A and C are gated on the same milestone; B sidesteps it at the cost of the proje
 ## Suggested ordering
 
 ```
-  1. match off Chez ───────────────┐  (syntax-rules macros / pattern-compiler pass)
-  2. string/number primitives ─────┤  (string-append, number->string, symbol->string)
-  3. vectors + finish list library ┤  (runtime vector prims; prelude helpers)
-  4. error/guard over rt_trap ─────┤  (reuse the Group 4 escape hook)
-  5. reader from stdin ────────────┤  (extend read-from-string to a full stream)
-  6. self-apply ───────────────────┘  → path C (subprocess), then embed → path A
+  ✅ match off Chez              (syntax-rules ,x matcher — done)
+  ✅ vectors + runtime prims     (done)
+  ───────────────────────────── remaining ─────────────────────────────
+  0. core/driver decomposition   (pure forms→IR text  ⟂  I/O + subprocess driver)
+  1. cheap prelude wins          (cxr combinators; `case` macro)
+  2. number formatting           (quotient/remainder prims; then number->string)
+  3. multiple values             (grow `let-values`/`values`, or avoid via pairs)
+  4. error/guard downgrade       (diagnose+abort on the rt_trap hook)
+  5. reader from stdin           (extend read-from-string to a full stream)
+  6. self-apply                  → path C (subprocess), then embed → path A
 ```
 
-1. **`match` off Chez** — pervasive; the single biggest unblock.
-2. **String/number formatting primitives** — unblocks `emit.ss`, which is all `string-append`.
-3. **Vectors** + finish the list library in `prelude.scm`.
-4. **`error`/`guard`** layered on the existing `rt_trap` hook.
+0. **Core/driver decomposition** *(new, highest-leverage structural move)* — split the
+   compiler into a **pure core** (forms → IR text; needs only lists/symbols/strings/vectors)
+   and a **driver** (file I/O, `process`/clang, ports). Self-hosting then targets the *core*
+   (read source on stdin → IR on stdout), and the whole filesystem/subprocess surface drops
+   out of the target — the driver can stay Chez/bash indefinitely. The REPL host already
+   speaks text-in→IR, and `read-from-string` already exists, so both endpoints are in place.
+1. **Cheap prelude wins** — `cadr`/`caddr`/… and a `case` macro; afternoon-sized, no runtime
+   changes. Good momentum after the structural split.
+2. **Number formatting** — add `quotient`/`remainder` runtime primitives, then
+   `number->string` in-language (unblocks `emit.ss`, which is all `string-append` +
+   `number->string`).
+3. **Multiple values** — the ~21 `let-values` sites: grow real `values`/`call-with-values`,
+   or refactor to return pairs.
+4. **`error`/`guard`** — downgrade to diagnose+abort on the existing `rt_trap` hook (only ~1
+   real R6RS `guard` site — REPL recovery — now that the matcher owns its own `guard` clause).
 5. **Reader** — extend `read-from-string` to consume a full stdin stream.
-6. **Self-apply** — compile `compile.ss` & friends with themselves → path C, then embed → A.
+6. **Self-apply** — compile the core with itself → path C (subprocess), then embed → A.
+
+**Validation at first light (the triple test).** Compile the core with Chez, use *that*
+binary to compile the core again, and check the two IR outputs are byte-identical. A stable
+fixed point is the proof that self-hosting actually holds.
 
 ## Open questions
 
-- Is `match` better as `syntax-rules` (stays in the language, but stresses the expander)
-  or as a dedicated pattern-compiler pass (more control, more code)?
+- ~~Is `match` better as `syntax-rules` or a pattern-compiler pass?~~ **Resolved:**
+  `syntax-rules` `,x` matcher (kept the language small; the expander hosts it fine). See
+  `2026-07-13-select-syntax-rules-matcher`.
 - Minimal condition model for `error`/`guard`: does the `rt_trap` single-jump hook suffice,
   or is a small tagged-condition value + handler stack needed?
 - Bootstrap artifact policy: check in a stage-0 `.ll`/native `schemec`, or always
