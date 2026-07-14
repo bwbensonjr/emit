@@ -4,15 +4,22 @@ The passes use a vendored `match` (`src/match.sls`, 325 lines, Andy Keep's match
 on `syntax-case`. Our expander implements only `syntax-rules`, so this `match` is
 un-expandable by scheme-llvm and blocks self-hosting.
 
-Two facts scope the work:
+Three facts scope the work:
 
 1. **Catamorphism is implemented in `match.sls` but unused by the compiler.** There are
-   zero `,[…]` catamorphism forms in the passes. The used pattern subset is: literal
-   symbol (bare symbol matches itself), pair `(a . b)`, single ellipsis `(p ...)`,
-   ellipsis-with-fixed-tail `(p ... plast)`, `,id` binder, `(guard <exp> …)`, and `else`.
-2. **The expander is already close.** `src/passes/expand.ss` tracks per-variable ellipsis
-   depth and supports ellipsis-with-tail (`match-ellipsis` takes a `tailpat`). It has no
-   visible handling of the ellipsis-escape `(... ...)`.
+   zero `,[…]` catamorphism forms in the passes.
+2. **The current passes use NO ellipsis patterns** (verified during apply: every `...` in
+   the pass source is in a comment). The patterns actually used are: literal symbol (bare
+   symbol matches itself), pair `(a . b)`, **dotted-rest** `(a . ,rest)`, fixed arity, `,id`
+   binder, `(guard <exp> …)`, and `else`. Consequently a non-ellipsis matcher covers 100% of
+   real pass usage. Ellipsis is **deferred to a follow-up** ([[port-match-ellipsis]], option
+   B) — see fact 3 for why it needs more than this change delivers.
+3. **Ellipsis needs two expander capabilities, and this change delivers only one.** A matcher
+   must both *emit* a literal `...` (the ellipsis escape `(... ...)`, which this change adds
+   to `expand.ss`) and *detect* `...` in a user pattern `(p ...)`. Detection needs the
+   matcher's `syntax-rules` to treat `...` as a matchable literal — a **custom ellipsis
+   identifier** — which the expander does not support (verified: it errors). Adding that, plus
+   the ellipsis-capable matcher, is the follow-up.
 
 A `syntax-rules` matcher works by expanding to *runtime* destructuring code
 (`car`/`cdr`/`pair?`/`null?`/`eq?`/`equal?`/`let`/`if`) — all in the M1 subset, so no
@@ -32,8 +39,9 @@ gensym/records/hashtables).
 **Non-Goals:**
 - Implementing `syntax-case`. Explicitly deferred until R7RS-large's pattern-matching
   story settles.
-- Catamorphism, `?`-predicate patterns beyond what the guards need, or any matcher feature
-  the passes do not use.
+- Catamorphism, `?`-predicate patterns, and the `_` wildcard.
+- Ellipsis `(p ...)` / `(p ... . tail)`: deferred to the follow-up [[port-match-ellipsis]]
+  (needs custom-ellipsis expander support; unused by current passes).
 - Self-hosting itself. This change removes one blocker; it does not compile the passes with
   scheme-llvm yet.
 

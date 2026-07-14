@@ -12,21 +12,22 @@ That subset is expressible with `syntax-rules`, so we can remove the `syntax-cas
 dependency without losing anything the compiler relies on — and we defer `syntax-case`
 itself until R7RS-large's pattern-matching direction (the SRFI-200/204/241 lineage) settles.
 
-This change consumes the recorded decision from [[select-syntax-rules-matcher]] (which
-matcher, its convention, and the exact expander work required); it does not re-derive the
-selection.
+This change consumes the recorded decision from [[select-syntax-rules-matcher]] (build a
+`,x`-convention `syntax-rules` matcher; add the ellipsis escape `(... ...)` to the expander).
 
-- Implement in `src/passes/expand.ss` whatever `syntax-rules` construct the decision
-  identified as required (candidate: the ellipsis escape `(... ...)`), with tests; skip if
-  the decision recorded that none is needed.
-- Replace `src/match.sls` with the chosen `syntax-rules` matcher, used by **both** the
-  host (Chez) build and the (future) self-hosted build, so there is a single matcher and
-  no host/target divergence.
-- Rewrite the ~22 `match` forms across the passes (`parse.ss`, `emit.ss`,
-  `passes/lower.ss`, `passes/convert-assignments.ss`, `passes/convert-closures.ss`,
-  `passes/recognize-let.ss`) to the adopted matcher's syntax — applying the convention
-  mapping from the decision — and test that the whole suite still passes (behavior-preserving
-  refactor).
+**Scope note (option B):** during implementation we confirmed the current passes use **no
+ellipsis patterns**, and that ellipsis *matching* needs the expander to *detect* `...` in
+patterns (a custom ellipsis identifier) — more than the escape alone. So ellipsis is split
+into a dedicated follow-up ([[port-match-ellipsis]]); this change lands the non-ellipsis
+matcher, which covers 100% of real pass usage and removes the `syntax-case` blocker.
+
+- Implement the ellipsis escape `(... ...)` in `src/passes/expand.ss`, with unit tests
+  (needed by the eventual ellipsis matcher and independently useful).
+- Replace `src/match.sls` with a `syntax-rules`-only `,x` matcher (`(import (rnrs))`),
+  used by **both** the host (Chez) build and — verified — scheme-llvm's own expander, so
+  there is a single matcher and no host/target divergence.
+- Because the `,x` convention is preserved and the passes use no ellipsis, the pass
+  `match` forms need **no rewrite**; the existing suite is the behavior-preserving oracle.
 
 ## Capabilities
 

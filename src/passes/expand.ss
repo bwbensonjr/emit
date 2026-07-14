@@ -158,9 +158,35 @@
        [(assq tmpl renames) => cdr]
        [else tmpl])]
     [(pair? tmpl)
+     (cond
+       [(eq? (car tmpl) 'quote)
+        (cons 'quote (instantiate-seq (cdr tmpl) binds pvars renames #t))]
+       [(and (eq? (car tmpl) *ellipsis*)                ; (... <tmpl>) ellipsis escape
+             (pair? (cdr tmpl)) (null? (cddr tmpl)))
+        (instantiate-escaped (cadr tmpl) binds pvars renames quoted?)]
+       [else (instantiate-seq tmpl binds pvars renames quoted?)])]
+    [else tmpl]))
+
+;; (... <tmpl>) escape: instantiate <tmpl> with every `...` treated as a literal
+;; identifier (never a repetition marker); pattern variables still substitute.
+(define (instantiate-escaped tmpl binds pvars renames quoted?)
+  (cond
+    [(eq? tmpl *ellipsis*) *ellipsis*]
+    [(symbol? tmpl)
+     (cond
+       [(memq tmpl pvars)
+        (let ([v (cdr (assq tmpl binds))])
+          (when (ell? v)
+            (error 'expand "pattern variable used at wrong ellipsis depth" tmpl))
+          v)]
+       [quoted? tmpl]
+       [(assq tmpl renames) => cdr]
+       [else tmpl])]
+    [(pair? tmpl)
      (if (eq? (car tmpl) 'quote)
-         (cons 'quote (instantiate-seq (cdr tmpl) binds pvars renames #t))
-         (instantiate-seq tmpl binds pvars renames quoted?))]
+         (cons 'quote (instantiate-escaped (cdr tmpl) binds pvars renames #t))
+         (cons (instantiate-escaped (car tmpl) binds pvars renames quoted?)
+               (instantiate-escaped (cdr tmpl) binds pvars renames quoted?)))]
     [else tmpl]))
 
 (define (instantiate-seq tmpls binds pvars renames quoted?)
