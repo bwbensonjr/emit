@@ -163,7 +163,10 @@
     (symbol? "rt_symbol_p") (string? "rt_string_p") (char? "rt_char_p")
     (boolean? "rt_boolean_p") (integer? "rt_integer_p") (exact? "rt_exact_p")
     (read-all-stdin "rt_read_all_stdin") (display "rt_display")
-    (%error-abort "rt_error")))
+    (%error-abort "rt_error") (%raise "rt_raise")
+    (%error-object? "rt_error_object_p")
+    (%error-object-message "rt_error_object_message")
+    (%error-object-irritants "rt_error_object_irritants")))
 
 ;; --- string helpers ---
 (define (comma-join lst)
@@ -278,10 +281,36 @@
     v))
 
 (define (emit-primcall op ops)
-  (let ([entry (assq op prim-table)] [t (fresh-temp)])
-    (unless entry (error 'emit "unknown prim" op))
-    (emit! (string-append t " = call i64 @" (cadr entry) "(" (i64s ops) ")"))
-    t))
+  ;; %run-guarded is special: it passes the module's own ccc trampoline @__apply0
+  ;; (a pointer, resolved within this module -- no cross-module symbol) so the C
+  ;; runtime can invoke the guarded thunk (change: r7rs-exceptions-subset).
+  (if (eq? op '%run-guarded)
+      (let ([t (fresh-temp)])
+        (emit! (string-append t " = call i64 @rt_run_guarded(ptr @__apply0, i64 "
+                              (car ops) ")"))
+        t)
+      (let ([entry (assq op prim-table)] [t (fresh-temp)])
+        (unless entry (error 'emit "unknown prim" op))
+        (emit! (string-append t " = call i64 @" (cadr entry) "(" (i64s ops) ")"))
+        t)))
+
+;; The ccc trampoline @__apply0(closure): load the closure's code pointer and do
+;; the fastcc 0-arg call (self=closure, argc=0, K positional pads = undef,
+;; overflow = null), matching the uniform prototype.  `internal` linkage so each
+;; module (incl. per-form REPL modules in one JITDylib) has its own with no
+;; collision.  rt_run_guarded (C) calls this by pointer inside its setjmp frame.
+(define (emit-apply0-trampoline k)
+  (let loop ([i 0] [pads ""])
+    (if (< i k)
+        (loop (+ i 1) (string-append pads ", i64 undef"))
+        (string-append
+         "define internal i64 @__apply0(i64 %clos) {\nentry:\n"
+         "  %b = and i64 %clos, -8\n"
+         "  %bp = inttoptr i64 %b to ptr\n"
+         "  %code = load i64, ptr %bp\n"
+         "  %fp = inttoptr i64 %code to ptr\n"
+         "  %r = call fastcc i64 %fp(i64 %clos, i64 0" pads ", ptr null)\n"
+         "  ret i64 %r\n}\n\n"))))
 
 ;; allocate {code_ptr, cap...}, tag TAG_CLOSURE (4)
 (define (emit-alloc-closure label caps-count)
@@ -467,7 +496,12 @@
    "declare i64 @rt_build_rest(i64, i64, i64, ptr, ptr)\n"
    "declare ptr @rt_apply_argv(i64, ptr, i64, i64)\n"
    "declare void @rt_arity_error(i64, i64)\n"
-   "declare i64 @rt_error(i64, i64)\n\n"))
+   "declare i64 @rt_error(i64, i64)\n"
+   "declare i64 @rt_raise(i64)\n"
+   "declare i64 @rt_run_guarded(ptr, i64)\n"
+   "declare i64 @rt_error_object_p(i64)\n"
+   "declare i64 @rt_error_object_message(i64)\n"
+   "declare i64 @rt_error_object_irritants(i64)\n\n"))
 
 ;; entry arity check: fixed callee requires argc == f, variadic requires
 ;; argc >= f; a mismatch calls rt_arity_error (which aborts).  Leaves emission
@@ -530,7 +564,7 @@
             [ent  (emit-entry entry)])
        (string-append (rt-declarations)
                       (symbol-globals)
-                      body ent))]))
+                      body ent (emit-apply0-trampoline *arity*)))]))
 
 ;; --- REPL emission: persistent globals + per-form entry thunks ------------
 ;; In a persistent session, closures built by one form's module are called from
@@ -614,7 +648,7 @@
           (string-append (rt-declarations) (symbol-globals) slots
                          (apply string-append (reverse bodies))
                          (apply string-append (reverse thunks))
-                         entry))
+                         entry (emit-apply0-trampoline repl-arity)))
         (let* ([prog (car ps)]
                [fd+rd (repl-scan-globals prog)]
                [fd (car fd+rd)] [rd (cadr fd+rd)])
@@ -658,5 +692,5 @@
                                             " = global i64 0\n"))
                               defd))])
            (list (string-append (rt-declarations) exts slots (symbol-globals)
-                                body thunk)
+                                body thunk (emit-apply0-trampoline repl-arity))
                  name defd))]))))

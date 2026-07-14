@@ -251,15 +251,48 @@
     [(< n 0) (list->string (cons #\- (ns-digits n (quote ()))))]
     [else    (list->string (ns-digits (- 0 n) (quote ())))]))
 
-;;; --- error: report a diagnostic and abort (error-and-guard-conditions) -----
-;;; (error who message irritant ...) reports "who: message irritant ..." and
-;;; aborts the current computation via the runtime trap hook: under the REPL host
-;;; the session survives and prints the message; standalone it exits non-zero.
-;;; The who/message prefix is formatted here in-language with string primitives;
-;;; %error-abort hands it to the runtime, which renders the irritants and traps.
-(define (error who msg . irritants)
-  (%error-abort (string-append (symbol->string who) (string-append ": " msg))
-                irritants))
+;;; --- exceptions: error objects, raise, guard (r7rs-exceptions-subset) ------
+;;; R7RS `(error message irritant ...)` builds a CATCHABLE error object and raises
+;;; it.  As a compatible superset we also accept a leading SYMBOL `who` (the
+;;; compiler's internal call style, and how this prelude is written so it stays
+;;; valid under the Chez bootstrap too), folding "who: message" into the message.
+;;; Uncaught, an error renders and aborts as before (REPL host survives; a
+;;; standalone executable exits non-zero).  %error-abort builds the error object
+;;; in the runtime (rt_error) and raises it through the guard escape stack.
+(define (error a . rest)
+  (if (string? a)
+      (%error-abort a rest)                          ; R7RS: (error message irritant ...)
+      (%error-abort (string-append (symbol->string a) (string-append ": " (car rest)))
+                    (cdr rest))))                     ; superset: (error who message ...)
+
+;;; raise any object to the nearest enclosing guard (else render + abort).
+(define (raise obj) (%raise obj))
+
+;;; R7RS error-object accessors over the runtime error-object representation.
+(define (error-object? x) (%error-object? x))
+(define (error-object-message x) (%error-object-message x))
+(define (error-object-irritants x) (%error-object-irritants x))
+
+;;; guard: evaluate BODY; if it raises (via raise/error), bind the object to VAR
+;;; and run the clauses as a `cond` in the guard's continuation.  No matching
+;;; clause (and no else) re-raises outward.  %run-guarded runs the thunk under a
+;;; runtime escape frame and returns (raised? . value-or-object); the emitter
+;;; passes the module's @__apply0 trampoline so the runtime can call the thunk.
+(define-syntax guard
+  (syntax-rules ()
+    ((_ (var clause ...) body ...)
+     (let ((%gres (%run-guarded (lambda () body ...))))
+       (if (car %gres)
+           (let ((var (cdr %gres))) (%guard-clauses var clause ...))
+           (cdr %gres))))))
+
+(define-syntax %guard-clauses
+  (syntax-rules (else =>)
+    ((_ v) (raise v))                                              ; no clause matched
+    ((_ v (else e ...)) (begin e ...))
+    ((_ v (test => proc) rest ...) (let ((gt test)) (if gt (proc gt) (%guard-clauses v rest ...))))
+    ((_ v (test) rest ...) (let ((gt test)) (if gt gt (%guard-clauses v rest ...))))
+    ((_ v (test e ...) rest ...) (if test (begin e ...) (%guard-clauses v rest ...)))))
 
 ;;; --- vector constructors (vectors change) ---------------------------------
 ;;; make-vector/vector-ref/vector-set!/vector-length/vector? are primitives;

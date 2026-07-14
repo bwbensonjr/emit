@@ -104,20 +104,27 @@ the module's K and (b) take its address, `guard` is recognized by the frontend/e
 and the error-object accessors remain ordinary procedures (prelude + runtime); only `guard`
 needs emitter support. This resolves the "guard home" open question.
 
-### D3: R7RS `error` signature + error-objects
+### D3: R7RS `error` as a compatible superset (no call-site migration)
 
-Adopt `(error message obj …)` — a string `message`, **no `who`** — producing a heap
-**error-object**: a new extended header type `HDR_ERROR` holding `{ message-string,
-irritant-list }`. Add `error-object?`, `error-object-message`, `error-object-irritants`.
-`raise`ing an error-object that reaches the outermost trap renders it exactly as `error`
-does today (message + irritants) and aborts / is caught by the host.
+Support `(error message obj …)` — a string `message` — producing a heap **error-object**: a
+new extended header type `HDR_ERROR` holding `{ message-string, irritant-list }`. Add
+`error-object?`, `error-object-message`, `error-object-irritants`. `raise`ing an error-object
+that reaches the outermost trap renders it (message + irritants) and aborts / is caught by
+the host.
 
-Internal compiler call sites currently use the R6RS `(error 'who "msg" irritant …)`. Migrate
-each to `(error "who: msg" irritant …)` (folding `who` into the message string) — mechanical,
-meaning-preserving, and it keeps existing diagnostics readable.
+**Revised from a signature migration to a superset (found during apply).** The R7RS
+signature (`message …`, ≥1 arg) collides with the bootstrap: the compiler source is compiled
+by *both* Chez (R6RS `error` needs `who` + `message`, ≥2 args) and itself, and the many
+internal `(error 'who "msg")` sites have no irritants — rewriting them to `(error "who: msg")`
+(1 arg) is invalid under R6RS and would break the Chez bootstrap. Instead the prelude `error`
+dispatches on its first argument: a **string** first arg is the R7RS `(error message …)`; a
+**symbol** first arg is the existing `(error who message …)`. R7RS programs get exact R7RS
+behavior; every internal call site is unchanged (so **no migration and no fixed-point risk**);
+and a symbol-as-message is undefined by R7RS anyway, so treating it as `who` is a permissible
+superset, not a violation.
 
-*Alternative — keep the `who` arg*: non-conformant, and the whole point is R7RS alignment.
-Migrate.
+*Alternative — strict R7RS `error` (drop `who`) + migrate sites*: breaks the dual-host
+bootstrap (above) for no user-visible benefit; the superset is conformant for R7RS programs.
 
 ### D4: Preserve uncaught behavior; only add a catch layer
 
@@ -146,12 +153,14 @@ stack, this falls out for free — no host change beyond initializing the stack 
 ## Migration Plan
 
 1. Runtime: add the escape-frame stack (generalize `rt_trap`), `HDR_ERROR` error-objects,
-   `error-object?`/`-message`/`-irritants`, and `%call-guarded` (or the enter/raised/object/
-   leave set per the D2 spike). `rt_error` builds and raises an error-object.
-2. Prelude: R7RS `error`; `raise`; error-object accessors; the `guard` macro (D2).
-3. Migrate internal `(error 'who …)` call sites to the R7RS signature (D3).
-4. Host: initialize the frame stack with the outermost frame (both `repl-host` and
-   `scheme-run`); confirm uncaught behavior unchanged (D4).
+   `error-object?`/`-message`/`-irritants`, `rt_run_guarded`, `rt_raise`, `rt_guard_reset`.
+   `rt_error` builds and raises an error-object.
+2. Emitter: `@__apply0` ccc trampoline (internal linkage) in every module emitter; the
+   `%run-guarded` primitive special-emitted to pass `@__apply0`; declare the new runtime fns.
+3. Prelude: the superset `error` (D3); `raise`; error-object accessors; the `guard` /
+   `%guard-clauses` macros (D2). No internal call-site migration (D3).
+4. Hosts: call `rt_guard_reset()` in the trap-recovery path (both `repl-host` and
+   `scheme-run`) so a trap that bypassed a frame pop leaves no stale frames (D4).
 5. Verify: `guard` catches a `raise`d object and an `error` object; nested `guard`s;
    re-raise-when-no-clause; uncaught still aborts/survives; the self-hosting fixed point holds
    after migration.

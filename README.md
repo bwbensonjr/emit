@@ -108,6 +108,10 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
   `let*` — realized as `syntax-rules` macros in the prelude; named `let` (hand-written).
 - **Macros**: `define-syntax` + `syntax-rules` (literals, `_`, ellipsis), a fixpoint
   `expand` stage, hygienic for macro-introduced identifiers.
+- **Exceptions (R7RS-small subset)**: `guard`, `raise`, and `error` with catchable error
+  objects (`error-object?`/`-message`/`-irritants`). `guard` is a one-shot upward escape
+  over a runtime `setjmp` frame stack (no `call/cc` needed); an uncaught raise aborts as
+  before. `error` is a superset — `(error message ...)` (R7RS) or `(error who message ...)`.
 - Arithmetic: n-ary `+ - *`. Comparisons: n-ary/chained `= < > <= >=`, `eq?` / `eqv?`, and
   structural `equal?`.
 - Variadic `lambda`, dotted rest parameters, `apply`, and runtime arity checking — on the
@@ -158,11 +162,15 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
   hygienic for macro-introduced identifiers only).
 - **Numeric tower** — fixnums only; no bignums/flonums/rationals, no `quotient`/`remainder`/
   `/`, no overflow handling.
-- **Control**: `call/cc`, `values`/`call-with-values`, exceptions/`guard`, `dynamic-wind`.
+- **Control**: `call/cc`, `values`/`call-with-values`, `dynamic-wind`; and the rest of the
+  R7RS exception system beyond the shipped subset — `with-exception-handler` and
+  `raise-continuable` (their non-unwinding/resumable semantics need `call/cc`),
+  `read-error?`/`file-error?`.
 - **Data**: bytevectors, hash tables, records (vectors done).
 - **I/O**: ports, files, `read` from stdin, `display`/`write` as procedures.
-- Recoverable error handling: arity errors are isolated in the REPL host (the session
-  survives) but still abort the standalone AOT/JIT executables; no general condition system.
+- Recoverable error handling: `guard` catches in-language `raise`/`error` (see above), but
+  runtime type/arity errors are still not guard-catchable (they trap to the host, per R7RS
+  "it is an error" latitude); no general condition-type hierarchy.
 
 **Self-hosting (the north star)**
 - The compiler compiles itself to a byte-identical fixed point, and there are now two

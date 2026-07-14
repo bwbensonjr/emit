@@ -14,9 +14,10 @@ hook.
 
 ## What Changes
 
-- Adopt the **R7RS `error` signature**: `(error message obj …)` (a string `message`, no
-  `who`), producing a catchable **error object**. **BREAKING** vs. the current
-  `(error who message irritant …)`; internal call sites migrate.
+- Support the **R7RS `error` signature** `(error message obj …)` producing a catchable
+  **error object**, as a compatible *superset* of the current `(error who message …)`: a
+  string first arg is R7RS, a symbol first arg is the existing who-style. Non-breaking; no
+  internal call-site migration (see design D3).
 - Add **error-object accessors**: `error-object?`, `error-object-message`,
   `error-object-irritants`.
 - Add **`raise`** — raise any object to the nearest enclosing `guard` (or, if none, the
@@ -46,13 +47,13 @@ hook.
 - **Unblocks:** `repl-embedded-incremental` (the compile-error rollback can be expressed
   in-language). Consumes the `rt_trap` mechanism established in this repo.
 - **Code:** `src/runtime/runtime.c` (error-object representation, escape-frame stack over
-  `rt_trap`, `rt_error` → error-object), `src/prelude.scm` (`error`, `raise`, error-object
-  accessors), the expander/prelude (`guard` macro over the escape primitive), `src/parse.ss`
-  (`%error-abort` wiring), and **all internal `(error 'who …)` call sites** (compiler passes)
-  migrated to the R7RS signature.
-- **Fixed point:** the compiler recompiles itself; re-verify the byte-identical fixed point
-  after the `error` call-site migration (error paths are not hit during a clean self-compile,
-  but their string literals change).
+  `rt_trap`, `rt_error` → error-object, `rt_run_guarded`/`rt_raise`/`rt_guard_reset`),
+  `src/emit.ss` (`@__apply0` trampoline + `%run-guarded` special emit + declarations),
+  `src/parse.ss` (new `%`-primitives), `src/prelude.scm` (superset `error`, `raise`,
+  error-object accessors, `guard`/`%guard-clauses` macros), and the two hosts
+  (`rt_guard_reset` on trap recovery). No internal call-site migration (design D3).
+- **Fixed point:** the compiler recompiles itself; the byte-identical fixed point is
+  re-verified (every module now also emits `@__apply0`, identically across stages).
 - **Out of scope (deferred):** `with-exception-handler` and `raise-continuable` (faithful,
   non-unwinding, resumable semantics need `call/cc`), `read-error?` / `file-error?`
   (I/O-specific), full `call/cc` / general continuations, and the R6RS condition-type

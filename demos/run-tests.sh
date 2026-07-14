@@ -92,6 +92,9 @@ check rdlex   demos/reader-lexical.scm '(3 9 65 32 10 (a . b) (x y . z))'  # esc
 check rdall   demos/read-all.scm '(((define x 1) (define y 2) (+ x y)) ((define a 1) (b c)) ())'  # read-all-from-string: whole-program read
 check rdbracket demos/reader-brackets.scm '((a (b c) (d 5)))'  # [...] brackets read as (...)
 
+echo "exceptions demos"
+check exceptions demos/exceptions.scm '(boom 7 "bad thing" (1 2) (outer y))'  # guard/raise/error objects
+
 echo "macro demos"
 check macrouser demos/macro-user.scm    '(3 10 10 11)'  # define-syntax: swap!/ellipsis/my-let
 check macrohyg  demos/macro-hygiene.scm '(2 1 99 5 5)'  # hygiene: introduced temps don't capture

@@ -49,6 +49,7 @@ char rt_trap_msg[128] = "";
 #define HDR_STRING  0
 #define HDR_CHAR    1
 #define HDR_VECTOR  2   /* { HDR_VECTOR, length, elem0, ... } */
+#define HDR_ERROR   3   /* { HDR_ERROR, message-string, irritants-list } (R7RS error obj) */
 
 #define FIX(n)     ((val)(((intptr_t)(n)) << 3))
 #define UNFIX(v)   (((intptr_t)(v)) >> 3)
@@ -535,23 +536,86 @@ static void err_write(char *buf, size_t cap, size_t *off, val v) {
     case TAG_SYMBOL: err_put(buf, cap, off, sym_name(v), strlen(sym_name(v))); break;
     case TAG_EXT:
       if (ext_hdr(v) == HDR_STRING) { err_put(buf, cap, off, str_bytes(v), (size_t)str_len(v)); break; }
+      if (ext_hdr(v) == HDR_ERROR) {                       /* message, then irritants */
+        val msg = as_ptr(v)[1], irritants = as_ptr(v)[2];
+        err_put(buf, cap, off, str_bytes(msg), (size_t)str_len(msg));
+        for (val cur = irritants; tag_of(cur) == TAG_PAIR; cur = as_ptr(cur)[1]) {
+          err_put(buf, cap, off, " ", 1);
+          err_write(buf, cap, off, as_ptr(cur)[0]);
+        }
+        break;
+      }
       err_put(buf, cap, off, "#<obj>", 6);
       break;
     default: err_put(buf, cap, off, "#<obj>", 6); break;
   }
 }
 
-val rt_error(val prefix, val irritants) {
-  size_t off = 0, cap = sizeof rt_trap_msg;
-  err_put(rt_trap_msg, cap, &off, str_bytes(prefix), (size_t)str_len(prefix));
-  for (val cur = irritants; tag_of(cur) == TAG_PAIR; cur = as_ptr(cur)[1]) {
-    err_put(rt_trap_msg, cap, &off, " ", 1);
-    err_write(rt_trap_msg, cap, &off, as_ptr(cur)[0]);
+/* --- R7RS exceptions subset: error objects, raise, guard (r7rs-exceptions-subset)
+ * A `guard` pushes an escape frame (a setjmp) via rt_run_guarded; `raise` (and
+ * `error`, which raises an error object) longjmps to the nearest frame, else
+ * falls back to the outermost trap (rt_trap) exactly as before -- so uncaught
+ * behavior (REPL host survives; standalone exits non-zero) is unchanged.  guard
+ * is only an upward, one-shot escape, so setjmp/longjmp suffices (no call/cc).
+ * Validated by spike/guard/. */
+#define RT_GUARD_MAX 256
+static jmp_buf rt_guard_env[RT_GUARD_MAX];
+static val     rt_guard_raised[RT_GUARD_MAX];   /* held only across an immediate longjmp */
+static int     rt_guard_depth = 0;
+
+/* Reset the guard stack; a host calls this after catching an outermost trap so a
+ * longjmp that bypassed rt_run_guarded's pop does not leave stale frames. */
+void rt_guard_reset(void) { rt_guard_depth = 0; }
+
+val rt_make_error_object(val message, val irritants) {
+  val *p = (val *)GC_MALLOC(3 * sizeof(val));
+  p[0] = HDR_ERROR; p[1] = message; p[2] = irritants;
+  return tag_ptr(p, TAG_EXT);
+}
+val rt_error_object_p(val v) { return truthy(tag_of(v) == TAG_EXT && ext_hdr(v) == HDR_ERROR); }
+val rt_error_object_message(val v)   { return as_ptr(v)[1]; }
+val rt_error_object_irritants(val v) { return as_ptr(v)[2]; }
+
+/* raise OBJ to the nearest enclosing guard; if none, render and trap as before. */
+val rt_raise(val obj) {
+  if (rt_guard_depth > 0) {
+    rt_guard_raised[rt_guard_depth - 1] = obj;
+    longjmp(rt_guard_env[rt_guard_depth - 1], 1);
   }
+  size_t off = 0;
+  err_write(rt_trap_msg, sizeof rt_trap_msg, &off, obj);
   fprintf(stderr, "%s\n", rt_trap_msg);
   if (rt_trap) longjmp(*rt_trap, 1);
   exit(1);
   return NIL_V;   /* unreachable; keeps the i64-returning call site well-typed */
+}
+
+/* The emitter-synthesized ccc trampoline @__apply0 (per module) has this type;
+ * it does the fastcc 0-arg call into the guarded thunk closure. */
+typedef val (*rt_apply0_t)(val);
+
+/* Run THUNK guarded: push a frame, setjmp, call it through the module's ccc
+ * trampoline FN.  Returns (#f . value) on normal completion, (#t . object) if a
+ * raise landed here.  Frame is popped on both paths (and any deeper abandoned
+ * frames are discarded on the caught path). */
+val rt_run_guarded(rt_apply0_t fn, val thunk) {
+  if (rt_guard_depth >= RT_GUARD_MAX) rt_fatal("guard nesting too deep");
+  int i = rt_guard_depth++;
+  if (setjmp(rt_guard_env[i]) == 0) {
+    val v = fn(thunk);
+    rt_guard_depth = i;
+    return rt_cons(FALSE_V, v);
+  } else {
+    val o = rt_guard_raised[i];
+    rt_guard_depth = i;
+    return rt_cons(TRUE_V, o);
+  }
+}
+
+/* error: (error message obj ...) -- raise a fresh error object (R7RS signature).
+ * The prelude passes the message string and the irritant list. */
+val rt_error(val message, val irritants) {
+  return rt_raise(rt_make_error_object(message, irritants));
 }
 
 /* --- value printer (tag-walking, design R1) ---------------------------- */
@@ -603,6 +667,13 @@ void rt_write(val v) {
             rt_write(as_ptr(v)[i + 2]);
           }
           putchar(')');
+          break;
+        }
+        case HDR_ERROR: {
+          val msg = as_ptr(v)[1];
+          printf("#<error ");
+          fwrite(str_bytes(msg), 1, (size_t)str_len(msg), stdout);
+          putchar('>');
           break;
         }
         default: printf("#<ext:%ld>", (long)ext_hdr(v));

@@ -16,7 +16,8 @@
                   make-vector vector-ref vector-set! vector-length vector?
                   symbol? string? char? boolean? integer? exact?
                   read-all-stdin display
-                  %error-abort))
+                  %error-abort %raise %run-guarded
+                  %error-object? %error-object-message %error-object-irritants))
 (define (prim? op) (and (memq op *prims*) #t))
 
 ;; ---- primitives as first-class values (self-host-gap-sweep G8) ----

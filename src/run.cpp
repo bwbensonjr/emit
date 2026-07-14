@@ -42,6 +42,7 @@ extern "C" {
   const char *rt_string_bytes(intptr_t v);
   extern jmp_buf *rt_trap;                    // runtime trap escape hook
   extern char rt_trap_msg[];                  // last trap's message
+  void rt_guard_reset(void);                  // clear guard frames after a trap
 }
 
 typedef intptr_t (*entry_t)(void);
@@ -115,6 +116,7 @@ int main() {
     std::printf("\n");
     std::fflush(stdout);
   } else {
+    rt_guard_reset();   // a trap may have bypassed rt_run_guarded's frame pop
     std::cerr << "trap: " << rt_trap_msg << "\n";
     rt_trap = nullptr;
     return 1;

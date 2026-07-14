@@ -39,6 +39,7 @@ extern "C" {
   void rt_write(intptr_t v);   // runtime value printer (linked into this host)
   extern jmp_buf *rt_trap;     // runtime trap escape hook (see runtime.c)
   extern char rt_trap_msg[];   // last trap's message
+  void rt_guard_reset(void);   // clear guard frames after an outermost trap
 }
 
 typedef intptr_t (*thunk_t)(void);
@@ -82,6 +83,7 @@ static void handle_form(const std::string &name, std::string ir) {
     std::printf("\n");
     std::fflush(stdout);
   } else {
+    rt_guard_reset();   // a trap may have bypassed rt_run_guarded's frame pop
     std::cout << "!trap: " << rt_trap_msg << "\n" << std::flush;
   }
   rt_trap = nullptr;
