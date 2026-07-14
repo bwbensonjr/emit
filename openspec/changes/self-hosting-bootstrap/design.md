@@ -36,6 +36,45 @@ Either (a) always bootstrap from Chez until the language is fully self-sufficien
 check in a stage-0 `.ll`/native `schemec` so the build no longer needs Chez. Decide when
 stage-1 is stable; (a) is simpler initially.
 
+### D4: The driver owns the prelude; the `schemec` path is toggleable (task 2.2)
+
+A native `schemec` is a pure text filter with no filesystem and no `argv` (the language has
+neither), so it can neither read `src/prelude.scm` itself nor honor `--no-prelude` on its own.
+Therefore the **driver keeps ownership of the prelude**: it reads the prelude file, applies the
+existing form-level `with-prelude` (user-wins shadowing) in Chez, and pipes the *already-merged*
+source text to `schemec`. `schemec` stays the dead-simple `(display (compile-source-string
+(read-all-stdin)))` filter that `self-host-io-strategy` task 3.3 hands off — no prelude or flag
+logic inside it. (Alternative: bake the prelude into `schemec` at build time; rejected — it
+loses `--no-prelude` and adds internal complexity for no gain.)
+
+The forms→IR step in `compile-file` becomes **toggleable** (env `SCHEMEC=<path>` or a
+`--via-schemec` flag): when routed through `schemec`, the driver does the prelude merge, `write`s
+the merged forms to text, pipes that to `build/schemec` (Chez `process`), and reads the IR back
+from stdout; it then prepends `host-target-header` and runs the toolchain exactly as today. The
+in-process path is not removed — it is needed to *build* `schemec` (Chez builds stage-1;
+`schemec` cannot build itself until the triple test passes) and as a fallback. The default can
+stay in-process until task 2.3 proves byte-parity. `schemec` emits only core IR (no target
+header), matching today's `--emit-ir` filter; the header and toolchain stay in the driver.
+
+### D5: The REPL defers to path A; no `schemec` REPL protocol (scope of task 2.2)
+
+Task 2.2 wires the **batch driver** to `schemec` (path C). The **REPL is not wired to
+`schemec`** and stays on the in-process Chez front-end for now. The REPL does not use the
+whole-program `compile-forms` that the `--emit-ir` filter exposes; it uses incremental per-form
+entry points (`repl-lcode` / `emit-repl-module` / `emit-repl-batch`) with cross-module
+`@__repl_N` linkage and a live session env, and the C++ host never calls Chez (the Chez
+front-end computes IR and feeds it over a wire). Two ways off Chez:
+
+- **R1 (rejected): a `schemec` incremental protocol.** Grow `schemec` into a stateful
+  co-process that holds the REPL session env and emits per-form modules over a wire protocol.
+  This ports `run-repl`'s front-end into compiled Scheme and is thrown away once path A lands.
+- **R2 (chosen): defer to path A.** The REPL stays on the Chez front-end until path A embeds the
+  *compiled* core directly in the C++ host, which then drives compiled `repl-lcode` /
+  `emit-repl-module` / `emit-repl-batch` across the JIT boundary. The design already names path A
+  as the REPL's destination and "thin host, loop logic in compiled Scheme" as the end state
+  (D1); R1 is effort that R2 subsumes. Path A remains the existing follow-up (task 4.2), now with
+  the concrete entry points it must call recorded here.
+
 ## Risks / Trade-offs
 
 - **Nondeterministic output breaks the fixed point** → the compiler already uses a
@@ -46,12 +85,23 @@ stage-1 is stable; (a) is simpler initially.
 
 ## Migration Plan
 
-1. Gate check: compile the core with scheme-llvm; fix any residual unsupported construct
-   (loops back to the relevant prerequisite change).
-2. Build stage-1 `schemec`; wire the driver/host to use it (path C).
-3. Run the triple test; require byte-identical stage-1/stage-2 IR.
-4. Decide the stage-0 artifact policy (D3).
-5. (Later, separate change) path A: embed the compiled compiler in the host.
+Ordered end-to-end; the first step is a hard prerequisite outside this change.
+
+1. **I/O primitives ([[self-host-io-strategy]], closes G3).** Add `rt_read_all_stdin` /
+   `rt_display` and register `read-all-stdin` / `display`. Without these the standalone filter
+   is not buildable at all. (Gate check otherwise complete: G1/G2 and G6–G10 are landed; the
+   nondeterminism audit is clean.)
+2. Build stage-1 `schemec` (task 2.1): assemble the core (`tools/assemble-core.ss`), append the
+   `(display (compile-source-string (read-all-stdin)))` main, and AOT-compile it with the
+   Chez-hosted `compile.ss`; add a `make build/schemec` rule.
+3. Wire the **batch** driver to `schemec` (task 2.2, D4): toggleable `SCHEMEC`/`--via-schemec`
+   path in `compile-file`, driver-owned prelude merge, header + toolchain unchanged.
+4. Confirm parity (task 2.3): schemec-path IR byte-identical to the in-process path for every
+   demo; program results unchanged across all three backends.
+5. Run the triple test (task 3); require byte-identical stage-1/stage-2 IR.
+6. Decide the stage-0 artifact policy (D3).
+7. (Later, separate change) path A: embed the compiled compiler in the host — the REPL's route
+   off Chez (D5).
 
 ## Gate-check findings (2026-07-14, task 1.1–1.3)
 
@@ -159,7 +209,9 @@ real `schemec`.
 ## Open Questions
 
 - Stage-0 artifact policy (D3).
-- Where the REPL loop lives after self-hosting (compiled Scheme calling the host to JIT, vs
-  host driving compiled `compile-form`) — `interactive-repl` D4 leans to the former.
 - Does any pass rely on Chez evaluation order / non-guaranteed behavior that self-compilation
   would expose?
+
+(Resolved: where the REPL loop lives after self-hosting — decided by D5. The REPL stays on the
+Chez front-end through path C and moves off Chez via path A, where the thin host drives the
+compiled `repl-lcode` / `emit-repl-module` / `emit-repl-batch` entry points.)

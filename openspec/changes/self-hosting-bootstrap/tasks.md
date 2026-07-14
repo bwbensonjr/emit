@@ -4,11 +4,29 @@
 - [x] 1.2 Compile the core with scheme-llvm; for any residual unsupported construct, loop back to the relevant prerequisite change and record the gap. — **gaps found (see design.md "Gate-check findings"): G1 internal defines unsupported, G2 emit.ss byte/hex/UTF-8 escaping, G3 path-C I/O shell. Blocks tasks 2–3.**
 - [x] 1.3 Audit for output nondeterminism (gensym counter, ordering) that would break the fixed point. — clean: only the reset-per-compile counter; no hashtables/sort/random.
 
-## 2. Stage-1 build (path C)  — BLOCKED on G1/G2/G3 (see design.md gate-check findings)
+## 2. Stage-1 build (path C)  — BLOCKED only on G3 ([[self-host-io-strategy]])
 
-- [ ] 2.1 Build the core AOT to a native `schemec` using the Chez-hosted compiler.
-- [ ] 2.2 Wire the driver/REPL host to invoke `schemec` (text→IR) instead of `chez … compile.ss`.
-- [ ] 2.3 Confirm program results are unchanged under the `schemec` path.
+G1/G2 and the gap-sweep gaps G6–G10 are all landed; the sole remaining prerequisite is the
+G3 I/O shell (`read-all-stdin` / `display`), tracked in [[self-host-io-strategy]]. Prelude,
+toggle, and REPL-scope decisions are D4/D5 in design.md.
+
+- [ ] 2.1 Build the core AOT to a native `schemec` using the Chez-hosted compiler: assemble the
+      core with `tools/assemble-core.ss`, append the `(display (compile-source-string
+      (read-all-stdin)))` main, AOT-compile with `compile.ss`, and add a `make build/schemec` rule.
+      **NB (from [[self-host-io-strategy]] 3.3):** the standard standalone `main` prints the
+      program's final value (`rt_write` + newline), which would append `()\n` after the IR. Use a
+      **filter-style main that suppresses the final-value print** (or have the driver strip a
+      trailing `()\n`) — otherwise stdout carries trailing bytes that break `llvm-as` and the
+      byte-identical triple test.
+- [ ] 2.2 Wire the **batch** driver to invoke `schemec` (text→IR) instead of the in-process core
+      (D4): toggleable `SCHEMEC`/`--via-schemec` path in `compile-file`; driver merges the prelude
+      (`with-prelude`) and pipes merged text to `schemec`; `host-target-header` + toolchain
+      unchanged; in-process path retained for bootstrapping and fallback.
+  - [ ] 2.2a (REPL) Do **not** wire the REPL to `schemec` (D5). Record that the REPL stays on the
+        Chez front-end through path C and moves off Chez via path A (task 4.2), noting the
+        entry points path A must drive (`repl-lcode` / `emit-repl-module` / `emit-repl-batch`).
+- [ ] 2.3 Confirm program results are unchanged under the `schemec` path: schemec-path IR is
+      byte-identical to the in-process path for every demo, across all three backends.
 
 ## 3. Fixed-point (triple) test
 

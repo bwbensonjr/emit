@@ -15,6 +15,7 @@
                   string-set! string-copy
                   make-vector vector-ref vector-set! vector-length vector?
                   symbol? string? char? boolean? integer? exact?
+                  read-all-stdin display
                   %error-abort))
 (define (prim? op) (and (memq op *prims*) #t))
 

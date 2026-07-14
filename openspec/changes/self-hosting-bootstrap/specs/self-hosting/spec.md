@@ -28,9 +28,9 @@ self-hosting.
 
 ### Requirement: Compiled compiler replaces Chez at compile time (path C)
 
-The driver/REPL host SHALL be able to invoke the compiled `schemec` in place of
-`chez … compile.ss`, so that compiling a program (or a REPL form) requires no Chez at
-runtime.
+The driver SHALL be able to invoke the compiled `schemec` in place of `chez … compile.ss`, so
+that compiling a program requires no Chez at runtime. The REPL host's removal of Chez is
+delivered separately by path A (in-process embedding), not path C.
 
 #### Scenario: Driver uses schemec, not Chez
 

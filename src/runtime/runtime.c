@@ -409,6 +409,35 @@ val rt_string_set(val s, val idx, val ch) {
 /* string-copy: a fresh string object over a fresh copy of the bytes. */
 val rt_string_copy(val s) { return rt_make_string(str_bytes(s), str_len(s)); }
 
+/* --- process I/O for a standalone text filter (self-host-io-strategy G3) ---
+ * The two edge primitives a native `schemec` needs: pull all of stdin into a
+ * string, and write a string's bytes to stdout raw.  Distinct from rt_write
+ * (the final-value printer, which quotes strings and adds a newline). */
+
+/* read all of stdin to EOF into a growable buffer; return a fresh scheme string. */
+val rt_read_all_stdin(void) {
+  size_t cap = 4096, len = 0;
+  char *buf = (char *)GC_MALLOC_ATOMIC(cap);
+  size_t n;
+  while ((n = fread(buf + len, 1, cap - len, stdin)) > 0) {
+    len += n;
+    if (len == cap) {
+      cap *= 2;
+      char *nb = (char *)GC_MALLOC_ATOMIC(cap);
+      memcpy(nb, buf, len);
+      buf = nb;
+    }
+  }
+  return rt_make_string(buf, (intptr_t)len);
+}
+
+/* write a string's bytes to stdout verbatim -- no quotes, no trailing newline.
+ * Returns an unspecified value (NIL) so it composes inside a `begin`. */
+val rt_display(val s) {
+  fwrite(str_bytes(s), 1, (size_t)str_len(s), stdout);
+  return NIL_V;
+}
+
 /* --- vectors (tag-7 HDR_VECTOR: { HDR_VECTOR, length, elem... }) --------- */
 static intptr_t vec_len(val v) { return (intptr_t)as_ptr(v)[1]; }
 val rt_make_vector(val k, val fill) {

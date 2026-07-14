@@ -156,6 +156,7 @@
     (vector? "rt_vector_p")
     (symbol? "rt_symbol_p") (string? "rt_string_p") (char? "rt_char_p")
     (boolean? "rt_boolean_p") (integer? "rt_integer_p") (exact? "rt_exact_p")
+    (read-all-stdin "rt_read_all_stdin") (display "rt_display")
     (%error-abort "rt_error")))
 
 ;; --- string helpers ---
@@ -439,6 +440,8 @@
    "declare i64 @rt_boolean_p(i64)\n"
    "declare i64 @rt_integer_p(i64)\n"
    "declare i64 @rt_exact_p(i64)\n"
+   "declare i64 @rt_read_all_stdin()\n"
+   "declare i64 @rt_display(i64)\n"
    "declare i64 @rt_list_length(i64)\n"
    "declare i64 @rt_build_rest(i64, i64, i64, ptr, ptr)\n"
    "declare ptr @rt_apply_argv(i64, ptr, i64, i64)\n"
