@@ -1,10 +1,10 @@
 ## 1. Gate check (prerequisites)
 
-- [ ] 1.1 Confirm all prerequisites are done: [[decompose-core-driver]], [[prelude-cxr-and-case]], [[integer-division-number-format]], [[multiple-values]], [[error-and-guard-conditions]], [[stdin-source-reader]] (plus the completed `match`/syntax-rules and vectors work).
-- [ ] 1.2 Compile the core with scheme-llvm; for any residual unsupported construct, loop back to the relevant prerequisite change and record the gap.
-- [ ] 1.3 Audit for output nondeterminism (gensym counter, ordering) that would break the fixed point.
+- [x] 1.1 Confirm all prerequisites are done: [[decompose-core-driver]], [[prelude-cxr-and-case]], [[integer-division-number-format]], [[multiple-values]], [[error-and-guard-conditions]], [[stdin-source-reader]] (plus the completed `match`/syntax-rules and vectors work). — all archived.
+- [x] 1.2 Compile the core with scheme-llvm; for any residual unsupported construct, loop back to the relevant prerequisite change and record the gap. — **gaps found (see design.md "Gate-check findings"): G1 internal defines unsupported, G2 emit.ss byte/hex/UTF-8 escaping, G3 path-C I/O shell. Blocks tasks 2–3.**
+- [x] 1.3 Audit for output nondeterminism (gensym counter, ordering) that would break the fixed point. — clean: only the reset-per-compile counter; no hashtables/sort/random.
 
-## 2. Stage-1 build (path C)
+## 2. Stage-1 build (path C)  — BLOCKED on G1/G2/G3 (see design.md gate-check findings)
 
 - [ ] 2.1 Build the core AOT to a native `schemec` using the Chez-hosted compiler.
 - [ ] 2.2 Wire the driver/REPL host to invoke `schemec` (text→IR) instead of `chez … compile.ss`.
