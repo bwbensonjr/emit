@@ -53,6 +53,11 @@
      (match e
        [(quote ,d) `(const ,d)]
        [(if ,a ,b ,c) `(if ,(parse-expr a) ,(parse-expr b) ,(parse-expr c))]
+       ;; two-armed `(if test then)`: a missing alternative is the unspecified
+       ;; value, spelled `#f` to match `when`/`unless` and the `case` no-match
+       ;; default (which desugars to `(if #f #f)`).  Distinct arities, so this
+       ;; never overlaps the three-armed clause above.
+       [(if ,a ,b) `(if ,(parse-expr a) ,(parse-expr b) (const #f))]
        [(lambda ,params . ,body) `(lambda ,params ,(parse-body body))]
        [(let ,binds . ,body) `(let ,(map parse-bind binds) ,(parse-body body))]
        [(letrec ,binds . ,body) `(letrec ,(map parse-bind binds) ,(parse-body body))]
