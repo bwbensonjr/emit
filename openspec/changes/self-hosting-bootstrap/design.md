@@ -64,13 +64,10 @@ But the empirical compile (1.2 — feeding core constructs through `chez … com
 found the core is **not yet compilable by scheme-llvm**. Three residual gaps, each loops
 back to a (new) prerequisite change; **tasks 2.x–3.x are blocked until they close**:
 
-- **G1 — internal `define` is unsupported (major, unanticipated).** scheme-llvm's parser
-  rejects body-level defines: `parse: 'define' is only allowed at the top level`. The core's
-  passes use internal defines pervasively (`parse.ss`, `expand.ss`, `convert-assignments.ss`
-  ~5 each; others fewer). Fix path: grow the language to accept internal defines (body
-  defines → `letrec*`), or rewrite every internal define in the core to `letrec`/`let`.
-  Recommend a new prerequisite change `internal-defines` (grow — it's a standard, contained
-  expander feature and avoids churning the whole core).
+- **G1 — internal `define` is unsupported (major, unanticipated).** ✅ **CLOSED** by
+  [[internal-defines]]: `parse-body` now peels a leading run of body defines and
+  builds them via the same `build-program` transform the top level uses (`letrec*` semantics).
+  The exact gate probe that failed (`(define (f x) (define (g y) …) …)`) now compiles.
 - **G2 — `emit.ss` byte/UTF-8/hex escaping.** `hex2`/`llvm-cstring` use `string->utf8`,
   `bytevector-length`, `bytevector-u8-ref`, `(number->string b 16)` (radix arg — the
   in-language `number->string` is base-10/one-arg), and `string-upcase`. None exist in

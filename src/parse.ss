@@ -70,11 +70,13 @@
 (define (parse-bind b) (list (car b) (parse-expr (cadr b))))
 
 (define (parse-body body)  ; non-empty list of source forms -> one core expr
-  (let loop ([es (map parse-expr body)])
-    (cond
-      [(null? es) `(const ())]
-      [(null? (cdr es)) (car es)]
-      [else `(seq ,(car es) ,(loop (cdr es)))])))
+  (if (and (pair? body) (define-form? (car body)))
+      (parse-expr (build-body body))   ; leading internal defines -> letrec/let+set!
+      (let loop ([es (map parse-expr body)])
+        (cond
+          [(null? es) `(const ())]
+          [(null? (cdr es)) (car es)]
+          [else `(seq ,(car es) ,(loop (cdr es)))]))))
 
 ;; ---- collect-toplevel: a program's top-level forms -> one source expr ----
 ;; A program is a sequence of top-level forms: any number of (define ...) and
@@ -116,6 +118,24 @@
         ,@(map (lambda (b) `(set! ,(car b) ,(cadr b))) binds)
         ,@pre
         ,value)]))
+
+;; internal defines: a body whose leading forms are (define ...) desugars via the
+;; SAME builder as the top level, but with R7RS body rules -- the defines must
+;; form a prefix (no define after a body expression) and letrec* bindings are
+;; visible across the whole run.  Returns a source form (re-parsed by parse-expr).
+(define (any-define? fs) (and (pair? fs) (or (define-form? (car fs)) (any-define? (cdr fs)))))
+(define (build-body forms)
+  (let loop ([fs forms] [binds '()])
+    (cond
+      [(and (pair? fs) (define-form? (car fs)))
+       (loop (cdr fs) (cons (normalize-define (car fs)) binds))]
+      [(null? fs)
+       (error 'parse "internal defines with no following body expression" forms)]
+      [(any-define? fs)
+       (error 'parse "internal 'define' must precede all body expressions" forms)]
+      [else
+       (let ([rev (reverse fs)])
+         (build-program (reverse binds) (reverse (cdr rev)) (car rev)))])))
 
 (define (collect-toplevel forms)
   (when (null? forms)
