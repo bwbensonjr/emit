@@ -2,19 +2,22 @@
 
 A Scheme to LLVM compiler
 
-Emit is a **self-hosting Scheme→LLVM compiler**: a hand-rolled frontend
-pipeline that emits textual LLVM IR, a small C runtime under Boehm GC,
-and **three backends** (AOT, JIT, bitcode) that are checked to agree
-byte-for-byte. There is an **interactive REPL** on a persistent LLVM
-ORC/LLJIT host, where each form is compiled by the **embedded compiler
-in-process** into a long-lived session. The compiler is written in
-Scheme and compiles its own source to a **byte-identical fixed point**
-— so the day-to-day build, run, REPL, and recompile loop needs **only
-LLVM 22 + libgcz**. The ability to host with Chez Scheme survives as
-the historical genesis (`historical/genesis/`) and an optional CI
-trust-check. The implementation prioritizes simple, transparent stages
-(see `CLAUDE.md`); development is OpenSpec-driven, tracked under
-`openspec/`.
+Emit is a **self-hosting Scheme→LLVM compiler**: a hand-rolled
+frontend pipeline that emits textual LLVM IR, a small C runtime under
+Boehm GC, and **three backends** (AOT, JIT, bitcode) that are checked
+to agree byte-for-byte. There is an **interactive REPL** on a
+persistent LLVM ORC/LLJIT host, where each form is compiled by the
+**embedded compiler in-process** into a long-lived session. The
+compiler is written in Scheme and compiles its own source to a
+**byte-identical fixed point** — so the day-to-day build, run, REPL,
+and recompile loop needs **only LLVM 22 + libgcz**. The ability to
+host with Chez Scheme survives as the historical genesis
+(`historical/genesis/`) and an optional CI trust-check. The
+implementation prioritizes simple, transparent stages (see
+`CLAUDE.md`); development is OpenSpec-driven, tracked under
+`openspec/`. There is a high-level architectural goal of generating
+standalone native-code executables while also supporting incremental
+REPL-based development and debugging.
 
 ## Quick start
 
