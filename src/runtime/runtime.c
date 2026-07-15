@@ -507,10 +507,14 @@ val rt_root(val v) {
 val rt_repl_state_ref(void)  { return rt_repl_cell(&rt_repl_state_cell, FALSE_V)[0]; }
 val rt_repl_state_set(val v) { rt_repl_cell(&rt_repl_state_cell, FALSE_V)[0] = v; return NIL_V; }
 
-/* write a string's bytes to stdout verbatim -- no quotes, no trailing newline.
- * Returns an unspecified value (NIL) so it composes inside a `begin`. */
-val rt_display(val s) {
-  fwrite(str_bytes(s), 1, (size_t)str_len(s), stdout);
+/* display ANY datum in R7RS *display* style (strings unquoted, chars raw),
+ * sharing the tag-walking printer with rt_write (change: fix-display-non-string).
+ * Dispatching on the tag makes this memory-safe for every value type -- a
+ * non-string no longer dereferences as a string header and crashes.  Returns an
+ * unspecified value (NIL) so it composes inside a `begin`. */
+static void print_val(val v, int display);   /* defined with rt_write below */
+val rt_display(val v) {
+  print_val(v, /*display=*/1);
   return NIL_V;
 }
 
@@ -686,8 +690,15 @@ val rt_error(val message, val irritants) {
   return rt_raise(rt_make_error_object(message, irritants));
 }
 
-/* --- value printer (tag-walking, design R1) ---------------------------- */
-void rt_write(val v) {
+/* --- value printer (tag-walking, design R1) ----------------------------
+ * One recursive printer serves both `write` and `display` style (change:
+ * fix-display-non-string).  `display` gates ONLY the two arms that differ:
+ * strings print their raw contents (no surrounding quotes) and characters print
+ * as the raw character (no `#\` prefix); every other arm is identical, and
+ * compound values recurse in the SAME mode so nested strings/chars follow suit.
+ * Dispatch is on the runtime tag, so no value is ever read as the wrong type --
+ * `display` of a non-string is memory-safe, not a segfault. */
+static void print_val(val v, int display) {
   switch (tag_of(v)) {
     case TAG_FIXNUM: printf("%ld", (long)UNFIX(v)); break;
     case TAG_BOOL:   printf(v == FALSE_V ? "#f" : "#t"); break;
@@ -698,10 +709,10 @@ void rt_write(val v) {
       while (tag_of(cur) == TAG_PAIR) {
         if (!first) printf(" ");
         first = 0;
-        rt_write(as_ptr(cur)[0]);
+        print_val(as_ptr(cur)[0], display);
         cur = as_ptr(cur)[1];
       }
-      if (cur != NIL_V) { printf(" . "); rt_write(cur); }
+      if (cur != NIL_V) { printf(" . "); print_val(cur, display); }
       printf(")");
       break;
     }
@@ -711,20 +722,19 @@ void rt_write(val v) {
     case TAG_EXT:
       switch (ext_hdr(v)) {
         case HDR_STRING:
-          putchar('"');
+          if (!display) putchar('"');
           fwrite(str_bytes(v), 1, (size_t)str_len(v), stdout);
-          putchar('"');
+          if (!display) putchar('"');
           break;
         case HDR_CHAR: {
           intptr_t cp = char_cp(v);
-          if (cp == ' ')       printf("#\\space");
-          else if (cp == '\n') printf("#\\newline");
-          else {
-            unsigned char buf[4];
-            int n = utf8_encode(cp, buf);
-            printf("#\\");
-            fwrite(buf, 1, (size_t)n, stdout);
-          }
+          unsigned char buf[4];
+          int n = utf8_encode(cp, buf);
+          if (display) {
+            fwrite(buf, 1, (size_t)n, stdout);        /* the raw character */
+          } else if (cp == ' ')  printf("#\\space");
+          else if (cp == '\n')   printf("#\\newline");
+          else { printf("#\\"); fwrite(buf, 1, (size_t)n, stdout); }
           break;
         }
         case HDR_VECTOR: {
@@ -732,7 +742,7 @@ void rt_write(val v) {
           printf("#(");
           for (intptr_t i = 0; i < len; i++) {
             if (i) putchar(' ');
-            rt_write(as_ptr(v)[i + 2]);
+            print_val(as_ptr(v)[i + 2], display);
           }
           putchar(')');
           break;
@@ -750,6 +760,10 @@ void rt_write(val v) {
     default:          printf("#<unknown:%ld>", (long)v);
   }
 }
+
+/* write-style value printer (quoted strings, `#\`-prefixed chars): the standalone
+ * entry uses this to print a program's final value. */
+void rt_write(val v) { print_val(v, /*display=*/0); }
 
 /* --- entry: exit code = ran/failed, stdout = value (design R1) ----------
  * The standalone AOT/JIT executables use this main.  The persistent REPL host

@@ -180,8 +180,10 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
   fixed-length, `#(...)` syntax).
 - Primitives: `+ - * = < cons car cdr null? pair? eq? eqv? equal? not char->integer
   integer->char string-length string-ref substring string->symbol string=? string-append
-  symbol->string list->string make-string string-set! string-copy`.
-- C runtime under Boehm GC; a tag-walking value printer.
+  symbol->string list->string make-string string-set! string-copy`, and `display`
+  (writes any datum in *display* style — strings unquoted, characters raw — to stdout).
+- C runtime under Boehm GC; a tag-walking value printer shared by `display` (display
+  style) and the final-value printer (write style: quoted strings, `#\`-prefixed chars).
 
 **Library & reader**
 - A prelude prepended to every program (user-wins shadowing, `--no-prelude`):
@@ -223,7 +225,8 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
   `raise-continuable` (their non-unwinding/resumable semantics need `call/cc`),
   `read-error?`/`file-error?`.
 - **Data**: bytevectors, hash tables, records (vectors done).
-- **I/O**: ports, files, `read` from stdin, `display`/`write` as procedures.
+- **I/O**: ports, files, `read` from stdin, `write` as a procedure (`display` is
+  supported — see above; `newline`/`write`/ports are not yet).
 - Recoverable error handling: `guard` catches in-language `raise`/`error` (see above), but
   runtime type/arity errors are still not guard-catchable (they trap to the host, per R7RS
   "it is an error" latitude); no general condition-type hierarchy.

@@ -124,6 +124,9 @@ check rdbracket demos/reader-brackets.scm '((a (b c) (d 5)))'  # [...] brackets 
 echo "exceptions demos"
 check exceptions demos/exceptions.scm '(boom 7 "bad thing" (1 2) (outer y))'  # guard/raise/error objects
 
+echo "display demo"
+check display demos/display.scm '42 str z sym (1 . 2) (a b 3) done'  # display any datum (strings unquoted, chars raw), memory-safe on non-strings
+
 echo "macro demos"
 check macrouser demos/macro-user.scm    '(3 10 10 11)'  # define-syntax: swap!/ellipsis/my-let
 check macrohyg  demos/macro-hygiene.scm '(2 1 99 5 5)'  # hygiene: introduced temps don't capture
