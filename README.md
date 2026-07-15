@@ -1,59 +1,62 @@
 # Scheme LLVM
 
-Experiment with compiling Scheme into LLVM IR.
+A Scheme to LLVM compiler
 
-A **self-hosting Scheme→LLVM compiler**: a hand-rolled frontend pipeline that emits textual
-LLVM IR, a small C runtime under Boehm GC, and **three backends** (AOT, JIT, bitcode) that
-are checked to agree byte-for-byte. There is an **interactive REPL** on a persistent LLVM
-ORC/LLJIT host, where each form is compiled by the **embedded compiler in-process** (no Chez,
-no subprocess) into a long-lived session. The compiler is written in Scheme and compiles its
-own source to a **byte-identical fixed point** — so the day-to-day build, run, REPL, and
-recompile loop needs **only LLVM 22 + libgc, no Chez**. Chez survives as the historical
-genesis (`historical/genesis/`) and an optional CI trust-check. The implementation prioritizes
-simple, transparent stages (see `CLAUDE.md`); development is OpenSpec-driven, tracked under
+A **self-hosting Scheme→LLVM compiler**: a hand-rolled frontend
+pipeline that emits textual LLVM IR, a small C runtime under Boehm GC,
+and **three backends** (AOT, JIT, bitcode) that are checked to agree
+byte-for-byte. There is an **interactive REPL** on a persistent LLVM
+ORC/LLJIT host, where each form is compiled by the **embedded compiler
+in-process** into a long-lived session. The compiler is written in
+Scheme and compiles its own source to a **byte-identical fixed point**
+— so the day-to-day build, run, REPL, and recompile loop needs **only
+LLVM 22 + libgcz**. The ability to host with Chez Scheme survives as
+the historical genesis (`historical/genesis/`) and an optional CI
+trust-check. The implementation prioritizes simple, transparent stages
+(see `CLAUDE.md`); development is OpenSpec-driven, tracked under
 `openspec/`.
 
 ## Quick start
 
-**Install LLVM 22 + libgc** (`brew install llvm@22 bdw-gc`). No Chez is required to build,
-run, compile, or REPL.
+**Install LLVM 22 + libgc** (`brew install llvm@22 bdw-gc`).
 
 ```sh
-# build the shipped binaries from the committed compiler IR -- LLVM only, no Chez
+# build the shipped binaries from the committed compiler LLVM IR
 make                       # -> build/scheme-run (runner) and build/repl-host (REPL)
 
-# in-process compile-and-run: NO Chez, NO clang/lli, NO subprocess.  The compiled
-# compiler is linked into build/scheme-run; it compiles the program to IR in-process
-# and JITs it via ORC/LLJIT.
+# In-process compile-and-run. The compiled compiler is linked into
+# build/scheme-run; it compiles the program to IR in-process and JITs
+# it via ORC/LLJIT.
 build/scheme-run < demos/fact.scm                              # => 120
 
-# standalone native executable, Chez-free (emit IR + clang):
+# standalone native executable (emit IR + clang):
 bin/scheme-compile demos/fact.scm -o /tmp/fact && /tmp/fact    # => 120
 build/scheme-run --emit < demos/fact.scm > /tmp/fact.ll        # (the emit step alone)
 
-# interactive REPL -- fully Chez-free: the embedded compiler is linked into
-# build/repl-host and compiles each form IN-PROCESS.  Run the host directly:
+# Interactive REPL: the embedded compiler is linked into
+# build/repl-host and compiles each form IN-PROCESS.  Run the host
+# directly:
 build/repl-host                                                # ^D to exit
 build/repl-host --no-prelude                                   # faster start, no stdlib
 #   scheme> (define (sq n) (* n n))
 #   scheme> (sq 9)          => 81
 #   scheme> (define sq 100) => 100   ; redefinition; later forms see the new binding
 
-# the batch text->IR filter compiler (also Chez-free)
+# The batch text->IR filter compiler
 make schemec
 cat src/prelude.scm demos/fact.scm | build/schemec > /tmp/fact.ll   # source text -> LLVM IR
 
-# the Chez-free default test suite (exercises the shipped binaries)
+# Run the default test suite (exercises the shipped binaries)
 ./run-all-tests.sh
 ```
 
 **Changing the compiler.** Edit the source, then regenerate the committed IR and relink —
-still Chez-free (the compiled compiler recompiles itself). See
+the compiled compiler recompiles itself. See
 [Regenerating the compiler](#regenerating-the-compiler-bootstrap) for how it works and the
 anti-stale trust-check.
 
 ```sh
-make regen                 # reassemble source (cat) + self-compile IR + relink -- no Chez
+make regen                 # reassemble source (cat) + self-compile IR + relink
 ```
 
 The Chez-gated developer/CI suite (backend equivalence, the self-hosting fixed point, the
@@ -62,17 +65,21 @@ is absent.
 
 ### Interactive REPL
 
-`build/repl-host` is a read-eval-print loop backed by a **persistent LLVM ORC/LLJIT host**
-(`src/repl/host.cpp`, built by `make repl-host`). The host **A-links the embedded compiler**
-(the committed `bootstrap/embed-repl.ll`) and compiles each entered form **in-process — no
-Chez and no per-form subprocess**. Each form is compiled to its own module and added to a
-long-lived JIT in which the GC heap, symbol table, and runtime stay alive, so definitions,
-closures, and heap values persist across forms and top-level names can be redefined. A bad
-form's compile error is reported and the session state rolled back (via in-language `guard`),
-and runtime traps (e.g. arity errors) are isolated, so the session continues; `^D` (end of
-input) exits. References resolve to earlier forms only — mutual top-level recursion (which the
-whole-program batch `letrec` supports) is not available interactively. (A Chez launcher,
-`chez --libdirs src --script src/compile.ss --repl`, builds and execs the same host.)
+`build/repl-host` is a read-eval-print loop backed by a **persistent
+LLVM ORC/LLJIT host** (`src/repl/host.cpp`, built by `make
+repl-host`). The host **A-links the embedded compiler** (the committed
+`bootstrap/embed-repl.ll`) and compiles each entered form **in-process
+— no per-form subprocess**. Each form is compiled to its own module
+and added to a long-lived JIT in which the GC heap, symbol table, and
+runtime stay alive, so definitions, closures, and heap values persist
+across forms and top-level names can be redefined. A bad form's
+compile error is reported and the session state rolled back (via
+in-language `guard`), and runtime traps (e.g. arity errors) are
+isolated, so the session continues; `^D` (end of input)
+exits. References resolve to earlier forms only — mutual top-level
+recursion (which the whole-program batch `letrec` supports) is not
+available interactively. (A Chez Scheme launcher, `chez --libdirs src
+--script src/compile.ss --repl`, builds and execs the same host.)
 
 ## Regenerating the compiler (bootstrap)
 
@@ -84,17 +91,19 @@ stage-0 artifacts that are the **favored, authoritative form**:
 - `bootstrap/embed-repl.ll` — the interactive REPL's embedded compiler
 
 These are produced by the **compiled compiler itself** (the self-hosting fixed point), so they
-regenerate with no Chez. The default `make` treats them as **checked-in inputs**: it links
+regenerate. The default `make` treats them as **checked-in inputs**: it links
 them with LLVM only and never regenerates them. To rebuild them after a compiler-source change:
 
 ```sh
-make regen                 # Chez-free; see tools/regen.sh
+make regen                 # see tools/regen.sh
 ```
 
-`regen` (1) **assembles** the flat source by ordered `cat` — the source files are already
-concatenation-ready (flat `match.scm`/`util.scm`, `core.ss` with no `include`s, per-target
-`entry-*.scm`), so there is no Chez assembler — and (2) **compiles** with the self-hosted
-`schemec`, iterating it to its byte-identical fixed point before emitting the other artifacts.
+`regen` (1) **assembles** the flat source by ordered `cat` — the
+source files are already concatenation-ready (flat
+`match.scm`/`util.scm`, `core.ss` with no `include`s, per-target
+`entry-*.scm`) — and (2) **compiles** with the self-hosted `schemec`,
+iterating it to its byte-identical fixed point before emitting the
+other artifacts.
 
 Because the default build does not auto-regenerate (design D4 — this deliberately **reverses**
 the earlier `fix-stale-repl-host-rebuild` auto-rebuild-on-source-change, so the committed IR
@@ -119,17 +128,17 @@ library-structured source are frozen under `historical/genesis/`.
   embedded compiler (`bootstrap/embed-repl.ll`) and drives it in-process; built by `make repl-host`.
 - `src/run.cpp` — the in-process runner (`build/scheme-run`): links the compiled compiler
   (`bootstrap/embed.ll`) and JITs its output, so a whole program is compiled *and* run in one
-  process with no Chez/clang/lli. `--emit` writes the IR to stdout (Chez-free AOT).
+  process. `--emit` writes the IR to stdout.
 - `bootstrap/` — committed host-agnostic stage-0 IR (the authoritative form): `schemec.ll`
   (batch filter), `embed.ll` (runner), `embed-repl.ll` (REPL); regenerate with `make regen`.
-- `tools/regen.sh` — the Chez-free regenerator (ordered-`cat` assembly + self-hosted compile).
-- `bin/scheme-compile` — Chez-free source→native-executable wrapper (`scheme-run --emit` + clang).
-- `historical/genesis/` — the frozen pre-flattening genesis: the Chez assembler
+- `tools/regen.sh` — the regenerator (ordered-`cat` assembly + self-hosted compile).
+- `bin/scheme-compile` — source→native-executable wrapper (`scheme-run --emit` + clang).
+- `historical/genesis/` — the frozen pre-flattening genesis: the Chez Scheme assembler
   (`assemble-core.ss`) and library-structured `match.sls`/`util.ss` (provenance; not maintained).
 - `demos/` — example programs and the `run-tests.sh` (`RUNNER=scheme-run|aot`) / `run-backends.sh`
   / `run-embedded.sh` harnesses.
 - `test/` — REPL harnesses, the front-end unit tests, `self-host-fixpoint.sh`, and `trust-check.sh`.
-- `run-all-tests.sh` — the **Chez-free** default suite (shipped binaries); `run-dev-tests.sh`
+- `run-all-tests.sh` — the default suite (shipped binaries); `run-dev-tests.sh`
   — the **Chez-gated** developer/CI suite (backends, self-host, IL units, trust-check).
 - `openspec/` — specs (`specs/`), archived changes (`changes/archive/`), and forward-looking
   notes (`explorations/`).
@@ -199,11 +208,11 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
 - **In-process embedded run** (`build/scheme-run`, Path A — mechanism): the compiled
   compiler is linked into a JIT host (`src/run.cpp`); its ccc `scheme_entry` reads the
   program, returns the emitted IR as a string, and the host JITs and runs it — a whole
-  program compiled *and* run in one process with **no Chez, no clang/lli, no subprocess**.
+  program compiled *and* run in one process.
   A parity harness checks the runner agrees with AOT on every demo (dev→ship fidelity). The
   compiler IR is a committed, host-agnostic stage-0 artifact (`bootstrap/embed.ll`).
 - **Interactive REPL** (`--repl`) on a persistent LLVM ORC/LLJIT host, driven by the
-  **embedded compiler in-process** (Path A for the REPL — **no Chez, no per-form
+  **embedded compiler in-process** (Path A for the REPL — **no per-form
   subprocess**; `bootstrap/embed-repl.ll` A-linked into the host): per-form modules added to
   a long-lived JIT with a shared GC heap / symbol table / runtime, so definitions, closures,
   heap values, and redefinition persist across forms; compile errors roll back (in-language
