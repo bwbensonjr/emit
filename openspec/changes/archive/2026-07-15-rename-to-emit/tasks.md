@@ -13,9 +13,9 @@
 
 ## 3. Spec prose (main specs)
 
-- [ ] 3.1 Sync the three delta specs (`core-language`, `self-hosting`, `compiler-pipeline`) into the main specs so the MODIFIED requirement prose reads *Emit* (handled by `/opsx:apply` or `openspec sync`/`archive`).
+- [x] 3.1 Sync the three delta specs (`core-language`, `self-hosting`, `compiler-pipeline`) into the main specs so the MODIFIED requirement prose reads *Emit* (done by `openspec archive`: 8 requirements updated — 2 + 2 + 4).
 - [x] 3.2 Directly edit the non-requirement prose that names the compiler and is not covered by a delta: the **Purpose** paragraph of `openspec/specs/self-hosting/spec.md` (line ~6, "the subset scheme-llvm accepts" → "the subset Emit accepts").
-- [ ] 3.3 Confirm no `scheme-llvm` / `Scheme LLVM` prose remains in `openspec/specs/` (excluding archived changes).
+- [x] 3.3 Confirm no `scheme-llvm` / `Scheme LLVM` prose remains in `openspec/specs/` (excluding archived changes). Also swept the one live exploration doc (`openspec/explorations/chez-free-repl.md`); whole live tree is clean.
 
 ## 4. Regenerate bootstrap IR and verify self-hosting
 

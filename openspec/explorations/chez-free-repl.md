@@ -28,7 +28,7 @@ Chez.** That is exactly the project's stated self-hosting goal.
 
 ## Progress (updated 2026-07-13)
 
-Two ends have to meet: the language scheme-llvm *accepts* grows up, and/or the compiler's
+Two ends have to meet: the language Emit *accepts* grows up, and/or the compiler's
 own source shrinks to fit it. Each remaining dependency below gets one of three verdicts —
 **grow** the language to it, **avoid** it by rewriting the compiler, or **downgrade** it to a
 weaker form a batch compiler can live with.

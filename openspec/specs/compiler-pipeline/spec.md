@@ -6,9 +6,7 @@ Defines how the compiler's pass pipeline is structured and justified: the choice
 framework for expressing passes (nanopass versus stylized hand-rolled Scheme), and the
 documented boundary between the frontend passes the compiler owns and the work delegated
 to LLVM.
-
 ## Requirements
-
 ### Requirement: Pass-pipeline framework decision is evidence-backed and recorded
 
 The project SHALL record a decision on how the compiler's pass pipeline is expressed —
@@ -80,7 +78,7 @@ The project SHALL record a decision on which `syntax-rules`-based pattern matche
 the compiler's `syntax-case` `match`, supported by an empirical comparison rather than paper
 analysis. Candidate matchers SHALL be filtered by hard gates (`syntax-rules`-only; coverage
 of the pattern subset the passes use, including ellipsis-with-tail `(p ... plast)`; use of
-no feature scheme-llvm lacks), the survivors SHALL be compared empirically, and the chosen
+no feature Emit lacks), the survivors SHALL be compared empirically, and the chosen
 matcher SHALL be recorded together with the rationale and the exact expander work the
 follow-on rewrite requires.
 
@@ -111,7 +109,7 @@ follow-on rewrite requires.
 
 The pattern-matching facility used to express the compiler's passes SHALL be implementable
 with `syntax-rules` alone and SHALL NOT depend on `syntax-case` or any other procedural-macro
-facility. This keeps the compiler's own source within reach of scheme-llvm's expander (a
+facility. This keeps the compiler's own source within reach of Emit's expander (a
 self-hosting enabler). The hand-rolled pass-framework decision is unchanged; only the
 matcher's macro-level requirements are constrained.
 
@@ -133,7 +131,7 @@ matcher's macro-level requirements are constrained.
 
 - **WHEN** the matcher is chosen and integrated
 - **THEN** the same matcher module is used by the host (Chez) build and is expressible by
-  scheme-llvm's own expander, so there is no separate host-only matcher to diverge
+  Emit's own expander, so there is no separate host-only matcher to diverge
 
 ### Requirement: Pure compiler core is separable from the I/O driver
 
@@ -159,3 +157,4 @@ perform file, subprocess, or port I/O, so that the self-hosting target is the co
 - **WHEN** source text is provided on stdin in the core's filter mode
 - **THEN** the corresponding IR text is written to stdout, with the target header and
   toolchain invocation left to the driver/host
+

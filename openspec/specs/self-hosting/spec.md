@@ -6,15 +6,13 @@ Defines the path toward compiling the compiler with itself: assembling the compi
 into a single program expressed in the subset Emit accepts, and maintaining a complete
 inventory of the remaining constructs the language does not yet support, so the stage-1
 self-hosting build can proceed without discovering gaps ad hoc.
-
 ## Requirements
-
 ### Requirement: The core is assembled into a single self-hostable program
 
 There SHALL be a repeatable step that assembles the compiler core into one program in the
-language scheme-llvm accepts — containing no `library`/`import`/`include` forms, with the source
+language Emit accepts — containing no `library`/`import`/`include` forms, with the source
 reader provided by the in-language `read-all-from-string` — so the core can be fed to
-scheme-llvm as a single compilation unit. This assembly step SHALL NOT require Chez: the core
+Emit as a single compilation unit. This assembly step SHALL NOT require Chez: the core
 sources SHALL already be in a flat, concatenation-ready form (top-level `define-syntax`/`define`s
 with no `library` wrappers, no `include`s, and no top-level name collisions), so that assembling
 the program is ordered concatenation of the source files with a chosen entry, performable with
@@ -35,7 +33,7 @@ historical/reproduction tooling but SHALL NOT be on the default build path.
 
 ### Requirement: Remaining self-hosting gaps are fully enumerated
 
-Compiling the assembled core with scheme-llvm SHALL yield a complete inventory of the
+Compiling the assembled core with Emit SHALL yield a complete inventory of the
 constructs the language does not yet accept, each classified (missing primitive, missing
 prelude procedure, unsupported special form, or reader gap) and assigned a fix path, recorded
 as the self-hosting gap backlog.
@@ -48,8 +46,8 @@ as the self-hosting gap backlog.
 
 ### Requirement: The compiler core compiles its own source
 
-The compiler core SHALL be expressible in the language scheme-llvm accepts, such that the
-core's own source can be compiled by scheme-llvm to produce a working compiler. Building the
+The compiler core SHALL be expressible in the language Emit accepts, such that the
+core's own source can be compiled by Emit to produce a working compiler. Building the
 core with the host-hosted compiler SHALL yield a native `schemec` that maps source text to
 LLVM IR without Chez at compile time.
 
@@ -68,7 +66,7 @@ triple test). This fixed point across self-compiled binaries is the acceptance c
 self-hosting.
 
 The stage-1 IR emitted by the *Chez-hosted* compiler is NOT required to match stage-2: Chez and
-scheme-llvm are different host runtimes and intern the constant pool in different orders, so
+Emit are different host runtimes and intern the constant pool in different orders, so
 stage-1 legitimately differs. The compiler converges after one recompile off Chez, not zero.
 
 #### Scenario: Stage-2 and stage-3 IR are identical
@@ -157,3 +155,4 @@ serve as an independent (second-host) re-derivation of the self-hosting fixed po
 - **WHEN** the trust-check rebuilds the compiler from the frozen genesis source under Chez
 - **THEN** it reaches the same committed byte-identical fixed point, confirming the committed IR
   is faithfully derived from source
+
