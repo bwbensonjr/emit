@@ -153,10 +153,23 @@
   (set! *repl-known* (union* (list *core-keywords* *prims* *extra-op-keywords*)))
   (set! *repl-n* 0)
   (set! *repl-libs* (quote ()))
+  ;; Stage 3 (module-prelude-scheme-base): the prelude's PROCEDURES now come from the
+  ;; (scheme base) library -- the host preloads it and then calls mode 6 to auto-import
+  ;; it into the session scope.  init only merges the derived-form MACROS (the
+  ;; compile-time half), emitting NO procedure batch, so it returns "".  --no-prelude
+  ;; passes "" here, so no macros are merged and no auto-import happens.
   (let ([forms (read-all-from-string prelude-src)])
-    (if (null? forms)
-        ""
-        (repl-load-prelude! forms))))
+    (for-each (lambda (f) (when (define-syntax-form? f) (repl-note-syntax! f))) forms)
+    ""))
+
+;; Auto-import (scheme base) into the session scope after the host has preloaded it
+;; (mode 6).  Merges its exports so later forms resolve prelude procedures to the
+;; loaded library's external globals.  Returns (ok . "") or (error . msg) so the host
+;; can warn if the standard library was not on the manifest.
+(define (repl-autoimport-scheme-base)
+  (if (repl-import! (quote (scheme base)))
+      (cons (quote ok) "")
+      (cons (quote error) "(scheme base) not loaded (missing from manifest?)")))
 
 ;; --- library import (both-doors REPL half; change: module-artifacts-vertical-slice)
 ;; Merge a loaded library's exports into the session scope: each external name
@@ -171,7 +184,11 @@
              (lambda (e)                     ; e = (external-name . mangled-string)
                (vector-set! *repl-env* 0
                  (cons (cons (car e) (string->symbol (cdr e)))
-                       (vector-ref *repl-env* 0))))
+                       (vector-ref *repl-env* 0)))
+               ;; the imported name is a "known" binding, so a derived-form macro
+               ;; may introduce a reference to it (e.g. `case` -> `memv`) without
+               ;; hygiene renaming it away (change: module-prelude-scheme-base).
+               (set! *repl-known* (cons (car e) *repl-known*)))
              (cdr entry))
            #t))))
 
@@ -319,6 +336,7 @@
 ;;   0 init-session no prelude   1 init-session with the baked-in *prelude-source*
 ;;   2 form-complete?            3 compile-one-form
 ;;   4 load-library (source text -> unit IR + __init)   5 manifest text -> source paths
+;;   6 auto-import (scheme base) into the session (after the host preloads it, Stage 3)
 ;; State is restored before and saved after each op (init modes seed it fresh).
 (define (repl-dispatch)
   (repl-restore-state!)
@@ -330,6 +348,7 @@
              [(= mode 2) (form-complete-code (repl-input))]
              [(= mode 4) (repl-load-library-text (repl-input))]  ; load a library unit
              [(= mode 5) (repl-manifest-paths (repl-input))]     ; manifest text -> paths
+             [(= mode 6) (repl-autoimport-scheme-base)]          ; auto-import (scheme base)
              [else       (compile-one-form-text (repl-input))])])
       (repl-save-state!)
       result)))

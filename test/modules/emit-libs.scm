@@ -5,7 +5,8 @@
 ;;; order is irrelevant: the build resolves the transitive closure and orders it
 ;;; topologically (dependencies before dependents).  Note chain-a is listed BEFORE
 ;;; its dependency chain-b, and dia-a/dia-b before dia-c, on purpose.
-((library (mylib)      (source "test/modules/mylib.sld"))
+((library (scheme base) (source "lib/scheme/base.sld"))
+ (library (mylib)      (source "test/modules/mylib.sld"))
  (library (liba)       (source "test/modules/liba.sld"))
  (library (libb)       (source "test/modules/libb.sld"))
  (library (chain-a)    (source "test/modules/chain-a.sld"))

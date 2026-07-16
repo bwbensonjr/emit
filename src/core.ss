@@ -200,10 +200,12 @@
   (let* ([me+rf (collect-define-syntax body-forms)]
          [macro-env (car me+rf)]
          [runtime (cadr me+rf)]
-         [known (compute-known macro-env runtime)]
+         [import-env-alist (import-tables->env-alist import-tables)]
+         ;; imported external names are "known" too (see compile-program-with-imports),
+         ;; so a macro introducing one is not hygiene-renamed away.
+         [known (union (compute-known macro-env runtime) (map car import-env-alist))]
          [defs  (filter define-form? runtime)]
          [defined-names (map (lambda (p) (car (normalize-define p))) defs)]
-         [import-env-alist (import-tables->env-alist import-tables)]
          [env   (make-repl-env)])
     ;; validate each export's INTERNAL name is defined at the library's top level.
     (for-each
@@ -249,7 +251,10 @@
     (reset-counter!)
     (let* ([me+rf (collect-define-syntax forms)]
            [macro-env (car me+rf)] [runtime (cadr me+rf)]
-           [known (compute-known macro-env runtime)]
+           ;; Imported external names are "known" bindings too, so a derived-form
+           ;; macro (e.g. `case`) may introduce a reference to one (e.g. `memv`)
+           ;; without hygiene renaming it away (change: module-prelude-scheme-base).
+           [known (union (compute-known macro-env runtime) (map car import-env-alist))]
            [top   (collect-toplevel runtime)]
            [expd  (expand top macro-env known)]
            [core0 (rename-program (parse-program expd))]

@@ -1,0 +1,11 @@
+;;; prog-base-macros.scm -- derived-form MACROS with no prepended prelude
+;;; (cond/case/when expand and their calls resolve to (scheme base)). => (yes 2 7)
+(define (label n)
+  (cond ((zero? n) 'zero)
+        ((> n 0) 'yes)
+        (else 'neg)))
+(define (kind k)
+  (case k ((a e i o u) 'vowel) (else 'consonant)))
+(list (label 5)
+      (case 2 ((1) 'one) ((2) 2) (else 'other))
+      (when #t 7))

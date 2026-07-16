@@ -275,6 +275,22 @@
 (define (write-text path text)
   (let ([o (open-output-file path 'replace)]) (display text o) (close-port o)))
 
+;; --- prelude as (scheme base) (change: module-prelude-scheme-base, Stage 3) ---
+;; The prelude's RUNTIME half is the library (scheme base) (auto-imported); its
+;; COMPILE-TIME half is the derived-form macros, obtained by filtering the prelude
+;; source for define-syntax and merged into a user program's macro-env (no separate
+;; baked constant -- the prelude source is the single source of truth).
+(define scheme-base-lib '(scheme base))
+(define (prelude-macro-forms)
+  (filter (lambda (f) (and (pair? f) (eq? (car f) 'define-syntax)))
+          (read-program prelude-path)))
+;; a program's imports plus an implicit (scheme base) when the prelude is enabled
+;; (deduped, so an explicit (import (scheme base)) is not doubled).
+(define (with-scheme-base imports prelude?)
+  (if (and prelude? (not (member scheme-base-lib imports)))
+      (append imports (list scheme-base-lib))
+      imports))
+
 ;; --- library dependency graph (change: module-generalize) ------------------
 ;; A library may import other libraries, so the build resolves the TRANSITIVE
 ;; closure of a program's imports, orders it topologically (dependencies before
@@ -326,9 +342,12 @@
 ;; closure's __init in dependency order (change: module-generalize).
 (define (build-modular-program src exe prelude?)
   (let* ([user-forms     (read-program src)]
-         [direct-imports (car (collect-imports user-forms))]
+         ;; Stage 3: the prelude's procedures come from the auto-imported (scheme
+         ;; base) library, not a prepend; only its derived-form macros are merged
+         ;; as prelude-forms (compile-time).  --no-prelude adds neither.
+         [direct-imports (with-scheme-base (car (collect-imports user-forms)) prelude?)]
          [manifest       (read-manifest *manifest-path*)]
-         [prelude-forms  (if prelude? (read-program prelude-path) '())]
+         [prelude-forms  (if prelude? (prelude-macro-forms) '())]
          [header         (host-target-header)])
     (let-values ([(order dl-cache) (toposort-libs direct-imports manifest)])
       ;; build/reuse each unit in topo order, accumulating (name . export-table)
@@ -393,9 +412,12 @@
                  ;; --dump = full per-pass form trace; -v = concise stage names; else silent
                  [dumpf (cond [dump? dump] [(>= driver-verbosity 2) announce-stage] [else no-dump])])
             (cond
-              ;; import-aware AOT: a program with (import (L)) forms is built by
-              ;; compiling+linking its libraries (change: module-artifacts-vertical-slice).
-              [(and (string=? backend "aot") (pair? (program-imports src)))
+              ;; import-aware AOT: a program that imports libraries -- or, with the
+              ;; prelude enabled, any program (it auto-imports (scheme base), Stage 3)
+              ;; -- is built by compiling+linking its libraries (changes:
+              ;; module-artifacts-vertical-slice, module-prelude-scheme-base).
+              [(and (string=? backend "aot")
+                    (or prelude? (pair? (program-imports src))))
                (build-modular-program src out prelude?)]
               [else
             (compile-file src ll dumpf prelude? via?)

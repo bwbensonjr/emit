@@ -295,6 +295,16 @@ int main(int argc, char **argv) {
   // Preload manifest libraries so interactive (import (L)) forms can resolve them.
   preload_libraries();
 
+  // Stage 3 (module-prelude-scheme-base): the prelude's procedures live in the
+  // now-preloaded (scheme base) library; auto-import it into the session scope
+  // (mode 6) so later forms resolve prelude names to it -- unless --no-prelude.
+  if (prelude) {
+    rt_repl_set(6, "", 0);
+    intptr_t r = scheme_entry();
+    if (status_of(r) != "ok")
+      std::cerr << "warning: auto-import (scheme base): " << scm_str(rt_cdr(r)) << "\n";
+  }
+
   std::cerr << "Emit REPL (embedded compiler, ORC/LLJIT).  ^D to exit.\n";
 
   // Accumulate stdin and drive the compiler.  After each line, ask the compiler

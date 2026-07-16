@@ -56,6 +56,8 @@ run_suite "expander units"              chez --libdirs src --script test/expande
 run_suite "read-all reader"             chez --libdirs src --script test/read-all-tests.ss
 run_suite "mangle (symbol naming)"      chez --libdirs src --script test/mangle-tests.ss
 run_suite "module vertical-slice (AOT)" test/modules-tests.sh
+run_suite "(scheme base) gen guard"     test/scheme-base-gen-check.sh
+run_suite "(scheme base) auto-import (AOT)" test/prelude-base-tests.sh
 run_suite "process-I/O primitives"      test/io-primitives-tests.sh
 run_suite "self-emission equivalence"   bash -c 'make build/schemec >/dev/null 2>&1 && test/self-emit-equiv.sh'
 run_suite "self-hosting fixed point"    test/self-host-fixpoint.sh
