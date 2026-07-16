@@ -23,6 +23,8 @@
 (define *repl-macro-env* (quote ()))         ; ((name . transformer) ...)
 (define *repl-known* (quote ()))             ; hygiene "known bindings" set
 (define *repl-n* 0)                          ; per-form thunk counter (@__repl_N)
+(define *repl-libs* (quote ()))              ; ((lib-name . exports-alist) ...) loaded units
+                                             ; (change: module-artifacts-vertical-slice)
 
 ;; register a define-syntax in the session (mirrors run-repl's note-syntax!)
 (define (repl-note-syntax! form)
@@ -83,6 +85,16 @@
         [(define-syntax-form? form)
          (repl-note-syntax! form)
          (cons (quote syntax) (symbol->string (cadr form)))]
+        [(import-form? form)
+         ;; (import (L) ...): merge each library's exports into the session scope
+         ;; as imported bindings; the unit is already loaded (mode 4) so no module
+         ;; is emitted here (change: module-artifacts-vertical-slice).
+         (for-each
+           (lambda (lib)
+             (unless (repl-import! lib)
+               (error 'repl "imported library not loaded" lib)))
+           (cdr form))
+         (cons (quote import) "")]
         [else
          (let ([dn (define-name form)])
            (when dn (set! *repl-known* (cons dn *repl-known*)))
@@ -140,10 +152,55 @@
   (set! *repl-macro-env* (quote ()))
   (set! *repl-known* (union* (list *core-keywords* *prims* *extra-op-keywords*)))
   (set! *repl-n* 0)
+  (set! *repl-libs* (quote ()))
   (let ([forms (read-all-from-string prelude-src)])
     (if (null? forms)
         ""
         (repl-load-prelude! forms))))
+
+;; --- library import (both-doors REPL half; change: module-artifacts-vertical-slice)
+;; Merge a loaded library's exports into the session scope: each external name
+;; maps to the exporter's mangled global symbol, so a later form resolves it to an
+;; `external global` the JIT binds to the already-loaded unit (design D3).  Returns
+;; #f if the named library was not loaded (mode 4) first.
+(define (repl-import! lib-name)
+  (let ([entry (assoc lib-name *repl-libs*)])
+    (and entry
+         (begin
+           (for-each
+             (lambda (e)                     ; e = (external-name . mangled-string)
+               (vector-set! *repl-env* 0
+                 (cons (cons (car e) (string->symbol (cdr e)))
+                       (vector-ref *repl-env* 0))))
+             (cdr entry))
+           #t))))
+
+;; Compile a library from its source text (host read the file): parse the
+;; define-library, compile the unit, remember its exports, and return
+;; (ok . (ir . init-symbol)) so the host addIRModules the unit and runs its
+;; one-shot @"L:__init" once.  The session gensym counter is preserved across the
+;; compile: library code labels are @"L:code_N" (qualified, so a per-library reset
+;; is safe), but interactive forms and the prelude share the unqualified @code_N
+;; namespace, so the session counter must stay monotonic.
+(define (repl-load-library-text text)
+  (guard (e (#t (cons (quote error) (repl-error->string e))))
+    (let ([saved counter])
+      (let* ([forms (read-all-from-string text)]
+             [dl    (parse-define-library (car forms))]
+             [res   (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl) no-dump)]
+             [name  (car dl)])
+        (set! counter saved)                 ; undo compile-library's reset-counter!
+        (set! *repl-libs* (cons (cons name (cadr (cadr res))) *repl-libs*))
+        (cons (quote ok) (cons (car res) (mangle name "__init")))))))
+
+;; Parse a manifest's text and return its source paths, newline-joined, so the
+;; host (which owns file I/O) can read each library source and load it (mode 4).
+(define (repl-manifest-paths text)
+  (let loop ([es (car (read-all-from-string text))] [acc ""])
+    (if (null? es)
+        acc
+        (let ([src (cond [(assq (quote source) (cddr (car es))) => cadr] [else #f])])
+          (loop (cdr es) (if src (string-append acc src "\n") acc))))))
 
 ;; --- the input-completeness probe (design D4(b); spike/form-complete) --------
 ;; Does the host's accumulated buffer start with a complete datum yet?  An
@@ -232,9 +289,10 @@
       (set! *repl-macro-env* (vector-ref s 1))
       (set! *repl-known* (vector-ref s 2))
       (set! *repl-n* (vector-ref s 3))
-      (set! counter (vector-ref s 4)))))
+      (set! counter (vector-ref s 4))
+      (set! *repl-libs* (vector-ref s 5)))))
 (define (repl-save-state!)
-  (repl-state-set! (vector *repl-env* *repl-macro-env* *repl-known* *repl-n* counter)))
+  (repl-state-set! (vector *repl-env* *repl-macro-env* *repl-known* *repl-n* counter *repl-libs*)))
 
 ;; --- the dispatched embedded entry (design D2) -------------------------------
 ;; The host sets (repl-mode)/(repl-input) via rt_repl_set, then calls this ccc
@@ -242,6 +300,7 @@
 ;; operations, so the existing single-scheme_entry emission is reused unchanged:
 ;;   0 init-session no prelude   1 init-session with the baked-in *prelude-source*
 ;;   2 form-complete?            3 compile-one-form
+;;   4 load-library (source text -> unit IR + __init)   5 manifest text -> source paths
 ;; State is restored before and saved after each op (init modes seed it fresh).
 (define (repl-dispatch)
   (repl-restore-state!)
@@ -251,6 +310,8 @@
              [(= mode 0) (init-session "")]
              [(= mode 1) (init-session *prelude-source*)]
              [(= mode 2) (form-complete-code (repl-input))]
+             [(= mode 4) (repl-load-library-text (repl-input))]  ; load a library unit
+             [(= mode 5) (repl-manifest-paths (repl-input))]     ; manifest text -> paths
              [else       (compile-one-form-text (repl-input))])])
       (repl-save-state!)
       result)))

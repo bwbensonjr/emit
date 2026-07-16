@@ -216,6 +216,17 @@
     (vector-set! env 0 (cons (cons name sym) (vector-ref env 0)))
     sym))
 
+;; ---- library (unit) environment (change: module-artifacts-vertical-slice) ---
+;; A compilation unit binds each top-level define to its PLAIN name (no
+;; generation suffix); the emit unit qualifies it to @"L:x" at emission.  It
+;; reuses the REPL env vector shape so the same repl-lower-form* group-load path
+;; (register? #f) drives a library body, but with stable, readable symbols.
+(define (unit-env-define! env name)
+  (vector-set! env 0 (cons (cons name name) (vector-ref env 0)))
+  name)
+(define (unit-register-define! env form)
+  (unit-env-define! env (car (normalize-define form))))
+
 ;; ---- typed binding resolution (change: module-resolution-scaffold) ----------
 ;; Free-identifier resolution classifies each resolved binding by KIND rather
 ;; than returning a bare target.  A binding is (binding <kind> <symbol>):

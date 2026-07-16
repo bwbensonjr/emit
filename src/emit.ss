@@ -183,6 +183,20 @@
     (map (lambda (l) (if (label-line? l) (string-append l "\n") (string-append "  " l "\n")))
          lines)))
 
+;; LLVM global operand for a code label (change: module-artifacts-vertical-slice).
+;; A program-unit label ("code_N") is a legal unquoted identifier and stays
+;; `@code_N` (byte-identical to before modules).  A unit-qualified label carries a
+;; ':' (e.g. "mylib:code_N"), illegal unquoted, so it is quoted `@"mylib:code_N"`.
+(define (label-has-colon? s)
+  (let loop ([i 0] [n (string-length s)])
+    (cond [(= i n) #f]
+          [(char=? (string-ref s i) #\:) #t]
+          [else (loop (+ i 1) n)])))
+(define (label-operand label)
+  (if (label-has-colon? label)
+      (string-append "@\"" label "\"")
+      (string-append "@" label)))
+
 ;; --- expression emission: ev returns an operand; et terminates the block ---
 (define (ev e env cp tc?)
   (match e
@@ -197,7 +211,11 @@
      ;; Route the value through rt_root so it survives GC: the JIT'd global slot
      ;; lives in memory libgc does not scan, so a value reachable only through the
      ;; slot would be collected (change: repl-embedded-incremental).
-     (let ([op (ev e env cp tc?)] [t (fresh-temp)])
+     ;; let* (not let): `op` (which emits and allocates temps) MUST evaluate before
+     ;; the result temp, so temp numbering is identical under Chez (right-to-left
+     ;; let) and the embedded compiler (left-to-right) -- the cross-door unit
+     ;; byte-identity guarantee (change: module-artifacts-vertical-slice).
+     (let* ([op (ev e env cp tc?)] [t (fresh-temp)])
        (emit! (string-append t " = call i64 @rt_root(i64 " op ")"))
        (emit! (string-append "store i64 " t ", ptr " (global-operand s)))
        t)]
@@ -323,7 +341,7 @@
   (let* ([raw (fresh-temp)] [p (fresh-temp)])
     (emit! (string-append raw " = call i64 @rt_alloc_words(i64 " (number->string (+ caps-count 1)) ")"))
     (emit! (string-append p " = inttoptr i64 " raw " to ptr"))
-    (emit! (string-append "store i64 ptrtoint (ptr @" label " to i64), ptr " p))
+    (emit! (string-append "store i64 ptrtoint (ptr " (label-operand label) " to i64), ptr " p))
     (list raw p)))
 
 (define (store-cap p i op)
@@ -554,7 +572,7 @@
                       (cons (cons rest (emit-build-rest f k)) env0)  ; hot path: fixed only
                       env0)])
          (et body env "%self" #t))
-       (string-append "define fastcc i64 @" label "(" argdecls ") {\n"
+       (string-append "define fastcc i64 " (label-operand label) "(" argdecls ") {\n"
                       (lines->string (reverse emit-lines)) "}\n\n"))]))
 
 (define (emit-entry entry)
@@ -565,6 +583,7 @@
 
 (define (emit-program prog)
   (reset-emit!)
+  (set! *emit-unit* program-unit)          ; a program's own globals are unprefixed
   (match prog
     [(program ,defs ,entry)
      (set! *arity* (max-arity defs))
@@ -727,3 +746,95 @@
            (list (string-append (rt-declarations) exts slots (symbol-globals)
                                 body thunk (emit-apply0-trampoline repl-arity))
                  name defd))]))))
+
+;; ============================================================================
+;; Module artifacts (change: module-artifacts-vertical-slice)
+;; ============================================================================
+
+;; @scheme_entry for a program that imports libraries: call each imported
+;; library's one-shot @"L:__init" (declared external) before the program body, so
+;; every imported global is populated before first use (generalizes emit-entry).
+(define (emit-entry/inits entry imported-libs)
+  (set! emit-lines '()) (set! current-bb "entry")
+  (start-bb "entry")
+  (for-each
+    (lambda (lib) (emit! (string-append "call i64 @\"" (mangle lib "__init") "\"()")))
+    imported-libs)
+  (et entry '() #f #f)
+  (string-append "define i64 @scheme_entry() {\n" (lines->string (reverse emit-lines)) "}\n"))
+
+;; A program module that imports libraries.  Like emit-program, but pins the
+;; closure arity K to repl-arity (the shared cross-module closure ABI, matching
+;; the libraries' own K), declares each imported global `external`, declares each
+;; imported library's __init, and runs those inits first in @scheme_entry.
+;;   imported-libs : list of library names (each a list of symbol parts)
+;;   imported-syms : list of mangled symbols the program references as externals
+(define (emit-program-with-imports prog imported-libs imported-syms)
+  (reset-emit!)
+  (set! *emit-unit* program-unit)          ; the program's own globals are unprefixed
+  (match prog
+    [(program ,defs ,entry)
+     (set! *arity* repl-arity)
+     (reset-symbols!)
+     (let* ([body (apply string-append (map (lambda (d) (emit-code-def d *arity*)) defs))]
+            [ent  (emit-entry/inits entry imported-libs)]
+            [gdecls (apply string-append
+                      (map (lambda (s) (string-append (global-operand s) " = external global i64\n"))
+                           imported-syms))]
+            [idecls (apply string-append
+                      (map (lambda (lib)
+                             (string-append "declare i64 @\"" (mangle lib "__init") "\"()\n"))
+                           imported-libs))])
+       (string-append (rt-declarations) gdecls idecls (symbol-globals)
+                      body ent (emit-apply0-trampoline *arity*)))]))
+
+;; Emit a library UNIT module for `library-name` from its lowered form-progs.
+;; Mirrors emit-repl-batch-named, but every unit-owned symbol is qualified via
+;; *emit-unit* (globals @"L:x", code labels @"L:code_N"); per-form init thunks are
+;; qualified @"L:__init_N" (no cross-library collision); the aggregate entry is a
+;; one-shot @"L:__init" guarded by @"L:__inited"; and there is NO @scheme_entry.
+;; Globals get default (external) linkage so importers resolve them by name.
+(define (emit-library-batch progs library-name)
+  (reset-emit!) (reset-symbols!)
+  (set! *emit-unit* library-name)
+  (set! *arity* repl-arity)
+  (for-each repl-check-arity progs)
+  (let ([qop (lambda (nm) (string-append "@\"" (mangle library-name nm) "\""))])  ; @-operand
+    (let loop ([ps progs] [n 1] [bodies '()] [thunks '()] [defd '()] [calls '()])
+      (if (null? ps)
+          (let* ([flag    (qop "__inited")]
+                 [flagdef (string-append flag " = global i64 0\n")]
+                 [slots   (apply string-append
+                            (map (lambda (s) (string-append (global-operand s) " = global i64 0\n"))
+                                 defd))]
+                 [init    (string-append
+                            "define i64 " (qop "__init") "() {\n"
+                            "entry:\n"
+                            "  %f = load i64, ptr " flag "\n"
+                            "  %c = icmp ne i64 %f, 0\n"
+                            "  br i1 %c, label %already, label %run\n"
+                            "already:\n"
+                            "  ret i64 2\n"
+                            "run:\n"
+                            "  store i64 8, ptr " flag "\n"
+                            (apply string-append (reverse calls))
+                            "  ret i64 2\n}\n")])
+            (string-append (rt-declarations) (symbol-globals) flagdef slots
+                           (apply string-append (reverse bodies))
+                           (apply string-append (reverse thunks))
+                           init (emit-apply0-trampoline repl-arity)))
+          (let* ([prog (car ps)]
+                 [fd+rd (repl-scan-globals prog)]
+                 [fd (car fd+rd)])
+            (match prog
+              [(program ,cdefs ,e)
+               (let* ([body  (apply string-append
+                               (map (lambda (d) (emit-code-def d repl-arity)) cdefs))]
+                      [tname (string-append "\""
+                               (mangle library-name (string-append "__init_" (number->string n)))
+                               "\"")]
+                      [thunk (emit-named-entry e tname)]
+                      [call  (string-append "  call i64 @" tname "()\n")])
+                 (loop (cdr ps) (+ n 1)
+                       (cons body bodies) (cons thunk thunks)
+                       (union defd fd) (cons call calls)))]))))))

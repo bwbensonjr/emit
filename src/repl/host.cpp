@@ -35,6 +35,9 @@
 #include <cstdint>
 #include <csetjmp>
 #include <cstdio>
+#include <cstdlib>
+#include <fstream>
+#include <sstream>
 #include <iostream>
 #include <string>
 #include <memory>
@@ -122,6 +125,67 @@ static void run_thunk(const std::string &name) {
   rt_trap = nullptr;
 }
 
+// Run a named entry thunk once for effect (no value print), under trap
+// isolation.  Used for the one-shot library @"L:__init" populators.
+static bool run_init(const std::string &name) {
+  Expected<ExecutorAddr> sym = JIT->lookup(name);
+  if (!sym) {
+    std::cerr << "error: library init lookup: " << toString(sym.takeError()) << "\n";
+    return false;
+  }
+  thunk_t fn = sym->toPtr<thunk_t>();
+  jmp_buf jb;
+  rt_trap = &jb;
+  bool ok = true;
+  if (setjmp(jb) == 0) { fn(); }
+  else { rt_guard_reset(); std::cerr << "error: library init trap: " << rt_trap_msg << "\n"; ok = false; }
+  rt_trap = nullptr;
+  return ok;
+}
+
+static std::string read_file(const std::string &path) {
+  std::ifstream f(path, std::ios::binary);
+  std::ostringstream ss;
+  ss << f.rdbuf();
+  return ss.str();
+}
+
+// Preload every library named in the manifest into the shared JITDylib (change:
+// module-artifacts-vertical-slice).  The compiler owns manifest parsing: mode 5
+// turns the manifest text into a newline-separated list of source paths; for each
+// we read the file (host I/O) and hand it to mode 4, which compiles the unit and
+// returns (ok . (ir . init-symbol)).  We addIRModule the unit and run its one-shot
+// __init.  An interactive (import (L)) later just makes L's exports visible.
+static void preload_libraries() {
+  const char *mp = std::getenv("EMIT_MANIFEST");
+  std::string manifest = mp ? std::string(mp) : std::string("emit-libs.scm");
+  std::ifstream probe(manifest);
+  if (!probe.good()) return;                 // no manifest: no libraries this session
+  std::string mtext = read_file(manifest);
+
+  rt_repl_set(5, mtext.data(), (intptr_t)mtext.size());
+  std::string paths = scm_str(scheme_entry());
+
+  std::istringstream lines(paths);
+  std::string path;
+  while (std::getline(lines, path)) {
+    if (path.empty()) continue;
+    std::string src = read_file(path);
+    rt_repl_set(4, src.data(), (intptr_t)src.size());
+    intptr_t r = scheme_entry();
+    if (status_of(r) != "ok") {
+      std::cerr << "error: loading library " << path << ": " << scm_str(rt_cdr(r)) << "\n";
+      continue;
+    }
+    intptr_t payload = rt_cdr(r);            // (ir . init-symbol)
+    std::string ir = scm_str(rt_car(payload));
+    std::string init = scm_str(rt_cdr(payload));
+    std::string err;
+    if (!add_ir(ir, err)) { std::cerr << "error: library add " << path << ": " << err << "\n"; continue; }
+    run_init(init);
+  }
+}
+
 // Compile one complete form's text via the embedded compiler and act on the
 // (status . payload) it returns.
 static void process_form(const std::string &form) {
@@ -137,6 +201,8 @@ static void process_form(const std::string &form) {
     run_thunk(name);                        // entry-name handshake: run what the compiler chose
   } else if (st == "syntax") {
     std::cerr << ";; syntax " << scm_str(rt_cdr(r)) << "\n";
+  } else if (st == "import") {              // (import (L)): exports merged; no module
+    // nothing to JIT -- the unit was preloaded; the session scope now sees it.
   } else {                                  // "error": compile-time; session continues
     std::cerr << "error: " << scm_str(rt_cdr(r)) << "\n";
   }
@@ -199,6 +265,9 @@ int main(int argc, char **argv) {
     }
     rt_trap = nullptr;
   }
+
+  // Preload manifest libraries so interactive (import (L)) forms can resolve them.
+  preload_libraries();
 
   std::cerr << "Emit REPL (embedded compiler, ORC/LLJIT).  ^D to exit.\n";
 

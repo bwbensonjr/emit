@@ -50,6 +50,7 @@ fi
 run_suite "demo values (scheme-run)"  env RUNNER=scheme-run demos/run-tests.sh
 run_suite "module-scaffold byte-identity" test/module-scaffold-baseline.sh check
 run_suite "REPL persistent host"      test/repl-host-tests.sh
+run_suite "module vertical-slice (REPL)" test/modules-repl-tests.sh
 
 echo
 echo "================================================================"

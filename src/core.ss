@@ -69,25 +69,156 @@
       (dump "convert-assignments" b) (dump "convert-closures" c) (dump "lower" d)
       (emit-program d))))
 
+;; a source whose only top-level form is a (define-library ...) is a library unit
+;; (change: module-artifacts-vertical-slice); it compiles to a unit module, not a
+;; program, through the SAME embedded --emit path programs use -- so a unit's bytes
+;; are identical whether emitted for the AOT door or loaded into the REPL door.
+(define (single-define-library forms)
+  (and (pair? forms) (null? (cdr forms)) (define-library-form? (car forms))
+       (car forms)))
+(define (compile-library-form form dump)
+  (let ([dl (parse-define-library form)])
+    (car (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl) dump))))
+
 ;; convenience: source text -> IR text (no prelude, no header).  This is the
 ;; core's self-hosting-facing contract; the driver adds prelude/header/toolchain.
 (define (compile-source-string str)
-  (compile-forms (read-forms-from-string str) no-dump))
+  (let ([forms (read-forms-from-string str)])
+    (cond
+      [(single-define-library forms) => (lambda (lib) (compile-library-form lib no-dump))]
+      [else (compile-forms forms no-dump)])))
 
 ;; source text + prelude text -> IR text (no header).  The prelude-aware sibling
 ;; of compile-source-string: it applies the same user-wins shadowing the batch
 ;; driver does (with-prelude), but takes the prelude as *text* rather than
 ;; reading a file, so it stays free of filesystem/subprocess I/O.  Used by the
 ;; embedded compiler (change: path-a-embedding), whose entry bakes the prelude
-;; source in as a string constant and passes the user program on stdin.
+;; source in as a string constant and passes the user program on stdin.  A lone
+;; define-library is compiled as a unit (prelude-free in Stage 1).
 (define (compile-source-with-prelude prelude-str user-str)
-  (compile-forms
-    (with-prelude (read-forms-from-string prelude-str)
-                  (read-forms-from-string user-str))
-    no-dump))
+  (let ([forms (read-forms-from-string user-str)])
+    (cond
+      [(single-define-library forms) => (lambda (lib) (compile-library-form lib no-dump))]
+      [else
+       (compile-forms
+         (with-prelude (read-forms-from-string prelude-str) forms)
+         no-dump)])))
 
 ;; shared back half of the pipeline for one core-IL expression.  The REPL feeds
 ;; forms through this incrementally (against a persistent env); batch compilation
 ;; runs the same passes over a whole program in `compile-forms`.
 (define (repl-lcode il)
   (lower-program (convert-closures (convert-assignments (recognize-let il))) program-unit))
+
+;; ============================================================================
+;; Module artifacts: define-library / import / export (change:
+;; module-artifacts-vertical-slice).  The pure core turns forms + an in-memory
+;; import environment into IR text + an export table; the driver/host owns all
+;; file/manifest/link effects.
+;; ============================================================================
+
+(define (define-library-form? f) (and (pair? f) (eq? (car f) 'define-library)))
+(define (import-form? f) (and (pair? f) (eq? (car f) 'import)))
+
+;; (define-library (name ...) decl ...) -> (list name imports exports body-forms).
+;; decls: (export n ...) | (import (L) ...) | (begin form ...) | a bare form.
+(define (parse-define-library form)
+  (let ([name (cadr form)])
+    (let loop ([ds (cddr form)] [imps '()] [exps '()] [body '()])
+      (if (null? ds)
+          (list name (reverse imps) (reverse exps) (reverse body))
+          (let ([d (car ds)])
+            (cond
+              [(and (pair? d) (eq? (car d) 'export))
+               (loop (cdr ds) imps (append (reverse (cdr d)) exps) body)]
+              [(and (pair? d) (eq? (car d) 'import))
+               (loop (cdr ds) (append (reverse (cdr d)) imps) exps body)]
+              [(and (pair? d) (eq? (car d) 'begin))
+               (loop (cdr ds) imps exps (append (reverse (cdr d)) body))]
+              [else (loop (cdr ds) imps exps (cons d body))]))))))
+
+;; Split a program's top-level forms into (list imported-libs runtime-forms);
+;; each imported-lib is a library name like (mylib).
+(define (collect-imports forms)
+  (let loop ([fs forms] [imps '()] [rt '()])
+    (cond
+      [(null? fs) (list (reverse imps) (reverse rt))]
+      [(import-form? (car fs)) (loop (cdr fs) (append (reverse (cdr (car fs))) imps) rt)]
+      [else (loop (cdr fs) imps (cons (car fs) rt))])))
+
+;; expand one top-level form (define init, or a bare expression) against macro-env
+(define (expand-unit-form f macro-env known)
+  (if (and (pair? f) (eq? (car f) 'define))
+      (let ([nd (normalize-define f)])
+        `(define ,(car nd) ,(expand (cadr nd) macro-env known)))
+      (expand f macro-env known)))
+
+;; lower one core-IL expression for a unit named `unit` (code labels get @"L:..").
+(define (unit-lcode il unit)
+  (lower-program (convert-closures (convert-assignments (recognize-let il))) unit))
+
+;; Compile a library's declarations into (list ir-text export-table).
+;;   name        : library name (list of symbol parts)
+;;   exports     : exported internal names (procedures; bare names in v0)
+;;   body-forms  : the library's top-level defines (a mutually-recursive group)
+;; export-table : (list name ((external-name . mangled-string) ...)).
+;; Stage 1 libraries import nothing and do not share the prelude (that is Stage 3),
+;; so the body uses primitives / core forms only.
+(define (compile-library name imports exports body-forms dump)
+  (reset-counter!)
+  (let* ([me+rf (collect-define-syntax body-forms)]
+         [macro-env (car me+rf)]
+         [runtime (cadr me+rf)]
+         [known (compute-known macro-env runtime)]
+         [defs  (filter define-form? runtime)]
+         [defined-names (map (lambda (p) (car (normalize-define p))) defs)]
+         [env   (make-repl-env)])
+    (for-each
+      (lambda (e)
+        (unless (memq e defined-names)
+          (error 'compile-library "export of a name the library does not define" e)))
+      exports)
+    ;; phase 1: register every top-level define (plain names) for mutual reference
+    (for-each (lambda (f) (unit-register-define! env f)) defs)
+    ;; phase 2: lower each define body as one mutually-recursive group (register? #f).
+    ;; Use fold-left (left-to-right in BOTH hosts), not map: the gensym counter is
+    ;; mutated per form, and Chez's map vs the prelude's map apply in different
+    ;; orders -- which would diverge the AOT-door and REPL-door units.  fold-left
+    ;; keeps a library's emitted bytes identical across doors (dev->ship fidelity).
+    (let ([progs (reverse
+                   (fold-left
+                     (lambda (acc f)
+                       (cons (unit-lcode (repl-lower-form* env (expand-unit-form f macro-env known) #f) name)
+                             acc))
+                     (quote ()) defs))]
+          [export-table (map (lambda (e) (cons e (mangle name e))) exports)])
+      (list (emit-library-batch progs name) (list name export-table)))))
+
+;; Compile a program that imports libraries.  import-tables is a list of the
+;; imported libraries' export tables (as returned by compile-library); the
+;; program resolves imported free identifiers to the exporter's external globals
+;; and its @scheme_entry runs each imported library's __init first.  Returns IR.
+(define (compile-program-with-imports prelude-forms user-forms import-tables dump)
+  (let* ([imp+rt (collect-imports user-forms)]
+         [imported-libs (car imp+rt)]
+         [runtime-user (cadr imp+rt)]
+         [export-alist (apply append (map cadr import-tables))]      ; (ext . mangled-string)
+         [import-env-alist (map (lambda (p) (cons (car p) (string->symbol (cdr p)))) export-alist)]
+         [forms (with-prelude prelude-forms runtime-user)])
+    (reset-counter!)
+    (let* ([me+rf (collect-define-syntax forms)]
+           [macro-env (car me+rf)] [runtime (cadr me+rf)]
+           [known (compute-known macro-env runtime)]
+           [top   (collect-toplevel runtime)]
+           [expd  (expand top macro-env known)]
+           [core0 (rename-program (parse-program expd))]
+           [core  (if (null? import-env-alist)
+                      core0
+                      (resolve-globals core0 (vector import-env-alist 0)))]
+           [a (recognize-let core)]
+           [b (convert-assignments a)]
+           [c (convert-closures b)]
+           [d (lower-program c program-unit)])
+      (dump "collect-toplevel" top) (dump "expand" expd)
+      (dump "parse+rename+imports" core) (dump "lower" d)
+      (emit-program-with-imports d imported-libs (map cdr import-env-alist)))))

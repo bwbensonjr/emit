@@ -240,6 +240,83 @@
     (display ir (current-output-port))
     (flush-output-port (current-output-port))))
 
+;; --- import-aware AOT build (change: module-artifacts-vertical-slice) ------
+;; A program with top-level (import (L)) forms is built by resolving each L
+;; through a manifest to its source, compiling the library to a unit .ll (+ a
+;; readable .exports table), compiling the program against the imports' export
+;; tables, and linking runtime + every unit .ll + the program into one exe.
+;; Reading the manifest/sources and writing/linking artifacts are driver effects;
+;; the pure core provides compile-library / compile-program-with-imports.
+(define *manifest-path* (or (getenv "EMIT_MANIFEST") "emit-libs.scm"))
+
+;; manifest file (one s-expression) -> list of (name source-path artifact-dir).
+(define (read-manifest path)
+  (unless (file-exists? path)
+    (error 'build (string-append "library manifest not found: " path)))
+  (map (lambda (entry)                     ; (library NAME (source S) [(artifacts A)])
+         (let ([name (cadr entry)] [clauses (cddr entry)])
+           (list name
+                 (cond [(assq 'source clauses) => cadr]
+                       [else (error 'build "manifest entry missing (source ...)" name)])
+                 (cond [(assq 'artifacts clauses) => cadr] [else "build/lib"]))))
+       (car (read-program path))))
+
+(define (manifest-lookup manifest name)
+  (or (assoc name manifest)
+      (error 'build "library not found in manifest" name)))
+
+(define (lib-basename name)                ; (foo bar) -> "foo.bar"
+  (let loop ([parts (cdr name)] [acc (symbol->string (car name))])
+    (if (null? parts) acc
+        (loop (cdr parts) (string-append acc "." (symbol->string (car parts)))))))
+
+(define (program-imports src) (car (collect-imports (read-program src))))
+
+(define (write-text path text)
+  (let ([o (open-output-file path 'replace)]) (display text o) (close-port o)))
+
+;; Compile+link a program that imports libraries.  `exe` is the output path.
+(define (build-modular-program src exe prelude?)
+  (let* ([user-forms    (read-program src)]
+         [imported-libs (car (collect-imports user-forms))]
+         [manifest      (read-manifest *manifest-path*)]
+         [prelude-forms (if prelude? (read-program prelude-path) '())]
+         [header        (host-target-header)])
+    ;; compile each imported library -> <art>/<base>.ll + <base>.exports
+    (let loop ([libs imported-libs] [lls '()] [tables '()])
+      (if (null? libs)
+          ;; all libraries compiled: compile the program and link everything
+          (let* ([prog-ll (string-append exe ".ll")]   ; beside the exe, not the source
+                 [prog-ir (compile-program-with-imports
+                            prelude-forms user-forms (reverse tables) no-dump)]
+                 [prog-text (string-append header prog-ir)])
+            (write-text prog-ll prog-text)
+            (note "compile ~a -> ~a  [~a bytes]\n" src prog-ll (string-length prog-text))
+            (let ([cmd (string-append
+                         "clang -Wno-override-module -I" gc-inc " -L" gc-lib " " runtime-c " "
+                         (apply string-append (map (lambda (l) (string-append l " ")) (reverse lls)))
+                         prog-ll " -lgc -o " exe)])
+              (sh "clang" cmd)
+              (note "link ~a + ~a unit(s) -> ~a  [aot, modules]\n"
+                    prog-ll (length lls) exe)))
+          ;; compile one library
+          (let* ([name    (car libs)]
+                 [entry   (manifest-lookup manifest name)]
+                 [art-dir (caddr entry)]
+                 [lib-fs  (read-program (cadr entry))]
+                 [dl      (parse-define-library (car lib-fs))]
+                 [res     (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl) no-dump)]
+                 [base    (lib-basename name)]
+                 [ll      (string-append art-dir "/" base ".ll")]
+                 [expf    (string-append art-dir "/" base ".exports")]
+                 [ll-text (string-append header (car res))])
+            (sh "mkdir" (string-append "mkdir -p " art-dir))
+            (write-text ll ll-text)
+            (let ([o (open-output-file expf 'replace)])
+              (write (cadr res) o) (newline o) (close-port o))
+            (note "compile ~s -> ~a  [~a bytes]\n" name ll (string-length ll-text))
+            (loop (cdr libs) (cons ll lls) (cons (cadr res) tables)))))))
+
 ;; --- argument handling ---
 ;; `via?` (env SCHEMEC=<path> or --via-schemec) routes the batch forms->IR step
 ;; through the compiled `schemec` (path C, D4) instead of the in-process core.
@@ -256,6 +333,12 @@
           (let* ([out (or out (strip-ext src))] [ll (string-append out ".ll")]
                  ;; --dump = full per-pass form trace; -v = concise stage names; else silent
                  [dumpf (cond [dump? dump] [(>= driver-verbosity 2) announce-stage] [else no-dump])])
+            (cond
+              ;; import-aware AOT: a program with (import (L)) forms is built by
+              ;; compiling+linking its libraries (change: module-artifacts-vertical-slice).
+              [(and (string=? backend "aot") (pair? (program-imports src)))
+               (build-modular-program src out prelude?)]
+              [else
             (compile-file src ll dumpf prelude? via?)
             (case (string->symbol backend)
               [(aot)
@@ -270,7 +353,8 @@
               [(jit)
                (require-llvm-tools)
                (run-jit ll out)]
-              [else (error 'compile "unknown backend (want aot|jit|bitcode)" backend)]))])]
+              [else (error 'compile "unknown backend (want aot|jit|bitcode)" backend)])]))])]
+      [(string=? (car args) "--manifest") (set! *manifest-path* (cadr args)) (loop (cddr args) src out dump? backend prelude? repl? emit-ir? via?)]
       [(string=? (car args) "-o") (loop (cddr args) src (cadr args) dump? backend prelude? repl? emit-ir? via?)]
       [(string=? (car args) "-q") (set! driver-verbosity 0) (loop (cdr args) src out dump? backend prelude? repl? emit-ir? via?)]
       [(string=? (car args) "-v") (set! driver-verbosity 2) (loop (cdr args) src out dump? backend prelude? repl? emit-ir? via?)]
