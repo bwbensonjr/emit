@@ -78,6 +78,19 @@ else
   echo "  [FAIL] --no-prelude emitted a marker or scheme.base reference"; fail=$((fail+1))
 fi
 
+# The committed bootstrap/scheme.base.ll (linked into every binary, incl. the
+# compiler itself since compiler-bootstrap-rehome) must equal the (scheme base)
+# module scheme-run emits AHEAD of a program -- same library, same core, no drift.
+if [ -f bootstrap/scheme.base.ll ]; then
+  awk '/^; ==EMIT-UNIT-BOUNDARY==$/{exit} {print}' "$emit" > "$TMP/base-inline.ll"
+  build/scheme-run --emit < lib/scheme/base.sld > "$TMP/base-standalone.ll"
+  if cmp -s "$TMP/base-inline.ll" "$TMP/base-standalone.ll" && cmp -s "$TMP/base-standalone.ll" bootstrap/scheme.base.ll; then
+    echo "  [OK  ] scheme.base module: inline == standalone == committed bootstrap/scheme.base.ll"; pass=$((pass+1))
+  else
+    echo "  [FAIL] scheme.base.ll drift (inline vs standalone vs committed)"; fail=$((fail+1))
+  fi
+fi
+
 # byte-identity of the re-homed PROGRAM module vs the Chez driver's prog.ll.
 if command -v chez >/dev/null 2>&1; then
   echo "embedded-runner program IR == Chez driver prog.ll (byte-identical)"

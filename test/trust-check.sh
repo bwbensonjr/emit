@@ -8,6 +8,11 @@
 # and assert it is byte-identical to what is committed.  A compiler-source change
 # that forgot `make regen` -> the committed IR no longer matches source -> FAIL.
 #
+# Since the compiler is re-homed on (scheme base) (change: compiler-bootstrap-rehome),
+# `make regen` re-derives bootstrap/scheme.base.ll from lib/scheme/base.sld and the
+# three compiler IRs (auto-importing it) and this check diffs ALL of bootstrap/, so
+# the library is re-derived and compared too -- it is not trusted blindly.
+#
 # Requires a clean working tree for bootstrap/ (as in a CI checkout).  Run from
 # the repo root: test/trust-check.sh
 set -u

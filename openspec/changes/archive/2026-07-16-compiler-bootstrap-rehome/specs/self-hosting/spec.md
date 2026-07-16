@@ -1,12 +1,5 @@
-# self-hosting Specification
+## MODIFIED Requirements
 
-## Purpose
-
-Defines the path toward compiling the compiler with itself: assembling the compiler core
-into a single program expressed in the subset Emit accepts, and maintaining a complete
-inventory of the remaining constructs the language does not yet support, so the stage-1
-self-hosting build can proceed without discovering gaps ad hoc.
-## Requirements
 ### Requirement: The core is assembled into a single self-hostable program
 
 There SHALL be a repeatable step that assembles the compiler core into one program in the
@@ -34,32 +27,6 @@ retained as historical/reproduction tooling but SHALL NOT be on the default buil
 - **THEN** the flat program is produced by concatenating the checked-in flat source files with the
   chosen entry (without prepending the prelude), and no Chez process is invoked
 
-### Requirement: Remaining self-hosting gaps are fully enumerated
-
-Compiling the assembled core with Emit SHALL yield a complete inventory of the
-constructs the language does not yet accept, each classified (missing primitive, missing
-prelude procedure, unsupported special form, or reader gap) and assigned a fix path, recorded
-as the self-hosting gap backlog.
-
-#### Scenario: Gap inventory is complete and sized
-
-- **WHEN** the sweep has compiled the assembled core as far as it can
-- **THEN** every remaining unsupported construct is recorded in the self-hosting gap list with
-  a location and a fix path, so no further gap is discovered ad hoc during the stage-1 build
-
-### Requirement: The compiler core compiles its own source
-
-The compiler core SHALL be expressible in the language Emit accepts, such that the
-core's own source can be compiled by Emit to produce a working compiler. Building the
-core with the host-hosted compiler SHALL yield a native `schemec` that maps source text to
-LLVM IR without Chez at compile time.
-
-#### Scenario: Core builds to a native compiler
-
-- **WHEN** the core source is compiled by the (Chez-hosted) compiler
-- **THEN** a native `schemec` is produced that, given a program's source text, emits the same
-  IR the Chez-hosted compiler emits for that program
-
 ### Requirement: Self-compilation reaches a stable fixed point
 
 Compiling the compiler source with the self-built, module-aware embedded compiler SHALL reproduce
@@ -81,29 +48,6 @@ converges after one recompile off Chez, not zero.
   is linked (with `scheme.base.ll`) and used to recompile the same source (yielding stage-3)
 - **THEN** the stage-2 and stage-3 IR outputs are byte-identical, for `scheme.base.ll` and for each
   compiler binary's IR
-
-### Requirement: Compiled compiler replaces Chez at compile time (path C)
-
-Compiling a program SHALL require no Chez. The compiled `schemec` (source text → LLVM IR) and
-the in-process runner `scheme-run` (source text → run) SHALL be buildable from committed IR with
-only LLVM, and SHALL be the standard way to compile and run programs. A Chez-free path SHALL
-exist to produce a standalone native executable from a program's source (for example
-`scheme-run --emit` piped to `clang`), honoring standalone executables as a first-class
-deliverable. The REPL host's removal of Chez is delivered separately by path A (in-process
-embedding).
-
-#### Scenario: A program is compiled and run without Chez
-
-- **WHEN** a program is compiled and run through `scheme-run` (or `schemec` + `clang`) on a
-  machine without Chez
-- **THEN** compilation and execution complete with no Chez process, and the result matches the
-  result the Chez-hosted driver produces for that program
-
-#### Scenario: A standalone executable is produced without Chez
-
-- **WHEN** a program's source is compiled to a native executable using only the committed
-  compiler IR and LLVM (no Chez)
-- **THEN** a standalone binary is produced whose output matches the AOT build's output
 
 ### Requirement: Committed self-compiled compiler artifacts are the authoritative form
 
@@ -146,24 +90,3 @@ prepending the prelude.
   emitted from the library source, the compiled compiler re-emits the committed IR auto-importing
   `(scheme base)`, the binaries relink against `scheme.base.ll`, and a program exercising the change
   compiles with the new behavior — all with no Chez process
-
-### Requirement: A Chez-gated check guarantees the committed IR is not stale
-
-Because the default build links committed IR and does not auto-regenerate on source change, there
-SHALL be a check — permitted to require Chez, and intended for CI — that regenerates the compiler
-IR from the current source in a clean tree and asserts it is byte-identical to the committed IR.
-This check SHALL fail if a compiler-source change was not accompanied by regeneration, and SHALL
-serve as an independent (second-host) re-derivation of the self-hosting fixed point.
-
-#### Scenario: Un-regenerated compiler change is caught
-
-- **WHEN** the compiler source is changed but the committed IR is not regenerated, and the
-  trust-check runs
-- **THEN** the check regenerates the IR and reports a mismatch against the committed IR, failing
-
-#### Scenario: An independent host reproduces the fixed point
-
-- **WHEN** the trust-check rebuilds the compiler from the frozen genesis source under Chez
-- **THEN** it reaches the same committed byte-identical fixed point, confirming the committed IR
-  is faithfully derived from source
-

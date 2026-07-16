@@ -66,12 +66,16 @@ read (host) → prepend prelude → collect-toplevel → expand → parse+rename
             → emit .ll → clang(+runtime,+libgc)
 ```
 
-**Prelude.** Before `collect-toplevel`, the driver prepends the forms of `src/prelude.scm`
-(a small standard library: `not`, `list`, `length`, `reverse`, `append`, `map`, `memq`,
-`assq`, plus the derived-form macros below) to the user program's forms, with **user-wins
-shadowing** (a user define of the same name drops the prelude's). This gives reusable Scheme
-code — and the reader — a home without a module system. `--no-prelude` compiles a program's
-forms alone; because the derived forms now live in the prelude, they are unavailable then.
+**Prelude.** `src/prelude.scm` is a small standard library (`not`, `list`, `length`, `reverse`,
+`append`, `map`, `memq`, `assq`, plus the derived-form macros below). It is no longer *prepended*:
+it is re-homed as the library **`(scheme base)`**, auto-imported into every program on all doors —
+the Chez driver, the REPL, and the Chez-free embedded runner — and, since
+`compiler-bootstrap-rehome`, into the compiler's own build too (its procedures resolve as
+`scheme.base:*` externals against a linked `scheme.base.ll`; the derived-form macros are merged
+compile-time). **User-wins shadowing** still holds (a user define of the same name beats the
+import). `--no-prelude` skips the auto-import and macro merge, so prelude names and derived forms
+are unavailable. (The `prepend prelude` box above is the historical model; the current mechanism
+is the `(scheme base)` auto-import — see the module-system spec.)
 
 **Macros (`expand`).** `expand` is a fixpoint `syntax-rules` macro expander. Before
 `collect-toplevel`, the driver lifts every top-level `(define-syntax name (syntax-rules …))`

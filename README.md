@@ -92,6 +92,9 @@ stage-0 artifacts that are the **favored, authoritative form**:
 - `bootstrap/schemec.ll` — the batch text→IR filter compiler
 - `bootstrap/embed.ll` — the in-process runner's embedded compiler
 - `bootstrap/embed-repl.ll` — the interactive REPL's embedded compiler
+- `bootstrap/scheme.base.ll` — the prelude re-homed as the `(scheme base)` library, which all
+  three binaries link (the compiler is re-homed on it too, so its IR references `scheme.base:*`
+  externals instead of inlining the prelude — see "Changing the compiler")
 
 These are produced by the **compiled compiler itself** (the self-hosting fixed point), so they
 regenerate. The default `make` treats them as **checked-in inputs**: it links
@@ -104,9 +107,13 @@ make regen                 # see tools/regen.sh
 `regen` (1) **assembles** the flat source by ordered `cat` — the
 source files are already concatenation-ready (flat
 `match.scm`/`util.scm`, `core.ss` with no `include`s, per-target
-`entry-*.scm`) — and (2) **compiles** with the self-hosted `schemec`,
-iterating it to its byte-identical fixed point before emitting the
-other artifacts.
+`entry-*.scm`), **without prepending the prelude** — and (2) **compiles**
+with the module-aware `scheme-run`, which auto-imports `(scheme base)`
+into the compiler sources and iterates the fixed point over
+`{scheme.base.ll, embed.ll}` (emitting `scheme.base.ll` from
+`lib/scheme/base.sld`) before emitting `schemec.ll` / `embed-repl.ll`.
+The `schemec` filter is no longer the bootstrap seed — it cannot resolve
+the `(scheme base)` import; `scheme-run` is the module-aware compiler.
 
 Because the default build does not auto-regenerate (design D4 — this deliberately **reverses**
 the earlier `fix-stale-repl-host-rebuild` auto-rebuild-on-source-change, so the committed IR
@@ -135,7 +142,8 @@ library-structured source are frozen under `historical/genesis/`.
   `(scheme base)` library and the program) separated by a boundary marker; the host splits on it
   and JITs both. `--emit` writes the whole IR to stdout; `--no-prelude` skips the auto-import.
 - `bootstrap/` — committed host-agnostic stage-0 IR (the authoritative form): `schemec.ll`
-  (batch filter), `embed.ll` (runner), `embed-repl.ll` (REPL); regenerate with `make regen`.
+  (batch filter), `embed.ll` (runner), `embed-repl.ll` (REPL), and `scheme.base.ll` (the prelude
+  re-homed as `(scheme base)`, linked into all three); regenerate with `make regen`.
 - `tools/regen.sh` — the regenerator (ordered-`cat` assembly + self-hosted compile).
 - `bin/scheme-compile` — source→native-executable wrapper (`scheme-run --emit` + clang); splits
   the emitted IR on the boundary marker and clang-links the `(scheme base)` unit + program.
@@ -209,7 +217,9 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
   (`scheme-run`/`scheme-compile`) — with user-wins shadowing and `--no-prelude` to opt out:
   `list length reverse append map memq assq member assoc filter fold-left fold-right`,
   the n-ary character comparisons `char=? char<? char>? char<=? char>=?`, and `string->list`.
-  (The compiler's own bootstrap still prepends the prelude for its self-compilation.)
+  `(scheme base)` is now **library zero** for the compiler's own build too: the compiler
+  binaries link `bootstrap/scheme.base.ll` and reference its exports rather than inlining the
+  prelude (change: `compiler-bootstrap-rehome`).
 - `read-from-string` — a recursive-descent Scheme reader (integers, symbols, lists,
   dotted/improper lists, `#t`/`#f`, characters incl. named `#\newline`/`#\space`/…,
   `"strings"` with `\n`/`\t`/`\r`/`\\`/`\"`/`\xHH;` escapes, `#(...)` vectors, `'`-quote
