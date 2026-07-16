@@ -25,14 +25,9 @@
 # then `make all schemec`).
 set -eu
 cd "$(dirname "$0")/.."
-. tools/log.sh   # say/vsay/bytes + EMIT_VERBOSITY (see docs/OUTPUT.md)
-
-CC="${CC:-/opt/homebrew/opt/llvm@22/bin/clang}"
-CXX="${CXX:-/opt/homebrew/opt/llvm@22/bin/clang++}"
-LLVM_CONFIG="${LLVM_CONFIG:-/opt/homebrew/opt/llvm@22/bin/llvm-config}"
-GC_INC="${GC_INC:-/opt/homebrew/include}"
-GC_LIB="${GC_LIB:-/opt/homebrew/lib}"
-LDFLAGS="$("$LLVM_CONFIG" --ldflags --libs orcjit native --system-libs)"
+# Discover the toolchain (CC/CXX/LLVM_CONFIG/GC_INC/GC_LIB/LDFLAGS) once, single-sourced; also
+# brings in say/vsay/bytes + EMIT_VERBOSITY (see docs/OUTPUT.md and tools/llvm-env.sh).
+. tools/llvm-env.sh || exit 1
 
 # Flat core, in concatenation order (this list == the Chez driver's include order).
 CORE_FLAT="src/match.scm src/util.scm src/parse.ss \

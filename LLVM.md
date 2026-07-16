@@ -87,14 +87,21 @@ LLVM through a C/C++ FFI shim for exactly this in-process-JIT purpose.
 
 ### Install (development)
 
+The toolchain is discovered via `llvm-config` + `pkg-config bdw-gc` (`tools/llvm-env.sh`),
+so any reasonably recent LLVM works — LLVM 19+ is expected (older warns, set `EMIT_LLVM_MIN`
+to change), with no upper bound.
+
 ```sh
 # Chez Scheme + nanopass on the library path (see nanopass README for --libdirs).
-# LLVM/clang toolchain matching the pinned major version:
-sudo apt-get install clang-22 llvm-22        # or your distro's LLVM 22 packages
-# Conservative GC for phase 1:
+# A recent LLVM/clang toolchain (any version discoverable via llvm-config):
+sudo apt-get install llvm-22 clang-22        # or your distro's LLVM packages / Homebrew `llvm`
+# Conservative GC:
 sudo apt-get install libgc-dev
-# Phase 2 only: the libLLVM shared library for FFI (bundled with the llvm-22 package).
+# Phase 2 only: the libLLVM shared library for FFI (bundled with the llvm-NN package).
 ```
+
+Override discovery when needed: `LLVM_CONFIG` / `EMIT_LLVM_BIN` for the LLVM tools, `CC`
+for the AOT compiler, `GC_INC` / `GC_LIB` / `GC_DYLIB` for libgc.
 
 Sanity checks:
 
@@ -365,17 +372,18 @@ all three and asserts byte-identical output.
 2. **JIT (phase 1, `lli`).** Assemble the program to `.bc`, `llvm-link` it with the
    runtime compiled to bitcode (so the C `main` + `rt_*` join the module — `lli` runs the
    *input module's* `main`), and run in-process via `lli` with `libgc` loaded
-   (`-load=…/libgc.dylib`). `musttail` and Boehm GC both work under `lli` (verified by the
+   (`-load=…/libgc.<so|dylib>`). `musttail` and Boehm GC both work under `lli` (verified by the
    10M-iteration `countdown` and the allocation-heavy demos in the equivalence harness).
    Phase 2: in-process ORC via the C-API FFI backend. ORC is the current LLVM JIT API;
    MCJIT is retired and not a target here.
 3. **Bitcode.** Emit `.bc` (`llvm-as`) for `opt`, inspection, or downstream tooling; the
-   bitcode backend also codegens it to a native exe (LLVM 22 `clang`) so the harness can
-   execute it.
+   bitcode backend also codegens it to a native exe (the discovered `clang`) so the harness
+   can execute it.
 
-> The JIT/bitcode exits use the pinned **LLVM 22** Homebrew keg
-> (`/opt/homebrew/opt/llvm@22/bin/`), driven by absolute path since the keg is off
-> `PATH`; the AOT exit uses the system clang. See `src/TOOLCHAIN.md`.
+> The JIT/bitcode exits use the **discovered** LLVM tools (via `llvm-config`; overridable
+> with `LLVM_CONFIG` / `EMIT_LLVM_BIN`), and load libgc into `lli` with the platform's
+> shared-object extension (`.so` / `.dylib`); the AOT exit prefers a system clang on `PATH`.
+> Discovery is single-sourced in `tools/llvm-env.sh`. See `src/TOOLCHAIN.md`.
 
 The LLVM Kaleidoscope tutorial maps onto these even though it is C++: chapter 3 (IR
 generation), chapter 4 (JIT + optimizer), chapter 8 (object files); the separate

@@ -42,8 +42,72 @@
 (define (read-all-from-string str) (read-forms (open-input-string str)))
 
 (define runtime-c "src/runtime/runtime.c")
-(define gc-inc "/opt/homebrew/include")
-(define gc-lib "/opt/homebrew/lib")
+
+;; --- toolchain discovery (change: allow-llvm-install-flexibility) ----------
+;; The Chez driver cannot source tools/llvm-env.sh, so discovery stays single-sourced by
+;; SHELLING OUT to that same layer (`tools/llvm-env.sh --print-env`) and reading the
+;; resolved values -- a bare `chez --script src/compile.ss ...` from the repo root thus
+;; picks up any LLVM the shared layer can find.  An explicit env override still wins; if
+;; the layer is unavailable, a legacy Homebrew keg is the last-resort fallback.
+(define (getenv-ne name)               ; getenv, but empty string counts as unset
+  (let ([v (getenv name)]) (and v (> (string-length v) 0) v)))
+(define (shell-line cmd)               ; run CMD, return its first stdout line, or #f
+  (let* ([pipes (process cmd)] [from (car pipes)] [to (cadr pipes)])
+    (close-port to)
+    (let ([ln (get-line from)]) (close-port from)
+      (and (not (eof-object? ln)) (> (string-length ln) 0) ln))))
+(define (ensure-slash s)               ; a bin dir path the `tool` helper can suffix
+  (if (and (> (string-length s) 0) (char=? (string-ref s (- (string-length s) 1)) #\/))
+      s (string-append s "/")))
+(define (string-suffix? suf s)
+  (let ([sl (string-length s)] [ul (string-length suf)])
+    (and (>= sl ul) (string=? (substring s (- sl ul) sl) suf))))
+(define (macos?) (string-suffix? "osx" (symbol->string (machine-type))))
+
+;; Read `NAME=VALUE` lines from `tools/llvm-env.sh --print-env` into an alist ('() if the
+;; layer is absent or errors); this is the single shared discovery implementation.
+(define *llvm-env*
+  (guard (e [#t '()])
+    (if (file-exists? "tools/llvm-env.sh")
+        (let* ([pipes (process "tools/llvm-env.sh --print-env 2>/dev/null")]
+               [from (car pipes)] [to (cadr pipes)])
+          (close-port to)
+          (let loop ([acc '()])
+            (let ([ln (get-line from)])
+              (if (eof-object? ln)
+                  (begin (close-port from) (reverse acc))
+                  (let ([i (let scan ([k 0])
+                             (cond [(>= k (string-length ln)) #f]
+                                   [(char=? (string-ref ln k) #\=) k]
+                                   [else (scan (+ k 1))]))])
+                    (loop (if i
+                              (cons (cons (substring ln 0 i)
+                                          (substring ln (+ i 1) (string-length ln)))
+                                    acc)
+                              acc)))))))
+        '())))
+(define (from-layer name) (cond [(assoc name *llvm-env*) => cdr] [else #f]))
+
+(define gc-inc  (or (getenv-ne "EMIT_GC_INC")  (from-layer "EMIT_GC_INC")  "/opt/homebrew/include"))
+(define gc-lib  (or (getenv-ne "EMIT_GC_LIB")  (from-layer "EMIT_GC_LIB")  "/opt/homebrew/lib"))
+;; LLVM tool dir for the jit/bitcode backends (kept with a trailing slash for `tool`).
+(define llvm-bin
+  (ensure-slash (or (getenv-ne "EMIT_LLVM_BIN") (from-layer "EMIT_LLVM_BIN")
+                    "/opt/homebrew/opt/llvm@22/bin")))
+;; libgc shared object for `lli -load=`: .dylib on macOS, .so elsewhere (fixes the JIT
+;; backend off macOS, where the old hardcoded libgc.dylib does not exist).
+(define gc-dylib
+  (or (getenv-ne "EMIT_GC_DYLIB") (from-layer "EMIT_GC_DYLIB")
+      (string-append gc-lib "/libgc." (if (macos?) "dylib" "so"))))
+;; AOT C compiler (D6): explicit CC wins, then the shared layer's resolved CC (a system
+;; clang when present, else the discovered LLVM clang); the in-Scheme branch is the
+;; last-resort fallback when the layer is unavailable.
+(define aot-cc
+  (or (getenv-ne "CC") (from-layer "CC")
+      (if (getenv-ne "EMIT_LLVM_BIN")
+          (string-append llvm-bin "clang")
+          (if (shell-line "command -v clang 2>/dev/null") "clang"
+              (string-append llvm-bin "clang")))))
 
 ;; Module header: the `target datalayout`/`target triple` lines for the host.
 ;; Without them clang fills in its own effective triple when it loads our IR and
@@ -51,7 +115,7 @@
 ;; empty translation unit -- the canonical, portable way to learn the host's
 ;; exact triple (which -print-target-triple does not report on macOS).
 (define (host-target-header)
-  (let* ([pipes (process "clang -S -emit-llvm -x c -o - - 2>/dev/null")]
+  (let* ([pipes (process (string-append aot-cc " -S -emit-llvm -x c -o - - 2>/dev/null"))]
          [from (car pipes)]
          [to   (cadr pipes)])
     (put-string to "int __scheme_llvm_probe;\n")
@@ -151,12 +215,11 @@
     (let ([out (open-output-file ll 'replace)]) (display text out) (close-port out))))
 
 ;; --- backends -----------------------------------------------------------
-;; One emitted OUT.ll drives three exits.  AOT stays on the system clang
-;; (unchanged).  The JIT and bitcode exits use the pinned LLVM 22 tools by
-;; absolute path (Homebrew keg, off PATH).
-(define llvm-bin "/opt/homebrew/opt/llvm@22/bin/")
+;; One emitted OUT.ll drives three exits.  AOT uses `aot-cc` (a system clang when present,
+;; else the discovered LLVM clang; see the toolchain-discovery block above).  The JIT and
+;; bitcode exits use the discovered LLVM tools (`llvm-bin`, from EMIT_LLVM_BIN or
+;; `llvm-config --bindir`) -- no fixed keg path.
 (define (tool t) (string-append llvm-bin t))
-(define gc-dylib (string-append gc-lib "/libgc.dylib"))
 (define (sh who cmd)
   (unless (zero? (system cmd)) (error 'compile (string-append who " failed") cmd)))
 
@@ -165,13 +228,14 @@
     (lambda (t)
       (unless (file-exists? (tool t))
         (error 'compile
-               (string-append "required LLVM 22 tool not found: " (tool t)
-                              "  (install with: brew install llvm@22)"))))
+               (string-append "required LLVM tool not found: " (tool t)
+                              "  (install LLVM -- apt: 'llvm', brew: 'llvm' -- "
+                              "or set EMIT_LLVM_BIN to your LLVM bin directory)"))))
     '("lli" "llvm-as" "llvm-link" "clang")))
 
 ;; AOT (default): textual IR -> native exe via the system clang.  Unchanged.
 (define (link ll exe)
-  (sh "clang" (string-append "clang -I" gc-inc " -L" gc-lib " " runtime-c " " ll " -lgc -o " exe)))
+  (sh "clang" (string-append aot-cc " -I" gc-inc " -L" gc-lib " " runtime-c " " ll " -lgc -o " exe)))
 
 ;; Bitcode: assemble OUT.ll -> OUT.bc (the inspectable/opt-able artifact),
 ;; then codegen the .bc + runtime to a native exe (LLVM 22 clang).
@@ -403,7 +467,7 @@
 ;; AOT: clang links runtime + every unit + program -> native exe.
 (define (link-modular-aot unit-lls prog-ll exe)
   (sh "clang"
-      (string-append "clang -Wno-override-module -I" gc-inc " -L" gc-lib " " runtime-c " "
+      (string-append aot-cc " -Wno-override-module -I" gc-inc " -L" gc-lib " " runtime-c " "
                      (lls->string unit-lls) prog-ll " -lgc -o " exe))
   (note "link ~a + ~a unit(s) -> ~a  [aot, modules]\n" prog-ll (length unit-lls) exe))
 

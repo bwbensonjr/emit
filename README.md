@@ -10,7 +10,7 @@ persistent LLVM ORC/LLJIT host, where each form is compiled by the
 **embedded compiler in-process** into a long-lived session. The
 compiler is written in Scheme and compiles its own source to a
 **byte-identical fixed point** — so the day-to-day build, run, REPL,
-and recompile loop needs **only LLVM 22 + libgcz**. The ability to
+and recompile loop needs **only a recent LLVM + libgc**. The ability to
 host with Chez Scheme survives as the historical genesis
 (`historical/genesis/`) and an optional CI trust-check. The
 implementation prioritizes simple, transparent stages (see
@@ -21,7 +21,19 @@ REPL-based development and debugging.
 
 ## Quick start
 
-**Install LLVM 22 + libgc** (`brew install llvm@22 bdw-gc`).
+**Install a recent LLVM + libgc.** The toolchain is discovered via `llvm-config` and
+`pkg-config bdw-gc` (see `tools/llvm-env.sh`), so any reasonably recent install works:
+
+```sh
+# macOS (Homebrew)
+brew install llvm bdw-gc
+# Debian/Ubuntu (apt) -- e.g. LLVM 22; clang provides the AOT compiler
+sudo apt-get install llvm-22 clang-22 libgc-dev
+```
+
+LLVM 19+ is expected (older warns but is not blocked; set `EMIT_LLVM_MIN` to change the floor).
+If discovery picks the wrong toolchain, point it explicitly: `LLVM_CONFIG=/path/to/llvm-config`
+(or `EMIT_LLVM_BIN=/path/to/llvm/bin`) and `GC_INC` / `GC_LIB` for libgc.
 
 ```sh
 # build the shipped binaries from the committed compiler LLVM IR

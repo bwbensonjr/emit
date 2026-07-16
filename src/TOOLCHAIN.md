@@ -2,22 +2,33 @@
 
 Recorded during implementation (design task 1.2).
 
-| tool | pinned (LLVM.md) | actual on this machine | note |
-|------|------------------|------------------------|------|
+| tool | required | example on a machine | note |
+|------|----------|----------------------|------|
 | Chez Scheme | host | 10.4.1 | |
-| clang / LLVM (AOT) | 22.x | Apple clang 21.0.0 (LLVM ~21) | AOT default; see below |
-| LLVM 22 tools (JIT/bitcode) | 22.x | Homebrew `llvm@22` 22.1.4 | keg off PATH, see below |
-| libgc (Boehm) | any | 8.2.12 (`/opt/homebrew`) | headers `gc/gc.h` |
+| clang / LLVM (AOT) | recent | Apple clang 21 / apt clang 22 | AOT default; see below |
+| LLVM tools (JIT/bitcode) | LLVM 19+ | Homebrew `llvm` or apt `llvm-22` | discovered, see below |
+| libgc (Boehm) | any | 8.2.x (`pkg-config bdw-gc`) | headers `gc.h` / `gc/gc.h` |
 | llc | — | not installed | not needed; `clang foo.ll` compiles IR directly |
 
-## LLVM 22 keg for the JIT/bitcode backends
+## Toolchain discovery for the JIT/bitcode backends
 
-The JIT (`lli`) and bitcode (`llvm-as`) exits use the pinned **LLVM 22** tools from the
-Homebrew keg at `/opt/homebrew/opt/llvm@22/bin/` (installed via `brew install llvm@22`).
-The keg is intentionally *not* on `PATH`, so `src/compile.ss` drives these tools by
-absolute path (`lli`, `llvm-as`, `llvm-link`, and the keg's `clang`). It fails with a
-clear message if the keg is missing. `libgc` is loaded into `lli` via
-`-load=/opt/homebrew/lib/libgc.dylib`. The AOT exit still uses the system (Apple) clang.
+The toolchain is **discovered**, not pinned to a fixed path (change:
+`allow-llvm-install-flexibility`). `tools/llvm-env.sh` is the single discovery
+implementation: it locates the LLVM tools via `llvm-config` (`--bindir`) and libgc via
+`pkg-config bdw-gc`, and it feeds every consumer — the `Makefile` (`--print-make`
+fragment), the shell drivers (they source it), and `src/compile.ss` (which shells out to
+`--print-env`, since a `chez --script` cannot source the layer).
+
+The JIT (`lli`) and bitcode (`llvm-as`, `llvm-link`, `clang`) exits use those discovered
+tools; `libgc` is loaded into `lli` via `-load=<libdir>/libgc.<ext>` where `<ext>` is
+`.dylib` on macOS and `.so` elsewhere. The AOT exit prefers a system `clang` on `PATH`
+(keeping the macOS Apple-clang default) and otherwise uses the discovered LLVM clang.
+
+Discovery is overridable at every step: `LLVM_CONFIG` / `EMIT_LLVM_BIN` select the LLVM
+tools, `CC` selects the AOT compiler, `GC_INC` / `GC_LIB` / `GC_DYLIB` select libgc, and
+`EMIT_LLVM_MIN` (default 19) sets the warn-only version floor. `require-llvm-tools` fails
+with a platform-neutral message (naming the `apt`/`brew` packages and `EMIT_LLVM_BIN`) if
+a needed tool is missing.
 
 ## Deviation: clang 21, not the pinned LLVM 22
 
@@ -38,10 +49,10 @@ LLVM-22-specific IR feature.
     # JIT: llvm-link the runtime in, run in-process via lli (prints the value)
     chez --libdirs src --script src/compile.ss <program>.scm -o <out> --backend jit
 
-Under the hood the AOT link is:
+Under the hood the AOT link is (paths come from discovery — `$CC`, `$GC_INC`, `$GC_LIB`):
 
-    clang -I/opt/homebrew/include -L/opt/homebrew/lib \
-          src/runtime/runtime.c <program>.ll -lgc -o <program>
+    $CC -I$GC_INC -L$GC_LIB \
+        src/runtime/runtime.c <program>.ll -lgc -o <program>
 
 The 3-way equivalence harness (`demos/run-backends.sh`) runs every demo through all
 three backends and asserts identical results.
@@ -49,9 +60,9 @@ three backends and asserts identical results.
 ## Interactive REPL: the persistent ORC/LLJIT host
 
 The interactive REPL (change `interactive-repl`) executes entered forms in a long-lived
-process built on **LLVM 22 ORC v2 / LLJIT** (`src/repl/host.cpp`). It requires the
-LLVM 22 **development** install (headers + `llvm-config`), already provided by the
-`llvm@22` keg used for the JIT/bitcode backends:
+process built on **LLVM ORC v2 / LLJIT** (`src/repl/host.cpp`). It requires an LLVM
+**development** install (headers + `llvm-config`) — the same one discovered by
+`tools/llvm-env.sh` for the JIT/bitcode backends (Homebrew `llvm`, apt `llvm-NN`, etc.):
 
     make build/repl-host              # dependency-driven; rebuilds when sources change
 

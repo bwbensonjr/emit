@@ -11,7 +11,7 @@
 # IL-level unit tests, the anti-stale trust-check) -- live in ./run-dev-tests.sh,
 # which auto-skips when `chez` is absent.
 #
-# Needs LLVM 22 at /opt/homebrew/opt/llvm@22, system clang, and libgc.
+# Needs an LLVM discoverable via llvm-config (see tools/llvm-env.sh) and libgc.
 # Run from anywhere: ./run-all-tests.sh
 set -u
 cd "$(dirname "$0")"

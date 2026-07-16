@@ -26,15 +26,15 @@
 # (the trust-check + IL-level unit tests + the independent-host fixed-point
 # re-derivation), and the historical genesis tooling lives in historical/genesis/.
 
-LLVM        := /opt/homebrew/opt/llvm@22
-CXX         := $(LLVM)/bin/clang++
-CC          := $(LLVM)/bin/clang
-LLVM_CONFIG := $(LLVM)/bin/llvm-config
-GC_INC      := /opt/homebrew/include
-GC_LIB      := /opt/homebrew/lib
-
-CXXFLAGS    := $(shell $(LLVM_CONFIG) --cxxflags) -I$(GC_INC)
-LDFLAGS     := $(shell $(LLVM_CONFIG) --ldflags --libs orcjit native --system-libs)
+# Toolchain discovery is single-sourced in tools/llvm-env.sh (change:
+# allow-llvm-install-flexibility): --print-make writes the resolved CC/CXX/LLVM_CONFIG/GC_*/
+# CXXFLAGS/LDFLAGS as a Make fragment that we -include, so the build finds any LLVM discoverable
+# via llvm-config + libgc (apt, Homebrew, Nix, custom) instead of a fixed keg path.  Environment
+# and command-line overrides still win (they flow into the fragment, and `make VAR=...` overrides
+# the include).  build/llvm.mk is regenerated whenever the discovery script changes.
+build/llvm.mk: tools/llvm-env.sh tools/log.sh | build
+	tools/llvm-env.sh --print-make > $@
+-include build/llvm.mk
 
 # Binaries.
 HOST        := build/repl-host
@@ -128,6 +128,6 @@ clean:
 	      build/schemec build/schemec-next \
 	      build/schemec.scm build/embed.scm build/embed-repl.scm \
 	      build/prelude-source.scm build/T-*.scm \
-	      build/schemec.ll build/schemec.ll.check
+	      build/schemec.ll build/schemec.ll.check build/llvm.mk
 	@echo "note: committed bootstrap/*.ll are checked-in inputs, left in place"
 	@echo "      (rebuild from source with 'make regen')"

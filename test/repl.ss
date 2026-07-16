@@ -24,8 +24,32 @@
 (include "src/emit.ss")
 
 (define runtime-c "src/runtime/runtime.c")
-(define gc-inc "/opt/homebrew/include")
-(define gc-lib "/opt/homebrew/lib")
+
+;; Toolchain discovery via the shared layer (change: allow-llvm-install-flexibility): read the
+;; resolved gc dirs + C compiler from `tools/llvm-env.sh --print-env` (one discovery
+;; implementation); env overrides win; fall back to a Homebrew keg if the layer is unavailable.
+(define (repl-getenv-ne name) (let ([v (getenv name)]) (and v (> (string-length v) 0) v)))
+(define *repl-llvm-env*
+  (guard (e [#t '()])
+    (if (file-exists? "tools/llvm-env.sh")
+        (let* ([pipes (process "tools/llvm-env.sh --print-env 2>/dev/null")]
+               [from (car pipes)] [to (cadr pipes)])
+          (close-port to)
+          (let loop ([acc '()])
+            (let ([ln (get-line from)])
+              (if (eof-object? ln)
+                  (begin (close-port from) (reverse acc))
+                  (let ([i (let scan ([k 0])
+                             (cond [(>= k (string-length ln)) #f]
+                                   [(char=? (string-ref ln k) #\=) k]
+                                   [else (scan (+ k 1))]))])
+                    (loop (if i (cons (cons (substring ln 0 i) (substring ln (+ i 1) (string-length ln))) acc)
+                              acc)))))))
+        '())))
+(define (repl-from-layer name) (cond [(assoc name *repl-llvm-env*) => cdr] [else #f]))
+(define gc-inc (or (repl-getenv-ne "EMIT_GC_INC") (repl-from-layer "EMIT_GC_INC") "/opt/homebrew/include"))
+(define gc-lib (or (repl-getenv-ne "EMIT_GC_LIB") (repl-from-layer "EMIT_GC_LIB") "/opt/homebrew/lib"))
+(define aot-cc (or (repl-getenv-ne "CC") (repl-from-layer "CC") "/opt/homebrew/opt/llvm@22/bin/clang"))
 
 (define err-port (current-error-port))
 
@@ -39,7 +63,7 @@
 (define cc-path  (string-append workdir "/cc.err"))
 
 (define (host-target-header)
-  (let* ([pipes (process "clang -S -emit-llvm -x c -o - - 2>/dev/null")]
+  (let* ([pipes (process (string-append aot-cc " -S -emit-llvm -x c -o - - 2>/dev/null"))]
          [from (car pipes)] [to (cadr pipes)])
     (put-string to "int __scheme_llvm_probe;\n")
     (close-port to)
@@ -75,7 +99,7 @@
            [text  (string-append (host-target-header) (emit-repl-batch progs))])
       (call-with-output-file ll-path (lambda (o) (display text o)) 'replace)
       (if (zero? (system (string-append
-                           "clang -I" gc-inc " -L" gc-lib " " runtime-c " "
+                           aot-cc " -I" gc-inc " -L" gc-lib " " runtime-c " "
                            ll-path " -lgc -o " exe-path " 2> " cc-path)))
           (begin (system (string-append exe-path " > " out-path))
                  (values 'ok (read-file out-path)))

@@ -6,6 +6,7 @@
 # Run from the repo root: test/repl-batch-tests.sh
 set -u
 cd "$(dirname "$0")/.."
+. tools/llvm-env.sh || exit 1   # discovers CC/GC_INC/GC_LIB (see tools/llvm-env.sh)
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -18,7 +19,7 @@ check () {  # name  expected  <<forms
         >/dev/null 2>"$TMP/$name.err"; then
     echo "  [FAIL] $name (emit error)"; sed 's/^/         /' "$TMP/$name.err"; fail=$((fail+1)); return
   fi
-  if ! clang -I/opt/homebrew/include -L/opt/homebrew/lib src/runtime/runtime.c \
+  if ! "$CC" -I"$GC_INC" -L"$GC_LIB" src/runtime/runtime.c \
         "$TMP/$name.ll" -lgc -o "$TMP/$name" 2>"$TMP/$name.cc"; then
     echo "  [FAIL] $name (clang error)"; sed 's/^/         /' "$TMP/$name.cc"; fail=$((fail+1)); return
   fi

@@ -19,7 +19,7 @@
 # itself was proven by capturing a pristine DIR and diffing a post-change
 # capture against it (design D3); `check` keeps the guarantee live afterwards.
 #
-# Needs LLVM 22 + libgc (to link build/scheme-run); no Chez.  Run from anywhere.
+# Needs an LLVM discoverable via llvm-config + libgc (to link build/scheme-run); no Chez.  Run from anywhere.
 set -u
 cd "$(dirname "$0")/.."
 . tools/log.sh   # say/vsay + EMIT_VERBOSITY (see docs/OUTPUT.md)

@@ -16,11 +16,9 @@
 #           (default out = prog, sans .scm)
 set -eu
 cd "$(dirname "$0")/.."
-. tools/log.sh   # say/vsay/bytes + EMIT_VERBOSITY (see docs/OUTPUT.md)
-
-CC="${CC:-/opt/homebrew/opt/llvm@22/bin/clang}"
-GC_INC="${GC_INC:-/opt/homebrew/include}"
-GC_LIB="${GC_LIB:-/opt/homebrew/lib}"
+# Discover the toolchain (CC/GC_INC/GC_LIB) once, single-sourced; also brings in
+# say/vsay/bytes + EMIT_VERBOSITY (see docs/OUTPUT.md and tools/llvm-env.sh).
+. tools/llvm-env.sh || exit 1
 RUN="${RUN:-build/scheme-run}"
 
 src=""; out=""; noprelude=""

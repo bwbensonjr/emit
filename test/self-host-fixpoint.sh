@@ -24,16 +24,12 @@
 # Emit-hosted fixed point (stage-2) equals the committed bootstrap/{embed,scheme.base}.ll,
 # the committed IR is faithfully derived from source by two independent hosts.
 #
-# Requires Chez + LLVM 22 + libgc.  Run from the repo root: test/self-host-fixpoint.sh
+# Requires Chez + an LLVM discoverable via llvm-config + libgc.  Run from the repo root: test/self-host-fixpoint.sh
 set -u
 cd "$(dirname "$0")/.."
 
-CC="${CC:-/opt/homebrew/opt/llvm@22/bin/clang}"
-CXX="${CXX:-/opt/homebrew/opt/llvm@22/bin/clang++}"
-LLVM_CONFIG="${LLVM_CONFIG:-/opt/homebrew/opt/llvm@22/bin/llvm-config}"
-GC_INC="${GC_INC:-/opt/homebrew/include}"
-GC_LIB="${GC_LIB:-/opt/homebrew/lib}"
-LDFLAGS="$("$LLVM_CONFIG" --ldflags --libs orcjit native --system-libs)"
+# Discover the toolchain (CC/CXX/LLVM_CONFIG/GC_INC/GC_LIB/LDFLAGS) once, single-sourced.
+. tools/llvm-env.sh || exit 1
 
 CORE_FLAT="src/match.scm src/util.scm src/parse.ss \
            src/passes/expand.ss src/passes/recognize-let.ss \
