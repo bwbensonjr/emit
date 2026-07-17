@@ -162,6 +162,58 @@
 ;; in the body order is left unspecified (R7RS allows a subset constructor).
 (define (record-type-form? f) (and (pair? f) (eq? (car f) 'define-record-type)))
 
+;; ---- define-record-type shape validation -------------------------------------
+;; record-type-bindings destructures the form with raw car/cdr, so a malformed
+;; form would otherwise read past the end of short lists and drive the compiler
+;; into undefined behavior (change: validate-record-type-syntax).  Validate the
+;; whole shape here FIRST and raise a recoverable (error 'collect-toplevel ...)
+;; -- the same channel the REPL catches, prints as an `error:` line, and returns
+;; to the prompt from (mirroring normalize-define's existing validation).
+(define (rt-proper-list? x)   ; a proper (nil-terminated) list
+  (cond [(null? x) #t]
+        [(pair? x) (rt-proper-list? (cdr x))]
+        [else #f]))
+(define (rt-symbols? x)       ; a proper list whose every element is a symbol
+  (cond [(null? x) #t]
+        [(and (pair? x) (symbol? (car x))) (rt-symbols? (cdr x))]
+        [else #f]))
+(define (rt-field-spec? spec) ; (fld ACC) or (fld ACC MUT), all symbols
+  (and (rt-proper-list? spec)
+       (rt-symbols? spec)
+       (let ([n (length spec)]) (or (= n 2) (= n 3)))))
+
+(define (check-record-type-form f)
+  ;; f = (define-record-type NAME (CTOR cf ...) PRED (fld ACC [MUT]) ...)
+  (unless (and (rt-proper-list? f) (>= (length f) 4))
+    (error 'collect-toplevel
+           "malformed define-record-type: expected (define-record-type NAME (CTOR field ...) PRED (field accessor [mutator]) ...)"
+           f))
+  (let ([tyname     (cadr f)]
+        [ctor-spec  (caddr f)]
+        [pred       (cadddr f)]
+        [field-specs (cdr (cdddr f))])   ; cddddr, spelled without cddddr (not exported)
+    (unless (symbol? tyname)
+      (error 'collect-toplevel "define-record-type: type name must be a symbol" f))
+    (unless (and (pair? ctor-spec) (rt-proper-list? ctor-spec) (rt-symbols? ctor-spec))
+      (error 'collect-toplevel
+             "define-record-type: constructor spec must be (constructor field ...) of symbols" f))
+    (unless (symbol? pred)
+      (error 'collect-toplevel "define-record-type: predicate must be a symbol" f))
+    (for-each
+      (lambda (spec)
+        (unless (rt-field-spec? spec)
+          (error 'collect-toplevel
+                 "define-record-type: field spec must be (field accessor [mutator]) of symbols" f)))
+      field-specs)
+    ;; every constructor field tag must name a declared field
+    (let ([field-names (map car field-specs)])
+      (for-each
+        (lambda (cf)
+          (unless (memq cf field-names)
+            (error 'collect-toplevel
+                   "define-record-type: constructor field is not a declared field" f)))
+        (cdr ctor-spec)))))
+
 (define (record-field-bindings specs i)   ; ((fld ACC [MUT]) ...) -> (name init) pairs
   (if (null? specs)
       '()
@@ -179,6 +231,7 @@
             (cons getter rest)))))
 
 (define (record-type-bindings f)
+  (check-record-type-form f)              ; reject malformed shapes before destructuring
   (let* ([tyname     (cadr f)]
          [rest1      (cddr f)]
          [ctor-spec  (car rest1)]              ; (CTOR cf ...)
