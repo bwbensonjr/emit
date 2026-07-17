@@ -53,6 +53,14 @@ SCHEME_BASE_LL := bootstrap/scheme.base.ll
 # ===========================================================================
 # Default build: link binaries from the committed IR with LLVM only (no Chez).
 # ===========================================================================
+# The `build/llvm.mk` makefile-remaking rule above is the first normal target in
+# the file.  GNU Make 3.81 (macOS system make) would otherwise treat it as the
+# default goal, so bare `make` would only regenerate the toolchain fragment and
+# stop.  (GNU Make 4.x excludes makefile-remaking targets from default-goal
+# selection, which is why this built on Linux/apt but not on macOS.)  Pin the
+# default goal explicitly so `make` builds the binaries on every Make version.
+.DEFAULT_GOAL := all
+
 .PHONY: all
 all: $(RUN) $(HOST)
 
