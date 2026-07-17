@@ -255,7 +255,36 @@
 ;; resolves those imports' exports as external globals, exactly as a program does.
 ;; Libraries do not share the prelude (that is Stage 3), so the body uses
 ;; primitives / core forms / imported bindings only.
-(define (compile-library name imports exports body-forms import-tables dump)
+;; --- reachability tree-shaking (change: aot-release-profile) -----------------
+;; Closed-world (AOT-only) pruning of unreachable library bindings.  Conservative
+;; and SOUND: we over-approximate a binding's dependencies by every symbol that
+;; appears anywhere in its expanded body (intersected with the unit's own define
+;; names).  Local shadowing can only ADD a false dependency -> keep an extra
+;; binding, never drop a needed one.  Computed post-expansion so macro-introduced
+;; references are visible.  Unit-general: it walks any define->define reference
+;; graph from an explicit root set.
+(define (all-symbols form)                 ; every symbol appearing in an s-expr
+  (cond [(symbol? form) (list form)]
+        [(pair? form) (append (all-symbols (car form)) (all-symbols (cdr form)))]
+        [else '()]))
+
+(define (reachable-names roots dep-alist)  ; transitive closure of roots over deps
+  (let loop ([work roots] [seen '()])
+    (cond [(null? work) seen]
+          [(memq (car work) seen) (loop (cdr work) seen)]
+          [else
+           (let ([deps (cond [(assq (car work) dep-alist) => cdr] [else '()])])
+             (loop (append deps (cdr work)) (cons (car work) seen)))])))
+
+;; `keep-roots` (optional): when #f (default), compile the WHOLE library unchanged
+;; -- byte-identical to before, so the REPL/JIT door and committed artifacts are
+;; unaffected.  When a list of internal names, emit ONLY the bindings transitively
+;; reachable from those roots (the closed-world AOT tree-shake).
+(define (compile-library name imports exports body-forms import-tables dump . opt)
+  (compile-library* name imports exports body-forms import-tables dump
+                    (if (pair? opt) (car opt) #f)))
+
+(define (compile-library* name imports exports body-forms import-tables dump keep-roots)
   (reset-counter!)
   (let* ([me+rf (collect-define-syntax body-forms)]
          [macro-env (car me+rf)]
@@ -283,16 +312,44 @@
     ;; mutated per form, and Chez's map vs the prelude's map apply in different
     ;; orders -- which would diverge the AOT-door and REPL-door units.  fold-left
     ;; keeps a library's emitted bytes identical across doors (dev->ship fidelity).
-    (let ([progs (reverse
-                   (fold-left
-                     (lambda (acc f)
-                       (cons (unit-lcode (repl-lower-form* env (expand-unit-form f macro-env known) #f) name)
-                             acc))
-                     (quote ()) defs))]
-          ;; export table keys on the EXTERNAL name; the symbol is the INTERNAL name
-          ;; mangled to this unit (rename is pure indirection).
-          [export-table (map (lambda (e) (cons (car e) (mangle name (cdr e)))) exports)])
-      (list (emit-library-batch progs name) (list name export-table)))))
+    (if (not keep-roots)
+        ;; DEFAULT PATH (dev/REPL/JIT + committed artifacts): whole unit, unchanged.
+        (let ([progs (reverse
+                       (fold-left
+                         (lambda (acc f)
+                           (cons (unit-lcode (repl-lower-form* env (expand-unit-form f macro-env known) #f) name)
+                                 acc))
+                         (quote ()) defs))]
+              ;; export table keys on the EXTERNAL name; the symbol is the INTERNAL name
+              ;; mangled to this unit (rename is pure indirection).
+              [export-table (map (lambda (e) (cons (car e) (mangle name (cdr e)))) exports)])
+          (list (emit-library-batch progs name) (list name export-table)))
+        ;; PRUNED PATH (closed-world AOT tree-shake): expand each def ONCE, compute
+        ;; the define->define reference graph, keep only what's reachable from the
+        ;; roots, and lower/emit just those (in original order, so __init order is
+        ;; preserved).  fold-left = left-to-right in both hosts (deterministic).
+        (let* ([expanded (reverse
+                           (fold-left
+                             (lambda (acc f)
+                               (cons (cons (car (normalize-define f))
+                                           (expand-unit-form f macro-env known))
+                                     acc))
+                             (quote ()) defs))]
+               [dep-alist (map (lambda (ne)
+                                 (cons (car ne)
+                                       (filter (lambda (s) (memq s defined-names))
+                                               (all-symbols (cdr ne)))))
+                               expanded)]
+               [reachable (reachable-names keep-roots dep-alist)]
+               [kept    (filter (lambda (ne) (memq (car ne) reachable)) expanded)]
+               [progs   (reverse
+                          (fold-left
+                            (lambda (acc ne)
+                              (cons (unit-lcode (repl-lower-form* env (cdr ne) #f) name) acc))
+                            (quote ()) kept))]
+               [export-table (map (lambda (e) (cons (car e) (mangle name (cdr e))))
+                                  (filter (lambda (e) (memq (cdr e) reachable)) exports))])
+          (list (emit-library-batch progs name) (list name export-table))))))
 
 ;; Compile a program that imports libraries.  import-tables is a list of the
 ;; program's DIRECT imports' export tables (as returned by compile-library); the

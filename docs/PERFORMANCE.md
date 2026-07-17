@@ -13,7 +13,7 @@ speed items in this list.
 
 | ID | Item | Kind | Value | Cost | OpenSpec change | Done |
 |----|------|------|-------|------|-----------------|------|
-| [P1](#p1-dead-code-elimination-for-library-units) | Dead-code elimination for library units | size | high | med | — | ☐ |
+| [P1](#p1-dead-code-elimination-for-library-units) | Dead-code elimination for library units | size | high | med | `aot-release-profile` | ☑ |
 | [P2](#p2-immediate-non-heap-characters) | Immediate (non-heap) characters | speed + cleanup | med | med | `immediate-characters` | ☑ |
 | [P3](#p3-precompiled-prelude--library-objects) | Precompiled prelude / library objects | build speed | low | low | — | ☐ |
 | [P4](#p4-on-codepoint-string-indexing) | O(n) codepoint string indexing | speed | low–med | med–high | `codepoint-string-indexing` | ☑ |
@@ -33,9 +33,23 @@ fixnum arithmetic and direct known-calls — are independent and can land separa
 
 ## P1 — Dead-code elimination for library units
 
-**Status:** ☐ not started
+**Status:** ☑ done (change: `aot-release-profile`)
 
-**Symptom.** Every AOT binary links the *entire* `(scheme base)` unit — all 196 defined
+**Outcome.** The AOT ship path (the "release profile") now tree-shakes unreachable library
+bindings under the closed-world assumption, and compiles the linked module at `-O2` instead of
+`-O0`. A `car`-only program dropped from **125 KB → 40 KB (−68%)** (0 `(scheme base)` exports
+reached); a `map`-using program is similarly small and grows with the reachable set. Two findings
+shaped the fix: (1) the shipped binary was linked at clang's default `-O0`, so it was *slower and
+larger than the JIT* — turning on `-O2` alone is ~14% smaller and faster; (2) plain
+`internalize + globaldce` removes **0 of 249** functions, because the prelude `__init` eagerly
+`make-closure`s every binding and `rt_root`s it (so nothing looks dead). The resolution: a
+Scheme-level, root-set-driven reachability pass recompiles each prunable unit emitting only the
+reachable bindings + a pruned `__init` (`compile-library*` in `src/core.ss`), which the AOT driver
+(`build-modular-artifacts*` in `src/compile.ss`) links — keeping the AOT path clang-only. The
+dev/REPL/JIT door keeps the full cached units (open world). See `aot-release-profile` and the
+original analysis below.
+
+**Symptom (original).** Every AOT binary links the *entire* `(scheme base)` unit — all 196 defined
 functions (`bootstrap/scheme.base.ll`) — even a program that calls only `car`. The same is
 true for any user library: the whole unit ships whether or not the program references it.
 This works directly against the "small, clean, self-contained executables" design goal.
@@ -68,7 +82,10 @@ core" rule (`CLAUDE.md`) needs an explicit, documented carve-out: identical IR o
 door, plus a link-time pruning pass only on the `--backend aot` path. Decide and record this
 in the change's design before implementing.
 
-**OpenSpec change:** _none yet._
+**OpenSpec change:** `aot-release-profile` (implemented). Chose Scheme-level tree-shaking
+(recompile each prunable unit to a reachability keep-set) over LLVM `internalize`/`globaldce`
+— the latter removes nothing here because eager `__init` + `rt_root` keep every binding live —
+plus `-O2` at the AOT link. AOT stays clang-only; the dev/REPL/JIT door keeps full units.
 
 ---
 
@@ -137,9 +154,14 @@ bitcode/object at link time; there is no committed precompiled `.bc`/`.o` for th
 `(scheme base)`. Minor build-time cost, repeated on every link.
 
 **Possible fix.** Precompile stable library units to `.bc`/`.o` and link the object rather
-than re-assembling the `.ll`. This composes with **P1**: the natural place to internalize +
-`globaldce` is over the merged module, so this item is best folded into P1's link rework
-rather than pursued alone.
+than re-assembling the `.ll`.
+
+**Interaction with P1 (`aot-release-profile`).** P1 landed via Scheme-level tree-shaking, which
+recompiles a *program-specific pruned* unit on the AOT ship path (it does **not** reuse the cached
+full `.ll` there). So a precompiled/cached `.bc` for the full `(scheme base)` still helps the
+**dev/REPL/JIT** door (which links the full unit), but the AOT door emits a per-program pruned
+unit. If AOT build time ever matters, cache the pruned unit keyed by its (root-set → keep-set)
+mapping rather than precompiling the full unit for AOT.
 
 **OpenSpec change:** _none yet._
 
@@ -290,8 +312,9 @@ self-reference is already captured/stable). **B-general** (direct calls to *othe
 top-levels) is **deferred**: it breaks REPL redefinition and needs the P1-style AOT-ship-time
 carve-out, so it may ride with P1's link rework.
 
-**OpenSpec change:** `inline-fixnum-arith-and-self-calls` (A + B-self; proposed, not yet
-implemented). B-general remains unscheduled.
+**OpenSpec change:** `inline-fixnum-arith-and-self-calls` (A + B-self; implemented). B-general
+remains unscheduled — note it may now compose with `aot-release-profile`'s closed-world AOT door
+(direct calls to immutable known top-levels are safe under the same closed-world assumption).
 
 ---
 

@@ -51,6 +51,7 @@ failed=0
 total_start=$SECONDS
 
 run_suite "demo values (AOT/chez)"      env RUNNER=aot demos/run-tests.sh
+run_suite "AOT tree-shaking"             test/aot-tree-shaking-tests.sh
 run_suite "backend equivalence"         demos/run-backends.sh
 run_suite "expander units"              chez --libdirs src --script test/expander-tests.ss
 run_suite "read-all reader"             chez --libdirs src --script test/read-all-tests.ss

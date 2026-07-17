@@ -215,6 +215,15 @@
     (let ([out (open-output-file ll 'replace)]) (display text out) (close-port out))))
 
 ;; --- backends -----------------------------------------------------------
+;; Optimization level for the AOT / bitcode SHIP path (change: aot-release-profile,
+;; the "release profile").  Previously the ship binary was linked at clang's default
+;; -O0 -- so it was both slower and larger than the JIT (dev beat ship).  Compiling
+;; the module with an optimizing pipeline is behavior-preserving and, on the
+;; Ackermann probe, both faster and ~14% smaller.  This is a link/codegen-time step:
+;; the emitter's textual IR and the committed bootstrap/*.ll are unchanged, so IR
+;; byte-identity and the self-hosting fixed point are unaffected.  The JIT/REPL (dev)
+;; door is not gated by this.
+(define ship-opt "-O2")
 ;; One emitted OUT.ll drives three exits.  AOT uses `aot-cc` (a system clang when present,
 ;; else the discovered LLVM clang; see the toolchain-discovery block above).  The JIT and
 ;; bitcode exits use the discovered LLVM tools (`llvm-bin`, from EMIT_LLVM_BIN or
@@ -235,7 +244,7 @@
 
 ;; AOT (default): textual IR -> native exe via the system clang.  Unchanged.
 (define (link ll exe)
-  (sh "clang" (string-append aot-cc " -I" gc-inc " -L" gc-lib " " runtime-c " " ll " -lgc -o " exe)))
+  (sh "clang" (string-append aot-cc " " ship-opt " -I" gc-inc " -L" gc-lib " " runtime-c " " ll " -lgc -o " exe)))
 
 ;; Bitcode: assemble OUT.ll -> OUT.bc (the inspectable/opt-able artifact),
 ;; then codegen the .bc + runtime to a native exe (LLVM 22 clang).
@@ -243,7 +252,7 @@
   (sh "llvm-as" (string-append (tool "llvm-as") " " ll " -o " bc)))
 (define (build-bitcode-exe bc exe)
   (sh "clang(bc)"
-      (string-append (tool "clang") " -I" gc-inc " -L" gc-lib " " runtime-c " " bc " -lgc -o " exe)))
+      (string-append (tool "clang") " " ship-opt " -I" gc-inc " -L" gc-lib " " runtime-c " " bc " -lgc -o " exe)))
 
 ;; JIT: assemble the program, compile the runtime to bitcode, llvm-link them
 ;; (so the C main + rt_* join the module), and run in-process via lli with
@@ -497,7 +506,30 @@
 ;; .ll list (topological/link order) plus the program .ll.  The three backends
 ;; (aot/jit/bitcode) each consume this same set, so re-home + import resolution is
 ;; one path, not per-backend.
-(define (build-modular-artifacts src out prelude?)
+;; --- closed-world AOT tree-shaking (change: aot-release-profile) -------------
+;; A used import is LOADED in the program IR as `ptr @"<mangled>"`; a merely
+;; declared (unused) import appears only as `@"<mangled>" = external global`.  So
+;; `ptr @"<mangled>"` matches real uses, giving the program's root references into
+;; a unit.  Returns the unit's INTERNAL names to seed reachability.
+(define (str-contains? hay needle)
+  (let ([hl (string-length hay)] [nl (string-length needle)])
+    (let loop ([i 0])
+      (cond [(> (+ i nl) hl) #f]
+            [(string=? (substring hay i (+ i nl)) needle) #t]
+            [else (loop (+ i 1))]))))
+(define (program-root-internals prog-text unit-name exports)  ; exports: (external . internal)
+  (fold-left
+    (lambda (acc e)
+      (if (str-contains? prog-text (string-append "ptr @\"" (mangle unit-name (cdr e)) "\""))
+          (cons (cdr e) acc) acc))
+    '() exports))
+
+;; `shake?` (AOT ship path) prunes each prunable unit to the bindings the program
+;; actually reaches.  A unit is prunable only if NO OTHER unit in the closure
+;; imports it (else that importer -- kept full -- could reference a dropped
+;; binding); this keeps the first cut sound without full backward DAG propagation.
+(define (build-modular-artifacts src out prelude?) (build-modular-artifacts* src out prelude? #f))
+(define (build-modular-artifacts* src out prelude? shake?)
   (let* ([user-forms     (read-program src)]
          ;; Stage 3: the prelude's procedures come from the auto-imported (scheme
          ;; base) library, not a prepend; only its derived-form macros are merged
@@ -520,10 +552,38 @@
                    [prog-ll   (string-append out ".ll")]      ; beside the exe, not the source
                    [prog-ir   (compile-program-with-imports
                                 prelude-forms user-forms direct-tables order no-dump)]
-                   [prog-text (string-append header prog-ir)])
+                   [prog-text (string-append header prog-ir)]
+                   [name->ll  (map cons order (reverse lls))]) ; topo-order name -> full .ll
               (write-text prog-ll prog-text)
               (note "compile ~a -> ~a  [~a bytes]\n" src prog-ll (string-length prog-text))
-              (values (reverse lls) prog-ll))           ; unit .ll's in link order + program .ll
+              (if (not shake?)
+                  (values (reverse lls) prog-ll)          ; unit .ll's in link order + program .ll
+                  ;; AOT tree-shake: rebuild each prunable unit to the program's
+                  ;; reachable roots; others keep their full .ll.  Final list stays
+                  ;; in topo (link) order.
+                  (let* ([imported-by-unit                ; units some OTHER unit imports
+                          (fold-left (lambda (acc nm) (union acc (cadr (cdr (assoc nm dl-cache)))))
+                                     '() order)]
+                         [final-lls
+                          (map
+                            (lambda (nm)
+                              (let ([dl (cdr (assoc nm dl-cache))])
+                                (if (and (memq nm direct-imports) (not (memq nm imported-by-unit)))
+                                    ;; prunable: recompile with the keep-set
+                                    (let* ([exps  (caddr dl)]
+                                           [roots (program-root-internals prog-text nm exps)]
+                                           [imp-t (map (lambda (n) (cdr (assoc n tables))) (cadr dl))]
+                                           [res   (compile-library (car dl) (cadr dl) (caddr dl)
+                                                                   (cadddr dl) imp-t no-dump roots)]
+                                           [txt   (string-append header (car res))]
+                                           [pll   (string-append out "." (lib-basename nm) ".pruned.ll")])
+                                      (write-text pll txt)
+                                      (note "shake ~s -> ~a  [~a exports reached, ~a bytes]\n"
+                                            nm pll (length roots) (string-length txt))
+                                      pll)
+                                    (cdr (assoc nm name->ll)))))  ; kept full
+                            order)])
+                    (values final-lls prog-ll))))
             ;; build or reuse one library
             (let* ([name    (car libs)]
                    [entry   (manifest-lookup manifest name)]
@@ -565,9 +625,9 @@
 ;; AOT: clang links runtime + every unit + program -> native exe.
 (define (link-modular-aot unit-lls prog-ll exe)
   (sh "clang"
-      (string-append aot-cc " -Wno-override-module -I" gc-inc " -L" gc-lib " " runtime-c " "
+      (string-append aot-cc " " ship-opt " -Wno-override-module -I" gc-inc " -L" gc-lib " " runtime-c " "
                      (lls->string unit-lls) prog-ll " -lgc -o " exe))
-  (note "link ~a + ~a unit(s) -> ~a  [aot, modules]\n" prog-ll (length unit-lls) exe))
+  (note "link ~a + ~a unit(s) -> ~a  [aot ~a, modules]\n" prog-ll (length unit-lls) exe ship-opt))
 
 ;; assemble each .ll in the set to a sibling .bc; return the .bc paths in order.
 (define (assemble-set lls)
@@ -595,7 +655,7 @@
          [bcs (assemble-set (append unit-lls (list prog-ll)))])
     (sh "llvm-link" (string-append (tool "llvm-link") " " (lls->string bcs) "-o " bc))
     (sh "clang(bc)"
-        (string-append (tool "clang") " -Wno-override-module -I" gc-inc " -L" gc-lib " "
+        (string-append (tool "clang") " " ship-opt " -Wno-override-module -I" gc-inc " -L" gc-lib " "
                        runtime-c " " bc " -lgc -o " exe))
     (note "link ~a + ~a unit(s) -> ~a -> ~a  [bitcode, modules]\n" prog-ll (length unit-lls) bc exe)))
 
@@ -624,7 +684,9 @@
               ;; and they now handle imports) (changes: module-artifacts-vertical-slice,
               ;; module-prelude-scheme-base, driver-backend-rehome).
               [(or prelude? (pair? (program-imports src)))
-               (let-values ([(unit-lls prog-ll) (build-modular-artifacts src out prelude?)])
+               ;; shake only the AOT ship path (closed-world); jit/bitcode consume full units.
+               (let-values ([(unit-lls prog-ll)
+                             (build-modular-artifacts* src out prelude? (string=? backend "aot"))])
                  (case (string->symbol backend)
                    [(aot) (link-modular-aot unit-lls prog-ll out)]
                    [(bitcode) (require-llvm-tools) (build-bitcode-modular unit-lls prog-ll out out)]
