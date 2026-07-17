@@ -17,7 +17,7 @@ speed items in this list.
 | [P2](#p2-immediate-non-heap-characters) | Immediate (non-heap) characters | speed + cleanup | med | med | `immediate-characters` | ☑ |
 | [P3](#p3-precompiled-prelude--library-objects) | Precompiled prelude / library objects | build speed | low | low | — | ☐ |
 | [P4](#p4-on-codepoint-string-indexing) | O(n) codepoint string indexing | speed | low–med | med–high | `codepoint-string-indexing` | ☑ |
-| [P5](#p5-arithmetic-and-call-overhead-ackermann-benchmark) | Arithmetic & call overhead (Ackermann benchmark) | speed | high | med–high | `inline-fixnum-arith-and-self-calls` (A + B-self) | ☐ |
+| [P5](#p5-arithmetic-and-call-overhead-ackermann-benchmark) | Arithmetic & call overhead (Ackermann benchmark) | speed | high | med–high | `inline-fixnum-arith-and-self-calls` (A + B-self) | ◐ |
 
 Legend — **Value**: benefit if fixed. **Cost**: rough implementation effort/risk. These are
 estimates to aid sequencing, not commitments.
@@ -182,7 +182,21 @@ small-clean-binary goal.
 
 ## P5 — Arithmetic and call overhead (Ackermann benchmark)
 
-**Status:** ☐ not started
+**Status:** ◐ in progress — A + B-self implemented (change: `inline-fixnum-arith-and-self-calls`);
+B-general still deferred.
+
+**Result (A + B-self).** Inline fixnum arithmetic + direct self-calls cut Ackermann wall time
+under `build/scheme-run` by ~35–40%:
+
+| call | before | after |
+|------|--------|-------|
+| `(ack 3 10)` | 0.74 s | 0.70 s |
+| `(ack 3 11)` | 1.51 s | 0.96 s |
+| `(ack 3 12)` | 5.15 s | 3.20 s |
+
+Cost: the committed binaries grew ~4% (`scheme-run` 772 KB → 805 KB) from the per-op fixnum
+guard/diamond; B-self's removal of closure-load chains offsets part of it. The regen fixed point
+still converges (iter 2) and all backends stay byte-identical.
 
 **Workload.** Ackermann is a near-pure probe of two costs — non-tail recursion and small-
 integer arithmetic — with almost no allocation, so it isolates codegen quality for calls and

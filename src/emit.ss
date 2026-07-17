@@ -247,7 +247,10 @@
     [(app ,f ,args)
      (let* ([aops (map (lambda (a) (ev a env cp tc?)) args)]
             [fop  (ev f env cp tc?)])
-       (emit-app fop aops #f tc?))]))
+       (emit-app fop aops #f tc?))]
+    [(self-app ,label ,args)                       ; direct self-call (B-self)
+     (let ([aops (map (lambda (a) (ev a env cp tc?)) args)])
+       (emit-self-app label aops #f tc? cp))]))
 
 (define (et e env cp tc?)
   (match e
@@ -267,6 +270,9 @@
      (let* ([aops (map (lambda (a) (ev a env cp tc?)) args)]
             [fop  (ev f env cp tc?)])
        (emit-app fop aops #t tc?))]
+    [(self-app ,label ,args)                       ; direct self-call in tail position
+     (let ([aops (map (lambda (a) (ev a env cp tc?)) args)])
+       (emit-self-app label aops #t tc? cp))]
     [else (emit! (string-append "ret i64 " (ev e env cp tc?)))]))
 
 (define (ev-if a b c env cp tc?)
@@ -310,6 +316,69 @@
     (emit! (string-append v " = load i64, ptr " g))
     v))
 
+;; --- inline fixnum fast path (change: inline-fixnum-arith-and-self-calls) -----
+;; The hot numeric primitives get an inline fast path for the both-operands-fixnum
+;; case instead of an out-of-line rt_* call.  Each entry is
+;;   (scheme-op  rt-name  kind  llvm-instr)
+;; where `kind` picks the fast-path shape.  Fixnums are tag 000 (payload value<<3),
+;; so the tagged word IS value<<3 and the ops fall out with no shifts (except *):
+;;   add : % = <instr> i64 a, b            (+ -> add, - -> sub)
+;;   mul : untag one operand (ashr 3) then mul  ((a>>3)*b = (va*vb)<<3)
+;;   cmp : <instr> i64 a, b (i1) then select TRUE_V/FALSE_V   (= -> eq, < -> slt)
+;; The runtime primitive remains the single definition of numeric semantics: it is
+;; the slow path, so a future flonum/bignum change lands in rt_* and non-fixnum
+;; operands are routed there automatically (design: A2 tag-checked seam).  N-ary
+;; arithmetic and chained comparisons are already reduced to binary primcalls in
+;; expand.ss, so hooking here covers every arity and `> >= <=`.
+(define inline-arith-table
+  '((+ "rt_add"    add "add")
+    (- "rt_sub"    add "sub")
+    (* "rt_mul"    mul "mul")
+    (= "rt_num_eq" cmp "icmp eq")
+    (< "rt_lt"     cmp "icmp slt")))
+
+(define (emit-inline-fast kind instr a b)  ; emit the fast-path op, return its operand
+  (cond
+    [(eq? kind 'add)                          ; + -> add, - -> sub (tag 000, no shift)
+     (let ([f (fresh-temp)])
+       (emit! (string-append f " = " instr " i64 " a ", " b))
+       f)]
+    [(eq? kind 'mul)                          ; (a>>3) * b = (va*vb)<<3
+     (let* ([s (fresh-temp)] [f (fresh-temp)])
+       (emit! (string-append s " = ashr i64 " a ", 3"))
+       (emit! (string-append f " = mul i64 " s ", " b))
+       f)]
+    [(eq? kind 'cmp)                          ; icmp (i1) then select TRUE_V(257)/FALSE_V(1)
+     (let* ([c (fresh-temp)] [f (fresh-temp)])
+       (emit! (string-append c " = " instr " i64 " a ", " b))
+       (emit! (string-append f " = select i1 " c ", i64 257, i64 1"))
+       f)]
+    [else (error 'emit "bad inline arith kind" kind)]))
+
+(define (emit-inline-arith entry a b)  ; guard -> fast op | slow rt_* call, joined by phi
+  ;; let* throughout so temp/label numbering is fixed regardless of host
+  ;; argument-evaluation order (the cross-door byte-identity guarantee; see ev-if).
+  (let* ([rt    (cadr entry)]
+         [kind  (caddr entry)]
+         [instr (cadddr entry)]
+         [g1 (fresh-temp)] [g2 (fresh-temp)] [g3 (fresh-temp)]
+         [fast (fresh-bb "fixfast")] [slow (fresh-bb "fixslow")] [mrg (fresh-bb "fixmerge")])
+    (emit! (string-append g1 " = or i64 " a ", " b))         ; both fixnum iff
+    (emit! (string-append g2 " = and i64 " g1 ", 7"))        ; (a|b)&7 == 0
+    (emit! (string-append g3 " = icmp eq i64 " g2 ", 0"))
+    (emit! (string-append "br i1 " g3 ", label %" fast ", label %" slow))
+    (start-bb fast)
+    (let* ([fv (emit-inline-fast kind instr a b)] [fbb current-bb])
+      (emit! (string-append "br label %" mrg))
+      (start-bb slow)
+      (let ([sv (fresh-temp)])
+        (emit! (string-append sv " = call i64 @" rt "(i64 " a ", i64 " b ")"))
+        (emit! (string-append "br label %" mrg))
+        (start-bb mrg)
+        (let ([r (fresh-temp)])
+          (emit! (string-append r " = phi i64 [ " fv ", %" fbb " ], [ " sv ", %" slow " ]"))
+          r)))))
+
 (define (emit-primcall op ops)
   ;; %run-guarded is special: it passes the module's own ccc trampoline @__apply0
   ;; (a pointer, resolved within this module -- no cross-module symbol) so the C
@@ -319,10 +388,13 @@
         (emit! (string-append t " = call i64 @rt_run_guarded(ptr @__apply0, i64 "
                               (car ops) ")"))
         t)
-      (let ([entry (assq op prim-table)] [t (fresh-temp)])
-        (unless entry (error 'emit "unknown prim" op))
-        (emit! (string-append t " = call i64 @" (cadr entry) "(" (i64s ops) ")"))
-        t)))
+      (let ([inl (assq op inline-arith-table)])
+        (if (and inl (pair? ops) (pair? (cdr ops)) (null? (cddr ops)))  ; exactly 2 operands
+            (emit-inline-arith inl (car ops) (cadr ops))
+            (let ([entry (assq op prim-table)] [t (fresh-temp)])
+              (unless entry (error 'emit "unknown prim" op))
+              (emit! (string-append t " = call i64 @" (cadr entry) "(" (i64s ops) ")"))
+              t)))))
 
 ;; The ccc trampoline @__apply0(closure): load the closure's code pointer and do
 ;; the fastcc 0-arg call (self=closure, argc=0, K positional pads = undef,
@@ -432,6 +504,37 @@
                        (map (lambda (o) (string-append "i64 " o)) slots)
                        (list (string-append "ptr " overflow))))])
     (finish-call fp callargs tail? tc?)))
+
+;; direct self-call (change: inline-fixnum-arith-and-self-calls): call the enclosing
+;; function's own code label instead of loading a code pointer from the closure, and
+;; reuse the current closure ptr `cp` (%self) as the callee's self -- correct because
+;; %self is a closure for this very function, which is exactly what the callee needs
+;; to load its free vars.  Same slot/overflow layout as emit-app; a direct call with
+;; a constant argc lets LLVM fold the callee's entry arity check.  A leading space
+;; before the label operand keeps `call fastcc i64 @code_N(...)` well-formed.
+(define (emit-self-app label aops tail? tc? cp)
+  (let* ([n (length aops)]
+         [k *arity*]
+         [slots (if (>= n k)
+                    (list-head aops k)
+                    (append aops (make-list (- k n) "0")))]
+         [overflow (if (> n k) (emit-spill (list-tail aops k)) "null")]
+         [callargs (comma-join
+                     (append
+                       (list (string-append "i64 " cp)
+                             (string-append "i64 " (number->string n)))
+                       (map (lambda (o) (string-append "i64 " o)) slots)
+                       (list (string-append "ptr " overflow))))]
+         [r (fresh-temp)])
+    (if tail?
+        (begin
+          (emit! (string-append r " = " (if tc? "musttail " "") "call fastcc i64 "
+                                (label-operand label) "(" callargs ")"))
+          (emit! (string-append "ret i64 " r))
+          #f)
+        (begin
+          (emit! (string-append r " = call fastcc i64 " (label-operand label) "(" callargs ")"))
+          r))))
 
 ;; (apply f a1 .. aN lst): flatten the N leading args and the elements of lst
 ;; into a runtime argv, load the K positional slots, and point overflow past K.
@@ -668,7 +771,8 @@
         [(closure-block ,entries ,body)
          (for-each (lambda (en) (for-each S (caddr en))) entries) (S body)]
         [(app ,f ,args) (S f) (for-each S args)]
-        [(apply-app ,f ,args) (S f) (for-each S args)]))
+        [(apply-app ,f ,args) (S f) (for-each S args)]
+        [(self-app ,label ,args) (for-each S args)]))  ; label is static; no callee to walk
     (match prog
       [(program ,cdefs ,entry)
        (for-each (lambda (d) (match d [(code ,l ,self ,fixed ,rest ,body) (S body)])) cdefs)
