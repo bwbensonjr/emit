@@ -305,6 +305,14 @@
           (begin (vector-set! v i (car xs)) (loop (cdr xs) (+ i 1)))))))
 (define (vector . xs) (list->vector xs))
 
+(define (list->bytevector bs)
+  (let ([bv (make-bytevector (length bs) 0)])
+    (let loop ([bs bs] [i 0])
+      (if (null? bs)
+          bv
+          (begin (bytevector-u8-set! bv i (car bs)) (loop (cdr bs) (+ i 1)))))))
+(define (bytevector . bs) (list->bytevector bs))
+
 ;;; --- reader (scheme-reader): read-from-string source text -> datum --------
 ;;; Recursive descent over a string; the scan position is threaded functionally
 ;;; as (datum . next-index) pairs.  Characters are classified by codepoint
@@ -411,6 +419,12 @@
       [(= k 92) (rd-char s n i)]                           ; #\<char> or #\<name>
       [(= k 40) (let ([r (rd-list s n (+ i 1) (quote ()))])  ; #( ... ) -> vector
                   (cons (list->vector (car r)) (cdr r)))]
+      [(and (= k 117)                                        ; #u8( ... ) -> bytevector
+            (< (+ i 2) n)
+            (= (char->integer (string-ref s (+ i 1))) 56)    ; 8
+            (= (char->integer (string-ref s (+ i 2))) 40))   ; (
+       (let ([r (rd-list s n (+ i 3) (quote ()))])
+         (cons (list->bytevector (car r)) (cdr r)))]
       [else (let ([j (rd-token-end s n i)])
               (cons (string->symbol (substring s i j)) j))])))
 

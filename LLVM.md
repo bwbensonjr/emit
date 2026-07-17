@@ -178,6 +178,15 @@ back to NULL. `string-copy` gives an independent duplicate.
 primitives; the `vector` constructor and `list->vector` are prelude Scheme. `rt_write` prints
 `#(e0 e1 …)` and the reader reads `#(…)`. `rt_equal` recurses element-wise into vectors.
 
+**Bytevectors (tag 7, header-word).** A bytevector is an extended object
+`{HDR_BYTEVECTOR, byte-length, uchar *bytes}` (header code 1, reclaiming the retired
+`HDR_CHAR` slot) — mutable, fixed-length, elements are raw bytes (0–255) in a separate
+`GC_MALLOC_ATOMIC` buffer (pointer-free, like a string's bytes).
+`rt_make_bytevector`/`rt_bytevector_u8_ref`/`rt_bytevector_u8_set`/`rt_bytevector_length`/`rt_bytevector_p`
+are the primitives; the `bytevector` constructor and `list->bytevector` are prelude Scheme.
+`rt_write` prints `#u8(b0 b1 …)` and the reader reads `#u8(…)`. `rt_equal` compares bytevectors
+byte-wise (`memcmp`).
+
 **Quoted structure is materialized at runtime.** `(quote sym)` emits a private
 string-constant global (`@.str.sym.N = private … c"name\00"`) plus a per-use
 `rt_intern` call; `(quote (a . d))` emits `rt_cons` over the recursively encoded car/cdr,

@@ -56,9 +56,11 @@ char rt_trap_msg[128] = "";
 
 /* header codes for TAG_EXT objects (tags 0-6 are exhausted, so new heap types
  * live under tag 7 and are discriminated by this header word) */
-#define HDR_STRING  0
-#define HDR_VECTOR  2   /* { HDR_VECTOR, length, elem0, ... } */
-#define HDR_ERROR   3   /* { HDR_ERROR, message-string, irritants-list } (R7RS error obj) */
+#define HDR_STRING     0
+#define HDR_BYTEVECTOR 1   /* { HDR_BYTEVECTOR, byte-length, unsigned char *bytes } (reclaims
+                            * the retired HDR_CHAR slot -- characters are now immediate) */
+#define HDR_VECTOR     2   /* { HDR_VECTOR, length, elem0, ... } */
+#define HDR_ERROR      3   /* { HDR_ERROR, message-string, irritants-list } (R7RS error obj) */
 
 #define FIX(n)     ((val)(((intptr_t)(n)) << 3))
 #define UNFIX(v)   (((intptr_t)(v)) >> 3)
@@ -584,6 +586,27 @@ val rt_vector_p(val v) {
   return truthy(tag_of(v) == TAG_EXT && ext_hdr(v) == HDR_VECTOR);
 }
 
+/* --- bytevectors (tag-7 HDR_BYTEVECTOR: { HDR_BYTEVECTOR, length, uchar *bytes })
+ * The bytes live in a separate GC_MALLOC_ATOMIC buffer (no interior pointers, so
+ * the collector need not scan it), mirroring how HDR_STRING stores its bytes.
+ * Elements are raw bytes (0-255); indexing is a plain byte load/store. */
+static intptr_t       bv_len(val v)   { return (intptr_t)as_ptr(v)[1]; }
+static unsigned char *bv_bytes(val v) { return (unsigned char *)as_ptr(v)[2]; }
+val rt_make_bytevector(val k, val fill) {
+  intptr_t n = UNFIX(k);
+  unsigned char *bytes = (unsigned char *)GC_MALLOC_ATOMIC((size_t)(n > 0 ? n : 1));
+  memset(bytes, (int)(UNFIX(fill) & 0xFF), (size_t)n);
+  val *p = (val *)GC_MALLOC(3 * sizeof(val));
+  p[0] = (val)HDR_BYTEVECTOR; p[1] = (val)n; p[2] = (val)bytes;
+  return tag_ptr(p, TAG_EXT);
+}
+val rt_bytevector_u8_ref(val v, val i)       { return FIX(bv_bytes(v)[UNFIX(i)]); }
+val rt_bytevector_u8_set(val v, val i, val b) { bv_bytes(v)[UNFIX(i)] = (unsigned char)(UNFIX(b) & 0xFF); return NIL_V; }
+val rt_bytevector_length(val v)              { return FIX(bv_len(v)); }
+val rt_bytevector_p(val v) {
+  return truthy(tag_of(v) == TAG_EXT && ext_hdr(v) == HDR_BYTEVECTOR);
+}
+
 /* --- type predicates (self-hosting gap G9) -------------------------------- */
 /* Each returns #t/#f by inspecting the tag (and, for tag-7 heap objects, the
  * header code -- guard the ext_hdr deref behind the TAG_EXT check, as vector? does).
@@ -618,6 +641,11 @@ val rt_equal(val a, val b) {
       for (intptr_t i = 0; i < la; i++)
         if (rt_equal(as_ptr(a)[i + 2], as_ptr(b)[i + 2]) != TRUE_V) return FALSE_V;
       return TRUE_V;
+    }
+    if (ext_hdr(a) == HDR_BYTEVECTOR && ext_hdr(b) == HDR_BYTEVECTOR) {
+      intptr_t la = bv_len(a);
+      if (la != bv_len(b)) return FALSE_V;
+      return truthy(memcmp(bv_bytes(a), bv_bytes(b), (size_t)la) == 0);
     }
   }
   return FALSE_V;
@@ -802,6 +830,17 @@ static void print_val(val v, int display) {
           for (intptr_t i = 0; i < len; i++) {
             if (i) putchar(' ');
             print_val(as_ptr(v)[i + 2], display);
+          }
+          putchar(')');
+          break;
+        }
+        case HDR_BYTEVECTOR: {
+          intptr_t len = (intptr_t)as_ptr(v)[1];
+          unsigned char *bytes = (unsigned char *)as_ptr(v)[2];
+          printf("#u8(");
+          for (intptr_t i = 0; i < len; i++) {
+            if (i) putchar(' ');
+            printf("%d", bytes[i]);
           }
           putchar(')');
           break;

@@ -157,6 +157,9 @@
     (make-vector "rt_make_vector") (vector-ref "rt_vector_ref")
     (vector-set! "rt_vector_set") (vector-length "rt_vector_length")
     (vector? "rt_vector_p")
+    (make-bytevector "rt_make_bytevector") (bytevector-u8-ref "rt_bytevector_u8_ref")
+    (bytevector-u8-set! "rt_bytevector_u8_set") (bytevector-length "rt_bytevector_length")
+    (bytevector? "rt_bytevector_p")
     (symbol? "rt_symbol_p") (string? "rt_string_p") (char? "rt_char_p")
     (boolean? "rt_boolean_p") (integer? "rt_integer_p") (exact? "rt_exact_p")
     (read-all-stdin "rt_read_all_stdin") (display "rt_display")
@@ -505,6 +508,11 @@
    "declare i64 @rt_vector_set(i64, i64, i64)\n"
    "declare i64 @rt_vector_length(i64)\n"
    "declare i64 @rt_vector_p(i64)\n"
+   "declare i64 @rt_make_bytevector(i64, i64)\n"
+   "declare i64 @rt_bytevector_u8_ref(i64, i64)\n"
+   "declare i64 @rt_bytevector_u8_set(i64, i64, i64)\n"
+   "declare i64 @rt_bytevector_length(i64)\n"
+   "declare i64 @rt_bytevector_p(i64)\n"
    "declare i64 @rt_symbol_p(i64)\n"
    "declare i64 @rt_string_p(i64)\n"
    "declare i64 @rt_char_p(i64)\n"

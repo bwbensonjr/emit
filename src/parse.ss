@@ -14,6 +14,7 @@
                   string=? string-append symbol->string list->string make-string
                   string-set! string-copy
                   make-vector vector-ref vector-set! vector-length vector?
+                  make-bytevector bytevector-u8-ref bytevector-u8-set! bytevector-length bytevector?
                   symbol? string? char? boolean? integer? exact?
                   read-all-stdin display %no-prelude?
                   repl-mode repl-input repl-state-ref repl-state-set!

@@ -78,6 +78,7 @@ discriminated by a header code in their first word:
 | header code | kind      | layout |
 |-------------|-----------|--------|
 | 0 (`HDR_STRING`) | string    | `{hdr, byte-length, char *bytes}` — UTF-8, explicit length |
+| 1 (`HDR_BYTEVECTOR`) | bytevector | `{hdr, byte-length, uchar *bytes}` — mutable, packed bytes (reclaims the retired `HDR_CHAR` slot) |
 | 2 (`HDR_VECTOR`) | vector    | `{hdr, length, elem0, …}` — mutable, fixed-length |
 
 ## Calling convention
