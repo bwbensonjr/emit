@@ -40,9 +40,13 @@ mkdir -p build bootstrap
 # take the program module (after the boundary marker) from a scheme-run --emit stream
 prog_module () { awk 'f{print} /^; ==EMIT-UNIT-BOUNDARY==$/{f=1}' "$1"; }
 
-# link the module-aware runner (scheme-run) from an embed IR + the (scheme base) IR
+# link the BATCH bootstrap runner (scheme-run-boot) from an embed IR + the (scheme
+# base) IR.  This uses run-boot.o (the batch host, src/run-boot.cpp), NOT the shipped
+# dispatched run.o: the fixed point below must be driven by the minimal batch compiler
+# (change: run-door-user-libraries, decision X).  The shipped module-aware build/scheme-run
+# is linked afterward by the Makefile (`make all`) from run.o + embed-repl.ll.
 link_scheme_run () { # <embed.ll> <base.ll> <out>
-  "$CXX" build/run.o build/runtime-host.o "$1" "$2" \
+  "$CXX" build/run-boot.o build/runtime-host.o "$1" "$2" \
     -Wno-override-module -rdynamic $LDFLAGS -L"$GC_LIB" -lgc -o "$3" 2>/dev/null
 }
 
@@ -56,8 +60,8 @@ say "regen [1/3] assemble flat source (ordered cat; no prelude prepend)"
 cat $CORE_FLAT src/entry-schemec.scm                                        > build/schemec.scm
 cat $CORE_FLAT build/prelude-source.scm src/entry-embed.scm                 > build/embed.scm
 cat $CORE_FLAT src/repl-core.ss build/prelude-source.scm src/entry-repl.scm > build/embed-repl.scm
-# host objects for linking the runner during the fixed-point loop
-make build/run.o build/runtime-host.o >/dev/null
+# host objects for linking the bootstrap runner during the fixed-point loop
+make build/run-boot.o build/runtime-host.o >/dev/null
 say "regen [1/3] done  [$(($(date +%s) - t0))s]"
 
 t0=$(date +%s)
@@ -74,26 +78,26 @@ if [ ! -f bootstrap/scheme.base.ll ]; then
 fi
 # seed the runner from the committed IR (module-aware even if its own code is not
 # yet re-homed -- the emitter is the same, so it converges in one recompile).
-link_scheme_run bootstrap/embed.ll bootstrap/scheme.base.ll build/scheme-run
+link_scheme_run bootstrap/embed.ll bootstrap/scheme.base.ll build/scheme-run-boot
 converged=0
 for i in 1 2 3 4 5; do
-  build/scheme-run --emit < lib/scheme/base.sld > build/scheme.base.ll
-  build/scheme-run --emit < build/embed.scm     > build/embed.emit
+  build/scheme-run-boot --emit < lib/scheme/base.sld > build/scheme.base.ll
+  build/scheme-run-boot --emit < build/embed.scm     > build/embed.emit
   prog_module build/embed.emit > build/embed.ll
-  link_scheme_run build/embed.ll build/scheme.base.ll build/scheme-run-next
+  link_scheme_run build/embed.ll build/scheme.base.ll build/scheme-run-boot-next
   # re-emit with the freshly linked runner; the fixed point is reached when neither
   # the library nor the runner's own IR changes across a recompile.
-  build/scheme-run-next --emit < lib/scheme/base.sld > build/scheme.base.chk
-  build/scheme-run-next --emit < build/embed.scm     > build/embed.chk.emit
+  build/scheme-run-boot-next --emit < lib/scheme/base.sld > build/scheme.base.chk
+  build/scheme-run-boot-next --emit < build/embed.scm     > build/embed.chk.emit
   prog_module build/embed.chk.emit > build/embed.chk
   vsay "   fixed-point iteration $i"
   if cmp -s build/scheme.base.ll build/scheme.base.chk && cmp -s build/embed.ll build/embed.chk; then
-    mv build/scheme-run-next build/scheme-run
+    mv build/scheme-run-boot-next build/scheme-run-boot
     converged=1
     say "   fixed point reached  [iter $i]"
     break
   fi
-  mv build/scheme-run-next build/scheme-run
+  mv build/scheme-run-boot-next build/scheme-run-boot
 done
 [ "$converged" = 1 ] || { echo "regen: bootstrap did not converge in 5 iterations" >&2; exit 1; }
 cp build/scheme.base.ll bootstrap/scheme.base.ll
@@ -101,10 +105,10 @@ cp build/embed.ll        bootstrap/embed.ll
 say "regen [2/3] done  [$(($(date +%s) - t0))s]"
 
 t0=$(date +%s)
-say "regen [3/3] emit schemec / embed-repl with the fixed-point scheme-run"
-build/scheme-run --emit < build/schemec.scm    > build/schemec.emit
+say "regen [3/3] emit schemec / embed-repl with the fixed-point scheme-run-boot"
+build/scheme-run-boot --emit < build/schemec.scm    > build/schemec.emit
 prog_module build/schemec.emit    > bootstrap/schemec.ll
-build/scheme-run --emit < build/embed-repl.scm > build/embed-repl.emit
+build/scheme-run-boot --emit < build/embed-repl.scm > build/embed-repl.emit
 prog_module build/embed-repl.emit > bootstrap/embed-repl.ll
 say "regen [3/3] done  [$(($(date +%s) - t0))s]"
 

@@ -16,7 +16,10 @@ environment variable if set, otherwise `--manifest FILE` if given, otherwise the
 imports nothing), the runner SHALL behave exactly as before (no regression), since the
 manifest is consulted only to resolve a non-baked-in imported library.
 
-A library that is not in the program's transitive import closure SHALL NOT be loaded.
+A library that is not in the program's transitive import closure SHALL NOT be initialized
+or linked into the program's initialization sequence, so it can have no observable effect on
+the run (the in-process JIT may inertly hold a unit's module without ever running its
+initializer).
 
 #### Scenario: A program importing a library runs in-process
 

@@ -40,8 +40,11 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
 prog_module () { awk 'f{print} /^; ==EMIT-UNIT-BOUNDARY==$/{f=1}' "$1"; }
+# Link a stage compiler from a BATCH embed.ll + base.ll.  Uses run-boot.o (the batch
+# host), not the shipped dispatched run.o: this fixed point is over the batch embed.ll,
+# so its stage runners must drive the batch entry (change: run-door-user-libraries, D7).
 link_run () {  # <embed.ll> <base.ll> <out>
-  "$CXX" build/run.o build/runtime-host.o "$1" "$2" \
+  "$CXX" build/run-boot.o build/runtime-host.o "$1" "$2" \
     -Wno-override-module -rdynamic $LDFLAGS -L"$GC_LIB" -lgc -o "$3" 2>/dev/null
 }
 
@@ -50,7 +53,7 @@ echo "self-hosting fixed-point (triple) test + independent-host trust-check (re-
 echo "  [1/7] assemble the flat embed program (ordered cat; no prelude prepend)"
 { printf '(define *prelude-source* "'; sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' src/prelude.scm; printf '")\n'; } > "$work/prelude-source.scm"
 cat $CORE_FLAT "$work/prelude-source.scm" src/entry-embed.scm > "$work/embed.scm"
-make build/run.o build/runtime-host.o >/dev/null 2>&1 || { echo "  [FAIL] could not build host objects"; exit 1; }
+make build/run-boot.o build/runtime-host.o >/dev/null 2>&1 || { echo "  [FAIL] could not build host objects"; exit 1; }
 
 echo "  [2/7] stage-1 = chez(embed.scm, base.sld) via compile.ss (auto-imports (scheme base))"
 # The program module the Chez driver emits (auto-importing (scheme base)); strip its host header.

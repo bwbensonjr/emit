@@ -25,6 +25,12 @@
 (define *repl-n* 0)                          ; per-form thunk counter (@__repl_N)
 (define *repl-libs* (quote ()))              ; ((lib-name . exports-alist) ...) loaded units
                                              ; (change: module-artifacts-vertical-slice)
+(define *repl-lib-imports* (quote ()))       ; ((lib-name . (import-name ...)) ...) each loaded
+                                             ; unit's DIRECT imports -- the run door computes a
+                                             ; program's transitive init closure in topological
+                                             ; order over this in-memory graph, since the driver's
+                                             ; toposort-libs reads files and is Chez-only (change:
+                                             ; run-door-user-libraries).
 
 ;; register a define-syntax in the session (mirrors run-repl's note-syntax!)
 (define (repl-note-syntax! form)
@@ -153,6 +159,7 @@
   (set! *repl-known* (union* (list *core-keywords* *prims* *extra-op-keywords*)))
   (set! *repl-n* 0)
   (set! *repl-libs* (quote ()))
+  (set! *repl-lib-imports* (quote ()))
   ;; Stage 3 (module-prelude-scheme-base): the prelude's PROCEDURES now come from the
   ;; (scheme base) library -- the host preloads it and then calls mode 6 to auto-import
   ;; it into the session scope.  init only merges the derived-form MACROS (the
@@ -220,13 +227,23 @@
            [dl    (parse-define-library (car forms))]
            [name  (car dl)]
            [tables (repl-import-tables (cadr dl))])   ; #f if a dep is not loaded yet
-      (if (not tables)
-          (cons (quote deferred) name)                ; retry after dependencies load
-          (let ([saved counter])
-            (let ([res (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl) tables no-dump)])
-              (set! counter saved)                    ; undo compile-library's reset-counter!
-              (set! *repl-libs* (cons (cons name (cadr (cadr res))) *repl-libs*))
-              (cons (quote ok) (cons (car res) (mangle name "__init")))))))))
+      (cond
+       ;; Already loaded -> skip (no module).  The run door registers (scheme base)
+       ;; baked-in (mode 8) before preloading the manifest, which also lists it; this
+       ;; guard makes the manifest's (scheme base) a no-op rather than a duplicate
+       ;; module (change: run-door-user-libraries).  The REPL never double-loads, so
+       ;; it never sees this status.
+       [(assoc name *repl-libs*) (cons (quote already) name)]
+       [(not tables) (cons (quote deferred) name)]    ; retry after dependencies load
+       [else
+        (let ([saved counter])
+          (let ([res (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl) tables no-dump)])
+            (set! counter saved)                      ; undo compile-library's reset-counter!
+            (set! *repl-libs* (cons (cons name (cadr (cadr res))) *repl-libs*))
+            ;; record this unit's DIRECT imports for the run door's init-closure
+            ;; topological sort (change: run-door-user-libraries).
+            (set! *repl-lib-imports* (cons (cons name (cadr dl)) *repl-lib-imports*))
+            (cons (quote ok) (cons (car res) (mangle name "__init")))))]))))
 
 ;; Parse a manifest's text and return its source paths, newline-joined, so the
 ;; host (which owns file I/O) can read each library source and load it (mode 4).
@@ -236,6 +253,100 @@
         acc
         (let ([src (cond [(assq (quote source) (cddr (car es))) => cadr] [else #f])])
           (loop (cdr es) (if src (string-append acc src "\n") acc))))))
+
+;; Like repl-manifest-paths but OMIT (scheme base): the run door bakes (scheme base)
+;; in (mode 8), or omits it entirely under --no-prelude, so it must never be loaded
+;; from the manifest -- doing so would emit a duplicate/spurious (scheme base) module
+;; (change: run-door-user-libraries).  Used by the run host (mode 9); the REPL host
+;; still wants (scheme base) from the manifest and uses mode 5.
+(define (repl-manifest-user-paths text)
+  (let loop ([es (car (read-all-from-string text))] [acc ""])
+    (if (null? es)
+        acc
+        (let* ([entry (car es)]
+               [name  (cadr entry)]
+               [src   (cond [(assq (quote source) (cddr entry)) => cadr] [else #f])])
+          (loop (cdr es)
+                (if (and src (not (equal? name (quote (scheme base)))))
+                    (string-append acc src "\n")
+                    acc))))))
+
+;; --- run door: run an importing program in-process (change: run-door-user-libraries) ---
+;; The run host preloads user libraries (mode 4, WITHOUT running __init) and registers
+;; the baked (scheme base) (mode 8), then mode 7 compiles the whole program against them.
+;; It is a FRESH whole-program compile calling the SAME compile-program-with-imports the
+;; AOT door drives, so the emitted program module is byte-identical to the AOT prog.ll.
+
+;; Append (scheme base) to a program's imports unless already present -- the run-door
+;; equivalent of the driver's with-scheme-base, matching its direct-import order so the
+;; toposort (and thus the program module) agrees byte-for-byte.  Under --no-prelude
+;; (host sets EMIT_NO_PRELUDE, read by %no-prelude?) the prelude is not implied, exactly
+;; as the driver's with-scheme-base gates on prelude?.
+(define (run-with-scheme-base imports)
+  (if (or (%no-prelude?) (member (quote (scheme base)) imports))
+      imports
+      (append imports (list (quote (scheme base))))))
+
+;; Transitive import closure of ROOTS over *repl-lib-imports*, in dependency
+;; (topological) order -- deepest dependency first, each once.  Same DFS post-order as
+;; the driver's toposort-libs, so init-libs (and the program module) match.  A name on
+;; the current DFS path is a back-edge -> import cycle.  A name with no recorded imports
+;; (e.g. baked (scheme base), or a leaf) is treated as a leaf.
+(define (run-visit-lib name path seen)
+  (cond
+    [(member name seen) seen]
+    [(member name path) (error 'run "import cycle among libraries" name)]
+    [else
+     (let ([imps (cond [(assoc name *repl-lib-imports*) => cdr] [else (quote ())])])
+       (cons name (run-visit-libs imps (cons name path) seen)))]))
+(define (run-visit-libs names path seen)
+  (if (null? names)
+      seen
+      (run-visit-libs (cdr names) path (run-visit-lib (car names) path seen))))
+(define (run-closure-order roots)
+  (reverse (run-visit-libs roots (quote ()) (quote ()))))
+
+;; Mode 8: build (scheme base) from the baked-in prelude source and register it as a
+;; loaded unit (its export table + imports), returning (ok . (ir . init-symbol)) so the
+;; host JIT-adds the module WITHOUT running __init -- the program's @scheme_entry inits it
+;; in topo order, exactly as a fresh AOT executable does.  (scheme base) is baked in, not
+;; read from the manifest (design D6), so a plain program needs no manifest and no files.
+(define (run-register-scheme-base)
+  (guard (e (#t (cons (quote error) (repl-error->string e))))
+    (let* ([prelude-forms (read-forms-from-string *prelude-source*)]
+           [dl   (parse-define-library (scheme-base-library-form prelude-forms))]
+           [name (car dl)]
+           [res  (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl) (quote ()) no-dump)])
+      (set! *repl-libs* (cons (cons name (cadr (cadr res))) *repl-libs*))
+      (set! *repl-lib-imports* (cons (cons name (cadr dl)) *repl-lib-imports*))
+      (cons (quote ok) (cons (car res) (mangle name "__init"))))))
+
+;; Mode 7: compile a whole program that may import user libraries.  direct imports are
+;; the program's explicit imports plus (scheme base) (run-with-scheme-base); their export
+;; tables come from the preloaded units (repl-import-tables), and init-libs is the
+;; transitive closure in topo order (run-closure-order).  Returns (ok . (ir . entry)) --
+;; the program module's entry is @scheme_entry (its JITDylib definition wins over the
+;; linked-in compiler's) -- or (error . msg) if an import is not loaded/known.
+(define (compile-program-text text)
+  (guard (e (#t (cons (quote error) (repl-error->string e))))
+    (let ([user-forms (read-all-from-string text)])
+      (cond
+       ;; A lone define-library is compiled as a single unit -- no baked (scheme base),
+       ;; no program entry (matches compile-source-rehomed).  The host emits/JITs just
+       ;; this module; the 'library status tells it to drop the baked base + preloaded
+       ;; units it set up for the program case.  (Used by `scheme-run --emit < lib.sld`.)
+       [(single-define-library user-forms)
+        => (lambda (lib) (cons (quote library) (cons (compile-library-form lib no-dump) "scheme_entry")))]
+       [else
+        (let ([direct (run-with-scheme-base (car (collect-imports user-forms)))])
+          (let ([tables (repl-import-tables direct)])
+            (if (not tables)
+                (cons (quote error) "program imports a library not found in the manifest")
+                (cons (quote ok)
+                      (cons (compile-program-with-imports
+                              (prelude-macro-forms (read-forms-from-string *prelude-source*))
+                              user-forms tables (run-closure-order direct) no-dump)
+                            "scheme_entry")))))]))))
 
 ;; --- the input-completeness probe (design D4(b); spike/form-complete) --------
 ;; Does the host's accumulated buffer start with a complete datum yet?  An
@@ -325,9 +436,11 @@
       (set! *repl-known* (vector-ref s 2))
       (set! *repl-n* (vector-ref s 3))
       (set! counter (vector-ref s 4))
-      (set! *repl-libs* (vector-ref s 5)))))
+      (set! *repl-libs* (vector-ref s 5))
+      (set! *repl-lib-imports* (vector-ref s 6)))))
 (define (repl-save-state!)
-  (repl-state-set! (vector *repl-env* *repl-macro-env* *repl-known* *repl-n* counter *repl-libs*)))
+  (repl-state-set! (vector *repl-env* *repl-macro-env* *repl-known* *repl-n* counter
+                           *repl-libs* *repl-lib-imports*)))
 
 ;; --- the dispatched embedded entry (design D2) -------------------------------
 ;; The host sets (repl-mode)/(repl-input) via rt_repl_set, then calls this ccc
@@ -337,6 +450,8 @@
 ;;   2 form-complete?            3 compile-one-form
 ;;   4 load-library (source text -> unit IR + __init)   5 manifest text -> source paths
 ;;   6 auto-import (scheme base) into the session (after the host preloads it, Stage 3)
+;;   7 run door: compile a whole program with imports  8 run door: register baked (scheme base)
+;;   9 run door: manifest text -> user-library paths (omitting (scheme base))
 ;; State is restored before and saved after each op (init modes seed it fresh).
 (define (repl-dispatch)
   (repl-restore-state!)
@@ -349,6 +464,9 @@
              [(= mode 4) (repl-load-library-text (repl-input))]  ; load a library unit
              [(= mode 5) (repl-manifest-paths (repl-input))]     ; manifest text -> paths
              [(= mode 6) (repl-autoimport-scheme-base)]          ; auto-import (scheme base)
+             [(= mode 7) (compile-program-text (repl-input))]    ; run door: whole program
+             [(= mode 8) (run-register-scheme-base)]             ; run door: baked (scheme base)
+             [(= mode 9) (repl-manifest-user-paths (repl-input))] ; run door: manifest paths sans (scheme base)
              [else       (compile-one-form-text (repl-input))])])
       (repl-save-state!)
       result)))

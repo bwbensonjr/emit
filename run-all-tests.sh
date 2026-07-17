@@ -53,6 +53,7 @@ run_suite "REPL persistent host"      test/repl-host-tests.sh
 run_suite "define-record-type syntax" test/record-type-syntax-tests.sh
 run_suite "inline arith + self-call IR" test/inline-arith-self-call-tests.sh
 run_suite "module vertical-slice (REPL)" test/modules-repl-tests.sh
+run_suite "module run door (scheme-run)" test/modules-run-tests.sh
 run_suite "(scheme base) auto-import (REPL)" test/prelude-base-repl-tests.sh
 run_suite "(scheme base) re-home (scheme-run/compile)" test/prelude-base-run-tests.sh
 

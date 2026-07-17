@@ -1,23 +1,32 @@
-// run.cpp -- in-process compile-and-run for a whole Scheme program
-// (change: path-a-embedding).
+// run.cpp -- in-process compile-and-run for a whole Scheme program, now with
+// user-library resolution via the manifest (change: run-door-user-libraries).
 //
-// One process, no Chez and no clang/lli: the compiled compiler is linked into
-// this binary (bootstrap/embed.ll -> its ccc `scheme_entry` reads the program
-// source from stdin, prepends the baked-in prelude, and RETURNS the emitted IR
-// as a scheme string).  This host calls that entry, reads the IR bytes back
-// through the runtime's exported string accessors, JIT-compiles the IR with
-// ORC/LLJIT, looks up the program's own `scheme_entry`, runs it, and prints the
-// value -- exactly the value the standalone AOT executable would print.
+// One process, no Chez and no clang/lli.  This host links the MODE-DISPATCHED
+// embedded compiler (bootstrap/embed-repl.ll -- the same one the REPL host drives)
+// and hands it operations through the runtime's REPL channel (rt_repl_set), reusing
+// the REPL door's proven Chez-free manifest/library machinery.  The run door is the
+// third module door, at parity with the AOT and REPL doors:
+//
+//   mode 1  init-session (seed session state; merge prelude macros)
+//   mode 8  register the baked-in (scheme base) -> its unit IR + init symbol
+//   mode 5  manifest text -> newline-separated user-library source paths
+//   mode 4  library source text -> (ok . (unit-ir . init-symbol)) | (deferred . name)
+//   mode 7  whole program text -> (ok . (program-ir . "scheme_entry")) | (error . msg)
+//
+// Unlike the REPL host, the run host adds each unit module to the JIT WITHOUT running
+// its __init: the program module's @scheme_entry runs every unit's one-shot __init in
+// topological order before the body -- exactly as a fresh AOT executable does, so the
+// program module is byte-identical to the AOT door's prog.ll (dev->ship fidelity).
 //
 // Usage:  build/scheme-run < program.scm
-//         build/scheme-run --emit < program.scm > program.ll   (Chez-free AOT)
+//         build/scheme-run --manifest FILE < program.scm      (user libraries)
+//         build/scheme-run --emit < program.scm > program.ll  (Chez-free AOT front half)
 //
-// With --emit (change: self-hosting-completion, design D7) the runner does NOT
-// JIT: it writes the embedded compiler's emitted IR to stdout and exits.  Piped
-// to clang with the runtime, this is a fully Chez-free source->native path
-// (see bin/scheme-compile), honoring standalone executables as a first-class
-// deliverable.  The IR is the SAME bytes the JIT path runs, so what you emit is
-// what you'd run in-process -- dev->ship fidelity.
+// With --emit the runner does NOT JIT: it writes every emitted module (the baked
+// (scheme base), each imported unit, then the program), joined by the boundary marker,
+// to stdout.  bin/scheme-compile splits that on the marker and links all units with the
+// runtime -- a fully Chez-free source->native path.  The IR is the SAME bytes the JIT
+// path runs, so what you emit is what you'd run in-process.
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
@@ -32,8 +41,11 @@
 #include <csetjmp>
 #include <cstdio>
 #include <cstdlib>
+#include <fstream>
+#include <sstream>
 #include <iostream>
 #include <string>
+#include <vector>
 #include <memory>
 
 #include <gc/gc.h>
@@ -42,13 +54,20 @@ using namespace llvm;
 using namespace llvm::orc;
 
 extern "C" {
-  // The embedded compiler's entry (defined by the linked-in bootstrap/embed.ll):
-  // reads the program from stdin, returns the emitted IR as a scheme string.
+  // The embedded compiler's dispatched entry (defined by the linked-in
+  // bootstrap/embed-repl.ll).  Called via this link-time symbol -- always the
+  // compiler, never a JIT'd module of the same name.
   intptr_t scheme_entry(void);
 
-  void rt_write(intptr_t v);                 // runtime value printer
-  intptr_t rt_string_len(intptr_t v);        // bytes of a scheme string value
+  // Runtime REPL channel + value accessors (src/runtime/runtime.c).
+  void rt_repl_set(intptr_t mode, const char *bytes, intptr_t len);
+  intptr_t rt_car(intptr_t v);
+  intptr_t rt_cdr(intptr_t v);
+  intptr_t rt_symbol_to_string(intptr_t v);
+  intptr_t rt_string_len(intptr_t v);
   const char *rt_string_bytes(intptr_t v);
+
+  void rt_write(intptr_t v);                 // runtime value printer
   extern jmp_buf *rt_trap;                    // runtime trap escape hook
   extern char rt_trap_msg[];                  // last trap's message
   void rt_guard_reset(void);                  // clear guard frames after a trap
@@ -56,40 +75,180 @@ extern "C" {
 
 typedef intptr_t (*entry_t)(void);
 
+static std::unique_ptr<LLJIT> JIT;
+
+// The boundary marker the compiler joins separate modules with (src/core.ss
+// *emit-unit-boundary*); --emit re-uses it to delimit the units it writes.
+static const std::string kBoundary = "; ==EMIT-UNIT-BOUNDARY==\n";
+
+// Copy a scheme string value's bytes into a std::string.
+static std::string scm_str(intptr_t v) {
+  return std::string(rt_string_bytes(v), (size_t)rt_string_len(v));
+}
+// The name of a (status . payload) result's status symbol.
+static std::string status_of(intptr_t r) {
+  return scm_str(rt_symbol_to_string(rt_car(r)));
+}
+
+static std::string read_file(const std::string &path) {
+  std::ifstream f(path, std::ios::binary);
+  std::ostringstream ss;
+  ss << f.rdbuf();
+  return ss.str();
+}
+
+// Parse IR text and add it to the JIT.  On failure, print a message and return false.
+static bool add_ir(const std::string &ir, const char *name) {
+  auto ctx = std::make_unique<LLVMContext>();
+  SMDiagnostic err;
+  auto buf = MemoryBuffer::getMemBuffer(ir, name);
+  std::unique_ptr<Module> mod = parseIR(buf->getMemBufferRef(), err, *ctx);
+  if (!mod) {
+    std::string msg;
+    raw_string_ostream os(msg);
+    err.print(name, os);
+    std::cerr << "scheme-run: parse error: " << os.str() << "\n";
+    return false;
+  }
+  mod->setDataLayout(JIT->getDataLayout());
+  if (Error e = JIT->addIRModule(ThreadSafeModule(std::move(mod), std::move(ctx)))) {
+    std::cerr << "scheme-run: add error: " << toString(std::move(e)) << "\n";
+    return false;
+  }
+  return true;
+}
+
+// Preload every user library named in the manifest into `modules` (change:
+// run-door-user-libraries).  Mirrors the REPL host's preload_libraries -- the SAME
+// compiler modes 5 (manifest text -> paths) and 4 (source -> unit IR) -- but it only
+// COLLECTS each unit's IR; it does NOT run __init (the program's @scheme_entry does).
+// The compiler owns all resolution; this is just the file I/O + fixpoint orchestration.
+// A library resolves against already-loaded units, so we iterate to a fixpoint: each
+// pass loads whatever units now have their imports satisfied, giving topological order
+// regardless of manifest order.  A pass with no progress and units still deferred means
+// an import cycle or an import missing from the manifest.  Returns false on a hard error.
+static bool preload_user_libraries(const std::string &manifest, std::vector<std::string> &modules) {
+  std::ifstream probe(manifest);
+  if (!probe.good()) return true;            // no manifest: no user libraries
+
+  std::string mtext = read_file(manifest);
+  // Mode 9: manifest paths EXCLUDING (scheme base) -- the run door bakes it in (mode 8)
+  // or omits it (--no-prelude), so it must never be loaded from the manifest.
+  rt_repl_set(9, mtext.data(), (intptr_t)mtext.size());
+  std::string paths = scm_str(scheme_entry());
+
+  std::vector<std::string> pending;
+  std::istringstream lines(paths);
+  std::string path;
+  while (std::getline(lines, path))
+    if (!path.empty()) pending.push_back(path);
+
+  while (!pending.empty()) {
+    std::vector<std::string> deferred;
+    bool progress = false;
+    for (const std::string &p : pending) {
+      std::string src = read_file(p);
+      rt_repl_set(4, src.data(), (intptr_t)src.size());
+      intptr_t r = scheme_entry();
+      std::string st = status_of(r);
+      if (st == "deferred") { deferred.push_back(p); continue; }
+      if (st == "already") { progress = true; continue; }  // e.g. baked (scheme base): no module
+      if (st != "ok") {
+        std::cerr << "scheme-run: loading library " << p << ": " << scm_str(rt_cdr(r)) << "\n";
+        return false;
+      }
+      modules.push_back(scm_str(rt_car(rt_cdr(r))));   // collect IR; do NOT run __init
+      progress = true;
+    }
+    if (!progress) {                         // every remaining unit is stuck
+      for (const std::string &p : deferred)
+        std::cerr << "scheme-run: library " << p
+                  << ": unresolved or cyclic import (dependency missing from manifest?)\n";
+      return false;
+    }
+    pending.swap(deferred);
+  }
+  return true;
+}
+
 int main(int argc, char **argv) {
   bool emit = false;
   bool no_prelude = false;
+  std::string manifest;
   for (int i = 1; i < argc; i++) {
     std::string a(argv[i]);
     if (a == "--emit") emit = true;
     else if (a == "--no-prelude") no_prelude = true;
+    else if (a == "--manifest" && i + 1 < argc) manifest = argv[++i];
+  }
+  // Manifest resolution: --manifest flag wins, then EMIT_MANIFEST, then the default.
+  if (manifest.empty()) {
+    const char *mp = std::getenv("EMIT_MANIFEST");
+    manifest = mp ? std::string(mp) : std::string("emit-libs.scm");
   }
 
-  // Forward --no-prelude to the embedded entry (change: embedded-runner-rehome):
-  // it reads EMIT_NO_PRELUDE via the %no-prelude? primitive to decide whether to
-  // auto-import (scheme base).  Must be set before scheme_entry() runs below.
+  // Forward --no-prelude to the embedded compiler (read via %no-prelude?): it skips
+  // baking/implying (scheme base).  Must be set before any scheme_entry() call.
   if (no_prelude) setenv("EMIT_NO_PRELUDE", "1", 1);
+
+  // Read the whole program source from stdin (the dispatched entry no longer reads
+  // stdin itself; the host owns I/O and hands the program in via mode 7).
+  std::string prog_src;
+  {
+    std::ostringstream ss;
+    ss << std::cin.rdbuf();
+    prog_src = ss.str();
+  }
 
   GC_INIT();                                 // once, before the compiler allocates
 
-  // 1) Compile the program in-process: the linked embedded compiler reads the
-  //    source from stdin and returns the emitted IR as a scheme string.  Copy
-  //    the bytes out immediately (the buffer is GC-managed).
-  intptr_t ir_val = scheme_entry();
-  std::string ir(rt_string_bytes(ir_val), (size_t)rt_string_len(ir_val));
+  // 1) Compile in-process.  Seed the session, register the baked (scheme base), preload
+  //    any user libraries, then compile the program -- collecting every module's IR.
+  rt_repl_set(no_prelude ? 0 : 1, "", 0);    // init-session
+  scheme_entry();
 
-  // --emit (design D7): write the emitted IR to stdout and stop -- no JIT.  This
-  //    is the Chez-free AOT front half: `scheme-run --emit < prog.scm > prog.ll`,
-  //    then clang links prog.ll with the runtime into a native executable.  The
-  //    IR here is byte-for-byte what the JIT path below would run.
+  std::vector<std::string> modules;          // unit modules, in the order emitted
+
+  if (!no_prelude) {
+    rt_repl_set(8, "", 0);                    // register baked (scheme base)
+    intptr_t r = scheme_entry();
+    if (status_of(r) != "ok") {
+      std::cerr << "scheme-run: (scheme base): " << scm_str(rt_cdr(r)) << "\n";
+      return 1;
+    }
+    modules.push_back(scm_str(rt_car(rt_cdr(r))));
+  }
+
+  if (!preload_user_libraries(manifest, modules)) return 1;
+
+  rt_repl_set(7, prog_src.data(), (intptr_t)prog_src.size());   // compile program
+  intptr_t pr = scheme_entry();
+  std::string pst = status_of(pr);
+  if (pst != "ok" && pst != "library") {
+    std::cerr << "scheme-run: " << scm_str(rt_cdr(pr)) << "\n";
+    return 1;
+  }
+  std::string prog_ir = scm_str(rt_car(rt_cdr(pr)));
+  // A lone define-library compiles to a single unit with no baked (scheme base) and
+  // no program entry: drop the base/units set up for the program case and emit/JIT
+  // only this module (matches the batch runner; used by `scheme-run --emit < lib.sld`).
+  if (pst == "library") modules.clear();
+
+  // --emit: write every module (units then program), joined by the boundary marker, to
+  //    stdout and stop -- no JIT.  bin/scheme-compile splits on the marker and links all
+  //    units with the runtime.  The IR here is byte-for-byte what the JIT path runs.
   if (emit) {
-    std::fwrite(ir.data(), 1, ir.size(), stdout);
+    for (const std::string &m : modules) {
+      std::fwrite(m.data(), 1, m.size(), stdout);
+      std::fwrite(kBoundary.data(), 1, kBoundary.size(), stdout);
+    }
+    std::fwrite(prog_ir.data(), 1, prog_ir.size(), stdout);
     std::fflush(stdout);
     return 0;
   }
 
-  // 2) Stand up the JIT and resolve rt_* / GC symbols from this process (the
-  //    runtime is linked in; -rdynamic exports the symbols the IR references).
+  // 2) Stand up the JIT and resolve rt_* / GC symbols from this process (the runtime is
+  //    linked in; -rdynamic exports the symbols the IR references).
   InitializeNativeTarget();
   InitializeNativeTargetAsmPrinter();
   InitializeNativeTargetAsmParser();
@@ -99,7 +258,7 @@ int main(int argc, char **argv) {
     std::cerr << "scheme-run: fatal: failed to create LLJIT: " << toString(jitOr.takeError()) << "\n";
     return 1;
   }
-  std::unique_ptr<LLJIT> JIT = std::move(*jitOr);
+  JIT = std::move(*jitOr);
 
   auto gen = DynamicLibrarySearchGenerator::GetForCurrentProcess(
       JIT->getDataLayout().getGlobalPrefix());
@@ -109,47 +268,14 @@ int main(int argc, char **argv) {
   }
   JIT->getMainJITDylib().addGenerator(std::move(*gen));
 
-  // 3) Parse the emitted IR and add it to the JIT.  The user program defines its
-  //    own `scheme_entry`; it is served from the JITDylib, distinct from the
-  //    linked compiler's entry (the process generator is only a fallback for the
-  //    module's undefined references -- the rt_* runtime functions).
-  //
-  //    When the prelude is re-homed (change: embedded-runner-rehome) the embedded
-  //    entry returns TWO modules -- the (scheme base) library and the program --
-  //    joined by a boundary marker, because they cannot share one LLVM module
-  //    (each emits a fixed @__apply0 and reset string globals that would collide).
-  //    Add each as its own module to the same JITDylib; the program's `external`
-  //    references to scheme.base:* resolve against the library module.  With
-  //    --no-prelude (or a lone define-library) there is no marker: one module.
-  auto addModule = [&](const std::string &text, const char *name) -> bool {
-    auto ctx = std::make_unique<LLVMContext>();
-    SMDiagnostic err;
-    auto buf = MemoryBuffer::getMemBuffer(text, name);
-    std::unique_ptr<Module> mod = parseIR(buf->getMemBufferRef(), err, *ctx);
-    if (!mod) {
-      std::string msg;
-      raw_string_ostream os(msg);
-      err.print(name, os);
-      std::cerr << "scheme-run: parse error: " << os.str() << "\n";
-      return false;
-    }
-    mod->setDataLayout(JIT->getDataLayout());
-    if (Error e = JIT->addIRModule(ThreadSafeModule(std::move(mod), std::move(ctx)))) {
-      std::cerr << "scheme-run: add error: " << toString(std::move(e)) << "\n";
-      return false;
-    }
-    return true;
-  };
-
-  const std::string marker = "; ==EMIT-UNIT-BOUNDARY==\n";
-  size_t bpos = ir.find(marker);
-  if (bpos == std::string::npos) {
-    if (!addModule(ir, "<program>")) return 1;
-  } else {
-    // (scheme base) module first, then the program that imports it.
-    if (!addModule(ir.substr(0, bpos), "<scheme.base>")) return 1;
-    if (!addModule(ir.substr(bpos + marker.size()), "<program>")) return 1;
-  }
+  // 3) Add every unit module (baked (scheme base) + preloaded user units), then the
+  //    program.  Add order is irrelevant -- symbols resolve lazily and the program's
+  //    @scheme_entry drives __init in topological order.  The program's own scheme_entry
+  //    (a JITDylib definition) shadows the linked-in compiler's (a process fallback), so
+  //    the lookup below resolves the program.
+  for (size_t i = 0; i < modules.size(); i++)
+    if (!add_ir(modules[i], "<unit>")) return 1;
+  if (!add_ir(prog_ir, "<program>")) return 1;
 
   Expected<ExecutorAddr> sym = JIT->lookup("scheme_entry");
   if (!sym) {
@@ -158,8 +284,8 @@ int main(int argc, char **argv) {
   }
   entry_t fn = sym->toPtr<entry_t>();
 
-  // 4) Run the program.  A runtime trap longjmps back here (as in the REPL host)
-  //    so we report it rather than crashing; conservative GC needs no unwinding.
+  // 4) Run the program.  A runtime trap longjmps back here (as in the REPL host) so we
+  //    report it rather than crashing; conservative GC needs no unwinding.
   jmp_buf jb;
   rt_trap = &jb;
   if (setjmp(jb) == 0) {

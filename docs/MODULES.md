@@ -111,19 +111,24 @@ EMIT_MANIFEST=test/modules/emit-libs.scm build/repl-host
 142
 ```
 
-### Chez-free embedded runner — `(scheme base)` only
+### Chez-free embedded runner — the run door (user libraries)
 
-`build/scheme-run` and `bin/scheme-compile` compile and run a whole program with **no Chez** — but
-they auto-import only `(scheme base)` (baked in) and have **no manifest**, so they cannot resolve
-arbitrary user-library `import`s:
+`build/scheme-run` compiles and runs a whole program with **no Chez**, and resolves user-library
+`import`s through the manifest — the *run door*, at parity with the AOT and REPL doors (change:
+`run-door-user-libraries`). `(scheme base)` is baked in, so a plain program needs no manifest at
+all; user libraries are read from the manifest (default `emit-libs.scm`, override `--manifest FILE`
+or `EMIT_MANIFEST`):
 
 ```sh
-echo '(map (lambda (x) (* x x)) (list 1 2 3))' | build/scheme-run   # => (1 4 9)   (scheme base) works
-echo '(import (mylib)) (greet)'                | build/scheme-run   # error: unbound variable greet
+echo '(map (lambda (x) (* x x)) (list 1 2 3))' | build/scheme-run   # => (1 4 9)   no manifest needed
+build/scheme-run --manifest test/modules/emit-libs.scm < test/modules/prog-mylib.scm   # => 142
 ```
 
-For user libraries on a Chez-free path, use the Chez driver above. (Extending the embedded runner
-with a manifest is future work.)
+The run door reuses the REPL door's Chez-free machinery: the host reads the manifest and each
+library source and hands the text to the embedded compiler through a small mode protocol, then the
+program's `@scheme_entry` initializes the imported units in topological order before running — so
+the emitted program module is **byte-identical** to the AOT door's for the same manifest (dev→ship
+fidelity). `bin/scheme-compile` uses the same `--emit` path for the native build.
 
 ## `(scheme base)`
 

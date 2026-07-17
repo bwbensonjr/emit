@@ -1,63 +1,69 @@
-## 1. Shared host-side library preload
+## 1. Host-side library preload
 
-- [ ] 1.1 Factor `preload_libraries()` and its helpers (manifest read via mode 5,
-      unit compile+JIT via mode 4, topological fixpoint with cycle / missing-from-manifest
-      detection, `L:__init` invocation) out of `src/repl/host.cpp` into a shared C++
-      translation unit (e.g. `src/repl/module-loader.{h,cpp}` or similar).
-- [ ] 1.2 Update `src/repl/host.cpp` to use the shared loader with no behavior change;
-      confirm `repl-host` still passes its existing module suites.
+- [x] 1.1 Reuse the REPL host's `preload_libraries()` PATTERN in the run host. NOTE: rather
+      than extracting a shared C++ TU (design D1's first cut), the ~30-line file-I/O + fixpoint
+      orchestration is kept in `src/run.cpp::preload_user_libraries` (no-init variant). The
+      *resolution* logic stays single-sourced in the compiler modes (4/5/9) — the "one path"
+      invariant D1 protects — and `src/repl/host.cpp` is left untouched (zero REPL regression risk).
+- [x] 1.2 `repl-host` unchanged; existing REPL module suites still pass (8/0).
 
 ## 2. Run host wiring
 
-- [ ] 2.1 Point `build/scheme-run` at the mode-dispatched entry (`bootstrap/embed-repl.ll`)
-      in the Makefile `$(RUN)` rule so `src/run.cpp` can drive modes 4/5/6 (D2).
-- [ ] 2.2 Add `--manifest FILE` / `EMIT_MANIFEST` handling to `src/run.cpp`'s argument
-      parsing, matching the AOT/REPL resolution order (env > flag > default `emit-libs.scm`).
-- [ ] 2.3 In `src/run.cpp`, before running: read the program's imports, preload the
-      transitive user-library closure via the shared loader (task 1), and auto-import
-      `(scheme base)` (mode 6) — mirroring `host.cpp`'s startup.
+- [x] 2.1 `Makefile` `$(RUN)` now links `bootstrap/embed-repl.ll` (dispatched entry). Bootstrap
+      conflict resolved by decision X / D7: the batch runner is preserved as `src/run-boot.cpp`
+      and `regen.sh` drives the fixed point through `build/scheme-run-boot`.
+- [x] 2.2 `--manifest FILE` + `EMIT_MANIFEST` handling in `src/run.cpp` (flag > env > default).
+- [x] 2.3 `src/run.cpp` seeds the session (mode 1), registers baked `(scheme base)` (mode 8),
+      preloads user libs (mode 9 paths → mode 4, WITHOUT running `__init`), then compiles.
 
 ## 3. Program compilation against preloaded units
 
-- [ ] 3.1 Add the dispatched compiler mode (D3) that compiles the whole user-program text
-      against the host-supplied direct-import export tables by calling the existing
-      `compile-program-with-imports` (`src/compile.ss:553`) — a thin wrapper, no new codegen.
-      (First confirm no existing mode already does this; generalize if so — Open Question.)
-- [ ] 3.2 Have `src/run.cpp` invoke that mode to get the program module IR, then JIT it into
-      the shared JITDylib alongside the preloaded units and run the program's `scheme_entry`,
-      initializing units in topological order (D5).
-- [ ] 3.3 Preserve the fast path (D4): a program importing only `(scheme base)` / nothing
-      with no resolvable manifest keeps today's two-module bake-in path unchanged.
+- [x] 3.1 Mode 7 (`compile-program-text`) compiles the whole program via the existing
+      `compile-program-with-imports` (`src/core.ss:362`), with direct-import tables from the
+      preloaded units and `init-libs` from an in-language topological closure over the recorded
+      import graph (`*repl-lib-imports*`). Lone `define-library` input → single unit (mode 7
+      returns `library` status). Baked `(scheme base)` registered via mode 8; `(scheme base)`
+      excluded from the manifest preload via mode 9 (avoids a duplicate module).
+- [x] 3.2 `src/run.cpp` JIT-adds every unit module + the program, then runs `scheme_entry`
+      (which drives `__init` in topological order — D5).
+- [x] 3.3 Fast path preserved (D4/D6): a plain program needs no manifest; `(scheme base)` is
+      baked in. Verified byte-identical program + base modules.
 
 ## 4. Regen + build
 
-- [ ] 4.1 `make regen` to rebuild committed IR after the `repl-core.ss` mode addition; verify
-      the fixed point converges and a clean-tree regen leaves `git diff bootstrap/` empty
-      (trust-check).
-- [ ] 4.2 Build `scheme-run` and `repl-host`; report `build/scheme-run` size delta from
-      linking the dispatched entry (output convention).
+- [x] 4.1 `make regen` converges (iter 1) and is idempotent across all four committed
+      `bootstrap/*.ll` (byte-identical on re-run) — the trust-check passes once committed. The
+      Chez-gated **self-hosting fixed point** also re-derives the committed `embed.ll` /
+      `scheme.base.ll` independently (Chez host). NOTE: decision X required updating the two
+      Chez-gated harnesses that link a stage runner — `tools/regen.sh` and
+      `test/self-host-fixpoint.sh` — to use the batch `run-boot.o` (was `run.o`).
+- [x] 4.2 `build/scheme-run` relinked from the dispatched entry: **~806 KB → ~894 KB** (+~88 KB,
+      the D2 tradeoff for the module-aware door).
 
 ## 5. Tests and fidelity
 
-- [ ] 5.1 Add a run-door test to `test/modules/`: run an importing program (single import and
-      a transitive `(a)->(b)` chain) through `build/scheme-run` and assert the value.
-- [ ] 5.2 Assert dev→ship fidelity: the run-door value equals the AOT-door value for the same
-      manifest, and the run-door program module is byte-identical to the AOT `prog.ll`.
-- [ ] 5.3 Add negative tests: an import cycle and an import of a library missing from the
-      manifest each report a diagnostic and exit non-zero (no loop).
-- [ ] 5.4 Regression: existing `demos/run-tests.sh` (no user imports) still passes unchanged
-      on the `scheme-run` backend.
+- [x] 5.1 `test/modules-run-tests.sh`: import (142), transitive chain (15), diamond (35), rename
+      (77), and a no-manifest plain program ((1 4 9)). Registered in `run-all-tests.sh`.
+- [x] 5.2 Fidelity: run-door value == AOT-door value (142==142); run-door program module
+      byte-identical to the AOT `prog.ll` (modulo the driver's target header, which the embedded
+      `--emit` omits by convention). Chez-gated section of the new suite.
+- [x] 5.3 Negative tests: import cycle and missing-from-manifest each report a diagnostic and
+      exit non-zero.
+- [x] 5.4 `demos/run-tests.sh` still 61/0 on `scheme-run` (fast path unaffected).
 
 ## 6. --emit scope decision
 
-- [ ] 6.1 Decide (per Open Questions) whether `scheme-run --emit` / `bin/scheme-compile`
-      emits the full transitive closure for importing programs in this change or as a
-      follow-up. If deferred, `log()`/note the limitation so units are never silently dropped.
+- [x] 6.1 DECIDED: `scheme-run --emit` emits every loaded unit module + the program, boundary-
+      joined; `bin/scheme-compile` already splits on the marker and links them all, so multi-unit
+      AOT works. LIMITATION (noted, follow-up): the run host preloads the WHOLE manifest, so
+      `--emit` currently emits all manifest units, not just the program's transitive closure — an
+      AOT binary built this way links unused libraries. The JIT run path is unaffected (extra
+      modules are inert; only the closure's `__init` runs). Closure-pruned `--emit` is future work.
 
 ## 7. Docs
 
-- [ ] 7.1 Update `docs/MODULES.md`: remove the "extending the embedded runner with a manifest
-      is future work" caveat and document `scheme-run --manifest` user-library loading.
+- [x] 7.1 `docs/MODULES.md` updated: the "future work" caveat is replaced with the run-door
+      documentation (`scheme-run --manifest`, baked `(scheme base)`, byte-identity).
 
 ## 8. Spec sync
 

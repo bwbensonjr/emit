@@ -79,12 +79,14 @@ $(HOST): build/host.o build/runtime-host.o $(EMBED_REPL_LL) $(SCHEME_BASE_LL) Ma
 	  -rdynamic $(LDFLAGS) -L$(GC_LIB) -lgc -o $@
 	@. tools/log.sh; say "link $(EMBED_REPL_LL) + $(SCHEME_BASE_LL) -> $@  [$$(bytes $@) bytes]"
 
-# In-process compile-and-run runner: A-links the embedded batch compiler
-# (embed.ll).  Supports `--emit` (write IR to stdout; Chez-free AOT, design D7).
-$(RUN): build/run.o build/runtime-host.o $(EMBED_LL) $(SCHEME_BASE_LL) Makefile
-	$(CXX) build/run.o build/runtime-host.o $(EMBED_LL) $(SCHEME_BASE_LL) \
+# In-process compile-and-run runner: A-links the MODE-DISPATCHED embedded compiler
+# (embed-repl.ll -- the same one the REPL host drives), so the run door can resolve
+# user libraries via the manifest through the shared mode protocol (change:
+# run-door-user-libraries).  Supports `--emit` (write IR to stdout; Chez-free AOT).
+$(RUN): build/run.o build/runtime-host.o $(EMBED_REPL_LL) $(SCHEME_BASE_LL) Makefile
+	$(CXX) build/run.o build/runtime-host.o $(EMBED_REPL_LL) $(SCHEME_BASE_LL) \
 	  -rdynamic $(LDFLAGS) -L$(GC_LIB) -lgc -o $@
-	@. tools/log.sh; say "link $(EMBED_LL) + $(SCHEME_BASE_LL) -> $@  [$$(bytes $@) bytes]"
+	@. tools/log.sh; say "link $(EMBED_REPL_LL) + $(SCHEME_BASE_LL) -> $@  [$$(bytes $@) bytes]"
 
 # Batch text->IR filter compiler: links the committed schemec IR + (scheme base)
 # with the runtime's RT_FILTER_MAIN (so the program's output is exactly the emitted IR).
@@ -104,6 +106,12 @@ build/host.o: src/repl/host.cpp Makefile | build
 
 # Runner host, compiled as C++ against the LLVM headers.
 build/run.o: src/run.cpp Makefile | build
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+# Batch bootstrap runner object (change: run-door-user-libraries, decision X):
+# tools/regen.sh links this with the batch embed.ll into build/scheme-run-boot to
+# drive the self-hosting fixed point.  Not linked into any shipped binary.
+build/run-boot.o: src/run-boot.cpp Makefile | build
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # ===========================================================================
@@ -132,7 +140,8 @@ build:
 .PHONY: clean
 clean:
 	rm -f $(HOST) $(RUN) $(SCHEMEC) \
-	      build/host.o build/run.o build/runtime-host.o \
+	      build/host.o build/run.o build/run-boot.o build/runtime-host.o \
+	      build/scheme-run-boot build/scheme-run-boot-next \
 	      build/schemec build/schemec-next \
 	      build/schemec.scm build/embed.scm build/embed-repl.scm \
 	      build/prelude-source.scm build/T-*.scm \
