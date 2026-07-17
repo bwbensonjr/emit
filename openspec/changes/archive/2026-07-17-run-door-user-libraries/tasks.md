@@ -67,5 +67,5 @@
 
 ## 8. Spec sync
 
-- [ ] 8.1 After green tests, sync the delta in `specs/module-system/spec.md` into
+- [x] 8.1 After green tests, sync the delta in `specs/module-system/spec.md` into
       `openspec/specs/module-system/spec.md` (sync/archive workflow).
