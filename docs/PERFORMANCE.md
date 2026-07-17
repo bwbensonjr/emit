@@ -17,6 +17,7 @@ speed items in this list.
 | [P2](#p2-immediate-non-heap-characters) | Immediate (non-heap) characters | speed + cleanup | med | med | `immediate-characters` | ☑ |
 | [P3](#p3-precompiled-prelude--library-objects) | Precompiled prelude / library objects | build speed | low | low | — | ☐ |
 | [P4](#p4-on-codepoint-string-indexing) | O(n) codepoint string indexing | speed | low–med | med–high | `codepoint-string-indexing` | ☑ |
+| [P5](#p5-arithmetic-and-call-overhead-ackermann-benchmark) | Arithmetic & call overhead (Ackermann benchmark) | speed | high | med–high | `inline-fixnum-arith-and-self-calls` (A + B-self) | ☐ |
 
 Legend — **Value**: benefit if fixed. **Cost**: rough implementation effort/risk. These are
 estimates to aid sequencing, not commitments.
@@ -24,7 +25,9 @@ estimates to aid sequencing, not commitments.
 **Suggested sequencing:** P2 first (self-contained; deletes code as well as speeding things
 up), then P1 (serves the flagship size goal, but carries a design decision — see its note),
 with P3 folding into P1's link rework. P4 waits for a workload that actually random-indexes
-strings; it is the highest cost and lowest present value.
+strings; it is the highest cost and lowest present value. P5 stands alone and has the broadest
+speed value (it touches every numeric-heavy and call-heavy program); its two halves — inline
+fixnum arithmetic and direct known-calls — are independent and can land separately.
 
 ---
 
@@ -174,6 +177,107 @@ from O(n²) into O(n). `string-set!` drops the stale index. The change is confin
 call, so no IR or committed bootstrap regeneration was needed (self-hosting fixed point holds).
 The fixed-width rewrite was rejected as too heavy for a rare-in-practice case, against the
 small-clean-binary goal.
+
+---
+
+## P5 — Arithmetic and call overhead (Ackermann benchmark)
+
+**Status:** ☐ not started
+
+**Workload.** Ackermann is a near-pure probe of two costs — non-tail recursion and small-
+integer arithmetic — with almost no allocation, so it isolates codegen quality for calls and
+fixnum ops:
+
+```scheme
+(define (ack m n)
+  (cond
+   ((= m 0) (+ n 1))
+   ((= n 0) (ack (- m 1) 1))
+   (else (ack (- m 1) (ack m (- n 1))))))
+(ack 3 12)   ; => 32765
+```
+
+**Symptom.** Measured under `build/scheme-run` (in-process JIT — the shipped runner):
+
+| call | result | wall time |
+|------|--------|-----------|
+| `(ack 3 10)` | 8189 | ~0.5 s |
+| `(ack 3 11)` | 16381 | ~1.5 s |
+| `(ack 3 12)` | 32765 | ~5.8 s |
+
+Clean ~4× per increment of `n`, i.e. time is linear in the (very large) call count with no
+super-linear cliff. Tail calls are **already** optimized — the two tail self-calls emit
+`musttail` and the stack stays bounded — so the entire cost is *per-activation*: the body is
+nothing but `= + -` and self-calls, and every one of those is an opaque runtime call. ~5.8 s
+for a function this small is far off a native or mature-Scheme baseline; the gap is codegen
+quality, not algorithm.
+
+**Cause** (read from the emitted IR of `ack`, `code_11`, via `scheme-run --emit`):
+
+1. **Integer arithmetic and comparison compile to out-of-line runtime calls.** `+ - * = <`
+   … map through `prim-table` (`src/emit.ss:142`) and `emit-primcall` (`src/emit.ss:313`) to a
+   `call @rt_add` / `@rt_sub` / `@rt_num_eq`. In `ack`'s body that is **six** runtime calls
+   per activation (2× `rt_num_eq`, 3× `rt_sub`, 1× `rt_add`), each performing tag/overflow
+   dispatch internally and each **opaque to LLVM** — it cannot fold, hoist, or CSE across
+   them. Fixnums are tagged `value << 3` immediates (the literal `1` appears in the IR as the
+   operand `8`, `0` as `0`), so the overwhelmingly-common both-operands-fixnum case is really
+   just one native `add`/`sub`/`icmp` plus an overflow check — but that fast path is never
+   emitted inline.
+
+2. **Self-calls go indirect through the closure.** Each recursive call reloads the code
+   pointer from the closure environment — `and self, -8; getelementptr; load; load; inttoptr`
+   — and issues an indirect `call fastcc %reg` (`finish-call`, `src/emit.ss:393-402`;
+   code-pointer load, `src/emit.ss:384`). The self-reference is a stable captured value (it is
+   loaded from `%self`, not a mutable global lookup), so for a self-recursive function a direct
+   `call fastcc @code_11` would be semantically identical, cheaper, and — most importantly —
+   would let LLVM inline and optimize across activations. The indirect call blocks all
+   interprocedural optimization.
+
+3. **Per-call arity guard.** Every entry runs `icmp eq argc, 2` → `rt_arity_error` branch
+   before the body. For calls whose arity is statically known (all self-calls here), this guard
+   is dead work on the hot path.
+
+**Possible fix** (two independent halves, ordered by value):
+
+- **A — inline fixnum fast-paths for the hot numeric primitives** (`+ - * = < > <= >=`). Emit
+  an inline "both operands fixnum?" tag test → native `add`/`sub`/`icmp` (with an overflow
+  guard for `+ - *`), falling back to the existing `rt_*` call only on the slow
+  (non-fixnum / overflow / bignum) path. `rt_*` stays the slow path, so numeric semantics are
+  unchanged; the win is that the common case becomes a handful of native instructions the
+  optimizer can see through. Broadest value — every numeric-heavy program benefits.
+
+- **B — direct-call statically-known functions and drop the redundant arity check.** Recognize
+  a self / known-top-level callee at a call site and emit `call fastcc @code_N` in place of the
+  closure-load + indirect call, skipping the `argc` guard when the arity is statically known.
+  The clearly-safe subset is the **self-call** (the captured self-reference cannot change under
+  a running activation); general top-level direct-calls must respect REPL redefinition (see the
+  dev→ship caveat below). Unlocks LLVM inlining of small self-recursive leaves.
+
+- **C — (follow-on)** once calls are direct, the fixed-arity zero-padding of unused register
+  args (`i64 0` for `a2..a7` on every 2-arg call) becomes visible to LLVM and largely
+  optimizable; revisit only if it still shows up in profiles.
+
+**Cost / risk.** A and B both live in the **shared emitter** (`src/emit.ss`), so the REPL and
+the AOT path get them identically — this is codegen *quality*, not a second compilation path,
+so the one-compiler-core / dev→ship-fidelity rule (`CLAUDE.md`) is preserved. Both are
+well-contained and highly testable: every existing demo must produce identical values, only
+faster, and Ackermann timings give a direct before/after metric. Two correctness hazards to
+respect: (A) the inline fixnum path must match `rt_*` exactly; (B) direct-call must fall back to
+the indirect path for anything not provably a fixed procedure — in particular a REPL
+redefinition of a top-level name must still be observed by *future* calls, so general (non-self)
+direct-calls need the same dev→ship carve-out reasoning as P1.
+
+**Decisions taken (in exploration).** Part A uses the **tag-checked seam (A2)**, not
+unconditional inline: the inline fast path is guarded by a fixnum-tag test and delegates to
+`rt_*` for non-fixnum operands, keeping numeric semantics single-sourced in the runtime so a
+future flonum/bignum change (deferred, `core-language` spec line 236) lands only in `rt_*`. The
+first change is scoped to **A + B-self** (self-calls only — no dev→ship tension, since the
+self-reference is already captured/stable). **B-general** (direct calls to *other* known
+top-levels) is **deferred**: it breaks REPL redefinition and needs the P1-style AOT-ship-time
+carve-out, so it may ride with P1's link rework.
+
+**OpenSpec change:** `inline-fixnum-arith-and-self-calls` (A + B-self; proposed, not yet
+implemented). B-general remains unscheduled.
 
 ---
 
