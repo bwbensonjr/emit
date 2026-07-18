@@ -185,13 +185,13 @@ check_backend be-import-bc   "$MOD/prog-mylib.scm" bitcode 142         # (import
 echo "dev->ship fidelity (cross-door byte-identity)"
 # The library unit emitted for the AOT door (chez compile.ss, above) must be
 # byte-identical to the one the embedded compiler emits for the REPL door.
-# build/scheme-run --emit compiles a lone define-library through the SAME core the
+# build/emit run --emit compiles a lone define-library through the SAME core the
 # REPL host uses; compare it to the AOT unit (host target header stripped).
-if make scheme-run >/dev/null 2>&1; then
+if make emit >/dev/null 2>&1; then
   for L in mylib; do
     aot="$TMP/$L.aot.ll"; repl="$TMP/$L.repl.ll"
     grep -v '^target ' "build/lib/$L.ll" > "$aot"
-    build/scheme-run --emit < "$MOD/$L.sld" > "$repl" 2>/dev/null
+    build/emit run --emit < "$MOD/$L.sld" > "$repl" 2>/dev/null
     if diff -q "$aot" "$repl" >/dev/null; then
       echo "  [OK  ] $L unit identical (AOT door == REPL door)"; pass=$((pass+1))
     else
@@ -199,7 +199,7 @@ if make scheme-run >/dev/null 2>&1; then
     fi
   done
 else
-  echo "  [SKIP] cross-door (could not build scheme-run)"
+  echo "  [SKIP] cross-door (could not build emit)"
 fi
 
 echo "-------------------------------------------"

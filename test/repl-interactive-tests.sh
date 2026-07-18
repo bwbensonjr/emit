@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # End-to-end tests for the interactive REPL driver (change: interactive-repl,
-# Group 5): `compile.ss --repl` driving build/repl-host as a co-process.  Feeds a
+# Group 5): `compile.ss --repl` driving `emit repl` as a co-process.  Feeds a
 # scripted session on stdin and checks the values echoed on stdout (prompts and
 # diagnostics go to stderr, so stdout is values only).
 # Run from the repo root: test/repl-interactive-tests.sh
@@ -9,7 +9,7 @@ cd "$(dirname "$0")/.."
 
 # Rebuild the host if the runtime/host sources changed (not just if it is
 # missing): make no-ops when it is already up to date.
-make build/repl-host >/dev/null || { echo "host build failed"; exit 1; }
+make emit >/dev/null || { echo "host build failed"; exit 1; }
 
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 pass=0; fail=0

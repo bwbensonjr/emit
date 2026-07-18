@@ -4,17 +4,17 @@
 # recoverable compile-time error -- never a segmentation fault, a silent
 # miscompile, or a spurious exit -- uniformly across the interactive host and the
 # batch compilers.  The reported bug was `(define-record-type <point> (x y))`
-# segfaulting build/repl-host (exit 139); these tests pin that shut and cover the
+# segfaulting the REPL host (exit 139); these tests pin that shut and cover the
 # sibling malformed shapes, plus assert that a well-formed record is unaffected.
 # Run from the repo root: test/record-type-syntax-tests.sh
 set -u
 cd "$(dirname "$0")/.."
 
-HOST=build/repl-host
-RUN=build/scheme-run
+HOST="build/emit repl"
+RUN="build/emit run"
 CC=build/schemec
 # Rebuild what the tests drive (no-ops when already up to date).
-make "$RUN" "$HOST" schemec >/dev/null 2>&1 || { echo "build failed"; exit 1; }
+make emit schemec >/dev/null 2>&1 || { echo "build failed"; exit 1; }
 
 SEGV=139   # 128 + SIGSEGV(11): the crash this change eliminates
 pass=0; fail=0
@@ -27,7 +27,7 @@ bad ()  { echo "  [FAIL] $1"; fail=$((fail+1)); }
 # (so stdout is exactly the follow-up value).
 repl_recovers () {  # name  malformed-form
   local name="$1" form="$2" out err rc
-  out="$(printf '%s\n(+ 1 2)\n' "$form" | "$HOST" 2>/tmp/rt-$$.err)"; rc=$?
+  out="$(printf '%s\n(+ 1 2)\n' "$form" | $HOST 2>/tmp/rt-$$.err)"; rc=$?
   err="$(cat /tmp/rt-$$.err)"; rm -f /tmp/rt-$$.err
   if [ "$rc" -eq "$SEGV" ]; then bad "$name (repl segfaulted, exit $rc)"; return; fi
   if [ "$out" != "3" ]; then bad "$name (repl did not recover; stdout=[$out])"; return; fi
@@ -40,7 +40,7 @@ repl_recovers () {  # name  malformed-form
 # --- batch compiler: malformed form is a clean non-zero compile error --------
 batch_rejects () {  # name  runner  malformed-form
   local name="$1" runner="$2" form="$3" err rc
-  printf '%s\n(display 1)\n' "$form" | "$runner" >/dev/null 2>/tmp/rt-$$.err; rc=$?
+  printf '%s\n(display 1)\n' "$form" | $runner >/dev/null 2>/tmp/rt-$$.err; rc=$?
   err="$(cat /tmp/rt-$$.err)"; rm -f /tmp/rt-$$.err
   if [ "$rc" -eq "$SEGV" ]; then bad "$name ($runner segfaulted, exit $rc)"; return; fi
   if [ "$rc" -eq 0 ]; then bad "$name ($runner exited 0; expected a compile error)"; return; fi
@@ -66,7 +66,7 @@ repl_recovers no-accessor  "$BAD_NOFIELDACC"
 repl_recovers ctor-field   "$BAD_CTORFIELD"
 repl_recovers pred-list    "$BAD_PREDLIST"
 
-echo " batch scheme-run rejects (clean non-zero):"
+echo " batch emit run rejects (clean non-zero):"
 batch_rejects reported    "$RUN" "$BAD_REPORTED"
 batch_rejects no-accessor "$RUN" "$BAD_NOFIELDACC"
 
@@ -78,7 +78,7 @@ echo " well-formed record still compiles:"
 good='(define-record-type point (make-point x y) point? (x point-x) (y point-y))'
 # The REPL echoes each form's value, so the record definition prints a procedure
 # and the accessor call prints its result on the last line -- check that result.
-out="$(printf '%s\n(point-x (make-point 3 4))\n' "$good" | "$HOST" 2>/dev/null | tail -1)"
+out="$(printf '%s\n(point-x (make-point 3 4))\n' "$good" | $HOST 2>/dev/null | tail -1)"
 if [ "$out" = "3" ]; then ok "well-formed => 3"; else bad "well-formed => [$out] (expected 3)"; fi
 
 echo

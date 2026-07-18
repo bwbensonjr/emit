@@ -3,9 +3,9 @@
 ;;; Treats each top-level form of SRC.scm as a separate REPL entry, emits each as
 ;;; its own module (emit-repl-module), and writes the host wire protocol to
 ;;; stdout:  "<entry-symbol> <byte-count>\n" then <byte-count> bytes of IR.
-;;; Pipe into build/repl-host to exercise the persistent JIT end-to-end:
+;;; Pipe into `build/emit repl` to exercise the persistent JIT end-to-end:
 ;;;
-;;;   chez --libdirs src --script test/repl-frames.ss SRC.scm | build/repl-host
+;;;   chez --libdirs src --script test/repl-frames.ss SRC.scm | build/emit repl
 ;;;
 ;;; This is a batch stand-in for the Group 5 interactive driver's transport.
 

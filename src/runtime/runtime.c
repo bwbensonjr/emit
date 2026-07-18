@@ -486,7 +486,7 @@ val rt_read_all_stdin(void) {
 }
 
 /* --no-prelude channel for the embedded batch entry (change:
- * embedded-runner-rehome).  The Chez-free runner (scheme-run / scheme-compile)
+ * embedded-runner-rehome).  The Chez-free runner (`emit run` / `emit build`)
  * forwards --no-prelude by setting EMIT_NO_PRELUDE in the environment; the
  * embedded entry reads it back through this nullary primitive to decide whether
  * to auto-import (scheme base).  A nullary env probe (mirroring rt_read_all_stdin's

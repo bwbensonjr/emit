@@ -2,9 +2,9 @@
 // decision X).  This is the original in-process runner: it A-links the batch
 // embedded compiler (bootstrap/embed.ll) whose `scheme_entry` reads the program
 // from stdin and returns emitted IR.  It exists ONLY so `tools/regen.sh` can drive
-// the self-hosting fixed point with a minimal batch compiler (build/scheme-run-boot);
-// the SHIPPED runner (build/scheme-run, src/run.cpp) is the mode-dispatched,
-// module-aware run door.  Keeping this batch runner separate leaves the proven
+// the self-hosting fixed point with a minimal batch compiler (build/emit-boot);
+// the SHIPPED runner is the mode-dispatched, module-aware run door -- `emit run`
+// (build/emit, src/emit.cpp).  Keeping this batch runner separate leaves the proven
 // bootstrap fixed point byte-for-byte unchanged.  (Originally change: path-a-embedding.)
 //
 // One process, no Chez and no clang/lli: the compiled compiler is linked into
@@ -15,13 +15,13 @@
 // ORC/LLJIT, looks up the program's own `scheme_entry`, runs it, and prints the
 // value -- exactly the value the standalone AOT executable would print.
 //
-// Usage:  build/scheme-run < program.scm
-//         build/scheme-run --emit < program.scm > program.ll   (Chez-free AOT)
+// Usage:  build/emit-boot < program.scm
+//         build/emit-boot --emit < program.scm > program.ll   (Chez-free AOT)
 //
 // With --emit (change: self-hosting-completion, design D7) the runner does NOT
 // JIT: it writes the embedded compiler's emitted IR to stdout and exits.  Piped
 // to clang with the runtime, this is a fully Chez-free source->native path
-// (see bin/scheme-compile), honoring standalone executables as a first-class
+// (see `emit build`), honoring standalone executables as a first-class
 // deliverable.  The IR is the SAME bytes the JIT path runs, so what you emit is
 // what you'd run in-process -- dev->ship fidelity.
 
@@ -85,7 +85,7 @@ int main(int argc, char **argv) {
   std::string ir(rt_string_bytes(ir_val), (size_t)rt_string_len(ir_val));
 
   // --emit (design D7): write the emitted IR to stdout and stop -- no JIT.  This
-  //    is the Chez-free AOT front half: `scheme-run --emit < prog.scm > prog.ll`,
+  //    is the Chez-free AOT front half: `emit-boot --emit < prog.scm > prog.ll`,
   //    then clang links prog.ll with the runtime into a native executable.  The
   //    IR here is byte-for-byte what the JIT path below would run.
   if (emit) {
@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
 
   auto jitOr = LLJITBuilder().create();
   if (!jitOr) {
-    std::cerr << "scheme-run: fatal: failed to create LLJIT: " << toString(jitOr.takeError()) << "\n";
+    std::cerr << "emit-boot: fatal: failed to create LLJIT: " << toString(jitOr.takeError()) << "\n";
     return 1;
   }
   std::unique_ptr<LLJIT> JIT = std::move(*jitOr);
@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
   auto gen = DynamicLibrarySearchGenerator::GetForCurrentProcess(
       JIT->getDataLayout().getGlobalPrefix());
   if (!gen) {
-    std::cerr << "scheme-run: fatal: generator error: " << toString(gen.takeError()) << "\n";
+    std::cerr << "emit-boot: fatal: generator error: " << toString(gen.takeError()) << "\n";
     return 1;
   }
   JIT->getMainJITDylib().addGenerator(std::move(*gen));
@@ -136,12 +136,12 @@ int main(int argc, char **argv) {
       std::string msg;
       raw_string_ostream os(msg);
       err.print(name, os);
-      std::cerr << "scheme-run: parse error: " << os.str() << "\n";
+      std::cerr << "emit-boot: parse error: " << os.str() << "\n";
       return false;
     }
     mod->setDataLayout(JIT->getDataLayout());
     if (Error e = JIT->addIRModule(ThreadSafeModule(std::move(mod), std::move(ctx)))) {
-      std::cerr << "scheme-run: add error: " << toString(std::move(e)) << "\n";
+      std::cerr << "emit-boot: add error: " << toString(std::move(e)) << "\n";
       return false;
     }
     return true;
@@ -159,7 +159,7 @@ int main(int argc, char **argv) {
 
   Expected<ExecutorAddr> sym = JIT->lookup("scheme_entry");
   if (!sym) {
-    std::cerr << "scheme-run: lookup error: " << toString(sym.takeError()) << "\n";
+    std::cerr << "emit-boot: lookup error: " << toString(sym.takeError()) << "\n";
     return 1;
   }
   entry_t fn = sym->toPtr<entry_t>();
@@ -175,7 +175,7 @@ int main(int argc, char **argv) {
     std::fflush(stdout);
   } else {
     rt_guard_reset();   // a trap may have bypassed rt_run_guarded's frame pop
-    std::cerr << "scheme-run: trap: " << rt_trap_msg << "\n";
+    std::cerr << "emit-boot: trap: " << rt_trap_msg << "\n";
     rt_trap = nullptr;
     return 1;
   }

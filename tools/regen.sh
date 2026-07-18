@@ -2,10 +2,16 @@
 # regen.sh -- Chez-free regeneration of the committed compiler IR (change:
 # compiler-bootstrap-rehome).  The compiler is re-homed on (scheme base): its
 # sources are compiled as ordinary programs that AUTO-IMPORT (scheme base) via the
-# module-aware embedded compiler (scheme-run --emit), and each binary links the
-# committed bootstrap/scheme.base.ll -- there is no more `prelude ++ compiler`
-# prepend and no more schemec-filter bootstrap seed (the filter cannot resolve
-# imports).
+# module-aware embedded compiler, and each binary links the committed
+# bootstrap/scheme.base.ll -- there is no more `prelude ++ compiler` prepend and no
+# more schemec-filter bootstrap seed (the filter cannot resolve imports).
+#
+# The fixed-point loop below is driven by build/emit-boot, a MINIMAL batch runner
+# (src/run-boot.cpp) linked against the batch compiler bootstrap/embed.ll -- NOT the
+# shipped `emit` binary (which links the mode-dispatched embed-repl.ll).  The batch
+# runner is relinked from the freshly emitted embed.ll each iteration, which is why
+# the bootstrap seed stays a separate, minimal host (change: run-door-user-libraries,
+# decision X).  The shipped `emit` binary is relinked afterward by `make all`.
 #
 # Three Chez-free steps:
 #   1. ASSEMBLE the flat sources by ordered `cat` -- NO prelude prepend.  The baked
@@ -13,12 +19,12 @@
 #      (scheme base) at runtime for the USER programs they compile) is produced by a
 #      shell escaper (\ -> \\, " -> \", newlines literal).  schemec bakes none (it is
 #      a prelude-free filter).
-#   2. FIXED POINT over {scheme.base.ll, embed.ll}: seed `scheme-run` from the
+#   2. FIXED POINT over {scheme.base.ll, embed.ll}: seed the batch runner from the
 #      committed IR, emit scheme.base.ll (from lib/scheme/base.sld) and embed.ll
 #      (re-homed program module), relink, and iterate until both are byte-stable.
 #      As with the old schemec loop, a compiler-source change converges after one
 #      recompile off the changed compiler.
-#   3. EMIT schemec.ll and embed-repl.ll with the fixed-point `scheme-run`.
+#   3. EMIT schemec.ll and embed-repl.ll with the fixed-point emit-boot.
 #
 # Output: rewrites bootstrap/{scheme.base,schemec,embed,embed-repl}.ll.  Relinking
 # the shipped binaries from that IR is the Makefile's job (`make regen` runs this
@@ -37,15 +43,15 @@ CORE_FLAT="src/match.scm src/util.scm src/parse.ss \
 
 mkdir -p build bootstrap
 
-# take the program module (after the boundary marker) from a scheme-run --emit stream
+# take the program module (after the boundary marker) from an --emit stream
 prog_module () { awk 'f{print} /^; ==EMIT-UNIT-BOUNDARY==$/{f=1}' "$1"; }
 
-# link the BATCH bootstrap runner (scheme-run-boot) from an embed IR + the (scheme
+# link the BATCH bootstrap runner (build/emit-boot) from an embed IR + the (scheme
 # base) IR.  This uses run-boot.o (the batch host, src/run-boot.cpp), NOT the shipped
-# dispatched run.o: the fixed point below must be driven by the minimal batch compiler
-# (change: run-door-user-libraries, decision X).  The shipped module-aware build/scheme-run
-# is linked afterward by the Makefile (`make all`) from run.o + embed-repl.ll.
-link_scheme_run () { # <embed.ll> <base.ll> <out>
+# dispatched emit.o: the fixed point below must be driven by the minimal batch compiler
+# (change: run-door-user-libraries, decision X).  The shipped module-aware build/emit
+# is linked afterward by the Makefile (`make all`) from emit.o + embed-repl.ll.
+link_emit_boot () { # <embed.ll> <base.ll> <out>
   "$CXX" build/run-boot.o build/runtime-host.o "$1" "$2" \
     -Wno-override-module -rdynamic $LDFLAGS -L"$GC_LIB" -lgc -o "$3" 2>/dev/null
 }
@@ -73,31 +79,31 @@ if [ ! -f bootstrap/embed.ll ]; then
 fi
 if [ ! -f bootstrap/scheme.base.ll ]; then
   echo "regen: bootstrap/scheme.base.ll is missing -- generate it once from the library" >&2
-  echo "       source: build/scheme-run --emit < lib/scheme/base.sld > bootstrap/scheme.base.ll" >&2
+  echo "       source: build/emit run --emit < lib/scheme/base.sld > bootstrap/scheme.base.ll" >&2
   exit 1
 fi
 # seed the runner from the committed IR (module-aware even if its own code is not
 # yet re-homed -- the emitter is the same, so it converges in one recompile).
-link_scheme_run bootstrap/embed.ll bootstrap/scheme.base.ll build/scheme-run-boot
+link_emit_boot bootstrap/embed.ll bootstrap/scheme.base.ll build/emit-boot
 converged=0
 for i in 1 2 3 4 5; do
-  build/scheme-run-boot --emit < lib/scheme/base.sld > build/scheme.base.ll
-  build/scheme-run-boot --emit < build/embed.scm     > build/embed.emit
+  build/emit-boot --emit < lib/scheme/base.sld > build/scheme.base.ll
+  build/emit-boot --emit < build/embed.scm     > build/embed.emit
   prog_module build/embed.emit > build/embed.ll
-  link_scheme_run build/embed.ll build/scheme.base.ll build/scheme-run-boot-next
+  link_emit_boot build/embed.ll build/scheme.base.ll build/emit-boot-next
   # re-emit with the freshly linked runner; the fixed point is reached when neither
   # the library nor the runner's own IR changes across a recompile.
-  build/scheme-run-boot-next --emit < lib/scheme/base.sld > build/scheme.base.chk
-  build/scheme-run-boot-next --emit < build/embed.scm     > build/embed.chk.emit
+  build/emit-boot-next --emit < lib/scheme/base.sld > build/scheme.base.chk
+  build/emit-boot-next --emit < build/embed.scm     > build/embed.chk.emit
   prog_module build/embed.chk.emit > build/embed.chk
   vsay "   fixed-point iteration $i"
   if cmp -s build/scheme.base.ll build/scheme.base.chk && cmp -s build/embed.ll build/embed.chk; then
-    mv build/scheme-run-boot-next build/scheme-run-boot
+    mv build/emit-boot-next build/emit-boot
     converged=1
     say "   fixed point reached  [iter $i]"
     break
   fi
-  mv build/scheme-run-boot-next build/scheme-run-boot
+  mv build/emit-boot-next build/emit-boot
 done
 [ "$converged" = 1 ] || { echo "regen: bootstrap did not converge in 5 iterations" >&2; exit 1; }
 cp build/scheme.base.ll bootstrap/scheme.base.ll
@@ -105,10 +111,10 @@ cp build/embed.ll        bootstrap/embed.ll
 say "regen [2/3] done  [$(($(date +%s) - t0))s]"
 
 t0=$(date +%s)
-say "regen [3/3] emit schemec / embed-repl with the fixed-point scheme-run-boot"
-build/scheme-run-boot --emit < build/schemec.scm    > build/schemec.emit
+say "regen [3/3] emit schemec / embed-repl with the fixed-point emit-boot"
+build/emit-boot --emit < build/schemec.scm    > build/schemec.emit
 prog_module build/schemec.emit    > bootstrap/schemec.ll
-build/scheme-run-boot --emit < build/embed-repl.scm > build/embed-repl.emit
+build/emit-boot --emit < build/embed-repl.scm > build/embed-repl.emit
 prog_module build/embed-repl.emit > bootstrap/embed-repl.ll
 say "regen [3/3] done  [$(($(date +%s) - t0))s]"
 

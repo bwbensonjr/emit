@@ -76,7 +76,7 @@
 (define (single-define-library forms)
   (and (pair? forms) (null? (cdr forms)) (define-library-form? (car forms))
        (car forms)))
-;; The lone-define-library filter path (scheme-run --emit / compile-source-string)
+;; The lone-define-library filter path (emit run --emit / compile-source-string)
 ;; has no manifest, so it resolves no imports: import-free libraries only (a library
 ;; with imports is built through build-modular-program / the REPL preload, which
 ;; supply its dependencies' export tables).  import-tables is '() here.
@@ -110,7 +110,7 @@
 
 ;; --- prelude re-homed as (scheme base) for the embedded runner (change:
 ;; embedded-runner-rehome) ---------------------------------------------------
-;; The Chez-free runner (scheme-run / scheme-compile) re-homes the prelude the way
+;; The Chez-free runner (emit run / emit build) re-homes the prelude the way
 ;; the Chez driver does, but with no manifest and no filesystem: it builds the
 ;; (scheme base) library from the BAKED-IN prelude source, compiles it to a unit,
 ;; and compiles the user program auto-importing it.  A program and a library each

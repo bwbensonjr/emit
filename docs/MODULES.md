@@ -117,11 +117,11 @@ chez --libdirs src --script src/compile.ss test/modules/prog-mylib.scm \
 
 ### REPL — interactive import
 
-The shipped `build/repl-host` (build it with `make repl-host`) preloads the manifest's libraries and
-honors interactive `import`; pass the manifest via `EMIT_MANIFEST`:
+The shipped `emit repl` (build it with `make emit`) preloads the manifest's libraries and
+honors interactive `import`; pass the manifest via `--manifest` (or `EMIT_MANIFEST`):
 
 ```sh
-EMIT_MANIFEST=test/modules/emit-libs.scm build/repl-host
+build/emit repl --manifest test/modules/emit-libs.scm
 > (import (mylib))
 > (greet)
 142
@@ -129,56 +129,69 @@ EMIT_MANIFEST=test/modules/emit-libs.scm build/repl-host
 
 ### Chez-free embedded runner — the run door (user libraries)
 
-`build/scheme-run` compiles and runs a whole program with **no Chez**, and resolves user-library
+`emit run` compiles and runs a whole program with **no Chez**, and resolves user-library
 `import`s through the manifest — the *run door*, at parity with the AOT and REPL doors (change:
 `run-door-user-libraries`). `(scheme base)` is baked in, so a plain program needs no manifest at
 all; user libraries are read from the manifest (default `emit-libs.scm`, override `--manifest FILE`
-or `EMIT_MANIFEST`):
+or `EMIT_MANIFEST`). The program source is read from a `FILE` argument when given, otherwise stdin:
 
 ```sh
-echo '(map (lambda (x) (* x x)) (list 1 2 3))' | build/scheme-run   # => (1 4 9)   no manifest needed
-build/scheme-run --manifest test/modules/emit-libs.scm < test/modules/prog-mylib.scm   # => 142
+echo '(map (lambda (x) (* x x)) (list 1 2 3))' | build/emit run   # => (1 4 9)   no manifest needed
+build/emit run --manifest test/modules/emit-libs.scm test/modules/prog-mylib.scm   # => 142
 ```
 
 The run door reuses the REPL door's Chez-free machinery: the host reads the manifest and each
 library source and hands the text to the embedded compiler through a small mode protocol, then the
 program's `@scheme_entry` initializes the imported units in topological order before running — so
 the emitted program module is **byte-identical** to the AOT door's for the same manifest (dev→ship
-fidelity). `bin/scheme-compile` uses the same `--emit` path for the native build.
+fidelity). `emit build` uses the same `--emit` path for the native build.
 
 ### `emit build` — deliver a program
 
-`bin/emit` is the project front-end. Today it exposes one verb, `build`, which turns a manifest
-**program entry** into a standalone native executable — Chez-free end to end (change:
-`emit-build-bin-entry`):
+`emit build` turns a manifest **program entry** into a standalone native executable — Chez-free end
+to end (change: `emit-build-bin-entry`), entirely within the compiled `build/emit` binary (it emits
+the IR in-process and forks `clang`):
 
 ```bash
-# resolve (program mylib-app) and deliver its executable via the Chez-free AOT door
-bin/emit build mylib-app --manifest test/modules/emit-libs.scm
+# resolve (program mylib-app) and deliver its executable
+build/emit build mylib-app --manifest test/modules/emit-libs.scm
 ./build/mylib-app                       # => 142
 
 # with exactly one program entry, the NAME may be omitted
-bin/emit build --manifest my-project.scm
+build/emit build --manifest my-project.scm
 ```
 
 - **Resolution is Chez-free.** `emit build` resolves the `(program NAME …)` entry through the
-  embedded compiler, exposed as `scheme-run --resolve-program NAME` (manifest resolution order:
+  embedded compiler, exposed as `emit run --resolve-program NAME` (manifest resolution order:
   `--manifest` > `EMIT_MANIFEST` > default `emit-libs.scm`). It prints the resolved source and
   output and runs nothing:
 
   ```bash
-  build/scheme-run --resolve-program mylib-app --manifest test/modules/emit-libs.scm
+  build/emit run --resolve-program mylib-app --manifest test/modules/emit-libs.scm
   # test/modules/prog-mylib.scm
   # build/mylib-app
   ```
 
-- **Delivery** is `bin/scheme-compile` (the Chez-free AOT door), so the executable is byte-for-
-  behavior identical to building the resolved source directly. This slice links full library units
-  (no tree-shaking); the output path comes from the entry's `output`, an `-o` override, or the
-  default `build/<NAME>`.
-- `emit build` **renames nothing** — `scheme-run`, `repl-host`, and `bin/scheme-compile` are
-  unchanged. Unifying the four doors under a single `emit` binary (`emit lib`/`run`/`repl`) is
-  future work; see `openspec/explorations/packaging-and-emit-cli.md`.
+- **Delivery** is the in-binary Chez-free AOT door: `emit build` emits the program IR in-process
+  (the `--emit` path) and forks `clang` to link the runtime and units into the executable — byte-
+  for-behavior identical to emitting the resolved source's IR and linking it directly. This slice
+  links full library units (no tree-shaking); the output path comes from the entry's `output`, an
+  `-o` override, or the default `build/<NAME>`.
+
+### `emit lib` — compile one library to its artifact
+
+`emit lib SRC` compiles a single `define-library` source to its unit artifact — the IR (`<name>.ll`)
+and a readable export table (`<name>.exports`) — Chez-free, named by the library's `define-library`
+name and written under `-o DIR` (default `build/lib`):
+
+```bash
+build/emit lib test/modules/mylib.sld -o build/lib
+# build/lib/mylib.ll        (byte-identical to the unit the run/AOT doors emit)
+# build/lib/mylib.exports   => ((mylib) ((greet . "mylib:greet")))
+```
+
+The four doors — `emit lib` / `emit build` / `emit run` / `emit repl` — are verbs of a single
+`emit` binary, the sole user-facing entry point (change: `emit-cli-unification`).
 
 ## `(scheme base)`
 
@@ -223,7 +236,7 @@ This is Modules v0:
 - **Exports are procedures (values), not macros.** A library may use `define-syntax` internally, but
   exporting macros through `.exports` is not yet supported; derived-form macros reach programs via
   the `(scheme base)` merge, not per-library export.
-- **No tree-shaking on the Chez-free door.** `bin/scheme-compile` (and thus `emit build`) links
+- **No tree-shaking on the Chez-free door.** `emit build` (the in-binary AOT door) links
   full library units; the closed-world reachability strip is only on the Chez driver's AOT ship
   path (change: `aot-release-profile`). Porting it to the Chez-free door is future work.
 - Import specifiers are whole-library only — no `only`/`except`/`prefix` import sets yet.

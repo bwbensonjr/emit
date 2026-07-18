@@ -36,23 +36,27 @@ If discovery picks the wrong toolchain, point it explicitly: `LLVM_CONFIG=/path/
 (or `EMIT_LLVM_BIN=/path/to/llvm/bin`) and `GC_INC` / `GC_LIB` for libgc.
 
 ```sh
-# build the shipped binaries from the committed compiler LLVM IR
-make                       # -> build/scheme-run (runner) and build/repl-host (REPL)
+# build the single shipped binary from the committed compiler LLVM IR
+make                       # -> build/emit  (verbs: run / repl / build / lib)
 
 # In-process compile-and-run. The compiled compiler is linked into
-# build/scheme-run; it compiles the program to IR in-process and JITs
+# build/emit; `emit run` compiles the program to IR in-process and JITs
 # it via ORC/LLJIT.
-build/scheme-run < demos/fact.scm                              # => 120
+build/emit run demos/fact.scm                                  # => 120
+build/emit run < demos/fact.scm                                # (stdin also works)
 
-# standalone native executable (emit IR + clang):
-bin/scheme-compile demos/fact.scm -o /tmp/fact && /tmp/fact    # => 120
-build/scheme-run --emit < demos/fact.scm > /tmp/fact.ll        # (the emit step alone)
+# standalone native executable, from a manifest (program NAME ...) entry
+# (emit IR in-process + clang link, all inside build/emit):
+build/emit build fact --manifest emit-libs.scm                 # -> the delivered exe
+build/emit run --emit < demos/fact.scm > /tmp/fact.ll          # (the emit step alone)
 
-# Interactive REPL: the embedded compiler is linked into
-# build/repl-host and compiles each form IN-PROCESS.  Run the host
-# directly:
-build/repl-host                                                # ^D to exit
-build/repl-host --no-prelude                                   # faster start, no stdlib
+# compile one library to its artifact (unit .ll + .exports), Chez-free:
+build/emit lib test/modules/mylib.sld -o build/lib
+
+# Interactive REPL: the embedded compiler is linked into build/emit and
+# `emit repl` compiles each form IN-PROCESS.  Run it directly:
+build/emit repl                                                # ^D to exit
+build/emit repl --no-prelude                                   # faster start, no stdlib
 #   scheme> (define (sq n) (* n n))
 #   scheme> (sq 9)          => 81
 #   scheme> (define sq 100) => 100   ; redefinition; later forms see the new binding
@@ -80,9 +84,9 @@ is absent.
 
 ### Interactive REPL
 
-`build/repl-host` is a read-eval-print loop backed by a **persistent
-LLVM ORC/LLJIT host** (`src/repl/host.cpp`, built by `make
-repl-host`). The host **A-links the embedded compiler** (the committed
+`emit repl` is a read-eval-print loop backed by a **persistent
+LLVM ORC/LLJIT host** (the `repl` verb of `src/emit.cpp`, built by `make
+emit`). The host **A-links the embedded compiler** (the committed
 `bootstrap/embed-repl.ll`) and compiles each entered form **in-process
 — no per-form subprocess**. Each form is compiled to its own module
 and added to a long-lived JIT in which the GC heap, symbol table, and
@@ -120,12 +124,14 @@ make regen                 # see tools/regen.sh
 source files are already concatenation-ready (flat
 `match.scm`/`util.scm`, `core.ss` with no `include`s, per-target
 `entry-*.scm`), **without prepending the prelude** — and (2) **compiles**
-with the module-aware `scheme-run`, which auto-imports `(scheme base)`
+with the module-aware compiler, which auto-imports `(scheme base)`
 into the compiler sources and iterates the fixed point over
 `{scheme.base.ll, embed.ll}` (emitting `scheme.base.ll` from
 `lib/scheme/base.sld`) before emitting `schemec.ll` / `embed-repl.ll`.
-The `schemec` filter is no longer the bootstrap seed — it cannot resolve
-the `(scheme base)` import; `scheme-run` is the module-aware compiler.
+The fixed point is driven by a minimal batch runner (`build/emit-boot`,
+`src/run-boot.cpp`), relinked each iteration; the shipped `emit` binary
+is relinked afterward by `make all`. The `schemec` filter is no longer the
+bootstrap seed — it cannot resolve the `(scheme base)` import.
 
 Because the default build does not auto-regenerate (design D4 — this deliberately **reverses**
 the earlier `fix-stale-repl-host-rebuild` auto-rebuild-on-source-change, so the committed IR
@@ -146,22 +152,24 @@ library-structured source are frozen under `historical/genesis/`.
   `prelude.scm` (standard library), `repl-core.ss` (interactive orchestration), and the
   per-target entries `entry-{schemec,embed,repl}.scm`. `compile.ss` is the Chez driver, which
   `(include ...)`s the same flat files (no separate library tree).
-- `src/repl/` — the persistent REPL host: `host.cpp` (LLVM ORC/LLJIT), which A-links the
-  embedded compiler (`bootstrap/embed-repl.ll`) and drives it in-process; built by `make repl-host`.
-- `src/run.cpp` — the in-process runner (`build/scheme-run`): links the compiled compiler
-  (`bootstrap/embed.ll`) and JITs its output, so a whole program is compiled *and* run in one
-  process. With the prelude re-homed as `(scheme base)` the entry returns two modules (the
-  `(scheme base)` library and the program) separated by a boundary marker; the host splits on it
-  and JITs both. `--emit` writes the whole IR to stdout; `--no-prelude` skips the auto-import.
+- `src/emit.cpp` — the **unified front-end** (`build/emit`), the sole user-facing entry point,
+  dispatching four verbs to one shared compiler core: `run` (in-process compile-and-run; also
+  `--emit` to write IR and `--resolve-program`), `repl` (persistent LLVM ORC/LLJIT interactive
+  host), `build` (deliver a native exe from a manifest `(program …)` entry — emits IR in-process
+  and forks `clang`), and `lib` (compile one `define-library` to its `.ll` + `.exports` artifact).
+  All four A-link the committed embedded compiler (`bootstrap/embed-repl.ll` + `scheme.base.ll`);
+  `make emit` (re)builds it. With the prelude re-homed as `(scheme base)` the run/AOT paths emit
+  two modules (the `(scheme base)` library and the program) separated by a boundary marker.
+- `src/run-boot.cpp` — a minimal **batch bootstrap runner** (`build/emit-boot`) used only by
+  `tools/regen.sh` to drive the self-hosting fixed point; not a shipped door.
 - `bootstrap/` — committed host-agnostic stage-0 IR (the authoritative form): `schemec.ll`
-  (batch filter), `embed.ll` (runner), `embed-repl.ll` (REPL), and `scheme.base.ll` (the prelude
-  re-homed as `(scheme base)`, linked into all three); regenerate with `make regen`.
+  (batch filter), `embed.ll` (batch runner), `embed-repl.ll` (the mode-dispatched compiler `emit`
+  links), and `scheme.base.ll` (the prelude re-homed as `(scheme base)`, linked into all);
+  regenerate with `make regen`.
 - `tools/regen.sh` — the regenerator (ordered-`cat` assembly + self-hosted compile).
-- `bin/scheme-compile` — source→native-executable wrapper (`scheme-run --emit` + clang); splits
-  the emitted IR on the boundary marker and clang-links the `(scheme base)` unit + program.
 - `historical/genesis/` — the frozen pre-flattening genesis: the Chez Scheme assembler
   (`assemble-core.ss`) and library-structured `match.sls`/`util.ss` (provenance; not maintained).
-- `demos/` — example programs and the `run-tests.sh` (`RUNNER=scheme-run|aot`) / `run-backends.sh`
+- `demos/` — example programs and the `run-tests.sh` (`RUNNER=emit-run|aot`) / `run-backends.sh`
   / `run-embedded.sh` harnesses.
 - `test/` — REPL harnesses, the front-end unit tests, `self-host-fixpoint.sh`, and `trust-check.sh`.
 - `run-all-tests.sh` — the default suite (shipped binaries); `run-dev-tests.sh`
@@ -236,7 +244,7 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
 **Library & reader**
 - A prelude re-homed as the library `(scheme base)`, auto-imported into every program on all
   three doors — the Chez driver, the REPL, and the Chez-free embedded runner
-  (`scheme-run`/`scheme-compile`) — with user-wins shadowing and `--no-prelude` to opt out:
+  (`emit run`/`emit build`) — with user-wins shadowing and `--no-prelude` to opt out:
   `list length reverse append map memq assq member assoc filter fold-left fold-right`,
   the n-ary character comparisons `char=? char<? char>? char<=? char>=?`, and `string->list`.
   `(scheme base)` is now **library zero** for the compiler's own build too: the compiler
@@ -252,8 +260,8 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
   libraries, including the auto-imported `(scheme base)`), with a 3-way equivalence harness. All
   three backends re-home the prelude and resolve `import`s identically — one compilation path.
   (`--emit-ir` is the exception: a single-module raw core-IR filter for piping/self-hosting.)
-- **In-process embedded run** (`build/scheme-run`, Path A — mechanism): the compiled
-  compiler is linked into a JIT host (`src/run.cpp`); its ccc `scheme_entry` reads the
+- **In-process embedded run** (`emit run`, Path A — mechanism): the compiled
+  compiler is linked into a JIT host (`src/emit.cpp`); its ccc `scheme_entry` reads the
   program, returns the emitted IR as a string, and the host JITs and runs it — a whole
   program compiled *and* run in one process.
   A parity harness checks the runner agrees with AOT on every demo (dev→ship fidelity). The
@@ -289,7 +297,7 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
 **Self-hosting (the north star)**
 - The compiler compiles itself to a byte-identical fixed point, and there are now three
   Chez-free ways to *use* it: the batch `schemec` filter (Path C, subprocess), the in-process
-  `build/scheme-run` (Path A — mechanism, whole program compiled and JIT-run in one process),
+  `emit run` (Path A — mechanism, whole program compiled and JIT-run in one process),
   and the **interactive `--repl`**, whose stateful, incremental orchestration (persistent env,
   per-form modules, compile-error rollback via in-language `guard`) is now **ported into the
   embedded compiler** (`src/repl-core.ss`, A-linked as `bootstrap/embed-repl.ll`) and runs

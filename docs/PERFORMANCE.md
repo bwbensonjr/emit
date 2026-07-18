@@ -208,7 +208,7 @@ small-clean-binary goal.
 B-general still deferred.
 
 **Result (A + B-self).** Inline fixnum arithmetic + direct self-calls cut Ackermann wall time
-under `build/scheme-run` by ~35–40%:
+under `emit run` by ~35–40%:
 
 | call | before | after |
 |------|--------|-------|
@@ -216,7 +216,7 @@ under `build/scheme-run` by ~35–40%:
 | `(ack 3 11)` | 1.51 s | 0.96 s |
 | `(ack 3 12)` | 5.15 s | 3.20 s |
 
-Cost: the committed binaries grew ~4% (`scheme-run` 772 KB → 805 KB) from the per-op fixnum
+Cost: the committed binaries grew ~4% (the runner 772 KB → 805 KB) from the per-op fixnum
 guard/diamond; B-self's removal of closure-load chains offsets part of it. The regen fixed point
 still converges (iter 2) and all backends stay byte-identical.
 
@@ -233,7 +233,7 @@ fixnum ops:
 (ack 3 12)   ; => 32765
 ```
 
-**Symptom.** Measured under `build/scheme-run` (in-process JIT — the shipped runner):
+**Symptom.** Measured under `emit run` (in-process JIT — the shipped runner):
 
 | call | result | wall time |
 |------|--------|-----------|
@@ -248,7 +248,7 @@ nothing but `= + -` and self-calls, and every one of those is an opaque runtime 
 for a function this small is far off a native or mature-Scheme baseline; the gap is codegen
 quality, not algorithm.
 
-**Cause** (read from the emitted IR of `ack`, `code_11`, via `scheme-run --emit`):
+**Cause** (read from the emitted IR of `ack`, `code_11`, via `emit run --emit`):
 
 1. **Integer arithmetic and comparison compile to out-of-line runtime calls.** `+ - * = <`
    … map through `prim-table` (`src/emit.ss:142`) and `emit-primcall` (`src/emit.ss:313`) to a

@@ -50,7 +50,7 @@ passes/            one pass per file (expand, recognize-let,
 emit.ss            L-code -> textual LLVM IR (opaque ptrs, tailcc, musttail)
 prelude.scm        standard library, prepended to every program
 runtime/runtime.c  C runtime: tagged values, primitives, libgc, printer, main
-repl/              persistent ORC/LLJIT host: host.cpp (built via `make build/repl-host`)
+emit.cpp           unified front-end build/emit: run/repl/build/lib verbs (`make emit`)
 match.sls          vendored Chez match macro (from akeep/scheme-to-llvm)
 util.ss            set ops + deterministic fresh names
 ```

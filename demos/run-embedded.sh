@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # In-process embedded-runner parity harness (change: path-a-embedding).
 #
-# For every demo, compare the in-process runner (build/scheme-run: the compiled
+# For every demo, compare the in-process runner (`emit run`: the compiled
 # compiler linked into a JIT host, no Chez/clang/lli) against the batch AOT path
 # (chez compile.ss + clang).  Asserting runner == AOT for both stdout and
 # exit-code parity is the concrete dev->ship fidelity check: what you run
@@ -12,7 +12,7 @@ set -u
 cd "$(dirname "$0")/.."
 
 # Ensure the runner is up to date (rebuilds embed.ll / relinks if sources changed).
-make build/scheme-run 1>&2 || { echo "failed to build build/scheme-run"; exit 1; }
+make emit 1>&2 || { echo "failed to build build/emit"; exit 1; }
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -34,7 +34,7 @@ check () {  # demo-source
 
   # In-process embedded runner.
   local run_out run_rc
-  run_out="$(timeout 120 build/scheme-run < "$src" 2>/dev/null)"; run_rc=$?
+  run_out="$(timeout 120 build/emit run < "$src" 2>/dev/null)"; run_rc=$?
 
   # Parity: same stdout, and same success/failure (exit-code zero-ness).
   local aot_ok=$([ "$aot_rc" -eq 0 ] && echo y || echo n)

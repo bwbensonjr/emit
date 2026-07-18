@@ -5,7 +5,7 @@
 # The scaffolding (typed-scope resolver + unit-parameterized symbol naming) MUST
 # NOT change the LLVM IR emitted for any library-free program (spec: "Scaffolding
 # preserves emitted IR").  This harness compiles every demos/*.scm through the
-# shipped Chez-free front half (build/scheme-run --emit) and checks the emitted
+# shipped Chez-free front half (`emit run --emit`) and checks the emitted
 # IR against a recorded reference.
 #
 # Modes:
@@ -19,17 +19,17 @@
 # itself was proven by capturing a pristine DIR and diffing a post-change
 # capture against it (design D3); `check` keeps the guarantee live afterwards.
 #
-# Needs an LLVM discoverable via llvm-config + libgc (to link build/scheme-run); no Chez.  Run from anywhere.
+# Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u
 cd "$(dirname "$0")/.."
 . tools/log.sh   # say/vsay + EMIT_VERBOSITY (see docs/OUTPUT.md)
 
-RUNNER=build/scheme-run
+RUNNER="build/emit run"
 REF=test/module-scaffold-baseline.sha256
 
 # The shipped Chez-free front half emits the exact IR the JIT path would run.
 ensure_runner () {
-  make scheme-run >/dev/null 2>&1 || { echo "fatal: could not build $RUNNER"; exit 1; }
+  make emit >/dev/null 2>&1 || { echo "fatal: could not build emit"; exit 1; }
 }
 
 demos () { ls demos/*.scm | sort; }
@@ -37,7 +37,7 @@ demos () { ls demos/*.scm | sort; }
 # emit one demo's IR to stdout; abort loudly if the compile fails.
 emit_one () {  # <src>
   local src="$1"
-  if ! "$RUNNER" --emit < "$src"; then
+  if ! $RUNNER --emit < "$src"; then
     echo "fatal: emit failed for $src" >&2
     return 1
   fi

@@ -2,14 +2,14 @@
 # End-to-end demo-value harness: run each demo, compare stdout to the expected
 # value.  Two backends drive the SAME expected values (change:
 # self-hosting-completion, design D5):
-#   RUNNER=scheme-run (default)  Chez-FREE: build/scheme-run compiles+runs the
+#   RUNNER=emit-run (default)   Chez-FREE: `emit run` compiles+runs the
 #                                demo in-process (the shipped runner, no Chez).
 #   RUNNER=aot                   Chez: chez compile.ss -> native exe (dev/CI).
 # Run from the repo root:  [RUNNER=aot] demos/run-tests.sh
 set -u
 cd "$(dirname "$0")/.."
 
-RUNNER="${RUNNER:-scheme-run}"
+RUNNER="${RUNNER:-emit-run}"
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -30,7 +30,7 @@ compile_and_run () {
     fi
     timeout 60 "$TMP/$name" >"$TMP/$name.out" 2>"$TMP/$name.run"; return $?
   else
-    timeout 60 build/scheme-run < "$src" >"$TMP/$name.out" 2>"$TMP/$name.run"; return $?
+    timeout 60 build/emit run < "$src" >"$TMP/$name.out" 2>"$TMP/$name.run"; return $?
   fi
 }
 
@@ -62,7 +62,7 @@ check_fail () {  # name  source   -- expects a clean compile but a non-zero run
 }
 
 # The Chez-free default needs the shipped runner (links committed IR; no Chez).
-[ "$RUNNER" = aot ] || make scheme-run >/dev/null 2>&1 || { echo "failed to build scheme-run"; exit 1; }
+[ "$RUNNER" = aot ] || make emit >/dev/null 2>&1 || { echo "failed to build emit"; exit 1; }
 
 echo "core-lambda-slice demos"
 check fact      demos/fact.scm      120

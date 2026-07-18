@@ -17,7 +17,7 @@
   `run`, `stage`. First token of the line.
 - **input -> output** — for a step that transforms one artifact into another, show the
   arrow. When a step has many inputs (e.g. a link with several objects), name the logical
-  target instead of listing them all: `link scheme-run -> build/scheme-run`.
+  target instead of listing them all: `link emit -> build/emit`.
 - **metrics** — a trailing clause with the numbers relevant to the action: byte sizes
   (`[12345 bytes]`), durations (`[1.2s]` or `[3s]`), counts (`iter 2`, `12/12 passed`).
   Metrics accompany the action they describe; they are not deferred to a distant summary.
@@ -28,11 +28,11 @@ source stays attributable: `regen:`, `test:`, `stage`.
 Examples:
 
 ```
-link scheme-run -> build/scheme-run  [48213 bytes]
+link embed-repl.ll + scheme.base.ll -> build/emit  [987960 bytes]
 emit demos/fact.scm -> /tmp/…/out.ll  [9021 bytes IR]
 regen: assemble flat source (ordered cat; no Chez)  [0s]
    schemec fixed point reached (iter 2)
-  [PASS] demo values (scheme-run) (3s)
+  [PASS] demo values (emit run) (3s)
 ```
 
 ## Stream discipline
@@ -40,7 +40,7 @@ regen: assemble flat source (ordered cat; no Chez)  [0s]
 - **Narration and status go to standard error.** Informational lines, step banners,
   progress, and metrics are all stderr.
 - **Standard output carries only machine-consumable data.** For the filter tools —
-  `scheme-run --emit` and `schemec` — stdout *is* the emitted LLVM IR, and the
+  `emit run --emit` and `schemec` — stdout *is* the emitted LLVM IR, and the
   self-hosting fixed-point and self-emission-equivalence checks compare it byte-for-byte.
   Adding or changing narration MUST NOT alter one byte of stdout.
 - A tool whose primary product is itself a human report (the test runners) may print that

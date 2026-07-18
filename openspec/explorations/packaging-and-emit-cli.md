@@ -125,9 +125,13 @@ Reranked after the gate correction. The genuinely-proposable-now slice turns out
   (separate-compile + whole-program strip), never for a network **registry / version
   constraints / lockfile**. That scope is genuinely undecided and should be an explicit
   decision before slice #2 grows a dependency notion.
-- **CLI naming / back-compat.** Whether `scheme-run` / `repl-host` / `schemec` /
+- **CLI naming / back-compat.** ~~Whether `scheme-run` / `repl-host` / `schemec` /
   `bin/scheme-compile` get renamed under a single `emit` binary, and with what deprecation
-  path, is undecided. Slice #1 is blocked on this.
+  path, is undecided. Slice #1 is blocked on this.~~ **RESOLVED as "rename now"** (slice #1,
+  change `emit-cli-unification`, 2026-07-17): a single `emit` binary is the sole user-facing
+  entry point (verbs `lib`/`build`/`run`/`repl`); `build/scheme-run`, `build/repl-host`,
+  `bin/scheme-compile`, and the `bin/emit` bash wrapper were **removed**, with no external
+  compatibility shims (pre-1.0). `schemec` stays as the internal batch bootstrap seed.
 
 ## Status of the follow-on proposal
 
@@ -148,9 +152,16 @@ Reranked after the gate correction. The genuinely-proposable-now slice turns out
     door's manifest machinery — keeping `emit build` Chez-free end to end.
   - `emit` was introduced **additively** (`bin/emit`, `build` verb only); nothing was renamed,
     so the CLI-naming/back-compat question below stays with slice #1.
-- **Slice #1 → remains in exploration.** The unified `emit lib`/`run`/`repl` dispatch and any
-  rename/deprecation of `scheme-run` / `repl-host` / `schemec` / `bin/scheme-compile` still
-  carry the CLI-naming/back-compat open question.
+- **Slice #1 → landed** as the `emit-cli-unification` change (2026-07-17). A single compiled
+  `build/emit` binary is now the sole user-facing entry point, dispatching four verbs to one
+  shared compiler core: `emit run` (was `build/scheme-run`), `emit repl` (was
+  `build/repl-host`), `emit build` (was `bin/emit` / `bin/scheme-compile`, now emitting IR
+  in-process and forking `clang` itself), and the **new** `emit lib` compile-unit door
+  (unit `.ll` + `.exports`, via a new embedded-compiler mode 11). The old binaries and bash
+  wrappers were removed and every caller (`Makefile`, `tools/regen.sh`, the tests, demos, and
+  docs) migrated to `emit <verb>`; the self-hosting fixed point and trust-check still hold
+  byte-for-byte (the fixed-point loop is driven by a renamed minimal batch runner,
+  `build/emit-boot`). The CLI-naming/back-compat question above was resolved "rename now".
 
 ## Open items after slice #2
 

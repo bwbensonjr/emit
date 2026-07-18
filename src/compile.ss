@@ -274,30 +274,31 @@
 ;; --- interactive REPL: launch the embedded-compiler host ----------------
 ;; The REPL is now Chez-free (change: repl-embedded-incremental): the whole
 ;; incremental loop -- read a complete form, compile it against the persistent
-;; session state, JIT and run it, print the value -- lives in build/repl-host,
-;; which A-links the EMBEDDED compiler and does its own compilation in-process.
-;; This driver only ensures the host is up to date and then hands the terminal
-;; over to it (the host inherits this process's stdin/stdout/stderr, so prompts,
-;; values, and diagnostics flow straight through).  There is no Chez per-form
-;; compilation, no frame protocol, and no persistent Chez state any more.
-(define repl-host-path "build/repl-host")
+;; session state, JIT and run it, print the value -- lives in the `emit repl` door
+;; (build/emit, change: emit-cli-unification), which A-links the EMBEDDED compiler
+;; and does its own compilation in-process.  This driver only ensures the binary is
+;; up to date and then hands the terminal over to it (it inherits this process's
+;; stdin/stdout/stderr, so prompts, values, and diagnostics flow straight through).
+;; There is no Chez per-form compilation, no frame protocol, and no persistent Chez
+;; state any more.
+(define repl-command "build/emit repl")
 
-;; Rebuild the host whenever the runtime/host sources, the embedded compiler (and
+;; Rebuild the binary whenever the runtime/host sources, the embedded compiler (and
 ;; the core sources behind it), or the recipe changed -- not merely when the
-;; binary is missing: the host links a runtime + compiler snapshot and the JIT
-;; resolves rt_* / prelude globals from the host process, so a stale binary
-;; silently lacks anything added since it was built (changes:
-;; fix-stale-repl-host-rebuild, repl-embedded-incremental).  `make` no-ops when
-;; the host is already up to date.
+;; binary is missing: it links a runtime + compiler snapshot and the JIT resolves
+;; rt_* / prelude globals from the host process, so a stale binary silently lacks
+;; anything added since it was built (changes: fix-stale-repl-host-rebuild,
+;; repl-embedded-incremental, emit-cli-unification).  `make` no-ops when the binary
+;; is already up to date.
 (define (ensure-host)
-  (unless (zero? (system "make build/repl-host 1>&2"))
+  (unless (zero? (system "make emit 1>&2"))
     (error 'repl "failed to build the REPL host")))
 
 ;; Launch the host, inheriting our stdio, and exit with its status.  --no-prelude
 ;; is passed through so the host seeds the session without the standard library.
 (define (run-repl prelude?)
   (ensure-host)
-  (exit (system (string-append repl-host-path (if prelude? "" " --no-prelude")))))
+  (exit (system (string-append repl-command (if prelude? "" " --no-prelude")))))
 
 ;; --- core filter mode: stdin source text -> stdout IR text ---------------
 ;; The self-hosting-facing shape of the core (design D2): read all of stdin as

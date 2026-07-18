@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # modules-repl-tests.sh -- Stage 1 module REPL door (change:
-# module-artifacts-vertical-slice).  Chez-FREE: drives the shipped build/repl-host,
+# module-artifacts-vertical-slice).  Chez-FREE: drives the shipped `emit repl`,
 # which preloads the manifest's libraries into the shared JITDylib and honors
 # interactive (import (L)) by merging the unit's exports into the session scope.
 #
@@ -10,12 +10,12 @@ cd "$(dirname "$0")/.."
 . tools/log.sh
 
 export EMIT_MANIFEST=test/modules/emit-libs.scm
-HOST=build/repl-host
-make "$HOST" >/dev/null 2>&1 || { echo "failed to build $HOST"; exit 1; }
+HOST="build/emit repl"
+make emit >/dev/null 2>&1 || { echo "failed to build emit"; exit 1; }
 
 pass=0; fail=0
 # feed <input> and grab the last non-empty stdout line (the final form's value)
-run_last () { printf '%s' "$1" | "$HOST" 2>/dev/null | awk 'NF{v=$0} END{print v}'; }
+run_last () { printf '%s' "$1" | $HOST 2>/dev/null | awk 'NF{v=$0} END{print v}'; }
 
 check () {  # <name> <input> <expected-last-value>
   local got; got="$(run_last "$2")"
@@ -38,8 +38,8 @@ check repl-diamond  $'(import (dia-a))\n(import (dia-b))\n(+ (a-val) (b-val))\n'
 
 # a renamed export exposes only its EXTERNAL name; the internal name stays unbound.
 echo "rename hides the internal name (REPL door)"
-rerr="$(printf '(import (rename-lib))\n(%%fast-map)\n' | "$HOST" 2>&1 >/dev/null)"
-rval="$(printf '(import (rename-lib))\n(fmap)\n' | "$HOST" 2>/dev/null | awk 'NF{v=$0}END{print v}')"
+rerr="$(printf '(import (rename-lib))\n(%%fast-map)\n' | $HOST 2>&1 >/dev/null)"
+rval="$(printf '(import (rename-lib))\n(fmap)\n' | $HOST 2>/dev/null | awk 'NF{v=$0}END{print v}')"
 if echo "$rerr" | grep -q "unbound variable %fast-map" && [ "$rval" = "77" ]; then
   echo "  [OK  ] rename-hides-internal  (fmap => 77, %fast-map unbound)"; pass=$((pass+1))
 else
@@ -48,8 +48,8 @@ fi
 
 # an imported name is unbound until imported; the session must survive the error.
 echo "unbound-before-import (session survives)"
-errout="$(printf '(greet)\n(+ 2 3)\n' | "$HOST" 2>&1 >/dev/null)"   # stderr only
-valout="$(printf '(greet)\n(+ 2 3)\n' | "$HOST" 2>/dev/null)"        # stdout only
+errout="$(printf '(greet)\n(+ 2 3)\n' | $HOST 2>&1 >/dev/null)"   # stderr only
+valout="$(printf '(greet)\n(+ 2 3)\n' | $HOST 2>/dev/null)"        # stdout only
 if echo "$errout" | grep -q "unbound variable greet" && echo "$valout" | grep -qx "5"; then
   echo "  [OK  ] unbound-then-continue"; pass=$((pass+1))
 else

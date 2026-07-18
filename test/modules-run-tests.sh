@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # modules-run-tests.sh -- the module RUN door (change: run-door-user-libraries).
-# Chez-FREE: drives the shipped build/scheme-run, which registers the baked-in
+# Chez-FREE: drives the shipped `emit run`, which registers the baked-in
 # (scheme base), preloads the manifest's user libraries into the JIT (without running
 # their __init), then compiles the whole program against them via the mode-dispatched
 # embedded compiler and runs it in-process.  This is the third module door, at parity
@@ -16,8 +16,8 @@ cd "$(dirname "$0")/.."
 
 MOD=test/modules
 MAN="$MOD/emit-libs.scm"
-RUN=build/scheme-run
-make "$RUN" >/dev/null 2>&1 || { echo "failed to build $RUN"; exit 1; }
+RUN="build/emit run"
+make emit >/dev/null 2>&1 || { echo "failed to build emit"; exit 1; }
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -25,7 +25,7 @@ pass=0; fail=0
 
 check () {  # <name> <src> <expected>
   local name="$1" src="$2" want="$3"
-  local got; got="$("$RUN" --manifest "$MAN" < "$src" 2>"$TMP/$name.err")"
+  local got; got="$($RUN --manifest "$MAN" < "$src" 2>"$TMP/$name.err")"
   if [ "$got" = "$want" ]; then echo "  [OK  ] $name => $got"; pass=$((pass+1))
   else echo "  [FAIL] $name => $got  (expected $want)"; sed 's/^/         /' "$TMP/$name.err"; fail=$((fail+1)); fi
 }
@@ -33,7 +33,7 @@ check () {  # <name> <src> <expected>
 # assert a run FAILS (non-zero) and its diagnostic matches a regex
 check_fail () {  # <name> <src> <manifest> <regex>
   local name="$1" src="$2" man="$3" re="$4"
-  if "$RUN" --manifest "$man" < "$src" >"$TMP/$name.out" 2>"$TMP/$name.err"; then
+  if $RUN --manifest "$man" < "$src" >"$TMP/$name.out" 2>"$TMP/$name.err"; then
     echo "  [FAIL] $name  (expected non-zero exit, but it succeeded)"; fail=$((fail+1)); return
   fi
   if grep -qE "$re" "$TMP/$name.err"; then
@@ -43,16 +43,16 @@ check_fail () {  # <name> <src> <manifest> <regex>
   fi
 }
 
-echo "module run door (scheme-run, Chez-free)"
+echo "module run door (emit run, Chez-free)"
 check run-import   "$MOD/prog-mylib.scm"   142   # import (mylib); greet -> 142
 check run-chain    "$MOD/prog-chain.scm"    15   # (chain-a) -> (chain-b), transitive
 check run-diamond  "$MOD/prog-diamond.scm"  35   # (dia-a)+(dia-b) both import (dia-c), once each
 check run-rename   "$MOD/prog-rename.scm"   77   # (rename-lib): importer sees fmap
 
 echo "run door: a plain program needs no manifest ((scheme base) is baked in)"
-RUNABS="$PWD/$RUN"
+RUNABS="$PWD/build/emit"
 plain="$TMP/plain.scm"; printf '(map (lambda (x) (* x x)) (list 1 2 3))\n' > "$plain"
-got="$(cd "$TMP" && "$RUNABS" < plain.scm 2>/dev/null)"    # run from a dir with NO manifest present
+got="$(cd "$TMP" && "$RUNABS" run < plain.scm 2>/dev/null)"    # run from a dir with NO manifest present
 if [ "$got" = "(1 4 9)" ]; then echo "  [OK  ] run-no-manifest => $got"; pass=$((pass+1))
 else echo "  [FAIL] run-no-manifest => $got  (expected (1 4 9))"; fail=$((fail+1)); fi
 
@@ -70,7 +70,7 @@ if command -v chez >/dev/null 2>&1; then
   # value parity
   chez --libdirs src --script src/compile.ss "$MOD/prog-mylib.scm" --manifest "$min" -o "$TMP/aot" >/dev/null 2>&1
   aot_val="$("$TMP/aot" 2>/dev/null)"
-  run_val="$("$RUN" --manifest "$min" < "$MOD/prog-mylib.scm" 2>/dev/null)"
+  run_val="$($RUN --manifest "$min" < "$MOD/prog-mylib.scm" 2>/dev/null)"
   if [ "$run_val" = "$aot_val" ] && [ "$run_val" = "142" ]; then
     echo "  [OK  ] value-parity  (run=$run_val aot=$aot_val)"; pass=$((pass+1))
   else
@@ -79,7 +79,7 @@ if command -v chez >/dev/null 2>&1; then
 
   # program-module byte-identity (modulo the driver's target header, which the
   # embedded --emit omits by convention -- clang supplies the triple).
-  "$RUN" --manifest "$min" --emit < "$MOD/prog-mylib.scm" > "$TMP/run.emit"
+  $RUN --manifest "$min" --emit < "$MOD/prog-mylib.scm" > "$TMP/run.emit"
   awk -v d="$TMP" 'BEGIN{n=0;f=sprintf("%s/ru.%02d.ll",d,0)}
      /^; ==EMIT-UNIT-BOUNDARY==$/{n++;f=sprintf("%s/ru.%02d.ll",d,n);next}{print > f}' "$TMP/run.emit"
   run_prog="$(ls "$TMP"/ru.*.ll | tail -1)"

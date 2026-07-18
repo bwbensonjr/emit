@@ -6,7 +6,7 @@
 #
 # Discipline (see docs/OUTPUT.md):
 #   * ALL narration goes to standard error -- stdout carries only machine data
-#     (e.g. the IR emitted by scheme-run --emit / schemec, compared byte-for-byte
+#     (e.g. the IR emitted by `emit run --emit` / schemec, compared byte-for-byte
 #     by the self-hosting checks).  say/vsay therefore always write to fd 2.
 #   * Verbosity is read once from EMIT_VERBOSITY (unset = default):
 #       quiet|q|0   -> errors + data only, no narration

@@ -59,26 +59,26 @@ three backends and asserts identical results.
 
 ## Interactive REPL: the persistent ORC/LLJIT host
 
-The interactive REPL (change `interactive-repl`) executes entered forms in a long-lived
-process built on **LLVM ORC v2 / LLJIT** (`src/repl/host.cpp`). It requires an LLVM
-**development** install (headers + `llvm-config`) — the same one discovered by
-`tools/llvm-env.sh` for the JIT/bitcode backends (Homebrew `llvm`, apt `llvm-NN`, etc.):
+The interactive REPL (change `interactive-repl`) is the `repl` verb of the unified `emit`
+binary; it executes entered forms in a long-lived process built on **LLVM ORC v2 / LLJIT**
+(`src/emit.cpp`, change `emit-cli-unification`). It requires an LLVM **development** install
+(headers + `llvm-config`) — the same one discovered by `tools/llvm-env.sh` for the JIT/bitcode
+backends (Homebrew `llvm`, apt `llvm-NN`, etc.):
 
-    make build/repl-host              # dependency-driven; rebuilds when sources change
+    make emit                         # dependency-driven; rebuilds when sources change
 
 The top-level `Makefile` owns the recipe (per-object rules for `runtime-host.o` and
-`host.o`, each also depending on the `Makefile`), so the host is rebuilt whenever
-`src/runtime/runtime.c`, `src/repl/host.cpp`, or the recipe changes — a stale host would
+`emit.o`, each also depending on the `Makefile`), so the binary is rebuilt whenever
+`src/runtime/runtime.c`, `src/emit.cpp`, or the recipe changes — a stale binary would
 otherwise silently lack any `rt_*` added since it was last built, breaking the prelude.
-`src/repl/build-host.sh` remains as a thin wrapper over `make build/repl-host`. Staleness
-is by mtime, so a `git checkout`/`clone` that sets source mtimes behind an existing binary
-may not trigger a rebuild; recover with `touch` on the source or `make clean`.
+Staleness is by mtime, so a `git checkout`/`clone` that sets source mtimes behind an existing
+binary may not trigger a rebuild; recover with `touch` on the source or `make clean`.
 
 The build:
 
 - compiles the C runtime (`src/runtime/runtime.c`) with `-DRT_NO_MAIN` so its standalone
   `main` is omitted (the host supplies its own);
-- compiles `host.cpp` against `$(llvm-config --cxxflags)`;
+- compiles `emit.cpp` against `$(llvm-config --cxxflags)`;
 - links with `$(llvm-config --ldflags --libs orcjit native --system-libs)` plus `-lgc`,
   and **`-rdynamic`** so the JIT resolves `rt_*` / GC symbols from the host process via
   `DynamicLibrarySearchGenerator::GetForCurrentProcess`.
@@ -92,6 +92,6 @@ to the host loop via the `rt_trap` hook in `runtime.c`, so the session survives;
 
 Drive it with the batch frame generator (a stand-in for the Group 5 interactive driver):
 
-    chez --libdirs src --script test/repl-frames.ss <session>.scm | build/repl-host
+    chez --libdirs src --script test/repl-frames.ss <session>.scm | build/emit repl
 
 End-to-end host tests: `test/repl-host-tests.sh`.

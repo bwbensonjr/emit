@@ -11,7 +11,7 @@ cd "$(dirname "$0")/.."
 
 # Rebuild the host if the runtime/host sources changed (not just if it is
 # missing): make no-ops when it is already up to date.
-make build/repl-host >/dev/null || { echo "host build failed"; exit 1; }
+make emit >/dev/null || { echo "emit build failed"; exit 1; }
 
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 pass=0; fail=0

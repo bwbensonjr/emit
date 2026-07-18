@@ -11,10 +11,10 @@
 set -u
 cd "$(dirname "$0")/.."
 
-HOST=build/repl-host
+HOST="build/emit repl"
 # Rebuild the host if the runtime/host/embedded-compiler sources changed (not
 # just if it is missing): make no-ops when it is already up to date.
-make build/repl-host >/dev/null || { echo "host build failed"; exit 1; }
+make emit >/dev/null || { echo "emit build failed"; exit 1; }
 
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 pass=0; fail=0
@@ -23,7 +23,7 @@ check () {  # name  expected-newline-joined  <<forms
   local name="$1" want="$2"
   cat > "$TMP/$name.scm"
   local got
-  got="$("$HOST" --no-prelude < "$TMP/$name.scm" 2>/dev/null)"
+  got="$($HOST --no-prelude < "$TMP/$name.scm" 2>/dev/null)"
   if [ "$got" = "$want" ]; then
     echo "  [OK  ] $name"; pass=$((pass+1))
   else

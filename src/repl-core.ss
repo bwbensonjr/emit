@@ -4,7 +4,7 @@
 ;;; the compiler that used to live in the Chez driver (`run-repl`, compile.ss).
 ;;; Ported here it compiles under Emit itself, so the interactive `--repl`
 ;;; runs its compilation in-process (no Chez, no per-form subprocess) -- the same
-;;; embedding Path A that `scheme-run` uses for batch.
+;;; embedding Path A that `emit run` uses for batch.
 ;;;
 ;;; It is assembled ONLY into the REPL embedded compiler (tools/assemble-core.ss
 ;;; --repl-entry), after the pure core (parse/expand/passes/emit/core.ss) whose
@@ -281,8 +281,8 @@
 ;; List the manifest's PROGRAM entries for the emit build door (Chez-free; change:
 ;; emit-build-bin-entry).  Each `(program NAME (source S) [(output O)])` entry yields
 ;; THREE newline-separated lines -- NAME, S, and O (O empty when there is no
-;; (output ...) clause) -- so the host (`scheme-run --resolve-program`) can select
-;; one by name and hand its source to bin/scheme-compile.  Library entries are
+;; (output ...) clause) -- so the host (`emit run --resolve-program`) can select
+;; one by name and hand its source to `emit build`.  Library entries are
 ;; ignored (this lists programs, not libraries); uses only \n, mirroring
 ;; repl-manifest-paths.
 (define (repl-manifest-programs text)
@@ -361,7 +361,7 @@
        ;; A lone define-library is compiled as a single unit -- no baked (scheme base),
        ;; no program entry (matches compile-source-rehomed).  The host emits/JITs just
        ;; this module; the 'library status tells it to drop the baked base + preloaded
-       ;; units it set up for the program case.  (Used by `scheme-run --emit < lib.sld`.)
+       ;; units it set up for the program case.  (Used by `emit run --emit < lib.sld`.)
        [(single-define-library user-forms)
         => (lambda (lib) (cons (quote library) (cons (compile-library-form lib no-dump) "scheme_entry")))]
        [else
@@ -374,6 +374,63 @@
                               (prelude-macro-forms (read-forms-from-string *prelude-source*))
                               user-forms tables (run-closure-order direct) no-dump)
                             "scheme_entry")))))]))))
+
+;; --- emit lib door: a library's export table as readable text (mode 11) ------
+;; (change: emit-cli-unification, design D3).  `emit lib` writes a library's unit
+;; artifact: the `.ll` comes from the emit path (mode 7's single-define-library
+;; branch); this mode surfaces the `.exports` sidecar the AOT door's artifact cache
+;; expects -- the (NAME ((external . "mangled") ...)) datum that compile-library
+;; computes but only the Chez driver used to write out.  We compile the lone library
+;; the SAME way compile-library-form does (mode 7's 'library path) and return its
+;; export table (cadr of compile-library's result), keeping one compile-unit core.
+
+;; Render a library NAME (a list of symbols, e.g. (foo bar)) to its basename
+;; "foo.bar" -- the artifact filename stem, matching mangle's dotting and the Chez
+;; driver's lib-basename.
+(define (lib-name->basename name)
+  (let loop ([parts (cdr name)] [acc (symbol->string (car name))])
+    (if (null? parts)
+        acc
+        (loop (cdr parts) (string-append acc "." (symbol->string (car parts)))))))
+
+;; Render the export-table datum subset to a readable string, matching what the Chez
+;; driver's `write` produces for (NAME export-table): symbols by name, strings quoted
+;; (mangled targets are plain identifiers, so no escaping is needed), proper lists as
+;; (a b c), and dotted pairs as (a . b).  Enough for the export table; avoids needing
+;; a full `write` in the compiled prelude.
+(define (render-datum x)
+  (cond
+    [(string? x) (string-append "\"" x "\"")]
+    [(symbol? x) (symbol->string x)]
+    [(null? x) "()"]
+    [(pair? x) (string-append "(" (render-list-body x) ")")]
+    [else "?"]))
+(define (render-list-body p)
+  (let ([a (render-datum (car p))] [d (cdr p)])
+    (cond
+      [(null? d) a]
+      [(pair? d) (string-append a " " (render-list-body d))]
+      [else (string-append a " . " (render-datum d))])))
+
+;; Mode 11: compile a lone define-library source and return (ok . payload) where
+;; payload is "<basename>\n<export-datum>" -- the host writes <basename>.exports from
+;; the datum and names the sibling <basename>.ll (emitted via mode 7).  (error . msg)
+;; if the source is not a single define-library or fails to compile.  Uses '() import
+;; tables, exactly like compile-library-form, so the export table matches the emitted
+;; unit (compile-library is deterministic).
+(define (repl-library-exports-text text)
+  (guard (e (#t (cons (quote error) (repl-error->string e))))
+    (let* ([forms (read-all-from-string text)]
+           [lib   (single-define-library forms)])
+      (if (not lib)
+          (cons (quote error) "emit lib: source is not a single define-library")
+          (let* ([dl   (parse-define-library lib)]
+                 [res  (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl) (quote ()) no-dump)]
+                 [nt   (cadr res)]            ; (name export-table)
+                 [name (car nt)])
+            (cons (quote ok)
+                  (string-append (lib-name->basename name) "\n"
+                                 (render-datum nt))))))))
 
 ;; --- the input-completeness probe (design D4(b); spike/form-complete) --------
 ;; Does the host's accumulated buffer start with a complete datum yet?  An
@@ -480,6 +537,7 @@
 ;;   7 run door: compile a whole program with imports  8 run door: register baked (scheme base)
 ;;   9 run door: manifest text -> user-library paths (omitting (scheme base))
 ;;  10 emit build door: manifest text -> program entries (NAME/source/output triples)
+;;  11 emit lib door: library source -> "<basename>\n<export-table datum>"
 ;; State is restored before and saved after each op (init modes seed it fresh).
 (define (repl-dispatch)
   (repl-restore-state!)
@@ -496,6 +554,7 @@
              [(= mode 8) (run-register-scheme-base)]             ; run door: baked (scheme base)
              [(= mode 9) (repl-manifest-user-paths (repl-input))] ; run door: manifest paths sans (scheme base)
              [(= mode 10) (repl-manifest-programs (repl-input))]  ; emit build door: program entries
+             [(= mode 11) (repl-library-exports-text (repl-input))] ; emit lib door: export table
              [else       (compile-one-form-text (repl-input))])])
       (repl-save-state!)
       result)))

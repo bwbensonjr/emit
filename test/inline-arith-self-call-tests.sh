@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # IR-shape regression tests for change: inline-fixnum-arith-and-self-calls.
 # Asserts the emitter's codegen decisions on the emitted LLVM IR (via
-# build/scheme-run --emit):
+# `emit run --emit`):
 #   A       - fixnum numeric primitives (+ - = <) get an inline fast path guarded
 #             by a fixnum-tag test, with the rt_* call kept on the slow path.
 #   B-self  - a function's self-call is a direct `call fastcc @code_N` reusing
@@ -12,8 +12,8 @@
 set -u
 cd "$(dirname "$0")/.."
 
-RUN=build/scheme-run
-make "$RUN" >/dev/null 2>&1 || { echo "build failed"; exit 1; }
+RUN="build/emit run"
+make emit >/dev/null 2>&1 || { echo "build failed"; exit 1; }
 
 pass=0; fail=0
 ok ()  { echo "  [OK  ] $1"; pass=$((pass+1)); }
@@ -21,7 +21,7 @@ bad () { echo "  [FAIL] $1"; fail=$((fail+1)); }
 
 # emit IR for a program (stdin) to a temp file, echo the path
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
-emit () { "$RUN" --emit > "$TMP/out.ll" 2>/dev/null; echo "$TMP/out.ll"; }
+emit () { $RUN --emit > "$TMP/out.ll" 2>/dev/null; echo "$TMP/out.ll"; }
 
 # want <name> <file> <regex>   -- IR must contain a line matching regex
 want () { if grep -Eq "$3" "$2"; then ok "$1"; else bad "$1 (missing: $3)"; fi; }

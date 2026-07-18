@@ -7,8 +7,8 @@
 # committed inputs with the C runtime using LLVM only; it never runs Chez and
 # never regenerates IR.
 #
-#   make            -> scheme-run + repl-host        (link committed IR, no Chez)
-#   make schemec    -> the batch text->IR compiler   (link committed IR, no Chez)
+#   make            -> build/emit (run/repl/build/lib)  (link committed IR, no Chez)
+#   make schemec    -> the batch text->IR compiler      (link committed IR, no Chez)
 #   make regen      -> rebuild the committed IR from source with the compiled
 #                      compiler (Chez-free; see tools/regen.sh), then relink
 #
@@ -36,9 +36,9 @@ build/llvm.mk: tools/llvm-env.sh tools/log.sh | build
 	tools/llvm-env.sh --print-make > $@
 -include build/llvm.mk
 
-# Binaries.
-HOST        := build/repl-host
-RUN         := build/scheme-run
+# Binaries.  `emit` is the single user-facing entry point (verbs run/repl/build/lib);
+# `schemec` is the internal batch text->IR bootstrap seed.
+EMIT        := build/emit
 SCHEMEC     := build/schemec
 
 # Committed, host-agnostic stage-0 compiler IR (checked-in INPUTS; design D3/D4).
@@ -62,29 +62,22 @@ SCHEME_BASE_LL := bootstrap/scheme.base.ll
 .DEFAULT_GOAL := all
 
 .PHONY: all
-all: $(RUN) $(HOST)
+all: $(EMIT)
 
-.PHONY: scheme-run repl-host schemec
-scheme-run: $(RUN)
-repl-host:  $(HOST)
+.PHONY: emit schemec
+emit:       $(EMIT)
 schemec:    $(SCHEMEC)
 
-# Interactive REPL host: A-links the embedded interactive compiler (embed-repl.ll)
-# and exports rt_* / scheme_entry (-rdynamic) so JIT'd code resolves them here.
-# Every binary links $(SCHEME_BASE_LL): the compiler is re-homed on (scheme base)
-# (change: compiler-bootstrap-rehome), so its IR references scheme.base:* externals
-# resolved against this one committed library, initialized once via its __init guard.
-$(HOST): build/host.o build/runtime-host.o $(EMBED_REPL_LL) $(SCHEME_BASE_LL) Makefile
-	$(CXX) build/host.o build/runtime-host.o $(EMBED_REPL_LL) $(SCHEME_BASE_LL) \
-	  -rdynamic $(LDFLAGS) -L$(GC_LIB) -lgc -o $@
-	@. tools/log.sh; say "link $(EMBED_REPL_LL) + $(SCHEME_BASE_LL) -> $@  [$$(bytes $@) bytes]"
-
-# In-process compile-and-run runner: A-links the MODE-DISPATCHED embedded compiler
-# (embed-repl.ll -- the same one the REPL host drives), so the run door can resolve
-# user libraries via the manifest through the shared mode protocol (change:
-# run-door-user-libraries).  Supports `--emit` (write IR to stdout; Chez-free AOT).
-$(RUN): build/run.o build/runtime-host.o $(EMBED_REPL_LL) $(SCHEME_BASE_LL) Makefile
-	$(CXX) build/run.o build/runtime-host.o $(EMBED_REPL_LL) $(SCHEME_BASE_LL) \
+# Unified `emit` front-end (change: emit-cli-unification): ONE binary dispatching the
+# run/repl/build/lib verbs -- the sole user-facing entry point.  A-links the
+# MODE-DISPATCHED embedded compiler (embed-repl.ll) and exports rt_* / scheme_entry
+# (-rdynamic) so JIT'd code resolves them here.  It links $(SCHEME_BASE_LL) too: the
+# compiler is re-homed on (scheme base) (change: compiler-bootstrap-rehome), so its IR
+# references scheme.base:* externals resolved against this one committed library,
+# initialized once via its __init guard.  The run/repl doors were formerly the separate
+# build/scheme-run and build/repl-host binaries, merged here; build/lib forks clang.
+$(EMIT): build/emit.o build/runtime-host.o $(EMBED_REPL_LL) $(SCHEME_BASE_LL) Makefile
+	$(CXX) build/emit.o build/runtime-host.o $(EMBED_REPL_LL) $(SCHEME_BASE_LL) \
 	  -rdynamic $(LDFLAGS) -L$(GC_LIB) -lgc -o $@
 	@. tools/log.sh; say "link $(EMBED_REPL_LL) + $(SCHEME_BASE_LL) -> $@  [$$(bytes $@) bytes]"
 
@@ -96,20 +89,16 @@ $(SCHEMEC): $(SCHEMEC_LL) $(SCHEME_BASE_LL) src/runtime/runtime.c Makefile | bui
 	@. tools/log.sh; say "link $(SCHEMEC_LL) + $(SCHEME_BASE_LL) -> $@  [$$(bytes $@) bytes]"
 
 # --- objects ---------------------------------------------------------------
-# Runtime compiled as C without its standalone main (the hosts supply one).
+# Runtime compiled as C without its standalone main (the host supplies one).
 build/runtime-host.o: src/runtime/runtime.c Makefile | build
 	$(CC) -std=c11 -O2 -I$(GC_INC) -DRT_NO_MAIN -c $< -o $@
 
-# REPL host, compiled as C++ against the LLVM headers.
-build/host.o: src/repl/host.cpp Makefile | build
-	$(CXX) $(CXXFLAGS) -c $< -o $@
-
-# Runner host, compiled as C++ against the LLVM headers.
-build/run.o: src/run.cpp Makefile | build
+# Unified emit front-end, compiled as C++ against the LLVM headers.
+build/emit.o: src/emit.cpp Makefile | build
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # Batch bootstrap runner object (change: run-door-user-libraries, decision X):
-# tools/regen.sh links this with the batch embed.ll into build/scheme-run-boot to
+# tools/regen.sh links this with the batch embed.ll into build/emit-boot to
 # drive the self-hosting fixed point.  Not linked into any shipped binary.
 build/run-boot.o: src/run-boot.cpp Makefile | build
 	$(CXX) $(CXXFLAGS) -c $< -o $@
@@ -118,11 +107,11 @@ build/run-boot.o: src/run-boot.cpp Makefile | build
 # Regeneration: rebuild the committed IR from source, Chez-free (explicit only).
 # ===========================================================================
 # tools/regen.sh assembles the flat source by ordered `cat` (no prelude prepend) and
-# compiles it with the module-aware embedded compiler (scheme-run), which auto-imports
-# (scheme base) and iterates {scheme.base.ll, embed.ll} to the byte-identical fixed
-# point; then it emits schemec.ll / embed-repl.ll.  It seeds scheme-run from the
-# committed IR (building its own host objects), so no prebuilt binary prerequisite is
-# needed here; after it, relink every binary from the regenerated IR.
+# compiles it with the module-aware embedded compiler (via build/emit-boot, the minimal
+# batch runner), which auto-imports (scheme base) and iterates {scheme.base.ll, embed.ll}
+# to the byte-identical fixed point; then it emits schemec.ll / embed-repl.ll.  It seeds
+# the batch runner from the committed IR (building its own host objects), so no prebuilt
+# binary prerequisite is needed here; after it, relink every binary from the regenerated IR.
 .PHONY: regen
 regen:
 	@. tools/log.sh; say "regen bootstrap/*.ll + binaries (Chez-free)"
@@ -139,9 +128,9 @@ build:
 # committed bootstrap/*.ll (checked-in inputs; rebuild them with 'make regen').
 .PHONY: clean
 clean:
-	rm -f $(HOST) $(RUN) $(SCHEMEC) \
-	      build/host.o build/run.o build/run-boot.o build/runtime-host.o \
-	      build/scheme-run-boot build/scheme-run-boot-next \
+	rm -f $(EMIT) $(SCHEMEC) \
+	      build/emit.o build/run-boot.o build/runtime-host.o \
+	      build/emit-boot build/emit-boot-next \
 	      build/schemec build/schemec-next \
 	      build/schemec.scm build/embed.scm build/embed-repl.scm \
 	      build/prelude-source.scm build/T-*.scm \

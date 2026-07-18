@@ -3,7 +3,7 @@
 # on (scheme base) (change: compiler-bootstrap-rehome).
 #
 # The compiler is now compiled as a program that AUTO-IMPORTS (scheme base), so the
-# module-aware compiler is `scheme-run` (embed), not the `schemec` filter (which
+# module-aware compiler is `emit run` (embed), not the `schemec` filter (which
 # cannot resolve imports).  The fixed point spans {scheme.base.ll, embed.ll}: a
 # module-aware compiler, compiling the library source and its OWN source, must
 # reproduce byte-identical library + compiler IR.
@@ -41,7 +41,7 @@ trap 'rm -rf "$work"' EXIT
 
 prog_module () { awk 'f{print} /^; ==EMIT-UNIT-BOUNDARY==$/{f=1}' "$1"; }
 # Link a stage compiler from a BATCH embed.ll + base.ll.  Uses run-boot.o (the batch
-# host), not the shipped dispatched run.o: this fixed point is over the batch embed.ll,
+# host), not the shipped dispatched emit.o: this fixed point is over the batch embed.ll,
 # so its stage runners must drive the batch entry (change: run-door-user-libraries, D7).
 link_run () {  # <embed.ll> <base.ll> <out>
   "$CXX" build/run-boot.o build/runtime-host.o "$1" "$2" \
@@ -61,8 +61,9 @@ if ! chez --libdirs src --script src/compile.ss "$work/embed.scm" -o "$work/run1
   echo "  [FAIL] Chez-hosted stage-1 embed emission failed"; exit 1
 fi
 grep -v '^target ' "$work/run1bin.ll" > "$work/s1.embed.ll"
-# The (scheme base) unit IR, emitted host-agnostic by the current committed scheme-run.
-build/scheme-run --emit < lib/scheme/base.sld > "$work/s1.base.ll"
+# The (scheme base) unit IR, emitted host-agnostic by the current committed `emit`.
+make emit >/dev/null 2>&1
+build/emit run --emit < lib/scheme/base.sld > "$work/s1.base.ll"
 if ! link_run "$work/s1.embed.ll" "$work/s1.base.ll" "$work/run1"; then
   echo "  [FAIL] could not link the stage-1 module-aware compiler"; exit 1
 fi
