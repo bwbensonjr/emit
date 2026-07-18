@@ -150,7 +150,7 @@
     (%char->integer "rt_char_to_integer") (%integer->char "rt_integer_to_char")
     (%string-length "rt_string_length") (%string-ref "rt_string_ref")
     (%substring "rt_substring") (%string->symbol "rt_string_to_symbol")
-    (%string=? "rt_string_eq") (string-append "rt_string_append")
+    (%string=? "rt_string_eq") (%string-append "rt_string_append")
     (%symbol->string "rt_symbol_to_string") (%list->string "rt_list_to_string")
     (%make-string "rt_make_string_fill")
     (%string-set! "rt_string_set") (%string-copy "rt_string_copy")

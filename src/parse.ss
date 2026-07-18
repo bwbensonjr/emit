@@ -8,24 +8,22 @@
 ;;;
 ;;; Primitive names are reserved keywords (not rebindable) in the M1 subset.
 
-;; Reserved primcall heads: the raw %-ops, plus a few plain names that cannot yet be
-;; integrable.  Nearly every standard primitive is now *integrable* (below), i.e. an
-;; ordinary shadowable binding.  The expander still folds n-ary `+`/`=`/... to binary
-;; forms (emitting the plain name, which the inliner rewrites to `%+`/`%=`/...);
-;; `> <= >=` remain derived over the integrable `<`/`=`.  Still reserved:
-;;   * `string-append` -- its VALUE-position eta is a fold over the prelude helper
-;;     `%str-concat` (a global that must be name-resolved), which the post-rename
-;;     inliner cannot synthesize; so its value-use stays in `prim-as-value` at parse
-;;     time and its operator calls stay reserved primcalls (not yet shadowable);
-;;   * the internal %-ops (hashing, records, error plumbing, `%no-prelude?`) and the
-;;     REPL state ops (`repl-mode`/`repl-input`/`repl-state-ref`/`repl-state-set!`) --
-;;     compiler/host internals, not standard primitives, never used as values.
+;; Reserved primcall heads.  EVERY standard primitive is now *integrable* (below),
+;; i.e. an ordinary shadowable binding -- including the variadic folding ops, whose
+;; value-position eta is a self-contained rest-param fold over raw primcalls, so no
+;; primitive needs a prelude helper or a parse-time special case any more.  The
+;; expander still folds n-ary `+`/`=`/`string-append`/... to binary forms (emitting
+;; the plain name, which the inliner rewrites to `%+`/`%=`/`%string-append`/...);
+;; `> <= >=` remain derived over the integrable `<`/`=`.  Only compiler/host internals
+;; stay reserved: the %-ops (hashing, records, error plumbing, `%no-prelude?`) and the
+;; REPL state ops (`repl-mode`/`repl-input`/`repl-state-ref`/`repl-state-set!`) --
+;; never used as values, and the raw %-ops staying internal is a Non-Goal to relax.
 (define *prims* '(%+ %- %* %= %< %eq? %eqv?
                   %cons %quotient %remainder %car %cdr %null? %pair? %equal? %not
                   %char->integer %integer->char
                   %string-length %string-ref %string->symbol %symbol->string %list->string
                   %string-set! %substring %string=? %make-string %string-copy
-                  string-append
+                  %string-append
                   %vector-ref %vector-set! %vector-length %vector? %make-vector
                   %bytevector-u8-ref %bytevector-u8-set! %bytevector-length %bytevector?
                   %make-bytevector
@@ -40,15 +38,14 @@
 (define (prim? op) (and (memq op *prims*) #t))
 
 ;; ---- primitives as first-class values ----
-;; A bare primitive reference in value position (e.g. `(map car xs)`) must become a
-;; genuine procedure.  For nearly every primitive this is no longer a parse-time
-;; special-case: the primitive is *integrable* (below), so the shadow-aware
+;; A bare primitive reference in value position (e.g. `(map car xs)`, `(apply + ns)`)
+;; must become a genuine procedure.  This is no longer a parse-time special-case for
+;; ANY primitive: every one is *integrable* (below), so the shadow-aware
 ;; inline-primitives pass (run after rename) supplies BOTH its direct-call inlining
-;; and its value-position eta (a self-contained `(lambda (p ..) (primcall %op p ..))`).
-;; `*prim-eta-arity*`/`nsyms` are retired.  The sole survivor is `string-append`
-;; (`prim-as-value`, below): its value-eta folds over the prelude helper `%str-concat`
-;; -- a global that must be name-resolved -- so it must be produced BEFORE rename, not
-;; in the post-rename inliner (task 4.1 completes when string-append moves too).
+;; and its value-position eta.  Fixed-arity ops eta to `(lambda (p ..) (primcall %op
+;; p ..))`; the variadic folding ops (`+ - * = < string-append`) eta to a
+;; self-contained rest-param fold over raw primcalls (fold-eta).  The old
+;; `prim-as-value`/`*prim-eta-arity*`/`nsyms` machinery is fully retired (task 4.1).
 ;; The eta must not live in the prelude: a prelude `(define (car x) (car x))` would be
 ;; a primcall under Emit but infinite self-recursion under the bootstrap host.
 
@@ -65,10 +62,14 @@
 (define *integrable*
   '((cons %cons 2)
     ;; Batch B: arithmetic / comparison / equality.  The expander (expand-arith,
-    ;; expand-compare) reduces every n-ary operator-position call to BINARY forms, so
-    ;; these are fixed-arity-2 integrables just like the others; a bare value-use
-    ;; eta-expands to a binary lambda (no variadic value-use of these exists in-tree).
-    (+ %+ 2) (- %- 2) (* %* 2) (= %= 2) (< %< 2) (eq? %eq? 2) (eqv? %eqv? 2)
+    ;; expand-compare) reduces every n-ary OPERATOR-position call to a BINARY form, so
+    ;; the arity-2 entry drives direct-call inlining.  The optional 4th field is a
+    ;; fold-kind for the VALUE-position eta: `+ - * = <` are variadic as values
+    ;; (`(apply + ns)`), so their eta is a self-contained rest-param fold over raw
+    ;; primcalls (see fold-eta) -- no prelude dependency, works under --no-prelude.
+    ;; `eq?`/`eqv?` are binary in R7RS, so they keep the plain binary eta.
+    (+ %+ 2 sum) (- %- 2 diff) (* %* 2 product) (= %= 2 cmp) (< %< 2 cmp)
+    (eq? %eq? 2) (eqv? %eqv? 2)
     (quotient %quotient 2) (remainder %remainder 2)
     (car %car 1) (cdr %cdr 1) (null? %null? 1) (pair? %pair? 1)
     (equal? %equal? 2) (not %not 1)
@@ -89,7 +90,11 @@
     (make-string %make-string 2) (string-copy %string-copy 1)
     (make-vector %make-vector 2) (make-bytevector %make-bytevector 2)
     (read-all-stdin %read-all-stdin 0)
-    (display %display 1) (write %write 1) (newline %newline 0)))
+    (display %display 1) (write %write 1) (newline %newline 0)
+    ;; string-append: expander folds n-ary operator calls to binary %string-append
+    ;; (arity 2 for direct inlining); as a VALUE it is variadic, so its eta is the
+    ;; self-contained `str` fold -- retiring the prelude `%str-concat` special case.
+    (string-append %string-append 2 str)))
 (define (integrable-lookup name) (assq name *integrable*))
 (define (integrable? name) (and (integrable-lookup name) #t))
 
@@ -97,9 +102,73 @@
   (let loop ([i n] [acc '()])
     (if (= i 0) acc (loop (- i 1) (cons (fresh-name 'p) acc)))))
 
-(define (eta-integrable entry)  ; (name raw arity) -> (lambda (p ..) (primcall raw p ..))
-  (let ([ps (fresh-syms (caddr entry))])
-    `(lambda ,ps (primcall ,(cadr entry) ,@ps))))
+;; Value-position eta for an integrable.  Fixed-arity ops get a plain
+;; `(lambda (p ..) (primcall raw p ..))`; a variadic folding op (4th field = fold
+;; kind) gets a self-contained rest-param fold built from raw primcalls -- so it
+;; needs no prelude helper and works identically under --no-prelude.  A rest-param
+;; lambda `(lambda gs ...)` collects all call args into the list `gs`, which serves
+;; BOTH `(map + xs ys)` (args passed individually) and `(apply + ns)` (a list).
+(define (eta-integrable entry)  ; (name raw arity [fold-kind]) -> value-position lambda
+  (if (and (pair? (cdddr entry)) (cadddr entry))
+      (fold-eta (cadr entry) (cadddr entry))
+      (let ([ps (fresh-syms (caddr entry))])
+        `(lambda ,ps (primcall ,(cadr entry) ,@ps)))))
+
+;; a left-fold `(lambda gs (loop IDENT gs))` where loop threads ACC over gs with
+;; `(primcall RAW acc (car rest))`.  Used for `+`(0) `*`(1) `string-append`("").
+(define (left-fold-eta raw ident)
+  (let ([gs (fresh-name 'gs)] [loop (fresh-name 'loop)]
+        [acc (fresh-name 'acc)] [rest (fresh-name 'rest)])
+    `(lambda ,gs
+       (letrec ([,loop (lambda (,acc ,rest)
+                         (if (primcall %null? ,rest)
+                             ,acc
+                             (call ,loop (primcall ,raw ,acc (primcall %car ,rest))
+                                         (primcall %cdr ,rest))))])
+         (call ,loop ,ident ,gs)))))
+
+;; `-` as a value: `(- a)` negates, `(- a b ...)` subtracts left-to-right, `(- )`
+;; is degenerate (0).  Distinct from the identity folds above.
+(define (diff-eta raw)
+  (let ([gs (fresh-name 'gs)] [loop (fresh-name 'loop)]
+        [acc (fresh-name 'acc)] [rest (fresh-name 'rest)])
+    `(lambda ,gs
+       (if (primcall %null? ,gs)
+           (const 0)
+           (if (primcall %null? (primcall %cdr ,gs))
+               (primcall ,raw (const 0) (primcall %car ,gs))          ; (- a) -> 0 - a
+               (letrec ([,loop (lambda (,acc ,rest)
+                                 (if (primcall %null? ,rest)
+                                     ,acc
+                                     (call ,loop (primcall ,raw ,acc (primcall %car ,rest))
+                                                 (primcall %cdr ,rest))))])
+                 (call ,loop (primcall %car ,gs) (primcall %cdr ,gs))))))))
+
+;; `= `/`<` as a value: a short-circuit pairwise chain; 0 or 1 operand -> #t.
+(define (cmp-chain-eta raw)
+  (let ([gs (fresh-name 'gs)] [loop (fresh-name 'loop)]
+        [prev (fresh-name 'prev)] [rest (fresh-name 'rest)])
+    `(lambda ,gs
+       (if (primcall %null? ,gs)
+           (const #t)
+           (if (primcall %null? (primcall %cdr ,gs))
+               (const #t)
+               (letrec ([,loop (lambda (,prev ,rest)
+                                 (if (primcall %null? ,rest)
+                                     (const #t)
+                                     (if (primcall ,raw ,prev (primcall %car ,rest))
+                                         (call ,loop (primcall %car ,rest) (primcall %cdr ,rest))
+                                         (const #f))))])
+                 (call ,loop (primcall %car ,gs) (primcall %cdr ,gs))))))))
+
+(define (fold-eta raw kind)
+  (case kind
+    [(sum)     (left-fold-eta raw '(const 0))]
+    [(product) (left-fold-eta raw '(const 1))]
+    [(str)     (left-fold-eta raw '(const ""))]
+    [(diff)    (diff-eta raw)]
+    [(cmp)     (cmp-chain-eta raw)]
+    [else (error 'parse "unknown integrable fold kind" kind)]))
 
 ;; inline-primitives: a universal pass run AFTER rename/resolve in every compile
 ;; path (compile-forms, compile-program-with-imports, repl-lower-form).
@@ -127,15 +196,6 @@
       [(letrec ,binds ,body)
        `(letrec ,(map (lambda (b) (list (car b) (I (cadr b)))) binds) ,(I body))]))
   (I e))
-
-;; The one reserved primitive still usable as a first-class value: `string-append`.
-;; Its value-eta folds over the prelude helper `%str-concat`, so it is produced HERE
-;; (parse time, before rename) where `%str-concat` still resolves normally -- unlike
-;; the integrable etas, which are self-contained primcalls synthesized post-rename.
-(define (prim-as-value op)
-  (if (eq? op 'string-append)
-      '(lambda gs (%str-concat gs))
-      (error 'parse "primitive not available as a first-class value" op)))
 
 ;; ---- variadic parameter lists ----
 ;; A lambda's param field may be a proper list (fixed arity), an improper list
@@ -169,9 +229,9 @@
     [(char? e) `(const ,e)]                ; char literals are self-evaluating
     [(null? e) `(const ())]
     ;; a bare symbol is a variable ref; an integrable's value-use eta is synthesized
-    ;; post-rename by inline-primitives.  The one exception is a reserved prim still
-    ;; usable as a value (string-append), whose eta must be produced here (pre-rename).
-    [(symbol? e) (if (prim? e) (parse-expr (prim-as-value e)) e)]
+    ;; post-rename by inline-primitives (self-contained, so even variadic ops like
+    ;; `+`/`string-append` need no parse-time special case anymore).
+    [(symbol? e) e]
     [(pair? e)
      (match e
        [(quote ,d) `(const ,d)]
