@@ -140,12 +140,12 @@
     [else (error 'emit "bad const" d)]))
 
 (define prim-table
-  '((+ "rt_add") (- "rt_sub") (* "rt_mul")
+  '((%+ "rt_add") (%- "rt_sub") (%* "rt_mul")
     (%quotient "rt_quotient") (%remainder "rt_remainder")
-    (= "rt_num_eq") (< "rt_lt")
+    (%= "rt_num_eq") (%< "rt_lt")
     (%cons "rt_cons") (%car "rt_car") (%cdr "rt_cdr")
-    (%null? "rt_null_p") (%pair? "rt_pair_p") (eq? "rt_eq_p")
-    (eqv? "rt_eqv_p") (%equal? "rt_equal") (%not "rt_not")
+    (%null? "rt_null_p") (%pair? "rt_pair_p") (%eq? "rt_eq_p")
+    (%eqv? "rt_eqv_p") (%equal? "rt_equal") (%not "rt_not")
     (box "rt_box") (unbox "rt_unbox") (set-box! "rt_set_box")
     (%char->integer "rt_char_to_integer") (%integer->char "rt_integer_to_char")
     (%string-length "rt_string_length") (%string-ref "rt_string_ref")
@@ -332,11 +332,11 @@
 ;; arithmetic and chained comparisons are already reduced to binary primcalls in
 ;; expand.ss, so hooking here covers every arity and `> >= <=`.
 (define inline-arith-table
-  '((+ "rt_add"    add "add")
-    (- "rt_sub"    add "sub")
-    (* "rt_mul"    mul "mul")
-    (= "rt_num_eq" cmp "icmp eq")
-    (< "rt_lt"     cmp "icmp slt")))
+  '((%+ "rt_add"    add "add")
+    (%- "rt_sub"    add "sub")
+    (%* "rt_mul"    mul "mul")
+    (%= "rt_num_eq" cmp "icmp eq")
+    (%< "rt_lt"     cmp "icmp slt")))
 
 (define (emit-inline-fast kind instr a b)  ; emit the fast-path op, return its operand
   (cond

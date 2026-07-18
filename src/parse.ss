@@ -9,11 +9,14 @@
 ;;; Primitive names are reserved keywords (not rebindable) in the M1 subset.
 
 ;; Reserved primcall heads: the raw %-ops, plus the plain names still handled as
-;; reserved keywords -- the expander-folded variadic ops (`+ - * = <`, `eq?`/`eqv?`,
-;; `string-append`), the R7RS optional-arity ops (`make-*`, `substring`,
-;; `string-copy`, `string=?`), I/O, and REPL state.  Most fixed-arity plain names
-;; are now *integrable* (below), i.e. ordinary shadowable bindings.
-(define *prims* '(+ - * = < eq? eqv?
+;; reserved keywords -- `string-append` (variadic value-use via `%str-concat`), the
+;; R7RS optional-arity ops (`make-*`, `substring`, `string-copy`, `string=?`), I/O,
+;; and REPL state.  Most plain names -- including the expander-folded arithmetic
+;; (`+ - *`), comparison (`= <`) and equality (`eq? eqv?`) ops -- are now
+;; *integrable* (below), i.e. ordinary shadowable bindings.  The expander still folds
+;; n-ary `+`/`=`/... to binary forms (emitting the plain name, which the inliner then
+;; rewrites to `%+`/`%=`/...); `> <= >=` remain derived over the integrable `<`/`=`.
+(define *prims* '(%+ %- %* %= %< %eq? %eqv?
                   %cons %quotient %remainder %car %cdr %null? %pair? %equal? %not
                   %char->integer %integer->char
                   %string-length %string-ref %string->symbol %symbol->string %list->string
@@ -58,6 +61,11 @@
 ;; compute-known), so programs, user libraries, and --no-prelude all get them.
 (define *integrable*
   '((cons %cons 2)
+    ;; Batch B: arithmetic / comparison / equality.  The expander (expand-arith,
+    ;; expand-compare) reduces every n-ary operator-position call to BINARY forms, so
+    ;; these are fixed-arity-2 integrables just like the others; a bare value-use
+    ;; eta-expands to a binary lambda (no variadic value-use of these exists in-tree).
+    (+ %+ 2) (- %- 2) (* %* 2) (= %= 2) (< %< 2) (eq? %eq? 2) (eqv? %eqv? 2)
     (quotient %quotient 2) (remainder %remainder 2)
     (car %car 1) (cdr %cdr 1) (null? %null? 1) (pair? %pair? 1)
     (equal? %equal? 2) (not %not 1)
