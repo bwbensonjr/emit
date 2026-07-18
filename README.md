@@ -183,6 +183,9 @@ library-structured source are frozen under `historical/genesis/`.
 - `docs/OUTPUT.md` — the tool-output convention: message format, stderr/stdout discipline,
   and the `EMIT_VERBOSITY` control that every build/compile/regen/test tool honors.
 - `tools/log.sh` — the shared `say`/`vsay`/`bytes` helpers that implement that convention.
+- [`docs/COMPLEXITY.md`](docs/COMPLEXITY.md) — a catalogue of the tree by component, role, and
+  language, separating the hand-authored system from generated IR, vendored code, and OpenSpec
+  tracking. Regenerate with `make catalogue`.
 
 ## Pipeline
 

@@ -120,6 +120,17 @@ regen:
 	  $(MAKE) all schemec && \
 	  { . tools/log.sh; say "regen complete -- committed IR + binaries rebuilt, no Chez  [$$(($$(date +%s) - start))s]"; }
 
+# ===========================================================================
+# Complexity catalogue: regenerate docs/COMPLEXITY.md from the tracked tree.
+# ===========================================================================
+# tools/complexity.sh classifies every git-tracked file by role/component/language
+# and splices the generated tables into docs/COMPLEXITY.md between its BEGIN/END
+# markers (idempotent; hand-authored prose outside the markers is preserved).  No
+# Chez, no compiler build -- just git + wc.
+.PHONY: catalogue
+catalogue:
+	tools/complexity.sh --write
+
 # build/ is a real directory (order-only prerequisite), not a phony target.
 build:
 	mkdir -p build
