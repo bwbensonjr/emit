@@ -40,18 +40,21 @@ The catalogue SHALL classify each file into a **role** so that a lines-of-code t
 not conflate hand-authored complexity with material the project did not write by hand. The
 role taxonomy SHALL at minimum distinguish: **authored** (hand-written compiler, runtime,
 standard library, and tooling source); **generated** (build artifacts checked into the
-tree, e.g. `bootstrap/*.ll`); **vendored** (third-party code, e.g. the nanopass copy under
-`spike/`); **reference** (external material reproduced for convenience, e.g. an imported
+tree, e.g. `bootstrap/*.ll`); **vendored** (third-party code copied into the tree, when
+present); **reference** (external material reproduced for convenience, e.g. an imported
 standard document); **tracking** (OpenSpec changes and specs); **test**; **demo**; and
-**spike** (first-party experiments). The catalogue SHALL report totals both including and
-excluding non-authored roles, and SHALL make the authored subtotal prominent.
+**spike** (first-party experiments). A role MAY legitimately have zero members at a given
+time (for example, after vendored code or experiments are removed); its classification rule
+remains so the role is applied consistently if such code returns. The catalogue SHALL report
+totals both including and excluding non-authored roles, and SHALL make the authored subtotal
+prominent.
 
-#### Scenario: Generated and vendored code are excluded from the authored subtotal
+#### Scenario: Generated and non-authored code are excluded from the authored subtotal
 
 - **WHEN** the catalogue is produced
-- **THEN** `bootstrap/*.ll` is classified as `generated` and the vendored nanopass tree is
-  classified as `vendored`
-- **AND** neither is counted in the authored subtotal
+- **THEN** `bootstrap/*.ll` is classified as `generated`
+- **AND** any file matching a non-authored role rule (generated, vendored, reference,
+  tracking, config, test, demo, spike) is excluded from the authored subtotal
 - **AND** the report shows both the authored subtotal and the full total so the difference
   is visible
 

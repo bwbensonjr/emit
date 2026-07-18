@@ -39,13 +39,13 @@ WRITE=0
 #   authored  hand-written compiler / runtime / stdlib / build+dev tooling source
 #   docs      hand-written project prose (README, docs/, design notes)
 #   generated build artifacts checked into the tree (bootstrap/*.ll)
-#   vendored  third-party code copied in (spike/nanopass/vendor)
+#   vendored  third-party code copied into the tree (none currently)
 #   reference external material reproduced for convenience (imported specs, genesis)
 #   tracking  OpenSpec changes + specs (process history, not system code)
 #   config    agent / editor config (.claude)
 #   test      test programs and harnesses
 #   demo      example programs under demos/
-#   spike     first-party experiments under spike/
+#   spike     first-party experiments under spike/ (none currently)
 #   other     anything the rules do not match (a visible gap to fix, never dropped)
 #
 # Rules are ORDERED, first match wins -- most specific paths first.
@@ -54,6 +54,9 @@ classify() {
   case "$f" in
     # --- generated / vendored / reference (non-authored, path-specific first) ---
     bootstrap/*.ll)               role=generated; comp="bootstrap-ir" ;;
+    # vendored: no third-party code is checked in today (the nanopass copy under
+    # spike/ was removed by the retire-spikes change); this rule stays so any future
+    # vendored tree classifies consistently.
     spike/nanopass/vendor/*)      role=vendored;  comp="nanopass-vendor" ;;
     docs/r7rs-small.md)           role=reference; comp="reference-docs" ;;
     historical/*)                 role=reference; comp="historical" ;;

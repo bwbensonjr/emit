@@ -432,7 +432,8 @@
                   (string-append (lib-name->basename name) "\n"
                                  (render-datum nt))))))))
 
-;; --- the input-completeness probe (design D4(b); spike/form-complete) --------
+;; --- the input-completeness probe (design D4(b); archived OpenSpec change
+;;     repl-embedded-incremental) ---------------------------------------------
 ;; Does the host's accumulated buffer start with a complete datum yet?  An
 ;; EOF-aware scanner mirroring the reader's structure -- it reuses the reader's
 ;; own lexeme helpers (rd-ws?/rd-delim?/rd-skip-ws/rd-token-end) so the two can't

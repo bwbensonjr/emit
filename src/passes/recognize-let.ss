@@ -1,5 +1,6 @@
 ;;; recognize-let.ss (task 3.1) -- (call (lambda (x ...) body) e ...) => let.
-;;; Promoted from spike/nanopass/hand-passes.ss, extended with const/primcall.
+;;; Promoted from the hand-rolled pass bake-off (archived OpenSpec change
+;;; spike-nanopass-translation), extended with const/primcall.
 
 (define (recognize-let e)
   (define (rl e) (recognize-let e))

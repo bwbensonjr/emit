@@ -331,12 +331,13 @@ straight-line code at callee entry, before the tail body, and the uniform protot
 unchanged (verified by `countdown`/`namedloop` at 10M iterations and by a variadic callee
 whose body tail-calls under `musttail`).
 
-The spike (`spike/calling-convention/`, real LLVM 22 IR, 100e6 tail iterations) showed
-this preserves `musttail`/bounded stack, costs ~0 on the fixed-arity hot path vs. today's
-convention (~0.5 ns/call for both), and expresses rest + unbounded `apply`. An
-arg-vector-only convention was ~5.4× slower on the hot path and rejected; a hybrid
-fast/slow scheme was deemed unnecessary since the overhead is already ~0. Full data and
-rationale: `spike/calling-convention/RESULTS.md`.
+A dedicated spike (real LLVM 22 IR, 100e6 tail iterations) showed this preserves
+`musttail`/bounded stack, costs ~0 on the fixed-arity hot path vs. today's convention
+(~0.5 ns/call for both), and expresses rest + unbounded `apply`. An arg-vector-only
+convention was ~5.4× slower on the hot path and rejected; a hybrid fast/slow scheme was
+deemed unnecessary since the overhead is already ~0. Full data and rationale: the archived
+OpenSpec changes `calling-convention-spike` and `argc-overflow-calling-convention` (under
+`openspec/changes/archive/`).
 
 If/when we go the register-pinning route, the reference is Manticore's "JWA"
 convention: fixed argument positions for runtime state (e.g. the allocation pointer

@@ -838,7 +838,7 @@ static void err_write(char *buf, size_t cap, size_t *off, val v) {
  * falls back to the outermost trap (rt_trap) exactly as before -- so uncaught
  * behavior (REPL host survives; standalone exits non-zero) is unchanged.  guard
  * is only an upward, one-shot escape, so setjmp/longjmp suffices (no call/cc).
- * Validated by spike/guard/. */
+ * Validated by a setjmp/longjmp guard prototype during design. */
 #define RT_GUARD_MAX 256
 static jmp_buf rt_guard_env[RT_GUARD_MAX];
 static val     rt_guard_raised[RT_GUARD_MAX];   /* held only across an immediate longjmp */

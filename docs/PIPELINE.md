@@ -6,7 +6,8 @@ document covers everything **upstream** of it — the pass ladder, where the lad
 and how the passes are written.
 
 Grounded in a survey of Chez Scheme's own nanopass compiler (`s/cpnanopass.ss`,
-`s/np-languages.ss`) and a hands-on spike (`spike/nanopass/`).
+`s/np-languages.ss`) and a hands-on nanopass-vs-hand-rolled bake-off (archived OpenSpec
+change `spike-nanopass-translation`).
 
 ---
 
@@ -120,11 +121,12 @@ tail recursion in bounded stack).
 
 ## How the passes are written: nanopass vs. hand-rolled `match`
 
-`LLVM.md` currently states the pipeline "uses the nanopass framework." The spike tested
+`LLVM.md` currently states the pipeline "uses the nanopass framework." A spike tested
 that assumption empirically by writing the three spine passes **both** ways — with
 nanopass, and hand-rolled over plain s-expressions using the Chez `match` macro — and
-running them against shared inputs. All cases agree; full data in
-[`spike/nanopass/RESULTS.md`](../spike/nanopass/RESULTS.md).
+running them against shared inputs. All cases agree; full data in the archived OpenSpec
+changes `spike-nanopass-translation` and `select-syntax-rules-matcher` (under
+`openspec/changes/archive/`).
 
 Summary of the finding at this project's scale (~5–9 frontend passes):
 
@@ -147,8 +149,8 @@ Summary of the finding at this project's scale (~5–9 frontend passes):
 
 **Start hand-rolled with the Chez `match` macro.** At the realistic early pass count the
 total-line and dependency-weight numbers favor it, and the analysis passes real pipelines
-are full of do not benefit from nanopass's catamorphism. The spike under
-`spike/nanopass/` is kept as the worked reference for both approaches.
+are full of do not benefit from nanopass's catamorphism. The worked comparison of both
+approaches is preserved in the archived OpenSpec change `spike-nanopass-translation`.
 
 **Revisit nanopass if the pipeline grows past ~7–10 passes or the IL churns often** — at
 that scale its line savings, self-documenting ILs, and free exhaustiveness check begin to
