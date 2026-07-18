@@ -185,6 +185,29 @@ Leave `fold-arith`/`expand-string-append` in place (they already emit correct bi
 primcalls for literal n-ary calls); the layer wrapper serves value/`apply` position. Unify
 into the table-driven inliner as a later, separate step once the inliner is proven.
 
+**As shipped (final):** D2 was kept. The expander (`expand-arith`/`expand-compare`/
+`expand-string-append`) reduces every n-ary *operator*-position call to binary forms emitting
+the plain op symbol; because rename runs *after* expand, once the op left `*prims*` (became
+integrable) that binary form is an ordinary `(call op a b)` that rename shadows and the inliner
+rewrites to `(primcall %op …)`. Value/`apply` position is served by a self-contained
+`fold-eta` over raw primcalls (not a linked wrapper), so it is universal (`--no-prelude`) and
+needs no prelude helper. `> <= >=` remain expander-derived over the integrable `<`/`=`.
+
+**Known limitation from keeping the expander fold (the task 4.3 gap — deliberately deferred).**
+The expander fold is keyed on the head symbol *unconditionally*, with no shadow information
+(rename runs later). So a **shadowed folding op (`+ - * = < string-append`) called with 3+
+args, or with 0/1 args**, is folded as if it were the primitive:
+`(let ((+ f)) (+ 1 2 3))` becomes `(f (f 1 2) 3)` (nested binary) rather than `(f 1 2 3)`, and
+`(let ((+ f)) (+))` becomes `0` (the identity), ignoring `f`. The **2-ary** shadowed case is
+correct (`(let ((+ f)) (+ 1 2))` → `(f 1 2)`) — that is the spec's shadowing scenario, and it
+holds. The gap bites only when a user *both* rebinds one of these ops to a *non-associative*
+function *and* calls it with a non-binary arity — vanishingly rare, and an associative custom
+`+` folds to the same result anyway. **Fix (task 4.3, if ever wanted):** move the n-ary fold
+out of the expander into the shadow-aware `inline-primitives`, so it fires only on the
+unshadowed integrable; this must also absorb the `> <= >=` derivation and the single-evaluation
+temp binding that currently live in `expand-compare`. Rated low value / moderate risk, so it is
+left as a separate future change rather than blocking this one.
+
 ### D3 — Staged bootstrap (inherent, from the spike)
 Each primitive batch is **two regens**: (1) add the `%`-names as recognized primcalls
 (synonyms alongside the plain names), regen so the committed seed learns them; (2) flip the
