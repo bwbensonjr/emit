@@ -143,7 +143,7 @@
   '((+ "rt_add") (- "rt_sub") (* "rt_mul")
     (quotient "rt_quotient") (remainder "rt_remainder")
     (= "rt_num_eq") (< "rt_lt")
-    (cons "rt_cons") (car "rt_car") (cdr "rt_cdr")
+    (%cons "rt_cons") (car "rt_car") (cdr "rt_cdr")
     (null? "rt_null_p") (pair? "rt_pair_p") (eq? "rt_eq_p")
     (eqv? "rt_eqv_p") (equal? "rt_equal") (not "rt_not")
     (box "rt_box") (unbox "rt_unbox") (set-box! "rt_set_box")

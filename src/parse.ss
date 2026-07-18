@@ -8,7 +8,7 @@
 ;;;
 ;;; Primitive names are reserved keywords (not rebindable) in the M1 subset.
 
-(define *prims* '(+ - * quotient remainder = < cons car cdr null? pair? eq? eqv? equal? not
+(define *prims* '(+ - * quotient remainder = < %cons car cdr null? pair? eq? eqv? equal? not
                   char->integer integer->char
                   string-length string-ref substring string->symbol
                   string=? string-append symbol->string list->string make-string
@@ -33,7 +33,58 @@
 ;; fix lives here, not in the prelude: a prelude `(define (car x) (car x))` would
 ;; be a primcall under Emit but infinite self-recursion under the bootstrap
 ;; host, which loads the prelude directly.
-(define *prim-eta-arity* '((car . 1) (cdr . 1) (cons . 2)))
+;; car/cdr keep the legacy parse-time eta; cons is now an *integrable* (below),
+;; handled by the shadow-aware inline-primitives pass (change: first-class-primitives).
+(define *prim-eta-arity* '((car . 1) (cdr . 1)))
+
+;; ---- integrable primitives (change: first-class-primitives) ----
+;; Plain names that are ORDINARY, shadowable, first-class -- NOT reserved keywords.
+;; Each maps to its raw %-primcall and fixed arity.  After rename, an UNSHADOWED
+;; integrable survives as its bare symbol (a lexical/user shadow was alpha-renamed
+;; unique), so `inline-primitives` can tell them apart with no scope tracking:
+;;   direct call  (cons a b)  -> (primcall %cons a b)          [bare op]
+;;   value use     cons       -> (lambda (p ..) (primcall %cons p ..))   [eta]
+;;   shadowed (renamed symbol) -> untouched (ordinary binding wins)
+;; Universal by construction: the names are compiler-intrinsic (added to
+;; compute-known), so programs, user libraries, and --no-prelude all get them.
+(define *integrable* '((cons %cons 2)))
+(define (integrable-lookup name) (assq name *integrable*))
+(define (integrable? name) (and (integrable-lookup name) #t))
+
+(define (fresh-syms n)   ; n globally-unique param names for an eta lambda
+  (let loop ([i n] [acc '()])
+    (if (= i 0) acc (loop (- i 1) (cons (fresh-name 'p) acc)))))
+
+(define (eta-integrable entry)  ; (name raw arity) -> (lambda (p ..) (primcall raw p ..))
+  (let ([ps (fresh-syms (caddr entry))])
+    `(lambda ,ps (primcall ,(cadr entry) ,@ps))))
+
+;; inline-primitives: a universal pass run AFTER rename/resolve in every compile
+;; path (compile-forms, compile-program-with-imports, repl-lower-form).
+(define (inline-primitives e)
+  (define (I e)
+    (match e
+      [(const ,d) e]
+      [(global-ref ,s) e]
+      [(global-set! ,s ,rhs) `(global-set! ,s ,(I rhs))]
+      [,x (guard (symbol? x))
+          (let ([p (integrable-lookup x)]) (if p (eta-integrable p) x))]
+      [(if ,a ,b ,c) `(if ,(I a) ,(I b) ,(I c))]
+      [(seq ,a ,b) `(seq ,(I a) ,(I b))]
+      [(set! ,x ,rhs) `(set! ,x ,(I rhs))]
+      [(primcall ,op . ,args) `(primcall ,op ,@(map I args))]
+      [(apply ,f . ,args) `(apply ,(I f) ,@(map I args))]
+      [(call ,f . ,args)
+       (let ([p (and (symbol? f) (integrable-lookup f))])
+         (if (and p (= (length args) (caddr p)))
+             `(primcall ,(cadr p) ,@(map I args))     ; direct unshadowed call -> bare op
+             `(call ,(I f) ,@(map I args))))]         ; value/wrong-arity -> eta (via symbol case)
+      [(lambda ,params ,body) `(lambda ,params ,(I body))]
+      [(let ,binds ,body)
+       `(let ,(map (lambda (b) (list (car b) (I (cadr b)))) binds) ,(I body))]
+      [(letrec ,binds ,body)
+       `(letrec ,(map (lambda (b) (list (car b) (I (cadr b)))) binds) ,(I body))]))
+  (I e))
 
 (define (nsyms n)   ; (p1 ... pn), fresh-looking params for an eta lambda
   (let loop ([i 1] [acc '()])
@@ -374,6 +425,7 @@
     (cond
       [s           (make-binding 'local s)]
       [(prim? name) (make-binding 'primitive name)]
+      [(integrable? name) (make-binding 'primitive name)]  ; leave symbol; inline-primitives rewrites it
       [else #f])))
 
 ;; Post-rename resolution: a bare symbol that is not bound by an enclosing
@@ -434,7 +486,7 @@
 ;; pre-registered by `repl-register-define!`, so its current symbol is reused and
 ;; all sibling names in the group are visible to every body -- letrec* semantics.
 (define (repl-lower-form* env form register?)
-  (define (prep sexp) (resolve-globals (rename-program (parse-program sexp)) env))
+  (define (prep sexp) (inline-primitives (resolve-globals (rename-program (parse-program sexp)) env)))
   (cond
     [(define-form? form)
      (let* ([nd   (normalize-define form)]

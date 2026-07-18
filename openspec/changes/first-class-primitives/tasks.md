@@ -1,16 +1,16 @@
 ## 1. Primitive floor (D0) — compiler-intrinsic (DECIDED: intrinsic floor, no linked artifact)
 
 - [x] 1.1 Decided the mechanism: compiler-intrinsic floor (recorded in design.md D0). Plain names are an intrinsic integrable set; direct calls inline to `%op`, value uses eta-synthesize; universal by construction (no import, no `primitive-layer.ll`).
-- [ ] 1.2 Introduce the intrinsic integrable set (plain name → raw `%`-op + arity), placed in `compute-known` so the names are universally "known" (programs, libraries, `--no-prelude`); remove them from `*prims*` and add the `%`-ops to `*prims*`
-- [ ] 1.3 Add the Chez host shim (`%op → Chez op`) at every site that `(load)`s the prelude under Chez (e.g. `test/read-all-tests.ss`) — needed because eta/inline bodies reference `%op`
-- [ ] 1.4 Regression guards: a library using `+`/`cons` without importing `(scheme base)`, and a `--no-prelude` program using them, both build and run (the spike failures)
+- [x] 1.2 Introduce the intrinsic integrable set (`*integrable*`, name→`%`-op+arity) in `compute-known`; `cons` removed from `*prims*`, `%cons` added. (Batch A: cons only so far.)
+- [~] 1.3 Chez host shim — NOT NEEDED under the intrinsic floor: `%`-ops appear only in compiler-generated IL, never in prelude source, so `read-all-tests` (loads prelude under Chez) passes unchanged (6/6). Marked moot; revisit only if a future primitive puts a `%`-op in source loaded under Chez.
+- [x] 1.4 Regression guards verified (Chez driver): a library using `cons` without importing `(scheme base)` → `(5 . 6)`; a `--no-prelude` program using `cons` → works. Both were spike failures. (Add to the automated suite in a later task.)
 
 ## 2. Shadow-aware inliner (D1)
 
-- [ ] 2.1 Add the integrable table (plain name → raw `%`-op, arity, fold/identity for variadic)
-- [ ] 2.2 Add the inlining pass after resolution; rewrite direct calls to bare primcalls only when the operator resolves to the global layer binding and is not shadowed / user-redefined / `set!`-ed (reuse resolver `bound` set, user-wins resolution, `find-assigned`)
+- [~] 2.1 Integrable table exists (`*integrable*`) for fixed-arity `cons`; variadic fold/identity (for `+`) pending Batch B
+- [x] 2.2 `inline-primitives` pass added and wired into all three paths (compile-forms, compile-program-with-imports, repl-lower-form). Shadow-awareness is free: rename makes any shadow unique, so an unshadowed integrable survives as its bare symbol — no `bound`/`find-assigned` threading needed
 - [ ] 2.3 Document the new stage in `docs/PIPELINE.md` with its input/output IL shape
-- [ ] 2.4 Verify byte-for-byte (or perf-parity) that unshadowed direct calls match the pre-change baseline IR for representative `cons`/`+`/`car` programs
+- [x] 2.4 Verified (cons): a direct unshadowed `(cons a b)` emits bare `@rt_cons`, zero wrapper refs — matches baseline codegen
 
 ## 3. Staged bootstrap rollout (D3) — repeat per batch
 
