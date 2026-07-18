@@ -1,9 +1,9 @@
-## 1. Primitive layer (D0) — the always-linked base
+## 1. Primitive floor (D0) — compiler-intrinsic (DECIDED: intrinsic floor, no linked artifact)
 
-- [ ] 1.1 Decide the layer mechanism (distinguished always-imported library vs base-env merge) against how `--no-prelude` and library builds assemble environments; record in design.md
-- [ ] 1.2 Introduce the primitive layer: a wrapper procedure per primitive over its raw `%`-op, available in programs, user libraries (no `(scheme base)` import), and `--no-prelude`
-- [ ] 1.3 Add the Chez host shim (`%op → Chez op`) at every site that `(load)`s the layer/prelude under Chez (e.g. `test/read-all-tests.ss`)
-- [ ] 1.4 Regression guards: a library using `+`/`cons` without importing `(scheme base)`, and a `--no-prelude` program using them, both build and run (these were the spike failures)
+- [x] 1.1 Decided the mechanism: compiler-intrinsic floor (recorded in design.md D0). Plain names are an intrinsic integrable set; direct calls inline to `%op`, value uses eta-synthesize; universal by construction (no import, no `primitive-layer.ll`).
+- [ ] 1.2 Introduce the intrinsic integrable set (plain name → raw `%`-op + arity), placed in `compute-known` so the names are universally "known" (programs, libraries, `--no-prelude`); remove them from `*prims*` and add the `%`-ops to `*prims*`
+- [ ] 1.3 Add the Chez host shim (`%op → Chez op`) at every site that `(load)`s the prelude under Chez (e.g. `test/read-all-tests.ss`) — needed because eta/inline bodies reference `%op`
+- [ ] 1.4 Regression guards: a library using `+`/`cons` without importing `(scheme base)`, and a `--no-prelude` program using them, both build and run (the spike failures)
 
 ## 2. Shadow-aware inliner (D1)
 

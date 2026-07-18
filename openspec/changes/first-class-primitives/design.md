@@ -19,11 +19,24 @@ user-facing (they stay internal/reserved); CPS/ANF or any change below the LLVM 
 
 ## Decisions
 
-### D0 — Always-linked primitive layer (the settled architecture)
-The plain-name wrappers live in a **base layer that is always linked**, wherever the raw
-primitives are available today — programs, user libraries, and `--no-prelude` — *not* only in
-the optional `(scheme base)`. Only the raw `%`-ops are reserved primcall heads; the plain
-names (`cons`, `+`, …) are ordinary bindings this layer provides.
+### D0 — Compiler-intrinsic primitive floor (DECIDED, task 1.1)
+
+**Mechanism chosen: compiler-intrinsic floor (no linked artifact).** The plain primitive
+names join a compiler-intrinsic integrable set (like `*prims*` is universal today), so they
+are available by construction in programs, user libraries, and `--no-prelude` — no import, no
+`primitive-layer.ll`, no module-system change. Realization:
+
+- operator position, resolves to the intrinsic primitive, unshadowed/un-`set!` → **inline** to
+  the bare `(primcall %op …)`;
+- value position, same conditions → **eta-synthesize** `(lambda (a …) (primcall %op a …))`;
+- shadowed (lexical, top-level user define, or `set!`) → the ordinary user binding wins.
+
+The wrapper is thus never a linked closure; it is either inlined away or synthesized per
+value-use (tree-shakeable). Universality falls out of the set being intrinsic to the compiler
+(in `compute-known`), not imported. The raw `%`-ops remain reserved primcall heads and still
+require the staged bootstrap (D3). *Alternative rejected:* an always-imported linked layer
+library — more module-system machinery and a link edge on every unit, for a shared closure we
+mostly inline away anyway.
 
 ```
    raw primcalls (reserved, internal)   %cons %add %car …   → rt_*
