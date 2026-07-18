@@ -1,10 +1,32 @@
-## Resumption state (2026-07-18) — paused mid-implementation
+## Resumption state (2026-07-18) — cons slice SHIPPED; next: expand Batch A
 
 **Branch:** `feat/first-class-primitives` (off `main` @ the D0-decision commit). `main` is
-clean of implementation code. Work is Chez-driver-verified but NOT yet regen'd/shipped.
+clean of implementation code.
 
-**Done & verified (Chez driver only — no regen yet):** the intrinsic-floor mechanism for
-`cons`.
+**Cons slice shipped (commit 0a18580):** the intrinsic-floor mechanism for `cons` is
+regen'd, committed, and self-host-verified.
+- A single **direct `make regen` converged** — the staged 2-regen (D3) proved unnecessary
+  for this shape: the old seed never needs to emit `%cons` to compile the new source (it
+  compiles the new source treating `cons` as its own prim; the new compiler's inliner only
+  fires when the *new* compiler recompiles, and it recognizes `%cons`). The fixed-point loop
+  plus the Chez independent-host re-derivation both confirm convergence to a unique point.
+- `bootstrap/scheme.base.ll` is **byte-identical** (unchanged) — `cons` and `%cons` both
+  lower to `@rt_cons`, and `%cons` never leaks into LLVM IR. Only the three compiler IRs
+  (`embed`, `embed-repl`, `schemec`) changed, because their *source* grew the
+  `inline-primitives` pass + `*integrable*` table.
+- Verified green: trust-check (2nd regen is a no-op), self-host fixed point, and — through
+  the **shipped binary** — direct call, `(map cons …)` value, top-level shadow, lexical
+  shadow, `--no-prelude`; and — through the **AOT path** — a library using `cons` without
+  importing `(scheme base)` → `(5 . 6)` (the spike failure, now fixed).
+
+**Lesson for D3:** the "two regens per batch" rule is a *safe upper bound*, not always
+required. When a batch only renames a primcall head to a `%`-synonym that lowers to the same
+`rt_*` and the compiler's own source never emits that `%`-op through the *old* seed, one
+direct regen converges. Try direct first; the fixed-point loop fails loudly (no convergence
+in 5 iters) if the jump is too big, at which point insert the stage-1 synonym regen.
+
+**Done & verified earlier (Chez driver), now also shipped:** the intrinsic-floor mechanism
+for `cons`.
 - `src/parse.ss`: `cons` removed from `*prims*`, `%cons` added; new `*integrable*` table
   (`(cons %cons 2)`), `integrable-lookup`/`integrable?`; `scope-resolve` treats integrables
   like prims (leaves the symbol); new **`inline-primitives`** pass + `eta-integrable`/
@@ -21,21 +43,26 @@ clean of implementation code. Work is Chez-driver-verified but NOT yet regen'd/s
 so the dual-host shim (task 1.3) is unnecessary.
 
 **Next states (in order):**
-1. **Ship the `cons` slice** — staged 2-regen bootstrap (stage 1: add `%cons` as a
-   `*prims*` synonym while `cons` still recognized, regen so the committed seed learns
-   `%cons`; stage 2: the current source, regen), then full `./run-dev-tests.sh`. This proves
-   self-hosting. (The spike proved convergence for the analogous shape.)
-2. **Batch B — `+`/variadic**: add a fold/identity rule to `*integrable*` and teach
+1. ~~**Ship the `cons` slice**~~ — **DONE (commit 0a18580).** Direct regen converged (the
+   staged 2-regen was unnecessary for this shape — see the shipped-slice note above); full
+   `./run-dev-tests.sh` green.
+2. **Expand Batch A — remaining fixed-arity prims** (`car`, `cdr`, `not`, `eqv?`, `null?`,
+   `pair?`, `eq?`, `equal?`, the predicates, …): add each to `*integrable*` (name → `%`-op +
+   arity), add the `%`-synonym to `*prims*` + the emit prim-table, drop it from
+   `*prim-eta-arity*`. These are the same shape as `cons`, so batch several at once and do a
+   single direct regen (fall back to a stage-1 synonym regen only if the fixed point fails to
+   converge). Retire `*prim-eta-arity*`/`prim-as-value` entirely once `car`/`cdr` move over.
+3. **Batch B — `+`/variadic**: add a fold/identity rule to `*integrable*` and teach
    `inline-primitives` to fold a direct n-ary `(+ …)` into nested `(primcall %add …)`
    (or keep the expander fold per D2 and only eta variadic value-use). Value/`apply` use is
-   the eta lambda over a fold. 2-regen + tests.
-3. **Scale** to the remaining primitives in staged batches (each a 2-regen + dev-tests).
-4. `docs/PIPELINE.md` stage doc; automated regression guards (the library / `--no-prelude`
+   the eta lambda over a fold. Regen + tests.
+4. **Scale** to the remaining primitives in staged batches (each regen + dev-tests).
+5. `docs/PIPELINE.md` stage doc; automated regression guards (the library / `--no-prelude`
    cases, currently only manually checked); retire the residual eta special-case; final
    verification (binary size + regen time within noise of baseline).
 
 **How to resume:** `git switch feat/first-class-primitives`; re-baseline with `make &&
-./run-dev-tests.sh` (should be green — code changes are inert until regen); then do state 1.
+./run-dev-tests.sh` (green — bootstrap now matches source); then do state 2 (expand Batch A).
 
 ## Context
 

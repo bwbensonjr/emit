@@ -9,12 +9,12 @@
 
 - [~] 2.1 Integrable table exists (`*integrable*`) for fixed-arity `cons`; variadic fold/identity (for `+`) pending Batch B
 - [x] 2.2 `inline-primitives` pass added and wired into all three paths (compile-forms, compile-program-with-imports, repl-lower-form). Shadow-awareness is free: rename makes any shadow unique, so an unshadowed integrable survives as its bare symbol — no `bound`/`find-assigned` threading needed
-- [ ] 2.3 Document the new stage in `docs/PIPELINE.md` with its input/output IL shape
+- [x] 2.3 Document the new stage in `docs/PIPELINE.md` with its input/output IL shape (added to the pipeline diagram, a prose paragraph on shadow-awareness / dev-ship fidelity, and a stage-table row)
 - [x] 2.4 Verified (cons): a direct unshadowed `(cons a b)` emits bare `@rt_cons`, zero wrapper refs — matches baseline codegen
 
 ## 3. Staged bootstrap rollout (D3) — repeat per batch
 
-- [ ] 3.1 Batch A (fixed-arity: `cons`, `car`, `cdr`, `not`, `eqv?`, …): stage-1 regen (add `%`-synonyms), stage-2 regen (flip to layer + inliner); full dev-tests green each stage
+- [~] 3.1 Batch A (fixed-arity: `cons`, `car`, `cdr`, `not`, `eqv?`, …): **`cons` shipped** — a single direct regen converged (the old seed never needs to emit `%cons` to compile the new source, so the staged 2-regen was unnecessary for this shape; the fixed-point loop + Chez independent-host re-derivation both confirm convergence). `scheme.base.ll` unchanged (byte-identical: `cons`/`%cons` both emit `rt_cons`); the three compiler IRs regenerated. Remaining fixed-arity prims (`car`, `cdr`, `not`, `eqv?`, …) pending.
 - [ ] 3.2 Batch B (variadic: `+ - * = <`, `string-append`): same 2-regen; keep the expander fold (D2) emitting binary raw primcalls for literal calls
 - [ ] 3.3 Remaining primitives in further batches until all are layer-exposed
 - [ ] 3.4 Commit regenerated `bootstrap/*.ll` at each stable stage; trust-check clean
