@@ -8,46 +8,49 @@
 ;;;
 ;;; Primitive names are reserved keywords (not rebindable) in the M1 subset.
 
-;; Reserved primcall heads: the raw %-ops, plus the plain names still handled as
-;; reserved keywords -- `string-append` (variadic value-use via `%str-concat`), the
-;; R7RS optional-arity ops (`make-*`, `substring`, `string-copy`, `string=?`), I/O,
-;; and REPL state.  Most plain names -- including the expander-folded arithmetic
-;; (`+ - *`), comparison (`= <`) and equality (`eq? eqv?`) ops -- are now
-;; *integrable* (below), i.e. ordinary shadowable bindings.  The expander still folds
-;; n-ary `+`/`=`/... to binary forms (emitting the plain name, which the inliner then
-;; rewrites to `%+`/`%=`/...); `> <= >=` remain derived over the integrable `<`/`=`.
+;; Reserved primcall heads: the raw %-ops, plus a few plain names that cannot yet be
+;; integrable.  Nearly every standard primitive is now *integrable* (below), i.e. an
+;; ordinary shadowable binding.  The expander still folds n-ary `+`/`=`/... to binary
+;; forms (emitting the plain name, which the inliner rewrites to `%+`/`%=`/...);
+;; `> <= >=` remain derived over the integrable `<`/`=`.  Still reserved:
+;;   * `string-append` -- its VALUE-position eta is a fold over the prelude helper
+;;     `%str-concat` (a global that must be name-resolved), which the post-rename
+;;     inliner cannot synthesize; so its value-use stays in `prim-as-value` at parse
+;;     time and its operator calls stay reserved primcalls (not yet shadowable);
+;;   * the internal %-ops (hashing, records, error plumbing, `%no-prelude?`) and the
+;;     REPL state ops (`repl-mode`/`repl-input`/`repl-state-ref`/`repl-state-set!`) --
+;;     compiler/host internals, not standard primitives, never used as values.
 (define *prims* '(%+ %- %* %= %< %eq? %eqv?
                   %cons %quotient %remainder %car %cdr %null? %pair? %equal? %not
                   %char->integer %integer->char
                   %string-length %string-ref %string->symbol %symbol->string %list->string
-                  %string-set!
-                  %vector-ref %vector-set! %vector-length %vector?
+                  %string-set! %substring %string=? %make-string %string-copy
+                  string-append
+                  %vector-ref %vector-set! %vector-length %vector? %make-vector
                   %bytevector-u8-ref %bytevector-u8-set! %bytevector-length %bytevector?
+                  %make-bytevector
                   %symbol? %string? %char? %boolean? %integer? %exact?
-                  substring string=? string-append make-string string-copy make-vector
-                  make-bytevector
+                  %read-all-stdin %display %write %newline
                   %hash %make-hash-table %hash-table? %hash-table-spine
                   %make-record-type %make-record %record-ref %record-set! %record-of-type? %record?
-                  read-all-stdin display write newline %no-prelude?
+                  %no-prelude?
                   repl-mode repl-input repl-state-ref repl-state-set!
                   %error-abort %raise %run-guarded
                   %error-object? %error-object-message %error-object-irritants))
 (define (prim? op) (and (memq op *prims*) #t))
 
-;; ---- primitives as first-class values (self-host-gap-sweep G8) ----
-;; Primitives are reserved keywords, so a bare reference in value position (e.g.
-;; `(map car xs)`, `(apply string-append xs)`) is not a variable and would be
-;; unbound.  When one appears as a value, eta-expand it into a lambda so it becomes
-;; a genuine procedure; a call in operator position is still recognized as a
-;; primcall (the prim check is head-only), so direct calls are unaffected.  The
-;; fix lives here, not in the prelude: a prelude `(define (car x) (car x))` would
-;; be a primcall under Emit but infinite self-recursion under the bootstrap
-;; host, which loads the prelude directly.
-;; The legacy fixed-arity eta list (`car`/`cdr`) is retired: those are now
-;; *integrable* (below), so the shadow-aware inline-primitives pass supplies both
-;; their direct-call inlining and their value-position eta.  `string-append` is the
-;; sole remaining eta special-case (variadic; handled in `prim-as-value`), pending
-;; Batch B (change: first-class-primitives, task 4.1).
+;; ---- primitives as first-class values ----
+;; A bare primitive reference in value position (e.g. `(map car xs)`) must become a
+;; genuine procedure.  For nearly every primitive this is no longer a parse-time
+;; special-case: the primitive is *integrable* (below), so the shadow-aware
+;; inline-primitives pass (run after rename) supplies BOTH its direct-call inlining
+;; and its value-position eta (a self-contained `(lambda (p ..) (primcall %op p ..))`).
+;; `*prim-eta-arity*`/`nsyms` are retired.  The sole survivor is `string-append`
+;; (`prim-as-value`, below): its value-eta folds over the prelude helper `%str-concat`
+;; -- a global that must be name-resolved -- so it must be produced BEFORE rename, not
+;; in the post-rename inliner (task 4.1 completes when string-append moves too).
+;; The eta must not live in the prelude: a prelude `(define (car x) (car x))` would be
+;; a primcall under Emit but infinite self-recursion under the bootstrap host.
 
 ;; ---- integrable primitives (change: first-class-primitives) ----
 ;; Plain names that are ORDINARY, shadowable, first-class -- NOT reserved keywords.
@@ -78,7 +81,15 @@
     (bytevector-u8-ref %bytevector-u8-ref 2) (bytevector-u8-set! %bytevector-u8-set! 3)
     (bytevector-length %bytevector-length 1) (bytevector? %bytevector? 1)
     (symbol? %symbol? 1) (string? %string? 1) (char? %char? 1)
-    (boolean? %boolean? 1) (integer? %integer? 1) (exact? %exact? 1)))
+    (boolean? %boolean? 1) (integer? %integer? 1) (exact? %exact? 1)
+    ;; Batch B increment 2: remaining string/vector/bytevector construction+access
+    ;; and I/O prims.  All fixed-arity in Emit (the runtime rt_* have fixed C
+    ;; signatures -- e.g. make-vector REQUIRES the fill, substring is exactly 3).
+    (substring %substring 3) (string=? %string=? 2)
+    (make-string %make-string 2) (string-copy %string-copy 1)
+    (make-vector %make-vector 2) (make-bytevector %make-bytevector 2)
+    (read-all-stdin %read-all-stdin 0)
+    (display %display 1) (write %write 1) (newline %newline 0)))
 (define (integrable-lookup name) (assq name *integrable*))
 (define (integrable? name) (and (integrable-lookup name) #t))
 
@@ -117,11 +128,10 @@
        `(letrec ,(map (lambda (b) (list (car b) (I (cadr b)))) binds) ,(I body))]))
   (I e))
 
-;; source lambda that behaves as the reserved primitive OP used as a value.  Only
-;; `string-append` remains (variadic, folds over its args via the prelude helper
-;; `%str-concat`); every fixed-arity primitive is now *integrable*, so its value-use
-;; eta is synthesized by inline-primitives, not here.  The other reserved prims
-;; (`+ - * = <`, `eq?`/`eqv?`, `make-*`, I/O, …) are not yet first-class values.
+;; The one reserved primitive still usable as a first-class value: `string-append`.
+;; Its value-eta folds over the prelude helper `%str-concat`, so it is produced HERE
+;; (parse time, before rename) where `%str-concat` still resolves normally -- unlike
+;; the integrable etas, which are self-contained primcalls synthesized post-rename.
 (define (prim-as-value op)
   (if (eq? op 'string-append)
       '(lambda gs (%str-concat gs))
@@ -158,7 +168,10 @@
     [(string? e) `(const ,e)]              ; string literals are self-evaluating
     [(char? e) `(const ,e)]                ; char literals are self-evaluating
     [(null? e) `(const ())]
-    [(symbol? e) (if (prim? e) (parse-expr (prim-as-value e)) e)]  ; prim value -> eta
+    ;; a bare symbol is a variable ref; an integrable's value-use eta is synthesized
+    ;; post-rename by inline-primitives.  The one exception is a reserved prim still
+    ;; usable as a value (string-append), whose eta must be produced here (pre-rename).
+    [(symbol? e) (if (prim? e) (parse-expr (prim-as-value e)) e)]
     [(pair? e)
      (match e
        [(quote ,d) `(const ,d)]
