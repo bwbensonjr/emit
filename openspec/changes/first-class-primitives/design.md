@@ -1,4 +1,17 @@
-## Resumption state (2026-07-18) — Batches A + B SHIPPED (48 prims first-class); next: cleanup
+## Resumption state (2026-07-18) — COMPLETE: 49 prims first-class; only internals reserved
+
+**Status: the change's implementation is complete.** Every standard primitive is first-class,
+shadowable, and universally available; `prim-as-value`/`*prim-eta-arity*` are fully retired;
+tasks 1–5 are done except the deliberately-optional D2→inliner unification (4.3). Full
+`./run-dev-tests.sh` 18/18 after every slice. The completion pass (commit 0660a4b) added
+self-contained rest-param **fold-etas** (over raw `%`-primcalls, so universal and needing no
+prelude helper) for the variadic value-use of `+ - * = < string-append`, which let
+`string-append` become integrable and retired the last parse-time value special-case. Ready to
+archive (or do the optional 4.3 unification first).
+
+---
+
+### Historical: Batches A + B (48 prims), before the completion pass
 
 **Branch:** `feat/first-class-primitives` (off `main` @ the D0-decision commit). `main` is
 clean of implementation code.

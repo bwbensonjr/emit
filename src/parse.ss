@@ -6,7 +6,9 @@
 ;;;   (primcall op e ...) | (let ([x e] ...) e) | (letrec ([x e] ...) e)
 ;;;   (seq e e) | (set! x e)
 ;;;
-;;; Primitive names are reserved keywords (not rebindable) in the M1 subset.
+;;; Nearly every primitive name is now an ordinary, shadowable binding (an
+;;; *integrable*, below); only the raw %-ops and a few host internals are reserved
+;;; keywords.  See the `first-class-primitives` change.
 
 ;; Reserved primcall heads.  EVERY standard primitive is now *integrable* (below),
 ;; i.e. an ordinary shadowable binding -- including the variadic folding ops, whose
@@ -505,10 +507,12 @@
 ;;                (emit.ss `emit-repl-module`) as `external global i64`.  NOT
 ;;                produced by the resolver in this change -- structured and
 ;;                consumable, ready for Stage 1 to populate from imports.
-;;   primitive -- a built-in operator/keyword.  In the M1 subset a primitive used
-;;                as a value is already eta-expanded in `parse-expr`, so a bare
-;;                primitive never reaches resolution as a free variable; the kind
-;;                is modeled for completeness (and Stage 1's import merge).
+;;   primitive -- a reserved primcall head (a raw %-op) OR an integrable left as its
+;;                bare symbol by `scope-resolve`.  The resolver leaves the symbol in
+;;                place; the post-rename `inline-primitives` pass then either inlines a
+;;                direct integrable call to a bare primcall or eta-expands a value-use.
+;;                (A shadowed integrable was alpha-renamed unique and resolves as a
+;;                normal binding, so it never lands here.)
 (define (make-binding kind sym) (list 'binding kind sym))
 (define (binding-kind b) (cadr b))
 (define (binding-sym b) (caddr b))
@@ -548,8 +552,8 @@
                   ;; is defined by another unit and resolves via external global.
                   [(eq? (binding-kind b) 'local)    `(global-ref ,(binding-sym b))]
                   [(eq? (binding-kind b) 'imported) `(global-ref ,(binding-sym b))]
-                  ;; primitive: a reserved keyword, not a variable (unreachable
-                  ;; post-eta) -- leave the symbol, as the flat model effectively did.
+                  ;; primitive: a raw %-op or an unshadowed integrable -- leave the
+                  ;; symbol for inline-primitives to rewrite post-rename.
                   [else x])))]
       [(if ,a ,b ,c) `(if ,(Rb a) ,(Rb b) ,(Rb c))]
       [(seq ,a ,b) `(seq ,(Rb a) ,(Rb b))]
