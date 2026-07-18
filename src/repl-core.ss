@@ -156,7 +156,11 @@
   (reset-counter!)                             ; monotonic gensym for @code_N labels
   (set! *repl-env* (make-repl-env))
   (set! *repl-macro-env* (quote ()))
-  (set! *repl-known* (union* (list *core-keywords* *prims* *extra-op-keywords*)))
+  ;; include the intrinsic integrable prims (cons, +, car, …) so a macro template
+  ;; that mentions one is treated as a known binding and not hygiene-renamed --
+  ;; mirrors compute-known on the batch path (change: first-class-primitives).
+  (set! *repl-known* (union* (list *core-keywords* *prims* *extra-op-keywords*
+                                   (map car *integrable*))))
   (set! *repl-n* 0)
   (set! *repl-libs* (quote ()))
   (set! *repl-lib-imports* (quote ()))
