@@ -43,6 +43,7 @@
 ;; which template identifiers a macro is allowed to introduce.
 (define (compute-known macro-env runtime-forms)
   (union* (list *core-keywords* *prims* *extra-op-keywords*
+                (map car *integrable*)     ; intrinsic integrable prims are universally known
                 (map car macro-env)
                 (filter (lambda (x) x) (map define-name runtime-forms)))))
 
@@ -59,7 +60,7 @@
     (let* ([known (compute-known macro-env runtime-forms)]
            [top   (collect-toplevel runtime-forms)]
            [expd  (expand top macro-env known)]
-           [core  (rename-program (parse-program expd))]
+           [core  (inline-primitives (rename-program (parse-program expd)))]
            [a     (recognize-let core)]
            [b     (convert-assignments a)]
            [c     (convert-closures b)]
@@ -375,9 +376,10 @@
            [top   (collect-toplevel runtime)]
            [expd  (expand top macro-env known)]
            [core0 (rename-program (parse-program expd))]
-           [core  (if (null? import-env-alist)
-                      core0
-                      (resolve-globals core0 (vector import-env-alist 0)))]
+           [core  (inline-primitives
+                    (if (null? import-env-alist)
+                        core0
+                        (resolve-globals core0 (vector import-env-alist 0))))]
            [a (recognize-let core)]
            [b (convert-assignments a)]
            [c (convert-closures b)]

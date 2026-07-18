@@ -62,8 +62,8 @@ The first production slice (`src/`) implements the spine as hand-rolled `match` 
 one observable intermediate language per stage (`--dump`):
 
 ```
-read (host) → prepend prelude → collect-toplevel → expand → parse+rename → recognize-let
-            → convert-assignments → convert-closures → lambda-lift+lower
+read (host) → prepend prelude → collect-toplevel → expand → parse+rename → inline-primitives
+            → recognize-let → convert-assignments → convert-closures → lambda-lift+lower
             → emit .ll → clang(+runtime,+libgc)
 ```
 
@@ -101,9 +101,28 @@ compiled program can call to parse text into data. Replacing the host `read` at 
 the pipeline with this Scheme reader is the concrete self-hosting milestone it sets up; string
 escapes, dotted pairs, quasiquote, and the wider number tower are noted follow-ons.
 
+**Inlining primitives (`inline-primitives`).** A universal core→core pass run in every
+compile path (`compile-forms`, `compile-program-with-imports`, `repl-lower-form`) right after
+`parse+rename` (and, on the module path, `resolve-globals`). It exists because *integrable*
+primitives — `cons` today, more per `first-class-primitives` — are **ordinary, shadowable
+bindings**, not reserved keywords: their plain names carry no special meaning until this pass
+decides, per occurrence, whether to inline. Alpha-renaming has already made this decision
+trivially observable: an **unshadowed** integrable survives as its **bare source symbol**,
+while any lexical/top-level/`set!` shadow was renamed to a unique gensym — so the pass needs
+no scope tracking. It rewrites a direct unshadowed call `(call cons a b)` into the bare
+`(primcall %cons a b)` (recovering baseline codegen — the `%`-op lowers to the same `rt_cons`
+and never appears in LLVM IR), and a value/`apply`/wrong-arity use of the bare symbol into an
+eta lambda `(lambda (p…) (primcall %cons p…))`. A shadowed (renamed) binding is left
+untouched, so the user binding wins. Because the pass is shared by all doors, the REPL and the
+AOT build make **identical** inlining decisions (dev→ship fidelity). The raw `%`-ops it emits
+stay reserved primcall heads, which is why adding an integrable is a staged-bootstrap step
+(the committed seed must learn the `%`-name — see the `first-class-primitives` change and the
+D3 lesson recorded there).
+
 | stage | IL shape (s-expr) | file |
 |-------|-------------------|------|
 | core | `(const d)｜x｜(if …)｜(lambda (x…) e)｜(call e e…)｜(primcall op e…)｜(let/letrec …)｜(seq …)｜(set! x e)` | `src/parse.ss` |
+| inline-primitives | same core IL; direct unshadowed integrable call `(call cons a b)` → `(primcall %cons a b)`, value/apply/wrong-arity use `cons` → `(lambda (p…) (primcall %cons p…))`; a shadowed (alpha-renamed) binding is left untouched | `src/parse.ss` |
 | recognize-let | + `(let …)` from `(call (lambda …) …)` | `src/passes/recognize-let.ss` |
 | convert-assignments | − `set!`; `+ (primcall box/unbox/set-box! …)` | `src/passes/convert-assignments.ss` |
 | convert-closures | − `letrec`; `+ (closures ([x (fv…) le]…) body)` | `src/passes/convert-closures.ss` |

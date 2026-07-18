@@ -19,6 +19,31 @@ raw primcall; a direct, unshadowed call SHALL still compile to the bare primitiv
 - **THEN** `not` behaves as an ordinary procedure value, and a user definition shadows it
   (user-wins), like any other binding
 
+### Requirement: eqv? primitive
+
+The compiler SHALL provide `eqv?` as an equivalence operation that returns `#t` when its two
+arguments are the same object, and `#f` otherwise. In the current subset `eqv?` SHALL agree
+with `eq?`: it holds for fixnums (immediate), interned symbols, and immediate characters
+(equal codepoints are the same immediate word). Value comparison for non-immediate numbers
+(flonums, bignums) — where `eqv?` would diverge from `eq?` — is deferred until such numbers
+exist. `eqv?` SHALL be exposed as an ordinary, first-class, shadowable binding in the
+always-present primitive layer, defined over a reserved raw primcall (`%eqv?`); a direct,
+unshadowed call SHALL still compile to the bare primitive operation (see the `primitive-layer`
+capability). It SHALL NOT require importing `(scheme base)`.
+
+#### Scenario: eqv? on fixnums, symbols, and characters
+
+- **WHEN** a program evaluates `(eqv? 3 3)`, `(eqv? 3 4)`, `(eqv? 'x 'x)`, and
+  `(eqv? #\a #\a)`
+- **THEN** the results are `#t`, `#f`, `#t`, and `#t`
+
+#### Scenario: eqv? is first-class and shadowable
+
+- **WHEN** a program evaluates `(map eqv? (list 1 2) (list 1 9))`, or defines
+  `(define (eqv? a b) 'mine)`
+- **THEN** `eqv?` behaves as an ordinary procedure value, and a user definition shadows it
+  (user-wins), like any other binding
+
 ## ADDED Requirements
 
 ### Requirement: Reserved-keyword status is limited to raw primitive operators

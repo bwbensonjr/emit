@@ -49,7 +49,7 @@
          '(global-set! x.g0 (const 41)))
   (check "reference resolves to x.g0"
          (repl-lower-form env '(+ x 1))
-         '(primcall + (global-ref x.g0) (const 1))))
+         '(primcall %+ (global-ref x.g0) (const 1))))
 
 ;; 2. Redefinition: a later form uses the newest generation.
 (let ([env (make-repl-env)])
@@ -60,7 +60,7 @@
          (repl-env-lookup env 'y) 'y.g1)
   (check "sum uses the latest y.g1"
          (repl-lower-form env '(+ y y))
-         '(primcall + (global-ref y.g1) (global-ref y.g1))))
+         '(primcall %+ (global-ref y.g1) (global-ref y.g1))))
 
 ;; 3. Forward reference is rejected.
 (let ([env (make-repl-env)])
@@ -85,7 +85,7 @@
   (repl-lower-form env '(define w 10))
   (check "value redefinition reads previous generation"
          (repl-lower-form env '(define w (+ w 1)))
-         '(global-set! w.g1 (primcall + (global-ref w.g0) (const 1)))))
+         '(global-set! w.g1 (primcall %+ (global-ref w.g0) (const 1)))))
 
 ;; 6. The whole front-end pipeline lowers a form to L-code carrying the global
 ;;    nodes (no unbound-variable crash from `lower`).

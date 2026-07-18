@@ -6,51 +6,198 @@
 ;;;   (primcall op e ...) | (let ([x e] ...) e) | (letrec ([x e] ...) e)
 ;;;   (seq e e) | (set! x e)
 ;;;
-;;; Primitive names are reserved keywords (not rebindable) in the M1 subset.
+;;; Nearly every primitive name is now an ordinary, shadowable binding (an
+;;; *integrable*, below); only the raw %-ops and a few host internals are reserved
+;;; keywords.  See the `first-class-primitives` change.
 
-(define *prims* '(+ - * quotient remainder = < cons car cdr null? pair? eq? eqv? equal? not
-                  char->integer integer->char
-                  string-length string-ref substring string->symbol
-                  string=? string-append symbol->string list->string make-string
-                  string-set! string-copy
-                  make-vector vector-ref vector-set! vector-length vector?
-                  make-bytevector bytevector-u8-ref bytevector-u8-set! bytevector-length bytevector?
+;; Reserved primcall heads.  EVERY standard primitive is now *integrable* (below),
+;; i.e. an ordinary shadowable binding -- including the variadic folding ops, whose
+;; value-position eta is a self-contained rest-param fold over raw primcalls, so no
+;; primitive needs a prelude helper or a parse-time special case any more.  The
+;; expander still folds n-ary `+`/`=`/`string-append`/... to binary forms (emitting
+;; the plain name, which the inliner rewrites to `%+`/`%=`/`%string-append`/...);
+;; `> <= >=` remain derived over the integrable `<`/`=`.  Only compiler/host internals
+;; stay reserved: the %-ops (hashing, records, error plumbing, `%no-prelude?`) and the
+;; REPL state ops (`repl-mode`/`repl-input`/`repl-state-ref`/`repl-state-set!`) --
+;; never used as values, and the raw %-ops staying internal is a Non-Goal to relax.
+(define *prims* '(%+ %- %* %= %< %eq? %eqv?
+                  %cons %quotient %remainder %car %cdr %null? %pair? %equal? %not
+                  %char->integer %integer->char
+                  %string-length %string-ref %string->symbol %symbol->string %list->string
+                  %string-set! %substring %string=? %make-string %string-copy
+                  %string-append
+                  %vector-ref %vector-set! %vector-length %vector? %make-vector
+                  %bytevector-u8-ref %bytevector-u8-set! %bytevector-length %bytevector?
+                  %make-bytevector
+                  %symbol? %string? %char? %boolean? %integer? %exact?
+                  %read-all-stdin %display %write %newline
                   %hash %make-hash-table %hash-table? %hash-table-spine
                   %make-record-type %make-record %record-ref %record-set! %record-of-type? %record?
-                  symbol? string? char? boolean? integer? exact?
-                  read-all-stdin display write newline %no-prelude?
+                  %no-prelude?
                   repl-mode repl-input repl-state-ref repl-state-set!
                   %error-abort %raise %run-guarded
                   %error-object? %error-object-message %error-object-irritants))
 (define (prim? op) (and (memq op *prims*) #t))
 
-;; ---- primitives as first-class values (self-host-gap-sweep G8) ----
-;; Primitives are reserved keywords, so a bare reference in value position (e.g.
-;; `(map car xs)`, `(apply string-append xs)`) is not a variable and would be
-;; unbound.  When one appears as a value, eta-expand it into a lambda so it becomes
-;; a genuine procedure; a call in operator position is still recognized as a
-;; primcall (the prim check is head-only), so direct calls are unaffected.  The
-;; fix lives here, not in the prelude: a prelude `(define (car x) (car x))` would
-;; be a primcall under Emit but infinite self-recursion under the bootstrap
-;; host, which loads the prelude directly.
-(define *prim-eta-arity* '((car . 1) (cdr . 1) (cons . 2)))
+;; ---- primitives as first-class values ----
+;; A bare primitive reference in value position (e.g. `(map car xs)`, `(apply + ns)`)
+;; must become a genuine procedure.  This is no longer a parse-time special-case for
+;; ANY primitive: every one is *integrable* (below), so the shadow-aware
+;; inline-primitives pass (run after rename) supplies BOTH its direct-call inlining
+;; and its value-position eta.  Fixed-arity ops eta to `(lambda (p ..) (primcall %op
+;; p ..))`; the variadic folding ops (`+ - * = < string-append`) eta to a
+;; self-contained rest-param fold over raw primcalls (fold-eta).  The old
+;; `prim-as-value`/`*prim-eta-arity*`/`nsyms` machinery is fully retired (task 4.1).
+;; The eta must not live in the prelude: a prelude `(define (car x) (car x))` would be
+;; a primcall under Emit but infinite self-recursion under the bootstrap host.
 
-(define (nsyms n)   ; (p1 ... pn), fresh-looking params for an eta lambda
-  (let loop ([i 1] [acc '()])
-    (if (> i n)
-        (reverse acc)
-        (loop (+ i 1)
-              (cons (string->symbol (string-append "p" (number->string i))) acc)))))
+;; ---- integrable primitives (change: first-class-primitives) ----
+;; Plain names that are ORDINARY, shadowable, first-class -- NOT reserved keywords.
+;; Each maps to its raw %-primcall and fixed arity.  After rename, an UNSHADOWED
+;; integrable survives as its bare symbol (a lexical/user shadow was alpha-renamed
+;; unique), so `inline-primitives` can tell them apart with no scope tracking:
+;;   direct call  (cons a b)  -> (primcall %cons a b)          [bare op]
+;;   value use     cons       -> (lambda (p ..) (primcall %cons p ..))   [eta]
+;;   shadowed (renamed symbol) -> untouched (ordinary binding wins)
+;; Universal by construction: the names are compiler-intrinsic (added to
+;; compute-known), so programs, user libraries, and --no-prelude all get them.
+(define *integrable*
+  '((cons %cons 2)
+    ;; Batch B: arithmetic / comparison / equality.  The expander (expand-arith,
+    ;; expand-compare) reduces every n-ary OPERATOR-position call to a BINARY form, so
+    ;; the arity-2 entry drives direct-call inlining.  The optional 4th field is a
+    ;; fold-kind for the VALUE-position eta: `+ - * = <` are variadic as values
+    ;; (`(apply + ns)`), so their eta is a self-contained rest-param fold over raw
+    ;; primcalls (see fold-eta) -- no prelude dependency, works under --no-prelude.
+    ;; `eq?`/`eqv?` are binary in R7RS, so they keep the plain binary eta.
+    (+ %+ 2 sum) (- %- 2 diff) (* %* 2 product) (= %= 2 cmp) (< %< 2 cmp)
+    (eq? %eq? 2) (eqv? %eqv? 2)
+    (quotient %quotient 2) (remainder %remainder 2)
+    (car %car 1) (cdr %cdr 1) (null? %null? 1) (pair? %pair? 1)
+    (equal? %equal? 2) (not %not 1)
+    (char->integer %char->integer 1) (integer->char %integer->char 1)
+    (string-length %string-length 1) (string-ref %string-ref 2)
+    (string->symbol %string->symbol 1) (symbol->string %symbol->string 1)
+    (list->string %list->string 1) (string-set! %string-set! 3)
+    (vector-ref %vector-ref 2) (vector-set! %vector-set! 3)
+    (vector-length %vector-length 1) (vector? %vector? 1)
+    (bytevector-u8-ref %bytevector-u8-ref 2) (bytevector-u8-set! %bytevector-u8-set! 3)
+    (bytevector-length %bytevector-length 1) (bytevector? %bytevector? 1)
+    (symbol? %symbol? 1) (string? %string? 1) (char? %char? 1)
+    (boolean? %boolean? 1) (integer? %integer? 1) (exact? %exact? 1)
+    ;; Batch B increment 2: remaining string/vector/bytevector construction+access
+    ;; and I/O prims.  All fixed-arity in Emit (the runtime rt_* have fixed C
+    ;; signatures -- e.g. make-vector REQUIRES the fill, substring is exactly 3).
+    (substring %substring 3) (string=? %string=? 2)
+    (make-string %make-string 2) (string-copy %string-copy 1)
+    (make-vector %make-vector 2) (make-bytevector %make-bytevector 2)
+    (read-all-stdin %read-all-stdin 0)
+    (display %display 1) (write %write 1) (newline %newline 0)
+    ;; string-append: expander folds n-ary operator calls to binary %string-append
+    ;; (arity 2 for direct inlining); as a VALUE it is variadic, so its eta is the
+    ;; self-contained `str` fold -- retiring the prelude `%str-concat` special case.
+    (string-append %string-append 2 str)))
+(define (integrable-lookup name) (assq name *integrable*))
+(define (integrable? name) (and (integrable-lookup name) #t))
 
-;; source lambda that behaves as the primitive OP used as a value.  `string-append`
-;; is variadic (folds over its args via the prelude helper `%str-concat`); the
-;; fixed-arity prims eta-expand to `(lambda (p ...) (op p ...))`.
-(define (prim-as-value op)
-  (cond
-    [(eq? op 'string-append) '(lambda gs (%str-concat gs))]
-    [(assq op *prim-eta-arity*)
-     => (lambda (p) (let ([ps (nsyms (cdr p))]) `(lambda ,ps (,op ,@ps))))]
-    [else (error 'parse "primitive not available as a first-class value" op)]))
+(define (fresh-syms n)   ; n globally-unique param names for an eta lambda
+  (let loop ([i n] [acc '()])
+    (if (= i 0) acc (loop (- i 1) (cons (fresh-name 'p) acc)))))
+
+;; Value-position eta for an integrable.  Fixed-arity ops get a plain
+;; `(lambda (p ..) (primcall raw p ..))`; a variadic folding op (4th field = fold
+;; kind) gets a self-contained rest-param fold built from raw primcalls -- so it
+;; needs no prelude helper and works identically under --no-prelude.  A rest-param
+;; lambda `(lambda gs ...)` collects all call args into the list `gs`, which serves
+;; BOTH `(map + xs ys)` (args passed individually) and `(apply + ns)` (a list).
+(define (eta-integrable entry)  ; (name raw arity [fold-kind]) -> value-position lambda
+  (if (and (pair? (cdddr entry)) (cadddr entry))
+      (fold-eta (cadr entry) (cadddr entry))
+      (let ([ps (fresh-syms (caddr entry))])
+        `(lambda ,ps (primcall ,(cadr entry) ,@ps)))))
+
+;; a left-fold `(lambda gs (loop IDENT gs))` where loop threads ACC over gs with
+;; `(primcall RAW acc (car rest))`.  Used for `+`(0) `*`(1) `string-append`("").
+(define (left-fold-eta raw ident)
+  (let ([gs (fresh-name 'gs)] [loop (fresh-name 'loop)]
+        [acc (fresh-name 'acc)] [rest (fresh-name 'rest)])
+    `(lambda ,gs
+       (letrec ([,loop (lambda (,acc ,rest)
+                         (if (primcall %null? ,rest)
+                             ,acc
+                             (call ,loop (primcall ,raw ,acc (primcall %car ,rest))
+                                         (primcall %cdr ,rest))))])
+         (call ,loop ,ident ,gs)))))
+
+;; `-` as a value: `(- a)` negates, `(- a b ...)` subtracts left-to-right, `(- )`
+;; is degenerate (0).  Distinct from the identity folds above.
+(define (diff-eta raw)
+  (let ([gs (fresh-name 'gs)] [loop (fresh-name 'loop)]
+        [acc (fresh-name 'acc)] [rest (fresh-name 'rest)])
+    `(lambda ,gs
+       (if (primcall %null? ,gs)
+           (const 0)
+           (if (primcall %null? (primcall %cdr ,gs))
+               (primcall ,raw (const 0) (primcall %car ,gs))          ; (- a) -> 0 - a
+               (letrec ([,loop (lambda (,acc ,rest)
+                                 (if (primcall %null? ,rest)
+                                     ,acc
+                                     (call ,loop (primcall ,raw ,acc (primcall %car ,rest))
+                                                 (primcall %cdr ,rest))))])
+                 (call ,loop (primcall %car ,gs) (primcall %cdr ,gs))))))))
+
+;; `= `/`<` as a value: a short-circuit pairwise chain; 0 or 1 operand -> #t.
+(define (cmp-chain-eta raw)
+  (let ([gs (fresh-name 'gs)] [loop (fresh-name 'loop)]
+        [prev (fresh-name 'prev)] [rest (fresh-name 'rest)])
+    `(lambda ,gs
+       (if (primcall %null? ,gs)
+           (const #t)
+           (if (primcall %null? (primcall %cdr ,gs))
+               (const #t)
+               (letrec ([,loop (lambda (,prev ,rest)
+                                 (if (primcall %null? ,rest)
+                                     (const #t)
+                                     (if (primcall ,raw ,prev (primcall %car ,rest))
+                                         (call ,loop (primcall %car ,rest) (primcall %cdr ,rest))
+                                         (const #f))))])
+                 (call ,loop (primcall %car ,gs) (primcall %cdr ,gs))))))))
+
+(define (fold-eta raw kind)
+  (case kind
+    [(sum)     (left-fold-eta raw '(const 0))]
+    [(product) (left-fold-eta raw '(const 1))]
+    [(str)     (left-fold-eta raw '(const ""))]
+    [(diff)    (diff-eta raw)]
+    [(cmp)     (cmp-chain-eta raw)]
+    [else (error 'parse "unknown integrable fold kind" kind)]))
+
+;; inline-primitives: a universal pass run AFTER rename/resolve in every compile
+;; path (compile-forms, compile-program-with-imports, repl-lower-form).
+(define (inline-primitives e)
+  (define (I e)
+    (match e
+      [(const ,d) e]
+      [(global-ref ,s) e]
+      [(global-set! ,s ,rhs) `(global-set! ,s ,(I rhs))]
+      [,x (guard (symbol? x))
+          (let ([p (integrable-lookup x)]) (if p (eta-integrable p) x))]
+      [(if ,a ,b ,c) `(if ,(I a) ,(I b) ,(I c))]
+      [(seq ,a ,b) `(seq ,(I a) ,(I b))]
+      [(set! ,x ,rhs) `(set! ,x ,(I rhs))]
+      [(primcall ,op . ,args) `(primcall ,op ,@(map I args))]
+      [(apply ,f . ,args) `(apply ,(I f) ,@(map I args))]
+      [(call ,f . ,args)
+       (let ([p (and (symbol? f) (integrable-lookup f))])
+         (if (and p (= (length args) (caddr p)))
+             `(primcall ,(cadr p) ,@(map I args))     ; direct unshadowed call -> bare op
+             `(call ,(I f) ,@(map I args))))]         ; value/wrong-arity -> eta (via symbol case)
+      [(lambda ,params ,body) `(lambda ,params ,(I body))]
+      [(let ,binds ,body)
+       `(let ,(map (lambda (b) (list (car b) (I (cadr b)))) binds) ,(I body))]
+      [(letrec ,binds ,body)
+       `(letrec ,(map (lambda (b) (list (car b) (I (cadr b)))) binds) ,(I body))]))
+  (I e))
 
 ;; ---- variadic parameter lists ----
 ;; A lambda's param field may be a proper list (fixed arity), an improper list
@@ -83,7 +230,10 @@
     [(string? e) `(const ,e)]              ; string literals are self-evaluating
     [(char? e) `(const ,e)]                ; char literals are self-evaluating
     [(null? e) `(const ())]
-    [(symbol? e) (if (prim? e) (parse-expr (prim-as-value e)) e)]  ; prim value -> eta
+    ;; a bare symbol is a variable ref; an integrable's value-use eta is synthesized
+    ;; post-rename by inline-primitives (self-contained, so even variadic ops like
+    ;; `+`/`string-append` need no parse-time special case anymore).
+    [(symbol? e) e]
     [(pair? e)
      (match e
        [(quote ,d) `(const ,d)]
@@ -357,10 +507,12 @@
 ;;                (emit.ss `emit-repl-module`) as `external global i64`.  NOT
 ;;                produced by the resolver in this change -- structured and
 ;;                consumable, ready for Stage 1 to populate from imports.
-;;   primitive -- a built-in operator/keyword.  In the M1 subset a primitive used
-;;                as a value is already eta-expanded in `parse-expr`, so a bare
-;;                primitive never reaches resolution as a free variable; the kind
-;;                is modeled for completeness (and Stage 1's import merge).
+;;   primitive -- a reserved primcall head (a raw %-op) OR an integrable left as its
+;;                bare symbol by `scope-resolve`.  The resolver leaves the symbol in
+;;                place; the post-rename `inline-primitives` pass then either inlines a
+;;                direct integrable call to a bare primcall or eta-expands a value-use.
+;;                (A shadowed integrable was alpha-renamed unique and resolves as a
+;;                normal binding, so it never lands here.)
 (define (make-binding kind sym) (list 'binding kind sym))
 (define (binding-kind b) (cadr b))
 (define (binding-sym b) (caddr b))
@@ -374,6 +526,7 @@
     (cond
       [s           (make-binding 'local s)]
       [(prim? name) (make-binding 'primitive name)]
+      [(integrable? name) (make-binding 'primitive name)]  ; leave symbol; inline-primitives rewrites it
       [else #f])))
 
 ;; Post-rename resolution: a bare symbol that is not bound by an enclosing
@@ -399,8 +552,8 @@
                   ;; is defined by another unit and resolves via external global.
                   [(eq? (binding-kind b) 'local)    `(global-ref ,(binding-sym b))]
                   [(eq? (binding-kind b) 'imported) `(global-ref ,(binding-sym b))]
-                  ;; primitive: a reserved keyword, not a variable (unreachable
-                  ;; post-eta) -- leave the symbol, as the flat model effectively did.
+                  ;; primitive: a raw %-op or an unshadowed integrable -- leave the
+                  ;; symbol for inline-primitives to rewrite post-rename.
                   [else x])))]
       [(if ,a ,b ,c) `(if ,(Rb a) ,(Rb b) ,(Rb c))]
       [(seq ,a ,b) `(seq ,(Rb a) ,(Rb b))]
@@ -434,7 +587,7 @@
 ;; pre-registered by `repl-register-define!`, so its current symbol is reused and
 ;; all sibling names in the group are visible to every body -- letrec* semantics.
 (define (repl-lower-form* env form register?)
-  (define (prep sexp) (resolve-globals (rename-program (parse-program sexp)) env))
+  (define (prep sexp) (inline-primitives (resolve-globals (rename-program (parse-program sexp)) env)))
   (cond
     [(define-form? form)
      (let* ([nd   (normalize-define form)]
