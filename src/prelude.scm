@@ -313,6 +313,22 @@
           (begin (bytevector-u8-set! bv i (car bs)) (loop (cdr bs) (+ i 1)))))))
 (define (bytevector . bs) (list->bytevector bs))
 
+;; --- multiple values (openspec multiple-values): values / call-with-values ---
+;; A distinguished bundle carries 0 or >=2 values; exactly one value is returned
+;; as itself (identity), so ordinary single-value code is untouched.  The bundle
+;; is a disjoint HDR_MV wrapper (%list->mv) that only call-with-values consumes,
+;; spreading it into the consumer via the existing `apply` -- so `(map ...)` and
+;; `(apply consumer ...)` both work with no calling-convention change.
+(define (values . vs)
+  (if (and (pair? vs) (null? (cdr vs)))
+      (car vs)                 ; exactly one value -> identity
+      (%list->mv vs)))         ; zero or >=2 values -> a bundle carrying the list
+(define (call-with-values producer consumer)
+  (let ([r (producer)])
+    (if (%mv? r)
+        (apply consumer (%mv->list r))
+        (consumer r))))
+
 ;; --- hash tables (openspec hash-tables): SRFI-69 subset, equal?-keyed --------
 ;; Built on vectors + the %hash primitive.  A table is an opaque HDR_HASHTABLE
 ;; wrapper (%make-hash-table) around a mutable spine vector #(count buckets _);

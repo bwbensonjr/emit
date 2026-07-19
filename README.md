@@ -224,6 +224,11 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
   structural `equal?`.
 - Variadic `lambda`, dotted rest parameters, `apply`, and runtime arity checking — on the
   uniform `argc`+`overflow` calling convention, preserving `musttail`.
+- **Multiple values**: `values` and `call-with-values` (R7RS). `(values x)` of one argument
+  is the identity, so single-value code is untouched; zero or many values ride a disjoint heap
+  bundle that `call-with-values` spreads into its consumer via `apply`. Shipped **independently
+  of `call/cc`** — multiple values need no continuation capture (see
+  `openspec/explorations/continuations-and-control.md`).
 - `quote` of symbols and arbitrary nested structure; `quasiquote` (`` ` ``/`,`/`,@`) over
   list structure with nesting-level tracking — a built-in expander transformer that lowers
   to `cons`/`append`/`list`/`quote`.
@@ -289,10 +294,10 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
   hygienic for macro-introduced identifiers only).
 - **Numeric tower** — fixnums only; no bignums/flonums/rationals, no `quotient`/`remainder`/
   `/`, no overflow handling.
-- **Control**: `call/cc`, `values`/`call-with-values`, `dynamic-wind`; and the rest of the
-  R7RS exception system beyond the shipped subset — `with-exception-handler` and
-  `raise-continuable` (their non-unwinding/resumable semantics need `call/cc`),
-  `read-error?`/`file-error?`.
+- **Control**: `call/cc`, `dynamic-wind`; and the rest of the R7RS exception system beyond the
+  shipped subset — `with-exception-handler` and `raise-continuable` (their
+  non-unwinding/resumable semantics need `call/cc`), `read-error?`/`file-error?`.
+  (`values`/`call-with-values` shipped — see "Accomplished" — independently of `call/cc`.)
 - **I/O**: ports, files, `read` from stdin, `write` as a procedure (`display` is
   supported — see above; `newline`/`write`/ports are not yet).
 - Recoverable error handling: `guard` catches in-language `raise`/`error` (see above), but

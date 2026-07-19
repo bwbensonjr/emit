@@ -33,6 +33,7 @@
                   %read-all-stdin %display %write %newline
                   %hash %make-hash-table %hash-table? %hash-table-spine
                   %make-record-type %make-record %record-ref %record-set! %record-of-type? %record?
+                  %list->mv %mv? %mv->list
                   %no-prelude?
                   repl-mode repl-input repl-state-ref repl-state-set!
                   %error-abort %raise %run-guarded

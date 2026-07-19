@@ -71,18 +71,27 @@ SHALL be passed to the consumer as exactly one argument. The result of
 - **THEN** the result is `(1 2 3 4)` — the produced values are spread into the
   variadic `list`, reconstructing them as a list
 
-### Requirement: the multiple-values bundle is memory-safe
+### Requirement: the multiple-values bundle is a disjoint, safely-printable type
 
-The runtime representation of a multiple-values bundle SHALL be dispatched on its
-runtime tag and subtype and SHALL NOT be interpreted as a type it is not. If a
-zero-or-many bundle reaches a single-value continuation (an unspecified situation
-under R7RS), the program SHALL fail safely — a type error or trap — and SHALL NOT
-cause a memory fault, silent corruption, or miscomputation.
+The runtime representation of a multiple-values bundle SHALL be a heap type
+dispatched on its tag and header, **disjoint** from every user-visible value type,
+so that `%mv?` (and thus `call-with-values`) never misidentifies a legitimate
+single value — list, vector, record, string, etc. — as a bundle, and never
+misroutes one. The final-value printer SHALL render a stray bundle **safely** (a
+fixed marker such as `#<values>`) rather than crash or misprint.
 
-#### Scenario: a stray bundle fails safe, not unsafe
+Using a zero-or-many bundle where an ordinary single value is expected is "an
+error" (R7RS latitude): the runtime applies the SAME unchecked semantics it
+already applies to any type confusion — e.g. `(car x)` for a non-pair `x` — so a
+misused bundle is no less safe than any other value used out of type. This change
+does NOT add type-checking to the pair accessors (that is a separate concern); it
+only guarantees the bundle is disjoint and that a bundle reaching the printer is
+rendered safely.
 
-- **WHEN** a program uses a zero-or-many `values` result directly as an ordinary
-  value, e.g. `(car (values 1 2))`
-- **THEN** the program does not segfault or corrupt memory; it either raises/traps
-  or otherwise fails safely (the exact behavior is unspecified per R7RS, but it is
-  never memory-unsafe)
+#### Scenario: a stray top-level bundle prints safely
+
+- **WHEN** a program's top-level value is a zero-or-many bundle, e.g. the whole
+  program is `(values 1 2)`
+- **THEN** the runner prints a safe fixed rendering (e.g. `#<values>`) and
+  completes without a segfault or memory error — the disjoint header lets the
+  printer recognize the bundle rather than misread it as another type

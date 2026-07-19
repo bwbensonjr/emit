@@ -165,6 +165,7 @@
     (%make-record-type "rt_make_record_type") (%make-record "rt_make_record")
     (%record-ref "rt_record_ref") (%record-set! "rt_record_set")
     (%record-of-type? "rt_record_of_type_p") (%record? "rt_record_p")
+    (%list->mv "rt_list_to_mv") (%mv? "rt_mv_p") (%mv->list "rt_mv_to_list")
     (%symbol? "rt_symbol_p") (%string? "rt_string_p") (%char? "rt_char_p")
     (%boolean? "rt_boolean_p") (%integer? "rt_integer_p") (%exact? "rt_exact_p")
     (%read-all-stdin "rt_read_all_stdin") (%display "rt_display")
@@ -632,6 +633,9 @@
    "declare i64 @rt_record_set(i64, i64, i64)\n"
    "declare i64 @rt_record_of_type_p(i64, i64)\n"
    "declare i64 @rt_record_p(i64)\n"
+   "declare i64 @rt_list_to_mv(i64)\n"
+   "declare i64 @rt_mv_p(i64)\n"
+   "declare i64 @rt_mv_to_list(i64)\n"
    "declare i64 @rt_symbol_p(i64)\n"
    "declare i64 @rt_string_p(i64)\n"
    "declare i64 @rt_char_p(i64)\n"

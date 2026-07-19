@@ -6,7 +6,7 @@
 ;;; The runtime half of the prelude: every prelude procedure is exported; the
 ;;; derived-form macros stay in the body (used by the procedures, not exported).
 (define-library (scheme base)
-  (export list caar cadr cdar cddr caaar caadr cadar caddr cdaar cdadr cddar cdddr length reverse %append2 append %map1 %any-null? %mapn map memq memv assq member assoc filter fold-left fold-right %for-each1 %for-eachn for-each andmap memp cadddr list? zero? list-tail list-ref list-head make-list iota max void string %str-concat chr-cmp char=? char<? char>? char<=? char>=? string->list ns-digits number->string error raise error-object? error-object-message error-object-irritants list->vector vector list->bytevector bytevector %ht-initial-buckets %ht-load-factor make-hash-table hash-table? %ht-count %ht-buckets %ht-set-count! %ht-set-buckets! %ht-index %ht-assoc %ht-remove hash-table-ref/default hash-table-contains? hash-table-ref hash-table-set! hash-table-delete! %ht-grow! hash-table-size %ht-fold-buckets hash-table->alist hash-table-keys hash-table-values rd-ws? rd-digit? rd-delim? rd-skip-line rd-skip-ws rd-token-end rd-all-digits? rd-numeric? rd-digits rd-parse-int rd-atom rd-hex-digit rd-hex rd-str-esc rd-string rd-hash rd-char-name rd-char rd-quote rd-quasi rd-unquote rd-dot? rd-append-reverse rd-list rd-datum read-from-string read-all-from-string)
+  (export list caar cadr cdar cddr caaar caadr cadar caddr cdaar cdadr cddar cdddr length reverse %append2 append %map1 %any-null? %mapn map memq memv assq member assoc filter fold-left fold-right %for-each1 %for-eachn for-each andmap memp cadddr list? zero? list-tail list-ref list-head make-list iota max void string %str-concat chr-cmp char=? char<? char>? char<=? char>=? string->list ns-digits number->string error raise error-object? error-object-message error-object-irritants list->vector vector list->bytevector bytevector values call-with-values %ht-initial-buckets %ht-load-factor make-hash-table hash-table? %ht-count %ht-buckets %ht-set-count! %ht-set-buckets! %ht-index %ht-assoc %ht-remove hash-table-ref/default hash-table-contains? hash-table-ref hash-table-set! hash-table-delete! %ht-grow! hash-table-size %ht-fold-buckets hash-table->alist hash-table-keys hash-table-values rd-ws? rd-digit? rd-delim? rd-skip-line rd-skip-ws rd-token-end rd-all-digits? rd-numeric? rd-digits rd-parse-int rd-atom rd-hex-digit rd-hex rd-str-esc rd-string rd-hash rd-char-name rd-char rd-quote rd-quasi rd-unquote rd-dot? rd-append-reverse rd-list rd-datum read-from-string read-all-from-string)
   (begin
     (define-syntax and (syntax-rules () ((_) #t) ((_ e) e) ((_ e1 e2 ...) (if e1 (and e2 ...) #f))))
     (define-syntax or (syntax-rules () ((_) #f) ((_ e) e) ((_ e1 e2 ...) (let ((t e1)) (if t t (or e2 ...))))))
@@ -81,6 +81,8 @@
     (define (vector . xs) (list->vector xs))
     (define (list->bytevector bs) (let ((bv (make-bytevector (length bs) 0))) (let loop ((bs bs) (i 0)) (if (null? bs) bv (begin (bytevector-u8-set! bv i (car bs)) (loop (cdr bs) (+ i 1)))))))
     (define (bytevector . bs) (list->bytevector bs))
+    (define (values . vs) (if (and (pair? vs) (null? (cdr vs))) (car vs) (%list->mv vs)))
+    (define (call-with-values producer consumer) (let ((r (producer))) (if (%mv? r) (apply consumer (%mv->list r)) (consumer r))))
     (define %ht-initial-buckets 8)
     (define %ht-load-factor 3)
     (define (make-hash-table) (%make-hash-table (vector 0 (make-vector %ht-initial-buckets (quote ())) #f)))

@@ -67,6 +67,10 @@ char rt_trap_msg[128] = "";
                             * the descriptor (itself an ext obj) is the per-type identity token */
 #define HDR_RECORD_TYPE 6  /* { HDR_RECORD_TYPE, name-string } -- a record type descriptor;
                             * object identity (eq?) distinguishes types, name is for printing */
+#define HDR_MV          7  /* { HDR_MV, values-list } -- a multiple-values bundle (change:
+                            * multiple-values).  Disjoint wrapper so `values` of 0 or >=2 args
+                            * is never confused with a real single value; consumed only by
+                            * call-with-values.  A unary `(values x)` returns x, not a bundle. */
 
 #define FIX(n)     ((val)(((intptr_t)(n)) << 3))
 #define UNFIX(v)   (((intptr_t)(v)) >> 3)
@@ -730,6 +734,22 @@ val rt_record_p(val r) {
   return truthy(tag_of(r) == TAG_EXT && ext_hdr(r) == HDR_RECORD);
 }
 
+/* --- multiple values (tag-7 HDR_MV: { HDR_MV, values-list }) --------------
+ * A disjoint wrapper carrying the list of values produced by `values` when it
+ * has other than one argument.  `values`/`call-with-values` live in the prelude
+ * over these three primitives; the wrapper only needs to be a distinct type so
+ * `%mv?` can tell a bundle apart from a legitimate single value.  Mirrors the
+ * HDR_HASHTABLE shape { header, one field }.  (change: multiple-values) */
+val rt_list_to_mv(val list) {
+  val *p = (val *)GC_MALLOC(2 * sizeof(val));
+  p[0] = (val)HDR_MV; p[1] = list;
+  return tag_ptr(p, TAG_EXT);
+}
+val rt_mv_p(val v) {
+  return truthy(tag_of(v) == TAG_EXT && ext_hdr(v) == HDR_MV);
+}
+val rt_mv_to_list(val v) { return as_ptr(v)[1]; }
+
 /* --- type predicates (self-hosting gap G9) -------------------------------- */
 /* Each returns #t/#f by inspecting the tag (and, for tag-7 heap objects, the
  * header code -- guard the ext_hdr deref behind the TAG_EXT check, as vector? does).
@@ -995,6 +1015,7 @@ static void print_val(val v, int display) {
           putchar('>');
           break;
         }
+        case HDR_MV:  printf("#<values>"); break;   /* stray bundle: print safely */
         default: printf("#<ext:%ld>", (long)ext_hdr(v));
       }
       break;
