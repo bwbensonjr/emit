@@ -31,7 +31,7 @@
       single direct regen first; if the fixed-point loop does not converge in 5
       iters, add a synonym-first stage per the `first-class-primitives` D3 lesson).
       — converged directly, **fixed point at iter 2** (no synonym stage needed).
-- [ ] 3.2 Commit the regenerated `bootstrap/*.ll` at the stable stage.
+- [x] 3.2 Commit the regenerated `bootstrap/*.ll` at the stable stage.
 
 ## 4. Library: values / call-with-values in (scheme base)
 
@@ -83,7 +83,7 @@
 
 ## 7. Spec sync + docs
 
-- [ ] 7.1 After implementation and green tests, sync the delta in
+- [x] 7.1 After implementation and green tests, sync the delta in
       `specs/core-language/spec.md` into `openspec/specs/core-language/spec.md`
       (via the sync/archive workflow).
 - [x] 7.2 Update the README: move `values`/`call-with-values` out of "Not yet
