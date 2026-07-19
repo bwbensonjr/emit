@@ -374,12 +374,32 @@ internal branches. Avoids per-call overhead but does not handle tail calls to
 
 ### First-class continuations (`call/cc`)
 
-Not in phase 1. When added, the plan is CPS conversion + heap-allocated
-continuations: after CPS every continuation is an ordinary closure, `call/cc` grabs
-the current one, and there is no native stack to capture. This also simplifies GC
-(no stack scanning). The reference implementation of this pattern on LLVM is
-Farvardin & Reppy, *Compiling with Continuations and LLVM* (see references) — copy
-its control and GC story, not its surface language.
+Not in phase 1 — and the mechanism is an **open decision, not a foregone conclusion.**
+For multi-shot `call/cc` on LLVM there are two viable families (full 2020–2026 survey
+plus an adversarially-verified research pass in
+`openspec/explorations/continuations-and-control.md`):
+
+- **(A) CPS + heap-allocated continuations.** After CPS every continuation is an
+  ordinary heap closure, `call/cc` grabs the current one, there is no native stack to
+  capture, multi-shot is free, and GC simplifies (no stack scanning). Reference:
+  Farvardin & Reppy, *Compiling with Continuations and LLVM* (see references). Cost: a
+  whole-frontend CPS pass, which abandons the direct-style pipeline `PIPELINE.md` is
+  built on; its *fast* form historically needed non-upstream LLVM (a custom calling
+  convention), softened today by `tailcc`/`musttail`/`preserve_none`.
+- **(B) Virtualize your own stack** — heap-managed Scheme frames, copy-on-capture for
+  multi-shot. Keeps direct style. Effekt (*Multiple Resumptions and Local Mutable
+  State, Directly*, ICFP 2025) is a **verified existence proof** that (B) gives
+  efficient multi-shot on a *real LLVM backend* (constant-time one-shot; multi-shot by
+  stack copying), using reference-counted stacks rather than CPS. Lexa (*Lexical Effect
+  Handlers, Directly*, OOPSLA 2024) shows the low-level stack-switch mechanism, using
+  LLVM's `preserve_none` convention to keep switching cheap and preserve tail calls.
+
+No stock-LLVM primitive (coroutines, WASM-style stack switching) gives multi-shot for
+free — those are one-shot by design. Earlier guidance here leaned all-in on CPS; the
+current reading is that **(B) deserves equal weight** — it preserves direct style, and
+the freshest LLVM-native multi-shot result is (B)-shaped. Decide empirically when the
+feature lands — a spike measuring self-host regen time under each is the tie-breaker —
+and copy the control/GC story of whichever, not the surface language.
 
 ### Garbage collection
 
@@ -391,8 +411,12 @@ its control and GC story, not its surface language.
   form and let `RewriteStatepointsForGC` lower it to stack maps; do not hand-write
   the explicit relocation form (it inhibits optimization). Hard constraint:
   statepoint lowering is supported **only on x86_64 and AArch64**.
-- The CPS route (above) removes stack scanning entirely, a strong argument for
-  adopting CPS *before* attempting precise GC.
+- Both continuation routes above reduce native-stack scanning, so the choice interacts
+  with precise GC: **(A) CPS** removes it entirely (continuations become ordinary heap
+  objects — the friendliest to Boehm), while **(B) heap-managed stacks** turn Scheme
+  frames into heap objects too (Farvardin's stack-rfc explores statepoints for such a
+  secondary stack). A real input to the precise-GC decision — but no longer a one-sided
+  argument *for CPS specifically*.
 
 ---
 

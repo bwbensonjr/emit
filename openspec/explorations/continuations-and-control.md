@@ -6,7 +6,7 @@ Related: `src/runtime/runtime.c` (the `setjmp`/`longjmp` guard frame stack — `
 `guard`/`raise`/`error` subset); `LLVM.md` §"First-class continuations" and §"CPS, continuations,
 and GC on LLVM"; `docs/PIPELINE.md` (the deliberate no-CPS/no-ANF direct-style pipeline).
 First rung: `openspec/changes/multiple-values`.
-Captured: 2026-07-18
+Captured: 2026-07-18 · Updated: 2026-07-18 (LLVM stack-switching research pass + a second adversarial re-verification of the Effekt/Lexa leads — see the dated section before "Open questions")
 
 ## The framing
 
@@ -121,6 +121,119 @@ how much the future precise/relocating GC matters — the latter is `LLVM.md`'s 
 for going CPS *eventually*, which would make rung 3's direct-style escape machinery a
 stepping-stone rather than a throwaway either way (escape semantics remain a correct fast path
 under CPS too).
+
+### Research pass (2026-07-18): does modern LLVM open a third way for rung 4?
+
+A cited deep-research pass (fan-out search → source fetch → adversarial verification). The final
+auto-synthesis step hit a session limit, so this is hand-synthesized from the 19 independently
+verified claims (each `✓` = verified 3-0 unless noted); sources listed at the end. The two most
+consequential leads (Effekt and Lexa) were then **re-verified by a second, fresh 3-skeptic
+adversarial pass** against the primary sources — **both confirmed unanimously (3/3)**, with the
+bibliographic and mechanism corrections folded in below. **Verdict: no — the two-family picture
+holds, and if anything the ecosystem has hardened around *one-shot*, making multi-shot re-entrant
+`call/cc` the deliberate expensive outlier.**
+
+**1. LLVM coroutines (`llvm.coro.*`) are one-shot — they cannot back multi-shot `call/cc`.** The
+LLVM docs define a suspended coroutine as resumable "to continue execution from the last suspend
+point or … destroyed" ✓, a single sequential resume; a coroutine frame persists state for one
+suspend/resume lifecycle only, with no documented frame-cloning ✓. Coroutine/`yield` are
+*intrinsically* one-shot — a property, not an implementation gap. So `llvm.coro.*` is out for our
+purpose.
+
+**2. There is no landed stock-LLVM stack-switching primitive.** The `llvm.xcall`/`xret`
+explicit-stack-pointer intrinsic was a *2017 proposal*, never upstreamed ✓. The literature's
+stack-based route is Dolan et al.'s SWAPSTACK — and it "captures only one-shot continuations" and
+needs runtime support ✓. The WebAssembly stack-switching proposal (WasmFX) is **single-shot by
+design**: a continuation "must be invoked exactly once" and re-invoking **traps** ✓ (following
+OCaml 5 ✓), deliberately excluding multi-shot because its target use-cases (concurrency/async)
+don't need it ✓; its production prototype capture is native fiber **stack switching** (swap `rsp`
+in a few asm instructions) ✓. So the "WASM analogy" floated earlier does **not** yield multi-shot.
+
+**3. The authoritative map is still Farvardin & Reppy, PLDI 2020, "From folklore to fact."** It
+compares **six** strategies through one identical pipeline / LLVM backend / runtime ✓, framed
+exactly as "call stacks, segmented stacks, and heap-allocated continuation closures" ✓ — i.e. our
+(A) heap-CPS-closures vs. (B) virtualize-your-own-stack (contiguous or segmented). Their Manticore
+system implements three concretely: immutable heap frames (CPS), contiguous stack, segmented stack
+✓. The map has not changed since 2020.
+
+**4. CPS-to-heap gives multi-shot for free — but the *efficient* version historically forked
+LLVM.** Heap-allocated continuation closures give constant-time `callcc` and multi-shot, because
+immutable heap frames re-enter arbitrarily ✓. But making it fast required a *new calling
+convention* (JWA, "Jump-With-Arguments") added in an **LLVM fork, x86-64 only** (verified 2-1, one
+dissent), plus the `naked` attribute (skip prologue/epilogue) + `musttail` + an SML/NJ-style asm
+shim, because stock LLVM's TCO frame management is "prohibitively expensive" for CPS ✓.
+**Softening caveat (newer upstream):** two ingredients we *already* use (`tailcc` + `musttail`),
+plus the newer `preserve_none` convention (upstream ~LLVM 18), narrow that gap — so the "must fork
+LLVM" caveat is weaker today than in 2020. The whole-frontend CPS cost, however, remains.
+
+**5. Multi-shot is the expensive corner, and the field has drifted away from it.** Multi-shot
+needs **copying the control stack at capture** ✓; since realistic programs resume at most once,
+effect-handler systems, WasmFX, and OCaml 5 all optimize one-shot and trap-or-copy for multi-shot.
+Scheme `call/cc` is squarely in the minority that *requires* re-entry — a deliberate, costly
+choice, not a gap in the tooling. Worth internalizing: wanting real multi-shot `call/cc` means
+opting into the corner modern LLVM-targeting runtimes specifically avoid.
+
+**Two post-2020 LLVM-targeting systems, now re-verified (3/3 each) against the primary sources —
+read both before any rung-4 commitment:**
+- **Effekt — "Multiple Resumptions and Local Mutable State, Directly," ICFP 2025** (PACMPL,
+  DOI 10.1145/3747529; Muhcu, Schuster, Steuwer, Brachthäuser — Tübingen). **Verified:** a real
+  **LLVM backend** that gives *constant-time* continuation capture/resume **when resumed exactly
+  once**, and **also supports multi-shot resumption — by copying stacks when necessary** (so
+  multi-shot is supported but *not* constant-time). Crucially, this is achieved with
+  garbage-free reference counting + stacks tied to stable prompts — i.e. an evolved **option (B)
+  (own-your-stack + copy-on-multishot)**, *not* CPS-to-heap. The closest modern LLVM-native answer
+  to our exact need, and evidence that (B) can do multi-shot efficiently on LLVM. (Note: I earlier
+  mis-cited this as OOPSLA 2025 with an arXiv ID that actually points to an unrelated Koka thesis —
+  both corrected here.)
+- **Lexa — "Lexical Effect Handlers, Directly," OOPSLA2 2024, Article 330** (Ma, Ge, Lee, Zhang).
+  **Verified:** compiles **Lexa → C → LLVM** and translates effect handling to low-level
+  **stack switching** (an x86-64 asm library, "StackTrek"; resume = restore a saved stack pointer
+  via `ret`). It uses the LLVM **`preserve_none`** calling convention (all-caller-saved) for the
+  stack-switching/effect functions to make switching cheap **and to expose tail-call optimizations
+  that `setjmp`/`longjmp` would otherwise defeat** (their Fig. 15: setjmp/longjmp overflows the
+  stack; `preserve_none` keeps the tail calls). **Important correction:** Lexa is **primarily
+  one-shot** — "a resumption can be resumed at most once"; multishot is an explicit *nongoal* with
+  only restricted support. So Lexa is a **mechanism** reference (the `preserve_none` + stack-switch
+  trick, directly relevant to our `tailcc`/`musttail` setup), not a multi-shot solution.
+- Also (from the first pass, not re-verified): Farvardin's **stack-rfc** proposes extending LLVM
+  **GC statepoints** to a secondary/heap-stack model (relevant to (B) + precise GC);
+  libmprompt/libhandler (Koka) show the C-level split — copy-fragments-to-heap (multi-shot) vs.
+  in-place growable stacklets (one-shot) — but that is asm/FFI, not portable LLVM.
+
+**GC bottom line for us.** CPS→heap closures are the friendliest to our **Boehm** setup:
+continuations become ordinary traced heap objects that Boehm scans with no IR cooperation. LLVM's
+own statepoint GC "assumes a stack runtime model" and doesn't apply to heap continuations — so the
+Boehm choice actually *removes* a problem the precise-GC crowd has to solve, strengthening
+`LLVM.md`'s "CPS also simplifies GC" note for our specific stack.
+
+**What this means for the fork.** Two endpoints remain for genuine **multi-shot** `call/cc` on
+Boehm + LLVM, and the verified evidence nudges the balance:
+- **(A) CPS→heap closures** — yields multi-shot *for free* (immutable frames re-enter arbitrarily)
+  and is the cleanest Boehm fit, but costs the whole-frontend CPS rewrite `PIPELINE.md` avoided,
+  and its *fast* form historically needed non-upstream LLVM (JWA) — softened today by
+  `tailcc`/`musttail`/`preserve_none`.
+- **(B) own-your-stack + copy-on-multishot** — the **Effekt/ICFP 2025 result now demonstrates this
+  working efficiently on a real LLVM backend**: constant-time one-shot, multi-shot via stack
+  copying, with reference-counted stacks. That is a direct, verified existence proof that we can
+  get multi-shot **without** abandoning direct style — the more surprising and arguably more
+  attractive option for this project, since it preserves the pipeline `PIPELINE.md` is built on.
+
+No stock-LLVM primitive shortcuts either path. So the concrete rung-4 next step, whenever it gets
+real, is: **read Effekt/ICFP 2025 first** (the (B)-style multi-shot recipe) and Lexa/OOPSLA 2024
+(the `preserve_none` + stack-switch mechanism), and weigh (B)-done-well against the CPS rewrite —
+rather than treating CPS as the foregone conclusion `LLVM.md` currently implies.
+
+#### Sources
+- Farvardin & Reppy, *Compiling with Continuations and LLVM* (Manticore), EPTCS 285 / arXiv:1805.08842 — http://manticore.cs.uchicago.edu/papers/eptcs285-cwc-llvm.pdf
+- Farvardin & Reppy, *From Folklore to Fact: Comparing Implementations of Stacks and Continuations*, PLDI 2020 — https://kavon.farvard.in/papers/pldi20-stacks.pdf
+- Farvardin, MS paper (Manticore's three strategies) — https://newtraell.cs.uchicago.edu/files/ms_paper/kavon.pdf
+- LLVM Coroutines documentation — https://llvm.org/docs/Coroutines.html
+- WasmFX / WebAssembly stack-switching — arXiv:2308.08347 and the proposal explainer at https://github.com/WebAssembly/stack-switching
+- Farvardin, HIW 2017 talk (the `xcall` proposal) — https://kavon.farvard.in/talks/hiw17.pdf
+- Farvardin, stack-rfc (GC statepoints for secondary stacks) — https://github.com/kavon/stack-rfc
+- Muhcu, Schuster, Steuwer & Brachthäuser, *Multiple Resumptions and Local Mutable State, Directly*, PACMPL **ICFP 2025** — https://dl.acm.org/doi/10.1145/3747529 (**re-verified 3/3**; note: not OOPSLA, and arXiv:2412.19826 is an *unrelated* paper)
+- Ma, Ge, Lee & Zhang, *Lexical Effect Handlers, Directly*, PACMPL **OOPSLA2 2024**, Article 330 — https://cs.uwaterloo.ca/~yizhou/papers/lexa-oopsla2024.pdf (**re-verified 3/3**; Lexa → C → LLVM; `preserve_none`; primarily one-shot)
+- libmprompt / libhandler (Koka) — https://github.com/koka-lang/libmprompt
 
 ## Open questions
 
