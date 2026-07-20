@@ -64,6 +64,7 @@ classify() {
     openspec/changes/archive/*)   role=tracking;  comp="openspec-archive" ;;
     openspec/*)                   role=tracking;  comp="openspec-active" ;;
     .claude/*)                    role=config;    comp="agent-config" ;;
+    .gitignore)                   role=config;    comp="repo-config" ;;
     # --- tests, demos, spikes ---
     test/*)                       role=test;      comp="test" ;;
     run-all-tests.sh|run-dev-tests.sh) role=test; comp="test-harness" ;;
