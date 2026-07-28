@@ -6,7 +6,7 @@ whole-program today and three things block it: lifted code blocks are named `@co
 @code2…` from a per-compilation counter (`src/passes/lower.ss:48`, `src/emit.ss:637`) so two
 units collide on link; every module defines its own `@scheme_entry`; and there is no scope
 boundary (the compile sees all forms at once). The full design lives in
-`docs/superpowers/specs/2026-07-15-modules-v0-design.md`; this change is its **Stage 0** —
+`openspec/explorations/modules-v0-design.md`; this change is its **Stage 0** —
 the behavior-preserving groundwork that makes the later module-artifact work small and safe.
 
 Landing the resolution/naming scaffolding on its own, verified by byte-identity, de-risks

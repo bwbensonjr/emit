@@ -1,6 +1,6 @@
 ## Context
 
-Stage 1 of Modules v0 (`docs/superpowers/specs/2026-07-15-modules-v0-design.md`), building
+Stage 1 of Modules v0 (`openspec/explorations/modules-v0-design.md`), building
 directly on the archived Stage 0 (`module-resolution-scaffold`). Stage 0 already delivered
 the two pieces this stage stands on: a typed-scope resolver in `resolve-globals`
 (`src/parse.ss`) that classifies bindings `local | imported | primitive` (with `imported`

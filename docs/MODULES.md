@@ -242,4 +242,4 @@ This is Modules v0:
 - Import specifiers are whole-library only — no `only`/`except`/`prefix` import sets yet.
 
 For the authoritative requirements and scenarios, see `openspec/specs/module-system/spec.md`; for
-the design rationale, `docs/superpowers/specs/2026-07-15-modules-v0-design.md`.
+the design rationale, `openspec/explorations/modules-v0-design.md`.

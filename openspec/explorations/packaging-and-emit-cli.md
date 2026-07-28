@@ -2,7 +2,7 @@
 
 Status: exploration / living roadmap (individual steps become their own changes)
 Related:
-- `docs/superpowers/specs/2026-07-15-modules-v0-design.md` (decision **D7** — the four-verb mapping and the "settle modules before packaging" sequencing)
+- `openspec/explorations/modules-v0-design.md` (decision **D7** — the four-verb mapping and the "settle modules before packaging" sequencing)
 - `openspec/changes/archive/2026-07-17-aot-release-profile` (delivered the *first slice* of `emit build`: release profile — `-O2` at link + root-set-driven, unit-general reachability tree-shaking)
 - `openspec/explorations/modules-and-embedding.md`, `openspec/explorations/namespace-model.md` (the module surface packaging sits on top of)
 - `docs/MODULES.md` (the manifest `emit-libs.scm`; "extending the embedded runner with a manifest is future work")
