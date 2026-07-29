@@ -17,7 +17,8 @@
 ;; expander still folds n-ary `+`/`=`/`string-append`/... to binary forms (emitting
 ;; the plain name, which the inliner rewrites to `%+`/`%=`/`%string-append`/...);
 ;; `> <= >=` remain derived over the integrable `<`/`=`.  Only compiler/host internals
-;; stay reserved: the %-ops (hashing, records, error plumbing, `%no-prelude?`) and the
+;; stay reserved: the %-ops (hashing, records, error plumbing, the host-flag probes
+;; `%no-prelude?`/`%dump-level`, the narration writer `%stderr-write`) and the
 ;; REPL state ops (`repl-mode`/`repl-input`/`repl-state-ref`/`repl-state-set!`) --
 ;; never used as values, and the raw %-ops staying internal is a Non-Goal to relax.
 (define *prims* '(%+ %- %* %/ %= %< %eq? %eqv?
@@ -36,7 +37,7 @@
                   %hash %make-hash-table %hash-table? %hash-table-spine
                   %make-record-type %make-record %record-ref %record-set! %record-of-type? %record?
                   %list->mv %mv? %mv->list
-                  %no-prelude?
+                  %no-prelude? %dump-level %stderr-write
                   repl-mode repl-input repl-state-ref repl-state-set!
                   %error-abort %raise %run-guarded
                   %error-object? %error-object-message %error-object-irritants))

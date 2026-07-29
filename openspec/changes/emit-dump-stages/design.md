@@ -74,6 +74,10 @@ A level rather than a boolean because the Chez driver already has *two* observab
 modes over this one channel (full `--dump` and concise `-v` stage announcements), and the
 Chez-free doors need both to satisfy `tooling-observability`. One probe serves both.
 
+*Refined during implementation:* the level carries a **fourth** value, `3` = full dump
+including library units, so D7's `--dump-all` rides the same probe instead of adding a
+second environment variable. Same rationale — one channel, parsing single-sourced in C.
+
 *Alternative considered:* a general `%getenv` (string → string or `#f`). More reusable,
 but it returns a freshly allocated string, widens the compiler's ambient-environment
 surface, and would need parsing in Scheme that `emit.cpp` and `tools/log.sh` already do in
@@ -162,7 +166,8 @@ program's stages in thousands of lines — a problem the Chez path sidestepped o
 So `--dump` covers the **program unit** (and, for `emit lib`, the library named on the
 command line — that is the unit under inspection there). `--dump-all` additionally dumps
 `(scheme base)` and preloaded manifest units. The distinction is a filter in the dumper
-the entry constructs, keyed on the unit being compiled, so it costs no extra plumbing.
+the entry constructs, keyed on the unit being compiled, so it costs no extra plumbing —
+and it rides the D1 probe as level 3 rather than a second environment variable.
 
 ### D8 — Per-form stages are labelled with their form
 

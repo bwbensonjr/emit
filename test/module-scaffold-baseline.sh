@@ -19,6 +19,14 @@
 # itself was proven by capturing a pristine DIR and diffing a post-change
 # capture against it (design D3); `check` keeps the guarantee live afterwards.
 #
+# RE-RECORDING the reference (`manifest > $REF`) is legitimate only when the IR
+# change is intended and has been shown to be exactly what was intended -- capture
+# a before/after pair and diff them, as the original change did.  Log of intended
+# re-records:
+#   emit-dump-stages -- +2 lines in every module's runtime declare header
+#     (@rt_dump_level, @rt_stderr_write).  Verified: a 69-demo before/after capture
+#     differed in exactly those 2 lines per module (138 lines, no deletions).
+#
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u
 cd "$(dirname "$0")/.."

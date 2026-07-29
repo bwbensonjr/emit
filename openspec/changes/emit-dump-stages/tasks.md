@@ -1,21 +1,27 @@
 ## 1. Stage 1 of the staged bootstrap — teach the seed the new primitives (no call sites)
 
-- [ ] 1.1 Add `rt_dump_level()` to `src/runtime/runtime.c` beside `rt_no_prelude_p`
+- [x] 1.1 Add `rt_dump_level()` to `src/runtime/runtime.c` beside `rt_no_prelude_p`
   (`~:610`): read `EMIT_DUMP_LEVEL`, return a scheme fixnum `0|1|2`, defaulting to `0` when
   unset, empty, or unparseable. Comment it with the same channel rationale.
-- [ ] 1.2 Add `rt_stderr_write(val v, val display_flag)` to `src/runtime/runtime.c`,
+- [x] 1.2 Add `rt_stderr_write(val v, val display_flag)` to `src/runtime/runtime.c`,
   implemented over the existing `static void print_val(val, int display)` (`~:688`) with
   `stderr` as the destination; return `v`.
-- [ ] 1.3 Add `(%dump-level "rt_dump_level")` and `(%stderr-write "rt_stderr_write")` to
+- [x] 1.3 Add `(%dump-level "rt_dump_level")` and `(%stderr-write "rt_stderr_write")` to
   `prim-table` in `src/emit.ss:153`.
-- [ ] 1.4 Add the matching `declare i64 @rt_dump_level()` and
+- [x] 1.4 Add the matching `declare i64 @rt_dump_level()` and
   `declare i64 @rt_stderr_write(i64, i64)` lines to the emitted declare header in
   `src/emit.ss:597`.
-- [ ] 1.5 Add both names to the reserved `%`-op head set in `src/parse.ss:39`.
-- [ ] 1.6 Confirm nothing in `src/` yet *calls* either primitive (this stage is tables
+- [x] 1.5 Add both names to the reserved `%`-op head set in `src/parse.ss:39`.
+- [x] 1.6 Confirm nothing in `src/` yet *calls* either primitive (this stage is tables
   only), then run `make regen` and record the fixed-point iteration count.
-- [ ] 1.7 Run `./run-all-tests.sh` and `./run-dev-tests.sh` (incl. trust-check); commit the
-  regenerated `bootstrap/*.ll` as the stage-1 seed.
+- [x] 1.6b Re-record `test/module-scaffold-baseline.sha256`: the two added `declare` lines
+  land in every module's runtime header, so every demo's IR hash changes. Prove the drift is
+  *only* those lines with a before/after 69-demo capture, then re-record and log the reason
+  in the harness header.
+- [x] 1.7 Run `./run-all-tests.sh` and `./run-dev-tests.sh` (incl. trust-check); commit the
+  regenerated `bootstrap/*.ll` as the stage-1 seed. (The trust-check only *runs* once
+  `bootstrap/` is committed — it skips on a dirty `bootstrap/` — so re-run it after the
+  commit.)
 
 ## 2. The in-language dumper
 
