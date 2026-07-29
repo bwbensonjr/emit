@@ -101,6 +101,29 @@ static void init_verbosity() {
 }
 static void say(const std::string &m)  { if (g_level >= 1) std::cerr << m << "\n"; }
 static void vsay(const std::string &m) { if (g_level >= 2) std::cerr << m << "\n"; }
+
+// --- stage-dump level, forwarded to the embedded compiler (change: emit-dump-stages)
+// The compiler cannot see our argv, so --dump rides an environment variable it probes
+// via %dump-level -- the same channel --no-prelude uses (spec: "the smallest viable
+// channel").  Levels (design D1): 0 off, 1 stage names only, 2 full per-pass IL dump,
+// 3 = 2 plus library units.  The precedence mirrors the Chez driver's
+// (src/compile.ss): an explicit --dump wins, else EMIT_VERBOSITY=verbose gives the
+// concise stage trace, else off.  MUST be called before the first scheme_entry().
+//
+// Narration goes to stderr on both sides, so this never changes a door's stdout: `emit
+// run --emit --dump` writes the same IR bytes as without it.
+static void forward_dump_level(bool dump, bool dump_all) {
+  int lvl = dump_all ? 3 : (dump ? 2 : (g_level >= 2 ? 1 : 0));
+  if (lvl == 0) return;                      // leave the variable untouched when off
+  setenv("EMIT_DUMP_LEVEL", std::to_string(lvl).c_str(), 1);
+}
+
+// The two dump flags, shared by every door's option loop.
+static bool is_dump_flag(const std::string &a, bool &dump, bool &dump_all) {
+  if (a == "--dump")     { dump = true;     return true; }
+  if (a == "--dump-all") { dump_all = true; return true; }
+  return false;
+}
 static long file_bytes(const std::string &p) {
   struct stat st;
   return stat(p.c_str(), &st) == 0 ? (long)st.st_size : -1;
@@ -301,6 +324,7 @@ static bool compile_program(const std::string &prog_src, const std::string &mani
 static int emit_run(int argc, char **argv) {
   bool emit = false;
   bool no_prelude = false;
+  bool dump = false, dump_all = false;
   bool resolve = false;                        // --resolve-program: print an entry, no run
   std::string resolve_name;                    // "" => select the sole program entry
   std::string manifest;
@@ -308,6 +332,7 @@ static int emit_run(int argc, char **argv) {
   for (int i = 1; i < argc; i++) {
     std::string a(argv[i]);
     if (a == "--emit") emit = true;
+    else if (is_dump_flag(a, dump, dump_all)) { }
     else if (a == "--no-prelude") no_prelude = true;
     else if (a == "--manifest" && i + 1 < argc) manifest = argv[++i];
     else if (a == "--resolve-program") {
@@ -338,6 +363,7 @@ static int emit_run(int argc, char **argv) {
   // Forward --no-prelude to the embedded compiler (read via %no-prelude?): skip
   // baking/implying (scheme base).  Must be set before any scheme_entry() call.
   if (no_prelude) setenv("EMIT_NO_PRELUDE", "1", 1);
+  forward_dump_level(dump, dump_all);
 
   // Program source: FILE when given, otherwise stdin (spec: emit run [FILE]).
   std::string prog_src;
@@ -547,15 +573,19 @@ static void process_form(const std::string &form) {
 
 static int emit_repl(int argc, char **argv) {
   bool prelude = true;
+  bool dump = false, dump_all = false;
   std::string manifest;
   for (int i = 1; i < argc; i++) {
     std::string a(argv[i]);
     if (a == "--no-prelude") prelude = false;
+    else if (is_dump_flag(a, dump, dump_all)) { }
     else if (a == "--manifest" && i + 1 < argc) manifest = argv[++i];
   }
   // A --manifest flag feeds preload_libraries (which reads EMIT_MANIFEST); set it so
   // the flag and the env agree (parity with `emit run --manifest`).
   if (!manifest.empty()) setenv("EMIT_MANIFEST", manifest.c_str(), 1);
+  // Per-form stage dumps for the whole session (change: emit-dump-stages).
+  forward_dump_level(dump, dump_all);
 
   GC_INIT();                                // once for the whole session
   InitializeNativeTarget();
@@ -741,10 +771,12 @@ static void ensure_parent_dir(const std::string &path) {
 static int emit_build(int argc, char **argv) {
   std::string name, manifest, out;
   bool no_prelude = false;
+  bool dump = false, dump_all = false;
   for (int i = 1; i < argc; i++) {
     std::string a(argv[i]);
     if (a == "--manifest" && i + 1 < argc) manifest = argv[++i];
     else if (a == "-o" && i + 1 < argc) out = argv[++i];
+    else if (is_dump_flag(a, dump, dump_all)) { }
     else if (a == "--no-prelude") no_prelude = true;
     else if (!a.empty() && a[0] == '-') { std::cerr << "emit build: unknown option " << a << "\n"; return 2; }
     else name = a;
@@ -757,6 +789,7 @@ static int emit_build(int argc, char **argv) {
 
   GC_INIT();
   if (no_prelude) setenv("EMIT_NO_PRELUDE", "1", 1);
+  forward_dump_level(dump, dump_all);
 
   // Resolve the (program NAME) entry to its source + delivered path (Chez-free).
   rt_repl_set(0, "", 0);
@@ -824,15 +857,17 @@ static int emit_build(int argc, char **argv) {
 
 static int emit_lib(int argc, char **argv) {
   std::string src, dir = "build/lib", manifest;
+  bool dump = false, dump_all = false;
   for (int i = 1; i < argc; i++) {
     std::string a(argv[i]);
     if (a == "-o" && i + 1 < argc) dir = argv[++i];
     else if (a == "--manifest" && i + 1 < argc) manifest = argv[++i];
+    else if (is_dump_flag(a, dump, dump_all)) { }
     else if (!a.empty() && a[0] == '-') { std::cerr << "emit lib: unknown option " << a << "\n"; return 2; }
     else src = a;
   }
   if (src.empty()) {
-    std::cerr << "usage: emit lib SRC [-o DIR] [--manifest F]\n";
+    std::cerr << "usage: emit lib SRC [-o DIR] [--manifest F] [--dump|--dump-all]\n";
     return 1;
   }
   if (manifest.empty()) {
@@ -841,6 +876,7 @@ static int emit_lib(int argc, char **argv) {
   }
 
   GC_INIT();
+  forward_dump_level(dump, dump_all);
   rt_repl_set(0, "", 0);                     // init-session
   scheme_entry();
 
@@ -901,7 +937,11 @@ static void usage() {
     "  emit run  [FILE] [--manifest F] [--no-prelude]     compile and run a program\n"
     "  emit repl [--manifest F] [--no-prelude]            interactive REPL\n"
     "  emit build [NAME] [--manifest F] [-o OUT] [--no-prelude]   deliver a native exe\n"
-    "  emit lib  SRC [-o DIR] [--manifest F]              compile one library -> artifact\n";
+    "  emit lib  SRC [-o DIR] [--manifest F]              compile one library -> artifact\n"
+    "\n"
+    "every verb also accepts:\n"
+    "  --dump       print the IL after each compiler pass to stderr (stdout unchanged)\n"
+    "  --dump-all   --dump, plus the stages of (scheme base) and imported libraries\n";
 }
 
 int main(int argc, char **argv) {

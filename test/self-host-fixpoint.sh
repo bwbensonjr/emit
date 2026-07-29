@@ -31,10 +31,11 @@ cd "$(dirname "$0")/.."
 # Discover the toolchain (CC/CXX/LLVM_CONFIG/GC_INC/GC_LIB/LDFLAGS) once, single-sourced.
 . tools/llvm-env.sh || exit 1
 
+# KEEP IN SYNC with tools/regen.sh's CORE_FLAT (see the note there on src/dump.ss).
 CORE_FLAT="src/match.scm src/util.scm src/parse.ss \
            src/passes/expand.ss src/passes/recognize-let.ss \
            src/passes/convert-assignments.ss src/passes/convert-closures.ss \
-           src/passes/lower.ss src/emit.ss src/core.ss"
+           src/passes/lower.ss src/emit.ss src/core.ss src/dump.ss"
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT

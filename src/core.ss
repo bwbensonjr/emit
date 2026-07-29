@@ -87,11 +87,15 @@
 
 ;; convenience: source text -> IR text (no prelude, no header).  This is the
 ;; core's self-hosting-facing contract; the driver adds prelude/header/toolchain.
-(define (compile-source-string str)
-  (let ([forms (read-forms-from-string str)])
+;; `dump` is optional (change: emit-dump-stages): the Chez-free entries pass the dumper
+;; they build from the host-forwarded level, and every other caller -- including the
+;; Chez driver, which never links dump.ss at all -- gets `no-dump` as before.
+(define (compile-source-string str . opt)
+  (let ([forms (read-forms-from-string str)]
+        [dump  (if (pair? opt) (car opt) no-dump)])
     (cond
-      [(single-define-library forms) => (lambda (lib) (compile-library-form lib no-dump))]
-      [else (compile-forms forms no-dump)])))
+      [(single-define-library forms) => (lambda (lib) (compile-library-form lib dump))]
+      [else (compile-forms forms dump)])))
 
 ;; source text + prelude text -> IR text (no header).  The prelude-aware sibling
 ;; of compile-source-string: it applies the same user-wins shadowing the batch
@@ -153,27 +157,40 @@
 ;; driver drives, so the program module is byte-identical to the driver's.  A lone
 ;; define-library is still compiled as one unit (a library does not auto-import the
 ;; prelude), returning a single module with no marker.
-(define (compile-source-rehomed prelude-str user-str)
-  (let ([user-forms (read-forms-from-string user-str)])
+;; `dump` and `base-dump` are optional (change: emit-dump-stages): the program is the
+;; unit under inspection, while the auto-imported (scheme base) it compiles on the way
+;; is incidental, so the two get SEPARATE dumpers -- the caller decides whether the
+;; standard library's stages appear at all (design D7).
+(define (compile-source-rehomed prelude-str user-str . opt)
+  (let ([user-forms (read-forms-from-string user-str)]
+        [dump       (if (pair? opt) (car opt) no-dump)]
+        [base-dump  (if (and (pair? opt) (pair? (cdr opt))) (cadr opt) no-dump)])
     (cond
-      [(single-define-library user-forms) => (lambda (lib) (compile-library-form lib no-dump))]
+      [(single-define-library user-forms) => (lambda (lib) (compile-library-form lib dump))]
       [else
        (let* ([prelude-forms (read-forms-from-string prelude-str)]
               [dl         (parse-define-library (scheme-base-library-form prelude-forms))]
-              [base-res   (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl) '() no-dump)]
+              [base-res   (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl) '() base-dump)]
               [base-ir    (car base-res)]
               [base-table (cadr base-res)]
               [prog-ir    (compile-program-with-imports
                             (prelude-macro-forms prelude-forms)
                             user-forms (list base-table)
-                            (list '(scheme base)) no-dump)])
+                            (list '(scheme base)) dump)])
          (string-append base-ir *emit-unit-boundary* prog-ir))])))
 
 ;; shared back half of the pipeline for one core-IL expression.  The REPL feeds
 ;; forms through this incrementally (against a persistent env); batch compilation
 ;; runs the same passes over a whole program in `compile-forms`.
-(define (repl-lcode il)
-  (lower-program (convert-closures (convert-assignments (recognize-let il))) program-unit))
+;;
+;; The mid-pipeline passes run HERE on the per-form paths, which is why they were
+;; invisible to `--dump` before: the whole-program `compile-forms` dumps them, but the
+;; REPL and library paths reach them through this back half.  `dump` is the same
+;; injected side-channel `compile-forms` takes -- optional, so a caller with nothing to
+;; narrate (and the Chez driver, which never dumps per form) is unchanged
+;; (change: emit-dump-stages).
+(define (repl-lcode il . opt)
+  (lcode-passes il program-unit (if (pair? opt) (car opt) no-dump)))
 
 ;; ============================================================================
 ;; Module artifacts: define-library / import / export (change:
@@ -223,6 +240,22 @@
       [(import-form? (car fs)) (loop (cdr fs) (append (reverse (cdr (car fs))) imps) rt)]
       [else (loop (cdr fs) imps (cons (car fs) rt))])))
 
+;; Expand + lower ONE of a library's top-level defines, with every stage of its own
+;; lowering observable and tagged with the define's name (change: emit-dump-stages --
+;; `compile-library` took a `dump` but never used it, so libraries dumped nothing on
+;; any host).  Order of effects is unchanged: expand, then lower, then narrate.
+(define (unit-def-lcode env f macro-env known unit dump)
+  (unit-lcode-tagged env (expand-unit-form f macro-env known) unit dump
+                     (symbol->string (car (normalize-define f)))))
+
+;; The shared tail: lower one already-expanded unit form, narrating its parse+rename
+;; result and each mid-pipeline stage under a `define <name>` tag.
+(define (unit-lcode-tagged env form unit dump name)
+  (let* ([d  (dump-tagged dump (string-append "define " name))]
+         [il (repl-lower-form* env form #f)])
+    (d "parse+rename" il)
+    (unit-lcode il unit d)))
+
 ;; expand one top-level form (define init, or a bare expression) against macro-env
 (define (expand-unit-form f macro-env known)
   (if (and (pair? f) (eq? (car f) 'define))
@@ -231,8 +264,32 @@
       (expand f macro-env known)))
 
 ;; lower one core-IL expression for a unit named `unit` (code labels get @"L:..").
-(define (unit-lcode il unit)
-  (lower-program (convert-closures (convert-assignments (recognize-let il))) unit))
+(define (unit-lcode il unit . opt)
+  (lcode-passes il unit (if (pair? opt) (car opt) no-dump)))
+
+;; A per-form view of a dumper (design D8): tag every stage NAME this dumper is given,
+;; so the stages of a pass that runs once per top-level form can be told apart --
+;; `;; ==== after convert-closures [define fact] ====`.  Carrying the tag in the stage
+;; string keeps the dump protocol at (stage form), so it works with ANY dumper: the
+;; in-language one, and the Chez driver's two-argument `dump` unchanged.  Pure Scheme
+;; with no %-ops, so this stays host-agnostic (change: emit-dump-stages).
+(define (dump-tagged dump tag)
+  (if (eq? dump no-dump)
+      no-dump                                    ; nothing to narrate: no allocation
+      (lambda (stage form) (dump (string-append stage " [" tag "]") form))))
+
+;; The mid-pipeline pass sequence shared by both per-form back halves, with each stage
+;; observable (change: emit-dump-stages).  Named stages match `compile-forms`, so one
+;; splitter reads a dump from any path; `dump` is `no-dump` in every caller that is not
+;; narrating, which makes this exactly the old one-liner.
+(define (lcode-passes il unit dump)
+  (let* ([a (recognize-let il)]
+         [b (convert-assignments a)]
+         [c (convert-closures b)]
+         [d (lower-program c unit)])
+    (dump "recognize-let" a) (dump "convert-assignments" b)
+    (dump "convert-closures" c) (dump "lower" d)
+    d))
 
 ;; An import environment is an alist external-name -> mangled-symbol, built from a
 ;; list of imported libraries' export tables (each `(name ((ext . mangled) ...))`,
@@ -318,8 +375,7 @@
         (let ([progs (reverse
                        (fold-left
                          (lambda (acc f)
-                           (cons (unit-lcode (repl-lower-form* env (expand-unit-form f macro-env known) #f) name)
-                                 acc))
+                           (cons (unit-def-lcode env f macro-env known name dump) acc))
                          (quote ()) defs))]
               ;; export table keys on the EXTERNAL name; the symbol is the INTERNAL name
               ;; mangled to this unit (rename is pure indirection).
@@ -346,7 +402,9 @@
                [progs   (reverse
                           (fold-left
                             (lambda (acc ne)
-                              (cons (unit-lcode (repl-lower-form* env (cdr ne) #f) name) acc))
+                              (cons (unit-lcode-tagged env (cdr ne) name dump
+                                                       (symbol->string (car ne)))
+                                    acc))
                             (quote ()) kept))]
                [export-table (map (lambda (e) (cons (car e) (mangle name (cdr e))))
                                   (filter (lambda (e) (memq (cdr e) reachable)) exports))])
@@ -384,6 +442,11 @@
            [b (convert-assignments a)]
            [c (convert-closures b)]
            [d (lower-program c program-unit)])
+      ;; every stage, not just the four this path used to show: it runs the same
+      ;; recognize-let/convert-assignments/convert-closures ladder as compile-forms,
+      ;; and this is the path EVERY door takes once (scheme base) is auto-imported
+      ;; (change: emit-dump-stages).
       (dump "collect-toplevel" top) (dump "expand" expd)
-      (dump "parse+rename+imports" core) (dump "lower" d)
+      (dump "parse+rename+imports" core) (dump "recognize-let" a)
+      (dump "convert-assignments" b) (dump "convert-closures" c) (dump "lower" d)
       (emit-program-with-imports d (or init-libs imported-libs) (map cdr import-env-alist)))))
