@@ -7,4 +7,5 @@
 - [A description of the principles for the Emit compiler's output logging](OUTPUT.md)
 - [A catalog of known and fixed performance issues](PERFORMANCE.md)
 - [A description of how the Emit compiler exposes built-in operations](PRIMITIVES.md)
+- [Research on unspecified return values in the standards and implementations](return-values.md)
 - [The R7RS Scheme Lanaguage standard in Markdown format](r7rs/README.md)
