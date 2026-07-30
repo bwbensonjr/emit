@@ -8,8 +8,8 @@ section, read [the recommended policy in brief](#the-recommended-policy-in-brief
 The short version: the ambiguity is deliberate and well-documented, it exists for two distinct
 reasons that call for different responses, and the great majority of the ~40 surveyed implementations
 have converged — without any standard asking them to — on *one distinguished value, not `#f`,
-suppressed by the REPL*. Emit currently uses `#f`, which is the one choice that forecloses ever
-diagnosing misuse.
+suppressed by the REPL*. Emit has no such value: it returns `#f` from the syntactic forms and `()`
+from the side-effecting C primitives, and its REPL echoes both, so `(display "hi")` prints `hi()`.
 
 ## Five different things called "unspecified"
 
@@ -423,17 +423,30 @@ to prevent.
 
 ## Where Emit stands today
 
-Emit currently uses `#f` as its unspecified value, in two places:
+Emit does not have *one* unspecified value today — it has **two**, split along the
+Scheme/C boundary, and neither is distinct from an ordinary datum. Observed by running
+`./build/emit repl`:
 
-- [src/parse.ss:273](../src/parse.ss) desugars a one-armed `if` to `(const #f)`, with the comment
-  that `#f` is chosen "to match `when`/`unless` and the `case` no-match default (which desugars to
-  `(if #f #f)`)."
-- [src/prelude.scm:222](../src/prelude.scm) defines `(define (void) (if #f #f))` — so `(void)`,
-  `(if #f #f)`, `(when #f …)`, `(unless #t …)`, and no-match `cond`/`case` all yield `#f`.
+| Expression | Emit today | Source of the value |
+|---|---|---|
+| `(if #f #f)` | `#f` | [src/parse.ss:273](../src/parse.ss) desugars one-armed `if` to `(const #f)` |
+| `(void)` | `#f` | [src/prelude.scm:222](../src/prelude.scm): `(define (void) (if #f #f))` |
+| `(when #f 1)`, `(unless #t 1)` | `#f` | prelude, via `(if #f #f)` |
+| `(cond (#f 1))`, `(case 9 ((1) 2))` | `#f` | derived-form no-match default |
+| `(for-each car '((1)))` | `#f` | `%for-each1` base case returns `(if #f #f)` |
+| `(display "")`, `(newline)` | `()` | `rt_display`/`rt_newline` return `NIL_V` |
+| `(write-char #\a)` | `()` | `rt_write_char` returns `NIL_V` |
+| `(vector-set! v 0 1)` | `()` | `rt_vector_set` returns `NIL_V` |
 
-This is internally consistent and R7RS-conforming: `#f` is an object, it is a single value, and no
-error is signaled. It also puts Emit in a four-member minority (Bigloo, JScheme, Dream, Owl Lisp) out
-of roughly forty surveyed implementations.
+The syntactic forms and the prelude yield `#f`; every side-effecting C primitive yields `NIL_V` —
+the empty list. Both are R7RS-conforming in isolation (each is an object, each is a single value, no
+error is signaled), so this is not a bug against the report. But it means Emit has *no* unspecified
+value in the sense every surveyed implementation means it, and it lands Emit simultaneously in the
+four-member `#f` minority (Bigloo, JScheme, Dream, Owl Lisp) and the `()` minority (TinyScheme, Elk,
+UMB, and others) out of roughly forty implementations.
+
+The split is also invisible in the source: nothing in the runtime comments flags `NIL_V` as standing
+for "unspecified," so the two conventions have drifted without anything to catch them.
 
 Two facts make changing it cheap:
 
@@ -444,13 +457,27 @@ Two facts make changing it cheap:
    new primary tag, no heap allocation, and no header word — which matters for the small-executable
    goal in [CLAUDE.md](../CLAUDE.md).
 2. **Nothing depends on the current choice.** A grep of `test/` and `demos/` for `(void)` and
-   `(if #f #f)` returns no hits, so no test asserts that the unspecified value is `#f`.
+   `(if #f #f)` returns no hits, so no test asserts what the unspecified value is.
 
-One further observation: Emit's REPL ([src/emit.cpp:654-677](../src/emit.cpp)) does not currently
-echo the value of a form at all — `process_form` compiles and runs the thunk, and all visible output
-comes from explicit `display`/`write`. So the REPL-suppression question is not yet forced. It will be
-the moment value echo is added, and the choice of representation determines whether suppression is
-even possible.
+And one fact makes the REPL half of the recommendation immediately relevant rather than deferred:
+Emit's REPL **already echoes every result unconditionally**. `run_thunk`
+([src/emit.cpp:472](../src/emit.cpp)) calls `rt_write(r)` on whatever the compiled thunk returns and
+prints a newline, with no suppression path — as the `interactive-repl` spec requires ("prints the
+resulting value using the runtime value printer"). So today an interactive session reads:
+
+```
+> (display "hi")
+hi()
+> (define x 5)
+5
+> (vector-set! v 0 1)
+()
+```
+
+Every side-effecting form echoes a junk value, and `display` produces the memorable `hi()`. That is
+the concrete, visible cost of having no distinguished value: there is nothing the REPL *could*
+suppress, because `()` and `#f` are both legitimate results that must be printed when a program really
+does return them.
 
 ## Recommendation
 
@@ -525,9 +552,11 @@ resolves it in favor of consistency wherever the prelude already pays the cost. 
 caveat into Emit's own documentation regardless: this is what Emit happens to return, it is not a
 promise, and portable programs must not rely on it.
 
-**6. Suppress it in the REPL when value echo lands.** Chez, Racket, and most others print nothing when
-the result is the unspecified value. Emit's REPL doesn't echo values yet; when it does, suppression
-should be part of that change rather than a later fix — and it is only implementable given decision 1.
+**6. Suppress it in the REPL.** Chez, Racket, and most others print nothing when the result is the
+unspecified value. This is not deferred work: Emit's REPL echoes every result today via `rt_write` in
+`run_thunk` ([src/emit.cpp:472](../src/emit.cpp)), so it already prints `()` and `#f` noise after every
+side-effecting form. Suppression is only implementable given decision 1 — with `#f` and `()` there is
+nothing safe to suppress — which makes this the most immediately user-visible payoff of the change.
 
 **7. Write down the per-category policy.** The five categories at the top of this document need
 separate answers, and only category 1 is settled by the above. Category 2 in particular is already
@@ -541,11 +570,16 @@ change proposal; this document only flags it.
 
 Stated plainly, since the recommendation is not free:
 
-- **Real work, small scope.** A new immediate touches `runtime.c` (constant, predicate, `write`/
-  `display` cases), the emitter's constant encoder, `parse.ss`'s one-armed `if` desugaring, and the
-  prelude's `void`. Contained, but not zero.
-- **One behavior change.** `(if (vector-set! v 0 1) 'a 'b)` flips from `'b` to `'a`. Both are
-  conforming; the second matches Chez and the majority. No test currently depends on either.
+- **Real work, small scope.** A new immediate touches `runtime.c` (the constant, the `write`/`display`
+  printer, and the ~dozen side-effecting `rt_*` entry points that currently `return NIL_V`), the
+  emitter's constant encoder, `parse.ss`'s one-armed `if` desugaring, the prelude's `void`, and
+  `run_thunk`'s REPL echo. Contained, but spread across the Scheme/C boundary — which is exactly why
+  the two conventions drifted in the first place.
+- **Two behavior changes, both conforming.** `(if (vector-set! v 0 1) 'a 'b)` flips from `'a` (today,
+  since `()` is truthy) to `'a` (unchanged — the new value is also truthy), but
+  `(if (if #f #f) 'a 'b)` flips from `'b` to `'a`. And `(null? (display ""))` flips from `#t` to `#f`.
+  No test in `test/` or `demos/` depends on either. The second is the one to grep for at
+  implementation time.
 - **The standards-level objection stands.** Cowan and Gleckler are right that a distinguished value
   "encourages people to have such a defined-undefined value." But their objection was to putting it in
   *the standard* — where it becomes a portable guarantee. An implementation choosing one for its own
