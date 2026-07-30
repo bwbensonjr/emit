@@ -1,6 +1,6 @@
 ## Context
 
-Stage 2 of Modules v0 (`docs/superpowers/specs/2026-07-15-modules-v0-design.md`), building on
+Stage 2 of Modules v0 (`openspec/explorations/modules-v0-design.md`), building on
 the archived Stage 1 (`module-artifacts-vertical-slice`) and Stage 0
 (`module-resolution-scaffold`). Stage 1 delivered the artifact machinery for the smallest
 case: a `compile-unit` core entry `(forms, library-name, import-env) → (ir-text,

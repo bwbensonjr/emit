@@ -4,7 +4,7 @@ Stage 1 (`module-artifacts-vertical-slice`) proved both doors on the smallest po
 one flat library, one bare-name export, one program importing it. Real libraries are not
 flat — they build on other libraries, they rename their exports, and a program can reach the
 same dependency by two paths. Stage 2 of the Modules v0 design
-(`docs/superpowers/specs/2026-07-15-modules-v0-design.md`) **generalizes** the Stage 1 slice
+(`openspec/explorations/modules-v0-design.md`) **generalizes** the Stage 1 slice
 into a usable separate-compilation system: libraries that import libraries, exports that
 rename, a build that orders and rebuilds units correctly, and a diamond that initializes
 each unit exactly once. This is the last stage before the prelude can be re-homed as

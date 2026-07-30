@@ -35,11 +35,15 @@ cd "$(dirname "$0")/.."
 # brings in say/vsay/bytes + EMIT_VERBOSITY (see docs/OUTPUT.md and tools/llvm-env.sh).
 . tools/llvm-env.sh || exit 1
 
-# Flat core, in concatenation order (this list == the Chez driver's include order).
+# Flat core, in concatenation order (this list == the Chez driver's include order,
+# PLUS src/dump.ss: the stage dumper calls the %-ops `%dump-level`/`%stderr-write`,
+# which are primcall heads when COMPILED here but unbound identifiers when Chez
+# EVALUATES its include block -- so it rides the Chez-free assembly only, and the
+# driver keeps its own independent pretty-print dumper (emit-dump-stages, D5/D10).
 CORE_FLAT="src/match.scm src/util.scm src/parse.ss \
            src/passes/expand.ss src/passes/recognize-let.ss \
            src/passes/convert-assignments.ss src/passes/convert-closures.ss \
-           src/passes/lower.ss src/emit.ss src/core.ss"
+           src/passes/lower.ss src/emit.ss src/core.ss src/dump.ss"
 
 mkdir -p build bootstrap
 

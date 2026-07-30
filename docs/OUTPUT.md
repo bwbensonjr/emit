@@ -67,6 +67,38 @@ make                                   # concise (default)
 EMIT_VERBOSITY=verbose make regen      # per-step timing and detail
 ```
 
+## Stage dumps (`--dump`)
+
+Per-pass intermediate-language inspection is a fourth, *orthogonal* level of detail: it
+is a debugging request, not narration, so an explicit `--dump` outranks the verbosity
+level (including `quiet`) — the same precedence the Chez driver has always had.
+
+| flag / variable          | shows                                                         |
+|--------------------------|---------------------------------------------------------------|
+| `--dump`                 | the IL after each pass, for the unit under inspection         |
+| `--dump-all`             | `--dump`, plus `(scheme base)` and imported library units      |
+| `EMIT_VERBOSITY=verbose` | pass *names* only (`  stage lower`), no IL                     |
+
+Every door of the shipped binary accepts both flags — `emit run`, `emit build`,
+`emit lib`, `emit repl` — as does the Chez driver (`--dump`). All dump output is
+**stderr**, so it cannot perturb a door's stdout: `emit run --emit --dump` writes the
+same IR bytes as `emit run --emit`, which is what keeps `make regen` and the trust-check
+safe. `test/dump-stages-tests.sh` asserts that byte-for-byte.
+
+Mechanism: the host computes a single level and forwards it to the embedded compiler in
+`EMIT_DUMP_LEVEL` (`0` off, `1` names only, `2` full dump, `3` + library units), which the
+compiler probes via the `%dump-level` primitive and narrates through `%stderr-write`. Tools
+without an argument parser therefore use the variable directly:
+
+```sh
+build/emit run --dump prog.scm            # or: EMIT_DUMP_LEVEL=2 build/emit run prog.scm
+EMIT_DUMP_LEVEL=2 build/schemec < prog.scm > prog.ll    # the filter has no flags
+```
+
+Stages that run once per top-level form (the REPL's, and each of a library's defines) tag
+their header with that form: `;; ==== after convert-closures [define fact] ====`, plus
+`[unit (scheme base)]` under `--dump-all`.
+
 ## Implementing a conforming tool
 
 - **Bash scripts** — source `tools/log.sh` (after `cd`-ing to the repo root) and use its
@@ -77,6 +109,10 @@ EMIT_VERBOSITY=verbose make regen      # per-step timing and detail
 - **The Chez driver (`compile.ss`)** — reads `EMIT_VERBOSITY` (and `-q`/`-v`); stage
   announcements are gated to `verbose`, and `--dump` additionally pretty-prints the full
   intermediate form after each pass.
+- **The embedded compiler (the shipped doors)** — narrates through `%stderr-write`, never
+  `%display`/`%write` (those are stdout, where the IR payload lives). It reads no
+  environment itself: the *entry* builds the dumper from `(%dump-level)` and passes it down
+  the core's `dump` parameter, so `src/core.ss` stays port-free and effect-free.
 
 ## Reviewer checklist
 

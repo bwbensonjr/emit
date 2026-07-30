@@ -104,10 +104,20 @@
         [else
          (let ([dn (define-name form)])
            (when dn (set! *repl-known* (cons dn *repl-known*)))
-           (let ([lc (repl-lcode (repl-lower-form *repl-env* (repl-expand-form form)))])
-             (let ([m (emit-repl-module lc (+ *repl-n* 1))])
-               (set! *repl-n* (+ *repl-n* 1))
-               (cons (quote ok) (cons (car m) (cadr m))))))]))))
+           ;; --dump in the REPL: the entered form IS the unit under inspection, and
+           ;; every stage is tagged with the form's identity -- its define name, else
+           ;; its session index -- since these passes run once per form (design D8,
+           ;; change: emit-dump-stages).
+           (let* ([d  (dump-tagged (make-dumper #f)
+                                   (if dn
+                                       (string-append "define " (symbol->string dn))
+                                       (string-append "form " (number->string (+ *repl-n* 1)))))]
+                  [il (repl-lower-form *repl-env* (repl-expand-form form))])
+             (d "parse+rename" il)
+             (let ([lc (repl-lcode il d)])
+               (let ([m (emit-repl-module lc (+ *repl-n* 1))])
+                 (set! *repl-n* (+ *repl-n* 1))
+                 (cons (quote ok) (cons (car m) (cadr m)))))))]))))
 
 ;; text -> (status . payload).  Read exactly one form from the host-supplied text
 ;; (the host already sliced it to one complete form via form-complete?), then
@@ -137,10 +147,18 @@
              (repl-register-define! *repl-env* f)]
             [else (if #f #f)]))
     forms)
+  ;; The prelude batch is not the unit under inspection, so its stages appear only at
+  ;; the all-units dump level (design D7) -- otherwise every REPL start would bury the
+  ;; session under the standard library's lowering.
   (let ([progs (fold-left
                  (lambda (acc f)
                    (if (define-form? f)
-                       (cons (repl-lcode (repl-lower-form* *repl-env* (repl-expand-form f) #f)) acc)
+                       (let* ([d  (dump-tagged (make-dumper (quote (scheme base)))
+                                               (string-append "define "
+                                                              (symbol->string (define-name f))))]
+                              [il (repl-lower-form* *repl-env* (repl-expand-form f) #f)])
+                         (d "parse+rename" il)
+                         (cons (repl-lcode il d) acc))
                        acc))
                  (quote ()) forms)])
     (set! *repl-n* (length progs))
@@ -241,7 +259,10 @@
        [(not tables) (cons (quote deferred) name)]    ; retry after dependencies load
        [else
         (let ([saved counter])
-          (let ([res (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl) tables no-dump)])
+          ;; A manifest library loaded to satisfy an import is not the unit under
+          ;; inspection: level 3 (--dump-all) only, and named in its headers.
+          (let ([res (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl) tables
+                                     (make-dumper name))])
             (set! counter saved)                      ; undo compile-library's reset-counter!
             (set! *repl-libs* (cons (cons name (cadr (cadr res))) *repl-libs*))
             ;; record this unit's DIRECT imports for the run door's init-closure
@@ -347,7 +368,9 @@
     (let* ([prelude-forms (read-forms-from-string *prelude-source*)]
            [dl   (parse-define-library (scheme-base-library-form prelude-forms))]
            [name (car dl)]
-           [res  (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl) (quote ()) no-dump)])
+           ;; the auto-imported (scheme base): incidental to the program, so level 3 only.
+           [res  (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl) (quote ())
+                                 (make-dumper name))])
       (set! *repl-libs* (cons (cons name (cadr (cadr res))) *repl-libs*))
       (set! *repl-lib-imports* (cons (cons name (cadr dl)) *repl-lib-imports*))
       (cons (quote ok) (cons (car res) (mangle name "__init"))))))
@@ -366,8 +389,12 @@
        ;; no program entry (matches compile-source-rehomed).  The host emits/JITs just
        ;; this module; the 'library status tells it to drop the baked base + preloaded
        ;; units it set up for the program case.  (Used by `emit run --emit < lib.sld`.)
+       ;; A lone define-library IS the unit under inspection here (this is `emit lib`'s
+       ;; and `emit run --emit < lib.sld`'s path), so it dumps at the ordinary level.
        [(single-define-library user-forms)
-        => (lambda (lib) (cons (quote library) (cons (compile-library-form lib no-dump) "scheme_entry")))]
+        => (lambda (lib)
+             (cons (quote library)
+                   (cons (compile-library-form lib (make-dumper #f)) "scheme_entry")))]
        [else
         (let ([direct (run-with-scheme-base (car (collect-imports user-forms)))])
           (let ([tables (repl-import-tables direct)])
@@ -376,7 +403,8 @@
                 (cons (quote ok)
                       (cons (compile-program-with-imports
                               (prelude-macro-forms (read-forms-from-string *prelude-source*))
-                              user-forms tables (run-closure-order direct) no-dump)
+                              user-forms tables (run-closure-order direct)
+                              (make-dumper #f))     ; the program: the unit under inspection
                             "scheme_entry")))))]))))
 
 ;; --- emit lib door: a library's export table as readable text (mode 11) ------
@@ -428,6 +456,9 @@
            [lib   (single-define-library forms)])
       (if (not lib)
           (cons (quote error) "emit lib: source is not a single define-library")
+          ;; no-dump deliberately: this mode recompiles the SAME library mode 7 just
+          ;; compiled, purely to recover its export table, so narrating here would print
+          ;; every stage of `emit lib --dump` a second time.
           (let* ([dl   (parse-define-library lib)]
                  [res  (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl) (quote ()) no-dump)]
                  [nt   (cadr res)]            ; (name export-table)

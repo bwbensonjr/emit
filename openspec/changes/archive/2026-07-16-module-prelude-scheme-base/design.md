@@ -1,6 +1,6 @@
 ## Context
 
-Stage 3 of Modules v0 (`docs/superpowers/specs/2026-07-15-modules-v0-design.md`, D6),
+Stage 3 of Modules v0 (`openspec/explorations/modules-v0-design.md`, D6),
 building on the archived Stages 0–2. The prelude (`src/prelude.scm`) is the last piece of
 "library zero" still delivered by textual **prepend**: ~89 procedure definitions plus 9
 derived-form macros (`and`, `or`, `when`, `unless`, `let*`, `cond`, `case`, `guard`,

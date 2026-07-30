@@ -19,6 +19,23 @@
 # itself was proven by capturing a pristine DIR and diffing a post-change
 # capture against it (design D3); `check` keeps the guarantee live afterwards.
 #
+# RE-RECORDING the reference (`manifest > $REF`) is legitimate only when the IR
+# change is intended and has been shown to be exactly what was intended -- capture
+# a before/after pair and diff them, as the original change did.  Log of intended
+# re-records:
+#   emit-dump-stages -- +2 lines in every module's runtime declare header
+#     (@rt_dump_level, @rt_stderr_write).  Verified: a 69-demo before/after capture
+#     differed in exactly those 2 lines per module (138 lines, no deletions).
+#   flonum-unboxing (merge of feat/flonum-unboxing into post-dump main) -- +1 declare
+#     line (@rt_make_flonum) in every module's header, PLUS real f64-region codegen
+#     (flofast/floslow/flomerge blocks + the label renumbering they shift) in exactly
+#     the two flonum-using demos.  Verified: a 69-demo before/after capture showed 67
+#     demos differing ONLY by the declare line (138 lines, no deletions -- the header
+#     appears twice per demo IR), and non-declare drift confined to flonum-arith.ll
+#     and mandelbrot.ll; both demos' stdout stayed byte-identical (33 / 2595 bytes),
+#     confirming the guarded slow arm preserves semantics.  +1 new entry
+#     (flonum-unbox), the change's own demo.
+#
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u
 cd "$(dirname "$0")/.."

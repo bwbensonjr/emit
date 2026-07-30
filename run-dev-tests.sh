@@ -67,6 +67,7 @@ run_suite "REPL front-end units"        chez --libdirs src --script test/repl-fr
 run_suite "REPL interactive (--repl)"   test/repl-interactive-tests.sh
 run_suite "REPL vs batch equivalence"   test/repl-equiv-tests.sh
 run_suite "REPL persistent-globals batch" test/repl-batch-tests.sh
+run_suite "--dump parity vs chez"       test/dump-parity-tests.sh
 run_suite "anti-stale trust-check"      test/trust-check.sh
 
 echo

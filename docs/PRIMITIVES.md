@@ -58,8 +58,9 @@ And two properties keep it honest as an implementation choice, not just an ergon
 - **Raw `%`-ops** (`%cons`, `%+`, `%car`, …) are the only reserved primcall heads left. They
   lower straight to runtime C entry points (`rt_cons`, `rt_add`, …) and never appear in a
   user program, never leak into LLVM IR as a `%`-name, and are never used as a value. Only
-  compiler/host internals stay down here permanently (hashing, records, error plumbing,
-  `%no-prelude?`, the REPL-state ops).
+  compiler/host internals stay down here permanently (hashing, records, error plumbing, the
+  host-flag probes `%no-prelude?` / `%dump-level`, the narration writer `%stderr-write`, the
+  REPL-state ops).
 - **The integrable floor** is the key idea. Each plain primitive name (`cons`, `+`, …) is an
   *ordinary shadowable binding* defined in terms of its raw `%`-op. It is **compiler-intrinsic**:
   the names are baked into the compiler's set of known bindings, not exported from any library,
@@ -268,6 +269,28 @@ one-line table edit. The safe procedure:
    and **regen** again.
 4. **Verify** — `make && ./run-dev-tests.sh` (18/18), including the self-host fixed point and
    the trust-check (a second regen is a no-op).
+
+### Adding a permanently-internal `%`-op
+
+Same staging, minus step 3 — an internal op has no plain shadowable name, so it never enters
+`*integrable*`. `emit-dump-stages` added two this way (`%dump-level`, `%stderr-write`):
+
+1. **Stage 1, tables only** — the runtime C function, its `prim-table` entry and `declare`
+   line in `src/emit.ss`, and the name in `*prims*` (`src/parse.ss`). Nothing *calls* it yet,
+   so the current seed compiles all of it (it is data and string constants), and `make regen`
+   produces a seed that knows the op. Expect the committed IR diff to include the new
+   `declare` in every module — which changes every demo's emitted-IR hash, so
+   `test/module-scaffold-baseline.sha256` must be re-recorded, with a before/after capture
+   proving the drift is *only* those lines.
+2. **Stage 2, call sites** — now the compiler's own source may use `(%foo …)`. Regen again.
+3. **Verify** — the full dev suite at the end of *each* stage, and commit the regenerated
+   `bootstrap/*.ll` at each stable stage. The trust-check *skips* while `bootstrap/` is dirty,
+   so re-run it after committing to see it actually pass.
+
+A caller-visible `%`-op also needs a home: if the compiler's own source calls it, that source
+file cannot be in `compile.ss`'s `(include ...)` block, which Chez *evaluates* — an unbound
+identifier there. `src/dump.ss` is the pattern: it rides `$CORE_FLAT` (compiled, never
+evaluated) in `tools/regen.sh` and `test/self-host-fixpoint.sh`.
 
 The D3 lesson recorded in the archived change: the "two regens per batch" rule is a *safe
 upper bound*, not always required — when a batch only renames a primcall head to a `%`-synonym

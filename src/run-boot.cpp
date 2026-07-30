@@ -65,16 +65,25 @@ typedef intptr_t (*entry_t)(void);
 int main(int argc, char **argv) {
   bool emit = false;
   bool no_prelude = false;
+  int dump_level = 0;
   for (int i = 1; i < argc; i++) {
     std::string a(argv[i]);
     if (a == "--emit") emit = true;
     else if (a == "--no-prelude") no_prelude = true;
+    else if (a == "--dump") dump_level = 2;
+    else if (a == "--dump-all") dump_level = 3;
   }
 
   // Forward --no-prelude to the embedded entry (change: embedded-runner-rehome):
   // it reads EMIT_NO_PRELUDE via the %no-prelude? primitive to decide whether to
   // auto-import (scheme base).  Must be set before scheme_entry() runs below.
   if (no_prelude) setenv("EMIT_NO_PRELUDE", "1", 1);
+
+  // Same channel for --dump (change: emit-dump-stages): worth having on the bootstrap
+  // runner too, since a regen that miscompiles is exactly when the stages matter.  The
+  // dump goes to stderr, so --emit's stdout IR -- what the fixed point compares -- is
+  // untouched.
+  if (dump_level) setenv("EMIT_DUMP_LEVEL", std::to_string(dump_level).c_str(), 1);
 
   GC_INIT();                                 // once, before the compiler allocates
 

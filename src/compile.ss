@@ -164,6 +164,12 @@
   (when (>= driver-verbosity 2)
     (fprintf (current-error-port) "  stage ~a\n" stage)))
 
+;; The dumper this run selected (`dump`, `announce-stage`, or `no-dump`), published so
+;; the modular path -- which is reached through build-modular-artifacts*, several frames
+;; below the argument loop that chooses it -- can narrate too.  Set once per run in the
+;; argument loop (change: emit-dump-stages).
+(define *dumpf* no-dump)
+
 ;; --- prelude (standard library prepended to every program) ---------------
 ;; The prelude is a *file*, so reading it is the driver's job; the pure core's
 ;; `with-prelude` merges the already-read forms (user-wins shadowing).
@@ -555,8 +561,11 @@
             ;; tables, ordering the whole closure's inits by topo order.
             (let* ([direct-tables (map (lambda (n) (cdr (assoc n tables))) direct-imports)]
                    [prog-ll   (string-append out ".ll")]      ; beside the exe, not the source
+                   ;; The program is the unit under inspection; the library units above
+                   ;; keep no-dump, matching the shipped doors' default (design D7 --
+                   ;; the driver has no --dump-all).
                    [prog-ir   (compile-program-with-imports
-                                prelude-forms user-forms direct-tables order no-dump)]
+                                prelude-forms user-forms direct-tables order *dumpf*)]
                    [prog-text (string-append header prog-ir)]
                    [name->ll  (map cons order (reverse lls))]) ; topo-order name -> full .ll
               (write-text prog-ll prog-text)
@@ -680,6 +689,14 @@
           (let* ([out (or out (strip-ext src))] [ll (string-append out ".ll")]
                  ;; --dump = full per-pass form trace; -v = concise stage names; else silent
                  [dumpf (cond [dump? dump] [(>= driver-verbosity 2) announce-stage] [else no-dump])])
+            ;; The modular path is reached through build-modular-artifacts*, which does
+            ;; not take a dumper, so publish it here (change: emit-dump-stages).  Before
+            ;; this, --dump on the DEFAULT path (prelude on, or any import) was silently
+            ;; ignored: only --no-prelude + no imports, the compile-file path below, ever
+            ;; dumped.  Wiring the existing dumper through is what lets the shipped
+            ;; binary's dump be checked against this one on the path every door takes
+            ;; (test/dump-parity-tests.sh).
+            (set! *dumpf* dumpf)
             (cond
               ;; Module-aware path for ALL backends (change: driver-backend-rehome):
               ;; a program that imports libraries -- or, with the prelude enabled, any

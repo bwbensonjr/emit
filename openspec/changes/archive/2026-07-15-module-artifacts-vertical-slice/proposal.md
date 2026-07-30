@@ -6,7 +6,7 @@ and Stage 0 (`module-resolution-scaffold`) already landed the typed-scope resolv
 module-qualified symbol ABI that make it safe. What's still missing is the artifact itself:
 there is no library surface syntax, nothing emits a linkable/loadable unit, and the
 `imported` binding kind is structured but never produced. This change is **Stage 1** of the
-design (`docs/superpowers/specs/2026-07-15-modules-v0-design.md`) — the smallest end-to-end
+design (`openspec/explorations/modules-v0-design.md`) — the smallest end-to-end
 vertical slice that proves both doors on one trivial library.
 
 ## What Changes

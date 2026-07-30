@@ -1,6 +1,6 @@
 ## Context
 
-This is Stage 0 of Modules v0 (`docs/superpowers/specs/2026-07-15-modules-v0-design.md`).
+This is Stage 0 of Modules v0 (`openspec/explorations/modules-v0-design.md`).
 The full design is approved; this change lands only the behavior-preserving scaffolding so
 the module-artifact stages that follow are small and safe.
 

@@ -612,6 +612,29 @@ val rt_no_prelude_p(void) {
   return (v && *v) ? TRUE_V : FALSE_V;
 }
 
+/* --dump channel for the embedded compiler (change: emit-dump-stages, design
+ * D1).  The same shape as rt_no_prelude_p above -- a nullary env probe, so the
+ * flag stays off the stdin source channel -- but it carries a LEVEL rather than
+ * a boolean, because the doors have two observability modes over this one
+ * channel: 0 = off, 1 = stage names only (the concise trace the Chez driver
+ * emits at EMIT_VERBOSITY=verbose), 2 = the full per-pass IL dump, 3 = the full
+ * dump including library units (--dump-all).  The host computes the level and
+ * sets EMIT_DUMP_LEVEL before the first scheme_entry() call; parsing stays here
+ * in C, single-sourced, as it is for the verbosity levels in emit.cpp.  Anything
+ * unset, empty, or unparseable is 0 (off), so a stray value can never turn
+ * narration on. */
+val rt_dump_level(void) {
+  const char *v = getenv("EMIT_DUMP_LEVEL");
+  if (!v || !*v) return FIX(0);
+  if (v[1] != '\0') return FIX(0);            /* single digit only */
+  switch (v[0]) {
+    case '1': return FIX(1);
+    case '2': return FIX(2);
+    case '3': return FIX(3);
+    default:  return FIX(0);
+  }
+}
+
 /* --- REPL request channel (change: repl-embedded-incremental) -------------
  * The interactive host drives the embedded compiler by calling its single ccc
  * `scheme_entry` repeatedly, one call per operation.  Because a ccc entry takes
@@ -685,9 +708,9 @@ val rt_repl_state_set(val v) { rt_repl_cell(&rt_repl_state_cell, FALSE_V)[0] = v
  * Dispatching on the tag makes this memory-safe for every value type -- a
  * non-string no longer dereferences as a string header and crashes.  Returns an
  * unspecified value (NIL) so it composes inside a `begin`. */
-static void print_val(val v, int display);   /* defined with rt_write below */
+static void print_val(FILE *out, val v, int display);   /* defined with rt_write below */
 val rt_display(val v) {
-  print_val(v, /*display=*/1);
+  print_val(stdout, v, /*display=*/1);
   return NIL_V;
 }
 
@@ -698,8 +721,24 @@ val rt_display(val v) {
  * from that void entry: a primitive must return a val (the unspecified value)
  * so it composes inside a `begin`, whereas the runner entry returns nothing. */
 val rt_write_val(val v) {
-  print_val(v, /*display=*/0);
+  print_val(stdout, v, /*display=*/0);
   return NIL_V;
+}
+
+/* write ANY datum to STANDARD ERROR, in write style (display? = #f) or display
+ * style (any other value) -- the embedded compiler's narration channel (change:
+ * emit-dump-stages, design D2).  stdout is reserved for a door's data payload
+ * (the IR that `emit run --emit` and `schemec` write), so narration must not go
+ * there; this is the SAME tag-walking printer as rt_display/rt_write_val, merely
+ * pointed at another stream, so there is no second printer to keep in sync.
+ * Carrying the style as an argument (rather than adding two primitives) keeps the
+ * new %-op surface at two: the dumper needs write style for IL forms -- so
+ * (code "code_6" ...) shows its string quoted, as Chez's pretty-print does -- and
+ * display style for its own headers, indentation, and newlines.  Returns `v`, so
+ * a dumper can thread a value through a write without an extra binding. */
+val rt_stderr_write(val v, val display_p) {
+  print_val(stderr, v, /*display=*/display_p != FALSE_V);
+  return v;
 }
 
 /* newline: write a single line feed (U+000A) to standard output.  Nullary;
@@ -1083,111 +1122,142 @@ val rt_error(val message, val irritants) {
  * as the raw character (no `#\` prefix); every other arm is identical, and
  * compound values recurse in the SAME mode so nested strings/chars follow suit.
  * Dispatch is on the runtime tag, so no value is ever read as the wrong type --
- * `display` of a non-string is memory-safe, not a segfault. */
-static void print_val(val v, int display) {
+ * `display` of a non-string is memory-safe, not a segfault.
+ *
+ * `out` is the destination stream: stdout for display/write/the final-value
+ * print, stderr for the embedded compiler's narration (rt_stderr_write, change:
+ * emit-dump-stages).  It is a parameter rather than a hardwired stdout so that
+ * narration and data share ONE printer -- the alternative was a second
+ * stderr-only printer to keep in sync with this one. */
+static void print_val(FILE *out, val v, int display) {
   switch (tag_of(v)) {
-    case TAG_FIXNUM: printf("%ld", (long)UNFIX(v)); break;
+    case TAG_FIXNUM: fprintf(out, "%ld", (long)UNFIX(v)); break;
     case TAG_BOOL:
       if (is_char(v)) {                                  /* char shares tag 001 */
         intptr_t cp = CHAR_CP(v);
         unsigned char buf[4];
         int n = utf8_encode(cp, buf);
-        if (display)          fwrite(buf, 1, (size_t)n, stdout);   /* the raw character */
-        else if (cp == ' ')   printf("#\\space");
-        else if (cp == '\n')  printf("#\\newline");
-        else { printf("#\\"); fwrite(buf, 1, (size_t)n, stdout); }
+        if (display)          fwrite(buf, 1, (size_t)n, out);   /* the raw character */
+        else if (cp == ' ')   fprintf(out, "#\\space");
+        else if (cp == '\n')  fprintf(out, "#\\newline");
+        else { fprintf(out, "#\\"); fwrite(buf, 1, (size_t)n, out); }
       } else {
-        printf(v == FALSE_V ? "#f" : "#t");
+        fputs(v == FALSE_V ? "#f" : "#t", out);   /* fputs: the string is not a literal */
       }
       break;
-    case TAG_NIL:    printf("()"); break;
+    case TAG_NIL:    fprintf(out, "()"); break;
     case TAG_PAIR: {
-      printf("(");
+      fprintf(out, "(");
       val cur = v; int first = 1;
       while (tag_of(cur) == TAG_PAIR) {
-        if (!first) printf(" ");
+        if (!first) fprintf(out, " ");
         first = 0;
-        print_val(as_ptr(cur)[0], display);
+        print_val(out, as_ptr(cur)[0], display);
         cur = as_ptr(cur)[1];
       }
-      if (cur != NIL_V) { printf(" . "); print_val(cur, display); }
-      printf(")");
+      if (cur != NIL_V) { fprintf(out, " . "); print_val(out, cur, display); }
+      fprintf(out, ")");
       break;
     }
-    case TAG_CLOSURE: printf("#<procedure>"); break;
-    case TAG_BOX:     printf("#<box>"); break;
-    case TAG_SYMBOL:  printf("%s", sym_name(v)); break;
+    case TAG_CLOSURE: fprintf(out, "#<procedure>"); break;
+    case TAG_BOX:     fprintf(out, "#<box>"); break;
+    case TAG_SYMBOL:  fprintf(out, "%s", sym_name(v)); break;
     case TAG_EXT:
       switch (ext_hdr(v)) {
         case HDR_STRING:
-          if (!display) putchar('"');
-          fwrite(str_bytes(v), 1, (size_t)str_len(v), stdout);
-          if (!display) putchar('"');
+          if (display) {
+            fwrite(str_bytes(v), 1, (size_t)str_len(v), out);
+          } else {
+            /* write style ESCAPES (change: emit-dump-stages).  R7RS requires written
+             * output to read back as the same datum, and this arm used to emit the raw
+             * bytes inside quotes -- so `(write "a\"b")` produced "a"b", which no reader
+             * can read.  It also made the stage dump (which prints IL forms in write
+             * style) invalid data whenever a string constant held a quote or backslash.
+             * Escapes are the ones this project's own reader understands
+             * (src/prelude.scm's read-from-string: \" \\ \n \t \r), so a dump round-trips
+             * through either reader.  Iterating bytes is safe for UTF-8: continuation
+             * bytes are all >= 0x80 and pass through verbatim. */
+            const char *b = str_bytes(v);
+            intptr_t n = str_len(v);
+            fputc('"', out);
+            for (intptr_t i = 0; i < n; i++) {
+              unsigned char c = (unsigned char)b[i];
+              switch (c) {
+                case '"':  fputs("\\\"", out); break;
+                case '\\': fputs("\\\\", out); break;
+                case '\n': fputs("\\n", out);  break;
+                case '\t': fputs("\\t", out);  break;
+                case '\r': fputs("\\r", out);  break;
+                default:   fputc((int)c, out); break;
+              }
+            }
+            fputc('"', out);
+          }
           break;
         case HDR_VECTOR: {
           intptr_t len = (intptr_t)as_ptr(v)[1];
-          printf("#(");
+          fprintf(out, "#(");
           for (intptr_t i = 0; i < len; i++) {
-            if (i) putchar(' ');
-            print_val(as_ptr(v)[i + 2], display);
+            if (i) fputc(' ', out);
+            print_val(out, as_ptr(v)[i + 2], display);
           }
-          putchar(')');
+          fputc(')', out);
           break;
         }
         case HDR_BYTEVECTOR: {
           intptr_t len = (intptr_t)as_ptr(v)[1];
           unsigned char *bytes = (unsigned char *)as_ptr(v)[2];
-          printf("#u8(");
+          fprintf(out, "#u8(");
           for (intptr_t i = 0; i < len; i++) {
-            if (i) putchar(' ');
-            printf("%d", bytes[i]);
+            if (i) fputc(' ', out);
+            fprintf(out, "%d", bytes[i]);
           }
-          putchar(')');
+          fputc(')', out);
           break;
         }
         case HDR_ERROR: {
           val msg = as_ptr(v)[1];
-          printf("#<error ");
-          fwrite(str_bytes(msg), 1, (size_t)str_len(msg), stdout);
-          putchar('>');
+          fprintf(out, "#<error ");
+          fwrite(str_bytes(msg), 1, (size_t)str_len(msg), out);
+          fputc('>', out);
           break;
         }
         case HDR_HASHTABLE: {
           val spine = as_ptr(v)[1];             /* #(count buckets _) */
           intptr_t count = UNFIX(as_ptr(spine)[2]);  /* vector elem 0 = count */
-          printf("#<hash-table %ld>", (long)count);
+          fprintf(out, "#<hash-table %ld>", (long)count);
           break;
         }
         case HDR_RECORD: {
           val td = as_ptr(v)[1], nm = as_ptr(td)[1];  /* descriptor -> name string */
-          printf("#<record ");
-          fwrite(str_bytes(nm), 1, (size_t)str_len(nm), stdout);
-          putchar('>');
+          fprintf(out, "#<record ");
+          fwrite(str_bytes(nm), 1, (size_t)str_len(nm), out);
+          fputc('>', out);
           break;
         }
         case HDR_RECORD_TYPE: {
           val nm = as_ptr(v)[1];
-          printf("#<record-type ");
-          fwrite(str_bytes(nm), 1, (size_t)str_len(nm), stdout);
-          putchar('>');
+          fprintf(out, "#<record-type ");
+          fwrite(str_bytes(nm), 1, (size_t)str_len(nm), out);
+          fputc('>', out);
           break;
         }
-        case HDR_MV:  printf("#<values>"); break;   /* stray bundle: print safely */
+        case HDR_MV:  fprintf(out, "#<values>"); break;   /* stray bundle: print safely */
         case HDR_FLONUM: {                          /* inexact real, always with a '.' */
           char buf[40]; int n = flonum_format(flo_val(v), buf);
-          fwrite(buf, 1, (size_t)n, stdout);
+          fwrite(buf, 1, (size_t)n, out);
           break;
         }
-        default: printf("#<ext:%ld>", (long)ext_hdr(v));
+        default: fprintf(out, "#<ext:%ld>", (long)ext_hdr(v));
       }
       break;
-    default:          printf("#<unknown:%ld>", (long)v);
+    default:          fprintf(out, "#<unknown:%ld>", (long)v);
   }
 }
 
 /* write-style value printer (quoted strings, `#\`-prefixed chars): the standalone
  * entry uses this to print a program's final value. */
-void rt_write(val v) { print_val(v, /*display=*/0); }
+void rt_write(val v) { print_val(stdout, v, /*display=*/0); }
 
 /* --- entry: exit code = ran/failed, stdout = value (design R1) ----------
  * The standalone AOT/JIT executables use this main.  The persistent REPL host

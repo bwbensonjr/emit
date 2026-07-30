@@ -4,7 +4,7 @@ The prelude (`src/prelude.scm`) is prepended, as source text, to every program t
 compiles — the one piece of "library zero" that is not yet a module. Stages 1–2 built a real
 separate-compilation system (`define-library`, export/rename, transitive imports, both
 doors); Stage 3 of the Modules v0 design
-(`docs/superpowers/specs/2026-07-15-modules-v0-design.md`, D6) finishes v0 by re-homing the
+(`openspec/explorations/modules-v0-design.md`, D6) finishes v0 by re-homing the
 prelude as the library **`(scheme base)`**: its procedures become a real linked/loaded
 library artifact, its derived-form macros become a compile-time set auto-merged into every
 scope, and both are auto-imported so existing programs keep working with no source change.
