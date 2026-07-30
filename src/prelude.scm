@@ -26,22 +26,33 @@
     ((_ e) e)
     ((_ e1 e2 ...) (let ((t e1)) (if t t (or e2 ...))))))
 
+;; when/unless: the UNTAKEN branch is the unspecified value, not #f (change:
+;; unspecified-value).  `when` gets it from the two-armed `if` -- the parser supplies the
+;; missing alternative -- and `unless`, which needs the else arm for its body, spells it
+;; with the `(if #f #f)` idiom.  (R7RS leaves the result unspecified even when the branch
+;; IS taken; Emit returns the body value there, as most implementations do.)
+;; `unless`'s nested `(if #f #f)` emits a dead branch diamond (+8 IR lines per use), the
+;; same cost `case`/`do` already pay for the idiom.  It costs nothing in the binary:
+;; `icmp ne i64 1, 1` is constant-folded, and clang -O2 collapses the whole diamond
+;; (verified against the emitted IR), so the standalone-executable size goal is unaffected.
 (define-syntax when
   (syntax-rules ()
-    ((_ test e ...) (if test (begin e ...) #f))))
+    ((_ test e ...) (if test (begin e ...)))))
 
 (define-syntax unless
   (syntax-rules ()
-    ((_ test e ...) (if test #f (begin e ...)))))
+    ((_ test e ...) (if test (if #f #f) (begin e ...)))))
 
 (define-syntax let*
   (syntax-rules ()
     ((_ () body ...) (begin body ...))
     ((_ ((x v) rest ...) body ...) (let ((x v)) (let* (rest ...) body ...)))))
 
+;; cond: falling off the end with no clause matched yields the unspecified value, not #f
+;; (change: unspecified-value) -- matching `case`'s no-match rule below.
 (define-syntax cond
   (syntax-rules (else =>)
-    ((_) #f)
+    ((_) (if #f #f))
     ((_ (else e ...)) (begin e ...))
     ((_ (test => proc) rest ...) (let ((t test)) (if t (proc t) (cond rest ...))))
     ((_ (test) rest ...) (let ((t test)) (if t t (cond rest ...))))
@@ -218,7 +229,12 @@
 ;; the larger of two numbers.
 (define (max a b) (if (< a b) b a))
 
-;; the unspecified value (matching (if #f #f)).
+;; THE unspecified value -- one distinguished immediate, distinct from #f and '() and
+;; truthy (change: unspecified-value).  `(if #f #f)` is the two-armed form, so the parser
+;; supplies the missing alternative as `(primcall %unspec)`; this needs no special case.
+;; The GENERATOR is exposed so a program can declare "no interesting result"; there is
+;; deliberately no `unspecified?` predicate to test for it (R7RS-WG1 ballot #49).  What
+;; Emit returns here is not a promise -- portable programs must not rely on it.
 (define (void) (if #f #f))
 
 ;; construct a string from character arguments (via the list->string primitive).

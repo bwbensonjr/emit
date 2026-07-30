@@ -35,6 +35,24 @@
 #     and mandelbrot.ll; both demos' stdout stayed byte-identical (33 / 2595 bytes),
 #     confirming the guarded slow arm preserves semantics.  +1 new entry
 #     (flonum-unbox), the change's own demo.
+#   unspecified-value -- the unspecified value changed from 1 (#f) to 17 (UNSPEC_V,
+#     misc-immediate subtype 2), so every site that yields it emits a different literal.
+#     Verified against a 70-demo pre-change capture (a detached HEAD worktree) vs the
+#     post-change tree.  Three kinds of drift, all intended, and nothing else:
+#       (1) 212 `ret i64 1` -> `ret i64 17`, in bodies that reduce to just the
+#           unspecified value.  Every changed literal was 1 before and 17 after; no
+#           other constant moved anywhere in the 70 files.
+#       (2) 4 two-armed-`if` phis whose ELSE operand went 1 -> 17.  Their THEN operands
+#           correctly stayed 1 -- that is the genuine #f from `(if #f #f)`'s then-branch.
+#       (3) +8 lines in derived.ll ONLY: `unless` now expands to
+#           `(if test (if #f #f) (begin e ...))`, and the nested idiom emits a dead
+#           branch diamond.  Confined to the one demo using `unless` in value position,
+#           and free in the binary -- `icmp ne i64 1, 1` is constant-folded and clang
+#           -O2 collapses the diamond entirely (checked with `opt -O2` on the pattern).
+#           `case`/`do` already paid this same cost for the same idiom.
+#     +1 new entry (unspecified-value), the change's own demo.  One demo's stdout also
+#     changed by design (mandelbrot.expected: `#f` -> `#<unspecified>`, since its
+#     `render` ends in a result-less `do` loop) -- which is the point of the change.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

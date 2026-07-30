@@ -8,7 +8,8 @@
  *   tag 001  misc-imm  immediate family; bits 3-7 = subtype, bits 8+ = payload:
  *                        subtype 0 boolean  (#f = 1, #t = 257)
  *                        subtype 1 char     (payload = Unicode codepoint)
- *                        subtypes 2,3,... reserved (eof-object, unspecified, ...)
+ *                        subtype 2 unspec   (the unspecified value; only 17)
+ *                        subtypes 3,4,... reserved (eof-object, ...)
  *   tag 010  nil       immediate, the empty list (only value 0b010 = 2)
  *   tag 011  pair      pointer, heap {car, cdr}
  *   tag 100  closure   pointer, heap {code_ptr, free0, ...}
@@ -49,11 +50,12 @@ char rt_trap_msg[128] = "";
 #define TAG_EXT     7   /* extended heap object; first word = a header code */
 
 /* Tag 001 (TAG_BOOL) is a misc-immediate FAMILY: bits 3-7 hold a 5-bit subtype,
- * bits 8+ the payload.  Booleans and characters are both immediates in this
- * family; further singletons (eof-object, the unspecified value) can take new
+ * bits 8+ the payload.  Booleans, characters, and the unspecified value are all
+ * immediates in this family; further singletons (eof-object) can take new
  * subtypes without needing a new primary tag. */
 #define SUB_BOOL    0
 #define SUB_CHAR    1
+#define SUB_UNSPEC  2   /* the unspecified value (change: unspecified-value) */
 
 /* header codes for TAG_EXT objects (tags 0-6 are exhausted, so new heap types
  * live under tag 7 and are discriminated by this header word) */
@@ -83,6 +85,13 @@ char rt_trap_msg[128] = "";
 #define FALSE_V    ((val)TAG_BOOL)                     /* 1   (subtype BOOL, payload 0) */
 #define TRUE_V     ((val)((1 << 8) | TAG_BOOL))        /* 257 (subtype BOOL, payload 1) */
 #define NIL_V      ((val)TAG_NIL)                       /* 2 */
+/* THE unspecified value: one distinguished immediate, returned wherever R7RS leaves
+ * a result unspecified.  Distinct from #f and () by construction (different subtype /
+ * primary tag), and truthy since it is not FALSE_V.  No reader syntax -- it is not a
+ * datum -- and no predicate is exposed to Scheme (see openspec change
+ * unspecified-value, decision 4).  The emitter writes this same literal; the two must
+ * agree (src/emit.ss). */
+#define UNSPEC_V   ((val)((SUB_UNSPEC << 3) | TAG_BOOL))  /* 17 (subtype UNSPEC, payload 0) */
 #define tag_of(v)  (((intptr_t)(v)) & TAG_MASK)
 #define as_ptr(v)  ((val *)(((intptr_t)(v)) & ~(intptr_t)TAG_MASK))
 #define tag_ptr(p, t) ((val)(((intptr_t)(p)) | (t)))
@@ -94,6 +103,9 @@ char rt_trap_msg[128] = "";
 #define CHAR_CP(v)     (((intptr_t)(v)) >> 8)
 #define is_bool(v)     (tag_of(v) == TAG_BOOL && imm_subtype(v) == SUB_BOOL)
 #define is_char(v)     (tag_of(v) == TAG_BOOL && imm_subtype(v) == SUB_CHAR)
+/* C-side only: used by the printer and by the REPL's echo suppression.  Deliberately
+ * NOT surfaced as a Scheme predicate. */
+#define is_unspec(v)   (tag_of(v) == TAG_BOOL && imm_subtype(v) == SUB_UNSPEC)
 
 static inline val truthy(int b) { return b ? TRUE_V : FALSE_V; }
 
@@ -114,7 +126,7 @@ val rt_cdr(val v) { return as_ptr(v)[1]; }
 /* --- boxes (assignment-converted variables) ---------------------------- */
 val rt_box(val v)          { val *p = (val *)GC_MALLOC(sizeof(val)); p[0] = v; return tag_ptr(p, TAG_BOX); }
 val rt_unbox(val b)        { return as_ptr(b)[0]; }
-val rt_set_box(val b, val v) { as_ptr(b)[0] = v; return NIL_V; }
+val rt_set_box(val b, val v) { as_ptr(b)[0] = v; return UNSPEC_V; }
 
 /* --- flonums (tag-7 HDR_FLONUM: { HDR_FLONUM, double }) ------------------
  * memcpy is used for the double<->word type-punning (well-defined, no strict-
@@ -573,7 +585,7 @@ val rt_string_set(val s, val idx, val ch) {
   as_ptr(s)[1] = (val)newlen;
   as_ptr(s)[3] = (val)buf;
   as_ptr(s)[4] = (val)NULL;                         /* drop stale breadcrumb index */
-  return NIL_V;
+  return UNSPEC_V;
 }
 /* string-copy: a fresh string object over a fresh copy of the bytes. */
 val rt_string_copy(val s) { return rt_make_string(str_bytes(s), str_len(s)); }
@@ -675,6 +687,13 @@ val rt_repl_input(void) { return rt_repl_cell(&rt_repl_input_cell, NIL_V)[0]; }
  * consumed-count / incomplete(-1) / malformed(-2) result without knowing the tag. */
 intptr_t rt_fixnum_value(val v) { return UNFIX(v); }
 
+/* Is v THE unspecified value?  A host accessor, so UNSPEC_V's bit pattern stays defined
+ * in exactly one place (this file) instead of being duplicated in the C++ host -- silent
+ * representation drift is the main risk in change: unspecified-value.  The REPL uses this
+ * to suppress the echo of an uninteresting result (src/emit.cpp).  Deliberately NOT a
+ * Scheme-visible predicate: it has no prim-table entry, so no Scheme binding exists. */
+intptr_t rt_is_unspec(val v) { return is_unspec(v) ? 1 : 0; }
+
 /* Persistent-global root set (change: repl-embedded-incremental).  In the REPL a
  * top-level define stores its value into a JIT'd module's global slot, and those
  * slots live in JIT-managed memory that libgc does NOT scan.  A value reachable
@@ -701,7 +720,7 @@ val rt_root(val v) {
   return v;
 }
 val rt_repl_state_ref(void)  { return rt_repl_cell(&rt_repl_state_cell, FALSE_V)[0]; }
-val rt_repl_state_set(val v) { rt_repl_cell(&rt_repl_state_cell, FALSE_V)[0] = v; return NIL_V; }
+val rt_repl_state_set(val v) { rt_repl_cell(&rt_repl_state_cell, FALSE_V)[0] = v; return UNSPEC_V; }
 
 /* display ANY datum in R7RS *display* style (strings unquoted, chars raw),
  * sharing the tag-walking printer with rt_write (change: fix-display-non-string).
@@ -711,7 +730,7 @@ val rt_repl_state_set(val v) { rt_repl_cell(&rt_repl_state_cell, FALSE_V)[0] = v
 static void print_val(FILE *out, val v, int display);   /* defined with rt_write below */
 val rt_display(val v) {
   print_val(stdout, v, /*display=*/1);
-  return NIL_V;
+  return UNSPEC_V;
 }
 
 /* write ANY datum in R7RS *write* style (strings quoted, chars `#\`-prefixed),
@@ -722,7 +741,7 @@ val rt_display(val v) {
  * so it composes inside a `begin`, whereas the runner entry returns nothing. */
 val rt_write_val(val v) {
   print_val(stdout, v, /*display=*/0);
-  return NIL_V;
+  return UNSPEC_V;
 }
 
 /* write ANY datum to STANDARD ERROR, in write style (display? = #f) or display
@@ -745,7 +764,7 @@ val rt_stderr_write(val v, val display_p) {
  * returns the unspecified value (NIL) so it composes inside a `begin`. */
 val rt_newline(void) {
   putchar('\n');
-  return NIL_V;
+  return UNSPEC_V;
 }
 
 /* write-char: emit one character's UTF-8 bytes to stdout (change:
@@ -754,7 +773,7 @@ val rt_write_char(val c) {
   unsigned char buf[4];
   int n = utf8_encode(CHAR_CP(c), buf);
   fwrite(buf, 1, (size_t)n, stdout);
-  return NIL_V;
+  return UNSPEC_V;
 }
 
 /* --- vectors (tag-7 HDR_VECTOR: { HDR_VECTOR, length, elem... }) --------- */
@@ -767,7 +786,7 @@ val rt_make_vector(val k, val fill) {
   return tag_ptr(p, TAG_EXT);
 }
 val rt_vector_ref(val v, val i)        { return as_ptr(v)[2 + UNFIX(i)]; }
-val rt_vector_set(val v, val i, val x) { as_ptr(v)[2 + UNFIX(i)] = x; return NIL_V; }
+val rt_vector_set(val v, val i, val x) { as_ptr(v)[2 + UNFIX(i)] = x; return UNSPEC_V; }
 val rt_vector_length(val v)            { return FIX(vec_len(v)); }
 val rt_vector_p(val v) {
   return truthy(tag_of(v) == TAG_EXT && ext_hdr(v) == HDR_VECTOR);
@@ -788,7 +807,7 @@ val rt_make_bytevector(val k, val fill) {
   return tag_ptr(p, TAG_EXT);
 }
 val rt_bytevector_u8_ref(val v, val i)       { return FIX(bv_bytes(v)[UNFIX(i)]); }
-val rt_bytevector_u8_set(val v, val i, val b) { bv_bytes(v)[UNFIX(i)] = (unsigned char)(UNFIX(b) & 0xFF); return NIL_V; }
+val rt_bytevector_u8_set(val v, val i, val b) { bv_bytes(v)[UNFIX(i)] = (unsigned char)(UNFIX(b) & 0xFF); return UNSPEC_V; }
 val rt_bytevector_length(val v)              { return FIX(bv_len(v)); }
 val rt_bytevector_p(val v) {
   return truthy(tag_of(v) == TAG_EXT && ext_hdr(v) == HDR_BYTEVECTOR);
@@ -887,7 +906,7 @@ val rt_make_record(val td, val fields) {
   return tag_ptr(p, TAG_EXT);
 }
 val rt_record_ref(val r, val i)        { return as_ptr(r)[2 + UNFIX(i)]; }
-val rt_record_set(val r, val i, val x) { as_ptr(r)[2 + UNFIX(i)] = x; return NIL_V; }
+val rt_record_set(val r, val i, val x) { as_ptr(r)[2 + UNFIX(i)] = x; return UNSPEC_V; }
 val rt_record_of_type_p(val r, val td) {
   return truthy(tag_of(r) == TAG_EXT && ext_hdr(r) == HDR_RECORD && as_ptr(r)[1] == td);
 }
@@ -1141,6 +1160,12 @@ static void print_val(FILE *out, val v, int display) {
         else if (cp == ' ')   fprintf(out, "#\\space");
         else if (cp == '\n')  fprintf(out, "#\\newline");
         else { fprintf(out, "#\\"); fwrite(buf, 1, (size_t)n, out); }
+      } else if (is_unspec(v)) {                /* unspecified value shares tag 001 */
+        /* Non-readable, like #<procedure>: there is no reader syntax, so `write` cannot
+         * round-trip it and `display` has nothing rawer to show.  Both modes print the
+         * same text.  The REPL suppresses the ECHO of this value (src/emit.cpp), but an
+         * explicit (write (if #f #f)) still lands here and prints. */
+        fprintf(out, "#<unspecified>");
       } else {
         fputs(v == FALSE_V ? "#f" : "#t", out);   /* fputs: the string is not a literal */
       }

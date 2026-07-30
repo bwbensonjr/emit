@@ -266,11 +266,19 @@
      (match e
        [(quote ,d) `(const ,d)]
        [(if ,a ,b ,c) `(if ,(parse-expr a) ,(parse-expr b) ,(parse-expr c))]
-       ;; two-armed `(if test then)`: a missing alternative is the unspecified
-       ;; value, spelled `#f` to match `when`/`unless` and the `case` no-match
-       ;; default (which desugars to `(if #f #f)`).  Distinct arities, so this
+       ;; two-armed `(if test then)`: a missing alternative is THE unspecified value
+       ;; (change: unspecified-value), synthesized as the reserved zero-arg primcall
+       ;; `%unspec`.  Not `(const ...)`: a const payload would have to be a host datum,
+       ;; and the host's own unspecified object prints differently under Chez than under
+       ;; a self-hosted Emit, which would break dump parity (test/dump-parity-tests.sh).
+       ;; A symbolic primcall head prints identically in both hosts.  `%unspec` is
+       ;; deliberately absent from *prims*, so source cannot call it -- the value is
+       ;; reachable only by evaluating a form that yields it.  Every pass matches
+       ;; `(primcall op . args)` generically, so a zero-arg op needs no pass changes;
+       ;; emit.ss lowers it to the bare immediate.  `when`/`unless` and the `case`
+       ;; no-match default all route here via `(if #f #f)`.  Distinct arities, so this
        ;; never overlaps the three-armed clause above.
-       [(if ,a ,b) `(if ,(parse-expr a) ,(parse-expr b) (const #f))]
+       [(if ,a ,b) `(if ,(parse-expr a) ,(parse-expr b) (primcall %unspec))]
        [(lambda ,params . ,body) `(lambda ,params ,(parse-body body))]
        [(let ,binds . ,body) `(let ,(map parse-bind binds) ,(parse-body body))]
        [(letrec ,binds . ,body) `(letrec ,(map parse-bind binds) ,(parse-body body))]

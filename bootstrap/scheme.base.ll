@@ -1155,7 +1155,7 @@ then120:
 then122:
   ret i64 1
 else123:
-  ret i64 1
+  ret i64 17
 else121:
   %t561 = call i64 @rt_car(i64 %a1)
   %t562 = and i64 %a0, -8
@@ -1219,7 +1219,7 @@ then130:
 then132:
   ret i64 1
 else133:
-  ret i64 1
+  ret i64 17
 else131:
   %t591 = call i64 @rt_alloc_words(i64 1)
   %t592 = inttoptr i64 %t591 to ptr
@@ -1730,7 +1730,7 @@ argok206:
 then207:
   ret i64 1
 else208:
-  ret i64 1
+  ret i64 17
 }
 
 define fastcc i64 @"scheme.base:code_209"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {

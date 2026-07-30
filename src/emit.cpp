@@ -69,6 +69,7 @@ extern "C" {
   const char *rt_string_bytes(intptr_t v);
 
   void rt_write(intptr_t v);                 // runtime value printer
+  intptr_t rt_is_unspec(intptr_t v);          // is v THE unspecified value? (echo suppression)
   extern jmp_buf *rt_trap;                    // runtime trap escape hook
   extern char rt_trap_msg[];                  // last trap's message
   void rt_guard_reset(void);                  // clear guard frames after a trap
@@ -469,9 +470,21 @@ static void run_thunk(const std::string &name) {
   rt_trap = &jb;
   if (setjmp(jb) == 0) {
     intptr_t r = fn();
-    rt_write(r);
-    std::printf("\n");
-    std::fflush(stdout);
+    // Echo suppression (change: unspecified-value, decision 6): a form whose result is
+    // THE unspecified value prints nothing at all -- no value, no newline -- so
+    // side-effecting forms stay quiet at the prompt, as in Chez's waiter and Racket's
+    // REPL.  This is a REPL DISPLAY policy, not a property of the value: the guard lives
+    // here and NOT in print_val, so an explicit (write (if #f #f)) still prints
+    // #<unspecified>.  Only the unspecified value is suppressed -- #f and () are
+    // legitimate results and still echo, which is why the value must be distinct from
+    // both.  Note the deliberate asymmetry with emit_run above, which prints a whole
+    // PROGRAM's value unsuppressed: that is a batch report, matching what the AOT
+    // executable prints, so dev->ship fidelity is preserved.
+    if (!rt_is_unspec(r)) {
+      rt_write(r);
+      std::printf("\n");
+      std::fflush(stdout);
+    }
   } else {
     rt_guard_reset();
     std::cout << "!trap: " << rt_trap_msg << "\n" << std::flush;

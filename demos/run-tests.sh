@@ -169,6 +169,7 @@ check flonumunbox demos/flonum-unbox.scm '(5.0 15.0 3.0 #t)'  # f64 region fast 
 check modulo      demos/modulo.scm '(2 0 2 -2 -1)'  # flooring modulo (divisor sign) vs truncating remainder
 check doloop      demos/do-loop.scm '(10 5 4)'  # R7RS do: parallel bindings, no-step binding, body command
 check writechar   demos/write-char.scm "$(printf 'hi \316\273\ndone')"  # write-char UTF-8 bytes (incl. 2-byte λ) + final value
+check unspecified demos/unspecified-value.scm '#<unspecified> #<unspecified> (#t #f #f t #t #t #t #t #t #t #t #t #t)'  # ONE distinguished unspecified value: distinct from #f and '(), truthy, agreed on by the syntactic forms / prelude / C primitives alike, printed non-readably by both write and display (change: unspecified-value)
 check_file mandelbrot demos/mandelbrot.scm demos/mandelbrot.expected  # ASCII Mandelbrot: float loops, /, write-char, do -- byte-identical on both backends
 
 echo "-------------------------------------------"

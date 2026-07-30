@@ -105,6 +105,29 @@ check error-reports-and-survives "" "$(printf '#<procedure>\n!trap: parse: bad e
 (+ 3 4)
 EOF
 
+# spec (interactive-repl): a form whose result is THE unspecified value echoes NOTHING --
+# no value and no newline -- so side-effecting forms stay quiet at the prompt (change:
+# unspecified-value).  Only the two `(+ ...)` forms and `display`'s own "hi" reach stdout;
+# the four unspecified-valued forms between them contribute nothing at all.
+check unspec-echo-suppressed "" "$(printf '1\nhi2')" <<'EOF'
+(+ 0 1)
+(if #f #f)
+(void)
+(display "hi")
+(vector-set! (make-vector 2 0) 0 1)
+(+ 1 1)
+EOF
+
+# ... but #f and () are LEGITIMATE results and must still print: they are exactly the two
+# values Emit used to conflate with "unspecified", which is why the new value is distinct
+# from both.  An explicit (write (if #f #f)) also still prints -- suppression is a REPL
+# display policy, not a property of the value.
+check unspec-suppression-is-narrow "" "$(printf '#f\n()\n#<unspecified>')" <<'EOF'
+(null? 1)
+(list)
+(write (if #f #f))
+EOF
+
 # spec: end-of-input ends the session cleanly (exit code 0)
 printf '(+ 1 2)\n' | chez --libdirs src --script src/compile.ss --repl --no-prelude >/dev/null 2>&1
 if [ "$?" -eq 0 ]; then

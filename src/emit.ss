@@ -611,6 +611,13 @@
   ;; %run-guarded is special: it passes the module's own ccc trampoline @__apply0
   ;; (a pointer, resolved within this module -- no cross-module symbol) so the C
   ;; runtime can invoke the guarded thunk (change: r7rs-exceptions-subset).
+  ;; %unspec is special the other way: it emits NOTHING and lowers to the bare
+  ;; unspecified-value immediate (change: unspecified-value).  Like the immediates in
+  ;; encode-const it is a pure operand -- no call, so it needs no `declare` and no
+  ;; prim-table entry.  MUST match UNSPEC_V in src/runtime/runtime.c:
+  ;;   (SUB_UNSPEC << 3) | TAG_BOOL = (2 << 3) | 1 = 17
+  (if (eq? op '%unspec)
+      "17"
   (if (eq? op '%run-guarded)
       (let ([t (fresh-temp)])
         (emit! (string-append t " = call i64 @rt_run_guarded(ptr @__apply0, i64 "
@@ -622,7 +629,7 @@
             (let ([entry (assq op prim-table)] [t (fresh-temp)])
               (unless entry (error 'emit "unknown prim" op))
               (emit! (string-append t " = call i64 @" (cadr entry) "(" (i64s ops) ")"))
-              t)))))
+              t))))))
 
 ;; The ccc trampoline @__apply0(closure): load the closure's code pointer and do
 ;; the fastcc 0-arg call (self=closure, argc=0, K positional pads = undef,

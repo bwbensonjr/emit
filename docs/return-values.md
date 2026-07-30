@@ -1,9 +1,17 @@
 # Unspecified Return Values
 
 Research notes on why the Scheme standards decline to specify certain return values, and on what
-implementations do instead — gathered as input into an explicit policy for Emit. This document
-surveys; the [Recommendation](#recommendation) is a proposal, not yet a decision. If you only read one
-section, read [the recommended policy in brief](#the-recommended-policy-in-brief).
+implementations do instead — gathered as input into an explicit policy for Emit. If you only read one
+section, read [the policy in brief](#the-policy-in-brief).
+
+> **Status: adopted and implemented** (OpenSpec change `unspecified-value`). Emit now has one
+> distinguished unspecified value: a misc-immediate on subtype 2, distinct from `#f` and `()`, truthy,
+> written `#<unspecified>`, with no reader syntax and no predicate, suppressed by the REPL echo.
+> [Where Emit stood before](#where-emit-stood-before) records what it replaced.
+>
+> **This is not a promise.** Following Chez's own caveat, what Emit returns at an unspecified-result
+> site is an implementation choice that may change. Portable programs must not depend on it, must not
+> test for it, and must not branch on it.
 
 The short version: the ambiguity is deliberate and well-documented, it exists for two distinct
 reasons that call for different responses, and the great majority of the ~40 surveyed implementations
@@ -421,13 +429,14 @@ do not. Chez's reasoning for withholding it is the sharper argument: the value "
 used as a datum," and giving it a written form invites exactly the dependence everyone says they want
 to prevent.
 
-## Where Emit stands today
+## Where Emit stood before
 
-Emit does not have *one* unspecified value today — it has **two**, split along the
-Scheme/C boundary, and neither is distinct from an ordinary datum. Observed by running
+Historical, kept because it is the evidence the recommendation rests on. Before the
+`unspecified-value` change Emit did not have *one* unspecified value — it had **two**, split along
+the Scheme/C boundary, and neither was distinct from an ordinary datum. Observed by running
 `./build/emit repl`:
 
-| Expression | Emit today | Source of the value |
+| Expression | Emit *before* | Source of the value |
 |---|---|---|
 | `(if #f #f)` | `#f` | [src/parse.ss:273](../src/parse.ss) desugars one-armed `if` to `(const #f)` |
 | `(void)` | `#f` | [src/prelude.scm:222](../src/prelude.scm): `(define (void) (if #f #f))` |
@@ -438,17 +447,17 @@ Scheme/C boundary, and neither is distinct from an ordinary datum. Observed by r
 | `(write-char #\a)` | `()` | `rt_write_char` returns `NIL_V` |
 | `(vector-set! v 0 1)` | `()` | `rt_vector_set` returns `NIL_V` |
 
-The syntactic forms and the prelude yield `#f`; every side-effecting C primitive yields `NIL_V` —
+The syntactic forms and the prelude yielded `#f`; every side-effecting C primitive yielded `NIL_V` —
 the empty list. Both are R7RS-conforming in isolation (each is an object, each is a single value, no
-error is signaled), so this is not a bug against the report. But it means Emit has *no* unspecified
-value in the sense every surveyed implementation means it, and it lands Emit simultaneously in the
+error is signaled), so this was not a bug against the report. But it meant Emit had *no* unspecified
+value in the sense every surveyed implementation means it, and it put Emit simultaneously in the
 four-member `#f` minority (Bigloo, JScheme, Dream, Owl Lisp) and the `()` minority (TinyScheme, Elk,
 UMB, and others) out of roughly forty implementations.
 
-The split is also invisible in the source: nothing in the runtime comments flags `NIL_V` as standing
-for "unspecified," so the two conventions have drifted without anything to catch them.
+The split was also invisible in the source: nothing in the runtime comments flagged `NIL_V` as
+standing for "unspecified," so the two conventions had drifted with nothing to catch them.
 
-Two facts make changing it cheap:
+Two facts made changing it cheap:
 
 1. **The runtime already reserves the encoding.** [src/runtime/runtime.c:8-11](../src/runtime/runtime.c)
    documents tag `001` as a misc-immediate *family* with a 5-bit subtype in bits 3–7, currently using
@@ -456,14 +465,14 @@ Two facts make changing it cheap:
    (eof-object, unspecified, …)". A distinguished unspecified value costs one subtype constant, no
    new primary tag, no heap allocation, and no header word — which matters for the small-executable
    goal in [CLAUDE.md](../CLAUDE.md).
-2. **Nothing depends on the current choice.** A grep of `test/` and `demos/` for `(void)` and
-   `(if #f #f)` returns no hits, so no test asserts what the unspecified value is.
+2. **Nothing depended on the old choice.** A grep of `test/` and `demos/` for `(void)` and
+   `(if #f #f)` returned no hits, so no test asserted what the unspecified value was.
 
-And one fact makes the REPL half of the recommendation immediately relevant rather than deferred:
-Emit's REPL **already echoes every result unconditionally**. `run_thunk`
-([src/emit.cpp:472](../src/emit.cpp)) calls `rt_write(r)` on whatever the compiled thunk returns and
-prints a newline, with no suppression path — as the `interactive-repl` spec requires ("prints the
-resulting value using the runtime value printer"). So today an interactive session reads:
+And one fact made the REPL half of the recommendation immediately relevant rather than deferred:
+Emit's REPL **already echoed every result unconditionally**. `run_thunk`
+([src/emit.cpp](../src/emit.cpp)) called `rt_write(r)` on whatever the compiled thunk returned and
+printed a newline, with no suppression path — as the `interactive-repl` spec requires ("prints the
+resulting value using the runtime value printer"). So an interactive session read:
 
 ```
 > (display "hi")
@@ -474,17 +483,17 @@ hi()
 ()
 ```
 
-Every side-effecting form echoes a junk value, and `display` produces the memorable `hi()`. That is
+Every side-effecting form echoed a junk value, and `display` produced the memorable `hi()`. That was
 the concrete, visible cost of having no distinguished value: there is nothing the REPL *could*
 suppress, because `()` and `#f` are both legitimate results that must be printed when a program really
 does return them.
 
 ## Recommendation
 
-A proposal, with the reasoning attached so it can be argued with. The survey above is the evidence;
-this section is what it adds up to.
+Adopted and implemented as OpenSpec change `unspecified-value`. The survey above is the evidence; this
+section is what it adds up to, with the reasoning attached so it can be revisited.
 
-### The recommended policy, in brief
+### The policy in brief
 
 Emit adopts **one distinguished unspecified value** — a single immediate, distinct from `#f` and from
 every other value — returned wherever R7RS leaves a return value unspecified and no natural value is
@@ -501,8 +510,8 @@ already at hand.
 | Predicate? | **no** — do not add `unspecified?` | ballot #49 result (6:3); Gleckler, Cowan, Shinn |
 | Guarantee to users? | none — documented as unreliable | Chez's "avoid counting on this behavior" |
 
-Nothing here requires new tooling. Decision 1 is what makes a Gauche-style diagnostic *possible*
-later; building it is out of scope.
+Nothing here required new tooling. Decision 1 is what makes a Gauche-style diagnostic *possible*
+later; building it was out of scope.
 
 ### The decisions in detail
 
@@ -553,10 +562,16 @@ caveat into Emit's own documentation regardless: this is what Emit happens to re
 promise, and portable programs must not rely on it.
 
 **6. Suppress it in the REPL.** Chez, Racket, and most others print nothing when the result is the
-unspecified value. This is not deferred work: Emit's REPL echoes every result today via `rt_write` in
-`run_thunk` ([src/emit.cpp:472](../src/emit.cpp)), so it already prints `()` and `#f` noise after every
+unspecified value. This was not deferred work: Emit's REPL echoed every result via `rt_write` in
+`run_thunk` ([src/emit.cpp](../src/emit.cpp)), so it printed `()` and `#f` noise after every
 side-effecting form. Suppression is only implementable given decision 1 — with `#f` and `()` there is
-nothing safe to suppress — which makes this the most immediately user-visible payoff of the change.
+nothing safe to suppress — which made this the most immediately user-visible payoff of the change.
+
+The guard is deliberately *not* in `print_val`, so `(write (if #f #f))` still prints
+`#<unspecified>`: suppression is a REPL display policy, not a property of the value. It is also not
+applied to `emit run`, which prints a whole *program's* value — that is a batch report, and it matches
+what the AOT executable prints, so dev→ship fidelity is preserved. (This resolves the open question the
+design doc left on that point.)
 
 **7. Write down the per-category policy.** The five categories at the top of this document need
 separate answers, and only category 1 is settled by the above. Category 2 in particular is already
@@ -565,6 +580,32 @@ live: the JIT and AOT paths disagree on argument evaluation order
 [CLAUDE.md](../CLAUDE.md), and an unspecified-order divergence *between Emit's own two backends* is a
 fidelity bug in the project's own terms even though it is standards-conforming. That deserves its own
 change proposal; this document only flags it.
+
+### What implementation changed about the plan
+
+Three things the proposal did not anticipate, recorded because each is a trap for the next person:
+
+**The value is a synthesized primcall, not a `const` payload.** The plan said "emit the
+unspecified-value constant" from `encode-const`, which would require the IR to carry a *host* object
+as a `(const …)` payload. That breaks dump parity: `src/dump.ss` prints datums through the runtime
+printer (`%stderr-write`), so the same IR would render as `#<void>` under the Chez bootstrap and
+`#<unspecified>` under a self-hosted Emit, and `test/dump-parity-tests.sh` compares exactly those two.
+The parser instead synthesizes the reserved zero-arg primcall `(primcall %unspec)`, whose head is a
+symbol and prints identically under both hosts. `emit.ss` lowers it to the bare immediate — no call,
+so it needs no `declare` and no `prim-table` entry. `%unspec` is deliberately kept out of `*prims*`,
+so source cannot call it: the value stays reachable only by evaluating a form that yields it.
+
+**`when`, `unless`, and no-match `cond` were three more `#f` sites.** The proposal's inventory missed
+them: they are `syntax-rules` macros in the prelude that hardcoded `#f` — `(if test (begin e ...) #f)`,
+`(if test #f (begin e ...))`, and `((_) #f)` — so they kept returning `#f` after the parser and runtime
+were both converged. `case` and `do` were already correct because they used the `(if #f #f)` idiom.
+Fixing them meant `lib/scheme/base.sld` had to be regenerated too (`tools/gen-scheme-base.ss`), since
+it is generated from the prelude and guarded for staleness.
+
+**Editing `src/prelude.scm` at all — even a comment — requires a bootstrap regen.** The prelude source
+is embedded verbatim as a string constant in `bootstrap/embed.ll`, so a comment-only edit changes the
+committed IR. Skipping the regen leaves `test/self-host-fixpoint.sh` failing with a handful of
+diff lines in that one string constant, which reads like a compiler divergence and is not one.
 
 ### Costs and counterarguments
 
