@@ -1165,9 +1165,34 @@ static void print_val(FILE *out, val v, int display) {
     case TAG_EXT:
       switch (ext_hdr(v)) {
         case HDR_STRING:
-          if (!display) fputc('"', out);
-          fwrite(str_bytes(v), 1, (size_t)str_len(v), out);
-          if (!display) fputc('"', out);
+          if (display) {
+            fwrite(str_bytes(v), 1, (size_t)str_len(v), out);
+          } else {
+            /* write style ESCAPES (change: emit-dump-stages).  R7RS requires written
+             * output to read back as the same datum, and this arm used to emit the raw
+             * bytes inside quotes -- so `(write "a\"b")` produced "a"b", which no reader
+             * can read.  It also made the stage dump (which prints IL forms in write
+             * style) invalid data whenever a string constant held a quote or backslash.
+             * Escapes are the ones this project's own reader understands
+             * (src/prelude.scm's read-from-string: \" \\ \n \t \r), so a dump round-trips
+             * through either reader.  Iterating bytes is safe for UTF-8: continuation
+             * bytes are all >= 0x80 and pass through verbatim. */
+            const char *b = str_bytes(v);
+            intptr_t n = str_len(v);
+            fputc('"', out);
+            for (intptr_t i = 0; i < n; i++) {
+              unsigned char c = (unsigned char)b[i];
+              switch (c) {
+                case '"':  fputs("\\\"", out); break;
+                case '\\': fputs("\\\\", out); break;
+                case '\n': fputs("\\n", out);  break;
+                case '\t': fputs("\\t", out);  break;
+                case '\r': fputs("\\r", out);  break;
+                default:   fputc((int)c, out); break;
+              }
+            }
+            fputc('"', out);
+          }
           break;
         case HDR_VECTOR: {
           intptr_t len = (intptr_t)as_ptr(v)[1];

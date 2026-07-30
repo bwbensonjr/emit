@@ -33,10 +33,27 @@
 ;; directly keeps the runtime as the only actual printer (design D2) and allocates
 ;; nothing -- which is also why dumping cannot perturb the gensym counter.
 ;; Every arm mirrors print_val's write-style output in src/runtime/runtime.c: a
-;; string is its bytes plus two quotes (the printer escapes nothing), a character
-;; is `#\x` except for the two named ones, an unknown value prints as an opaque
-;; `#<...>` whose exact width does not matter (it never fits a line budget anyway).
+;; string is its characters plus two quotes plus one column per escaped character, a
+;; character is `#\x` except for the two named ones, an unknown value prints as an
+;; opaque `#<...>` whose exact width does not matter (it never fits a line budget
+;; anyway).
 (define *pp-width* 78)
+
+;; Characters print_val escapes in write style, each costing one extra column.  Keep in
+;; sync with runtime.c's HDR_STRING write arm.
+(define (string-escape-count s)
+  (let ([n (string-length s)])
+    (let loop ([i 0] [k 0])
+      (if (= i n)
+          k
+          (let ([c (string-ref s i)])
+            (loop (+ i 1)
+                  (if (or (eq? c #\") (eq? c #\\)
+                          (eq? c #\newline)
+                          (eq? c (integer->char 9))     ; tab
+                          (eq? c (integer->char 13)))   ; return
+                      (+ k 1)
+                      k)))))))
 
 (define (char-write-width c)
   (cond [(eq? c #\space)   7]        ; #\space
@@ -48,7 +65,7 @@
     [(pair? d)    (+ 2 (elems-width d))]
     [(null? d)    2]
     [(symbol? d)  (string-length (symbol->string d))]
-    [(string? d)  (+ 2 (string-length d))]
+    [(string? d)  (+ 2 (string-length d) (string-escape-count d))]
     [(char? d)    (char-write-width d)]
     [(boolean? d) 2]
     [(vector? d)  (+ 3 (vector-elems-width d))]

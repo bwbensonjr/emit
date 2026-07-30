@@ -58,6 +58,7 @@ run_suite "module run door (emit run)" test/modules-run-tests.sh
 run_suite "emit build + program resolver" test/emit-build-tests.sh
 run_suite "(scheme base) auto-import (REPL)" test/prelude-base-repl-tests.sh
 run_suite "(scheme base) re-home (emit run/build)" test/prelude-base-run-tests.sh
+run_suite "--dump stages (all doors)"   test/dump-stages-tests.sh
 
 echo
 echo "================================================================"

@@ -99,21 +99,41 @@
 
 ## 6. Verification
 
-- [ ] 6.1 Add a Chez-free stdout-invariance check to `run-all-tests.sh`: `emit run --emit`
+- [x] 6.1 Add a Chez-free stdout-invariance check to `run-all-tests.sh`: `emit run --emit`
   vs `emit run --emit --dump` on a program using macros, closures, and an import must be
   byte-identical (design D6).
-- [ ] 6.2 Add the same invariance check for `emit lib` artifacts (`.ll` and `.exports`),
+- [x] 6.2 Add the same invariance check for `emit lib` artifacts (`.ll` and `.exports`),
   and for `emit build` check the **emitted IR** plus that the delivered exe still runs with
   the same output — not exe byte-identity, which the linker does not provide (see 5.3).
-- [ ] 6.3 Add a Chez-gated dump-parity check to `run-dev-tests.sh`: split the Chez driver's
+- [x] 6.3 Add a Chez-gated dump-parity check to `run-dev-tests.sh`: split the Chez driver's
   `--dump` stderr and `emit run --dump` stderr on the stage headers, `read` each section,
   and assert equal stage names, order, and `equal?` forms (design D5).
-- [ ] 6.4 Add a stage-list assertion covering the modular path's seven stages and the
+- [x] 6.4 Add a stage-list assertion covering the modular path's seven stages and the
   per-form path's form-qualified headers.
-- [ ] 6.5 Add a REPL check that `emit repl --dump` dumps each entered form and leaves the
+- [x] 6.5 Add a REPL check that `emit repl --dump` dumps each entered form and leaves the
   session's values and redefinition behavior unchanged.
-- [ ] 6.6 Verify on a machine (or a `PATH` with `chez` removed) that build, run, REPL, and
-  dump all work with no Chez present.
+- [x] 6.6 Verify on a machine (or a `PATH` with `chez` removed) that build, run, REPL, and
+  dump all work with no Chez present. Done: `run-all-tests.sh` is 11/11 on a `chez`-free
+  `PATH`, with no `chez` diagnostic anywhere.
+
+Two defects the verification work surfaced, both fixed here:
+
+- [x] 6.7 **The Chez driver's `--dump` was ignored on its DEFAULT path.**
+  `build-modular-artifacts*` passed `no-dump` (`src/compile.ss:559`), so
+  `chez … --dump prog.scm` printed *nothing* unless `--no-prelude` was given — only the
+  non-modular `compile-file` path ever dumped. Publish the selected dumper as `*dumpf*`
+  and use it for the program unit. A deviation from design D10 ("leave the driver
+  alone"), justified: it wires the *existing* dumper rather than changing it, and
+  without it the modular path — the one every door takes, and the one carrying the three
+  newly-dumped stages — has no reference for D5 to check against.
+- [x] 6.8 **Write-style string output escaped nothing, so a dump was not readable data.**
+  `print_val`'s `HDR_STRING` arm wrote raw bytes inside quotes, so a string constant
+  holding a quote dumped as `(const "a"b")` — unreadable, and `equal?`-incomparable
+  against the Chez reference. It also made the runtime's `write` non-conformant
+  (R7RS requires written output to read back). Escape `\" \\ \n \t \r` — exactly what
+  this project's own reader (`read-from-string`) understands — and count the extra columns
+  in `datum-width`. No demo expectation changed (none writes such a string); locked in by
+  a parity case whose reference is Chez's escaping.
 
 ## 7. Documentation
 

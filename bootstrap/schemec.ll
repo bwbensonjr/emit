@@ -1056,7 +1056,7 @@ declare i64 @"scheme.base:__init"()
 @.str.lit.835 = private unnamed_addr constant [6 x i8] c"rt_lt\00"
 @.str.lit.836 = private unnamed_addr constant [9 x i8] c"icmp slt\00"
 @.str.lit.837 = private unnamed_addr constant [26 x i8] c"; ==EMIT-UNIT-BOUNDARY==\0A\00"
-define fastcc i64 @code_5212(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5252(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1 = icmp eq i64 %argc, 2
   br i1 %t1, label %argok2, label %arityerr1
@@ -1087,17 +1087,17 @@ else4:
   br i1 %t17, label %then5, label %else6
 then5:
   %t18 = call i64 @rt_cdr(i64 %a0)
-  %t19 = musttail call fastcc i64 @code_5212(i64 %self, i64 2, i64 %t18, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t19 = musttail call fastcc i64 @code_5252(i64 %self, i64 2, i64 %t18, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t19
 else6:
   %t20 = call i64 @rt_cdr(i64 %a0)
   %t21 = call i64 @rt_car(i64 %a0)
   %t22 = call i64 @rt_cons(i64 %t21, i64 %a1)
-  %t23 = musttail call fastcc i64 @code_5212(i64 %self, i64 2, i64 %t20, i64 %t22, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t23 = musttail call fastcc i64 @code_5252(i64 %self, i64 2, i64 %t20, i64 %t22, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t23
 }
 
-define fastcc i64 @code_5210(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5250(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t24 = icmp eq i64 %argc, 2
   br i1 %t24, label %argok8, label %arityerr7
@@ -1107,7 +1107,7 @@ arityerr7:
 argok8:
   %t25 = call i64 @rt_alloc_words(i64 2)
   %t26 = inttoptr i64 %t25 to ptr
-  store i64 ptrtoint (ptr @code_5212 to i64), ptr %t26
+  store i64 ptrtoint (ptr @code_5252 to i64), ptr %t26
   %t27 = or i64 %t25, 4
   %t28 = getelementptr i64, ptr %t26, i64 1
   store i64 %t27, ptr %t28
@@ -1125,7 +1125,7 @@ argok8:
   ret i64 %t39
 }
 
-define fastcc i64 @code_5214(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5254(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t40 = icmp eq i64 %argc, 1
   br i1 %t40, label %argok10, label %arityerr9
@@ -1147,7 +1147,7 @@ argok10:
   ret i64 %t51
 }
 
-define fastcc i64 @code_5218(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5258(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t52 = icmp eq i64 %argc, 1
   br i1 %t52, label %argok12, label %arityerr11
@@ -1169,7 +1169,7 @@ argok12:
   ret i64 %t63
 }
 
-define fastcc i64 @code_5216(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5256(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t64 = icmp eq i64 %argc, 2
   br i1 %t64, label %argok14, label %arityerr13
@@ -1179,7 +1179,7 @@ arityerr13:
 argok14:
   %t65 = call i64 @rt_alloc_words(i64 2)
   %t66 = inttoptr i64 %t65 to ptr
-  store i64 ptrtoint (ptr @code_5218 to i64), ptr %t66
+  store i64 ptrtoint (ptr @code_5258 to i64), ptr %t66
   %t67 = getelementptr i64, ptr %t66, i64 1
   store i64 %a1, ptr %t67
   %t68 = or i64 %t65, 4
@@ -1192,7 +1192,7 @@ argok14:
   ret i64 %t74
 }
 
-define fastcc i64 @code_5220(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5260(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t75 = icmp eq i64 %argc, 2
   br i1 %t75, label %argok16, label %arityerr15
@@ -1214,7 +1214,7 @@ else18:
   ret i64 1
 }
 
-define fastcc i64 @code_5222(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5262(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t83 = icmp eq i64 %argc, 0
   br i1 %t83, label %argok20, label %arityerr19
@@ -1230,7 +1230,7 @@ argok20:
   ret i64 %t88
 }
 
-define fastcc i64 @code_5224(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5264(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t89 = icmp eq i64 %argc, 0
   br i1 %t89, label %argok22, label %arityerr21
@@ -1263,7 +1263,7 @@ fixmerge25:
   ret i64 %t94
 }
 
-define fastcc i64 @code_5226(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5266(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t106 = icmp eq i64 %argc, 1
   br i1 %t106, label %argok27, label %arityerr26
@@ -1295,7 +1295,7 @@ argok27:
   ret i64 %t127
 }
 
-define fastcc i64 @code_5228(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5268(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t128 = icmp eq i64 %argc, 1
   br i1 %t128, label %argok29, label %arityerr28
@@ -1325,7 +1325,7 @@ argok29:
   ret i64 %t147
 }
 
-define fastcc i64 @code_5232(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5272(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t148 = icmp eq i64 %argc, 2
   br i1 %t148, label %argok31, label %arityerr30
@@ -1352,11 +1352,11 @@ else33:
   %t161 = call i64 @rt_car(i64 %a0)
   %t162 = call i64 @rt_symbol_to_string(i64 %t161)
   %t163 = call i64 @rt_string_append(i64 %t160, i64 %t162)
-  %t164 = musttail call fastcc i64 @code_5232(i64 %self, i64 2, i64 %t158, i64 %t163, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t164 = musttail call fastcc i64 @code_5272(i64 %self, i64 2, i64 %t158, i64 %t163, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t164
 }
 
-define fastcc i64 @code_5230(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5270(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t165 = icmp eq i64 %argc, 2
   br i1 %t165, label %argok35, label %arityerr34
@@ -1382,7 +1382,7 @@ then39:
 else40:
   %t172 = call i64 @rt_alloc_words(i64 3)
   %t173 = inttoptr i64 %t172 to ptr
-  store i64 ptrtoint (ptr @code_5232 to i64), ptr %t173
+  store i64 ptrtoint (ptr @code_5272 to i64), ptr %t173
   %t174 = or i64 %t172, 4
   %t175 = getelementptr i64, ptr %t173, i64 1
   store i64 %t169, ptr %t175
@@ -1399,7 +1399,7 @@ else40:
   ret i64 %t184
 }
 
-define fastcc i64 @code_5234(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5274(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t185 = icmp eq i64 %argc, 1
   br i1 %t185, label %argok42, label %arityerr41
@@ -1426,7 +1426,7 @@ else44:
   ret i64 1
 }
 
-define fastcc i64 @code_5236(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5276(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t198 = icmp eq i64 %argc, 1
   br i1 %t198, label %argok46, label %arityerr45
@@ -1448,7 +1448,7 @@ argok46:
   ret i64 %t209
 }
 
-define fastcc i64 @code_5238(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5278(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t210 = icmp eq i64 %argc, 1
   br i1 %t210, label %argok48, label %arityerr47
@@ -1474,7 +1474,7 @@ else50:
   ret i64 1
 }
 
-define fastcc i64 @code_5242(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5282(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t222 = icmp eq i64 %argc, 2
   br i1 %t222, label %argok52, label %arityerr51
@@ -1524,11 +1524,11 @@ fixmerge60:
   %t246 = inttoptr i64 %t245 to ptr
   %t247 = call fastcc i64%t246(i64 %t242, i64 1, i64 %t237, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t248 = call i64 @rt_cons(i64 %t247, i64 %a1)
-  %t249 = musttail call fastcc i64 @code_5242(i64 %self, i64 2, i64 %t236, i64 %t248, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t249 = musttail call fastcc i64 @code_5282(i64 %self, i64 2, i64 %t236, i64 %t248, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t249
 }
 
-define fastcc i64 @code_5240(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5280(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t250 = icmp eq i64 %argc, 1
   br i1 %t250, label %argok62, label %arityerr61
@@ -1538,7 +1538,7 @@ arityerr61:
 argok62:
   %t251 = call i64 @rt_alloc_words(i64 3)
   %t252 = inttoptr i64 %t251 to ptr
-  store i64 ptrtoint (ptr @code_5242 to i64), ptr %t252
+  store i64 ptrtoint (ptr @code_5282 to i64), ptr %t252
   %t253 = or i64 %t251, 4
   %t254 = getelementptr i64, ptr %t252, i64 1
   store i64 %t253, ptr %t254
@@ -1556,7 +1556,7 @@ argok62:
   ret i64 %t264
 }
 
-define fastcc i64 @code_5244(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5284(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t265 = icmp eq i64 %argc, 1
   br i1 %t265, label %argok64, label %arityerr63
@@ -1650,7 +1650,7 @@ else69:
   ret i64 %t338
 }
 
-define fastcc i64 @code_5246(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5286(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t339 = icmp eq i64 %argc, 2
   br i1 %t339, label %argok71, label %arityerr70
@@ -1757,7 +1757,7 @@ argok71:
   ret i64 %t435
 }
 
-define fastcc i64 @code_5248(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5288(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t436 = icmp eq i64 %argc, 1
   br i1 %t436, label %argok73, label %arityerr72
@@ -1915,7 +1915,7 @@ argok73:
   ret i64 %t583
 }
 
-define fastcc i64 @code_5250(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5290(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t584 = icmp eq i64 %argc, 1
   br i1 %t584, label %argok75, label %arityerr74
@@ -2073,7 +2073,7 @@ argok75:
   ret i64 %t731
 }
 
-define fastcc i64 @code_5252(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5292(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t732 = icmp eq i64 %argc, 1
   br i1 %t732, label %argok77, label %arityerr76
@@ -2237,7 +2237,7 @@ argok77:
   ret i64 %t885
 }
 
-define fastcc i64 @code_5254(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5294(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t886 = icmp eq i64 %argc, 2
   br i1 %t886, label %argok79, label %arityerr78
@@ -2404,7 +2404,7 @@ else91:
   ret i64 %t1018
 }
 
-define fastcc i64 @code_5284(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5324(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1019 = icmp eq i64 %argc, 0
   br i1 %t1019, label %argok93, label %arityerr92
@@ -2427,7 +2427,7 @@ argok93:
   ret i64 %t1031
 }
 
-define fastcc i64 @code_5286(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5326(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1032 = icmp eq i64 %argc, 1
   br i1 %t1032, label %argok95, label %arityerr94
@@ -2460,7 +2460,7 @@ argok95:
   ret i64 %t1054
 }
 
-define fastcc i64 @code_5282(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5322(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1055 = icmp eq i64 %argc, 0
   br i1 %t1055, label %argok97, label %arityerr96
@@ -2474,7 +2474,7 @@ argok97:
   %t1059 = load i64, ptr %t1058
   %t1060 = call i64 @rt_alloc_words(i64 2)
   %t1061 = inttoptr i64 %t1060 to ptr
-  store i64 ptrtoint (ptr @code_5284 to i64), ptr %t1061
+  store i64 ptrtoint (ptr @code_5324 to i64), ptr %t1061
   %t1062 = getelementptr i64, ptr %t1061, i64 1
   store i64 %t1059, ptr %t1062
   %t1063 = or i64 %t1060, 4
@@ -2524,7 +2524,7 @@ then106:
   %t1097 = load i64, ptr %t1096
   %t1098 = call i64 @rt_alloc_words(i64 2)
   %t1099 = inttoptr i64 %t1098 to ptr
-  store i64 ptrtoint (ptr @code_5286 to i64), ptr %t1099
+  store i64 ptrtoint (ptr @code_5326 to i64), ptr %t1099
   %t1100 = getelementptr i64, ptr %t1099, i64 1
   store i64 %t1097, ptr %t1100
   %t1101 = or i64 %t1098, 4
@@ -2584,7 +2584,7 @@ else99:
   ret i64 %t1144
 }
 
-define fastcc i64 @code_5288(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5328(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1145 = icmp eq i64 %argc, 1
   br i1 %t1145, label %argok109, label %arityerr108
@@ -2617,7 +2617,7 @@ argok109:
   ret i64 %t1167
 }
 
-define fastcc i64 @code_5280(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5320(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1168 = icmp eq i64 %argc, 0
   br i1 %t1168, label %argok111, label %arityerr110
@@ -2635,7 +2635,7 @@ argok111:
   %t1176 = load i64, ptr %t1175
   %t1177 = call i64 @rt_alloc_words(i64 3)
   %t1178 = inttoptr i64 %t1177 to ptr
-  store i64 ptrtoint (ptr @code_5282 to i64), ptr %t1178
+  store i64 ptrtoint (ptr @code_5322 to i64), ptr %t1178
   %t1179 = getelementptr i64, ptr %t1178, i64 1
   store i64 %t1172, ptr %t1179
   %t1180 = getelementptr i64, ptr %t1178, i64 2
@@ -2687,7 +2687,7 @@ then120:
   %t1215 = load i64, ptr %t1214
   %t1216 = call i64 @rt_alloc_words(i64 2)
   %t1217 = inttoptr i64 %t1216 to ptr
-  store i64 ptrtoint (ptr @code_5288 to i64), ptr %t1217
+  store i64 ptrtoint (ptr @code_5328 to i64), ptr %t1217
   %t1218 = getelementptr i64, ptr %t1217, i64 1
   store i64 %t1215, ptr %t1218
   %t1219 = or i64 %t1216, 4
@@ -2747,7 +2747,7 @@ else113:
   ret i64 %t1262
 }
 
-define fastcc i64 @code_5278(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5318(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1263 = icmp eq i64 %argc, 0
   br i1 %t1263, label %argok123, label %arityerr122
@@ -2765,7 +2765,7 @@ argok123:
   %t1271 = load i64, ptr %t1270
   %t1272 = call i64 @rt_alloc_words(i64 3)
   %t1273 = inttoptr i64 %t1272 to ptr
-  store i64 ptrtoint (ptr @code_5280 to i64), ptr %t1273
+  store i64 ptrtoint (ptr @code_5320 to i64), ptr %t1273
   %t1274 = getelementptr i64, ptr %t1273, i64 1
   store i64 %t1267, ptr %t1274
   %t1275 = getelementptr i64, ptr %t1273, i64 2
@@ -2861,7 +2861,7 @@ else125:
   ret i64 %t1343
 }
 
-define fastcc i64 @code_5276(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5316(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1344 = icmp eq i64 %argc, 0
   br i1 %t1344, label %argok135, label %arityerr134
@@ -2879,7 +2879,7 @@ argok135:
   %t1352 = load i64, ptr %t1351
   %t1353 = call i64 @rt_alloc_words(i64 3)
   %t1354 = inttoptr i64 %t1353 to ptr
-  store i64 ptrtoint (ptr @code_5278 to i64), ptr %t1354
+  store i64 ptrtoint (ptr @code_5318 to i64), ptr %t1354
   %t1355 = getelementptr i64, ptr %t1354, i64 1
   store i64 %t1348, ptr %t1355
   %t1356 = getelementptr i64, ptr %t1354, i64 2
@@ -3048,7 +3048,7 @@ else137:
   ret i64 %t1483
 }
 
-define fastcc i64 @code_5274(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5314(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1484 = icmp eq i64 %argc, 0
   br i1 %t1484, label %argok154, label %arityerr153
@@ -3070,7 +3070,7 @@ argok154:
   %t1496 = load i64, ptr %t1495
   %t1497 = call i64 @rt_alloc_words(i64 4)
   %t1498 = inttoptr i64 %t1497 to ptr
-  store i64 ptrtoint (ptr @code_5276 to i64), ptr %t1498
+  store i64 ptrtoint (ptr @code_5316 to i64), ptr %t1498
   %t1499 = getelementptr i64, ptr %t1498, i64 1
   store i64 %t1488, ptr %t1499
   %t1500 = getelementptr i64, ptr %t1498, i64 2
@@ -3159,7 +3159,7 @@ else156:
   ret i64 %t1568
 }
 
-define fastcc i64 @code_5272(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5312(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1569 = icmp eq i64 %argc, 0
   br i1 %t1569, label %argok162, label %arityerr161
@@ -3181,7 +3181,7 @@ argok162:
   %t1581 = load i64, ptr %t1580
   %t1582 = call i64 @rt_alloc_words(i64 4)
   %t1583 = inttoptr i64 %t1582 to ptr
-  store i64 ptrtoint (ptr @code_5274 to i64), ptr %t1583
+  store i64 ptrtoint (ptr @code_5314 to i64), ptr %t1583
   %t1584 = getelementptr i64, ptr %t1583, i64 1
   store i64 %t1573, ptr %t1584
   %t1585 = getelementptr i64, ptr %t1583, i64 2
@@ -3261,7 +3261,7 @@ else164:
   ret i64 %t1644
 }
 
-define fastcc i64 @code_5270(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5310(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1645 = icmp eq i64 %argc, 0
   br i1 %t1645, label %argok170, label %arityerr169
@@ -3283,7 +3283,7 @@ argok170:
   %t1657 = load i64, ptr %t1656
   %t1658 = call i64 @rt_alloc_words(i64 4)
   %t1659 = inttoptr i64 %t1658 to ptr
-  store i64 ptrtoint (ptr @code_5272 to i64), ptr %t1659
+  store i64 ptrtoint (ptr @code_5312 to i64), ptr %t1659
   %t1660 = getelementptr i64, ptr %t1659, i64 1
   store i64 %t1649, ptr %t1660
   %t1661 = getelementptr i64, ptr %t1659, i64 2
@@ -3381,7 +3381,7 @@ else172:
   ret i64 %t1730
 }
 
-define fastcc i64 @code_5268(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5308(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1731 = icmp eq i64 %argc, 0
   br i1 %t1731, label %argok182, label %arityerr181
@@ -3403,7 +3403,7 @@ argok182:
   %t1743 = load i64, ptr %t1742
   %t1744 = call i64 @rt_alloc_words(i64 4)
   %t1745 = inttoptr i64 %t1744 to ptr
-  store i64 ptrtoint (ptr @code_5270 to i64), ptr %t1745
+  store i64 ptrtoint (ptr @code_5310 to i64), ptr %t1745
   %t1746 = getelementptr i64, ptr %t1745, i64 1
   store i64 %t1735, ptr %t1746
   %t1747 = getelementptr i64, ptr %t1745, i64 2
@@ -3510,7 +3510,7 @@ else184:
   ret i64 %t1825
 }
 
-define fastcc i64 @code_5266(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5306(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1826 = icmp eq i64 %argc, 0
   br i1 %t1826, label %argok194, label %arityerr193
@@ -3532,7 +3532,7 @@ argok194:
   %t1838 = load i64, ptr %t1837
   %t1839 = call i64 @rt_alloc_words(i64 4)
   %t1840 = inttoptr i64 %t1839 to ptr
-  store i64 ptrtoint (ptr @code_5268 to i64), ptr %t1840
+  store i64 ptrtoint (ptr @code_5308 to i64), ptr %t1840
   %t1841 = getelementptr i64, ptr %t1840, i64 1
   store i64 %t1830, ptr %t1841
   %t1842 = getelementptr i64, ptr %t1840, i64 2
@@ -3662,7 +3662,7 @@ else196:
   ret i64 %t1939
 }
 
-define fastcc i64 @code_5264(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5304(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1940 = icmp eq i64 %argc, 0
   br i1 %t1940, label %argok208, label %arityerr207
@@ -3684,7 +3684,7 @@ argok208:
   %t1952 = load i64, ptr %t1951
   %t1953 = call i64 @rt_alloc_words(i64 4)
   %t1954 = inttoptr i64 %t1953 to ptr
-  store i64 ptrtoint (ptr @code_5266 to i64), ptr %t1954
+  store i64 ptrtoint (ptr @code_5306 to i64), ptr %t1954
   %t1955 = getelementptr i64, ptr %t1954, i64 1
   store i64 %t1944, ptr %t1955
   %t1956 = getelementptr i64, ptr %t1954, i64 2
@@ -3735,7 +3735,7 @@ else210:
   ret i64 %t1990
 }
 
-define fastcc i64 @code_5262(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5302(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1991 = icmp eq i64 %argc, 0
   br i1 %t1991, label %argok214, label %arityerr213
@@ -3761,7 +3761,7 @@ argok214:
   %t2007 = load i64, ptr %t2006
   %t2008 = call i64 @rt_alloc_words(i64 5)
   %t2009 = inttoptr i64 %t2008 to ptr
-  store i64 ptrtoint (ptr @code_5264 to i64), ptr %t2009
+  store i64 ptrtoint (ptr @code_5304 to i64), ptr %t2009
   %t2010 = getelementptr i64, ptr %t2009, i64 1
   store i64 %t1995, ptr %t2010
   %t2011 = getelementptr i64, ptr %t2009, i64 2
@@ -3861,7 +3861,7 @@ else216:
   ret i64 %t2081
 }
 
-define fastcc i64 @code_5260(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5300(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2082 = icmp eq i64 %argc, 0
   br i1 %t2082, label %argok226, label %arityerr225
@@ -3887,7 +3887,7 @@ argok226:
   %t2098 = load i64, ptr %t2097
   %t2099 = call i64 @rt_alloc_words(i64 5)
   %t2100 = inttoptr i64 %t2099 to ptr
-  store i64 ptrtoint (ptr @code_5262 to i64), ptr %t2100
+  store i64 ptrtoint (ptr @code_5302 to i64), ptr %t2100
   %t2101 = getelementptr i64, ptr %t2100, i64 1
   store i64 %t2086, ptr %t2101
   %t2102 = getelementptr i64, ptr %t2100, i64 2
@@ -3965,7 +3965,7 @@ else228:
   ret i64 %t2154
 }
 
-define fastcc i64 @code_5258(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5298(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2155 = icmp eq i64 %argc, 1
   br i1 %t2155, label %argok236, label %arityerr235
@@ -3987,7 +3987,7 @@ argok236:
   %t2167 = load i64, ptr %t2166
   %t2168 = call i64 @rt_alloc_words(i64 6)
   %t2169 = inttoptr i64 %t2168 to ptr
-  store i64 ptrtoint (ptr @code_5260 to i64), ptr %t2169
+  store i64 ptrtoint (ptr @code_5300 to i64), ptr %t2169
   %t2170 = getelementptr i64, ptr %t2169, i64 1
   store i64 %a0, ptr %t2170
   %t2171 = getelementptr i64, ptr %t2169, i64 2
@@ -4051,7 +4051,7 @@ else238:
   ret i64 %t2208
 }
 
-define fastcc i64 @code_5256(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5296(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2209 = icmp eq i64 %argc, 1
   br i1 %t2209, label %argok246, label %arityerr245
@@ -4061,7 +4061,7 @@ arityerr245:
 argok246:
   %t2210 = call i64 @rt_alloc_words(i64 4)
   %t2211 = inttoptr i64 %t2210 to ptr
-  store i64 ptrtoint (ptr @code_5258 to i64), ptr %t2211
+  store i64 ptrtoint (ptr @code_5298 to i64), ptr %t2211
   %t2212 = or i64 %t2210, 4
   %t2213 = getelementptr i64, ptr %t2211, i64 1
   store i64 %t2212, ptr %t2213
@@ -4085,7 +4085,7 @@ argok246:
   ret i64 %t2228
 }
 
-define fastcc i64 @code_5290(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5330(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2229 = icmp eq i64 %argc, 1
   br i1 %t2229, label %argok248, label %arityerr247
@@ -4121,7 +4121,7 @@ else252:
   ret i64 2
 }
 
-define fastcc i64 @code_5292(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5332(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2247 = icmp eq i64 %argc, 1
   br i1 %t2247, label %argok254, label %arityerr253
@@ -4155,7 +4155,7 @@ else258:
   ret i64 1
 }
 
-define fastcc i64 @code_5294(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5334(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2263 = icmp eq i64 %argc, 1
   br i1 %t2263, label %argok260, label %arityerr259
@@ -4213,7 +4213,7 @@ else262:
   ret i64 %t2306
 }
 
-define fastcc i64 @code_5298(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5338(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2307 = icmp eq i64 %argc, 1
   br i1 %t2307, label %argok264, label %arityerr263
@@ -4233,12 +4233,12 @@ then265:
 else266:
   %t2314 = call i64 @rt_car(i64 %a0)
   %t2315 = call i64 @rt_cdr(i64 %a0)
-  %t2316 = call fastcc i64 @code_5298(i64 %self, i64 1, i64 %t2315, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t2316 = call fastcc i64 @code_5338(i64 %self, i64 1, i64 %t2315, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t2317 = call i64 @rt_cons(i64 %t2314, i64 %t2316)
   ret i64 %t2317
 }
 
-define fastcc i64 @code_5296(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5336(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2318 = icmp eq i64 %argc, 2
   br i1 %t2318, label %argok268, label %arityerr267
@@ -4251,7 +4251,7 @@ argok268:
 then269:
   %t2320 = call i64 @rt_alloc_words(i64 3)
   %t2321 = inttoptr i64 %t2320 to ptr
-  store i64 ptrtoint (ptr @code_5298 to i64), ptr %t2321
+  store i64 ptrtoint (ptr @code_5338 to i64), ptr %t2321
   %t2322 = or i64 %t2320, 4
   %t2323 = getelementptr i64, ptr %t2321, i64 1
   store i64 %a1, ptr %t2323
@@ -4267,7 +4267,7 @@ else270:
   ret i64 %a0
 }
 
-define fastcc i64 @code_5300(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5340(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2330 = icmp eq i64 %argc, 1
   br i1 %t2330, label %argok272, label %arityerr271
@@ -4288,7 +4288,7 @@ argok272:
   ret i64 %t2340
 }
 
-define fastcc i64 @code_5326(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5366(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2341 = icmp eq i64 %argc, 0
   br i1 %t2341, label %argok274, label %arityerr273
@@ -4311,7 +4311,7 @@ argok274:
   ret i64 %t2353
 }
 
-define fastcc i64 @code_5324(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5364(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2354 = icmp eq i64 %argc, 0
   br i1 %t2354, label %argok276, label %arityerr275
@@ -4325,7 +4325,7 @@ argok276:
   %t2358 = load i64, ptr %t2357
   %t2359 = call i64 @rt_alloc_words(i64 2)
   %t2360 = inttoptr i64 %t2359 to ptr
-  store i64 ptrtoint (ptr @code_5326 to i64), ptr %t2360
+  store i64 ptrtoint (ptr @code_5366 to i64), ptr %t2360
   %t2361 = getelementptr i64, ptr %t2360, i64 1
   store i64 %t2358, ptr %t2361
   %t2362 = or i64 %t2359, 4
@@ -4387,7 +4387,7 @@ else278:
   ret i64 %t2413
 }
 
-define fastcc i64 @code_5322(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5362(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2414 = icmp eq i64 %argc, 0
   br i1 %t2414, label %argok280, label %arityerr279
@@ -4405,7 +4405,7 @@ argok280:
   %t2422 = load i64, ptr %t2421
   %t2423 = call i64 @rt_alloc_words(i64 3)
   %t2424 = inttoptr i64 %t2423 to ptr
-  store i64 ptrtoint (ptr @code_5324 to i64), ptr %t2424
+  store i64 ptrtoint (ptr @code_5364 to i64), ptr %t2424
   %t2425 = getelementptr i64, ptr %t2424, i64 1
   store i64 %t2418, ptr %t2425
   %t2426 = getelementptr i64, ptr %t2424, i64 2
@@ -4479,7 +4479,7 @@ else282:
   ret i64 %t2484
 }
 
-define fastcc i64 @code_5320(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5360(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2485 = icmp eq i64 %argc, 0
   br i1 %t2485, label %argok286, label %arityerr285
@@ -4501,7 +4501,7 @@ argok286:
   %t2497 = load i64, ptr %t2496
   %t2498 = call i64 @rt_alloc_words(i64 4)
   %t2499 = inttoptr i64 %t2498 to ptr
-  store i64 ptrtoint (ptr @code_5322 to i64), ptr %t2499
+  store i64 ptrtoint (ptr @code_5362 to i64), ptr %t2499
   %t2500 = getelementptr i64, ptr %t2499, i64 1
   store i64 %t2489, ptr %t2500
   %t2501 = getelementptr i64, ptr %t2499, i64 2
@@ -4606,7 +4606,7 @@ else288:
   ret i64 %t2581
 }
 
-define fastcc i64 @code_5318(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5358(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2582 = icmp eq i64 %argc, 0
   br i1 %t2582, label %argok296, label %arityerr295
@@ -4628,7 +4628,7 @@ argok296:
   %t2594 = load i64, ptr %t2593
   %t2595 = call i64 @rt_alloc_words(i64 4)
   %t2596 = inttoptr i64 %t2595 to ptr
-  store i64 ptrtoint (ptr @code_5320 to i64), ptr %t2596
+  store i64 ptrtoint (ptr @code_5360 to i64), ptr %t2596
   %t2597 = getelementptr i64, ptr %t2596, i64 1
   store i64 %t2586, ptr %t2597
   %t2598 = getelementptr i64, ptr %t2596, i64 2
@@ -4727,7 +4727,7 @@ else298:
   ret i64 %t2668
 }
 
-define fastcc i64 @code_5316(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5356(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2669 = icmp eq i64 %argc, 0
   br i1 %t2669, label %argok308, label %arityerr307
@@ -4749,7 +4749,7 @@ argok308:
   %t2681 = load i64, ptr %t2680
   %t2682 = call i64 @rt_alloc_words(i64 4)
   %t2683 = inttoptr i64 %t2682 to ptr
-  store i64 ptrtoint (ptr @code_5318 to i64), ptr %t2683
+  store i64 ptrtoint (ptr @code_5358 to i64), ptr %t2683
   %t2684 = getelementptr i64, ptr %t2683, i64 1
   store i64 %t2673, ptr %t2684
   %t2685 = getelementptr i64, ptr %t2683, i64 2
@@ -4809,7 +4809,7 @@ else310:
   ret i64 %t2728
 }
 
-define fastcc i64 @code_5314(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5354(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2729 = icmp eq i64 %argc, 0
   br i1 %t2729, label %argok314, label %arityerr313
@@ -4835,7 +4835,7 @@ argok314:
   %t2745 = load i64, ptr %t2744
   %t2746 = call i64 @rt_alloc_words(i64 5)
   %t2747 = inttoptr i64 %t2746 to ptr
-  store i64 ptrtoint (ptr @code_5316 to i64), ptr %t2747
+  store i64 ptrtoint (ptr @code_5356 to i64), ptr %t2747
   %t2748 = getelementptr i64, ptr %t2747, i64 1
   store i64 %t2733, ptr %t2748
   %t2749 = getelementptr i64, ptr %t2747, i64 2
@@ -4895,7 +4895,7 @@ else316:
   ret i64 %t2791
 }
 
-define fastcc i64 @code_5312(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5352(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2792 = icmp eq i64 %argc, 0
   br i1 %t2792, label %argok320, label %arityerr319
@@ -4925,7 +4925,7 @@ argok320:
   %t2812 = load i64, ptr %t2811
   %t2813 = call i64 @rt_alloc_words(i64 6)
   %t2814 = inttoptr i64 %t2813 to ptr
-  store i64 ptrtoint (ptr @code_5314 to i64), ptr %t2814
+  store i64 ptrtoint (ptr @code_5354 to i64), ptr %t2814
   %t2815 = getelementptr i64, ptr %t2814, i64 1
   store i64 %t2796, ptr %t2815
   %t2816 = getelementptr i64, ptr %t2814, i64 2
@@ -5015,7 +5015,7 @@ else322:
   ret i64 %t2883
 }
 
-define fastcc i64 @code_5310(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5350(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2884 = icmp eq i64 %argc, 0
   br i1 %t2884, label %argok328, label %arityerr327
@@ -5049,7 +5049,7 @@ argok328:
   %t2908 = load i64, ptr %t2907
   %t2909 = call i64 @rt_alloc_words(i64 7)
   %t2910 = inttoptr i64 %t2909 to ptr
-  store i64 ptrtoint (ptr @code_5312 to i64), ptr %t2910
+  store i64 ptrtoint (ptr @code_5352 to i64), ptr %t2910
   %t2911 = getelementptr i64, ptr %t2910, i64 1
   store i64 %t2888, ptr %t2911
   %t2912 = getelementptr i64, ptr %t2910, i64 2
@@ -5141,7 +5141,7 @@ else330:
   ret i64 %t2980
 }
 
-define fastcc i64 @code_5308(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5348(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2981 = icmp eq i64 %argc, 0
   br i1 %t2981, label %argok336, label %arityerr335
@@ -5175,7 +5175,7 @@ argok336:
   %t3005 = load i64, ptr %t3004
   %t3006 = call i64 @rt_alloc_words(i64 7)
   %t3007 = inttoptr i64 %t3006 to ptr
-  store i64 ptrtoint (ptr @code_5310 to i64), ptr %t3007
+  store i64 ptrtoint (ptr @code_5350 to i64), ptr %t3007
   %t3008 = getelementptr i64, ptr %t3007, i64 1
   store i64 %t2985, ptr %t3008
   %t3009 = getelementptr i64, ptr %t3007, i64 2
@@ -5256,7 +5256,7 @@ else338:
   ret i64 %t3066
 }
 
-define fastcc i64 @code_5306(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5346(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3067 = icmp eq i64 %argc, 0
   br i1 %t3067, label %argok344, label %arityerr343
@@ -5290,7 +5290,7 @@ argok344:
   %t3091 = load i64, ptr %t3090
   %t3092 = call i64 @rt_alloc_words(i64 7)
   %t3093 = inttoptr i64 %t3092 to ptr
-  store i64 ptrtoint (ptr @code_5308 to i64), ptr %t3093
+  store i64 ptrtoint (ptr @code_5348 to i64), ptr %t3093
   %t3094 = getelementptr i64, ptr %t3093, i64 1
   store i64 %t3071, ptr %t3094
   %t3095 = getelementptr i64, ptr %t3093, i64 2
@@ -5409,7 +5409,7 @@ else346:
   ret i64 %t3182
 }
 
-define fastcc i64 @code_5304(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5344(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3183 = icmp eq i64 %argc, 0
   br i1 %t3183, label %argok356, label %arityerr355
@@ -5443,7 +5443,7 @@ argok356:
   %t3207 = load i64, ptr %t3206
   %t3208 = call i64 @rt_alloc_words(i64 7)
   %t3209 = inttoptr i64 %t3208 to ptr
-  store i64 ptrtoint (ptr @code_5306 to i64), ptr %t3209
+  store i64 ptrtoint (ptr @code_5346 to i64), ptr %t3209
   %t3210 = getelementptr i64, ptr %t3209, i64 1
   store i64 %t3187, ptr %t3210
   %t3211 = getelementptr i64, ptr %t3209, i64 2
@@ -5582,7 +5582,7 @@ else358:
   ret i64 %t3314
 }
 
-define fastcc i64 @code_5302(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5342(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3315 = icmp eq i64 %argc, 1
   br i1 %t3315, label %argok370, label %arityerr369
@@ -5672,7 +5672,7 @@ then386:
   %t3363 = load i64, ptr %t3362
   %t3364 = call i64 @rt_alloc_words(i64 7)
   %t3365 = inttoptr i64 %t3364 to ptr
-  store i64 ptrtoint (ptr @code_5304 to i64), ptr %t3365
+  store i64 ptrtoint (ptr @code_5344 to i64), ptr %t3365
   %t3366 = getelementptr i64, ptr %t3365, i64 1
   store i64 %a0, ptr %t3366
   %t3367 = getelementptr i64, ptr %t3365, i64 2
@@ -5770,7 +5770,7 @@ else400:
   ret i64 %t3425
 }
 
-define fastcc i64 @code_5328(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5368(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3426 = icmp eq i64 %argc, 1
   br i1 %t3426, label %argok402, label %arityerr401
@@ -5804,7 +5804,7 @@ argok402:
   ret i64 %t3449
 }
 
-define fastcc i64 @code_5332(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5372(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3450 = icmp eq i64 %argc, 1
   br i1 %t3450, label %argok404, label %arityerr403
@@ -5832,14 +5832,14 @@ else408:
   %t3460 = call i64 @rt_intern(ptr @.str.sym.33)
   %t3461 = call i64 @rt_car(i64 %a0)
   %t3462 = call i64 @rt_cdr(i64 %a0)
-  %t3463 = call fastcc i64 @code_5332(i64 %self, i64 1, i64 %t3462, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3463 = call fastcc i64 @code_5372(i64 %self, i64 1, i64 %t3462, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t3464 = call i64 @rt_cons(i64 %t3463, i64 2)
   %t3465 = call i64 @rt_cons(i64 %t3461, i64 %t3464)
   %t3466 = call i64 @rt_cons(i64 %t3460, i64 %t3465)
   ret i64 %t3466
 }
 
-define fastcc i64 @code_5330(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5370(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3467 = icmp eq i64 %argc, 1
   br i1 %t3467, label %argok410, label %arityerr409
@@ -5894,7 +5894,7 @@ then414:
 else415:
   %t3503 = call i64 @rt_alloc_words(i64 2)
   %t3504 = inttoptr i64 %t3503 to ptr
-  store i64 ptrtoint (ptr @code_5332 to i64), ptr %t3504
+  store i64 ptrtoint (ptr @code_5372 to i64), ptr %t3504
   %t3505 = or i64 %t3503, 4
   %t3506 = getelementptr i64, ptr %t3504, i64 1
   store i64 %t3505, ptr %t3506
@@ -5917,7 +5917,7 @@ else415:
   ret i64 %t3522
 }
 
-define fastcc i64 @code_5334(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5374(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3523 = icmp eq i64 %argc, 1
   br i1 %t3523, label %argok417, label %arityerr416
@@ -5937,7 +5937,7 @@ else419:
   ret i64 1
 }
 
-define fastcc i64 @code_5336(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5376(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3529 = icmp eq i64 %argc, 1
   br i1 %t3529, label %argok421, label %arityerr420
@@ -5957,7 +5957,7 @@ else423:
   ret i64 1
 }
 
-define fastcc i64 @code_5338(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5378(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3535 = icmp eq i64 %argc, 1
   br i1 %t3535, label %argok425, label %arityerr424
@@ -6051,7 +6051,7 @@ else429:
   ret i64 %t3598
 }
 
-define fastcc i64 @code_5340(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5380(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3599 = icmp eq i64 %argc, 1
   br i1 %t3599, label %argok437, label %arityerr436
@@ -6071,7 +6071,7 @@ else439:
   ret i64 1
 }
 
-define fastcc i64 @code_5342(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5382(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3605 = icmp eq i64 %argc, 1
   br i1 %t3605, label %argok441, label %arityerr440
@@ -6105,7 +6105,7 @@ else445:
   ret i64 1
 }
 
-define fastcc i64 @code_5344(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5384(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3621 = icmp eq i64 %argc, 1
   br i1 %t3621, label %argok447, label %arityerr446
@@ -6149,7 +6149,7 @@ else454:
   ret i64 1
 }
 
-define fastcc i64 @code_5346(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5386(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3641 = icmp eq i64 %argc, 1
   br i1 %t3641, label %argok456, label %arityerr455
@@ -6227,7 +6227,7 @@ else458:
   ret i64 1
 }
 
-define fastcc i64 @code_5350(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5390(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3685 = icmp eq i64 %argc, 1
   br i1 %t3685, label %argok470, label %arityerr469
@@ -6265,7 +6265,7 @@ else472:
   ret i64 %t3708
 }
 
-define fastcc i64 @code_5352(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5392(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3709 = icmp eq i64 %argc, 1
   br i1 %t3709, label %argok474, label %arityerr473
@@ -6277,7 +6277,7 @@ argok474:
   ret i64 %t3710
 }
 
-define fastcc i64 @code_5354(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5394(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3711 = icmp eq i64 %argc, 1
   br i1 %t3711, label %argok476, label %arityerr475
@@ -6315,7 +6315,7 @@ else478:
   ret i64 %t3734
 }
 
-define fastcc i64 @code_5348(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5388(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3735 = icmp eq i64 %argc, 1
   br i1 %t3735, label %argok480, label %arityerr479
@@ -6515,7 +6515,7 @@ merge510:
   %t3865 = load i64, ptr %t3864
   %t3866 = call i64 @rt_alloc_words(i64 3)
   %t3867 = inttoptr i64 %t3866 to ptr
-  store i64 ptrtoint (ptr @code_5350 to i64), ptr %t3867
+  store i64 ptrtoint (ptr @code_5390 to i64), ptr %t3867
   %t3868 = getelementptr i64, ptr %t3867, i64 1
   store i64 %t3865, ptr %t3868
   %t3869 = getelementptr i64, ptr %t3867, i64 2
@@ -6529,7 +6529,7 @@ merge510:
   %t3876 = call fastcc i64%t3875(i64 %t3871, i64 2, i64 %t3870, i64 %t3804, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t3877 = call i64 @rt_alloc_words(i64 1)
   %t3878 = inttoptr i64 %t3877 to ptr
-  store i64 ptrtoint (ptr @code_5352 to i64), ptr %t3878
+  store i64 ptrtoint (ptr @code_5392 to i64), ptr %t3878
   %t3879 = or i64 %t3877, 4
   %t3880 = load i64, ptr @"scheme.base:map"
   %t3881 = and i64 %t3880, -8
@@ -6539,7 +6539,7 @@ merge510:
   %t3885 = call fastcc i64%t3884(i64 %t3880, i64 2, i64 %t3879, i64 %t3804, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t3886 = call i64 @rt_alloc_words(i64 3)
   %t3887 = inttoptr i64 %t3886 to ptr
-  store i64 ptrtoint (ptr @code_5354 to i64), ptr %t3887
+  store i64 ptrtoint (ptr @code_5394 to i64), ptr %t3887
   %t3888 = getelementptr i64, ptr %t3887, i64 1
   store i64 %t3885, ptr %t3888
   %t3889 = getelementptr i64, ptr %t3887, i64 2
@@ -6555,7 +6555,7 @@ merge510:
   ret i64 %t3897
 }
 
-define fastcc i64 @code_5356(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5396(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3898 = icmp eq i64 %argc, 2
   br i1 %t3898, label %argok512, label %arityerr511
@@ -6677,7 +6677,7 @@ else519:
   ret i64 %t3995
 }
 
-define fastcc i64 @code_5360(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5400(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3996 = icmp eq i64 %argc, 1
   br i1 %t3996, label %argok521, label %arityerr520
@@ -6689,7 +6689,7 @@ argok521:
   ret i64 %t3997
 }
 
-define fastcc i64 @code_5362(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5402(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3998 = icmp eq i64 %argc, 1
   br i1 %t3998, label %argok523, label %arityerr522
@@ -6718,7 +6718,7 @@ else525:
   ret i64 %t4012
 }
 
-define fastcc i64 @code_5358(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5398(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4013 = icmp eq i64 %argc, 1
   br i1 %t4013, label %argok527, label %arityerr526
@@ -6756,7 +6756,7 @@ argok527:
   %t4041 = call i64 @rt_cdr(i64 %t4036)
   %t4042 = call i64 @rt_alloc_words(i64 1)
   %t4043 = inttoptr i64 %t4042 to ptr
-  store i64 ptrtoint (ptr @code_5360 to i64), ptr %t4043
+  store i64 ptrtoint (ptr @code_5400 to i64), ptr %t4043
   %t4044 = or i64 %t4042, 4
   %t4045 = load i64, ptr @"scheme.base:map"
   %t4046 = and i64 %t4045, -8
@@ -6801,7 +6801,7 @@ argok527:
   %t4085 = call i64 @rt_intern(ptr @.str.sym.59)
   %t4086 = call i64 @rt_alloc_words(i64 2)
   %t4087 = inttoptr i64 %t4086 to ptr
-  store i64 ptrtoint (ptr @code_5362 to i64), ptr %t4087
+  store i64 ptrtoint (ptr @code_5402 to i64), ptr %t4087
   %t4088 = getelementptr i64, ptr %t4087, i64 1
   store i64 %t4041, ptr %t4088
   %t4089 = or i64 %t4086, 4
@@ -6861,7 +6861,7 @@ argok527:
   ret i64 %t4142
 }
 
-define fastcc i64 @code_5364(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5404(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4143 = icmp eq i64 %argc, 2
   br i1 %t4143, label %argok529, label %arityerr528
@@ -6887,7 +6887,7 @@ else531:
   ret i64 %t4154
 }
 
-define fastcc i64 @code_5368(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5408(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4155 = icmp eq i64 %argc, 1
   br i1 %t4155, label %argok533, label %arityerr532
@@ -6914,7 +6914,7 @@ argok533:
   ret i64 %t4171
 }
 
-define fastcc i64 @code_5370(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5410(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4172 = icmp eq i64 %argc, 1
   br i1 %t4172, label %argok535, label %arityerr534
@@ -6935,7 +6935,7 @@ argok535:
   ret i64 %t4182
 }
 
-define fastcc i64 @code_5372(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5412(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4183 = icmp eq i64 %argc, 1
   br i1 %t4183, label %argok537, label %arityerr536
@@ -6957,7 +6957,7 @@ argok537:
   ret i64 %t4194
 }
 
-define fastcc i64 @code_5366(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5406(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4195 = icmp eq i64 %argc, 3
   br i1 %t4195, label %argok539, label %arityerr538
@@ -6987,7 +6987,7 @@ else541:
   %t4211 = load i64, ptr %t4210
   %t4212 = call i64 @rt_alloc_words(i64 2)
   %t4213 = inttoptr i64 %t4212 to ptr
-  store i64 ptrtoint (ptr @code_5368 to i64), ptr %t4213
+  store i64 ptrtoint (ptr @code_5408 to i64), ptr %t4213
   %t4214 = getelementptr i64, ptr %t4213, i64 1
   store i64 %t4211, ptr %t4214
   %t4215 = or i64 %t4212, 4
@@ -7019,7 +7019,7 @@ else543:
   %t4237 = call i64 @rt_intern(ptr @.str.sym.30)
   %t4238 = call i64 @rt_alloc_words(i64 1)
   %t4239 = inttoptr i64 %t4238 to ptr
-  store i64 ptrtoint (ptr @code_5370 to i64), ptr %t4239
+  store i64 ptrtoint (ptr @code_5410 to i64), ptr %t4239
   %t4240 = or i64 %t4238, 4
   %t4241 = load i64, ptr @"scheme.base:map"
   %t4242 = and i64 %t4241, -8
@@ -7029,7 +7029,7 @@ else543:
   %t4246 = call fastcc i64%t4245(i64 %t4241, i64 2, i64 %t4240, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t4247 = call i64 @rt_alloc_words(i64 1)
   %t4248 = inttoptr i64 %t4247 to ptr
-  store i64 ptrtoint (ptr @code_5372 to i64), ptr %t4248
+  store i64 ptrtoint (ptr @code_5412 to i64), ptr %t4248
   %t4249 = or i64 %t4247, 4
   %t4250 = load i64, ptr @"scheme.base:map"
   %t4251 = and i64 %t4250, -8
@@ -7055,7 +7055,7 @@ else543:
   ret i64 %t4270
 }
 
-define fastcc i64 @code_5374(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5414(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4271 = icmp eq i64 %argc, 1
   br i1 %t4271, label %argok545, label %arityerr544
@@ -7115,7 +7115,7 @@ else547:
   ret i64 1
 }
 
-define fastcc i64 @code_5378(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5418(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4309 = icmp eq i64 %argc, 2
   br i1 %t4309, label %argok553, label %arityerr552
@@ -7159,7 +7159,7 @@ then557:
   %t4335 = inttoptr i64 %t4334 to ptr
   %t4336 = call fastcc i64%t4335(i64 %t4331, i64 1, i64 %t4326, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t4337 = call i64 @rt_cons(i64 %t4336, i64 %a1)
-  %t4338 = musttail call fastcc i64 @code_5378(i64 %self, i64 2, i64 %t4325, i64 %t4337, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4338 = musttail call fastcc i64 @code_5418(i64 %self, i64 2, i64 %t4325, i64 %t4337, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t4338
 else558:
   %t4339 = call i64 @rt_pair_p(i64 %a0)
@@ -7209,7 +7209,7 @@ then562:
   %t4375 = load i64, ptr %t4374
   %t4376 = inttoptr i64 %t4375 to ptr
   %t4377 = call fastcc i64%t4376(i64 %t4372, i64 2, i64 %t4371, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4378 = musttail call fastcc i64 @code_5378(i64 %self, i64 2, i64 %t4354, i64 %t4377, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4378 = musttail call fastcc i64 @code_5418(i64 %self, i64 2, i64 %t4354, i64 %t4377, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t4378
 else563:
   %t4379 = call i64 @rt_null_p(i64 %a0)
@@ -7290,7 +7290,7 @@ else567:
   ret i64 %t4445
 }
 
-define fastcc i64 @code_5376(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5416(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4446 = icmp eq i64 %argc, 1
   br i1 %t4446, label %argok569, label %arityerr568
@@ -7300,7 +7300,7 @@ arityerr568:
 argok569:
   %t4447 = call i64 @rt_alloc_words(i64 9)
   %t4448 = inttoptr i64 %t4447 to ptr
-  store i64 ptrtoint (ptr @code_5378 to i64), ptr %t4448
+  store i64 ptrtoint (ptr @code_5418 to i64), ptr %t4448
   %t4449 = or i64 %t4447, 4
   %t4450 = and i64 %self, -8
   %t4451 = inttoptr i64 %t4450 to ptr
@@ -7350,7 +7350,7 @@ argok569:
   ret i64 %t4486
 }
 
-define fastcc i64 @code_5382(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5422(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4487 = icmp eq i64 %argc, 3
   br i1 %t4487, label %argok571, label %arityerr570
@@ -7399,7 +7399,7 @@ then574:
   %t4520 = inttoptr i64 %t4519 to ptr
   %t4521 = call fastcc i64%t4520(i64 %t4516, i64 1, i64 %t4511, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t4522 = call i64 @rt_cons(i64 %t4521, i64 %a1)
-  %t4523 = musttail call fastcc i64 @code_5382(i64 %self, i64 3, i64 %t4510, i64 %t4522, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4523 = musttail call fastcc i64 @code_5422(i64 %self, i64 3, i64 %t4510, i64 %t4522, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t4523
 else575:
   %t4524 = call i64 @rt_car(i64 %a0)
@@ -7440,7 +7440,7 @@ then576:
   %t4557 = load i64, ptr %t4556
   %t4558 = inttoptr i64 %t4557 to ptr
   %t4559 = call fastcc i64%t4558(i64 %t4554, i64 2, i64 %t4553, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4560 = musttail call fastcc i64 @code_5382(i64 %self, i64 3, i64 %t4536, i64 %t4559, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4560 = musttail call fastcc i64 @code_5422(i64 %self, i64 3, i64 %t4536, i64 %t4559, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t4560
 else577:
   %t4561 = call i64 @rt_cdr(i64 %a0)
@@ -7476,11 +7476,11 @@ else579:
   %t4587 = call i64 @rt_cdr(i64 %a0)
   %t4588 = call i64 @rt_car(i64 %a0)
   %t4589 = call i64 @rt_cons(i64 %t4588, i64 %a2)
-  %t4590 = musttail call fastcc i64 @code_5382(i64 %self, i64 3, i64 %t4587, i64 %a1, i64 %t4589, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4590 = musttail call fastcc i64 @code_5422(i64 %self, i64 3, i64 %t4587, i64 %a1, i64 %t4589, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t4590
 }
 
-define fastcc i64 @code_5380(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5420(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4591 = icmp eq i64 %argc, 1
   br i1 %t4591, label %argok581, label %arityerr580
@@ -7507,7 +7507,7 @@ merge584:
   %t4602 = phi i64 [ %t4601, %then582 ], [ 1, %else583 ]
   %t4603 = call i64 @rt_alloc_words(i64 7)
   %t4604 = inttoptr i64 %t4603 to ptr
-  store i64 ptrtoint (ptr @code_5382 to i64), ptr %t4604
+  store i64 ptrtoint (ptr @code_5422 to i64), ptr %t4604
   %t4605 = or i64 %t4603, 4
   %t4606 = and i64 %self, -8
   %t4607 = inttoptr i64 %t4606 to ptr
@@ -7549,7 +7549,7 @@ merge584:
   ret i64 %t4636
 }
 
-define fastcc i64 @code_5384(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5424(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4637 = icmp eq i64 %argc, 0
   br i1 %t4637, label %argok586, label %arityerr585
@@ -7566,7 +7566,7 @@ argok586:
   ret i64 %t4643
 }
 
-define fastcc i64 @code_5386(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5426(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4644 = icmp eq i64 %argc, 2
   br i1 %t4644, label %argok588, label %arityerr587
@@ -7590,7 +7590,7 @@ else590:
   ret i64 1
 }
 
-define fastcc i64 @code_5388(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5428(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4654 = icmp eq i64 %argc, 2
   br i1 %t4654, label %argok592, label %arityerr591
@@ -7630,7 +7630,7 @@ fixmerge595:
   ret i64 %t4666
 }
 
-define fastcc i64 @code_5390(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5430(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4678 = icmp eq i64 %argc, 2
   br i1 %t4678, label %argok597, label %arityerr596
@@ -7645,7 +7645,7 @@ argok597:
   ret i64 %a1
 }
 
-define fastcc i64 @code_5392(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5432(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4683 = icmp eq i64 %argc, 2
   br i1 %t4683, label %argok599, label %arityerr598
@@ -7677,7 +7677,7 @@ argok599:
   ret i64 %t4704
 }
 
-define fastcc i64 @code_5394(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5434(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4705 = icmp eq i64 %argc, 2
   br i1 %t4705, label %argok601, label %arityerr600
@@ -7695,7 +7695,7 @@ argok601:
   ret i64 %t4712
 }
 
-define fastcc i64 @code_5396(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5436(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4713 = icmp eq i64 %argc, 1
   br i1 %t4713, label %argok603, label %arityerr602
@@ -7712,7 +7712,7 @@ argok603:
   ret i64 %t4719
 }
 
-define fastcc i64 @code_5398(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5438(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4720 = icmp eq i64 %argc, 1
   br i1 %t4720, label %argok605, label %arityerr604
@@ -7729,7 +7729,7 @@ argok605:
   ret i64 %t4726
 }
 
-define fastcc i64 @code_5400(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5440(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4727 = icmp eq i64 %argc, 2
   br i1 %t4727, label %argok607, label %arityerr606
@@ -7818,7 +7818,7 @@ else613:
   ret i64 1
 }
 
-define fastcc i64 @code_5406(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5446(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4794 = icmp eq i64 %argc, 1
   br i1 %t4794, label %argok615, label %arityerr614
@@ -7842,7 +7842,7 @@ argok615:
   ret i64 %t4807
 }
 
-define fastcc i64 @code_5432(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5472(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4808 = icmp eq i64 %argc, 0
   br i1 %t4808, label %argok617, label %arityerr616
@@ -7865,7 +7865,7 @@ argok617:
   ret i64 %t4820
 }
 
-define fastcc i64 @code_5434(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5474(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4821 = icmp eq i64 %argc, 1
   br i1 %t4821, label %argok619, label %arityerr618
@@ -7877,7 +7877,7 @@ argok619:
   ret i64 %t4822
 }
 
-define fastcc i64 @code_5436(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5476(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4823 = icmp eq i64 %argc, 1
   br i1 %t4823, label %argok621, label %arityerr620
@@ -7914,7 +7914,7 @@ argok621:
   ret i64 %t4849
 }
 
-define fastcc i64 @code_5430(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5470(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4850 = icmp eq i64 %argc, 0
   br i1 %t4850, label %argok623, label %arityerr622
@@ -7928,7 +7928,7 @@ argok623:
   %t4854 = load i64, ptr %t4853
   %t4855 = call i64 @rt_alloc_words(i64 2)
   %t4856 = inttoptr i64 %t4855 to ptr
-  store i64 ptrtoint (ptr @code_5432 to i64), ptr %t4856
+  store i64 ptrtoint (ptr @code_5472 to i64), ptr %t4856
   %t4857 = getelementptr i64, ptr %t4856, i64 1
   store i64 %t4854, ptr %t4857
   %t4858 = or i64 %t4855, 4
@@ -7973,7 +7973,7 @@ then630:
 then632:
   %t4888 = call i64 @rt_alloc_words(i64 1)
   %t4889 = inttoptr i64 %t4888 to ptr
-  store i64 ptrtoint (ptr @code_5434 to i64), ptr %t4889
+  store i64 ptrtoint (ptr @code_5474 to i64), ptr %t4889
   %t4890 = or i64 %t4888, 4
   %t4891 = load i64, ptr @"scheme.base:map"
   %t4892 = and i64 %t4891, -8
@@ -7998,7 +7998,7 @@ then632:
   %t4911 = load i64, ptr %t4910
   %t4912 = call i64 @rt_alloc_words(i64 3)
   %t4913 = inttoptr i64 %t4912 to ptr
-  store i64 ptrtoint (ptr @code_5436 to i64), ptr %t4913
+  store i64 ptrtoint (ptr @code_5476 to i64), ptr %t4913
   %t4914 = getelementptr i64, ptr %t4913, i64 1
   store i64 %t4911, ptr %t4914
   %t4915 = getelementptr i64, ptr %t4913, i64 2
@@ -8060,7 +8060,7 @@ else625:
   ret i64 %t4959
 }
 
-define fastcc i64 @code_5438(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5478(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4960 = icmp eq i64 %argc, 1
   br i1 %t4960, label %argok635, label %arityerr634
@@ -8072,7 +8072,7 @@ argok635:
   ret i64 %t4961
 }
 
-define fastcc i64 @code_5440(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5480(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4962 = icmp eq i64 %argc, 1
   br i1 %t4962, label %argok637, label %arityerr636
@@ -8105,7 +8105,7 @@ argok637:
   ret i64 %t4984
 }
 
-define fastcc i64 @code_5428(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5468(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t4985 = icmp eq i64 %argc, 0
   br i1 %t4985, label %argok639, label %arityerr638
@@ -8127,7 +8127,7 @@ argok639:
   %t4997 = load i64, ptr %t4996
   %t4998 = call i64 @rt_alloc_words(i64 4)
   %t4999 = inttoptr i64 %t4998 to ptr
-  store i64 ptrtoint (ptr @code_5430 to i64), ptr %t4999
+  store i64 ptrtoint (ptr @code_5470 to i64), ptr %t4999
   %t5000 = getelementptr i64, ptr %t4999, i64 1
   store i64 %t4989, ptr %t5000
   %t5001 = getelementptr i64, ptr %t4999, i64 2
@@ -8176,7 +8176,7 @@ then646:
 then648:
   %t5033 = call i64 @rt_alloc_words(i64 1)
   %t5034 = inttoptr i64 %t5033 to ptr
-  store i64 ptrtoint (ptr @code_5438 to i64), ptr %t5034
+  store i64 ptrtoint (ptr @code_5478 to i64), ptr %t5034
   %t5035 = or i64 %t5033, 4
   %t5036 = load i64, ptr @"scheme.base:map"
   %t5037 = and i64 %t5036, -8
@@ -8201,7 +8201,7 @@ then648:
   %t5056 = load i64, ptr %t5055
   %t5057 = call i64 @rt_alloc_words(i64 2)
   %t5058 = inttoptr i64 %t5057 to ptr
-  store i64 ptrtoint (ptr @code_5440 to i64), ptr %t5058
+  store i64 ptrtoint (ptr @code_5480 to i64), ptr %t5058
   %t5059 = getelementptr i64, ptr %t5058, i64 1
   store i64 %t5056, ptr %t5059
   %t5060 = or i64 %t5057, 4
@@ -8261,7 +8261,7 @@ else641:
   ret i64 %t5103
 }
 
-define fastcc i64 @code_5426(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5466(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t5104 = icmp eq i64 %argc, 0
   br i1 %t5104, label %argok651, label %arityerr650
@@ -8287,7 +8287,7 @@ argok651:
   %t5120 = load i64, ptr %t5119
   %t5121 = call i64 @rt_alloc_words(i64 5)
   %t5122 = inttoptr i64 %t5121 to ptr
-  store i64 ptrtoint (ptr @code_5428 to i64), ptr %t5122
+  store i64 ptrtoint (ptr @code_5468 to i64), ptr %t5122
   %t5123 = getelementptr i64, ptr %t5122, i64 1
   store i64 %t5108, ptr %t5123
   %t5124 = getelementptr i64, ptr %t5122, i64 2
@@ -8407,7 +8407,7 @@ else653:
   ret i64 %t5214
 }
 
-define fastcc i64 @code_5424(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5464(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t5215 = icmp eq i64 %argc, 0
   br i1 %t5215, label %argok663, label %arityerr662
@@ -8437,7 +8437,7 @@ argok663:
   %t5235 = load i64, ptr %t5234
   %t5236 = call i64 @rt_alloc_words(i64 6)
   %t5237 = inttoptr i64 %t5236 to ptr
-  store i64 ptrtoint (ptr @code_5426 to i64), ptr %t5237
+  store i64 ptrtoint (ptr @code_5466 to i64), ptr %t5237
   %t5238 = getelementptr i64, ptr %t5237, i64 1
   store i64 %t5219, ptr %t5238
   %t5239 = getelementptr i64, ptr %t5237, i64 2
@@ -8530,7 +8530,7 @@ else665:
   ret i64 %t5309
 }
 
-define fastcc i64 @code_5422(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5462(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t5310 = icmp eq i64 %argc, 0
   br i1 %t5310, label %argok671, label %arityerr670
@@ -8560,7 +8560,7 @@ argok671:
   %t5330 = load i64, ptr %t5329
   %t5331 = call i64 @rt_alloc_words(i64 6)
   %t5332 = inttoptr i64 %t5331 to ptr
-  store i64 ptrtoint (ptr @code_5424 to i64), ptr %t5332
+  store i64 ptrtoint (ptr @code_5464 to i64), ptr %t5332
   %t5333 = getelementptr i64, ptr %t5332, i64 1
   store i64 %t5314, ptr %t5333
   %t5334 = getelementptr i64, ptr %t5332, i64 2
@@ -8653,7 +8653,7 @@ else673:
   ret i64 %t5404
 }
 
-define fastcc i64 @code_5420(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5460(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t5405 = icmp eq i64 %argc, 0
   br i1 %t5405, label %argok679, label %arityerr678
@@ -8683,7 +8683,7 @@ argok679:
   %t5425 = load i64, ptr %t5424
   %t5426 = call i64 @rt_alloc_words(i64 6)
   %t5427 = inttoptr i64 %t5426 to ptr
-  store i64 ptrtoint (ptr @code_5422 to i64), ptr %t5427
+  store i64 ptrtoint (ptr @code_5462 to i64), ptr %t5427
   %t5428 = getelementptr i64, ptr %t5427, i64 1
   store i64 %t5409, ptr %t5428
   %t5429 = getelementptr i64, ptr %t5427, i64 2
@@ -8767,7 +8767,7 @@ else681:
   ret i64 %t5490
 }
 
-define fastcc i64 @code_5418(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5458(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t5491 = icmp eq i64 %argc, 0
   br i1 %t5491, label %argok687, label %arityerr686
@@ -8797,7 +8797,7 @@ argok687:
   %t5511 = load i64, ptr %t5510
   %t5512 = call i64 @rt_alloc_words(i64 6)
   %t5513 = inttoptr i64 %t5512 to ptr
-  store i64 ptrtoint (ptr @code_5420 to i64), ptr %t5513
+  store i64 ptrtoint (ptr @code_5460 to i64), ptr %t5513
   %t5514 = getelementptr i64, ptr %t5513, i64 1
   store i64 %t5495, ptr %t5514
   %t5515 = getelementptr i64, ptr %t5513, i64 2
@@ -8899,7 +8899,7 @@ else689:
   ret i64 %t5586
 }
 
-define fastcc i64 @code_5416(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5456(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t5587 = icmp eq i64 %argc, 0
   br i1 %t5587, label %argok699, label %arityerr698
@@ -8929,7 +8929,7 @@ argok699:
   %t5607 = load i64, ptr %t5606
   %t5608 = call i64 @rt_alloc_words(i64 6)
   %t5609 = inttoptr i64 %t5608 to ptr
-  store i64 ptrtoint (ptr @code_5418 to i64), ptr %t5609
+  store i64 ptrtoint (ptr @code_5458 to i64), ptr %t5609
   %t5610 = getelementptr i64, ptr %t5609, i64 1
   store i64 %t5591, ptr %t5610
   %t5611 = getelementptr i64, ptr %t5609, i64 2
@@ -9040,7 +9040,7 @@ else701:
   ret i64 %t5691
 }
 
-define fastcc i64 @code_5414(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5454(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t5692 = icmp eq i64 %argc, 0
   br i1 %t5692, label %argok711, label %arityerr710
@@ -9070,7 +9070,7 @@ argok711:
   %t5712 = load i64, ptr %t5711
   %t5713 = call i64 @rt_alloc_words(i64 6)
   %t5714 = inttoptr i64 %t5713 to ptr
-  store i64 ptrtoint (ptr @code_5416 to i64), ptr %t5714
+  store i64 ptrtoint (ptr @code_5456 to i64), ptr %t5714
   %t5715 = getelementptr i64, ptr %t5714, i64 1
   store i64 %t5696, ptr %t5715
   %t5716 = getelementptr i64, ptr %t5714, i64 2
@@ -9204,7 +9204,7 @@ else713:
   ret i64 %t5815
 }
 
-define fastcc i64 @code_5412(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5452(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t5816 = icmp eq i64 %argc, 0
   br i1 %t5816, label %argok725, label %arityerr724
@@ -9234,7 +9234,7 @@ argok725:
   %t5836 = load i64, ptr %t5835
   %t5837 = call i64 @rt_alloc_words(i64 6)
   %t5838 = inttoptr i64 %t5837 to ptr
-  store i64 ptrtoint (ptr @code_5414 to i64), ptr %t5838
+  store i64 ptrtoint (ptr @code_5454 to i64), ptr %t5838
   %t5839 = getelementptr i64, ptr %t5838, i64 1
   store i64 %t5820, ptr %t5839
   %t5840 = getelementptr i64, ptr %t5838, i64 2
@@ -9367,7 +9367,7 @@ else727:
   ret i64 %t5942
 }
 
-define fastcc i64 @code_5410(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5450(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t5943 = icmp eq i64 %argc, 0
   br i1 %t5943, label %argok737, label %arityerr736
@@ -9413,7 +9413,7 @@ argok737:
   %t5979 = load i64, ptr %t5978
   %t5980 = call i64 @rt_alloc_words(i64 10)
   %t5981 = inttoptr i64 %t5980 to ptr
-  store i64 ptrtoint (ptr @code_5412 to i64), ptr %t5981
+  store i64 ptrtoint (ptr @code_5452 to i64), ptr %t5981
   %t5982 = getelementptr i64, ptr %t5981, i64 1
   store i64 %t5947, ptr %t5982
   %t5983 = getelementptr i64, ptr %t5981, i64 2
@@ -9523,7 +9523,7 @@ else739:
   ret i64 %t6058
 }
 
-define fastcc i64 @code_5408(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5448(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t6059 = icmp eq i64 %argc, 0
   br i1 %t6059, label %argok749, label %arityerr748
@@ -9569,7 +9569,7 @@ argok749:
   %t6095 = load i64, ptr %t6094
   %t6096 = call i64 @rt_alloc_words(i64 10)
   %t6097 = inttoptr i64 %t6096 to ptr
-  store i64 ptrtoint (ptr @code_5410 to i64), ptr %t6097
+  store i64 ptrtoint (ptr @code_5450 to i64), ptr %t6097
   %t6098 = getelementptr i64, ptr %t6097, i64 1
   store i64 %t6063, ptr %t6098
   %t6099 = getelementptr i64, ptr %t6097, i64 2
@@ -9657,7 +9657,7 @@ else751:
   ret i64 %t6156
 }
 
-define fastcc i64 @code_5404(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5444(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t6157 = icmp eq i64 %argc, 2
   br i1 %t6157, label %argok759, label %arityerr758
@@ -9667,7 +9667,7 @@ arityerr758:
 argok759:
   %t6158 = call i64 @rt_alloc_words(i64 3)
   %t6159 = inttoptr i64 %t6158 to ptr
-  store i64 ptrtoint (ptr @code_5406 to i64), ptr %t6159
+  store i64 ptrtoint (ptr @code_5446 to i64), ptr %t6159
   %t6160 = or i64 %t6158, 4
   %t6161 = and i64 %self, -8
   %t6162 = inttoptr i64 %t6161 to ptr
@@ -9703,7 +9703,7 @@ argok759:
   %t6190 = load i64, ptr %t6189
   %t6191 = call i64 @rt_alloc_words(i64 11)
   %t6192 = inttoptr i64 %t6191 to ptr
-  store i64 ptrtoint (ptr @code_5408 to i64), ptr %t6192
+  store i64 ptrtoint (ptr @code_5448 to i64), ptr %t6192
   %t6193 = getelementptr i64, ptr %t6192, i64 1
   store i64 %a0, ptr %t6193
   %t6194 = getelementptr i64, ptr %t6192, i64 2
@@ -9777,7 +9777,7 @@ else761:
   ret i64 %t6236
 }
 
-define fastcc i64 @code_5402(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5442(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t6237 = icmp eq i64 %argc, 2
   br i1 %t6237, label %argok769, label %arityerr768
@@ -9787,7 +9787,7 @@ arityerr768:
 argok769:
   %t6238 = call i64 @rt_alloc_words(i64 7)
   %t6239 = inttoptr i64 %t6238 to ptr
-  store i64 ptrtoint (ptr @code_5404 to i64), ptr %t6239
+  store i64 ptrtoint (ptr @code_5444 to i64), ptr %t6239
   %t6240 = or i64 %t6238, 4
   %t6241 = getelementptr i64, ptr %t6239, i64 1
   store i64 %t6240, ptr %t6241
@@ -9825,7 +9825,7 @@ argok769:
   ret i64 %t6267
 }
 
-define fastcc i64 @code_5444(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5484(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t6268 = icmp eq i64 %argc, 1
   br i1 %t6268, label %argok771, label %arityerr770
@@ -9880,7 +9880,7 @@ argok771:
   ret i64 %t6312
 }
 
-define fastcc i64 @code_5446(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5486(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t6313 = icmp eq i64 %argc, 1
   br i1 %t6313, label %argok773, label %arityerr772
@@ -9906,7 +9906,7 @@ argok773:
   ret i64 %t6328
 }
 
-define fastcc i64 @code_5448(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5488(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t6329 = icmp eq i64 %argc, 1
   br i1 %t6329, label %argok775, label %arityerr774
@@ -9959,14 +9959,14 @@ then776:
 else777:
   %t6369 = call i64 @rt_intern(ptr @.str.sym.33)
   %t6370 = call i64 @rt_cdr(i64 %a0)
-  %t6371 = call fastcc i64 @code_5448(i64 %self, i64 1, i64 %t6370, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t6371 = call fastcc i64 @code_5488(i64 %self, i64 1, i64 %t6370, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t6372 = call i64 @rt_cons(i64 %t6371, i64 2)
   %t6373 = call i64 @rt_cons(i64 %t6365, i64 %t6372)
   %t6374 = call i64 @rt_cons(i64 %t6369, i64 %t6373)
   ret i64 %t6374
 }
 
-define fastcc i64 @code_5442(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5482(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t6375 = icmp eq i64 %argc, 3
   br i1 %t6375, label %argok779, label %arityerr778
@@ -9976,7 +9976,7 @@ arityerr778:
 argok779:
   %t6376 = call i64 @rt_alloc_words(i64 6)
   %t6377 = inttoptr i64 %t6376 to ptr
-  store i64 ptrtoint (ptr @code_5444 to i64), ptr %t6377
+  store i64 ptrtoint (ptr @code_5484 to i64), ptr %t6377
   %t6378 = or i64 %t6376, 4
   %t6379 = and i64 %self, -8
   %t6380 = inttoptr i64 %t6379 to ptr
@@ -10143,7 +10143,7 @@ then786:
   %t6522 = load i64, ptr %t6521
   %t6523 = call i64 @rt_alloc_words(i64 3)
   %t6524 = inttoptr i64 %t6523 to ptr
-  store i64 ptrtoint (ptr @code_5446 to i64), ptr %t6524
+  store i64 ptrtoint (ptr @code_5486 to i64), ptr %t6524
   %t6525 = getelementptr i64, ptr %t6524, i64 1
   store i64 %t6522, ptr %t6525
   %t6526 = getelementptr i64, ptr %t6524, i64 2
@@ -10157,7 +10157,7 @@ then786:
   %t6533 = call fastcc i64%t6532(i64 %t6528, i64 2, i64 %t6527, i64 %t6518, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t6534 = call i64 @rt_alloc_words(i64 5)
   %t6535 = inttoptr i64 %t6534 to ptr
-  store i64 ptrtoint (ptr @code_5448 to i64), ptr %t6535
+  store i64 ptrtoint (ptr @code_5488 to i64), ptr %t6535
   %t6536 = or i64 %t6534, 4
   %t6537 = and i64 %self, -8
   %t6538 = inttoptr i64 %t6537 to ptr
@@ -10186,7 +10186,7 @@ else787:
   ret i64 %t6554
 }
 
-define fastcc i64 @code_5450(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5490(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t6555 = icmp eq i64 %argc, 2
   br i1 %t6555, label %argok789, label %arityerr788
@@ -10207,7 +10207,7 @@ argok789:
   ret i64 %t6565
 }
 
-define fastcc i64 @code_5452(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5492(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t6566 = icmp eq i64 %argc, 2
   br i1 %t6566, label %argok791, label %arityerr790
@@ -10239,7 +10239,7 @@ argok791:
   ret i64 %t6587
 }
 
-define fastcc i64 @code_5454(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5494(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t6588 = icmp eq i64 %argc, 1
   br i1 %t6588, label %argok793, label %arityerr792
@@ -10260,7 +10260,7 @@ argok793:
   ret i64 %t6598
 }
 
-define fastcc i64 @code_5458(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5498(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t6599 = icmp eq i64 %argc, 1
   br i1 %t6599, label %argok795, label %arityerr794
@@ -10287,7 +10287,7 @@ else797:
   ret i64 %a0
 }
 
-define fastcc i64 @code_5460(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5500(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t6612 = icmp eq i64 %argc, 1
   br i1 %t6612, label %argok799, label %arityerr798
@@ -10312,7 +10312,7 @@ argok799:
   ret i64 %t6626
 }
 
-define fastcc i64 @code_5482(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5522(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t6627 = icmp eq i64 %argc, 0
   br i1 %t6627, label %argok801, label %arityerr800
@@ -10335,7 +10335,7 @@ argok801:
   ret i64 %t6639
 }
 
-define fastcc i64 @code_5484(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5524(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t6640 = icmp eq i64 %argc, 1
   br i1 %t6640, label %argok803, label %arityerr802
@@ -10347,7 +10347,7 @@ argok803:
   ret i64 %t6641
 }
 
-define fastcc i64 @code_5486(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5526(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t6642 = icmp eq i64 %argc, 2
   br i1 %t6642, label %argok805, label %arityerr804
@@ -10359,7 +10359,7 @@ argok805:
   ret i64 %t6643
 }
 
-define fastcc i64 @code_5488(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5528(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t6644 = icmp eq i64 %argc, 1
   br i1 %t6644, label %argok807, label %arityerr806
@@ -10390,7 +10390,7 @@ argok807:
   ret i64 %t6664
 }
 
-define fastcc i64 @code_5480(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5520(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t6665 = icmp eq i64 %argc, 0
   br i1 %t6665, label %argok809, label %arityerr808
@@ -10404,7 +10404,7 @@ argok809:
   %t6669 = load i64, ptr %t6668
   %t6670 = call i64 @rt_alloc_words(i64 2)
   %t6671 = inttoptr i64 %t6670 to ptr
-  store i64 ptrtoint (ptr @code_5482 to i64), ptr %t6671
+  store i64 ptrtoint (ptr @code_5522 to i64), ptr %t6671
   %t6672 = getelementptr i64, ptr %t6671, i64 1
   store i64 %t6669, ptr %t6672
   %t6673 = or i64 %t6670, 4
@@ -10449,7 +10449,7 @@ then816:
 then818:
   %t6703 = call i64 @rt_alloc_words(i64 1)
   %t6704 = inttoptr i64 %t6703 to ptr
-  store i64 ptrtoint (ptr @code_5484 to i64), ptr %t6704
+  store i64 ptrtoint (ptr @code_5524 to i64), ptr %t6704
   %t6705 = or i64 %t6703, 4
   %t6706 = load i64, ptr @"scheme.base:map"
   %t6707 = and i64 %t6706, -8
@@ -10470,7 +10470,7 @@ then818:
   %t6722 = call fastcc i64%t6721(i64 %t6717, i64 2, i64 %t6716, i64 %t6711, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t6723 = call i64 @rt_alloc_words(i64 1)
   %t6724 = inttoptr i64 %t6723 to ptr
-  store i64 ptrtoint (ptr @code_5486 to i64), ptr %t6724
+  store i64 ptrtoint (ptr @code_5526 to i64), ptr %t6724
   %t6725 = or i64 %t6723, 4
   %t6726 = load i64, ptr @"scheme.base:map"
   %t6727 = and i64 %t6726, -8
@@ -10494,7 +10494,7 @@ then818:
   %t6745 = load i64, ptr %t6744
   %t6746 = call i64 @rt_alloc_words(i64 3)
   %t6747 = inttoptr i64 %t6746 to ptr
-  store i64 ptrtoint (ptr @code_5488 to i64), ptr %t6747
+  store i64 ptrtoint (ptr @code_5528 to i64), ptr %t6747
   %t6748 = getelementptr i64, ptr %t6747, i64 1
   store i64 %t6745, ptr %t6748
   %t6749 = getelementptr i64, ptr %t6747, i64 2
@@ -10565,7 +10565,7 @@ else811:
   ret i64 %t6802
 }
 
-define fastcc i64 @code_5490(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5530(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t6803 = icmp eq i64 %argc, 1
   br i1 %t6803, label %argok821, label %arityerr820
@@ -10577,7 +10577,7 @@ argok821:
   ret i64 %t6804
 }
 
-define fastcc i64 @code_5492(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5532(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t6805 = icmp eq i64 %argc, 1
   br i1 %t6805, label %argok823, label %arityerr822
@@ -10603,7 +10603,7 @@ argok823:
   ret i64 %t6820
 }
 
-define fastcc i64 @code_5494(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5534(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t6821 = icmp eq i64 %argc, 2
   br i1 %t6821, label %argok825, label %arityerr824
@@ -10615,7 +10615,7 @@ argok825:
   ret i64 %t6822
 }
 
-define fastcc i64 @code_5478(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5518(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t6823 = icmp eq i64 %argc, 0
   br i1 %t6823, label %argok827, label %arityerr826
@@ -10641,7 +10641,7 @@ argok827:
   %t6839 = load i64, ptr %t6838
   %t6840 = call i64 @rt_alloc_words(i64 5)
   %t6841 = inttoptr i64 %t6840 to ptr
-  store i64 ptrtoint (ptr @code_5480 to i64), ptr %t6841
+  store i64 ptrtoint (ptr @code_5520 to i64), ptr %t6841
   %t6842 = getelementptr i64, ptr %t6841, i64 1
   store i64 %t6827, ptr %t6842
   %t6843 = getelementptr i64, ptr %t6841, i64 2
@@ -10692,7 +10692,7 @@ then834:
 then836:
   %t6876 = call i64 @rt_alloc_words(i64 1)
   %t6877 = inttoptr i64 %t6876 to ptr
-  store i64 ptrtoint (ptr @code_5490 to i64), ptr %t6877
+  store i64 ptrtoint (ptr @code_5530 to i64), ptr %t6877
   %t6878 = or i64 %t6876, 4
   %t6879 = load i64, ptr @"scheme.base:map"
   %t6880 = and i64 %t6879, -8
@@ -10706,7 +10706,7 @@ then836:
   %t6888 = load i64, ptr %t6887
   %t6889 = call i64 @rt_alloc_words(i64 2)
   %t6890 = inttoptr i64 %t6889 to ptr
-  store i64 ptrtoint (ptr @code_5492 to i64), ptr %t6890
+  store i64 ptrtoint (ptr @code_5532 to i64), ptr %t6890
   %t6891 = getelementptr i64, ptr %t6890, i64 1
   store i64 %t6888, ptr %t6891
   %t6892 = or i64 %t6889, 4
@@ -10729,7 +10729,7 @@ then836:
   %t6909 = call fastcc i64%t6908(i64 %t6904, i64 2, i64 %t6903, i64 %t6884, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t6910 = call i64 @rt_alloc_words(i64 1)
   %t6911 = inttoptr i64 %t6910 to ptr
-  store i64 ptrtoint (ptr @code_5494 to i64), ptr %t6911
+  store i64 ptrtoint (ptr @code_5534 to i64), ptr %t6911
   %t6912 = or i64 %t6910, 4
   %t6913 = load i64, ptr @"scheme.base:map"
   %t6914 = and i64 %t6913, -8
@@ -10806,7 +10806,7 @@ else829:
   ret i64 %t6974
 }
 
-define fastcc i64 @code_5496(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5536(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t6975 = icmp eq i64 %argc, 2
   br i1 %t6975, label %argok839, label %arityerr838
@@ -10818,7 +10818,7 @@ argok839:
   ret i64 %t6976
 }
 
-define fastcc i64 @code_5498(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5538(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t6977 = icmp eq i64 %argc, 1
   br i1 %t6977, label %argok841, label %arityerr840
@@ -10840,7 +10840,7 @@ argok841:
   ret i64 %t6988
 }
 
-define fastcc i64 @code_5476(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5516(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t6989 = icmp eq i64 %argc, 0
   br i1 %t6989, label %argok843, label %arityerr842
@@ -10870,7 +10870,7 @@ argok843:
   %t7009 = load i64, ptr %t7008
   %t7010 = call i64 @rt_alloc_words(i64 6)
   %t7011 = inttoptr i64 %t7010 to ptr
-  store i64 ptrtoint (ptr @code_5478 to i64), ptr %t7011
+  store i64 ptrtoint (ptr @code_5518 to i64), ptr %t7011
   %t7012 = getelementptr i64, ptr %t7011, i64 1
   store i64 %t6993, ptr %t7012
   %t7013 = getelementptr i64, ptr %t7011, i64 2
@@ -10944,7 +10944,7 @@ then852:
   %t7067 = call fastcc i64%t7066(i64 %t7062, i64 2, i64 %t7061, i64 %t7056, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t7068 = call i64 @rt_alloc_words(i64 1)
   %t7069 = inttoptr i64 %t7068 to ptr
-  store i64 ptrtoint (ptr @code_5496 to i64), ptr %t7069
+  store i64 ptrtoint (ptr @code_5536 to i64), ptr %t7069
   %t7070 = or i64 %t7068, 4
   %t7071 = load i64, ptr @"scheme.base:map"
   %t7072 = and i64 %t7071, -8
@@ -10964,7 +10964,7 @@ then852:
   %t7086 = call fastcc i64%t7085(i64 %t7081, i64 2, i64 %t7076, i64 %t7080, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t7087 = call i64 @rt_alloc_words(i64 2)
   %t7088 = inttoptr i64 %t7087 to ptr
-  store i64 ptrtoint (ptr @code_5498 to i64), ptr %t7088
+  store i64 ptrtoint (ptr @code_5538 to i64), ptr %t7088
   %t7089 = getelementptr i64, ptr %t7088, i64 1
   store i64 %t7076, ptr %t7089
   %t7090 = or i64 %t7087, 4
@@ -11071,7 +11071,7 @@ else845:
   ret i64 %t7174
 }
 
-define fastcc i64 @code_5474(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5514(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t7175 = icmp eq i64 %argc, 0
   br i1 %t7175, label %argok858, label %arityerr857
@@ -11117,7 +11117,7 @@ argok858:
   %t7211 = load i64, ptr %t7210
   %t7212 = call i64 @rt_alloc_words(i64 10)
   %t7213 = inttoptr i64 %t7212 to ptr
-  store i64 ptrtoint (ptr @code_5476 to i64), ptr %t7213
+  store i64 ptrtoint (ptr @code_5516 to i64), ptr %t7213
   %t7214 = getelementptr i64, ptr %t7213, i64 1
   store i64 %t7179, ptr %t7214
   %t7215 = getelementptr i64, ptr %t7213, i64 2
@@ -11218,7 +11218,7 @@ else860:
   ret i64 %t7289
 }
 
-define fastcc i64 @code_5472(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5512(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t7290 = icmp eq i64 %argc, 0
   br i1 %t7290, label %argok866, label %arityerr865
@@ -11264,7 +11264,7 @@ argok866:
   %t7326 = load i64, ptr %t7325
   %t7327 = call i64 @rt_alloc_words(i64 10)
   %t7328 = inttoptr i64 %t7327 to ptr
-  store i64 ptrtoint (ptr @code_5474 to i64), ptr %t7328
+  store i64 ptrtoint (ptr @code_5514 to i64), ptr %t7328
   %t7329 = getelementptr i64, ptr %t7328, i64 1
   store i64 %t7294, ptr %t7329
   %t7330 = getelementptr i64, ptr %t7328, i64 2
@@ -11365,7 +11365,7 @@ else868:
   ret i64 %t7404
 }
 
-define fastcc i64 @code_5470(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5510(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t7405 = icmp eq i64 %argc, 0
   br i1 %t7405, label %argok874, label %arityerr873
@@ -11411,7 +11411,7 @@ argok874:
   %t7441 = load i64, ptr %t7440
   %t7442 = call i64 @rt_alloc_words(i64 10)
   %t7443 = inttoptr i64 %t7442 to ptr
-  store i64 ptrtoint (ptr @code_5472 to i64), ptr %t7443
+  store i64 ptrtoint (ptr @code_5512 to i64), ptr %t7443
   %t7444 = getelementptr i64, ptr %t7443, i64 1
   store i64 %t7409, ptr %t7444
   %t7445 = getelementptr i64, ptr %t7443, i64 2
@@ -11503,7 +11503,7 @@ else876:
   ret i64 %t7510
 }
 
-define fastcc i64 @code_5468(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5508(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t7511 = icmp eq i64 %argc, 0
   br i1 %t7511, label %argok882, label %arityerr881
@@ -11549,7 +11549,7 @@ argok882:
   %t7547 = load i64, ptr %t7546
   %t7548 = call i64 @rt_alloc_words(i64 10)
   %t7549 = inttoptr i64 %t7548 to ptr
-  store i64 ptrtoint (ptr @code_5470 to i64), ptr %t7549
+  store i64 ptrtoint (ptr @code_5510 to i64), ptr %t7549
   %t7550 = getelementptr i64, ptr %t7549, i64 1
   store i64 %t7515, ptr %t7550
   %t7551 = getelementptr i64, ptr %t7549, i64 2
@@ -11668,7 +11668,7 @@ else884:
   ret i64 %t7635
 }
 
-define fastcc i64 @code_5466(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5506(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t7636 = icmp eq i64 %argc, 0
   br i1 %t7636, label %argok894, label %arityerr893
@@ -11718,7 +11718,7 @@ argok894:
   %t7676 = load i64, ptr %t7675
   %t7677 = call i64 @rt_alloc_words(i64 11)
   %t7678 = inttoptr i64 %t7677 to ptr
-  store i64 ptrtoint (ptr @code_5468 to i64), ptr %t7678
+  store i64 ptrtoint (ptr @code_5508 to i64), ptr %t7678
   %t7679 = getelementptr i64, ptr %t7678, i64 1
   store i64 %t7640, ptr %t7679
   %t7680 = getelementptr i64, ptr %t7678, i64 2
@@ -11839,7 +11839,7 @@ else896:
   ret i64 %t7765
 }
 
-define fastcc i64 @code_5464(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5504(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t7766 = icmp eq i64 %argc, 0
   br i1 %t7766, label %argok906, label %arityerr905
@@ -11889,7 +11889,7 @@ argok906:
   %t7806 = load i64, ptr %t7805
   %t7807 = call i64 @rt_alloc_words(i64 11)
   %t7808 = inttoptr i64 %t7807 to ptr
-  store i64 ptrtoint (ptr @code_5466 to i64), ptr %t7808
+  store i64 ptrtoint (ptr @code_5506 to i64), ptr %t7808
   %t7809 = getelementptr i64, ptr %t7808, i64 1
   store i64 %t7770, ptr %t7809
   %t7810 = getelementptr i64, ptr %t7808, i64 2
@@ -12033,7 +12033,7 @@ else908:
   ret i64 %t7914
 }
 
-define fastcc i64 @code_5462(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5502(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t7915 = icmp eq i64 %argc, 0
   br i1 %t7915, label %argok920, label %arityerr919
@@ -12083,7 +12083,7 @@ argok920:
   %t7955 = load i64, ptr %t7954
   %t7956 = call i64 @rt_alloc_words(i64 11)
   %t7957 = inttoptr i64 %t7956 to ptr
-  store i64 ptrtoint (ptr @code_5464 to i64), ptr %t7957
+  store i64 ptrtoint (ptr @code_5504 to i64), ptr %t7957
   %t7958 = getelementptr i64, ptr %t7957, i64 1
   store i64 %t7919, ptr %t7958
   %t7959 = getelementptr i64, ptr %t7957, i64 2
@@ -12132,7 +12132,7 @@ else922:
   ret i64 %t7988
 }
 
-define fastcc i64 @code_5456(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5496(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t7989 = icmp eq i64 %argc, 2
   br i1 %t7989, label %argok924, label %arityerr923
@@ -12142,11 +12142,11 @@ arityerr923:
 argok924:
   %t7990 = call i64 @rt_alloc_words(i64 2)
   %t7991 = inttoptr i64 %t7990 to ptr
-  store i64 ptrtoint (ptr @code_5458 to i64), ptr %t7991
+  store i64 ptrtoint (ptr @code_5498 to i64), ptr %t7991
   %t7992 = or i64 %t7990, 4
   %t7993 = call i64 @rt_alloc_words(i64 3)
   %t7994 = inttoptr i64 %t7993 to ptr
-  store i64 ptrtoint (ptr @code_5460 to i64), ptr %t7994
+  store i64 ptrtoint (ptr @code_5500 to i64), ptr %t7994
   %t7995 = or i64 %t7993, 4
   %t7996 = getelementptr i64, ptr %t7991, i64 1
   store i64 %a1, ptr %t7996
@@ -12184,7 +12184,7 @@ argok924:
   %t8026 = load i64, ptr %t8025
   %t8027 = call i64 @rt_alloc_words(i64 11)
   %t8028 = inttoptr i64 %t8027 to ptr
-  store i64 ptrtoint (ptr @code_5462 to i64), ptr %t8028
+  store i64 ptrtoint (ptr @code_5502 to i64), ptr %t8028
   %t8029 = getelementptr i64, ptr %t8028, i64 1
   store i64 %a0, ptr %t8029
   %t8030 = getelementptr i64, ptr %t8028, i64 2
@@ -12258,7 +12258,7 @@ else926:
   ret i64 %t8072
 }
 
-define fastcc i64 @code_5500(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5540(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t8073 = icmp eq i64 %argc, 1
   br i1 %t8073, label %argok934, label %arityerr933
@@ -12278,7 +12278,7 @@ else936:
   ret i64 1
 }
 
-define fastcc i64 @code_5504(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5544(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t8079 = icmp eq i64 %argc, 1
   br i1 %t8079, label %argok938, label %arityerr937
@@ -12297,7 +12297,7 @@ argok938:
   ret i64 %t8087
 }
 
-define fastcc i64 @code_5502(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5542(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t8088 = icmp eq i64 %argc, 1
   br i1 %t8088, label %argok940, label %arityerr939
@@ -12353,7 +12353,7 @@ merge946:
   %t8122 = call fastcc i64%t8121(i64 %t8117, i64 1, i64 %t8100, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t8123 = call i64 @rt_alloc_words(i64 1)
   %t8124 = inttoptr i64 %t8123 to ptr
-  store i64 ptrtoint (ptr @code_5504 to i64), ptr %t8124
+  store i64 ptrtoint (ptr @code_5544 to i64), ptr %t8124
   %t8125 = or i64 %t8123, 4
   %t8126 = load i64, ptr @"scheme.base:cddr"
   %t8127 = and i64 %t8126, -8
@@ -12372,7 +12372,7 @@ merge946:
   ret i64 %t8139
 }
 
-define fastcc i64 @code_5508(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5548(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t8140 = icmp eq i64 %argc, 3
   br i1 %t8140, label %argok948, label %arityerr947
@@ -12431,17 +12431,17 @@ then951:
   %t8183 = inttoptr i64 %t8182 to ptr
   %t8184 = call fastcc i64%t8183(i64 %t8179, i64 1, i64 %t8174, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t8185 = call i64 @rt_cons(i64 %t8184, i64 %a1)
-  %t8186 = musttail call fastcc i64 @code_5508(i64 %self, i64 3, i64 %t8173, i64 %t8185, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t8186 = musttail call fastcc i64 @code_5548(i64 %self, i64 3, i64 %t8173, i64 %t8185, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t8186
 else952:
   %t8187 = call i64 @rt_cdr(i64 %a0)
   %t8188 = call i64 @rt_car(i64 %a0)
   %t8189 = call i64 @rt_cons(i64 %t8188, i64 %a2)
-  %t8190 = musttail call fastcc i64 @code_5508(i64 %self, i64 3, i64 %t8187, i64 %a1, i64 %t8189, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t8190 = musttail call fastcc i64 @code_5548(i64 %self, i64 3, i64 %t8187, i64 %a1, i64 %t8189, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t8190
 }
 
-define fastcc i64 @code_5506(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5546(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t8191 = icmp eq i64 %argc, 1
   br i1 %t8191, label %argok954, label %arityerr953
@@ -12451,7 +12451,7 @@ arityerr953:
 argok954:
   %t8192 = call i64 @rt_alloc_words(i64 4)
   %t8193 = inttoptr i64 %t8192 to ptr
-  store i64 ptrtoint (ptr @code_5508 to i64), ptr %t8193
+  store i64 ptrtoint (ptr @code_5548 to i64), ptr %t8193
   %t8194 = or i64 %t8192, 4
   %t8195 = and i64 %self, -8
   %t8196 = inttoptr i64 %t8195 to ptr
@@ -12475,7 +12475,7 @@ argok954:
   ret i64 %t8210
 }
 
-define fastcc i64 @code_5510(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5550(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t8211 = icmp eq i64 %argc, 1
   br i1 %t8211, label %argok956, label %arityerr955
@@ -12492,7 +12492,7 @@ argok956:
   ret i64 %t8217
 }
 
-define fastcc i64 @code_5512(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5552(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t8218 = icmp eq i64 %argc, 1
   br i1 %t8218, label %argok958, label %arityerr957
@@ -12516,7 +12516,7 @@ else960:
   ret i64 1
 }
 
-define fastcc i64 @code_5514(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5554(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t8228 = icmp eq i64 %argc, 1
   br i1 %t8228, label %argok962, label %arityerr961
@@ -12528,7 +12528,7 @@ argok962:
   ret i64 %t8229
 }
 
-define fastcc i64 @code_5518(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5558(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t8230 = icmp eq i64 %argc, 2
   br i1 %t8230, label %argok964, label %arityerr963
@@ -12553,13 +12553,13 @@ fixslow968:
   br label %fixmerge969
 fixmerge969:
   %t8239 = phi i64 [ %t8237, %fixfast967 ], [ %t8238, %fixslow968 ]
-  %t8240 = musttail call fastcc i64 @code_5518(i64 %self, i64 2, i64 %t8233, i64 %t8239, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t8240 = musttail call fastcc i64 @code_5558(i64 %self, i64 2, i64 %t8233, i64 %t8239, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t8240
 else966:
   ret i64 %a1
 }
 
-define fastcc i64 @code_5516(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5556(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t8241 = icmp eq i64 %argc, 1
   br i1 %t8241, label %argok971, label %arityerr970
@@ -12569,7 +12569,7 @@ arityerr970:
 argok971:
   %t8242 = call i64 @rt_alloc_words(i64 2)
   %t8243 = inttoptr i64 %t8242 to ptr
-  store i64 ptrtoint (ptr @code_5518 to i64), ptr %t8243
+  store i64 ptrtoint (ptr @code_5558 to i64), ptr %t8243
   %t8244 = or i64 %t8242, 4
   %t8245 = getelementptr i64, ptr %t8243, i64 1
   store i64 %t8244, ptr %t8245
@@ -12581,7 +12581,7 @@ argok971:
   ret i64 %t8250
 }
 
-define fastcc i64 @code_5520(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5560(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t8251 = icmp eq i64 %argc, 2
   br i1 %t8251, label %argok973, label %arityerr972
@@ -12635,7 +12635,7 @@ fixmerge981:
   ret i64 %t8278
 }
 
-define fastcc i64 @code_5524(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5564(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t8279 = icmp eq i64 %argc, 3
   br i1 %t8279, label %argok983, label %arityerr982
@@ -12739,20 +12739,20 @@ fixslow1001:
   br label %fixmerge1002
 fixmerge1002:
   %t8341 = phi i64 [ %t8339, %fixfast1000 ], [ %t8340, %fixslow1001 ]
-  %t8342 = call fastcc i64 @code_5524(i64 %self, i64 3, i64 %t8335, i64 %t8341, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t8343 = musttail call fastcc i64 @code_5524(i64 %self, i64 3, i64 %t8334, i64 %a1, i64 %t8342, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t8342 = call fastcc i64 @code_5564(i64 %self, i64 3, i64 %t8335, i64 %t8341, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t8343 = musttail call fastcc i64 @code_5564(i64 %self, i64 3, i64 %t8334, i64 %a1, i64 %t8342, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t8343
 else999:
   %t8344 = call i64 @rt_cdr(i64 %a0)
   %t8345 = call i64 @rt_car(i64 %a0)
-  %t8346 = call fastcc i64 @code_5524(i64 %self, i64 3, i64 %t8345, i64 %a1, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t8347 = musttail call fastcc i64 @code_5524(i64 %self, i64 3, i64 %t8344, i64 %a1, i64 %t8346, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t8346 = call fastcc i64 @code_5564(i64 %self, i64 3, i64 %t8345, i64 %a1, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t8347 = musttail call fastcc i64 @code_5564(i64 %self, i64 3, i64 %t8344, i64 %a1, i64 %t8346, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t8347
 else994:
   ret i64 %a2
 }
 
-define fastcc i64 @code_5522(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5562(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t8348 = icmp eq i64 %argc, 2
   br i1 %t8348, label %argok1004, label %arityerr1003
@@ -12762,7 +12762,7 @@ arityerr1003:
 argok1004:
   %t8349 = call i64 @rt_alloc_words(i64 5)
   %t8350 = inttoptr i64 %t8349 to ptr
-  store i64 ptrtoint (ptr @code_5524 to i64), ptr %t8350
+  store i64 ptrtoint (ptr @code_5564 to i64), ptr %t8350
   %t8351 = or i64 %t8349, 4
   %t8352 = and i64 %self, -8
   %t8353 = inttoptr i64 %t8352 to ptr
@@ -12788,7 +12788,7 @@ argok1004:
   ret i64 %t8368
 }
 
-define fastcc i64 @code_5526(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5566(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t8369 = icmp eq i64 %argc, 3
   br i1 %t8369, label %argok1006, label %arityerr1005
@@ -12996,7 +12996,7 @@ else1033:
   ret i64 %t8512
 }
 
-define fastcc i64 @code_5530(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5570(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t8513 = icmp eq i64 %argc, 1
   br i1 %t8513, label %argok1035, label %arityerr1034
@@ -13025,7 +13025,7 @@ argok1035:
   ret i64 %t8531
 }
 
-define fastcc i64 @code_5532(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5572(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t8532 = icmp eq i64 %argc, 1
   br i1 %t8532, label %argok1037, label %arityerr1036
@@ -13042,7 +13042,7 @@ argok1037:
   ret i64 %t8538
 }
 
-define fastcc i64 @code_5534(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5574(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t8539 = icmp eq i64 %argc, 1
   br i1 %t8539, label %argok1039, label %arityerr1038
@@ -13054,7 +13054,7 @@ argok1039:
   ret i64 %t8540
 }
 
-define fastcc i64 @code_5538(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5578(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t8541 = icmp eq i64 %argc, 1
   br i1 %t8541, label %argok1041, label %arityerr1040
@@ -13076,7 +13076,7 @@ argok1041:
   ret i64 %t8552
 }
 
-define fastcc i64 @code_5536(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5576(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t8553 = icmp eq i64 %argc, 1
   br i1 %t8553, label %argok1043, label %arityerr1042
@@ -13086,7 +13086,7 @@ arityerr1042:
 argok1043:
   %t8554 = call i64 @rt_alloc_words(i64 2)
   %t8555 = inttoptr i64 %t8554 to ptr
-  store i64 ptrtoint (ptr @code_5538 to i64), ptr %t8555
+  store i64 ptrtoint (ptr @code_5578 to i64), ptr %t8555
   %t8556 = getelementptr i64, ptr %t8555, i64 1
   store i64 %a0, ptr %t8556
   %t8557 = or i64 %t8554, 4
@@ -13114,7 +13114,7 @@ argok1043:
   ret i64 %t8578
 }
 
-define fastcc i64 @code_5528(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5568(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t8579 = icmp eq i64 %argc, 4
   br i1 %t8579, label %argok1045, label %arityerr1044
@@ -13199,7 +13199,7 @@ fixmerge1053:
   %t8638 = load i64, ptr %t8637
   %t8639 = call i64 @rt_alloc_words(i64 4)
   %t8640 = inttoptr i64 %t8639 to ptr
-  store i64 ptrtoint (ptr @code_5530 to i64), ptr %t8640
+  store i64 ptrtoint (ptr @code_5570 to i64), ptr %t8640
   %t8641 = getelementptr i64, ptr %t8640, i64 1
   store i64 %t8638, ptr %t8641
   %t8642 = getelementptr i64, ptr %t8640, i64 2
@@ -13219,7 +13219,7 @@ fixmerge1053:
   %t8654 = load i64, ptr %t8653
   %t8655 = call i64 @rt_alloc_words(i64 2)
   %t8656 = inttoptr i64 %t8655 to ptr
-  store i64 ptrtoint (ptr @code_5532 to i64), ptr %t8656
+  store i64 ptrtoint (ptr @code_5572 to i64), ptr %t8656
   %t8657 = getelementptr i64, ptr %t8656, i64 1
   store i64 %t8654, ptr %t8657
   %t8658 = or i64 %t8655, 4
@@ -13241,7 +13241,7 @@ then1054:
 else1055:
   %t8671 = call i64 @rt_alloc_words(i64 1)
   %t8672 = inttoptr i64 %t8671 to ptr
-  store i64 ptrtoint (ptr @code_5534 to i64), ptr %t8672
+  store i64 ptrtoint (ptr @code_5574 to i64), ptr %t8672
   %t8673 = or i64 %t8671, 4
   %t8674 = and i64 %self, -8
   %t8675 = inttoptr i64 %t8674 to ptr
@@ -13265,7 +13265,7 @@ else1055:
   %t8693 = load i64, ptr %t8692
   %t8694 = call i64 @rt_alloc_words(i64 3)
   %t8695 = inttoptr i64 %t8694 to ptr
-  store i64 ptrtoint (ptr @code_5536 to i64), ptr %t8695
+  store i64 ptrtoint (ptr @code_5576 to i64), ptr %t8695
   %t8696 = getelementptr i64, ptr %t8695, i64 1
   store i64 %t8693, ptr %t8696
   %t8697 = getelementptr i64, ptr %t8695, i64 2
@@ -13312,7 +13312,7 @@ else1057:
   ret i64 %t8732
 }
 
-define fastcc i64 @code_5540(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5580(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t8733 = icmp eq i64 %argc, 2
   br i1 %t8733, label %argok1059, label %arityerr1058
@@ -13384,7 +13384,7 @@ else1065:
   ret i64 2
 }
 
-define fastcc i64 @code_5546(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5586(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t8783 = icmp eq i64 %argc, 1
   br i1 %t8783, label %argok1067, label %arityerr1066
@@ -13404,7 +13404,7 @@ argok1067:
   ret i64 %t8792
 }
 
-define fastcc i64 @code_5544(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5584(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t8793 = icmp eq i64 %argc, 2
   br i1 %t8793, label %argok1069, label %arityerr1068
@@ -13550,7 +13550,7 @@ then1091:
   %t8887 = load i64, ptr %t8886
   %t8888 = call i64 @rt_alloc_words(i64 2)
   %t8889 = inttoptr i64 %t8888 to ptr
-  store i64 ptrtoint (ptr @code_5546 to i64), ptr %t8889
+  store i64 ptrtoint (ptr @code_5586 to i64), ptr %t8889
   %t8890 = getelementptr i64, ptr %t8889, i64 1
   store i64 %t8887, ptr %t8890
   %t8891 = or i64 %t8888, 4
@@ -13564,9 +13564,9 @@ then1091:
   ret i64 %t8898
 else1092:
   %t8899 = call i64 @rt_car(i64 %a0)
-  %t8900 = call fastcc i64 @code_5544(i64 %self, i64 2, i64 %t8899, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t8900 = call fastcc i64 @code_5584(i64 %self, i64 2, i64 %t8899, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t8901 = call i64 @rt_cdr(i64 %a0)
-  %t8902 = musttail call fastcc i64 @code_5544(i64 %self, i64 2, i64 %t8901, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t8902 = musttail call fastcc i64 @code_5584(i64 %self, i64 2, i64 %t8901, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t8902
 else1090:
   %t8903 = icmp ne i64 1, 1
@@ -13577,7 +13577,7 @@ else1094:
   ret i64 1
 }
 
-define fastcc i64 @code_5542(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5582(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t8904 = icmp eq i64 %argc, 3
   br i1 %t8904, label %argok1096, label %arityerr1095
@@ -13588,7 +13588,7 @@ argok1096:
   %t8905 = call i64 @rt_box(i64 2)
   %t8906 = call i64 @rt_alloc_words(i64 8)
   %t8907 = inttoptr i64 %t8906 to ptr
-  store i64 ptrtoint (ptr @code_5544 to i64), ptr %t8907
+  store i64 ptrtoint (ptr @code_5584 to i64), ptr %t8907
   %t8908 = or i64 %t8906, 4
   %t8909 = getelementptr i64, ptr %t8907, i64 1
   store i64 %a1, ptr %t8909
@@ -13625,7 +13625,7 @@ argok1096:
   ret i64 %t8933
 }
 
-define fastcc i64 @code_5548(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5588(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t8934 = icmp eq i64 %argc, 5
   br i1 %t8934, label %argok1098, label %arityerr1097
@@ -13793,7 +13793,7 @@ else1111:
   ret i64 %a0
 }
 
-define fastcc i64 @code_5550(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5590(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t9046 = icmp eq i64 %argc, 5
   br i1 %t9046, label %argok1123, label %arityerr1122
@@ -13937,7 +13937,7 @@ else1138:
   ret i64 %a0
 }
 
-define fastcc i64 @code_5552(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5592(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t9146 = icmp eq i64 %argc, 5
   br i1 %t9146, label %argok1142, label %arityerr1141
@@ -14054,7 +14054,7 @@ else1151:
   ret i64 %t9234
 }
 
-define fastcc i64 @code_5556(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5596(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t9235 = icmp eq i64 %argc, 1
   br i1 %t9235, label %argok1153, label %arityerr1152
@@ -14091,7 +14091,7 @@ else1155:
   ret i64 1
 }
 
-define fastcc i64 @code_5558(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5598(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t9258 = icmp eq i64 %argc, 1
   br i1 %t9258, label %argok1157, label %arityerr1156
@@ -14123,7 +14123,7 @@ argok1157:
   ret i64 %t9279
 }
 
-define fastcc i64 @code_5560(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5600(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t9280 = icmp eq i64 %argc, 1
   br i1 %t9280, label %argok1159, label %arityerr1158
@@ -14174,7 +14174,7 @@ else1164:
   ret i64 %t9310
 }
 
-define fastcc i64 @code_5564(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5604(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t9311 = icmp eq i64 %argc, 2
   br i1 %t9311, label %argok1166, label %arityerr1165
@@ -14196,7 +14196,7 @@ argok1166:
   ret i64 %t9322
 }
 
-define fastcc i64 @code_5562(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5602(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t9323 = icmp eq i64 %argc, 2
   br i1 %t9323, label %argok1168, label %arityerr1167
@@ -14234,7 +14234,7 @@ then1172:
 else1173:
   %t9342 = call i64 @rt_alloc_words(i64 2)
   %t9343 = inttoptr i64 %t9342 to ptr
-  store i64 ptrtoint (ptr @code_5564 to i64), ptr %t9343
+  store i64 ptrtoint (ptr @code_5604 to i64), ptr %t9343
   %t9344 = getelementptr i64, ptr %t9343, i64 1
   store i64 %a0, ptr %t9344
   %t9345 = or i64 %t9342, 4
@@ -14301,11 +14301,11 @@ fixmerge1176:
   %t9400 = inttoptr i64 %t9399 to ptr
   %t9401 = call fastcc i64%t9400(i64 %t9396, i64 5, i64 %t9379, i64 %t9369, i64 %t9383, i64 %t9387, i64 %t9391, i64 0, i64 0, i64 0, ptr null)
   %t9402 = call i64 @rt_cons(i64 %t9401, i64 %a1)
-  %t9403 = musttail call fastcc i64 @code_5562(i64 %self, i64 2, i64 %t9375, i64 %t9402, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t9403 = musttail call fastcc i64 @code_5602(i64 %self, i64 2, i64 %t9375, i64 %t9402, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t9403
 }
 
-define fastcc i64 @code_5554(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5594(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t9404 = icmp eq i64 %argc, 5
   br i1 %t9404, label %argok1178, label %arityerr1177
@@ -14319,7 +14319,7 @@ argok1178:
   %t9408 = load i64, ptr %t9407
   %t9409 = call i64 @rt_alloc_words(i64 3)
   %t9410 = inttoptr i64 %t9409 to ptr
-  store i64 ptrtoint (ptr @code_5556 to i64), ptr %t9410
+  store i64 ptrtoint (ptr @code_5596 to i64), ptr %t9410
   %t9411 = getelementptr i64, ptr %t9410, i64 1
   store i64 %a1, ptr %t9411
   %t9412 = getelementptr i64, ptr %t9410, i64 2
@@ -14364,7 +14364,7 @@ merge1181:
   %t9444 = load i64, ptr %t9443
   %t9445 = call i64 @rt_alloc_words(i64 3)
   %t9446 = inttoptr i64 %t9445 to ptr
-  store i64 ptrtoint (ptr @code_5558 to i64), ptr %t9446
+  store i64 ptrtoint (ptr @code_5598 to i64), ptr %t9446
   %t9447 = getelementptr i64, ptr %t9446, i64 1
   store i64 %t9444, ptr %t9447
   %t9448 = getelementptr i64, ptr %t9446, i64 2
@@ -14385,7 +14385,7 @@ merge1181:
   %t9462 = call fastcc i64%t9461(i64 %t9457, i64 1, i64 %t9456, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t9463 = call i64 @rt_alloc_words(i64 3)
   %t9464 = inttoptr i64 %t9463 to ptr
-  store i64 ptrtoint (ptr @code_5560 to i64), ptr %t9464
+  store i64 ptrtoint (ptr @code_5600 to i64), ptr %t9464
   %t9465 = getelementptr i64, ptr %t9464, i64 1
   store i64 %t9462, ptr %t9465
   %t9466 = getelementptr i64, ptr %t9464, i64 2
@@ -14399,7 +14399,7 @@ merge1181:
   %t9473 = call fastcc i64%t9472(i64 %t9468, i64 2, i64 %t9467, i64 %t9455, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t9474 = call i64 @rt_alloc_words(i64 11)
   %t9475 = inttoptr i64 %t9474 to ptr
-  store i64 ptrtoint (ptr @code_5562 to i64), ptr %t9475
+  store i64 ptrtoint (ptr @code_5602 to i64), ptr %t9475
   %t9476 = or i64 %t9474, 4
   %t9477 = getelementptr i64, ptr %t9475, i64 1
   store i64 %t9462, ptr %t9477
@@ -14433,7 +14433,7 @@ merge1181:
   ret i64 %t9495
 }
 
-define fastcc i64 @code_5568(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5608(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t9496 = icmp eq i64 %argc, 1
   br i1 %t9496, label %argok1183, label %arityerr1182
@@ -14460,7 +14460,7 @@ else1185:
   ret i64 1
 }
 
-define fastcc i64 @code_5574(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5614(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t9509 = icmp eq i64 %argc, 1
   br i1 %t9509, label %argok1187, label %arityerr1186
@@ -14472,7 +14472,7 @@ argok1187:
   ret i64 %t9510
 }
 
-define fastcc i64 @code_5572(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5612(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t9511 = icmp eq i64 %argc, 1
   br i1 %t9511, label %argok1189, label %arityerr1188
@@ -14540,12 +14540,12 @@ else1191:
   br i1 %t9564, label %then1192, label %else1193
 then1192:
   %t9565 = call i64 @rt_cdr(i64 %a0)
-  %t9566 = musttail call fastcc i64 @code_5572(i64 %self, i64 1, i64 %t9565, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t9566 = musttail call fastcc i64 @code_5612(i64 %self, i64 1, i64 %t9565, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t9566
 else1193:
   %t9567 = call i64 @rt_alloc_words(i64 1)
   %t9568 = inttoptr i64 %t9567 to ptr
-  store i64 ptrtoint (ptr @code_5574 to i64), ptr %t9568
+  store i64 ptrtoint (ptr @code_5614 to i64), ptr %t9568
   %t9569 = or i64 %t9567, 4
   %t9570 = call i64 @rt_cdr(i64 %t9531)
   %t9571 = and i64 %self, -8
@@ -14595,7 +14595,7 @@ else1193:
   ret i64 %t9614
 }
 
-define fastcc i64 @code_5570(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5610(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t9615 = icmp eq i64 %argc, 2
   br i1 %t9615, label %argok1195, label %arityerr1194
@@ -14617,7 +14617,7 @@ argok1195:
   %t9627 = call fastcc i64%t9626(i64 %t9622, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t9628 = call i64 @rt_alloc_words(i64 10)
   %t9629 = inttoptr i64 %t9628 to ptr
-  store i64 ptrtoint (ptr @code_5572 to i64), ptr %t9629
+  store i64 ptrtoint (ptr @code_5612 to i64), ptr %t9629
   %t9630 = or i64 %t9628, 4
   %t9631 = getelementptr i64, ptr %t9629, i64 1
   store i64 %a1, ptr %t9631
@@ -14669,7 +14669,7 @@ argok1195:
   ret i64 %t9668
 }
 
-define fastcc i64 @code_5576(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5616(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t9669 = icmp eq i64 %argc, 1
   br i1 %t9669, label %argok1197, label %arityerr1196
@@ -14689,7 +14689,7 @@ argok1197:
   ret i64 %t9678
 }
 
-define fastcc i64 @code_5578(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5618(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t9679 = icmp eq i64 %argc, 2
   br i1 %t9679, label %argok1199, label %arityerr1198
@@ -14834,7 +14834,7 @@ fixslow1217:
   br label %fixmerge1218
 fixmerge1218:
   %t9780 = phi i64 [ %t9778, %fixfast1216 ], [ %t9779, %fixslow1217 ]
-  %t9781 = musttail call fastcc i64 @code_5578(i64 %self, i64 2, i64 %t9774, i64 %t9780, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t9781 = musttail call fastcc i64 @code_5618(i64 %self, i64 2, i64 %t9774, i64 %t9780, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t9781
 else1215:
   %t9782 = call i64 @rt_intern(ptr @.str.sym.5)
@@ -15129,7 +15129,7 @@ else1232:
   ret i64 %t10042
 }
 
-define fastcc i64 @code_5580(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5620(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t10043 = icmp eq i64 %argc, 1
   br i1 %t10043, label %argok1234, label %arityerr1233
@@ -15162,7 +15162,7 @@ argok1234:
   ret i64 %t10065
 }
 
-define fastcc i64 @code_5566(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5606(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t10066 = icmp eq i64 %argc, 3
   br i1 %t10066, label %argok1236, label %arityerr1235
@@ -15172,23 +15172,23 @@ arityerr1235:
 argok1236:
   %t10067 = call i64 @rt_alloc_words(i64 2)
   %t10068 = inttoptr i64 %t10067 to ptr
-  store i64 ptrtoint (ptr @code_5568 to i64), ptr %t10068
+  store i64 ptrtoint (ptr @code_5608 to i64), ptr %t10068
   %t10069 = or i64 %t10067, 4
   %t10070 = call i64 @rt_alloc_words(i64 7)
   %t10071 = inttoptr i64 %t10070 to ptr
-  store i64 ptrtoint (ptr @code_5570 to i64), ptr %t10071
+  store i64 ptrtoint (ptr @code_5610 to i64), ptr %t10071
   %t10072 = or i64 %t10070, 4
   %t10073 = call i64 @rt_alloc_words(i64 2)
   %t10074 = inttoptr i64 %t10073 to ptr
-  store i64 ptrtoint (ptr @code_5576 to i64), ptr %t10074
+  store i64 ptrtoint (ptr @code_5616 to i64), ptr %t10074
   %t10075 = or i64 %t10073, 4
   %t10076 = call i64 @rt_alloc_words(i64 12)
   %t10077 = inttoptr i64 %t10076 to ptr
-  store i64 ptrtoint (ptr @code_5578 to i64), ptr %t10077
+  store i64 ptrtoint (ptr @code_5618 to i64), ptr %t10077
   %t10078 = or i64 %t10076, 4
   %t10079 = call i64 @rt_alloc_words(i64 2)
   %t10080 = inttoptr i64 %t10079 to ptr
-  store i64 ptrtoint (ptr @code_5580 to i64), ptr %t10080
+  store i64 ptrtoint (ptr @code_5620 to i64), ptr %t10080
   %t10081 = or i64 %t10079, 4
   %t10082 = getelementptr i64, ptr %t10068, i64 1
   store i64 %a1, ptr %t10082
@@ -15282,7 +15282,7 @@ argok1236:
   ret i64 %t10150
 }
 
-define fastcc i64 @code_5584(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5624(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t10151 = icmp eq i64 %argc, 1
   br i1 %t10151, label %argok1238, label %arityerr1237
@@ -15294,7 +15294,7 @@ argok1238:
   ret i64 %t10152
 }
 
-define fastcc i64 @code_5582(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5622(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t10153 = icmp eq i64 %argc, 3
   br i1 %t10153, label %argok1240, label %arityerr1239
@@ -15306,7 +15306,7 @@ argok1240:
   %t10155 = call i64 @rt_intern(ptr @.str.sym.5)
   %t10156 = call i64 @rt_alloc_words(i64 1)
   %t10157 = inttoptr i64 %t10156 to ptr
-  store i64 ptrtoint (ptr @code_5584 to i64), ptr %t10157
+  store i64 ptrtoint (ptr @code_5624 to i64), ptr %t10157
   %t10158 = or i64 %t10156, 4
   %t10159 = load i64, ptr @"scheme.base:map"
   %t10160 = and i64 %t10159, -8
@@ -15345,7 +15345,7 @@ argok1240:
   ret i64 %t10192
 }
 
-define fastcc i64 @code_5586(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5626(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t10193 = icmp eq i64 %argc, 2
   br i1 %t10193, label %argok1242, label %arityerr1241
@@ -15712,7 +15712,7 @@ else1304:
   ret i64 %t10425
 }
 
-define fastcc i64 @code_5588(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5628(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t10426 = icmp eq i64 %argc, 3
   br i1 %t10426, label %argok1306, label %arityerr1305
@@ -15906,7 +15906,7 @@ else1332:
   ret i64 1
 }
 
-define fastcc i64 @code_5592(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5632(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t10558 = icmp eq i64 %argc, 2
   br i1 %t10558, label %argok1334, label %arityerr1333
@@ -15932,11 +15932,11 @@ else1336:
   %t10570 = inttoptr i64 %t10569 to ptr
   %t10571 = call fastcc i64%t10570(i64 %t10566, i64 3, i64 %t10564, i64 %a0, i64 %t10565, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t10572 = call i64 @rt_cdr(i64 %a1)
-  %t10573 = musttail call fastcc i64 @code_5592(i64 %self, i64 2, i64 %t10571, i64 %t10572, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t10573 = musttail call fastcc i64 @code_5632(i64 %self, i64 2, i64 %t10571, i64 %t10572, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t10573
 }
 
-define fastcc i64 @code_5590(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5630(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t10574 = icmp eq i64 %argc, 2
   br i1 %t10574, label %argok1338, label %arityerr1337
@@ -15946,7 +15946,7 @@ arityerr1337:
 argok1338:
   %t10575 = call i64 @rt_alloc_words(i64 3)
   %t10576 = inttoptr i64 %t10575 to ptr
-  store i64 ptrtoint (ptr @code_5592 to i64), ptr %t10576
+  store i64 ptrtoint (ptr @code_5632 to i64), ptr %t10576
   %t10577 = or i64 %t10575, 4
   %t10578 = getelementptr i64, ptr %t10576, i64 1
   store i64 %t10577, ptr %t10578
@@ -15979,7 +15979,7 @@ argok1338:
   ret i64 %t10603
 }
 
-define fastcc i64 @code_5594(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5634(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t10604 = icmp eq i64 %argc, 2
   br i1 %t10604, label %argok1340, label %arityerr1339
@@ -16022,7 +16022,7 @@ else1344:
   ret i64 %t10628
 }
 
-define fastcc i64 @code_5598(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5638(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t10629 = icmp eq i64 %argc, 1
   br i1 %t10629, label %argok1346, label %arityerr1345
@@ -16044,7 +16044,7 @@ argok1346:
   ret i64 %t10640
 }
 
-define fastcc i64 @code_5596(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5636(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t10641 = icmp eq i64 %argc, 3
   br i1 %t10641, label %argok1348, label %arityerr1347
@@ -16080,7 +16080,7 @@ else1353:
   %t10657 = load i64, ptr %t10656
   %t10658 = call i64 @rt_alloc_words(i64 2)
   %t10659 = inttoptr i64 %t10658 to ptr
-  store i64 ptrtoint (ptr @code_5598 to i64), ptr %t10659
+  store i64 ptrtoint (ptr @code_5638 to i64), ptr %t10659
   %t10660 = getelementptr i64, ptr %t10659, i64 1
   store i64 %t10657, ptr %t10660
   %t10661 = or i64 %t10658, 4
@@ -16113,7 +16113,7 @@ else1353:
   ret i64 %t10687
 }
 
-define fastcc i64 @code_5600(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5640(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t10688 = icmp eq i64 %argc, 3
   br i1 %t10688, label %argok1355, label %arityerr1354
@@ -16151,7 +16151,7 @@ else1357:
   ret i64 %t10711
 }
 
-define fastcc i64 @code_5604(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5644(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t10712 = icmp eq i64 %argc, 1
   br i1 %t10712, label %argok1359, label %arityerr1358
@@ -16188,12 +16188,12 @@ else1361:
   %t10735 = inttoptr i64 %t10734 to ptr
   %t10736 = call fastcc i64%t10735(i64 %t10731, i64 3, i64 %t10719, i64 %t10720, i64 %t10726, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t10737 = call i64 @rt_cdr(i64 %a0)
-  %t10738 = call fastcc i64 @code_5604(i64 %self, i64 1, i64 %t10737, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t10738 = call fastcc i64 @code_5644(i64 %self, i64 1, i64 %t10737, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t10739 = call i64 @rt_cons(i64 %t10736, i64 %t10738)
   ret i64 %t10739
 }
 
-define fastcc i64 @code_5602(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5642(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t10740 = icmp eq i64 %argc, 2
   br i1 %t10740, label %argok1363, label %arityerr1362
@@ -16203,7 +16203,7 @@ arityerr1362:
 argok1363:
   %t10741 = call i64 @rt_alloc_words(i64 4)
   %t10742 = inttoptr i64 %t10741 to ptr
-  store i64 ptrtoint (ptr @code_5604 to i64), ptr %t10742
+  store i64 ptrtoint (ptr @code_5644 to i64), ptr %t10742
   %t10743 = or i64 %t10741, 4
   %t10744 = and i64 %self, -8
   %t10745 = inttoptr i64 %t10744 to ptr
@@ -16233,7 +16233,7 @@ argok1363:
   ret i64 %t10765
 }
 
-define fastcc i64 @code_5606(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5646(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t10766 = icmp eq i64 %argc, 1
   br i1 %t10766, label %argok1365, label %arityerr1364
@@ -16275,7 +16275,7 @@ else1369:
   ret i64 %t10789
 }
 
-define fastcc i64 @code_5608(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5648(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t10790 = icmp eq i64 %argc, 3
   br i1 %t10790, label %argok1371, label %arityerr1370
@@ -16428,7 +16428,7 @@ else1387:
   ret i64 1
 }
 
-define fastcc i64 @code_5612(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5652(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t10901 = icmp eq i64 %argc, 1
   br i1 %t10901, label %argok1389, label %arityerr1388
@@ -16449,7 +16449,7 @@ argok1389:
   ret i64 %t10911
 }
 
-define fastcc i64 @code_5640(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5680(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t10912 = icmp eq i64 %argc, 0
   br i1 %t10912, label %argok1391, label %arityerr1390
@@ -16472,7 +16472,7 @@ argok1391:
   ret i64 %t10924
 }
 
-define fastcc i64 @code_5638(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5678(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t10925 = icmp eq i64 %argc, 0
   br i1 %t10925, label %argok1393, label %arityerr1392
@@ -16486,7 +16486,7 @@ argok1393:
   %t10929 = load i64, ptr %t10928
   %t10930 = call i64 @rt_alloc_words(i64 2)
   %t10931 = inttoptr i64 %t10930 to ptr
-  store i64 ptrtoint (ptr @code_5640 to i64), ptr %t10931
+  store i64 ptrtoint (ptr @code_5680 to i64), ptr %t10931
   %t10932 = getelementptr i64, ptr %t10931, i64 1
   store i64 %t10929, ptr %t10932
   %t10933 = or i64 %t10930, 4
@@ -16571,7 +16571,7 @@ else1395:
   ret i64 %t10999
 }
 
-define fastcc i64 @code_5642(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5682(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t11000 = icmp eq i64 %argc, 2
   br i1 %t11000, label %argok1401, label %arityerr1400
@@ -16597,7 +16597,7 @@ argok1401:
   ret i64 %t11015
 }
 
-define fastcc i64 @code_5636(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5676(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t11016 = icmp eq i64 %argc, 0
   br i1 %t11016, label %argok1403, label %arityerr1402
@@ -16615,7 +16615,7 @@ argok1403:
   %t11024 = load i64, ptr %t11023
   %t11025 = call i64 @rt_alloc_words(i64 3)
   %t11026 = inttoptr i64 %t11025 to ptr
-  store i64 ptrtoint (ptr @code_5638 to i64), ptr %t11026
+  store i64 ptrtoint (ptr @code_5678 to i64), ptr %t11026
   %t11027 = getelementptr i64, ptr %t11026, i64 1
   store i64 %t11020, ptr %t11027
   %t11028 = getelementptr i64, ptr %t11026, i64 2
@@ -16726,7 +16726,7 @@ then1426:
   %t11102 = load i64, ptr %t11101
   %t11103 = call i64 @rt_alloc_words(i64 2)
   %t11104 = inttoptr i64 %t11103 to ptr
-  store i64 ptrtoint (ptr @code_5642 to i64), ptr %t11104
+  store i64 ptrtoint (ptr @code_5682 to i64), ptr %t11104
   %t11105 = getelementptr i64, ptr %t11104, i64 1
   store i64 %t11102, ptr %t11105
   %t11106 = or i64 %t11103, 4
@@ -16814,7 +16814,7 @@ else1405:
   ret i64 %t11169
 }
 
-define fastcc i64 @code_5644(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5684(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t11170 = icmp eq i64 %argc, 1
   br i1 %t11170, label %argok1429, label %arityerr1428
@@ -16847,7 +16847,7 @@ argok1429:
   ret i64 %t11192
 }
 
-define fastcc i64 @code_5634(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5674(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t11193 = icmp eq i64 %argc, 0
   br i1 %t11193, label %argok1431, label %arityerr1430
@@ -16865,7 +16865,7 @@ argok1431:
   %t11201 = load i64, ptr %t11200
   %t11202 = call i64 @rt_alloc_words(i64 3)
   %t11203 = inttoptr i64 %t11202 to ptr
-  store i64 ptrtoint (ptr @code_5636 to i64), ptr %t11203
+  store i64 ptrtoint (ptr @code_5676 to i64), ptr %t11203
   %t11204 = getelementptr i64, ptr %t11203, i64 1
   store i64 %t11197, ptr %t11204
   %t11205 = getelementptr i64, ptr %t11203, i64 2
@@ -16917,7 +16917,7 @@ then1440:
   %t11240 = load i64, ptr %t11239
   %t11241 = call i64 @rt_alloc_words(i64 2)
   %t11242 = inttoptr i64 %t11241 to ptr
-  store i64 ptrtoint (ptr @code_5644 to i64), ptr %t11242
+  store i64 ptrtoint (ptr @code_5684 to i64), ptr %t11242
   %t11243 = getelementptr i64, ptr %t11242, i64 1
   store i64 %t11240, ptr %t11243
   %t11244 = or i64 %t11241, 4
@@ -16977,7 +16977,7 @@ else1433:
   ret i64 %t11287
 }
 
-define fastcc i64 @code_5646(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5686(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t11288 = icmp eq i64 %argc, 1
   br i1 %t11288, label %argok1443, label %arityerr1442
@@ -17010,7 +17010,7 @@ argok1443:
   ret i64 %t11310
 }
 
-define fastcc i64 @code_5632(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5672(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t11311 = icmp eq i64 %argc, 0
   br i1 %t11311, label %argok1445, label %arityerr1444
@@ -17028,7 +17028,7 @@ argok1445:
   %t11319 = load i64, ptr %t11318
   %t11320 = call i64 @rt_alloc_words(i64 3)
   %t11321 = inttoptr i64 %t11320 to ptr
-  store i64 ptrtoint (ptr @code_5634 to i64), ptr %t11321
+  store i64 ptrtoint (ptr @code_5674 to i64), ptr %t11321
   %t11322 = getelementptr i64, ptr %t11321, i64 1
   store i64 %t11315, ptr %t11322
   %t11323 = getelementptr i64, ptr %t11321, i64 2
@@ -17080,7 +17080,7 @@ then1454:
   %t11358 = load i64, ptr %t11357
   %t11359 = call i64 @rt_alloc_words(i64 2)
   %t11360 = inttoptr i64 %t11359 to ptr
-  store i64 ptrtoint (ptr @code_5646 to i64), ptr %t11360
+  store i64 ptrtoint (ptr @code_5686 to i64), ptr %t11360
   %t11361 = getelementptr i64, ptr %t11360, i64 1
   store i64 %t11358, ptr %t11361
   %t11362 = or i64 %t11359, 4
@@ -17140,7 +17140,7 @@ else1447:
   ret i64 %t11405
 }
 
-define fastcc i64 @code_5630(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5670(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t11406 = icmp eq i64 %argc, 0
   br i1 %t11406, label %argok1457, label %arityerr1456
@@ -17158,7 +17158,7 @@ argok1457:
   %t11414 = load i64, ptr %t11413
   %t11415 = call i64 @rt_alloc_words(i64 3)
   %t11416 = inttoptr i64 %t11415 to ptr
-  store i64 ptrtoint (ptr @code_5632 to i64), ptr %t11416
+  store i64 ptrtoint (ptr @code_5672 to i64), ptr %t11416
   %t11417 = getelementptr i64, ptr %t11416, i64 1
   store i64 %t11410, ptr %t11417
   %t11418 = getelementptr i64, ptr %t11416, i64 2
@@ -17254,7 +17254,7 @@ else1459:
   ret i64 %t11486
 }
 
-define fastcc i64 @code_5628(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5668(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t11487 = icmp eq i64 %argc, 0
   br i1 %t11487, label %argok1469, label %arityerr1468
@@ -17272,7 +17272,7 @@ argok1469:
   %t11495 = load i64, ptr %t11494
   %t11496 = call i64 @rt_alloc_words(i64 3)
   %t11497 = inttoptr i64 %t11496 to ptr
-  store i64 ptrtoint (ptr @code_5630 to i64), ptr %t11497
+  store i64 ptrtoint (ptr @code_5670 to i64), ptr %t11497
   %t11498 = getelementptr i64, ptr %t11497, i64 1
   store i64 %t11491, ptr %t11498
   %t11499 = getelementptr i64, ptr %t11497, i64 2
@@ -17359,7 +17359,7 @@ else1471:
   ret i64 %t11566
 }
 
-define fastcc i64 @code_5626(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5666(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t11567 = icmp eq i64 %argc, 0
   br i1 %t11567, label %argok1477, label %arityerr1476
@@ -17377,7 +17377,7 @@ argok1477:
   %t11575 = load i64, ptr %t11574
   %t11576 = call i64 @rt_alloc_words(i64 3)
   %t11577 = inttoptr i64 %t11576 to ptr
-  store i64 ptrtoint (ptr @code_5628 to i64), ptr %t11577
+  store i64 ptrtoint (ptr @code_5668 to i64), ptr %t11577
   %t11578 = getelementptr i64, ptr %t11577, i64 1
   store i64 %t11571, ptr %t11578
   %t11579 = getelementptr i64, ptr %t11577, i64 2
@@ -17455,7 +17455,7 @@ else1479:
   ret i64 %t11637
 }
 
-define fastcc i64 @code_5624(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5664(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t11638 = icmp eq i64 %argc, 0
   br i1 %t11638, label %argok1485, label %arityerr1484
@@ -17473,7 +17473,7 @@ argok1485:
   %t11646 = load i64, ptr %t11645
   %t11647 = call i64 @rt_alloc_words(i64 3)
   %t11648 = inttoptr i64 %t11647 to ptr
-  store i64 ptrtoint (ptr @code_5626 to i64), ptr %t11648
+  store i64 ptrtoint (ptr @code_5666 to i64), ptr %t11648
   %t11649 = getelementptr i64, ptr %t11648, i64 1
   store i64 %t11642, ptr %t11649
   %t11650 = getelementptr i64, ptr %t11648, i64 2
@@ -17569,7 +17569,7 @@ else1487:
   ret i64 %t11718
 }
 
-define fastcc i64 @code_5622(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5662(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t11719 = icmp eq i64 %argc, 0
   br i1 %t11719, label %argok1497, label %arityerr1496
@@ -17587,7 +17587,7 @@ argok1497:
   %t11727 = load i64, ptr %t11726
   %t11728 = call i64 @rt_alloc_words(i64 3)
   %t11729 = inttoptr i64 %t11728 to ptr
-  store i64 ptrtoint (ptr @code_5624 to i64), ptr %t11729
+  store i64 ptrtoint (ptr @code_5664 to i64), ptr %t11729
   %t11730 = getelementptr i64, ptr %t11729, i64 1
   store i64 %t11723, ptr %t11730
   %t11731 = getelementptr i64, ptr %t11729, i64 2
@@ -17661,7 +17661,7 @@ else1499:
   ret i64 %t11781
 }
 
-define fastcc i64 @code_5620(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5660(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t11782 = icmp eq i64 %argc, 0
   br i1 %t11782, label %argok1507, label %arityerr1506
@@ -17683,7 +17683,7 @@ argok1507:
   %t11794 = load i64, ptr %t11793
   %t11795 = call i64 @rt_alloc_words(i64 4)
   %t11796 = inttoptr i64 %t11795 to ptr
-  store i64 ptrtoint (ptr @code_5622 to i64), ptr %t11796
+  store i64 ptrtoint (ptr @code_5662 to i64), ptr %t11796
   %t11797 = getelementptr i64, ptr %t11796, i64 1
   store i64 %t11786, ptr %t11797
   %t11798 = getelementptr i64, ptr %t11796, i64 2
@@ -17781,7 +17781,7 @@ else1509:
   ret i64 %t11867
 }
 
-define fastcc i64 @code_5618(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5658(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t11868 = icmp eq i64 %argc, 0
   br i1 %t11868, label %argok1519, label %arityerr1518
@@ -17803,7 +17803,7 @@ argok1519:
   %t11880 = load i64, ptr %t11879
   %t11881 = call i64 @rt_alloc_words(i64 4)
   %t11882 = inttoptr i64 %t11881 to ptr
-  store i64 ptrtoint (ptr @code_5620 to i64), ptr %t11882
+  store i64 ptrtoint (ptr @code_5660 to i64), ptr %t11882
   %t11883 = getelementptr i64, ptr %t11882, i64 1
   store i64 %t11872, ptr %t11883
   %t11884 = getelementptr i64, ptr %t11882, i64 2
@@ -17910,7 +17910,7 @@ else1521:
   ret i64 %t11962
 }
 
-define fastcc i64 @code_5616(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5656(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t11963 = icmp eq i64 %argc, 0
   br i1 %t11963, label %argok1531, label %arityerr1530
@@ -17932,7 +17932,7 @@ argok1531:
   %t11975 = load i64, ptr %t11974
   %t11976 = call i64 @rt_alloc_words(i64 4)
   %t11977 = inttoptr i64 %t11976 to ptr
-  store i64 ptrtoint (ptr @code_5618 to i64), ptr %t11977
+  store i64 ptrtoint (ptr @code_5658 to i64), ptr %t11977
   %t11978 = getelementptr i64, ptr %t11977, i64 1
   store i64 %t11967, ptr %t11978
   %t11979 = getelementptr i64, ptr %t11977, i64 2
@@ -18062,7 +18062,7 @@ else1533:
   ret i64 %t12076
 }
 
-define fastcc i64 @code_5614(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5654(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t12077 = icmp eq i64 %argc, 0
   br i1 %t12077, label %argok1545, label %arityerr1544
@@ -18084,7 +18084,7 @@ argok1545:
   %t12089 = load i64, ptr %t12088
   %t12090 = call i64 @rt_alloc_words(i64 4)
   %t12091 = inttoptr i64 %t12090 to ptr
-  store i64 ptrtoint (ptr @code_5616 to i64), ptr %t12091
+  store i64 ptrtoint (ptr @code_5656 to i64), ptr %t12091
   %t12092 = getelementptr i64, ptr %t12091, i64 1
   store i64 %t12081, ptr %t12092
   %t12093 = getelementptr i64, ptr %t12091, i64 2
@@ -18110,7 +18110,7 @@ else1547:
   ret i64 %t12106
 }
 
-define fastcc i64 @code_5610(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5650(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t12107 = icmp eq i64 %argc, 1
   br i1 %t12107, label %argok1549, label %arityerr1548
@@ -18120,7 +18120,7 @@ arityerr1548:
 argok1549:
   %t12108 = call i64 @rt_alloc_words(i64 2)
   %t12109 = inttoptr i64 %t12108 to ptr
-  store i64 ptrtoint (ptr @code_5612 to i64), ptr %t12109
+  store i64 ptrtoint (ptr @code_5652 to i64), ptr %t12109
   %t12110 = or i64 %t12108, 4
   %t12111 = and i64 %self, -8
   %t12112 = inttoptr i64 %t12111 to ptr
@@ -18130,7 +18130,7 @@ argok1549:
   store i64 %t12114, ptr %t12115
   %t12116 = call i64 @rt_alloc_words(i64 4)
   %t12117 = inttoptr i64 %t12116 to ptr
-  store i64 ptrtoint (ptr @code_5614 to i64), ptr %t12117
+  store i64 ptrtoint (ptr @code_5654 to i64), ptr %t12117
   %t12118 = getelementptr i64, ptr %t12117, i64 1
   store i64 %a0, ptr %t12118
   %t12119 = getelementptr i64, ptr %t12117, i64 2
@@ -18190,7 +18190,7 @@ else1551:
   ret i64 %t12154
 }
 
-define fastcc i64 @code_5650(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5690(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t12155 = icmp eq i64 %argc, 1
   br i1 %t12155, label %argok1559, label %arityerr1558
@@ -18211,7 +18211,7 @@ argok1559:
   ret i64 %t12165
 }
 
-define fastcc i64 @code_5676(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5716(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t12166 = icmp eq i64 %argc, 0
   br i1 %t12166, label %argok1561, label %arityerr1560
@@ -18234,7 +18234,7 @@ argok1561:
   ret i64 %t12178
 }
 
-define fastcc i64 @code_5674(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5714(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t12179 = icmp eq i64 %argc, 0
   br i1 %t12179, label %argok1563, label %arityerr1562
@@ -18248,7 +18248,7 @@ argok1563:
   %t12183 = load i64, ptr %t12182
   %t12184 = call i64 @rt_alloc_words(i64 2)
   %t12185 = inttoptr i64 %t12184 to ptr
-  store i64 ptrtoint (ptr @code_5676 to i64), ptr %t12185
+  store i64 ptrtoint (ptr @code_5716 to i64), ptr %t12185
   %t12186 = getelementptr i64, ptr %t12185, i64 1
   store i64 %t12183, ptr %t12186
   %t12187 = or i64 %t12184, 4
@@ -18344,7 +18344,7 @@ else1565:
   ret i64 %t12264
 }
 
-define fastcc i64 @code_5672(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5712(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t12265 = icmp eq i64 %argc, 0
   br i1 %t12265, label %argok1571, label %arityerr1570
@@ -18370,7 +18370,7 @@ argok1571:
   %t12281 = load i64, ptr %t12280
   %t12282 = call i64 @rt_alloc_words(i64 5)
   %t12283 = inttoptr i64 %t12282 to ptr
-  store i64 ptrtoint (ptr @code_5674 to i64), ptr %t12283
+  store i64 ptrtoint (ptr @code_5714 to i64), ptr %t12283
   %t12284 = getelementptr i64, ptr %t12283, i64 1
   store i64 %t12269, ptr %t12284
   %t12285 = getelementptr i64, ptr %t12283, i64 2
@@ -18472,7 +18472,7 @@ else1573:
   ret i64 %t12365
 }
 
-define fastcc i64 @code_5678(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5718(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t12366 = icmp eq i64 %argc, 1
   br i1 %t12366, label %argok1579, label %arityerr1578
@@ -18498,7 +18498,7 @@ argok1579:
   ret i64 %t12381
 }
 
-define fastcc i64 @code_5670(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5710(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t12382 = icmp eq i64 %argc, 0
   br i1 %t12382, label %argok1581, label %arityerr1580
@@ -18524,7 +18524,7 @@ argok1581:
   %t12398 = load i64, ptr %t12397
   %t12399 = call i64 @rt_alloc_words(i64 5)
   %t12400 = inttoptr i64 %t12399 to ptr
-  store i64 ptrtoint (ptr @code_5672 to i64), ptr %t12400
+  store i64 ptrtoint (ptr @code_5712 to i64), ptr %t12400
   %t12401 = getelementptr i64, ptr %t12400, i64 1
   store i64 %t12386, ptr %t12401
   %t12402 = getelementptr i64, ptr %t12400, i64 2
@@ -18579,7 +18579,7 @@ then1590:
   %t12438 = load i64, ptr %t12437
   %t12439 = call i64 @rt_alloc_words(i64 2)
   %t12440 = inttoptr i64 %t12439 to ptr
-  store i64 ptrtoint (ptr @code_5678 to i64), ptr %t12440
+  store i64 ptrtoint (ptr @code_5718 to i64), ptr %t12440
   %t12441 = getelementptr i64, ptr %t12440, i64 1
   store i64 %t12438, ptr %t12441
   %t12442 = or i64 %t12439, 4
@@ -18656,7 +18656,7 @@ else1583:
   ret i64 %t12502
 }
 
-define fastcc i64 @code_5680(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5720(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t12503 = icmp eq i64 %argc, 1
   br i1 %t12503, label %argok1593, label %arityerr1592
@@ -18682,7 +18682,7 @@ argok1593:
   ret i64 %t12518
 }
 
-define fastcc i64 @code_5668(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5708(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t12519 = icmp eq i64 %argc, 0
   br i1 %t12519, label %argok1595, label %arityerr1594
@@ -18708,7 +18708,7 @@ argok1595:
   %t12535 = load i64, ptr %t12534
   %t12536 = call i64 @rt_alloc_words(i64 5)
   %t12537 = inttoptr i64 %t12536 to ptr
-  store i64 ptrtoint (ptr @code_5670 to i64), ptr %t12537
+  store i64 ptrtoint (ptr @code_5710 to i64), ptr %t12537
   %t12538 = getelementptr i64, ptr %t12537, i64 1
   store i64 %t12523, ptr %t12538
   %t12539 = getelementptr i64, ptr %t12537, i64 2
@@ -18763,7 +18763,7 @@ then1604:
   %t12575 = load i64, ptr %t12574
   %t12576 = call i64 @rt_alloc_words(i64 2)
   %t12577 = inttoptr i64 %t12576 to ptr
-  store i64 ptrtoint (ptr @code_5680 to i64), ptr %t12577
+  store i64 ptrtoint (ptr @code_5720 to i64), ptr %t12577
   %t12578 = getelementptr i64, ptr %t12577, i64 1
   store i64 %t12575, ptr %t12578
   %t12579 = or i64 %t12576, 4
@@ -18840,7 +18840,7 @@ else1597:
   ret i64 %t12639
 }
 
-define fastcc i64 @code_5666(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5706(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t12640 = icmp eq i64 %argc, 0
   br i1 %t12640, label %argok1607, label %arityerr1606
@@ -18866,7 +18866,7 @@ argok1607:
   %t12656 = load i64, ptr %t12655
   %t12657 = call i64 @rt_alloc_words(i64 5)
   %t12658 = inttoptr i64 %t12657 to ptr
-  store i64 ptrtoint (ptr @code_5668 to i64), ptr %t12658
+  store i64 ptrtoint (ptr @code_5708 to i64), ptr %t12658
   %t12659 = getelementptr i64, ptr %t12658, i64 1
   store i64 %t12644, ptr %t12659
   %t12660 = getelementptr i64, ptr %t12658, i64 2
@@ -18962,7 +18962,7 @@ else1609:
   ret i64 %t12726
 }
 
-define fastcc i64 @code_5664(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5704(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t12727 = icmp eq i64 %argc, 0
   br i1 %t12727, label %argok1619, label %arityerr1618
@@ -18988,7 +18988,7 @@ argok1619:
   %t12743 = load i64, ptr %t12742
   %t12744 = call i64 @rt_alloc_words(i64 5)
   %t12745 = inttoptr i64 %t12744 to ptr
-  store i64 ptrtoint (ptr @code_5666 to i64), ptr %t12745
+  store i64 ptrtoint (ptr @code_5706 to i64), ptr %t12745
   %t12746 = getelementptr i64, ptr %t12745, i64 1
   store i64 %t12731, ptr %t12746
   %t12747 = getelementptr i64, ptr %t12745, i64 2
@@ -19071,7 +19071,7 @@ else1621:
   ret i64 %t12808
 }
 
-define fastcc i64 @code_5662(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5702(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t12809 = icmp eq i64 %argc, 0
   br i1 %t12809, label %argok1627, label %arityerr1626
@@ -19097,7 +19097,7 @@ argok1627:
   %t12825 = load i64, ptr %t12824
   %t12826 = call i64 @rt_alloc_words(i64 5)
   %t12827 = inttoptr i64 %t12826 to ptr
-  store i64 ptrtoint (ptr @code_5664 to i64), ptr %t12827
+  store i64 ptrtoint (ptr @code_5704 to i64), ptr %t12827
   %t12828 = getelementptr i64, ptr %t12827, i64 1
   store i64 %t12813, ptr %t12828
   %t12829 = getelementptr i64, ptr %t12827, i64 2
@@ -19193,7 +19193,7 @@ else1629:
   ret i64 %t12895
 }
 
-define fastcc i64 @code_5660(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5700(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t12896 = icmp eq i64 %argc, 0
   br i1 %t12896, label %argok1639, label %arityerr1638
@@ -19219,7 +19219,7 @@ argok1639:
   %t12912 = load i64, ptr %t12911
   %t12913 = call i64 @rt_alloc_words(i64 5)
   %t12914 = inttoptr i64 %t12913 to ptr
-  store i64 ptrtoint (ptr @code_5662 to i64), ptr %t12914
+  store i64 ptrtoint (ptr @code_5702 to i64), ptr %t12914
   %t12915 = getelementptr i64, ptr %t12914, i64 1
   store i64 %t12900, ptr %t12915
   %t12916 = getelementptr i64, ptr %t12914, i64 2
@@ -19293,7 +19293,7 @@ else1641:
   ret i64 %t12964
 }
 
-define fastcc i64 @code_5658(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5698(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t12965 = icmp eq i64 %argc, 0
   br i1 %t12965, label %argok1649, label %arityerr1648
@@ -19319,7 +19319,7 @@ argok1649:
   %t12981 = load i64, ptr %t12980
   %t12982 = call i64 @rt_alloc_words(i64 5)
   %t12983 = inttoptr i64 %t12982 to ptr
-  store i64 ptrtoint (ptr @code_5660 to i64), ptr %t12983
+  store i64 ptrtoint (ptr @code_5700 to i64), ptr %t12983
   %t12984 = getelementptr i64, ptr %t12983, i64 1
   store i64 %t12969, ptr %t12984
   %t12985 = getelementptr i64, ptr %t12983, i64 2
@@ -19431,7 +19431,7 @@ else1651:
   ret i64 %t13067
 }
 
-define fastcc i64 @code_5656(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5696(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t13068 = icmp eq i64 %argc, 0
   br i1 %t13068, label %argok1661, label %arityerr1660
@@ -19457,7 +19457,7 @@ argok1661:
   %t13084 = load i64, ptr %t13083
   %t13085 = call i64 @rt_alloc_words(i64 5)
   %t13086 = inttoptr i64 %t13085 to ptr
-  store i64 ptrtoint (ptr @code_5658 to i64), ptr %t13086
+  store i64 ptrtoint (ptr @code_5698 to i64), ptr %t13086
   %t13087 = getelementptr i64, ptr %t13086, i64 1
   store i64 %t13072, ptr %t13087
   %t13088 = getelementptr i64, ptr %t13086, i64 2
@@ -19572,7 +19572,7 @@ else1663:
   ret i64 %t13173
 }
 
-define fastcc i64 @code_5654(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5694(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t13174 = icmp eq i64 %argc, 0
   br i1 %t13174, label %argok1673, label %arityerr1672
@@ -19598,7 +19598,7 @@ argok1673:
   %t13190 = load i64, ptr %t13189
   %t13191 = call i64 @rt_alloc_words(i64 5)
   %t13192 = inttoptr i64 %t13191 to ptr
-  store i64 ptrtoint (ptr @code_5656 to i64), ptr %t13192
+  store i64 ptrtoint (ptr @code_5696 to i64), ptr %t13192
   %t13193 = getelementptr i64, ptr %t13192, i64 1
   store i64 %t13178, ptr %t13193
   %t13194 = getelementptr i64, ptr %t13192, i64 2
@@ -19745,7 +19745,7 @@ else1675:
   ret i64 %t13307
 }
 
-define fastcc i64 @code_5652(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5692(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t13308 = icmp eq i64 %argc, 0
   br i1 %t13308, label %argok1687, label %arityerr1686
@@ -19771,7 +19771,7 @@ argok1687:
   %t13324 = load i64, ptr %t13323
   %t13325 = call i64 @rt_alloc_words(i64 5)
   %t13326 = inttoptr i64 %t13325 to ptr
-  store i64 ptrtoint (ptr @code_5654 to i64), ptr %t13326
+  store i64 ptrtoint (ptr @code_5694 to i64), ptr %t13326
   %t13327 = getelementptr i64, ptr %t13326, i64 1
   store i64 %t13312, ptr %t13327
   %t13328 = getelementptr i64, ptr %t13326, i64 2
@@ -19799,7 +19799,7 @@ else1689:
   ret i64 %t13342
 }
 
-define fastcc i64 @code_5648(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5688(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t13343 = icmp eq i64 %argc, 1
   br i1 %t13343, label %argok1691, label %arityerr1690
@@ -19809,7 +19809,7 @@ arityerr1690:
 argok1691:
   %t13344 = call i64 @rt_alloc_words(i64 2)
   %t13345 = inttoptr i64 %t13344 to ptr
-  store i64 ptrtoint (ptr @code_5650 to i64), ptr %t13345
+  store i64 ptrtoint (ptr @code_5690 to i64), ptr %t13345
   %t13346 = or i64 %t13344, 4
   %t13347 = and i64 %self, -8
   %t13348 = inttoptr i64 %t13347 to ptr
@@ -19827,7 +19827,7 @@ argok1691:
   %t13359 = load i64, ptr %t13358
   %t13360 = call i64 @rt_alloc_words(i64 5)
   %t13361 = inttoptr i64 %t13360 to ptr
-  store i64 ptrtoint (ptr @code_5652 to i64), ptr %t13361
+  store i64 ptrtoint (ptr @code_5692 to i64), ptr %t13361
   %t13362 = getelementptr i64, ptr %t13361, i64 1
   store i64 %a0, ptr %t13362
   %t13363 = getelementptr i64, ptr %t13361, i64 2
@@ -19889,7 +19889,7 @@ else1693:
   ret i64 %t13399
 }
 
-define fastcc i64 @code_5684(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5724(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t13400 = icmp eq i64 %argc, 1
   br i1 %t13400, label %argok1701, label %arityerr1700
@@ -19915,7 +19915,7 @@ argok1701:
   ret i64 %t13415
 }
 
-define fastcc i64 @code_5690(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5730(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t13416 = icmp eq i64 %argc, 2
   br i1 %t13416, label %argok1703, label %arityerr1702
@@ -19937,7 +19937,7 @@ argok1703:
   ret i64 %t13427
 }
 
-define fastcc i64 @code_5688(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5728(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t13428 = icmp eq i64 %argc, 4
   br i1 %t13428, label %argok1705, label %arityerr1704
@@ -19986,7 +19986,7 @@ else1709:
   %t13461 = call i64 @rt_intern(ptr @.str.sym.30)
   %t13462 = call i64 @rt_alloc_words(i64 1)
   %t13463 = inttoptr i64 %t13462 to ptr
-  store i64 ptrtoint (ptr @code_5690 to i64), ptr %t13463
+  store i64 ptrtoint (ptr @code_5730 to i64), ptr %t13463
   %t13464 = or i64 %t13462, 4
   %t13465 = load i64, ptr @"scheme.base:map"
   %t13466 = and i64 %t13465, -8
@@ -20037,16 +20037,16 @@ then1710:
   %t13507 = call i64 @rt_cons(i64 %t13505, i64 %a1)
   %t13508 = call i64 @rt_cons(i64 %t13484, i64 %a2)
   %t13509 = call i64 @rt_cons(i64 %t13505, i64 %a3)
-  %t13510 = musttail call fastcc i64 @code_5688(i64 %self, i64 4, i64 %t13506, i64 %t13507, i64 %t13508, i64 %t13509, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t13510 = musttail call fastcc i64 @code_5728(i64 %self, i64 4, i64 %t13506, i64 %t13507, i64 %t13508, i64 %t13509, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t13510
 else1711:
   %t13511 = call i64 @rt_cdr(i64 %a0)
   %t13512 = call i64 @rt_cons(i64 %t13484, i64 %a1)
-  %t13513 = musttail call fastcc i64 @code_5688(i64 %self, i64 4, i64 %t13511, i64 %t13512, i64 %a2, i64 %a3, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t13513 = musttail call fastcc i64 @code_5728(i64 %self, i64 4, i64 %t13511, i64 %t13512, i64 %a2, i64 %a3, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t13513
 }
 
-define fastcc i64 @code_5686(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5726(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t13514 = icmp eq i64 %argc, 2
   br i1 %t13514, label %argok1713, label %arityerr1712
@@ -20056,7 +20056,7 @@ arityerr1712:
 argok1713:
   %t13515 = call i64 @rt_alloc_words(i64 5)
   %t13516 = inttoptr i64 %t13515 to ptr
-  store i64 ptrtoint (ptr @code_5688 to i64), ptr %t13516
+  store i64 ptrtoint (ptr @code_5728 to i64), ptr %t13516
   %t13517 = or i64 %t13515, 4
   %t13518 = getelementptr i64, ptr %t13516, i64 1
   store i64 %a1, ptr %t13518
@@ -20082,7 +20082,7 @@ argok1713:
   ret i64 %t13534
 }
 
-define fastcc i64 @code_5718(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5758(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t13535 = icmp eq i64 %argc, 0
   br i1 %t13535, label %argok1715, label %arityerr1714
@@ -20105,7 +20105,7 @@ argok1715:
   ret i64 %t13547
 }
 
-define fastcc i64 @code_5716(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5756(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t13548 = icmp eq i64 %argc, 0
   br i1 %t13548, label %argok1717, label %arityerr1716
@@ -20119,7 +20119,7 @@ argok1717:
   %t13552 = load i64, ptr %t13551
   %t13553 = call i64 @rt_alloc_words(i64 2)
   %t13554 = inttoptr i64 %t13553 to ptr
-  store i64 ptrtoint (ptr @code_5718 to i64), ptr %t13554
+  store i64 ptrtoint (ptr @code_5758 to i64), ptr %t13554
   %t13555 = getelementptr i64, ptr %t13554, i64 1
   store i64 %t13552, ptr %t13555
   %t13556 = or i64 %t13553, 4
@@ -20206,7 +20206,7 @@ else1719:
   ret i64 %t13624
 }
 
-define fastcc i64 @code_5714(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5754(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t13625 = icmp eq i64 %argc, 0
   br i1 %t13625, label %argok1725, label %arityerr1724
@@ -20224,7 +20224,7 @@ argok1725:
   %t13633 = load i64, ptr %t13632
   %t13634 = call i64 @rt_alloc_words(i64 3)
   %t13635 = inttoptr i64 %t13634 to ptr
-  store i64 ptrtoint (ptr @code_5716 to i64), ptr %t13635
+  store i64 ptrtoint (ptr @code_5756 to i64), ptr %t13635
   %t13636 = getelementptr i64, ptr %t13635, i64 1
   store i64 %t13629, ptr %t13636
   %t13637 = getelementptr i64, ptr %t13635, i64 2
@@ -20313,7 +20313,7 @@ else1727:
   ret i64 %t13706
 }
 
-define fastcc i64 @code_5720(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5760(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t13707 = icmp eq i64 %argc, 1
   br i1 %t13707, label %argok1733, label %arityerr1732
@@ -20347,7 +20347,7 @@ argok1733:
   ret i64 %t13730
 }
 
-define fastcc i64 @code_5712(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5752(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t13731 = icmp eq i64 %argc, 0
   br i1 %t13731, label %argok1735, label %arityerr1734
@@ -20365,7 +20365,7 @@ argok1735:
   %t13739 = load i64, ptr %t13738
   %t13740 = call i64 @rt_alloc_words(i64 3)
   %t13741 = inttoptr i64 %t13740 to ptr
-  store i64 ptrtoint (ptr @code_5714 to i64), ptr %t13741
+  store i64 ptrtoint (ptr @code_5754 to i64), ptr %t13741
   %t13742 = getelementptr i64, ptr %t13741, i64 1
   store i64 %t13735, ptr %t13742
   %t13743 = getelementptr i64, ptr %t13741, i64 2
@@ -20417,7 +20417,7 @@ then1744:
   %t13778 = load i64, ptr %t13777
   %t13779 = call i64 @rt_alloc_words(i64 2)
   %t13780 = inttoptr i64 %t13779 to ptr
-  store i64 ptrtoint (ptr @code_5720 to i64), ptr %t13780
+  store i64 ptrtoint (ptr @code_5760 to i64), ptr %t13780
   %t13781 = getelementptr i64, ptr %t13780, i64 1
   store i64 %t13778, ptr %t13781
   %t13782 = or i64 %t13779, 4
@@ -20478,7 +20478,7 @@ else1737:
   ret i64 %t13826
 }
 
-define fastcc i64 @code_5722(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5762(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t13827 = icmp eq i64 %argc, 1
   br i1 %t13827, label %argok1747, label %arityerr1746
@@ -20490,7 +20490,7 @@ argok1747:
   ret i64 %t13828
 }
 
-define fastcc i64 @code_5724(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5764(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t13829 = icmp eq i64 %argc, 1
   br i1 %t13829, label %argok1749, label %arityerr1748
@@ -20517,7 +20517,7 @@ argok1749:
   ret i64 %t13845
 }
 
-define fastcc i64 @code_5710(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5750(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t13846 = icmp eq i64 %argc, 0
   br i1 %t13846, label %argok1751, label %arityerr1750
@@ -20535,7 +20535,7 @@ argok1751:
   %t13854 = load i64, ptr %t13853
   %t13855 = call i64 @rt_alloc_words(i64 3)
   %t13856 = inttoptr i64 %t13855 to ptr
-  store i64 ptrtoint (ptr @code_5712 to i64), ptr %t13856
+  store i64 ptrtoint (ptr @code_5752 to i64), ptr %t13856
   %t13857 = getelementptr i64, ptr %t13856, i64 1
   store i64 %t13850, ptr %t13857
   %t13858 = getelementptr i64, ptr %t13856, i64 2
@@ -20582,7 +20582,7 @@ then1758:
 then1760:
   %t13889 = call i64 @rt_alloc_words(i64 1)
   %t13890 = inttoptr i64 %t13889 to ptr
-  store i64 ptrtoint (ptr @code_5722 to i64), ptr %t13890
+  store i64 ptrtoint (ptr @code_5762 to i64), ptr %t13890
   %t13891 = or i64 %t13889, 4
   %t13892 = load i64, ptr @"scheme.base:map"
   %t13893 = and i64 %t13892, -8
@@ -20596,7 +20596,7 @@ then1760:
   %t13901 = load i64, ptr %t13900
   %t13902 = call i64 @rt_alloc_words(i64 2)
   %t13903 = inttoptr i64 %t13902 to ptr
-  store i64 ptrtoint (ptr @code_5724 to i64), ptr %t13903
+  store i64 ptrtoint (ptr @code_5764 to i64), ptr %t13903
   %t13904 = getelementptr i64, ptr %t13903, i64 1
   store i64 %t13901, ptr %t13904
   %t13905 = or i64 %t13902, 4
@@ -20682,7 +20682,7 @@ else1753:
   ret i64 %t13974
 }
 
-define fastcc i64 @code_5708(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5748(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t13975 = icmp eq i64 %argc, 0
   br i1 %t13975, label %argok1763, label %arityerr1762
@@ -20704,7 +20704,7 @@ argok1763:
   %t13987 = load i64, ptr %t13986
   %t13988 = call i64 @rt_alloc_words(i64 4)
   %t13989 = inttoptr i64 %t13988 to ptr
-  store i64 ptrtoint (ptr @code_5710 to i64), ptr %t13989
+  store i64 ptrtoint (ptr @code_5750 to i64), ptr %t13989
   %t13990 = getelementptr i64, ptr %t13989, i64 1
   store i64 %t13979, ptr %t13990
   %t13991 = getelementptr i64, ptr %t13989, i64 2
@@ -20907,7 +20907,7 @@ else1765:
   ret i64 %t14149
 }
 
-define fastcc i64 @code_5706(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5746(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t14150 = icmp eq i64 %argc, 0
   br i1 %t14150, label %argok1783, label %arityerr1782
@@ -20941,7 +20941,7 @@ argok1783:
   %t14174 = load i64, ptr %t14173
   %t14175 = call i64 @rt_alloc_words(i64 7)
   %t14176 = inttoptr i64 %t14175 to ptr
-  store i64 ptrtoint (ptr @code_5708 to i64), ptr %t14176
+  store i64 ptrtoint (ptr @code_5748 to i64), ptr %t14176
   %t14177 = getelementptr i64, ptr %t14176, i64 1
   store i64 %t14154, ptr %t14177
   %t14178 = getelementptr i64, ptr %t14176, i64 2
@@ -21028,7 +21028,7 @@ else1785:
   ret i64 %t14241
 }
 
-define fastcc i64 @code_5704(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5744(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t14242 = icmp eq i64 %argc, 0
   br i1 %t14242, label %argok1791, label %arityerr1790
@@ -21062,7 +21062,7 @@ argok1791:
   %t14266 = load i64, ptr %t14265
   %t14267 = call i64 @rt_alloc_words(i64 7)
   %t14268 = inttoptr i64 %t14267 to ptr
-  store i64 ptrtoint (ptr @code_5706 to i64), ptr %t14268
+  store i64 ptrtoint (ptr @code_5746 to i64), ptr %t14268
   %t14269 = getelementptr i64, ptr %t14268, i64 1
   store i64 %t14246, ptr %t14269
   %t14270 = getelementptr i64, ptr %t14268, i64 2
@@ -21177,7 +21177,7 @@ else1793:
   ret i64 %t14353
 }
 
-define fastcc i64 @code_5702(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5742(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t14354 = icmp eq i64 %argc, 0
   br i1 %t14354, label %argok1803, label %arityerr1802
@@ -21211,7 +21211,7 @@ argok1803:
   %t14378 = load i64, ptr %t14377
   %t14379 = call i64 @rt_alloc_words(i64 7)
   %t14380 = inttoptr i64 %t14379 to ptr
-  store i64 ptrtoint (ptr @code_5704 to i64), ptr %t14380
+  store i64 ptrtoint (ptr @code_5744 to i64), ptr %t14380
   %t14381 = getelementptr i64, ptr %t14380, i64 1
   store i64 %t14358, ptr %t14381
   %t14382 = getelementptr i64, ptr %t14380, i64 2
@@ -21350,7 +21350,7 @@ else1805:
   ret i64 %t14485
 }
 
-define fastcc i64 @code_5700(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5740(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t14486 = icmp eq i64 %argc, 0
   br i1 %t14486, label %argok1817, label %arityerr1816
@@ -21384,7 +21384,7 @@ argok1817:
   %t14510 = load i64, ptr %t14509
   %t14511 = call i64 @rt_alloc_words(i64 7)
   %t14512 = inttoptr i64 %t14511 to ptr
-  store i64 ptrtoint (ptr @code_5702 to i64), ptr %t14512
+  store i64 ptrtoint (ptr @code_5742 to i64), ptr %t14512
   %t14513 = getelementptr i64, ptr %t14512, i64 1
   store i64 %t14490, ptr %t14513
   %t14514 = getelementptr i64, ptr %t14512, i64 2
@@ -21491,7 +21491,7 @@ else1819:
   ret i64 %t14589
 }
 
-define fastcc i64 @code_5698(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5738(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t14590 = icmp eq i64 %argc, 0
   br i1 %t14590, label %argok1829, label %arityerr1828
@@ -21525,7 +21525,7 @@ argok1829:
   %t14614 = load i64, ptr %t14613
   %t14615 = call i64 @rt_alloc_words(i64 7)
   %t14616 = inttoptr i64 %t14615 to ptr
-  store i64 ptrtoint (ptr @code_5700 to i64), ptr %t14616
+  store i64 ptrtoint (ptr @code_5740 to i64), ptr %t14616
   %t14617 = getelementptr i64, ptr %t14616, i64 1
   store i64 %t14594, ptr %t14617
   %t14618 = getelementptr i64, ptr %t14616, i64 2
@@ -21630,7 +21630,7 @@ else1831:
   ret i64 %t14691
 }
 
-define fastcc i64 @code_5696(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5736(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t14692 = icmp eq i64 %argc, 0
   br i1 %t14692, label %argok1841, label %arityerr1840
@@ -21664,7 +21664,7 @@ argok1841:
   %t14716 = load i64, ptr %t14715
   %t14717 = call i64 @rt_alloc_words(i64 7)
   %t14718 = inttoptr i64 %t14717 to ptr
-  store i64 ptrtoint (ptr @code_5698 to i64), ptr %t14718
+  store i64 ptrtoint (ptr @code_5738 to i64), ptr %t14718
   %t14719 = getelementptr i64, ptr %t14718, i64 1
   store i64 %t14696, ptr %t14719
   %t14720 = getelementptr i64, ptr %t14718, i64 2
@@ -21746,7 +21746,7 @@ else1843:
   ret i64 %t14774
 }
 
-define fastcc i64 @code_5694(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5734(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t14775 = icmp eq i64 %argc, 0
   br i1 %t14775, label %argok1851, label %arityerr1850
@@ -21784,7 +21784,7 @@ argok1851:
   %t14803 = load i64, ptr %t14802
   %t14804 = call i64 @rt_alloc_words(i64 8)
   %t14805 = inttoptr i64 %t14804 to ptr
-  store i64 ptrtoint (ptr @code_5696 to i64), ptr %t14805
+  store i64 ptrtoint (ptr @code_5736 to i64), ptr %t14805
   %t14806 = getelementptr i64, ptr %t14805, i64 1
   store i64 %t14779, ptr %t14806
   %t14807 = getelementptr i64, ptr %t14805, i64 2
@@ -21838,7 +21838,7 @@ else1853:
   ret i64 %t14840
 }
 
-define fastcc i64 @code_5692(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5732(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t14841 = icmp eq i64 %argc, 1
   br i1 %t14841, label %argok1857, label %arityerr1856
@@ -21872,7 +21872,7 @@ argok1857:
   %t14865 = load i64, ptr %t14864
   %t14866 = call i64 @rt_alloc_words(i64 9)
   %t14867 = inttoptr i64 %t14866 to ptr
-  store i64 ptrtoint (ptr @code_5694 to i64), ptr %t14867
+  store i64 ptrtoint (ptr @code_5734 to i64), ptr %t14867
   %t14868 = getelementptr i64, ptr %t14867, i64 1
   store i64 %a0, ptr %t14868
   %t14869 = getelementptr i64, ptr %t14867, i64 2
@@ -21942,7 +21942,7 @@ else1859:
   ret i64 %t14909
 }
 
-define fastcc i64 @code_5682(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5722(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t14910 = icmp eq i64 %argc, 1
   br i1 %t14910, label %argok1867, label %arityerr1866
@@ -21971,7 +21971,7 @@ argok1867:
   %t14929 = load i64, ptr %t14928
   %t14930 = call i64 @rt_alloc_words(i64 3)
   %t14931 = inttoptr i64 %t14930 to ptr
-  store i64 ptrtoint (ptr @code_5684 to i64), ptr %t14931
+  store i64 ptrtoint (ptr @code_5724 to i64), ptr %t14931
   %t14932 = getelementptr i64, ptr %t14931, i64 1
   store i64 %t14929, ptr %t14932
   %t14933 = getelementptr i64, ptr %t14931, i64 2
@@ -21984,7 +21984,7 @@ argok1867:
   %t14939 = load i64, ptr %t14938
   %t14940 = call i64 @rt_alloc_words(i64 3)
   %t14941 = inttoptr i64 %t14940 to ptr
-  store i64 ptrtoint (ptr @code_5686 to i64), ptr %t14941
+  store i64 ptrtoint (ptr @code_5726 to i64), ptr %t14941
   %t14942 = getelementptr i64, ptr %t14941, i64 1
   store i64 %t14912, ptr %t14942
   %t14943 = getelementptr i64, ptr %t14941, i64 2
@@ -22005,7 +22005,7 @@ argok1867:
   %t14957 = load i64, ptr %t14956
   %t14958 = call i64 @rt_alloc_words(i64 7)
   %t14959 = inttoptr i64 %t14958 to ptr
-  store i64 ptrtoint (ptr @code_5692 to i64), ptr %t14959
+  store i64 ptrtoint (ptr @code_5732 to i64), ptr %t14959
   %t14960 = getelementptr i64, ptr %t14959, i64 1
   store i64 %t14914, ptr %t14960
   %t14961 = getelementptr i64, ptr %t14959, i64 2
@@ -22029,7 +22029,7 @@ argok1867:
   ret i64 %t14973
 }
 
-define fastcc i64 @code_5728(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5768(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t14974 = icmp eq i64 %argc, 1
   br i1 %t14974, label %argok1869, label %arityerr1868
@@ -22050,7 +22050,7 @@ argok1869:
   ret i64 %t14984
 }
 
-define fastcc i64 @code_5754(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5794(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t14985 = icmp eq i64 %argc, 0
   br i1 %t14985, label %argok1871, label %arityerr1870
@@ -22073,7 +22073,7 @@ argok1871:
   ret i64 %t14997
 }
 
-define fastcc i64 @code_5752(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5792(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t14998 = icmp eq i64 %argc, 0
   br i1 %t14998, label %argok1873, label %arityerr1872
@@ -22087,7 +22087,7 @@ argok1873:
   %t15002 = load i64, ptr %t15001
   %t15003 = call i64 @rt_alloc_words(i64 2)
   %t15004 = inttoptr i64 %t15003 to ptr
-  store i64 ptrtoint (ptr @code_5754 to i64), ptr %t15004
+  store i64 ptrtoint (ptr @code_5794 to i64), ptr %t15004
   %t15005 = getelementptr i64, ptr %t15004, i64 1
   store i64 %t15002, ptr %t15005
   %t15006 = or i64 %t15003, 4
@@ -22183,7 +22183,7 @@ else1875:
   ret i64 %t15083
 }
 
-define fastcc i64 @code_5750(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5790(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t15084 = icmp eq i64 %argc, 0
   br i1 %t15084, label %argok1881, label %arityerr1880
@@ -22209,7 +22209,7 @@ argok1881:
   %t15100 = load i64, ptr %t15099
   %t15101 = call i64 @rt_alloc_words(i64 5)
   %t15102 = inttoptr i64 %t15101 to ptr
-  store i64 ptrtoint (ptr @code_5752 to i64), ptr %t15102
+  store i64 ptrtoint (ptr @code_5792 to i64), ptr %t15102
   %t15103 = getelementptr i64, ptr %t15102, i64 1
   store i64 %t15088, ptr %t15103
   %t15104 = getelementptr i64, ptr %t15102, i64 2
@@ -22311,7 +22311,7 @@ else1883:
   ret i64 %t15184
 }
 
-define fastcc i64 @code_5756(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5796(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t15185 = icmp eq i64 %argc, 1
   br i1 %t15185, label %argok1889, label %arityerr1888
@@ -22337,7 +22337,7 @@ argok1889:
   ret i64 %t15200
 }
 
-define fastcc i64 @code_5758(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5798(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t15201 = icmp eq i64 %argc, 1
   br i1 %t15201, label %argok1891, label %arityerr1890
@@ -22349,7 +22349,7 @@ argok1891:
   ret i64 %t15202
 }
 
-define fastcc i64 @code_5748(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5788(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t15203 = icmp eq i64 %argc, 0
   br i1 %t15203, label %argok1893, label %arityerr1892
@@ -22375,7 +22375,7 @@ argok1893:
   %t15219 = load i64, ptr %t15218
   %t15220 = call i64 @rt_alloc_words(i64 5)
   %t15221 = inttoptr i64 %t15220 to ptr
-  store i64 ptrtoint (ptr @code_5750 to i64), ptr %t15221
+  store i64 ptrtoint (ptr @code_5790 to i64), ptr %t15221
   %t15222 = getelementptr i64, ptr %t15221, i64 1
   store i64 %t15207, ptr %t15222
   %t15223 = getelementptr i64, ptr %t15221, i64 2
@@ -22430,7 +22430,7 @@ then1902:
   %t15259 = load i64, ptr %t15258
   %t15260 = call i64 @rt_alloc_words(i64 2)
   %t15261 = inttoptr i64 %t15260 to ptr
-  store i64 ptrtoint (ptr @code_5756 to i64), ptr %t15261
+  store i64 ptrtoint (ptr @code_5796 to i64), ptr %t15261
   %t15262 = getelementptr i64, ptr %t15261, i64 1
   store i64 %t15259, ptr %t15262
   %t15263 = or i64 %t15260, 4
@@ -22471,7 +22471,7 @@ then1902:
   %t15298 = call fastcc i64%t15297(i64 %t15293, i64 2, i64 %t15279, i64 %t15288, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t15299 = call i64 @rt_alloc_words(i64 1)
   %t15300 = inttoptr i64 %t15299 to ptr
-  store i64 ptrtoint (ptr @code_5758 to i64), ptr %t15300
+  store i64 ptrtoint (ptr @code_5798 to i64), ptr %t15300
   %t15301 = or i64 %t15299, 4
   %t15302 = load i64, ptr @"scheme.base:map"
   %t15303 = and i64 %t15302, -8
@@ -22527,7 +22527,7 @@ else1895:
   ret i64 %t15342
 }
 
-define fastcc i64 @code_5760(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5800(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t15343 = icmp eq i64 %argc, 1
   br i1 %t15343, label %argok1905, label %arityerr1904
@@ -22553,7 +22553,7 @@ argok1905:
   ret i64 %t15358
 }
 
-define fastcc i64 @code_5762(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5802(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t15359 = icmp eq i64 %argc, 1
   br i1 %t15359, label %argok1907, label %arityerr1906
@@ -22565,7 +22565,7 @@ argok1907:
   ret i64 %t15360
 }
 
-define fastcc i64 @code_5746(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5786(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t15361 = icmp eq i64 %argc, 0
   br i1 %t15361, label %argok1909, label %arityerr1908
@@ -22595,7 +22595,7 @@ argok1909:
   %t15381 = load i64, ptr %t15380
   %t15382 = call i64 @rt_alloc_words(i64 6)
   %t15383 = inttoptr i64 %t15382 to ptr
-  store i64 ptrtoint (ptr @code_5748 to i64), ptr %t15383
+  store i64 ptrtoint (ptr @code_5788 to i64), ptr %t15383
   %t15384 = getelementptr i64, ptr %t15383, i64 1
   store i64 %t15365, ptr %t15384
   %t15385 = getelementptr i64, ptr %t15383, i64 2
@@ -22652,7 +22652,7 @@ then1918:
   %t15422 = load i64, ptr %t15421
   %t15423 = call i64 @rt_alloc_words(i64 2)
   %t15424 = inttoptr i64 %t15423 to ptr
-  store i64 ptrtoint (ptr @code_5760 to i64), ptr %t15424
+  store i64 ptrtoint (ptr @code_5800 to i64), ptr %t15424
   %t15425 = getelementptr i64, ptr %t15424, i64 1
   store i64 %t15422, ptr %t15425
   %t15426 = or i64 %t15423, 4
@@ -22693,7 +22693,7 @@ then1918:
   %t15461 = call fastcc i64%t15460(i64 %t15456, i64 2, i64 %t15442, i64 %t15451, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t15462 = call i64 @rt_alloc_words(i64 1)
   %t15463 = inttoptr i64 %t15462 to ptr
-  store i64 ptrtoint (ptr @code_5762 to i64), ptr %t15463
+  store i64 ptrtoint (ptr @code_5802 to i64), ptr %t15463
   %t15464 = or i64 %t15462, 4
   %t15465 = load i64, ptr @"scheme.base:map"
   %t15466 = and i64 %t15465, -8
@@ -22749,7 +22749,7 @@ else1911:
   ret i64 %t15505
 }
 
-define fastcc i64 @code_5764(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5804(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t15506 = icmp eq i64 %argc, 1
   br i1 %t15506, label %argok1921, label %arityerr1920
@@ -22775,7 +22775,7 @@ argok1921:
   ret i64 %t15521
 }
 
-define fastcc i64 @code_5766(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5806(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t15522 = icmp eq i64 %argc, 1
   br i1 %t15522, label %argok1923, label %arityerr1922
@@ -22787,7 +22787,7 @@ argok1923:
   ret i64 %t15523
 }
 
-define fastcc i64 @code_5744(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5784(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t15524 = icmp eq i64 %argc, 0
   br i1 %t15524, label %argok1925, label %arityerr1924
@@ -22817,7 +22817,7 @@ argok1925:
   %t15544 = load i64, ptr %t15543
   %t15545 = call i64 @rt_alloc_words(i64 6)
   %t15546 = inttoptr i64 %t15545 to ptr
-  store i64 ptrtoint (ptr @code_5746 to i64), ptr %t15546
+  store i64 ptrtoint (ptr @code_5786 to i64), ptr %t15546
   %t15547 = getelementptr i64, ptr %t15546, i64 1
   store i64 %t15528, ptr %t15547
   %t15548 = getelementptr i64, ptr %t15546, i64 2
@@ -22874,7 +22874,7 @@ then1934:
   %t15585 = load i64, ptr %t15584
   %t15586 = call i64 @rt_alloc_words(i64 2)
   %t15587 = inttoptr i64 %t15586 to ptr
-  store i64 ptrtoint (ptr @code_5764 to i64), ptr %t15587
+  store i64 ptrtoint (ptr @code_5804 to i64), ptr %t15587
   %t15588 = getelementptr i64, ptr %t15587, i64 1
   store i64 %t15585, ptr %t15588
   %t15589 = or i64 %t15586, 4
@@ -22905,7 +22905,7 @@ then1934:
   %t15614 = call fastcc i64%t15613(i64 %t15609, i64 1, i64 %t15578, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t15615 = call i64 @rt_alloc_words(i64 1)
   %t15616 = inttoptr i64 %t15615 to ptr
-  store i64 ptrtoint (ptr @code_5766 to i64), ptr %t15616
+  store i64 ptrtoint (ptr @code_5806 to i64), ptr %t15616
   %t15617 = or i64 %t15615, 4
   %t15618 = load i64, ptr @"scheme.base:map"
   %t15619 = and i64 %t15618, -8
@@ -22971,7 +22971,7 @@ else1927:
   ret i64 %t15668
 }
 
-define fastcc i64 @code_5742(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5782(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t15669 = icmp eq i64 %argc, 0
   br i1 %t15669, label %argok1937, label %arityerr1936
@@ -23001,7 +23001,7 @@ argok1937:
   %t15689 = load i64, ptr %t15688
   %t15690 = call i64 @rt_alloc_words(i64 6)
   %t15691 = inttoptr i64 %t15690 to ptr
-  store i64 ptrtoint (ptr @code_5744 to i64), ptr %t15691
+  store i64 ptrtoint (ptr @code_5784 to i64), ptr %t15691
   %t15692 = getelementptr i64, ptr %t15691, i64 1
   store i64 %t15673, ptr %t15692
   %t15693 = getelementptr i64, ptr %t15691, i64 2
@@ -23119,7 +23119,7 @@ else1939:
   ret i64 %t15780
 }
 
-define fastcc i64 @code_5740(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5780(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t15781 = icmp eq i64 %argc, 0
   br i1 %t15781, label %argok1949, label %arityerr1948
@@ -23153,7 +23153,7 @@ argok1949:
   %t15805 = load i64, ptr %t15804
   %t15806 = call i64 @rt_alloc_words(i64 7)
   %t15807 = inttoptr i64 %t15806 to ptr
-  store i64 ptrtoint (ptr @code_5742 to i64), ptr %t15807
+  store i64 ptrtoint (ptr @code_5782 to i64), ptr %t15807
   %t15808 = getelementptr i64, ptr %t15807, i64 1
   store i64 %t15785, ptr %t15808
   %t15809 = getelementptr i64, ptr %t15807, i64 2
@@ -23240,7 +23240,7 @@ else1951:
   ret i64 %t15872
 }
 
-define fastcc i64 @code_5738(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5778(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t15873 = icmp eq i64 %argc, 0
   br i1 %t15873, label %argok1957, label %arityerr1956
@@ -23274,7 +23274,7 @@ argok1957:
   %t15897 = load i64, ptr %t15896
   %t15898 = call i64 @rt_alloc_words(i64 7)
   %t15899 = inttoptr i64 %t15898 to ptr
-  store i64 ptrtoint (ptr @code_5740 to i64), ptr %t15899
+  store i64 ptrtoint (ptr @code_5780 to i64), ptr %t15899
   %t15900 = getelementptr i64, ptr %t15899, i64 1
   store i64 %t15877, ptr %t15900
   %t15901 = getelementptr i64, ptr %t15899, i64 2
@@ -23393,7 +23393,7 @@ else1959:
   ret i64 %t15988
 }
 
-define fastcc i64 @code_5736(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5776(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t15989 = icmp eq i64 %argc, 0
   br i1 %t15989, label %argok1969, label %arityerr1968
@@ -23427,7 +23427,7 @@ argok1969:
   %t16013 = load i64, ptr %t16012
   %t16014 = call i64 @rt_alloc_words(i64 7)
   %t16015 = inttoptr i64 %t16014 to ptr
-  store i64 ptrtoint (ptr @code_5738 to i64), ptr %t16015
+  store i64 ptrtoint (ptr @code_5778 to i64), ptr %t16015
   %t16016 = getelementptr i64, ptr %t16015, i64 1
   store i64 %t15993, ptr %t16016
   %t16017 = getelementptr i64, ptr %t16015, i64 2
@@ -23578,7 +23578,7 @@ else1971:
   ret i64 %t16132
 }
 
-define fastcc i64 @code_5734(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5774(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t16133 = icmp eq i64 %argc, 0
   br i1 %t16133, label %argok1983, label %arityerr1982
@@ -23612,7 +23612,7 @@ argok1983:
   %t16157 = load i64, ptr %t16156
   %t16158 = call i64 @rt_alloc_words(i64 7)
   %t16159 = inttoptr i64 %t16158 to ptr
-  store i64 ptrtoint (ptr @code_5736 to i64), ptr %t16159
+  store i64 ptrtoint (ptr @code_5776 to i64), ptr %t16159
   %t16160 = getelementptr i64, ptr %t16159, i64 1
   store i64 %t16137, ptr %t16160
   %t16161 = getelementptr i64, ptr %t16159, i64 2
@@ -23712,7 +23712,7 @@ else1985:
   ret i64 %t16229
 }
 
-define fastcc i64 @code_5732(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5772(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t16230 = icmp eq i64 %argc, 0
   br i1 %t16230, label %argok1995, label %arityerr1994
@@ -23746,7 +23746,7 @@ argok1995:
   %t16254 = load i64, ptr %t16253
   %t16255 = call i64 @rt_alloc_words(i64 7)
   %t16256 = inttoptr i64 %t16255 to ptr
-  store i64 ptrtoint (ptr @code_5734 to i64), ptr %t16256
+  store i64 ptrtoint (ptr @code_5774 to i64), ptr %t16256
   %t16257 = getelementptr i64, ptr %t16256, i64 1
   store i64 %t16234, ptr %t16257
   %t16258 = getelementptr i64, ptr %t16256, i64 2
@@ -23824,7 +23824,7 @@ else1997:
   ret i64 %t16308
 }
 
-define fastcc i64 @code_5730(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5770(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t16309 = icmp eq i64 %argc, 0
   br i1 %t16309, label %argok2005, label %arityerr2004
@@ -23858,7 +23858,7 @@ argok2005:
   %t16333 = load i64, ptr %t16332
   %t16334 = call i64 @rt_alloc_words(i64 7)
   %t16335 = inttoptr i64 %t16334 to ptr
-  store i64 ptrtoint (ptr @code_5732 to i64), ptr %t16335
+  store i64 ptrtoint (ptr @code_5772 to i64), ptr %t16335
   %t16336 = getelementptr i64, ptr %t16335, i64 1
   store i64 %t16313, ptr %t16336
   %t16337 = getelementptr i64, ptr %t16335, i64 2
@@ -23896,7 +23896,7 @@ else2007:
   ret i64 %t16359
 }
 
-define fastcc i64 @code_5726(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5766(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t16360 = icmp eq i64 %argc, 1
   br i1 %t16360, label %argok2009, label %arityerr2008
@@ -23906,7 +23906,7 @@ arityerr2008:
 argok2009:
   %t16361 = call i64 @rt_alloc_words(i64 2)
   %t16362 = inttoptr i64 %t16361 to ptr
-  store i64 ptrtoint (ptr @code_5728 to i64), ptr %t16362
+  store i64 ptrtoint (ptr @code_5768 to i64), ptr %t16362
   %t16363 = or i64 %t16361, 4
   %t16364 = and i64 %self, -8
   %t16365 = inttoptr i64 %t16364 to ptr
@@ -23932,7 +23932,7 @@ argok2009:
   %t16384 = load i64, ptr %t16383
   %t16385 = call i64 @rt_alloc_words(i64 7)
   %t16386 = inttoptr i64 %t16385 to ptr
-  store i64 ptrtoint (ptr @code_5730 to i64), ptr %t16386
+  store i64 ptrtoint (ptr @code_5770 to i64), ptr %t16386
   %t16387 = getelementptr i64, ptr %t16386, i64 1
   store i64 %a0, ptr %t16387
   %t16388 = getelementptr i64, ptr %t16386, i64 2
@@ -23998,7 +23998,7 @@ else2011:
   ret i64 %t16426
 }
 
-define fastcc i64 @code_5770(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5810(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t16427 = icmp eq i64 %argc, 1
   br i1 %t16427, label %argok2019, label %arityerr2018
@@ -24019,7 +24019,7 @@ argok2019:
   ret i64 %t16437
 }
 
-define fastcc i64 @code_5794(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5834(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t16438 = icmp eq i64 %argc, 0
   br i1 %t16438, label %argok2021, label %arityerr2020
@@ -24042,7 +24042,7 @@ argok2021:
   ret i64 %t16450
 }
 
-define fastcc i64 @code_5792(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5832(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t16451 = icmp eq i64 %argc, 0
   br i1 %t16451, label %argok2023, label %arityerr2022
@@ -24056,7 +24056,7 @@ argok2023:
   %t16455 = load i64, ptr %t16454
   %t16456 = call i64 @rt_alloc_words(i64 2)
   %t16457 = inttoptr i64 %t16456 to ptr
-  store i64 ptrtoint (ptr @code_5794 to i64), ptr %t16457
+  store i64 ptrtoint (ptr @code_5834 to i64), ptr %t16457
   %t16458 = getelementptr i64, ptr %t16457, i64 1
   store i64 %t16455, ptr %t16458
   %t16459 = or i64 %t16456, 4
@@ -24141,7 +24141,7 @@ else2025:
   ret i64 %t16525
 }
 
-define fastcc i64 @code_5790(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5830(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t16526 = icmp eq i64 %argc, 0
   br i1 %t16526, label %argok2031, label %arityerr2030
@@ -24159,7 +24159,7 @@ argok2031:
   %t16534 = load i64, ptr %t16533
   %t16535 = call i64 @rt_alloc_words(i64 3)
   %t16536 = inttoptr i64 %t16535 to ptr
-  store i64 ptrtoint (ptr @code_5792 to i64), ptr %t16536
+  store i64 ptrtoint (ptr @code_5832 to i64), ptr %t16536
   %t16537 = getelementptr i64, ptr %t16536, i64 1
   store i64 %t16530, ptr %t16537
   %t16538 = getelementptr i64, ptr %t16536, i64 2
@@ -24246,7 +24246,7 @@ else2033:
   ret i64 %t16605
 }
 
-define fastcc i64 @code_5796(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5836(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t16606 = icmp eq i64 %argc, 1
   br i1 %t16606, label %argok2039, label %arityerr2038
@@ -24295,7 +24295,7 @@ argok2039:
   ret i64 %t16644
 }
 
-define fastcc i64 @code_5788(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5828(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t16645 = icmp eq i64 %argc, 0
   br i1 %t16645, label %argok2041, label %arityerr2040
@@ -24313,7 +24313,7 @@ argok2041:
   %t16653 = load i64, ptr %t16652
   %t16654 = call i64 @rt_alloc_words(i64 3)
   %t16655 = inttoptr i64 %t16654 to ptr
-  store i64 ptrtoint (ptr @code_5790 to i64), ptr %t16655
+  store i64 ptrtoint (ptr @code_5830 to i64), ptr %t16655
   %t16656 = getelementptr i64, ptr %t16655, i64 1
   store i64 %t16649, ptr %t16656
   %t16657 = getelementptr i64, ptr %t16655, i64 2
@@ -24369,7 +24369,7 @@ then2050:
   %t16696 = load i64, ptr %t16695
   %t16697 = call i64 @rt_alloc_words(i64 3)
   %t16698 = inttoptr i64 %t16697 to ptr
-  store i64 ptrtoint (ptr @code_5796 to i64), ptr %t16698
+  store i64 ptrtoint (ptr @code_5836 to i64), ptr %t16698
   %t16699 = getelementptr i64, ptr %t16698, i64 1
   store i64 %t16692, ptr %t16699
   %t16700 = getelementptr i64, ptr %t16698, i64 2
@@ -24431,7 +24431,7 @@ else2043:
   ret i64 %t16744
 }
 
-define fastcc i64 @code_5798(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5838(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t16745 = icmp eq i64 %argc, 1
   br i1 %t16745, label %argok2053, label %arityerr2052
@@ -24464,7 +24464,7 @@ argok2053:
   ret i64 %t16767
 }
 
-define fastcc i64 @code_5786(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5826(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t16768 = icmp eq i64 %argc, 0
   br i1 %t16768, label %argok2055, label %arityerr2054
@@ -24486,7 +24486,7 @@ argok2055:
   %t16780 = load i64, ptr %t16779
   %t16781 = call i64 @rt_alloc_words(i64 4)
   %t16782 = inttoptr i64 %t16781 to ptr
-  store i64 ptrtoint (ptr @code_5788 to i64), ptr %t16782
+  store i64 ptrtoint (ptr @code_5828 to i64), ptr %t16782
   %t16783 = getelementptr i64, ptr %t16782, i64 1
   store i64 %t16772, ptr %t16783
   %t16784 = getelementptr i64, ptr %t16782, i64 2
@@ -24540,7 +24540,7 @@ then2064:
   %t16820 = load i64, ptr %t16819
   %t16821 = call i64 @rt_alloc_words(i64 2)
   %t16822 = inttoptr i64 %t16821 to ptr
-  store i64 ptrtoint (ptr @code_5798 to i64), ptr %t16822
+  store i64 ptrtoint (ptr @code_5838 to i64), ptr %t16822
   %t16823 = getelementptr i64, ptr %t16822, i64 1
   store i64 %t16820, ptr %t16823
   %t16824 = or i64 %t16821, 4
@@ -24600,7 +24600,7 @@ else2057:
   ret i64 %t16867
 }
 
-define fastcc i64 @code_5784(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5824(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t16868 = icmp eq i64 %argc, 0
   br i1 %t16868, label %argok2067, label %arityerr2066
@@ -24622,7 +24622,7 @@ argok2067:
   %t16880 = load i64, ptr %t16879
   %t16881 = call i64 @rt_alloc_words(i64 4)
   %t16882 = inttoptr i64 %t16881 to ptr
-  store i64 ptrtoint (ptr @code_5786 to i64), ptr %t16882
+  store i64 ptrtoint (ptr @code_5826 to i64), ptr %t16882
   %t16883 = getelementptr i64, ptr %t16882, i64 1
   store i64 %t16872, ptr %t16883
   %t16884 = getelementptr i64, ptr %t16882, i64 2
@@ -24720,7 +24720,7 @@ else2069:
   ret i64 %t16953
 }
 
-define fastcc i64 @code_5782(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5822(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t16954 = icmp eq i64 %argc, 0
   br i1 %t16954, label %argok2079, label %arityerr2078
@@ -24742,7 +24742,7 @@ argok2079:
   %t16966 = load i64, ptr %t16965
   %t16967 = call i64 @rt_alloc_words(i64 4)
   %t16968 = inttoptr i64 %t16967 to ptr
-  store i64 ptrtoint (ptr @code_5784 to i64), ptr %t16968
+  store i64 ptrtoint (ptr @code_5824 to i64), ptr %t16968
   %t16969 = getelementptr i64, ptr %t16968, i64 1
   store i64 %t16958, ptr %t16969
   %t16970 = getelementptr i64, ptr %t16968, i64 2
@@ -24822,7 +24822,7 @@ else2081:
   ret i64 %t17029
 }
 
-define fastcc i64 @code_5780(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5820(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t17030 = icmp eq i64 %argc, 0
   br i1 %t17030, label %argok2087, label %arityerr2086
@@ -24844,7 +24844,7 @@ argok2087:
   %t17042 = load i64, ptr %t17041
   %t17043 = call i64 @rt_alloc_words(i64 4)
   %t17044 = inttoptr i64 %t17043 to ptr
-  store i64 ptrtoint (ptr @code_5782 to i64), ptr %t17044
+  store i64 ptrtoint (ptr @code_5822 to i64), ptr %t17044
   %t17045 = getelementptr i64, ptr %t17044, i64 1
   store i64 %t17034, ptr %t17045
   %t17046 = getelementptr i64, ptr %t17044, i64 2
@@ -24951,7 +24951,7 @@ else2089:
   ret i64 %t17124
 }
 
-define fastcc i64 @code_5778(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5818(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t17125 = icmp eq i64 %argc, 0
   br i1 %t17125, label %argok2099, label %arityerr2098
@@ -24973,7 +24973,7 @@ argok2099:
   %t17137 = load i64, ptr %t17136
   %t17138 = call i64 @rt_alloc_words(i64 4)
   %t17139 = inttoptr i64 %t17138 to ptr
-  store i64 ptrtoint (ptr @code_5780 to i64), ptr %t17139
+  store i64 ptrtoint (ptr @code_5820 to i64), ptr %t17139
   %t17140 = getelementptr i64, ptr %t17139, i64 1
   store i64 %t17129, ptr %t17140
   %t17141 = getelementptr i64, ptr %t17139, i64 2
@@ -25103,7 +25103,7 @@ else2101:
   ret i64 %t17238
 }
 
-define fastcc i64 @code_5776(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5816(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t17239 = icmp eq i64 %argc, 0
   br i1 %t17239, label %argok2113, label %arityerr2112
@@ -25125,7 +25125,7 @@ argok2113:
   %t17251 = load i64, ptr %t17250
   %t17252 = call i64 @rt_alloc_words(i64 4)
   %t17253 = inttoptr i64 %t17252 to ptr
-  store i64 ptrtoint (ptr @code_5778 to i64), ptr %t17253
+  store i64 ptrtoint (ptr @code_5818 to i64), ptr %t17253
   %t17254 = getelementptr i64, ptr %t17253, i64 1
   store i64 %t17243, ptr %t17254
   %t17255 = getelementptr i64, ptr %t17253, i64 2
@@ -25223,7 +25223,7 @@ else2115:
   ret i64 %t17324
 }
 
-define fastcc i64 @code_5774(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5814(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t17325 = icmp eq i64 %argc, 0
   br i1 %t17325, label %argok2125, label %arityerr2124
@@ -25245,7 +25245,7 @@ argok2125:
   %t17337 = load i64, ptr %t17336
   %t17338 = call i64 @rt_alloc_words(i64 4)
   %t17339 = inttoptr i64 %t17338 to ptr
-  store i64 ptrtoint (ptr @code_5776 to i64), ptr %t17339
+  store i64 ptrtoint (ptr @code_5816 to i64), ptr %t17339
   %t17340 = getelementptr i64, ptr %t17339, i64 1
   store i64 %t17329, ptr %t17340
   %t17341 = getelementptr i64, ptr %t17339, i64 2
@@ -25321,7 +25321,7 @@ else2127:
   ret i64 %t17392
 }
 
-define fastcc i64 @code_5772(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5812(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t17393 = icmp eq i64 %argc, 0
   br i1 %t17393, label %argok2135, label %arityerr2134
@@ -25347,7 +25347,7 @@ argok2135:
   %t17409 = load i64, ptr %t17408
   %t17410 = call i64 @rt_alloc_words(i64 5)
   %t17411 = inttoptr i64 %t17410 to ptr
-  store i64 ptrtoint (ptr @code_5774 to i64), ptr %t17411
+  store i64 ptrtoint (ptr @code_5814 to i64), ptr %t17411
   %t17412 = getelementptr i64, ptr %t17411, i64 1
   store i64 %t17397, ptr %t17412
   %t17413 = getelementptr i64, ptr %t17411, i64 2
@@ -25375,7 +25375,7 @@ else2137:
   ret i64 %t17427
 }
 
-define fastcc i64 @code_5768(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5808(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t17428 = icmp eq i64 %argc, 1
   br i1 %t17428, label %argok2139, label %arityerr2138
@@ -25385,7 +25385,7 @@ arityerr2138:
 argok2139:
   %t17429 = call i64 @rt_alloc_words(i64 2)
   %t17430 = inttoptr i64 %t17429 to ptr
-  store i64 ptrtoint (ptr @code_5770 to i64), ptr %t17430
+  store i64 ptrtoint (ptr @code_5810 to i64), ptr %t17430
   %t17431 = or i64 %t17429, 4
   %t17432 = and i64 %self, -8
   %t17433 = inttoptr i64 %t17432 to ptr
@@ -25399,7 +25399,7 @@ argok2139:
   %t17440 = load i64, ptr %t17439
   %t17441 = call i64 @rt_alloc_words(i64 5)
   %t17442 = inttoptr i64 %t17441 to ptr
-  store i64 ptrtoint (ptr @code_5772 to i64), ptr %t17442
+  store i64 ptrtoint (ptr @code_5812 to i64), ptr %t17442
   %t17443 = getelementptr i64, ptr %t17442, i64 1
   store i64 %a0, ptr %t17443
   %t17444 = getelementptr i64, ptr %t17442, i64 2
@@ -25461,7 +25461,7 @@ else2141:
   ret i64 %t17480
 }
 
-define fastcc i64 @code_5800(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5840(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t17481 = icmp eq i64 %argc, 1
   br i1 %t17481, label %argok2149, label %arityerr2148
@@ -25483,7 +25483,7 @@ argok2149:
   ret i64 %t17492
 }
 
-define fastcc i64 @code_5802(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5842(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t17493 = icmp eq i64 %argc, 0
   br i1 %t17493, label %argok2151, label %arityerr2150
@@ -25520,7 +25520,7 @@ argok2151:
   ret i64 %t17519
 }
 
-define fastcc i64 @code_5804(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5844(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t17520 = icmp sge i64 %argc, 1
   br i1 %t17520, label %argok2153, label %arityerr2152
@@ -25600,7 +25600,7 @@ merge2156:
   ret i64 %t17575
 }
 
-define fastcc i64 @code_5808(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5848(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t17576 = icmp eq i64 %argc, 1
   br i1 %t17576, label %argok2158, label %arityerr2157
@@ -25633,7 +25633,7 @@ argok2158:
   ret i64 %t17598
 }
 
-define fastcc i64 @code_5832(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5872(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t17599 = icmp eq i64 %argc, 0
   br i1 %t17599, label %argok2160, label %arityerr2159
@@ -25656,7 +25656,7 @@ argok2160:
   ret i64 %t17611
 }
 
-define fastcc i64 @code_5830(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5870(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t17612 = icmp eq i64 %argc, 0
   br i1 %t17612, label %argok2162, label %arityerr2161
@@ -25670,7 +25670,7 @@ argok2162:
   %t17616 = load i64, ptr %t17615
   %t17617 = call i64 @rt_alloc_words(i64 2)
   %t17618 = inttoptr i64 %t17617 to ptr
-  store i64 ptrtoint (ptr @code_5832 to i64), ptr %t17618
+  store i64 ptrtoint (ptr @code_5872 to i64), ptr %t17618
   %t17619 = getelementptr i64, ptr %t17618, i64 1
   store i64 %t17616, ptr %t17619
   %t17620 = or i64 %t17617, 4
@@ -25820,7 +25820,7 @@ else2164:
   ret i64 %t17729
 }
 
-define fastcc i64 @code_5828(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5868(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t17730 = icmp eq i64 %argc, 0
   br i1 %t17730, label %argok2181, label %arityerr2180
@@ -25846,7 +25846,7 @@ argok2181:
   %t17746 = load i64, ptr %t17745
   %t17747 = call i64 @rt_alloc_words(i64 5)
   %t17748 = inttoptr i64 %t17747 to ptr
-  store i64 ptrtoint (ptr @code_5830 to i64), ptr %t17748
+  store i64 ptrtoint (ptr @code_5870 to i64), ptr %t17748
   %t17749 = getelementptr i64, ptr %t17748, i64 1
   store i64 %t17734, ptr %t17749
   %t17750 = getelementptr i64, ptr %t17748, i64 2
@@ -25932,7 +25932,7 @@ else2183:
   ret i64 %t17814
 }
 
-define fastcc i64 @code_5834(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5874(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t17815 = icmp eq i64 %argc, 1
   br i1 %t17815, label %argok2189, label %arityerr2188
@@ -25944,7 +25944,7 @@ argok2189:
   ret i64 %t17816
 }
 
-define fastcc i64 @code_5838(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5878(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t17817 = icmp eq i64 %argc, 0
   br i1 %t17817, label %argok2191, label %arityerr2190
@@ -25967,7 +25967,7 @@ argok2191:
   ret i64 %t17829
 }
 
-define fastcc i64 @code_5840(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5880(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t17830 = icmp eq i64 %argc, 1
   br i1 %t17830, label %argok2193, label %arityerr2192
@@ -26000,7 +26000,7 @@ argok2193:
   ret i64 %t17852
 }
 
-define fastcc i64 @code_5836(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5876(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t17853 = icmp eq i64 %argc, 1
   br i1 %t17853, label %argok2195, label %arityerr2194
@@ -26016,7 +26016,7 @@ argok2195:
   %t17859 = call fastcc i64%t17858(i64 %t17854, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t17860 = call i64 @rt_alloc_words(i64 2)
   %t17861 = inttoptr i64 %t17860 to ptr
-  store i64 ptrtoint (ptr @code_5838 to i64), ptr %t17861
+  store i64 ptrtoint (ptr @code_5878 to i64), ptr %t17861
   %t17862 = getelementptr i64, ptr %t17861, i64 1
   store i64 %t17859, ptr %t17862
   %t17863 = or i64 %t17860, 4
@@ -26103,7 +26103,7 @@ then2204:
   %t17934 = load i64, ptr %t17933
   %t17935 = call i64 @rt_alloc_words(i64 5)
   %t17936 = inttoptr i64 %t17935 to ptr
-  store i64 ptrtoint (ptr @code_5840 to i64), ptr %t17936
+  store i64 ptrtoint (ptr @code_5880 to i64), ptr %t17936
   %t17937 = getelementptr i64, ptr %t17936, i64 1
   store i64 %t17922, ptr %t17937
   %t17938 = getelementptr i64, ptr %t17936, i64 2
@@ -26163,7 +26163,7 @@ else2197:
   ret i64 %t17978
 }
 
-define fastcc i64 @code_5826(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5866(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t17979 = icmp eq i64 %argc, 0
   br i1 %t17979, label %argok2207, label %arityerr2206
@@ -26189,7 +26189,7 @@ argok2207:
   %t17995 = load i64, ptr %t17994
   %t17996 = call i64 @rt_alloc_words(i64 5)
   %t17997 = inttoptr i64 %t17996 to ptr
-  store i64 ptrtoint (ptr @code_5828 to i64), ptr %t17997
+  store i64 ptrtoint (ptr @code_5868 to i64), ptr %t17997
   %t17998 = getelementptr i64, ptr %t17997, i64 1
   store i64 %t17983, ptr %t17998
   %t17999 = getelementptr i64, ptr %t17997, i64 2
@@ -26240,7 +26240,7 @@ then2214:
 then2216:
   %t18032 = call i64 @rt_alloc_words(i64 1)
   %t18033 = inttoptr i64 %t18032 to ptr
-  store i64 ptrtoint (ptr @code_5834 to i64), ptr %t18033
+  store i64 ptrtoint (ptr @code_5874 to i64), ptr %t18033
   %t18034 = or i64 %t18032, 4
   %t18035 = load i64, ptr @"scheme.base:map"
   %t18036 = and i64 %t18035, -8
@@ -26284,7 +26284,7 @@ then2216:
   %t18074 = load i64, ptr %t18073
   %t18075 = call i64 @rt_alloc_words(i64 8)
   %t18076 = inttoptr i64 %t18075 to ptr
-  store i64 ptrtoint (ptr @code_5836 to i64), ptr %t18076
+  store i64 ptrtoint (ptr @code_5876 to i64), ptr %t18076
   %t18077 = getelementptr i64, ptr %t18076, i64 1
   store i64 %t18054, ptr %t18077
   %t18078 = getelementptr i64, ptr %t18076, i64 2
@@ -26366,7 +26366,7 @@ else2209:
   ret i64 %t18137
 }
 
-define fastcc i64 @code_5842(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5882(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t18138 = icmp eq i64 %argc, 1
   br i1 %t18138, label %argok2219, label %arityerr2218
@@ -26399,7 +26399,7 @@ argok2219:
   ret i64 %t18160
 }
 
-define fastcc i64 @code_5824(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5864(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t18161 = icmp eq i64 %argc, 0
   br i1 %t18161, label %argok2221, label %arityerr2220
@@ -26445,7 +26445,7 @@ argok2221:
   %t18197 = load i64, ptr %t18196
   %t18198 = call i64 @rt_alloc_words(i64 10)
   %t18199 = inttoptr i64 %t18198 to ptr
-  store i64 ptrtoint (ptr @code_5826 to i64), ptr %t18199
+  store i64 ptrtoint (ptr @code_5866 to i64), ptr %t18199
   %t18200 = getelementptr i64, ptr %t18199, i64 1
   store i64 %t18165, ptr %t18200
   %t18201 = getelementptr i64, ptr %t18199, i64 2
@@ -26557,7 +26557,7 @@ then2230:
   %t18289 = load i64, ptr %t18288
   %t18290 = call i64 @rt_alloc_words(i64 5)
   %t18291 = inttoptr i64 %t18290 to ptr
-  store i64 ptrtoint (ptr @code_5842 to i64), ptr %t18291
+  store i64 ptrtoint (ptr @code_5882 to i64), ptr %t18291
   %t18292 = getelementptr i64, ptr %t18291, i64 1
   store i64 %t18277, ptr %t18292
   %t18293 = getelementptr i64, ptr %t18291, i64 2
@@ -26614,7 +26614,7 @@ else2223:
   ret i64 %t18330
 }
 
-define fastcc i64 @code_5844(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5884(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t18331 = icmp eq i64 %argc, 1
   br i1 %t18331, label %argok2233, label %arityerr2232
@@ -26626,7 +26626,7 @@ argok2233:
   ret i64 %t18332
 }
 
-define fastcc i64 @code_5846(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5886(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t18333 = icmp eq i64 %argc, 1
   br i1 %t18333, label %argok2235, label %arityerr2234
@@ -26652,7 +26652,7 @@ argok2235:
   ret i64 %t18348
 }
 
-define fastcc i64 @code_5822(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5862(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t18349 = icmp eq i64 %argc, 0
   br i1 %t18349, label %argok2237, label %arityerr2236
@@ -26702,7 +26702,7 @@ argok2237:
   %t18389 = load i64, ptr %t18388
   %t18390 = call i64 @rt_alloc_words(i64 11)
   %t18391 = inttoptr i64 %t18390 to ptr
-  store i64 ptrtoint (ptr @code_5824 to i64), ptr %t18391
+  store i64 ptrtoint (ptr @code_5864 to i64), ptr %t18391
   %t18392 = getelementptr i64, ptr %t18391, i64 1
   store i64 %t18353, ptr %t18392
   %t18393 = getelementptr i64, ptr %t18391, i64 2
@@ -26765,7 +26765,7 @@ then2244:
 then2246:
   %t18432 = call i64 @rt_alloc_words(i64 1)
   %t18433 = inttoptr i64 %t18432 to ptr
-  store i64 ptrtoint (ptr @code_5844 to i64), ptr %t18433
+  store i64 ptrtoint (ptr @code_5884 to i64), ptr %t18433
   %t18434 = or i64 %t18432, 4
   %t18435 = load i64, ptr @"scheme.base:map"
   %t18436 = and i64 %t18435, -8
@@ -26779,7 +26779,7 @@ then2246:
   %t18444 = load i64, ptr %t18443
   %t18445 = call i64 @rt_alloc_words(i64 2)
   %t18446 = inttoptr i64 %t18445 to ptr
-  store i64 ptrtoint (ptr @code_5846 to i64), ptr %t18446
+  store i64 ptrtoint (ptr @code_5886 to i64), ptr %t18446
   %t18447 = getelementptr i64, ptr %t18446, i64 1
   store i64 %t18444, ptr %t18447
   %t18448 = or i64 %t18445, 4
@@ -26866,7 +26866,7 @@ else2239:
   ret i64 %t18518
 }
 
-define fastcc i64 @code_5820(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5860(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t18519 = icmp eq i64 %argc, 0
   br i1 %t18519, label %argok2249, label %arityerr2248
@@ -26916,7 +26916,7 @@ argok2249:
   %t18559 = load i64, ptr %t18558
   %t18560 = call i64 @rt_alloc_words(i64 11)
   %t18561 = inttoptr i64 %t18560 to ptr
-  store i64 ptrtoint (ptr @code_5822 to i64), ptr %t18561
+  store i64 ptrtoint (ptr @code_5862 to i64), ptr %t18561
   %t18562 = getelementptr i64, ptr %t18561, i64 1
   store i64 %t18523, ptr %t18562
   %t18563 = getelementptr i64, ptr %t18561, i64 2
@@ -27010,7 +27010,7 @@ else2251:
   ret i64 %t18629
 }
 
-define fastcc i64 @code_5818(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5858(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t18630 = icmp eq i64 %argc, 0
   br i1 %t18630, label %argok2257, label %arityerr2256
@@ -27060,7 +27060,7 @@ argok2257:
   %t18670 = load i64, ptr %t18669
   %t18671 = call i64 @rt_alloc_words(i64 11)
   %t18672 = inttoptr i64 %t18671 to ptr
-  store i64 ptrtoint (ptr @code_5820 to i64), ptr %t18672
+  store i64 ptrtoint (ptr @code_5860 to i64), ptr %t18672
   %t18673 = getelementptr i64, ptr %t18672, i64 1
   store i64 %t18634, ptr %t18673
   %t18674 = getelementptr i64, ptr %t18672, i64 2
@@ -27181,7 +27181,7 @@ else2259:
   ret i64 %t18759
 }
 
-define fastcc i64 @code_5816(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5856(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t18760 = icmp eq i64 %argc, 0
   br i1 %t18760, label %argok2269, label %arityerr2268
@@ -27231,7 +27231,7 @@ argok2269:
   %t18800 = load i64, ptr %t18799
   %t18801 = call i64 @rt_alloc_words(i64 11)
   %t18802 = inttoptr i64 %t18801 to ptr
-  store i64 ptrtoint (ptr @code_5818 to i64), ptr %t18802
+  store i64 ptrtoint (ptr @code_5858 to i64), ptr %t18802
   %t18803 = getelementptr i64, ptr %t18802, i64 1
   store i64 %t18764, ptr %t18803
   %t18804 = getelementptr i64, ptr %t18802, i64 2
@@ -27375,7 +27375,7 @@ else2271:
   ret i64 %t18908
 }
 
-define fastcc i64 @code_5814(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5854(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t18909 = icmp eq i64 %argc, 0
   br i1 %t18909, label %argok2283, label %arityerr2282
@@ -27425,7 +27425,7 @@ argok2283:
   %t18949 = load i64, ptr %t18948
   %t18950 = call i64 @rt_alloc_words(i64 11)
   %t18951 = inttoptr i64 %t18950 to ptr
-  store i64 ptrtoint (ptr @code_5816 to i64), ptr %t18951
+  store i64 ptrtoint (ptr @code_5856 to i64), ptr %t18951
   %t18952 = getelementptr i64, ptr %t18951, i64 1
   store i64 %t18913, ptr %t18952
   %t18953 = getelementptr i64, ptr %t18951, i64 2
@@ -27537,7 +27537,7 @@ else2285:
   ret i64 %t19029
 }
 
-define fastcc i64 @code_5812(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5852(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t19030 = icmp eq i64 %argc, 0
   br i1 %t19030, label %argok2295, label %arityerr2294
@@ -27587,7 +27587,7 @@ argok2295:
   %t19070 = load i64, ptr %t19069
   %t19071 = call i64 @rt_alloc_words(i64 11)
   %t19072 = inttoptr i64 %t19071 to ptr
-  store i64 ptrtoint (ptr @code_5814 to i64), ptr %t19072
+  store i64 ptrtoint (ptr @code_5854 to i64), ptr %t19072
   %t19073 = getelementptr i64, ptr %t19072, i64 1
   store i64 %t19034, ptr %t19073
   %t19074 = getelementptr i64, ptr %t19072, i64 2
@@ -27676,7 +27676,7 @@ else2297:
   ret i64 %t19131
 }
 
-define fastcc i64 @code_5810(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5850(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t19132 = icmp eq i64 %argc, 0
   br i1 %t19132, label %argok2305, label %arityerr2304
@@ -27726,7 +27726,7 @@ argok2305:
   %t19172 = load i64, ptr %t19171
   %t19173 = call i64 @rt_alloc_words(i64 11)
   %t19174 = inttoptr i64 %t19173 to ptr
-  store i64 ptrtoint (ptr @code_5812 to i64), ptr %t19174
+  store i64 ptrtoint (ptr @code_5852 to i64), ptr %t19174
   %t19175 = getelementptr i64, ptr %t19174, i64 1
   store i64 %t19136, ptr %t19175
   %t19176 = getelementptr i64, ptr %t19174, i64 2
@@ -27811,7 +27811,7 @@ else2307:
   ret i64 %t19233
 }
 
-define fastcc i64 @code_5806(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5846(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t19234 = icmp eq i64 %argc, 4
   br i1 %t19234, label %argok2313, label %arityerr2312
@@ -27821,7 +27821,7 @@ arityerr2312:
 argok2313:
   %t19235 = call i64 @rt_alloc_words(i64 5)
   %t19236 = inttoptr i64 %t19235 to ptr
-  store i64 ptrtoint (ptr @code_5808 to i64), ptr %t19236
+  store i64 ptrtoint (ptr @code_5848 to i64), ptr %t19236
   %t19237 = or i64 %t19235, 4
   %t19238 = and i64 %self, -8
   %t19239 = inttoptr i64 %t19238 to ptr
@@ -27853,7 +27853,7 @@ argok2313:
   %t19261 = load i64, ptr %t19260
   %t19262 = call i64 @rt_alloc_words(i64 11)
   %t19263 = inttoptr i64 %t19262 to ptr
-  store i64 ptrtoint (ptr @code_5810 to i64), ptr %t19263
+  store i64 ptrtoint (ptr @code_5850 to i64), ptr %t19263
   %t19264 = getelementptr i64, ptr %t19263, i64 1
   store i64 %a0, ptr %t19264
   %t19265 = getelementptr i64, ptr %t19263, i64 2
@@ -27930,7 +27930,7 @@ else2315:
   ret i64 %t19310
 }
 
-define fastcc i64 @code_5850(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5890(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t19311 = icmp eq i64 %argc, 3
   br i1 %t19311, label %argok2323, label %arityerr2322
@@ -27966,11 +27966,11 @@ fixmerge2328:
   %t19327 = call i64 @rt_car(i64 %a0)
   %t19328 = call i64 @rt_cons(i64 %t19327, i64 %a1)
   %t19329 = call i64 @rt_cons(i64 %t19328, i64 %a2)
-  %t19330 = musttail call fastcc i64 @code_5850(i64 %self, i64 3, i64 %t19320, i64 %t19326, i64 %t19329, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t19330 = musttail call fastcc i64 @code_5890(i64 %self, i64 3, i64 %t19320, i64 %t19326, i64 %t19329, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t19330
 }
 
-define fastcc i64 @code_5848(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5888(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t19331 = icmp eq i64 %argc, 5
   br i1 %t19331, label %argok2330, label %arityerr2329
@@ -27991,7 +27991,7 @@ argok2330:
   %t19342 = call fastcc i64%t19341(i64 %t19337, i64 1, i64 %t19332, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t19343 = call i64 @rt_alloc_words(i64 2)
   %t19344 = inttoptr i64 %t19343 to ptr
-  store i64 ptrtoint (ptr @code_5850 to i64), ptr %t19344
+  store i64 ptrtoint (ptr @code_5890 to i64), ptr %t19344
   %t19345 = or i64 %t19343, 4
   %t19346 = getelementptr i64, ptr %t19344, i64 1
   store i64 %t19345, ptr %t19346
@@ -28069,7 +28069,7 @@ merge2333:
   ret i64 %t19411
 }
 
-define fastcc i64 @code_5852(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5892(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t19412 = icmp eq i64 %argc, 1
   br i1 %t19412, label %argok2335, label %arityerr2334
@@ -28091,7 +28091,7 @@ argok2335:
   ret i64 %t19423
 }
 
-define fastcc i64 @code_5854(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5894(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t19424 = icmp eq i64 %argc, 0
   br i1 %t19424, label %argok2337, label %arityerr2336
@@ -28137,7 +28137,7 @@ fixmerge2340:
   ret i64 %t19453
 }
 
-define fastcc i64 @code_5856(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5896(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t19454 = icmp eq i64 %argc, 1
   br i1 %t19454, label %argok2342, label %arityerr2341
@@ -28182,7 +28182,7 @@ fixmerge2345:
   ret i64 %t19482
 }
 
-define fastcc i64 @code_5858(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5898(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t19483 = icmp eq i64 %argc, 1
   br i1 %t19483, label %argok2347, label %arityerr2346
@@ -28210,7 +28210,7 @@ argok2347:
   ret i64 %t19500
 }
 
-define fastcc i64 @code_5860(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5900(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t19501 = icmp eq i64 %argc, 0
   br i1 %t19501, label %argok2349, label %arityerr2348
@@ -28242,7 +28242,7 @@ argok2349:
   ret i64 %t19522
 }
 
-define fastcc i64 @code_5862(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5902(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t19523 = icmp eq i64 %argc, 0
   br i1 %t19523, label %argok2351, label %arityerr2350
@@ -28268,7 +28268,7 @@ argok2351:
   ret i64 %t19538
 }
 
-define fastcc i64 @code_5868(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5908(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t19539 = icmp eq i64 %argc, 2
   br i1 %t19539, label %argok2353, label %arityerr2352
@@ -28285,11 +28285,11 @@ else2355:
   %t19542 = call i64 @rt_car(i64 %a1)
   %t19543 = call i64 @rt_string_append(i64 %a0, i64 %t19542)
   %t19544 = call i64 @rt_cdr(i64 %a1)
-  %t19545 = musttail call fastcc i64 @code_5868(i64 %self, i64 2, i64 %t19543, i64 %t19544, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t19545 = musttail call fastcc i64 @code_5908(i64 %self, i64 2, i64 %t19543, i64 %t19544, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t19545
 }
 
-define fastcc i64 @code_5866(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5906(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t19546 = icmp sge i64 %argc, 0
   br i1 %t19546, label %argok2357, label %arityerr2356
@@ -28318,7 +28318,7 @@ argok2357:
   %t19557 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t19548, ptr %overflow)
   %t19558 = call i64 @rt_alloc_words(i64 2)
   %t19559 = inttoptr i64 %t19558 to ptr
-  store i64 ptrtoint (ptr @code_5868 to i64), ptr %t19559
+  store i64 ptrtoint (ptr @code_5908 to i64), ptr %t19559
   %t19560 = or i64 %t19558, 4
   %t19561 = getelementptr i64, ptr %t19559, i64 1
   store i64 %t19560, ptr %t19561
@@ -28331,7 +28331,7 @@ argok2357:
   ret i64 %t19567
 }
 
-define fastcc i64 @code_5864(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5904(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t19568 = icmp eq i64 %argc, 0
   br i1 %t19568, label %argok2359, label %arityerr2358
@@ -28352,7 +28352,7 @@ argok2359:
   %t19579 = call fastcc i64%t19578(i64 %t19574, i64 1, i64 %t19573, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t19580 = call i64 @rt_alloc_words(i64 1)
   %t19581 = inttoptr i64 %t19580 to ptr
-  store i64 ptrtoint (ptr @code_5866 to i64), ptr %t19581
+  store i64 ptrtoint (ptr @code_5906 to i64), ptr %t19581
   %t19582 = or i64 %t19580, 4
   %t19583 = and i64 %t19582, -8
   %t19584 = inttoptr i64 %t19583 to ptr
@@ -28384,7 +28384,7 @@ argok2359:
   ret i64 %t19609
 }
 
-define fastcc i64 @code_5870(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5910(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t19610 = icmp eq i64 %argc, 1
   br i1 %t19610, label %argok2361, label %arityerr2360
@@ -28422,7 +28422,7 @@ argok2361:
   ret i64 %t19637
 }
 
-define fastcc i64 @code_5872(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5912(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t19638 = icmp eq i64 %argc, 1
   br i1 %t19638, label %argok2363, label %arityerr2362
@@ -28631,7 +28631,7 @@ fixmerge2405:
   ret i64 %t19752
 }
 
-define fastcc i64 @code_5874(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5914(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t19753 = icmp eq i64 %argc, 1
   br i1 %t19753, label %argok2407, label %arityerr2406
@@ -28786,7 +28786,7 @@ else2442:
   ret i64 %t19827
 }
 
-define fastcc i64 @code_5882(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5922(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t19828 = icmp eq i64 %argc, 2
   br i1 %t19828, label %argok2444, label %arityerr2443
@@ -28803,11 +28803,11 @@ else2446:
   %t19831 = call i64 @rt_car(i64 %a1)
   %t19832 = call i64 @rt_string_append(i64 %a0, i64 %t19831)
   %t19833 = call i64 @rt_cdr(i64 %a1)
-  %t19834 = musttail call fastcc i64 @code_5882(i64 %self, i64 2, i64 %t19832, i64 %t19833, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t19834 = musttail call fastcc i64 @code_5922(i64 %self, i64 2, i64 %t19832, i64 %t19833, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t19834
 }
 
-define fastcc i64 @code_5880(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5920(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t19835 = icmp sge i64 %argc, 0
   br i1 %t19835, label %argok2448, label %arityerr2447
@@ -28836,7 +28836,7 @@ argok2448:
   %t19846 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t19837, ptr %overflow)
   %t19847 = call i64 @rt_alloc_words(i64 2)
   %t19848 = inttoptr i64 %t19847 to ptr
-  store i64 ptrtoint (ptr @code_5882 to i64), ptr %t19848
+  store i64 ptrtoint (ptr @code_5922 to i64), ptr %t19848
   %t19849 = or i64 %t19847, 4
   %t19850 = getelementptr i64, ptr %t19848, i64 1
   store i64 %t19849, ptr %t19850
@@ -28849,7 +28849,7 @@ argok2448:
   ret i64 %t19856
 }
 
-define fastcc i64 @code_5878(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5918(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t19857 = icmp eq i64 %argc, 3
   br i1 %t19857, label %argok2450, label %arityerr2449
@@ -28885,7 +28885,7 @@ then2454:
   %t19875 = call fastcc i64%t19874(i64 %t19870, i64 1, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t19876 = call i64 @rt_alloc_words(i64 1)
   %t19877 = inttoptr i64 %t19876 to ptr
-  store i64 ptrtoint (ptr @code_5880 to i64), ptr %t19877
+  store i64 ptrtoint (ptr @code_5920 to i64), ptr %t19877
   %t19878 = or i64 %t19876, 4
   %t19879 = and i64 %t19878, -8
   %t19880 = inttoptr i64 %t19879 to ptr
@@ -29003,11 +29003,11 @@ fixmerge2464:
   %t19972 = load i64, ptr %t19971
   %t19973 = inttoptr i64 %t19972 to ptr
   %t19974 = call fastcc i64%t19973(i64 %t19969, i64 2, i64 %t19968, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t19975 = musttail call fastcc i64 @code_5878(i64 %self, i64 3, i64 %t19939, i64 %t19951, i64 %t19974, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t19975 = musttail call fastcc i64 @code_5918(i64 %self, i64 3, i64 %t19939, i64 %t19951, i64 %t19974, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t19975
 }
 
-define fastcc i64 @code_5876(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5916(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t19976 = icmp eq i64 %argc, 1
   br i1 %t19976, label %argok2466, label %arityerr2465
@@ -29018,7 +29018,7 @@ argok2466:
   %t19977 = call i64 @rt_string_length(i64 %a0)
   %t19978 = call i64 @rt_alloc_words(i64 6)
   %t19979 = inttoptr i64 %t19978 to ptr
-  store i64 ptrtoint (ptr @code_5878 to i64), ptr %t19979
+  store i64 ptrtoint (ptr @code_5918 to i64), ptr %t19979
   %t19980 = or i64 %t19978, 4
   %t19981 = getelementptr i64, ptr %t19979, i64 1
   store i64 %t19977, ptr %t19981
@@ -29046,7 +29046,7 @@ argok2466:
   ret i64 %t19998
 }
 
-define fastcc i64 @code_5884(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5924(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t19999 = icmp eq i64 %argc, 2
   br i1 %t19999, label %argok2468, label %arityerr2467
@@ -29151,7 +29151,7 @@ fixmerge2474:
   ret i64 %t20081
 }
 
-define fastcc i64 @code_5886(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5926(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t20082 = icmp eq i64 %argc, 1
   br i1 %t20082, label %argok2476, label %arityerr2475
@@ -29203,7 +29203,7 @@ else2478:
   ret i64 %t20107
 }
 
-define fastcc i64 @code_5888(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5928(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t20120 = icmp eq i64 %argc, 1
   br i1 %t20120, label %argok2480, label %arityerr2479
@@ -29530,7 +29530,7 @@ else2513:
   ret i64 %t20370
 }
 
-define fastcc i64 @code_5890(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5930(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t20371 = icmp eq i64 %argc, 1
   br i1 %t20371, label %argok2515, label %arityerr2514
@@ -29571,7 +29571,7 @@ else2519:
   ret i64 %t20393
 }
 
-define fastcc i64 @code_5894(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5934(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t20394 = icmp eq i64 %argc, 1
   br i1 %t20394, label %argok2521, label %arityerr2520
@@ -29584,7 +29584,7 @@ argok2521:
   ret i64 %t20396
 }
 
-define fastcc i64 @code_5892(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5932(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t20397 = icmp eq i64 %argc, 1
   br i1 %t20397, label %argok2523, label %arityerr2522
@@ -29594,7 +29594,7 @@ arityerr2522:
 argok2523:
   %t20398 = call i64 @rt_alloc_words(i64 1)
   %t20399 = inttoptr i64 %t20398 to ptr
-  store i64 ptrtoint (ptr @code_5894 to i64), ptr %t20399
+  store i64 ptrtoint (ptr @code_5934 to i64), ptr %t20399
   %t20400 = or i64 %t20398, 4
   %t20401 = load i64, ptr @"scheme.base:map"
   %t20402 = and i64 %t20401, -8
@@ -29615,7 +29615,7 @@ argok2523:
   ret i64 %t20416
 }
 
-define fastcc i64 @code_5896(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5936(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t20417 = icmp eq i64 %argc, 1
   br i1 %t20417, label %argok2525, label %arityerr2524
@@ -29664,7 +29664,7 @@ else2530:
   ret i64 1
 }
 
-define fastcc i64 @code_5902(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5942(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t20440 = icmp eq i64 %argc, 2
   br i1 %t20440, label %argok2535, label %arityerr2534
@@ -29681,11 +29681,11 @@ else2537:
   %t20443 = call i64 @rt_car(i64 %a1)
   %t20444 = call i64 @rt_string_append(i64 %a0, i64 %t20443)
   %t20445 = call i64 @rt_cdr(i64 %a1)
-  %t20446 = musttail call fastcc i64 @code_5902(i64 %self, i64 2, i64 %t20444, i64 %t20445, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t20446 = musttail call fastcc i64 @code_5942(i64 %self, i64 2, i64 %t20444, i64 %t20445, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t20446
 }
 
-define fastcc i64 @code_5900(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5940(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t20447 = icmp sge i64 %argc, 0
   br i1 %t20447, label %argok2539, label %arityerr2538
@@ -29714,7 +29714,7 @@ argok2539:
   %t20458 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t20449, ptr %overflow)
   %t20459 = call i64 @rt_alloc_words(i64 2)
   %t20460 = inttoptr i64 %t20459 to ptr
-  store i64 ptrtoint (ptr @code_5902 to i64), ptr %t20460
+  store i64 ptrtoint (ptr @code_5942 to i64), ptr %t20460
   %t20461 = or i64 %t20459, 4
   %t20462 = getelementptr i64, ptr %t20460, i64 1
   store i64 %t20461, ptr %t20462
@@ -29727,7 +29727,7 @@ argok2539:
   ret i64 %t20468
 }
 
-define fastcc i64 @code_5904(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5944(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t20469 = icmp eq i64 %argc, 1
   br i1 %t20469, label %argok2541, label %arityerr2540
@@ -29759,7 +29759,7 @@ else2543:
   ret i64 %t20486
 }
 
-define fastcc i64 @code_5898(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5938(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t20487 = icmp eq i64 %argc, 1
   br i1 %t20487, label %argok2545, label %arityerr2544
@@ -29773,7 +29773,7 @@ argok2545:
   %t20491 = load i64, ptr %t20490
   %t20492 = call i64 @rt_alloc_words(i64 2)
   %t20493 = inttoptr i64 %t20492 to ptr
-  store i64 ptrtoint (ptr @code_5904 to i64), ptr %t20493
+  store i64 ptrtoint (ptr @code_5944 to i64), ptr %t20493
   %t20494 = getelementptr i64, ptr %t20493, i64 1
   store i64 %t20491, ptr %t20494
   %t20495 = or i64 %t20492, 4
@@ -29785,7 +29785,7 @@ argok2545:
   %t20501 = call fastcc i64%t20500(i64 %t20496, i64 2, i64 %t20495, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t20502 = call i64 @rt_alloc_words(i64 1)
   %t20503 = inttoptr i64 %t20502 to ptr
-  store i64 ptrtoint (ptr @code_5900 to i64), ptr %t20503
+  store i64 ptrtoint (ptr @code_5940 to i64), ptr %t20503
   %t20504 = or i64 %t20502, 4
   %t20505 = and i64 %t20504, -8
   %t20506 = inttoptr i64 %t20505 to ptr
@@ -29817,7 +29817,7 @@ argok2545:
   ret i64 %t20531
 }
 
-define fastcc i64 @code_5908(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5948(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t20532 = icmp eq i64 %argc, 2
   br i1 %t20532, label %argok2547, label %arityerr2546
@@ -29871,11 +29871,11 @@ fixslow2556:
   br label %fixmerge2557
 fixmerge2557:
   %t20558 = phi i64 [ %t20556, %fixfast2555 ], [ %t20557, %fixslow2556 ]
-  %t20559 = musttail call fastcc i64 @code_5908(i64 %self, i64 2, i64 %t20558, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t20559 = musttail call fastcc i64 @code_5948(i64 %self, i64 2, i64 %t20558, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t20559
 }
 
-define fastcc i64 @code_5906(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5946(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t20560 = icmp eq i64 %argc, 1
   br i1 %t20560, label %argok2559, label %arityerr2558
@@ -29885,7 +29885,7 @@ arityerr2558:
 argok2559:
   %t20561 = call i64 @rt_alloc_words(i64 3)
   %t20562 = inttoptr i64 %t20561 to ptr
-  store i64 ptrtoint (ptr @code_5908 to i64), ptr %t20562
+  store i64 ptrtoint (ptr @code_5948 to i64), ptr %t20562
   %t20563 = or i64 %t20561, 4
   %t20564 = getelementptr i64, ptr %t20562, i64 1
   store i64 %a0, ptr %t20564
@@ -29900,7 +29900,7 @@ argok2559:
   ret i64 %t20571
 }
 
-define fastcc i64 @code_5910(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5950(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t20572 = icmp eq i64 %argc, 1
   br i1 %t20572, label %argok2561, label %arityerr2560
@@ -29932,7 +29932,7 @@ else2563:
   ret i64 %t20589
 }
 
-define fastcc i64 @code_5940(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5980(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t20590 = icmp eq i64 %argc, 0
   br i1 %t20590, label %argok2565, label %arityerr2564
@@ -29955,7 +29955,7 @@ argok2565:
   ret i64 %t20602
 }
 
-define fastcc i64 @code_5942(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5982(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t20603 = icmp eq i64 %argc, 1
   br i1 %t20603, label %argok2567, label %arityerr2566
@@ -29988,7 +29988,7 @@ argok2567:
   ret i64 %t20625
 }
 
-define fastcc i64 @code_5938(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5978(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t20626 = icmp eq i64 %argc, 0
   br i1 %t20626, label %argok2569, label %arityerr2568
@@ -30002,7 +30002,7 @@ argok2569:
   %t20630 = load i64, ptr %t20629
   %t20631 = call i64 @rt_alloc_words(i64 2)
   %t20632 = inttoptr i64 %t20631 to ptr
-  store i64 ptrtoint (ptr @code_5940 to i64), ptr %t20632
+  store i64 ptrtoint (ptr @code_5980 to i64), ptr %t20632
   %t20633 = getelementptr i64, ptr %t20632, i64 1
   store i64 %t20630, ptr %t20633
   %t20634 = or i64 %t20631, 4
@@ -30063,7 +30063,7 @@ then2578:
   %t20679 = load i64, ptr %t20678
   %t20680 = call i64 @rt_alloc_words(i64 5)
   %t20681 = inttoptr i64 %t20680 to ptr
-  store i64 ptrtoint (ptr @code_5942 to i64), ptr %t20681
+  store i64 ptrtoint (ptr @code_5982 to i64), ptr %t20681
   %t20682 = getelementptr i64, ptr %t20681, i64 1
   store i64 %t20667, ptr %t20682
   %t20683 = getelementptr i64, ptr %t20681, i64 2
@@ -30135,7 +30135,7 @@ else2571:
   ret i64 %t20735
 }
 
-define fastcc i64 @code_5944(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5984(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t20736 = icmp eq i64 %argc, 1
   br i1 %t20736, label %argok2581, label %arityerr2580
@@ -30168,7 +30168,7 @@ argok2581:
   ret i64 %t20758
 }
 
-define fastcc i64 @code_5936(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5976(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t20759 = icmp eq i64 %argc, 0
   br i1 %t20759, label %argok2583, label %arityerr2582
@@ -30202,7 +30202,7 @@ argok2583:
   %t20783 = load i64, ptr %t20782
   %t20784 = call i64 @rt_alloc_words(i64 7)
   %t20785 = inttoptr i64 %t20784 to ptr
-  store i64 ptrtoint (ptr @code_5938 to i64), ptr %t20785
+  store i64 ptrtoint (ptr @code_5978 to i64), ptr %t20785
   %t20786 = getelementptr i64, ptr %t20785, i64 1
   store i64 %t20763, ptr %t20786
   %t20787 = getelementptr i64, ptr %t20785, i64 2
@@ -30273,7 +30273,7 @@ then2592:
   %t20837 = load i64, ptr %t20836
   %t20838 = call i64 @rt_alloc_words(i64 5)
   %t20839 = inttoptr i64 %t20838 to ptr
-  store i64 ptrtoint (ptr @code_5944 to i64), ptr %t20839
+  store i64 ptrtoint (ptr @code_5984 to i64), ptr %t20839
   %t20840 = getelementptr i64, ptr %t20839, i64 1
   store i64 %t20825, ptr %t20840
   %t20841 = getelementptr i64, ptr %t20839, i64 2
@@ -30363,7 +30363,7 @@ else2585:
   ret i64 %t20911
 }
 
-define fastcc i64 @code_5946(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5986(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t20912 = icmp eq i64 %argc, 1
   br i1 %t20912, label %argok2595, label %arityerr2594
@@ -30396,7 +30396,7 @@ argok2595:
   ret i64 %t20934
 }
 
-define fastcc i64 @code_5934(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5974(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t20935 = icmp eq i64 %argc, 0
   br i1 %t20935, label %argok2597, label %arityerr2596
@@ -30434,7 +30434,7 @@ argok2597:
   %t20963 = load i64, ptr %t20962
   %t20964 = call i64 @rt_alloc_words(i64 8)
   %t20965 = inttoptr i64 %t20964 to ptr
-  store i64 ptrtoint (ptr @code_5936 to i64), ptr %t20965
+  store i64 ptrtoint (ptr @code_5976 to i64), ptr %t20965
   %t20966 = getelementptr i64, ptr %t20965, i64 1
   store i64 %t20939, ptr %t20966
   %t20967 = getelementptr i64, ptr %t20965, i64 2
@@ -30507,7 +30507,7 @@ then2606:
   %t21018 = load i64, ptr %t21017
   %t21019 = call i64 @rt_alloc_words(i64 5)
   %t21020 = inttoptr i64 %t21019 to ptr
-  store i64 ptrtoint (ptr @code_5946 to i64), ptr %t21020
+  store i64 ptrtoint (ptr @code_5986 to i64), ptr %t21020
   %t21021 = getelementptr i64, ptr %t21020, i64 1
   store i64 %t21006, ptr %t21021
   %t21022 = getelementptr i64, ptr %t21020, i64 2
@@ -30597,7 +30597,7 @@ else2599:
   ret i64 %t21092
 }
 
-define fastcc i64 @code_5932(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5972(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t21093 = icmp eq i64 %argc, 0
   br i1 %t21093, label %argok2609, label %arityerr2608
@@ -30639,7 +30639,7 @@ argok2609:
   %t21125 = load i64, ptr %t21124
   %t21126 = call i64 @rt_alloc_words(i64 9)
   %t21127 = inttoptr i64 %t21126 to ptr
-  store i64 ptrtoint (ptr @code_5934 to i64), ptr %t21127
+  store i64 ptrtoint (ptr @code_5974 to i64), ptr %t21127
   %t21128 = getelementptr i64, ptr %t21127, i64 1
   store i64 %t21097, ptr %t21128
   %t21129 = getelementptr i64, ptr %t21127, i64 2
@@ -30774,7 +30774,7 @@ else2611:
   ret i64 %t21230
 }
 
-define fastcc i64 @code_5948(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5988(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t21231 = icmp eq i64 %argc, 1
   br i1 %t21231, label %argok2621, label %arityerr2620
@@ -30807,7 +30807,7 @@ argok2621:
   ret i64 %t21253
 }
 
-define fastcc i64 @code_5930(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5970(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t21254 = icmp eq i64 %argc, 0
   br i1 %t21254, label %argok2623, label %arityerr2622
@@ -30853,7 +30853,7 @@ argok2623:
   %t21290 = load i64, ptr %t21289
   %t21291 = call i64 @rt_alloc_words(i64 10)
   %t21292 = inttoptr i64 %t21291 to ptr
-  store i64 ptrtoint (ptr @code_5932 to i64), ptr %t21292
+  store i64 ptrtoint (ptr @code_5972 to i64), ptr %t21292
   %t21293 = getelementptr i64, ptr %t21292, i64 1
   store i64 %t21258, ptr %t21293
   %t21294 = getelementptr i64, ptr %t21292, i64 2
@@ -30930,7 +30930,7 @@ then2632:
   %t21347 = load i64, ptr %t21346
   %t21348 = call i64 @rt_alloc_words(i64 5)
   %t21349 = inttoptr i64 %t21348 to ptr
-  store i64 ptrtoint (ptr @code_5948 to i64), ptr %t21349
+  store i64 ptrtoint (ptr @code_5988 to i64), ptr %t21349
   %t21350 = getelementptr i64, ptr %t21349, i64 1
   store i64 %t21335, ptr %t21350
   %t21351 = getelementptr i64, ptr %t21349, i64 2
@@ -30994,7 +30994,7 @@ else2625:
   ret i64 %t21395
 }
 
-define fastcc i64 @code_5950(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5990(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t21396 = icmp eq i64 %argc, 1
   br i1 %t21396, label %argok2635, label %arityerr2634
@@ -31027,7 +31027,7 @@ argok2635:
   ret i64 %t21418
 }
 
-define fastcc i64 @code_5928(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5968(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t21419 = icmp eq i64 %argc, 0
   br i1 %t21419, label %argok2637, label %arityerr2636
@@ -31077,7 +31077,7 @@ argok2637:
   %t21459 = load i64, ptr %t21458
   %t21460 = call i64 @rt_alloc_words(i64 11)
   %t21461 = inttoptr i64 %t21460 to ptr
-  store i64 ptrtoint (ptr @code_5930 to i64), ptr %t21461
+  store i64 ptrtoint (ptr @code_5970 to i64), ptr %t21461
   %t21462 = getelementptr i64, ptr %t21461, i64 1
   store i64 %t21423, ptr %t21462
   %t21463 = getelementptr i64, ptr %t21461, i64 2
@@ -31146,7 +31146,7 @@ then2642:
   %t21511 = load i64, ptr %t21510
   %t21512 = call i64 @rt_alloc_words(i64 5)
   %t21513 = inttoptr i64 %t21512 to ptr
-  store i64 ptrtoint (ptr @code_5950 to i64), ptr %t21513
+  store i64 ptrtoint (ptr @code_5990 to i64), ptr %t21513
   %t21514 = getelementptr i64, ptr %t21513, i64 1
   store i64 %t21499, ptr %t21514
   %t21515 = getelementptr i64, ptr %t21513, i64 2
@@ -31196,7 +31196,7 @@ else2639:
   ret i64 %t21549
 }
 
-define fastcc i64 @code_5952(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5992(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t21550 = icmp eq i64 %argc, 1
   br i1 %t21550, label %argok2645, label %arityerr2644
@@ -31235,7 +31235,7 @@ argok2645:
   ret i64 %t21578
 }
 
-define fastcc i64 @code_5954(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5994(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t21579 = icmp eq i64 %argc, 2
   br i1 %t21579, label %argok2647, label %arityerr2646
@@ -31248,7 +31248,7 @@ argok2647:
   ret i64 %t21581
 }
 
-define fastcc i64 @code_5926(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5966(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t21582 = icmp eq i64 %argc, 0
   br i1 %t21582, label %argok2649, label %arityerr2648
@@ -31302,7 +31302,7 @@ argok2649:
   %t21626 = load i64, ptr %t21625
   %t21627 = call i64 @rt_alloc_words(i64 12)
   %t21628 = inttoptr i64 %t21627 to ptr
-  store i64 ptrtoint (ptr @code_5928 to i64), ptr %t21628
+  store i64 ptrtoint (ptr @code_5968 to i64), ptr %t21628
   %t21629 = getelementptr i64, ptr %t21628, i64 1
   store i64 %t21586, ptr %t21629
   %t21630 = getelementptr i64, ptr %t21628, i64 2
@@ -31383,7 +31383,7 @@ then2658:
   %t21685 = load i64, ptr %t21684
   %t21686 = call i64 @rt_alloc_words(i64 5)
   %t21687 = inttoptr i64 %t21686 to ptr
-  store i64 ptrtoint (ptr @code_5952 to i64), ptr %t21687
+  store i64 ptrtoint (ptr @code_5992 to i64), ptr %t21687
   %t21688 = getelementptr i64, ptr %t21687, i64 1
   store i64 %t21673, ptr %t21688
   %t21689 = getelementptr i64, ptr %t21687, i64 2
@@ -31401,7 +31401,7 @@ then2658:
   %t21698 = call fastcc i64%t21697(i64 %t21693, i64 2, i64 %t21692, i64 %t21662, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t21699 = call i64 @rt_alloc_words(i64 1)
   %t21700 = inttoptr i64 %t21699 to ptr
-  store i64 ptrtoint (ptr @code_5954 to i64), ptr %t21700
+  store i64 ptrtoint (ptr @code_5994 to i64), ptr %t21700
   %t21701 = or i64 %t21699, 4
   %t21702 = load i64, ptr @"scheme.base:map"
   %t21703 = and i64 %t21702, -8
@@ -31475,7 +31475,7 @@ else2651:
   ret i64 %t21760
 }
 
-define fastcc i64 @code_5924(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5964(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t21761 = icmp eq i64 %argc, 0
   br i1 %t21761, label %argok2661, label %arityerr2660
@@ -31529,7 +31529,7 @@ argok2661:
   %t21805 = load i64, ptr %t21804
   %t21806 = call i64 @rt_alloc_words(i64 12)
   %t21807 = inttoptr i64 %t21806 to ptr
-  store i64 ptrtoint (ptr @code_5926 to i64), ptr %t21807
+  store i64 ptrtoint (ptr @code_5966 to i64), ptr %t21807
   %t21808 = getelementptr i64, ptr %t21807, i64 1
   store i64 %t21765, ptr %t21808
   %t21809 = getelementptr i64, ptr %t21807, i64 2
@@ -31674,7 +31674,7 @@ else2663:
   ret i64 %t21917
 }
 
-define fastcc i64 @code_5922(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5962(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t21918 = icmp eq i64 %argc, 0
   br i1 %t21918, label %argok2673, label %arityerr2672
@@ -31728,7 +31728,7 @@ argok2673:
   %t21962 = load i64, ptr %t21961
   %t21963 = call i64 @rt_alloc_words(i64 12)
   %t21964 = inttoptr i64 %t21963 to ptr
-  store i64 ptrtoint (ptr @code_5924 to i64), ptr %t21964
+  store i64 ptrtoint (ptr @code_5964 to i64), ptr %t21964
   %t21965 = getelementptr i64, ptr %t21964, i64 1
   store i64 %t21922, ptr %t21965
   %t21966 = getelementptr i64, ptr %t21964, i64 2
@@ -31864,7 +31864,7 @@ else2675:
   ret i64 %t22061
 }
 
-define fastcc i64 @code_5920(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5960(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t22062 = icmp eq i64 %argc, 0
   br i1 %t22062, label %argok2687, label %arityerr2686
@@ -31922,7 +31922,7 @@ argok2687:
   %t22110 = load i64, ptr %t22109
   %t22111 = call i64 @rt_alloc_words(i64 13)
   %t22112 = inttoptr i64 %t22111 to ptr
-  store i64 ptrtoint (ptr @code_5922 to i64), ptr %t22112
+  store i64 ptrtoint (ptr @code_5962 to i64), ptr %t22112
   %t22113 = getelementptr i64, ptr %t22112, i64 1
   store i64 %t22066, ptr %t22113
   %t22114 = getelementptr i64, ptr %t22112, i64 2
@@ -32097,7 +32097,7 @@ else2689:
   ret i64 %t22251
 }
 
-define fastcc i64 @code_5918(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5958(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t22252 = icmp eq i64 %argc, 0
   br i1 %t22252, label %argok2699, label %arityerr2698
@@ -32167,7 +32167,7 @@ argok2699:
   %t22312 = load i64, ptr %t22311
   %t22313 = call i64 @rt_alloc_words(i64 16)
   %t22314 = inttoptr i64 %t22313 to ptr
-  store i64 ptrtoint (ptr @code_5920 to i64), ptr %t22314
+  store i64 ptrtoint (ptr @code_5960 to i64), ptr %t22314
   %t22315 = getelementptr i64, ptr %t22314, i64 1
   store i64 %t22256, ptr %t22315
   %t22316 = getelementptr i64, ptr %t22314, i64 2
@@ -32296,7 +32296,7 @@ else2701:
   ret i64 %t22408
 }
 
-define fastcc i64 @code_5916(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5956(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t22409 = icmp eq i64 %argc, 0
   br i1 %t22409, label %argok2709, label %arityerr2708
@@ -32366,7 +32366,7 @@ argok2709:
   %t22469 = load i64, ptr %t22468
   %t22470 = call i64 @rt_alloc_words(i64 16)
   %t22471 = inttoptr i64 %t22470 to ptr
-  store i64 ptrtoint (ptr @code_5918 to i64), ptr %t22471
+  store i64 ptrtoint (ptr @code_5958 to i64), ptr %t22471
   %t22472 = getelementptr i64, ptr %t22471, i64 1
   store i64 %t22413, ptr %t22472
   %t22473 = getelementptr i64, ptr %t22471, i64 2
@@ -32476,7 +32476,7 @@ else2711:
   ret i64 %t22546
 }
 
-define fastcc i64 @code_5914(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5954(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t22547 = icmp eq i64 %argc, 0
   br i1 %t22547, label %argok2719, label %arityerr2718
@@ -32550,7 +32550,7 @@ argok2719:
   %t22611 = load i64, ptr %t22610
   %t22612 = call i64 @rt_alloc_words(i64 17)
   %t22613 = inttoptr i64 %t22612 to ptr
-  store i64 ptrtoint (ptr @code_5916 to i64), ptr %t22613
+  store i64 ptrtoint (ptr @code_5956 to i64), ptr %t22613
   %t22614 = getelementptr i64, ptr %t22613, i64 1
   store i64 %t22551, ptr %t22614
   %t22615 = getelementptr i64, ptr %t22613, i64 2
@@ -32659,7 +32659,7 @@ else2721:
   ret i64 %t22686
 }
 
-define fastcc i64 @code_5912(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5952(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t22687 = icmp eq i64 %argc, 4
   br i1 %t22687, label %argok2729, label %arityerr2728
@@ -32717,7 +32717,7 @@ argok2729:
   %t22735 = load i64, ptr %t22734
   %t22736 = call i64 @rt_alloc_words(i64 17)
   %t22737 = inttoptr i64 %t22736 to ptr
-  store i64 ptrtoint (ptr @code_5914 to i64), ptr %t22737
+  store i64 ptrtoint (ptr @code_5954 to i64), ptr %t22737
   %t22738 = getelementptr i64, ptr %t22737, i64 1
   store i64 %a0, ptr %t22738
   %t22739 = getelementptr i64, ptr %t22737, i64 2
@@ -32813,7 +32813,7 @@ else2731:
   ret i64 %t22797
 }
 
-define fastcc i64 @code_5970(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6010(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t22798 = icmp eq i64 %argc, 0
   br i1 %t22798, label %argok2739, label %arityerr2738
@@ -32862,7 +32862,7 @@ argok2739:
   ret i64 %t22836
 }
 
-define fastcc i64 @code_5972(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6012(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t22837 = icmp eq i64 %argc, 1
   br i1 %t22837, label %argok2741, label %arityerr2740
@@ -32895,7 +32895,7 @@ argok2741:
   ret i64 %t22859
 }
 
-define fastcc i64 @code_5968(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6008(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t22860 = icmp eq i64 %argc, 0
   br i1 %t22860, label %argok2743, label %arityerr2742
@@ -32929,7 +32929,7 @@ argok2743:
   %t22884 = load i64, ptr %t22883
   %t22885 = call i64 @rt_alloc_words(i64 7)
   %t22886 = inttoptr i64 %t22885 to ptr
-  store i64 ptrtoint (ptr @code_5970 to i64), ptr %t22886
+  store i64 ptrtoint (ptr @code_6010 to i64), ptr %t22886
   %t22887 = getelementptr i64, ptr %t22886, i64 1
   store i64 %t22864, ptr %t22887
   %t22888 = getelementptr i64, ptr %t22886, i64 2
@@ -33000,7 +33000,7 @@ then2752:
   %t22938 = load i64, ptr %t22937
   %t22939 = call i64 @rt_alloc_words(i64 5)
   %t22940 = inttoptr i64 %t22939 to ptr
-  store i64 ptrtoint (ptr @code_5972 to i64), ptr %t22940
+  store i64 ptrtoint (ptr @code_6012 to i64), ptr %t22940
   %t22941 = getelementptr i64, ptr %t22940, i64 1
   store i64 %t22926, ptr %t22941
   %t22942 = getelementptr i64, ptr %t22940, i64 2
@@ -33072,7 +33072,7 @@ else2745:
   ret i64 %t22994
 }
 
-define fastcc i64 @code_5974(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6014(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t22995 = icmp eq i64 %argc, 1
   br i1 %t22995, label %argok2755, label %arityerr2754
@@ -33105,7 +33105,7 @@ argok2755:
   ret i64 %t23017
 }
 
-define fastcc i64 @code_5966(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6006(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t23018 = icmp eq i64 %argc, 0
   br i1 %t23018, label %argok2757, label %arityerr2756
@@ -33147,7 +33147,7 @@ argok2757:
   %t23050 = load i64, ptr %t23049
   %t23051 = call i64 @rt_alloc_words(i64 9)
   %t23052 = inttoptr i64 %t23051 to ptr
-  store i64 ptrtoint (ptr @code_5968 to i64), ptr %t23052
+  store i64 ptrtoint (ptr @code_6008 to i64), ptr %t23052
   %t23053 = getelementptr i64, ptr %t23052, i64 1
   store i64 %t23022, ptr %t23053
   %t23054 = getelementptr i64, ptr %t23052, i64 2
@@ -33222,7 +33222,7 @@ then2766:
   %t23106 = load i64, ptr %t23105
   %t23107 = call i64 @rt_alloc_words(i64 5)
   %t23108 = inttoptr i64 %t23107 to ptr
-  store i64 ptrtoint (ptr @code_5974 to i64), ptr %t23108
+  store i64 ptrtoint (ptr @code_6014 to i64), ptr %t23108
   %t23109 = getelementptr i64, ptr %t23108, i64 1
   store i64 %t23094, ptr %t23109
   %t23110 = getelementptr i64, ptr %t23108, i64 2
@@ -33312,7 +33312,7 @@ else2759:
   ret i64 %t23180
 }
 
-define fastcc i64 @code_5976(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6016(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t23181 = icmp eq i64 %argc, 1
   br i1 %t23181, label %argok2769, label %arityerr2768
@@ -33345,7 +33345,7 @@ argok2769:
   ret i64 %t23203
 }
 
-define fastcc i64 @code_5964(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6004(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t23204 = icmp eq i64 %argc, 0
   br i1 %t23204, label %argok2771, label %arityerr2770
@@ -33391,7 +33391,7 @@ argok2771:
   %t23240 = load i64, ptr %t23239
   %t23241 = call i64 @rt_alloc_words(i64 10)
   %t23242 = inttoptr i64 %t23241 to ptr
-  store i64 ptrtoint (ptr @code_5966 to i64), ptr %t23242
+  store i64 ptrtoint (ptr @code_6006 to i64), ptr %t23242
   %t23243 = getelementptr i64, ptr %t23242, i64 1
   store i64 %t23208, ptr %t23243
   %t23244 = getelementptr i64, ptr %t23242, i64 2
@@ -33468,7 +33468,7 @@ then2780:
   %t23297 = load i64, ptr %t23296
   %t23298 = call i64 @rt_alloc_words(i64 5)
   %t23299 = inttoptr i64 %t23298 to ptr
-  store i64 ptrtoint (ptr @code_5976 to i64), ptr %t23299
+  store i64 ptrtoint (ptr @code_6016 to i64), ptr %t23299
   %t23300 = getelementptr i64, ptr %t23299, i64 1
   store i64 %t23285, ptr %t23300
   %t23301 = getelementptr i64, ptr %t23299, i64 2
@@ -33558,7 +33558,7 @@ else2773:
   ret i64 %t23371
 }
 
-define fastcc i64 @code_5962(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6002(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t23372 = icmp eq i64 %argc, 0
   br i1 %t23372, label %argok2783, label %arityerr2782
@@ -33608,7 +33608,7 @@ argok2783:
   %t23412 = load i64, ptr %t23411
   %t23413 = call i64 @rt_alloc_words(i64 11)
   %t23414 = inttoptr i64 %t23413 to ptr
-  store i64 ptrtoint (ptr @code_5964 to i64), ptr %t23414
+  store i64 ptrtoint (ptr @code_6004 to i64), ptr %t23414
   %t23415 = getelementptr i64, ptr %t23414, i64 1
   store i64 %t23376, ptr %t23415
   %t23416 = getelementptr i64, ptr %t23414, i64 2
@@ -33747,7 +33747,7 @@ else2785:
   ret i64 %t23519
 }
 
-define fastcc i64 @code_5978(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6018(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t23520 = icmp eq i64 %argc, 1
   br i1 %t23520, label %argok2795, label %arityerr2794
@@ -33786,7 +33786,7 @@ argok2795:
   ret i64 %t23548
 }
 
-define fastcc i64 @code_5980(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6020(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t23549 = icmp eq i64 %argc, 2
   br i1 %t23549, label %argok2797, label %arityerr2796
@@ -33799,7 +33799,7 @@ argok2797:
   ret i64 %t23551
 }
 
-define fastcc i64 @code_5960(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6000(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t23552 = icmp eq i64 %argc, 0
   br i1 %t23552, label %argok2799, label %arityerr2798
@@ -33857,7 +33857,7 @@ argok2799:
   %t23600 = load i64, ptr %t23599
   %t23601 = call i64 @rt_alloc_words(i64 13)
   %t23602 = inttoptr i64 %t23601 to ptr
-  store i64 ptrtoint (ptr @code_5962 to i64), ptr %t23602
+  store i64 ptrtoint (ptr @code_6002 to i64), ptr %t23602
   %t23603 = getelementptr i64, ptr %t23602, i64 1
   store i64 %t23556, ptr %t23603
   %t23604 = getelementptr i64, ptr %t23602, i64 2
@@ -33940,7 +33940,7 @@ then2808:
   %t23660 = load i64, ptr %t23659
   %t23661 = call i64 @rt_alloc_words(i64 5)
   %t23662 = inttoptr i64 %t23661 to ptr
-  store i64 ptrtoint (ptr @code_5978 to i64), ptr %t23662
+  store i64 ptrtoint (ptr @code_6018 to i64), ptr %t23662
   %t23663 = getelementptr i64, ptr %t23662, i64 1
   store i64 %t23648, ptr %t23663
   %t23664 = getelementptr i64, ptr %t23662, i64 2
@@ -33958,7 +33958,7 @@ then2808:
   %t23673 = call fastcc i64%t23672(i64 %t23668, i64 2, i64 %t23667, i64 %t23637, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t23674 = call i64 @rt_alloc_words(i64 1)
   %t23675 = inttoptr i64 %t23674 to ptr
-  store i64 ptrtoint (ptr @code_5980 to i64), ptr %t23675
+  store i64 ptrtoint (ptr @code_6020 to i64), ptr %t23675
   %t23676 = or i64 %t23674, 4
   %t23677 = load i64, ptr @"scheme.base:map"
   %t23678 = and i64 %t23677, -8
@@ -34032,7 +34032,7 @@ else2801:
   ret i64 %t23735
 }
 
-define fastcc i64 @code_5958(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5998(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t23736 = icmp eq i64 %argc, 0
   br i1 %t23736, label %argok2811, label %arityerr2810
@@ -34090,7 +34090,7 @@ argok2811:
   %t23784 = load i64, ptr %t23783
   %t23785 = call i64 @rt_alloc_words(i64 13)
   %t23786 = inttoptr i64 %t23785 to ptr
-  store i64 ptrtoint (ptr @code_5960 to i64), ptr %t23786
+  store i64 ptrtoint (ptr @code_6000 to i64), ptr %t23786
   %t23787 = getelementptr i64, ptr %t23786, i64 1
   store i64 %t23740, ptr %t23787
   %t23788 = getelementptr i64, ptr %t23786, i64 2
@@ -34237,7 +34237,7 @@ else2813:
   ret i64 %t23897
 }
 
-define fastcc i64 @code_5956(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_5996(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t23898 = icmp eq i64 %argc, 4
   br i1 %t23898, label %argok2823, label %arityerr2822
@@ -34275,7 +34275,7 @@ argok2823:
   %t23926 = load i64, ptr %t23925
   %t23927 = call i64 @rt_alloc_words(i64 13)
   %t23928 = inttoptr i64 %t23927 to ptr
-  store i64 ptrtoint (ptr @code_5958 to i64), ptr %t23928
+  store i64 ptrtoint (ptr @code_5998 to i64), ptr %t23928
   %t23929 = getelementptr i64, ptr %t23928, i64 1
   store i64 %t23902, ptr %t23929
   %t23930 = getelementptr i64, ptr %t23928, i64 2
@@ -34389,7 +34389,7 @@ else2825:
   ret i64 %t24002
 }
 
-define fastcc i64 @code_5982(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6022(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t24003 = icmp eq i64 %argc, 6
   br i1 %t24003, label %argok2837, label %arityerr2836
@@ -34604,7 +34604,7 @@ argok2837:
   ret i64 %t24183
 }
 
-define fastcc i64 @code_5984(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6024(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t24208 = icmp eq i64 %argc, 6
   br i1 %t24208, label %argok2839, label %arityerr2838
@@ -34730,7 +34730,7 @@ argok2839:
   ret i64 %t24323
 }
 
-define fastcc i64 @code_5986(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6026(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t24324 = icmp eq i64 %argc, 2
   br i1 %t24324, label %argok2841, label %arityerr2840
@@ -34858,7 +34858,7 @@ fixmerge2844:
   ret i64 %t24364
 }
 
-define fastcc i64 @code_5988(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6028(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t24436 = icmp eq i64 %argc, 4
   br i1 %t24436, label %argok2846, label %arityerr2845
@@ -35032,7 +35032,7 @@ else2852:
   ret i64 %t24587
 }
 
-define fastcc i64 @code_5990(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6030(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t24588 = icmp eq i64 %argc, 3
   br i1 %t24588, label %argok2854, label %arityerr2853
@@ -35322,7 +35322,7 @@ argok2854:
   ret i64 %t24843
 }
 
-define fastcc i64 @code_5992(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6032(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t24868 = icmp eq i64 %argc, 2
   br i1 %t24868, label %argok2856, label %arityerr2855
@@ -35504,7 +35504,7 @@ merge2872:
   ret i64 %t24963
 }
 
-define fastcc i64 @code_5996(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6036(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t25008 = icmp eq i64 %argc, 2
   br i1 %t25008, label %argok2874, label %arityerr2873
@@ -35546,7 +35546,7 @@ fixmerge2882:
   %t25026 = phi i64 [ %t25024, %fixfast2880 ], [ %t25025, %fixslow2881 ]
   %t25027 = call i64 @rt_make_string(ptr @.str.lit.247, i64 11)
   %t25028 = call i64 @rt_string_append(i64 %a1, i64 %t25027)
-  %t25029 = musttail call fastcc i64 @code_5996(i64 %self, i64 2, i64 %t25026, i64 %t25028, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t25029 = musttail call fastcc i64 @code_6036(i64 %self, i64 2, i64 %t25026, i64 %t25028, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t25029
 else2879:
   %t25030 = call i64 @rt_make_string(ptr @.str.lit.248, i64 50)
@@ -35568,7 +35568,7 @@ else2879:
   ret i64 %t25045
 }
 
-define fastcc i64 @code_5994(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6034(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t25046 = icmp eq i64 %argc, 1
   br i1 %t25046, label %argok2884, label %arityerr2883
@@ -35578,7 +35578,7 @@ arityerr2883:
 argok2884:
   %t25047 = call i64 @rt_alloc_words(i64 3)
   %t25048 = inttoptr i64 %t25047 to ptr
-  store i64 ptrtoint (ptr @code_5996 to i64), ptr %t25048
+  store i64 ptrtoint (ptr @code_6036 to i64), ptr %t25048
   %t25049 = or i64 %t25047, 4
   %t25050 = getelementptr i64, ptr %t25048, i64 1
   store i64 %a0, ptr %t25050
@@ -35593,7 +35593,7 @@ argok2884:
   ret i64 %t25057
 }
 
-define fastcc i64 @code_5998(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6038(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t25058 = icmp eq i64 %argc, 2
   br i1 %t25058, label %argok2886, label %arityerr2885
@@ -35703,7 +35703,7 @@ fixmerge2889:
   ret i64 %t25151
 }
 
-define fastcc i64 @code_6000(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6040(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t25152 = icmp eq i64 %argc, 3
   br i1 %t25152, label %argok2891, label %arityerr2890
@@ -35761,7 +35761,7 @@ argok2891:
   ret i64 %t25199
 }
 
-define fastcc i64 @code_6004(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6044(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t25200 = icmp eq i64 %argc, 2
   br i1 %t25200, label %argok2893, label %arityerr2892
@@ -35803,11 +35803,11 @@ fixslow2897:
 fixmerge2898:
   %t25223 = phi i64 [ %t25221, %fixfast2896 ], [ %t25222, %fixslow2897 ]
   %t25224 = call i64 @rt_cdr(i64 %a1)
-  %t25225 = musttail call fastcc i64 @code_6004(i64 %self, i64 2, i64 %t25223, i64 %t25224, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t25225 = musttail call fastcc i64 @code_6044(i64 %self, i64 2, i64 %t25223, i64 %t25224, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t25225
 }
 
-define fastcc i64 @code_6002(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6042(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t25226 = icmp eq i64 %argc, 2
   br i1 %t25226, label %argok2900, label %arityerr2899
@@ -35840,7 +35840,7 @@ argok2900:
   %t25249 = call fastcc i64%t25248(i64 %t25244, i64 1, i64 %t25242, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t25250 = call i64 @rt_alloc_words(i64 4)
   %t25251 = inttoptr i64 %t25250 to ptr
-  store i64 ptrtoint (ptr @code_6004 to i64), ptr %t25251
+  store i64 ptrtoint (ptr @code_6044 to i64), ptr %t25251
   %t25252 = or i64 %t25250, 4
   %t25253 = and i64 %self, -8
   %t25254 = inttoptr i64 %t25253 to ptr
@@ -35885,7 +35885,7 @@ argok2900:
   ret i64 %t25274
 }
 
-define fastcc i64 @code_6008(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6048(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t25290 = icmp eq i64 %argc, 1
   br i1 %t25290, label %argok2902, label %arityerr2901
@@ -35969,7 +35969,7 @@ argok2902:
   ret i64 %t25363
 }
 
-define fastcc i64 @code_6010(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6050(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t25364 = icmp eq i64 %argc, 1
   br i1 %t25364, label %argok2904, label %arityerr2903
@@ -35988,7 +35988,7 @@ argok2904:
   ret i64 %t25372
 }
 
-define fastcc i64 @code_6014(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6054(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t25373 = icmp eq i64 %argc, 2
   br i1 %t25373, label %argok2906, label %arityerr2905
@@ -36058,11 +36058,11 @@ fixslow2910:
 fixmerge2911:
   %t25424 = phi i64 [ %t25422, %fixfast2909 ], [ %t25423, %fixslow2910 ]
   %t25425 = call i64 @rt_cdr(i64 %a1)
-  %t25426 = musttail call fastcc i64 @code_6014(i64 %self, i64 2, i64 %t25424, i64 %t25425, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t25426 = musttail call fastcc i64 @code_6054(i64 %self, i64 2, i64 %t25424, i64 %t25425, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t25426
 }
 
-define fastcc i64 @code_6012(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6052(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t25427 = icmp eq i64 %argc, 1
   br i1 %t25427, label %argok2913, label %arityerr2912
@@ -36072,7 +36072,7 @@ arityerr2912:
 argok2913:
   %t25428 = call i64 @rt_alloc_words(i64 8)
   %t25429 = inttoptr i64 %t25428 to ptr
-  store i64 ptrtoint (ptr @code_6014 to i64), ptr %t25429
+  store i64 ptrtoint (ptr @code_6054 to i64), ptr %t25429
   %t25430 = or i64 %t25428, 4
   %t25431 = and i64 %self, -8
   %t25432 = inttoptr i64 %t25431 to ptr
@@ -36122,7 +36122,7 @@ argok2913:
   ret i64 %t25468
 }
 
-define fastcc i64 @code_6006(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6046(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t25469 = icmp eq i64 %argc, 4
   br i1 %t25469, label %argok2915, label %arityerr2914
@@ -36144,7 +36144,7 @@ argok2915:
   %t25481 = load i64, ptr %t25480
   %t25482 = call i64 @rt_alloc_words(i64 4)
   %t25483 = inttoptr i64 %t25482 to ptr
-  store i64 ptrtoint (ptr @code_6008 to i64), ptr %t25483
+  store i64 ptrtoint (ptr @code_6048 to i64), ptr %t25483
   %t25484 = getelementptr i64, ptr %t25483, i64 1
   store i64 %t25473, ptr %t25484
   %t25485 = getelementptr i64, ptr %t25483, i64 2
@@ -36160,7 +36160,7 @@ argok2915:
   %t25493 = call fastcc i64%t25492(i64 %t25488, i64 2, i64 %t25487, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t25494 = call i64 @rt_alloc_words(i64 1)
   %t25495 = inttoptr i64 %t25494 to ptr
-  store i64 ptrtoint (ptr @code_6010 to i64), ptr %t25495
+  store i64 ptrtoint (ptr @code_6050 to i64), ptr %t25495
   %t25496 = or i64 %t25494, 4
   %t25497 = load i64, ptr @"scheme.base:map"
   %t25498 = and i64 %t25497, -8
@@ -36184,7 +36184,7 @@ argok2915:
   %t25516 = load i64, ptr %t25515
   %t25517 = call i64 @rt_alloc_words(i64 6)
   %t25518 = inttoptr i64 %t25517 to ptr
-  store i64 ptrtoint (ptr @code_6012 to i64), ptr %t25518
+  store i64 ptrtoint (ptr @code_6052 to i64), ptr %t25518
   %t25519 = getelementptr i64, ptr %t25518, i64 1
   store i64 %t25512, ptr %t25519
   %t25520 = getelementptr i64, ptr %t25518, i64 2
@@ -36205,7 +36205,7 @@ argok2915:
   ret i64 %t25508
 }
 
-define fastcc i64 @code_6016(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6056(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t25531 = icmp eq i64 %argc, 1
   br i1 %t25531, label %argok2917, label %arityerr2916
@@ -36314,7 +36314,7 @@ argok2917:
   ret i64 %t25571
 }
 
-define fastcc i64 @code_6018(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6058(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t25630 = icmp eq i64 %argc, 4
   br i1 %t25630, label %argok2919, label %arityerr2918
@@ -36401,7 +36401,7 @@ else2921:
   ret i64 %t25640
 }
 
-define fastcc i64 @code_6022(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6062(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t25697 = icmp eq i64 %argc, 2
   br i1 %t25697, label %argok2926, label %arityerr2925
@@ -36480,11 +36480,11 @@ fixslow2930:
 fixmerge2931:
   %t25757 = phi i64 [ %t25755, %fixfast2929 ], [ %t25756, %fixslow2930 ]
   %t25758 = call i64 @rt_cdr(i64 %a1)
-  %t25759 = musttail call fastcc i64 @code_6022(i64 %self, i64 2, i64 %t25757, i64 %t25758, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t25759 = musttail call fastcc i64 @code_6062(i64 %self, i64 2, i64 %t25757, i64 %t25758, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t25759
 }
 
-define fastcc i64 @code_6020(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6060(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t25760 = icmp eq i64 %argc, 1
   br i1 %t25760, label %argok2933, label %arityerr2932
@@ -36556,7 +36556,7 @@ argok2933:
   %t25822 = call fastcc i64%t25821(i64 %t25817, i64 1, i64 %t25812, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t25823 = call i64 @rt_alloc_words(i64 5)
   %t25824 = inttoptr i64 %t25823 to ptr
-  store i64 ptrtoint (ptr @code_6022 to i64), ptr %t25824
+  store i64 ptrtoint (ptr @code_6062 to i64), ptr %t25824
   %t25825 = or i64 %t25823, 4
   %t25826 = and i64 %self, -8
   %t25827 = inttoptr i64 %t25826 to ptr
@@ -36582,7 +36582,7 @@ argok2933:
   ret i64 %t25780
 }
 
-define fastcc i64 @code_6026(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6066(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t25843 = icmp eq i64 %argc, 1
   br i1 %t25843, label %argok2935, label %arityerr2934
@@ -36595,7 +36595,7 @@ argok2935:
   ret i64 %t25845
 }
 
-define fastcc i64 @code_6024(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6064(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t25846 = icmp eq i64 %argc, 4
   br i1 %t25846, label %argok2937, label %arityerr2936
@@ -36753,7 +36753,7 @@ merge2958:
   %t25952 = call fastcc i64%t25951(i64 %t25947, i64 2, i64 %t25938, i64 %t25946, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t25953 = call i64 @rt_alloc_words(i64 1)
   %t25954 = inttoptr i64 %t25953 to ptr
-  store i64 ptrtoint (ptr @code_6026 to i64), ptr %t25954
+  store i64 ptrtoint (ptr @code_6066 to i64), ptr %t25954
   %t25955 = or i64 %t25953, 4
   %t25956 = load i64, ptr @"scheme.base:map"
   %t25957 = and i64 %t25956, -8
@@ -36798,7 +36798,7 @@ merge2958:
   ret i64 %t25995
 }
 
-define fastcc i64 @code_6030(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6070(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t25996 = icmp eq i64 %argc, 1
   br i1 %t25996, label %argok2960, label %arityerr2959
@@ -36811,7 +36811,7 @@ argok2960:
   ret i64 %t25998
 }
 
-define fastcc i64 @code_6028(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6068(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t25999 = icmp eq i64 %argc, 5
   br i1 %t25999, label %argok2962, label %arityerr2961
@@ -36959,7 +36959,7 @@ merge2983:
   %t26095 = call fastcc i64%t26094(i64 %t26090, i64 2, i64 %t26081, i64 %t26089, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t26096 = call i64 @rt_alloc_words(i64 1)
   %t26097 = inttoptr i64 %t26096 to ptr
-  store i64 ptrtoint (ptr @code_6030 to i64), ptr %t26097
+  store i64 ptrtoint (ptr @code_6070 to i64), ptr %t26097
   %t26098 = or i64 %t26096, 4
   %t26099 = load i64, ptr @"scheme.base:map"
   %t26100 = and i64 %t26099, -8
@@ -37090,7 +37090,7 @@ else2985:
   ret i64 %t26138
 }
 
-define fastcc i64 @code_6034(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6074(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t26215 = icmp eq i64 %argc, 1
   br i1 %t26215, label %argok2990, label %arityerr2989
@@ -37111,7 +37111,7 @@ argok2990:
   ret i64 %t26225
 }
 
-define fastcc i64 @code_6036(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6076(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t26226 = icmp eq i64 %argc, 2
   br i1 %t26226, label %argok2992, label %arityerr2991
@@ -37171,7 +37171,7 @@ argok2992:
   ret i64 %t26275
 }
 
-define fastcc i64 @code_6038(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6078(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t26276 = icmp eq i64 %argc, 1
   br i1 %t26276, label %argok2994, label %arityerr2993
@@ -37184,7 +37184,7 @@ argok2994:
   ret i64 %t26278
 }
 
-define fastcc i64 @code_6032(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6072(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t26279 = icmp eq i64 %argc, 4
   br i1 %t26279, label %argok2996, label %arityerr2995
@@ -37328,7 +37328,7 @@ merge3002:
   %t26401 = load i64, ptr %t26400
   %t26402 = call i64 @rt_alloc_words(i64 2)
   %t26403 = inttoptr i64 %t26402 to ptr
-  store i64 ptrtoint (ptr @code_6034 to i64), ptr %t26403
+  store i64 ptrtoint (ptr @code_6074 to i64), ptr %t26403
   %t26404 = getelementptr i64, ptr %t26403, i64 1
   store i64 %t26401, ptr %t26404
   %t26405 = or i64 %t26402, 4
@@ -37427,7 +37427,7 @@ merge3002:
   %t26498 = load i64, ptr %t26497
   %t26499 = call i64 @rt_alloc_words(i64 4)
   %t26500 = inttoptr i64 %t26499 to ptr
-  store i64 ptrtoint (ptr @code_6036 to i64), ptr %t26500
+  store i64 ptrtoint (ptr @code_6076 to i64), ptr %t26500
   %t26501 = getelementptr i64, ptr %t26500, i64 1
   store i64 %t26494, ptr %t26501
   %t26502 = getelementptr i64, ptr %t26500, i64 2
@@ -37521,7 +37521,7 @@ merge3002:
   %t26588 = call fastcc i64%t26587(i64 %t26583, i64 2, i64 %t26580, i64 %t26582, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t26589 = call i64 @rt_alloc_words(i64 1)
   %t26590 = inttoptr i64 %t26589 to ptr
-  store i64 ptrtoint (ptr @code_6038 to i64), ptr %t26590
+  store i64 ptrtoint (ptr @code_6078 to i64), ptr %t26590
   %t26591 = or i64 %t26589, 4
   %t26592 = load i64, ptr @"scheme.base:map"
   %t26593 = and i64 %t26592, -8
@@ -37566,7 +37566,7 @@ merge3002:
   ret i64 %t26631
 }
 
-define fastcc i64 @code_6044(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6084(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t26632 = icmp eq i64 %argc, 0
   br i1 %t26632, label %argok3004, label %arityerr3003
@@ -37589,7 +37589,7 @@ argok3004:
   ret i64 %t26644
 }
 
-define fastcc i64 @code_6042(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6082(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t26645 = icmp eq i64 %argc, 2
   br i1 %t26645, label %argok3006, label %arityerr3005
@@ -37599,7 +37599,7 @@ arityerr3005:
 argok3006:
   %t26646 = call i64 @rt_alloc_words(i64 2)
   %t26647 = inttoptr i64 %t26646 to ptr
-  store i64 ptrtoint (ptr @code_6044 to i64), ptr %t26647
+  store i64 ptrtoint (ptr @code_6084 to i64), ptr %t26647
   %t26648 = getelementptr i64, ptr %t26647, i64 1
   store i64 %a1, ptr %t26648
   %t26649 = or i64 %t26646, 4
@@ -37719,7 +37719,7 @@ else3008:
   ret i64 %t26730
 }
 
-define fastcc i64 @code_6040(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6080(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t26731 = icmp eq i64 %argc, 1
   br i1 %t26731, label %argok3024, label %arityerr3023
@@ -37729,7 +37729,7 @@ arityerr3023:
 argok3024:
   %t26732 = call i64 @rt_alloc_words(i64 1)
   %t26733 = inttoptr i64 %t26732 to ptr
-  store i64 ptrtoint (ptr @code_6042 to i64), ptr %t26733
+  store i64 ptrtoint (ptr @code_6082 to i64), ptr %t26733
   %t26734 = or i64 %t26732, 4
   %t26735 = load i64, ptr @"scheme.base:fold-left"
   %t26736 = and i64 %t26735, -8
@@ -37740,7 +37740,7 @@ argok3024:
   ret i64 %t26740
 }
 
-define fastcc i64 @code_6046(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6086(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t26741 = icmp eq i64 %argc, 0
   br i1 %t26741, label %argok3026, label %arityerr3025
@@ -37946,7 +37946,7 @@ argok3026:
   ret i64 %t26936
 }
 
-define fastcc i64 @code_6048(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6088(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t26937 = icmp eq i64 %argc, 2
   br i1 %t26937, label %argok3028, label %arityerr3027
@@ -38090,7 +38090,7 @@ merge3031:
   ret i64 %t27064
 }
 
-define fastcc i64 @code_6052(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6092(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t27065 = icmp eq i64 %argc, 1
   br i1 %t27065, label %argok3033, label %arityerr3032
@@ -38109,7 +38109,7 @@ argok3033:
   ret i64 %t27073
 }
 
-define fastcc i64 @code_6050(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6090(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t27074 = icmp eq i64 %argc, 2
   br i1 %t27074, label %argok3035, label %arityerr3034
@@ -38119,7 +38119,7 @@ arityerr3034:
 argok3035:
   %t27075 = call i64 @rt_alloc_words(i64 1)
   %t27076 = inttoptr i64 %t27075 to ptr
-  store i64 ptrtoint (ptr @code_6052 to i64), ptr %t27076
+  store i64 ptrtoint (ptr @code_6092 to i64), ptr %t27076
   %t27077 = or i64 %t27075, 4
   %t27078 = load i64, ptr @"scheme.base:iota"
   %t27079 = and i64 %t27078, -8
@@ -38189,7 +38189,7 @@ argok3035:
   ret i64 %t27109
 }
 
-define fastcc i64 @code_6056(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6096(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t27143 = icmp eq i64 %argc, 0
   br i1 %t27143, label %argok3037, label %arityerr3036
@@ -38212,7 +38212,7 @@ argok3037:
   ret i64 %t27155
 }
 
-define fastcc i64 @code_6058(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6098(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t27156 = icmp eq i64 %argc, 1
   br i1 %t27156, label %argok3039, label %arityerr3038
@@ -38231,7 +38231,7 @@ argok3039:
   ret i64 %t27164
 }
 
-define fastcc i64 @code_6060(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6100(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t27165 = icmp eq i64 %argc, 2
   br i1 %t27165, label %argok3041, label %arityerr3040
@@ -38251,7 +38251,7 @@ argok3041:
   ret i64 %t27174
 }
 
-define fastcc i64 @code_6054(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6094(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t27175 = icmp eq i64 %argc, 2
   br i1 %t27175, label %argok3043, label %arityerr3042
@@ -38261,7 +38261,7 @@ arityerr3042:
 argok3043:
   %t27176 = call i64 @rt_alloc_words(i64 2)
   %t27177 = inttoptr i64 %t27176 to ptr
-  store i64 ptrtoint (ptr @code_6056 to i64), ptr %t27177
+  store i64 ptrtoint (ptr @code_6096 to i64), ptr %t27177
   %t27178 = getelementptr i64, ptr %t27177, i64 1
   store i64 %a0, ptr %t27178
   %t27179 = or i64 %t27176, 4
@@ -38337,7 +38337,7 @@ then3058:
   %t27233 = call fastcc i64%t27232(i64 %t27228, i64 2, i64 %t27226, i64 %t27227, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t27234 = call i64 @rt_alloc_words(i64 1)
   %t27235 = inttoptr i64 %t27234 to ptr
-  store i64 ptrtoint (ptr @code_6058 to i64), ptr %t27235
+  store i64 ptrtoint (ptr @code_6098 to i64), ptr %t27235
   %t27236 = or i64 %t27234, 4
   %t27237 = load i64, ptr @"scheme.base:iota"
   %t27238 = and i64 %t27237, -8
@@ -38376,7 +38376,7 @@ then3058:
   %t27271 = call fastcc i64%t27270(i64 %t27266, i64 1, i64 %t27261, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t27272 = call i64 @rt_alloc_words(i64 1)
   %t27273 = inttoptr i64 %t27272 to ptr
-  store i64 ptrtoint (ptr @code_6060 to i64), ptr %t27273
+  store i64 ptrtoint (ptr @code_6100 to i64), ptr %t27273
   %t27274 = or i64 %t27272, 4
   %t27275 = load i64, ptr @"scheme.base:iota"
   %t27276 = and i64 %t27275, -8
@@ -38542,7 +38542,7 @@ else3045:
   ret i64 %t27413
 }
 
-define fastcc i64 @code_6062(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6102(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t27414 = icmp eq i64 %argc, 1
   br i1 %t27414, label %argok3064, label %arityerr3063
@@ -38610,7 +38610,7 @@ argok3064:
   ret i64 %t27471
 }
 
-define fastcc i64 @code_6066(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6106(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t27472 = icmp eq i64 %argc, 0
   br i1 %t27472, label %argok3066, label %arityerr3065
@@ -38633,7 +38633,7 @@ argok3066:
   ret i64 %t27484
 }
 
-define fastcc i64 @code_6070(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6110(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t27485 = icmp eq i64 %argc, 2
   br i1 %t27485, label %argok3068, label %arityerr3067
@@ -38650,11 +38650,11 @@ else3070:
   %t27488 = call i64 @rt_car(i64 %a1)
   %t27489 = call i64 @rt_string_append(i64 %a0, i64 %t27488)
   %t27490 = call i64 @rt_cdr(i64 %a1)
-  %t27491 = musttail call fastcc i64 @code_6070(i64 %self, i64 2, i64 %t27489, i64 %t27490, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t27491 = musttail call fastcc i64 @code_6110(i64 %self, i64 2, i64 %t27489, i64 %t27490, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t27491
 }
 
-define fastcc i64 @code_6068(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6108(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t27492 = icmp sge i64 %argc, 0
   br i1 %t27492, label %argok3072, label %arityerr3071
@@ -38683,7 +38683,7 @@ argok3072:
   %t27503 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t27494, ptr %overflow)
   %t27504 = call i64 @rt_alloc_words(i64 2)
   %t27505 = inttoptr i64 %t27504 to ptr
-  store i64 ptrtoint (ptr @code_6070 to i64), ptr %t27505
+  store i64 ptrtoint (ptr @code_6110 to i64), ptr %t27505
   %t27506 = or i64 %t27504, 4
   %t27507 = getelementptr i64, ptr %t27505, i64 1
   store i64 %t27506, ptr %t27507
@@ -38696,7 +38696,7 @@ argok3072:
   ret i64 %t27513
 }
 
-define fastcc i64 @code_6072(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6112(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t27514 = icmp eq i64 %argc, 1
   br i1 %t27514, label %argok3074, label %arityerr3073
@@ -38722,7 +38722,7 @@ argok3074:
   ret i64 %t27529
 }
 
-define fastcc i64 @code_6064(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6104(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t27530 = icmp eq i64 %argc, 1
   br i1 %t27530, label %argok3076, label %arityerr3075
@@ -38752,7 +38752,7 @@ argok3076:
   %t27550 = call i64 @rt_set_box(i64 %t27544, i64 %t27549)
   %t27551 = call i64 @rt_alloc_words(i64 2)
   %t27552 = inttoptr i64 %t27551 to ptr
-  store i64 ptrtoint (ptr @code_6066 to i64), ptr %t27552
+  store i64 ptrtoint (ptr @code_6106 to i64), ptr %t27552
   %t27553 = getelementptr i64, ptr %t27552, i64 1
   store i64 %a0, ptr %t27553
   %t27554 = or i64 %t27551, 4
@@ -38818,7 +38818,7 @@ then3085:
   %t27604 = load i64, ptr %t27603
   %t27605 = call i64 @rt_alloc_words(i64 3)
   %t27606 = inttoptr i64 %t27605 to ptr
-  store i64 ptrtoint (ptr @code_6072 to i64), ptr %t27606
+  store i64 ptrtoint (ptr @code_6112 to i64), ptr %t27606
   %t27607 = getelementptr i64, ptr %t27606, i64 1
   store i64 %t27600, ptr %t27607
   %t27608 = getelementptr i64, ptr %t27606, i64 2
@@ -38832,7 +38832,7 @@ then3085:
   %t27615 = call fastcc i64%t27614(i64 %t27610, i64 2, i64 %t27609, i64 %t27564, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t27616 = call i64 @rt_alloc_words(i64 1)
   %t27617 = inttoptr i64 %t27616 to ptr
-  store i64 ptrtoint (ptr @code_6068 to i64), ptr %t27617
+  store i64 ptrtoint (ptr @code_6108 to i64), ptr %t27617
   %t27618 = or i64 %t27616, 4
   %t27619 = and i64 %t27618, -8
   %t27620 = inttoptr i64 %t27619 to ptr
@@ -38948,7 +38948,7 @@ else3078:
   ret i64 %t27719
 }
 
-define fastcc i64 @code_6074(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6114(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t27720 = icmp eq i64 %argc, 1
   br i1 %t27720, label %argok3088, label %arityerr3087
@@ -39007,7 +39007,7 @@ else3093:
   ret i64 %t27758
 }
 
-define fastcc i64 @code_6106(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6146(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t27759 = icmp eq i64 %argc, 0
   br i1 %t27759, label %argok3095, label %arityerr3094
@@ -39030,7 +39030,7 @@ argok3095:
   ret i64 %t27771
 }
 
-define fastcc i64 @code_6104(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6144(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t27772 = icmp eq i64 %argc, 0
   br i1 %t27772, label %argok3097, label %arityerr3096
@@ -39044,7 +39044,7 @@ argok3097:
   %t27776 = load i64, ptr %t27775
   %t27777 = call i64 @rt_alloc_words(i64 2)
   %t27778 = inttoptr i64 %t27777 to ptr
-  store i64 ptrtoint (ptr @code_6106 to i64), ptr %t27778
+  store i64 ptrtoint (ptr @code_6146 to i64), ptr %t27778
   %t27779 = getelementptr i64, ptr %t27778, i64 1
   store i64 %t27776, ptr %t27779
   %t27780 = or i64 %t27777, 4
@@ -39135,7 +39135,7 @@ else3099:
   ret i64 %t27844
 }
 
-define fastcc i64 @code_6102(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6142(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t27845 = icmp eq i64 %argc, 0
   br i1 %t27845, label %argok3109, label %arityerr3108
@@ -39153,7 +39153,7 @@ argok3109:
   %t27853 = load i64, ptr %t27852
   %t27854 = call i64 @rt_alloc_words(i64 3)
   %t27855 = inttoptr i64 %t27854 to ptr
-  store i64 ptrtoint (ptr @code_6104 to i64), ptr %t27855
+  store i64 ptrtoint (ptr @code_6144 to i64), ptr %t27855
   %t27856 = getelementptr i64, ptr %t27855, i64 1
   store i64 %t27849, ptr %t27856
   %t27857 = getelementptr i64, ptr %t27855, i64 2
@@ -39255,7 +39255,7 @@ else3111:
   ret i64 %t27931
 }
 
-define fastcc i64 @code_6100(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6140(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t27932 = icmp eq i64 %argc, 0
   br i1 %t27932, label %argok3121, label %arityerr3120
@@ -39273,7 +39273,7 @@ argok3121:
   %t27940 = load i64, ptr %t27939
   %t27941 = call i64 @rt_alloc_words(i64 3)
   %t27942 = inttoptr i64 %t27941 to ptr
-  store i64 ptrtoint (ptr @code_6102 to i64), ptr %t27942
+  store i64 ptrtoint (ptr @code_6142 to i64), ptr %t27942
   %t27943 = getelementptr i64, ptr %t27942, i64 1
   store i64 %t27936, ptr %t27943
   %t27944 = getelementptr i64, ptr %t27942, i64 2
@@ -39375,7 +39375,7 @@ else3123:
   ret i64 %t28018
 }
 
-define fastcc i64 @code_6108(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6148(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t28019 = icmp eq i64 %argc, 1
   br i1 %t28019, label %argok3133, label %arityerr3132
@@ -39402,7 +39402,7 @@ argok3133:
   ret i64 %t28035
 }
 
-define fastcc i64 @code_6098(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6138(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t28036 = icmp eq i64 %argc, 0
   br i1 %t28036, label %argok3135, label %arityerr3134
@@ -39420,7 +39420,7 @@ argok3135:
   %t28044 = load i64, ptr %t28043
   %t28045 = call i64 @rt_alloc_words(i64 3)
   %t28046 = inttoptr i64 %t28045 to ptr
-  store i64 ptrtoint (ptr @code_6100 to i64), ptr %t28046
+  store i64 ptrtoint (ptr @code_6140 to i64), ptr %t28046
   %t28047 = getelementptr i64, ptr %t28046, i64 1
   store i64 %t28040, ptr %t28047
   %t28048 = getelementptr i64, ptr %t28046, i64 2
@@ -39471,7 +39471,7 @@ then3144:
   %t28082 = load i64, ptr %t28081
   %t28083 = call i64 @rt_alloc_words(i64 2)
   %t28084 = inttoptr i64 %t28083 to ptr
-  store i64 ptrtoint (ptr @code_6108 to i64), ptr %t28084
+  store i64 ptrtoint (ptr @code_6148 to i64), ptr %t28084
   %t28085 = getelementptr i64, ptr %t28084, i64 1
   store i64 %t28082, ptr %t28085
   %t28086 = or i64 %t28083, 4
@@ -39528,7 +39528,7 @@ else3137:
   ret i64 %t28126
 }
 
-define fastcc i64 @code_6096(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6136(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t28127 = icmp eq i64 %argc, 0
   br i1 %t28127, label %argok3147, label %arityerr3146
@@ -39546,7 +39546,7 @@ argok3147:
   %t28135 = load i64, ptr %t28134
   %t28136 = call i64 @rt_alloc_words(i64 3)
   %t28137 = inttoptr i64 %t28136 to ptr
-  store i64 ptrtoint (ptr @code_6098 to i64), ptr %t28137
+  store i64 ptrtoint (ptr @code_6138 to i64), ptr %t28137
   %t28138 = getelementptr i64, ptr %t28137, i64 1
   store i64 %t28131, ptr %t28138
   %t28139 = getelementptr i64, ptr %t28137, i64 2
@@ -39639,7 +39639,7 @@ else3149:
   ret i64 %t28204
 }
 
-define fastcc i64 @code_6110(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6150(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t28205 = icmp eq i64 %argc, 1
   br i1 %t28205, label %argok3159, label %arityerr3158
@@ -39665,7 +39665,7 @@ argok3159:
   ret i64 %t28220
 }
 
-define fastcc i64 @code_6094(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6134(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t28221 = icmp eq i64 %argc, 0
   br i1 %t28221, label %argok3161, label %arityerr3160
@@ -39683,7 +39683,7 @@ argok3161:
   %t28229 = load i64, ptr %t28228
   %t28230 = call i64 @rt_alloc_words(i64 3)
   %t28231 = inttoptr i64 %t28230 to ptr
-  store i64 ptrtoint (ptr @code_6096 to i64), ptr %t28231
+  store i64 ptrtoint (ptr @code_6136 to i64), ptr %t28231
   %t28232 = getelementptr i64, ptr %t28231, i64 1
   store i64 %t28225, ptr %t28232
   %t28233 = getelementptr i64, ptr %t28231, i64 2
@@ -39734,7 +39734,7 @@ then3170:
   %t28267 = load i64, ptr %t28266
   %t28268 = call i64 @rt_alloc_words(i64 2)
   %t28269 = inttoptr i64 %t28268 to ptr
-  store i64 ptrtoint (ptr @code_6110 to i64), ptr %t28269
+  store i64 ptrtoint (ptr @code_6150 to i64), ptr %t28269
   %t28270 = getelementptr i64, ptr %t28269, i64 1
   store i64 %t28267, ptr %t28270
   %t28271 = or i64 %t28268, 4
@@ -39791,7 +39791,7 @@ else3163:
   ret i64 %t28311
 }
 
-define fastcc i64 @code_6092(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6132(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t28312 = icmp eq i64 %argc, 0
   br i1 %t28312, label %argok3173, label %arityerr3172
@@ -39809,7 +39809,7 @@ argok3173:
   %t28320 = load i64, ptr %t28319
   %t28321 = call i64 @rt_alloc_words(i64 3)
   %t28322 = inttoptr i64 %t28321 to ptr
-  store i64 ptrtoint (ptr @code_6094 to i64), ptr %t28322
+  store i64 ptrtoint (ptr @code_6134 to i64), ptr %t28322
   %t28323 = getelementptr i64, ptr %t28322, i64 1
   store i64 %t28316, ptr %t28323
   %t28324 = getelementptr i64, ptr %t28322, i64 2
@@ -39878,7 +39878,7 @@ else3175:
   ret i64 %t28373
 }
 
-define fastcc i64 @code_6090(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6130(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t28374 = icmp eq i64 %argc, 0
   br i1 %t28374, label %argok3181, label %arityerr3180
@@ -39896,7 +39896,7 @@ argok3181:
   %t28382 = load i64, ptr %t28381
   %t28383 = call i64 @rt_alloc_words(i64 3)
   %t28384 = inttoptr i64 %t28383 to ptr
-  store i64 ptrtoint (ptr @code_6092 to i64), ptr %t28384
+  store i64 ptrtoint (ptr @code_6132 to i64), ptr %t28384
   %t28385 = getelementptr i64, ptr %t28384, i64 1
   store i64 %t28378, ptr %t28385
   %t28386 = getelementptr i64, ptr %t28384, i64 2
@@ -39997,7 +39997,7 @@ else3183:
   ret i64 %t28459
 }
 
-define fastcc i64 @code_6088(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6128(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t28460 = icmp eq i64 %argc, 0
   br i1 %t28460, label %argok3193, label %arityerr3192
@@ -40015,7 +40015,7 @@ argok3193:
   %t28468 = load i64, ptr %t28467
   %t28469 = call i64 @rt_alloc_words(i64 3)
   %t28470 = inttoptr i64 %t28469 to ptr
-  store i64 ptrtoint (ptr @code_6090 to i64), ptr %t28470
+  store i64 ptrtoint (ptr @code_6130 to i64), ptr %t28470
   %t28471 = getelementptr i64, ptr %t28470, i64 1
   store i64 %t28464, ptr %t28471
   %t28472 = getelementptr i64, ptr %t28470, i64 2
@@ -40138,7 +40138,7 @@ else3195:
   ret i64 %t28563
 }
 
-define fastcc i64 @code_6086(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6126(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t28564 = icmp eq i64 %argc, 0
   br i1 %t28564, label %argok3207, label %arityerr3206
@@ -40156,7 +40156,7 @@ argok3207:
   %t28572 = load i64, ptr %t28571
   %t28573 = call i64 @rt_alloc_words(i64 3)
   %t28574 = inttoptr i64 %t28573 to ptr
-  store i64 ptrtoint (ptr @code_6088 to i64), ptr %t28574
+  store i64 ptrtoint (ptr @code_6128 to i64), ptr %t28574
   %t28575 = getelementptr i64, ptr %t28574, i64 1
   store i64 %t28568, ptr %t28575
   %t28576 = getelementptr i64, ptr %t28574, i64 2
@@ -40300,7 +40300,7 @@ else3209:
   ret i64 %t28692
 }
 
-define fastcc i64 @code_6084(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6124(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t28693 = icmp eq i64 %argc, 0
   br i1 %t28693, label %argok3219, label %arityerr3218
@@ -40330,7 +40330,7 @@ argok3219:
   %t28713 = load i64, ptr %t28712
   %t28714 = call i64 @rt_alloc_words(i64 6)
   %t28715 = inttoptr i64 %t28714 to ptr
-  store i64 ptrtoint (ptr @code_6086 to i64), ptr %t28715
+  store i64 ptrtoint (ptr @code_6126 to i64), ptr %t28715
   %t28716 = getelementptr i64, ptr %t28715, i64 1
   store i64 %t28697, ptr %t28716
   %t28717 = getelementptr i64, ptr %t28715, i64 2
@@ -40432,7 +40432,7 @@ else3221:
   ret i64 %t28792
 }
 
-define fastcc i64 @code_6082(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6122(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t28793 = icmp eq i64 %argc, 0
   br i1 %t28793, label %argok3229, label %arityerr3228
@@ -40462,7 +40462,7 @@ argok3229:
   %t28813 = load i64, ptr %t28812
   %t28814 = call i64 @rt_alloc_words(i64 6)
   %t28815 = inttoptr i64 %t28814 to ptr
-  store i64 ptrtoint (ptr @code_6084 to i64), ptr %t28815
+  store i64 ptrtoint (ptr @code_6124 to i64), ptr %t28815
   %t28816 = getelementptr i64, ptr %t28815, i64 1
   store i64 %t28797, ptr %t28816
   %t28817 = getelementptr i64, ptr %t28815, i64 2
@@ -40544,7 +40544,7 @@ else3231:
   ret i64 %t28872
 }
 
-define fastcc i64 @code_6080(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6120(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t28873 = icmp eq i64 %argc, 0
   br i1 %t28873, label %argok3239, label %arityerr3238
@@ -40574,7 +40574,7 @@ argok3239:
   %t28893 = load i64, ptr %t28892
   %t28894 = call i64 @rt_alloc_words(i64 6)
   %t28895 = inttoptr i64 %t28894 to ptr
-  store i64 ptrtoint (ptr @code_6082 to i64), ptr %t28895
+  store i64 ptrtoint (ptr @code_6122 to i64), ptr %t28895
   %t28896 = getelementptr i64, ptr %t28895, i64 1
   store i64 %t28877, ptr %t28896
   %t28897 = getelementptr i64, ptr %t28895, i64 2
@@ -40656,7 +40656,7 @@ else3241:
   ret i64 %t28952
 }
 
-define fastcc i64 @code_6078(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6118(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t28953 = icmp eq i64 %argc, 1
   br i1 %t28953, label %argok3249, label %arityerr3248
@@ -40682,7 +40682,7 @@ argok3249:
   %t28969 = load i64, ptr %t28968
   %t28970 = call i64 @rt_alloc_words(i64 6)
   %t28971 = inttoptr i64 %t28970 to ptr
-  store i64 ptrtoint (ptr @code_6080 to i64), ptr %t28971
+  store i64 ptrtoint (ptr @code_6120 to i64), ptr %t28971
   %t28972 = getelementptr i64, ptr %t28971, i64 1
   store i64 %a0, ptr %t28972
   %t28973 = getelementptr i64, ptr %t28971, i64 2
@@ -40752,7 +40752,7 @@ else3251:
   ret i64 %t29016
 }
 
-define fastcc i64 @code_6112(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6152(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t29017 = icmp eq i64 %argc, 0
   br i1 %t29017, label %argok3259, label %arityerr3258
@@ -40775,7 +40775,7 @@ argok3259:
   ret i64 %t29029
 }
 
-define fastcc i64 @code_6116(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6156(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t29030 = icmp eq i64 %argc, 0
   br i1 %t29030, label %argok3261, label %arityerr3260
@@ -40798,7 +40798,7 @@ argok3261:
   ret i64 %t29042
 }
 
-define fastcc i64 @code_6114(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6154(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t29043 = icmp eq i64 %argc, 1
   br i1 %t29043, label %argok3263, label %arityerr3262
@@ -40808,7 +40808,7 @@ arityerr3262:
 argok3263:
   %t29044 = call i64 @rt_alloc_words(i64 2)
   %t29045 = inttoptr i64 %t29044 to ptr
-  store i64 ptrtoint (ptr @code_6116 to i64), ptr %t29045
+  store i64 ptrtoint (ptr @code_6156 to i64), ptr %t29045
   %t29046 = getelementptr i64, ptr %t29045, i64 1
   store i64 %a0, ptr %t29046
   %t29047 = or i64 %t29044, 4
@@ -40925,7 +40925,7 @@ else3265:
   ret i64 %t29125
 }
 
-define fastcc i64 @code_6076(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6116(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t29126 = icmp eq i64 %argc, 1
   br i1 %t29126, label %argok3281, label %arityerr3280
@@ -40937,7 +40937,7 @@ argok3281:
   %t29128 = call i64 @rt_box(i64 2)
   %t29129 = call i64 @rt_alloc_words(i64 5)
   %t29130 = inttoptr i64 %t29129 to ptr
-  store i64 ptrtoint (ptr @code_6078 to i64), ptr %t29130
+  store i64 ptrtoint (ptr @code_6118 to i64), ptr %t29130
   %t29131 = or i64 %t29129, 4
   %t29132 = getelementptr i64, ptr %t29130, i64 1
   store i64 %t29131, ptr %t29132
@@ -40953,7 +40953,7 @@ argok3281:
   store i64 %t29128, ptr %t29139
   %t29140 = call i64 @rt_alloc_words(i64 2)
   %t29141 = inttoptr i64 %t29140 to ptr
-  store i64 ptrtoint (ptr @code_6112 to i64), ptr %t29141
+  store i64 ptrtoint (ptr @code_6152 to i64), ptr %t29141
   %t29142 = getelementptr i64, ptr %t29141, i64 1
   store i64 %a0, ptr %t29142
   %t29143 = or i64 %t29140, 4
@@ -40986,7 +40986,7 @@ then3291:
 then3294:
   %t29161 = call i64 @rt_alloc_words(i64 2)
   %t29162 = inttoptr i64 %t29161 to ptr
-  store i64 ptrtoint (ptr @code_6114 to i64), ptr %t29162
+  store i64 ptrtoint (ptr @code_6154 to i64), ptr %t29162
   %t29163 = getelementptr i64, ptr %t29162, i64 1
   store i64 %t29131, ptr %t29163
   %t29164 = or i64 %t29161, 4
@@ -41062,7 +41062,7 @@ merge3284:
   ret i64 %t29213
 }
 
-define fastcc i64 @code_6120(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6160(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t29214 = icmp eq i64 %argc, 0
   br i1 %t29214, label %argok3298, label %arityerr3297
@@ -41085,7 +41085,7 @@ argok3298:
   ret i64 %t29226
 }
 
-define fastcc i64 @code_6124(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6164(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t29227 = icmp eq i64 %argc, 0
   br i1 %t29227, label %argok3300, label %arityerr3299
@@ -41108,7 +41108,7 @@ argok3300:
   ret i64 %t29239
 }
 
-define fastcc i64 @code_6122(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6162(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t29240 = icmp eq i64 %argc, 1
   br i1 %t29240, label %argok3302, label %arityerr3301
@@ -41118,7 +41118,7 @@ arityerr3301:
 argok3302:
   %t29241 = call i64 @rt_alloc_words(i64 2)
   %t29242 = inttoptr i64 %t29241 to ptr
-  store i64 ptrtoint (ptr @code_6124 to i64), ptr %t29242
+  store i64 ptrtoint (ptr @code_6164 to i64), ptr %t29242
   %t29243 = getelementptr i64, ptr %t29242, i64 1
   store i64 %a0, ptr %t29243
   %t29244 = or i64 %t29241, 4
@@ -41277,7 +41277,7 @@ else3304:
   ret i64 %t29354
 }
 
-define fastcc i64 @code_6118(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6158(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t29355 = icmp eq i64 %argc, 1
   br i1 %t29355, label %argok3325, label %arityerr3324
@@ -41287,7 +41287,7 @@ arityerr3324:
 argok3325:
   %t29356 = call i64 @rt_alloc_words(i64 2)
   %t29357 = inttoptr i64 %t29356 to ptr
-  store i64 ptrtoint (ptr @code_6120 to i64), ptr %t29357
+  store i64 ptrtoint (ptr @code_6160 to i64), ptr %t29357
   %t29358 = getelementptr i64, ptr %t29357, i64 1
   store i64 %a0, ptr %t29358
   %t29359 = or i64 %t29356, 4
@@ -41324,7 +41324,7 @@ then3334:
   %t29380 = load i64, ptr %t29379
   %t29381 = call i64 @rt_alloc_words(i64 2)
   %t29382 = inttoptr i64 %t29381 to ptr
-  store i64 ptrtoint (ptr @code_6122 to i64), ptr %t29382
+  store i64 ptrtoint (ptr @code_6162 to i64), ptr %t29382
   %t29383 = getelementptr i64, ptr %t29382, i64 1
   store i64 %t29380, ptr %t29383
   %t29384 = or i64 %t29381, 4
@@ -41372,7 +41372,7 @@ else3327:
   ret i64 %t29415
 }
 
-define fastcc i64 @code_6126(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6166(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t29416 = icmp eq i64 %argc, 2
   br i1 %t29416, label %argok3337, label %arityerr3336
@@ -41443,7 +41443,7 @@ argok3337:
   ret i64 %t29476
 }
 
-define fastcc i64 @code_6128(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6168(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t29477 = icmp eq i64 %argc, 1
   br i1 %t29477, label %argok3339, label %arityerr3338
@@ -41465,7 +41465,7 @@ argok3339:
   ret i64 %t29488
 }
 
-define fastcc i64 @code_6136(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6176(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t29489 = icmp eq i64 %argc, 2
   br i1 %t29489, label %argok3341, label %arityerr3340
@@ -41482,11 +41482,11 @@ else3343:
   %t29492 = call i64 @rt_car(i64 %a1)
   %t29493 = call i64 @rt_string_append(i64 %a0, i64 %t29492)
   %t29494 = call i64 @rt_cdr(i64 %a1)
-  %t29495 = musttail call fastcc i64 @code_6136(i64 %self, i64 2, i64 %t29493, i64 %t29494, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t29495 = musttail call fastcc i64 @code_6176(i64 %self, i64 2, i64 %t29493, i64 %t29494, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t29495
 }
 
-define fastcc i64 @code_6134(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6174(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t29496 = icmp sge i64 %argc, 0
   br i1 %t29496, label %argok3345, label %arityerr3344
@@ -41515,7 +41515,7 @@ argok3345:
   %t29507 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t29498, ptr %overflow)
   %t29508 = call i64 @rt_alloc_words(i64 2)
   %t29509 = inttoptr i64 %t29508 to ptr
-  store i64 ptrtoint (ptr @code_6136 to i64), ptr %t29509
+  store i64 ptrtoint (ptr @code_6176 to i64), ptr %t29509
   %t29510 = or i64 %t29508, 4
   %t29511 = getelementptr i64, ptr %t29509, i64 1
   store i64 %t29510, ptr %t29511
@@ -41528,7 +41528,7 @@ argok3345:
   ret i64 %t29517
 }
 
-define fastcc i64 @code_6138(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6178(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t29518 = icmp eq i64 %argc, 1
   br i1 %t29518, label %argok3347, label %arityerr3346
@@ -41551,7 +41551,7 @@ argok3347:
   ret i64 %t29530
 }
 
-define fastcc i64 @code_6142(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6182(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t29531 = icmp eq i64 %argc, 2
   br i1 %t29531, label %argok3349, label %arityerr3348
@@ -41568,11 +41568,11 @@ else3351:
   %t29534 = call i64 @rt_car(i64 %a1)
   %t29535 = call i64 @rt_string_append(i64 %a0, i64 %t29534)
   %t29536 = call i64 @rt_cdr(i64 %a1)
-  %t29537 = musttail call fastcc i64 @code_6142(i64 %self, i64 2, i64 %t29535, i64 %t29536, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t29537 = musttail call fastcc i64 @code_6182(i64 %self, i64 2, i64 %t29535, i64 %t29536, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t29537
 }
 
-define fastcc i64 @code_6140(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6180(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t29538 = icmp sge i64 %argc, 0
   br i1 %t29538, label %argok3353, label %arityerr3352
@@ -41601,7 +41601,7 @@ argok3353:
   %t29549 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t29540, ptr %overflow)
   %t29550 = call i64 @rt_alloc_words(i64 2)
   %t29551 = inttoptr i64 %t29550 to ptr
-  store i64 ptrtoint (ptr @code_6142 to i64), ptr %t29551
+  store i64 ptrtoint (ptr @code_6182 to i64), ptr %t29551
   %t29552 = or i64 %t29550, 4
   %t29553 = getelementptr i64, ptr %t29551, i64 1
   store i64 %t29552, ptr %t29553
@@ -41614,7 +41614,7 @@ argok3353:
   ret i64 %t29559
 }
 
-define fastcc i64 @code_6146(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6186(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t29560 = icmp eq i64 %argc, 2
   br i1 %t29560, label %argok3355, label %arityerr3354
@@ -41631,11 +41631,11 @@ else3357:
   %t29563 = call i64 @rt_car(i64 %a1)
   %t29564 = call i64 @rt_string_append(i64 %a0, i64 %t29563)
   %t29565 = call i64 @rt_cdr(i64 %a1)
-  %t29566 = musttail call fastcc i64 @code_6146(i64 %self, i64 2, i64 %t29564, i64 %t29565, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t29566 = musttail call fastcc i64 @code_6186(i64 %self, i64 2, i64 %t29564, i64 %t29565, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t29566
 }
 
-define fastcc i64 @code_6144(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6184(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t29567 = icmp sge i64 %argc, 0
   br i1 %t29567, label %argok3359, label %arityerr3358
@@ -41664,7 +41664,7 @@ argok3359:
   %t29578 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t29569, ptr %overflow)
   %t29579 = call i64 @rt_alloc_words(i64 2)
   %t29580 = inttoptr i64 %t29579 to ptr
-  store i64 ptrtoint (ptr @code_6146 to i64), ptr %t29580
+  store i64 ptrtoint (ptr @code_6186 to i64), ptr %t29580
   %t29581 = or i64 %t29579, 4
   %t29582 = getelementptr i64, ptr %t29580, i64 1
   store i64 %t29581, ptr %t29582
@@ -41677,7 +41677,7 @@ argok3359:
   ret i64 %t29588
 }
 
-define fastcc i64 @code_6150(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6190(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t29589 = icmp eq i64 %argc, 2
   br i1 %t29589, label %argok3361, label %arityerr3360
@@ -41694,11 +41694,11 @@ else3363:
   %t29592 = call i64 @rt_car(i64 %a1)
   %t29593 = call i64 @rt_string_append(i64 %a0, i64 %t29592)
   %t29594 = call i64 @rt_cdr(i64 %a1)
-  %t29595 = musttail call fastcc i64 @code_6150(i64 %self, i64 2, i64 %t29593, i64 %t29594, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t29595 = musttail call fastcc i64 @code_6190(i64 %self, i64 2, i64 %t29593, i64 %t29594, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t29595
 }
 
-define fastcc i64 @code_6148(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6188(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t29596 = icmp sge i64 %argc, 0
   br i1 %t29596, label %argok3365, label %arityerr3364
@@ -41727,7 +41727,7 @@ argok3365:
   %t29607 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t29598, ptr %overflow)
   %t29608 = call i64 @rt_alloc_words(i64 2)
   %t29609 = inttoptr i64 %t29608 to ptr
-  store i64 ptrtoint (ptr @code_6150 to i64), ptr %t29609
+  store i64 ptrtoint (ptr @code_6190 to i64), ptr %t29609
   %t29610 = or i64 %t29608, 4
   %t29611 = getelementptr i64, ptr %t29609, i64 1
   store i64 %t29610, ptr %t29611
@@ -41740,7 +41740,7 @@ argok3365:
   ret i64 %t29617
 }
 
-define fastcc i64 @code_6152(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6192(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t29618 = icmp eq i64 %argc, 0
   br i1 %t29618, label %argok3367, label %arityerr3366
@@ -41763,7 +41763,7 @@ argok3367:
   ret i64 %t29630
 }
 
-define fastcc i64 @code_6156(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6196(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t29631 = icmp eq i64 %argc, 2
   br i1 %t29631, label %argok3369, label %arityerr3368
@@ -41780,11 +41780,11 @@ else3371:
   %t29634 = call i64 @rt_car(i64 %a1)
   %t29635 = call i64 @rt_string_append(i64 %a0, i64 %t29634)
   %t29636 = call i64 @rt_cdr(i64 %a1)
-  %t29637 = musttail call fastcc i64 @code_6156(i64 %self, i64 2, i64 %t29635, i64 %t29636, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t29637 = musttail call fastcc i64 @code_6196(i64 %self, i64 2, i64 %t29635, i64 %t29636, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t29637
 }
 
-define fastcc i64 @code_6154(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6194(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t29638 = icmp sge i64 %argc, 0
   br i1 %t29638, label %argok3373, label %arityerr3372
@@ -41813,7 +41813,7 @@ argok3373:
   %t29649 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t29640, ptr %overflow)
   %t29650 = call i64 @rt_alloc_words(i64 2)
   %t29651 = inttoptr i64 %t29650 to ptr
-  store i64 ptrtoint (ptr @code_6156 to i64), ptr %t29651
+  store i64 ptrtoint (ptr @code_6196 to i64), ptr %t29651
   %t29652 = or i64 %t29650, 4
   %t29653 = getelementptr i64, ptr %t29651, i64 1
   store i64 %t29652, ptr %t29653
@@ -41826,7 +41826,7 @@ argok3373:
   ret i64 %t29659
 }
 
-define fastcc i64 @code_6158(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6198(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t29660 = icmp eq i64 %argc, 1
   br i1 %t29660, label %argok3375, label %arityerr3374
@@ -41852,7 +41852,7 @@ argok3375:
   ret i64 %t29675
 }
 
-define fastcc i64 @code_6132(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6172(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t29676 = icmp eq i64 %argc, 7
   br i1 %t29676, label %argok3377, label %arityerr3376
@@ -41870,7 +41870,7 @@ then3378:
   %t29682 = load i64, ptr %t29681
   %t29683 = call i64 @rt_alloc_words(i64 2)
   %t29684 = inttoptr i64 %t29683 to ptr
-  store i64 ptrtoint (ptr @code_6138 to i64), ptr %t29684
+  store i64 ptrtoint (ptr @code_6178 to i64), ptr %t29684
   %t29685 = getelementptr i64, ptr %t29684, i64 1
   store i64 %t29682, ptr %t29685
   %t29686 = or i64 %t29683, 4
@@ -41882,7 +41882,7 @@ then3378:
   %t29692 = call fastcc i64%t29691(i64 %t29687, i64 2, i64 %t29686, i64 %a4, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t29693 = call i64 @rt_alloc_words(i64 1)
   %t29694 = inttoptr i64 %t29693 to ptr
-  store i64 ptrtoint (ptr @code_6134 to i64), ptr %t29694
+  store i64 ptrtoint (ptr @code_6174 to i64), ptr %t29694
   %t29695 = or i64 %t29693, 4
   %t29696 = and i64 %t29695, -8
   %t29697 = inttoptr i64 %t29696 to ptr
@@ -41927,7 +41927,7 @@ then3378:
   %t29736 = call fastcc i64%t29735(i64 %t29731, i64 1, i64 %a5, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t29737 = call i64 @rt_alloc_words(i64 1)
   %t29738 = inttoptr i64 %t29737 to ptr
-  store i64 ptrtoint (ptr @code_6140 to i64), ptr %t29738
+  store i64 ptrtoint (ptr @code_6180 to i64), ptr %t29738
   %t29739 = or i64 %t29737, 4
   %t29740 = and i64 %t29739, -8
   %t29741 = inttoptr i64 %t29740 to ptr
@@ -42001,7 +42001,7 @@ merge3382:
   %t29803 = call fastcc i64%t29802(i64 %t29798, i64 1, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t29804 = call i64 @rt_alloc_words(i64 1)
   %t29805 = inttoptr i64 %t29804 to ptr
-  store i64 ptrtoint (ptr @code_6144 to i64), ptr %t29805
+  store i64 ptrtoint (ptr @code_6184 to i64), ptr %t29805
   %t29806 = or i64 %t29804, 4
   %t29807 = and i64 %t29806, -8
   %t29808 = inttoptr i64 %t29807 to ptr
@@ -42039,7 +42039,7 @@ merge3382:
   %t29840 = call fastcc i64%t29839(i64 %t29835, i64 1, i64 %a3, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t29841 = call i64 @rt_alloc_words(i64 1)
   %t29842 = inttoptr i64 %t29841 to ptr
-  store i64 ptrtoint (ptr @code_6148 to i64), ptr %t29842
+  store i64 ptrtoint (ptr @code_6188 to i64), ptr %t29842
   %t29843 = or i64 %t29841, 4
   %t29844 = and i64 %t29843, -8
   %t29845 = inttoptr i64 %t29844 to ptr
@@ -42108,7 +42108,7 @@ else3379:
   %t29906 = call fastcc i64%t29905(i64 %t29901, i64 1, i64 %t29899, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t29907 = call i64 @rt_alloc_words(i64 2)
   %t29908 = inttoptr i64 %t29907 to ptr
-  store i64 ptrtoint (ptr @code_6152 to i64), ptr %t29908
+  store i64 ptrtoint (ptr @code_6192 to i64), ptr %t29908
   %t29909 = getelementptr i64, ptr %t29908, i64 1
   store i64 %t29889, ptr %t29909
   %t29910 = or i64 %t29907, 4
@@ -42149,7 +42149,7 @@ then3391:
   %t29935 = load i64, ptr %t29934
   %t29936 = call i64 @rt_alloc_words(i64 3)
   %t29937 = inttoptr i64 %t29936 to ptr
-  store i64 ptrtoint (ptr @code_6158 to i64), ptr %t29937
+  store i64 ptrtoint (ptr @code_6198 to i64), ptr %t29937
   %t29938 = getelementptr i64, ptr %t29937, i64 1
   store i64 %t29931, ptr %t29938
   %t29939 = getelementptr i64, ptr %t29937, i64 2
@@ -42163,7 +42163,7 @@ then3391:
   %t29946 = call fastcc i64%t29945(i64 %t29941, i64 2, i64 %t29940, i64 %t29920, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t29947 = call i64 @rt_alloc_words(i64 1)
   %t29948 = inttoptr i64 %t29947 to ptr
-  store i64 ptrtoint (ptr @code_6154 to i64), ptr %t29948
+  store i64 ptrtoint (ptr @code_6194 to i64), ptr %t29948
   %t29949 = or i64 %t29947, 4
   %t29950 = and i64 %t29949, -8
   %t29951 = inttoptr i64 %t29950 to ptr
@@ -42251,7 +42251,7 @@ fixmerge3395:
   %t30027 = inttoptr i64 %t30026 to ptr
   %t30028 = call fastcc i64%t30027(i64 %t30023, i64 2, i64 %a4, i64 %t29900, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t30029 = call i64 @rt_cons(i64 %t30009, i64 %a5)
-  %t30030 = musttail call fastcc i64 @code_6132(i64 %self, i64 7, i64 %t30010, i64 %t30016, i64 %t30017, i64 %t30018, i64 %t30028, i64 %t30029, i64 %t30002, i64 0, ptr null)
+  %t30030 = musttail call fastcc i64 @code_6172(i64 %self, i64 7, i64 %t30010, i64 %t30016, i64 %t30017, i64 %t30018, i64 %t30028, i64 %t30029, i64 %t30002, i64 0, ptr null)
   ret i64 %t30030
 else3392:
   %t30031 = and i64 %t29910, -8
@@ -42290,7 +42290,7 @@ else3384:
   ret i64 %t30055
 }
 
-define fastcc i64 @code_6130(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6170(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30056 = icmp eq i64 %argc, 2
   br i1 %t30056, label %argok3397, label %arityerr3396
@@ -42341,7 +42341,7 @@ argok3397:
   %t30097 = call fastcc i64%t30096(i64 %t30092, i64 2, i64 %t30091, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t30098 = call i64 @rt_alloc_words(i64 12)
   %t30099 = inttoptr i64 %t30098 to ptr
-  store i64 ptrtoint (ptr @code_6132 to i64), ptr %t30099
+  store i64 ptrtoint (ptr @code_6172 to i64), ptr %t30099
   %t30100 = or i64 %t30098, 4
   %t30101 = and i64 %self, -8
   %t30102 = inttoptr i64 %t30101 to ptr
@@ -42409,7 +42409,7 @@ argok3397:
   ret i64 %t30152
 }
 
-define fastcc i64 @code_6162(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6202(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30153 = icmp eq i64 %argc, 0
   br i1 %t30153, label %argok3399, label %arityerr3398
@@ -42432,7 +42432,7 @@ argok3399:
   ret i64 %t30165
 }
 
-define fastcc i64 @code_6166(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6206(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30166 = icmp eq i64 %argc, 2
   br i1 %t30166, label %argok3401, label %arityerr3400
@@ -42449,11 +42449,11 @@ else3403:
   %t30169 = call i64 @rt_car(i64 %a1)
   %t30170 = call i64 @rt_string_append(i64 %a0, i64 %t30169)
   %t30171 = call i64 @rt_cdr(i64 %a1)
-  %t30172 = musttail call fastcc i64 @code_6166(i64 %self, i64 2, i64 %t30170, i64 %t30171, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t30172 = musttail call fastcc i64 @code_6206(i64 %self, i64 2, i64 %t30170, i64 %t30171, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t30172
 }
 
-define fastcc i64 @code_6164(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6204(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30173 = icmp sge i64 %argc, 0
   br i1 %t30173, label %argok3405, label %arityerr3404
@@ -42482,7 +42482,7 @@ argok3405:
   %t30184 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t30175, ptr %overflow)
   %t30185 = call i64 @rt_alloc_words(i64 2)
   %t30186 = inttoptr i64 %t30185 to ptr
-  store i64 ptrtoint (ptr @code_6166 to i64), ptr %t30186
+  store i64 ptrtoint (ptr @code_6206 to i64), ptr %t30186
   %t30187 = or i64 %t30185, 4
   %t30188 = getelementptr i64, ptr %t30186, i64 1
   store i64 %t30187, ptr %t30188
@@ -42495,7 +42495,7 @@ argok3405:
   ret i64 %t30194
 }
 
-define fastcc i64 @code_6168(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6208(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30195 = icmp eq i64 %argc, 1
   br i1 %t30195, label %argok3407, label %arityerr3406
@@ -42521,7 +42521,7 @@ argok3407:
   ret i64 %t30210
 }
 
-define fastcc i64 @code_6172(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6212(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30211 = icmp eq i64 %argc, 2
   br i1 %t30211, label %argok3409, label %arityerr3408
@@ -42538,11 +42538,11 @@ else3411:
   %t30214 = call i64 @rt_car(i64 %a1)
   %t30215 = call i64 @rt_string_append(i64 %a0, i64 %t30214)
   %t30216 = call i64 @rt_cdr(i64 %a1)
-  %t30217 = musttail call fastcc i64 @code_6172(i64 %self, i64 2, i64 %t30215, i64 %t30216, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t30217 = musttail call fastcc i64 @code_6212(i64 %self, i64 2, i64 %t30215, i64 %t30216, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t30217
 }
 
-define fastcc i64 @code_6170(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6210(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30218 = icmp sge i64 %argc, 0
   br i1 %t30218, label %argok3413, label %arityerr3412
@@ -42571,7 +42571,7 @@ argok3413:
   %t30229 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t30220, ptr %overflow)
   %t30230 = call i64 @rt_alloc_words(i64 2)
   %t30231 = inttoptr i64 %t30230 to ptr
-  store i64 ptrtoint (ptr @code_6172 to i64), ptr %t30231
+  store i64 ptrtoint (ptr @code_6212 to i64), ptr %t30231
   %t30232 = or i64 %t30230, 4
   %t30233 = getelementptr i64, ptr %t30231, i64 1
   store i64 %t30232, ptr %t30233
@@ -42584,7 +42584,7 @@ argok3413:
   ret i64 %t30239
 }
 
-define fastcc i64 @code_6174(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6214(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30240 = icmp eq i64 %argc, 1
   br i1 %t30240, label %argok3415, label %arityerr3414
@@ -42607,7 +42607,7 @@ argok3415:
   ret i64 %t30252
 }
 
-define fastcc i64 @code_6178(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6218(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30253 = icmp eq i64 %argc, 2
   br i1 %t30253, label %argok3417, label %arityerr3416
@@ -42624,11 +42624,11 @@ else3419:
   %t30256 = call i64 @rt_car(i64 %a1)
   %t30257 = call i64 @rt_string_append(i64 %a0, i64 %t30256)
   %t30258 = call i64 @rt_cdr(i64 %a1)
-  %t30259 = musttail call fastcc i64 @code_6178(i64 %self, i64 2, i64 %t30257, i64 %t30258, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t30259 = musttail call fastcc i64 @code_6218(i64 %self, i64 2, i64 %t30257, i64 %t30258, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t30259
 }
 
-define fastcc i64 @code_6176(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6216(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30260 = icmp sge i64 %argc, 0
   br i1 %t30260, label %argok3421, label %arityerr3420
@@ -42657,7 +42657,7 @@ argok3421:
   %t30271 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t30262, ptr %overflow)
   %t30272 = call i64 @rt_alloc_words(i64 2)
   %t30273 = inttoptr i64 %t30272 to ptr
-  store i64 ptrtoint (ptr @code_6178 to i64), ptr %t30273
+  store i64 ptrtoint (ptr @code_6218 to i64), ptr %t30273
   %t30274 = or i64 %t30272, 4
   %t30275 = getelementptr i64, ptr %t30273, i64 1
   store i64 %t30274, ptr %t30275
@@ -42670,7 +42670,7 @@ argok3421:
   ret i64 %t30281
 }
 
-define fastcc i64 @code_6180(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6220(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30282 = icmp eq i64 %argc, 1
   br i1 %t30282, label %argok3423, label %arityerr3422
@@ -42693,7 +42693,7 @@ argok3423:
   ret i64 %t30294
 }
 
-define fastcc i64 @code_6160(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6200(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30295 = icmp eq i64 %argc, 2
   br i1 %t30295, label %argok3425, label %arityerr3424
@@ -42778,7 +42778,7 @@ argok3425:
   %t30370 = call i64 @rt_string_append(i64 %t30363, i64 %t30369)
   %t30371 = call i64 @rt_alloc_words(i64 2)
   %t30372 = inttoptr i64 %t30371 to ptr
-  store i64 ptrtoint (ptr @code_6162 to i64), ptr %t30372
+  store i64 ptrtoint (ptr @code_6202 to i64), ptr %t30372
   %t30373 = getelementptr i64, ptr %t30372, i64 1
   store i64 %a0, ptr %t30373
   %t30374 = or i64 %t30371, 4
@@ -42819,7 +42819,7 @@ then3434:
   %t30399 = load i64, ptr %t30398
   %t30400 = call i64 @rt_alloc_words(i64 3)
   %t30401 = inttoptr i64 %t30400 to ptr
-  store i64 ptrtoint (ptr @code_6168 to i64), ptr %t30401
+  store i64 ptrtoint (ptr @code_6208 to i64), ptr %t30401
   %t30402 = getelementptr i64, ptr %t30401, i64 1
   store i64 %t30395, ptr %t30402
   %t30403 = getelementptr i64, ptr %t30401, i64 2
@@ -42833,7 +42833,7 @@ then3434:
   %t30410 = call fastcc i64%t30409(i64 %t30405, i64 2, i64 %t30404, i64 %t30384, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t30411 = call i64 @rt_alloc_words(i64 1)
   %t30412 = inttoptr i64 %t30411 to ptr
-  store i64 ptrtoint (ptr @code_6164 to i64), ptr %t30412
+  store i64 ptrtoint (ptr @code_6204 to i64), ptr %t30412
   %t30413 = or i64 %t30411, 4
   %t30414 = and i64 %t30413, -8
   %t30415 = inttoptr i64 %t30414 to ptr
@@ -42878,7 +42878,7 @@ then3434:
   %t30454 = load i64, ptr %t30453
   %t30455 = call i64 @rt_alloc_words(i64 2)
   %t30456 = inttoptr i64 %t30455 to ptr
-  store i64 ptrtoint (ptr @code_6174 to i64), ptr %t30456
+  store i64 ptrtoint (ptr @code_6214 to i64), ptr %t30456
   %t30457 = getelementptr i64, ptr %t30456, i64 1
   store i64 %t30454, ptr %t30457
   %t30458 = or i64 %t30455, 4
@@ -42890,7 +42890,7 @@ then3434:
   %t30464 = call fastcc i64%t30463(i64 %t30459, i64 2, i64 %t30458, i64 %t30362, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t30465 = call i64 @rt_alloc_words(i64 1)
   %t30466 = inttoptr i64 %t30465 to ptr
-  store i64 ptrtoint (ptr @code_6170 to i64), ptr %t30466
+  store i64 ptrtoint (ptr @code_6210 to i64), ptr %t30466
   %t30467 = or i64 %t30465, 4
   %t30468 = and i64 %t30467, -8
   %t30469 = inttoptr i64 %t30468 to ptr
@@ -42925,7 +42925,7 @@ then3434:
   %t30498 = load i64, ptr %t30497
   %t30499 = call i64 @rt_alloc_words(i64 2)
   %t30500 = inttoptr i64 %t30499 to ptr
-  store i64 ptrtoint (ptr @code_6180 to i64), ptr %t30500
+  store i64 ptrtoint (ptr @code_6220 to i64), ptr %t30500
   %t30501 = getelementptr i64, ptr %t30500, i64 1
   store i64 %t30498, ptr %t30501
   %t30502 = or i64 %t30499, 4
@@ -42937,7 +42937,7 @@ then3434:
   %t30508 = call fastcc i64%t30507(i64 %t30503, i64 2, i64 %t30502, i64 %t30346, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t30509 = call i64 @rt_alloc_words(i64 1)
   %t30510 = inttoptr i64 %t30509 to ptr
-  store i64 ptrtoint (ptr @code_6176 to i64), ptr %t30510
+  store i64 ptrtoint (ptr @code_6216 to i64), ptr %t30510
   %t30511 = or i64 %t30509, 4
   %t30512 = and i64 %t30511, -8
   %t30513 = inttoptr i64 %t30512 to ptr
@@ -43051,7 +43051,7 @@ else3427:
   ret i64 %t30610
 }
 
-define fastcc i64 @code_6184(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6224(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30611 = icmp eq i64 %argc, 1
   br i1 %t30611, label %argok3437, label %arityerr3436
@@ -43087,7 +43087,7 @@ argok3437:
   ret i64 %t30636
 }
 
-define fastcc i64 @code_6182(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6222(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30637 = icmp eq i64 %argc, 2
   br i1 %t30637, label %argok3439, label %arityerr3438
@@ -43127,7 +43127,7 @@ argok3439:
   %t30667 = load i64, ptr %t30666
   %t30668 = call i64 @rt_alloc_words(i64 3)
   %t30669 = inttoptr i64 %t30668 to ptr
-  store i64 ptrtoint (ptr @code_6184 to i64), ptr %t30669
+  store i64 ptrtoint (ptr @code_6224 to i64), ptr %t30669
   %t30670 = getelementptr i64, ptr %t30669, i64 1
   store i64 %t30663, ptr %t30670
   %t30671 = getelementptr i64, ptr %t30669, i64 2
@@ -43177,7 +43177,7 @@ argok3439:
   ret i64 %t30713
 }
 
-define fastcc i64 @code_6188(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6228(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30714 = icmp eq i64 %argc, 0
   br i1 %t30714, label %argok3441, label %arityerr3440
@@ -43200,7 +43200,7 @@ argok3441:
   ret i64 %t30726
 }
 
-define fastcc i64 @code_6192(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6232(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30727 = icmp eq i64 %argc, 2
   br i1 %t30727, label %argok3443, label %arityerr3442
@@ -43217,11 +43217,11 @@ else3445:
   %t30730 = call i64 @rt_car(i64 %a1)
   %t30731 = call i64 @rt_string_append(i64 %a0, i64 %t30730)
   %t30732 = call i64 @rt_cdr(i64 %a1)
-  %t30733 = musttail call fastcc i64 @code_6192(i64 %self, i64 2, i64 %t30731, i64 %t30732, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t30733 = musttail call fastcc i64 @code_6232(i64 %self, i64 2, i64 %t30731, i64 %t30732, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t30733
 }
 
-define fastcc i64 @code_6190(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6230(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30734 = icmp sge i64 %argc, 0
   br i1 %t30734, label %argok3447, label %arityerr3446
@@ -43250,7 +43250,7 @@ argok3447:
   %t30745 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t30736, ptr %overflow)
   %t30746 = call i64 @rt_alloc_words(i64 2)
   %t30747 = inttoptr i64 %t30746 to ptr
-  store i64 ptrtoint (ptr @code_6192 to i64), ptr %t30747
+  store i64 ptrtoint (ptr @code_6232 to i64), ptr %t30747
   %t30748 = or i64 %t30746, 4
   %t30749 = getelementptr i64, ptr %t30747, i64 1
   store i64 %t30748, ptr %t30749
@@ -43263,7 +43263,7 @@ argok3447:
   ret i64 %t30755
 }
 
-define fastcc i64 @code_6194(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6234(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30756 = icmp eq i64 %argc, 1
   br i1 %t30756, label %argok3449, label %arityerr3448
@@ -43289,7 +43289,7 @@ argok3449:
   ret i64 %t30771
 }
 
-define fastcc i64 @code_6198(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6238(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30772 = icmp eq i64 %argc, 2
   br i1 %t30772, label %argok3451, label %arityerr3450
@@ -43306,11 +43306,11 @@ else3453:
   %t30775 = call i64 @rt_car(i64 %a1)
   %t30776 = call i64 @rt_string_append(i64 %a0, i64 %t30775)
   %t30777 = call i64 @rt_cdr(i64 %a1)
-  %t30778 = musttail call fastcc i64 @code_6198(i64 %self, i64 2, i64 %t30776, i64 %t30777, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t30778 = musttail call fastcc i64 @code_6238(i64 %self, i64 2, i64 %t30776, i64 %t30777, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t30778
 }
 
-define fastcc i64 @code_6196(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6236(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30779 = icmp sge i64 %argc, 0
   br i1 %t30779, label %argok3455, label %arityerr3454
@@ -43339,7 +43339,7 @@ argok3455:
   %t30790 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t30781, ptr %overflow)
   %t30791 = call i64 @rt_alloc_words(i64 2)
   %t30792 = inttoptr i64 %t30791 to ptr
-  store i64 ptrtoint (ptr @code_6198 to i64), ptr %t30792
+  store i64 ptrtoint (ptr @code_6238 to i64), ptr %t30792
   %t30793 = or i64 %t30791, 4
   %t30794 = getelementptr i64, ptr %t30792, i64 1
   store i64 %t30793, ptr %t30794
@@ -43352,7 +43352,7 @@ argok3455:
   ret i64 %t30800
 }
 
-define fastcc i64 @code_6200(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6240(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30801 = icmp eq i64 %argc, 1
   br i1 %t30801, label %argok3457, label %arityerr3456
@@ -43375,7 +43375,7 @@ argok3457:
   ret i64 %t30813
 }
 
-define fastcc i64 @code_6204(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6244(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30814 = icmp eq i64 %argc, 2
   br i1 %t30814, label %argok3459, label %arityerr3458
@@ -43392,11 +43392,11 @@ else3461:
   %t30817 = call i64 @rt_car(i64 %a1)
   %t30818 = call i64 @rt_string_append(i64 %a0, i64 %t30817)
   %t30819 = call i64 @rt_cdr(i64 %a1)
-  %t30820 = musttail call fastcc i64 @code_6204(i64 %self, i64 2, i64 %t30818, i64 %t30819, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t30820 = musttail call fastcc i64 @code_6244(i64 %self, i64 2, i64 %t30818, i64 %t30819, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t30820
 }
 
-define fastcc i64 @code_6202(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6242(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30821 = icmp sge i64 %argc, 0
   br i1 %t30821, label %argok3463, label %arityerr3462
@@ -43425,7 +43425,7 @@ argok3463:
   %t30832 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t30823, ptr %overflow)
   %t30833 = call i64 @rt_alloc_words(i64 2)
   %t30834 = inttoptr i64 %t30833 to ptr
-  store i64 ptrtoint (ptr @code_6204 to i64), ptr %t30834
+  store i64 ptrtoint (ptr @code_6244 to i64), ptr %t30834
   %t30835 = or i64 %t30833, 4
   %t30836 = getelementptr i64, ptr %t30834, i64 1
   store i64 %t30835, ptr %t30836
@@ -43438,7 +43438,7 @@ argok3463:
   ret i64 %t30842
 }
 
-define fastcc i64 @code_6206(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6246(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30843 = icmp eq i64 %argc, 1
   br i1 %t30843, label %argok3465, label %arityerr3464
@@ -43464,7 +43464,7 @@ argok3465:
   ret i64 %t30858
 }
 
-define fastcc i64 @code_6186(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6226(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30859 = icmp eq i64 %argc, 3
   br i1 %t30859, label %argok3467, label %arityerr3466
@@ -43494,7 +43494,7 @@ argok3467:
   %t30879 = call i64 @rt_set_box(i64 %t30873, i64 %t30878)
   %t30880 = call i64 @rt_alloc_words(i64 2)
   %t30881 = inttoptr i64 %t30880 to ptr
-  store i64 ptrtoint (ptr @code_6188 to i64), ptr %t30881
+  store i64 ptrtoint (ptr @code_6228 to i64), ptr %t30881
   %t30882 = getelementptr i64, ptr %t30881, i64 1
   store i64 %a0, ptr %t30882
   %t30883 = or i64 %t30880, 4
@@ -43555,7 +43555,7 @@ then3476:
   %t30928 = load i64, ptr %t30927
   %t30929 = call i64 @rt_alloc_words(i64 3)
   %t30930 = inttoptr i64 %t30929 to ptr
-  store i64 ptrtoint (ptr @code_6194 to i64), ptr %t30930
+  store i64 ptrtoint (ptr @code_6234 to i64), ptr %t30930
   %t30931 = getelementptr i64, ptr %t30930, i64 1
   store i64 %t30924, ptr %t30931
   %t30932 = getelementptr i64, ptr %t30930, i64 2
@@ -43569,7 +43569,7 @@ then3476:
   %t30939 = call fastcc i64%t30938(i64 %t30934, i64 2, i64 %t30933, i64 %t30893, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t30940 = call i64 @rt_alloc_words(i64 1)
   %t30941 = inttoptr i64 %t30940 to ptr
-  store i64 ptrtoint (ptr @code_6190 to i64), ptr %t30941
+  store i64 ptrtoint (ptr @code_6230 to i64), ptr %t30941
   %t30942 = or i64 %t30940, 4
   %t30943 = and i64 %t30942, -8
   %t30944 = inttoptr i64 %t30943 to ptr
@@ -43614,7 +43614,7 @@ then3476:
   %t30983 = load i64, ptr %t30982
   %t30984 = call i64 @rt_alloc_words(i64 2)
   %t30985 = inttoptr i64 %t30984 to ptr
-  store i64 ptrtoint (ptr @code_6200 to i64), ptr %t30985
+  store i64 ptrtoint (ptr @code_6240 to i64), ptr %t30985
   %t30986 = getelementptr i64, ptr %t30985, i64 1
   store i64 %t30983, ptr %t30986
   %t30987 = or i64 %t30984, 4
@@ -43626,7 +43626,7 @@ then3476:
   %t30993 = call fastcc i64%t30992(i64 %t30988, i64 2, i64 %t30987, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t30994 = call i64 @rt_alloc_words(i64 1)
   %t30995 = inttoptr i64 %t30994 to ptr
-  store i64 ptrtoint (ptr @code_6196 to i64), ptr %t30995
+  store i64 ptrtoint (ptr @code_6236 to i64), ptr %t30995
   %t30996 = or i64 %t30994, 4
   %t30997 = and i64 %t30996, -8
   %t30998 = inttoptr i64 %t30997 to ptr
@@ -43661,7 +43661,7 @@ then3476:
   %t31027 = load i64, ptr %t31026
   %t31028 = call i64 @rt_alloc_words(i64 2)
   %t31029 = inttoptr i64 %t31028 to ptr
-  store i64 ptrtoint (ptr @code_6206 to i64), ptr %t31029
+  store i64 ptrtoint (ptr @code_6246 to i64), ptr %t31029
   %t31030 = getelementptr i64, ptr %t31029, i64 1
   store i64 %t31027, ptr %t31030
   %t31031 = or i64 %t31028, 4
@@ -43673,7 +43673,7 @@ then3476:
   %t31037 = call fastcc i64%t31036(i64 %t31032, i64 2, i64 %t31031, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t31038 = call i64 @rt_alloc_words(i64 1)
   %t31039 = inttoptr i64 %t31038 to ptr
-  store i64 ptrtoint (ptr @code_6202 to i64), ptr %t31039
+  store i64 ptrtoint (ptr @code_6242 to i64), ptr %t31039
   %t31040 = or i64 %t31038, 4
   %t31041 = and i64 %t31040, -8
   %t31042 = inttoptr i64 %t31041 to ptr
@@ -43781,7 +43781,7 @@ else3469:
   ret i64 %t31133
 }
 
-define fastcc i64 @code_6210(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6250(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t31134 = icmp eq i64 %argc, 1
   br i1 %t31134, label %argok3479, label %arityerr3478
@@ -43810,7 +43810,7 @@ argok3479:
   ret i64 %t31152
 }
 
-define fastcc i64 @code_6216(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6256(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t31153 = icmp eq i64 %argc, 2
   br i1 %t31153, label %argok3481, label %arityerr3480
@@ -43827,11 +43827,11 @@ else3483:
   %t31156 = call i64 @rt_car(i64 %a1)
   %t31157 = call i64 @rt_string_append(i64 %a0, i64 %t31156)
   %t31158 = call i64 @rt_cdr(i64 %a1)
-  %t31159 = musttail call fastcc i64 @code_6216(i64 %self, i64 2, i64 %t31157, i64 %t31158, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t31159 = musttail call fastcc i64 @code_6256(i64 %self, i64 2, i64 %t31157, i64 %t31158, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t31159
 }
 
-define fastcc i64 @code_6214(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6254(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t31160 = icmp sge i64 %argc, 0
   br i1 %t31160, label %argok3485, label %arityerr3484
@@ -43860,7 +43860,7 @@ argok3485:
   %t31171 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t31162, ptr %overflow)
   %t31172 = call i64 @rt_alloc_words(i64 2)
   %t31173 = inttoptr i64 %t31172 to ptr
-  store i64 ptrtoint (ptr @code_6216 to i64), ptr %t31173
+  store i64 ptrtoint (ptr @code_6256 to i64), ptr %t31173
   %t31174 = or i64 %t31172, 4
   %t31175 = getelementptr i64, ptr %t31173, i64 1
   store i64 %t31174, ptr %t31175
@@ -43873,7 +43873,7 @@ argok3485:
   ret i64 %t31181
 }
 
-define fastcc i64 @code_6218(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6258(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t31182 = icmp eq i64 %argc, 1
   br i1 %t31182, label %argok3487, label %arityerr3486
@@ -43896,7 +43896,7 @@ argok3487:
   ret i64 %t31194
 }
 
-define fastcc i64 @code_6222(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6262(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t31195 = icmp eq i64 %argc, 2
   br i1 %t31195, label %argok3489, label %arityerr3488
@@ -43913,11 +43913,11 @@ else3491:
   %t31198 = call i64 @rt_car(i64 %a1)
   %t31199 = call i64 @rt_string_append(i64 %a0, i64 %t31198)
   %t31200 = call i64 @rt_cdr(i64 %a1)
-  %t31201 = musttail call fastcc i64 @code_6222(i64 %self, i64 2, i64 %t31199, i64 %t31200, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t31201 = musttail call fastcc i64 @code_6262(i64 %self, i64 2, i64 %t31199, i64 %t31200, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t31201
 }
 
-define fastcc i64 @code_6220(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6260(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t31202 = icmp sge i64 %argc, 0
   br i1 %t31202, label %argok3493, label %arityerr3492
@@ -43946,7 +43946,7 @@ argok3493:
   %t31213 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t31204, ptr %overflow)
   %t31214 = call i64 @rt_alloc_words(i64 2)
   %t31215 = inttoptr i64 %t31214 to ptr
-  store i64 ptrtoint (ptr @code_6222 to i64), ptr %t31215
+  store i64 ptrtoint (ptr @code_6262 to i64), ptr %t31215
   %t31216 = or i64 %t31214, 4
   %t31217 = getelementptr i64, ptr %t31215, i64 1
   store i64 %t31216, ptr %t31217
@@ -43959,7 +43959,7 @@ argok3493:
   ret i64 %t31223
 }
 
-define fastcc i64 @code_6224(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6264(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t31224 = icmp eq i64 %argc, 1
   br i1 %t31224, label %argok3495, label %arityerr3494
@@ -43982,7 +43982,7 @@ argok3495:
   ret i64 %t31236
 }
 
-define fastcc i64 @code_6228(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6268(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t31237 = icmp eq i64 %argc, 2
   br i1 %t31237, label %argok3497, label %arityerr3496
@@ -43999,11 +43999,11 @@ else3499:
   %t31240 = call i64 @rt_car(i64 %a1)
   %t31241 = call i64 @rt_string_append(i64 %a0, i64 %t31240)
   %t31242 = call i64 @rt_cdr(i64 %a1)
-  %t31243 = musttail call fastcc i64 @code_6228(i64 %self, i64 2, i64 %t31241, i64 %t31242, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t31243 = musttail call fastcc i64 @code_6268(i64 %self, i64 2, i64 %t31241, i64 %t31242, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t31243
 }
 
-define fastcc i64 @code_6226(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6266(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t31244 = icmp sge i64 %argc, 0
   br i1 %t31244, label %argok3501, label %arityerr3500
@@ -44032,7 +44032,7 @@ argok3501:
   %t31255 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t31246, ptr %overflow)
   %t31256 = call i64 @rt_alloc_words(i64 2)
   %t31257 = inttoptr i64 %t31256 to ptr
-  store i64 ptrtoint (ptr @code_6228 to i64), ptr %t31257
+  store i64 ptrtoint (ptr @code_6268 to i64), ptr %t31257
   %t31258 = or i64 %t31256, 4
   %t31259 = getelementptr i64, ptr %t31257, i64 1
   store i64 %t31258, ptr %t31259
@@ -44045,7 +44045,7 @@ argok3501:
   ret i64 %t31265
 }
 
-define fastcc i64 @code_6232(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6272(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t31266 = icmp eq i64 %argc, 2
   br i1 %t31266, label %argok3503, label %arityerr3502
@@ -44062,11 +44062,11 @@ else3505:
   %t31269 = call i64 @rt_car(i64 %a1)
   %t31270 = call i64 @rt_string_append(i64 %a0, i64 %t31269)
   %t31271 = call i64 @rt_cdr(i64 %a1)
-  %t31272 = musttail call fastcc i64 @code_6232(i64 %self, i64 2, i64 %t31270, i64 %t31271, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t31272 = musttail call fastcc i64 @code_6272(i64 %self, i64 2, i64 %t31270, i64 %t31271, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t31272
 }
 
-define fastcc i64 @code_6230(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6270(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t31273 = icmp sge i64 %argc, 0
   br i1 %t31273, label %argok3507, label %arityerr3506
@@ -44095,7 +44095,7 @@ argok3507:
   %t31284 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t31275, ptr %overflow)
   %t31285 = call i64 @rt_alloc_words(i64 2)
   %t31286 = inttoptr i64 %t31285 to ptr
-  store i64 ptrtoint (ptr @code_6232 to i64), ptr %t31286
+  store i64 ptrtoint (ptr @code_6272 to i64), ptr %t31286
   %t31287 = or i64 %t31285, 4
   %t31288 = getelementptr i64, ptr %t31286, i64 1
   store i64 %t31287, ptr %t31288
@@ -44108,7 +44108,7 @@ argok3507:
   ret i64 %t31294
 }
 
-define fastcc i64 @code_6236(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6276(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t31295 = icmp eq i64 %argc, 2
   br i1 %t31295, label %argok3509, label %arityerr3508
@@ -44125,11 +44125,11 @@ else3511:
   %t31298 = call i64 @rt_car(i64 %a1)
   %t31299 = call i64 @rt_string_append(i64 %a0, i64 %t31298)
   %t31300 = call i64 @rt_cdr(i64 %a1)
-  %t31301 = musttail call fastcc i64 @code_6236(i64 %self, i64 2, i64 %t31299, i64 %t31300, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t31301 = musttail call fastcc i64 @code_6276(i64 %self, i64 2, i64 %t31299, i64 %t31300, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t31301
 }
 
-define fastcc i64 @code_6234(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6274(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t31302 = icmp sge i64 %argc, 0
   br i1 %t31302, label %argok3513, label %arityerr3512
@@ -44158,7 +44158,7 @@ argok3513:
   %t31313 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t31304, ptr %overflow)
   %t31314 = call i64 @rt_alloc_words(i64 2)
   %t31315 = inttoptr i64 %t31314 to ptr
-  store i64 ptrtoint (ptr @code_6236 to i64), ptr %t31315
+  store i64 ptrtoint (ptr @code_6276 to i64), ptr %t31315
   %t31316 = or i64 %t31314, 4
   %t31317 = getelementptr i64, ptr %t31315, i64 1
   store i64 %t31316, ptr %t31317
@@ -44171,7 +44171,7 @@ argok3513:
   ret i64 %t31323
 }
 
-define fastcc i64 @code_6238(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6278(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t31324 = icmp eq i64 %argc, 0
   br i1 %t31324, label %argok3515, label %arityerr3514
@@ -44194,7 +44194,7 @@ argok3515:
   ret i64 %t31336
 }
 
-define fastcc i64 @code_6242(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6282(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t31337 = icmp eq i64 %argc, 2
   br i1 %t31337, label %argok3517, label %arityerr3516
@@ -44211,11 +44211,11 @@ else3519:
   %t31340 = call i64 @rt_car(i64 %a1)
   %t31341 = call i64 @rt_string_append(i64 %a0, i64 %t31340)
   %t31342 = call i64 @rt_cdr(i64 %a1)
-  %t31343 = musttail call fastcc i64 @code_6242(i64 %self, i64 2, i64 %t31341, i64 %t31342, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t31343 = musttail call fastcc i64 @code_6282(i64 %self, i64 2, i64 %t31341, i64 %t31342, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t31343
 }
 
-define fastcc i64 @code_6240(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6280(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t31344 = icmp sge i64 %argc, 0
   br i1 %t31344, label %argok3521, label %arityerr3520
@@ -44244,7 +44244,7 @@ argok3521:
   %t31355 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t31346, ptr %overflow)
   %t31356 = call i64 @rt_alloc_words(i64 2)
   %t31357 = inttoptr i64 %t31356 to ptr
-  store i64 ptrtoint (ptr @code_6242 to i64), ptr %t31357
+  store i64 ptrtoint (ptr @code_6282 to i64), ptr %t31357
   %t31358 = or i64 %t31356, 4
   %t31359 = getelementptr i64, ptr %t31357, i64 1
   store i64 %t31358, ptr %t31359
@@ -44257,7 +44257,7 @@ argok3521:
   ret i64 %t31365
 }
 
-define fastcc i64 @code_6244(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6284(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t31366 = icmp eq i64 %argc, 1
   br i1 %t31366, label %argok3523, label %arityerr3522
@@ -44283,7 +44283,7 @@ argok3523:
   ret i64 %t31381
 }
 
-define fastcc i64 @code_6212(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6252(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t31382 = icmp eq i64 %argc, 7
   br i1 %t31382, label %argok3525, label %arityerr3524
@@ -44323,7 +44323,7 @@ then3526:
   %t31410 = load i64, ptr %t31409
   %t31411 = call i64 @rt_alloc_words(i64 2)
   %t31412 = inttoptr i64 %t31411 to ptr
-  store i64 ptrtoint (ptr @code_6218 to i64), ptr %t31412
+  store i64 ptrtoint (ptr @code_6258 to i64), ptr %t31412
   %t31413 = getelementptr i64, ptr %t31412, i64 1
   store i64 %t31410, ptr %t31413
   %t31414 = or i64 %t31411, 4
@@ -44335,7 +44335,7 @@ then3526:
   %t31420 = call fastcc i64%t31419(i64 %t31415, i64 2, i64 %t31414, i64 %t31406, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t31421 = call i64 @rt_alloc_words(i64 1)
   %t31422 = inttoptr i64 %t31421 to ptr
-  store i64 ptrtoint (ptr @code_6214 to i64), ptr %t31422
+  store i64 ptrtoint (ptr @code_6254 to i64), ptr %t31422
   %t31423 = or i64 %t31421, 4
   %t31424 = and i64 %t31423, -8
   %t31425 = inttoptr i64 %t31424 to ptr
@@ -44370,7 +44370,7 @@ then3526:
   %t31454 = load i64, ptr %t31453
   %t31455 = call i64 @rt_alloc_words(i64 2)
   %t31456 = inttoptr i64 %t31455 to ptr
-  store i64 ptrtoint (ptr @code_6224 to i64), ptr %t31456
+  store i64 ptrtoint (ptr @code_6264 to i64), ptr %t31456
   %t31457 = getelementptr i64, ptr %t31456, i64 1
   store i64 %t31454, ptr %t31457
   %t31458 = or i64 %t31455, 4
@@ -44382,7 +44382,7 @@ then3526:
   %t31464 = call fastcc i64%t31463(i64 %t31459, i64 2, i64 %t31458, i64 %a4, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t31465 = call i64 @rt_alloc_words(i64 1)
   %t31466 = inttoptr i64 %t31465 to ptr
-  store i64 ptrtoint (ptr @code_6220 to i64), ptr %t31466
+  store i64 ptrtoint (ptr @code_6260 to i64), ptr %t31466
   %t31467 = or i64 %t31465, 4
   %t31468 = and i64 %t31467, -8
   %t31469 = inttoptr i64 %t31468 to ptr
@@ -44455,7 +44455,7 @@ then3526:
   %t31536 = call fastcc i64%t31535(i64 %t31531, i64 1, i64 %a6, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t31537 = call i64 @rt_alloc_words(i64 1)
   %t31538 = inttoptr i64 %t31537 to ptr
-  store i64 ptrtoint (ptr @code_6226 to i64), ptr %t31538
+  store i64 ptrtoint (ptr @code_6266 to i64), ptr %t31538
   %t31539 = or i64 %t31537, 4
   %t31540 = and i64 %t31539, -8
   %t31541 = inttoptr i64 %t31540 to ptr
@@ -44519,7 +44519,7 @@ then3526:
   %t31599 = call fastcc i64%t31598(i64 %t31594, i64 1, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t31600 = call i64 @rt_alloc_words(i64 1)
   %t31601 = inttoptr i64 %t31600 to ptr
-  store i64 ptrtoint (ptr @code_6230 to i64), ptr %t31601
+  store i64 ptrtoint (ptr @code_6270 to i64), ptr %t31601
   %t31602 = or i64 %t31600, 4
   %t31603 = and i64 %t31602, -8
   %t31604 = inttoptr i64 %t31603 to ptr
@@ -44557,7 +44557,7 @@ then3526:
   %t31636 = call fastcc i64%t31635(i64 %t31631, i64 1, i64 %a3, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t31637 = call i64 @rt_alloc_words(i64 1)
   %t31638 = inttoptr i64 %t31637 to ptr
-  store i64 ptrtoint (ptr @code_6234 to i64), ptr %t31638
+  store i64 ptrtoint (ptr @code_6274 to i64), ptr %t31638
   %t31639 = or i64 %t31637, 4
   %t31640 = and i64 %t31639, -8
   %t31641 = inttoptr i64 %t31640 to ptr
@@ -44626,7 +44626,7 @@ else3527:
   %t31702 = call fastcc i64%t31701(i64 %t31697, i64 1, i64 %t31695, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t31703 = call i64 @rt_alloc_words(i64 2)
   %t31704 = inttoptr i64 %t31703 to ptr
-  store i64 ptrtoint (ptr @code_6238 to i64), ptr %t31704
+  store i64 ptrtoint (ptr @code_6278 to i64), ptr %t31704
   %t31705 = getelementptr i64, ptr %t31704, i64 1
   store i64 %t31685, ptr %t31705
   %t31706 = or i64 %t31703, 4
@@ -44667,7 +44667,7 @@ then3536:
   %t31731 = load i64, ptr %t31730
   %t31732 = call i64 @rt_alloc_words(i64 3)
   %t31733 = inttoptr i64 %t31732 to ptr
-  store i64 ptrtoint (ptr @code_6244 to i64), ptr %t31733
+  store i64 ptrtoint (ptr @code_6284 to i64), ptr %t31733
   %t31734 = getelementptr i64, ptr %t31733, i64 1
   store i64 %t31727, ptr %t31734
   %t31735 = getelementptr i64, ptr %t31733, i64 2
@@ -44681,7 +44681,7 @@ then3536:
   %t31742 = call fastcc i64%t31741(i64 %t31737, i64 2, i64 %t31736, i64 %t31716, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t31743 = call i64 @rt_alloc_words(i64 1)
   %t31744 = inttoptr i64 %t31743 to ptr
-  store i64 ptrtoint (ptr @code_6240 to i64), ptr %t31744
+  store i64 ptrtoint (ptr @code_6280 to i64), ptr %t31744
   %t31745 = or i64 %t31743, 4
   %t31746 = and i64 %t31745, -8
   %t31747 = inttoptr i64 %t31746 to ptr
@@ -44786,7 +44786,7 @@ fixmerge3540:
   %t31840 = inttoptr i64 %t31839 to ptr
   %t31841 = call fastcc i64%t31840(i64 %t31836, i64 2, i64 %a5, i64 %t31702, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t31842 = call i64 @rt_cons(i64 %t31812, i64 %a6)
-  %t31843 = musttail call fastcc i64 @code_6212(i64 %self, i64 7, i64 %t31813, i64 %t31819, i64 %t31820, i64 %t31821, i64 %t31831, i64 %t31841, i64 %t31842, i64 0, ptr null)
+  %t31843 = musttail call fastcc i64 @code_6252(i64 %self, i64 7, i64 %t31813, i64 %t31819, i64 %t31820, i64 %t31821, i64 %t31831, i64 %t31841, i64 %t31842, i64 0, ptr null)
   ret i64 %t31843
 else3537:
   %t31844 = and i64 %t31706, -8
@@ -44825,7 +44825,7 @@ else3529:
   ret i64 %t31868
 }
 
-define fastcc i64 @code_6208(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6248(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t31869 = icmp eq i64 %argc, 2
   br i1 %t31869, label %argok3542, label %arityerr3541
@@ -44885,7 +44885,7 @@ argok3542:
   %t31919 = load i64, ptr %t31918
   %t31920 = call i64 @rt_alloc_words(i64 3)
   %t31921 = inttoptr i64 %t31920 to ptr
-  store i64 ptrtoint (ptr @code_6210 to i64), ptr %t31921
+  store i64 ptrtoint (ptr @code_6250 to i64), ptr %t31921
   %t31922 = getelementptr i64, ptr %t31921, i64 1
   store i64 %t31919, ptr %t31922
   %t31923 = getelementptr i64, ptr %t31921, i64 2
@@ -44893,7 +44893,7 @@ argok3542:
   %t31924 = or i64 %t31920, 4
   %t31925 = call i64 @rt_alloc_words(i64 15)
   %t31926 = inttoptr i64 %t31925 to ptr
-  store i64 ptrtoint (ptr @code_6212 to i64), ptr %t31926
+  store i64 ptrtoint (ptr @code_6252 to i64), ptr %t31926
   %t31927 = or i64 %t31925, 4
   %t31928 = getelementptr i64, ptr %t31926, i64 1
   store i64 %t31924, ptr %t31928
@@ -44975,7 +44975,7 @@ argok3542:
   ret i64 %t31990
 }
 
-define fastcc i64 @code_6246(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6286(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t31991 = icmp eq i64 %argc, 1
   br i1 %t31991, label %argok3544, label %arityerr3543
@@ -44992,7 +44992,7 @@ argok3544:
   ret i64 %t31997
 }
 
-define fastcc i64 @code_6248(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6288(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t31998 = icmp eq i64 %argc, 1
   br i1 %t31998, label %argok3546, label %arityerr3545
@@ -45030,7 +45030,7 @@ else3548:
   ret i64 1
 }
 
-define fastcc i64 @code_6252(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6292(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t32014 = icmp eq i64 %argc, 1
   br i1 %t32014, label %argok3554, label %arityerr3553
@@ -45041,7 +45041,7 @@ argok3554:
   ret i64 %a0
 }
 
-define fastcc i64 @code_6254(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6294(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t32015 = icmp eq i64 %argc, 1
   br i1 %t32015, label %argok3556, label %arityerr3555
@@ -45081,7 +45081,7 @@ merge3559:
   ret i64 %t32038
 }
 
-define fastcc i64 @code_6250(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6290(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t32039 = icmp eq i64 %argc, 2
   br i1 %t32039, label %argok3561, label %arityerr3560
@@ -45091,7 +45091,7 @@ arityerr3560:
 argok3561:
   %t32040 = call i64 @rt_alloc_words(i64 1)
   %t32041 = inttoptr i64 %t32040 to ptr
-  store i64 ptrtoint (ptr @code_6252 to i64), ptr %t32041
+  store i64 ptrtoint (ptr @code_6292 to i64), ptr %t32041
   %t32042 = or i64 %t32040, 4
   %t32043 = and i64 %self, -8
   %t32044 = inttoptr i64 %t32043 to ptr
@@ -45116,7 +45116,7 @@ argok3561:
   %t32063 = load i64, ptr %t32062
   %t32064 = call i64 @rt_alloc_words(i64 3)
   %t32065 = inttoptr i64 %t32064 to ptr
-  store i64 ptrtoint (ptr @code_6254 to i64), ptr %t32065
+  store i64 ptrtoint (ptr @code_6294 to i64), ptr %t32065
   %t32066 = getelementptr i64, ptr %t32065, i64 1
   store i64 %t32063, ptr %t32066
   %t32067 = getelementptr i64, ptr %t32065, i64 2
@@ -45137,7 +45137,7 @@ argok3561:
   ret i64 %t32080
 }
 
-define fastcc i64 @code_6258(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6298(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t32081 = icmp eq i64 %argc, 1
   br i1 %t32081, label %argok3563, label %arityerr3562
@@ -45149,7 +45149,7 @@ argok3563:
   ret i64 %t32082
 }
 
-define fastcc i64 @code_6260(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6300(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t32083 = icmp eq i64 %argc, 1
   br i1 %t32083, label %argok3565, label %arityerr3564
@@ -45161,7 +45161,7 @@ argok3565:
   ret i64 %t32084
 }
 
-define fastcc i64 @code_6262(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6302(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t32085 = icmp eq i64 %argc, 1
   br i1 %t32085, label %argok3567, label %arityerr3566
@@ -45172,7 +45172,7 @@ argok3567:
   ret i64 %a0
 }
 
-define fastcc i64 @code_6256(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6296(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t32086 = icmp eq i64 %argc, 2
   br i1 %t32086, label %argok3569, label %arityerr3568
@@ -45197,7 +45197,7 @@ argok3569:
   %t32101 = call i64 @rt_unbox(i64 %t32100)
   %t32102 = call i64 @rt_alloc_words(i64 1)
   %t32103 = inttoptr i64 %t32102 to ptr
-  store i64 ptrtoint (ptr @code_6258 to i64), ptr %t32103
+  store i64 ptrtoint (ptr @code_6298 to i64), ptr %t32103
   %t32104 = or i64 %t32102, 4
   %t32105 = and i64 %self, -8
   %t32106 = inttoptr i64 %t32105 to ptr
@@ -45212,7 +45212,7 @@ argok3569:
   %t32115 = call fastcc i64%t32114(i64 %t32110, i64 2, i64 %t32104, i64 %t32109, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t32116 = call i64 @rt_alloc_words(i64 1)
   %t32117 = inttoptr i64 %t32116 to ptr
-  store i64 ptrtoint (ptr @code_6260 to i64), ptr %t32117
+  store i64 ptrtoint (ptr @code_6300 to i64), ptr %t32117
   %t32118 = or i64 %t32116, 4
   %t32119 = load i64, ptr @"scheme.base:map"
   %t32120 = and i64 %t32119, -8
@@ -45222,7 +45222,7 @@ argok3569:
   %t32124 = call fastcc i64%t32123(i64 %t32119, i64 2, i64 %t32118, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t32125 = call i64 @rt_alloc_words(i64 1)
   %t32126 = inttoptr i64 %t32125 to ptr
-  store i64 ptrtoint (ptr @code_6262 to i64), ptr %t32126
+  store i64 ptrtoint (ptr @code_6302 to i64), ptr %t32126
   %t32127 = or i64 %t32125, 4
   %t32128 = and i64 %self, -8
   %t32129 = inttoptr i64 %t32128 to ptr
@@ -45260,7 +45260,7 @@ argok3569:
   ret i64 %t32160
 }
 
-define fastcc i64 @code_6264(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6304(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t32161 = icmp eq i64 %argc, 2
   br i1 %t32161, label %argok3571, label %arityerr3570
@@ -45276,7 +45276,7 @@ else3573:
   ret i64 1
 }
 
-define fastcc i64 @code_6266(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6306(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t32163 = icmp eq i64 %argc, 2
   br i1 %t32163, label %argok3575, label %arityerr3574
@@ -45471,7 +45471,7 @@ argok3575:
   ret i64 %t32347
 }
 
-define fastcc i64 @code_6268(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6308(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t32348 = icmp eq i64 %argc, 1
   br i1 %t32348, label %argok3577, label %arityerr3576
@@ -45512,7 +45512,7 @@ else3579:
   ret i64 1
 }
 
-define fastcc i64 @code_6270(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6310(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t32367 = icmp eq i64 %argc, 2
   br i1 %t32367, label %argok3585, label %arityerr3584
@@ -45563,7 +45563,7 @@ argok3585:
   ret i64 %t32407
 }
 
-define fastcc i64 @code_6272(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6312(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t32408 = icmp sge i64 %argc, 1
   br i1 %t32408, label %argok3587, label %arityerr3586
@@ -45653,7 +45653,7 @@ else3592:
   ret i64 %t32469
 }
 
-define fastcc i64 @code_6274(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6314(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t32470 = icmp eq i64 %argc, 2
   br i1 %t32470, label %argok3594, label %arityerr3593
@@ -45739,7 +45739,7 @@ else3596:
   ret i64 %t32541
 }
 
-define fastcc i64 @code_6278(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6318(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t32542 = icmp eq i64 %argc, 1
   br i1 %t32542, label %argok3598, label %arityerr3597
@@ -45750,7 +45750,7 @@ argok3598:
   ret i64 %a0
 }
 
-define fastcc i64 @code_6276(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6316(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t32543 = icmp eq i64 %argc, 1
   br i1 %t32543, label %argok3600, label %arityerr3599
@@ -45766,7 +45766,7 @@ argok3600:
   %t32549 = call i64 @rt_intern(ptr @.str.sym.575)
   %t32550 = call i64 @rt_alloc_words(i64 1)
   %t32551 = inttoptr i64 %t32550 to ptr
-  store i64 ptrtoint (ptr @code_6278 to i64), ptr %t32551
+  store i64 ptrtoint (ptr @code_6318 to i64), ptr %t32551
   %t32552 = or i64 %t32550, 4
   %t32553 = and i64 %self, -8
   %t32554 = inttoptr i64 %t32553 to ptr
@@ -45800,7 +45800,7 @@ argok3600:
   ret i64 %t32581
 }
 
-define fastcc i64 @code_6282(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6322(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t32582 = icmp eq i64 %argc, 1
   br i1 %t32582, label %argok3602, label %arityerr3601
@@ -45820,7 +45820,7 @@ else3604:
   ret i64 1
 }
 
-define fastcc i64 @code_6280(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6320(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t32588 = icmp eq i64 %argc, 1
   br i1 %t32588, label %argok3606, label %arityerr3605
@@ -45830,7 +45830,7 @@ arityerr3605:
 argok3606:
   %t32589 = call i64 @rt_alloc_words(i64 1)
   %t32590 = inttoptr i64 %t32589 to ptr
-  store i64 ptrtoint (ptr @code_6282 to i64), ptr %t32590
+  store i64 ptrtoint (ptr @code_6322 to i64), ptr %t32590
   %t32591 = or i64 %t32589, 4
   %t32592 = load i64, ptr @"scheme.base:filter"
   %t32593 = and i64 %t32592, -8
@@ -45841,7 +45841,7 @@ argok3606:
   ret i64 %t32597
 }
 
-define fastcc i64 @code_6284(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6324(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t32598 = icmp sge i64 %argc, 2
   br i1 %t32598, label %argok3608, label %arityerr3607
@@ -46060,7 +46060,7 @@ else3619:
   ret i64 %t32776
 }
 
-define fastcc i64 @code_6286(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6326(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t32777 = icmp sge i64 %argc, 1
   br i1 %t32777, label %argok3621, label %arityerr3620
@@ -46120,7 +46120,7 @@ merge3624:
   ret i64 %t32812
 }
 
-define fastcc i64 @code_6288(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6328(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t32813 = icmp eq i64 %argc, 1
   br i1 %t32813, label %argok3626, label %arityerr3625
@@ -46140,7 +46140,7 @@ else3628:
   ret i64 1
 }
 
-define fastcc i64 @code_6290(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6330(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t32819 = icmp eq i64 %argc, 1
   br i1 %t32819, label %argok3630, label %arityerr3629
@@ -46160,7 +46160,7 @@ else3632:
   ret i64 1
 }
 
-define fastcc i64 @code_6292(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6332(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t32825 = icmp eq i64 %argc, 1
   br i1 %t32825, label %argok3634, label %arityerr3633
@@ -46191,7 +46191,7 @@ else3636:
   ret i64 %t32841
 }
 
-define fastcc i64 @code_6296(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6336(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t32842 = icmp eq i64 %argc, 4
   br i1 %t32842, label %argok3638, label %arityerr3637
@@ -46274,7 +46274,7 @@ then3644:
   %t32903 = load i64, ptr %t32902
   %t32904 = inttoptr i64 %t32903 to ptr
   %t32905 = call fastcc i64%t32904(i64 %t32900, i64 2, i64 %t32899, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t32906 = musttail call fastcc i64 @code_6296(i64 %self, i64 4, i64 %t32881, i64 %a1, i64 %t32905, i64 %a3, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t32906 = musttail call fastcc i64 @code_6336(i64 %self, i64 4, i64 %t32881, i64 %a1, i64 %t32905, i64 %a3, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t32906
 else3645:
   %t32907 = call i64 @rt_pair_p(i64 %t32873)
@@ -46306,7 +46306,7 @@ then3649:
   %t32925 = load i64, ptr %t32924
   %t32926 = inttoptr i64 %t32925 to ptr
   %t32927 = call fastcc i64%t32926(i64 %t32922, i64 2, i64 %t32921, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t32928 = musttail call fastcc i64 @code_6296(i64 %self, i64 4, i64 %t32914, i64 %t32927, i64 %a2, i64 %a3, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t32928 = musttail call fastcc i64 @code_6336(i64 %self, i64 4, i64 %t32914, i64 %t32927, i64 %a2, i64 %a3, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t32928
 else3650:
   %t32929 = call i64 @rt_pair_p(i64 %t32873)
@@ -46338,16 +46338,16 @@ then3654:
   %t32947 = load i64, ptr %t32946
   %t32948 = inttoptr i64 %t32947 to ptr
   %t32949 = call fastcc i64%t32948(i64 %t32944, i64 2, i64 %t32943, i64 %a3, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t32950 = musttail call fastcc i64 @code_6296(i64 %self, i64 4, i64 %t32936, i64 %a1, i64 %a2, i64 %t32949, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t32950 = musttail call fastcc i64 @code_6336(i64 %self, i64 4, i64 %t32936, i64 %a1, i64 %a2, i64 %t32949, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t32950
 else3655:
   %t32951 = call i64 @rt_cdr(i64 %a0)
   %t32952 = call i64 @rt_cons(i64 %t32873, i64 %a3)
-  %t32953 = musttail call fastcc i64 @code_6296(i64 %self, i64 4, i64 %t32951, i64 %a1, i64 %a2, i64 %t32952, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t32953 = musttail call fastcc i64 @code_6336(i64 %self, i64 4, i64 %t32951, i64 %a1, i64 %a2, i64 %t32952, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t32953
 }
 
-define fastcc i64 @code_6294(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6334(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t32954 = icmp eq i64 %argc, 1
   br i1 %t32954, label %argok3657, label %arityerr3656
@@ -46363,7 +46363,7 @@ argok3657:
   %t32960 = call fastcc i64%t32959(i64 %t32955, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t32961 = call i64 @rt_alloc_words(i64 4)
   %t32962 = inttoptr i64 %t32961 to ptr
-  store i64 ptrtoint (ptr @code_6296 to i64), ptr %t32962
+  store i64 ptrtoint (ptr @code_6336 to i64), ptr %t32962
   %t32963 = or i64 %t32961, 4
   %t32964 = getelementptr i64, ptr %t32962, i64 1
   store i64 %t32960, ptr %t32964
@@ -46389,7 +46389,7 @@ argok3657:
   ret i64 %t32981
 }
 
-define fastcc i64 @code_6300(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6340(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t32982 = icmp eq i64 %argc, 3
   br i1 %t32982, label %argok3659, label %arityerr3658
@@ -46450,17 +46450,17 @@ then3662:
   %t33027 = load i64, ptr %t33026
   %t33028 = inttoptr i64 %t33027 to ptr
   %t33029 = call fastcc i64%t33028(i64 %t33024, i64 2, i64 %t33023, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t33030 = musttail call fastcc i64 @code_6300(i64 %self, i64 3, i64 %t33015, i64 %t33029, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t33030 = musttail call fastcc i64 @code_6340(i64 %self, i64 3, i64 %t33015, i64 %t33029, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t33030
 else3663:
   %t33031 = call i64 @rt_cdr(i64 %a0)
   %t33032 = call i64 @rt_car(i64 %a0)
   %t33033 = call i64 @rt_cons(i64 %t33032, i64 %a2)
-  %t33034 = musttail call fastcc i64 @code_6300(i64 %self, i64 3, i64 %t33031, i64 %a1, i64 %t33033, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t33034 = musttail call fastcc i64 @code_6340(i64 %self, i64 3, i64 %t33031, i64 %a1, i64 %t33033, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t33034
 }
 
-define fastcc i64 @code_6298(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6338(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33035 = icmp eq i64 %argc, 1
   br i1 %t33035, label %argok3665, label %arityerr3664
@@ -46470,7 +46470,7 @@ arityerr3664:
 argok3665:
   %t33036 = call i64 @rt_alloc_words(i64 3)
   %t33037 = inttoptr i64 %t33036 to ptr
-  store i64 ptrtoint (ptr @code_6300 to i64), ptr %t33037
+  store i64 ptrtoint (ptr @code_6340 to i64), ptr %t33037
   %t33038 = or i64 %t33036, 4
   %t33039 = and i64 %self, -8
   %t33040 = inttoptr i64 %t33039 to ptr
@@ -46488,7 +46488,7 @@ argok3665:
   ret i64 %t33049
 }
 
-define fastcc i64 @code_6302(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6342(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33050 = icmp eq i64 %argc, 6
   br i1 %t33050, label %argok3667, label %arityerr3666
@@ -46531,7 +46531,7 @@ argok3667:
   ret i64 %t33082
 }
 
-define fastcc i64 @code_6304(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6344(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33083 = icmp eq i64 %argc, 5
   br i1 %t33083, label %argok3669, label %arityerr3668
@@ -46580,7 +46580,7 @@ argok3669:
   ret i64 %t33121
 }
 
-define fastcc i64 @code_6306(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6346(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33122 = icmp eq i64 %argc, 3
   br i1 %t33122, label %argok3671, label %arityerr3670
@@ -46649,7 +46649,7 @@ else3676:
   ret i64 %t33170
 }
 
-define fastcc i64 @code_6308(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6348(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33171 = icmp sge i64 %argc, 2
   br i1 %t33171, label %argok3678, label %arityerr3677
@@ -46704,7 +46704,7 @@ merge3681:
   ret i64 %t33201
 }
 
-define fastcc i64 @code_6312(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6352(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33202 = icmp eq i64 %argc, 2
   br i1 %t33202, label %argok3683, label %arityerr3682
@@ -46733,7 +46733,7 @@ argok3683:
   ret i64 %t33220
 }
 
-define fastcc i64 @code_6310(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6350(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33221 = icmp eq i64 %argc, 2
   br i1 %t33221, label %argok3685, label %arityerr3684
@@ -46759,7 +46759,7 @@ then3686:
 else3687:
   %t33234 = call i64 @rt_alloc_words(i64 3)
   %t33235 = inttoptr i64 %t33234 to ptr
-  store i64 ptrtoint (ptr @code_6312 to i64), ptr %t33235
+  store i64 ptrtoint (ptr @code_6352 to i64), ptr %t33235
   %t33236 = getelementptr i64, ptr %t33235, i64 1
   store i64 %a0, ptr %t33236
   %t33237 = getelementptr i64, ptr %t33235, i64 2
@@ -46768,7 +46768,7 @@ else3687:
   ret i64 %t33238
 }
 
-define fastcc i64 @code_6314(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6354(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33239 = icmp eq i64 %argc, 3
   br i1 %t33239, label %argok3689, label %arityerr3688
@@ -46843,7 +46843,7 @@ argok3689:
   ret i64 %t33279
 }
 
-define fastcc i64 @code_6318(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6358(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33304 = icmp eq i64 %argc, 1
   br i1 %t33304, label %argok3691, label %arityerr3690
@@ -46858,7 +46858,7 @@ argok3691:
   ret i64 %t33308
 }
 
-define fastcc i64 @code_6316(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6356(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33309 = icmp eq i64 %argc, 1
   br i1 %t33309, label %argok3693, label %arityerr3692
@@ -46868,7 +46868,7 @@ arityerr3692:
 argok3693:
   %t33310 = call i64 @rt_alloc_words(i64 1)
   %t33311 = inttoptr i64 %t33310 to ptr
-  store i64 ptrtoint (ptr @code_6318 to i64), ptr %t33311
+  store i64 ptrtoint (ptr @code_6358 to i64), ptr %t33311
   %t33312 = or i64 %t33310, 4
   %t33313 = load i64, ptr @"scheme.base:cadr"
   %t33314 = load i64, ptr @"scheme.base:map"
@@ -46914,7 +46914,7 @@ argok3693:
   ret i64 %t33353
 }
 
-define fastcc i64 @code_6320(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6360(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33354 = icmp eq i64 %argc, 1
   br i1 %t33354, label %argok3695, label %arityerr3694
@@ -46971,7 +46971,7 @@ else3699:
   ret i64 2
 }
 
-define fastcc i64 @code_6324(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6364(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33393 = icmp eq i64 %argc, 2
   br i1 %t33393, label %argok3701, label %arityerr3700
@@ -46996,7 +46996,7 @@ else3703:
   br i1 %t33403, label %then3704, label %else3705
 then3704:
   %t33404 = call i64 @rt_cdr(i64 %a0)
-  %t33405 = musttail call fastcc i64 @code_6324(i64 %self, i64 2, i64 %t33404, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t33405 = musttail call fastcc i64 @code_6364(i64 %self, i64 2, i64 %t33404, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t33405
 else3705:
   %t33406 = call i64 @rt_car(i64 %a0)
@@ -47028,11 +47028,11 @@ merge3708:
   %t33426 = call fastcc i64%t33425(i64 %t33421, i64 2, i64 %t33419, i64 %t33420, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t33427 = call i64 @rt_car(i64 %a0)
   %t33428 = call i64 @rt_cons(i64 %t33427, i64 %a1)
-  %t33429 = musttail call fastcc i64 @code_6324(i64 %self, i64 2, i64 %t33426, i64 %t33428, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t33429 = musttail call fastcc i64 @code_6364(i64 %self, i64 2, i64 %t33426, i64 %t33428, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t33429
 }
 
-define fastcc i64 @code_6322(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6362(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33430 = icmp eq i64 %argc, 2
   br i1 %t33430, label %argok3710, label %arityerr3709
@@ -47042,7 +47042,7 @@ arityerr3709:
 argok3710:
   %t33431 = call i64 @rt_alloc_words(i64 3)
   %t33432 = inttoptr i64 %t33431 to ptr
-  store i64 ptrtoint (ptr @code_6324 to i64), ptr %t33432
+  store i64 ptrtoint (ptr @code_6364 to i64), ptr %t33432
   %t33433 = or i64 %t33431, 4
   %t33434 = getelementptr i64, ptr %t33432, i64 1
   store i64 %t33433, ptr %t33434
@@ -47056,7 +47056,7 @@ argok3710:
   ret i64 %t33440
 }
 
-define fastcc i64 @code_6326(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6366(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33441 = icmp sge i64 %argc, 6
   br i1 %t33441, label %argok3712, label %arityerr3711
@@ -47106,7 +47106,7 @@ merge3715:
   ret i64 %t33466
 }
 
-define fastcc i64 @code_6330(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6370(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33467 = icmp eq i64 %argc, 1
   br i1 %t33467, label %argok3717, label %arityerr3716
@@ -47118,7 +47118,7 @@ argok3717:
   ret i64 %t33468
 }
 
-define fastcc i64 @code_6332(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6372(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33469 = icmp eq i64 %argc, 1
   br i1 %t33469, label %argok3719, label %arityerr3718
@@ -47140,7 +47140,7 @@ argok3719:
   ret i64 %t33480
 }
 
-define fastcc i64 @code_6334(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6374(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33481 = icmp eq i64 %argc, 1
   br i1 %t33481, label %argok3721, label %arityerr3720
@@ -47176,7 +47176,7 @@ else3723:
   ret i64 %t33502
 }
 
-define fastcc i64 @code_6336(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6376(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33503 = icmp eq i64 %argc, 1
   br i1 %t33503, label %argok3725, label %arityerr3724
@@ -47201,7 +47201,7 @@ argok3725:
   ret i64 %t33517
 }
 
-define fastcc i64 @code_6338(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6378(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33518 = icmp eq i64 %argc, 2
   br i1 %t33518, label %argok3727, label %arityerr3726
@@ -47243,7 +47243,7 @@ argok3727:
   ret i64 %t33549
 }
 
-define fastcc i64 @code_6340(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6380(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33550 = icmp eq i64 %argc, 1
   br i1 %t33550, label %argok3729, label %arityerr3728
@@ -47271,7 +47271,7 @@ argok3729:
   ret i64 %t33567
 }
 
-define fastcc i64 @code_6342(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6382(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33568 = icmp eq i64 %argc, 2
   br i1 %t33568, label %argok3731, label %arityerr3730
@@ -47313,7 +47313,7 @@ argok3731:
   ret i64 %t33599
 }
 
-define fastcc i64 @code_6346(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6386(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33600 = icmp eq i64 %argc, 1
   br i1 %t33600, label %argok3733, label %arityerr3732
@@ -47334,7 +47334,7 @@ argok3733:
   ret i64 %t33610
 }
 
-define fastcc i64 @code_6344(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6384(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33611 = icmp eq i64 %argc, 1
   br i1 %t33611, label %argok3735, label %arityerr3734
@@ -47349,7 +47349,7 @@ argok3735:
   %t33616 = load i64, ptr %t33615
   %t33617 = call i64 @rt_alloc_words(i64 2)
   %t33618 = inttoptr i64 %t33617 to ptr
-  store i64 ptrtoint (ptr @code_6346 to i64), ptr %t33618
+  store i64 ptrtoint (ptr @code_6386 to i64), ptr %t33618
   %t33619 = getelementptr i64, ptr %t33618, i64 1
   store i64 %t33616, ptr %t33619
   %t33620 = or i64 %t33617, 4
@@ -47374,7 +47374,7 @@ argok3735:
   ret i64 %t33638
 }
 
-define fastcc i64 @code_6348(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6388(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33639 = icmp eq i64 %argc, 1
   br i1 %t33639, label %argok3737, label %arityerr3736
@@ -47396,7 +47396,7 @@ argok3737:
   ret i64 %t33650
 }
 
-define fastcc i64 @code_6350(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6390(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33651 = icmp eq i64 %argc, 2
   br i1 %t33651, label %argok3739, label %arityerr3738
@@ -47433,7 +47433,7 @@ argok3739:
   ret i64 %t33677
 }
 
-define fastcc i64 @code_6352(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6392(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33678 = icmp eq i64 %argc, 1
   br i1 %t33678, label %argok3741, label %arityerr3740
@@ -47461,7 +47461,7 @@ argok3741:
   ret i64 %t33695
 }
 
-define fastcc i64 @code_6354(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6394(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33696 = icmp eq i64 %argc, 1
   br i1 %t33696, label %argok3743, label %arityerr3742
@@ -47483,7 +47483,7 @@ argok3743:
   ret i64 %t33707
 }
 
-define fastcc i64 @code_6328(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6368(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t33708 = icmp eq i64 %argc, 7
   br i1 %t33708, label %argok3745, label %arityerr3744
@@ -47540,7 +47540,7 @@ argok3745:
   %t33755 = call fastcc i64%t33754(i64 %t33750, i64 2, i64 %t33729, i64 %t33735, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t33756 = call i64 @rt_alloc_words(i64 1)
   %t33757 = inttoptr i64 %t33756 to ptr
-  store i64 ptrtoint (ptr @code_6330 to i64), ptr %t33757
+  store i64 ptrtoint (ptr @code_6370 to i64), ptr %t33757
   %t33758 = or i64 %t33756, 4
   %t33759 = load i64, ptr @"scheme.base:map"
   %t33760 = and i64 %t33759, -8
@@ -47575,7 +47575,7 @@ argok3745:
   %t33789 = load i64, ptr %t33788
   %t33790 = call i64 @rt_alloc_words(i64 2)
   %t33791 = inttoptr i64 %t33790 to ptr
-  store i64 ptrtoint (ptr @code_6332 to i64), ptr %t33791
+  store i64 ptrtoint (ptr @code_6372 to i64), ptr %t33791
   %t33792 = getelementptr i64, ptr %t33791, i64 1
   store i64 %t33789, ptr %t33792
   %t33793 = or i64 %t33790, 4
@@ -47597,7 +47597,7 @@ argok3745:
   %t33809 = call fastcc i64%t33808(i64 %t33804, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t33810 = call i64 @rt_alloc_words(i64 2)
   %t33811 = inttoptr i64 %t33810 to ptr
-  store i64 ptrtoint (ptr @code_6334 to i64), ptr %t33811
+  store i64 ptrtoint (ptr @code_6374 to i64), ptr %t33811
   %t33812 = getelementptr i64, ptr %t33811, i64 1
   store i64 %t33799, ptr %t33812
   %t33813 = or i64 %t33810, 4
@@ -47614,7 +47614,7 @@ argok3745:
   %t33824 = load i64, ptr %t33823
   %t33825 = call i64 @rt_alloc_words(i64 3)
   %t33826 = inttoptr i64 %t33825 to ptr
-  store i64 ptrtoint (ptr @code_6336 to i64), ptr %t33826
+  store i64 ptrtoint (ptr @code_6376 to i64), ptr %t33826
   %t33827 = getelementptr i64, ptr %t33826, i64 1
   store i64 %t33824, ptr %t33827
   %t33828 = getelementptr i64, ptr %t33826, i64 2
@@ -47636,7 +47636,7 @@ then3746:
   %t33841 = load i64, ptr %t33840
   %t33842 = call i64 @rt_alloc_words(i64 7)
   %t33843 = inttoptr i64 %t33842 to ptr
-  store i64 ptrtoint (ptr @code_6338 to i64), ptr %t33843
+  store i64 ptrtoint (ptr @code_6378 to i64), ptr %t33843
   %t33844 = getelementptr i64, ptr %t33843, i64 1
   store i64 %t33841, ptr %t33844
   %t33845 = getelementptr i64, ptr %t33843, i64 2
@@ -47668,7 +47668,7 @@ then3746:
   %t33866 = load i64, ptr %t33865
   %t33867 = call i64 @rt_alloc_words(i64 3)
   %t33868 = inttoptr i64 %t33867 to ptr
-  store i64 ptrtoint (ptr @code_6340 to i64), ptr %t33868
+  store i64 ptrtoint (ptr @code_6380 to i64), ptr %t33868
   %t33869 = getelementptr i64, ptr %t33868, i64 1
   store i64 %t33866, ptr %t33869
   %t33870 = getelementptr i64, ptr %t33868, i64 2
@@ -47714,7 +47714,7 @@ else3747:
   %t33907 = load i64, ptr %t33906
   %t33908 = call i64 @rt_alloc_words(i64 5)
   %t33909 = inttoptr i64 %t33908 to ptr
-  store i64 ptrtoint (ptr @code_6342 to i64), ptr %t33909
+  store i64 ptrtoint (ptr @code_6382 to i64), ptr %t33909
   %t33910 = getelementptr i64, ptr %t33909, i64 1
   store i64 %t33903, ptr %t33910
   %t33911 = getelementptr i64, ptr %t33909, i64 2
@@ -47742,7 +47742,7 @@ else3747:
   %t33930 = load i64, ptr %t33929
   %t33931 = call i64 @rt_alloc_words(i64 3)
   %t33932 = inttoptr i64 %t33931 to ptr
-  store i64 ptrtoint (ptr @code_6344 to i64), ptr %t33932
+  store i64 ptrtoint (ptr @code_6384 to i64), ptr %t33932
   %t33933 = getelementptr i64, ptr %t33932, i64 1
   store i64 %t33799, ptr %t33933
   %t33934 = getelementptr i64, ptr %t33932, i64 2
@@ -47766,7 +47766,7 @@ else3747:
   %t33951 = call fastcc i64%t33950(i64 %t33946, i64 2, i64 %a6, i64 %t33941, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t33952 = call i64 @rt_alloc_words(i64 2)
   %t33953 = inttoptr i64 %t33952 to ptr
-  store i64 ptrtoint (ptr @code_6348 to i64), ptr %t33953
+  store i64 ptrtoint (ptr @code_6388 to i64), ptr %t33953
   %t33954 = getelementptr i64, ptr %t33953, i64 1
   store i64 %t33951, ptr %t33954
   %t33955 = or i64 %t33952, 4
@@ -47782,7 +47782,7 @@ else3747:
   %t33965 = load i64, ptr %t33964
   %t33966 = call i64 @rt_alloc_words(i64 5)
   %t33967 = inttoptr i64 %t33966 to ptr
-  store i64 ptrtoint (ptr @code_6350 to i64), ptr %t33967
+  store i64 ptrtoint (ptr @code_6390 to i64), ptr %t33967
   %t33968 = getelementptr i64, ptr %t33967, i64 1
   store i64 %t33965, ptr %t33968
   %t33969 = getelementptr i64, ptr %t33967, i64 2
@@ -47810,7 +47810,7 @@ else3747:
   %t33988 = load i64, ptr %t33987
   %t33989 = call i64 @rt_alloc_words(i64 3)
   %t33990 = inttoptr i64 %t33989 to ptr
-  store i64 ptrtoint (ptr @code_6352 to i64), ptr %t33990
+  store i64 ptrtoint (ptr @code_6392 to i64), ptr %t33990
   %t33991 = getelementptr i64, ptr %t33990, i64 1
   store i64 %t33988, ptr %t33991
   %t33992 = getelementptr i64, ptr %t33990, i64 2
@@ -47818,7 +47818,7 @@ else3747:
   %t33993 = or i64 %t33989, 4
   %t33994 = call i64 @rt_alloc_words(i64 2)
   %t33995 = inttoptr i64 %t33994 to ptr
-  store i64 ptrtoint (ptr @code_6354 to i64), ptr %t33995
+  store i64 ptrtoint (ptr @code_6394 to i64), ptr %t33995
   %t33996 = getelementptr i64, ptr %t33995, i64 1
   store i64 %t33951, ptr %t33996
   %t33997 = or i64 %t33994, 4
@@ -47859,7 +47859,7 @@ else3747:
   ret i64 %t34031
 }
 
-define fastcc i64 @code_6358(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6398(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t34032 = icmp eq i64 %argc, 1
   br i1 %t34032, label %argok3749, label %arityerr3748
@@ -47871,7 +47871,7 @@ argok3749:
   ret i64 %t34033
 }
 
-define fastcc i64 @code_6360(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6400(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t34034 = icmp eq i64 %argc, 1
   br i1 %t34034, label %argok3751, label %arityerr3750
@@ -47883,7 +47883,7 @@ argok3751:
   ret i64 %t34035
 }
 
-define fastcc i64 @code_6356(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6396(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t34036 = icmp eq i64 %argc, 5
   br i1 %t34036, label %argok3753, label %arityerr3752
@@ -47967,7 +47967,7 @@ argok3753:
   %t34110 = call fastcc i64%t34109(i64 %t34105, i64 2, i64 %t34094, i64 %t34100, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t34111 = call i64 @rt_alloc_words(i64 1)
   %t34112 = inttoptr i64 %t34111 to ptr
-  store i64 ptrtoint (ptr @code_6358 to i64), ptr %t34112
+  store i64 ptrtoint (ptr @code_6398 to i64), ptr %t34112
   %t34113 = or i64 %t34111, 4
   %t34114 = load i64, ptr @"scheme.base:map"
   %t34115 = and i64 %t34114, -8
@@ -48157,7 +48157,7 @@ merge3759:
   %t34287 = phi i64 [ %a3, %then3757 ], [ %t34047, %else3758 ]
   %t34288 = call i64 @rt_alloc_words(i64 1)
   %t34289 = inttoptr i64 %t34288 to ptr
-  store i64 ptrtoint (ptr @code_6360 to i64), ptr %t34289
+  store i64 ptrtoint (ptr @code_6400 to i64), ptr %t34289
   %t34290 = or i64 %t34288, 4
   %t34291 = load i64, ptr @"scheme.base:map"
   %t34292 = and i64 %t34291, -8
@@ -48178,7 +48178,7 @@ merge3759:
   ret i64 %t34306
 }
 
-define fastcc i64 @code_6362(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6402(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t34307 = icmp eq i64 %argc, 1
   br i1 %t34307, label %argok3761, label %arityerr3760
@@ -48190,7 +48190,7 @@ argok3761:
   ret i64 %t34308
 }
 
-define fastcc i64 @code_6364(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6404(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t34309 = icmp eq i64 %argc, 1
   br i1 %t34309, label %argok3763, label %arityerr3762
@@ -48202,7 +48202,7 @@ argok3763:
   ret i64 %t34310
 }
 
-define fastcc i64 @code_6366(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6406(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t34311 = icmp eq i64 %argc, 1
   br i1 %t34311, label %argok3765, label %arityerr3764
@@ -48242,1151 +48242,1217 @@ else3770:
   ret i64 1
 }
 
-define fastcc i64 @code_6368(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6410(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t34331 = icmp eq i64 %argc, 1
+  %t34331 = icmp eq i64 %argc, 2
   br i1 %t34331, label %argok3772, label %arityerr3771
 arityerr3771:
-  call void @rt_arity_error(i64 1, i64 %argc)
+  call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
 argok3772:
-  %t34332 = call i64 @rt_eq_p(i64 %a0, i64 8201)
-  %t34333 = icmp ne i64 %t34332, 1
-  br i1 %t34333, label %then3773, label %else3774
-then3773:
+  %t34332 = and i64 %self, -8
+  %t34333 = inttoptr i64 %t34332 to ptr
+  %t34334 = getelementptr i64, ptr %t34333, i64 1
+  %t34335 = load i64, ptr %t34334
+  %t34336 = or i64 %a0, %t34335
+  %t34337 = and i64 %t34336, 7
+  %t34338 = icmp eq i64 %t34337, 0
+  br i1 %t34338, label %fixfast3773, label %fixslow3774
+fixfast3773:
+  %t34339 = icmp eq i64 %a0, %t34335
+  %t34340 = select i1 %t34339, i64 257, i64 1
+  br label %fixmerge3775
+fixslow3774:
+  %t34341 = call i64 @rt_num_eq(i64 %a0, i64 %t34335)
+  br label %fixmerge3775
+fixmerge3775:
+  %t34342 = phi i64 [ %t34340, %fixfast3773 ], [ %t34341, %fixslow3774 ]
+  %t34343 = icmp ne i64 %t34342, 1
+  br i1 %t34343, label %then3776, label %else3777
+then3776:
+  ret i64 %a1
+else3777:
+  %t34344 = and i64 %self, -8
+  %t34345 = inttoptr i64 %t34344 to ptr
+  %t34346 = getelementptr i64, ptr %t34345, i64 2
+  %t34347 = load i64, ptr %t34346
+  %t34348 = call i64 @rt_string_ref(i64 %t34347, i64 %a0)
+  %t34349 = or i64 %a0, 8
+  %t34350 = and i64 %t34349, 7
+  %t34351 = icmp eq i64 %t34350, 0
+  br i1 %t34351, label %fixfast3778, label %fixslow3779
+fixfast3778:
+  %t34352 = add i64 %a0, 8
+  br label %fixmerge3780
+fixslow3779:
+  %t34353 = call i64 @rt_add(i64 %a0, i64 8)
+  br label %fixmerge3780
+fixmerge3780:
+  %t34354 = phi i64 [ %t34352, %fixfast3778 ], [ %t34353, %fixslow3779 ]
+  %t34355 = call i64 @rt_eq_p(i64 %t34348, i64 8713)
+  %t34356 = icmp ne i64 %t34355, 1
+  br i1 %t34356, label %then3781, label %else3782
+then3781:
+  br label %merge3783
+else3782:
+  %t34357 = call i64 @rt_eq_p(i64 %t34348, i64 23561)
+  %t34358 = icmp ne i64 %t34357, 1
+  br i1 %t34358, label %then3784, label %else3785
+then3784:
+  br label %merge3786
+else3785:
+  %t34359 = call i64 @rt_eq_p(i64 %t34348, i64 2569)
+  %t34360 = icmp ne i64 %t34359, 1
+  br i1 %t34360, label %then3787, label %else3788
+then3787:
+  br label %merge3789
+else3788:
+  %t34361 = call i64 @rt_integer_to_char(i64 72)
+  %t34362 = call i64 @rt_eq_p(i64 %t34348, i64 %t34361)
+  %t34363 = icmp ne i64 %t34362, 1
+  br i1 %t34363, label %then3790, label %else3791
+then3790:
+  br label %merge3792
+else3791:
+  %t34364 = call i64 @rt_integer_to_char(i64 104)
+  %t34365 = call i64 @rt_eq_p(i64 %t34348, i64 %t34364)
+  br label %merge3792
+merge3792:
+  %t34366 = phi i64 [ %t34362, %then3790 ], [ %t34365, %else3791 ]
+  br label %merge3789
+merge3789:
+  %t34367 = phi i64 [ %t34359, %then3787 ], [ %t34366, %merge3792 ]
+  br label %merge3786
+merge3786:
+  %t34368 = phi i64 [ %t34357, %then3784 ], [ %t34367, %merge3789 ]
+  br label %merge3783
+merge3783:
+  %t34369 = phi i64 [ %t34355, %then3781 ], [ %t34368, %merge3786 ]
+  %t34370 = icmp ne i64 %t34369, 1
+  br i1 %t34370, label %then3793, label %else3794
+then3793:
+  %t34371 = or i64 %a1, 8
+  %t34372 = and i64 %t34371, 7
+  %t34373 = icmp eq i64 %t34372, 0
+  br i1 %t34373, label %fixfast3796, label %fixslow3797
+fixfast3796:
+  %t34374 = add i64 %a1, 8
+  br label %fixmerge3798
+fixslow3797:
+  %t34375 = call i64 @rt_add(i64 %a1, i64 8)
+  br label %fixmerge3798
+fixmerge3798:
+  %t34376 = phi i64 [ %t34374, %fixfast3796 ], [ %t34375, %fixslow3797 ]
+  br label %merge3795
+else3794:
+  br label %merge3795
+merge3795:
+  %t34377 = phi i64 [ %t34376, %fixmerge3798 ], [ %a1, %else3794 ]
+  %t34378 = musttail call fastcc i64 @code_6410(i64 %self, i64 2, i64 %t34354, i64 %t34377, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t34378
+}
+
+define fastcc i64 @code_6408(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+entry:
+  %t34379 = icmp eq i64 %argc, 1
+  br i1 %t34379, label %argok3800, label %arityerr3799
+arityerr3799:
+  call void @rt_arity_error(i64 1, i64 %argc)
+  unreachable
+argok3800:
+  %t34380 = call i64 @rt_string_length(i64 %a0)
+  %t34381 = call i64 @rt_alloc_words(i64 4)
+  %t34382 = inttoptr i64 %t34381 to ptr
+  store i64 ptrtoint (ptr @code_6410 to i64), ptr %t34382
+  %t34383 = or i64 %t34381, 4
+  %t34384 = getelementptr i64, ptr %t34382, i64 1
+  store i64 %t34380, ptr %t34384
+  %t34385 = getelementptr i64, ptr %t34382, i64 2
+  store i64 %a0, ptr %t34385
+  %t34386 = getelementptr i64, ptr %t34382, i64 3
+  store i64 %t34383, ptr %t34386
+  %t34387 = and i64 %t34383, -8
+  %t34388 = inttoptr i64 %t34387 to ptr
+  %t34389 = load i64, ptr %t34388
+  %t34390 = inttoptr i64 %t34389 to ptr
+  %t34391 = musttail call fastcc i64 %t34390(i64 %t34383, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t34391
+}
+
+define fastcc i64 @code_6412(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+entry:
+  %t34392 = icmp eq i64 %argc, 1
+  br i1 %t34392, label %argok3802, label %arityerr3801
+arityerr3801:
+  call void @rt_arity_error(i64 1, i64 %argc)
+  unreachable
+argok3802:
+  %t34393 = call i64 @rt_eq_p(i64 %a0, i64 8201)
+  %t34394 = icmp ne i64 %t34393, 1
+  br i1 %t34394, label %then3803, label %else3804
+then3803:
   ret i64 56
-else3774:
-  %t34334 = call i64 @rt_eq_p(i64 %a0, i64 2569)
-  %t34335 = icmp ne i64 %t34334, 1
-  br i1 %t34335, label %then3775, label %else3776
-then3775:
+else3804:
+  %t34395 = call i64 @rt_eq_p(i64 %a0, i64 2569)
+  %t34396 = icmp ne i64 %t34395, 1
+  br i1 %t34396, label %then3805, label %else3806
+then3805:
   ret i64 72
-else3776:
+else3806:
   ret i64 24
 }
 
-define fastcc i64 @code_6370(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6414(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t34336 = icmp eq i64 %argc, 1
-  br i1 %t34336, label %argok3778, label %arityerr3777
-arityerr3777:
+  %t34397 = icmp eq i64 %argc, 1
+  br i1 %t34397, label %argok3808, label %arityerr3807
+arityerr3807:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok3778:
-  %t34337 = call i64 @rt_pair_p(i64 %a0)
-  %t34338 = icmp ne i64 %t34337, 1
-  br i1 %t34338, label %then3779, label %else3780
-then3779:
-  %t34339 = and i64 %self, -8
-  %t34340 = inttoptr i64 %t34339 to ptr
-  %t34341 = getelementptr i64, ptr %t34340, i64 1
-  %t34342 = load i64, ptr %t34341
-  %t34343 = call i64 @rt_unbox(i64 %t34342)
-  %t34344 = and i64 %t34343, -8
-  %t34345 = inttoptr i64 %t34344 to ptr
-  %t34346 = load i64, ptr %t34345
-  %t34347 = inttoptr i64 %t34346 to ptr
-  %t34348 = call fastcc i64%t34347(i64 %t34343, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t34349 = or i64 16, %t34348
-  %t34350 = and i64 %t34349, 7
-  %t34351 = icmp eq i64 %t34350, 0
-  br i1 %t34351, label %fixfast3781, label %fixslow3782
-fixfast3781:
-  %t34352 = add i64 16, %t34348
-  br label %fixmerge3783
-fixslow3782:
-  %t34353 = call i64 @rt_add(i64 16, i64 %t34348)
-  br label %fixmerge3783
-fixmerge3783:
-  %t34354 = phi i64 [ %t34352, %fixfast3781 ], [ %t34353, %fixslow3782 ]
-  ret i64 %t34354
-else3780:
-  %t34355 = call i64 @rt_null_p(i64 %a0)
-  %t34356 = icmp ne i64 %t34355, 1
-  br i1 %t34356, label %then3784, label %else3785
-then3784:
+argok3808:
+  %t34398 = call i64 @rt_pair_p(i64 %a0)
+  %t34399 = icmp ne i64 %t34398, 1
+  br i1 %t34399, label %then3809, label %else3810
+then3809:
+  %t34400 = and i64 %self, -8
+  %t34401 = inttoptr i64 %t34400 to ptr
+  %t34402 = getelementptr i64, ptr %t34401, i64 1
+  %t34403 = load i64, ptr %t34402
+  %t34404 = call i64 @rt_unbox(i64 %t34403)
+  %t34405 = and i64 %t34404, -8
+  %t34406 = inttoptr i64 %t34405 to ptr
+  %t34407 = load i64, ptr %t34406
+  %t34408 = inttoptr i64 %t34407 to ptr
+  %t34409 = call fastcc i64%t34408(i64 %t34404, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t34410 = or i64 16, %t34409
+  %t34411 = and i64 %t34410, 7
+  %t34412 = icmp eq i64 %t34411, 0
+  br i1 %t34412, label %fixfast3811, label %fixslow3812
+fixfast3811:
+  %t34413 = add i64 16, %t34409
+  br label %fixmerge3813
+fixslow3812:
+  %t34414 = call i64 @rt_add(i64 16, i64 %t34409)
+  br label %fixmerge3813
+fixmerge3813:
+  %t34415 = phi i64 [ %t34413, %fixfast3811 ], [ %t34414, %fixslow3812 ]
+  ret i64 %t34415
+else3810:
+  %t34416 = call i64 @rt_null_p(i64 %a0)
+  %t34417 = icmp ne i64 %t34416, 1
+  br i1 %t34417, label %then3814, label %else3815
+then3814:
   ret i64 16
-else3785:
-  %t34357 = call i64 @rt_symbol_p(i64 %a0)
-  %t34358 = icmp ne i64 %t34357, 1
-  br i1 %t34358, label %then3786, label %else3787
-then3786:
-  %t34359 = call i64 @rt_symbol_to_string(i64 %a0)
-  %t34360 = call i64 @rt_string_length(i64 %t34359)
-  ret i64 %t34360
-else3787:
-  %t34361 = call i64 @rt_string_p(i64 %a0)
-  %t34362 = icmp ne i64 %t34361, 1
-  br i1 %t34362, label %then3788, label %else3789
-then3788:
-  %t34363 = call i64 @rt_string_length(i64 %a0)
-  %t34364 = or i64 16, %t34363
-  %t34365 = and i64 %t34364, 7
-  %t34366 = icmp eq i64 %t34365, 0
-  br i1 %t34366, label %fixfast3790, label %fixslow3791
-fixfast3790:
-  %t34367 = add i64 16, %t34363
-  br label %fixmerge3792
-fixslow3791:
-  %t34368 = call i64 @rt_add(i64 16, i64 %t34363)
-  br label %fixmerge3792
-fixmerge3792:
-  %t34369 = phi i64 [ %t34367, %fixfast3790 ], [ %t34368, %fixslow3791 ]
-  ret i64 %t34369
-else3789:
-  %t34370 = call i64 @rt_char_p(i64 %a0)
-  %t34371 = icmp ne i64 %t34370, 1
-  br i1 %t34371, label %then3793, label %else3794
-then3793:
-  %t34372 = and i64 %self, -8
-  %t34373 = inttoptr i64 %t34372 to ptr
-  %t34374 = getelementptr i64, ptr %t34373, i64 2
-  %t34375 = load i64, ptr %t34374
-  %t34376 = call i64 @rt_unbox(i64 %t34375)
-  %t34377 = and i64 %t34376, -8
-  %t34378 = inttoptr i64 %t34377 to ptr
-  %t34379 = load i64, ptr %t34378
-  %t34380 = inttoptr i64 %t34379 to ptr
-  %t34381 = musttail call fastcc i64 %t34380(i64 %t34376, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t34381
-else3794:
-  %t34382 = call i64 @rt_boolean_p(i64 %a0)
-  %t34383 = icmp ne i64 %t34382, 1
-  br i1 %t34383, label %then3795, label %else3796
-then3795:
+else3815:
+  %t34418 = call i64 @rt_symbol_p(i64 %a0)
+  %t34419 = icmp ne i64 %t34418, 1
+  br i1 %t34419, label %then3816, label %else3817
+then3816:
+  %t34420 = call i64 @rt_symbol_to_string(i64 %a0)
+  %t34421 = call i64 @rt_string_length(i64 %t34420)
+  ret i64 %t34421
+else3817:
+  %t34422 = call i64 @rt_string_p(i64 %a0)
+  %t34423 = icmp ne i64 %t34422, 1
+  br i1 %t34423, label %then3818, label %else3819
+then3818:
+  %t34424 = call i64 @rt_string_length(i64 %a0)
+  %t34425 = or i64 16, %t34424
+  %t34426 = and i64 %t34425, 7
+  %t34427 = icmp eq i64 %t34426, 0
+  br i1 %t34427, label %fixfast3820, label %fixslow3821
+fixfast3820:
+  %t34428 = add i64 16, %t34424
+  br label %fixmerge3822
+fixslow3821:
+  %t34429 = call i64 @rt_add(i64 16, i64 %t34424)
+  br label %fixmerge3822
+fixmerge3822:
+  %t34430 = phi i64 [ %t34428, %fixfast3820 ], [ %t34429, %fixslow3821 ]
+  %t34431 = and i64 %self, -8
+  %t34432 = inttoptr i64 %t34431 to ptr
+  %t34433 = getelementptr i64, ptr %t34432, i64 2
+  %t34434 = load i64, ptr %t34433
+  %t34435 = call i64 @rt_unbox(i64 %t34434)
+  %t34436 = and i64 %t34435, -8
+  %t34437 = inttoptr i64 %t34436 to ptr
+  %t34438 = load i64, ptr %t34437
+  %t34439 = inttoptr i64 %t34438 to ptr
+  %t34440 = call fastcc i64%t34439(i64 %t34435, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t34441 = or i64 %t34430, %t34440
+  %t34442 = and i64 %t34441, 7
+  %t34443 = icmp eq i64 %t34442, 0
+  br i1 %t34443, label %fixfast3823, label %fixslow3824
+fixfast3823:
+  %t34444 = add i64 %t34430, %t34440
+  br label %fixmerge3825
+fixslow3824:
+  %t34445 = call i64 @rt_add(i64 %t34430, i64 %t34440)
+  br label %fixmerge3825
+fixmerge3825:
+  %t34446 = phi i64 [ %t34444, %fixfast3823 ], [ %t34445, %fixslow3824 ]
+  ret i64 %t34446
+else3819:
+  %t34447 = call i64 @rt_char_p(i64 %a0)
+  %t34448 = icmp ne i64 %t34447, 1
+  br i1 %t34448, label %then3826, label %else3827
+then3826:
+  %t34449 = and i64 %self, -8
+  %t34450 = inttoptr i64 %t34449 to ptr
+  %t34451 = getelementptr i64, ptr %t34450, i64 3
+  %t34452 = load i64, ptr %t34451
+  %t34453 = call i64 @rt_unbox(i64 %t34452)
+  %t34454 = and i64 %t34453, -8
+  %t34455 = inttoptr i64 %t34454 to ptr
+  %t34456 = load i64, ptr %t34455
+  %t34457 = inttoptr i64 %t34456 to ptr
+  %t34458 = musttail call fastcc i64 %t34457(i64 %t34453, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t34458
+else3827:
+  %t34459 = call i64 @rt_boolean_p(i64 %a0)
+  %t34460 = icmp ne i64 %t34459, 1
+  br i1 %t34460, label %then3828, label %else3829
+then3828:
   ret i64 16
-else3796:
-  %t34384 = call i64 @rt_vector_p(i64 %a0)
-  %t34385 = icmp ne i64 %t34384, 1
-  br i1 %t34385, label %then3797, label %else3798
-then3797:
-  %t34386 = and i64 %self, -8
-  %t34387 = inttoptr i64 %t34386 to ptr
-  %t34388 = getelementptr i64, ptr %t34387, i64 3
-  %t34389 = load i64, ptr %t34388
-  %t34390 = call i64 @rt_unbox(i64 %t34389)
-  %t34391 = and i64 %t34390, -8
-  %t34392 = inttoptr i64 %t34391 to ptr
-  %t34393 = load i64, ptr %t34392
-  %t34394 = inttoptr i64 %t34393 to ptr
-  %t34395 = call fastcc i64%t34394(i64 %t34390, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t34396 = or i64 24, %t34395
-  %t34397 = and i64 %t34396, 7
-  %t34398 = icmp eq i64 %t34397, 0
-  br i1 %t34398, label %fixfast3799, label %fixslow3800
-fixfast3799:
-  %t34399 = add i64 24, %t34395
-  br label %fixmerge3801
-fixslow3800:
-  %t34400 = call i64 @rt_add(i64 24, i64 %t34395)
-  br label %fixmerge3801
-fixmerge3801:
-  %t34401 = phi i64 [ %t34399, %fixfast3799 ], [ %t34400, %fixslow3800 ]
-  ret i64 %t34401
-else3798:
-  %t34402 = call i64 @rt_flonum_p(i64 %a0)
-  %t34403 = icmp ne i64 %t34402, 1
-  br i1 %t34403, label %then3802, label %else3803
-then3802:
-  %t34404 = call i64 @rt_flonum_to_string(i64 %a0)
-  %t34405 = call i64 @rt_string_length(i64 %t34404)
-  ret i64 %t34405
-else3803:
-  %t34406 = call i64 @rt_number_p(i64 %a0)
-  %t34407 = icmp ne i64 %t34406, 1
-  br i1 %t34407, label %then3804, label %else3805
-then3804:
-  %t34408 = load i64, ptr @"scheme.base:number->string"
-  %t34409 = and i64 %t34408, -8
-  %t34410 = inttoptr i64 %t34409 to ptr
-  %t34411 = load i64, ptr %t34410
-  %t34412 = inttoptr i64 %t34411 to ptr
-  %t34413 = call fastcc i64%t34412(i64 %t34408, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t34414 = call i64 @rt_string_length(i64 %t34413)
-  ret i64 %t34414
-else3805:
+else3829:
+  %t34461 = call i64 @rt_vector_p(i64 %a0)
+  %t34462 = icmp ne i64 %t34461, 1
+  br i1 %t34462, label %then3830, label %else3831
+then3830:
+  %t34463 = and i64 %self, -8
+  %t34464 = inttoptr i64 %t34463 to ptr
+  %t34465 = getelementptr i64, ptr %t34464, i64 4
+  %t34466 = load i64, ptr %t34465
+  %t34467 = call i64 @rt_unbox(i64 %t34466)
+  %t34468 = and i64 %t34467, -8
+  %t34469 = inttoptr i64 %t34468 to ptr
+  %t34470 = load i64, ptr %t34469
+  %t34471 = inttoptr i64 %t34470 to ptr
+  %t34472 = call fastcc i64%t34471(i64 %t34467, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t34473 = or i64 24, %t34472
+  %t34474 = and i64 %t34473, 7
+  %t34475 = icmp eq i64 %t34474, 0
+  br i1 %t34475, label %fixfast3832, label %fixslow3833
+fixfast3832:
+  %t34476 = add i64 24, %t34472
+  br label %fixmerge3834
+fixslow3833:
+  %t34477 = call i64 @rt_add(i64 24, i64 %t34472)
+  br label %fixmerge3834
+fixmerge3834:
+  %t34478 = phi i64 [ %t34476, %fixfast3832 ], [ %t34477, %fixslow3833 ]
+  ret i64 %t34478
+else3831:
+  %t34479 = call i64 @rt_flonum_p(i64 %a0)
+  %t34480 = icmp ne i64 %t34479, 1
+  br i1 %t34480, label %then3835, label %else3836
+then3835:
+  %t34481 = call i64 @rt_flonum_to_string(i64 %a0)
+  %t34482 = call i64 @rt_string_length(i64 %t34481)
+  ret i64 %t34482
+else3836:
+  %t34483 = call i64 @rt_number_p(i64 %a0)
+  %t34484 = icmp ne i64 %t34483, 1
+  br i1 %t34484, label %then3837, label %else3838
+then3837:
+  %t34485 = load i64, ptr @"scheme.base:number->string"
+  %t34486 = and i64 %t34485, -8
+  %t34487 = inttoptr i64 %t34486 to ptr
+  %t34488 = load i64, ptr %t34487
+  %t34489 = inttoptr i64 %t34488 to ptr
+  %t34490 = call fastcc i64%t34489(i64 %t34485, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t34491 = call i64 @rt_string_length(i64 %t34490)
+  ret i64 %t34491
+else3838:
   ret i64 96
 }
 
-define fastcc i64 @code_6374(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6418(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t34415 = icmp eq i64 %argc, 3
-  br i1 %t34415, label %argok3807, label %arityerr3806
-arityerr3806:
+  %t34492 = icmp eq i64 %argc, 3
+  br i1 %t34492, label %argok3840, label %arityerr3839
+arityerr3839:
   call void @rt_arity_error(i64 3, i64 %argc)
   unreachable
-argok3807:
-  %t34416 = call i64 @rt_pair_p(i64 %a0)
-  %t34417 = icmp ne i64 %t34416, 1
-  br i1 %t34417, label %then3808, label %else3809
-then3808:
-  %t34418 = call i64 @rt_cdr(i64 %a0)
-  %t34419 = icmp ne i64 %a2, 1
-  br i1 %t34419, label %then3810, label %else3811
-then3810:
-  br label %merge3812
-else3811:
-  br label %merge3812
-merge3812:
-  %t34420 = phi i64 [ 0, %then3810 ], [ 8, %else3811 ]
-  %t34421 = or i64 %a1, %t34420
-  %t34422 = and i64 %t34421, 7
-  %t34423 = icmp eq i64 %t34422, 0
-  br i1 %t34423, label %fixfast3813, label %fixslow3814
-fixfast3813:
-  %t34424 = add i64 %a1, %t34420
-  br label %fixmerge3815
-fixslow3814:
-  %t34425 = call i64 @rt_add(i64 %a1, i64 %t34420)
-  br label %fixmerge3815
-fixmerge3815:
-  %t34426 = phi i64 [ %t34424, %fixfast3813 ], [ %t34425, %fixslow3814 ]
-  %t34427 = call i64 @rt_car(i64 %a0)
-  %t34428 = and i64 %self, -8
-  %t34429 = inttoptr i64 %t34428 to ptr
-  %t34430 = getelementptr i64, ptr %t34429, i64 2
-  %t34431 = load i64, ptr %t34430
-  %t34432 = call i64 @rt_unbox(i64 %t34431)
-  %t34433 = and i64 %t34432, -8
-  %t34434 = inttoptr i64 %t34433 to ptr
-  %t34435 = load i64, ptr %t34434
-  %t34436 = inttoptr i64 %t34435 to ptr
-  %t34437 = call fastcc i64%t34436(i64 %t34432, i64 1, i64 %t34427, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t34438 = or i64 %t34426, %t34437
-  %t34439 = and i64 %t34438, 7
-  %t34440 = icmp eq i64 %t34439, 0
-  br i1 %t34440, label %fixfast3816, label %fixslow3817
-fixfast3816:
-  %t34441 = add i64 %t34426, %t34437
-  br label %fixmerge3818
-fixslow3817:
-  %t34442 = call i64 @rt_add(i64 %t34426, i64 %t34437)
-  br label %fixmerge3818
-fixmerge3818:
-  %t34443 = phi i64 [ %t34441, %fixfast3816 ], [ %t34442, %fixslow3817 ]
-  %t34444 = musttail call fastcc i64 @code_6374(i64 %self, i64 3, i64 %t34418, i64 %t34443, i64 1, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t34444
-else3809:
-  %t34445 = call i64 @rt_null_p(i64 %a0)
-  %t34446 = icmp ne i64 %t34445, 1
-  br i1 %t34446, label %then3819, label %else3820
-then3819:
+argok3840:
+  %t34493 = call i64 @rt_pair_p(i64 %a0)
+  %t34494 = icmp ne i64 %t34493, 1
+  br i1 %t34494, label %then3841, label %else3842
+then3841:
+  %t34495 = call i64 @rt_cdr(i64 %a0)
+  %t34496 = icmp ne i64 %a2, 1
+  br i1 %t34496, label %then3843, label %else3844
+then3843:
+  br label %merge3845
+else3844:
+  br label %merge3845
+merge3845:
+  %t34497 = phi i64 [ 0, %then3843 ], [ 8, %else3844 ]
+  %t34498 = or i64 %a1, %t34497
+  %t34499 = and i64 %t34498, 7
+  %t34500 = icmp eq i64 %t34499, 0
+  br i1 %t34500, label %fixfast3846, label %fixslow3847
+fixfast3846:
+  %t34501 = add i64 %a1, %t34497
+  br label %fixmerge3848
+fixslow3847:
+  %t34502 = call i64 @rt_add(i64 %a1, i64 %t34497)
+  br label %fixmerge3848
+fixmerge3848:
+  %t34503 = phi i64 [ %t34501, %fixfast3846 ], [ %t34502, %fixslow3847 ]
+  %t34504 = call i64 @rt_car(i64 %a0)
+  %t34505 = and i64 %self, -8
+  %t34506 = inttoptr i64 %t34505 to ptr
+  %t34507 = getelementptr i64, ptr %t34506, i64 2
+  %t34508 = load i64, ptr %t34507
+  %t34509 = call i64 @rt_unbox(i64 %t34508)
+  %t34510 = and i64 %t34509, -8
+  %t34511 = inttoptr i64 %t34510 to ptr
+  %t34512 = load i64, ptr %t34511
+  %t34513 = inttoptr i64 %t34512 to ptr
+  %t34514 = call fastcc i64%t34513(i64 %t34509, i64 1, i64 %t34504, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t34515 = or i64 %t34503, %t34514
+  %t34516 = and i64 %t34515, 7
+  %t34517 = icmp eq i64 %t34516, 0
+  br i1 %t34517, label %fixfast3849, label %fixslow3850
+fixfast3849:
+  %t34518 = add i64 %t34503, %t34514
+  br label %fixmerge3851
+fixslow3850:
+  %t34519 = call i64 @rt_add(i64 %t34503, i64 %t34514)
+  br label %fixmerge3851
+fixmerge3851:
+  %t34520 = phi i64 [ %t34518, %fixfast3849 ], [ %t34519, %fixslow3850 ]
+  %t34521 = musttail call fastcc i64 @code_6418(i64 %self, i64 3, i64 %t34495, i64 %t34520, i64 1, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t34521
+else3842:
+  %t34522 = call i64 @rt_null_p(i64 %a0)
+  %t34523 = icmp ne i64 %t34522, 1
+  br i1 %t34523, label %then3852, label %else3853
+then3852:
   ret i64 %a1
-else3820:
-  %t34447 = or i64 %a1, 24
-  %t34448 = and i64 %t34447, 7
-  %t34449 = icmp eq i64 %t34448, 0
-  br i1 %t34449, label %fixfast3821, label %fixslow3822
-fixfast3821:
-  %t34450 = add i64 %a1, 24
-  br label %fixmerge3823
-fixslow3822:
-  %t34451 = call i64 @rt_add(i64 %a1, i64 24)
-  br label %fixmerge3823
-fixmerge3823:
-  %t34452 = phi i64 [ %t34450, %fixfast3821 ], [ %t34451, %fixslow3822 ]
-  %t34453 = and i64 %self, -8
-  %t34454 = inttoptr i64 %t34453 to ptr
-  %t34455 = getelementptr i64, ptr %t34454, i64 2
-  %t34456 = load i64, ptr %t34455
-  %t34457 = call i64 @rt_unbox(i64 %t34456)
-  %t34458 = and i64 %t34457, -8
-  %t34459 = inttoptr i64 %t34458 to ptr
-  %t34460 = load i64, ptr %t34459
-  %t34461 = inttoptr i64 %t34460 to ptr
-  %t34462 = call fastcc i64%t34461(i64 %t34457, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t34463 = or i64 %t34452, %t34462
-  %t34464 = and i64 %t34463, 7
-  %t34465 = icmp eq i64 %t34464, 0
-  br i1 %t34465, label %fixfast3824, label %fixslow3825
-fixfast3824:
-  %t34466 = add i64 %t34452, %t34462
-  br label %fixmerge3826
-fixslow3825:
-  %t34467 = call i64 @rt_add(i64 %t34452, i64 %t34462)
-  br label %fixmerge3826
-fixmerge3826:
-  %t34468 = phi i64 [ %t34466, %fixfast3824 ], [ %t34467, %fixslow3825 ]
-  ret i64 %t34468
-}
-
-define fastcc i64 @code_6372(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
-entry:
-  %t34469 = icmp eq i64 %argc, 1
-  br i1 %t34469, label %argok3828, label %arityerr3827
-arityerr3827:
-  call void @rt_arity_error(i64 1, i64 %argc)
-  unreachable
-argok3828:
-  %t34470 = call i64 @rt_alloc_words(i64 3)
-  %t34471 = inttoptr i64 %t34470 to ptr
-  store i64 ptrtoint (ptr @code_6374 to i64), ptr %t34471
-  %t34472 = or i64 %t34470, 4
-  %t34473 = getelementptr i64, ptr %t34471, i64 1
-  store i64 %t34472, ptr %t34473
-  %t34474 = and i64 %self, -8
-  %t34475 = inttoptr i64 %t34474 to ptr
-  %t34476 = getelementptr i64, ptr %t34475, i64 1
-  %t34477 = load i64, ptr %t34476
-  %t34478 = getelementptr i64, ptr %t34471, i64 2
-  store i64 %t34477, ptr %t34478
-  %t34479 = and i64 %t34472, -8
-  %t34480 = inttoptr i64 %t34479 to ptr
-  %t34481 = load i64, ptr %t34480
-  %t34482 = inttoptr i64 %t34481 to ptr
-  %t34483 = musttail call fastcc i64 %t34482(i64 %t34472, i64 3, i64 %a0, i64 0, i64 257, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t34483
-}
-
-define fastcc i64 @code_6378(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
-entry:
-  %t34484 = icmp eq i64 %argc, 2
-  br i1 %t34484, label %argok3830, label %arityerr3829
-arityerr3829:
-  call void @rt_arity_error(i64 2, i64 %argc)
-  unreachable
-argok3830:
-  %t34485 = and i64 %self, -8
-  %t34486 = inttoptr i64 %t34485 to ptr
-  %t34487 = getelementptr i64, ptr %t34486, i64 1
-  %t34488 = load i64, ptr %t34487
-  %t34489 = or i64 %a0, %t34488
-  %t34490 = and i64 %t34489, 7
-  %t34491 = icmp eq i64 %t34490, 0
-  br i1 %t34491, label %fixfast3831, label %fixslow3832
-fixfast3831:
-  %t34492 = icmp eq i64 %a0, %t34488
-  %t34493 = select i1 %t34492, i64 257, i64 1
-  br label %fixmerge3833
-fixslow3832:
-  %t34494 = call i64 @rt_num_eq(i64 %a0, i64 %t34488)
-  br label %fixmerge3833
-fixmerge3833:
-  %t34495 = phi i64 [ %t34493, %fixfast3831 ], [ %t34494, %fixslow3832 ]
-  %t34496 = icmp ne i64 %t34495, 1
-  br i1 %t34496, label %then3834, label %else3835
-then3834:
-  ret i64 %a1
-else3835:
-  %t34497 = or i64 %a0, 8
-  %t34498 = and i64 %t34497, 7
-  %t34499 = icmp eq i64 %t34498, 0
-  br i1 %t34499, label %fixfast3836, label %fixslow3837
-fixfast3836:
-  %t34500 = add i64 %a0, 8
-  br label %fixmerge3838
-fixslow3837:
-  %t34501 = call i64 @rt_add(i64 %a0, i64 8)
-  br label %fixmerge3838
-fixmerge3838:
-  %t34502 = phi i64 [ %t34500, %fixfast3836 ], [ %t34501, %fixslow3837 ]
-  %t34503 = or i64 %a0, 0
-  %t34504 = and i64 %t34503, 7
-  %t34505 = icmp eq i64 %t34504, 0
-  br i1 %t34505, label %fixfast3839, label %fixslow3840
-fixfast3839:
-  %t34506 = icmp eq i64 %a0, 0
-  %t34507 = select i1 %t34506, i64 257, i64 1
-  br label %fixmerge3841
-fixslow3840:
-  %t34508 = call i64 @rt_num_eq(i64 %a0, i64 0)
-  br label %fixmerge3841
-fixmerge3841:
-  %t34509 = phi i64 [ %t34507, %fixfast3839 ], [ %t34508, %fixslow3840 ]
-  %t34510 = icmp ne i64 %t34509, 1
-  br i1 %t34510, label %then3842, label %else3843
-then3842:
-  br label %merge3844
-else3843:
-  br label %merge3844
-merge3844:
-  %t34511 = phi i64 [ 0, %then3842 ], [ 8, %else3843 ]
-  %t34512 = or i64 %a1, %t34511
-  %t34513 = and i64 %t34512, 7
-  %t34514 = icmp eq i64 %t34513, 0
-  br i1 %t34514, label %fixfast3845, label %fixslow3846
-fixfast3845:
-  %t34515 = add i64 %a1, %t34511
-  br label %fixmerge3847
-fixslow3846:
-  %t34516 = call i64 @rt_add(i64 %a1, i64 %t34511)
-  br label %fixmerge3847
-fixmerge3847:
-  %t34517 = phi i64 [ %t34515, %fixfast3845 ], [ %t34516, %fixslow3846 ]
-  %t34518 = and i64 %self, -8
-  %t34519 = inttoptr i64 %t34518 to ptr
-  %t34520 = getelementptr i64, ptr %t34519, i64 4
-  %t34521 = load i64, ptr %t34520
-  %t34522 = call i64 @rt_vector_ref(i64 %t34521, i64 %a0)
-  %t34523 = and i64 %self, -8
-  %t34524 = inttoptr i64 %t34523 to ptr
-  %t34525 = getelementptr i64, ptr %t34524, i64 3
-  %t34526 = load i64, ptr %t34525
-  %t34527 = call i64 @rt_unbox(i64 %t34526)
-  %t34528 = and i64 %t34527, -8
-  %t34529 = inttoptr i64 %t34528 to ptr
-  %t34530 = load i64, ptr %t34529
+else3853:
+  %t34524 = or i64 %a1, 24
+  %t34525 = and i64 %t34524, 7
+  %t34526 = icmp eq i64 %t34525, 0
+  br i1 %t34526, label %fixfast3854, label %fixslow3855
+fixfast3854:
+  %t34527 = add i64 %a1, 24
+  br label %fixmerge3856
+fixslow3855:
+  %t34528 = call i64 @rt_add(i64 %a1, i64 24)
+  br label %fixmerge3856
+fixmerge3856:
+  %t34529 = phi i64 [ %t34527, %fixfast3854 ], [ %t34528, %fixslow3855 ]
+  %t34530 = and i64 %self, -8
   %t34531 = inttoptr i64 %t34530 to ptr
-  %t34532 = call fastcc i64%t34531(i64 %t34527, i64 1, i64 %t34522, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t34533 = or i64 %t34517, %t34532
-  %t34534 = and i64 %t34533, 7
-  %t34535 = icmp eq i64 %t34534, 0
-  br i1 %t34535, label %fixfast3848, label %fixslow3849
-fixfast3848:
-  %t34536 = add i64 %t34517, %t34532
-  br label %fixmerge3850
-fixslow3849:
-  %t34537 = call i64 @rt_add(i64 %t34517, i64 %t34532)
-  br label %fixmerge3850
-fixmerge3850:
-  %t34538 = phi i64 [ %t34536, %fixfast3848 ], [ %t34537, %fixslow3849 ]
-  %t34539 = musttail call fastcc i64 @code_6378(i64 %self, i64 2, i64 %t34502, i64 %t34538, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t34539
+  %t34532 = getelementptr i64, ptr %t34531, i64 2
+  %t34533 = load i64, ptr %t34532
+  %t34534 = call i64 @rt_unbox(i64 %t34533)
+  %t34535 = and i64 %t34534, -8
+  %t34536 = inttoptr i64 %t34535 to ptr
+  %t34537 = load i64, ptr %t34536
+  %t34538 = inttoptr i64 %t34537 to ptr
+  %t34539 = call fastcc i64%t34538(i64 %t34534, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t34540 = or i64 %t34529, %t34539
+  %t34541 = and i64 %t34540, 7
+  %t34542 = icmp eq i64 %t34541, 0
+  br i1 %t34542, label %fixfast3857, label %fixslow3858
+fixfast3857:
+  %t34543 = add i64 %t34529, %t34539
+  br label %fixmerge3859
+fixslow3858:
+  %t34544 = call i64 @rt_add(i64 %t34529, i64 %t34539)
+  br label %fixmerge3859
+fixmerge3859:
+  %t34545 = phi i64 [ %t34543, %fixfast3857 ], [ %t34544, %fixslow3858 ]
+  ret i64 %t34545
 }
 
-define fastcc i64 @code_6376(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6416(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t34540 = icmp eq i64 %argc, 1
-  br i1 %t34540, label %argok3852, label %arityerr3851
-arityerr3851:
+  %t34546 = icmp eq i64 %argc, 1
+  br i1 %t34546, label %argok3861, label %arityerr3860
+arityerr3860:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok3852:
-  %t34541 = call i64 @rt_vector_length(i64 %a0)
-  %t34542 = call i64 @rt_alloc_words(i64 5)
-  %t34543 = inttoptr i64 %t34542 to ptr
-  store i64 ptrtoint (ptr @code_6378 to i64), ptr %t34543
-  %t34544 = or i64 %t34542, 4
-  %t34545 = getelementptr i64, ptr %t34543, i64 1
-  store i64 %t34541, ptr %t34545
-  %t34546 = getelementptr i64, ptr %t34543, i64 2
-  store i64 %t34544, ptr %t34546
-  %t34547 = and i64 %self, -8
+argok3861:
+  %t34547 = call i64 @rt_alloc_words(i64 3)
   %t34548 = inttoptr i64 %t34547 to ptr
-  %t34549 = getelementptr i64, ptr %t34548, i64 1
-  %t34550 = load i64, ptr %t34549
-  %t34551 = getelementptr i64, ptr %t34543, i64 3
-  store i64 %t34550, ptr %t34551
-  %t34552 = getelementptr i64, ptr %t34543, i64 4
-  store i64 %a0, ptr %t34552
-  %t34553 = and i64 %t34544, -8
-  %t34554 = inttoptr i64 %t34553 to ptr
-  %t34555 = load i64, ptr %t34554
-  %t34556 = inttoptr i64 %t34555 to ptr
-  %t34557 = musttail call fastcc i64 %t34556(i64 %t34544, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t34557
+  store i64 ptrtoint (ptr @code_6418 to i64), ptr %t34548
+  %t34549 = or i64 %t34547, 4
+  %t34550 = getelementptr i64, ptr %t34548, i64 1
+  store i64 %t34549, ptr %t34550
+  %t34551 = and i64 %self, -8
+  %t34552 = inttoptr i64 %t34551 to ptr
+  %t34553 = getelementptr i64, ptr %t34552, i64 1
+  %t34554 = load i64, ptr %t34553
+  %t34555 = getelementptr i64, ptr %t34548, i64 2
+  store i64 %t34554, ptr %t34555
+  %t34556 = and i64 %t34549, -8
+  %t34557 = inttoptr i64 %t34556 to ptr
+  %t34558 = load i64, ptr %t34557
+  %t34559 = inttoptr i64 %t34558 to ptr
+  %t34560 = musttail call fastcc i64 %t34559(i64 %t34549, i64 3, i64 %a0, i64 0, i64 257, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t34560
 }
 
-define fastcc i64 @code_6380(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6422(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t34558 = icmp eq i64 %argc, 2
-  br i1 %t34558, label %argok3854, label %arityerr3853
-arityerr3853:
+  %t34561 = icmp eq i64 %argc, 2
+  br i1 %t34561, label %argok3863, label %arityerr3862
+arityerr3862:
   call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
-argok3854:
-  %t34559 = and i64 %self, -8
-  %t34560 = inttoptr i64 %t34559 to ptr
-  %t34561 = getelementptr i64, ptr %t34560, i64 1
-  %t34562 = load i64, ptr %t34561
-  %t34563 = call i64 @rt_unbox(i64 %t34562)
-  %t34564 = and i64 %t34563, -8
-  %t34565 = inttoptr i64 %t34564 to ptr
-  %t34566 = load i64, ptr %t34565
-  %t34567 = inttoptr i64 %t34566 to ptr
-  %t34568 = call fastcc i64%t34567(i64 %t34563, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t34569 = or i64 %a1, %t34568
-  %t34570 = and i64 %t34569, 7
-  %t34571 = icmp eq i64 %t34570, 0
-  br i1 %t34571, label %fixfast3855, label %fixslow3856
-fixfast3855:
-  %t34572 = add i64 %a1, %t34568
-  br label %fixmerge3857
-fixslow3856:
-  %t34573 = call i64 @rt_add(i64 %a1, i64 %t34568)
-  br label %fixmerge3857
-fixmerge3857:
-  %t34574 = phi i64 [ %t34572, %fixfast3855 ], [ %t34573, %fixslow3856 ]
-  %t34575 = and i64 %self, -8
-  %t34576 = inttoptr i64 %t34575 to ptr
-  %t34577 = getelementptr i64, ptr %t34576, i64 2
-  %t34578 = load i64, ptr %t34577
-  %t34579 = call i64 @rt_unbox(i64 %t34578)
-  %t34580 = or i64 %t34574, %t34579
-  %t34581 = and i64 %t34580, 7
-  %t34582 = icmp eq i64 %t34581, 0
-  br i1 %t34582, label %fixfast3858, label %fixslow3859
-fixfast3858:
-  %t34583 = icmp slt i64 %t34574, %t34579
-  %t34584 = select i1 %t34583, i64 257, i64 1
-  br label %fixmerge3860
-fixslow3859:
-  %t34585 = call i64 @rt_lt(i64 %t34574, i64 %t34579)
-  br label %fixmerge3860
-fixmerge3860:
-  %t34586 = phi i64 [ %t34584, %fixfast3858 ], [ %t34585, %fixslow3859 ]
-  %t34587 = icmp ne i64 %t34586, 1
-  br i1 %t34587, label %then3861, label %else3862
-then3861:
-  br label %merge3863
-else3862:
-  %t34588 = or i64 %t34574, %t34579
-  %t34589 = and i64 %t34588, 7
-  %t34590 = icmp eq i64 %t34589, 0
-  br i1 %t34590, label %fixfast3864, label %fixslow3865
+argok3863:
+  %t34562 = and i64 %self, -8
+  %t34563 = inttoptr i64 %t34562 to ptr
+  %t34564 = getelementptr i64, ptr %t34563, i64 1
+  %t34565 = load i64, ptr %t34564
+  %t34566 = or i64 %a0, %t34565
+  %t34567 = and i64 %t34566, 7
+  %t34568 = icmp eq i64 %t34567, 0
+  br i1 %t34568, label %fixfast3864, label %fixslow3865
 fixfast3864:
-  %t34591 = icmp eq i64 %t34574, %t34579
-  %t34592 = select i1 %t34591, i64 257, i64 1
+  %t34569 = icmp eq i64 %a0, %t34565
+  %t34570 = select i1 %t34569, i64 257, i64 1
   br label %fixmerge3866
 fixslow3865:
-  %t34593 = call i64 @rt_num_eq(i64 %t34574, i64 %t34579)
+  %t34571 = call i64 @rt_num_eq(i64 %a0, i64 %t34565)
   br label %fixmerge3866
 fixmerge3866:
-  %t34594 = phi i64 [ %t34592, %fixfast3864 ], [ %t34593, %fixslow3865 ]
-  br label %merge3863
-merge3863:
-  %t34595 = phi i64 [ 257, %then3861 ], [ %t34594, %fixmerge3866 ]
-  %t34596 = icmp ne i64 %t34595, 1
-  br i1 %t34596, label %then3867, label %else3868
+  %t34572 = phi i64 [ %t34570, %fixfast3864 ], [ %t34571, %fixslow3865 ]
+  %t34573 = icmp ne i64 %t34572, 1
+  br i1 %t34573, label %then3867, label %else3868
 then3867:
-  br label %merge3869
+  ret i64 %a1
 else3868:
-  %t34597 = call i64 @rt_pair_p(i64 %a0)
-  %t34598 = call i64 @rt_not(i64 %t34597)
-  br label %merge3869
-merge3869:
-  %t34599 = phi i64 [ %t34595, %then3867 ], [ %t34598, %else3868 ]
-  %t34600 = icmp ne i64 %t34599, 1
-  br i1 %t34600, label %then3870, label %else3871
-then3870:
-  %t34601 = and i64 %self, -8
-  %t34602 = inttoptr i64 %t34601 to ptr
-  %t34603 = getelementptr i64, ptr %t34602, i64 3
-  %t34604 = load i64, ptr %t34603
-  %t34605 = call i64 @rt_unbox(i64 %t34604)
-  %t34606 = and i64 %t34605, -8
-  %t34607 = inttoptr i64 %t34606 to ptr
-  %t34608 = load i64, ptr %t34607
-  %t34609 = inttoptr i64 %t34608 to ptr
-  %t34610 = musttail call fastcc i64 %t34609(i64 %t34605, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t34610
-else3871:
-  %t34611 = and i64 %self, -8
-  %t34612 = inttoptr i64 %t34611 to ptr
-  %t34613 = getelementptr i64, ptr %t34612, i64 4
-  %t34614 = load i64, ptr %t34613
-  %t34615 = call i64 @rt_unbox(i64 %t34614)
-  %t34616 = and i64 %t34615, -8
-  %t34617 = inttoptr i64 %t34616 to ptr
-  %t34618 = load i64, ptr %t34617
-  %t34619 = inttoptr i64 %t34618 to ptr
-  %t34620 = musttail call fastcc i64 %t34619(i64 %t34615, i64 2, i64 %a0, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t34620
+  %t34574 = or i64 %a0, 8
+  %t34575 = and i64 %t34574, 7
+  %t34576 = icmp eq i64 %t34575, 0
+  br i1 %t34576, label %fixfast3869, label %fixslow3870
+fixfast3869:
+  %t34577 = add i64 %a0, 8
+  br label %fixmerge3871
+fixslow3870:
+  %t34578 = call i64 @rt_add(i64 %a0, i64 8)
+  br label %fixmerge3871
+fixmerge3871:
+  %t34579 = phi i64 [ %t34577, %fixfast3869 ], [ %t34578, %fixslow3870 ]
+  %t34580 = or i64 %a0, 0
+  %t34581 = and i64 %t34580, 7
+  %t34582 = icmp eq i64 %t34581, 0
+  br i1 %t34582, label %fixfast3872, label %fixslow3873
+fixfast3872:
+  %t34583 = icmp eq i64 %a0, 0
+  %t34584 = select i1 %t34583, i64 257, i64 1
+  br label %fixmerge3874
+fixslow3873:
+  %t34585 = call i64 @rt_num_eq(i64 %a0, i64 0)
+  br label %fixmerge3874
+fixmerge3874:
+  %t34586 = phi i64 [ %t34584, %fixfast3872 ], [ %t34585, %fixslow3873 ]
+  %t34587 = icmp ne i64 %t34586, 1
+  br i1 %t34587, label %then3875, label %else3876
+then3875:
+  br label %merge3877
+else3876:
+  br label %merge3877
+merge3877:
+  %t34588 = phi i64 [ 0, %then3875 ], [ 8, %else3876 ]
+  %t34589 = or i64 %a1, %t34588
+  %t34590 = and i64 %t34589, 7
+  %t34591 = icmp eq i64 %t34590, 0
+  br i1 %t34591, label %fixfast3878, label %fixslow3879
+fixfast3878:
+  %t34592 = add i64 %a1, %t34588
+  br label %fixmerge3880
+fixslow3879:
+  %t34593 = call i64 @rt_add(i64 %a1, i64 %t34588)
+  br label %fixmerge3880
+fixmerge3880:
+  %t34594 = phi i64 [ %t34592, %fixfast3878 ], [ %t34593, %fixslow3879 ]
+  %t34595 = and i64 %self, -8
+  %t34596 = inttoptr i64 %t34595 to ptr
+  %t34597 = getelementptr i64, ptr %t34596, i64 4
+  %t34598 = load i64, ptr %t34597
+  %t34599 = call i64 @rt_vector_ref(i64 %t34598, i64 %a0)
+  %t34600 = and i64 %self, -8
+  %t34601 = inttoptr i64 %t34600 to ptr
+  %t34602 = getelementptr i64, ptr %t34601, i64 3
+  %t34603 = load i64, ptr %t34602
+  %t34604 = call i64 @rt_unbox(i64 %t34603)
+  %t34605 = and i64 %t34604, -8
+  %t34606 = inttoptr i64 %t34605 to ptr
+  %t34607 = load i64, ptr %t34606
+  %t34608 = inttoptr i64 %t34607 to ptr
+  %t34609 = call fastcc i64%t34608(i64 %t34604, i64 1, i64 %t34599, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t34610 = or i64 %t34594, %t34609
+  %t34611 = and i64 %t34610, 7
+  %t34612 = icmp eq i64 %t34611, 0
+  br i1 %t34612, label %fixfast3881, label %fixslow3882
+fixfast3881:
+  %t34613 = add i64 %t34594, %t34609
+  br label %fixmerge3883
+fixslow3882:
+  %t34614 = call i64 @rt_add(i64 %t34594, i64 %t34609)
+  br label %fixmerge3883
+fixmerge3883:
+  %t34615 = phi i64 [ %t34613, %fixfast3881 ], [ %t34614, %fixslow3882 ]
+  %t34616 = musttail call fastcc i64 @code_6422(i64 %self, i64 2, i64 %t34579, i64 %t34615, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t34616
 }
 
-define fastcc i64 @code_6384(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6420(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t34621 = icmp eq i64 %argc, 2
-  br i1 %t34621, label %argok3873, label %arityerr3872
-arityerr3872:
-  call void @rt_arity_error(i64 2, i64 %argc)
+  %t34617 = icmp eq i64 %argc, 1
+  br i1 %t34617, label %argok3885, label %arityerr3884
+arityerr3884:
+  call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok3873:
-  %t34622 = call i64 @rt_null_p(i64 %a0)
-  %t34623 = icmp ne i64 %t34622, 1
-  br i1 %t34623, label %then3874, label %else3875
-then3874:
-  %t34624 = call i64 @rt_make_string(ptr @.str.lit.594, i64 1)
-  %t34625 = and i64 %self, -8
-  %t34626 = inttoptr i64 %t34625 to ptr
-  %t34627 = getelementptr i64, ptr %t34626, i64 1
-  %t34628 = load i64, ptr %t34627
-  %t34629 = call i64 @rt_unbox(i64 %t34628)
-  %t34630 = and i64 %t34629, -8
+argok3885:
+  %t34618 = call i64 @rt_vector_length(i64 %a0)
+  %t34619 = call i64 @rt_alloc_words(i64 5)
+  %t34620 = inttoptr i64 %t34619 to ptr
+  store i64 ptrtoint (ptr @code_6422 to i64), ptr %t34620
+  %t34621 = or i64 %t34619, 4
+  %t34622 = getelementptr i64, ptr %t34620, i64 1
+  store i64 %t34618, ptr %t34622
+  %t34623 = getelementptr i64, ptr %t34620, i64 2
+  store i64 %t34621, ptr %t34623
+  %t34624 = and i64 %self, -8
+  %t34625 = inttoptr i64 %t34624 to ptr
+  %t34626 = getelementptr i64, ptr %t34625, i64 1
+  %t34627 = load i64, ptr %t34626
+  %t34628 = getelementptr i64, ptr %t34620, i64 3
+  store i64 %t34627, ptr %t34628
+  %t34629 = getelementptr i64, ptr %t34620, i64 4
+  store i64 %a0, ptr %t34629
+  %t34630 = and i64 %t34621, -8
   %t34631 = inttoptr i64 %t34630 to ptr
   %t34632 = load i64, ptr %t34631
   %t34633 = inttoptr i64 %t34632 to ptr
-  %t34634 = musttail call fastcc i64 %t34633(i64 %t34629, i64 1, i64 %t34624, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t34634 = musttail call fastcc i64 %t34633(i64 %t34621, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t34634
-else3875:
-  %t34635 = call i64 @rt_pair_p(i64 %a0)
-  %t34636 = icmp ne i64 %t34635, 1
-  br i1 %t34636, label %then3876, label %else3877
-then3876:
-  %t34637 = call i64 @rt_car(i64 %a0)
-  %t34638 = and i64 %self, -8
-  %t34639 = inttoptr i64 %t34638 to ptr
-  %t34640 = getelementptr i64, ptr %t34639, i64 2
-  %t34641 = load i64, ptr %t34640
-  %t34642 = call i64 @rt_unbox(i64 %t34641)
-  %t34643 = and i64 %t34642, -8
+}
+
+define fastcc i64 @code_6424(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+entry:
+  %t34635 = icmp eq i64 %argc, 2
+  br i1 %t34635, label %argok3887, label %arityerr3886
+arityerr3886:
+  call void @rt_arity_error(i64 2, i64 %argc)
+  unreachable
+argok3887:
+  %t34636 = and i64 %self, -8
+  %t34637 = inttoptr i64 %t34636 to ptr
+  %t34638 = getelementptr i64, ptr %t34637, i64 1
+  %t34639 = load i64, ptr %t34638
+  %t34640 = call i64 @rt_unbox(i64 %t34639)
+  %t34641 = and i64 %t34640, -8
+  %t34642 = inttoptr i64 %t34641 to ptr
+  %t34643 = load i64, ptr %t34642
   %t34644 = inttoptr i64 %t34643 to ptr
-  %t34645 = load i64, ptr %t34644
-  %t34646 = inttoptr i64 %t34645 to ptr
-  %t34647 = call fastcc i64%t34646(i64 %t34642, i64 1, i64 %t34637, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t34648 = or i64 %a1, 8
-  %t34649 = and i64 %t34648, 7
-  %t34650 = icmp eq i64 %t34649, 0
-  br i1 %t34650, label %fixfast3878, label %fixslow3879
-fixfast3878:
-  %t34651 = add i64 %a1, 8
-  br label %fixmerge3880
-fixslow3879:
-  %t34652 = call i64 @rt_add(i64 %a1, i64 8)
-  br label %fixmerge3880
-fixmerge3880:
-  %t34653 = phi i64 [ %t34651, %fixfast3878 ], [ %t34652, %fixslow3879 ]
-  %t34654 = or i64 %t34653, %t34647
-  %t34655 = and i64 %t34654, 7
-  %t34656 = icmp eq i64 %t34655, 0
-  br i1 %t34656, label %fixfast3881, label %fixslow3882
-fixfast3881:
-  %t34657 = add i64 %t34653, %t34647
-  br label %fixmerge3883
-fixslow3882:
-  %t34658 = call i64 @rt_add(i64 %t34653, i64 %t34647)
-  br label %fixmerge3883
-fixmerge3883:
-  %t34659 = phi i64 [ %t34657, %fixfast3881 ], [ %t34658, %fixslow3882 ]
-  %t34660 = and i64 %self, -8
-  %t34661 = inttoptr i64 %t34660 to ptr
-  %t34662 = getelementptr i64, ptr %t34661, i64 3
-  %t34663 = load i64, ptr %t34662
-  %t34664 = call i64 @rt_unbox(i64 %t34663)
-  %t34665 = or i64 %t34659, %t34664
+  %t34645 = call fastcc i64%t34644(i64 %t34640, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t34646 = or i64 %a1, %t34645
+  %t34647 = and i64 %t34646, 7
+  %t34648 = icmp eq i64 %t34647, 0
+  br i1 %t34648, label %fixfast3888, label %fixslow3889
+fixfast3888:
+  %t34649 = add i64 %a1, %t34645
+  br label %fixmerge3890
+fixslow3889:
+  %t34650 = call i64 @rt_add(i64 %a1, i64 %t34645)
+  br label %fixmerge3890
+fixmerge3890:
+  %t34651 = phi i64 [ %t34649, %fixfast3888 ], [ %t34650, %fixslow3889 ]
+  %t34652 = and i64 %self, -8
+  %t34653 = inttoptr i64 %t34652 to ptr
+  %t34654 = getelementptr i64, ptr %t34653, i64 2
+  %t34655 = load i64, ptr %t34654
+  %t34656 = call i64 @rt_unbox(i64 %t34655)
+  %t34657 = or i64 %t34651, %t34656
+  %t34658 = and i64 %t34657, 7
+  %t34659 = icmp eq i64 %t34658, 0
+  br i1 %t34659, label %fixfast3891, label %fixslow3892
+fixfast3891:
+  %t34660 = icmp slt i64 %t34651, %t34656
+  %t34661 = select i1 %t34660, i64 257, i64 1
+  br label %fixmerge3893
+fixslow3892:
+  %t34662 = call i64 @rt_lt(i64 %t34651, i64 %t34656)
+  br label %fixmerge3893
+fixmerge3893:
+  %t34663 = phi i64 [ %t34661, %fixfast3891 ], [ %t34662, %fixslow3892 ]
+  %t34664 = icmp ne i64 %t34663, 1
+  br i1 %t34664, label %then3894, label %else3895
+then3894:
+  br label %merge3896
+else3895:
+  %t34665 = or i64 %t34651, %t34656
   %t34666 = and i64 %t34665, 7
   %t34667 = icmp eq i64 %t34666, 0
-  br i1 %t34667, label %fixfast3884, label %fixslow3885
-fixfast3884:
-  %t34668 = icmp slt i64 %t34659, %t34664
+  br i1 %t34667, label %fixfast3897, label %fixslow3898
+fixfast3897:
+  %t34668 = icmp eq i64 %t34651, %t34656
   %t34669 = select i1 %t34668, i64 257, i64 1
-  br label %fixmerge3886
-fixslow3885:
-  %t34670 = call i64 @rt_lt(i64 %t34659, i64 %t34664)
-  br label %fixmerge3886
-fixmerge3886:
-  %t34671 = phi i64 [ %t34669, %fixfast3884 ], [ %t34670, %fixslow3885 ]
-  %t34672 = icmp ne i64 %t34671, 1
-  br i1 %t34672, label %then3887, label %else3888
-then3887:
-  br label %merge3889
-else3888:
-  %t34673 = or i64 %t34659, %t34664
-  %t34674 = and i64 %t34673, 7
-  %t34675 = icmp eq i64 %t34674, 0
-  br i1 %t34675, label %fixfast3890, label %fixslow3891
-fixfast3890:
-  %t34676 = icmp eq i64 %t34659, %t34664
-  %t34677 = select i1 %t34676, i64 257, i64 1
-  br label %fixmerge3892
-fixslow3891:
-  %t34678 = call i64 @rt_num_eq(i64 %t34659, i64 %t34664)
-  br label %fixmerge3892
-fixmerge3892:
-  %t34679 = phi i64 [ %t34677, %fixfast3890 ], [ %t34678, %fixslow3891 ]
-  br label %merge3889
-merge3889:
-  %t34680 = phi i64 [ 257, %then3887 ], [ %t34679, %fixmerge3892 ]
-  %t34681 = icmp ne i64 %t34680, 1
-  br i1 %t34681, label %then3893, label %else3894
-then3893:
-  %t34682 = call i64 @rt_make_string(ptr @.str.lit.595, i64 1)
-  %t34683 = and i64 %self, -8
+  br label %fixmerge3899
+fixslow3898:
+  %t34670 = call i64 @rt_num_eq(i64 %t34651, i64 %t34656)
+  br label %fixmerge3899
+fixmerge3899:
+  %t34671 = phi i64 [ %t34669, %fixfast3897 ], [ %t34670, %fixslow3898 ]
+  br label %merge3896
+merge3896:
+  %t34672 = phi i64 [ 257, %then3894 ], [ %t34671, %fixmerge3899 ]
+  %t34673 = icmp ne i64 %t34672, 1
+  br i1 %t34673, label %then3900, label %else3901
+then3900:
+  br label %merge3902
+else3901:
+  %t34674 = call i64 @rt_pair_p(i64 %a0)
+  %t34675 = call i64 @rt_not(i64 %t34674)
+  br label %merge3902
+merge3902:
+  %t34676 = phi i64 [ %t34672, %then3900 ], [ %t34675, %else3901 ]
+  %t34677 = icmp ne i64 %t34676, 1
+  br i1 %t34677, label %then3903, label %else3904
+then3903:
+  %t34678 = and i64 %self, -8
+  %t34679 = inttoptr i64 %t34678 to ptr
+  %t34680 = getelementptr i64, ptr %t34679, i64 3
+  %t34681 = load i64, ptr %t34680
+  %t34682 = call i64 @rt_unbox(i64 %t34681)
+  %t34683 = and i64 %t34682, -8
   %t34684 = inttoptr i64 %t34683 to ptr
-  %t34685 = getelementptr i64, ptr %t34684, i64 1
-  %t34686 = load i64, ptr %t34685
-  %t34687 = call i64 @rt_unbox(i64 %t34686)
-  %t34688 = and i64 %t34687, -8
+  %t34685 = load i64, ptr %t34684
+  %t34686 = inttoptr i64 %t34685 to ptr
+  %t34687 = musttail call fastcc i64 %t34686(i64 %t34682, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t34687
+else3904:
+  %t34688 = and i64 %self, -8
   %t34689 = inttoptr i64 %t34688 to ptr
-  %t34690 = load i64, ptr %t34689
-  %t34691 = inttoptr i64 %t34690 to ptr
-  %t34692 = call fastcc i64%t34691(i64 %t34687, i64 1, i64 %t34682, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t34693 = call i64 @rt_car(i64 %a0)
-  %t34694 = or i64 %a1, 8
-  %t34695 = and i64 %t34694, 7
-  %t34696 = icmp eq i64 %t34695, 0
-  br i1 %t34696, label %fixfast3896, label %fixslow3897
-fixfast3896:
-  %t34697 = add i64 %a1, 8
-  br label %fixmerge3898
-fixslow3897:
-  %t34698 = call i64 @rt_add(i64 %a1, i64 8)
-  br label %fixmerge3898
-fixmerge3898:
-  %t34699 = phi i64 [ %t34697, %fixfast3896 ], [ %t34698, %fixslow3897 ]
-  %t34700 = and i64 %self, -8
-  %t34701 = inttoptr i64 %t34700 to ptr
-  %t34702 = getelementptr i64, ptr %t34701, i64 4
-  %t34703 = load i64, ptr %t34702
-  %t34704 = call i64 @rt_unbox(i64 %t34703)
-  %t34705 = and i64 %t34704, -8
-  %t34706 = inttoptr i64 %t34705 to ptr
-  %t34707 = load i64, ptr %t34706
+  %t34690 = getelementptr i64, ptr %t34689, i64 4
+  %t34691 = load i64, ptr %t34690
+  %t34692 = call i64 @rt_unbox(i64 %t34691)
+  %t34693 = and i64 %t34692, -8
+  %t34694 = inttoptr i64 %t34693 to ptr
+  %t34695 = load i64, ptr %t34694
+  %t34696 = inttoptr i64 %t34695 to ptr
+  %t34697 = musttail call fastcc i64 %t34696(i64 %t34692, i64 2, i64 %a0, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t34697
+}
+
+define fastcc i64 @code_6428(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+entry:
+  %t34698 = icmp eq i64 %argc, 2
+  br i1 %t34698, label %argok3906, label %arityerr3905
+arityerr3905:
+  call void @rt_arity_error(i64 2, i64 %argc)
+  unreachable
+argok3906:
+  %t34699 = call i64 @rt_null_p(i64 %a0)
+  %t34700 = icmp ne i64 %t34699, 1
+  br i1 %t34700, label %then3907, label %else3908
+then3907:
+  %t34701 = call i64 @rt_make_string(ptr @.str.lit.594, i64 1)
+  %t34702 = and i64 %self, -8
+  %t34703 = inttoptr i64 %t34702 to ptr
+  %t34704 = getelementptr i64, ptr %t34703, i64 1
+  %t34705 = load i64, ptr %t34704
+  %t34706 = call i64 @rt_unbox(i64 %t34705)
+  %t34707 = and i64 %t34706, -8
   %t34708 = inttoptr i64 %t34707 to ptr
-  %t34709 = call fastcc i64%t34708(i64 %t34704, i64 2, i64 %t34693, i64 %t34699, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  br label %merge3895
-else3894:
-  %t34710 = call i64 @rt_make_string(ptr @.str.lit.596, i64 1)
-  %t34711 = and i64 %self, -8
-  %t34712 = inttoptr i64 %t34711 to ptr
-  %t34713 = getelementptr i64, ptr %t34712, i64 1
-  %t34714 = load i64, ptr %t34713
-  %t34715 = call i64 @rt_unbox(i64 %t34714)
-  %t34716 = and i64 %t34715, -8
-  %t34717 = inttoptr i64 %t34716 to ptr
+  %t34709 = load i64, ptr %t34708
+  %t34710 = inttoptr i64 %t34709 to ptr
+  %t34711 = musttail call fastcc i64 %t34710(i64 %t34706, i64 1, i64 %t34701, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t34711
+else3908:
+  %t34712 = call i64 @rt_pair_p(i64 %a0)
+  %t34713 = icmp ne i64 %t34712, 1
+  br i1 %t34713, label %then3909, label %else3910
+then3909:
+  %t34714 = call i64 @rt_car(i64 %a0)
+  %t34715 = and i64 %self, -8
+  %t34716 = inttoptr i64 %t34715 to ptr
+  %t34717 = getelementptr i64, ptr %t34716, i64 2
   %t34718 = load i64, ptr %t34717
-  %t34719 = inttoptr i64 %t34718 to ptr
-  %t34720 = call fastcc i64%t34719(i64 %t34715, i64 1, i64 %t34710, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t34721 = and i64 %self, -8
-  %t34722 = inttoptr i64 %t34721 to ptr
-  %t34723 = getelementptr i64, ptr %t34722, i64 6
-  %t34724 = load i64, ptr %t34723
-  %t34725 = and i64 %self, -8
-  %t34726 = inttoptr i64 %t34725 to ptr
-  %t34727 = getelementptr i64, ptr %t34726, i64 5
-  %t34728 = load i64, ptr %t34727
-  %t34729 = call i64 @rt_unbox(i64 %t34728)
-  %t34730 = and i64 %t34729, -8
-  %t34731 = inttoptr i64 %t34730 to ptr
-  %t34732 = load i64, ptr %t34731
-  %t34733 = inttoptr i64 %t34732 to ptr
-  %t34734 = call fastcc i64%t34733(i64 %t34729, i64 1, i64 %t34724, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t34735 = call i64 @rt_car(i64 %a0)
-  %t34736 = and i64 %self, -8
-  %t34737 = inttoptr i64 %t34736 to ptr
-  %t34738 = getelementptr i64, ptr %t34737, i64 6
-  %t34739 = load i64, ptr %t34738
-  %t34740 = and i64 %self, -8
-  %t34741 = inttoptr i64 %t34740 to ptr
-  %t34742 = getelementptr i64, ptr %t34741, i64 4
-  %t34743 = load i64, ptr %t34742
-  %t34744 = call i64 @rt_unbox(i64 %t34743)
-  %t34745 = and i64 %t34744, -8
-  %t34746 = inttoptr i64 %t34745 to ptr
-  %t34747 = load i64, ptr %t34746
-  %t34748 = inttoptr i64 %t34747 to ptr
-  %t34749 = call fastcc i64%t34748(i64 %t34744, i64 2, i64 %t34735, i64 %t34739, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  br label %merge3895
-merge3895:
-  %t34750 = phi i64 [ %t34709, %fixmerge3898 ], [ %t34749, %else3894 ]
-  %t34751 = call i64 @rt_cdr(i64 %a0)
-  %t34752 = icmp ne i64 %t34680, 1
-  br i1 %t34752, label %then3899, label %else3900
-then3899:
-  %t34753 = or i64 %a1, 8
-  %t34754 = and i64 %t34753, 7
-  %t34755 = icmp eq i64 %t34754, 0
-  br i1 %t34755, label %fixfast3902, label %fixslow3903
-fixfast3902:
-  %t34756 = add i64 %a1, 8
-  br label %fixmerge3904
-fixslow3903:
-  %t34757 = call i64 @rt_add(i64 %a1, i64 8)
-  br label %fixmerge3904
-fixmerge3904:
-  %t34758 = phi i64 [ %t34756, %fixfast3902 ], [ %t34757, %fixslow3903 ]
-  %t34759 = or i64 %t34758, %t34647
-  %t34760 = and i64 %t34759, 7
-  %t34761 = icmp eq i64 %t34760, 0
-  br i1 %t34761, label %fixfast3905, label %fixslow3906
-fixfast3905:
-  %t34762 = add i64 %t34758, %t34647
-  br label %fixmerge3907
-fixslow3906:
-  %t34763 = call i64 @rt_add(i64 %t34758, i64 %t34647)
-  br label %fixmerge3907
-fixmerge3907:
-  %t34764 = phi i64 [ %t34762, %fixfast3905 ], [ %t34763, %fixslow3906 ]
-  br label %merge3901
-else3900:
-  %t34765 = and i64 %self, -8
+  %t34719 = call i64 @rt_unbox(i64 %t34718)
+  %t34720 = and i64 %t34719, -8
+  %t34721 = inttoptr i64 %t34720 to ptr
+  %t34722 = load i64, ptr %t34721
+  %t34723 = inttoptr i64 %t34722 to ptr
+  %t34724 = call fastcc i64%t34723(i64 %t34719, i64 1, i64 %t34714, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t34725 = or i64 %a1, 8
+  %t34726 = and i64 %t34725, 7
+  %t34727 = icmp eq i64 %t34726, 0
+  br i1 %t34727, label %fixfast3911, label %fixslow3912
+fixfast3911:
+  %t34728 = add i64 %a1, 8
+  br label %fixmerge3913
+fixslow3912:
+  %t34729 = call i64 @rt_add(i64 %a1, i64 8)
+  br label %fixmerge3913
+fixmerge3913:
+  %t34730 = phi i64 [ %t34728, %fixfast3911 ], [ %t34729, %fixslow3912 ]
+  %t34731 = or i64 %t34730, %t34724
+  %t34732 = and i64 %t34731, 7
+  %t34733 = icmp eq i64 %t34732, 0
+  br i1 %t34733, label %fixfast3914, label %fixslow3915
+fixfast3914:
+  %t34734 = add i64 %t34730, %t34724
+  br label %fixmerge3916
+fixslow3915:
+  %t34735 = call i64 @rt_add(i64 %t34730, i64 %t34724)
+  br label %fixmerge3916
+fixmerge3916:
+  %t34736 = phi i64 [ %t34734, %fixfast3914 ], [ %t34735, %fixslow3915 ]
+  %t34737 = and i64 %self, -8
+  %t34738 = inttoptr i64 %t34737 to ptr
+  %t34739 = getelementptr i64, ptr %t34738, i64 3
+  %t34740 = load i64, ptr %t34739
+  %t34741 = call i64 @rt_unbox(i64 %t34740)
+  %t34742 = or i64 %t34736, %t34741
+  %t34743 = and i64 %t34742, 7
+  %t34744 = icmp eq i64 %t34743, 0
+  br i1 %t34744, label %fixfast3917, label %fixslow3918
+fixfast3917:
+  %t34745 = icmp slt i64 %t34736, %t34741
+  %t34746 = select i1 %t34745, i64 257, i64 1
+  br label %fixmerge3919
+fixslow3918:
+  %t34747 = call i64 @rt_lt(i64 %t34736, i64 %t34741)
+  br label %fixmerge3919
+fixmerge3919:
+  %t34748 = phi i64 [ %t34746, %fixfast3917 ], [ %t34747, %fixslow3918 ]
+  %t34749 = icmp ne i64 %t34748, 1
+  br i1 %t34749, label %then3920, label %else3921
+then3920:
+  br label %merge3922
+else3921:
+  %t34750 = or i64 %t34736, %t34741
+  %t34751 = and i64 %t34750, 7
+  %t34752 = icmp eq i64 %t34751, 0
+  br i1 %t34752, label %fixfast3923, label %fixslow3924
+fixfast3923:
+  %t34753 = icmp eq i64 %t34736, %t34741
+  %t34754 = select i1 %t34753, i64 257, i64 1
+  br label %fixmerge3925
+fixslow3924:
+  %t34755 = call i64 @rt_num_eq(i64 %t34736, i64 %t34741)
+  br label %fixmerge3925
+fixmerge3925:
+  %t34756 = phi i64 [ %t34754, %fixfast3923 ], [ %t34755, %fixslow3924 ]
+  br label %merge3922
+merge3922:
+  %t34757 = phi i64 [ 257, %then3920 ], [ %t34756, %fixmerge3925 ]
+  %t34758 = icmp ne i64 %t34757, 1
+  br i1 %t34758, label %then3926, label %else3927
+then3926:
+  %t34759 = call i64 @rt_make_string(ptr @.str.lit.595, i64 1)
+  %t34760 = and i64 %self, -8
+  %t34761 = inttoptr i64 %t34760 to ptr
+  %t34762 = getelementptr i64, ptr %t34761, i64 1
+  %t34763 = load i64, ptr %t34762
+  %t34764 = call i64 @rt_unbox(i64 %t34763)
+  %t34765 = and i64 %t34764, -8
   %t34766 = inttoptr i64 %t34765 to ptr
-  %t34767 = getelementptr i64, ptr %t34766, i64 6
-  %t34768 = load i64, ptr %t34767
-  %t34769 = or i64 %t34768, %t34647
-  %t34770 = and i64 %t34769, 7
-  %t34771 = icmp eq i64 %t34770, 0
-  br i1 %t34771, label %fixfast3908, label %fixslow3909
-fixfast3908:
-  %t34772 = add i64 %t34768, %t34647
-  br label %fixmerge3910
-fixslow3909:
-  %t34773 = call i64 @rt_add(i64 %t34768, i64 %t34647)
-  br label %fixmerge3910
-fixmerge3910:
-  %t34774 = phi i64 [ %t34772, %fixfast3908 ], [ %t34773, %fixslow3909 ]
-  br label %merge3901
-merge3901:
-  %t34775 = phi i64 [ %t34764, %fixmerge3907 ], [ %t34774, %fixmerge3910 ]
-  %t34776 = musttail call fastcc i64 @code_6384(i64 %self, i64 2, i64 %t34751, i64 %t34775, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t34776
-else3877:
-  %t34777 = call i64 @rt_make_string(ptr @.str.lit.597, i64 1)
-  %t34778 = and i64 %self, -8
-  %t34779 = inttoptr i64 %t34778 to ptr
-  %t34780 = getelementptr i64, ptr %t34779, i64 1
-  %t34781 = load i64, ptr %t34780
-  %t34782 = call i64 @rt_unbox(i64 %t34781)
-  %t34783 = and i64 %t34782, -8
-  %t34784 = inttoptr i64 %t34783 to ptr
-  %t34785 = load i64, ptr %t34784
-  %t34786 = inttoptr i64 %t34785 to ptr
-  %t34787 = call fastcc i64%t34786(i64 %t34782, i64 1, i64 %t34777, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t34767 = load i64, ptr %t34766
+  %t34768 = inttoptr i64 %t34767 to ptr
+  %t34769 = call fastcc i64%t34768(i64 %t34764, i64 1, i64 %t34759, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t34770 = call i64 @rt_car(i64 %a0)
+  %t34771 = or i64 %a1, 8
+  %t34772 = and i64 %t34771, 7
+  %t34773 = icmp eq i64 %t34772, 0
+  br i1 %t34773, label %fixfast3929, label %fixslow3930
+fixfast3929:
+  %t34774 = add i64 %a1, 8
+  br label %fixmerge3931
+fixslow3930:
+  %t34775 = call i64 @rt_add(i64 %a1, i64 8)
+  br label %fixmerge3931
+fixmerge3931:
+  %t34776 = phi i64 [ %t34774, %fixfast3929 ], [ %t34775, %fixslow3930 ]
+  %t34777 = and i64 %self, -8
+  %t34778 = inttoptr i64 %t34777 to ptr
+  %t34779 = getelementptr i64, ptr %t34778, i64 4
+  %t34780 = load i64, ptr %t34779
+  %t34781 = call i64 @rt_unbox(i64 %t34780)
+  %t34782 = and i64 %t34781, -8
+  %t34783 = inttoptr i64 %t34782 to ptr
+  %t34784 = load i64, ptr %t34783
+  %t34785 = inttoptr i64 %t34784 to ptr
+  %t34786 = call fastcc i64%t34785(i64 %t34781, i64 2, i64 %t34770, i64 %t34776, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  br label %merge3928
+else3927:
+  %t34787 = call i64 @rt_make_string(ptr @.str.lit.596, i64 1)
   %t34788 = and i64 %self, -8
   %t34789 = inttoptr i64 %t34788 to ptr
-  %t34790 = getelementptr i64, ptr %t34789, i64 6
+  %t34790 = getelementptr i64, ptr %t34789, i64 1
   %t34791 = load i64, ptr %t34790
-  %t34792 = and i64 %self, -8
-  %t34793 = inttoptr i64 %t34792 to ptr
-  %t34794 = getelementptr i64, ptr %t34793, i64 5
+  %t34792 = call i64 @rt_unbox(i64 %t34791)
+  %t34793 = and i64 %t34792, -8
+  %t34794 = inttoptr i64 %t34793 to ptr
   %t34795 = load i64, ptr %t34794
-  %t34796 = call i64 @rt_unbox(i64 %t34795)
-  %t34797 = and i64 %t34796, -8
-  %t34798 = inttoptr i64 %t34797 to ptr
-  %t34799 = load i64, ptr %t34798
-  %t34800 = inttoptr i64 %t34799 to ptr
-  %t34801 = call fastcc i64%t34800(i64 %t34796, i64 1, i64 %t34791, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t34802 = call i64 @rt_make_string(ptr @.str.lit.598, i64 2)
-  %t34803 = and i64 %self, -8
-  %t34804 = inttoptr i64 %t34803 to ptr
-  %t34805 = getelementptr i64, ptr %t34804, i64 1
-  %t34806 = load i64, ptr %t34805
-  %t34807 = call i64 @rt_unbox(i64 %t34806)
-  %t34808 = and i64 %t34807, -8
-  %t34809 = inttoptr i64 %t34808 to ptr
-  %t34810 = load i64, ptr %t34809
-  %t34811 = inttoptr i64 %t34810 to ptr
-  %t34812 = call fastcc i64%t34811(i64 %t34807, i64 1, i64 %t34802, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t34796 = inttoptr i64 %t34795 to ptr
+  %t34797 = call fastcc i64%t34796(i64 %t34792, i64 1, i64 %t34787, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t34798 = and i64 %self, -8
+  %t34799 = inttoptr i64 %t34798 to ptr
+  %t34800 = getelementptr i64, ptr %t34799, i64 6
+  %t34801 = load i64, ptr %t34800
+  %t34802 = and i64 %self, -8
+  %t34803 = inttoptr i64 %t34802 to ptr
+  %t34804 = getelementptr i64, ptr %t34803, i64 5
+  %t34805 = load i64, ptr %t34804
+  %t34806 = call i64 @rt_unbox(i64 %t34805)
+  %t34807 = and i64 %t34806, -8
+  %t34808 = inttoptr i64 %t34807 to ptr
+  %t34809 = load i64, ptr %t34808
+  %t34810 = inttoptr i64 %t34809 to ptr
+  %t34811 = call fastcc i64%t34810(i64 %t34806, i64 1, i64 %t34801, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t34812 = call i64 @rt_car(i64 %a0)
   %t34813 = and i64 %self, -8
   %t34814 = inttoptr i64 %t34813 to ptr
   %t34815 = getelementptr i64, ptr %t34814, i64 6
   %t34816 = load i64, ptr %t34815
-  %t34817 = or i64 %t34816, 16
-  %t34818 = and i64 %t34817, 7
-  %t34819 = icmp eq i64 %t34818, 0
-  br i1 %t34819, label %fixfast3911, label %fixslow3912
-fixfast3911:
-  %t34820 = add i64 %t34816, 16
-  br label %fixmerge3913
-fixslow3912:
-  %t34821 = call i64 @rt_add(i64 %t34816, i64 16)
-  br label %fixmerge3913
-fixmerge3913:
-  %t34822 = phi i64 [ %t34820, %fixfast3911 ], [ %t34821, %fixslow3912 ]
-  %t34823 = and i64 %self, -8
-  %t34824 = inttoptr i64 %t34823 to ptr
-  %t34825 = getelementptr i64, ptr %t34824, i64 4
-  %t34826 = load i64, ptr %t34825
-  %t34827 = call i64 @rt_unbox(i64 %t34826)
-  %t34828 = and i64 %t34827, -8
-  %t34829 = inttoptr i64 %t34828 to ptr
-  %t34830 = load i64, ptr %t34829
-  %t34831 = inttoptr i64 %t34830 to ptr
-  %t34832 = call fastcc i64%t34831(i64 %t34827, i64 2, i64 %a0, i64 %t34822, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t34833 = call i64 @rt_make_string(ptr @.str.lit.599, i64 1)
-  %t34834 = and i64 %self, -8
-  %t34835 = inttoptr i64 %t34834 to ptr
-  %t34836 = getelementptr i64, ptr %t34835, i64 1
-  %t34837 = load i64, ptr %t34836
-  %t34838 = call i64 @rt_unbox(i64 %t34837)
-  %t34839 = and i64 %t34838, -8
-  %t34840 = inttoptr i64 %t34839 to ptr
-  %t34841 = load i64, ptr %t34840
-  %t34842 = inttoptr i64 %t34841 to ptr
-  %t34843 = musttail call fastcc i64 %t34842(i64 %t34838, i64 1, i64 %t34833, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t34843
+  %t34817 = and i64 %self, -8
+  %t34818 = inttoptr i64 %t34817 to ptr
+  %t34819 = getelementptr i64, ptr %t34818, i64 4
+  %t34820 = load i64, ptr %t34819
+  %t34821 = call i64 @rt_unbox(i64 %t34820)
+  %t34822 = and i64 %t34821, -8
+  %t34823 = inttoptr i64 %t34822 to ptr
+  %t34824 = load i64, ptr %t34823
+  %t34825 = inttoptr i64 %t34824 to ptr
+  %t34826 = call fastcc i64%t34825(i64 %t34821, i64 2, i64 %t34812, i64 %t34816, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  br label %merge3928
+merge3928:
+  %t34827 = phi i64 [ %t34786, %fixmerge3931 ], [ %t34826, %else3927 ]
+  %t34828 = call i64 @rt_cdr(i64 %a0)
+  %t34829 = icmp ne i64 %t34757, 1
+  br i1 %t34829, label %then3932, label %else3933
+then3932:
+  %t34830 = or i64 %a1, 8
+  %t34831 = and i64 %t34830, 7
+  %t34832 = icmp eq i64 %t34831, 0
+  br i1 %t34832, label %fixfast3935, label %fixslow3936
+fixfast3935:
+  %t34833 = add i64 %a1, 8
+  br label %fixmerge3937
+fixslow3936:
+  %t34834 = call i64 @rt_add(i64 %a1, i64 8)
+  br label %fixmerge3937
+fixmerge3937:
+  %t34835 = phi i64 [ %t34833, %fixfast3935 ], [ %t34834, %fixslow3936 ]
+  %t34836 = or i64 %t34835, %t34724
+  %t34837 = and i64 %t34836, 7
+  %t34838 = icmp eq i64 %t34837, 0
+  br i1 %t34838, label %fixfast3938, label %fixslow3939
+fixfast3938:
+  %t34839 = add i64 %t34835, %t34724
+  br label %fixmerge3940
+fixslow3939:
+  %t34840 = call i64 @rt_add(i64 %t34835, i64 %t34724)
+  br label %fixmerge3940
+fixmerge3940:
+  %t34841 = phi i64 [ %t34839, %fixfast3938 ], [ %t34840, %fixslow3939 ]
+  br label %merge3934
+else3933:
+  %t34842 = and i64 %self, -8
+  %t34843 = inttoptr i64 %t34842 to ptr
+  %t34844 = getelementptr i64, ptr %t34843, i64 6
+  %t34845 = load i64, ptr %t34844
+  %t34846 = or i64 %t34845, %t34724
+  %t34847 = and i64 %t34846, 7
+  %t34848 = icmp eq i64 %t34847, 0
+  br i1 %t34848, label %fixfast3941, label %fixslow3942
+fixfast3941:
+  %t34849 = add i64 %t34845, %t34724
+  br label %fixmerge3943
+fixslow3942:
+  %t34850 = call i64 @rt_add(i64 %t34845, i64 %t34724)
+  br label %fixmerge3943
+fixmerge3943:
+  %t34851 = phi i64 [ %t34849, %fixfast3941 ], [ %t34850, %fixslow3942 ]
+  br label %merge3934
+merge3934:
+  %t34852 = phi i64 [ %t34841, %fixmerge3940 ], [ %t34851, %fixmerge3943 ]
+  %t34853 = musttail call fastcc i64 @code_6428(i64 %self, i64 2, i64 %t34828, i64 %t34852, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t34853
+else3910:
+  %t34854 = call i64 @rt_make_string(ptr @.str.lit.597, i64 1)
+  %t34855 = and i64 %self, -8
+  %t34856 = inttoptr i64 %t34855 to ptr
+  %t34857 = getelementptr i64, ptr %t34856, i64 1
+  %t34858 = load i64, ptr %t34857
+  %t34859 = call i64 @rt_unbox(i64 %t34858)
+  %t34860 = and i64 %t34859, -8
+  %t34861 = inttoptr i64 %t34860 to ptr
+  %t34862 = load i64, ptr %t34861
+  %t34863 = inttoptr i64 %t34862 to ptr
+  %t34864 = call fastcc i64%t34863(i64 %t34859, i64 1, i64 %t34854, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t34865 = and i64 %self, -8
+  %t34866 = inttoptr i64 %t34865 to ptr
+  %t34867 = getelementptr i64, ptr %t34866, i64 6
+  %t34868 = load i64, ptr %t34867
+  %t34869 = and i64 %self, -8
+  %t34870 = inttoptr i64 %t34869 to ptr
+  %t34871 = getelementptr i64, ptr %t34870, i64 5
+  %t34872 = load i64, ptr %t34871
+  %t34873 = call i64 @rt_unbox(i64 %t34872)
+  %t34874 = and i64 %t34873, -8
+  %t34875 = inttoptr i64 %t34874 to ptr
+  %t34876 = load i64, ptr %t34875
+  %t34877 = inttoptr i64 %t34876 to ptr
+  %t34878 = call fastcc i64%t34877(i64 %t34873, i64 1, i64 %t34868, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t34879 = call i64 @rt_make_string(ptr @.str.lit.598, i64 2)
+  %t34880 = and i64 %self, -8
+  %t34881 = inttoptr i64 %t34880 to ptr
+  %t34882 = getelementptr i64, ptr %t34881, i64 1
+  %t34883 = load i64, ptr %t34882
+  %t34884 = call i64 @rt_unbox(i64 %t34883)
+  %t34885 = and i64 %t34884, -8
+  %t34886 = inttoptr i64 %t34885 to ptr
+  %t34887 = load i64, ptr %t34886
+  %t34888 = inttoptr i64 %t34887 to ptr
+  %t34889 = call fastcc i64%t34888(i64 %t34884, i64 1, i64 %t34879, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t34890 = and i64 %self, -8
+  %t34891 = inttoptr i64 %t34890 to ptr
+  %t34892 = getelementptr i64, ptr %t34891, i64 6
+  %t34893 = load i64, ptr %t34892
+  %t34894 = or i64 %t34893, 16
+  %t34895 = and i64 %t34894, 7
+  %t34896 = icmp eq i64 %t34895, 0
+  br i1 %t34896, label %fixfast3944, label %fixslow3945
+fixfast3944:
+  %t34897 = add i64 %t34893, 16
+  br label %fixmerge3946
+fixslow3945:
+  %t34898 = call i64 @rt_add(i64 %t34893, i64 16)
+  br label %fixmerge3946
+fixmerge3946:
+  %t34899 = phi i64 [ %t34897, %fixfast3944 ], [ %t34898, %fixslow3945 ]
+  %t34900 = and i64 %self, -8
+  %t34901 = inttoptr i64 %t34900 to ptr
+  %t34902 = getelementptr i64, ptr %t34901, i64 4
+  %t34903 = load i64, ptr %t34902
+  %t34904 = call i64 @rt_unbox(i64 %t34903)
+  %t34905 = and i64 %t34904, -8
+  %t34906 = inttoptr i64 %t34905 to ptr
+  %t34907 = load i64, ptr %t34906
+  %t34908 = inttoptr i64 %t34907 to ptr
+  %t34909 = call fastcc i64%t34908(i64 %t34904, i64 2, i64 %a0, i64 %t34899, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t34910 = call i64 @rt_make_string(ptr @.str.lit.599, i64 1)
+  %t34911 = and i64 %self, -8
+  %t34912 = inttoptr i64 %t34911 to ptr
+  %t34913 = getelementptr i64, ptr %t34912, i64 1
+  %t34914 = load i64, ptr %t34913
+  %t34915 = call i64 @rt_unbox(i64 %t34914)
+  %t34916 = and i64 %t34915, -8
+  %t34917 = inttoptr i64 %t34916 to ptr
+  %t34918 = load i64, ptr %t34917
+  %t34919 = inttoptr i64 %t34918 to ptr
+  %t34920 = musttail call fastcc i64 %t34919(i64 %t34915, i64 1, i64 %t34910, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t34920
 }
 
-define fastcc i64 @code_6382(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6426(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t34844 = icmp eq i64 %argc, 2
-  br i1 %t34844, label %argok3915, label %arityerr3914
-arityerr3914:
+  %t34921 = icmp eq i64 %argc, 2
+  br i1 %t34921, label %argok3948, label %arityerr3947
+arityerr3947:
   call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
-argok3915:
-  %t34845 = or i64 %a1, 16
-  %t34846 = and i64 %t34845, 7
-  %t34847 = icmp eq i64 %t34846, 0
-  br i1 %t34847, label %fixfast3916, label %fixslow3917
-fixfast3916:
-  %t34848 = add i64 %a1, 16
-  br label %fixmerge3918
-fixslow3917:
-  %t34849 = call i64 @rt_add(i64 %a1, i64 16)
-  br label %fixmerge3918
-fixmerge3918:
-  %t34850 = phi i64 [ %t34848, %fixfast3916 ], [ %t34849, %fixslow3917 ]
-  %t34851 = or i64 %a1, 8
-  %t34852 = and i64 %t34851, 7
-  %t34853 = icmp eq i64 %t34852, 0
-  br i1 %t34853, label %fixfast3919, label %fixslow3920
-fixfast3919:
-  %t34854 = add i64 %a1, 8
-  br label %fixmerge3921
-fixslow3920:
-  %t34855 = call i64 @rt_add(i64 %a1, i64 8)
-  br label %fixmerge3921
-fixmerge3921:
-  %t34856 = phi i64 [ %t34854, %fixfast3919 ], [ %t34855, %fixslow3920 ]
-  %t34857 = call i64 @rt_car(i64 %a0)
-  %t34858 = and i64 %self, -8
-  %t34859 = inttoptr i64 %t34858 to ptr
-  %t34860 = getelementptr i64, ptr %t34859, i64 1
-  %t34861 = load i64, ptr %t34860
-  %t34862 = call i64 @rt_unbox(i64 %t34861)
-  %t34863 = and i64 %t34862, -8
-  %t34864 = inttoptr i64 %t34863 to ptr
-  %t34865 = load i64, ptr %t34864
-  %t34866 = inttoptr i64 %t34865 to ptr
-  %t34867 = call fastcc i64%t34866(i64 %t34862, i64 1, i64 %t34857, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t34868 = or i64 %t34856, %t34867
-  %t34869 = and i64 %t34868, 7
-  %t34870 = icmp eq i64 %t34869, 0
-  br i1 %t34870, label %fixfast3922, label %fixslow3923
-fixfast3922:
-  %t34871 = add i64 %t34856, %t34867
-  br label %fixmerge3924
-fixslow3923:
-  %t34872 = call i64 @rt_add(i64 %t34856, i64 %t34867)
-  br label %fixmerge3924
-fixmerge3924:
-  %t34873 = phi i64 [ %t34871, %fixfast3922 ], [ %t34872, %fixslow3923 ]
-  %t34874 = call i64 @rt_make_string(ptr @.str.lit.600, i64 1)
-  %t34875 = and i64 %self, -8
-  %t34876 = inttoptr i64 %t34875 to ptr
-  %t34877 = getelementptr i64, ptr %t34876, i64 2
-  %t34878 = load i64, ptr %t34877
-  %t34879 = call i64 @rt_unbox(i64 %t34878)
-  %t34880 = and i64 %t34879, -8
-  %t34881 = inttoptr i64 %t34880 to ptr
-  %t34882 = load i64, ptr %t34881
-  %t34883 = inttoptr i64 %t34882 to ptr
-  %t34884 = call fastcc i64%t34883(i64 %t34879, i64 1, i64 %t34874, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t34885 = call i64 @rt_car(i64 %a0)
-  %t34886 = or i64 %a1, 8
-  %t34887 = and i64 %t34886, 7
-  %t34888 = icmp eq i64 %t34887, 0
-  br i1 %t34888, label %fixfast3925, label %fixslow3926
-fixfast3925:
-  %t34889 = add i64 %a1, 8
-  br label %fixmerge3927
-fixslow3926:
-  %t34890 = call i64 @rt_add(i64 %a1, i64 8)
-  br label %fixmerge3927
-fixmerge3927:
-  %t34891 = phi i64 [ %t34889, %fixfast3925 ], [ %t34890, %fixslow3926 ]
-  %t34892 = and i64 %self, -8
-  %t34893 = inttoptr i64 %t34892 to ptr
-  %t34894 = getelementptr i64, ptr %t34893, i64 3
-  %t34895 = load i64, ptr %t34894
-  %t34896 = call i64 @rt_unbox(i64 %t34895)
-  %t34897 = and i64 %t34896, -8
-  %t34898 = inttoptr i64 %t34897 to ptr
-  %t34899 = load i64, ptr %t34898
-  %t34900 = inttoptr i64 %t34899 to ptr
-  %t34901 = call fastcc i64%t34900(i64 %t34896, i64 2, i64 %t34885, i64 %t34891, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t34902 = call i64 @rt_alloc_words(i64 8)
-  %t34903 = inttoptr i64 %t34902 to ptr
-  store i64 ptrtoint (ptr @code_6384 to i64), ptr %t34903
-  %t34904 = or i64 %t34902, 4
-  %t34905 = and i64 %self, -8
-  %t34906 = inttoptr i64 %t34905 to ptr
-  %t34907 = getelementptr i64, ptr %t34906, i64 2
-  %t34908 = load i64, ptr %t34907
-  %t34909 = getelementptr i64, ptr %t34903, i64 1
-  store i64 %t34908, ptr %t34909
-  %t34910 = and i64 %self, -8
-  %t34911 = inttoptr i64 %t34910 to ptr
-  %t34912 = getelementptr i64, ptr %t34911, i64 1
-  %t34913 = load i64, ptr %t34912
-  %t34914 = getelementptr i64, ptr %t34903, i64 2
-  store i64 %t34913, ptr %t34914
-  %t34915 = and i64 %self, -8
-  %t34916 = inttoptr i64 %t34915 to ptr
-  %t34917 = getelementptr i64, ptr %t34916, i64 4
-  %t34918 = load i64, ptr %t34917
-  %t34919 = getelementptr i64, ptr %t34903, i64 3
-  store i64 %t34918, ptr %t34919
-  %t34920 = and i64 %self, -8
-  %t34921 = inttoptr i64 %t34920 to ptr
-  %t34922 = getelementptr i64, ptr %t34921, i64 3
-  %t34923 = load i64, ptr %t34922
-  %t34924 = getelementptr i64, ptr %t34903, i64 4
-  store i64 %t34923, ptr %t34924
-  %t34925 = and i64 %self, -8
-  %t34926 = inttoptr i64 %t34925 to ptr
-  %t34927 = getelementptr i64, ptr %t34926, i64 5
-  %t34928 = load i64, ptr %t34927
-  %t34929 = getelementptr i64, ptr %t34903, i64 5
-  store i64 %t34928, ptr %t34929
-  %t34930 = getelementptr i64, ptr %t34903, i64 6
-  store i64 %t34850, ptr %t34930
-  %t34931 = getelementptr i64, ptr %t34903, i64 7
-  store i64 %t34904, ptr %t34931
-  %t34932 = call i64 @rt_cdr(i64 %a0)
-  %t34933 = and i64 %self, -8
-  %t34934 = inttoptr i64 %t34933 to ptr
-  %t34935 = getelementptr i64, ptr %t34934, i64 4
-  %t34936 = load i64, ptr %t34935
-  %t34937 = call i64 @rt_unbox(i64 %t34936)
-  %t34938 = or i64 %t34873, %t34937
-  %t34939 = and i64 %t34938, 7
-  %t34940 = icmp eq i64 %t34939, 0
-  br i1 %t34940, label %fixfast3928, label %fixslow3929
-fixfast3928:
-  %t34941 = icmp slt i64 %t34873, %t34937
-  %t34942 = select i1 %t34941, i64 257, i64 1
-  br label %fixmerge3930
-fixslow3929:
-  %t34943 = call i64 @rt_lt(i64 %t34873, i64 %t34937)
-  br label %fixmerge3930
-fixmerge3930:
-  %t34944 = phi i64 [ %t34942, %fixfast3928 ], [ %t34943, %fixslow3929 ]
-  %t34945 = icmp ne i64 %t34944, 1
-  br i1 %t34945, label %then3931, label %else3932
-then3931:
-  br label %merge3933
-else3932:
-  %t34946 = or i64 %t34873, %t34937
-  %t34947 = and i64 %t34946, 7
-  %t34948 = icmp eq i64 %t34947, 0
-  br i1 %t34948, label %fixfast3934, label %fixslow3935
-fixfast3934:
-  %t34949 = icmp eq i64 %t34873, %t34937
-  %t34950 = select i1 %t34949, i64 257, i64 1
-  br label %fixmerge3936
-fixslow3935:
-  %t34951 = call i64 @rt_num_eq(i64 %t34873, i64 %t34937)
-  br label %fixmerge3936
-fixmerge3936:
-  %t34952 = phi i64 [ %t34950, %fixfast3934 ], [ %t34951, %fixslow3935 ]
-  br label %merge3933
-merge3933:
-  %t34953 = phi i64 [ 257, %then3931 ], [ %t34952, %fixmerge3936 ]
-  %t34954 = icmp ne i64 %t34953, 1
-  br i1 %t34954, label %then3937, label %else3938
-then3937:
-  br label %merge3939
-else3938:
-  %t34955 = and i64 %self, -8
-  %t34956 = inttoptr i64 %t34955 to ptr
-  %t34957 = getelementptr i64, ptr %t34956, i64 4
-  %t34958 = load i64, ptr %t34957
-  %t34959 = call i64 @rt_unbox(i64 %t34958)
-  br label %merge3939
-merge3939:
-  %t34960 = phi i64 [ %t34873, %then3937 ], [ %t34959, %else3938 ]
-  %t34961 = and i64 %t34904, -8
-  %t34962 = inttoptr i64 %t34961 to ptr
-  %t34963 = load i64, ptr %t34962
-  %t34964 = inttoptr i64 %t34963 to ptr
-  %t34965 = musttail call fastcc i64 %t34964(i64 %t34904, i64 2, i64 %t34932, i64 %t34960, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t34965
-}
-
-define fastcc i64 @code_6386(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
-entry:
-  %t34966 = icmp eq i64 %argc, 1
-  br i1 %t34966, label %argok3941, label %arityerr3940
-arityerr3940:
-  call void @rt_arity_error(i64 1, i64 %argc)
-  unreachable
-argok3941:
-  %t34967 = call i64 @rt_make_string(ptr @.str.lit.601, i64 8)
-  %t34968 = and i64 %self, -8
-  %t34969 = inttoptr i64 %t34968 to ptr
-  %t34970 = getelementptr i64, ptr %t34969, i64 1
-  %t34971 = load i64, ptr %t34970
-  %t34972 = call i64 @rt_unbox(i64 %t34971)
-  %t34973 = and i64 %t34972, -8
-  %t34974 = inttoptr i64 %t34973 to ptr
-  %t34975 = load i64, ptr %t34974
-  %t34976 = inttoptr i64 %t34975 to ptr
-  %t34977 = call fastcc i64%t34976(i64 %t34972, i64 1, i64 %t34967, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t34978 = and i64 %self, -8
-  %t34979 = inttoptr i64 %t34978 to ptr
-  %t34980 = getelementptr i64, ptr %t34979, i64 1
-  %t34981 = load i64, ptr %t34980
-  %t34982 = call i64 @rt_unbox(i64 %t34981)
-  %t34983 = and i64 %t34982, -8
-  %t34984 = inttoptr i64 %t34983 to ptr
+argok3948:
+  %t34922 = or i64 %a1, 16
+  %t34923 = and i64 %t34922, 7
+  %t34924 = icmp eq i64 %t34923, 0
+  br i1 %t34924, label %fixfast3949, label %fixslow3950
+fixfast3949:
+  %t34925 = add i64 %a1, 16
+  br label %fixmerge3951
+fixslow3950:
+  %t34926 = call i64 @rt_add(i64 %a1, i64 16)
+  br label %fixmerge3951
+fixmerge3951:
+  %t34927 = phi i64 [ %t34925, %fixfast3949 ], [ %t34926, %fixslow3950 ]
+  %t34928 = or i64 %a1, 8
+  %t34929 = and i64 %t34928, 7
+  %t34930 = icmp eq i64 %t34929, 0
+  br i1 %t34930, label %fixfast3952, label %fixslow3953
+fixfast3952:
+  %t34931 = add i64 %a1, 8
+  br label %fixmerge3954
+fixslow3953:
+  %t34932 = call i64 @rt_add(i64 %a1, i64 8)
+  br label %fixmerge3954
+fixmerge3954:
+  %t34933 = phi i64 [ %t34931, %fixfast3952 ], [ %t34932, %fixslow3953 ]
+  %t34934 = call i64 @rt_car(i64 %a0)
+  %t34935 = and i64 %self, -8
+  %t34936 = inttoptr i64 %t34935 to ptr
+  %t34937 = getelementptr i64, ptr %t34936, i64 1
+  %t34938 = load i64, ptr %t34937
+  %t34939 = call i64 @rt_unbox(i64 %t34938)
+  %t34940 = and i64 %t34939, -8
+  %t34941 = inttoptr i64 %t34940 to ptr
+  %t34942 = load i64, ptr %t34941
+  %t34943 = inttoptr i64 %t34942 to ptr
+  %t34944 = call fastcc i64%t34943(i64 %t34939, i64 1, i64 %t34934, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t34945 = or i64 %t34933, %t34944
+  %t34946 = and i64 %t34945, 7
+  %t34947 = icmp eq i64 %t34946, 0
+  br i1 %t34947, label %fixfast3955, label %fixslow3956
+fixfast3955:
+  %t34948 = add i64 %t34933, %t34944
+  br label %fixmerge3957
+fixslow3956:
+  %t34949 = call i64 @rt_add(i64 %t34933, i64 %t34944)
+  br label %fixmerge3957
+fixmerge3957:
+  %t34950 = phi i64 [ %t34948, %fixfast3955 ], [ %t34949, %fixslow3956 ]
+  %t34951 = call i64 @rt_make_string(ptr @.str.lit.600, i64 1)
+  %t34952 = and i64 %self, -8
+  %t34953 = inttoptr i64 %t34952 to ptr
+  %t34954 = getelementptr i64, ptr %t34953, i64 2
+  %t34955 = load i64, ptr %t34954
+  %t34956 = call i64 @rt_unbox(i64 %t34955)
+  %t34957 = and i64 %t34956, -8
+  %t34958 = inttoptr i64 %t34957 to ptr
+  %t34959 = load i64, ptr %t34958
+  %t34960 = inttoptr i64 %t34959 to ptr
+  %t34961 = call fastcc i64%t34960(i64 %t34956, i64 1, i64 %t34951, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t34962 = call i64 @rt_car(i64 %a0)
+  %t34963 = or i64 %a1, 8
+  %t34964 = and i64 %t34963, 7
+  %t34965 = icmp eq i64 %t34964, 0
+  br i1 %t34965, label %fixfast3958, label %fixslow3959
+fixfast3958:
+  %t34966 = add i64 %a1, 8
+  br label %fixmerge3960
+fixslow3959:
+  %t34967 = call i64 @rt_add(i64 %a1, i64 8)
+  br label %fixmerge3960
+fixmerge3960:
+  %t34968 = phi i64 [ %t34966, %fixfast3958 ], [ %t34967, %fixslow3959 ]
+  %t34969 = and i64 %self, -8
+  %t34970 = inttoptr i64 %t34969 to ptr
+  %t34971 = getelementptr i64, ptr %t34970, i64 3
+  %t34972 = load i64, ptr %t34971
+  %t34973 = call i64 @rt_unbox(i64 %t34972)
+  %t34974 = and i64 %t34973, -8
+  %t34975 = inttoptr i64 %t34974 to ptr
+  %t34976 = load i64, ptr %t34975
+  %t34977 = inttoptr i64 %t34976 to ptr
+  %t34978 = call fastcc i64%t34977(i64 %t34973, i64 2, i64 %t34962, i64 %t34968, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t34979 = call i64 @rt_alloc_words(i64 8)
+  %t34980 = inttoptr i64 %t34979 to ptr
+  store i64 ptrtoint (ptr @code_6428 to i64), ptr %t34980
+  %t34981 = or i64 %t34979, 4
+  %t34982 = and i64 %self, -8
+  %t34983 = inttoptr i64 %t34982 to ptr
+  %t34984 = getelementptr i64, ptr %t34983, i64 2
   %t34985 = load i64, ptr %t34984
-  %t34986 = inttoptr i64 %t34985 to ptr
-  %t34987 = call fastcc i64%t34986(i64 %t34982, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t34988 = call i64 @rt_make_string(ptr @.str.lit.602, i64 1)
-  %t34989 = and i64 %self, -8
-  %t34990 = inttoptr i64 %t34989 to ptr
-  %t34991 = getelementptr i64, ptr %t34990, i64 1
-  %t34992 = load i64, ptr %t34991
-  %t34993 = call i64 @rt_unbox(i64 %t34992)
-  %t34994 = and i64 %t34993, -8
-  %t34995 = inttoptr i64 %t34994 to ptr
-  %t34996 = load i64, ptr %t34995
-  %t34997 = inttoptr i64 %t34996 to ptr
-  %t34998 = call fastcc i64%t34997(i64 %t34993, i64 1, i64 %t34988, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t34999 = icmp ne i64 1, 1
-  br i1 %t34999, label %then3942, label %else3943
-then3942:
-  ret i64 1
-else3943:
-  ret i64 1
-}
-
-define fastcc i64 @code_6388(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
-entry:
-  %t35000 = icmp eq i64 %argc, 3
-  br i1 %t35000, label %argok3945, label %arityerr3944
-arityerr3944:
-  call void @rt_arity_error(i64 3, i64 %argc)
-  unreachable
-argok3945:
-  %t35001 = call i64 @rt_make_string(ptr @.str.lit.603, i64 14)
+  %t34986 = getelementptr i64, ptr %t34980, i64 1
+  store i64 %t34985, ptr %t34986
+  %t34987 = and i64 %self, -8
+  %t34988 = inttoptr i64 %t34987 to ptr
+  %t34989 = getelementptr i64, ptr %t34988, i64 1
+  %t34990 = load i64, ptr %t34989
+  %t34991 = getelementptr i64, ptr %t34980, i64 2
+  store i64 %t34990, ptr %t34991
+  %t34992 = and i64 %self, -8
+  %t34993 = inttoptr i64 %t34992 to ptr
+  %t34994 = getelementptr i64, ptr %t34993, i64 4
+  %t34995 = load i64, ptr %t34994
+  %t34996 = getelementptr i64, ptr %t34980, i64 3
+  store i64 %t34995, ptr %t34996
+  %t34997 = and i64 %self, -8
+  %t34998 = inttoptr i64 %t34997 to ptr
+  %t34999 = getelementptr i64, ptr %t34998, i64 3
+  %t35000 = load i64, ptr %t34999
+  %t35001 = getelementptr i64, ptr %t34980, i64 4
+  store i64 %t35000, ptr %t35001
   %t35002 = and i64 %self, -8
   %t35003 = inttoptr i64 %t35002 to ptr
-  %t35004 = getelementptr i64, ptr %t35003, i64 1
+  %t35004 = getelementptr i64, ptr %t35003, i64 5
   %t35005 = load i64, ptr %t35004
-  %t35006 = call i64 @rt_unbox(i64 %t35005)
-  %t35007 = and i64 %t35006, -8
-  %t35008 = inttoptr i64 %t35007 to ptr
-  %t35009 = load i64, ptr %t35008
-  %t35010 = inttoptr i64 %t35009 to ptr
-  %t35011 = call fastcc i64%t35010(i64 %t35006, i64 1, i64 %t35001, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t35012 = and i64 %self, -8
-  %t35013 = inttoptr i64 %t35012 to ptr
-  %t35014 = getelementptr i64, ptr %t35013, i64 1
-  %t35015 = load i64, ptr %t35014
-  %t35016 = call i64 @rt_unbox(i64 %t35015)
-  %t35017 = and i64 %t35016, -8
-  %t35018 = inttoptr i64 %t35017 to ptr
-  %t35019 = load i64, ptr %t35018
-  %t35020 = inttoptr i64 %t35019 to ptr
-  %t35021 = call fastcc i64%t35020(i64 %t35016, i64 1, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t35022 = icmp ne i64 %a0, 1
-  br i1 %t35022, label %then3946, label %else3947
-then3946:
-  %t35023 = call i64 @rt_make_string(ptr @.str.lit.604, i64 7)
-  %t35024 = and i64 %self, -8
-  %t35025 = inttoptr i64 %t35024 to ptr
-  %t35026 = getelementptr i64, ptr %t35025, i64 1
-  %t35027 = load i64, ptr %t35026
-  %t35028 = call i64 @rt_unbox(i64 %t35027)
-  %t35029 = and i64 %t35028, -8
-  %t35030 = inttoptr i64 %t35029 to ptr
-  %t35031 = load i64, ptr %t35030
-  %t35032 = inttoptr i64 %t35031 to ptr
-  %t35033 = call fastcc i64%t35032(i64 %t35028, i64 1, i64 %t35023, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t35034 = and i64 %self, -8
-  %t35035 = inttoptr i64 %t35034 to ptr
-  %t35036 = getelementptr i64, ptr %t35035, i64 2
-  %t35037 = load i64, ptr %t35036
-  %t35038 = call i64 @rt_unbox(i64 %t35037)
-  %t35039 = and i64 %t35038, -8
-  %t35040 = inttoptr i64 %t35039 to ptr
-  %t35041 = load i64, ptr %t35040
-  %t35042 = inttoptr i64 %t35041 to ptr
-  %t35043 = call fastcc i64%t35042(i64 %t35038, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t35044 = call i64 @rt_make_string(ptr @.str.lit.605, i64 1)
+  %t35006 = getelementptr i64, ptr %t34980, i64 5
+  store i64 %t35005, ptr %t35006
+  %t35007 = getelementptr i64, ptr %t34980, i64 6
+  store i64 %t34927, ptr %t35007
+  %t35008 = getelementptr i64, ptr %t34980, i64 7
+  store i64 %t34981, ptr %t35008
+  %t35009 = call i64 @rt_cdr(i64 %a0)
+  %t35010 = and i64 %self, -8
+  %t35011 = inttoptr i64 %t35010 to ptr
+  %t35012 = getelementptr i64, ptr %t35011, i64 4
+  %t35013 = load i64, ptr %t35012
+  %t35014 = call i64 @rt_unbox(i64 %t35013)
+  %t35015 = or i64 %t34950, %t35014
+  %t35016 = and i64 %t35015, 7
+  %t35017 = icmp eq i64 %t35016, 0
+  br i1 %t35017, label %fixfast3961, label %fixslow3962
+fixfast3961:
+  %t35018 = icmp slt i64 %t34950, %t35014
+  %t35019 = select i1 %t35018, i64 257, i64 1
+  br label %fixmerge3963
+fixslow3962:
+  %t35020 = call i64 @rt_lt(i64 %t34950, i64 %t35014)
+  br label %fixmerge3963
+fixmerge3963:
+  %t35021 = phi i64 [ %t35019, %fixfast3961 ], [ %t35020, %fixslow3962 ]
+  %t35022 = icmp ne i64 %t35021, 1
+  br i1 %t35022, label %then3964, label %else3965
+then3964:
+  br label %merge3966
+else3965:
+  %t35023 = or i64 %t34950, %t35014
+  %t35024 = and i64 %t35023, 7
+  %t35025 = icmp eq i64 %t35024, 0
+  br i1 %t35025, label %fixfast3967, label %fixslow3968
+fixfast3967:
+  %t35026 = icmp eq i64 %t34950, %t35014
+  %t35027 = select i1 %t35026, i64 257, i64 1
+  br label %fixmerge3969
+fixslow3968:
+  %t35028 = call i64 @rt_num_eq(i64 %t34950, i64 %t35014)
+  br label %fixmerge3969
+fixmerge3969:
+  %t35029 = phi i64 [ %t35027, %fixfast3967 ], [ %t35028, %fixslow3968 ]
+  br label %merge3966
+merge3966:
+  %t35030 = phi i64 [ 257, %then3964 ], [ %t35029, %fixmerge3969 ]
+  %t35031 = icmp ne i64 %t35030, 1
+  br i1 %t35031, label %then3970, label %else3971
+then3970:
+  br label %merge3972
+else3971:
+  %t35032 = and i64 %self, -8
+  %t35033 = inttoptr i64 %t35032 to ptr
+  %t35034 = getelementptr i64, ptr %t35033, i64 4
+  %t35035 = load i64, ptr %t35034
+  %t35036 = call i64 @rt_unbox(i64 %t35035)
+  br label %merge3972
+merge3972:
+  %t35037 = phi i64 [ %t34950, %then3970 ], [ %t35036, %else3971 ]
+  %t35038 = and i64 %t34981, -8
+  %t35039 = inttoptr i64 %t35038 to ptr
+  %t35040 = load i64, ptr %t35039
+  %t35041 = inttoptr i64 %t35040 to ptr
+  %t35042 = musttail call fastcc i64 %t35041(i64 %t34981, i64 2, i64 %t35009, i64 %t35037, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t35042
+}
+
+define fastcc i64 @code_6430(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+entry:
+  %t35043 = icmp eq i64 %argc, 1
+  br i1 %t35043, label %argok3974, label %arityerr3973
+arityerr3973:
+  call void @rt_arity_error(i64 1, i64 %argc)
+  unreachable
+argok3974:
+  %t35044 = call i64 @rt_make_string(ptr @.str.lit.601, i64 8)
   %t35045 = and i64 %self, -8
   %t35046 = inttoptr i64 %t35045 to ptr
   %t35047 = getelementptr i64, ptr %t35046, i64 1
@@ -49397,283 +49463,299 @@ then3946:
   %t35052 = load i64, ptr %t35051
   %t35053 = inttoptr i64 %t35052 to ptr
   %t35054 = call fastcc i64%t35053(i64 %t35049, i64 1, i64 %t35044, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  br label %merge3948
-else3947:
-  br label %merge3948
-merge3948:
-  %t35055 = phi i64 [ %t35054, %then3946 ], [ 1, %else3947 ]
-  %t35056 = call i64 @rt_make_string(ptr @.str.lit.606, i64 6)
-  %t35057 = and i64 %self, -8
-  %t35058 = inttoptr i64 %t35057 to ptr
-  %t35059 = getelementptr i64, ptr %t35058, i64 1
-  %t35060 = load i64, ptr %t35059
-  %t35061 = call i64 @rt_unbox(i64 %t35060)
-  %t35062 = and i64 %t35061, -8
+  %t35055 = and i64 %self, -8
+  %t35056 = inttoptr i64 %t35055 to ptr
+  %t35057 = getelementptr i64, ptr %t35056, i64 1
+  %t35058 = load i64, ptr %t35057
+  %t35059 = call i64 @rt_unbox(i64 %t35058)
+  %t35060 = and i64 %t35059, -8
+  %t35061 = inttoptr i64 %t35060 to ptr
+  %t35062 = load i64, ptr %t35061
   %t35063 = inttoptr i64 %t35062 to ptr
-  %t35064 = load i64, ptr %t35063
-  %t35065 = inttoptr i64 %t35064 to ptr
-  %t35066 = call fastcc i64%t35065(i64 %t35061, i64 1, i64 %t35056, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t35067 = and i64 %self, -8
-  %t35068 = inttoptr i64 %t35067 to ptr
-  %t35069 = getelementptr i64, ptr %t35068, i64 3
-  %t35070 = load i64, ptr %t35069
-  %t35071 = call i64 @rt_unbox(i64 %t35070)
-  %t35072 = and i64 %t35071, -8
-  %t35073 = inttoptr i64 %t35072 to ptr
-  %t35074 = load i64, ptr %t35073
-  %t35075 = inttoptr i64 %t35074 to ptr
-  %t35076 = call fastcc i64%t35075(i64 %t35071, i64 2, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t35077 = call i64 @rt_make_string(ptr @.str.lit.607, i64 2)
-  %t35078 = and i64 %self, -8
-  %t35079 = inttoptr i64 %t35078 to ptr
-  %t35080 = getelementptr i64, ptr %t35079, i64 1
-  %t35081 = load i64, ptr %t35080
-  %t35082 = call i64 @rt_unbox(i64 %t35081)
-  %t35083 = and i64 %t35082, -8
-  %t35084 = inttoptr i64 %t35083 to ptr
-  %t35085 = load i64, ptr %t35084
-  %t35086 = inttoptr i64 %t35085 to ptr
-  %t35087 = call fastcc i64%t35086(i64 %t35082, i64 1, i64 %t35077, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t35088 = icmp ne i64 1, 1
-  br i1 %t35088, label %then3949, label %else3950
-then3949:
+  %t35064 = call fastcc i64%t35063(i64 %t35059, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t35065 = call i64 @rt_make_string(ptr @.str.lit.602, i64 1)
+  %t35066 = and i64 %self, -8
+  %t35067 = inttoptr i64 %t35066 to ptr
+  %t35068 = getelementptr i64, ptr %t35067, i64 1
+  %t35069 = load i64, ptr %t35068
+  %t35070 = call i64 @rt_unbox(i64 %t35069)
+  %t35071 = and i64 %t35070, -8
+  %t35072 = inttoptr i64 %t35071 to ptr
+  %t35073 = load i64, ptr %t35072
+  %t35074 = inttoptr i64 %t35073 to ptr
+  %t35075 = call fastcc i64%t35074(i64 %t35070, i64 1, i64 %t35065, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t35076 = icmp ne i64 1, 1
+  br i1 %t35076, label %then3975, label %else3976
+then3975:
   ret i64 1
-else3950:
+else3976:
   ret i64 1
 }
 
-define fastcc i64 @code_6392(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6432(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t35089 = icmp eq i64 %argc, 2
-  br i1 %t35089, label %argok3952, label %arityerr3951
-arityerr3951:
-  call void @rt_arity_error(i64 2, i64 %argc)
+  %t35077 = icmp eq i64 %argc, 3
+  br i1 %t35077, label %argok3978, label %arityerr3977
+arityerr3977:
+  call void @rt_arity_error(i64 3, i64 %argc)
   unreachable
-argok3952:
-  %t35090 = and i64 %self, -8
-  %t35091 = inttoptr i64 %t35090 to ptr
-  %t35092 = getelementptr i64, ptr %t35091, i64 1
-  %t35093 = load i64, ptr %t35092
-  %t35094 = call i64 @rt_unbox(i64 %t35093)
-  %t35095 = and i64 %t35094, -8
-  %t35096 = inttoptr i64 %t35095 to ptr
-  %t35097 = load i64, ptr %t35096
-  %t35098 = inttoptr i64 %t35097 to ptr
-  %t35099 = musttail call fastcc i64 %t35098(i64 %t35094, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t35099
-}
-
-define fastcc i64 @code_6394(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
-entry:
-  %t35100 = icmp eq i64 %argc, 2
-  br i1 %t35100, label %argok3954, label %arityerr3953
-arityerr3953:
-  call void @rt_arity_error(i64 2, i64 %argc)
-  unreachable
-argok3954:
+argok3978:
+  %t35078 = call i64 @rt_make_string(ptr @.str.lit.603, i64 14)
+  %t35079 = and i64 %self, -8
+  %t35080 = inttoptr i64 %t35079 to ptr
+  %t35081 = getelementptr i64, ptr %t35080, i64 1
+  %t35082 = load i64, ptr %t35081
+  %t35083 = call i64 @rt_unbox(i64 %t35082)
+  %t35084 = and i64 %t35083, -8
+  %t35085 = inttoptr i64 %t35084 to ptr
+  %t35086 = load i64, ptr %t35085
+  %t35087 = inttoptr i64 %t35086 to ptr
+  %t35088 = call fastcc i64%t35087(i64 %t35083, i64 1, i64 %t35078, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t35089 = and i64 %self, -8
+  %t35090 = inttoptr i64 %t35089 to ptr
+  %t35091 = getelementptr i64, ptr %t35090, i64 1
+  %t35092 = load i64, ptr %t35091
+  %t35093 = call i64 @rt_unbox(i64 %t35092)
+  %t35094 = and i64 %t35093, -8
+  %t35095 = inttoptr i64 %t35094 to ptr
+  %t35096 = load i64, ptr %t35095
+  %t35097 = inttoptr i64 %t35096 to ptr
+  %t35098 = call fastcc i64%t35097(i64 %t35093, i64 1, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t35099 = icmp ne i64 %a0, 1
+  br i1 %t35099, label %then3979, label %else3980
+then3979:
+  %t35100 = call i64 @rt_make_string(ptr @.str.lit.604, i64 7)
   %t35101 = and i64 %self, -8
   %t35102 = inttoptr i64 %t35101 to ptr
-  %t35103 = getelementptr i64, ptr %t35102, i64 2
+  %t35103 = getelementptr i64, ptr %t35102, i64 1
   %t35104 = load i64, ptr %t35103
-  %t35105 = and i64 %self, -8
-  %t35106 = inttoptr i64 %t35105 to ptr
-  %t35107 = getelementptr i64, ptr %t35106, i64 1
+  %t35105 = call i64 @rt_unbox(i64 %t35104)
+  %t35106 = and i64 %t35105, -8
+  %t35107 = inttoptr i64 %t35106 to ptr
   %t35108 = load i64, ptr %t35107
-  %t35109 = call i64 @rt_unbox(i64 %t35108)
-  %t35110 = and i64 %t35109, -8
-  %t35111 = inttoptr i64 %t35110 to ptr
-  %t35112 = load i64, ptr %t35111
-  %t35113 = inttoptr i64 %t35112 to ptr
-  %t35114 = musttail call fastcc i64 %t35113(i64 %t35109, i64 3, i64 %t35104, i64 %a0, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t35114
+  %t35109 = inttoptr i64 %t35108 to ptr
+  %t35110 = call fastcc i64%t35109(i64 %t35105, i64 1, i64 %t35100, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t35111 = and i64 %self, -8
+  %t35112 = inttoptr i64 %t35111 to ptr
+  %t35113 = getelementptr i64, ptr %t35112, i64 2
+  %t35114 = load i64, ptr %t35113
+  %t35115 = call i64 @rt_unbox(i64 %t35114)
+  %t35116 = and i64 %t35115, -8
+  %t35117 = inttoptr i64 %t35116 to ptr
+  %t35118 = load i64, ptr %t35117
+  %t35119 = inttoptr i64 %t35118 to ptr
+  %t35120 = call fastcc i64%t35119(i64 %t35115, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t35121 = call i64 @rt_make_string(ptr @.str.lit.605, i64 1)
+  %t35122 = and i64 %self, -8
+  %t35123 = inttoptr i64 %t35122 to ptr
+  %t35124 = getelementptr i64, ptr %t35123, i64 1
+  %t35125 = load i64, ptr %t35124
+  %t35126 = call i64 @rt_unbox(i64 %t35125)
+  %t35127 = and i64 %t35126, -8
+  %t35128 = inttoptr i64 %t35127 to ptr
+  %t35129 = load i64, ptr %t35128
+  %t35130 = inttoptr i64 %t35129 to ptr
+  %t35131 = call fastcc i64%t35130(i64 %t35126, i64 1, i64 %t35121, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  br label %merge3981
+else3980:
+  br label %merge3981
+merge3981:
+  %t35132 = phi i64 [ %t35131, %then3979 ], [ 1, %else3980 ]
+  %t35133 = call i64 @rt_make_string(ptr @.str.lit.606, i64 6)
+  %t35134 = and i64 %self, -8
+  %t35135 = inttoptr i64 %t35134 to ptr
+  %t35136 = getelementptr i64, ptr %t35135, i64 1
+  %t35137 = load i64, ptr %t35136
+  %t35138 = call i64 @rt_unbox(i64 %t35137)
+  %t35139 = and i64 %t35138, -8
+  %t35140 = inttoptr i64 %t35139 to ptr
+  %t35141 = load i64, ptr %t35140
+  %t35142 = inttoptr i64 %t35141 to ptr
+  %t35143 = call fastcc i64%t35142(i64 %t35138, i64 1, i64 %t35133, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t35144 = and i64 %self, -8
+  %t35145 = inttoptr i64 %t35144 to ptr
+  %t35146 = getelementptr i64, ptr %t35145, i64 3
+  %t35147 = load i64, ptr %t35146
+  %t35148 = call i64 @rt_unbox(i64 %t35147)
+  %t35149 = and i64 %t35148, -8
+  %t35150 = inttoptr i64 %t35149 to ptr
+  %t35151 = load i64, ptr %t35150
+  %t35152 = inttoptr i64 %t35151 to ptr
+  %t35153 = call fastcc i64%t35152(i64 %t35148, i64 2, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t35154 = call i64 @rt_make_string(ptr @.str.lit.607, i64 2)
+  %t35155 = and i64 %self, -8
+  %t35156 = inttoptr i64 %t35155 to ptr
+  %t35157 = getelementptr i64, ptr %t35156, i64 1
+  %t35158 = load i64, ptr %t35157
+  %t35159 = call i64 @rt_unbox(i64 %t35158)
+  %t35160 = and i64 %t35159, -8
+  %t35161 = inttoptr i64 %t35160 to ptr
+  %t35162 = load i64, ptr %t35161
+  %t35163 = inttoptr i64 %t35162 to ptr
+  %t35164 = call fastcc i64%t35163(i64 %t35159, i64 1, i64 %t35154, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t35165 = icmp ne i64 1, 1
+  br i1 %t35165, label %then3982, label %else3983
+then3982:
+  ret i64 1
+else3983:
+  ret i64 1
 }
 
-define fastcc i64 @code_6390(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @code_6436(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t35115 = icmp eq i64 %argc, 1
-  br i1 %t35115, label %argok3956, label %arityerr3955
-arityerr3955:
+  %t35166 = icmp eq i64 %argc, 2
+  br i1 %t35166, label %argok3985, label %arityerr3984
+arityerr3984:
+  call void @rt_arity_error(i64 2, i64 %argc)
+  unreachable
+argok3985:
+  %t35167 = and i64 %self, -8
+  %t35168 = inttoptr i64 %t35167 to ptr
+  %t35169 = getelementptr i64, ptr %t35168, i64 1
+  %t35170 = load i64, ptr %t35169
+  %t35171 = call i64 @rt_unbox(i64 %t35170)
+  %t35172 = and i64 %t35171, -8
+  %t35173 = inttoptr i64 %t35172 to ptr
+  %t35174 = load i64, ptr %t35173
+  %t35175 = inttoptr i64 %t35174 to ptr
+  %t35176 = musttail call fastcc i64 %t35175(i64 %t35171, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t35176
+}
+
+define fastcc i64 @code_6438(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+entry:
+  %t35177 = icmp eq i64 %argc, 2
+  br i1 %t35177, label %argok3987, label %arityerr3986
+arityerr3986:
+  call void @rt_arity_error(i64 2, i64 %argc)
+  unreachable
+argok3987:
+  %t35178 = and i64 %self, -8
+  %t35179 = inttoptr i64 %t35178 to ptr
+  %t35180 = getelementptr i64, ptr %t35179, i64 2
+  %t35181 = load i64, ptr %t35180
+  %t35182 = and i64 %self, -8
+  %t35183 = inttoptr i64 %t35182 to ptr
+  %t35184 = getelementptr i64, ptr %t35183, i64 1
+  %t35185 = load i64, ptr %t35184
+  %t35186 = call i64 @rt_unbox(i64 %t35185)
+  %t35187 = and i64 %t35186, -8
+  %t35188 = inttoptr i64 %t35187 to ptr
+  %t35189 = load i64, ptr %t35188
+  %t35190 = inttoptr i64 %t35189 to ptr
+  %t35191 = musttail call fastcc i64 %t35190(i64 %t35186, i64 3, i64 %t35181, i64 %a0, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t35191
+}
+
+define fastcc i64 @code_6434(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+entry:
+  %t35192 = icmp eq i64 %argc, 1
+  br i1 %t35192, label %argok3989, label %arityerr3988
+arityerr3988:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok3956:
-  %t35116 = call i64 @rt_dump_level()
-  %t35117 = or i64 %t35116, 0
-  %t35118 = and i64 %t35117, 7
-  %t35119 = icmp eq i64 %t35118, 0
-  br i1 %t35119, label %fixfast3957, label %fixslow3958
-fixfast3957:
-  %t35120 = icmp eq i64 %t35116, 0
-  %t35121 = select i1 %t35120, i64 257, i64 1
-  br label %fixmerge3959
-fixslow3958:
-  %t35122 = call i64 @rt_num_eq(i64 %t35116, i64 0)
-  br label %fixmerge3959
-fixmerge3959:
-  %t35123 = phi i64 [ %t35121, %fixfast3957 ], [ %t35122, %fixslow3958 ]
-  %t35124 = icmp ne i64 %t35123, 1
-  br i1 %t35124, label %then3960, label %else3961
-then3960:
-  %t35125 = and i64 %self, -8
-  %t35126 = inttoptr i64 %t35125 to ptr
-  %t35127 = getelementptr i64, ptr %t35126, i64 1
-  %t35128 = load i64, ptr %t35127
-  %t35129 = call i64 @rt_unbox(i64 %t35128)
-  ret i64 %t35129
-else3961:
-  %t35130 = icmp ne i64 %a0, 1
-  br i1 %t35130, label %then3962, label %else3963
-then3962:
-  %t35131 = or i64 %t35116, 24
-  %t35132 = and i64 %t35131, 7
-  %t35133 = icmp eq i64 %t35132, 0
-  br i1 %t35133, label %fixfast3965, label %fixslow3966
-fixfast3965:
-  %t35134 = icmp slt i64 %t35116, 24
-  %t35135 = select i1 %t35134, i64 257, i64 1
-  br label %fixmerge3967
-fixslow3966:
-  %t35136 = call i64 @rt_lt(i64 %t35116, i64 24)
-  br label %fixmerge3967
-fixmerge3967:
-  %t35137 = phi i64 [ %t35135, %fixfast3965 ], [ %t35136, %fixslow3966 ]
-  br label %merge3964
-else3963:
-  br label %merge3964
-merge3964:
-  %t35138 = phi i64 [ %t35137, %fixmerge3967 ], [ 1, %else3963 ]
-  %t35139 = icmp ne i64 %t35138, 1
-  br i1 %t35139, label %then3968, label %else3969
-then3968:
-  %t35140 = and i64 %self, -8
-  %t35141 = inttoptr i64 %t35140 to ptr
-  %t35142 = getelementptr i64, ptr %t35141, i64 1
-  %t35143 = load i64, ptr %t35142
-  %t35144 = call i64 @rt_unbox(i64 %t35143)
-  ret i64 %t35144
-else3969:
-  %t35145 = or i64 %t35116, 8
-  %t35146 = and i64 %t35145, 7
-  %t35147 = icmp eq i64 %t35146, 0
-  br i1 %t35147, label %fixfast3970, label %fixslow3971
-fixfast3970:
-  %t35148 = icmp eq i64 %t35116, 8
-  %t35149 = select i1 %t35148, i64 257, i64 1
-  br label %fixmerge3972
-fixslow3971:
-  %t35150 = call i64 @rt_num_eq(i64 %t35116, i64 8)
-  br label %fixmerge3972
-fixmerge3972:
-  %t35151 = phi i64 [ %t35149, %fixfast3970 ], [ %t35150, %fixslow3971 ]
-  %t35152 = icmp ne i64 %t35151, 1
-  br i1 %t35152, label %then3973, label %else3974
-then3973:
-  %t35153 = and i64 %self, -8
-  %t35154 = inttoptr i64 %t35153 to ptr
-  %t35155 = getelementptr i64, ptr %t35154, i64 2
-  %t35156 = load i64, ptr %t35155
-  %t35157 = call i64 @rt_alloc_words(i64 2)
-  %t35158 = inttoptr i64 %t35157 to ptr
-  store i64 ptrtoint (ptr @code_6392 to i64), ptr %t35158
-  %t35159 = getelementptr i64, ptr %t35158, i64 1
-  store i64 %t35156, ptr %t35159
-  %t35160 = or i64 %t35157, 4
-  ret i64 %t35160
-else3974:
-  %t35161 = and i64 %self, -8
-  %t35162 = inttoptr i64 %t35161 to ptr
-  %t35163 = getelementptr i64, ptr %t35162, i64 3
-  %t35164 = load i64, ptr %t35163
-  %t35165 = call i64 @rt_alloc_words(i64 3)
-  %t35166 = inttoptr i64 %t35165 to ptr
-  store i64 ptrtoint (ptr @code_6394 to i64), ptr %t35166
-  %t35167 = getelementptr i64, ptr %t35166, i64 1
-  store i64 %t35164, ptr %t35167
-  %t35168 = getelementptr i64, ptr %t35166, i64 2
-  store i64 %a0, ptr %t35168
-  %t35169 = or i64 %t35165, 4
-  ret i64 %t35169
+argok3989:
+  %t35193 = call i64 @rt_dump_level()
+  %t35194 = or i64 %t35193, 0
+  %t35195 = and i64 %t35194, 7
+  %t35196 = icmp eq i64 %t35195, 0
+  br i1 %t35196, label %fixfast3990, label %fixslow3991
+fixfast3990:
+  %t35197 = icmp eq i64 %t35193, 0
+  %t35198 = select i1 %t35197, i64 257, i64 1
+  br label %fixmerge3992
+fixslow3991:
+  %t35199 = call i64 @rt_num_eq(i64 %t35193, i64 0)
+  br label %fixmerge3992
+fixmerge3992:
+  %t35200 = phi i64 [ %t35198, %fixfast3990 ], [ %t35199, %fixslow3991 ]
+  %t35201 = icmp ne i64 %t35200, 1
+  br i1 %t35201, label %then3993, label %else3994
+then3993:
+  %t35202 = and i64 %self, -8
+  %t35203 = inttoptr i64 %t35202 to ptr
+  %t35204 = getelementptr i64, ptr %t35203, i64 1
+  %t35205 = load i64, ptr %t35204
+  %t35206 = call i64 @rt_unbox(i64 %t35205)
+  ret i64 %t35206
+else3994:
+  %t35207 = icmp ne i64 %a0, 1
+  br i1 %t35207, label %then3995, label %else3996
+then3995:
+  %t35208 = or i64 %t35193, 24
+  %t35209 = and i64 %t35208, 7
+  %t35210 = icmp eq i64 %t35209, 0
+  br i1 %t35210, label %fixfast3998, label %fixslow3999
+fixfast3998:
+  %t35211 = icmp slt i64 %t35193, 24
+  %t35212 = select i1 %t35211, i64 257, i64 1
+  br label %fixmerge4000
+fixslow3999:
+  %t35213 = call i64 @rt_lt(i64 %t35193, i64 24)
+  br label %fixmerge4000
+fixmerge4000:
+  %t35214 = phi i64 [ %t35212, %fixfast3998 ], [ %t35213, %fixslow3999 ]
+  br label %merge3997
+else3996:
+  br label %merge3997
+merge3997:
+  %t35215 = phi i64 [ %t35214, %fixmerge4000 ], [ 1, %else3996 ]
+  %t35216 = icmp ne i64 %t35215, 1
+  br i1 %t35216, label %then4001, label %else4002
+then4001:
+  %t35217 = and i64 %self, -8
+  %t35218 = inttoptr i64 %t35217 to ptr
+  %t35219 = getelementptr i64, ptr %t35218, i64 1
+  %t35220 = load i64, ptr %t35219
+  %t35221 = call i64 @rt_unbox(i64 %t35220)
+  ret i64 %t35221
+else4002:
+  %t35222 = or i64 %t35193, 8
+  %t35223 = and i64 %t35222, 7
+  %t35224 = icmp eq i64 %t35223, 0
+  br i1 %t35224, label %fixfast4003, label %fixslow4004
+fixfast4003:
+  %t35225 = icmp eq i64 %t35193, 8
+  %t35226 = select i1 %t35225, i64 257, i64 1
+  br label %fixmerge4005
+fixslow4004:
+  %t35227 = call i64 @rt_num_eq(i64 %t35193, i64 8)
+  br label %fixmerge4005
+fixmerge4005:
+  %t35228 = phi i64 [ %t35226, %fixfast4003 ], [ %t35227, %fixslow4004 ]
+  %t35229 = icmp ne i64 %t35228, 1
+  br i1 %t35229, label %then4006, label %else4007
+then4006:
+  %t35230 = and i64 %self, -8
+  %t35231 = inttoptr i64 %t35230 to ptr
+  %t35232 = getelementptr i64, ptr %t35231, i64 2
+  %t35233 = load i64, ptr %t35232
+  %t35234 = call i64 @rt_alloc_words(i64 2)
+  %t35235 = inttoptr i64 %t35234 to ptr
+  store i64 ptrtoint (ptr @code_6436 to i64), ptr %t35235
+  %t35236 = getelementptr i64, ptr %t35235, i64 1
+  store i64 %t35233, ptr %t35236
+  %t35237 = or i64 %t35234, 4
+  ret i64 %t35237
+else4007:
+  %t35238 = and i64 %self, -8
+  %t35239 = inttoptr i64 %t35238 to ptr
+  %t35240 = getelementptr i64, ptr %t35239, i64 3
+  %t35241 = load i64, ptr %t35240
+  %t35242 = call i64 @rt_alloc_words(i64 3)
+  %t35243 = inttoptr i64 %t35242 to ptr
+  store i64 ptrtoint (ptr @code_6438 to i64), ptr %t35243
+  %t35244 = getelementptr i64, ptr %t35243, i64 1
+  store i64 %t35241, ptr %t35244
+  %t35245 = getelementptr i64, ptr %t35243, i64 2
+  store i64 %a0, ptr %t35245
+  %t35246 = or i64 %t35242, 4
+  ret i64 %t35246
 }
 
 define i64 @scheme_entry() {
 entry:
   call i64 @"scheme.base:__init"()
-  %t35170 = call i64 @rt_box(i64 2)
-  %t35171 = call i64 @rt_box(i64 2)
-  %t35172 = call i64 @rt_box(i64 2)
-  %t35173 = call i64 @rt_box(i64 2)
-  %t35174 = call i64 @rt_box(i64 2)
-  %t35175 = call i64 @rt_box(i64 2)
-  %t35176 = call i64 @rt_box(i64 2)
-  %t35177 = call i64 @rt_box(i64 2)
-  %t35178 = call i64 @rt_box(i64 2)
-  %t35179 = call i64 @rt_box(i64 2)
-  %t35180 = call i64 @rt_box(i64 2)
-  %t35181 = call i64 @rt_box(i64 2)
-  %t35182 = call i64 @rt_box(i64 2)
-  %t35183 = call i64 @rt_box(i64 2)
-  %t35184 = call i64 @rt_box(i64 2)
-  %t35185 = call i64 @rt_box(i64 2)
-  %t35186 = call i64 @rt_box(i64 2)
-  %t35187 = call i64 @rt_box(i64 2)
-  %t35188 = call i64 @rt_box(i64 2)
-  %t35189 = call i64 @rt_box(i64 2)
-  %t35190 = call i64 @rt_box(i64 2)
-  %t35191 = call i64 @rt_box(i64 2)
-  %t35192 = call i64 @rt_box(i64 2)
-  %t35193 = call i64 @rt_box(i64 2)
-  %t35194 = call i64 @rt_box(i64 2)
-  %t35195 = call i64 @rt_box(i64 2)
-  %t35196 = call i64 @rt_box(i64 2)
-  %t35197 = call i64 @rt_box(i64 2)
-  %t35198 = call i64 @rt_box(i64 2)
-  %t35199 = call i64 @rt_box(i64 2)
-  %t35200 = call i64 @rt_box(i64 2)
-  %t35201 = call i64 @rt_box(i64 2)
-  %t35202 = call i64 @rt_box(i64 2)
-  %t35203 = call i64 @rt_box(i64 2)
-  %t35204 = call i64 @rt_box(i64 2)
-  %t35205 = call i64 @rt_box(i64 2)
-  %t35206 = call i64 @rt_box(i64 2)
-  %t35207 = call i64 @rt_box(i64 2)
-  %t35208 = call i64 @rt_box(i64 2)
-  %t35209 = call i64 @rt_box(i64 2)
-  %t35210 = call i64 @rt_box(i64 2)
-  %t35211 = call i64 @rt_box(i64 2)
-  %t35212 = call i64 @rt_box(i64 2)
-  %t35213 = call i64 @rt_box(i64 2)
-  %t35214 = call i64 @rt_box(i64 2)
-  %t35215 = call i64 @rt_box(i64 2)
-  %t35216 = call i64 @rt_box(i64 2)
-  %t35217 = call i64 @rt_box(i64 2)
-  %t35218 = call i64 @rt_box(i64 2)
-  %t35219 = call i64 @rt_box(i64 2)
-  %t35220 = call i64 @rt_box(i64 2)
-  %t35221 = call i64 @rt_box(i64 2)
-  %t35222 = call i64 @rt_box(i64 2)
-  %t35223 = call i64 @rt_box(i64 2)
-  %t35224 = call i64 @rt_box(i64 2)
-  %t35225 = call i64 @rt_box(i64 2)
-  %t35226 = call i64 @rt_box(i64 2)
-  %t35227 = call i64 @rt_box(i64 2)
-  %t35228 = call i64 @rt_box(i64 2)
-  %t35229 = call i64 @rt_box(i64 2)
-  %t35230 = call i64 @rt_box(i64 2)
-  %t35231 = call i64 @rt_box(i64 2)
-  %t35232 = call i64 @rt_box(i64 2)
-  %t35233 = call i64 @rt_box(i64 2)
-  %t35234 = call i64 @rt_box(i64 2)
-  %t35235 = call i64 @rt_box(i64 2)
-  %t35236 = call i64 @rt_box(i64 2)
-  %t35237 = call i64 @rt_box(i64 2)
-  %t35238 = call i64 @rt_box(i64 2)
-  %t35239 = call i64 @rt_box(i64 2)
-  %t35240 = call i64 @rt_box(i64 2)
-  %t35241 = call i64 @rt_box(i64 2)
-  %t35242 = call i64 @rt_box(i64 2)
-  %t35243 = call i64 @rt_box(i64 2)
-  %t35244 = call i64 @rt_box(i64 2)
-  %t35245 = call i64 @rt_box(i64 2)
-  %t35246 = call i64 @rt_box(i64 2)
   %t35247 = call i64 @rt_box(i64 2)
   %t35248 = call i64 @rt_box(i64 2)
   %t35249 = call i64 @rt_box(i64 2)
@@ -49820,3168 +49902,3253 @@ entry:
   %t35390 = call i64 @rt_box(i64 2)
   %t35391 = call i64 @rt_box(i64 2)
   %t35392 = call i64 @rt_box(i64 2)
-  %t35393 = call i64 @rt_alloc_words(i64 1)
-  %t35394 = inttoptr i64 %t35393 to ptr
-  store i64 ptrtoint (ptr @code_5210 to i64), ptr %t35394
-  %t35395 = or i64 %t35393, 4
-  %t35396 = call i64 @rt_set_box(i64 %t35170, i64 %t35395)
-  %t35397 = call i64 @rt_alloc_words(i64 2)
-  %t35398 = inttoptr i64 %t35397 to ptr
-  store i64 ptrtoint (ptr @code_5214 to i64), ptr %t35398
-  %t35399 = getelementptr i64, ptr %t35398, i64 1
-  store i64 %t35170, ptr %t35399
-  %t35400 = or i64 %t35397, 4
-  %t35401 = call i64 @rt_set_box(i64 %t35171, i64 %t35400)
-  %t35402 = call i64 @rt_alloc_words(i64 1)
-  %t35403 = inttoptr i64 %t35402 to ptr
-  store i64 ptrtoint (ptr @code_5216 to i64), ptr %t35403
-  %t35404 = or i64 %t35402, 4
-  %t35405 = call i64 @rt_set_box(i64 %t35172, i64 %t35404)
-  %t35406 = call i64 @rt_alloc_words(i64 1)
-  %t35407 = inttoptr i64 %t35406 to ptr
-  store i64 ptrtoint (ptr @code_5220 to i64), ptr %t35407
-  %t35408 = or i64 %t35406, 4
-  %t35409 = call i64 @rt_set_box(i64 %t35173, i64 %t35408)
-  %t35410 = call i64 @rt_set_box(i64 %t35174, i64 0)
-  %t35411 = call i64 @rt_alloc_words(i64 2)
-  %t35412 = inttoptr i64 %t35411 to ptr
-  store i64 ptrtoint (ptr @code_5222 to i64), ptr %t35412
-  %t35413 = getelementptr i64, ptr %t35412, i64 1
-  store i64 %t35174, ptr %t35413
-  %t35414 = or i64 %t35411, 4
-  %t35415 = call i64 @rt_set_box(i64 %t35175, i64 %t35414)
-  %t35416 = call i64 @rt_alloc_words(i64 2)
-  %t35417 = inttoptr i64 %t35416 to ptr
-  store i64 ptrtoint (ptr @code_5224 to i64), ptr %t35417
-  %t35418 = getelementptr i64, ptr %t35417, i64 1
-  store i64 %t35174, ptr %t35418
-  %t35419 = or i64 %t35416, 4
-  %t35420 = call i64 @rt_set_box(i64 %t35176, i64 %t35419)
-  %t35421 = call i64 @rt_alloc_words(i64 2)
-  %t35422 = inttoptr i64 %t35421 to ptr
-  store i64 ptrtoint (ptr @code_5226 to i64), ptr %t35422
-  %t35423 = getelementptr i64, ptr %t35422, i64 1
-  store i64 %t35176, ptr %t35423
-  %t35424 = or i64 %t35421, 4
-  %t35425 = call i64 @rt_set_box(i64 %t35177, i64 %t35424)
-  %t35426 = call i64 @rt_alloc_words(i64 2)
-  %t35427 = inttoptr i64 %t35426 to ptr
-  store i64 ptrtoint (ptr @code_5228 to i64), ptr %t35427
-  %t35428 = getelementptr i64, ptr %t35427, i64 1
-  store i64 %t35176, ptr %t35428
-  %t35429 = or i64 %t35426, 4
-  %t35430 = call i64 @rt_set_box(i64 %t35178, i64 %t35429)
-  %t35431 = call i64 @rt_set_box(i64 %t35179, i64 2)
-  %t35432 = call i64 @rt_alloc_words(i64 1)
-  %t35433 = inttoptr i64 %t35432 to ptr
-  store i64 ptrtoint (ptr @code_5230 to i64), ptr %t35433
-  %t35434 = or i64 %t35432, 4
-  %t35435 = call i64 @rt_set_box(i64 %t35180, i64 %t35434)
-  %t35436 = call i64 @rt_intern(ptr @.str.sym.608)
-  %t35437 = call i64 @rt_intern(ptr @.str.sym.609)
-  %t35438 = call i64 @rt_intern(ptr @.str.sym.610)
-  %t35439 = call i64 @rt_intern(ptr @.str.sym.611)
-  %t35440 = call i64 @rt_intern(ptr @.str.sym.612)
-  %t35441 = call i64 @rt_intern(ptr @.str.sym.613)
-  %t35442 = call i64 @rt_intern(ptr @.str.sym.614)
-  %t35443 = call i64 @rt_intern(ptr @.str.sym.615)
-  %t35444 = call i64 @rt_intern(ptr @.str.sym.616)
-  %t35445 = call i64 @rt_intern(ptr @.str.sym.617)
-  %t35446 = call i64 @rt_intern(ptr @.str.sym.618)
-  %t35447 = call i64 @rt_intern(ptr @.str.sym.619)
-  %t35448 = call i64 @rt_intern(ptr @.str.sym.15)
-  %t35449 = call i64 @rt_intern(ptr @.str.sym.16)
-  %t35450 = call i64 @rt_intern(ptr @.str.sym.13)
-  %t35451 = call i64 @rt_intern(ptr @.str.sym.620)
-  %t35452 = call i64 @rt_intern(ptr @.str.sym.621)
-  %t35453 = call i64 @rt_intern(ptr @.str.sym.622)
-  %t35454 = call i64 @rt_intern(ptr @.str.sym.623)
-  %t35455 = call i64 @rt_intern(ptr @.str.sym.624)
-  %t35456 = call i64 @rt_intern(ptr @.str.sym.625)
-  %t35457 = call i64 @rt_intern(ptr @.str.sym.626)
-  %t35458 = call i64 @rt_intern(ptr @.str.sym.627)
-  %t35459 = call i64 @rt_intern(ptr @.str.sym.628)
-  %t35460 = call i64 @rt_intern(ptr @.str.sym.629)
-  %t35461 = call i64 @rt_intern(ptr @.str.sym.630)
-  %t35462 = call i64 @rt_intern(ptr @.str.sym.631)
-  %t35463 = call i64 @rt_intern(ptr @.str.sym.632)
-  %t35464 = call i64 @rt_intern(ptr @.str.sym.633)
-  %t35465 = call i64 @rt_intern(ptr @.str.sym.634)
-  %t35466 = call i64 @rt_intern(ptr @.str.sym.635)
-  %t35467 = call i64 @rt_intern(ptr @.str.sym.636)
-  %t35468 = call i64 @rt_intern(ptr @.str.sym.637)
-  %t35469 = call i64 @rt_intern(ptr @.str.sym.638)
-  %t35470 = call i64 @rt_intern(ptr @.str.sym.639)
-  %t35471 = call i64 @rt_intern(ptr @.str.sym.640)
-  %t35472 = call i64 @rt_intern(ptr @.str.sym.641)
-  %t35473 = call i64 @rt_intern(ptr @.str.sym.642)
-  %t35474 = call i64 @rt_intern(ptr @.str.sym.643)
-  %t35475 = call i64 @rt_intern(ptr @.str.sym.644)
-  %t35476 = call i64 @rt_intern(ptr @.str.sym.645)
-  %t35477 = call i64 @rt_intern(ptr @.str.sym.646)
-  %t35478 = call i64 @rt_intern(ptr @.str.sym.647)
-  %t35479 = call i64 @rt_intern(ptr @.str.sym.648)
-  %t35480 = call i64 @rt_intern(ptr @.str.sym.649)
-  %t35481 = call i64 @rt_intern(ptr @.str.sym.650)
-  %t35482 = call i64 @rt_intern(ptr @.str.sym.651)
-  %t35483 = call i64 @rt_intern(ptr @.str.sym.652)
-  %t35484 = call i64 @rt_intern(ptr @.str.sym.653)
-  %t35485 = call i64 @rt_intern(ptr @.str.sym.654)
-  %t35486 = call i64 @rt_intern(ptr @.str.sym.655)
-  %t35487 = call i64 @rt_intern(ptr @.str.sym.656)
-  %t35488 = call i64 @rt_intern(ptr @.str.sym.657)
-  %t35489 = call i64 @rt_intern(ptr @.str.sym.658)
-  %t35490 = call i64 @rt_intern(ptr @.str.sym.659)
-  %t35491 = call i64 @rt_intern(ptr @.str.sym.660)
-  %t35492 = call i64 @rt_intern(ptr @.str.sym.661)
-  %t35493 = call i64 @rt_intern(ptr @.str.sym.662)
-  %t35494 = call i64 @rt_intern(ptr @.str.sym.663)
-  %t35495 = call i64 @rt_intern(ptr @.str.sym.664)
-  %t35496 = call i64 @rt_intern(ptr @.str.sym.665)
-  %t35497 = call i64 @rt_intern(ptr @.str.sym.666)
-  %t35498 = call i64 @rt_intern(ptr @.str.sym.667)
-  %t35499 = call i64 @rt_intern(ptr @.str.sym.668)
-  %t35500 = call i64 @rt_intern(ptr @.str.sym.57)
-  %t35501 = call i64 @rt_intern(ptr @.str.sym.58)
-  %t35502 = call i64 @rt_intern(ptr @.str.sym.54)
-  %t35503 = call i64 @rt_intern(ptr @.str.sym.55)
-  %t35504 = call i64 @rt_intern(ptr @.str.sym.60)
-  %t35505 = call i64 @rt_intern(ptr @.str.sym.669)
-  %t35506 = call i64 @rt_intern(ptr @.str.sym.670)
-  %t35507 = call i64 @rt_intern(ptr @.str.sym.671)
-  %t35508 = call i64 @rt_intern(ptr @.str.sym.672)
-  %t35509 = call i64 @rt_intern(ptr @.str.sym.673)
-  %t35510 = call i64 @rt_intern(ptr @.str.sym.674)
-  %t35511 = call i64 @rt_intern(ptr @.str.sym.675)
-  %t35512 = call i64 @rt_intern(ptr @.str.sym.676)
-  %t35513 = call i64 @rt_intern(ptr @.str.sym.677)
-  %t35514 = call i64 @rt_intern(ptr @.str.sym.678)
-  %t35515 = call i64 @rt_intern(ptr @.str.sym.679)
-  %t35516 = call i64 @rt_intern(ptr @.str.sym.680)
-  %t35517 = call i64 @rt_intern(ptr @.str.sym.681)
-  %t35518 = call i64 @rt_intern(ptr @.str.sym.240)
-  %t35519 = call i64 @rt_intern(ptr @.str.sym.682)
-  %t35520 = call i64 @rt_intern(ptr @.str.sym.683)
-  %t35521 = call i64 @rt_intern(ptr @.str.sym.684)
-  %t35522 = call i64 @rt_cons(i64 %t35521, i64 2)
-  %t35523 = call i64 @rt_cons(i64 %t35520, i64 %t35522)
-  %t35524 = call i64 @rt_cons(i64 %t35519, i64 %t35523)
-  %t35525 = call i64 @rt_cons(i64 %t35518, i64 %t35524)
-  %t35526 = call i64 @rt_cons(i64 %t35517, i64 %t35525)
-  %t35527 = call i64 @rt_cons(i64 %t35516, i64 %t35526)
-  %t35528 = call i64 @rt_cons(i64 %t35515, i64 %t35527)
-  %t35529 = call i64 @rt_cons(i64 %t35514, i64 %t35528)
-  %t35530 = call i64 @rt_cons(i64 %t35513, i64 %t35529)
-  %t35531 = call i64 @rt_cons(i64 %t35512, i64 %t35530)
-  %t35532 = call i64 @rt_cons(i64 %t35511, i64 %t35531)
-  %t35533 = call i64 @rt_cons(i64 %t35510, i64 %t35532)
-  %t35534 = call i64 @rt_cons(i64 %t35509, i64 %t35533)
-  %t35535 = call i64 @rt_cons(i64 %t35508, i64 %t35534)
-  %t35536 = call i64 @rt_cons(i64 %t35507, i64 %t35535)
-  %t35537 = call i64 @rt_cons(i64 %t35506, i64 %t35536)
-  %t35538 = call i64 @rt_cons(i64 %t35505, i64 %t35537)
-  %t35539 = call i64 @rt_cons(i64 %t35504, i64 %t35538)
-  %t35540 = call i64 @rt_cons(i64 %t35503, i64 %t35539)
-  %t35541 = call i64 @rt_cons(i64 %t35502, i64 %t35540)
-  %t35542 = call i64 @rt_cons(i64 %t35501, i64 %t35541)
-  %t35543 = call i64 @rt_cons(i64 %t35500, i64 %t35542)
-  %t35544 = call i64 @rt_cons(i64 %t35499, i64 %t35543)
-  %t35545 = call i64 @rt_cons(i64 %t35498, i64 %t35544)
-  %t35546 = call i64 @rt_cons(i64 %t35497, i64 %t35545)
-  %t35547 = call i64 @rt_cons(i64 %t35496, i64 %t35546)
-  %t35548 = call i64 @rt_cons(i64 %t35495, i64 %t35547)
-  %t35549 = call i64 @rt_cons(i64 %t35494, i64 %t35548)
-  %t35550 = call i64 @rt_cons(i64 %t35493, i64 %t35549)
-  %t35551 = call i64 @rt_cons(i64 %t35492, i64 %t35550)
-  %t35552 = call i64 @rt_cons(i64 %t35491, i64 %t35551)
-  %t35553 = call i64 @rt_cons(i64 %t35490, i64 %t35552)
-  %t35554 = call i64 @rt_cons(i64 %t35489, i64 %t35553)
-  %t35555 = call i64 @rt_cons(i64 %t35488, i64 %t35554)
-  %t35556 = call i64 @rt_cons(i64 %t35487, i64 %t35555)
-  %t35557 = call i64 @rt_cons(i64 %t35486, i64 %t35556)
-  %t35558 = call i64 @rt_cons(i64 %t35485, i64 %t35557)
-  %t35559 = call i64 @rt_cons(i64 %t35484, i64 %t35558)
-  %t35560 = call i64 @rt_cons(i64 %t35483, i64 %t35559)
-  %t35561 = call i64 @rt_cons(i64 %t35482, i64 %t35560)
-  %t35562 = call i64 @rt_cons(i64 %t35481, i64 %t35561)
-  %t35563 = call i64 @rt_cons(i64 %t35480, i64 %t35562)
-  %t35564 = call i64 @rt_cons(i64 %t35479, i64 %t35563)
-  %t35565 = call i64 @rt_cons(i64 %t35478, i64 %t35564)
-  %t35566 = call i64 @rt_cons(i64 %t35477, i64 %t35565)
-  %t35567 = call i64 @rt_cons(i64 %t35476, i64 %t35566)
-  %t35568 = call i64 @rt_cons(i64 %t35475, i64 %t35567)
-  %t35569 = call i64 @rt_cons(i64 %t35474, i64 %t35568)
-  %t35570 = call i64 @rt_cons(i64 %t35473, i64 %t35569)
-  %t35571 = call i64 @rt_cons(i64 %t35472, i64 %t35570)
-  %t35572 = call i64 @rt_cons(i64 %t35471, i64 %t35571)
-  %t35573 = call i64 @rt_cons(i64 %t35470, i64 %t35572)
-  %t35574 = call i64 @rt_cons(i64 %t35469, i64 %t35573)
-  %t35575 = call i64 @rt_cons(i64 %t35468, i64 %t35574)
-  %t35576 = call i64 @rt_cons(i64 %t35467, i64 %t35575)
-  %t35577 = call i64 @rt_cons(i64 %t35466, i64 %t35576)
-  %t35578 = call i64 @rt_cons(i64 %t35465, i64 %t35577)
-  %t35579 = call i64 @rt_cons(i64 %t35464, i64 %t35578)
-  %t35580 = call i64 @rt_cons(i64 %t35463, i64 %t35579)
-  %t35581 = call i64 @rt_cons(i64 %t35462, i64 %t35580)
-  %t35582 = call i64 @rt_cons(i64 %t35461, i64 %t35581)
-  %t35583 = call i64 @rt_cons(i64 %t35460, i64 %t35582)
-  %t35584 = call i64 @rt_cons(i64 %t35459, i64 %t35583)
-  %t35585 = call i64 @rt_cons(i64 %t35458, i64 %t35584)
-  %t35586 = call i64 @rt_cons(i64 %t35457, i64 %t35585)
-  %t35587 = call i64 @rt_cons(i64 %t35456, i64 %t35586)
-  %t35588 = call i64 @rt_cons(i64 %t35455, i64 %t35587)
-  %t35589 = call i64 @rt_cons(i64 %t35454, i64 %t35588)
-  %t35590 = call i64 @rt_cons(i64 %t35453, i64 %t35589)
-  %t35591 = call i64 @rt_cons(i64 %t35452, i64 %t35590)
-  %t35592 = call i64 @rt_cons(i64 %t35451, i64 %t35591)
-  %t35593 = call i64 @rt_cons(i64 %t35450, i64 %t35592)
-  %t35594 = call i64 @rt_cons(i64 %t35449, i64 %t35593)
-  %t35595 = call i64 @rt_cons(i64 %t35448, i64 %t35594)
-  %t35596 = call i64 @rt_cons(i64 %t35447, i64 %t35595)
-  %t35597 = call i64 @rt_cons(i64 %t35446, i64 %t35596)
-  %t35598 = call i64 @rt_cons(i64 %t35445, i64 %t35597)
-  %t35599 = call i64 @rt_cons(i64 %t35444, i64 %t35598)
-  %t35600 = call i64 @rt_cons(i64 %t35443, i64 %t35599)
-  %t35601 = call i64 @rt_cons(i64 %t35442, i64 %t35600)
-  %t35602 = call i64 @rt_cons(i64 %t35441, i64 %t35601)
-  %t35603 = call i64 @rt_cons(i64 %t35440, i64 %t35602)
-  %t35604 = call i64 @rt_cons(i64 %t35439, i64 %t35603)
-  %t35605 = call i64 @rt_cons(i64 %t35438, i64 %t35604)
-  %t35606 = call i64 @rt_cons(i64 %t35437, i64 %t35605)
-  %t35607 = call i64 @rt_cons(i64 %t35436, i64 %t35606)
-  %t35608 = call i64 @rt_set_box(i64 %t35181, i64 %t35607)
-  %t35609 = call i64 @rt_alloc_words(i64 2)
-  %t35610 = inttoptr i64 %t35609 to ptr
-  store i64 ptrtoint (ptr @code_5234 to i64), ptr %t35610
-  %t35611 = getelementptr i64, ptr %t35610, i64 1
-  store i64 %t35181, ptr %t35611
-  %t35612 = or i64 %t35609, 4
-  %t35613 = call i64 @rt_set_box(i64 %t35182, i64 %t35612)
-  %t35614 = call i64 @rt_intern(ptr @.str.sym.102)
-  %t35615 = call i64 @rt_intern(ptr @.str.sym.616)
-  %t35616 = call i64 @rt_cons(i64 16, i64 2)
-  %t35617 = call i64 @rt_cons(i64 %t35615, i64 %t35616)
-  %t35618 = call i64 @rt_cons(i64 %t35614, i64 %t35617)
-  %t35619 = call i64 @rt_intern(ptr @.str.sym.88)
-  %t35620 = call i64 @rt_intern(ptr @.str.sym.608)
-  %t35621 = call i64 @rt_intern(ptr @.str.sym.19)
-  %t35622 = call i64 @rt_cons(i64 %t35621, i64 2)
-  %t35623 = call i64 @rt_cons(i64 16, i64 %t35622)
-  %t35624 = call i64 @rt_cons(i64 %t35620, i64 %t35623)
-  %t35625 = call i64 @rt_cons(i64 %t35619, i64 %t35624)
-  %t35626 = call i64 @rt_intern(ptr @.str.sym.89)
-  %t35627 = call i64 @rt_intern(ptr @.str.sym.609)
-  %t35628 = call i64 @rt_intern(ptr @.str.sym.23)
-  %t35629 = call i64 @rt_cons(i64 %t35628, i64 2)
-  %t35630 = call i64 @rt_cons(i64 16, i64 %t35629)
-  %t35631 = call i64 @rt_cons(i64 %t35627, i64 %t35630)
-  %t35632 = call i64 @rt_cons(i64 %t35626, i64 %t35631)
-  %t35633 = call i64 @rt_intern(ptr @.str.sym.90)
-  %t35634 = call i64 @rt_intern(ptr @.str.sym.610)
-  %t35635 = call i64 @rt_intern(ptr @.str.sym.20)
-  %t35636 = call i64 @rt_cons(i64 %t35635, i64 2)
-  %t35637 = call i64 @rt_cons(i64 16, i64 %t35636)
-  %t35638 = call i64 @rt_cons(i64 %t35634, i64 %t35637)
-  %t35639 = call i64 @rt_cons(i64 %t35633, i64 %t35638)
-  %t35640 = call i64 @rt_intern(ptr @.str.sym.91)
-  %t35641 = call i64 @rt_intern(ptr @.str.sym.611)
-  %t35642 = call i64 @rt_intern(ptr @.str.sym.24)
-  %t35643 = call i64 @rt_cons(i64 %t35642, i64 2)
-  %t35644 = call i64 @rt_cons(i64 16, i64 %t35643)
-  %t35645 = call i64 @rt_cons(i64 %t35641, i64 %t35644)
-  %t35646 = call i64 @rt_cons(i64 %t35640, i64 %t35645)
-  %t35647 = call i64 @rt_intern(ptr @.str.sym.93)
-  %t35648 = call i64 @rt_intern(ptr @.str.sym.612)
-  %t35649 = call i64 @rt_intern(ptr @.str.sym.25)
-  %t35650 = call i64 @rt_cons(i64 %t35649, i64 2)
-  %t35651 = call i64 @rt_cons(i64 16, i64 %t35650)
-  %t35652 = call i64 @rt_cons(i64 %t35648, i64 %t35651)
-  %t35653 = call i64 @rt_cons(i64 %t35647, i64 %t35652)
-  %t35654 = call i64 @rt_intern(ptr @.str.sym.94)
-  %t35655 = call i64 @rt_intern(ptr @.str.sym.613)
-  %t35656 = call i64 @rt_intern(ptr @.str.sym.25)
-  %t35657 = call i64 @rt_cons(i64 %t35656, i64 2)
-  %t35658 = call i64 @rt_cons(i64 16, i64 %t35657)
-  %t35659 = call i64 @rt_cons(i64 %t35655, i64 %t35658)
-  %t35660 = call i64 @rt_cons(i64 %t35654, i64 %t35659)
-  %t35661 = call i64 @rt_intern(ptr @.str.sym.98)
-  %t35662 = call i64 @rt_intern(ptr @.str.sym.614)
-  %t35663 = call i64 @rt_cons(i64 16, i64 2)
-  %t35664 = call i64 @rt_cons(i64 %t35662, i64 %t35663)
-  %t35665 = call i64 @rt_cons(i64 %t35661, i64 %t35664)
-  %t35666 = call i64 @rt_intern(ptr @.str.sym.99)
-  %t35667 = call i64 @rt_intern(ptr @.str.sym.615)
-  %t35668 = call i64 @rt_cons(i64 16, i64 2)
-  %t35669 = call i64 @rt_cons(i64 %t35667, i64 %t35668)
-  %t35670 = call i64 @rt_cons(i64 %t35666, i64 %t35669)
-  %t35671 = call i64 @rt_intern(ptr @.str.sym.685)
-  %t35672 = call i64 @rt_intern(ptr @.str.sym.617)
-  %t35673 = call i64 @rt_cons(i64 16, i64 2)
-  %t35674 = call i64 @rt_cons(i64 %t35672, i64 %t35673)
-  %t35675 = call i64 @rt_cons(i64 %t35671, i64 %t35674)
-  %t35676 = call i64 @rt_intern(ptr @.str.sym.686)
-  %t35677 = call i64 @rt_intern(ptr @.str.sym.618)
-  %t35678 = call i64 @rt_cons(i64 16, i64 2)
-  %t35679 = call i64 @rt_cons(i64 %t35677, i64 %t35678)
-  %t35680 = call i64 @rt_cons(i64 %t35676, i64 %t35679)
-  %t35681 = call i64 @rt_intern(ptr @.str.sym.687)
-  %t35682 = call i64 @rt_intern(ptr @.str.sym.619)
-  %t35683 = call i64 @rt_cons(i64 16, i64 2)
-  %t35684 = call i64 @rt_cons(i64 %t35682, i64 %t35683)
-  %t35685 = call i64 @rt_cons(i64 %t35681, i64 %t35684)
-  %t35686 = call i64 @rt_intern(ptr @.str.sym.688)
-  %t35687 = call i64 @rt_intern(ptr @.str.sym.15)
-  %t35688 = call i64 @rt_cons(i64 8, i64 2)
-  %t35689 = call i64 @rt_cons(i64 %t35687, i64 %t35688)
-  %t35690 = call i64 @rt_cons(i64 %t35686, i64 %t35689)
-  %t35691 = call i64 @rt_intern(ptr @.str.sym.689)
-  %t35692 = call i64 @rt_intern(ptr @.str.sym.16)
-  %t35693 = call i64 @rt_cons(i64 8, i64 2)
-  %t35694 = call i64 @rt_cons(i64 %t35692, i64 %t35693)
-  %t35695 = call i64 @rt_cons(i64 %t35691, i64 %t35694)
-  %t35696 = call i64 @rt_intern(ptr @.str.sym.690)
-  %t35697 = call i64 @rt_intern(ptr @.str.sym.13)
-  %t35698 = call i64 @rt_cons(i64 8, i64 2)
-  %t35699 = call i64 @rt_cons(i64 %t35697, i64 %t35698)
-  %t35700 = call i64 @rt_cons(i64 %t35696, i64 %t35699)
-  %t35701 = call i64 @rt_intern(ptr @.str.sym.691)
-  %t35702 = call i64 @rt_intern(ptr @.str.sym.620)
-  %t35703 = call i64 @rt_cons(i64 8, i64 2)
-  %t35704 = call i64 @rt_cons(i64 %t35702, i64 %t35703)
-  %t35705 = call i64 @rt_cons(i64 %t35701, i64 %t35704)
-  %t35706 = call i64 @rt_intern(ptr @.str.sym.692)
-  %t35707 = call i64 @rt_intern(ptr @.str.sym.621)
-  %t35708 = call i64 @rt_cons(i64 16, i64 2)
-  %t35709 = call i64 @rt_cons(i64 %t35707, i64 %t35708)
-  %t35710 = call i64 @rt_cons(i64 %t35706, i64 %t35709)
-  %t35711 = call i64 @rt_intern(ptr @.str.sym.693)
-  %t35712 = call i64 @rt_intern(ptr @.str.sym.622)
-  %t35713 = call i64 @rt_cons(i64 8, i64 2)
-  %t35714 = call i64 @rt_cons(i64 %t35712, i64 %t35713)
-  %t35715 = call i64 @rt_cons(i64 %t35711, i64 %t35714)
-  %t35716 = call i64 @rt_intern(ptr @.str.sym.694)
-  %t35717 = call i64 @rt_intern(ptr @.str.sym.652)
-  %t35718 = call i64 @rt_cons(i64 8, i64 2)
-  %t35719 = call i64 @rt_cons(i64 %t35717, i64 %t35718)
-  %t35720 = call i64 @rt_cons(i64 %t35716, i64 %t35719)
-  %t35721 = call i64 @rt_intern(ptr @.str.sym.695)
-  %t35722 = call i64 @rt_intern(ptr @.str.sym.653)
-  %t35723 = call i64 @rt_cons(i64 8, i64 2)
-  %t35724 = call i64 @rt_cons(i64 %t35722, i64 %t35723)
-  %t35725 = call i64 @rt_cons(i64 %t35721, i64 %t35724)
-  %t35726 = call i64 @rt_intern(ptr @.str.sym.696)
-  %t35727 = call i64 @rt_intern(ptr @.str.sym.654)
-  %t35728 = call i64 @rt_cons(i64 8, i64 2)
-  %t35729 = call i64 @rt_cons(i64 %t35727, i64 %t35728)
+  %t35393 = call i64 @rt_box(i64 2)
+  %t35394 = call i64 @rt_box(i64 2)
+  %t35395 = call i64 @rt_box(i64 2)
+  %t35396 = call i64 @rt_box(i64 2)
+  %t35397 = call i64 @rt_box(i64 2)
+  %t35398 = call i64 @rt_box(i64 2)
+  %t35399 = call i64 @rt_box(i64 2)
+  %t35400 = call i64 @rt_box(i64 2)
+  %t35401 = call i64 @rt_box(i64 2)
+  %t35402 = call i64 @rt_box(i64 2)
+  %t35403 = call i64 @rt_box(i64 2)
+  %t35404 = call i64 @rt_box(i64 2)
+  %t35405 = call i64 @rt_box(i64 2)
+  %t35406 = call i64 @rt_box(i64 2)
+  %t35407 = call i64 @rt_box(i64 2)
+  %t35408 = call i64 @rt_box(i64 2)
+  %t35409 = call i64 @rt_box(i64 2)
+  %t35410 = call i64 @rt_box(i64 2)
+  %t35411 = call i64 @rt_box(i64 2)
+  %t35412 = call i64 @rt_box(i64 2)
+  %t35413 = call i64 @rt_box(i64 2)
+  %t35414 = call i64 @rt_box(i64 2)
+  %t35415 = call i64 @rt_box(i64 2)
+  %t35416 = call i64 @rt_box(i64 2)
+  %t35417 = call i64 @rt_box(i64 2)
+  %t35418 = call i64 @rt_box(i64 2)
+  %t35419 = call i64 @rt_box(i64 2)
+  %t35420 = call i64 @rt_box(i64 2)
+  %t35421 = call i64 @rt_box(i64 2)
+  %t35422 = call i64 @rt_box(i64 2)
+  %t35423 = call i64 @rt_box(i64 2)
+  %t35424 = call i64 @rt_box(i64 2)
+  %t35425 = call i64 @rt_box(i64 2)
+  %t35426 = call i64 @rt_box(i64 2)
+  %t35427 = call i64 @rt_box(i64 2)
+  %t35428 = call i64 @rt_box(i64 2)
+  %t35429 = call i64 @rt_box(i64 2)
+  %t35430 = call i64 @rt_box(i64 2)
+  %t35431 = call i64 @rt_box(i64 2)
+  %t35432 = call i64 @rt_box(i64 2)
+  %t35433 = call i64 @rt_box(i64 2)
+  %t35434 = call i64 @rt_box(i64 2)
+  %t35435 = call i64 @rt_box(i64 2)
+  %t35436 = call i64 @rt_box(i64 2)
+  %t35437 = call i64 @rt_box(i64 2)
+  %t35438 = call i64 @rt_box(i64 2)
+  %t35439 = call i64 @rt_box(i64 2)
+  %t35440 = call i64 @rt_box(i64 2)
+  %t35441 = call i64 @rt_box(i64 2)
+  %t35442 = call i64 @rt_box(i64 2)
+  %t35443 = call i64 @rt_box(i64 2)
+  %t35444 = call i64 @rt_box(i64 2)
+  %t35445 = call i64 @rt_box(i64 2)
+  %t35446 = call i64 @rt_box(i64 2)
+  %t35447 = call i64 @rt_box(i64 2)
+  %t35448 = call i64 @rt_box(i64 2)
+  %t35449 = call i64 @rt_box(i64 2)
+  %t35450 = call i64 @rt_box(i64 2)
+  %t35451 = call i64 @rt_box(i64 2)
+  %t35452 = call i64 @rt_box(i64 2)
+  %t35453 = call i64 @rt_box(i64 2)
+  %t35454 = call i64 @rt_box(i64 2)
+  %t35455 = call i64 @rt_box(i64 2)
+  %t35456 = call i64 @rt_box(i64 2)
+  %t35457 = call i64 @rt_box(i64 2)
+  %t35458 = call i64 @rt_box(i64 2)
+  %t35459 = call i64 @rt_box(i64 2)
+  %t35460 = call i64 @rt_box(i64 2)
+  %t35461 = call i64 @rt_box(i64 2)
+  %t35462 = call i64 @rt_box(i64 2)
+  %t35463 = call i64 @rt_box(i64 2)
+  %t35464 = call i64 @rt_box(i64 2)
+  %t35465 = call i64 @rt_box(i64 2)
+  %t35466 = call i64 @rt_box(i64 2)
+  %t35467 = call i64 @rt_box(i64 2)
+  %t35468 = call i64 @rt_box(i64 2)
+  %t35469 = call i64 @rt_box(i64 2)
+  %t35470 = call i64 @rt_box(i64 2)
+  %t35471 = call i64 @rt_alloc_words(i64 1)
+  %t35472 = inttoptr i64 %t35471 to ptr
+  store i64 ptrtoint (ptr @code_5250 to i64), ptr %t35472
+  %t35473 = or i64 %t35471, 4
+  %t35474 = call i64 @rt_set_box(i64 %t35247, i64 %t35473)
+  %t35475 = call i64 @rt_alloc_words(i64 2)
+  %t35476 = inttoptr i64 %t35475 to ptr
+  store i64 ptrtoint (ptr @code_5254 to i64), ptr %t35476
+  %t35477 = getelementptr i64, ptr %t35476, i64 1
+  store i64 %t35247, ptr %t35477
+  %t35478 = or i64 %t35475, 4
+  %t35479 = call i64 @rt_set_box(i64 %t35248, i64 %t35478)
+  %t35480 = call i64 @rt_alloc_words(i64 1)
+  %t35481 = inttoptr i64 %t35480 to ptr
+  store i64 ptrtoint (ptr @code_5256 to i64), ptr %t35481
+  %t35482 = or i64 %t35480, 4
+  %t35483 = call i64 @rt_set_box(i64 %t35249, i64 %t35482)
+  %t35484 = call i64 @rt_alloc_words(i64 1)
+  %t35485 = inttoptr i64 %t35484 to ptr
+  store i64 ptrtoint (ptr @code_5260 to i64), ptr %t35485
+  %t35486 = or i64 %t35484, 4
+  %t35487 = call i64 @rt_set_box(i64 %t35250, i64 %t35486)
+  %t35488 = call i64 @rt_set_box(i64 %t35251, i64 0)
+  %t35489 = call i64 @rt_alloc_words(i64 2)
+  %t35490 = inttoptr i64 %t35489 to ptr
+  store i64 ptrtoint (ptr @code_5262 to i64), ptr %t35490
+  %t35491 = getelementptr i64, ptr %t35490, i64 1
+  store i64 %t35251, ptr %t35491
+  %t35492 = or i64 %t35489, 4
+  %t35493 = call i64 @rt_set_box(i64 %t35252, i64 %t35492)
+  %t35494 = call i64 @rt_alloc_words(i64 2)
+  %t35495 = inttoptr i64 %t35494 to ptr
+  store i64 ptrtoint (ptr @code_5264 to i64), ptr %t35495
+  %t35496 = getelementptr i64, ptr %t35495, i64 1
+  store i64 %t35251, ptr %t35496
+  %t35497 = or i64 %t35494, 4
+  %t35498 = call i64 @rt_set_box(i64 %t35253, i64 %t35497)
+  %t35499 = call i64 @rt_alloc_words(i64 2)
+  %t35500 = inttoptr i64 %t35499 to ptr
+  store i64 ptrtoint (ptr @code_5266 to i64), ptr %t35500
+  %t35501 = getelementptr i64, ptr %t35500, i64 1
+  store i64 %t35253, ptr %t35501
+  %t35502 = or i64 %t35499, 4
+  %t35503 = call i64 @rt_set_box(i64 %t35254, i64 %t35502)
+  %t35504 = call i64 @rt_alloc_words(i64 2)
+  %t35505 = inttoptr i64 %t35504 to ptr
+  store i64 ptrtoint (ptr @code_5268 to i64), ptr %t35505
+  %t35506 = getelementptr i64, ptr %t35505, i64 1
+  store i64 %t35253, ptr %t35506
+  %t35507 = or i64 %t35504, 4
+  %t35508 = call i64 @rt_set_box(i64 %t35255, i64 %t35507)
+  %t35509 = call i64 @rt_set_box(i64 %t35256, i64 2)
+  %t35510 = call i64 @rt_alloc_words(i64 1)
+  %t35511 = inttoptr i64 %t35510 to ptr
+  store i64 ptrtoint (ptr @code_5270 to i64), ptr %t35511
+  %t35512 = or i64 %t35510, 4
+  %t35513 = call i64 @rt_set_box(i64 %t35257, i64 %t35512)
+  %t35514 = call i64 @rt_intern(ptr @.str.sym.608)
+  %t35515 = call i64 @rt_intern(ptr @.str.sym.609)
+  %t35516 = call i64 @rt_intern(ptr @.str.sym.610)
+  %t35517 = call i64 @rt_intern(ptr @.str.sym.611)
+  %t35518 = call i64 @rt_intern(ptr @.str.sym.612)
+  %t35519 = call i64 @rt_intern(ptr @.str.sym.613)
+  %t35520 = call i64 @rt_intern(ptr @.str.sym.614)
+  %t35521 = call i64 @rt_intern(ptr @.str.sym.615)
+  %t35522 = call i64 @rt_intern(ptr @.str.sym.616)
+  %t35523 = call i64 @rt_intern(ptr @.str.sym.617)
+  %t35524 = call i64 @rt_intern(ptr @.str.sym.618)
+  %t35525 = call i64 @rt_intern(ptr @.str.sym.619)
+  %t35526 = call i64 @rt_intern(ptr @.str.sym.15)
+  %t35527 = call i64 @rt_intern(ptr @.str.sym.16)
+  %t35528 = call i64 @rt_intern(ptr @.str.sym.13)
+  %t35529 = call i64 @rt_intern(ptr @.str.sym.620)
+  %t35530 = call i64 @rt_intern(ptr @.str.sym.621)
+  %t35531 = call i64 @rt_intern(ptr @.str.sym.622)
+  %t35532 = call i64 @rt_intern(ptr @.str.sym.623)
+  %t35533 = call i64 @rt_intern(ptr @.str.sym.624)
+  %t35534 = call i64 @rt_intern(ptr @.str.sym.625)
+  %t35535 = call i64 @rt_intern(ptr @.str.sym.626)
+  %t35536 = call i64 @rt_intern(ptr @.str.sym.627)
+  %t35537 = call i64 @rt_intern(ptr @.str.sym.628)
+  %t35538 = call i64 @rt_intern(ptr @.str.sym.629)
+  %t35539 = call i64 @rt_intern(ptr @.str.sym.630)
+  %t35540 = call i64 @rt_intern(ptr @.str.sym.631)
+  %t35541 = call i64 @rt_intern(ptr @.str.sym.632)
+  %t35542 = call i64 @rt_intern(ptr @.str.sym.633)
+  %t35543 = call i64 @rt_intern(ptr @.str.sym.634)
+  %t35544 = call i64 @rt_intern(ptr @.str.sym.635)
+  %t35545 = call i64 @rt_intern(ptr @.str.sym.636)
+  %t35546 = call i64 @rt_intern(ptr @.str.sym.637)
+  %t35547 = call i64 @rt_intern(ptr @.str.sym.638)
+  %t35548 = call i64 @rt_intern(ptr @.str.sym.639)
+  %t35549 = call i64 @rt_intern(ptr @.str.sym.640)
+  %t35550 = call i64 @rt_intern(ptr @.str.sym.641)
+  %t35551 = call i64 @rt_intern(ptr @.str.sym.642)
+  %t35552 = call i64 @rt_intern(ptr @.str.sym.643)
+  %t35553 = call i64 @rt_intern(ptr @.str.sym.644)
+  %t35554 = call i64 @rt_intern(ptr @.str.sym.645)
+  %t35555 = call i64 @rt_intern(ptr @.str.sym.646)
+  %t35556 = call i64 @rt_intern(ptr @.str.sym.647)
+  %t35557 = call i64 @rt_intern(ptr @.str.sym.648)
+  %t35558 = call i64 @rt_intern(ptr @.str.sym.649)
+  %t35559 = call i64 @rt_intern(ptr @.str.sym.650)
+  %t35560 = call i64 @rt_intern(ptr @.str.sym.651)
+  %t35561 = call i64 @rt_intern(ptr @.str.sym.652)
+  %t35562 = call i64 @rt_intern(ptr @.str.sym.653)
+  %t35563 = call i64 @rt_intern(ptr @.str.sym.654)
+  %t35564 = call i64 @rt_intern(ptr @.str.sym.655)
+  %t35565 = call i64 @rt_intern(ptr @.str.sym.656)
+  %t35566 = call i64 @rt_intern(ptr @.str.sym.657)
+  %t35567 = call i64 @rt_intern(ptr @.str.sym.658)
+  %t35568 = call i64 @rt_intern(ptr @.str.sym.659)
+  %t35569 = call i64 @rt_intern(ptr @.str.sym.660)
+  %t35570 = call i64 @rt_intern(ptr @.str.sym.661)
+  %t35571 = call i64 @rt_intern(ptr @.str.sym.662)
+  %t35572 = call i64 @rt_intern(ptr @.str.sym.663)
+  %t35573 = call i64 @rt_intern(ptr @.str.sym.664)
+  %t35574 = call i64 @rt_intern(ptr @.str.sym.665)
+  %t35575 = call i64 @rt_intern(ptr @.str.sym.666)
+  %t35576 = call i64 @rt_intern(ptr @.str.sym.667)
+  %t35577 = call i64 @rt_intern(ptr @.str.sym.668)
+  %t35578 = call i64 @rt_intern(ptr @.str.sym.57)
+  %t35579 = call i64 @rt_intern(ptr @.str.sym.58)
+  %t35580 = call i64 @rt_intern(ptr @.str.sym.54)
+  %t35581 = call i64 @rt_intern(ptr @.str.sym.55)
+  %t35582 = call i64 @rt_intern(ptr @.str.sym.60)
+  %t35583 = call i64 @rt_intern(ptr @.str.sym.669)
+  %t35584 = call i64 @rt_intern(ptr @.str.sym.670)
+  %t35585 = call i64 @rt_intern(ptr @.str.sym.671)
+  %t35586 = call i64 @rt_intern(ptr @.str.sym.672)
+  %t35587 = call i64 @rt_intern(ptr @.str.sym.673)
+  %t35588 = call i64 @rt_intern(ptr @.str.sym.674)
+  %t35589 = call i64 @rt_intern(ptr @.str.sym.675)
+  %t35590 = call i64 @rt_intern(ptr @.str.sym.676)
+  %t35591 = call i64 @rt_intern(ptr @.str.sym.677)
+  %t35592 = call i64 @rt_intern(ptr @.str.sym.678)
+  %t35593 = call i64 @rt_intern(ptr @.str.sym.679)
+  %t35594 = call i64 @rt_intern(ptr @.str.sym.680)
+  %t35595 = call i64 @rt_intern(ptr @.str.sym.681)
+  %t35596 = call i64 @rt_intern(ptr @.str.sym.240)
+  %t35597 = call i64 @rt_intern(ptr @.str.sym.682)
+  %t35598 = call i64 @rt_intern(ptr @.str.sym.683)
+  %t35599 = call i64 @rt_intern(ptr @.str.sym.684)
+  %t35600 = call i64 @rt_cons(i64 %t35599, i64 2)
+  %t35601 = call i64 @rt_cons(i64 %t35598, i64 %t35600)
+  %t35602 = call i64 @rt_cons(i64 %t35597, i64 %t35601)
+  %t35603 = call i64 @rt_cons(i64 %t35596, i64 %t35602)
+  %t35604 = call i64 @rt_cons(i64 %t35595, i64 %t35603)
+  %t35605 = call i64 @rt_cons(i64 %t35594, i64 %t35604)
+  %t35606 = call i64 @rt_cons(i64 %t35593, i64 %t35605)
+  %t35607 = call i64 @rt_cons(i64 %t35592, i64 %t35606)
+  %t35608 = call i64 @rt_cons(i64 %t35591, i64 %t35607)
+  %t35609 = call i64 @rt_cons(i64 %t35590, i64 %t35608)
+  %t35610 = call i64 @rt_cons(i64 %t35589, i64 %t35609)
+  %t35611 = call i64 @rt_cons(i64 %t35588, i64 %t35610)
+  %t35612 = call i64 @rt_cons(i64 %t35587, i64 %t35611)
+  %t35613 = call i64 @rt_cons(i64 %t35586, i64 %t35612)
+  %t35614 = call i64 @rt_cons(i64 %t35585, i64 %t35613)
+  %t35615 = call i64 @rt_cons(i64 %t35584, i64 %t35614)
+  %t35616 = call i64 @rt_cons(i64 %t35583, i64 %t35615)
+  %t35617 = call i64 @rt_cons(i64 %t35582, i64 %t35616)
+  %t35618 = call i64 @rt_cons(i64 %t35581, i64 %t35617)
+  %t35619 = call i64 @rt_cons(i64 %t35580, i64 %t35618)
+  %t35620 = call i64 @rt_cons(i64 %t35579, i64 %t35619)
+  %t35621 = call i64 @rt_cons(i64 %t35578, i64 %t35620)
+  %t35622 = call i64 @rt_cons(i64 %t35577, i64 %t35621)
+  %t35623 = call i64 @rt_cons(i64 %t35576, i64 %t35622)
+  %t35624 = call i64 @rt_cons(i64 %t35575, i64 %t35623)
+  %t35625 = call i64 @rt_cons(i64 %t35574, i64 %t35624)
+  %t35626 = call i64 @rt_cons(i64 %t35573, i64 %t35625)
+  %t35627 = call i64 @rt_cons(i64 %t35572, i64 %t35626)
+  %t35628 = call i64 @rt_cons(i64 %t35571, i64 %t35627)
+  %t35629 = call i64 @rt_cons(i64 %t35570, i64 %t35628)
+  %t35630 = call i64 @rt_cons(i64 %t35569, i64 %t35629)
+  %t35631 = call i64 @rt_cons(i64 %t35568, i64 %t35630)
+  %t35632 = call i64 @rt_cons(i64 %t35567, i64 %t35631)
+  %t35633 = call i64 @rt_cons(i64 %t35566, i64 %t35632)
+  %t35634 = call i64 @rt_cons(i64 %t35565, i64 %t35633)
+  %t35635 = call i64 @rt_cons(i64 %t35564, i64 %t35634)
+  %t35636 = call i64 @rt_cons(i64 %t35563, i64 %t35635)
+  %t35637 = call i64 @rt_cons(i64 %t35562, i64 %t35636)
+  %t35638 = call i64 @rt_cons(i64 %t35561, i64 %t35637)
+  %t35639 = call i64 @rt_cons(i64 %t35560, i64 %t35638)
+  %t35640 = call i64 @rt_cons(i64 %t35559, i64 %t35639)
+  %t35641 = call i64 @rt_cons(i64 %t35558, i64 %t35640)
+  %t35642 = call i64 @rt_cons(i64 %t35557, i64 %t35641)
+  %t35643 = call i64 @rt_cons(i64 %t35556, i64 %t35642)
+  %t35644 = call i64 @rt_cons(i64 %t35555, i64 %t35643)
+  %t35645 = call i64 @rt_cons(i64 %t35554, i64 %t35644)
+  %t35646 = call i64 @rt_cons(i64 %t35553, i64 %t35645)
+  %t35647 = call i64 @rt_cons(i64 %t35552, i64 %t35646)
+  %t35648 = call i64 @rt_cons(i64 %t35551, i64 %t35647)
+  %t35649 = call i64 @rt_cons(i64 %t35550, i64 %t35648)
+  %t35650 = call i64 @rt_cons(i64 %t35549, i64 %t35649)
+  %t35651 = call i64 @rt_cons(i64 %t35548, i64 %t35650)
+  %t35652 = call i64 @rt_cons(i64 %t35547, i64 %t35651)
+  %t35653 = call i64 @rt_cons(i64 %t35546, i64 %t35652)
+  %t35654 = call i64 @rt_cons(i64 %t35545, i64 %t35653)
+  %t35655 = call i64 @rt_cons(i64 %t35544, i64 %t35654)
+  %t35656 = call i64 @rt_cons(i64 %t35543, i64 %t35655)
+  %t35657 = call i64 @rt_cons(i64 %t35542, i64 %t35656)
+  %t35658 = call i64 @rt_cons(i64 %t35541, i64 %t35657)
+  %t35659 = call i64 @rt_cons(i64 %t35540, i64 %t35658)
+  %t35660 = call i64 @rt_cons(i64 %t35539, i64 %t35659)
+  %t35661 = call i64 @rt_cons(i64 %t35538, i64 %t35660)
+  %t35662 = call i64 @rt_cons(i64 %t35537, i64 %t35661)
+  %t35663 = call i64 @rt_cons(i64 %t35536, i64 %t35662)
+  %t35664 = call i64 @rt_cons(i64 %t35535, i64 %t35663)
+  %t35665 = call i64 @rt_cons(i64 %t35534, i64 %t35664)
+  %t35666 = call i64 @rt_cons(i64 %t35533, i64 %t35665)
+  %t35667 = call i64 @rt_cons(i64 %t35532, i64 %t35666)
+  %t35668 = call i64 @rt_cons(i64 %t35531, i64 %t35667)
+  %t35669 = call i64 @rt_cons(i64 %t35530, i64 %t35668)
+  %t35670 = call i64 @rt_cons(i64 %t35529, i64 %t35669)
+  %t35671 = call i64 @rt_cons(i64 %t35528, i64 %t35670)
+  %t35672 = call i64 @rt_cons(i64 %t35527, i64 %t35671)
+  %t35673 = call i64 @rt_cons(i64 %t35526, i64 %t35672)
+  %t35674 = call i64 @rt_cons(i64 %t35525, i64 %t35673)
+  %t35675 = call i64 @rt_cons(i64 %t35524, i64 %t35674)
+  %t35676 = call i64 @rt_cons(i64 %t35523, i64 %t35675)
+  %t35677 = call i64 @rt_cons(i64 %t35522, i64 %t35676)
+  %t35678 = call i64 @rt_cons(i64 %t35521, i64 %t35677)
+  %t35679 = call i64 @rt_cons(i64 %t35520, i64 %t35678)
+  %t35680 = call i64 @rt_cons(i64 %t35519, i64 %t35679)
+  %t35681 = call i64 @rt_cons(i64 %t35518, i64 %t35680)
+  %t35682 = call i64 @rt_cons(i64 %t35517, i64 %t35681)
+  %t35683 = call i64 @rt_cons(i64 %t35516, i64 %t35682)
+  %t35684 = call i64 @rt_cons(i64 %t35515, i64 %t35683)
+  %t35685 = call i64 @rt_cons(i64 %t35514, i64 %t35684)
+  %t35686 = call i64 @rt_set_box(i64 %t35258, i64 %t35685)
+  %t35687 = call i64 @rt_alloc_words(i64 2)
+  %t35688 = inttoptr i64 %t35687 to ptr
+  store i64 ptrtoint (ptr @code_5274 to i64), ptr %t35688
+  %t35689 = getelementptr i64, ptr %t35688, i64 1
+  store i64 %t35258, ptr %t35689
+  %t35690 = or i64 %t35687, 4
+  %t35691 = call i64 @rt_set_box(i64 %t35259, i64 %t35690)
+  %t35692 = call i64 @rt_intern(ptr @.str.sym.102)
+  %t35693 = call i64 @rt_intern(ptr @.str.sym.616)
+  %t35694 = call i64 @rt_cons(i64 16, i64 2)
+  %t35695 = call i64 @rt_cons(i64 %t35693, i64 %t35694)
+  %t35696 = call i64 @rt_cons(i64 %t35692, i64 %t35695)
+  %t35697 = call i64 @rt_intern(ptr @.str.sym.88)
+  %t35698 = call i64 @rt_intern(ptr @.str.sym.608)
+  %t35699 = call i64 @rt_intern(ptr @.str.sym.19)
+  %t35700 = call i64 @rt_cons(i64 %t35699, i64 2)
+  %t35701 = call i64 @rt_cons(i64 16, i64 %t35700)
+  %t35702 = call i64 @rt_cons(i64 %t35698, i64 %t35701)
+  %t35703 = call i64 @rt_cons(i64 %t35697, i64 %t35702)
+  %t35704 = call i64 @rt_intern(ptr @.str.sym.89)
+  %t35705 = call i64 @rt_intern(ptr @.str.sym.609)
+  %t35706 = call i64 @rt_intern(ptr @.str.sym.23)
+  %t35707 = call i64 @rt_cons(i64 %t35706, i64 2)
+  %t35708 = call i64 @rt_cons(i64 16, i64 %t35707)
+  %t35709 = call i64 @rt_cons(i64 %t35705, i64 %t35708)
+  %t35710 = call i64 @rt_cons(i64 %t35704, i64 %t35709)
+  %t35711 = call i64 @rt_intern(ptr @.str.sym.90)
+  %t35712 = call i64 @rt_intern(ptr @.str.sym.610)
+  %t35713 = call i64 @rt_intern(ptr @.str.sym.20)
+  %t35714 = call i64 @rt_cons(i64 %t35713, i64 2)
+  %t35715 = call i64 @rt_cons(i64 16, i64 %t35714)
+  %t35716 = call i64 @rt_cons(i64 %t35712, i64 %t35715)
+  %t35717 = call i64 @rt_cons(i64 %t35711, i64 %t35716)
+  %t35718 = call i64 @rt_intern(ptr @.str.sym.91)
+  %t35719 = call i64 @rt_intern(ptr @.str.sym.611)
+  %t35720 = call i64 @rt_intern(ptr @.str.sym.24)
+  %t35721 = call i64 @rt_cons(i64 %t35720, i64 2)
+  %t35722 = call i64 @rt_cons(i64 16, i64 %t35721)
+  %t35723 = call i64 @rt_cons(i64 %t35719, i64 %t35722)
+  %t35724 = call i64 @rt_cons(i64 %t35718, i64 %t35723)
+  %t35725 = call i64 @rt_intern(ptr @.str.sym.93)
+  %t35726 = call i64 @rt_intern(ptr @.str.sym.612)
+  %t35727 = call i64 @rt_intern(ptr @.str.sym.25)
+  %t35728 = call i64 @rt_cons(i64 %t35727, i64 2)
+  %t35729 = call i64 @rt_cons(i64 16, i64 %t35728)
   %t35730 = call i64 @rt_cons(i64 %t35726, i64 %t35729)
-  %t35731 = call i64 @rt_intern(ptr @.str.sym.697)
-  %t35732 = call i64 @rt_intern(ptr @.str.sym.655)
-  %t35733 = call i64 @rt_cons(i64 8, i64 2)
-  %t35734 = call i64 @rt_cons(i64 %t35732, i64 %t35733)
-  %t35735 = call i64 @rt_cons(i64 %t35731, i64 %t35734)
-  %t35736 = call i64 @rt_intern(ptr @.str.sym.698)
-  %t35737 = call i64 @rt_intern(ptr @.str.sym.656)
-  %t35738 = call i64 @rt_cons(i64 8, i64 2)
-  %t35739 = call i64 @rt_cons(i64 %t35737, i64 %t35738)
-  %t35740 = call i64 @rt_cons(i64 %t35736, i64 %t35739)
-  %t35741 = call i64 @rt_intern(ptr @.str.sym.699)
-  %t35742 = call i64 @rt_intern(ptr @.str.sym.657)
-  %t35743 = call i64 @rt_cons(i64 8, i64 2)
-  %t35744 = call i64 @rt_cons(i64 %t35742, i64 %t35743)
-  %t35745 = call i64 @rt_cons(i64 %t35741, i64 %t35744)
-  %t35746 = call i64 @rt_intern(ptr @.str.sym.700)
-  %t35747 = call i64 @rt_intern(ptr @.str.sym.663)
-  %t35748 = call i64 @rt_cons(i64 8, i64 2)
-  %t35749 = call i64 @rt_cons(i64 %t35747, i64 %t35748)
-  %t35750 = call i64 @rt_cons(i64 %t35746, i64 %t35749)
-  %t35751 = call i64 @rt_intern(ptr @.str.sym.701)
-  %t35752 = call i64 @rt_intern(ptr @.str.sym.623)
-  %t35753 = call i64 @rt_cons(i64 8, i64 2)
-  %t35754 = call i64 @rt_cons(i64 %t35752, i64 %t35753)
-  %t35755 = call i64 @rt_cons(i64 %t35751, i64 %t35754)
-  %t35756 = call i64 @rt_intern(ptr @.str.sym.702)
-  %t35757 = call i64 @rt_intern(ptr @.str.sym.624)
-  %t35758 = call i64 @rt_cons(i64 8, i64 2)
-  %t35759 = call i64 @rt_cons(i64 %t35757, i64 %t35758)
-  %t35760 = call i64 @rt_cons(i64 %t35756, i64 %t35759)
-  %t35761 = call i64 @rt_intern(ptr @.str.sym.703)
-  %t35762 = call i64 @rt_intern(ptr @.str.sym.625)
-  %t35763 = call i64 @rt_cons(i64 8, i64 2)
-  %t35764 = call i64 @rt_cons(i64 %t35762, i64 %t35763)
-  %t35765 = call i64 @rt_cons(i64 %t35761, i64 %t35764)
-  %t35766 = call i64 @rt_intern(ptr @.str.sym.704)
-  %t35767 = call i64 @rt_intern(ptr @.str.sym.626)
-  %t35768 = call i64 @rt_cons(i64 16, i64 2)
-  %t35769 = call i64 @rt_cons(i64 %t35767, i64 %t35768)
-  %t35770 = call i64 @rt_cons(i64 %t35766, i64 %t35769)
-  %t35771 = call i64 @rt_intern(ptr @.str.sym.705)
-  %t35772 = call i64 @rt_intern(ptr @.str.sym.627)
-  %t35773 = call i64 @rt_cons(i64 8, i64 2)
-  %t35774 = call i64 @rt_cons(i64 %t35772, i64 %t35773)
-  %t35775 = call i64 @rt_cons(i64 %t35771, i64 %t35774)
-  %t35776 = call i64 @rt_intern(ptr @.str.sym.706)
-  %t35777 = call i64 @rt_intern(ptr @.str.sym.628)
-  %t35778 = call i64 @rt_cons(i64 8, i64 2)
-  %t35779 = call i64 @rt_cons(i64 %t35777, i64 %t35778)
-  %t35780 = call i64 @rt_cons(i64 %t35776, i64 %t35779)
-  %t35781 = call i64 @rt_intern(ptr @.str.sym.707)
-  %t35782 = call i64 @rt_intern(ptr @.str.sym.629)
-  %t35783 = call i64 @rt_cons(i64 8, i64 2)
-  %t35784 = call i64 @rt_cons(i64 %t35782, i64 %t35783)
-  %t35785 = call i64 @rt_cons(i64 %t35781, i64 %t35784)
-  %t35786 = call i64 @rt_intern(ptr @.str.sym.708)
-  %t35787 = call i64 @rt_intern(ptr @.str.sym.630)
-  %t35788 = call i64 @rt_cons(i64 24, i64 2)
-  %t35789 = call i64 @rt_cons(i64 %t35787, i64 %t35788)
-  %t35790 = call i64 @rt_cons(i64 %t35786, i64 %t35789)
-  %t35791 = call i64 @rt_intern(ptr @.str.sym.709)
-  %t35792 = call i64 @rt_intern(ptr @.str.sym.636)
-  %t35793 = call i64 @rt_cons(i64 16, i64 2)
-  %t35794 = call i64 @rt_cons(i64 %t35792, i64 %t35793)
-  %t35795 = call i64 @rt_cons(i64 %t35791, i64 %t35794)
-  %t35796 = call i64 @rt_intern(ptr @.str.sym.710)
-  %t35797 = call i64 @rt_intern(ptr @.str.sym.637)
-  %t35798 = call i64 @rt_cons(i64 24, i64 2)
-  %t35799 = call i64 @rt_cons(i64 %t35797, i64 %t35798)
-  %t35800 = call i64 @rt_cons(i64 %t35796, i64 %t35799)
-  %t35801 = call i64 @rt_intern(ptr @.str.sym.711)
-  %t35802 = call i64 @rt_intern(ptr @.str.sym.638)
-  %t35803 = call i64 @rt_cons(i64 8, i64 2)
-  %t35804 = call i64 @rt_cons(i64 %t35802, i64 %t35803)
-  %t35805 = call i64 @rt_cons(i64 %t35801, i64 %t35804)
-  %t35806 = call i64 @rt_intern(ptr @.str.sym.712)
-  %t35807 = call i64 @rt_intern(ptr @.str.sym.639)
-  %t35808 = call i64 @rt_cons(i64 8, i64 2)
-  %t35809 = call i64 @rt_cons(i64 %t35807, i64 %t35808)
-  %t35810 = call i64 @rt_cons(i64 %t35806, i64 %t35809)
-  %t35811 = call i64 @rt_intern(ptr @.str.sym.713)
-  %t35812 = call i64 @rt_intern(ptr @.str.sym.641)
-  %t35813 = call i64 @rt_cons(i64 16, i64 2)
-  %t35814 = call i64 @rt_cons(i64 %t35812, i64 %t35813)
-  %t35815 = call i64 @rt_cons(i64 %t35811, i64 %t35814)
-  %t35816 = call i64 @rt_intern(ptr @.str.sym.714)
-  %t35817 = call i64 @rt_intern(ptr @.str.sym.642)
-  %t35818 = call i64 @rt_cons(i64 24, i64 2)
-  %t35819 = call i64 @rt_cons(i64 %t35817, i64 %t35818)
-  %t35820 = call i64 @rt_cons(i64 %t35816, i64 %t35819)
-  %t35821 = call i64 @rt_intern(ptr @.str.sym.715)
-  %t35822 = call i64 @rt_intern(ptr @.str.sym.643)
-  %t35823 = call i64 @rt_cons(i64 8, i64 2)
-  %t35824 = call i64 @rt_cons(i64 %t35822, i64 %t35823)
-  %t35825 = call i64 @rt_cons(i64 %t35821, i64 %t35824)
-  %t35826 = call i64 @rt_intern(ptr @.str.sym.716)
-  %t35827 = call i64 @rt_intern(ptr @.str.sym.644)
-  %t35828 = call i64 @rt_cons(i64 8, i64 2)
-  %t35829 = call i64 @rt_cons(i64 %t35827, i64 %t35828)
-  %t35830 = call i64 @rt_cons(i64 %t35826, i64 %t35829)
-  %t35831 = call i64 @rt_intern(ptr @.str.sym.717)
-  %t35832 = call i64 @rt_intern(ptr @.str.sym.646)
-  %t35833 = call i64 @rt_cons(i64 8, i64 2)
-  %t35834 = call i64 @rt_cons(i64 %t35832, i64 %t35833)
-  %t35835 = call i64 @rt_cons(i64 %t35831, i64 %t35834)
-  %t35836 = call i64 @rt_intern(ptr @.str.sym.718)
-  %t35837 = call i64 @rt_intern(ptr @.str.sym.647)
-  %t35838 = call i64 @rt_cons(i64 8, i64 2)
-  %t35839 = call i64 @rt_cons(i64 %t35837, i64 %t35838)
-  %t35840 = call i64 @rt_cons(i64 %t35836, i64 %t35839)
-  %t35841 = call i64 @rt_intern(ptr @.str.sym.719)
-  %t35842 = call i64 @rt_intern(ptr @.str.sym.648)
-  %t35843 = call i64 @rt_cons(i64 8, i64 2)
-  %t35844 = call i64 @rt_cons(i64 %t35842, i64 %t35843)
-  %t35845 = call i64 @rt_cons(i64 %t35841, i64 %t35844)
-  %t35846 = call i64 @rt_intern(ptr @.str.sym.720)
-  %t35847 = call i64 @rt_intern(ptr @.str.sym.649)
-  %t35848 = call i64 @rt_cons(i64 8, i64 2)
-  %t35849 = call i64 @rt_cons(i64 %t35847, i64 %t35848)
-  %t35850 = call i64 @rt_cons(i64 %t35846, i64 %t35849)
-  %t35851 = call i64 @rt_intern(ptr @.str.sym.721)
-  %t35852 = call i64 @rt_intern(ptr @.str.sym.650)
-  %t35853 = call i64 @rt_cons(i64 8, i64 2)
-  %t35854 = call i64 @rt_cons(i64 %t35852, i64 %t35853)
-  %t35855 = call i64 @rt_cons(i64 %t35851, i64 %t35854)
-  %t35856 = call i64 @rt_intern(ptr @.str.sym.722)
-  %t35857 = call i64 @rt_intern(ptr @.str.sym.651)
-  %t35858 = call i64 @rt_cons(i64 8, i64 2)
-  %t35859 = call i64 @rt_cons(i64 %t35857, i64 %t35858)
-  %t35860 = call i64 @rt_cons(i64 %t35856, i64 %t35859)
-  %t35861 = call i64 @rt_intern(ptr @.str.sym.723)
-  %t35862 = call i64 @rt_intern(ptr @.str.sym.631)
-  %t35863 = call i64 @rt_cons(i64 24, i64 2)
-  %t35864 = call i64 @rt_cons(i64 %t35862, i64 %t35863)
-  %t35865 = call i64 @rt_cons(i64 %t35861, i64 %t35864)
-  %t35866 = call i64 @rt_intern(ptr @.str.sym.724)
-  %t35867 = call i64 @rt_intern(ptr @.str.sym.632)
-  %t35868 = call i64 @rt_cons(i64 16, i64 2)
-  %t35869 = call i64 @rt_cons(i64 %t35867, i64 %t35868)
-  %t35870 = call i64 @rt_cons(i64 %t35866, i64 %t35869)
-  %t35871 = call i64 @rt_intern(ptr @.str.sym.725)
-  %t35872 = call i64 @rt_intern(ptr @.str.sym.633)
-  %t35873 = call i64 @rt_cons(i64 16, i64 2)
-  %t35874 = call i64 @rt_cons(i64 %t35872, i64 %t35873)
-  %t35875 = call i64 @rt_cons(i64 %t35871, i64 %t35874)
-  %t35876 = call i64 @rt_intern(ptr @.str.sym.726)
-  %t35877 = call i64 @rt_intern(ptr @.str.sym.634)
-  %t35878 = call i64 @rt_cons(i64 8, i64 2)
-  %t35879 = call i64 @rt_cons(i64 %t35877, i64 %t35878)
-  %t35880 = call i64 @rt_cons(i64 %t35876, i64 %t35879)
-  %t35881 = call i64 @rt_intern(ptr @.str.sym.727)
-  %t35882 = call i64 @rt_intern(ptr @.str.sym.640)
-  %t35883 = call i64 @rt_cons(i64 16, i64 2)
-  %t35884 = call i64 @rt_cons(i64 %t35882, i64 %t35883)
-  %t35885 = call i64 @rt_cons(i64 %t35881, i64 %t35884)
-  %t35886 = call i64 @rt_intern(ptr @.str.sym.728)
-  %t35887 = call i64 @rt_intern(ptr @.str.sym.645)
-  %t35888 = call i64 @rt_cons(i64 16, i64 2)
-  %t35889 = call i64 @rt_cons(i64 %t35887, i64 %t35888)
-  %t35890 = call i64 @rt_cons(i64 %t35886, i64 %t35889)
-  %t35891 = call i64 @rt_intern(ptr @.str.sym.729)
-  %t35892 = call i64 @rt_intern(ptr @.str.sym.660)
-  %t35893 = call i64 @rt_cons(i64 0, i64 2)
-  %t35894 = call i64 @rt_cons(i64 %t35892, i64 %t35893)
-  %t35895 = call i64 @rt_cons(i64 %t35891, i64 %t35894)
-  %t35896 = call i64 @rt_intern(ptr @.str.sym.730)
-  %t35897 = call i64 @rt_intern(ptr @.str.sym.661)
-  %t35898 = call i64 @rt_cons(i64 8, i64 2)
-  %t35899 = call i64 @rt_cons(i64 %t35897, i64 %t35898)
-  %t35900 = call i64 @rt_cons(i64 %t35896, i64 %t35899)
-  %t35901 = call i64 @rt_intern(ptr @.str.sym.731)
-  %t35902 = call i64 @rt_intern(ptr @.str.sym.662)
-  %t35903 = call i64 @rt_cons(i64 8, i64 2)
-  %t35904 = call i64 @rt_cons(i64 %t35902, i64 %t35903)
-  %t35905 = call i64 @rt_cons(i64 %t35901, i64 %t35904)
-  %t35906 = call i64 @rt_intern(ptr @.str.sym.732)
-  %t35907 = call i64 @rt_intern(ptr @.str.sym.664)
-  %t35908 = call i64 @rt_cons(i64 0, i64 2)
-  %t35909 = call i64 @rt_cons(i64 %t35907, i64 %t35908)
-  %t35910 = call i64 @rt_cons(i64 %t35906, i64 %t35909)
-  %t35911 = call i64 @rt_intern(ptr @.str.sym.92)
-  %t35912 = call i64 @rt_intern(ptr @.str.sym.635)
-  %t35913 = call i64 @rt_intern(ptr @.str.sym.21)
-  %t35914 = call i64 @rt_cons(i64 %t35913, i64 2)
-  %t35915 = call i64 @rt_cons(i64 16, i64 %t35914)
-  %t35916 = call i64 @rt_cons(i64 %t35912, i64 %t35915)
-  %t35917 = call i64 @rt_cons(i64 %t35911, i64 %t35916)
-  %t35918 = call i64 @rt_cons(i64 %t35917, i64 2)
-  %t35919 = call i64 @rt_cons(i64 %t35910, i64 %t35918)
-  %t35920 = call i64 @rt_cons(i64 %t35905, i64 %t35919)
-  %t35921 = call i64 @rt_cons(i64 %t35900, i64 %t35920)
-  %t35922 = call i64 @rt_cons(i64 %t35895, i64 %t35921)
-  %t35923 = call i64 @rt_cons(i64 %t35890, i64 %t35922)
-  %t35924 = call i64 @rt_cons(i64 %t35885, i64 %t35923)
-  %t35925 = call i64 @rt_cons(i64 %t35880, i64 %t35924)
-  %t35926 = call i64 @rt_cons(i64 %t35875, i64 %t35925)
-  %t35927 = call i64 @rt_cons(i64 %t35870, i64 %t35926)
-  %t35928 = call i64 @rt_cons(i64 %t35865, i64 %t35927)
-  %t35929 = call i64 @rt_cons(i64 %t35860, i64 %t35928)
-  %t35930 = call i64 @rt_cons(i64 %t35855, i64 %t35929)
-  %t35931 = call i64 @rt_cons(i64 %t35850, i64 %t35930)
-  %t35932 = call i64 @rt_cons(i64 %t35845, i64 %t35931)
-  %t35933 = call i64 @rt_cons(i64 %t35840, i64 %t35932)
-  %t35934 = call i64 @rt_cons(i64 %t35835, i64 %t35933)
-  %t35935 = call i64 @rt_cons(i64 %t35830, i64 %t35934)
-  %t35936 = call i64 @rt_cons(i64 %t35825, i64 %t35935)
-  %t35937 = call i64 @rt_cons(i64 %t35820, i64 %t35936)
-  %t35938 = call i64 @rt_cons(i64 %t35815, i64 %t35937)
-  %t35939 = call i64 @rt_cons(i64 %t35810, i64 %t35938)
-  %t35940 = call i64 @rt_cons(i64 %t35805, i64 %t35939)
-  %t35941 = call i64 @rt_cons(i64 %t35800, i64 %t35940)
-  %t35942 = call i64 @rt_cons(i64 %t35795, i64 %t35941)
-  %t35943 = call i64 @rt_cons(i64 %t35790, i64 %t35942)
-  %t35944 = call i64 @rt_cons(i64 %t35785, i64 %t35943)
-  %t35945 = call i64 @rt_cons(i64 %t35780, i64 %t35944)
-  %t35946 = call i64 @rt_cons(i64 %t35775, i64 %t35945)
-  %t35947 = call i64 @rt_cons(i64 %t35770, i64 %t35946)
-  %t35948 = call i64 @rt_cons(i64 %t35765, i64 %t35947)
-  %t35949 = call i64 @rt_cons(i64 %t35760, i64 %t35948)
-  %t35950 = call i64 @rt_cons(i64 %t35755, i64 %t35949)
-  %t35951 = call i64 @rt_cons(i64 %t35750, i64 %t35950)
-  %t35952 = call i64 @rt_cons(i64 %t35745, i64 %t35951)
-  %t35953 = call i64 @rt_cons(i64 %t35740, i64 %t35952)
-  %t35954 = call i64 @rt_cons(i64 %t35735, i64 %t35953)
-  %t35955 = call i64 @rt_cons(i64 %t35730, i64 %t35954)
-  %t35956 = call i64 @rt_cons(i64 %t35725, i64 %t35955)
-  %t35957 = call i64 @rt_cons(i64 %t35720, i64 %t35956)
-  %t35958 = call i64 @rt_cons(i64 %t35715, i64 %t35957)
-  %t35959 = call i64 @rt_cons(i64 %t35710, i64 %t35958)
-  %t35960 = call i64 @rt_cons(i64 %t35705, i64 %t35959)
-  %t35961 = call i64 @rt_cons(i64 %t35700, i64 %t35960)
-  %t35962 = call i64 @rt_cons(i64 %t35695, i64 %t35961)
-  %t35963 = call i64 @rt_cons(i64 %t35690, i64 %t35962)
-  %t35964 = call i64 @rt_cons(i64 %t35685, i64 %t35963)
-  %t35965 = call i64 @rt_cons(i64 %t35680, i64 %t35964)
-  %t35966 = call i64 @rt_cons(i64 %t35675, i64 %t35965)
-  %t35967 = call i64 @rt_cons(i64 %t35670, i64 %t35966)
-  %t35968 = call i64 @rt_cons(i64 %t35665, i64 %t35967)
-  %t35969 = call i64 @rt_cons(i64 %t35660, i64 %t35968)
-  %t35970 = call i64 @rt_cons(i64 %t35653, i64 %t35969)
-  %t35971 = call i64 @rt_cons(i64 %t35646, i64 %t35970)
-  %t35972 = call i64 @rt_cons(i64 %t35639, i64 %t35971)
-  %t35973 = call i64 @rt_cons(i64 %t35632, i64 %t35972)
-  %t35974 = call i64 @rt_cons(i64 %t35625, i64 %t35973)
-  %t35975 = call i64 @rt_cons(i64 %t35618, i64 %t35974)
-  %t35976 = call i64 @rt_set_box(i64 %t35183, i64 %t35975)
-  %t35977 = call i64 @rt_alloc_words(i64 2)
-  %t35978 = inttoptr i64 %t35977 to ptr
-  store i64 ptrtoint (ptr @code_5236 to i64), ptr %t35978
-  %t35979 = getelementptr i64, ptr %t35978, i64 1
-  store i64 %t35183, ptr %t35979
-  %t35980 = or i64 %t35977, 4
-  %t35981 = call i64 @rt_set_box(i64 %t35184, i64 %t35980)
-  %t35982 = call i64 @rt_alloc_words(i64 2)
-  %t35983 = inttoptr i64 %t35982 to ptr
-  store i64 ptrtoint (ptr @code_5238 to i64), ptr %t35983
-  %t35984 = getelementptr i64, ptr %t35983, i64 1
-  store i64 %t35184, ptr %t35984
-  %t35985 = or i64 %t35982, 4
-  %t35986 = call i64 @rt_set_box(i64 %t35185, i64 %t35985)
-  %t35987 = call i64 @rt_alloc_words(i64 2)
-  %t35988 = inttoptr i64 %t35987 to ptr
-  store i64 ptrtoint (ptr @code_5240 to i64), ptr %t35988
-  %t35989 = getelementptr i64, ptr %t35988, i64 1
-  store i64 %t35177, ptr %t35989
-  %t35990 = or i64 %t35987, 4
-  %t35991 = call i64 @rt_set_box(i64 %t35186, i64 %t35990)
-  %t35992 = call i64 @rt_alloc_words(i64 3)
-  %t35993 = inttoptr i64 %t35992 to ptr
-  store i64 ptrtoint (ptr @code_5244 to i64), ptr %t35993
-  %t35994 = getelementptr i64, ptr %t35993, i64 1
-  store i64 %t35192, ptr %t35994
-  %t35995 = getelementptr i64, ptr %t35993, i64 2
-  store i64 %t35186, ptr %t35995
-  %t35996 = or i64 %t35992, 4
-  %t35997 = call i64 @rt_set_box(i64 %t35187, i64 %t35996)
-  %t35998 = call i64 @rt_alloc_words(i64 2)
-  %t35999 = inttoptr i64 %t35998 to ptr
-  store i64 ptrtoint (ptr @code_5246 to i64), ptr %t35999
-  %t36000 = getelementptr i64, ptr %t35999, i64 1
-  store i64 %t35177, ptr %t36000
-  %t36001 = or i64 %t35998, 4
-  %t36002 = call i64 @rt_set_box(i64 %t35188, i64 %t36001)
-  %t36003 = call i64 @rt_alloc_words(i64 2)
-  %t36004 = inttoptr i64 %t36003 to ptr
-  store i64 ptrtoint (ptr @code_5248 to i64), ptr %t36004
-  %t36005 = getelementptr i64, ptr %t36004, i64 1
-  store i64 %t35177, ptr %t36005
-  %t36006 = or i64 %t36003, 4
-  %t36007 = call i64 @rt_set_box(i64 %t35189, i64 %t36006)
-  %t36008 = call i64 @rt_alloc_words(i64 2)
-  %t36009 = inttoptr i64 %t36008 to ptr
-  store i64 ptrtoint (ptr @code_5250 to i64), ptr %t36009
-  %t36010 = getelementptr i64, ptr %t36009, i64 1
-  store i64 %t35177, ptr %t36010
-  %t36011 = or i64 %t36008, 4
-  %t36012 = call i64 @rt_set_box(i64 %t35190, i64 %t36011)
-  %t36013 = call i64 @rt_alloc_words(i64 2)
-  %t36014 = inttoptr i64 %t36013 to ptr
-  store i64 ptrtoint (ptr @code_5252 to i64), ptr %t36014
-  %t36015 = getelementptr i64, ptr %t36014, i64 1
-  store i64 %t35177, ptr %t36015
-  %t36016 = or i64 %t36013, 4
-  %t36017 = call i64 @rt_set_box(i64 %t35191, i64 %t36016)
-  %t36018 = call i64 @rt_alloc_words(i64 5)
-  %t36019 = inttoptr i64 %t36018 to ptr
-  store i64 ptrtoint (ptr @code_5254 to i64), ptr %t36019
-  %t36020 = getelementptr i64, ptr %t36019, i64 1
-  store i64 %t35188, ptr %t36020
-  %t36021 = getelementptr i64, ptr %t36019, i64 2
-  store i64 %t35189, ptr %t36021
-  %t36022 = getelementptr i64, ptr %t36019, i64 3
-  store i64 %t35190, ptr %t36022
-  %t36023 = getelementptr i64, ptr %t36019, i64 4
-  store i64 %t35191, ptr %t36023
-  %t36024 = or i64 %t36018, 4
-  %t36025 = call i64 @rt_set_box(i64 %t35192, i64 %t36024)
-  %t36026 = call i64 @rt_alloc_words(i64 3)
-  %t36027 = inttoptr i64 %t36026 to ptr
-  store i64 ptrtoint (ptr @code_5256 to i64), ptr %t36027
-  %t36028 = getelementptr i64, ptr %t36027, i64 1
-  store i64 %t35184, ptr %t36028
-  %t36029 = getelementptr i64, ptr %t36027, i64 2
-  store i64 %t35187, ptr %t36029
-  %t36030 = or i64 %t36026, 4
-  %t36031 = call i64 @rt_set_box(i64 %t35193, i64 %t36030)
-  %t36032 = call i64 @rt_alloc_words(i64 2)
-  %t36033 = inttoptr i64 %t36032 to ptr
-  store i64 ptrtoint (ptr @code_5290 to i64), ptr %t36033
-  %t36034 = getelementptr i64, ptr %t36033, i64 1
-  store i64 %t35194, ptr %t36034
-  %t36035 = or i64 %t36032, 4
-  %t36036 = call i64 @rt_set_box(i64 %t35194, i64 %t36035)
-  %t36037 = call i64 @rt_alloc_words(i64 2)
-  %t36038 = inttoptr i64 %t36037 to ptr
-  store i64 ptrtoint (ptr @code_5292 to i64), ptr %t36038
-  %t36039 = getelementptr i64, ptr %t36038, i64 1
-  store i64 %t35195, ptr %t36039
-  %t36040 = or i64 %t36037, 4
-  %t36041 = call i64 @rt_set_box(i64 %t35195, i64 %t36040)
-  %t36042 = call i64 @rt_alloc_words(i64 3)
-  %t36043 = inttoptr i64 %t36042 to ptr
-  store i64 ptrtoint (ptr @code_5294 to i64), ptr %t36043
-  %t36044 = getelementptr i64, ptr %t36043, i64 1
-  store i64 %t35195, ptr %t36044
-  %t36045 = getelementptr i64, ptr %t36043, i64 2
-  store i64 %t35194, ptr %t36045
-  %t36046 = or i64 %t36042, 4
-  %t36047 = call i64 @rt_set_box(i64 %t35196, i64 %t36046)
-  %t36048 = call i64 @rt_alloc_words(i64 1)
-  %t36049 = inttoptr i64 %t36048 to ptr
-  store i64 ptrtoint (ptr @code_5296 to i64), ptr %t36049
-  %t36050 = or i64 %t36048, 4
-  %t36051 = call i64 @rt_set_box(i64 %t35197, i64 %t36050)
-  %t36052 = call i64 @rt_alloc_words(i64 2)
-  %t36053 = inttoptr i64 %t36052 to ptr
-  store i64 ptrtoint (ptr @code_5300 to i64), ptr %t36053
-  %t36054 = getelementptr i64, ptr %t36053, i64 1
-  store i64 %t35199, ptr %t36054
-  %t36055 = or i64 %t36052, 4
-  %t36056 = call i64 @rt_set_box(i64 %t35198, i64 %t36055)
-  %t36057 = call i64 @rt_alloc_words(i64 5)
-  %t36058 = inttoptr i64 %t36057 to ptr
-  store i64 ptrtoint (ptr @code_5302 to i64), ptr %t36058
-  %t36059 = getelementptr i64, ptr %t36058, i64 1
-  store i64 %t35199, ptr %t36059
-  %t36060 = getelementptr i64, ptr %t36058, i64 2
-  store i64 %t35182, ptr %t36060
-  %t36061 = getelementptr i64, ptr %t36058, i64 3
-  store i64 %t35201, ptr %t36061
-  %t36062 = getelementptr i64, ptr %t36058, i64 4
-  store i64 %t35200, ptr %t36062
-  %t36063 = or i64 %t36057, 4
-  %t36064 = call i64 @rt_set_box(i64 %t35199, i64 %t36063)
+  %t35731 = call i64 @rt_cons(i64 %t35725, i64 %t35730)
+  %t35732 = call i64 @rt_intern(ptr @.str.sym.94)
+  %t35733 = call i64 @rt_intern(ptr @.str.sym.613)
+  %t35734 = call i64 @rt_intern(ptr @.str.sym.25)
+  %t35735 = call i64 @rt_cons(i64 %t35734, i64 2)
+  %t35736 = call i64 @rt_cons(i64 16, i64 %t35735)
+  %t35737 = call i64 @rt_cons(i64 %t35733, i64 %t35736)
+  %t35738 = call i64 @rt_cons(i64 %t35732, i64 %t35737)
+  %t35739 = call i64 @rt_intern(ptr @.str.sym.98)
+  %t35740 = call i64 @rt_intern(ptr @.str.sym.614)
+  %t35741 = call i64 @rt_cons(i64 16, i64 2)
+  %t35742 = call i64 @rt_cons(i64 %t35740, i64 %t35741)
+  %t35743 = call i64 @rt_cons(i64 %t35739, i64 %t35742)
+  %t35744 = call i64 @rt_intern(ptr @.str.sym.99)
+  %t35745 = call i64 @rt_intern(ptr @.str.sym.615)
+  %t35746 = call i64 @rt_cons(i64 16, i64 2)
+  %t35747 = call i64 @rt_cons(i64 %t35745, i64 %t35746)
+  %t35748 = call i64 @rt_cons(i64 %t35744, i64 %t35747)
+  %t35749 = call i64 @rt_intern(ptr @.str.sym.685)
+  %t35750 = call i64 @rt_intern(ptr @.str.sym.617)
+  %t35751 = call i64 @rt_cons(i64 16, i64 2)
+  %t35752 = call i64 @rt_cons(i64 %t35750, i64 %t35751)
+  %t35753 = call i64 @rt_cons(i64 %t35749, i64 %t35752)
+  %t35754 = call i64 @rt_intern(ptr @.str.sym.686)
+  %t35755 = call i64 @rt_intern(ptr @.str.sym.618)
+  %t35756 = call i64 @rt_cons(i64 16, i64 2)
+  %t35757 = call i64 @rt_cons(i64 %t35755, i64 %t35756)
+  %t35758 = call i64 @rt_cons(i64 %t35754, i64 %t35757)
+  %t35759 = call i64 @rt_intern(ptr @.str.sym.687)
+  %t35760 = call i64 @rt_intern(ptr @.str.sym.619)
+  %t35761 = call i64 @rt_cons(i64 16, i64 2)
+  %t35762 = call i64 @rt_cons(i64 %t35760, i64 %t35761)
+  %t35763 = call i64 @rt_cons(i64 %t35759, i64 %t35762)
+  %t35764 = call i64 @rt_intern(ptr @.str.sym.688)
+  %t35765 = call i64 @rt_intern(ptr @.str.sym.15)
+  %t35766 = call i64 @rt_cons(i64 8, i64 2)
+  %t35767 = call i64 @rt_cons(i64 %t35765, i64 %t35766)
+  %t35768 = call i64 @rt_cons(i64 %t35764, i64 %t35767)
+  %t35769 = call i64 @rt_intern(ptr @.str.sym.689)
+  %t35770 = call i64 @rt_intern(ptr @.str.sym.16)
+  %t35771 = call i64 @rt_cons(i64 8, i64 2)
+  %t35772 = call i64 @rt_cons(i64 %t35770, i64 %t35771)
+  %t35773 = call i64 @rt_cons(i64 %t35769, i64 %t35772)
+  %t35774 = call i64 @rt_intern(ptr @.str.sym.690)
+  %t35775 = call i64 @rt_intern(ptr @.str.sym.13)
+  %t35776 = call i64 @rt_cons(i64 8, i64 2)
+  %t35777 = call i64 @rt_cons(i64 %t35775, i64 %t35776)
+  %t35778 = call i64 @rt_cons(i64 %t35774, i64 %t35777)
+  %t35779 = call i64 @rt_intern(ptr @.str.sym.691)
+  %t35780 = call i64 @rt_intern(ptr @.str.sym.620)
+  %t35781 = call i64 @rt_cons(i64 8, i64 2)
+  %t35782 = call i64 @rt_cons(i64 %t35780, i64 %t35781)
+  %t35783 = call i64 @rt_cons(i64 %t35779, i64 %t35782)
+  %t35784 = call i64 @rt_intern(ptr @.str.sym.692)
+  %t35785 = call i64 @rt_intern(ptr @.str.sym.621)
+  %t35786 = call i64 @rt_cons(i64 16, i64 2)
+  %t35787 = call i64 @rt_cons(i64 %t35785, i64 %t35786)
+  %t35788 = call i64 @rt_cons(i64 %t35784, i64 %t35787)
+  %t35789 = call i64 @rt_intern(ptr @.str.sym.693)
+  %t35790 = call i64 @rt_intern(ptr @.str.sym.622)
+  %t35791 = call i64 @rt_cons(i64 8, i64 2)
+  %t35792 = call i64 @rt_cons(i64 %t35790, i64 %t35791)
+  %t35793 = call i64 @rt_cons(i64 %t35789, i64 %t35792)
+  %t35794 = call i64 @rt_intern(ptr @.str.sym.694)
+  %t35795 = call i64 @rt_intern(ptr @.str.sym.652)
+  %t35796 = call i64 @rt_cons(i64 8, i64 2)
+  %t35797 = call i64 @rt_cons(i64 %t35795, i64 %t35796)
+  %t35798 = call i64 @rt_cons(i64 %t35794, i64 %t35797)
+  %t35799 = call i64 @rt_intern(ptr @.str.sym.695)
+  %t35800 = call i64 @rt_intern(ptr @.str.sym.653)
+  %t35801 = call i64 @rt_cons(i64 8, i64 2)
+  %t35802 = call i64 @rt_cons(i64 %t35800, i64 %t35801)
+  %t35803 = call i64 @rt_cons(i64 %t35799, i64 %t35802)
+  %t35804 = call i64 @rt_intern(ptr @.str.sym.696)
+  %t35805 = call i64 @rt_intern(ptr @.str.sym.654)
+  %t35806 = call i64 @rt_cons(i64 8, i64 2)
+  %t35807 = call i64 @rt_cons(i64 %t35805, i64 %t35806)
+  %t35808 = call i64 @rt_cons(i64 %t35804, i64 %t35807)
+  %t35809 = call i64 @rt_intern(ptr @.str.sym.697)
+  %t35810 = call i64 @rt_intern(ptr @.str.sym.655)
+  %t35811 = call i64 @rt_cons(i64 8, i64 2)
+  %t35812 = call i64 @rt_cons(i64 %t35810, i64 %t35811)
+  %t35813 = call i64 @rt_cons(i64 %t35809, i64 %t35812)
+  %t35814 = call i64 @rt_intern(ptr @.str.sym.698)
+  %t35815 = call i64 @rt_intern(ptr @.str.sym.656)
+  %t35816 = call i64 @rt_cons(i64 8, i64 2)
+  %t35817 = call i64 @rt_cons(i64 %t35815, i64 %t35816)
+  %t35818 = call i64 @rt_cons(i64 %t35814, i64 %t35817)
+  %t35819 = call i64 @rt_intern(ptr @.str.sym.699)
+  %t35820 = call i64 @rt_intern(ptr @.str.sym.657)
+  %t35821 = call i64 @rt_cons(i64 8, i64 2)
+  %t35822 = call i64 @rt_cons(i64 %t35820, i64 %t35821)
+  %t35823 = call i64 @rt_cons(i64 %t35819, i64 %t35822)
+  %t35824 = call i64 @rt_intern(ptr @.str.sym.700)
+  %t35825 = call i64 @rt_intern(ptr @.str.sym.663)
+  %t35826 = call i64 @rt_cons(i64 8, i64 2)
+  %t35827 = call i64 @rt_cons(i64 %t35825, i64 %t35826)
+  %t35828 = call i64 @rt_cons(i64 %t35824, i64 %t35827)
+  %t35829 = call i64 @rt_intern(ptr @.str.sym.701)
+  %t35830 = call i64 @rt_intern(ptr @.str.sym.623)
+  %t35831 = call i64 @rt_cons(i64 8, i64 2)
+  %t35832 = call i64 @rt_cons(i64 %t35830, i64 %t35831)
+  %t35833 = call i64 @rt_cons(i64 %t35829, i64 %t35832)
+  %t35834 = call i64 @rt_intern(ptr @.str.sym.702)
+  %t35835 = call i64 @rt_intern(ptr @.str.sym.624)
+  %t35836 = call i64 @rt_cons(i64 8, i64 2)
+  %t35837 = call i64 @rt_cons(i64 %t35835, i64 %t35836)
+  %t35838 = call i64 @rt_cons(i64 %t35834, i64 %t35837)
+  %t35839 = call i64 @rt_intern(ptr @.str.sym.703)
+  %t35840 = call i64 @rt_intern(ptr @.str.sym.625)
+  %t35841 = call i64 @rt_cons(i64 8, i64 2)
+  %t35842 = call i64 @rt_cons(i64 %t35840, i64 %t35841)
+  %t35843 = call i64 @rt_cons(i64 %t35839, i64 %t35842)
+  %t35844 = call i64 @rt_intern(ptr @.str.sym.704)
+  %t35845 = call i64 @rt_intern(ptr @.str.sym.626)
+  %t35846 = call i64 @rt_cons(i64 16, i64 2)
+  %t35847 = call i64 @rt_cons(i64 %t35845, i64 %t35846)
+  %t35848 = call i64 @rt_cons(i64 %t35844, i64 %t35847)
+  %t35849 = call i64 @rt_intern(ptr @.str.sym.705)
+  %t35850 = call i64 @rt_intern(ptr @.str.sym.627)
+  %t35851 = call i64 @rt_cons(i64 8, i64 2)
+  %t35852 = call i64 @rt_cons(i64 %t35850, i64 %t35851)
+  %t35853 = call i64 @rt_cons(i64 %t35849, i64 %t35852)
+  %t35854 = call i64 @rt_intern(ptr @.str.sym.706)
+  %t35855 = call i64 @rt_intern(ptr @.str.sym.628)
+  %t35856 = call i64 @rt_cons(i64 8, i64 2)
+  %t35857 = call i64 @rt_cons(i64 %t35855, i64 %t35856)
+  %t35858 = call i64 @rt_cons(i64 %t35854, i64 %t35857)
+  %t35859 = call i64 @rt_intern(ptr @.str.sym.707)
+  %t35860 = call i64 @rt_intern(ptr @.str.sym.629)
+  %t35861 = call i64 @rt_cons(i64 8, i64 2)
+  %t35862 = call i64 @rt_cons(i64 %t35860, i64 %t35861)
+  %t35863 = call i64 @rt_cons(i64 %t35859, i64 %t35862)
+  %t35864 = call i64 @rt_intern(ptr @.str.sym.708)
+  %t35865 = call i64 @rt_intern(ptr @.str.sym.630)
+  %t35866 = call i64 @rt_cons(i64 24, i64 2)
+  %t35867 = call i64 @rt_cons(i64 %t35865, i64 %t35866)
+  %t35868 = call i64 @rt_cons(i64 %t35864, i64 %t35867)
+  %t35869 = call i64 @rt_intern(ptr @.str.sym.709)
+  %t35870 = call i64 @rt_intern(ptr @.str.sym.636)
+  %t35871 = call i64 @rt_cons(i64 16, i64 2)
+  %t35872 = call i64 @rt_cons(i64 %t35870, i64 %t35871)
+  %t35873 = call i64 @rt_cons(i64 %t35869, i64 %t35872)
+  %t35874 = call i64 @rt_intern(ptr @.str.sym.710)
+  %t35875 = call i64 @rt_intern(ptr @.str.sym.637)
+  %t35876 = call i64 @rt_cons(i64 24, i64 2)
+  %t35877 = call i64 @rt_cons(i64 %t35875, i64 %t35876)
+  %t35878 = call i64 @rt_cons(i64 %t35874, i64 %t35877)
+  %t35879 = call i64 @rt_intern(ptr @.str.sym.711)
+  %t35880 = call i64 @rt_intern(ptr @.str.sym.638)
+  %t35881 = call i64 @rt_cons(i64 8, i64 2)
+  %t35882 = call i64 @rt_cons(i64 %t35880, i64 %t35881)
+  %t35883 = call i64 @rt_cons(i64 %t35879, i64 %t35882)
+  %t35884 = call i64 @rt_intern(ptr @.str.sym.712)
+  %t35885 = call i64 @rt_intern(ptr @.str.sym.639)
+  %t35886 = call i64 @rt_cons(i64 8, i64 2)
+  %t35887 = call i64 @rt_cons(i64 %t35885, i64 %t35886)
+  %t35888 = call i64 @rt_cons(i64 %t35884, i64 %t35887)
+  %t35889 = call i64 @rt_intern(ptr @.str.sym.713)
+  %t35890 = call i64 @rt_intern(ptr @.str.sym.641)
+  %t35891 = call i64 @rt_cons(i64 16, i64 2)
+  %t35892 = call i64 @rt_cons(i64 %t35890, i64 %t35891)
+  %t35893 = call i64 @rt_cons(i64 %t35889, i64 %t35892)
+  %t35894 = call i64 @rt_intern(ptr @.str.sym.714)
+  %t35895 = call i64 @rt_intern(ptr @.str.sym.642)
+  %t35896 = call i64 @rt_cons(i64 24, i64 2)
+  %t35897 = call i64 @rt_cons(i64 %t35895, i64 %t35896)
+  %t35898 = call i64 @rt_cons(i64 %t35894, i64 %t35897)
+  %t35899 = call i64 @rt_intern(ptr @.str.sym.715)
+  %t35900 = call i64 @rt_intern(ptr @.str.sym.643)
+  %t35901 = call i64 @rt_cons(i64 8, i64 2)
+  %t35902 = call i64 @rt_cons(i64 %t35900, i64 %t35901)
+  %t35903 = call i64 @rt_cons(i64 %t35899, i64 %t35902)
+  %t35904 = call i64 @rt_intern(ptr @.str.sym.716)
+  %t35905 = call i64 @rt_intern(ptr @.str.sym.644)
+  %t35906 = call i64 @rt_cons(i64 8, i64 2)
+  %t35907 = call i64 @rt_cons(i64 %t35905, i64 %t35906)
+  %t35908 = call i64 @rt_cons(i64 %t35904, i64 %t35907)
+  %t35909 = call i64 @rt_intern(ptr @.str.sym.717)
+  %t35910 = call i64 @rt_intern(ptr @.str.sym.646)
+  %t35911 = call i64 @rt_cons(i64 8, i64 2)
+  %t35912 = call i64 @rt_cons(i64 %t35910, i64 %t35911)
+  %t35913 = call i64 @rt_cons(i64 %t35909, i64 %t35912)
+  %t35914 = call i64 @rt_intern(ptr @.str.sym.718)
+  %t35915 = call i64 @rt_intern(ptr @.str.sym.647)
+  %t35916 = call i64 @rt_cons(i64 8, i64 2)
+  %t35917 = call i64 @rt_cons(i64 %t35915, i64 %t35916)
+  %t35918 = call i64 @rt_cons(i64 %t35914, i64 %t35917)
+  %t35919 = call i64 @rt_intern(ptr @.str.sym.719)
+  %t35920 = call i64 @rt_intern(ptr @.str.sym.648)
+  %t35921 = call i64 @rt_cons(i64 8, i64 2)
+  %t35922 = call i64 @rt_cons(i64 %t35920, i64 %t35921)
+  %t35923 = call i64 @rt_cons(i64 %t35919, i64 %t35922)
+  %t35924 = call i64 @rt_intern(ptr @.str.sym.720)
+  %t35925 = call i64 @rt_intern(ptr @.str.sym.649)
+  %t35926 = call i64 @rt_cons(i64 8, i64 2)
+  %t35927 = call i64 @rt_cons(i64 %t35925, i64 %t35926)
+  %t35928 = call i64 @rt_cons(i64 %t35924, i64 %t35927)
+  %t35929 = call i64 @rt_intern(ptr @.str.sym.721)
+  %t35930 = call i64 @rt_intern(ptr @.str.sym.650)
+  %t35931 = call i64 @rt_cons(i64 8, i64 2)
+  %t35932 = call i64 @rt_cons(i64 %t35930, i64 %t35931)
+  %t35933 = call i64 @rt_cons(i64 %t35929, i64 %t35932)
+  %t35934 = call i64 @rt_intern(ptr @.str.sym.722)
+  %t35935 = call i64 @rt_intern(ptr @.str.sym.651)
+  %t35936 = call i64 @rt_cons(i64 8, i64 2)
+  %t35937 = call i64 @rt_cons(i64 %t35935, i64 %t35936)
+  %t35938 = call i64 @rt_cons(i64 %t35934, i64 %t35937)
+  %t35939 = call i64 @rt_intern(ptr @.str.sym.723)
+  %t35940 = call i64 @rt_intern(ptr @.str.sym.631)
+  %t35941 = call i64 @rt_cons(i64 24, i64 2)
+  %t35942 = call i64 @rt_cons(i64 %t35940, i64 %t35941)
+  %t35943 = call i64 @rt_cons(i64 %t35939, i64 %t35942)
+  %t35944 = call i64 @rt_intern(ptr @.str.sym.724)
+  %t35945 = call i64 @rt_intern(ptr @.str.sym.632)
+  %t35946 = call i64 @rt_cons(i64 16, i64 2)
+  %t35947 = call i64 @rt_cons(i64 %t35945, i64 %t35946)
+  %t35948 = call i64 @rt_cons(i64 %t35944, i64 %t35947)
+  %t35949 = call i64 @rt_intern(ptr @.str.sym.725)
+  %t35950 = call i64 @rt_intern(ptr @.str.sym.633)
+  %t35951 = call i64 @rt_cons(i64 16, i64 2)
+  %t35952 = call i64 @rt_cons(i64 %t35950, i64 %t35951)
+  %t35953 = call i64 @rt_cons(i64 %t35949, i64 %t35952)
+  %t35954 = call i64 @rt_intern(ptr @.str.sym.726)
+  %t35955 = call i64 @rt_intern(ptr @.str.sym.634)
+  %t35956 = call i64 @rt_cons(i64 8, i64 2)
+  %t35957 = call i64 @rt_cons(i64 %t35955, i64 %t35956)
+  %t35958 = call i64 @rt_cons(i64 %t35954, i64 %t35957)
+  %t35959 = call i64 @rt_intern(ptr @.str.sym.727)
+  %t35960 = call i64 @rt_intern(ptr @.str.sym.640)
+  %t35961 = call i64 @rt_cons(i64 16, i64 2)
+  %t35962 = call i64 @rt_cons(i64 %t35960, i64 %t35961)
+  %t35963 = call i64 @rt_cons(i64 %t35959, i64 %t35962)
+  %t35964 = call i64 @rt_intern(ptr @.str.sym.728)
+  %t35965 = call i64 @rt_intern(ptr @.str.sym.645)
+  %t35966 = call i64 @rt_cons(i64 16, i64 2)
+  %t35967 = call i64 @rt_cons(i64 %t35965, i64 %t35966)
+  %t35968 = call i64 @rt_cons(i64 %t35964, i64 %t35967)
+  %t35969 = call i64 @rt_intern(ptr @.str.sym.729)
+  %t35970 = call i64 @rt_intern(ptr @.str.sym.660)
+  %t35971 = call i64 @rt_cons(i64 0, i64 2)
+  %t35972 = call i64 @rt_cons(i64 %t35970, i64 %t35971)
+  %t35973 = call i64 @rt_cons(i64 %t35969, i64 %t35972)
+  %t35974 = call i64 @rt_intern(ptr @.str.sym.730)
+  %t35975 = call i64 @rt_intern(ptr @.str.sym.661)
+  %t35976 = call i64 @rt_cons(i64 8, i64 2)
+  %t35977 = call i64 @rt_cons(i64 %t35975, i64 %t35976)
+  %t35978 = call i64 @rt_cons(i64 %t35974, i64 %t35977)
+  %t35979 = call i64 @rt_intern(ptr @.str.sym.731)
+  %t35980 = call i64 @rt_intern(ptr @.str.sym.662)
+  %t35981 = call i64 @rt_cons(i64 8, i64 2)
+  %t35982 = call i64 @rt_cons(i64 %t35980, i64 %t35981)
+  %t35983 = call i64 @rt_cons(i64 %t35979, i64 %t35982)
+  %t35984 = call i64 @rt_intern(ptr @.str.sym.732)
+  %t35985 = call i64 @rt_intern(ptr @.str.sym.664)
+  %t35986 = call i64 @rt_cons(i64 0, i64 2)
+  %t35987 = call i64 @rt_cons(i64 %t35985, i64 %t35986)
+  %t35988 = call i64 @rt_cons(i64 %t35984, i64 %t35987)
+  %t35989 = call i64 @rt_intern(ptr @.str.sym.92)
+  %t35990 = call i64 @rt_intern(ptr @.str.sym.635)
+  %t35991 = call i64 @rt_intern(ptr @.str.sym.21)
+  %t35992 = call i64 @rt_cons(i64 %t35991, i64 2)
+  %t35993 = call i64 @rt_cons(i64 16, i64 %t35992)
+  %t35994 = call i64 @rt_cons(i64 %t35990, i64 %t35993)
+  %t35995 = call i64 @rt_cons(i64 %t35989, i64 %t35994)
+  %t35996 = call i64 @rt_cons(i64 %t35995, i64 2)
+  %t35997 = call i64 @rt_cons(i64 %t35988, i64 %t35996)
+  %t35998 = call i64 @rt_cons(i64 %t35983, i64 %t35997)
+  %t35999 = call i64 @rt_cons(i64 %t35978, i64 %t35998)
+  %t36000 = call i64 @rt_cons(i64 %t35973, i64 %t35999)
+  %t36001 = call i64 @rt_cons(i64 %t35968, i64 %t36000)
+  %t36002 = call i64 @rt_cons(i64 %t35963, i64 %t36001)
+  %t36003 = call i64 @rt_cons(i64 %t35958, i64 %t36002)
+  %t36004 = call i64 @rt_cons(i64 %t35953, i64 %t36003)
+  %t36005 = call i64 @rt_cons(i64 %t35948, i64 %t36004)
+  %t36006 = call i64 @rt_cons(i64 %t35943, i64 %t36005)
+  %t36007 = call i64 @rt_cons(i64 %t35938, i64 %t36006)
+  %t36008 = call i64 @rt_cons(i64 %t35933, i64 %t36007)
+  %t36009 = call i64 @rt_cons(i64 %t35928, i64 %t36008)
+  %t36010 = call i64 @rt_cons(i64 %t35923, i64 %t36009)
+  %t36011 = call i64 @rt_cons(i64 %t35918, i64 %t36010)
+  %t36012 = call i64 @rt_cons(i64 %t35913, i64 %t36011)
+  %t36013 = call i64 @rt_cons(i64 %t35908, i64 %t36012)
+  %t36014 = call i64 @rt_cons(i64 %t35903, i64 %t36013)
+  %t36015 = call i64 @rt_cons(i64 %t35898, i64 %t36014)
+  %t36016 = call i64 @rt_cons(i64 %t35893, i64 %t36015)
+  %t36017 = call i64 @rt_cons(i64 %t35888, i64 %t36016)
+  %t36018 = call i64 @rt_cons(i64 %t35883, i64 %t36017)
+  %t36019 = call i64 @rt_cons(i64 %t35878, i64 %t36018)
+  %t36020 = call i64 @rt_cons(i64 %t35873, i64 %t36019)
+  %t36021 = call i64 @rt_cons(i64 %t35868, i64 %t36020)
+  %t36022 = call i64 @rt_cons(i64 %t35863, i64 %t36021)
+  %t36023 = call i64 @rt_cons(i64 %t35858, i64 %t36022)
+  %t36024 = call i64 @rt_cons(i64 %t35853, i64 %t36023)
+  %t36025 = call i64 @rt_cons(i64 %t35848, i64 %t36024)
+  %t36026 = call i64 @rt_cons(i64 %t35843, i64 %t36025)
+  %t36027 = call i64 @rt_cons(i64 %t35838, i64 %t36026)
+  %t36028 = call i64 @rt_cons(i64 %t35833, i64 %t36027)
+  %t36029 = call i64 @rt_cons(i64 %t35828, i64 %t36028)
+  %t36030 = call i64 @rt_cons(i64 %t35823, i64 %t36029)
+  %t36031 = call i64 @rt_cons(i64 %t35818, i64 %t36030)
+  %t36032 = call i64 @rt_cons(i64 %t35813, i64 %t36031)
+  %t36033 = call i64 @rt_cons(i64 %t35808, i64 %t36032)
+  %t36034 = call i64 @rt_cons(i64 %t35803, i64 %t36033)
+  %t36035 = call i64 @rt_cons(i64 %t35798, i64 %t36034)
+  %t36036 = call i64 @rt_cons(i64 %t35793, i64 %t36035)
+  %t36037 = call i64 @rt_cons(i64 %t35788, i64 %t36036)
+  %t36038 = call i64 @rt_cons(i64 %t35783, i64 %t36037)
+  %t36039 = call i64 @rt_cons(i64 %t35778, i64 %t36038)
+  %t36040 = call i64 @rt_cons(i64 %t35773, i64 %t36039)
+  %t36041 = call i64 @rt_cons(i64 %t35768, i64 %t36040)
+  %t36042 = call i64 @rt_cons(i64 %t35763, i64 %t36041)
+  %t36043 = call i64 @rt_cons(i64 %t35758, i64 %t36042)
+  %t36044 = call i64 @rt_cons(i64 %t35753, i64 %t36043)
+  %t36045 = call i64 @rt_cons(i64 %t35748, i64 %t36044)
+  %t36046 = call i64 @rt_cons(i64 %t35743, i64 %t36045)
+  %t36047 = call i64 @rt_cons(i64 %t35738, i64 %t36046)
+  %t36048 = call i64 @rt_cons(i64 %t35731, i64 %t36047)
+  %t36049 = call i64 @rt_cons(i64 %t35724, i64 %t36048)
+  %t36050 = call i64 @rt_cons(i64 %t35717, i64 %t36049)
+  %t36051 = call i64 @rt_cons(i64 %t35710, i64 %t36050)
+  %t36052 = call i64 @rt_cons(i64 %t35703, i64 %t36051)
+  %t36053 = call i64 @rt_cons(i64 %t35696, i64 %t36052)
+  %t36054 = call i64 @rt_set_box(i64 %t35260, i64 %t36053)
+  %t36055 = call i64 @rt_alloc_words(i64 2)
+  %t36056 = inttoptr i64 %t36055 to ptr
+  store i64 ptrtoint (ptr @code_5276 to i64), ptr %t36056
+  %t36057 = getelementptr i64, ptr %t36056, i64 1
+  store i64 %t35260, ptr %t36057
+  %t36058 = or i64 %t36055, 4
+  %t36059 = call i64 @rt_set_box(i64 %t35261, i64 %t36058)
+  %t36060 = call i64 @rt_alloc_words(i64 2)
+  %t36061 = inttoptr i64 %t36060 to ptr
+  store i64 ptrtoint (ptr @code_5278 to i64), ptr %t36061
+  %t36062 = getelementptr i64, ptr %t36061, i64 1
+  store i64 %t35261, ptr %t36062
+  %t36063 = or i64 %t36060, 4
+  %t36064 = call i64 @rt_set_box(i64 %t35262, i64 %t36063)
   %t36065 = call i64 @rt_alloc_words(i64 2)
   %t36066 = inttoptr i64 %t36065 to ptr
-  store i64 ptrtoint (ptr @code_5328 to i64), ptr %t36066
+  store i64 ptrtoint (ptr @code_5280 to i64), ptr %t36066
   %t36067 = getelementptr i64, ptr %t36066, i64 1
-  store i64 %t35199, ptr %t36067
+  store i64 %t35254, ptr %t36067
   %t36068 = or i64 %t36065, 4
-  %t36069 = call i64 @rt_set_box(i64 %t35200, i64 %t36068)
-  %t36070 = call i64 @rt_alloc_words(i64 4)
+  %t36069 = call i64 @rt_set_box(i64 %t35263, i64 %t36068)
+  %t36070 = call i64 @rt_alloc_words(i64 3)
   %t36071 = inttoptr i64 %t36070 to ptr
-  store i64 ptrtoint (ptr @code_5330 to i64), ptr %t36071
+  store i64 ptrtoint (ptr @code_5284 to i64), ptr %t36071
   %t36072 = getelementptr i64, ptr %t36071, i64 1
-  store i64 %t35202, ptr %t36072
+  store i64 %t35269, ptr %t36072
   %t36073 = getelementptr i64, ptr %t36071, i64 2
-  store i64 %t35199, ptr %t36073
-  %t36074 = getelementptr i64, ptr %t36071, i64 3
-  store i64 %t35215, ptr %t36074
-  %t36075 = or i64 %t36070, 4
-  %t36076 = call i64 @rt_set_box(i64 %t35201, i64 %t36075)
-  %t36077 = call i64 @rt_alloc_words(i64 1)
-  %t36078 = inttoptr i64 %t36077 to ptr
-  store i64 ptrtoint (ptr @code_5334 to i64), ptr %t36078
-  %t36079 = or i64 %t36077, 4
-  %t36080 = call i64 @rt_set_box(i64 %t35202, i64 %t36079)
-  %t36081 = call i64 @rt_alloc_words(i64 1)
+  store i64 %t35263, ptr %t36073
+  %t36074 = or i64 %t36070, 4
+  %t36075 = call i64 @rt_set_box(i64 %t35264, i64 %t36074)
+  %t36076 = call i64 @rt_alloc_words(i64 2)
+  %t36077 = inttoptr i64 %t36076 to ptr
+  store i64 ptrtoint (ptr @code_5286 to i64), ptr %t36077
+  %t36078 = getelementptr i64, ptr %t36077, i64 1
+  store i64 %t35254, ptr %t36078
+  %t36079 = or i64 %t36076, 4
+  %t36080 = call i64 @rt_set_box(i64 %t35265, i64 %t36079)
+  %t36081 = call i64 @rt_alloc_words(i64 2)
   %t36082 = inttoptr i64 %t36081 to ptr
-  store i64 ptrtoint (ptr @code_5336 to i64), ptr %t36082
-  %t36083 = or i64 %t36081, 4
-  %t36084 = call i64 @rt_set_box(i64 %t35203, i64 %t36083)
-  %t36085 = call i64 @rt_alloc_words(i64 1)
-  %t36086 = inttoptr i64 %t36085 to ptr
-  store i64 ptrtoint (ptr @code_5338 to i64), ptr %t36086
-  %t36087 = or i64 %t36085, 4
-  %t36088 = call i64 @rt_set_box(i64 %t35204, i64 %t36087)
-  %t36089 = call i64 @rt_alloc_words(i64 1)
-  %t36090 = inttoptr i64 %t36089 to ptr
-  store i64 ptrtoint (ptr @code_5340 to i64), ptr %t36090
-  %t36091 = or i64 %t36089, 4
-  %t36092 = call i64 @rt_set_box(i64 %t35205, i64 %t36091)
-  %t36093 = call i64 @rt_alloc_words(i64 2)
-  %t36094 = inttoptr i64 %t36093 to ptr
-  store i64 ptrtoint (ptr @code_5342 to i64), ptr %t36094
-  %t36095 = getelementptr i64, ptr %t36094, i64 1
-  store i64 %t35206, ptr %t36095
-  %t36096 = or i64 %t36093, 4
-  %t36097 = call i64 @rt_set_box(i64 %t35206, i64 %t36096)
-  %t36098 = call i64 @rt_alloc_words(i64 2)
-  %t36099 = inttoptr i64 %t36098 to ptr
-  store i64 ptrtoint (ptr @code_5344 to i64), ptr %t36099
-  %t36100 = getelementptr i64, ptr %t36099, i64 1
-  store i64 %t35207, ptr %t36100
-  %t36101 = or i64 %t36098, 4
-  %t36102 = call i64 @rt_set_box(i64 %t35207, i64 %t36101)
-  %t36103 = call i64 @rt_alloc_words(i64 3)
-  %t36104 = inttoptr i64 %t36103 to ptr
-  store i64 ptrtoint (ptr @code_5346 to i64), ptr %t36104
-  %t36105 = getelementptr i64, ptr %t36104, i64 1
-  store i64 %t35206, ptr %t36105
-  %t36106 = getelementptr i64, ptr %t36104, i64 2
-  store i64 %t35207, ptr %t36106
-  %t36107 = or i64 %t36103, 4
-  %t36108 = call i64 @rt_set_box(i64 %t35208, i64 %t36107)
-  %t36109 = call i64 @rt_alloc_words(i64 4)
-  %t36110 = inttoptr i64 %t36109 to ptr
-  store i64 ptrtoint (ptr @code_5348 to i64), ptr %t36110
-  %t36111 = getelementptr i64, ptr %t36110, i64 1
-  store i64 %t35206, ptr %t36111
-  %t36112 = getelementptr i64, ptr %t36110, i64 2
-  store i64 %t35207, ptr %t36112
-  %t36113 = getelementptr i64, ptr %t36110, i64 3
-  store i64 %t35208, ptr %t36113
-  %t36114 = or i64 %t36109, 4
-  %t36115 = call i64 @rt_set_box(i64 %t35209, i64 %t36114)
-  %t36116 = call i64 @rt_alloc_words(i64 3)
-  %t36117 = inttoptr i64 %t36116 to ptr
-  store i64 ptrtoint (ptr @code_5356 to i64), ptr %t36117
-  %t36118 = getelementptr i64, ptr %t36117, i64 1
-  store i64 %t35177, ptr %t36118
-  %t36119 = getelementptr i64, ptr %t36117, i64 2
-  store i64 %t35210, ptr %t36119
-  %t36120 = or i64 %t36116, 4
-  %t36121 = call i64 @rt_set_box(i64 %t35210, i64 %t36120)
-  %t36122 = call i64 @rt_alloc_words(i64 4)
-  %t36123 = inttoptr i64 %t36122 to ptr
-  store i64 ptrtoint (ptr @code_5358 to i64), ptr %t36123
-  %t36124 = getelementptr i64, ptr %t36123, i64 1
-  store i64 %t35209, ptr %t36124
-  %t36125 = getelementptr i64, ptr %t36123, i64 2
-  store i64 %t35177, ptr %t36125
-  %t36126 = getelementptr i64, ptr %t36123, i64 3
-  store i64 %t35210, ptr %t36126
-  %t36127 = or i64 %t36122, 4
-  %t36128 = call i64 @rt_set_box(i64 %t35211, i64 %t36127)
-  %t36129 = call i64 @rt_alloc_words(i64 1)
-  %t36130 = inttoptr i64 %t36129 to ptr
-  store i64 ptrtoint (ptr @code_5364 to i64), ptr %t36130
-  %t36131 = or i64 %t36129, 4
-  %t36132 = call i64 @rt_set_box(i64 %t35212, i64 %t36131)
-  %t36133 = call i64 @rt_alloc_words(i64 3)
-  %t36134 = inttoptr i64 %t36133 to ptr
-  store i64 ptrtoint (ptr @code_5366 to i64), ptr %t36134
-  %t36135 = getelementptr i64, ptr %t36134, i64 1
-  store i64 %t35212, ptr %t36135
-  %t36136 = getelementptr i64, ptr %t36134, i64 2
-  store i64 %t35203, ptr %t36136
-  %t36137 = or i64 %t36133, 4
-  %t36138 = call i64 @rt_set_box(i64 %t35213, i64 %t36137)
-  %t36139 = call i64 @rt_alloc_words(i64 4)
-  %t36140 = inttoptr i64 %t36139 to ptr
-  store i64 ptrtoint (ptr @code_5374 to i64), ptr %t36140
-  %t36141 = getelementptr i64, ptr %t36140, i64 1
-  store i64 %t35202, ptr %t36141
-  %t36142 = getelementptr i64, ptr %t36140, i64 2
-  store i64 %t35205, ptr %t36142
-  %t36143 = getelementptr i64, ptr %t36140, i64 3
-  store i64 %t35214, ptr %t36143
-  %t36144 = or i64 %t36139, 4
-  %t36145 = call i64 @rt_set_box(i64 %t35214, i64 %t36144)
-  %t36146 = call i64 @rt_alloc_words(i64 7)
-  %t36147 = inttoptr i64 %t36146 to ptr
-  store i64 ptrtoint (ptr @code_5376 to i64), ptr %t36147
-  %t36148 = getelementptr i64, ptr %t36147, i64 1
-  store i64 %t35202, ptr %t36148
-  %t36149 = getelementptr i64, ptr %t36147, i64 2
-  store i64 %t35204, ptr %t36149
-  %t36150 = getelementptr i64, ptr %t36147, i64 3
-  store i64 %t35205, ptr %t36150
-  %t36151 = getelementptr i64, ptr %t36147, i64 4
-  store i64 %t35211, ptr %t36151
-  %t36152 = getelementptr i64, ptr %t36147, i64 5
-  store i64 %t35214, ptr %t36152
-  %t36153 = getelementptr i64, ptr %t36147, i64 6
-  store i64 %t35213, ptr %t36153
-  %t36154 = or i64 %t36146, 4
-  %t36155 = call i64 @rt_set_box(i64 %t35215, i64 %t36154)
-  %t36156 = call i64 @rt_alloc_words(i64 6)
-  %t36157 = inttoptr i64 %t36156 to ptr
-  store i64 ptrtoint (ptr @code_5380 to i64), ptr %t36157
-  %t36158 = getelementptr i64, ptr %t36157, i64 1
-  store i64 %t35202, ptr %t36158
-  %t36159 = getelementptr i64, ptr %t36157, i64 2
-  store i64 %t35204, ptr %t36159
-  %t36160 = getelementptr i64, ptr %t36157, i64 3
-  store i64 %t35205, ptr %t36160
-  %t36161 = getelementptr i64, ptr %t36157, i64 4
-  store i64 %t35211, ptr %t36161
-  %t36162 = getelementptr i64, ptr %t36157, i64 5
-  store i64 %t35213, ptr %t36162
-  %t36163 = or i64 %t36156, 4
-  %t36164 = call i64 @rt_set_box(i64 %t35216, i64 %t36163)
-  %t36165 = call i64 @rt_alloc_words(i64 1)
-  %t36166 = inttoptr i64 %t36165 to ptr
-  store i64 ptrtoint (ptr @code_5384 to i64), ptr %t36166
-  %t36167 = or i64 %t36165, 4
-  %t36168 = call i64 @rt_set_box(i64 %t35217, i64 %t36167)
-  %t36169 = call i64 @rt_alloc_words(i64 1)
-  %t36170 = inttoptr i64 %t36169 to ptr
-  store i64 ptrtoint (ptr @code_5386 to i64), ptr %t36170
-  %t36171 = or i64 %t36169, 4
-  %t36172 = call i64 @rt_set_box(i64 %t35218, i64 %t36171)
-  %t36173 = call i64 @rt_alloc_words(i64 1)
-  %t36174 = inttoptr i64 %t36173 to ptr
-  store i64 ptrtoint (ptr @code_5388 to i64), ptr %t36174
-  %t36175 = or i64 %t36173, 4
-  %t36176 = call i64 @rt_set_box(i64 %t35219, i64 %t36175)
-  %t36177 = call i64 @rt_alloc_words(i64 1)
-  %t36178 = inttoptr i64 %t36177 to ptr
-  store i64 ptrtoint (ptr @code_5390 to i64), ptr %t36178
-  %t36179 = or i64 %t36177, 4
-  %t36180 = call i64 @rt_set_box(i64 %t35220, i64 %t36179)
+  store i64 ptrtoint (ptr @code_5288 to i64), ptr %t36082
+  %t36083 = getelementptr i64, ptr %t36082, i64 1
+  store i64 %t35254, ptr %t36083
+  %t36084 = or i64 %t36081, 4
+  %t36085 = call i64 @rt_set_box(i64 %t35266, i64 %t36084)
+  %t36086 = call i64 @rt_alloc_words(i64 2)
+  %t36087 = inttoptr i64 %t36086 to ptr
+  store i64 ptrtoint (ptr @code_5290 to i64), ptr %t36087
+  %t36088 = getelementptr i64, ptr %t36087, i64 1
+  store i64 %t35254, ptr %t36088
+  %t36089 = or i64 %t36086, 4
+  %t36090 = call i64 @rt_set_box(i64 %t35267, i64 %t36089)
+  %t36091 = call i64 @rt_alloc_words(i64 2)
+  %t36092 = inttoptr i64 %t36091 to ptr
+  store i64 ptrtoint (ptr @code_5292 to i64), ptr %t36092
+  %t36093 = getelementptr i64, ptr %t36092, i64 1
+  store i64 %t35254, ptr %t36093
+  %t36094 = or i64 %t36091, 4
+  %t36095 = call i64 @rt_set_box(i64 %t35268, i64 %t36094)
+  %t36096 = call i64 @rt_alloc_words(i64 5)
+  %t36097 = inttoptr i64 %t36096 to ptr
+  store i64 ptrtoint (ptr @code_5294 to i64), ptr %t36097
+  %t36098 = getelementptr i64, ptr %t36097, i64 1
+  store i64 %t35265, ptr %t36098
+  %t36099 = getelementptr i64, ptr %t36097, i64 2
+  store i64 %t35266, ptr %t36099
+  %t36100 = getelementptr i64, ptr %t36097, i64 3
+  store i64 %t35267, ptr %t36100
+  %t36101 = getelementptr i64, ptr %t36097, i64 4
+  store i64 %t35268, ptr %t36101
+  %t36102 = or i64 %t36096, 4
+  %t36103 = call i64 @rt_set_box(i64 %t35269, i64 %t36102)
+  %t36104 = call i64 @rt_alloc_words(i64 3)
+  %t36105 = inttoptr i64 %t36104 to ptr
+  store i64 ptrtoint (ptr @code_5296 to i64), ptr %t36105
+  %t36106 = getelementptr i64, ptr %t36105, i64 1
+  store i64 %t35261, ptr %t36106
+  %t36107 = getelementptr i64, ptr %t36105, i64 2
+  store i64 %t35264, ptr %t36107
+  %t36108 = or i64 %t36104, 4
+  %t36109 = call i64 @rt_set_box(i64 %t35270, i64 %t36108)
+  %t36110 = call i64 @rt_alloc_words(i64 2)
+  %t36111 = inttoptr i64 %t36110 to ptr
+  store i64 ptrtoint (ptr @code_5330 to i64), ptr %t36111
+  %t36112 = getelementptr i64, ptr %t36111, i64 1
+  store i64 %t35271, ptr %t36112
+  %t36113 = or i64 %t36110, 4
+  %t36114 = call i64 @rt_set_box(i64 %t35271, i64 %t36113)
+  %t36115 = call i64 @rt_alloc_words(i64 2)
+  %t36116 = inttoptr i64 %t36115 to ptr
+  store i64 ptrtoint (ptr @code_5332 to i64), ptr %t36116
+  %t36117 = getelementptr i64, ptr %t36116, i64 1
+  store i64 %t35272, ptr %t36117
+  %t36118 = or i64 %t36115, 4
+  %t36119 = call i64 @rt_set_box(i64 %t35272, i64 %t36118)
+  %t36120 = call i64 @rt_alloc_words(i64 3)
+  %t36121 = inttoptr i64 %t36120 to ptr
+  store i64 ptrtoint (ptr @code_5334 to i64), ptr %t36121
+  %t36122 = getelementptr i64, ptr %t36121, i64 1
+  store i64 %t35272, ptr %t36122
+  %t36123 = getelementptr i64, ptr %t36121, i64 2
+  store i64 %t35271, ptr %t36123
+  %t36124 = or i64 %t36120, 4
+  %t36125 = call i64 @rt_set_box(i64 %t35273, i64 %t36124)
+  %t36126 = call i64 @rt_alloc_words(i64 1)
+  %t36127 = inttoptr i64 %t36126 to ptr
+  store i64 ptrtoint (ptr @code_5336 to i64), ptr %t36127
+  %t36128 = or i64 %t36126, 4
+  %t36129 = call i64 @rt_set_box(i64 %t35274, i64 %t36128)
+  %t36130 = call i64 @rt_alloc_words(i64 2)
+  %t36131 = inttoptr i64 %t36130 to ptr
+  store i64 ptrtoint (ptr @code_5340 to i64), ptr %t36131
+  %t36132 = getelementptr i64, ptr %t36131, i64 1
+  store i64 %t35276, ptr %t36132
+  %t36133 = or i64 %t36130, 4
+  %t36134 = call i64 @rt_set_box(i64 %t35275, i64 %t36133)
+  %t36135 = call i64 @rt_alloc_words(i64 5)
+  %t36136 = inttoptr i64 %t36135 to ptr
+  store i64 ptrtoint (ptr @code_5342 to i64), ptr %t36136
+  %t36137 = getelementptr i64, ptr %t36136, i64 1
+  store i64 %t35276, ptr %t36137
+  %t36138 = getelementptr i64, ptr %t36136, i64 2
+  store i64 %t35259, ptr %t36138
+  %t36139 = getelementptr i64, ptr %t36136, i64 3
+  store i64 %t35278, ptr %t36139
+  %t36140 = getelementptr i64, ptr %t36136, i64 4
+  store i64 %t35277, ptr %t36140
+  %t36141 = or i64 %t36135, 4
+  %t36142 = call i64 @rt_set_box(i64 %t35276, i64 %t36141)
+  %t36143 = call i64 @rt_alloc_words(i64 2)
+  %t36144 = inttoptr i64 %t36143 to ptr
+  store i64 ptrtoint (ptr @code_5368 to i64), ptr %t36144
+  %t36145 = getelementptr i64, ptr %t36144, i64 1
+  store i64 %t35276, ptr %t36145
+  %t36146 = or i64 %t36143, 4
+  %t36147 = call i64 @rt_set_box(i64 %t35277, i64 %t36146)
+  %t36148 = call i64 @rt_alloc_words(i64 4)
+  %t36149 = inttoptr i64 %t36148 to ptr
+  store i64 ptrtoint (ptr @code_5370 to i64), ptr %t36149
+  %t36150 = getelementptr i64, ptr %t36149, i64 1
+  store i64 %t35279, ptr %t36150
+  %t36151 = getelementptr i64, ptr %t36149, i64 2
+  store i64 %t35276, ptr %t36151
+  %t36152 = getelementptr i64, ptr %t36149, i64 3
+  store i64 %t35292, ptr %t36152
+  %t36153 = or i64 %t36148, 4
+  %t36154 = call i64 @rt_set_box(i64 %t35278, i64 %t36153)
+  %t36155 = call i64 @rt_alloc_words(i64 1)
+  %t36156 = inttoptr i64 %t36155 to ptr
+  store i64 ptrtoint (ptr @code_5374 to i64), ptr %t36156
+  %t36157 = or i64 %t36155, 4
+  %t36158 = call i64 @rt_set_box(i64 %t35279, i64 %t36157)
+  %t36159 = call i64 @rt_alloc_words(i64 1)
+  %t36160 = inttoptr i64 %t36159 to ptr
+  store i64 ptrtoint (ptr @code_5376 to i64), ptr %t36160
+  %t36161 = or i64 %t36159, 4
+  %t36162 = call i64 @rt_set_box(i64 %t35280, i64 %t36161)
+  %t36163 = call i64 @rt_alloc_words(i64 1)
+  %t36164 = inttoptr i64 %t36163 to ptr
+  store i64 ptrtoint (ptr @code_5378 to i64), ptr %t36164
+  %t36165 = or i64 %t36163, 4
+  %t36166 = call i64 @rt_set_box(i64 %t35281, i64 %t36165)
+  %t36167 = call i64 @rt_alloc_words(i64 1)
+  %t36168 = inttoptr i64 %t36167 to ptr
+  store i64 ptrtoint (ptr @code_5380 to i64), ptr %t36168
+  %t36169 = or i64 %t36167, 4
+  %t36170 = call i64 @rt_set_box(i64 %t35282, i64 %t36169)
+  %t36171 = call i64 @rt_alloc_words(i64 2)
+  %t36172 = inttoptr i64 %t36171 to ptr
+  store i64 ptrtoint (ptr @code_5382 to i64), ptr %t36172
+  %t36173 = getelementptr i64, ptr %t36172, i64 1
+  store i64 %t35283, ptr %t36173
+  %t36174 = or i64 %t36171, 4
+  %t36175 = call i64 @rt_set_box(i64 %t35283, i64 %t36174)
+  %t36176 = call i64 @rt_alloc_words(i64 2)
+  %t36177 = inttoptr i64 %t36176 to ptr
+  store i64 ptrtoint (ptr @code_5384 to i64), ptr %t36177
+  %t36178 = getelementptr i64, ptr %t36177, i64 1
+  store i64 %t35284, ptr %t36178
+  %t36179 = or i64 %t36176, 4
+  %t36180 = call i64 @rt_set_box(i64 %t35284, i64 %t36179)
   %t36181 = call i64 @rt_alloc_words(i64 3)
   %t36182 = inttoptr i64 %t36181 to ptr
-  store i64 ptrtoint (ptr @code_5392 to i64), ptr %t36182
+  store i64 ptrtoint (ptr @code_5386 to i64), ptr %t36182
   %t36183 = getelementptr i64, ptr %t36182, i64 1
-  store i64 %t35220, ptr %t36183
+  store i64 %t35283, ptr %t36183
   %t36184 = getelementptr i64, ptr %t36182, i64 2
-  store i64 %t35204, ptr %t36184
+  store i64 %t35284, ptr %t36184
   %t36185 = or i64 %t36181, 4
-  %t36186 = call i64 @rt_set_box(i64 %t35221, i64 %t36185)
-  %t36187 = call i64 @rt_alloc_words(i64 1)
+  %t36186 = call i64 @rt_set_box(i64 %t35285, i64 %t36185)
+  %t36187 = call i64 @rt_alloc_words(i64 4)
   %t36188 = inttoptr i64 %t36187 to ptr
-  store i64 ptrtoint (ptr @code_5394 to i64), ptr %t36188
-  %t36189 = or i64 %t36187, 4
-  %t36190 = call i64 @rt_set_box(i64 %t35222, i64 %t36189)
-  %t36191 = call i64 @rt_alloc_words(i64 1)
-  %t36192 = inttoptr i64 %t36191 to ptr
-  store i64 ptrtoint (ptr @code_5396 to i64), ptr %t36192
-  %t36193 = or i64 %t36191, 4
-  %t36194 = call i64 @rt_set_box(i64 %t35223, i64 %t36193)
-  %t36195 = call i64 @rt_alloc_words(i64 1)
-  %t36196 = inttoptr i64 %t36195 to ptr
-  store i64 ptrtoint (ptr @code_5398 to i64), ptr %t36196
-  %t36197 = or i64 %t36195, 4
-  %t36198 = call i64 @rt_set_box(i64 %t35224, i64 %t36197)
-  %t36199 = call i64 @rt_alloc_words(i64 5)
-  %t36200 = inttoptr i64 %t36199 to ptr
-  store i64 ptrtoint (ptr @code_5400 to i64), ptr %t36200
-  %t36201 = getelementptr i64, ptr %t36200, i64 1
-  store i64 %t35218, ptr %t36201
-  %t36202 = getelementptr i64, ptr %t36200, i64 2
-  store i64 %t35222, ptr %t36202
-  %t36203 = getelementptr i64, ptr %t36200, i64 3
-  store i64 %t35182, ptr %t36203
-  %t36204 = getelementptr i64, ptr %t36200, i64 4
-  store i64 %t35185, ptr %t36204
-  %t36205 = or i64 %t36199, 4
-  %t36206 = call i64 @rt_set_box(i64 %t35225, i64 %t36205)
-  %t36207 = call i64 @rt_alloc_words(i64 5)
+  store i64 ptrtoint (ptr @code_5388 to i64), ptr %t36188
+  %t36189 = getelementptr i64, ptr %t36188, i64 1
+  store i64 %t35283, ptr %t36189
+  %t36190 = getelementptr i64, ptr %t36188, i64 2
+  store i64 %t35284, ptr %t36190
+  %t36191 = getelementptr i64, ptr %t36188, i64 3
+  store i64 %t35285, ptr %t36191
+  %t36192 = or i64 %t36187, 4
+  %t36193 = call i64 @rt_set_box(i64 %t35286, i64 %t36192)
+  %t36194 = call i64 @rt_alloc_words(i64 3)
+  %t36195 = inttoptr i64 %t36194 to ptr
+  store i64 ptrtoint (ptr @code_5396 to i64), ptr %t36195
+  %t36196 = getelementptr i64, ptr %t36195, i64 1
+  store i64 %t35254, ptr %t36196
+  %t36197 = getelementptr i64, ptr %t36195, i64 2
+  store i64 %t35287, ptr %t36197
+  %t36198 = or i64 %t36194, 4
+  %t36199 = call i64 @rt_set_box(i64 %t35287, i64 %t36198)
+  %t36200 = call i64 @rt_alloc_words(i64 4)
+  %t36201 = inttoptr i64 %t36200 to ptr
+  store i64 ptrtoint (ptr @code_5398 to i64), ptr %t36201
+  %t36202 = getelementptr i64, ptr %t36201, i64 1
+  store i64 %t35286, ptr %t36202
+  %t36203 = getelementptr i64, ptr %t36201, i64 2
+  store i64 %t35254, ptr %t36203
+  %t36204 = getelementptr i64, ptr %t36201, i64 3
+  store i64 %t35287, ptr %t36204
+  %t36205 = or i64 %t36200, 4
+  %t36206 = call i64 @rt_set_box(i64 %t35288, i64 %t36205)
+  %t36207 = call i64 @rt_alloc_words(i64 1)
   %t36208 = inttoptr i64 %t36207 to ptr
-  store i64 ptrtoint (ptr @code_5402 to i64), ptr %t36208
-  %t36209 = getelementptr i64, ptr %t36208, i64 1
-  store i64 %t35196, ptr %t36209
-  %t36210 = getelementptr i64, ptr %t36208, i64 2
-  store i64 %t35225, ptr %t36210
-  %t36211 = getelementptr i64, ptr %t36208, i64 3
-  store i64 %t35223, ptr %t36211
-  %t36212 = getelementptr i64, ptr %t36208, i64 4
-  store i64 %t35224, ptr %t36212
-  %t36213 = or i64 %t36207, 4
-  %t36214 = call i64 @rt_set_box(i64 %t35226, i64 %t36213)
-  %t36215 = call i64 @rt_alloc_words(i64 12)
-  %t36216 = inttoptr i64 %t36215 to ptr
-  store i64 ptrtoint (ptr @code_5442 to i64), ptr %t36216
-  %t36217 = getelementptr i64, ptr %t36216, i64 1
-  store i64 %t35193, ptr %t36217
-  %t36218 = getelementptr i64, ptr %t36216, i64 2
-  store i64 %t35226, ptr %t36218
-  %t36219 = getelementptr i64, ptr %t36216, i64 3
-  store i64 %t35230, ptr %t36219
-  %t36220 = getelementptr i64, ptr %t36216, i64 4
-  store i64 %t35198, ptr %t36220
-  %t36221 = getelementptr i64, ptr %t36216, i64 5
-  store i64 %t35202, ptr %t36221
-  %t36222 = getelementptr i64, ptr %t36216, i64 6
-  store i64 %t35204, ptr %t36222
-  %t36223 = getelementptr i64, ptr %t36216, i64 7
-  store i64 %t35218, ptr %t36223
-  %t36224 = getelementptr i64, ptr %t36216, i64 8
-  store i64 %t35203, ptr %t36224
-  %t36225 = getelementptr i64, ptr %t36216, i64 9
-  store i64 %t35219, ptr %t36225
-  %t36226 = getelementptr i64, ptr %t36216, i64 10
-  store i64 %t35205, ptr %t36226
-  %t36227 = getelementptr i64, ptr %t36216, i64 11
-  store i64 %t35211, ptr %t36227
-  %t36228 = or i64 %t36215, 4
-  %t36229 = call i64 @rt_set_box(i64 %t35227, i64 %t36228)
-  %t36230 = call i64 @rt_alloc_words(i64 2)
-  %t36231 = inttoptr i64 %t36230 to ptr
-  store i64 ptrtoint (ptr @code_5450 to i64), ptr %t36231
-  %t36232 = getelementptr i64, ptr %t36231, i64 1
-  store i64 %t35227, ptr %t36232
-  %t36233 = or i64 %t36230, 4
-  %t36234 = call i64 @rt_set_box(i64 %t35228, i64 %t36233)
-  %t36235 = call i64 @rt_alloc_words(i64 3)
-  %t36236 = inttoptr i64 %t36235 to ptr
-  store i64 ptrtoint (ptr @code_5452 to i64), ptr %t36236
-  %t36237 = getelementptr i64, ptr %t36236, i64 1
-  store i64 %t35219, ptr %t36237
-  %t36238 = getelementptr i64, ptr %t36236, i64 2
-  store i64 %t35204, ptr %t36238
-  %t36239 = or i64 %t36235, 4
-  %t36240 = call i64 @rt_set_box(i64 %t35229, i64 %t36239)
-  %t36241 = call i64 @rt_alloc_words(i64 2)
-  %t36242 = inttoptr i64 %t36241 to ptr
-  store i64 ptrtoint (ptr @code_5454 to i64), ptr %t36242
-  %t36243 = getelementptr i64, ptr %t36242, i64 1
-  store i64 %t35231, ptr %t36243
-  %t36244 = or i64 %t36241, 4
-  %t36245 = call i64 @rt_set_box(i64 %t35230, i64 %t36244)
-  %t36246 = call i64 @rt_alloc_words(i64 7)
-  %t36247 = inttoptr i64 %t36246 to ptr
-  store i64 ptrtoint (ptr @code_5456 to i64), ptr %t36247
-  %t36248 = getelementptr i64, ptr %t36247, i64 1
-  store i64 %t35231, ptr %t36248
-  %t36249 = getelementptr i64, ptr %t36247, i64 2
-  store i64 %t35177, ptr %t36249
-  %t36250 = getelementptr i64, ptr %t36247, i64 3
-  store i64 %t35196, ptr %t36250
-  %t36251 = getelementptr i64, ptr %t36247, i64 4
-  store i64 %t35194, ptr %t36251
-  %t36252 = getelementptr i64, ptr %t36247, i64 5
-  store i64 %t35195, ptr %t36252
-  %t36253 = getelementptr i64, ptr %t36247, i64 6
-  store i64 %t35197, ptr %t36253
-  %t36254 = or i64 %t36246, 4
-  %t36255 = call i64 @rt_set_box(i64 %t35231, i64 %t36254)
-  %t36256 = call i64 @rt_intern(ptr @.str.sym.733)
-  %t36257 = call i64 @rt_set_box(i64 %t35232, i64 %t36256)
-  %t36258 = call i64 @rt_intern(ptr @.str.sym.734)
-  %t36259 = call i64 @rt_set_box(i64 %t35233, i64 %t36258)
-  %t36260 = call i64 @rt_intern(ptr @.str.sym.40)
-  %t36261 = call i64 @rt_intern(ptr @.str.sym.12)
-  %t36262 = call i64 @rt_intern(ptr @.str.sym.5)
-  %t36263 = call i64 @rt_intern(ptr @.str.sym.30)
-  %t36264 = call i64 @rt_intern(ptr @.str.sym.11)
-  %t36265 = call i64 @rt_intern(ptr @.str.sym.39)
-  %t36266 = call i64 @rt_intern(ptr @.str.sym.32)
-  %t36267 = call i64 @rt_intern(ptr @.str.sym.37)
-  %t36268 = call i64 @rt_intern(ptr @.str.sym.31)
-  %t36269 = call i64 @rt_intern(ptr @.str.sym.74)
-  %t36270 = call i64 @rt_intern(ptr @.str.sym.75)
-  %t36271 = call i64 @rt_intern(ptr @.str.sym.84)
-  %t36272 = call i64 @rt_intern(ptr @.str.sym.85)
-  %t36273 = call i64 @rt_intern(ptr @.str.sym.86)
-  %t36274 = call i64 @rt_cons(i64 %t36273, i64 2)
-  %t36275 = call i64 @rt_cons(i64 %t36272, i64 %t36274)
-  %t36276 = call i64 @rt_cons(i64 %t36271, i64 %t36275)
-  %t36277 = call i64 @rt_cons(i64 %t36270, i64 %t36276)
-  %t36278 = call i64 @rt_cons(i64 %t36269, i64 %t36277)
-  %t36279 = call i64 @rt_cons(i64 %t36268, i64 %t36278)
-  %t36280 = call i64 @rt_cons(i64 %t36267, i64 %t36279)
-  %t36281 = call i64 @rt_cons(i64 %t36266, i64 %t36280)
-  %t36282 = call i64 @rt_cons(i64 %t36265, i64 %t36281)
-  %t36283 = call i64 @rt_cons(i64 %t36264, i64 %t36282)
-  %t36284 = call i64 @rt_cons(i64 %t36263, i64 %t36283)
-  %t36285 = call i64 @rt_cons(i64 %t36262, i64 %t36284)
-  %t36286 = call i64 @rt_cons(i64 %t36261, i64 %t36285)
-  %t36287 = call i64 @rt_cons(i64 %t36260, i64 %t36286)
-  %t36288 = call i64 @rt_set_box(i64 %t35234, i64 %t36287)
-  %t36289 = call i64 @rt_intern(ptr @.str.sym.95)
-  %t36290 = call i64 @rt_intern(ptr @.str.sym.96)
-  %t36291 = call i64 @rt_intern(ptr @.str.sym.97)
-  %t36292 = call i64 @rt_cons(i64 %t36291, i64 2)
-  %t36293 = call i64 @rt_cons(i64 %t36290, i64 %t36292)
-  %t36294 = call i64 @rt_cons(i64 %t36289, i64 %t36293)
-  %t36295 = call i64 @rt_set_box(i64 %t35235, i64 %t36294)
-  %t36296 = call i64 @rt_alloc_words(i64 1)
-  %t36297 = inttoptr i64 %t36296 to ptr
-  store i64 ptrtoint (ptr @code_5500 to i64), ptr %t36297
-  %t36298 = or i64 %t36296, 4
-  %t36299 = call i64 @rt_set_box(i64 %t35236, i64 %t36298)
-  %t36300 = call i64 @rt_alloc_words(i64 1)
-  %t36301 = inttoptr i64 %t36300 to ptr
-  store i64 ptrtoint (ptr @code_5502 to i64), ptr %t36301
-  %t36302 = or i64 %t36300, 4
-  %t36303 = call i64 @rt_set_box(i64 %t35237, i64 %t36302)
-  %t36304 = call i64 @rt_alloc_words(i64 3)
-  %t36305 = inttoptr i64 %t36304 to ptr
-  store i64 ptrtoint (ptr @code_5506 to i64), ptr %t36305
-  %t36306 = getelementptr i64, ptr %t36305, i64 1
-  store i64 %t35236, ptr %t36306
-  %t36307 = getelementptr i64, ptr %t36305, i64 2
-  store i64 %t35237, ptr %t36307
-  %t36308 = or i64 %t36304, 4
-  %t36309 = call i64 @rt_set_box(i64 %t35238, i64 %t36308)
-  %t36310 = call i64 @rt_intern(ptr @.str.sym.735)
-  %t36311 = load i64, ptr @"scheme.base:list"
-  %t36312 = and i64 %t36311, -8
-  %t36313 = inttoptr i64 %t36312 to ptr
-  %t36314 = load i64, ptr %t36313
-  %t36315 = inttoptr i64 %t36314 to ptr
-  %t36316 = call fastcc i64%t36315(i64 %t36311, i64 1, i64 %t36310, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t36317 = call i64 @rt_set_box(i64 %t35239, i64 %t36316)
-  %t36318 = call i64 @rt_intern(ptr @.str.sym.736)
-  %t36319 = load i64, ptr @"scheme.base:list"
-  %t36320 = and i64 %t36319, -8
-  %t36321 = inttoptr i64 %t36320 to ptr
-  %t36322 = load i64, ptr %t36321
-  %t36323 = inttoptr i64 %t36322 to ptr
-  %t36324 = call fastcc i64%t36323(i64 %t36319, i64 1, i64 %t36318, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t36325 = call i64 @rt_set_box(i64 %t35240, i64 %t36324)
-  %t36326 = call i64 @rt_alloc_words(i64 2)
-  %t36327 = inttoptr i64 %t36326 to ptr
-  store i64 ptrtoint (ptr @code_5510 to i64), ptr %t36327
-  %t36328 = getelementptr i64, ptr %t36327, i64 1
-  store i64 %t35240, ptr %t36328
-  %t36329 = or i64 %t36326, 4
-  %t36330 = call i64 @rt_set_box(i64 %t35241, i64 %t36329)
-  %t36331 = call i64 @rt_alloc_words(i64 2)
-  %t36332 = inttoptr i64 %t36331 to ptr
-  store i64 ptrtoint (ptr @code_5512 to i64), ptr %t36332
-  %t36333 = getelementptr i64, ptr %t36332, i64 1
-  store i64 %t35240, ptr %t36333
-  %t36334 = or i64 %t36331, 4
-  %t36335 = call i64 @rt_set_box(i64 %t35242, i64 %t36334)
-  %t36336 = call i64 @rt_alloc_words(i64 1)
-  %t36337 = inttoptr i64 %t36336 to ptr
-  store i64 ptrtoint (ptr @code_5514 to i64), ptr %t36337
-  %t36338 = or i64 %t36336, 4
-  %t36339 = call i64 @rt_set_box(i64 %t35243, i64 %t36338)
-  %t36340 = call i64 @rt_alloc_words(i64 1)
-  %t36341 = inttoptr i64 %t36340 to ptr
-  store i64 ptrtoint (ptr @code_5516 to i64), ptr %t36341
-  %t36342 = or i64 %t36340, 4
-  %t36343 = call i64 @rt_set_box(i64 %t35244, i64 %t36342)
-  %t36344 = call i64 @rt_alloc_words(i64 2)
-  %t36345 = inttoptr i64 %t36344 to ptr
-  store i64 ptrtoint (ptr @code_5520 to i64), ptr %t36345
-  %t36346 = getelementptr i64, ptr %t36345, i64 1
-  store i64 %t35245, ptr %t36346
-  %t36347 = or i64 %t36344, 4
-  %t36348 = call i64 @rt_set_box(i64 %t35245, i64 %t36347)
-  %t36349 = call i64 @rt_alloc_words(i64 3)
-  %t36350 = inttoptr i64 %t36349 to ptr
-  store i64 ptrtoint (ptr @code_5522 to i64), ptr %t36350
-  %t36351 = getelementptr i64, ptr %t36350, i64 1
-  store i64 %t35233, ptr %t36351
-  %t36352 = getelementptr i64, ptr %t36350, i64 2
-  store i64 %t35232, ptr %t36352
-  %t36353 = or i64 %t36349, 4
-  %t36354 = call i64 @rt_set_box(i64 %t35246, i64 %t36353)
-  %t36355 = call i64 @rt_alloc_words(i64 6)
-  %t36356 = inttoptr i64 %t36355 to ptr
-  store i64 ptrtoint (ptr @code_5526 to i64), ptr %t36356
-  %t36357 = getelementptr i64, ptr %t36356, i64 1
-  store i64 %t35233, ptr %t36357
-  %t36358 = getelementptr i64, ptr %t36356, i64 2
-  store i64 %t35239, ptr %t36358
-  %t36359 = getelementptr i64, ptr %t36356, i64 3
-  store i64 %t35232, ptr %t36359
-  %t36360 = getelementptr i64, ptr %t36356, i64 4
-  store i64 %t35248, ptr %t36360
-  %t36361 = getelementptr i64, ptr %t36356, i64 5
-  store i64 %t35247, ptr %t36361
-  %t36362 = or i64 %t36355, 4
-  %t36363 = call i64 @rt_set_box(i64 %t35247, i64 %t36362)
-  %t36364 = call i64 @rt_alloc_words(i64 7)
-  %t36365 = inttoptr i64 %t36364 to ptr
-  store i64 ptrtoint (ptr @code_5528 to i64), ptr %t36365
-  %t36366 = getelementptr i64, ptr %t36365, i64 1
-  store i64 %t35244, ptr %t36366
-  %t36367 = getelementptr i64, ptr %t36365, i64 2
-  store i64 %t35239, ptr %t36367
-  %t36368 = getelementptr i64, ptr %t36365, i64 3
-  store i64 %t35245, ptr %t36368
-  %t36369 = getelementptr i64, ptr %t36365, i64 4
-  store i64 %t35247, ptr %t36369
-  %t36370 = getelementptr i64, ptr %t36365, i64 5
-  store i64 %t35246, ptr %t36370
-  %t36371 = getelementptr i64, ptr %t36365, i64 6
-  store i64 %t35241, ptr %t36371
-  %t36372 = or i64 %t36364, 4
-  %t36373 = call i64 @rt_set_box(i64 %t35248, i64 %t36372)
-  %t36374 = call i64 @rt_alloc_words(i64 3)
+  store i64 ptrtoint (ptr @code_5404 to i64), ptr %t36208
+  %t36209 = or i64 %t36207, 4
+  %t36210 = call i64 @rt_set_box(i64 %t35289, i64 %t36209)
+  %t36211 = call i64 @rt_alloc_words(i64 3)
+  %t36212 = inttoptr i64 %t36211 to ptr
+  store i64 ptrtoint (ptr @code_5406 to i64), ptr %t36212
+  %t36213 = getelementptr i64, ptr %t36212, i64 1
+  store i64 %t35289, ptr %t36213
+  %t36214 = getelementptr i64, ptr %t36212, i64 2
+  store i64 %t35280, ptr %t36214
+  %t36215 = or i64 %t36211, 4
+  %t36216 = call i64 @rt_set_box(i64 %t35290, i64 %t36215)
+  %t36217 = call i64 @rt_alloc_words(i64 4)
+  %t36218 = inttoptr i64 %t36217 to ptr
+  store i64 ptrtoint (ptr @code_5414 to i64), ptr %t36218
+  %t36219 = getelementptr i64, ptr %t36218, i64 1
+  store i64 %t35279, ptr %t36219
+  %t36220 = getelementptr i64, ptr %t36218, i64 2
+  store i64 %t35282, ptr %t36220
+  %t36221 = getelementptr i64, ptr %t36218, i64 3
+  store i64 %t35291, ptr %t36221
+  %t36222 = or i64 %t36217, 4
+  %t36223 = call i64 @rt_set_box(i64 %t35291, i64 %t36222)
+  %t36224 = call i64 @rt_alloc_words(i64 7)
+  %t36225 = inttoptr i64 %t36224 to ptr
+  store i64 ptrtoint (ptr @code_5416 to i64), ptr %t36225
+  %t36226 = getelementptr i64, ptr %t36225, i64 1
+  store i64 %t35279, ptr %t36226
+  %t36227 = getelementptr i64, ptr %t36225, i64 2
+  store i64 %t35281, ptr %t36227
+  %t36228 = getelementptr i64, ptr %t36225, i64 3
+  store i64 %t35282, ptr %t36228
+  %t36229 = getelementptr i64, ptr %t36225, i64 4
+  store i64 %t35288, ptr %t36229
+  %t36230 = getelementptr i64, ptr %t36225, i64 5
+  store i64 %t35291, ptr %t36230
+  %t36231 = getelementptr i64, ptr %t36225, i64 6
+  store i64 %t35290, ptr %t36231
+  %t36232 = or i64 %t36224, 4
+  %t36233 = call i64 @rt_set_box(i64 %t35292, i64 %t36232)
+  %t36234 = call i64 @rt_alloc_words(i64 6)
+  %t36235 = inttoptr i64 %t36234 to ptr
+  store i64 ptrtoint (ptr @code_5420 to i64), ptr %t36235
+  %t36236 = getelementptr i64, ptr %t36235, i64 1
+  store i64 %t35279, ptr %t36236
+  %t36237 = getelementptr i64, ptr %t36235, i64 2
+  store i64 %t35281, ptr %t36237
+  %t36238 = getelementptr i64, ptr %t36235, i64 3
+  store i64 %t35282, ptr %t36238
+  %t36239 = getelementptr i64, ptr %t36235, i64 4
+  store i64 %t35288, ptr %t36239
+  %t36240 = getelementptr i64, ptr %t36235, i64 5
+  store i64 %t35290, ptr %t36240
+  %t36241 = or i64 %t36234, 4
+  %t36242 = call i64 @rt_set_box(i64 %t35293, i64 %t36241)
+  %t36243 = call i64 @rt_alloc_words(i64 1)
+  %t36244 = inttoptr i64 %t36243 to ptr
+  store i64 ptrtoint (ptr @code_5424 to i64), ptr %t36244
+  %t36245 = or i64 %t36243, 4
+  %t36246 = call i64 @rt_set_box(i64 %t35294, i64 %t36245)
+  %t36247 = call i64 @rt_alloc_words(i64 1)
+  %t36248 = inttoptr i64 %t36247 to ptr
+  store i64 ptrtoint (ptr @code_5426 to i64), ptr %t36248
+  %t36249 = or i64 %t36247, 4
+  %t36250 = call i64 @rt_set_box(i64 %t35295, i64 %t36249)
+  %t36251 = call i64 @rt_alloc_words(i64 1)
+  %t36252 = inttoptr i64 %t36251 to ptr
+  store i64 ptrtoint (ptr @code_5428 to i64), ptr %t36252
+  %t36253 = or i64 %t36251, 4
+  %t36254 = call i64 @rt_set_box(i64 %t35296, i64 %t36253)
+  %t36255 = call i64 @rt_alloc_words(i64 1)
+  %t36256 = inttoptr i64 %t36255 to ptr
+  store i64 ptrtoint (ptr @code_5430 to i64), ptr %t36256
+  %t36257 = or i64 %t36255, 4
+  %t36258 = call i64 @rt_set_box(i64 %t35297, i64 %t36257)
+  %t36259 = call i64 @rt_alloc_words(i64 3)
+  %t36260 = inttoptr i64 %t36259 to ptr
+  store i64 ptrtoint (ptr @code_5432 to i64), ptr %t36260
+  %t36261 = getelementptr i64, ptr %t36260, i64 1
+  store i64 %t35297, ptr %t36261
+  %t36262 = getelementptr i64, ptr %t36260, i64 2
+  store i64 %t35281, ptr %t36262
+  %t36263 = or i64 %t36259, 4
+  %t36264 = call i64 @rt_set_box(i64 %t35298, i64 %t36263)
+  %t36265 = call i64 @rt_alloc_words(i64 1)
+  %t36266 = inttoptr i64 %t36265 to ptr
+  store i64 ptrtoint (ptr @code_5434 to i64), ptr %t36266
+  %t36267 = or i64 %t36265, 4
+  %t36268 = call i64 @rt_set_box(i64 %t35299, i64 %t36267)
+  %t36269 = call i64 @rt_alloc_words(i64 1)
+  %t36270 = inttoptr i64 %t36269 to ptr
+  store i64 ptrtoint (ptr @code_5436 to i64), ptr %t36270
+  %t36271 = or i64 %t36269, 4
+  %t36272 = call i64 @rt_set_box(i64 %t35300, i64 %t36271)
+  %t36273 = call i64 @rt_alloc_words(i64 1)
+  %t36274 = inttoptr i64 %t36273 to ptr
+  store i64 ptrtoint (ptr @code_5438 to i64), ptr %t36274
+  %t36275 = or i64 %t36273, 4
+  %t36276 = call i64 @rt_set_box(i64 %t35301, i64 %t36275)
+  %t36277 = call i64 @rt_alloc_words(i64 5)
+  %t36278 = inttoptr i64 %t36277 to ptr
+  store i64 ptrtoint (ptr @code_5440 to i64), ptr %t36278
+  %t36279 = getelementptr i64, ptr %t36278, i64 1
+  store i64 %t35295, ptr %t36279
+  %t36280 = getelementptr i64, ptr %t36278, i64 2
+  store i64 %t35299, ptr %t36280
+  %t36281 = getelementptr i64, ptr %t36278, i64 3
+  store i64 %t35259, ptr %t36281
+  %t36282 = getelementptr i64, ptr %t36278, i64 4
+  store i64 %t35262, ptr %t36282
+  %t36283 = or i64 %t36277, 4
+  %t36284 = call i64 @rt_set_box(i64 %t35302, i64 %t36283)
+  %t36285 = call i64 @rt_alloc_words(i64 5)
+  %t36286 = inttoptr i64 %t36285 to ptr
+  store i64 ptrtoint (ptr @code_5442 to i64), ptr %t36286
+  %t36287 = getelementptr i64, ptr %t36286, i64 1
+  store i64 %t35273, ptr %t36287
+  %t36288 = getelementptr i64, ptr %t36286, i64 2
+  store i64 %t35302, ptr %t36288
+  %t36289 = getelementptr i64, ptr %t36286, i64 3
+  store i64 %t35300, ptr %t36289
+  %t36290 = getelementptr i64, ptr %t36286, i64 4
+  store i64 %t35301, ptr %t36290
+  %t36291 = or i64 %t36285, 4
+  %t36292 = call i64 @rt_set_box(i64 %t35303, i64 %t36291)
+  %t36293 = call i64 @rt_alloc_words(i64 12)
+  %t36294 = inttoptr i64 %t36293 to ptr
+  store i64 ptrtoint (ptr @code_5482 to i64), ptr %t36294
+  %t36295 = getelementptr i64, ptr %t36294, i64 1
+  store i64 %t35270, ptr %t36295
+  %t36296 = getelementptr i64, ptr %t36294, i64 2
+  store i64 %t35303, ptr %t36296
+  %t36297 = getelementptr i64, ptr %t36294, i64 3
+  store i64 %t35307, ptr %t36297
+  %t36298 = getelementptr i64, ptr %t36294, i64 4
+  store i64 %t35275, ptr %t36298
+  %t36299 = getelementptr i64, ptr %t36294, i64 5
+  store i64 %t35279, ptr %t36299
+  %t36300 = getelementptr i64, ptr %t36294, i64 6
+  store i64 %t35281, ptr %t36300
+  %t36301 = getelementptr i64, ptr %t36294, i64 7
+  store i64 %t35295, ptr %t36301
+  %t36302 = getelementptr i64, ptr %t36294, i64 8
+  store i64 %t35280, ptr %t36302
+  %t36303 = getelementptr i64, ptr %t36294, i64 9
+  store i64 %t35296, ptr %t36303
+  %t36304 = getelementptr i64, ptr %t36294, i64 10
+  store i64 %t35282, ptr %t36304
+  %t36305 = getelementptr i64, ptr %t36294, i64 11
+  store i64 %t35288, ptr %t36305
+  %t36306 = or i64 %t36293, 4
+  %t36307 = call i64 @rt_set_box(i64 %t35304, i64 %t36306)
+  %t36308 = call i64 @rt_alloc_words(i64 2)
+  %t36309 = inttoptr i64 %t36308 to ptr
+  store i64 ptrtoint (ptr @code_5490 to i64), ptr %t36309
+  %t36310 = getelementptr i64, ptr %t36309, i64 1
+  store i64 %t35304, ptr %t36310
+  %t36311 = or i64 %t36308, 4
+  %t36312 = call i64 @rt_set_box(i64 %t35305, i64 %t36311)
+  %t36313 = call i64 @rt_alloc_words(i64 3)
+  %t36314 = inttoptr i64 %t36313 to ptr
+  store i64 ptrtoint (ptr @code_5492 to i64), ptr %t36314
+  %t36315 = getelementptr i64, ptr %t36314, i64 1
+  store i64 %t35296, ptr %t36315
+  %t36316 = getelementptr i64, ptr %t36314, i64 2
+  store i64 %t35281, ptr %t36316
+  %t36317 = or i64 %t36313, 4
+  %t36318 = call i64 @rt_set_box(i64 %t35306, i64 %t36317)
+  %t36319 = call i64 @rt_alloc_words(i64 2)
+  %t36320 = inttoptr i64 %t36319 to ptr
+  store i64 ptrtoint (ptr @code_5494 to i64), ptr %t36320
+  %t36321 = getelementptr i64, ptr %t36320, i64 1
+  store i64 %t35308, ptr %t36321
+  %t36322 = or i64 %t36319, 4
+  %t36323 = call i64 @rt_set_box(i64 %t35307, i64 %t36322)
+  %t36324 = call i64 @rt_alloc_words(i64 7)
+  %t36325 = inttoptr i64 %t36324 to ptr
+  store i64 ptrtoint (ptr @code_5496 to i64), ptr %t36325
+  %t36326 = getelementptr i64, ptr %t36325, i64 1
+  store i64 %t35308, ptr %t36326
+  %t36327 = getelementptr i64, ptr %t36325, i64 2
+  store i64 %t35254, ptr %t36327
+  %t36328 = getelementptr i64, ptr %t36325, i64 3
+  store i64 %t35273, ptr %t36328
+  %t36329 = getelementptr i64, ptr %t36325, i64 4
+  store i64 %t35271, ptr %t36329
+  %t36330 = getelementptr i64, ptr %t36325, i64 5
+  store i64 %t35272, ptr %t36330
+  %t36331 = getelementptr i64, ptr %t36325, i64 6
+  store i64 %t35274, ptr %t36331
+  %t36332 = or i64 %t36324, 4
+  %t36333 = call i64 @rt_set_box(i64 %t35308, i64 %t36332)
+  %t36334 = call i64 @rt_intern(ptr @.str.sym.733)
+  %t36335 = call i64 @rt_set_box(i64 %t35309, i64 %t36334)
+  %t36336 = call i64 @rt_intern(ptr @.str.sym.734)
+  %t36337 = call i64 @rt_set_box(i64 %t35310, i64 %t36336)
+  %t36338 = call i64 @rt_intern(ptr @.str.sym.40)
+  %t36339 = call i64 @rt_intern(ptr @.str.sym.12)
+  %t36340 = call i64 @rt_intern(ptr @.str.sym.5)
+  %t36341 = call i64 @rt_intern(ptr @.str.sym.30)
+  %t36342 = call i64 @rt_intern(ptr @.str.sym.11)
+  %t36343 = call i64 @rt_intern(ptr @.str.sym.39)
+  %t36344 = call i64 @rt_intern(ptr @.str.sym.32)
+  %t36345 = call i64 @rt_intern(ptr @.str.sym.37)
+  %t36346 = call i64 @rt_intern(ptr @.str.sym.31)
+  %t36347 = call i64 @rt_intern(ptr @.str.sym.74)
+  %t36348 = call i64 @rt_intern(ptr @.str.sym.75)
+  %t36349 = call i64 @rt_intern(ptr @.str.sym.84)
+  %t36350 = call i64 @rt_intern(ptr @.str.sym.85)
+  %t36351 = call i64 @rt_intern(ptr @.str.sym.86)
+  %t36352 = call i64 @rt_cons(i64 %t36351, i64 2)
+  %t36353 = call i64 @rt_cons(i64 %t36350, i64 %t36352)
+  %t36354 = call i64 @rt_cons(i64 %t36349, i64 %t36353)
+  %t36355 = call i64 @rt_cons(i64 %t36348, i64 %t36354)
+  %t36356 = call i64 @rt_cons(i64 %t36347, i64 %t36355)
+  %t36357 = call i64 @rt_cons(i64 %t36346, i64 %t36356)
+  %t36358 = call i64 @rt_cons(i64 %t36345, i64 %t36357)
+  %t36359 = call i64 @rt_cons(i64 %t36344, i64 %t36358)
+  %t36360 = call i64 @rt_cons(i64 %t36343, i64 %t36359)
+  %t36361 = call i64 @rt_cons(i64 %t36342, i64 %t36360)
+  %t36362 = call i64 @rt_cons(i64 %t36341, i64 %t36361)
+  %t36363 = call i64 @rt_cons(i64 %t36340, i64 %t36362)
+  %t36364 = call i64 @rt_cons(i64 %t36339, i64 %t36363)
+  %t36365 = call i64 @rt_cons(i64 %t36338, i64 %t36364)
+  %t36366 = call i64 @rt_set_box(i64 %t35311, i64 %t36365)
+  %t36367 = call i64 @rt_intern(ptr @.str.sym.95)
+  %t36368 = call i64 @rt_intern(ptr @.str.sym.96)
+  %t36369 = call i64 @rt_intern(ptr @.str.sym.97)
+  %t36370 = call i64 @rt_cons(i64 %t36369, i64 2)
+  %t36371 = call i64 @rt_cons(i64 %t36368, i64 %t36370)
+  %t36372 = call i64 @rt_cons(i64 %t36367, i64 %t36371)
+  %t36373 = call i64 @rt_set_box(i64 %t35312, i64 %t36372)
+  %t36374 = call i64 @rt_alloc_words(i64 1)
   %t36375 = inttoptr i64 %t36374 to ptr
   store i64 ptrtoint (ptr @code_5540 to i64), ptr %t36375
-  %t36376 = getelementptr i64, ptr %t36375, i64 1
-  store i64 %t35170, ptr %t36376
-  %t36377 = getelementptr i64, ptr %t36375, i64 2
-  store i64 %t35249, ptr %t36377
-  %t36378 = or i64 %t36374, 4
-  %t36379 = call i64 @rt_set_box(i64 %t35249, i64 %t36378)
-  %t36380 = call i64 @rt_alloc_words(i64 4)
-  %t36381 = inttoptr i64 %t36380 to ptr
-  store i64 ptrtoint (ptr @code_5542 to i64), ptr %t36381
-  %t36382 = getelementptr i64, ptr %t36381, i64 1
-  store i64 %t35232, ptr %t36382
-  %t36383 = getelementptr i64, ptr %t36381, i64 2
-  store i64 %t35233, ptr %t36383
-  %t36384 = getelementptr i64, ptr %t36381, i64 3
-  store i64 %t35177, ptr %t36384
-  %t36385 = or i64 %t36380, 4
-  %t36386 = call i64 @rt_set_box(i64 %t35250, i64 %t36385)
-  %t36387 = call i64 @rt_alloc_words(i64 5)
-  %t36388 = inttoptr i64 %t36387 to ptr
-  store i64 ptrtoint (ptr @code_5548 to i64), ptr %t36388
-  %t36389 = getelementptr i64, ptr %t36388, i64 1
-  store i64 %t35242, ptr %t36389
-  %t36390 = getelementptr i64, ptr %t36388, i64 2
-  store i64 %t35253, ptr %t36390
-  %t36391 = getelementptr i64, ptr %t36388, i64 3
-  store i64 %t35232, ptr %t36391
-  %t36392 = getelementptr i64, ptr %t36388, i64 4
-  store i64 %t35252, ptr %t36392
-  %t36393 = or i64 %t36387, 4
-  %t36394 = call i64 @rt_set_box(i64 %t35251, i64 %t36393)
-  %t36395 = call i64 @rt_alloc_words(i64 4)
-  %t36396 = inttoptr i64 %t36395 to ptr
-  store i64 ptrtoint (ptr @code_5550 to i64), ptr %t36396
-  %t36397 = getelementptr i64, ptr %t36396, i64 1
-  store i64 %t35232, ptr %t36397
-  %t36398 = getelementptr i64, ptr %t36396, i64 2
-  store i64 %t35242, ptr %t36398
-  %t36399 = getelementptr i64, ptr %t36396, i64 3
-  store i64 %t35252, ptr %t36399
-  %t36400 = or i64 %t36395, 4
-  %t36401 = call i64 @rt_set_box(i64 %t35252, i64 %t36400)
-  %t36402 = call i64 @rt_alloc_words(i64 5)
-  %t36403 = inttoptr i64 %t36402 to ptr
-  store i64 ptrtoint (ptr @code_5552 to i64), ptr %t36403
-  %t36404 = getelementptr i64, ptr %t36403, i64 1
-  store i64 %t35251, ptr %t36404
-  %t36405 = getelementptr i64, ptr %t36403, i64 2
-  store i64 %t35232, ptr %t36405
-  %t36406 = getelementptr i64, ptr %t36403, i64 3
-  store i64 %t35254, ptr %t36406
-  %t36407 = getelementptr i64, ptr %t36403, i64 4
-  store i64 %t35253, ptr %t36407
-  %t36408 = or i64 %t36402, 4
-  %t36409 = call i64 @rt_set_box(i64 %t35253, i64 %t36408)
-  %t36410 = call i64 @rt_alloc_words(i64 5)
-  %t36411 = inttoptr i64 %t36410 to ptr
-  store i64 ptrtoint (ptr @code_5554 to i64), ptr %t36411
-  %t36412 = getelementptr i64, ptr %t36411, i64 1
-  store i64 %t35242, ptr %t36412
-  %t36413 = getelementptr i64, ptr %t36411, i64 2
-  store i64 %t35249, ptr %t36413
-  %t36414 = getelementptr i64, ptr %t36411, i64 3
-  store i64 %t35243, ptr %t36414
-  %t36415 = getelementptr i64, ptr %t36411, i64 4
-  store i64 %t35251, ptr %t36415
-  %t36416 = or i64 %t36410, 4
-  %t36417 = call i64 @rt_set_box(i64 %t35254, i64 %t36416)
-  %t36418 = call i64 @rt_set_box(i64 %t35255, i64 8000)
-  %t36419 = call i64 @rt_alloc_words(i64 12)
-  %t36420 = inttoptr i64 %t36419 to ptr
-  store i64 ptrtoint (ptr @code_5566 to i64), ptr %t36420
-  %t36421 = getelementptr i64, ptr %t36420, i64 1
-  store i64 %t35247, ptr %t36421
-  %t36422 = getelementptr i64, ptr %t36420, i64 2
-  store i64 %t35239, ptr %t36422
-  %t36423 = getelementptr i64, ptr %t36420, i64 3
-  store i64 %t35246, ptr %t36423
-  %t36424 = getelementptr i64, ptr %t36420, i64 4
-  store i64 %t35250, ptr %t36424
-  %t36425 = getelementptr i64, ptr %t36420, i64 5
-  store i64 %t35251, ptr %t36425
-  %t36426 = getelementptr i64, ptr %t36420, i64 6
-  store i64 %t35255, ptr %t36426
-  %t36427 = getelementptr i64, ptr %t36420, i64 7
-  store i64 %t35258, ptr %t36427
-  %t36428 = getelementptr i64, ptr %t36420, i64 8
-  store i64 %t35257, ptr %t36428
-  %t36429 = getelementptr i64, ptr %t36420, i64 9
-  store i64 %t35259, ptr %t36429
-  %t36430 = getelementptr i64, ptr %t36420, i64 10
-  store i64 %t35261, ptr %t36430
-  %t36431 = getelementptr i64, ptr %t36420, i64 11
-  store i64 %t35262, ptr %t36431
-  %t36432 = or i64 %t36419, 4
-  %t36433 = call i64 @rt_set_box(i64 %t35256, i64 %t36432)
-  %t36434 = call i64 @rt_alloc_words(i64 1)
-  %t36435 = inttoptr i64 %t36434 to ptr
-  store i64 ptrtoint (ptr @code_5582 to i64), ptr %t36435
-  %t36436 = or i64 %t36434, 4
-  %t36437 = call i64 @rt_set_box(i64 %t35257, i64 %t36436)
-  %t36438 = call i64 @rt_alloc_words(i64 2)
-  %t36439 = inttoptr i64 %t36438 to ptr
-  store i64 ptrtoint (ptr @code_5586 to i64), ptr %t36439
-  %t36440 = getelementptr i64, ptr %t36439, i64 1
-  store i64 %t35258, ptr %t36440
-  %t36441 = or i64 %t36438, 4
-  %t36442 = call i64 @rt_set_box(i64 %t35258, i64 %t36441)
-  %t36443 = call i64 @rt_alloc_words(i64 2)
-  %t36444 = inttoptr i64 %t36443 to ptr
-  store i64 ptrtoint (ptr @code_5588 to i64), ptr %t36444
-  %t36445 = getelementptr i64, ptr %t36444, i64 1
-  store i64 %t35260, ptr %t36445
-  %t36446 = or i64 %t36443, 4
-  %t36447 = call i64 @rt_set_box(i64 %t35259, i64 %t36446)
-  %t36448 = call i64 @rt_alloc_words(i64 1)
-  %t36449 = inttoptr i64 %t36448 to ptr
-  store i64 ptrtoint (ptr @code_5590 to i64), ptr %t36449
-  %t36450 = or i64 %t36448, 4
-  %t36451 = call i64 @rt_set_box(i64 %t35260, i64 %t36450)
-  %t36452 = call i64 @rt_alloc_words(i64 2)
+  %t36376 = or i64 %t36374, 4
+  %t36377 = call i64 @rt_set_box(i64 %t35313, i64 %t36376)
+  %t36378 = call i64 @rt_alloc_words(i64 1)
+  %t36379 = inttoptr i64 %t36378 to ptr
+  store i64 ptrtoint (ptr @code_5542 to i64), ptr %t36379
+  %t36380 = or i64 %t36378, 4
+  %t36381 = call i64 @rt_set_box(i64 %t35314, i64 %t36380)
+  %t36382 = call i64 @rt_alloc_words(i64 3)
+  %t36383 = inttoptr i64 %t36382 to ptr
+  store i64 ptrtoint (ptr @code_5546 to i64), ptr %t36383
+  %t36384 = getelementptr i64, ptr %t36383, i64 1
+  store i64 %t35313, ptr %t36384
+  %t36385 = getelementptr i64, ptr %t36383, i64 2
+  store i64 %t35314, ptr %t36385
+  %t36386 = or i64 %t36382, 4
+  %t36387 = call i64 @rt_set_box(i64 %t35315, i64 %t36386)
+  %t36388 = call i64 @rt_intern(ptr @.str.sym.735)
+  %t36389 = load i64, ptr @"scheme.base:list"
+  %t36390 = and i64 %t36389, -8
+  %t36391 = inttoptr i64 %t36390 to ptr
+  %t36392 = load i64, ptr %t36391
+  %t36393 = inttoptr i64 %t36392 to ptr
+  %t36394 = call fastcc i64%t36393(i64 %t36389, i64 1, i64 %t36388, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t36395 = call i64 @rt_set_box(i64 %t35316, i64 %t36394)
+  %t36396 = call i64 @rt_intern(ptr @.str.sym.736)
+  %t36397 = load i64, ptr @"scheme.base:list"
+  %t36398 = and i64 %t36397, -8
+  %t36399 = inttoptr i64 %t36398 to ptr
+  %t36400 = load i64, ptr %t36399
+  %t36401 = inttoptr i64 %t36400 to ptr
+  %t36402 = call fastcc i64%t36401(i64 %t36397, i64 1, i64 %t36396, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t36403 = call i64 @rt_set_box(i64 %t35317, i64 %t36402)
+  %t36404 = call i64 @rt_alloc_words(i64 2)
+  %t36405 = inttoptr i64 %t36404 to ptr
+  store i64 ptrtoint (ptr @code_5550 to i64), ptr %t36405
+  %t36406 = getelementptr i64, ptr %t36405, i64 1
+  store i64 %t35317, ptr %t36406
+  %t36407 = or i64 %t36404, 4
+  %t36408 = call i64 @rt_set_box(i64 %t35318, i64 %t36407)
+  %t36409 = call i64 @rt_alloc_words(i64 2)
+  %t36410 = inttoptr i64 %t36409 to ptr
+  store i64 ptrtoint (ptr @code_5552 to i64), ptr %t36410
+  %t36411 = getelementptr i64, ptr %t36410, i64 1
+  store i64 %t35317, ptr %t36411
+  %t36412 = or i64 %t36409, 4
+  %t36413 = call i64 @rt_set_box(i64 %t35319, i64 %t36412)
+  %t36414 = call i64 @rt_alloc_words(i64 1)
+  %t36415 = inttoptr i64 %t36414 to ptr
+  store i64 ptrtoint (ptr @code_5554 to i64), ptr %t36415
+  %t36416 = or i64 %t36414, 4
+  %t36417 = call i64 @rt_set_box(i64 %t35320, i64 %t36416)
+  %t36418 = call i64 @rt_alloc_words(i64 1)
+  %t36419 = inttoptr i64 %t36418 to ptr
+  store i64 ptrtoint (ptr @code_5556 to i64), ptr %t36419
+  %t36420 = or i64 %t36418, 4
+  %t36421 = call i64 @rt_set_box(i64 %t35321, i64 %t36420)
+  %t36422 = call i64 @rt_alloc_words(i64 2)
+  %t36423 = inttoptr i64 %t36422 to ptr
+  store i64 ptrtoint (ptr @code_5560 to i64), ptr %t36423
+  %t36424 = getelementptr i64, ptr %t36423, i64 1
+  store i64 %t35322, ptr %t36424
+  %t36425 = or i64 %t36422, 4
+  %t36426 = call i64 @rt_set_box(i64 %t35322, i64 %t36425)
+  %t36427 = call i64 @rt_alloc_words(i64 3)
+  %t36428 = inttoptr i64 %t36427 to ptr
+  store i64 ptrtoint (ptr @code_5562 to i64), ptr %t36428
+  %t36429 = getelementptr i64, ptr %t36428, i64 1
+  store i64 %t35310, ptr %t36429
+  %t36430 = getelementptr i64, ptr %t36428, i64 2
+  store i64 %t35309, ptr %t36430
+  %t36431 = or i64 %t36427, 4
+  %t36432 = call i64 @rt_set_box(i64 %t35323, i64 %t36431)
+  %t36433 = call i64 @rt_alloc_words(i64 6)
+  %t36434 = inttoptr i64 %t36433 to ptr
+  store i64 ptrtoint (ptr @code_5566 to i64), ptr %t36434
+  %t36435 = getelementptr i64, ptr %t36434, i64 1
+  store i64 %t35310, ptr %t36435
+  %t36436 = getelementptr i64, ptr %t36434, i64 2
+  store i64 %t35316, ptr %t36436
+  %t36437 = getelementptr i64, ptr %t36434, i64 3
+  store i64 %t35309, ptr %t36437
+  %t36438 = getelementptr i64, ptr %t36434, i64 4
+  store i64 %t35325, ptr %t36438
+  %t36439 = getelementptr i64, ptr %t36434, i64 5
+  store i64 %t35324, ptr %t36439
+  %t36440 = or i64 %t36433, 4
+  %t36441 = call i64 @rt_set_box(i64 %t35324, i64 %t36440)
+  %t36442 = call i64 @rt_alloc_words(i64 7)
+  %t36443 = inttoptr i64 %t36442 to ptr
+  store i64 ptrtoint (ptr @code_5568 to i64), ptr %t36443
+  %t36444 = getelementptr i64, ptr %t36443, i64 1
+  store i64 %t35321, ptr %t36444
+  %t36445 = getelementptr i64, ptr %t36443, i64 2
+  store i64 %t35316, ptr %t36445
+  %t36446 = getelementptr i64, ptr %t36443, i64 3
+  store i64 %t35322, ptr %t36446
+  %t36447 = getelementptr i64, ptr %t36443, i64 4
+  store i64 %t35324, ptr %t36447
+  %t36448 = getelementptr i64, ptr %t36443, i64 5
+  store i64 %t35323, ptr %t36448
+  %t36449 = getelementptr i64, ptr %t36443, i64 6
+  store i64 %t35318, ptr %t36449
+  %t36450 = or i64 %t36442, 4
+  %t36451 = call i64 @rt_set_box(i64 %t35325, i64 %t36450)
+  %t36452 = call i64 @rt_alloc_words(i64 3)
   %t36453 = inttoptr i64 %t36452 to ptr
-  store i64 ptrtoint (ptr @code_5594 to i64), ptr %t36453
+  store i64 ptrtoint (ptr @code_5580 to i64), ptr %t36453
   %t36454 = getelementptr i64, ptr %t36453, i64 1
-  store i64 %t35260, ptr %t36454
-  %t36455 = or i64 %t36452, 4
-  %t36456 = call i64 @rt_set_box(i64 %t35261, i64 %t36455)
-  %t36457 = call i64 @rt_alloc_words(i64 4)
-  %t36458 = inttoptr i64 %t36457 to ptr
-  store i64 ptrtoint (ptr @code_5596 to i64), ptr %t36458
-  %t36459 = getelementptr i64, ptr %t36458, i64 1
-  store i64 %t35177, ptr %t36459
-  %t36460 = getelementptr i64, ptr %t36458, i64 2
-  store i64 %t35263, ptr %t36460
-  %t36461 = getelementptr i64, ptr %t36458, i64 3
-  store i64 %t35264, ptr %t36461
-  %t36462 = or i64 %t36457, 4
-  %t36463 = call i64 @rt_set_box(i64 %t35262, i64 %t36462)
-  %t36464 = call i64 @rt_alloc_words(i64 2)
-  %t36465 = inttoptr i64 %t36464 to ptr
-  store i64 ptrtoint (ptr @code_5600 to i64), ptr %t36465
-  %t36466 = getelementptr i64, ptr %t36465, i64 1
-  store i64 %t35263, ptr %t36466
-  %t36467 = or i64 %t36464, 4
-  %t36468 = call i64 @rt_set_box(i64 %t35263, i64 %t36467)
-  %t36469 = call i64 @rt_alloc_words(i64 3)
-  %t36470 = inttoptr i64 %t36469 to ptr
-  store i64 ptrtoint (ptr @code_5602 to i64), ptr %t36470
-  %t36471 = getelementptr i64, ptr %t36470, i64 1
-  store i64 %t35265, ptr %t36471
-  %t36472 = getelementptr i64, ptr %t36470, i64 2
-  store i64 %t35266, ptr %t36472
-  %t36473 = or i64 %t36469, 4
-  %t36474 = call i64 @rt_set_box(i64 %t35264, i64 %t36473)
-  %t36475 = call i64 @rt_alloc_words(i64 2)
-  %t36476 = inttoptr i64 %t36475 to ptr
-  store i64 ptrtoint (ptr @code_5606 to i64), ptr %t36476
-  %t36477 = getelementptr i64, ptr %t36476, i64 1
-  store i64 %t35265, ptr %t36477
-  %t36478 = or i64 %t36475, 4
-  %t36479 = call i64 @rt_set_box(i64 %t35265, i64 %t36478)
-  %t36480 = call i64 @rt_alloc_words(i64 1)
+  store i64 %t35247, ptr %t36454
+  %t36455 = getelementptr i64, ptr %t36453, i64 2
+  store i64 %t35326, ptr %t36455
+  %t36456 = or i64 %t36452, 4
+  %t36457 = call i64 @rt_set_box(i64 %t35326, i64 %t36456)
+  %t36458 = call i64 @rt_alloc_words(i64 4)
+  %t36459 = inttoptr i64 %t36458 to ptr
+  store i64 ptrtoint (ptr @code_5582 to i64), ptr %t36459
+  %t36460 = getelementptr i64, ptr %t36459, i64 1
+  store i64 %t35309, ptr %t36460
+  %t36461 = getelementptr i64, ptr %t36459, i64 2
+  store i64 %t35310, ptr %t36461
+  %t36462 = getelementptr i64, ptr %t36459, i64 3
+  store i64 %t35254, ptr %t36462
+  %t36463 = or i64 %t36458, 4
+  %t36464 = call i64 @rt_set_box(i64 %t35327, i64 %t36463)
+  %t36465 = call i64 @rt_alloc_words(i64 5)
+  %t36466 = inttoptr i64 %t36465 to ptr
+  store i64 ptrtoint (ptr @code_5588 to i64), ptr %t36466
+  %t36467 = getelementptr i64, ptr %t36466, i64 1
+  store i64 %t35319, ptr %t36467
+  %t36468 = getelementptr i64, ptr %t36466, i64 2
+  store i64 %t35330, ptr %t36468
+  %t36469 = getelementptr i64, ptr %t36466, i64 3
+  store i64 %t35309, ptr %t36469
+  %t36470 = getelementptr i64, ptr %t36466, i64 4
+  store i64 %t35329, ptr %t36470
+  %t36471 = or i64 %t36465, 4
+  %t36472 = call i64 @rt_set_box(i64 %t35328, i64 %t36471)
+  %t36473 = call i64 @rt_alloc_words(i64 4)
+  %t36474 = inttoptr i64 %t36473 to ptr
+  store i64 ptrtoint (ptr @code_5590 to i64), ptr %t36474
+  %t36475 = getelementptr i64, ptr %t36474, i64 1
+  store i64 %t35309, ptr %t36475
+  %t36476 = getelementptr i64, ptr %t36474, i64 2
+  store i64 %t35319, ptr %t36476
+  %t36477 = getelementptr i64, ptr %t36474, i64 3
+  store i64 %t35329, ptr %t36477
+  %t36478 = or i64 %t36473, 4
+  %t36479 = call i64 @rt_set_box(i64 %t35329, i64 %t36478)
+  %t36480 = call i64 @rt_alloc_words(i64 5)
   %t36481 = inttoptr i64 %t36480 to ptr
-  store i64 ptrtoint (ptr @code_5608 to i64), ptr %t36481
-  %t36482 = or i64 %t36480, 4
-  %t36483 = call i64 @rt_set_box(i64 %t35266, i64 %t36482)
-  %t36484 = call i64 @rt_alloc_words(i64 2)
-  %t36485 = inttoptr i64 %t36484 to ptr
-  store i64 ptrtoint (ptr @code_5610 to i64), ptr %t36485
-  %t36486 = getelementptr i64, ptr %t36485, i64 1
-  store i64 %t35267, ptr %t36486
-  %t36487 = or i64 %t36484, 4
-  %t36488 = call i64 @rt_set_box(i64 %t35267, i64 %t36487)
-  %t36489 = call i64 @rt_alloc_words(i64 4)
-  %t36490 = inttoptr i64 %t36489 to ptr
-  store i64 ptrtoint (ptr @code_5648 to i64), ptr %t36490
-  %t36491 = getelementptr i64, ptr %t36490, i64 1
-  store i64 %t35268, ptr %t36491
-  %t36492 = getelementptr i64, ptr %t36490, i64 2
-  store i64 %t35170, ptr %t36492
-  %t36493 = getelementptr i64, ptr %t36490, i64 3
-  store i64 %t35171, ptr %t36493
-  %t36494 = or i64 %t36489, 4
-  %t36495 = call i64 @rt_set_box(i64 %t35268, i64 %t36494)
-  %t36496 = call i64 @rt_alloc_words(i64 7)
-  %t36497 = inttoptr i64 %t36496 to ptr
-  store i64 ptrtoint (ptr @code_5682 to i64), ptr %t36497
-  %t36498 = getelementptr i64, ptr %t36497, i64 1
-  store i64 %t35268, ptr %t36498
-  %t36499 = getelementptr i64, ptr %t36497, i64 2
-  store i64 %t35173, ptr %t36499
-  %t36500 = getelementptr i64, ptr %t36497, i64 3
-  store i64 %t35177, ptr %t36500
-  %t36501 = getelementptr i64, ptr %t36497, i64 4
-  store i64 %t35195, ptr %t36501
-  %t36502 = getelementptr i64, ptr %t36497, i64 5
-  store i64 %t35196, ptr %t36502
-  %t36503 = getelementptr i64, ptr %t36497, i64 6
-  store i64 %t35197, ptr %t36503
-  %t36504 = or i64 %t36496, 4
-  %t36505 = call i64 @rt_set_box(i64 %t35269, i64 %t36504)
-  %t36506 = call i64 @rt_alloc_words(i64 6)
-  %t36507 = inttoptr i64 %t36506 to ptr
-  store i64 ptrtoint (ptr @code_5726 to i64), ptr %t36507
-  %t36508 = getelementptr i64, ptr %t36507, i64 1
-  store i64 %t35270, ptr %t36508
-  %t36509 = getelementptr i64, ptr %t36507, i64 2
-  store i64 %t35170, ptr %t36509
-  %t36510 = getelementptr i64, ptr %t36507, i64 3
-  store i64 %t35171, ptr %t36510
-  %t36511 = getelementptr i64, ptr %t36507, i64 4
-  store i64 %t35172, ptr %t36511
-  %t36512 = getelementptr i64, ptr %t36507, i64 5
-  store i64 %t35196, ptr %t36512
-  %t36513 = or i64 %t36506, 4
-  %t36514 = call i64 @rt_set_box(i64 %t35270, i64 %t36513)
-  %t36515 = call i64 @rt_alloc_words(i64 3)
-  %t36516 = inttoptr i64 %t36515 to ptr
-  store i64 ptrtoint (ptr @code_5768 to i64), ptr %t36516
-  %t36517 = getelementptr i64, ptr %t36516, i64 1
-  store i64 %t35271, ptr %t36517
-  %t36518 = getelementptr i64, ptr %t36516, i64 2
-  store i64 %t35270, ptr %t36518
-  %t36519 = or i64 %t36515, 4
-  %t36520 = call i64 @rt_set_box(i64 %t35271, i64 %t36519)
-  %t36521 = call i64 @rt_set_box(i64 %t35272, i64 2)
-  %t36522 = call i64 @rt_alloc_words(i64 2)
-  %t36523 = inttoptr i64 %t36522 to ptr
-  store i64 ptrtoint (ptr @code_5800 to i64), ptr %t36523
-  %t36524 = getelementptr i64, ptr %t36523, i64 1
-  store i64 %t35272, ptr %t36524
-  %t36525 = or i64 %t36522, 4
-  %t36526 = call i64 @rt_set_box(i64 %t35273, i64 %t36525)
-  %t36527 = call i64 @rt_unbox(i64 %t35179)
-  %t36528 = call i64 @rt_set_box(i64 %t35274, i64 %t36527)
-  %t36529 = call i64 @rt_alloc_words(i64 4)
-  %t36530 = inttoptr i64 %t36529 to ptr
-  store i64 ptrtoint (ptr @code_5802 to i64), ptr %t36530
-  %t36531 = getelementptr i64, ptr %t36530, i64 1
-  store i64 %t35180, ptr %t36531
-  %t36532 = getelementptr i64, ptr %t36530, i64 2
-  store i64 %t35274, ptr %t36532
-  %t36533 = getelementptr i64, ptr %t36530, i64 3
-  store i64 %t35178, ptr %t36533
-  %t36534 = or i64 %t36529, 4
-  %t36535 = call i64 @rt_set_box(i64 %t35275, i64 %t36534)
-  %t36536 = call i64 @rt_alloc_words(i64 5)
-  %t36537 = inttoptr i64 %t36536 to ptr
-  store i64 ptrtoint (ptr @code_5804 to i64), ptr %t36537
-  %t36538 = getelementptr i64, ptr %t36537, i64 1
-  store i64 %t35272, ptr %t36538
-  %t36539 = getelementptr i64, ptr %t36537, i64 2
-  store i64 %t35274, ptr %t36539
-  %t36540 = getelementptr i64, ptr %t36537, i64 3
-  store i64 %t35179, ptr %t36540
-  %t36541 = getelementptr i64, ptr %t36537, i64 4
-  store i64 %t35277, ptr %t36541
-  %t36542 = or i64 %t36536, 4
-  %t36543 = call i64 @rt_set_box(i64 %t35276, i64 %t36542)
-  %t36544 = call i64 @rt_alloc_words(i64 5)
-  %t36545 = inttoptr i64 %t36544 to ptr
-  store i64 ptrtoint (ptr @code_5806 to i64), ptr %t36545
-  %t36546 = getelementptr i64, ptr %t36545, i64 1
-  store i64 %t35277, ptr %t36546
-  %t36547 = getelementptr i64, ptr %t36545, i64 2
-  store i64 %t35270, ptr %t36547
-  %t36548 = getelementptr i64, ptr %t36545, i64 3
-  store i64 %t35275, ptr %t36548
-  %t36549 = getelementptr i64, ptr %t36545, i64 4
-  store i64 %t35278, ptr %t36549
-  %t36550 = or i64 %t36544, 4
-  %t36551 = call i64 @rt_set_box(i64 %t35277, i64 %t36550)
-  %t36552 = call i64 @rt_alloc_words(i64 7)
-  %t36553 = inttoptr i64 %t36552 to ptr
-  store i64 ptrtoint (ptr @code_5848 to i64), ptr %t36553
-  %t36554 = getelementptr i64, ptr %t36553, i64 1
-  store i64 %t35177, ptr %t36554
-  %t36555 = getelementptr i64, ptr %t36553, i64 2
-  store i64 %t35277, ptr %t36555
-  %t36556 = getelementptr i64, ptr %t36553, i64 3
-  store i64 %t35196, ptr %t36556
-  %t36557 = getelementptr i64, ptr %t36553, i64 4
-  store i64 %t35273, ptr %t36557
-  %t36558 = getelementptr i64, ptr %t36553, i64 5
-  store i64 %t35194, ptr %t36558
-  %t36559 = getelementptr i64, ptr %t36553, i64 6
-  store i64 %t35195, ptr %t36559
-  %t36560 = or i64 %t36552, 4
-  %t36561 = call i64 @rt_set_box(i64 %t35278, i64 %t36560)
-  %t36562 = call i64 @rt_set_box(i64 %t35279, i64 2)
-  %t36563 = call i64 @rt_alloc_words(i64 2)
-  %t36564 = inttoptr i64 %t36563 to ptr
-  store i64 ptrtoint (ptr @code_5852 to i64), ptr %t36564
-  %t36565 = getelementptr i64, ptr %t36564, i64 1
-  store i64 %t35279, ptr %t36565
-  %t36566 = or i64 %t36563, 4
-  %t36567 = call i64 @rt_set_box(i64 %t35280, i64 %t36566)
-  %t36568 = call i64 @rt_set_box(i64 %t35281, i64 0)
-  %t36569 = call i64 @rt_set_box(i64 %t35282, i64 0)
-  %t36570 = call i64 @rt_make_string(ptr @.str.lit.737, i64 5)
-  %t36571 = call i64 @rt_set_box(i64 %t35283, i64 %t36570)
-  %t36572 = call i64 @rt_alloc_words(i64 2)
-  %t36573 = inttoptr i64 %t36572 to ptr
-  store i64 ptrtoint (ptr @code_5854 to i64), ptr %t36573
-  %t36574 = getelementptr i64, ptr %t36573, i64 1
-  store i64 %t35281, ptr %t36574
-  %t36575 = or i64 %t36572, 4
-  %t36576 = call i64 @rt_set_box(i64 %t35284, i64 %t36575)
-  %t36577 = call i64 @rt_alloc_words(i64 2)
-  %t36578 = inttoptr i64 %t36577 to ptr
-  store i64 ptrtoint (ptr @code_5856 to i64), ptr %t36578
-  %t36579 = getelementptr i64, ptr %t36578, i64 1
-  store i64 %t35282, ptr %t36579
-  %t36580 = or i64 %t36577, 4
-  %t36581 = call i64 @rt_set_box(i64 %t35285, i64 %t36580)
-  %t36582 = call i64 @rt_alloc_words(i64 3)
-  %t36583 = inttoptr i64 %t36582 to ptr
-  store i64 ptrtoint (ptr @code_5858 to i64), ptr %t36583
-  %t36584 = getelementptr i64, ptr %t36583, i64 1
-  store i64 %t35280, ptr %t36584
-  %t36585 = getelementptr i64, ptr %t36583, i64 2
-  store i64 %t35283, ptr %t36585
-  %t36586 = or i64 %t36582, 4
-  %t36587 = call i64 @rt_set_box(i64 %t35286, i64 %t36586)
-  %t36588 = call i64 @rt_alloc_words(i64 5)
-  %t36589 = inttoptr i64 %t36588 to ptr
-  store i64 ptrtoint (ptr @code_5860 to i64), ptr %t36589
-  %t36590 = getelementptr i64, ptr %t36589, i64 1
-  store i64 %t35281, ptr %t36590
-  %t36591 = getelementptr i64, ptr %t36589, i64 2
-  store i64 %t35282, ptr %t36591
-  %t36592 = getelementptr i64, ptr %t36589, i64 3
-  store i64 %t35279, ptr %t36592
-  %t36593 = getelementptr i64, ptr %t36589, i64 4
-  store i64 %t35283, ptr %t36593
-  %t36594 = or i64 %t36588, 4
-  %t36595 = call i64 @rt_set_box(i64 %t35287, i64 %t36594)
-  %t36596 = call i64 @rt_set_box(i64 %t35288, i64 2)
-  %t36597 = call i64 @rt_set_box(i64 %t35289, i64 2)
-  %t36598 = call i64 @rt_set_box(i64 %t35290, i64 0)
-  %t36599 = call i64 @rt_alloc_words(i64 4)
-  %t36600 = inttoptr i64 %t36599 to ptr
-  store i64 ptrtoint (ptr @code_5862 to i64), ptr %t36600
-  %t36601 = getelementptr i64, ptr %t36600, i64 1
-  store i64 %t35288, ptr %t36601
-  %t36602 = getelementptr i64, ptr %t36600, i64 2
-  store i64 %t35289, ptr %t36602
-  %t36603 = getelementptr i64, ptr %t36600, i64 3
-  store i64 %t35290, ptr %t36603
-  %t36604 = or i64 %t36599, 4
-  %t36605 = call i64 @rt_set_box(i64 %t35291, i64 %t36604)
-  %t36606 = call i64 @rt_alloc_words(i64 2)
-  %t36607 = inttoptr i64 %t36606 to ptr
-  store i64 ptrtoint (ptr @code_5864 to i64), ptr %t36607
-  %t36608 = getelementptr i64, ptr %t36607, i64 1
-  store i64 %t35288, ptr %t36608
-  %t36609 = or i64 %t36606, 4
-  %t36610 = call i64 @rt_set_box(i64 %t35292, i64 %t36609)
-  %t36611 = call i64 @rt_make_string(ptr @.str.lit.738, i64 16)
-  %t36612 = call i64 @rt_set_box(i64 %t35293, i64 %t36611)
-  %t36613 = call i64 @rt_alloc_words(i64 2)
-  %t36614 = inttoptr i64 %t36613 to ptr
-  store i64 ptrtoint (ptr @code_5870 to i64), ptr %t36614
-  %t36615 = getelementptr i64, ptr %t36614, i64 1
-  store i64 %t35293, ptr %t36615
-  %t36616 = or i64 %t36613, 4
-  %t36617 = call i64 @rt_set_box(i64 %t35294, i64 %t36616)
-  %t36618 = call i64 @rt_alloc_words(i64 1)
-  %t36619 = inttoptr i64 %t36618 to ptr
-  store i64 ptrtoint (ptr @code_5872 to i64), ptr %t36619
-  %t36620 = or i64 %t36618, 4
-  %t36621 = call i64 @rt_set_box(i64 %t35295, i64 %t36620)
-  %t36622 = call i64 @rt_alloc_words(i64 2)
+  store i64 ptrtoint (ptr @code_5592 to i64), ptr %t36481
+  %t36482 = getelementptr i64, ptr %t36481, i64 1
+  store i64 %t35328, ptr %t36482
+  %t36483 = getelementptr i64, ptr %t36481, i64 2
+  store i64 %t35309, ptr %t36483
+  %t36484 = getelementptr i64, ptr %t36481, i64 3
+  store i64 %t35331, ptr %t36484
+  %t36485 = getelementptr i64, ptr %t36481, i64 4
+  store i64 %t35330, ptr %t36485
+  %t36486 = or i64 %t36480, 4
+  %t36487 = call i64 @rt_set_box(i64 %t35330, i64 %t36486)
+  %t36488 = call i64 @rt_alloc_words(i64 5)
+  %t36489 = inttoptr i64 %t36488 to ptr
+  store i64 ptrtoint (ptr @code_5594 to i64), ptr %t36489
+  %t36490 = getelementptr i64, ptr %t36489, i64 1
+  store i64 %t35319, ptr %t36490
+  %t36491 = getelementptr i64, ptr %t36489, i64 2
+  store i64 %t35326, ptr %t36491
+  %t36492 = getelementptr i64, ptr %t36489, i64 3
+  store i64 %t35320, ptr %t36492
+  %t36493 = getelementptr i64, ptr %t36489, i64 4
+  store i64 %t35328, ptr %t36493
+  %t36494 = or i64 %t36488, 4
+  %t36495 = call i64 @rt_set_box(i64 %t35331, i64 %t36494)
+  %t36496 = call i64 @rt_set_box(i64 %t35332, i64 8000)
+  %t36497 = call i64 @rt_alloc_words(i64 12)
+  %t36498 = inttoptr i64 %t36497 to ptr
+  store i64 ptrtoint (ptr @code_5606 to i64), ptr %t36498
+  %t36499 = getelementptr i64, ptr %t36498, i64 1
+  store i64 %t35324, ptr %t36499
+  %t36500 = getelementptr i64, ptr %t36498, i64 2
+  store i64 %t35316, ptr %t36500
+  %t36501 = getelementptr i64, ptr %t36498, i64 3
+  store i64 %t35323, ptr %t36501
+  %t36502 = getelementptr i64, ptr %t36498, i64 4
+  store i64 %t35327, ptr %t36502
+  %t36503 = getelementptr i64, ptr %t36498, i64 5
+  store i64 %t35328, ptr %t36503
+  %t36504 = getelementptr i64, ptr %t36498, i64 6
+  store i64 %t35332, ptr %t36504
+  %t36505 = getelementptr i64, ptr %t36498, i64 7
+  store i64 %t35335, ptr %t36505
+  %t36506 = getelementptr i64, ptr %t36498, i64 8
+  store i64 %t35334, ptr %t36506
+  %t36507 = getelementptr i64, ptr %t36498, i64 9
+  store i64 %t35336, ptr %t36507
+  %t36508 = getelementptr i64, ptr %t36498, i64 10
+  store i64 %t35338, ptr %t36508
+  %t36509 = getelementptr i64, ptr %t36498, i64 11
+  store i64 %t35339, ptr %t36509
+  %t36510 = or i64 %t36497, 4
+  %t36511 = call i64 @rt_set_box(i64 %t35333, i64 %t36510)
+  %t36512 = call i64 @rt_alloc_words(i64 1)
+  %t36513 = inttoptr i64 %t36512 to ptr
+  store i64 ptrtoint (ptr @code_5622 to i64), ptr %t36513
+  %t36514 = or i64 %t36512, 4
+  %t36515 = call i64 @rt_set_box(i64 %t35334, i64 %t36514)
+  %t36516 = call i64 @rt_alloc_words(i64 2)
+  %t36517 = inttoptr i64 %t36516 to ptr
+  store i64 ptrtoint (ptr @code_5626 to i64), ptr %t36517
+  %t36518 = getelementptr i64, ptr %t36517, i64 1
+  store i64 %t35335, ptr %t36518
+  %t36519 = or i64 %t36516, 4
+  %t36520 = call i64 @rt_set_box(i64 %t35335, i64 %t36519)
+  %t36521 = call i64 @rt_alloc_words(i64 2)
+  %t36522 = inttoptr i64 %t36521 to ptr
+  store i64 ptrtoint (ptr @code_5628 to i64), ptr %t36522
+  %t36523 = getelementptr i64, ptr %t36522, i64 1
+  store i64 %t35337, ptr %t36523
+  %t36524 = or i64 %t36521, 4
+  %t36525 = call i64 @rt_set_box(i64 %t35336, i64 %t36524)
+  %t36526 = call i64 @rt_alloc_words(i64 1)
+  %t36527 = inttoptr i64 %t36526 to ptr
+  store i64 ptrtoint (ptr @code_5630 to i64), ptr %t36527
+  %t36528 = or i64 %t36526, 4
+  %t36529 = call i64 @rt_set_box(i64 %t35337, i64 %t36528)
+  %t36530 = call i64 @rt_alloc_words(i64 2)
+  %t36531 = inttoptr i64 %t36530 to ptr
+  store i64 ptrtoint (ptr @code_5634 to i64), ptr %t36531
+  %t36532 = getelementptr i64, ptr %t36531, i64 1
+  store i64 %t35337, ptr %t36532
+  %t36533 = or i64 %t36530, 4
+  %t36534 = call i64 @rt_set_box(i64 %t35338, i64 %t36533)
+  %t36535 = call i64 @rt_alloc_words(i64 4)
+  %t36536 = inttoptr i64 %t36535 to ptr
+  store i64 ptrtoint (ptr @code_5636 to i64), ptr %t36536
+  %t36537 = getelementptr i64, ptr %t36536, i64 1
+  store i64 %t35254, ptr %t36537
+  %t36538 = getelementptr i64, ptr %t36536, i64 2
+  store i64 %t35340, ptr %t36538
+  %t36539 = getelementptr i64, ptr %t36536, i64 3
+  store i64 %t35341, ptr %t36539
+  %t36540 = or i64 %t36535, 4
+  %t36541 = call i64 @rt_set_box(i64 %t35339, i64 %t36540)
+  %t36542 = call i64 @rt_alloc_words(i64 2)
+  %t36543 = inttoptr i64 %t36542 to ptr
+  store i64 ptrtoint (ptr @code_5640 to i64), ptr %t36543
+  %t36544 = getelementptr i64, ptr %t36543, i64 1
+  store i64 %t35340, ptr %t36544
+  %t36545 = or i64 %t36542, 4
+  %t36546 = call i64 @rt_set_box(i64 %t35340, i64 %t36545)
+  %t36547 = call i64 @rt_alloc_words(i64 3)
+  %t36548 = inttoptr i64 %t36547 to ptr
+  store i64 ptrtoint (ptr @code_5642 to i64), ptr %t36548
+  %t36549 = getelementptr i64, ptr %t36548, i64 1
+  store i64 %t35342, ptr %t36549
+  %t36550 = getelementptr i64, ptr %t36548, i64 2
+  store i64 %t35343, ptr %t36550
+  %t36551 = or i64 %t36547, 4
+  %t36552 = call i64 @rt_set_box(i64 %t35341, i64 %t36551)
+  %t36553 = call i64 @rt_alloc_words(i64 2)
+  %t36554 = inttoptr i64 %t36553 to ptr
+  store i64 ptrtoint (ptr @code_5646 to i64), ptr %t36554
+  %t36555 = getelementptr i64, ptr %t36554, i64 1
+  store i64 %t35342, ptr %t36555
+  %t36556 = or i64 %t36553, 4
+  %t36557 = call i64 @rt_set_box(i64 %t35342, i64 %t36556)
+  %t36558 = call i64 @rt_alloc_words(i64 1)
+  %t36559 = inttoptr i64 %t36558 to ptr
+  store i64 ptrtoint (ptr @code_5648 to i64), ptr %t36559
+  %t36560 = or i64 %t36558, 4
+  %t36561 = call i64 @rt_set_box(i64 %t35343, i64 %t36560)
+  %t36562 = call i64 @rt_alloc_words(i64 2)
+  %t36563 = inttoptr i64 %t36562 to ptr
+  store i64 ptrtoint (ptr @code_5650 to i64), ptr %t36563
+  %t36564 = getelementptr i64, ptr %t36563, i64 1
+  store i64 %t35344, ptr %t36564
+  %t36565 = or i64 %t36562, 4
+  %t36566 = call i64 @rt_set_box(i64 %t35344, i64 %t36565)
+  %t36567 = call i64 @rt_alloc_words(i64 4)
+  %t36568 = inttoptr i64 %t36567 to ptr
+  store i64 ptrtoint (ptr @code_5688 to i64), ptr %t36568
+  %t36569 = getelementptr i64, ptr %t36568, i64 1
+  store i64 %t35345, ptr %t36569
+  %t36570 = getelementptr i64, ptr %t36568, i64 2
+  store i64 %t35247, ptr %t36570
+  %t36571 = getelementptr i64, ptr %t36568, i64 3
+  store i64 %t35248, ptr %t36571
+  %t36572 = or i64 %t36567, 4
+  %t36573 = call i64 @rt_set_box(i64 %t35345, i64 %t36572)
+  %t36574 = call i64 @rt_alloc_words(i64 7)
+  %t36575 = inttoptr i64 %t36574 to ptr
+  store i64 ptrtoint (ptr @code_5722 to i64), ptr %t36575
+  %t36576 = getelementptr i64, ptr %t36575, i64 1
+  store i64 %t35345, ptr %t36576
+  %t36577 = getelementptr i64, ptr %t36575, i64 2
+  store i64 %t35250, ptr %t36577
+  %t36578 = getelementptr i64, ptr %t36575, i64 3
+  store i64 %t35254, ptr %t36578
+  %t36579 = getelementptr i64, ptr %t36575, i64 4
+  store i64 %t35272, ptr %t36579
+  %t36580 = getelementptr i64, ptr %t36575, i64 5
+  store i64 %t35273, ptr %t36580
+  %t36581 = getelementptr i64, ptr %t36575, i64 6
+  store i64 %t35274, ptr %t36581
+  %t36582 = or i64 %t36574, 4
+  %t36583 = call i64 @rt_set_box(i64 %t35346, i64 %t36582)
+  %t36584 = call i64 @rt_alloc_words(i64 6)
+  %t36585 = inttoptr i64 %t36584 to ptr
+  store i64 ptrtoint (ptr @code_5766 to i64), ptr %t36585
+  %t36586 = getelementptr i64, ptr %t36585, i64 1
+  store i64 %t35347, ptr %t36586
+  %t36587 = getelementptr i64, ptr %t36585, i64 2
+  store i64 %t35247, ptr %t36587
+  %t36588 = getelementptr i64, ptr %t36585, i64 3
+  store i64 %t35248, ptr %t36588
+  %t36589 = getelementptr i64, ptr %t36585, i64 4
+  store i64 %t35249, ptr %t36589
+  %t36590 = getelementptr i64, ptr %t36585, i64 5
+  store i64 %t35273, ptr %t36590
+  %t36591 = or i64 %t36584, 4
+  %t36592 = call i64 @rt_set_box(i64 %t35347, i64 %t36591)
+  %t36593 = call i64 @rt_alloc_words(i64 3)
+  %t36594 = inttoptr i64 %t36593 to ptr
+  store i64 ptrtoint (ptr @code_5808 to i64), ptr %t36594
+  %t36595 = getelementptr i64, ptr %t36594, i64 1
+  store i64 %t35348, ptr %t36595
+  %t36596 = getelementptr i64, ptr %t36594, i64 2
+  store i64 %t35347, ptr %t36596
+  %t36597 = or i64 %t36593, 4
+  %t36598 = call i64 @rt_set_box(i64 %t35348, i64 %t36597)
+  %t36599 = call i64 @rt_set_box(i64 %t35349, i64 2)
+  %t36600 = call i64 @rt_alloc_words(i64 2)
+  %t36601 = inttoptr i64 %t36600 to ptr
+  store i64 ptrtoint (ptr @code_5840 to i64), ptr %t36601
+  %t36602 = getelementptr i64, ptr %t36601, i64 1
+  store i64 %t35349, ptr %t36602
+  %t36603 = or i64 %t36600, 4
+  %t36604 = call i64 @rt_set_box(i64 %t35350, i64 %t36603)
+  %t36605 = call i64 @rt_unbox(i64 %t35256)
+  %t36606 = call i64 @rt_set_box(i64 %t35351, i64 %t36605)
+  %t36607 = call i64 @rt_alloc_words(i64 4)
+  %t36608 = inttoptr i64 %t36607 to ptr
+  store i64 ptrtoint (ptr @code_5842 to i64), ptr %t36608
+  %t36609 = getelementptr i64, ptr %t36608, i64 1
+  store i64 %t35257, ptr %t36609
+  %t36610 = getelementptr i64, ptr %t36608, i64 2
+  store i64 %t35351, ptr %t36610
+  %t36611 = getelementptr i64, ptr %t36608, i64 3
+  store i64 %t35255, ptr %t36611
+  %t36612 = or i64 %t36607, 4
+  %t36613 = call i64 @rt_set_box(i64 %t35352, i64 %t36612)
+  %t36614 = call i64 @rt_alloc_words(i64 5)
+  %t36615 = inttoptr i64 %t36614 to ptr
+  store i64 ptrtoint (ptr @code_5844 to i64), ptr %t36615
+  %t36616 = getelementptr i64, ptr %t36615, i64 1
+  store i64 %t35349, ptr %t36616
+  %t36617 = getelementptr i64, ptr %t36615, i64 2
+  store i64 %t35351, ptr %t36617
+  %t36618 = getelementptr i64, ptr %t36615, i64 3
+  store i64 %t35256, ptr %t36618
+  %t36619 = getelementptr i64, ptr %t36615, i64 4
+  store i64 %t35354, ptr %t36619
+  %t36620 = or i64 %t36614, 4
+  %t36621 = call i64 @rt_set_box(i64 %t35353, i64 %t36620)
+  %t36622 = call i64 @rt_alloc_words(i64 5)
   %t36623 = inttoptr i64 %t36622 to ptr
-  store i64 ptrtoint (ptr @code_5874 to i64), ptr %t36623
+  store i64 ptrtoint (ptr @code_5846 to i64), ptr %t36623
   %t36624 = getelementptr i64, ptr %t36623, i64 1
-  store i64 %t35294, ptr %t36624
-  %t36625 = or i64 %t36622, 4
-  %t36626 = call i64 @rt_set_box(i64 %t35296, i64 %t36625)
-  %t36627 = call i64 @rt_alloc_words(i64 3)
-  %t36628 = inttoptr i64 %t36627 to ptr
-  store i64 ptrtoint (ptr @code_5876 to i64), ptr %t36628
-  %t36629 = getelementptr i64, ptr %t36628, i64 1
-  store i64 %t35295, ptr %t36629
-  %t36630 = getelementptr i64, ptr %t36628, i64 2
-  store i64 %t35296, ptr %t36630
-  %t36631 = or i64 %t36627, 4
-  %t36632 = call i64 @rt_set_box(i64 %t35297, i64 %t36631)
-  %t36633 = call i64 @rt_alloc_words(i64 4)
-  %t36634 = inttoptr i64 %t36633 to ptr
-  store i64 ptrtoint (ptr @code_5884 to i64), ptr %t36634
-  %t36635 = getelementptr i64, ptr %t36634, i64 1
-  store i64 %t35297, ptr %t36635
-  %t36636 = getelementptr i64, ptr %t36634, i64 2
-  store i64 %t35290, ptr %t36636
-  %t36637 = getelementptr i64, ptr %t36634, i64 3
-  store i64 %t35288, ptr %t36637
-  %t36638 = or i64 %t36633, 4
-  %t36639 = call i64 @rt_set_box(i64 %t35298, i64 %t36638)
-  %t36640 = call i64 @rt_alloc_words(i64 3)
-  %t36641 = inttoptr i64 %t36640 to ptr
-  store i64 ptrtoint (ptr @code_5886 to i64), ptr %t36641
-  %t36642 = getelementptr i64, ptr %t36641, i64 1
-  store i64 %t35289, ptr %t36642
-  %t36643 = getelementptr i64, ptr %t36641, i64 2
-  store i64 %t35298, ptr %t36643
-  %t36644 = or i64 %t36640, 4
-  %t36645 = call i64 @rt_set_box(i64 %t35299, i64 %t36644)
-  %t36646 = call i64 @rt_alloc_words(i64 6)
-  %t36647 = inttoptr i64 %t36646 to ptr
-  store i64 ptrtoint (ptr @code_5888 to i64), ptr %t36647
-  %t36648 = getelementptr i64, ptr %t36647, i64 1
-  store i64 %t35299, ptr %t36648
-  %t36649 = getelementptr i64, ptr %t36647, i64 2
-  store i64 %t35284, ptr %t36649
-  %t36650 = getelementptr i64, ptr %t36647, i64 3
-  store i64 %t35280, ptr %t36650
-  %t36651 = getelementptr i64, ptr %t36647, i64 4
-  store i64 %t35298, ptr %t36651
-  %t36652 = getelementptr i64, ptr %t36647, i64 5
-  store i64 %t35300, ptr %t36652
-  %t36653 = or i64 %t36646, 4
-  %t36654 = call i64 @rt_set_box(i64 %t35300, i64 %t36653)
-  %t36655 = call i64 @rt_intern(ptr @.str.sym.608)
-  %t36656 = call i64 @rt_make_string(ptr @.str.lit.739, i64 6)
-  %t36657 = call i64 @rt_cons(i64 %t36656, i64 2)
-  %t36658 = call i64 @rt_cons(i64 %t36655, i64 %t36657)
-  %t36659 = call i64 @rt_intern(ptr @.str.sym.609)
-  %t36660 = call i64 @rt_make_string(ptr @.str.lit.740, i64 6)
-  %t36661 = call i64 @rt_cons(i64 %t36660, i64 2)
-  %t36662 = call i64 @rt_cons(i64 %t36659, i64 %t36661)
-  %t36663 = call i64 @rt_intern(ptr @.str.sym.610)
-  %t36664 = call i64 @rt_make_string(ptr @.str.lit.741, i64 6)
-  %t36665 = call i64 @rt_cons(i64 %t36664, i64 2)
-  %t36666 = call i64 @rt_cons(i64 %t36663, i64 %t36665)
-  %t36667 = call i64 @rt_intern(ptr @.str.sym.611)
-  %t36668 = call i64 @rt_make_string(ptr @.str.lit.742, i64 6)
-  %t36669 = call i64 @rt_cons(i64 %t36668, i64 2)
-  %t36670 = call i64 @rt_cons(i64 %t36667, i64 %t36669)
-  %t36671 = call i64 @rt_intern(ptr @.str.sym.617)
-  %t36672 = call i64 @rt_make_string(ptr @.str.lit.743, i64 11)
-  %t36673 = call i64 @rt_cons(i64 %t36672, i64 2)
-  %t36674 = call i64 @rt_cons(i64 %t36671, i64 %t36673)
-  %t36675 = call i64 @rt_intern(ptr @.str.sym.618)
-  %t36676 = call i64 @rt_make_string(ptr @.str.lit.744, i64 12)
-  %t36677 = call i64 @rt_cons(i64 %t36676, i64 2)
-  %t36678 = call i64 @rt_cons(i64 %t36675, i64 %t36677)
-  %t36679 = call i64 @rt_intern(ptr @.str.sym.619)
-  %t36680 = call i64 @rt_make_string(ptr @.str.lit.745, i64 9)
-  %t36681 = call i64 @rt_cons(i64 %t36680, i64 2)
-  %t36682 = call i64 @rt_cons(i64 %t36679, i64 %t36681)
-  %t36683 = call i64 @rt_intern(ptr @.str.sym.612)
-  %t36684 = call i64 @rt_make_string(ptr @.str.lit.746, i64 9)
-  %t36685 = call i64 @rt_cons(i64 %t36684, i64 2)
-  %t36686 = call i64 @rt_cons(i64 %t36683, i64 %t36685)
-  %t36687 = call i64 @rt_intern(ptr @.str.sym.613)
-  %t36688 = call i64 @rt_make_string(ptr @.str.lit.747, i64 5)
-  %t36689 = call i64 @rt_cons(i64 %t36688, i64 2)
-  %t36690 = call i64 @rt_cons(i64 %t36687, i64 %t36689)
-  %t36691 = call i64 @rt_intern(ptr @.str.sym.652)
-  %t36692 = call i64 @rt_make_string(ptr @.str.lit.748, i64 11)
-  %t36693 = call i64 @rt_cons(i64 %t36692, i64 2)
-  %t36694 = call i64 @rt_cons(i64 %t36691, i64 %t36693)
-  %t36695 = call i64 @rt_intern(ptr @.str.sym.653)
-  %t36696 = call i64 @rt_make_string(ptr @.str.lit.749, i64 11)
-  %t36697 = call i64 @rt_cons(i64 %t36696, i64 2)
-  %t36698 = call i64 @rt_cons(i64 %t36695, i64 %t36697)
-  %t36699 = call i64 @rt_intern(ptr @.str.sym.654)
-  %t36700 = call i64 @rt_make_string(ptr @.str.lit.750, i64 9)
-  %t36701 = call i64 @rt_cons(i64 %t36700, i64 2)
-  %t36702 = call i64 @rt_cons(i64 %t36699, i64 %t36701)
-  %t36703 = call i64 @rt_intern(ptr @.str.sym.655)
-  %t36704 = call i64 @rt_make_string(ptr @.str.lit.751, i64 12)
-  %t36705 = call i64 @rt_cons(i64 %t36704, i64 2)
-  %t36706 = call i64 @rt_cons(i64 %t36703, i64 %t36705)
-  %t36707 = call i64 @rt_intern(ptr @.str.sym.656)
-  %t36708 = call i64 @rt_make_string(ptr @.str.lit.752, i64 19)
-  %t36709 = call i64 @rt_cons(i64 %t36708, i64 2)
-  %t36710 = call i64 @rt_cons(i64 %t36707, i64 %t36709)
-  %t36711 = call i64 @rt_intern(ptr @.str.sym.657)
-  %t36712 = call i64 @rt_make_string(ptr @.str.lit.753, i64 19)
-  %t36713 = call i64 @rt_cons(i64 %t36712, i64 2)
-  %t36714 = call i64 @rt_cons(i64 %t36711, i64 %t36713)
-  %t36715 = call i64 @rt_intern(ptr @.str.sym.658)
-  %t36716 = call i64 @rt_make_string(ptr @.str.lit.754, i64 19)
-  %t36717 = call i64 @rt_cons(i64 %t36716, i64 2)
-  %t36718 = call i64 @rt_cons(i64 %t36715, i64 %t36717)
-  %t36719 = call i64 @rt_intern(ptr @.str.sym.659)
-  %t36720 = call i64 @rt_make_string(ptr @.str.lit.755, i64 19)
-  %t36721 = call i64 @rt_cons(i64 %t36720, i64 2)
-  %t36722 = call i64 @rt_cons(i64 %t36719, i64 %t36721)
-  %t36723 = call i64 @rt_intern(ptr @.str.sym.663)
-  %t36724 = call i64 @rt_make_string(ptr @.str.lit.756, i64 13)
-  %t36725 = call i64 @rt_cons(i64 %t36724, i64 2)
-  %t36726 = call i64 @rt_cons(i64 %t36723, i64 %t36725)
-  %t36727 = call i64 @rt_intern(ptr @.str.sym.616)
-  %t36728 = call i64 @rt_make_string(ptr @.str.lit.757, i64 7)
-  %t36729 = call i64 @rt_cons(i64 %t36728, i64 2)
-  %t36730 = call i64 @rt_cons(i64 %t36727, i64 %t36729)
-  %t36731 = call i64 @rt_intern(ptr @.str.sym.15)
-  %t36732 = call i64 @rt_make_string(ptr @.str.lit.758, i64 6)
-  %t36733 = call i64 @rt_cons(i64 %t36732, i64 2)
-  %t36734 = call i64 @rt_cons(i64 %t36731, i64 %t36733)
-  %t36735 = call i64 @rt_intern(ptr @.str.sym.16)
-  %t36736 = call i64 @rt_make_string(ptr @.str.lit.759, i64 6)
-  %t36737 = call i64 @rt_cons(i64 %t36736, i64 2)
-  %t36738 = call i64 @rt_cons(i64 %t36735, i64 %t36737)
-  %t36739 = call i64 @rt_intern(ptr @.str.sym.13)
-  %t36740 = call i64 @rt_make_string(ptr @.str.lit.760, i64 9)
-  %t36741 = call i64 @rt_cons(i64 %t36740, i64 2)
-  %t36742 = call i64 @rt_cons(i64 %t36739, i64 %t36741)
-  %t36743 = call i64 @rt_intern(ptr @.str.sym.620)
-  %t36744 = call i64 @rt_make_string(ptr @.str.lit.761, i64 9)
-  %t36745 = call i64 @rt_cons(i64 %t36744, i64 2)
-  %t36746 = call i64 @rt_cons(i64 %t36743, i64 %t36745)
-  %t36747 = call i64 @rt_intern(ptr @.str.sym.614)
-  %t36748 = call i64 @rt_make_string(ptr @.str.lit.762, i64 7)
-  %t36749 = call i64 @rt_cons(i64 %t36748, i64 2)
-  %t36750 = call i64 @rt_cons(i64 %t36747, i64 %t36749)
-  %t36751 = call i64 @rt_intern(ptr @.str.sym.615)
-  %t36752 = call i64 @rt_make_string(ptr @.str.lit.763, i64 8)
-  %t36753 = call i64 @rt_cons(i64 %t36752, i64 2)
-  %t36754 = call i64 @rt_cons(i64 %t36751, i64 %t36753)
-  %t36755 = call i64 @rt_intern(ptr @.str.sym.621)
-  %t36756 = call i64 @rt_make_string(ptr @.str.lit.764, i64 8)
-  %t36757 = call i64 @rt_cons(i64 %t36756, i64 2)
-  %t36758 = call i64 @rt_cons(i64 %t36755, i64 %t36757)
-  %t36759 = call i64 @rt_intern(ptr @.str.sym.622)
-  %t36760 = call i64 @rt_make_string(ptr @.str.lit.765, i64 6)
-  %t36761 = call i64 @rt_cons(i64 %t36760, i64 2)
-  %t36762 = call i64 @rt_cons(i64 %t36759, i64 %t36761)
-  %t36763 = call i64 @rt_intern(ptr @.str.sym.108)
-  %t36764 = call i64 @rt_make_string(ptr @.str.lit.766, i64 6)
-  %t36765 = call i64 @rt_cons(i64 %t36764, i64 2)
-  %t36766 = call i64 @rt_cons(i64 %t36763, i64 %t36765)
-  %t36767 = call i64 @rt_intern(ptr @.str.sym.111)
-  %t36768 = call i64 @rt_make_string(ptr @.str.lit.767, i64 8)
-  %t36769 = call i64 @rt_cons(i64 %t36768, i64 2)
-  %t36770 = call i64 @rt_cons(i64 %t36767, i64 %t36769)
-  %t36771 = call i64 @rt_intern(ptr @.str.sym.110)
-  %t36772 = call i64 @rt_make_string(ptr @.str.lit.768, i64 10)
-  %t36773 = call i64 @rt_cons(i64 %t36772, i64 2)
-  %t36774 = call i64 @rt_cons(i64 %t36771, i64 %t36773)
-  %t36775 = call i64 @rt_intern(ptr @.str.sym.623)
-  %t36776 = call i64 @rt_make_string(ptr @.str.lit.769, i64 18)
-  %t36777 = call i64 @rt_cons(i64 %t36776, i64 2)
-  %t36778 = call i64 @rt_cons(i64 %t36775, i64 %t36777)
-  %t36779 = call i64 @rt_intern(ptr @.str.sym.624)
-  %t36780 = call i64 @rt_make_string(ptr @.str.lit.770, i64 18)
-  %t36781 = call i64 @rt_cons(i64 %t36780, i64 2)
-  %t36782 = call i64 @rt_cons(i64 %t36779, i64 %t36781)
-  %t36783 = call i64 @rt_intern(ptr @.str.sym.625)
-  %t36784 = call i64 @rt_make_string(ptr @.str.lit.771, i64 16)
-  %t36785 = call i64 @rt_cons(i64 %t36784, i64 2)
-  %t36786 = call i64 @rt_cons(i64 %t36783, i64 %t36785)
-  %t36787 = call i64 @rt_intern(ptr @.str.sym.626)
-  %t36788 = call i64 @rt_make_string(ptr @.str.lit.772, i64 13)
-  %t36789 = call i64 @rt_cons(i64 %t36788, i64 2)
-  %t36790 = call i64 @rt_cons(i64 %t36787, i64 %t36789)
-  %t36791 = call i64 @rt_intern(ptr @.str.sym.631)
-  %t36792 = call i64 @rt_make_string(ptr @.str.lit.773, i64 12)
-  %t36793 = call i64 @rt_cons(i64 %t36792, i64 2)
-  %t36794 = call i64 @rt_cons(i64 %t36791, i64 %t36793)
-  %t36795 = call i64 @rt_intern(ptr @.str.sym.627)
-  %t36796 = call i64 @rt_make_string(ptr @.str.lit.774, i64 19)
-  %t36797 = call i64 @rt_cons(i64 %t36796, i64 2)
-  %t36798 = call i64 @rt_cons(i64 %t36795, i64 %t36797)
-  %t36799 = call i64 @rt_intern(ptr @.str.sym.632)
-  %t36800 = call i64 @rt_make_string(ptr @.str.lit.775, i64 12)
-  %t36801 = call i64 @rt_cons(i64 %t36800, i64 2)
-  %t36802 = call i64 @rt_cons(i64 %t36799, i64 %t36801)
-  %t36803 = call i64 @rt_intern(ptr @.str.sym.635)
-  %t36804 = call i64 @rt_make_string(ptr @.str.lit.776, i64 16)
-  %t36805 = call i64 @rt_cons(i64 %t36804, i64 2)
-  %t36806 = call i64 @rt_cons(i64 %t36803, i64 %t36805)
-  %t36807 = call i64 @rt_intern(ptr @.str.sym.628)
-  %t36808 = call i64 @rt_make_string(ptr @.str.lit.777, i64 19)
-  %t36809 = call i64 @rt_cons(i64 %t36808, i64 2)
-  %t36810 = call i64 @rt_cons(i64 %t36807, i64 %t36809)
-  %t36811 = call i64 @rt_intern(ptr @.str.sym.629)
-  %t36812 = call i64 @rt_make_string(ptr @.str.lit.778, i64 17)
-  %t36813 = call i64 @rt_cons(i64 %t36812, i64 2)
-  %t36814 = call i64 @rt_cons(i64 %t36811, i64 %t36813)
-  %t36815 = call i64 @rt_intern(ptr @.str.sym.633)
-  %t36816 = call i64 @rt_make_string(ptr @.str.lit.779, i64 19)
-  %t36817 = call i64 @rt_cons(i64 %t36816, i64 2)
-  %t36818 = call i64 @rt_cons(i64 %t36815, i64 %t36817)
-  %t36819 = call i64 @rt_intern(ptr @.str.sym.630)
-  %t36820 = call i64 @rt_make_string(ptr @.str.lit.780, i64 13)
-  %t36821 = call i64 @rt_cons(i64 %t36820, i64 2)
-  %t36822 = call i64 @rt_cons(i64 %t36819, i64 %t36821)
-  %t36823 = call i64 @rt_intern(ptr @.str.sym.634)
-  %t36824 = call i64 @rt_make_string(ptr @.str.lit.781, i64 14)
-  %t36825 = call i64 @rt_cons(i64 %t36824, i64 2)
-  %t36826 = call i64 @rt_cons(i64 %t36823, i64 %t36825)
-  %t36827 = call i64 @rt_intern(ptr @.str.sym.640)
-  %t36828 = call i64 @rt_make_string(ptr @.str.lit.782, i64 14)
-  %t36829 = call i64 @rt_cons(i64 %t36828, i64 2)
-  %t36830 = call i64 @rt_cons(i64 %t36827, i64 %t36829)
-  %t36831 = call i64 @rt_intern(ptr @.str.sym.636)
-  %t36832 = call i64 @rt_make_string(ptr @.str.lit.783, i64 13)
-  %t36833 = call i64 @rt_cons(i64 %t36832, i64 2)
-  %t36834 = call i64 @rt_cons(i64 %t36831, i64 %t36833)
-  %t36835 = call i64 @rt_intern(ptr @.str.sym.637)
-  %t36836 = call i64 @rt_make_string(ptr @.str.lit.784, i64 13)
-  %t36837 = call i64 @rt_cons(i64 %t36836, i64 2)
-  %t36838 = call i64 @rt_cons(i64 %t36835, i64 %t36837)
-  %t36839 = call i64 @rt_intern(ptr @.str.sym.638)
-  %t36840 = call i64 @rt_make_string(ptr @.str.lit.785, i64 16)
-  %t36841 = call i64 @rt_cons(i64 %t36840, i64 2)
-  %t36842 = call i64 @rt_cons(i64 %t36839, i64 %t36841)
-  %t36843 = call i64 @rt_intern(ptr @.str.sym.639)
-  %t36844 = call i64 @rt_make_string(ptr @.str.lit.786, i64 11)
-  %t36845 = call i64 @rt_cons(i64 %t36844, i64 2)
-  %t36846 = call i64 @rt_cons(i64 %t36843, i64 %t36845)
-  %t36847 = call i64 @rt_intern(ptr @.str.sym.645)
-  %t36848 = call i64 @rt_make_string(ptr @.str.lit.787, i64 18)
-  %t36849 = call i64 @rt_cons(i64 %t36848, i64 2)
-  %t36850 = call i64 @rt_cons(i64 %t36847, i64 %t36849)
-  %t36851 = call i64 @rt_intern(ptr @.str.sym.641)
-  %t36852 = call i64 @rt_make_string(ptr @.str.lit.788, i64 20)
-  %t36853 = call i64 @rt_cons(i64 %t36852, i64 2)
-  %t36854 = call i64 @rt_cons(i64 %t36851, i64 %t36853)
-  %t36855 = call i64 @rt_intern(ptr @.str.sym.642)
-  %t36856 = call i64 @rt_make_string(ptr @.str.lit.789, i64 20)
-  %t36857 = call i64 @rt_cons(i64 %t36856, i64 2)
-  %t36858 = call i64 @rt_cons(i64 %t36855, i64 %t36857)
-  %t36859 = call i64 @rt_intern(ptr @.str.sym.643)
-  %t36860 = call i64 @rt_make_string(ptr @.str.lit.790, i64 20)
-  %t36861 = call i64 @rt_cons(i64 %t36860, i64 2)
-  %t36862 = call i64 @rt_cons(i64 %t36859, i64 %t36861)
-  %t36863 = call i64 @rt_intern(ptr @.str.sym.644)
-  %t36864 = call i64 @rt_make_string(ptr @.str.lit.791, i64 15)
-  %t36865 = call i64 @rt_cons(i64 %t36864, i64 2)
-  %t36866 = call i64 @rt_cons(i64 %t36863, i64 %t36865)
-  %t36867 = call i64 @rt_intern(ptr @.str.sym.665)
-  %t36868 = call i64 @rt_make_string(ptr @.str.lit.792, i64 7)
-  %t36869 = call i64 @rt_cons(i64 %t36868, i64 2)
-  %t36870 = call i64 @rt_cons(i64 %t36867, i64 %t36869)
-  %t36871 = call i64 @rt_intern(ptr @.str.sym.666)
-  %t36872 = call i64 @rt_make_string(ptr @.str.lit.793, i64 18)
-  %t36873 = call i64 @rt_cons(i64 %t36872, i64 2)
-  %t36874 = call i64 @rt_cons(i64 %t36871, i64 %t36873)
-  %t36875 = call i64 @rt_intern(ptr @.str.sym.667)
-  %t36876 = call i64 @rt_make_string(ptr @.str.lit.794, i64 15)
-  %t36877 = call i64 @rt_cons(i64 %t36876, i64 2)
-  %t36878 = call i64 @rt_cons(i64 %t36875, i64 %t36877)
-  %t36879 = call i64 @rt_intern(ptr @.str.sym.668)
-  %t36880 = call i64 @rt_make_string(ptr @.str.lit.795, i64 19)
-  %t36881 = call i64 @rt_cons(i64 %t36880, i64 2)
-  %t36882 = call i64 @rt_cons(i64 %t36879, i64 %t36881)
-  %t36883 = call i64 @rt_intern(ptr @.str.sym.57)
-  %t36884 = call i64 @rt_make_string(ptr @.str.lit.796, i64 19)
-  %t36885 = call i64 @rt_cons(i64 %t36884, i64 2)
-  %t36886 = call i64 @rt_cons(i64 %t36883, i64 %t36885)
-  %t36887 = call i64 @rt_intern(ptr @.str.sym.58)
-  %t36888 = call i64 @rt_make_string(ptr @.str.lit.797, i64 14)
-  %t36889 = call i64 @rt_cons(i64 %t36888, i64 2)
-  %t36890 = call i64 @rt_cons(i64 %t36887, i64 %t36889)
-  %t36891 = call i64 @rt_intern(ptr @.str.sym.54)
-  %t36892 = call i64 @rt_make_string(ptr @.str.lit.798, i64 13)
-  %t36893 = call i64 @rt_cons(i64 %t36892, i64 2)
-  %t36894 = call i64 @rt_cons(i64 %t36891, i64 %t36893)
-  %t36895 = call i64 @rt_intern(ptr @.str.sym.55)
-  %t36896 = call i64 @rt_make_string(ptr @.str.lit.799, i64 13)
-  %t36897 = call i64 @rt_cons(i64 %t36896, i64 2)
-  %t36898 = call i64 @rt_cons(i64 %t36895, i64 %t36897)
-  %t36899 = call i64 @rt_intern(ptr @.str.sym.60)
-  %t36900 = call i64 @rt_make_string(ptr @.str.lit.800, i64 19)
-  %t36901 = call i64 @rt_cons(i64 %t36900, i64 2)
-  %t36902 = call i64 @rt_cons(i64 %t36899, i64 %t36901)
-  %t36903 = call i64 @rt_intern(ptr @.str.sym.669)
-  %t36904 = call i64 @rt_make_string(ptr @.str.lit.801, i64 11)
-  %t36905 = call i64 @rt_cons(i64 %t36904, i64 2)
-  %t36906 = call i64 @rt_cons(i64 %t36903, i64 %t36905)
-  %t36907 = call i64 @rt_intern(ptr @.str.sym.670)
-  %t36908 = call i64 @rt_make_string(ptr @.str.lit.802, i64 13)
-  %t36909 = call i64 @rt_cons(i64 %t36908, i64 2)
-  %t36910 = call i64 @rt_cons(i64 %t36907, i64 %t36909)
-  %t36911 = call i64 @rt_intern(ptr @.str.sym.671)
-  %t36912 = call i64 @rt_make_string(ptr @.str.lit.803, i64 7)
-  %t36913 = call i64 @rt_cons(i64 %t36912, i64 2)
-  %t36914 = call i64 @rt_cons(i64 %t36911, i64 %t36913)
-  %t36915 = call i64 @rt_intern(ptr @.str.sym.672)
-  %t36916 = call i64 @rt_make_string(ptr @.str.lit.804, i64 13)
-  %t36917 = call i64 @rt_cons(i64 %t36916, i64 2)
-  %t36918 = call i64 @rt_cons(i64 %t36915, i64 %t36917)
-  %t36919 = call i64 @rt_intern(ptr @.str.sym.646)
-  %t36920 = call i64 @rt_make_string(ptr @.str.lit.805, i64 11)
-  %t36921 = call i64 @rt_cons(i64 %t36920, i64 2)
-  %t36922 = call i64 @rt_cons(i64 %t36919, i64 %t36921)
-  %t36923 = call i64 @rt_intern(ptr @.str.sym.647)
-  %t36924 = call i64 @rt_make_string(ptr @.str.lit.806, i64 11)
-  %t36925 = call i64 @rt_cons(i64 %t36924, i64 2)
-  %t36926 = call i64 @rt_cons(i64 %t36923, i64 %t36925)
-  %t36927 = call i64 @rt_intern(ptr @.str.sym.648)
-  %t36928 = call i64 @rt_make_string(ptr @.str.lit.807, i64 9)
-  %t36929 = call i64 @rt_cons(i64 %t36928, i64 2)
-  %t36930 = call i64 @rt_cons(i64 %t36927, i64 %t36929)
-  %t36931 = call i64 @rt_intern(ptr @.str.sym.649)
-  %t36932 = call i64 @rt_make_string(ptr @.str.lit.808, i64 12)
-  %t36933 = call i64 @rt_cons(i64 %t36932, i64 2)
-  %t36934 = call i64 @rt_cons(i64 %t36931, i64 %t36933)
-  %t36935 = call i64 @rt_intern(ptr @.str.sym.650)
-  %t36936 = call i64 @rt_make_string(ptr @.str.lit.809, i64 12)
-  %t36937 = call i64 @rt_cons(i64 %t36936, i64 2)
-  %t36938 = call i64 @rt_cons(i64 %t36935, i64 %t36937)
-  %t36939 = call i64 @rt_intern(ptr @.str.sym.651)
-  %t36940 = call i64 @rt_make_string(ptr @.str.lit.810, i64 10)
-  %t36941 = call i64 @rt_cons(i64 %t36940, i64 2)
-  %t36942 = call i64 @rt_cons(i64 %t36939, i64 %t36941)
-  %t36943 = call i64 @rt_intern(ptr @.str.sym.660)
-  %t36944 = call i64 @rt_make_string(ptr @.str.lit.811, i64 17)
-  %t36945 = call i64 @rt_cons(i64 %t36944, i64 2)
-  %t36946 = call i64 @rt_cons(i64 %t36943, i64 %t36945)
-  %t36947 = call i64 @rt_intern(ptr @.str.sym.661)
-  %t36948 = call i64 @rt_make_string(ptr @.str.lit.812, i64 10)
-  %t36949 = call i64 @rt_cons(i64 %t36948, i64 2)
-  %t36950 = call i64 @rt_cons(i64 %t36947, i64 %t36949)
-  %t36951 = call i64 @rt_intern(ptr @.str.sym.662)
-  %t36952 = call i64 @rt_make_string(ptr @.str.lit.813, i64 12)
-  %t36953 = call i64 @rt_cons(i64 %t36952, i64 2)
-  %t36954 = call i64 @rt_cons(i64 %t36951, i64 %t36953)
-  %t36955 = call i64 @rt_intern(ptr @.str.sym.664)
-  %t36956 = call i64 @rt_make_string(ptr @.str.lit.814, i64 10)
-  %t36957 = call i64 @rt_cons(i64 %t36956, i64 2)
-  %t36958 = call i64 @rt_cons(i64 %t36955, i64 %t36957)
-  %t36959 = call i64 @rt_intern(ptr @.str.sym.673)
-  %t36960 = call i64 @rt_make_string(ptr @.str.lit.815, i64 15)
-  %t36961 = call i64 @rt_cons(i64 %t36960, i64 2)
-  %t36962 = call i64 @rt_cons(i64 %t36959, i64 %t36961)
-  %t36963 = call i64 @rt_intern(ptr @.str.sym.674)
-  %t36964 = call i64 @rt_make_string(ptr @.str.lit.816, i64 13)
-  %t36965 = call i64 @rt_cons(i64 %t36964, i64 2)
-  %t36966 = call i64 @rt_cons(i64 %t36963, i64 %t36965)
-  %t36967 = call i64 @rt_intern(ptr @.str.sym.675)
-  %t36968 = call i64 @rt_make_string(ptr @.str.lit.817, i64 15)
-  %t36969 = call i64 @rt_cons(i64 %t36968, i64 2)
-  %t36970 = call i64 @rt_cons(i64 %t36967, i64 %t36969)
-  %t36971 = call i64 @rt_intern(ptr @.str.sym.676)
-  %t36972 = call i64 @rt_make_string(ptr @.str.lit.818, i64 12)
-  %t36973 = call i64 @rt_cons(i64 %t36972, i64 2)
-  %t36974 = call i64 @rt_cons(i64 %t36971, i64 %t36973)
-  %t36975 = call i64 @rt_intern(ptr @.str.sym.677)
-  %t36976 = call i64 @rt_make_string(ptr @.str.lit.819, i64 13)
-  %t36977 = call i64 @rt_cons(i64 %t36976, i64 2)
-  %t36978 = call i64 @rt_cons(i64 %t36975, i64 %t36977)
-  %t36979 = call i64 @rt_intern(ptr @.str.sym.678)
-  %t36980 = call i64 @rt_make_string(ptr @.str.lit.820, i64 17)
-  %t36981 = call i64 @rt_cons(i64 %t36980, i64 2)
-  %t36982 = call i64 @rt_cons(i64 %t36979, i64 %t36981)
-  %t36983 = call i64 @rt_intern(ptr @.str.sym.679)
-  %t36984 = call i64 @rt_make_string(ptr @.str.lit.821, i64 17)
-  %t36985 = call i64 @rt_cons(i64 %t36984, i64 2)
-  %t36986 = call i64 @rt_cons(i64 %t36983, i64 %t36985)
-  %t36987 = call i64 @rt_intern(ptr @.str.sym.680)
-  %t36988 = call i64 @rt_make_string(ptr @.str.lit.822, i64 8)
-  %t36989 = call i64 @rt_cons(i64 %t36988, i64 2)
-  %t36990 = call i64 @rt_cons(i64 %t36987, i64 %t36989)
-  %t36991 = call i64 @rt_intern(ptr @.str.sym.681)
-  %t36992 = call i64 @rt_make_string(ptr @.str.lit.823, i64 8)
-  %t36993 = call i64 @rt_cons(i64 %t36992, i64 2)
-  %t36994 = call i64 @rt_cons(i64 %t36991, i64 %t36993)
-  %t36995 = call i64 @rt_intern(ptr @.str.sym.682)
-  %t36996 = call i64 @rt_make_string(ptr @.str.lit.824, i64 17)
-  %t36997 = call i64 @rt_cons(i64 %t36996, i64 2)
-  %t36998 = call i64 @rt_cons(i64 %t36995, i64 %t36997)
-  %t36999 = call i64 @rt_intern(ptr @.str.sym.683)
-  %t37000 = call i64 @rt_make_string(ptr @.str.lit.825, i64 23)
-  %t37001 = call i64 @rt_cons(i64 %t37000, i64 2)
-  %t37002 = call i64 @rt_cons(i64 %t36999, i64 %t37001)
-  %t37003 = call i64 @rt_intern(ptr @.str.sym.684)
-  %t37004 = call i64 @rt_make_string(ptr @.str.lit.826, i64 25)
-  %t37005 = call i64 @rt_cons(i64 %t37004, i64 2)
-  %t37006 = call i64 @rt_cons(i64 %t37003, i64 %t37005)
+  store i64 %t35354, ptr %t36624
+  %t36625 = getelementptr i64, ptr %t36623, i64 2
+  store i64 %t35347, ptr %t36625
+  %t36626 = getelementptr i64, ptr %t36623, i64 3
+  store i64 %t35352, ptr %t36626
+  %t36627 = getelementptr i64, ptr %t36623, i64 4
+  store i64 %t35355, ptr %t36627
+  %t36628 = or i64 %t36622, 4
+  %t36629 = call i64 @rt_set_box(i64 %t35354, i64 %t36628)
+  %t36630 = call i64 @rt_alloc_words(i64 7)
+  %t36631 = inttoptr i64 %t36630 to ptr
+  store i64 ptrtoint (ptr @code_5888 to i64), ptr %t36631
+  %t36632 = getelementptr i64, ptr %t36631, i64 1
+  store i64 %t35254, ptr %t36632
+  %t36633 = getelementptr i64, ptr %t36631, i64 2
+  store i64 %t35354, ptr %t36633
+  %t36634 = getelementptr i64, ptr %t36631, i64 3
+  store i64 %t35273, ptr %t36634
+  %t36635 = getelementptr i64, ptr %t36631, i64 4
+  store i64 %t35350, ptr %t36635
+  %t36636 = getelementptr i64, ptr %t36631, i64 5
+  store i64 %t35271, ptr %t36636
+  %t36637 = getelementptr i64, ptr %t36631, i64 6
+  store i64 %t35272, ptr %t36637
+  %t36638 = or i64 %t36630, 4
+  %t36639 = call i64 @rt_set_box(i64 %t35355, i64 %t36638)
+  %t36640 = call i64 @rt_set_box(i64 %t35356, i64 2)
+  %t36641 = call i64 @rt_alloc_words(i64 2)
+  %t36642 = inttoptr i64 %t36641 to ptr
+  store i64 ptrtoint (ptr @code_5892 to i64), ptr %t36642
+  %t36643 = getelementptr i64, ptr %t36642, i64 1
+  store i64 %t35356, ptr %t36643
+  %t36644 = or i64 %t36641, 4
+  %t36645 = call i64 @rt_set_box(i64 %t35357, i64 %t36644)
+  %t36646 = call i64 @rt_set_box(i64 %t35358, i64 0)
+  %t36647 = call i64 @rt_set_box(i64 %t35359, i64 0)
+  %t36648 = call i64 @rt_make_string(ptr @.str.lit.737, i64 5)
+  %t36649 = call i64 @rt_set_box(i64 %t35360, i64 %t36648)
+  %t36650 = call i64 @rt_alloc_words(i64 2)
+  %t36651 = inttoptr i64 %t36650 to ptr
+  store i64 ptrtoint (ptr @code_5894 to i64), ptr %t36651
+  %t36652 = getelementptr i64, ptr %t36651, i64 1
+  store i64 %t35358, ptr %t36652
+  %t36653 = or i64 %t36650, 4
+  %t36654 = call i64 @rt_set_box(i64 %t35361, i64 %t36653)
+  %t36655 = call i64 @rt_alloc_words(i64 2)
+  %t36656 = inttoptr i64 %t36655 to ptr
+  store i64 ptrtoint (ptr @code_5896 to i64), ptr %t36656
+  %t36657 = getelementptr i64, ptr %t36656, i64 1
+  store i64 %t35359, ptr %t36657
+  %t36658 = or i64 %t36655, 4
+  %t36659 = call i64 @rt_set_box(i64 %t35362, i64 %t36658)
+  %t36660 = call i64 @rt_alloc_words(i64 3)
+  %t36661 = inttoptr i64 %t36660 to ptr
+  store i64 ptrtoint (ptr @code_5898 to i64), ptr %t36661
+  %t36662 = getelementptr i64, ptr %t36661, i64 1
+  store i64 %t35357, ptr %t36662
+  %t36663 = getelementptr i64, ptr %t36661, i64 2
+  store i64 %t35360, ptr %t36663
+  %t36664 = or i64 %t36660, 4
+  %t36665 = call i64 @rt_set_box(i64 %t35363, i64 %t36664)
+  %t36666 = call i64 @rt_alloc_words(i64 5)
+  %t36667 = inttoptr i64 %t36666 to ptr
+  store i64 ptrtoint (ptr @code_5900 to i64), ptr %t36667
+  %t36668 = getelementptr i64, ptr %t36667, i64 1
+  store i64 %t35358, ptr %t36668
+  %t36669 = getelementptr i64, ptr %t36667, i64 2
+  store i64 %t35359, ptr %t36669
+  %t36670 = getelementptr i64, ptr %t36667, i64 3
+  store i64 %t35356, ptr %t36670
+  %t36671 = getelementptr i64, ptr %t36667, i64 4
+  store i64 %t35360, ptr %t36671
+  %t36672 = or i64 %t36666, 4
+  %t36673 = call i64 @rt_set_box(i64 %t35364, i64 %t36672)
+  %t36674 = call i64 @rt_set_box(i64 %t35365, i64 2)
+  %t36675 = call i64 @rt_set_box(i64 %t35366, i64 2)
+  %t36676 = call i64 @rt_set_box(i64 %t35367, i64 0)
+  %t36677 = call i64 @rt_alloc_words(i64 4)
+  %t36678 = inttoptr i64 %t36677 to ptr
+  store i64 ptrtoint (ptr @code_5902 to i64), ptr %t36678
+  %t36679 = getelementptr i64, ptr %t36678, i64 1
+  store i64 %t35365, ptr %t36679
+  %t36680 = getelementptr i64, ptr %t36678, i64 2
+  store i64 %t35366, ptr %t36680
+  %t36681 = getelementptr i64, ptr %t36678, i64 3
+  store i64 %t35367, ptr %t36681
+  %t36682 = or i64 %t36677, 4
+  %t36683 = call i64 @rt_set_box(i64 %t35368, i64 %t36682)
+  %t36684 = call i64 @rt_alloc_words(i64 2)
+  %t36685 = inttoptr i64 %t36684 to ptr
+  store i64 ptrtoint (ptr @code_5904 to i64), ptr %t36685
+  %t36686 = getelementptr i64, ptr %t36685, i64 1
+  store i64 %t35365, ptr %t36686
+  %t36687 = or i64 %t36684, 4
+  %t36688 = call i64 @rt_set_box(i64 %t35369, i64 %t36687)
+  %t36689 = call i64 @rt_make_string(ptr @.str.lit.738, i64 16)
+  %t36690 = call i64 @rt_set_box(i64 %t35370, i64 %t36689)
+  %t36691 = call i64 @rt_alloc_words(i64 2)
+  %t36692 = inttoptr i64 %t36691 to ptr
+  store i64 ptrtoint (ptr @code_5910 to i64), ptr %t36692
+  %t36693 = getelementptr i64, ptr %t36692, i64 1
+  store i64 %t35370, ptr %t36693
+  %t36694 = or i64 %t36691, 4
+  %t36695 = call i64 @rt_set_box(i64 %t35371, i64 %t36694)
+  %t36696 = call i64 @rt_alloc_words(i64 1)
+  %t36697 = inttoptr i64 %t36696 to ptr
+  store i64 ptrtoint (ptr @code_5912 to i64), ptr %t36697
+  %t36698 = or i64 %t36696, 4
+  %t36699 = call i64 @rt_set_box(i64 %t35372, i64 %t36698)
+  %t36700 = call i64 @rt_alloc_words(i64 2)
+  %t36701 = inttoptr i64 %t36700 to ptr
+  store i64 ptrtoint (ptr @code_5914 to i64), ptr %t36701
+  %t36702 = getelementptr i64, ptr %t36701, i64 1
+  store i64 %t35371, ptr %t36702
+  %t36703 = or i64 %t36700, 4
+  %t36704 = call i64 @rt_set_box(i64 %t35373, i64 %t36703)
+  %t36705 = call i64 @rt_alloc_words(i64 3)
+  %t36706 = inttoptr i64 %t36705 to ptr
+  store i64 ptrtoint (ptr @code_5916 to i64), ptr %t36706
+  %t36707 = getelementptr i64, ptr %t36706, i64 1
+  store i64 %t35372, ptr %t36707
+  %t36708 = getelementptr i64, ptr %t36706, i64 2
+  store i64 %t35373, ptr %t36708
+  %t36709 = or i64 %t36705, 4
+  %t36710 = call i64 @rt_set_box(i64 %t35374, i64 %t36709)
+  %t36711 = call i64 @rt_alloc_words(i64 4)
+  %t36712 = inttoptr i64 %t36711 to ptr
+  store i64 ptrtoint (ptr @code_5924 to i64), ptr %t36712
+  %t36713 = getelementptr i64, ptr %t36712, i64 1
+  store i64 %t35374, ptr %t36713
+  %t36714 = getelementptr i64, ptr %t36712, i64 2
+  store i64 %t35367, ptr %t36714
+  %t36715 = getelementptr i64, ptr %t36712, i64 3
+  store i64 %t35365, ptr %t36715
+  %t36716 = or i64 %t36711, 4
+  %t36717 = call i64 @rt_set_box(i64 %t35375, i64 %t36716)
+  %t36718 = call i64 @rt_alloc_words(i64 3)
+  %t36719 = inttoptr i64 %t36718 to ptr
+  store i64 ptrtoint (ptr @code_5926 to i64), ptr %t36719
+  %t36720 = getelementptr i64, ptr %t36719, i64 1
+  store i64 %t35366, ptr %t36720
+  %t36721 = getelementptr i64, ptr %t36719, i64 2
+  store i64 %t35375, ptr %t36721
+  %t36722 = or i64 %t36718, 4
+  %t36723 = call i64 @rt_set_box(i64 %t35376, i64 %t36722)
+  %t36724 = call i64 @rt_alloc_words(i64 6)
+  %t36725 = inttoptr i64 %t36724 to ptr
+  store i64 ptrtoint (ptr @code_5928 to i64), ptr %t36725
+  %t36726 = getelementptr i64, ptr %t36725, i64 1
+  store i64 %t35376, ptr %t36726
+  %t36727 = getelementptr i64, ptr %t36725, i64 2
+  store i64 %t35361, ptr %t36727
+  %t36728 = getelementptr i64, ptr %t36725, i64 3
+  store i64 %t35357, ptr %t36728
+  %t36729 = getelementptr i64, ptr %t36725, i64 4
+  store i64 %t35375, ptr %t36729
+  %t36730 = getelementptr i64, ptr %t36725, i64 5
+  store i64 %t35377, ptr %t36730
+  %t36731 = or i64 %t36724, 4
+  %t36732 = call i64 @rt_set_box(i64 %t35377, i64 %t36731)
+  %t36733 = call i64 @rt_intern(ptr @.str.sym.608)
+  %t36734 = call i64 @rt_make_string(ptr @.str.lit.739, i64 6)
+  %t36735 = call i64 @rt_cons(i64 %t36734, i64 2)
+  %t36736 = call i64 @rt_cons(i64 %t36733, i64 %t36735)
+  %t36737 = call i64 @rt_intern(ptr @.str.sym.609)
+  %t36738 = call i64 @rt_make_string(ptr @.str.lit.740, i64 6)
+  %t36739 = call i64 @rt_cons(i64 %t36738, i64 2)
+  %t36740 = call i64 @rt_cons(i64 %t36737, i64 %t36739)
+  %t36741 = call i64 @rt_intern(ptr @.str.sym.610)
+  %t36742 = call i64 @rt_make_string(ptr @.str.lit.741, i64 6)
+  %t36743 = call i64 @rt_cons(i64 %t36742, i64 2)
+  %t36744 = call i64 @rt_cons(i64 %t36741, i64 %t36743)
+  %t36745 = call i64 @rt_intern(ptr @.str.sym.611)
+  %t36746 = call i64 @rt_make_string(ptr @.str.lit.742, i64 6)
+  %t36747 = call i64 @rt_cons(i64 %t36746, i64 2)
+  %t36748 = call i64 @rt_cons(i64 %t36745, i64 %t36747)
+  %t36749 = call i64 @rt_intern(ptr @.str.sym.617)
+  %t36750 = call i64 @rt_make_string(ptr @.str.lit.743, i64 11)
+  %t36751 = call i64 @rt_cons(i64 %t36750, i64 2)
+  %t36752 = call i64 @rt_cons(i64 %t36749, i64 %t36751)
+  %t36753 = call i64 @rt_intern(ptr @.str.sym.618)
+  %t36754 = call i64 @rt_make_string(ptr @.str.lit.744, i64 12)
+  %t36755 = call i64 @rt_cons(i64 %t36754, i64 2)
+  %t36756 = call i64 @rt_cons(i64 %t36753, i64 %t36755)
+  %t36757 = call i64 @rt_intern(ptr @.str.sym.619)
+  %t36758 = call i64 @rt_make_string(ptr @.str.lit.745, i64 9)
+  %t36759 = call i64 @rt_cons(i64 %t36758, i64 2)
+  %t36760 = call i64 @rt_cons(i64 %t36757, i64 %t36759)
+  %t36761 = call i64 @rt_intern(ptr @.str.sym.612)
+  %t36762 = call i64 @rt_make_string(ptr @.str.lit.746, i64 9)
+  %t36763 = call i64 @rt_cons(i64 %t36762, i64 2)
+  %t36764 = call i64 @rt_cons(i64 %t36761, i64 %t36763)
+  %t36765 = call i64 @rt_intern(ptr @.str.sym.613)
+  %t36766 = call i64 @rt_make_string(ptr @.str.lit.747, i64 5)
+  %t36767 = call i64 @rt_cons(i64 %t36766, i64 2)
+  %t36768 = call i64 @rt_cons(i64 %t36765, i64 %t36767)
+  %t36769 = call i64 @rt_intern(ptr @.str.sym.652)
+  %t36770 = call i64 @rt_make_string(ptr @.str.lit.748, i64 11)
+  %t36771 = call i64 @rt_cons(i64 %t36770, i64 2)
+  %t36772 = call i64 @rt_cons(i64 %t36769, i64 %t36771)
+  %t36773 = call i64 @rt_intern(ptr @.str.sym.653)
+  %t36774 = call i64 @rt_make_string(ptr @.str.lit.749, i64 11)
+  %t36775 = call i64 @rt_cons(i64 %t36774, i64 2)
+  %t36776 = call i64 @rt_cons(i64 %t36773, i64 %t36775)
+  %t36777 = call i64 @rt_intern(ptr @.str.sym.654)
+  %t36778 = call i64 @rt_make_string(ptr @.str.lit.750, i64 9)
+  %t36779 = call i64 @rt_cons(i64 %t36778, i64 2)
+  %t36780 = call i64 @rt_cons(i64 %t36777, i64 %t36779)
+  %t36781 = call i64 @rt_intern(ptr @.str.sym.655)
+  %t36782 = call i64 @rt_make_string(ptr @.str.lit.751, i64 12)
+  %t36783 = call i64 @rt_cons(i64 %t36782, i64 2)
+  %t36784 = call i64 @rt_cons(i64 %t36781, i64 %t36783)
+  %t36785 = call i64 @rt_intern(ptr @.str.sym.656)
+  %t36786 = call i64 @rt_make_string(ptr @.str.lit.752, i64 19)
+  %t36787 = call i64 @rt_cons(i64 %t36786, i64 2)
+  %t36788 = call i64 @rt_cons(i64 %t36785, i64 %t36787)
+  %t36789 = call i64 @rt_intern(ptr @.str.sym.657)
+  %t36790 = call i64 @rt_make_string(ptr @.str.lit.753, i64 19)
+  %t36791 = call i64 @rt_cons(i64 %t36790, i64 2)
+  %t36792 = call i64 @rt_cons(i64 %t36789, i64 %t36791)
+  %t36793 = call i64 @rt_intern(ptr @.str.sym.658)
+  %t36794 = call i64 @rt_make_string(ptr @.str.lit.754, i64 19)
+  %t36795 = call i64 @rt_cons(i64 %t36794, i64 2)
+  %t36796 = call i64 @rt_cons(i64 %t36793, i64 %t36795)
+  %t36797 = call i64 @rt_intern(ptr @.str.sym.659)
+  %t36798 = call i64 @rt_make_string(ptr @.str.lit.755, i64 19)
+  %t36799 = call i64 @rt_cons(i64 %t36798, i64 2)
+  %t36800 = call i64 @rt_cons(i64 %t36797, i64 %t36799)
+  %t36801 = call i64 @rt_intern(ptr @.str.sym.663)
+  %t36802 = call i64 @rt_make_string(ptr @.str.lit.756, i64 13)
+  %t36803 = call i64 @rt_cons(i64 %t36802, i64 2)
+  %t36804 = call i64 @rt_cons(i64 %t36801, i64 %t36803)
+  %t36805 = call i64 @rt_intern(ptr @.str.sym.616)
+  %t36806 = call i64 @rt_make_string(ptr @.str.lit.757, i64 7)
+  %t36807 = call i64 @rt_cons(i64 %t36806, i64 2)
+  %t36808 = call i64 @rt_cons(i64 %t36805, i64 %t36807)
+  %t36809 = call i64 @rt_intern(ptr @.str.sym.15)
+  %t36810 = call i64 @rt_make_string(ptr @.str.lit.758, i64 6)
+  %t36811 = call i64 @rt_cons(i64 %t36810, i64 2)
+  %t36812 = call i64 @rt_cons(i64 %t36809, i64 %t36811)
+  %t36813 = call i64 @rt_intern(ptr @.str.sym.16)
+  %t36814 = call i64 @rt_make_string(ptr @.str.lit.759, i64 6)
+  %t36815 = call i64 @rt_cons(i64 %t36814, i64 2)
+  %t36816 = call i64 @rt_cons(i64 %t36813, i64 %t36815)
+  %t36817 = call i64 @rt_intern(ptr @.str.sym.13)
+  %t36818 = call i64 @rt_make_string(ptr @.str.lit.760, i64 9)
+  %t36819 = call i64 @rt_cons(i64 %t36818, i64 2)
+  %t36820 = call i64 @rt_cons(i64 %t36817, i64 %t36819)
+  %t36821 = call i64 @rt_intern(ptr @.str.sym.620)
+  %t36822 = call i64 @rt_make_string(ptr @.str.lit.761, i64 9)
+  %t36823 = call i64 @rt_cons(i64 %t36822, i64 2)
+  %t36824 = call i64 @rt_cons(i64 %t36821, i64 %t36823)
+  %t36825 = call i64 @rt_intern(ptr @.str.sym.614)
+  %t36826 = call i64 @rt_make_string(ptr @.str.lit.762, i64 7)
+  %t36827 = call i64 @rt_cons(i64 %t36826, i64 2)
+  %t36828 = call i64 @rt_cons(i64 %t36825, i64 %t36827)
+  %t36829 = call i64 @rt_intern(ptr @.str.sym.615)
+  %t36830 = call i64 @rt_make_string(ptr @.str.lit.763, i64 8)
+  %t36831 = call i64 @rt_cons(i64 %t36830, i64 2)
+  %t36832 = call i64 @rt_cons(i64 %t36829, i64 %t36831)
+  %t36833 = call i64 @rt_intern(ptr @.str.sym.621)
+  %t36834 = call i64 @rt_make_string(ptr @.str.lit.764, i64 8)
+  %t36835 = call i64 @rt_cons(i64 %t36834, i64 2)
+  %t36836 = call i64 @rt_cons(i64 %t36833, i64 %t36835)
+  %t36837 = call i64 @rt_intern(ptr @.str.sym.622)
+  %t36838 = call i64 @rt_make_string(ptr @.str.lit.765, i64 6)
+  %t36839 = call i64 @rt_cons(i64 %t36838, i64 2)
+  %t36840 = call i64 @rt_cons(i64 %t36837, i64 %t36839)
+  %t36841 = call i64 @rt_intern(ptr @.str.sym.108)
+  %t36842 = call i64 @rt_make_string(ptr @.str.lit.766, i64 6)
+  %t36843 = call i64 @rt_cons(i64 %t36842, i64 2)
+  %t36844 = call i64 @rt_cons(i64 %t36841, i64 %t36843)
+  %t36845 = call i64 @rt_intern(ptr @.str.sym.111)
+  %t36846 = call i64 @rt_make_string(ptr @.str.lit.767, i64 8)
+  %t36847 = call i64 @rt_cons(i64 %t36846, i64 2)
+  %t36848 = call i64 @rt_cons(i64 %t36845, i64 %t36847)
+  %t36849 = call i64 @rt_intern(ptr @.str.sym.110)
+  %t36850 = call i64 @rt_make_string(ptr @.str.lit.768, i64 10)
+  %t36851 = call i64 @rt_cons(i64 %t36850, i64 2)
+  %t36852 = call i64 @rt_cons(i64 %t36849, i64 %t36851)
+  %t36853 = call i64 @rt_intern(ptr @.str.sym.623)
+  %t36854 = call i64 @rt_make_string(ptr @.str.lit.769, i64 18)
+  %t36855 = call i64 @rt_cons(i64 %t36854, i64 2)
+  %t36856 = call i64 @rt_cons(i64 %t36853, i64 %t36855)
+  %t36857 = call i64 @rt_intern(ptr @.str.sym.624)
+  %t36858 = call i64 @rt_make_string(ptr @.str.lit.770, i64 18)
+  %t36859 = call i64 @rt_cons(i64 %t36858, i64 2)
+  %t36860 = call i64 @rt_cons(i64 %t36857, i64 %t36859)
+  %t36861 = call i64 @rt_intern(ptr @.str.sym.625)
+  %t36862 = call i64 @rt_make_string(ptr @.str.lit.771, i64 16)
+  %t36863 = call i64 @rt_cons(i64 %t36862, i64 2)
+  %t36864 = call i64 @rt_cons(i64 %t36861, i64 %t36863)
+  %t36865 = call i64 @rt_intern(ptr @.str.sym.626)
+  %t36866 = call i64 @rt_make_string(ptr @.str.lit.772, i64 13)
+  %t36867 = call i64 @rt_cons(i64 %t36866, i64 2)
+  %t36868 = call i64 @rt_cons(i64 %t36865, i64 %t36867)
+  %t36869 = call i64 @rt_intern(ptr @.str.sym.631)
+  %t36870 = call i64 @rt_make_string(ptr @.str.lit.773, i64 12)
+  %t36871 = call i64 @rt_cons(i64 %t36870, i64 2)
+  %t36872 = call i64 @rt_cons(i64 %t36869, i64 %t36871)
+  %t36873 = call i64 @rt_intern(ptr @.str.sym.627)
+  %t36874 = call i64 @rt_make_string(ptr @.str.lit.774, i64 19)
+  %t36875 = call i64 @rt_cons(i64 %t36874, i64 2)
+  %t36876 = call i64 @rt_cons(i64 %t36873, i64 %t36875)
+  %t36877 = call i64 @rt_intern(ptr @.str.sym.632)
+  %t36878 = call i64 @rt_make_string(ptr @.str.lit.775, i64 12)
+  %t36879 = call i64 @rt_cons(i64 %t36878, i64 2)
+  %t36880 = call i64 @rt_cons(i64 %t36877, i64 %t36879)
+  %t36881 = call i64 @rt_intern(ptr @.str.sym.635)
+  %t36882 = call i64 @rt_make_string(ptr @.str.lit.776, i64 16)
+  %t36883 = call i64 @rt_cons(i64 %t36882, i64 2)
+  %t36884 = call i64 @rt_cons(i64 %t36881, i64 %t36883)
+  %t36885 = call i64 @rt_intern(ptr @.str.sym.628)
+  %t36886 = call i64 @rt_make_string(ptr @.str.lit.777, i64 19)
+  %t36887 = call i64 @rt_cons(i64 %t36886, i64 2)
+  %t36888 = call i64 @rt_cons(i64 %t36885, i64 %t36887)
+  %t36889 = call i64 @rt_intern(ptr @.str.sym.629)
+  %t36890 = call i64 @rt_make_string(ptr @.str.lit.778, i64 17)
+  %t36891 = call i64 @rt_cons(i64 %t36890, i64 2)
+  %t36892 = call i64 @rt_cons(i64 %t36889, i64 %t36891)
+  %t36893 = call i64 @rt_intern(ptr @.str.sym.633)
+  %t36894 = call i64 @rt_make_string(ptr @.str.lit.779, i64 19)
+  %t36895 = call i64 @rt_cons(i64 %t36894, i64 2)
+  %t36896 = call i64 @rt_cons(i64 %t36893, i64 %t36895)
+  %t36897 = call i64 @rt_intern(ptr @.str.sym.630)
+  %t36898 = call i64 @rt_make_string(ptr @.str.lit.780, i64 13)
+  %t36899 = call i64 @rt_cons(i64 %t36898, i64 2)
+  %t36900 = call i64 @rt_cons(i64 %t36897, i64 %t36899)
+  %t36901 = call i64 @rt_intern(ptr @.str.sym.634)
+  %t36902 = call i64 @rt_make_string(ptr @.str.lit.781, i64 14)
+  %t36903 = call i64 @rt_cons(i64 %t36902, i64 2)
+  %t36904 = call i64 @rt_cons(i64 %t36901, i64 %t36903)
+  %t36905 = call i64 @rt_intern(ptr @.str.sym.640)
+  %t36906 = call i64 @rt_make_string(ptr @.str.lit.782, i64 14)
+  %t36907 = call i64 @rt_cons(i64 %t36906, i64 2)
+  %t36908 = call i64 @rt_cons(i64 %t36905, i64 %t36907)
+  %t36909 = call i64 @rt_intern(ptr @.str.sym.636)
+  %t36910 = call i64 @rt_make_string(ptr @.str.lit.783, i64 13)
+  %t36911 = call i64 @rt_cons(i64 %t36910, i64 2)
+  %t36912 = call i64 @rt_cons(i64 %t36909, i64 %t36911)
+  %t36913 = call i64 @rt_intern(ptr @.str.sym.637)
+  %t36914 = call i64 @rt_make_string(ptr @.str.lit.784, i64 13)
+  %t36915 = call i64 @rt_cons(i64 %t36914, i64 2)
+  %t36916 = call i64 @rt_cons(i64 %t36913, i64 %t36915)
+  %t36917 = call i64 @rt_intern(ptr @.str.sym.638)
+  %t36918 = call i64 @rt_make_string(ptr @.str.lit.785, i64 16)
+  %t36919 = call i64 @rt_cons(i64 %t36918, i64 2)
+  %t36920 = call i64 @rt_cons(i64 %t36917, i64 %t36919)
+  %t36921 = call i64 @rt_intern(ptr @.str.sym.639)
+  %t36922 = call i64 @rt_make_string(ptr @.str.lit.786, i64 11)
+  %t36923 = call i64 @rt_cons(i64 %t36922, i64 2)
+  %t36924 = call i64 @rt_cons(i64 %t36921, i64 %t36923)
+  %t36925 = call i64 @rt_intern(ptr @.str.sym.645)
+  %t36926 = call i64 @rt_make_string(ptr @.str.lit.787, i64 18)
+  %t36927 = call i64 @rt_cons(i64 %t36926, i64 2)
+  %t36928 = call i64 @rt_cons(i64 %t36925, i64 %t36927)
+  %t36929 = call i64 @rt_intern(ptr @.str.sym.641)
+  %t36930 = call i64 @rt_make_string(ptr @.str.lit.788, i64 20)
+  %t36931 = call i64 @rt_cons(i64 %t36930, i64 2)
+  %t36932 = call i64 @rt_cons(i64 %t36929, i64 %t36931)
+  %t36933 = call i64 @rt_intern(ptr @.str.sym.642)
+  %t36934 = call i64 @rt_make_string(ptr @.str.lit.789, i64 20)
+  %t36935 = call i64 @rt_cons(i64 %t36934, i64 2)
+  %t36936 = call i64 @rt_cons(i64 %t36933, i64 %t36935)
+  %t36937 = call i64 @rt_intern(ptr @.str.sym.643)
+  %t36938 = call i64 @rt_make_string(ptr @.str.lit.790, i64 20)
+  %t36939 = call i64 @rt_cons(i64 %t36938, i64 2)
+  %t36940 = call i64 @rt_cons(i64 %t36937, i64 %t36939)
+  %t36941 = call i64 @rt_intern(ptr @.str.sym.644)
+  %t36942 = call i64 @rt_make_string(ptr @.str.lit.791, i64 15)
+  %t36943 = call i64 @rt_cons(i64 %t36942, i64 2)
+  %t36944 = call i64 @rt_cons(i64 %t36941, i64 %t36943)
+  %t36945 = call i64 @rt_intern(ptr @.str.sym.665)
+  %t36946 = call i64 @rt_make_string(ptr @.str.lit.792, i64 7)
+  %t36947 = call i64 @rt_cons(i64 %t36946, i64 2)
+  %t36948 = call i64 @rt_cons(i64 %t36945, i64 %t36947)
+  %t36949 = call i64 @rt_intern(ptr @.str.sym.666)
+  %t36950 = call i64 @rt_make_string(ptr @.str.lit.793, i64 18)
+  %t36951 = call i64 @rt_cons(i64 %t36950, i64 2)
+  %t36952 = call i64 @rt_cons(i64 %t36949, i64 %t36951)
+  %t36953 = call i64 @rt_intern(ptr @.str.sym.667)
+  %t36954 = call i64 @rt_make_string(ptr @.str.lit.794, i64 15)
+  %t36955 = call i64 @rt_cons(i64 %t36954, i64 2)
+  %t36956 = call i64 @rt_cons(i64 %t36953, i64 %t36955)
+  %t36957 = call i64 @rt_intern(ptr @.str.sym.668)
+  %t36958 = call i64 @rt_make_string(ptr @.str.lit.795, i64 19)
+  %t36959 = call i64 @rt_cons(i64 %t36958, i64 2)
+  %t36960 = call i64 @rt_cons(i64 %t36957, i64 %t36959)
+  %t36961 = call i64 @rt_intern(ptr @.str.sym.57)
+  %t36962 = call i64 @rt_make_string(ptr @.str.lit.796, i64 19)
+  %t36963 = call i64 @rt_cons(i64 %t36962, i64 2)
+  %t36964 = call i64 @rt_cons(i64 %t36961, i64 %t36963)
+  %t36965 = call i64 @rt_intern(ptr @.str.sym.58)
+  %t36966 = call i64 @rt_make_string(ptr @.str.lit.797, i64 14)
+  %t36967 = call i64 @rt_cons(i64 %t36966, i64 2)
+  %t36968 = call i64 @rt_cons(i64 %t36965, i64 %t36967)
+  %t36969 = call i64 @rt_intern(ptr @.str.sym.54)
+  %t36970 = call i64 @rt_make_string(ptr @.str.lit.798, i64 13)
+  %t36971 = call i64 @rt_cons(i64 %t36970, i64 2)
+  %t36972 = call i64 @rt_cons(i64 %t36969, i64 %t36971)
+  %t36973 = call i64 @rt_intern(ptr @.str.sym.55)
+  %t36974 = call i64 @rt_make_string(ptr @.str.lit.799, i64 13)
+  %t36975 = call i64 @rt_cons(i64 %t36974, i64 2)
+  %t36976 = call i64 @rt_cons(i64 %t36973, i64 %t36975)
+  %t36977 = call i64 @rt_intern(ptr @.str.sym.60)
+  %t36978 = call i64 @rt_make_string(ptr @.str.lit.800, i64 19)
+  %t36979 = call i64 @rt_cons(i64 %t36978, i64 2)
+  %t36980 = call i64 @rt_cons(i64 %t36977, i64 %t36979)
+  %t36981 = call i64 @rt_intern(ptr @.str.sym.669)
+  %t36982 = call i64 @rt_make_string(ptr @.str.lit.801, i64 11)
+  %t36983 = call i64 @rt_cons(i64 %t36982, i64 2)
+  %t36984 = call i64 @rt_cons(i64 %t36981, i64 %t36983)
+  %t36985 = call i64 @rt_intern(ptr @.str.sym.670)
+  %t36986 = call i64 @rt_make_string(ptr @.str.lit.802, i64 13)
+  %t36987 = call i64 @rt_cons(i64 %t36986, i64 2)
+  %t36988 = call i64 @rt_cons(i64 %t36985, i64 %t36987)
+  %t36989 = call i64 @rt_intern(ptr @.str.sym.671)
+  %t36990 = call i64 @rt_make_string(ptr @.str.lit.803, i64 7)
+  %t36991 = call i64 @rt_cons(i64 %t36990, i64 2)
+  %t36992 = call i64 @rt_cons(i64 %t36989, i64 %t36991)
+  %t36993 = call i64 @rt_intern(ptr @.str.sym.672)
+  %t36994 = call i64 @rt_make_string(ptr @.str.lit.804, i64 13)
+  %t36995 = call i64 @rt_cons(i64 %t36994, i64 2)
+  %t36996 = call i64 @rt_cons(i64 %t36993, i64 %t36995)
+  %t36997 = call i64 @rt_intern(ptr @.str.sym.646)
+  %t36998 = call i64 @rt_make_string(ptr @.str.lit.805, i64 11)
+  %t36999 = call i64 @rt_cons(i64 %t36998, i64 2)
+  %t37000 = call i64 @rt_cons(i64 %t36997, i64 %t36999)
+  %t37001 = call i64 @rt_intern(ptr @.str.sym.647)
+  %t37002 = call i64 @rt_make_string(ptr @.str.lit.806, i64 11)
+  %t37003 = call i64 @rt_cons(i64 %t37002, i64 2)
+  %t37004 = call i64 @rt_cons(i64 %t37001, i64 %t37003)
+  %t37005 = call i64 @rt_intern(ptr @.str.sym.648)
+  %t37006 = call i64 @rt_make_string(ptr @.str.lit.807, i64 9)
   %t37007 = call i64 @rt_cons(i64 %t37006, i64 2)
-  %t37008 = call i64 @rt_cons(i64 %t37002, i64 %t37007)
-  %t37009 = call i64 @rt_cons(i64 %t36998, i64 %t37008)
-  %t37010 = call i64 @rt_cons(i64 %t36994, i64 %t37009)
-  %t37011 = call i64 @rt_cons(i64 %t36990, i64 %t37010)
-  %t37012 = call i64 @rt_cons(i64 %t36986, i64 %t37011)
-  %t37013 = call i64 @rt_cons(i64 %t36982, i64 %t37012)
-  %t37014 = call i64 @rt_cons(i64 %t36978, i64 %t37013)
-  %t37015 = call i64 @rt_cons(i64 %t36974, i64 %t37014)
-  %t37016 = call i64 @rt_cons(i64 %t36970, i64 %t37015)
-  %t37017 = call i64 @rt_cons(i64 %t36966, i64 %t37016)
-  %t37018 = call i64 @rt_cons(i64 %t36962, i64 %t37017)
-  %t37019 = call i64 @rt_cons(i64 %t36958, i64 %t37018)
-  %t37020 = call i64 @rt_cons(i64 %t36954, i64 %t37019)
-  %t37021 = call i64 @rt_cons(i64 %t36950, i64 %t37020)
-  %t37022 = call i64 @rt_cons(i64 %t36946, i64 %t37021)
-  %t37023 = call i64 @rt_cons(i64 %t36942, i64 %t37022)
-  %t37024 = call i64 @rt_cons(i64 %t36938, i64 %t37023)
-  %t37025 = call i64 @rt_cons(i64 %t36934, i64 %t37024)
-  %t37026 = call i64 @rt_cons(i64 %t36930, i64 %t37025)
-  %t37027 = call i64 @rt_cons(i64 %t36926, i64 %t37026)
-  %t37028 = call i64 @rt_cons(i64 %t36922, i64 %t37027)
-  %t37029 = call i64 @rt_cons(i64 %t36918, i64 %t37028)
-  %t37030 = call i64 @rt_cons(i64 %t36914, i64 %t37029)
-  %t37031 = call i64 @rt_cons(i64 %t36910, i64 %t37030)
-  %t37032 = call i64 @rt_cons(i64 %t36906, i64 %t37031)
-  %t37033 = call i64 @rt_cons(i64 %t36902, i64 %t37032)
-  %t37034 = call i64 @rt_cons(i64 %t36898, i64 %t37033)
-  %t37035 = call i64 @rt_cons(i64 %t36894, i64 %t37034)
-  %t37036 = call i64 @rt_cons(i64 %t36890, i64 %t37035)
-  %t37037 = call i64 @rt_cons(i64 %t36886, i64 %t37036)
-  %t37038 = call i64 @rt_cons(i64 %t36882, i64 %t37037)
-  %t37039 = call i64 @rt_cons(i64 %t36878, i64 %t37038)
-  %t37040 = call i64 @rt_cons(i64 %t36874, i64 %t37039)
-  %t37041 = call i64 @rt_cons(i64 %t36870, i64 %t37040)
-  %t37042 = call i64 @rt_cons(i64 %t36866, i64 %t37041)
-  %t37043 = call i64 @rt_cons(i64 %t36862, i64 %t37042)
-  %t37044 = call i64 @rt_cons(i64 %t36858, i64 %t37043)
-  %t37045 = call i64 @rt_cons(i64 %t36854, i64 %t37044)
-  %t37046 = call i64 @rt_cons(i64 %t36850, i64 %t37045)
-  %t37047 = call i64 @rt_cons(i64 %t36846, i64 %t37046)
-  %t37048 = call i64 @rt_cons(i64 %t36842, i64 %t37047)
-  %t37049 = call i64 @rt_cons(i64 %t36838, i64 %t37048)
-  %t37050 = call i64 @rt_cons(i64 %t36834, i64 %t37049)
-  %t37051 = call i64 @rt_cons(i64 %t36830, i64 %t37050)
-  %t37052 = call i64 @rt_cons(i64 %t36826, i64 %t37051)
-  %t37053 = call i64 @rt_cons(i64 %t36822, i64 %t37052)
-  %t37054 = call i64 @rt_cons(i64 %t36818, i64 %t37053)
-  %t37055 = call i64 @rt_cons(i64 %t36814, i64 %t37054)
-  %t37056 = call i64 @rt_cons(i64 %t36810, i64 %t37055)
-  %t37057 = call i64 @rt_cons(i64 %t36806, i64 %t37056)
-  %t37058 = call i64 @rt_cons(i64 %t36802, i64 %t37057)
-  %t37059 = call i64 @rt_cons(i64 %t36798, i64 %t37058)
-  %t37060 = call i64 @rt_cons(i64 %t36794, i64 %t37059)
-  %t37061 = call i64 @rt_cons(i64 %t36790, i64 %t37060)
-  %t37062 = call i64 @rt_cons(i64 %t36786, i64 %t37061)
-  %t37063 = call i64 @rt_cons(i64 %t36782, i64 %t37062)
-  %t37064 = call i64 @rt_cons(i64 %t36778, i64 %t37063)
-  %t37065 = call i64 @rt_cons(i64 %t36774, i64 %t37064)
-  %t37066 = call i64 @rt_cons(i64 %t36770, i64 %t37065)
-  %t37067 = call i64 @rt_cons(i64 %t36766, i64 %t37066)
-  %t37068 = call i64 @rt_cons(i64 %t36762, i64 %t37067)
-  %t37069 = call i64 @rt_cons(i64 %t36758, i64 %t37068)
-  %t37070 = call i64 @rt_cons(i64 %t36754, i64 %t37069)
-  %t37071 = call i64 @rt_cons(i64 %t36750, i64 %t37070)
-  %t37072 = call i64 @rt_cons(i64 %t36746, i64 %t37071)
-  %t37073 = call i64 @rt_cons(i64 %t36742, i64 %t37072)
-  %t37074 = call i64 @rt_cons(i64 %t36738, i64 %t37073)
-  %t37075 = call i64 @rt_cons(i64 %t36734, i64 %t37074)
-  %t37076 = call i64 @rt_cons(i64 %t36730, i64 %t37075)
-  %t37077 = call i64 @rt_cons(i64 %t36726, i64 %t37076)
-  %t37078 = call i64 @rt_cons(i64 %t36722, i64 %t37077)
-  %t37079 = call i64 @rt_cons(i64 %t36718, i64 %t37078)
-  %t37080 = call i64 @rt_cons(i64 %t36714, i64 %t37079)
-  %t37081 = call i64 @rt_cons(i64 %t36710, i64 %t37080)
-  %t37082 = call i64 @rt_cons(i64 %t36706, i64 %t37081)
-  %t37083 = call i64 @rt_cons(i64 %t36702, i64 %t37082)
-  %t37084 = call i64 @rt_cons(i64 %t36698, i64 %t37083)
-  %t37085 = call i64 @rt_cons(i64 %t36694, i64 %t37084)
-  %t37086 = call i64 @rt_cons(i64 %t36690, i64 %t37085)
-  %t37087 = call i64 @rt_cons(i64 %t36686, i64 %t37086)
-  %t37088 = call i64 @rt_cons(i64 %t36682, i64 %t37087)
-  %t37089 = call i64 @rt_cons(i64 %t36678, i64 %t37088)
-  %t37090 = call i64 @rt_cons(i64 %t36674, i64 %t37089)
-  %t37091 = call i64 @rt_cons(i64 %t36670, i64 %t37090)
-  %t37092 = call i64 @rt_cons(i64 %t36666, i64 %t37091)
-  %t37093 = call i64 @rt_cons(i64 %t36662, i64 %t37092)
-  %t37094 = call i64 @rt_cons(i64 %t36658, i64 %t37093)
-  %t37095 = call i64 @rt_set_box(i64 %t35301, i64 %t37094)
-  %t37096 = call i64 @rt_alloc_words(i64 2)
-  %t37097 = inttoptr i64 %t37096 to ptr
-  store i64 ptrtoint (ptr @code_5890 to i64), ptr %t37097
-  %t37098 = getelementptr i64, ptr %t37097, i64 1
-  store i64 %t35302, ptr %t37098
-  %t37099 = or i64 %t37096, 4
-  %t37100 = call i64 @rt_set_box(i64 %t35302, i64 %t37099)
-  %t37101 = call i64 @rt_alloc_words(i64 2)
-  %t37102 = inttoptr i64 %t37101 to ptr
-  store i64 ptrtoint (ptr @code_5892 to i64), ptr %t37102
-  %t37103 = getelementptr i64, ptr %t37102, i64 1
-  store i64 %t35302, ptr %t37103
-  %t37104 = or i64 %t37101, 4
-  %t37105 = call i64 @rt_set_box(i64 %t35303, i64 %t37104)
-  %t37106 = call i64 @rt_alloc_words(i64 1)
-  %t37107 = inttoptr i64 %t37106 to ptr
-  store i64 ptrtoint (ptr @code_5896 to i64), ptr %t37107
-  %t37108 = or i64 %t37106, 4
-  %t37109 = call i64 @rt_set_box(i64 %t35304, i64 %t37108)
-  %t37110 = call i64 @rt_alloc_words(i64 2)
-  %t37111 = inttoptr i64 %t37110 to ptr
-  store i64 ptrtoint (ptr @code_5898 to i64), ptr %t37111
-  %t37112 = getelementptr i64, ptr %t37111, i64 1
-  store i64 %t35304, ptr %t37112
-  %t37113 = or i64 %t37110, 4
-  %t37114 = call i64 @rt_set_box(i64 %t35305, i64 %t37113)
-  %t37115 = call i64 @rt_alloc_words(i64 1)
-  %t37116 = inttoptr i64 %t37115 to ptr
-  store i64 ptrtoint (ptr @code_5906 to i64), ptr %t37116
-  %t37117 = or i64 %t37115, 4
-  %t37118 = call i64 @rt_set_box(i64 %t35306, i64 %t37117)
-  %t37119 = call i64 @rt_alloc_words(i64 2)
-  %t37120 = inttoptr i64 %t37119 to ptr
-  store i64 ptrtoint (ptr @code_5910 to i64), ptr %t37120
-  %t37121 = getelementptr i64, ptr %t37120, i64 1
-  store i64 %t35306, ptr %t37121
-  %t37122 = or i64 %t37119, 4
-  %t37123 = call i64 @rt_set_box(i64 %t35307, i64 %t37122)
-  %t37124 = call i64 @rt_alloc_words(i64 14)
-  %t37125 = inttoptr i64 %t37124 to ptr
-  store i64 ptrtoint (ptr @code_5912 to i64), ptr %t37125
-  %t37126 = getelementptr i64, ptr %t37125, i64 1
-  store i64 %t35308, ptr %t37126
-  %t37127 = getelementptr i64, ptr %t37125, i64 2
-  store i64 %t35326, ptr %t37127
-  %t37128 = getelementptr i64, ptr %t37125, i64 3
-  store i64 %t35325, ptr %t37128
-  %t37129 = getelementptr i64, ptr %t37125, i64 4
-  store i64 %t35327, ptr %t37129
-  %t37130 = getelementptr i64, ptr %t37125, i64 5
-  store i64 %t35321, ptr %t37130
-  %t37131 = getelementptr i64, ptr %t37125, i64 6
-  store i64 %t35320, ptr %t37131
-  %t37132 = getelementptr i64, ptr %t37125, i64 7
-  store i64 %t35316, ptr %t37132
-  %t37133 = getelementptr i64, ptr %t37125, i64 8
-  store i64 %t35310, ptr %t37133
-  %t37134 = getelementptr i64, ptr %t37125, i64 9
-  store i64 %t35284, ptr %t37134
-  %t37135 = getelementptr i64, ptr %t37125, i64 10
-  store i64 %t35280, ptr %t37135
-  %t37136 = getelementptr i64, ptr %t37125, i64 11
-  store i64 %t35338, ptr %t37136
-  %t37137 = getelementptr i64, ptr %t37125, i64 12
-  store i64 %t35312, ptr %t37137
-  %t37138 = getelementptr i64, ptr %t37125, i64 13
-  store i64 %t35300, ptr %t37138
-  %t37139 = or i64 %t37124, 4
-  %t37140 = call i64 @rt_set_box(i64 %t35308, i64 %t37139)
-  %t37141 = call i64 @rt_alloc_words(i64 9)
-  %t37142 = inttoptr i64 %t37141 to ptr
-  store i64 ptrtoint (ptr @code_5956 to i64), ptr %t37142
-  %t37143 = getelementptr i64, ptr %t37142, i64 1
-  store i64 %t35280, ptr %t37143
-  %t37144 = getelementptr i64, ptr %t37142, i64 2
-  store i64 %t35308, ptr %t37144
-  %t37145 = getelementptr i64, ptr %t37142, i64 3
-  store i64 %t35326, ptr %t37145
-  %t37146 = getelementptr i64, ptr %t37142, i64 4
-  store i64 %t35325, ptr %t37146
-  %t37147 = getelementptr i64, ptr %t37142, i64 5
-  store i64 %t35327, ptr %t37147
-  %t37148 = getelementptr i64, ptr %t37142, i64 6
-  store i64 %t35309, ptr %t37148
-  %t37149 = getelementptr i64, ptr %t37142, i64 7
-  store i64 %t35321, ptr %t37149
-  %t37150 = getelementptr i64, ptr %t37142, i64 8
-  store i64 %t35311, ptr %t37150
-  %t37151 = or i64 %t37141, 4
-  %t37152 = call i64 @rt_set_box(i64 %t35309, i64 %t37151)
-  %t37153 = call i64 @rt_alloc_words(i64 7)
-  %t37154 = inttoptr i64 %t37153 to ptr
-  store i64 ptrtoint (ptr @code_5982 to i64), ptr %t37154
-  %t37155 = getelementptr i64, ptr %t37154, i64 1
-  store i64 %t35308, ptr %t37155
-  %t37156 = getelementptr i64, ptr %t37154, i64 2
-  store i64 %t35285, ptr %t37156
-  %t37157 = getelementptr i64, ptr %t37154, i64 3
-  store i64 %t35284, ptr %t37157
-  %t37158 = getelementptr i64, ptr %t37154, i64 4
-  store i64 %t35280, ptr %t37158
-  %t37159 = getelementptr i64, ptr %t37154, i64 5
-  store i64 %t35286, ptr %t37159
-  %t37160 = getelementptr i64, ptr %t37154, i64 6
-  store i64 %t35283, ptr %t37160
-  %t37161 = or i64 %t37153, 4
-  %t37162 = call i64 @rt_set_box(i64 %t35310, i64 %t37161)
-  %t37163 = call i64 @rt_alloc_words(i64 7)
-  %t37164 = inttoptr i64 %t37163 to ptr
-  store i64 ptrtoint (ptr @code_5984 to i64), ptr %t37164
-  %t37165 = getelementptr i64, ptr %t37164, i64 1
-  store i64 %t35308, ptr %t37165
-  %t37166 = getelementptr i64, ptr %t37164, i64 2
-  store i64 %t35285, ptr %t37166
-  %t37167 = getelementptr i64, ptr %t37164, i64 3
-  store i64 %t35284, ptr %t37167
-  %t37168 = getelementptr i64, ptr %t37164, i64 4
-  store i64 %t35280, ptr %t37168
-  %t37169 = getelementptr i64, ptr %t37164, i64 5
-  store i64 %t35286, ptr %t37169
-  %t37170 = getelementptr i64, ptr %t37164, i64 6
-  store i64 %t35309, ptr %t37170
-  %t37171 = or i64 %t37163, 4
-  %t37172 = call i64 @rt_set_box(i64 %t35311, i64 %t37171)
-  %t37173 = call i64 @rt_alloc_words(i64 3)
-  %t37174 = inttoptr i64 %t37173 to ptr
-  store i64 ptrtoint (ptr @code_5986 to i64), ptr %t37174
-  %t37175 = getelementptr i64, ptr %t37174, i64 1
-  store i64 %t35284, ptr %t37175
-  %t37176 = getelementptr i64, ptr %t37174, i64 2
-  store i64 %t35280, ptr %t37176
-  %t37177 = or i64 %t37173, 4
-  %t37178 = call i64 @rt_set_box(i64 %t35312, i64 %t37177)
-  %t37179 = call i64 @rt_intern(ptr @.str.sym.608)
-  %t37180 = call i64 @rt_make_string(ptr @.str.lit.827, i64 6)
-  %t37181 = call i64 @rt_intern(ptr @.str.sym.202)
-  %t37182 = call i64 @rt_make_string(ptr @.str.lit.828, i64 3)
-  %t37183 = call i64 @rt_cons(i64 %t37182, i64 2)
-  %t37184 = call i64 @rt_cons(i64 %t37181, i64 %t37183)
-  %t37185 = call i64 @rt_cons(i64 %t37180, i64 %t37184)
-  %t37186 = call i64 @rt_cons(i64 %t37179, i64 %t37185)
-  %t37187 = call i64 @rt_intern(ptr @.str.sym.609)
-  %t37188 = call i64 @rt_make_string(ptr @.str.lit.829, i64 6)
-  %t37189 = call i64 @rt_intern(ptr @.str.sym.202)
-  %t37190 = call i64 @rt_make_string(ptr @.str.lit.830, i64 3)
-  %t37191 = call i64 @rt_cons(i64 %t37190, i64 2)
-  %t37192 = call i64 @rt_cons(i64 %t37189, i64 %t37191)
-  %t37193 = call i64 @rt_cons(i64 %t37188, i64 %t37192)
-  %t37194 = call i64 @rt_cons(i64 %t37187, i64 %t37193)
-  %t37195 = call i64 @rt_intern(ptr @.str.sym.610)
-  %t37196 = call i64 @rt_make_string(ptr @.str.lit.831, i64 6)
-  %t37197 = call i64 @rt_intern(ptr @.str.sym.206)
-  %t37198 = call i64 @rt_make_string(ptr @.str.lit.832, i64 3)
-  %t37199 = call i64 @rt_cons(i64 %t37198, i64 2)
-  %t37200 = call i64 @rt_cons(i64 %t37197, i64 %t37199)
-  %t37201 = call i64 @rt_cons(i64 %t37196, i64 %t37200)
-  %t37202 = call i64 @rt_cons(i64 %t37195, i64 %t37201)
-  %t37203 = call i64 @rt_intern(ptr @.str.sym.612)
-  %t37204 = call i64 @rt_make_string(ptr @.str.lit.833, i64 9)
-  %t37205 = call i64 @rt_intern(ptr @.str.sym.25)
-  %t37206 = call i64 @rt_make_string(ptr @.str.lit.834, i64 7)
-  %t37207 = call i64 @rt_cons(i64 %t37206, i64 2)
-  %t37208 = call i64 @rt_cons(i64 %t37205, i64 %t37207)
-  %t37209 = call i64 @rt_cons(i64 %t37204, i64 %t37208)
-  %t37210 = call i64 @rt_cons(i64 %t37203, i64 %t37209)
-  %t37211 = call i64 @rt_intern(ptr @.str.sym.613)
-  %t37212 = call i64 @rt_make_string(ptr @.str.lit.835, i64 5)
-  %t37213 = call i64 @rt_intern(ptr @.str.sym.25)
-  %t37214 = call i64 @rt_make_string(ptr @.str.lit.836, i64 8)
-  %t37215 = call i64 @rt_cons(i64 %t37214, i64 2)
-  %t37216 = call i64 @rt_cons(i64 %t37213, i64 %t37215)
-  %t37217 = call i64 @rt_cons(i64 %t37212, i64 %t37216)
-  %t37218 = call i64 @rt_cons(i64 %t37211, i64 %t37217)
-  %t37219 = call i64 @rt_cons(i64 %t37218, i64 2)
-  %t37220 = call i64 @rt_cons(i64 %t37210, i64 %t37219)
-  %t37221 = call i64 @rt_cons(i64 %t37202, i64 %t37220)
-  %t37222 = call i64 @rt_cons(i64 %t37194, i64 %t37221)
-  %t37223 = call i64 @rt_cons(i64 %t37186, i64 %t37222)
-  %t37224 = call i64 @rt_set_box(i64 %t35313, i64 %t37223)
-  %t37225 = call i64 @rt_alloc_words(i64 3)
-  %t37226 = inttoptr i64 %t37225 to ptr
-  store i64 ptrtoint (ptr @code_5988 to i64), ptr %t37226
-  %t37227 = getelementptr i64, ptr %t37226, i64 1
-  store i64 %t35284, ptr %t37227
-  %t37228 = getelementptr i64, ptr %t37226, i64 2
-  store i64 %t35280, ptr %t37228
-  %t37229 = or i64 %t37225, 4
-  %t37230 = call i64 @rt_set_box(i64 %t35314, i64 %t37229)
+  %t37008 = call i64 @rt_cons(i64 %t37005, i64 %t37007)
+  %t37009 = call i64 @rt_intern(ptr @.str.sym.649)
+  %t37010 = call i64 @rt_make_string(ptr @.str.lit.808, i64 12)
+  %t37011 = call i64 @rt_cons(i64 %t37010, i64 2)
+  %t37012 = call i64 @rt_cons(i64 %t37009, i64 %t37011)
+  %t37013 = call i64 @rt_intern(ptr @.str.sym.650)
+  %t37014 = call i64 @rt_make_string(ptr @.str.lit.809, i64 12)
+  %t37015 = call i64 @rt_cons(i64 %t37014, i64 2)
+  %t37016 = call i64 @rt_cons(i64 %t37013, i64 %t37015)
+  %t37017 = call i64 @rt_intern(ptr @.str.sym.651)
+  %t37018 = call i64 @rt_make_string(ptr @.str.lit.810, i64 10)
+  %t37019 = call i64 @rt_cons(i64 %t37018, i64 2)
+  %t37020 = call i64 @rt_cons(i64 %t37017, i64 %t37019)
+  %t37021 = call i64 @rt_intern(ptr @.str.sym.660)
+  %t37022 = call i64 @rt_make_string(ptr @.str.lit.811, i64 17)
+  %t37023 = call i64 @rt_cons(i64 %t37022, i64 2)
+  %t37024 = call i64 @rt_cons(i64 %t37021, i64 %t37023)
+  %t37025 = call i64 @rt_intern(ptr @.str.sym.661)
+  %t37026 = call i64 @rt_make_string(ptr @.str.lit.812, i64 10)
+  %t37027 = call i64 @rt_cons(i64 %t37026, i64 2)
+  %t37028 = call i64 @rt_cons(i64 %t37025, i64 %t37027)
+  %t37029 = call i64 @rt_intern(ptr @.str.sym.662)
+  %t37030 = call i64 @rt_make_string(ptr @.str.lit.813, i64 12)
+  %t37031 = call i64 @rt_cons(i64 %t37030, i64 2)
+  %t37032 = call i64 @rt_cons(i64 %t37029, i64 %t37031)
+  %t37033 = call i64 @rt_intern(ptr @.str.sym.664)
+  %t37034 = call i64 @rt_make_string(ptr @.str.lit.814, i64 10)
+  %t37035 = call i64 @rt_cons(i64 %t37034, i64 2)
+  %t37036 = call i64 @rt_cons(i64 %t37033, i64 %t37035)
+  %t37037 = call i64 @rt_intern(ptr @.str.sym.673)
+  %t37038 = call i64 @rt_make_string(ptr @.str.lit.815, i64 15)
+  %t37039 = call i64 @rt_cons(i64 %t37038, i64 2)
+  %t37040 = call i64 @rt_cons(i64 %t37037, i64 %t37039)
+  %t37041 = call i64 @rt_intern(ptr @.str.sym.674)
+  %t37042 = call i64 @rt_make_string(ptr @.str.lit.816, i64 13)
+  %t37043 = call i64 @rt_cons(i64 %t37042, i64 2)
+  %t37044 = call i64 @rt_cons(i64 %t37041, i64 %t37043)
+  %t37045 = call i64 @rt_intern(ptr @.str.sym.675)
+  %t37046 = call i64 @rt_make_string(ptr @.str.lit.817, i64 15)
+  %t37047 = call i64 @rt_cons(i64 %t37046, i64 2)
+  %t37048 = call i64 @rt_cons(i64 %t37045, i64 %t37047)
+  %t37049 = call i64 @rt_intern(ptr @.str.sym.676)
+  %t37050 = call i64 @rt_make_string(ptr @.str.lit.818, i64 12)
+  %t37051 = call i64 @rt_cons(i64 %t37050, i64 2)
+  %t37052 = call i64 @rt_cons(i64 %t37049, i64 %t37051)
+  %t37053 = call i64 @rt_intern(ptr @.str.sym.677)
+  %t37054 = call i64 @rt_make_string(ptr @.str.lit.819, i64 13)
+  %t37055 = call i64 @rt_cons(i64 %t37054, i64 2)
+  %t37056 = call i64 @rt_cons(i64 %t37053, i64 %t37055)
+  %t37057 = call i64 @rt_intern(ptr @.str.sym.678)
+  %t37058 = call i64 @rt_make_string(ptr @.str.lit.820, i64 17)
+  %t37059 = call i64 @rt_cons(i64 %t37058, i64 2)
+  %t37060 = call i64 @rt_cons(i64 %t37057, i64 %t37059)
+  %t37061 = call i64 @rt_intern(ptr @.str.sym.679)
+  %t37062 = call i64 @rt_make_string(ptr @.str.lit.821, i64 17)
+  %t37063 = call i64 @rt_cons(i64 %t37062, i64 2)
+  %t37064 = call i64 @rt_cons(i64 %t37061, i64 %t37063)
+  %t37065 = call i64 @rt_intern(ptr @.str.sym.680)
+  %t37066 = call i64 @rt_make_string(ptr @.str.lit.822, i64 8)
+  %t37067 = call i64 @rt_cons(i64 %t37066, i64 2)
+  %t37068 = call i64 @rt_cons(i64 %t37065, i64 %t37067)
+  %t37069 = call i64 @rt_intern(ptr @.str.sym.681)
+  %t37070 = call i64 @rt_make_string(ptr @.str.lit.823, i64 8)
+  %t37071 = call i64 @rt_cons(i64 %t37070, i64 2)
+  %t37072 = call i64 @rt_cons(i64 %t37069, i64 %t37071)
+  %t37073 = call i64 @rt_intern(ptr @.str.sym.682)
+  %t37074 = call i64 @rt_make_string(ptr @.str.lit.824, i64 17)
+  %t37075 = call i64 @rt_cons(i64 %t37074, i64 2)
+  %t37076 = call i64 @rt_cons(i64 %t37073, i64 %t37075)
+  %t37077 = call i64 @rt_intern(ptr @.str.sym.683)
+  %t37078 = call i64 @rt_make_string(ptr @.str.lit.825, i64 23)
+  %t37079 = call i64 @rt_cons(i64 %t37078, i64 2)
+  %t37080 = call i64 @rt_cons(i64 %t37077, i64 %t37079)
+  %t37081 = call i64 @rt_intern(ptr @.str.sym.684)
+  %t37082 = call i64 @rt_make_string(ptr @.str.lit.826, i64 25)
+  %t37083 = call i64 @rt_cons(i64 %t37082, i64 2)
+  %t37084 = call i64 @rt_cons(i64 %t37081, i64 %t37083)
+  %t37085 = call i64 @rt_cons(i64 %t37084, i64 2)
+  %t37086 = call i64 @rt_cons(i64 %t37080, i64 %t37085)
+  %t37087 = call i64 @rt_cons(i64 %t37076, i64 %t37086)
+  %t37088 = call i64 @rt_cons(i64 %t37072, i64 %t37087)
+  %t37089 = call i64 @rt_cons(i64 %t37068, i64 %t37088)
+  %t37090 = call i64 @rt_cons(i64 %t37064, i64 %t37089)
+  %t37091 = call i64 @rt_cons(i64 %t37060, i64 %t37090)
+  %t37092 = call i64 @rt_cons(i64 %t37056, i64 %t37091)
+  %t37093 = call i64 @rt_cons(i64 %t37052, i64 %t37092)
+  %t37094 = call i64 @rt_cons(i64 %t37048, i64 %t37093)
+  %t37095 = call i64 @rt_cons(i64 %t37044, i64 %t37094)
+  %t37096 = call i64 @rt_cons(i64 %t37040, i64 %t37095)
+  %t37097 = call i64 @rt_cons(i64 %t37036, i64 %t37096)
+  %t37098 = call i64 @rt_cons(i64 %t37032, i64 %t37097)
+  %t37099 = call i64 @rt_cons(i64 %t37028, i64 %t37098)
+  %t37100 = call i64 @rt_cons(i64 %t37024, i64 %t37099)
+  %t37101 = call i64 @rt_cons(i64 %t37020, i64 %t37100)
+  %t37102 = call i64 @rt_cons(i64 %t37016, i64 %t37101)
+  %t37103 = call i64 @rt_cons(i64 %t37012, i64 %t37102)
+  %t37104 = call i64 @rt_cons(i64 %t37008, i64 %t37103)
+  %t37105 = call i64 @rt_cons(i64 %t37004, i64 %t37104)
+  %t37106 = call i64 @rt_cons(i64 %t37000, i64 %t37105)
+  %t37107 = call i64 @rt_cons(i64 %t36996, i64 %t37106)
+  %t37108 = call i64 @rt_cons(i64 %t36992, i64 %t37107)
+  %t37109 = call i64 @rt_cons(i64 %t36988, i64 %t37108)
+  %t37110 = call i64 @rt_cons(i64 %t36984, i64 %t37109)
+  %t37111 = call i64 @rt_cons(i64 %t36980, i64 %t37110)
+  %t37112 = call i64 @rt_cons(i64 %t36976, i64 %t37111)
+  %t37113 = call i64 @rt_cons(i64 %t36972, i64 %t37112)
+  %t37114 = call i64 @rt_cons(i64 %t36968, i64 %t37113)
+  %t37115 = call i64 @rt_cons(i64 %t36964, i64 %t37114)
+  %t37116 = call i64 @rt_cons(i64 %t36960, i64 %t37115)
+  %t37117 = call i64 @rt_cons(i64 %t36956, i64 %t37116)
+  %t37118 = call i64 @rt_cons(i64 %t36952, i64 %t37117)
+  %t37119 = call i64 @rt_cons(i64 %t36948, i64 %t37118)
+  %t37120 = call i64 @rt_cons(i64 %t36944, i64 %t37119)
+  %t37121 = call i64 @rt_cons(i64 %t36940, i64 %t37120)
+  %t37122 = call i64 @rt_cons(i64 %t36936, i64 %t37121)
+  %t37123 = call i64 @rt_cons(i64 %t36932, i64 %t37122)
+  %t37124 = call i64 @rt_cons(i64 %t36928, i64 %t37123)
+  %t37125 = call i64 @rt_cons(i64 %t36924, i64 %t37124)
+  %t37126 = call i64 @rt_cons(i64 %t36920, i64 %t37125)
+  %t37127 = call i64 @rt_cons(i64 %t36916, i64 %t37126)
+  %t37128 = call i64 @rt_cons(i64 %t36912, i64 %t37127)
+  %t37129 = call i64 @rt_cons(i64 %t36908, i64 %t37128)
+  %t37130 = call i64 @rt_cons(i64 %t36904, i64 %t37129)
+  %t37131 = call i64 @rt_cons(i64 %t36900, i64 %t37130)
+  %t37132 = call i64 @rt_cons(i64 %t36896, i64 %t37131)
+  %t37133 = call i64 @rt_cons(i64 %t36892, i64 %t37132)
+  %t37134 = call i64 @rt_cons(i64 %t36888, i64 %t37133)
+  %t37135 = call i64 @rt_cons(i64 %t36884, i64 %t37134)
+  %t37136 = call i64 @rt_cons(i64 %t36880, i64 %t37135)
+  %t37137 = call i64 @rt_cons(i64 %t36876, i64 %t37136)
+  %t37138 = call i64 @rt_cons(i64 %t36872, i64 %t37137)
+  %t37139 = call i64 @rt_cons(i64 %t36868, i64 %t37138)
+  %t37140 = call i64 @rt_cons(i64 %t36864, i64 %t37139)
+  %t37141 = call i64 @rt_cons(i64 %t36860, i64 %t37140)
+  %t37142 = call i64 @rt_cons(i64 %t36856, i64 %t37141)
+  %t37143 = call i64 @rt_cons(i64 %t36852, i64 %t37142)
+  %t37144 = call i64 @rt_cons(i64 %t36848, i64 %t37143)
+  %t37145 = call i64 @rt_cons(i64 %t36844, i64 %t37144)
+  %t37146 = call i64 @rt_cons(i64 %t36840, i64 %t37145)
+  %t37147 = call i64 @rt_cons(i64 %t36836, i64 %t37146)
+  %t37148 = call i64 @rt_cons(i64 %t36832, i64 %t37147)
+  %t37149 = call i64 @rt_cons(i64 %t36828, i64 %t37148)
+  %t37150 = call i64 @rt_cons(i64 %t36824, i64 %t37149)
+  %t37151 = call i64 @rt_cons(i64 %t36820, i64 %t37150)
+  %t37152 = call i64 @rt_cons(i64 %t36816, i64 %t37151)
+  %t37153 = call i64 @rt_cons(i64 %t36812, i64 %t37152)
+  %t37154 = call i64 @rt_cons(i64 %t36808, i64 %t37153)
+  %t37155 = call i64 @rt_cons(i64 %t36804, i64 %t37154)
+  %t37156 = call i64 @rt_cons(i64 %t36800, i64 %t37155)
+  %t37157 = call i64 @rt_cons(i64 %t36796, i64 %t37156)
+  %t37158 = call i64 @rt_cons(i64 %t36792, i64 %t37157)
+  %t37159 = call i64 @rt_cons(i64 %t36788, i64 %t37158)
+  %t37160 = call i64 @rt_cons(i64 %t36784, i64 %t37159)
+  %t37161 = call i64 @rt_cons(i64 %t36780, i64 %t37160)
+  %t37162 = call i64 @rt_cons(i64 %t36776, i64 %t37161)
+  %t37163 = call i64 @rt_cons(i64 %t36772, i64 %t37162)
+  %t37164 = call i64 @rt_cons(i64 %t36768, i64 %t37163)
+  %t37165 = call i64 @rt_cons(i64 %t36764, i64 %t37164)
+  %t37166 = call i64 @rt_cons(i64 %t36760, i64 %t37165)
+  %t37167 = call i64 @rt_cons(i64 %t36756, i64 %t37166)
+  %t37168 = call i64 @rt_cons(i64 %t36752, i64 %t37167)
+  %t37169 = call i64 @rt_cons(i64 %t36748, i64 %t37168)
+  %t37170 = call i64 @rt_cons(i64 %t36744, i64 %t37169)
+  %t37171 = call i64 @rt_cons(i64 %t36740, i64 %t37170)
+  %t37172 = call i64 @rt_cons(i64 %t36736, i64 %t37171)
+  %t37173 = call i64 @rt_set_box(i64 %t35378, i64 %t37172)
+  %t37174 = call i64 @rt_alloc_words(i64 2)
+  %t37175 = inttoptr i64 %t37174 to ptr
+  store i64 ptrtoint (ptr @code_5930 to i64), ptr %t37175
+  %t37176 = getelementptr i64, ptr %t37175, i64 1
+  store i64 %t35379, ptr %t37176
+  %t37177 = or i64 %t37174, 4
+  %t37178 = call i64 @rt_set_box(i64 %t35379, i64 %t37177)
+  %t37179 = call i64 @rt_alloc_words(i64 2)
+  %t37180 = inttoptr i64 %t37179 to ptr
+  store i64 ptrtoint (ptr @code_5932 to i64), ptr %t37180
+  %t37181 = getelementptr i64, ptr %t37180, i64 1
+  store i64 %t35379, ptr %t37181
+  %t37182 = or i64 %t37179, 4
+  %t37183 = call i64 @rt_set_box(i64 %t35380, i64 %t37182)
+  %t37184 = call i64 @rt_alloc_words(i64 1)
+  %t37185 = inttoptr i64 %t37184 to ptr
+  store i64 ptrtoint (ptr @code_5936 to i64), ptr %t37185
+  %t37186 = or i64 %t37184, 4
+  %t37187 = call i64 @rt_set_box(i64 %t35381, i64 %t37186)
+  %t37188 = call i64 @rt_alloc_words(i64 2)
+  %t37189 = inttoptr i64 %t37188 to ptr
+  store i64 ptrtoint (ptr @code_5938 to i64), ptr %t37189
+  %t37190 = getelementptr i64, ptr %t37189, i64 1
+  store i64 %t35381, ptr %t37190
+  %t37191 = or i64 %t37188, 4
+  %t37192 = call i64 @rt_set_box(i64 %t35382, i64 %t37191)
+  %t37193 = call i64 @rt_alloc_words(i64 1)
+  %t37194 = inttoptr i64 %t37193 to ptr
+  store i64 ptrtoint (ptr @code_5946 to i64), ptr %t37194
+  %t37195 = or i64 %t37193, 4
+  %t37196 = call i64 @rt_set_box(i64 %t35383, i64 %t37195)
+  %t37197 = call i64 @rt_alloc_words(i64 2)
+  %t37198 = inttoptr i64 %t37197 to ptr
+  store i64 ptrtoint (ptr @code_5950 to i64), ptr %t37198
+  %t37199 = getelementptr i64, ptr %t37198, i64 1
+  store i64 %t35383, ptr %t37199
+  %t37200 = or i64 %t37197, 4
+  %t37201 = call i64 @rt_set_box(i64 %t35384, i64 %t37200)
+  %t37202 = call i64 @rt_alloc_words(i64 14)
+  %t37203 = inttoptr i64 %t37202 to ptr
+  store i64 ptrtoint (ptr @code_5952 to i64), ptr %t37203
+  %t37204 = getelementptr i64, ptr %t37203, i64 1
+  store i64 %t35385, ptr %t37204
+  %t37205 = getelementptr i64, ptr %t37203, i64 2
+  store i64 %t35403, ptr %t37205
+  %t37206 = getelementptr i64, ptr %t37203, i64 3
+  store i64 %t35402, ptr %t37206
+  %t37207 = getelementptr i64, ptr %t37203, i64 4
+  store i64 %t35404, ptr %t37207
+  %t37208 = getelementptr i64, ptr %t37203, i64 5
+  store i64 %t35398, ptr %t37208
+  %t37209 = getelementptr i64, ptr %t37203, i64 6
+  store i64 %t35397, ptr %t37209
+  %t37210 = getelementptr i64, ptr %t37203, i64 7
+  store i64 %t35393, ptr %t37210
+  %t37211 = getelementptr i64, ptr %t37203, i64 8
+  store i64 %t35387, ptr %t37211
+  %t37212 = getelementptr i64, ptr %t37203, i64 9
+  store i64 %t35361, ptr %t37212
+  %t37213 = getelementptr i64, ptr %t37203, i64 10
+  store i64 %t35357, ptr %t37213
+  %t37214 = getelementptr i64, ptr %t37203, i64 11
+  store i64 %t35415, ptr %t37214
+  %t37215 = getelementptr i64, ptr %t37203, i64 12
+  store i64 %t35389, ptr %t37215
+  %t37216 = getelementptr i64, ptr %t37203, i64 13
+  store i64 %t35377, ptr %t37216
+  %t37217 = or i64 %t37202, 4
+  %t37218 = call i64 @rt_set_box(i64 %t35385, i64 %t37217)
+  %t37219 = call i64 @rt_alloc_words(i64 9)
+  %t37220 = inttoptr i64 %t37219 to ptr
+  store i64 ptrtoint (ptr @code_5996 to i64), ptr %t37220
+  %t37221 = getelementptr i64, ptr %t37220, i64 1
+  store i64 %t35357, ptr %t37221
+  %t37222 = getelementptr i64, ptr %t37220, i64 2
+  store i64 %t35385, ptr %t37222
+  %t37223 = getelementptr i64, ptr %t37220, i64 3
+  store i64 %t35403, ptr %t37223
+  %t37224 = getelementptr i64, ptr %t37220, i64 4
+  store i64 %t35402, ptr %t37224
+  %t37225 = getelementptr i64, ptr %t37220, i64 5
+  store i64 %t35404, ptr %t37225
+  %t37226 = getelementptr i64, ptr %t37220, i64 6
+  store i64 %t35386, ptr %t37226
+  %t37227 = getelementptr i64, ptr %t37220, i64 7
+  store i64 %t35398, ptr %t37227
+  %t37228 = getelementptr i64, ptr %t37220, i64 8
+  store i64 %t35388, ptr %t37228
+  %t37229 = or i64 %t37219, 4
+  %t37230 = call i64 @rt_set_box(i64 %t35386, i64 %t37229)
   %t37231 = call i64 @rt_alloc_words(i64 7)
   %t37232 = inttoptr i64 %t37231 to ptr
-  store i64 ptrtoint (ptr @code_5990 to i64), ptr %t37232
+  store i64 ptrtoint (ptr @code_6022 to i64), ptr %t37232
   %t37233 = getelementptr i64, ptr %t37232, i64 1
-  store i64 %t35284, ptr %t37233
+  store i64 %t35385, ptr %t37233
   %t37234 = getelementptr i64, ptr %t37232, i64 2
-  store i64 %t35285, ptr %t37234
+  store i64 %t35362, ptr %t37234
   %t37235 = getelementptr i64, ptr %t37232, i64 3
-  store i64 %t35280, ptr %t37235
+  store i64 %t35361, ptr %t37235
   %t37236 = getelementptr i64, ptr %t37232, i64 4
-  store i64 %t35286, ptr %t37236
+  store i64 %t35357, ptr %t37236
   %t37237 = getelementptr i64, ptr %t37232, i64 5
-  store i64 %t35314, ptr %t37237
+  store i64 %t35363, ptr %t37237
   %t37238 = getelementptr i64, ptr %t37232, i64 6
-  store i64 %t35283, ptr %t37238
+  store i64 %t35360, ptr %t37238
   %t37239 = or i64 %t37231, 4
-  %t37240 = call i64 @rt_set_box(i64 %t35315, i64 %t37239)
+  %t37240 = call i64 @rt_set_box(i64 %t35387, i64 %t37239)
   %t37241 = call i64 @rt_alloc_words(i64 7)
   %t37242 = inttoptr i64 %t37241 to ptr
-  store i64 ptrtoint (ptr @code_5992 to i64), ptr %t37242
+  store i64 ptrtoint (ptr @code_6024 to i64), ptr %t37242
   %t37243 = getelementptr i64, ptr %t37242, i64 1
-  store i64 %t35284, ptr %t37243
+  store i64 %t35385, ptr %t37243
   %t37244 = getelementptr i64, ptr %t37242, i64 2
-  store i64 %t35280, ptr %t37244
+  store i64 %t35362, ptr %t37244
   %t37245 = getelementptr i64, ptr %t37242, i64 3
-  store i64 %t35313, ptr %t37245
+  store i64 %t35361, ptr %t37245
   %t37246 = getelementptr i64, ptr %t37242, i64 4
-  store i64 %t35315, ptr %t37246
+  store i64 %t35357, ptr %t37246
   %t37247 = getelementptr i64, ptr %t37242, i64 5
-  store i64 %t35301, ptr %t37247
+  store i64 %t35363, ptr %t37247
   %t37248 = getelementptr i64, ptr %t37242, i64 6
-  store i64 %t35303, ptr %t37248
+  store i64 %t35386, ptr %t37248
   %t37249 = or i64 %t37241, 4
-  %t37250 = call i64 @rt_set_box(i64 %t35316, i64 %t37249)
-  %t37251 = call i64 @rt_alloc_words(i64 1)
+  %t37250 = call i64 @rt_set_box(i64 %t35388, i64 %t37249)
+  %t37251 = call i64 @rt_alloc_words(i64 3)
   %t37252 = inttoptr i64 %t37251 to ptr
-  store i64 ptrtoint (ptr @code_5994 to i64), ptr %t37252
-  %t37253 = or i64 %t37251, 4
-  %t37254 = call i64 @rt_set_box(i64 %t35317, i64 %t37253)
-  %t37255 = call i64 @rt_alloc_words(i64 4)
-  %t37256 = inttoptr i64 %t37255 to ptr
-  store i64 ptrtoint (ptr @code_5998 to i64), ptr %t37256
-  %t37257 = getelementptr i64, ptr %t37256, i64 1
-  store i64 %t35284, ptr %t37257
-  %t37258 = getelementptr i64, ptr %t37256, i64 2
-  store i64 %t35280, ptr %t37258
-  %t37259 = getelementptr i64, ptr %t37256, i64 3
-  store i64 %t35307, ptr %t37259
-  %t37260 = or i64 %t37255, 4
-  %t37261 = call i64 @rt_set_box(i64 %t35318, i64 %t37260)
-  %t37262 = call i64 @rt_alloc_words(i64 3)
-  %t37263 = inttoptr i64 %t37262 to ptr
-  store i64 ptrtoint (ptr @code_6000 to i64), ptr %t37263
-  %t37264 = getelementptr i64, ptr %t37263, i64 1
-  store i64 %t35284, ptr %t37264
-  %t37265 = getelementptr i64, ptr %t37263, i64 2
-  store i64 %t35280, ptr %t37265
-  %t37266 = or i64 %t37262, 4
-  %t37267 = call i64 @rt_set_box(i64 %t35319, i64 %t37266)
-  %t37268 = call i64 @rt_alloc_words(i64 5)
-  %t37269 = inttoptr i64 %t37268 to ptr
-  store i64 ptrtoint (ptr @code_6002 to i64), ptr %t37269
-  %t37270 = getelementptr i64, ptr %t37269, i64 1
-  store i64 %t35318, ptr %t37270
-  %t37271 = getelementptr i64, ptr %t37269, i64 2
-  store i64 %t35319, ptr %t37271
-  %t37272 = getelementptr i64, ptr %t37269, i64 3
-  store i64 %t35284, ptr %t37272
-  %t37273 = getelementptr i64, ptr %t37269, i64 4
-  store i64 %t35280, ptr %t37273
-  %t37274 = or i64 %t37268, 4
-  %t37275 = call i64 @rt_set_box(i64 %t35320, i64 %t37274)
-  %t37276 = call i64 @rt_alloc_words(i64 6)
-  %t37277 = inttoptr i64 %t37276 to ptr
-  store i64 ptrtoint (ptr @code_6006 to i64), ptr %t37277
-  %t37278 = getelementptr i64, ptr %t37277, i64 1
-  store i64 %t35318, ptr %t37278
-  %t37279 = getelementptr i64, ptr %t37277, i64 2
-  store i64 %t35284, ptr %t37279
-  %t37280 = getelementptr i64, ptr %t37277, i64 3
-  store i64 %t35280, ptr %t37280
-  %t37281 = getelementptr i64, ptr %t37277, i64 4
-  store i64 %t35319, ptr %t37281
-  %t37282 = getelementptr i64, ptr %t37277, i64 5
-  store i64 %t35308, ptr %t37282
-  %t37283 = or i64 %t37276, 4
-  %t37284 = call i64 @rt_set_box(i64 %t35321, i64 %t37283)
-  %t37285 = call i64 @rt_alloc_words(i64 3)
-  %t37286 = inttoptr i64 %t37285 to ptr
-  store i64 ptrtoint (ptr @code_6016 to i64), ptr %t37286
-  %t37287 = getelementptr i64, ptr %t37286, i64 1
-  store i64 %t35284, ptr %t37287
-  %t37288 = getelementptr i64, ptr %t37286, i64 2
-  store i64 %t35280, ptr %t37288
-  %t37289 = or i64 %t37285, 4
-  %t37290 = call i64 @rt_set_box(i64 %t35322, i64 %t37289)
-  %t37291 = call i64 @rt_alloc_words(i64 3)
-  %t37292 = inttoptr i64 %t37291 to ptr
-  store i64 ptrtoint (ptr @code_6018 to i64), ptr %t37292
-  %t37293 = getelementptr i64, ptr %t37292, i64 1
-  store i64 %t35284, ptr %t37293
-  %t37294 = getelementptr i64, ptr %t37292, i64 2
-  store i64 %t35280, ptr %t37294
-  %t37295 = or i64 %t37291, 4
-  %t37296 = call i64 @rt_set_box(i64 %t35323, i64 %t37295)
-  %t37297 = call i64 @rt_alloc_words(i64 3)
-  %t37298 = inttoptr i64 %t37297 to ptr
-  store i64 ptrtoint (ptr @code_6020 to i64), ptr %t37298
-  %t37299 = getelementptr i64, ptr %t37298, i64 1
-  store i64 %t35284, ptr %t37299
-  %t37300 = getelementptr i64, ptr %t37298, i64 2
-  store i64 %t35280, ptr %t37300
-  %t37301 = or i64 %t37297, 4
-  %t37302 = call i64 @rt_set_box(i64 %t35324, i64 %t37301)
-  %t37303 = call i64 @rt_alloc_words(i64 6)
+  store i64 ptrtoint (ptr @code_6026 to i64), ptr %t37252
+  %t37253 = getelementptr i64, ptr %t37252, i64 1
+  store i64 %t35361, ptr %t37253
+  %t37254 = getelementptr i64, ptr %t37252, i64 2
+  store i64 %t35357, ptr %t37254
+  %t37255 = or i64 %t37251, 4
+  %t37256 = call i64 @rt_set_box(i64 %t35389, i64 %t37255)
+  %t37257 = call i64 @rt_intern(ptr @.str.sym.608)
+  %t37258 = call i64 @rt_make_string(ptr @.str.lit.827, i64 6)
+  %t37259 = call i64 @rt_intern(ptr @.str.sym.202)
+  %t37260 = call i64 @rt_make_string(ptr @.str.lit.828, i64 3)
+  %t37261 = call i64 @rt_cons(i64 %t37260, i64 2)
+  %t37262 = call i64 @rt_cons(i64 %t37259, i64 %t37261)
+  %t37263 = call i64 @rt_cons(i64 %t37258, i64 %t37262)
+  %t37264 = call i64 @rt_cons(i64 %t37257, i64 %t37263)
+  %t37265 = call i64 @rt_intern(ptr @.str.sym.609)
+  %t37266 = call i64 @rt_make_string(ptr @.str.lit.829, i64 6)
+  %t37267 = call i64 @rt_intern(ptr @.str.sym.202)
+  %t37268 = call i64 @rt_make_string(ptr @.str.lit.830, i64 3)
+  %t37269 = call i64 @rt_cons(i64 %t37268, i64 2)
+  %t37270 = call i64 @rt_cons(i64 %t37267, i64 %t37269)
+  %t37271 = call i64 @rt_cons(i64 %t37266, i64 %t37270)
+  %t37272 = call i64 @rt_cons(i64 %t37265, i64 %t37271)
+  %t37273 = call i64 @rt_intern(ptr @.str.sym.610)
+  %t37274 = call i64 @rt_make_string(ptr @.str.lit.831, i64 6)
+  %t37275 = call i64 @rt_intern(ptr @.str.sym.206)
+  %t37276 = call i64 @rt_make_string(ptr @.str.lit.832, i64 3)
+  %t37277 = call i64 @rt_cons(i64 %t37276, i64 2)
+  %t37278 = call i64 @rt_cons(i64 %t37275, i64 %t37277)
+  %t37279 = call i64 @rt_cons(i64 %t37274, i64 %t37278)
+  %t37280 = call i64 @rt_cons(i64 %t37273, i64 %t37279)
+  %t37281 = call i64 @rt_intern(ptr @.str.sym.612)
+  %t37282 = call i64 @rt_make_string(ptr @.str.lit.833, i64 9)
+  %t37283 = call i64 @rt_intern(ptr @.str.sym.25)
+  %t37284 = call i64 @rt_make_string(ptr @.str.lit.834, i64 7)
+  %t37285 = call i64 @rt_cons(i64 %t37284, i64 2)
+  %t37286 = call i64 @rt_cons(i64 %t37283, i64 %t37285)
+  %t37287 = call i64 @rt_cons(i64 %t37282, i64 %t37286)
+  %t37288 = call i64 @rt_cons(i64 %t37281, i64 %t37287)
+  %t37289 = call i64 @rt_intern(ptr @.str.sym.613)
+  %t37290 = call i64 @rt_make_string(ptr @.str.lit.835, i64 5)
+  %t37291 = call i64 @rt_intern(ptr @.str.sym.25)
+  %t37292 = call i64 @rt_make_string(ptr @.str.lit.836, i64 8)
+  %t37293 = call i64 @rt_cons(i64 %t37292, i64 2)
+  %t37294 = call i64 @rt_cons(i64 %t37291, i64 %t37293)
+  %t37295 = call i64 @rt_cons(i64 %t37290, i64 %t37294)
+  %t37296 = call i64 @rt_cons(i64 %t37289, i64 %t37295)
+  %t37297 = call i64 @rt_cons(i64 %t37296, i64 2)
+  %t37298 = call i64 @rt_cons(i64 %t37288, i64 %t37297)
+  %t37299 = call i64 @rt_cons(i64 %t37280, i64 %t37298)
+  %t37300 = call i64 @rt_cons(i64 %t37272, i64 %t37299)
+  %t37301 = call i64 @rt_cons(i64 %t37264, i64 %t37300)
+  %t37302 = call i64 @rt_set_box(i64 %t35390, i64 %t37301)
+  %t37303 = call i64 @rt_alloc_words(i64 3)
   %t37304 = inttoptr i64 %t37303 to ptr
-  store i64 ptrtoint (ptr @code_6024 to i64), ptr %t37304
+  store i64 ptrtoint (ptr @code_6028 to i64), ptr %t37304
   %t37305 = getelementptr i64, ptr %t37304, i64 1
-  store i64 %t35322, ptr %t37305
+  store i64 %t35361, ptr %t37305
   %t37306 = getelementptr i64, ptr %t37304, i64 2
-  store i64 %t35328, ptr %t37306
-  %t37307 = getelementptr i64, ptr %t37304, i64 3
-  store i64 %t35324, ptr %t37307
-  %t37308 = getelementptr i64, ptr %t37304, i64 4
-  store i64 %t35302, ptr %t37308
-  %t37309 = getelementptr i64, ptr %t37304, i64 5
-  store i64 %t35323, ptr %t37309
-  %t37310 = or i64 %t37303, 4
-  %t37311 = call i64 @rt_set_box(i64 %t35325, i64 %t37310)
-  %t37312 = call i64 @rt_alloc_words(i64 7)
-  %t37313 = inttoptr i64 %t37312 to ptr
-  store i64 ptrtoint (ptr @code_6028 to i64), ptr %t37313
-  %t37314 = getelementptr i64, ptr %t37313, i64 1
-  store i64 %t35328, ptr %t37314
-  %t37315 = getelementptr i64, ptr %t37313, i64 2
-  store i64 %t35324, ptr %t37315
-  %t37316 = getelementptr i64, ptr %t37313, i64 3
-  store i64 %t35302, ptr %t37316
-  %t37317 = getelementptr i64, ptr %t37313, i64 4
-  store i64 %t35284, ptr %t37317
-  %t37318 = getelementptr i64, ptr %t37313, i64 5
-  store i64 %t35280, ptr %t37318
-  %t37319 = getelementptr i64, ptr %t37313, i64 6
-  store i64 %t35307, ptr %t37319
-  %t37320 = or i64 %t37312, 4
-  %t37321 = call i64 @rt_set_box(i64 %t35326, i64 %t37320)
-  %t37322 = call i64 @rt_alloc_words(i64 8)
-  %t37323 = inttoptr i64 %t37322 to ptr
-  store i64 ptrtoint (ptr @code_6032 to i64), ptr %t37323
-  %t37324 = getelementptr i64, ptr %t37323, i64 1
-  store i64 %t35322, ptr %t37324
-  %t37325 = getelementptr i64, ptr %t37323, i64 2
-  store i64 %t35328, ptr %t37325
-  %t37326 = getelementptr i64, ptr %t37323, i64 3
-  store i64 %t35324, ptr %t37326
-  %t37327 = getelementptr i64, ptr %t37323, i64 4
-  store i64 %t35284, ptr %t37327
-  %t37328 = getelementptr i64, ptr %t37323, i64 5
-  store i64 %t35280, ptr %t37328
-  %t37329 = getelementptr i64, ptr %t37323, i64 6
-  store i64 %t35323, ptr %t37329
-  %t37330 = getelementptr i64, ptr %t37323, i64 7
-  store i64 %t35302, ptr %t37330
-  %t37331 = or i64 %t37322, 4
-  %t37332 = call i64 @rt_set_box(i64 %t35327, i64 %t37331)
-  %t37333 = call i64 @rt_set_box(i64 %t35328, i64 0)
-  %t37334 = call i64 @rt_alloc_words(i64 1)
-  %t37335 = inttoptr i64 %t37334 to ptr
-  store i64 ptrtoint (ptr @code_6040 to i64), ptr %t37335
-  %t37336 = or i64 %t37334, 4
-  %t37337 = call i64 @rt_set_box(i64 %t35329, i64 %t37336)
-  %t37338 = call i64 @rt_alloc_words(i64 1)
-  %t37339 = inttoptr i64 %t37338 to ptr
-  store i64 ptrtoint (ptr @code_6046 to i64), ptr %t37339
-  %t37340 = or i64 %t37338, 4
-  %t37341 = call i64 @rt_set_box(i64 %t35330, i64 %t37340)
-  %t37342 = call i64 @rt_alloc_words(i64 5)
-  %t37343 = inttoptr i64 %t37342 to ptr
-  store i64 ptrtoint (ptr @code_6048 to i64), ptr %t37343
-  %t37344 = getelementptr i64, ptr %t37343, i64 1
-  store i64 %t35284, ptr %t37344
-  %t37345 = getelementptr i64, ptr %t37343, i64 2
-  store i64 %t35285, ptr %t37345
-  %t37346 = getelementptr i64, ptr %t37343, i64 3
-  store i64 %t35280, ptr %t37346
-  %t37347 = getelementptr i64, ptr %t37343, i64 4
-  store i64 %t35286, ptr %t37347
-  %t37348 = or i64 %t37342, 4
-  %t37349 = call i64 @rt_set_box(i64 %t35331, i64 %t37348)
-  %t37350 = call i64 @rt_alloc_words(i64 4)
-  %t37351 = inttoptr i64 %t37350 to ptr
-  store i64 ptrtoint (ptr @code_6050 to i64), ptr %t37351
-  %t37352 = getelementptr i64, ptr %t37351, i64 1
-  store i64 %t35324, ptr %t37352
-  %t37353 = getelementptr i64, ptr %t37351, i64 2
-  store i64 %t35284, ptr %t37353
-  %t37354 = getelementptr i64, ptr %t37351, i64 3
-  store i64 %t35280, ptr %t37354
-  %t37355 = or i64 %t37350, 4
-  %t37356 = call i64 @rt_set_box(i64 %t35332, i64 %t37355)
-  %t37357 = call i64 @rt_alloc_words(i64 10)
-  %t37358 = inttoptr i64 %t37357 to ptr
-  store i64 ptrtoint (ptr @code_6054 to i64), ptr %t37358
-  %t37359 = getelementptr i64, ptr %t37358, i64 1
-  store i64 %t35279, ptr %t37359
-  %t37360 = getelementptr i64, ptr %t37358, i64 2
-  store i64 %t35283, ptr %t37360
-  %t37361 = getelementptr i64, ptr %t37358, i64 3
-  store i64 %t35302, ptr %t37361
-  %t37362 = getelementptr i64, ptr %t37358, i64 4
-  store i64 %t35286, ptr %t37362
-  %t37363 = getelementptr i64, ptr %t37358, i64 5
-  store i64 %t35331, ptr %t37363
-  %t37364 = getelementptr i64, ptr %t37358, i64 6
-  store i64 %t35332, ptr %t37364
-  %t37365 = getelementptr i64, ptr %t37358, i64 7
-  store i64 %t35309, ptr %t37365
-  %t37366 = getelementptr i64, ptr %t37358, i64 8
-  store i64 %t35307, ptr %t37366
-  %t37367 = getelementptr i64, ptr %t37358, i64 9
-  store i64 %t35305, ptr %t37367
-  %t37368 = or i64 %t37357, 4
-  %t37369 = call i64 @rt_set_box(i64 %t35333, i64 %t37368)
-  %t37370 = call i64 @rt_alloc_words(i64 6)
-  %t37371 = inttoptr i64 %t37370 to ptr
-  store i64 ptrtoint (ptr @code_6062 to i64), ptr %t37371
-  %t37372 = getelementptr i64, ptr %t37371, i64 1
-  store i64 %t35279, ptr %t37372
-  %t37373 = getelementptr i64, ptr %t37371, i64 2
-  store i64 %t35283, ptr %t37373
-  %t37374 = getelementptr i64, ptr %t37371, i64 3
-  store i64 %t35286, ptr %t37374
-  %t37375 = getelementptr i64, ptr %t37371, i64 4
-  store i64 %t35309, ptr %t37375
-  %t37376 = getelementptr i64, ptr %t37371, i64 5
-  store i64 %t35305, ptr %t37376
-  %t37377 = or i64 %t37370, 4
-  %t37378 = call i64 @rt_set_box(i64 %t35334, i64 %t37377)
-  %t37379 = call i64 @rt_alloc_words(i64 12)
-  %t37380 = inttoptr i64 %t37379 to ptr
-  store i64 ptrtoint (ptr @code_6064 to i64), ptr %t37380
-  %t37381 = getelementptr i64, ptr %t37380, i64 1
-  store i64 %t35287, ptr %t37381
-  %t37382 = getelementptr i64, ptr %t37380, i64 2
-  store i64 %t35337, ptr %t37382
-  %t37383 = getelementptr i64, ptr %t37380, i64 3
-  store i64 %t35179, ptr %t37383
-  %t37384 = getelementptr i64, ptr %t37380, i64 4
-  store i64 %t35328, ptr %t37384
-  %t37385 = getelementptr i64, ptr %t37380, i64 5
-  store i64 %t35329, ptr %t37385
-  %t37386 = getelementptr i64, ptr %t37380, i64 6
-  store i64 %t35291, ptr %t37386
-  %t37387 = getelementptr i64, ptr %t37380, i64 7
-  store i64 %t35333, ptr %t37387
-  %t37388 = getelementptr i64, ptr %t37380, i64 8
-  store i64 %t35334, ptr %t37388
-  %t37389 = getelementptr i64, ptr %t37380, i64 9
-  store i64 %t35330, ptr %t37389
-  %t37390 = getelementptr i64, ptr %t37380, i64 10
-  store i64 %t35292, ptr %t37390
-  %t37391 = getelementptr i64, ptr %t37380, i64 11
-  store i64 %t35317, ptr %t37391
-  %t37392 = or i64 %t37379, 4
-  %t37393 = call i64 @rt_set_box(i64 %t35335, i64 %t37392)
-  %t37394 = call i64 @rt_set_box(i64 %t35336, i64 64)
-  %t37395 = call i64 @rt_unbox(i64 %t35179)
-  %t37396 = call i64 @rt_set_box(i64 %t35337, i64 %t37395)
-  %t37397 = call i64 @rt_alloc_words(i64 4)
-  %t37398 = inttoptr i64 %t37397 to ptr
-  store i64 ptrtoint (ptr @code_6074 to i64), ptr %t37398
-  %t37399 = getelementptr i64, ptr %t37398, i64 1
-  store i64 %t35306, ptr %t37399
-  %t37400 = getelementptr i64, ptr %t37398, i64 2
-  store i64 %t35180, ptr %t37400
-  %t37401 = getelementptr i64, ptr %t37398, i64 3
-  store i64 %t35337, ptr %t37401
-  %t37402 = or i64 %t37397, 4
-  %t37403 = call i64 @rt_set_box(i64 %t35338, i64 %t37402)
-  %t37404 = call i64 @rt_alloc_words(i64 2)
-  %t37405 = inttoptr i64 %t37404 to ptr
-  store i64 ptrtoint (ptr @code_6076 to i64), ptr %t37405
-  %t37406 = getelementptr i64, ptr %t37405, i64 1
-  store i64 %t35170, ptr %t37406
-  %t37407 = or i64 %t37404, 4
-  %t37408 = call i64 @rt_set_box(i64 %t35339, i64 %t37407)
-  %t37409 = call i64 @rt_alloc_words(i64 2)
-  %t37410 = inttoptr i64 %t37409 to ptr
-  store i64 ptrtoint (ptr @code_6118 to i64), ptr %t37410
-  %t37411 = getelementptr i64, ptr %t37410, i64 1
-  store i64 %t35336, ptr %t37411
-  %t37412 = or i64 %t37409, 4
-  %t37413 = call i64 @rt_set_box(i64 %t35340, i64 %t37412)
-  %t37414 = call i64 @rt_alloc_words(i64 6)
-  %t37415 = inttoptr i64 %t37414 to ptr
-  store i64 ptrtoint (ptr @code_6126 to i64), ptr %t37415
-  %t37416 = getelementptr i64, ptr %t37415, i64 1
-  store i64 %t35279, ptr %t37416
-  %t37417 = getelementptr i64, ptr %t37415, i64 2
-  store i64 %t35283, ptr %t37417
-  %t37418 = getelementptr i64, ptr %t37415, i64 3
-  store i64 %t35286, ptr %t37418
-  %t37419 = getelementptr i64, ptr %t37415, i64 4
-  store i64 %t35309, ptr %t37419
-  %t37420 = getelementptr i64, ptr %t37415, i64 5
-  store i64 %t35305, ptr %t37420
-  %t37421 = or i64 %t37414, 4
-  %t37422 = call i64 @rt_set_box(i64 %t35341, i64 %t37421)
-  %t37423 = call i64 @rt_alloc_words(i64 2)
-  %t37424 = inttoptr i64 %t37423 to ptr
-  store i64 ptrtoint (ptr @code_6128 to i64), ptr %t37424
-  %t37425 = getelementptr i64, ptr %t37424, i64 1
-  store i64 %t35343, ptr %t37425
-  %t37426 = or i64 %t37423, 4
-  %t37427 = call i64 @rt_set_box(i64 %t35342, i64 %t37426)
-  %t37428 = call i64 @rt_alloc_words(i64 14)
+  store i64 %t35357, ptr %t37306
+  %t37307 = or i64 %t37303, 4
+  %t37308 = call i64 @rt_set_box(i64 %t35391, i64 %t37307)
+  %t37309 = call i64 @rt_alloc_words(i64 7)
+  %t37310 = inttoptr i64 %t37309 to ptr
+  store i64 ptrtoint (ptr @code_6030 to i64), ptr %t37310
+  %t37311 = getelementptr i64, ptr %t37310, i64 1
+  store i64 %t35361, ptr %t37311
+  %t37312 = getelementptr i64, ptr %t37310, i64 2
+  store i64 %t35362, ptr %t37312
+  %t37313 = getelementptr i64, ptr %t37310, i64 3
+  store i64 %t35357, ptr %t37313
+  %t37314 = getelementptr i64, ptr %t37310, i64 4
+  store i64 %t35363, ptr %t37314
+  %t37315 = getelementptr i64, ptr %t37310, i64 5
+  store i64 %t35391, ptr %t37315
+  %t37316 = getelementptr i64, ptr %t37310, i64 6
+  store i64 %t35360, ptr %t37316
+  %t37317 = or i64 %t37309, 4
+  %t37318 = call i64 @rt_set_box(i64 %t35392, i64 %t37317)
+  %t37319 = call i64 @rt_alloc_words(i64 7)
+  %t37320 = inttoptr i64 %t37319 to ptr
+  store i64 ptrtoint (ptr @code_6032 to i64), ptr %t37320
+  %t37321 = getelementptr i64, ptr %t37320, i64 1
+  store i64 %t35361, ptr %t37321
+  %t37322 = getelementptr i64, ptr %t37320, i64 2
+  store i64 %t35357, ptr %t37322
+  %t37323 = getelementptr i64, ptr %t37320, i64 3
+  store i64 %t35390, ptr %t37323
+  %t37324 = getelementptr i64, ptr %t37320, i64 4
+  store i64 %t35392, ptr %t37324
+  %t37325 = getelementptr i64, ptr %t37320, i64 5
+  store i64 %t35378, ptr %t37325
+  %t37326 = getelementptr i64, ptr %t37320, i64 6
+  store i64 %t35380, ptr %t37326
+  %t37327 = or i64 %t37319, 4
+  %t37328 = call i64 @rt_set_box(i64 %t35393, i64 %t37327)
+  %t37329 = call i64 @rt_alloc_words(i64 1)
+  %t37330 = inttoptr i64 %t37329 to ptr
+  store i64 ptrtoint (ptr @code_6034 to i64), ptr %t37330
+  %t37331 = or i64 %t37329, 4
+  %t37332 = call i64 @rt_set_box(i64 %t35394, i64 %t37331)
+  %t37333 = call i64 @rt_alloc_words(i64 4)
+  %t37334 = inttoptr i64 %t37333 to ptr
+  store i64 ptrtoint (ptr @code_6038 to i64), ptr %t37334
+  %t37335 = getelementptr i64, ptr %t37334, i64 1
+  store i64 %t35361, ptr %t37335
+  %t37336 = getelementptr i64, ptr %t37334, i64 2
+  store i64 %t35357, ptr %t37336
+  %t37337 = getelementptr i64, ptr %t37334, i64 3
+  store i64 %t35384, ptr %t37337
+  %t37338 = or i64 %t37333, 4
+  %t37339 = call i64 @rt_set_box(i64 %t35395, i64 %t37338)
+  %t37340 = call i64 @rt_alloc_words(i64 3)
+  %t37341 = inttoptr i64 %t37340 to ptr
+  store i64 ptrtoint (ptr @code_6040 to i64), ptr %t37341
+  %t37342 = getelementptr i64, ptr %t37341, i64 1
+  store i64 %t35361, ptr %t37342
+  %t37343 = getelementptr i64, ptr %t37341, i64 2
+  store i64 %t35357, ptr %t37343
+  %t37344 = or i64 %t37340, 4
+  %t37345 = call i64 @rt_set_box(i64 %t35396, i64 %t37344)
+  %t37346 = call i64 @rt_alloc_words(i64 5)
+  %t37347 = inttoptr i64 %t37346 to ptr
+  store i64 ptrtoint (ptr @code_6042 to i64), ptr %t37347
+  %t37348 = getelementptr i64, ptr %t37347, i64 1
+  store i64 %t35395, ptr %t37348
+  %t37349 = getelementptr i64, ptr %t37347, i64 2
+  store i64 %t35396, ptr %t37349
+  %t37350 = getelementptr i64, ptr %t37347, i64 3
+  store i64 %t35361, ptr %t37350
+  %t37351 = getelementptr i64, ptr %t37347, i64 4
+  store i64 %t35357, ptr %t37351
+  %t37352 = or i64 %t37346, 4
+  %t37353 = call i64 @rt_set_box(i64 %t35397, i64 %t37352)
+  %t37354 = call i64 @rt_alloc_words(i64 6)
+  %t37355 = inttoptr i64 %t37354 to ptr
+  store i64 ptrtoint (ptr @code_6046 to i64), ptr %t37355
+  %t37356 = getelementptr i64, ptr %t37355, i64 1
+  store i64 %t35395, ptr %t37356
+  %t37357 = getelementptr i64, ptr %t37355, i64 2
+  store i64 %t35361, ptr %t37357
+  %t37358 = getelementptr i64, ptr %t37355, i64 3
+  store i64 %t35357, ptr %t37358
+  %t37359 = getelementptr i64, ptr %t37355, i64 4
+  store i64 %t35396, ptr %t37359
+  %t37360 = getelementptr i64, ptr %t37355, i64 5
+  store i64 %t35385, ptr %t37360
+  %t37361 = or i64 %t37354, 4
+  %t37362 = call i64 @rt_set_box(i64 %t35398, i64 %t37361)
+  %t37363 = call i64 @rt_alloc_words(i64 3)
+  %t37364 = inttoptr i64 %t37363 to ptr
+  store i64 ptrtoint (ptr @code_6056 to i64), ptr %t37364
+  %t37365 = getelementptr i64, ptr %t37364, i64 1
+  store i64 %t35361, ptr %t37365
+  %t37366 = getelementptr i64, ptr %t37364, i64 2
+  store i64 %t35357, ptr %t37366
+  %t37367 = or i64 %t37363, 4
+  %t37368 = call i64 @rt_set_box(i64 %t35399, i64 %t37367)
+  %t37369 = call i64 @rt_alloc_words(i64 3)
+  %t37370 = inttoptr i64 %t37369 to ptr
+  store i64 ptrtoint (ptr @code_6058 to i64), ptr %t37370
+  %t37371 = getelementptr i64, ptr %t37370, i64 1
+  store i64 %t35361, ptr %t37371
+  %t37372 = getelementptr i64, ptr %t37370, i64 2
+  store i64 %t35357, ptr %t37372
+  %t37373 = or i64 %t37369, 4
+  %t37374 = call i64 @rt_set_box(i64 %t35400, i64 %t37373)
+  %t37375 = call i64 @rt_alloc_words(i64 3)
+  %t37376 = inttoptr i64 %t37375 to ptr
+  store i64 ptrtoint (ptr @code_6060 to i64), ptr %t37376
+  %t37377 = getelementptr i64, ptr %t37376, i64 1
+  store i64 %t35361, ptr %t37377
+  %t37378 = getelementptr i64, ptr %t37376, i64 2
+  store i64 %t35357, ptr %t37378
+  %t37379 = or i64 %t37375, 4
+  %t37380 = call i64 @rt_set_box(i64 %t35401, i64 %t37379)
+  %t37381 = call i64 @rt_alloc_words(i64 6)
+  %t37382 = inttoptr i64 %t37381 to ptr
+  store i64 ptrtoint (ptr @code_6064 to i64), ptr %t37382
+  %t37383 = getelementptr i64, ptr %t37382, i64 1
+  store i64 %t35399, ptr %t37383
+  %t37384 = getelementptr i64, ptr %t37382, i64 2
+  store i64 %t35405, ptr %t37384
+  %t37385 = getelementptr i64, ptr %t37382, i64 3
+  store i64 %t35401, ptr %t37385
+  %t37386 = getelementptr i64, ptr %t37382, i64 4
+  store i64 %t35379, ptr %t37386
+  %t37387 = getelementptr i64, ptr %t37382, i64 5
+  store i64 %t35400, ptr %t37387
+  %t37388 = or i64 %t37381, 4
+  %t37389 = call i64 @rt_set_box(i64 %t35402, i64 %t37388)
+  %t37390 = call i64 @rt_alloc_words(i64 7)
+  %t37391 = inttoptr i64 %t37390 to ptr
+  store i64 ptrtoint (ptr @code_6068 to i64), ptr %t37391
+  %t37392 = getelementptr i64, ptr %t37391, i64 1
+  store i64 %t35405, ptr %t37392
+  %t37393 = getelementptr i64, ptr %t37391, i64 2
+  store i64 %t35401, ptr %t37393
+  %t37394 = getelementptr i64, ptr %t37391, i64 3
+  store i64 %t35379, ptr %t37394
+  %t37395 = getelementptr i64, ptr %t37391, i64 4
+  store i64 %t35361, ptr %t37395
+  %t37396 = getelementptr i64, ptr %t37391, i64 5
+  store i64 %t35357, ptr %t37396
+  %t37397 = getelementptr i64, ptr %t37391, i64 6
+  store i64 %t35384, ptr %t37397
+  %t37398 = or i64 %t37390, 4
+  %t37399 = call i64 @rt_set_box(i64 %t35403, i64 %t37398)
+  %t37400 = call i64 @rt_alloc_words(i64 8)
+  %t37401 = inttoptr i64 %t37400 to ptr
+  store i64 ptrtoint (ptr @code_6072 to i64), ptr %t37401
+  %t37402 = getelementptr i64, ptr %t37401, i64 1
+  store i64 %t35399, ptr %t37402
+  %t37403 = getelementptr i64, ptr %t37401, i64 2
+  store i64 %t35405, ptr %t37403
+  %t37404 = getelementptr i64, ptr %t37401, i64 3
+  store i64 %t35401, ptr %t37404
+  %t37405 = getelementptr i64, ptr %t37401, i64 4
+  store i64 %t35361, ptr %t37405
+  %t37406 = getelementptr i64, ptr %t37401, i64 5
+  store i64 %t35357, ptr %t37406
+  %t37407 = getelementptr i64, ptr %t37401, i64 6
+  store i64 %t35400, ptr %t37407
+  %t37408 = getelementptr i64, ptr %t37401, i64 7
+  store i64 %t35379, ptr %t37408
+  %t37409 = or i64 %t37400, 4
+  %t37410 = call i64 @rt_set_box(i64 %t35404, i64 %t37409)
+  %t37411 = call i64 @rt_set_box(i64 %t35405, i64 0)
+  %t37412 = call i64 @rt_alloc_words(i64 1)
+  %t37413 = inttoptr i64 %t37412 to ptr
+  store i64 ptrtoint (ptr @code_6080 to i64), ptr %t37413
+  %t37414 = or i64 %t37412, 4
+  %t37415 = call i64 @rt_set_box(i64 %t35406, i64 %t37414)
+  %t37416 = call i64 @rt_alloc_words(i64 1)
+  %t37417 = inttoptr i64 %t37416 to ptr
+  store i64 ptrtoint (ptr @code_6086 to i64), ptr %t37417
+  %t37418 = or i64 %t37416, 4
+  %t37419 = call i64 @rt_set_box(i64 %t35407, i64 %t37418)
+  %t37420 = call i64 @rt_alloc_words(i64 5)
+  %t37421 = inttoptr i64 %t37420 to ptr
+  store i64 ptrtoint (ptr @code_6088 to i64), ptr %t37421
+  %t37422 = getelementptr i64, ptr %t37421, i64 1
+  store i64 %t35361, ptr %t37422
+  %t37423 = getelementptr i64, ptr %t37421, i64 2
+  store i64 %t35362, ptr %t37423
+  %t37424 = getelementptr i64, ptr %t37421, i64 3
+  store i64 %t35357, ptr %t37424
+  %t37425 = getelementptr i64, ptr %t37421, i64 4
+  store i64 %t35363, ptr %t37425
+  %t37426 = or i64 %t37420, 4
+  %t37427 = call i64 @rt_set_box(i64 %t35408, i64 %t37426)
+  %t37428 = call i64 @rt_alloc_words(i64 4)
   %t37429 = inttoptr i64 %t37428 to ptr
-  store i64 ptrtoint (ptr @code_6130 to i64), ptr %t37429
+  store i64 ptrtoint (ptr @code_6090 to i64), ptr %t37429
   %t37430 = getelementptr i64, ptr %t37429, i64 1
-  store i64 %t35287, ptr %t37430
+  store i64 %t35401, ptr %t37430
   %t37431 = getelementptr i64, ptr %t37429, i64 2
-  store i64 %t35291, ptr %t37431
+  store i64 %t35361, ptr %t37431
   %t37432 = getelementptr i64, ptr %t37429, i64 3
-  store i64 %t35328, ptr %t37432
-  %t37433 = getelementptr i64, ptr %t37429, i64 4
-  store i64 %t35336, ptr %t37433
-  %t37434 = getelementptr i64, ptr %t37429, i64 5
-  store i64 %t35340, ptr %t37434
-  %t37435 = getelementptr i64, ptr %t37429, i64 6
-  store i64 %t35338, ptr %t37435
-  %t37436 = getelementptr i64, ptr %t37429, i64 7
-  store i64 %t35330, ptr %t37436
-  %t37437 = getelementptr i64, ptr %t37429, i64 8
-  store i64 %t35292, ptr %t37437
-  %t37438 = getelementptr i64, ptr %t37429, i64 9
-  store i64 %t35317, ptr %t37438
-  %t37439 = getelementptr i64, ptr %t37429, i64 10
-  store i64 %t35339, ptr %t37439
-  %t37440 = getelementptr i64, ptr %t37429, i64 11
-  store i64 %t35333, ptr %t37440
-  %t37441 = getelementptr i64, ptr %t37429, i64 12
-  store i64 %t35341, ptr %t37441
-  %t37442 = getelementptr i64, ptr %t37429, i64 13
-  store i64 %t35170, ptr %t37442
-  %t37443 = or i64 %t37428, 4
-  %t37444 = call i64 @rt_set_box(i64 %t35343, i64 %t37443)
-  %t37445 = call i64 @rt_alloc_words(i64 14)
-  %t37446 = inttoptr i64 %t37445 to ptr
-  store i64 ptrtoint (ptr @code_6160 to i64), ptr %t37446
-  %t37447 = getelementptr i64, ptr %t37446, i64 1
-  store i64 %t35287, ptr %t37447
-  %t37448 = getelementptr i64, ptr %t37446, i64 2
-  store i64 %t35291, ptr %t37448
-  %t37449 = getelementptr i64, ptr %t37446, i64 3
-  store i64 %t35328, ptr %t37449
-  %t37450 = getelementptr i64, ptr %t37446, i64 4
-  store i64 %t35336, ptr %t37450
-  %t37451 = getelementptr i64, ptr %t37446, i64 5
-  store i64 %t35340, ptr %t37451
-  %t37452 = getelementptr i64, ptr %t37446, i64 6
-  store i64 %t35339, ptr %t37452
-  %t37453 = getelementptr i64, ptr %t37446, i64 7
-  store i64 %t35172, ptr %t37453
-  %t37454 = getelementptr i64, ptr %t37446, i64 8
-  store i64 %t35333, ptr %t37454
-  %t37455 = getelementptr i64, ptr %t37446, i64 9
-  store i64 %t35341, ptr %t37455
-  %t37456 = getelementptr i64, ptr %t37446, i64 10
-  store i64 %t35338, ptr %t37456
-  %t37457 = getelementptr i64, ptr %t37446, i64 11
-  store i64 %t35330, ptr %t37457
-  %t37458 = getelementptr i64, ptr %t37446, i64 12
-  store i64 %t35292, ptr %t37458
-  %t37459 = getelementptr i64, ptr %t37446, i64 13
-  store i64 %t35317, ptr %t37459
-  %t37460 = or i64 %t37445, 4
-  %t37461 = call i64 @rt_set_box(i64 %t35344, i64 %t37460)
-  %t37462 = call i64 @rt_alloc_words(i64 8)
-  %t37463 = inttoptr i64 %t37462 to ptr
-  store i64 ptrtoint (ptr @code_6182 to i64), ptr %t37463
-  %t37464 = getelementptr i64, ptr %t37463, i64 1
-  store i64 %t35279, ptr %t37464
-  %t37465 = getelementptr i64, ptr %t37463, i64 2
-  store i64 %t35283, ptr %t37465
-  %t37466 = getelementptr i64, ptr %t37463, i64 3
-  store i64 %t35286, ptr %t37466
-  %t37467 = getelementptr i64, ptr %t37463, i64 4
-  store i64 %t35280, ptr %t37467
-  %t37468 = getelementptr i64, ptr %t37463, i64 5
-  store i64 %t35180, ptr %t37468
-  %t37469 = getelementptr i64, ptr %t37463, i64 6
-  store i64 %t35309, ptr %t37469
-  %t37470 = getelementptr i64, ptr %t37463, i64 7
-  store i64 %t35305, ptr %t37470
-  %t37471 = or i64 %t37462, 4
-  %t37472 = call i64 @rt_set_box(i64 %t35345, i64 %t37471)
-  %t37473 = call i64 @rt_alloc_words(i64 14)
-  %t37474 = inttoptr i64 %t37473 to ptr
-  store i64 ptrtoint (ptr @code_6186 to i64), ptr %t37474
-  %t37475 = getelementptr i64, ptr %t37474, i64 1
-  store i64 %t35287, ptr %t37475
-  %t37476 = getelementptr i64, ptr %t37474, i64 2
-  store i64 %t35337, ptr %t37476
-  %t37477 = getelementptr i64, ptr %t37474, i64 3
-  store i64 %t35179, ptr %t37477
-  %t37478 = getelementptr i64, ptr %t37474, i64 4
-  store i64 %t35328, ptr %t37478
-  %t37479 = getelementptr i64, ptr %t37474, i64 5
-  store i64 %t35336, ptr %t37479
-  %t37480 = getelementptr i64, ptr %t37474, i64 6
-  store i64 %t35291, ptr %t37480
-  %t37481 = getelementptr i64, ptr %t37474, i64 7
-  store i64 %t35333, ptr %t37481
-  %t37482 = getelementptr i64, ptr %t37474, i64 8
-  store i64 %t35345, ptr %t37482
-  %t37483 = getelementptr i64, ptr %t37474, i64 9
-  store i64 %t35338, ptr %t37483
-  %t37484 = getelementptr i64, ptr %t37474, i64 10
-  store i64 %t35180, ptr %t37484
-  %t37485 = getelementptr i64, ptr %t37474, i64 11
-  store i64 %t35330, ptr %t37485
-  %t37486 = getelementptr i64, ptr %t37474, i64 12
-  store i64 %t35292, ptr %t37486
-  %t37487 = getelementptr i64, ptr %t37474, i64 13
-  store i64 %t35317, ptr %t37487
-  %t37488 = or i64 %t37473, 4
-  %t37489 = call i64 @rt_set_box(i64 %t35346, i64 %t37488)
-  %t37490 = call i64 @rt_alloc_words(i64 17)
-  %t37491 = inttoptr i64 %t37490 to ptr
-  store i64 ptrtoint (ptr @code_6208 to i64), ptr %t37491
-  %t37492 = getelementptr i64, ptr %t37491, i64 1
-  store i64 %t35287, ptr %t37492
-  %t37493 = getelementptr i64, ptr %t37491, i64 2
-  store i64 %t35291, ptr %t37493
-  %t37494 = getelementptr i64, ptr %t37491, i64 3
-  store i64 %t35337, ptr %t37494
-  %t37495 = getelementptr i64, ptr %t37491, i64 4
-  store i64 %t35328, ptr %t37495
-  %t37496 = getelementptr i64, ptr %t37491, i64 5
-  store i64 %t35336, ptr %t37496
-  %t37497 = getelementptr i64, ptr %t37491, i64 6
-  store i64 %t35340, ptr %t37497
-  %t37498 = getelementptr i64, ptr %t37491, i64 7
-  store i64 %t35180, ptr %t37498
-  %t37499 = getelementptr i64, ptr %t37491, i64 8
-  store i64 %t35172, ptr %t37499
-  %t37500 = getelementptr i64, ptr %t37491, i64 9
-  store i64 %t35338, ptr %t37500
-  %t37501 = getelementptr i64, ptr %t37491, i64 10
-  store i64 %t35330, ptr %t37501
-  %t37502 = getelementptr i64, ptr %t37491, i64 11
-  store i64 %t35292, ptr %t37502
-  %t37503 = getelementptr i64, ptr %t37491, i64 12
-  store i64 %t35317, ptr %t37503
-  %t37504 = getelementptr i64, ptr %t37491, i64 13
-  store i64 %t35339, ptr %t37504
-  %t37505 = getelementptr i64, ptr %t37491, i64 14
-  store i64 %t35333, ptr %t37505
-  %t37506 = getelementptr i64, ptr %t37491, i64 15
-  store i64 %t35341, ptr %t37506
-  %t37507 = getelementptr i64, ptr %t37491, i64 16
-  store i64 %t35170, ptr %t37507
-  %t37508 = or i64 %t37490, 4
-  %t37509 = call i64 @rt_set_box(i64 %t35347, i64 %t37508)
-  %t37510 = call i64 @rt_alloc_words(i64 1)
-  %t37511 = inttoptr i64 %t37510 to ptr
-  store i64 ptrtoint (ptr @code_6246 to i64), ptr %t37511
-  %t37512 = or i64 %t37510, 4
-  %t37513 = call i64 @rt_set_box(i64 %t35348, i64 %t37512)
-  %t37514 = call i64 @rt_alloc_words(i64 1)
-  %t37515 = inttoptr i64 %t37514 to ptr
-  store i64 ptrtoint (ptr @code_6248 to i64), ptr %t37515
-  %t37516 = or i64 %t37514, 4
-  %t37517 = call i64 @rt_set_box(i64 %t35349, i64 %t37516)
-  %t37518 = call i64 @rt_alloc_words(i64 2)
-  %t37519 = inttoptr i64 %t37518 to ptr
-  store i64 ptrtoint (ptr @code_6250 to i64), ptr %t37519
-  %t37520 = getelementptr i64, ptr %t37519, i64 1
-  store i64 %t35349, ptr %t37520
-  %t37521 = or i64 %t37518, 4
-  %t37522 = call i64 @rt_set_box(i64 %t35350, i64 %t37521)
-  %t37523 = call i64 @rt_alloc_words(i64 7)
+  store i64 %t35357, ptr %t37432
+  %t37433 = or i64 %t37428, 4
+  %t37434 = call i64 @rt_set_box(i64 %t35409, i64 %t37433)
+  %t37435 = call i64 @rt_alloc_words(i64 10)
+  %t37436 = inttoptr i64 %t37435 to ptr
+  store i64 ptrtoint (ptr @code_6094 to i64), ptr %t37436
+  %t37437 = getelementptr i64, ptr %t37436, i64 1
+  store i64 %t35356, ptr %t37437
+  %t37438 = getelementptr i64, ptr %t37436, i64 2
+  store i64 %t35360, ptr %t37438
+  %t37439 = getelementptr i64, ptr %t37436, i64 3
+  store i64 %t35379, ptr %t37439
+  %t37440 = getelementptr i64, ptr %t37436, i64 4
+  store i64 %t35363, ptr %t37440
+  %t37441 = getelementptr i64, ptr %t37436, i64 5
+  store i64 %t35408, ptr %t37441
+  %t37442 = getelementptr i64, ptr %t37436, i64 6
+  store i64 %t35409, ptr %t37442
+  %t37443 = getelementptr i64, ptr %t37436, i64 7
+  store i64 %t35386, ptr %t37443
+  %t37444 = getelementptr i64, ptr %t37436, i64 8
+  store i64 %t35384, ptr %t37444
+  %t37445 = getelementptr i64, ptr %t37436, i64 9
+  store i64 %t35382, ptr %t37445
+  %t37446 = or i64 %t37435, 4
+  %t37447 = call i64 @rt_set_box(i64 %t35410, i64 %t37446)
+  %t37448 = call i64 @rt_alloc_words(i64 6)
+  %t37449 = inttoptr i64 %t37448 to ptr
+  store i64 ptrtoint (ptr @code_6102 to i64), ptr %t37449
+  %t37450 = getelementptr i64, ptr %t37449, i64 1
+  store i64 %t35356, ptr %t37450
+  %t37451 = getelementptr i64, ptr %t37449, i64 2
+  store i64 %t35360, ptr %t37451
+  %t37452 = getelementptr i64, ptr %t37449, i64 3
+  store i64 %t35363, ptr %t37452
+  %t37453 = getelementptr i64, ptr %t37449, i64 4
+  store i64 %t35386, ptr %t37453
+  %t37454 = getelementptr i64, ptr %t37449, i64 5
+  store i64 %t35382, ptr %t37454
+  %t37455 = or i64 %t37448, 4
+  %t37456 = call i64 @rt_set_box(i64 %t35411, i64 %t37455)
+  %t37457 = call i64 @rt_alloc_words(i64 12)
+  %t37458 = inttoptr i64 %t37457 to ptr
+  store i64 ptrtoint (ptr @code_6104 to i64), ptr %t37458
+  %t37459 = getelementptr i64, ptr %t37458, i64 1
+  store i64 %t35364, ptr %t37459
+  %t37460 = getelementptr i64, ptr %t37458, i64 2
+  store i64 %t35414, ptr %t37460
+  %t37461 = getelementptr i64, ptr %t37458, i64 3
+  store i64 %t35256, ptr %t37461
+  %t37462 = getelementptr i64, ptr %t37458, i64 4
+  store i64 %t35405, ptr %t37462
+  %t37463 = getelementptr i64, ptr %t37458, i64 5
+  store i64 %t35406, ptr %t37463
+  %t37464 = getelementptr i64, ptr %t37458, i64 6
+  store i64 %t35368, ptr %t37464
+  %t37465 = getelementptr i64, ptr %t37458, i64 7
+  store i64 %t35410, ptr %t37465
+  %t37466 = getelementptr i64, ptr %t37458, i64 8
+  store i64 %t35411, ptr %t37466
+  %t37467 = getelementptr i64, ptr %t37458, i64 9
+  store i64 %t35407, ptr %t37467
+  %t37468 = getelementptr i64, ptr %t37458, i64 10
+  store i64 %t35369, ptr %t37468
+  %t37469 = getelementptr i64, ptr %t37458, i64 11
+  store i64 %t35394, ptr %t37469
+  %t37470 = or i64 %t37457, 4
+  %t37471 = call i64 @rt_set_box(i64 %t35412, i64 %t37470)
+  %t37472 = call i64 @rt_set_box(i64 %t35413, i64 64)
+  %t37473 = call i64 @rt_unbox(i64 %t35256)
+  %t37474 = call i64 @rt_set_box(i64 %t35414, i64 %t37473)
+  %t37475 = call i64 @rt_alloc_words(i64 4)
+  %t37476 = inttoptr i64 %t37475 to ptr
+  store i64 ptrtoint (ptr @code_6114 to i64), ptr %t37476
+  %t37477 = getelementptr i64, ptr %t37476, i64 1
+  store i64 %t35383, ptr %t37477
+  %t37478 = getelementptr i64, ptr %t37476, i64 2
+  store i64 %t35257, ptr %t37478
+  %t37479 = getelementptr i64, ptr %t37476, i64 3
+  store i64 %t35414, ptr %t37479
+  %t37480 = or i64 %t37475, 4
+  %t37481 = call i64 @rt_set_box(i64 %t35415, i64 %t37480)
+  %t37482 = call i64 @rt_alloc_words(i64 2)
+  %t37483 = inttoptr i64 %t37482 to ptr
+  store i64 ptrtoint (ptr @code_6116 to i64), ptr %t37483
+  %t37484 = getelementptr i64, ptr %t37483, i64 1
+  store i64 %t35247, ptr %t37484
+  %t37485 = or i64 %t37482, 4
+  %t37486 = call i64 @rt_set_box(i64 %t35416, i64 %t37485)
+  %t37487 = call i64 @rt_alloc_words(i64 2)
+  %t37488 = inttoptr i64 %t37487 to ptr
+  store i64 ptrtoint (ptr @code_6158 to i64), ptr %t37488
+  %t37489 = getelementptr i64, ptr %t37488, i64 1
+  store i64 %t35413, ptr %t37489
+  %t37490 = or i64 %t37487, 4
+  %t37491 = call i64 @rt_set_box(i64 %t35417, i64 %t37490)
+  %t37492 = call i64 @rt_alloc_words(i64 6)
+  %t37493 = inttoptr i64 %t37492 to ptr
+  store i64 ptrtoint (ptr @code_6166 to i64), ptr %t37493
+  %t37494 = getelementptr i64, ptr %t37493, i64 1
+  store i64 %t35356, ptr %t37494
+  %t37495 = getelementptr i64, ptr %t37493, i64 2
+  store i64 %t35360, ptr %t37495
+  %t37496 = getelementptr i64, ptr %t37493, i64 3
+  store i64 %t35363, ptr %t37496
+  %t37497 = getelementptr i64, ptr %t37493, i64 4
+  store i64 %t35386, ptr %t37497
+  %t37498 = getelementptr i64, ptr %t37493, i64 5
+  store i64 %t35382, ptr %t37498
+  %t37499 = or i64 %t37492, 4
+  %t37500 = call i64 @rt_set_box(i64 %t35418, i64 %t37499)
+  %t37501 = call i64 @rt_alloc_words(i64 2)
+  %t37502 = inttoptr i64 %t37501 to ptr
+  store i64 ptrtoint (ptr @code_6168 to i64), ptr %t37502
+  %t37503 = getelementptr i64, ptr %t37502, i64 1
+  store i64 %t35420, ptr %t37503
+  %t37504 = or i64 %t37501, 4
+  %t37505 = call i64 @rt_set_box(i64 %t35419, i64 %t37504)
+  %t37506 = call i64 @rt_alloc_words(i64 14)
+  %t37507 = inttoptr i64 %t37506 to ptr
+  store i64 ptrtoint (ptr @code_6170 to i64), ptr %t37507
+  %t37508 = getelementptr i64, ptr %t37507, i64 1
+  store i64 %t35364, ptr %t37508
+  %t37509 = getelementptr i64, ptr %t37507, i64 2
+  store i64 %t35368, ptr %t37509
+  %t37510 = getelementptr i64, ptr %t37507, i64 3
+  store i64 %t35405, ptr %t37510
+  %t37511 = getelementptr i64, ptr %t37507, i64 4
+  store i64 %t35413, ptr %t37511
+  %t37512 = getelementptr i64, ptr %t37507, i64 5
+  store i64 %t35417, ptr %t37512
+  %t37513 = getelementptr i64, ptr %t37507, i64 6
+  store i64 %t35415, ptr %t37513
+  %t37514 = getelementptr i64, ptr %t37507, i64 7
+  store i64 %t35407, ptr %t37514
+  %t37515 = getelementptr i64, ptr %t37507, i64 8
+  store i64 %t35369, ptr %t37515
+  %t37516 = getelementptr i64, ptr %t37507, i64 9
+  store i64 %t35394, ptr %t37516
+  %t37517 = getelementptr i64, ptr %t37507, i64 10
+  store i64 %t35416, ptr %t37517
+  %t37518 = getelementptr i64, ptr %t37507, i64 11
+  store i64 %t35410, ptr %t37518
+  %t37519 = getelementptr i64, ptr %t37507, i64 12
+  store i64 %t35418, ptr %t37519
+  %t37520 = getelementptr i64, ptr %t37507, i64 13
+  store i64 %t35247, ptr %t37520
+  %t37521 = or i64 %t37506, 4
+  %t37522 = call i64 @rt_set_box(i64 %t35420, i64 %t37521)
+  %t37523 = call i64 @rt_alloc_words(i64 14)
   %t37524 = inttoptr i64 %t37523 to ptr
-  store i64 ptrtoint (ptr @code_6256 to i64), ptr %t37524
+  store i64 ptrtoint (ptr @code_6200 to i64), ptr %t37524
   %t37525 = getelementptr i64, ptr %t37524, i64 1
-  store i64 %t35171, ptr %t37525
+  store i64 %t35364, ptr %t37525
   %t37526 = getelementptr i64, ptr %t37524, i64 2
-  store i64 %t35234, ptr %t37526
+  store i64 %t35368, ptr %t37526
   %t37527 = getelementptr i64, ptr %t37524, i64 3
-  store i64 %t35181, ptr %t37527
+  store i64 %t35405, ptr %t37527
   %t37528 = getelementptr i64, ptr %t37524, i64 4
-  store i64 %t35235, ptr %t37528
+  store i64 %t35413, ptr %t37528
   %t37529 = getelementptr i64, ptr %t37524, i64 5
-  store i64 %t35183, ptr %t37529
+  store i64 %t35417, ptr %t37529
   %t37530 = getelementptr i64, ptr %t37524, i64 6
-  store i64 %t35349, ptr %t37530
-  %t37531 = or i64 %t37523, 4
-  %t37532 = call i64 @rt_set_box(i64 %t35351, i64 %t37531)
-  %t37533 = call i64 @rt_alloc_words(i64 1)
-  %t37534 = inttoptr i64 %t37533 to ptr
-  store i64 ptrtoint (ptr @code_6264 to i64), ptr %t37534
-  %t37535 = or i64 %t37533, 4
-  %t37536 = call i64 @rt_set_box(i64 %t35352, i64 %t37535)
-  %t37537 = call i64 @rt_alloc_words(i64 15)
-  %t37538 = inttoptr i64 %t37537 to ptr
-  store i64 ptrtoint (ptr @code_6266 to i64), ptr %t37538
-  %t37539 = getelementptr i64, ptr %t37538, i64 1
-  store i64 %t35175, ptr %t37539
-  %t37540 = getelementptr i64, ptr %t37538, i64 2
-  store i64 %t35238, ptr %t37540
-  %t37541 = getelementptr i64, ptr %t37538, i64 3
-  store i64 %t35351, ptr %t37541
-  %t37542 = getelementptr i64, ptr %t37538, i64 4
-  store i64 %t35216, ptr %t37542
-  %t37543 = getelementptr i64, ptr %t37538, i64 5
-  store i64 %t35256, ptr %t37543
-  %t37544 = getelementptr i64, ptr %t37538, i64 6
-  store i64 %t35193, ptr %t37544
-  %t37545 = getelementptr i64, ptr %t37538, i64 7
-  store i64 %t35230, ptr %t37545
-  %t37546 = getelementptr i64, ptr %t37538, i64 8
-  store i64 %t35198, ptr %t37546
-  %t37547 = getelementptr i64, ptr %t37538, i64 9
-  store i64 %t35267, ptr %t37547
-  %t37548 = getelementptr i64, ptr %t37538, i64 10
-  store i64 %t35269, ptr %t37548
-  %t37549 = getelementptr i64, ptr %t37538, i64 11
-  store i64 %t35271, ptr %t37549
-  %t37550 = getelementptr i64, ptr %t37538, i64 12
-  store i64 %t35276, ptr %t37550
-  %t37551 = getelementptr i64, ptr %t37538, i64 13
-  store i64 %t35179, ptr %t37551
-  %t37552 = getelementptr i64, ptr %t37538, i64 14
-  store i64 %t35335, ptr %t37552
-  %t37553 = or i64 %t37537, 4
-  %t37554 = call i64 @rt_set_box(i64 %t35353, i64 %t37553)
-  %t37555 = call i64 @rt_alloc_words(i64 2)
-  %t37556 = inttoptr i64 %t37555 to ptr
-  store i64 ptrtoint (ptr @code_6268 to i64), ptr %t37556
-  %t37557 = getelementptr i64, ptr %t37556, i64 1
-  store i64 %t35363, ptr %t37557
-  %t37558 = or i64 %t37555, 4
-  %t37559 = call i64 @rt_set_box(i64 %t35354, i64 %t37558)
-  %t37560 = call i64 @rt_alloc_words(i64 3)
-  %t37561 = inttoptr i64 %t37560 to ptr
-  store i64 ptrtoint (ptr @code_6270 to i64), ptr %t37561
-  %t37562 = getelementptr i64, ptr %t37561, i64 1
-  store i64 %t35366, ptr %t37562
-  %t37563 = getelementptr i64, ptr %t37561, i64 2
-  store i64 %t35377, ptr %t37563
-  %t37564 = or i64 %t37560, 4
-  %t37565 = call i64 @rt_set_box(i64 %t35355, i64 %t37564)
-  %t37566 = call i64 @rt_alloc_words(i64 6)
-  %t37567 = inttoptr i64 %t37566 to ptr
-  store i64 ptrtoint (ptr @code_6272 to i64), ptr %t37567
-  %t37568 = getelementptr i64, ptr %t37567, i64 1
-  store i64 %t35348, ptr %t37568
-  %t37569 = getelementptr i64, ptr %t37567, i64 2
-  store i64 %t35352, ptr %t37569
-  %t37570 = getelementptr i64, ptr %t37567, i64 3
-  store i64 %t35354, ptr %t37570
-  %t37571 = getelementptr i64, ptr %t37567, i64 4
-  store i64 %t35355, ptr %t37571
-  %t37572 = getelementptr i64, ptr %t37567, i64 5
-  store i64 %t35353, ptr %t37572
-  %t37573 = or i64 %t37566, 4
-  %t37574 = call i64 @rt_set_box(i64 %t35356, i64 %t37573)
-  %t37575 = call i64 @rt_alloc_words(i64 7)
-  %t37576 = inttoptr i64 %t37575 to ptr
-  store i64 ptrtoint (ptr @code_6274 to i64), ptr %t37576
-  %t37577 = getelementptr i64, ptr %t37576, i64 1
-  store i64 %t35348, ptr %t37577
-  %t37578 = getelementptr i64, ptr %t37576, i64 2
-  store i64 %t35354, ptr %t37578
-  %t37579 = getelementptr i64, ptr %t37576, i64 3
-  store i64 %t35355, ptr %t37579
-  %t37580 = getelementptr i64, ptr %t37576, i64 4
-  store i64 %t35352, ptr %t37580
-  %t37581 = getelementptr i64, ptr %t37576, i64 5
-  store i64 %t35353, ptr %t37581
-  %t37582 = getelementptr i64, ptr %t37576, i64 6
-  store i64 %t35350, ptr %t37582
-  %t37583 = or i64 %t37575, 4
-  %t37584 = call i64 @rt_set_box(i64 %t35357, i64 %t37583)
-  %t37585 = call i64 @rt_make_string(ptr @.str.lit.837, i64 25)
-  %t37586 = call i64 @rt_set_box(i64 %t35358, i64 %t37585)
-  %t37587 = call i64 @rt_alloc_words(i64 2)
-  %t37588 = inttoptr i64 %t37587 to ptr
-  store i64 ptrtoint (ptr @code_6276 to i64), ptr %t37588
-  %t37589 = getelementptr i64, ptr %t37588, i64 1
-  store i64 %t35349, ptr %t37589
-  %t37590 = or i64 %t37587, 4
-  %t37591 = call i64 @rt_set_box(i64 %t35359, i64 %t37590)
+  store i64 %t35416, ptr %t37530
+  %t37531 = getelementptr i64, ptr %t37524, i64 7
+  store i64 %t35249, ptr %t37531
+  %t37532 = getelementptr i64, ptr %t37524, i64 8
+  store i64 %t35410, ptr %t37532
+  %t37533 = getelementptr i64, ptr %t37524, i64 9
+  store i64 %t35418, ptr %t37533
+  %t37534 = getelementptr i64, ptr %t37524, i64 10
+  store i64 %t35415, ptr %t37534
+  %t37535 = getelementptr i64, ptr %t37524, i64 11
+  store i64 %t35407, ptr %t37535
+  %t37536 = getelementptr i64, ptr %t37524, i64 12
+  store i64 %t35369, ptr %t37536
+  %t37537 = getelementptr i64, ptr %t37524, i64 13
+  store i64 %t35394, ptr %t37537
+  %t37538 = or i64 %t37523, 4
+  %t37539 = call i64 @rt_set_box(i64 %t35421, i64 %t37538)
+  %t37540 = call i64 @rt_alloc_words(i64 8)
+  %t37541 = inttoptr i64 %t37540 to ptr
+  store i64 ptrtoint (ptr @code_6222 to i64), ptr %t37541
+  %t37542 = getelementptr i64, ptr %t37541, i64 1
+  store i64 %t35356, ptr %t37542
+  %t37543 = getelementptr i64, ptr %t37541, i64 2
+  store i64 %t35360, ptr %t37543
+  %t37544 = getelementptr i64, ptr %t37541, i64 3
+  store i64 %t35363, ptr %t37544
+  %t37545 = getelementptr i64, ptr %t37541, i64 4
+  store i64 %t35357, ptr %t37545
+  %t37546 = getelementptr i64, ptr %t37541, i64 5
+  store i64 %t35257, ptr %t37546
+  %t37547 = getelementptr i64, ptr %t37541, i64 6
+  store i64 %t35386, ptr %t37547
+  %t37548 = getelementptr i64, ptr %t37541, i64 7
+  store i64 %t35382, ptr %t37548
+  %t37549 = or i64 %t37540, 4
+  %t37550 = call i64 @rt_set_box(i64 %t35422, i64 %t37549)
+  %t37551 = call i64 @rt_alloc_words(i64 14)
+  %t37552 = inttoptr i64 %t37551 to ptr
+  store i64 ptrtoint (ptr @code_6226 to i64), ptr %t37552
+  %t37553 = getelementptr i64, ptr %t37552, i64 1
+  store i64 %t35364, ptr %t37553
+  %t37554 = getelementptr i64, ptr %t37552, i64 2
+  store i64 %t35414, ptr %t37554
+  %t37555 = getelementptr i64, ptr %t37552, i64 3
+  store i64 %t35256, ptr %t37555
+  %t37556 = getelementptr i64, ptr %t37552, i64 4
+  store i64 %t35405, ptr %t37556
+  %t37557 = getelementptr i64, ptr %t37552, i64 5
+  store i64 %t35413, ptr %t37557
+  %t37558 = getelementptr i64, ptr %t37552, i64 6
+  store i64 %t35368, ptr %t37558
+  %t37559 = getelementptr i64, ptr %t37552, i64 7
+  store i64 %t35410, ptr %t37559
+  %t37560 = getelementptr i64, ptr %t37552, i64 8
+  store i64 %t35422, ptr %t37560
+  %t37561 = getelementptr i64, ptr %t37552, i64 9
+  store i64 %t35415, ptr %t37561
+  %t37562 = getelementptr i64, ptr %t37552, i64 10
+  store i64 %t35257, ptr %t37562
+  %t37563 = getelementptr i64, ptr %t37552, i64 11
+  store i64 %t35407, ptr %t37563
+  %t37564 = getelementptr i64, ptr %t37552, i64 12
+  store i64 %t35369, ptr %t37564
+  %t37565 = getelementptr i64, ptr %t37552, i64 13
+  store i64 %t35394, ptr %t37565
+  %t37566 = or i64 %t37551, 4
+  %t37567 = call i64 @rt_set_box(i64 %t35423, i64 %t37566)
+  %t37568 = call i64 @rt_alloc_words(i64 17)
+  %t37569 = inttoptr i64 %t37568 to ptr
+  store i64 ptrtoint (ptr @code_6248 to i64), ptr %t37569
+  %t37570 = getelementptr i64, ptr %t37569, i64 1
+  store i64 %t35364, ptr %t37570
+  %t37571 = getelementptr i64, ptr %t37569, i64 2
+  store i64 %t35368, ptr %t37571
+  %t37572 = getelementptr i64, ptr %t37569, i64 3
+  store i64 %t35414, ptr %t37572
+  %t37573 = getelementptr i64, ptr %t37569, i64 4
+  store i64 %t35405, ptr %t37573
+  %t37574 = getelementptr i64, ptr %t37569, i64 5
+  store i64 %t35413, ptr %t37574
+  %t37575 = getelementptr i64, ptr %t37569, i64 6
+  store i64 %t35417, ptr %t37575
+  %t37576 = getelementptr i64, ptr %t37569, i64 7
+  store i64 %t35257, ptr %t37576
+  %t37577 = getelementptr i64, ptr %t37569, i64 8
+  store i64 %t35249, ptr %t37577
+  %t37578 = getelementptr i64, ptr %t37569, i64 9
+  store i64 %t35415, ptr %t37578
+  %t37579 = getelementptr i64, ptr %t37569, i64 10
+  store i64 %t35407, ptr %t37579
+  %t37580 = getelementptr i64, ptr %t37569, i64 11
+  store i64 %t35369, ptr %t37580
+  %t37581 = getelementptr i64, ptr %t37569, i64 12
+  store i64 %t35394, ptr %t37581
+  %t37582 = getelementptr i64, ptr %t37569, i64 13
+  store i64 %t35416, ptr %t37582
+  %t37583 = getelementptr i64, ptr %t37569, i64 14
+  store i64 %t35410, ptr %t37583
+  %t37584 = getelementptr i64, ptr %t37569, i64 15
+  store i64 %t35418, ptr %t37584
+  %t37585 = getelementptr i64, ptr %t37569, i64 16
+  store i64 %t35247, ptr %t37585
+  %t37586 = or i64 %t37568, 4
+  %t37587 = call i64 @rt_set_box(i64 %t35424, i64 %t37586)
+  %t37588 = call i64 @rt_alloc_words(i64 1)
+  %t37589 = inttoptr i64 %t37588 to ptr
+  store i64 ptrtoint (ptr @code_6286 to i64), ptr %t37589
+  %t37590 = or i64 %t37588, 4
+  %t37591 = call i64 @rt_set_box(i64 %t35425, i64 %t37590)
   %t37592 = call i64 @rt_alloc_words(i64 1)
   %t37593 = inttoptr i64 %t37592 to ptr
-  store i64 ptrtoint (ptr @code_6280 to i64), ptr %t37593
+  store i64 ptrtoint (ptr @code_6288 to i64), ptr %t37593
   %t37594 = or i64 %t37592, 4
-  %t37595 = call i64 @rt_set_box(i64 %t35360, i64 %t37594)
-  %t37596 = call i64 @rt_alloc_words(i64 11)
+  %t37595 = call i64 @rt_set_box(i64 %t35426, i64 %t37594)
+  %t37596 = call i64 @rt_alloc_words(i64 2)
   %t37597 = inttoptr i64 %t37596 to ptr
-  store i64 ptrtoint (ptr @code_6284 to i64), ptr %t37597
+  store i64 ptrtoint (ptr @code_6290 to i64), ptr %t37597
   %t37598 = getelementptr i64, ptr %t37597, i64 1
-  store i64 %t35348, ptr %t37598
-  %t37599 = getelementptr i64, ptr %t37597, i64 2
-  store i64 %t35352, ptr %t37599
-  %t37600 = getelementptr i64, ptr %t37597, i64 3
-  store i64 %t35354, ptr %t37600
-  %t37601 = getelementptr i64, ptr %t37597, i64 4
-  store i64 %t35355, ptr %t37601
-  %t37602 = getelementptr i64, ptr %t37597, i64 5
-  store i64 %t35366, ptr %t37602
-  %t37603 = getelementptr i64, ptr %t37597, i64 6
-  store i64 %t35359, ptr %t37603
-  %t37604 = getelementptr i64, ptr %t37597, i64 7
-  store i64 %t35377, ptr %t37604
-  %t37605 = getelementptr i64, ptr %t37597, i64 8
-  store i64 %t35379, ptr %t37605
-  %t37606 = getelementptr i64, ptr %t37597, i64 9
-  store i64 %t35360, ptr %t37606
-  %t37607 = getelementptr i64, ptr %t37597, i64 10
-  store i64 %t35358, ptr %t37607
-  %t37608 = or i64 %t37596, 4
-  %t37609 = call i64 @rt_set_box(i64 %t35361, i64 %t37608)
-  %t37610 = call i64 @rt_alloc_words(i64 4)
-  %t37611 = inttoptr i64 %t37610 to ptr
-  store i64 ptrtoint (ptr @code_6286 to i64), ptr %t37611
-  %t37612 = getelementptr i64, ptr %t37611, i64 1
-  store i64 %t35373, ptr %t37612
-  %t37613 = getelementptr i64, ptr %t37611, i64 2
-  store i64 %t35179, ptr %t37613
-  %t37614 = getelementptr i64, ptr %t37611, i64 3
-  store i64 %t35352, ptr %t37614
-  %t37615 = or i64 %t37610, 4
-  %t37616 = call i64 @rt_set_box(i64 %t35362, i64 %t37615)
-  %t37617 = call i64 @rt_alloc_words(i64 1)
-  %t37618 = inttoptr i64 %t37617 to ptr
-  store i64 ptrtoint (ptr @code_6288 to i64), ptr %t37618
-  %t37619 = or i64 %t37617, 4
-  %t37620 = call i64 @rt_set_box(i64 %t35363, i64 %t37619)
-  %t37621 = call i64 @rt_alloc_words(i64 1)
-  %t37622 = inttoptr i64 %t37621 to ptr
-  store i64 ptrtoint (ptr @code_6290 to i64), ptr %t37622
-  %t37623 = or i64 %t37621, 4
-  %t37624 = call i64 @rt_set_box(i64 %t35364, i64 %t37623)
-  %t37625 = call i64 @rt_alloc_words(i64 1)
-  %t37626 = inttoptr i64 %t37625 to ptr
-  store i64 ptrtoint (ptr @code_6292 to i64), ptr %t37626
-  %t37627 = or i64 %t37625, 4
-  %t37628 = call i64 @rt_set_box(i64 %t35365, i64 %t37627)
-  %t37629 = call i64 @rt_alloc_words(i64 2)
-  %t37630 = inttoptr i64 %t37629 to ptr
-  store i64 ptrtoint (ptr @code_6294 to i64), ptr %t37630
-  %t37631 = getelementptr i64, ptr %t37630, i64 1
-  store i64 %t35365, ptr %t37631
-  %t37632 = or i64 %t37629, 4
-  %t37633 = call i64 @rt_set_box(i64 %t35366, i64 %t37632)
-  %t37634 = call i64 @rt_alloc_words(i64 2)
-  %t37635 = inttoptr i64 %t37634 to ptr
-  store i64 ptrtoint (ptr @code_6298 to i64), ptr %t37635
-  %t37636 = getelementptr i64, ptr %t37635, i64 1
-  store i64 %t35364, ptr %t37636
-  %t37637 = or i64 %t37634, 4
-  %t37638 = call i64 @rt_set_box(i64 %t35367, i64 %t37637)
-  %t37639 = call i64 @rt_alloc_words(i64 4)
-  %t37640 = inttoptr i64 %t37639 to ptr
-  store i64 ptrtoint (ptr @code_6302 to i64), ptr %t37640
-  %t37641 = getelementptr i64, ptr %t37640, i64 1
-  store i64 %t35369, ptr %t37641
-  %t37642 = getelementptr i64, ptr %t37640, i64 2
-  store i64 %t35370, ptr %t37642
-  %t37643 = getelementptr i64, ptr %t37640, i64 3
-  store i64 %t35204, ptr %t37643
-  %t37644 = or i64 %t37639, 4
-  %t37645 = call i64 @rt_set_box(i64 %t35368, i64 %t37644)
-  %t37646 = call i64 @rt_alloc_words(i64 4)
-  %t37647 = inttoptr i64 %t37646 to ptr
-  store i64 ptrtoint (ptr @code_6304 to i64), ptr %t37647
-  %t37648 = getelementptr i64, ptr %t37647, i64 1
-  store i64 %t35372, ptr %t37648
-  %t37649 = getelementptr i64, ptr %t37647, i64 2
-  store i64 %t35227, ptr %t37649
-  %t37650 = getelementptr i64, ptr %t37647, i64 3
-  store i64 %t35371, ptr %t37650
-  %t37651 = or i64 %t37646, 4
-  %t37652 = call i64 @rt_set_box(i64 %t35369, i64 %t37651)
-  %t37653 = call i64 @rt_alloc_words(i64 3)
+  store i64 %t35426, ptr %t37598
+  %t37599 = or i64 %t37596, 4
+  %t37600 = call i64 @rt_set_box(i64 %t35427, i64 %t37599)
+  %t37601 = call i64 @rt_alloc_words(i64 7)
+  %t37602 = inttoptr i64 %t37601 to ptr
+  store i64 ptrtoint (ptr @code_6296 to i64), ptr %t37602
+  %t37603 = getelementptr i64, ptr %t37602, i64 1
+  store i64 %t35248, ptr %t37603
+  %t37604 = getelementptr i64, ptr %t37602, i64 2
+  store i64 %t35311, ptr %t37604
+  %t37605 = getelementptr i64, ptr %t37602, i64 3
+  store i64 %t35258, ptr %t37605
+  %t37606 = getelementptr i64, ptr %t37602, i64 4
+  store i64 %t35312, ptr %t37606
+  %t37607 = getelementptr i64, ptr %t37602, i64 5
+  store i64 %t35260, ptr %t37607
+  %t37608 = getelementptr i64, ptr %t37602, i64 6
+  store i64 %t35426, ptr %t37608
+  %t37609 = or i64 %t37601, 4
+  %t37610 = call i64 @rt_set_box(i64 %t35428, i64 %t37609)
+  %t37611 = call i64 @rt_alloc_words(i64 1)
+  %t37612 = inttoptr i64 %t37611 to ptr
+  store i64 ptrtoint (ptr @code_6304 to i64), ptr %t37612
+  %t37613 = or i64 %t37611, 4
+  %t37614 = call i64 @rt_set_box(i64 %t35429, i64 %t37613)
+  %t37615 = call i64 @rt_alloc_words(i64 15)
+  %t37616 = inttoptr i64 %t37615 to ptr
+  store i64 ptrtoint (ptr @code_6306 to i64), ptr %t37616
+  %t37617 = getelementptr i64, ptr %t37616, i64 1
+  store i64 %t35252, ptr %t37617
+  %t37618 = getelementptr i64, ptr %t37616, i64 2
+  store i64 %t35315, ptr %t37618
+  %t37619 = getelementptr i64, ptr %t37616, i64 3
+  store i64 %t35428, ptr %t37619
+  %t37620 = getelementptr i64, ptr %t37616, i64 4
+  store i64 %t35293, ptr %t37620
+  %t37621 = getelementptr i64, ptr %t37616, i64 5
+  store i64 %t35333, ptr %t37621
+  %t37622 = getelementptr i64, ptr %t37616, i64 6
+  store i64 %t35270, ptr %t37622
+  %t37623 = getelementptr i64, ptr %t37616, i64 7
+  store i64 %t35307, ptr %t37623
+  %t37624 = getelementptr i64, ptr %t37616, i64 8
+  store i64 %t35275, ptr %t37624
+  %t37625 = getelementptr i64, ptr %t37616, i64 9
+  store i64 %t35344, ptr %t37625
+  %t37626 = getelementptr i64, ptr %t37616, i64 10
+  store i64 %t35346, ptr %t37626
+  %t37627 = getelementptr i64, ptr %t37616, i64 11
+  store i64 %t35348, ptr %t37627
+  %t37628 = getelementptr i64, ptr %t37616, i64 12
+  store i64 %t35353, ptr %t37628
+  %t37629 = getelementptr i64, ptr %t37616, i64 13
+  store i64 %t35256, ptr %t37629
+  %t37630 = getelementptr i64, ptr %t37616, i64 14
+  store i64 %t35412, ptr %t37630
+  %t37631 = or i64 %t37615, 4
+  %t37632 = call i64 @rt_set_box(i64 %t35430, i64 %t37631)
+  %t37633 = call i64 @rt_alloc_words(i64 2)
+  %t37634 = inttoptr i64 %t37633 to ptr
+  store i64 ptrtoint (ptr @code_6308 to i64), ptr %t37634
+  %t37635 = getelementptr i64, ptr %t37634, i64 1
+  store i64 %t35440, ptr %t37635
+  %t37636 = or i64 %t37633, 4
+  %t37637 = call i64 @rt_set_box(i64 %t35431, i64 %t37636)
+  %t37638 = call i64 @rt_alloc_words(i64 3)
+  %t37639 = inttoptr i64 %t37638 to ptr
+  store i64 ptrtoint (ptr @code_6310 to i64), ptr %t37639
+  %t37640 = getelementptr i64, ptr %t37639, i64 1
+  store i64 %t35443, ptr %t37640
+  %t37641 = getelementptr i64, ptr %t37639, i64 2
+  store i64 %t35454, ptr %t37641
+  %t37642 = or i64 %t37638, 4
+  %t37643 = call i64 @rt_set_box(i64 %t35432, i64 %t37642)
+  %t37644 = call i64 @rt_alloc_words(i64 6)
+  %t37645 = inttoptr i64 %t37644 to ptr
+  store i64 ptrtoint (ptr @code_6312 to i64), ptr %t37645
+  %t37646 = getelementptr i64, ptr %t37645, i64 1
+  store i64 %t35425, ptr %t37646
+  %t37647 = getelementptr i64, ptr %t37645, i64 2
+  store i64 %t35429, ptr %t37647
+  %t37648 = getelementptr i64, ptr %t37645, i64 3
+  store i64 %t35431, ptr %t37648
+  %t37649 = getelementptr i64, ptr %t37645, i64 4
+  store i64 %t35432, ptr %t37649
+  %t37650 = getelementptr i64, ptr %t37645, i64 5
+  store i64 %t35430, ptr %t37650
+  %t37651 = or i64 %t37644, 4
+  %t37652 = call i64 @rt_set_box(i64 %t35433, i64 %t37651)
+  %t37653 = call i64 @rt_alloc_words(i64 7)
   %t37654 = inttoptr i64 %t37653 to ptr
-  store i64 ptrtoint (ptr @code_6306 to i64), ptr %t37654
+  store i64 ptrtoint (ptr @code_6314 to i64), ptr %t37654
   %t37655 = getelementptr i64, ptr %t37654, i64 1
-  store i64 %t35204, ptr %t37655
+  store i64 %t35425, ptr %t37655
   %t37656 = getelementptr i64, ptr %t37654, i64 2
-  store i64 %t35256, ptr %t37656
-  %t37657 = or i64 %t37653, 4
-  %t37658 = call i64 @rt_set_box(i64 %t35370, i64 %t37657)
-  %t37659 = call i64 @rt_alloc_words(i64 3)
-  %t37660 = inttoptr i64 %t37659 to ptr
-  store i64 ptrtoint (ptr @code_6308 to i64), ptr %t37660
-  %t37661 = getelementptr i64, ptr %t37660, i64 1
-  store i64 %t35373, ptr %t37661
-  %t37662 = getelementptr i64, ptr %t37660, i64 2
-  store i64 %t35352, ptr %t37662
-  %t37663 = or i64 %t37659, 4
-  %t37664 = call i64 @rt_set_box(i64 %t35371, i64 %t37663)
+  store i64 %t35431, ptr %t37656
+  %t37657 = getelementptr i64, ptr %t37654, i64 3
+  store i64 %t35432, ptr %t37657
+  %t37658 = getelementptr i64, ptr %t37654, i64 4
+  store i64 %t35429, ptr %t37658
+  %t37659 = getelementptr i64, ptr %t37654, i64 5
+  store i64 %t35430, ptr %t37659
+  %t37660 = getelementptr i64, ptr %t37654, i64 6
+  store i64 %t35427, ptr %t37660
+  %t37661 = or i64 %t37653, 4
+  %t37662 = call i64 @rt_set_box(i64 %t35434, i64 %t37661)
+  %t37663 = call i64 @rt_make_string(ptr @.str.lit.837, i64 25)
+  %t37664 = call i64 @rt_set_box(i64 %t35435, i64 %t37663)
   %t37665 = call i64 @rt_alloc_words(i64 2)
   %t37666 = inttoptr i64 %t37665 to ptr
-  store i64 ptrtoint (ptr @code_6310 to i64), ptr %t37666
+  store i64 ptrtoint (ptr @code_6316 to i64), ptr %t37666
   %t37667 = getelementptr i64, ptr %t37666, i64 1
-  store i64 %t35352, ptr %t37667
+  store i64 %t35426, ptr %t37667
   %t37668 = or i64 %t37665, 4
-  %t37669 = call i64 @rt_set_box(i64 %t35372, i64 %t37668)
-  %t37670 = call i64 @rt_alloc_words(i64 5)
+  %t37669 = call i64 @rt_set_box(i64 %t35436, i64 %t37668)
+  %t37670 = call i64 @rt_alloc_words(i64 1)
   %t37671 = inttoptr i64 %t37670 to ptr
-  store i64 ptrtoint (ptr @code_6314 to i64), ptr %t37671
-  %t37672 = getelementptr i64, ptr %t37671, i64 1
-  store i64 %t35267, ptr %t37672
-  %t37673 = getelementptr i64, ptr %t37671, i64 2
-  store i64 %t35269, ptr %t37673
-  %t37674 = getelementptr i64, ptr %t37671, i64 3
-  store i64 %t35271, ptr %t37674
-  %t37675 = getelementptr i64, ptr %t37671, i64 4
-  store i64 %t35276, ptr %t37675
-  %t37676 = or i64 %t37670, 4
-  %t37677 = call i64 @rt_set_box(i64 %t35373, i64 %t37676)
-  %t37678 = call i64 @rt_alloc_words(i64 1)
-  %t37679 = inttoptr i64 %t37678 to ptr
-  store i64 ptrtoint (ptr @code_6316 to i64), ptr %t37679
-  %t37680 = or i64 %t37678, 4
-  %t37681 = call i64 @rt_set_box(i64 %t35374, i64 %t37680)
-  %t37682 = call i64 @rt_alloc_words(i64 2)
-  %t37683 = inttoptr i64 %t37682 to ptr
-  store i64 ptrtoint (ptr @code_6320 to i64), ptr %t37683
-  %t37684 = getelementptr i64, ptr %t37683, i64 1
-  store i64 %t35375, ptr %t37684
-  %t37685 = or i64 %t37682, 4
-  %t37686 = call i64 @rt_set_box(i64 %t35375, i64 %t37685)
-  %t37687 = call i64 @rt_alloc_words(i64 1)
-  %t37688 = inttoptr i64 %t37687 to ptr
-  store i64 ptrtoint (ptr @code_6322 to i64), ptr %t37688
-  %t37689 = or i64 %t37687, 4
-  %t37690 = call i64 @rt_set_box(i64 %t35376, i64 %t37689)
-  %t37691 = call i64 @rt_alloc_words(i64 2)
-  %t37692 = inttoptr i64 %t37691 to ptr
-  store i64 ptrtoint (ptr @code_6326 to i64), ptr %t37692
-  %t37693 = getelementptr i64, ptr %t37692, i64 1
-  store i64 %t35378, ptr %t37693
-  %t37694 = or i64 %t37691, 4
-  %t37695 = call i64 @rt_set_box(i64 %t35377, i64 %t37694)
-  %t37696 = call i64 @rt_alloc_words(i64 17)
-  %t37697 = inttoptr i64 %t37696 to ptr
-  store i64 ptrtoint (ptr @code_6328 to i64), ptr %t37697
-  %t37698 = getelementptr i64, ptr %t37697, i64 1
-  store i64 %t35175, ptr %t37698
-  %t37699 = getelementptr i64, ptr %t37697, i64 2
-  store i64 %t35238, ptr %t37699
-  %t37700 = getelementptr i64, ptr %t37697, i64 3
-  store i64 %t35374, ptr %t37700
-  %t37701 = getelementptr i64, ptr %t37697, i64 4
-  store i64 %t35170, ptr %t37701
-  %t37702 = getelementptr i64, ptr %t37697, i64 5
-  store i64 %t35351, ptr %t37702
-  %t37703 = getelementptr i64, ptr %t37697, i64 6
-  store i64 %t35202, ptr %t37703
-  %t37704 = getelementptr i64, ptr %t37697, i64 7
-  store i64 %t35204, ptr %t37704
-  %t37705 = getelementptr i64, ptr %t37697, i64 8
-  store i64 %t35217, ptr %t37705
-  %t37706 = getelementptr i64, ptr %t37697, i64 9
-  store i64 %t35221, ptr %t37706
-  %t37707 = getelementptr i64, ptr %t37697, i64 10
-  store i64 %t35368, ptr %t37707
-  %t37708 = getelementptr i64, ptr %t37697, i64 11
-  store i64 %t35180, ptr %t37708
-  %t37709 = getelementptr i64, ptr %t37697, i64 12
-  store i64 %t35347, ptr %t37709
-  %t37710 = getelementptr i64, ptr %t37697, i64 13
-  store i64 %t35370, ptr %t37710
-  %t37711 = getelementptr i64, ptr %t37697, i64 14
-  store i64 %t35375, ptr %t37711
-  %t37712 = getelementptr i64, ptr %t37697, i64 15
-  store i64 %t35376, ptr %t37712
-  %t37713 = getelementptr i64, ptr %t37697, i64 16
-  store i64 %t35369, ptr %t37713
-  %t37714 = or i64 %t37696, 4
-  %t37715 = call i64 @rt_set_box(i64 %t35378, i64 %t37714)
-  %t37716 = call i64 @rt_alloc_words(i64 20)
-  %t37717 = inttoptr i64 %t37716 to ptr
-  store i64 ptrtoint (ptr @code_6356 to i64), ptr %t37717
-  %t37718 = getelementptr i64, ptr %t37717, i64 1
-  store i64 %t35367, ptr %t37718
-  %t37719 = getelementptr i64, ptr %t37717, i64 2
-  store i64 %t35374, ptr %t37719
-  %t37720 = getelementptr i64, ptr %t37717, i64 3
-  store i64 %t35350, ptr %t37720
-  %t37721 = getelementptr i64, ptr %t37717, i64 4
-  store i64 %t35175, ptr %t37721
-  %t37722 = getelementptr i64, ptr %t37717, i64 5
-  store i64 %t35238, ptr %t37722
-  %t37723 = getelementptr i64, ptr %t37717, i64 6
-  store i64 %t35170, ptr %t37723
-  %t37724 = getelementptr i64, ptr %t37717, i64 7
-  store i64 %t35351, ptr %t37724
-  %t37725 = getelementptr i64, ptr %t37717, i64 8
-  store i64 %t35216, ptr %t37725
-  %t37726 = getelementptr i64, ptr %t37717, i64 9
-  store i64 %t35256, ptr %t37726
-  %t37727 = getelementptr i64, ptr %t37717, i64 10
-  store i64 %t35230, ptr %t37727
-  %t37728 = getelementptr i64, ptr %t37717, i64 11
-  store i64 %t35198, ptr %t37728
-  %t37729 = getelementptr i64, ptr %t37717, i64 12
-  store i64 %t35193, ptr %t37729
-  %t37730 = getelementptr i64, ptr %t37717, i64 13
-  store i64 %t35226, ptr %t37730
-  %t37731 = getelementptr i64, ptr %t37717, i64 14
-  store i64 %t35267, ptr %t37731
-  %t37732 = getelementptr i64, ptr %t37717, i64 15
-  store i64 %t35269, ptr %t37732
-  %t37733 = getelementptr i64, ptr %t37717, i64 16
-  store i64 %t35271, ptr %t37733
-  %t37734 = getelementptr i64, ptr %t37717, i64 17
-  store i64 %t35276, ptr %t37734
-  %t37735 = getelementptr i64, ptr %t37717, i64 18
-  store i64 %t35179, ptr %t37735
-  %t37736 = getelementptr i64, ptr %t37717, i64 19
-  store i64 %t35346, ptr %t37736
-  %t37737 = or i64 %t37716, 4
-  %t37738 = call i64 @rt_set_box(i64 %t35379, i64 %t37737)
-  %t37739 = call i64 @rt_alloc_words(i64 1)
-  %t37740 = inttoptr i64 %t37739 to ptr
-  store i64 ptrtoint (ptr @code_6362 to i64), ptr %t37740
-  %t37741 = or i64 %t37739, 4
-  %t37742 = call i64 @rt_set_box(i64 %t35380, i64 %t37741)
-  %t37743 = call i64 @rt_alloc_words(i64 1)
+  store i64 ptrtoint (ptr @code_6320 to i64), ptr %t37671
+  %t37672 = or i64 %t37670, 4
+  %t37673 = call i64 @rt_set_box(i64 %t35437, i64 %t37672)
+  %t37674 = call i64 @rt_alloc_words(i64 11)
+  %t37675 = inttoptr i64 %t37674 to ptr
+  store i64 ptrtoint (ptr @code_6324 to i64), ptr %t37675
+  %t37676 = getelementptr i64, ptr %t37675, i64 1
+  store i64 %t35425, ptr %t37676
+  %t37677 = getelementptr i64, ptr %t37675, i64 2
+  store i64 %t35429, ptr %t37677
+  %t37678 = getelementptr i64, ptr %t37675, i64 3
+  store i64 %t35431, ptr %t37678
+  %t37679 = getelementptr i64, ptr %t37675, i64 4
+  store i64 %t35432, ptr %t37679
+  %t37680 = getelementptr i64, ptr %t37675, i64 5
+  store i64 %t35443, ptr %t37680
+  %t37681 = getelementptr i64, ptr %t37675, i64 6
+  store i64 %t35436, ptr %t37681
+  %t37682 = getelementptr i64, ptr %t37675, i64 7
+  store i64 %t35454, ptr %t37682
+  %t37683 = getelementptr i64, ptr %t37675, i64 8
+  store i64 %t35456, ptr %t37683
+  %t37684 = getelementptr i64, ptr %t37675, i64 9
+  store i64 %t35437, ptr %t37684
+  %t37685 = getelementptr i64, ptr %t37675, i64 10
+  store i64 %t35435, ptr %t37685
+  %t37686 = or i64 %t37674, 4
+  %t37687 = call i64 @rt_set_box(i64 %t35438, i64 %t37686)
+  %t37688 = call i64 @rt_alloc_words(i64 4)
+  %t37689 = inttoptr i64 %t37688 to ptr
+  store i64 ptrtoint (ptr @code_6326 to i64), ptr %t37689
+  %t37690 = getelementptr i64, ptr %t37689, i64 1
+  store i64 %t35450, ptr %t37690
+  %t37691 = getelementptr i64, ptr %t37689, i64 2
+  store i64 %t35256, ptr %t37691
+  %t37692 = getelementptr i64, ptr %t37689, i64 3
+  store i64 %t35429, ptr %t37692
+  %t37693 = or i64 %t37688, 4
+  %t37694 = call i64 @rt_set_box(i64 %t35439, i64 %t37693)
+  %t37695 = call i64 @rt_alloc_words(i64 1)
+  %t37696 = inttoptr i64 %t37695 to ptr
+  store i64 ptrtoint (ptr @code_6328 to i64), ptr %t37696
+  %t37697 = or i64 %t37695, 4
+  %t37698 = call i64 @rt_set_box(i64 %t35440, i64 %t37697)
+  %t37699 = call i64 @rt_alloc_words(i64 1)
+  %t37700 = inttoptr i64 %t37699 to ptr
+  store i64 ptrtoint (ptr @code_6330 to i64), ptr %t37700
+  %t37701 = or i64 %t37699, 4
+  %t37702 = call i64 @rt_set_box(i64 %t35441, i64 %t37701)
+  %t37703 = call i64 @rt_alloc_words(i64 1)
+  %t37704 = inttoptr i64 %t37703 to ptr
+  store i64 ptrtoint (ptr @code_6332 to i64), ptr %t37704
+  %t37705 = or i64 %t37703, 4
+  %t37706 = call i64 @rt_set_box(i64 %t35442, i64 %t37705)
+  %t37707 = call i64 @rt_alloc_words(i64 2)
+  %t37708 = inttoptr i64 %t37707 to ptr
+  store i64 ptrtoint (ptr @code_6334 to i64), ptr %t37708
+  %t37709 = getelementptr i64, ptr %t37708, i64 1
+  store i64 %t35442, ptr %t37709
+  %t37710 = or i64 %t37707, 4
+  %t37711 = call i64 @rt_set_box(i64 %t35443, i64 %t37710)
+  %t37712 = call i64 @rt_alloc_words(i64 2)
+  %t37713 = inttoptr i64 %t37712 to ptr
+  store i64 ptrtoint (ptr @code_6338 to i64), ptr %t37713
+  %t37714 = getelementptr i64, ptr %t37713, i64 1
+  store i64 %t35441, ptr %t37714
+  %t37715 = or i64 %t37712, 4
+  %t37716 = call i64 @rt_set_box(i64 %t35444, i64 %t37715)
+  %t37717 = call i64 @rt_alloc_words(i64 4)
+  %t37718 = inttoptr i64 %t37717 to ptr
+  store i64 ptrtoint (ptr @code_6342 to i64), ptr %t37718
+  %t37719 = getelementptr i64, ptr %t37718, i64 1
+  store i64 %t35446, ptr %t37719
+  %t37720 = getelementptr i64, ptr %t37718, i64 2
+  store i64 %t35447, ptr %t37720
+  %t37721 = getelementptr i64, ptr %t37718, i64 3
+  store i64 %t35281, ptr %t37721
+  %t37722 = or i64 %t37717, 4
+  %t37723 = call i64 @rt_set_box(i64 %t35445, i64 %t37722)
+  %t37724 = call i64 @rt_alloc_words(i64 4)
+  %t37725 = inttoptr i64 %t37724 to ptr
+  store i64 ptrtoint (ptr @code_6344 to i64), ptr %t37725
+  %t37726 = getelementptr i64, ptr %t37725, i64 1
+  store i64 %t35449, ptr %t37726
+  %t37727 = getelementptr i64, ptr %t37725, i64 2
+  store i64 %t35304, ptr %t37727
+  %t37728 = getelementptr i64, ptr %t37725, i64 3
+  store i64 %t35448, ptr %t37728
+  %t37729 = or i64 %t37724, 4
+  %t37730 = call i64 @rt_set_box(i64 %t35446, i64 %t37729)
+  %t37731 = call i64 @rt_alloc_words(i64 3)
+  %t37732 = inttoptr i64 %t37731 to ptr
+  store i64 ptrtoint (ptr @code_6346 to i64), ptr %t37732
+  %t37733 = getelementptr i64, ptr %t37732, i64 1
+  store i64 %t35281, ptr %t37733
+  %t37734 = getelementptr i64, ptr %t37732, i64 2
+  store i64 %t35333, ptr %t37734
+  %t37735 = or i64 %t37731, 4
+  %t37736 = call i64 @rt_set_box(i64 %t35447, i64 %t37735)
+  %t37737 = call i64 @rt_alloc_words(i64 3)
+  %t37738 = inttoptr i64 %t37737 to ptr
+  store i64 ptrtoint (ptr @code_6348 to i64), ptr %t37738
+  %t37739 = getelementptr i64, ptr %t37738, i64 1
+  store i64 %t35450, ptr %t37739
+  %t37740 = getelementptr i64, ptr %t37738, i64 2
+  store i64 %t35429, ptr %t37740
+  %t37741 = or i64 %t37737, 4
+  %t37742 = call i64 @rt_set_box(i64 %t35448, i64 %t37741)
+  %t37743 = call i64 @rt_alloc_words(i64 2)
   %t37744 = inttoptr i64 %t37743 to ptr
-  store i64 ptrtoint (ptr @code_6364 to i64), ptr %t37744
-  %t37745 = or i64 %t37743, 4
-  %t37746 = call i64 @rt_set_box(i64 %t35381, i64 %t37745)
-  %t37747 = call i64 @rt_alloc_words(i64 2)
-  %t37748 = inttoptr i64 %t37747 to ptr
-  store i64 ptrtoint (ptr @code_6366 to i64), ptr %t37748
-  %t37749 = getelementptr i64, ptr %t37748, i64 1
-  store i64 %t35380, ptr %t37749
-  %t37750 = or i64 %t37747, 4
-  %t37751 = call i64 @rt_set_box(i64 %t35382, i64 %t37750)
-  %t37752 = call i64 @rt_set_box(i64 %t35383, i64 624)
-  %t37753 = call i64 @rt_alloc_words(i64 1)
-  %t37754 = inttoptr i64 %t37753 to ptr
-  store i64 ptrtoint (ptr @code_6368 to i64), ptr %t37754
-  %t37755 = or i64 %t37753, 4
-  %t37756 = call i64 @rt_set_box(i64 %t35384, i64 %t37755)
-  %t37757 = call i64 @rt_alloc_words(i64 4)
-  %t37758 = inttoptr i64 %t37757 to ptr
-  store i64 ptrtoint (ptr @code_6370 to i64), ptr %t37758
-  %t37759 = getelementptr i64, ptr %t37758, i64 1
-  store i64 %t35386, ptr %t37759
-  %t37760 = getelementptr i64, ptr %t37758, i64 2
-  store i64 %t35384, ptr %t37760
-  %t37761 = getelementptr i64, ptr %t37758, i64 3
-  store i64 %t35387, ptr %t37761
-  %t37762 = or i64 %t37757, 4
-  %t37763 = call i64 @rt_set_box(i64 %t35385, i64 %t37762)
-  %t37764 = call i64 @rt_alloc_words(i64 2)
-  %t37765 = inttoptr i64 %t37764 to ptr
-  store i64 ptrtoint (ptr @code_6372 to i64), ptr %t37765
-  %t37766 = getelementptr i64, ptr %t37765, i64 1
-  store i64 %t35385, ptr %t37766
-  %t37767 = or i64 %t37764, 4
-  %t37768 = call i64 @rt_set_box(i64 %t35386, i64 %t37767)
+  store i64 ptrtoint (ptr @code_6350 to i64), ptr %t37744
+  %t37745 = getelementptr i64, ptr %t37744, i64 1
+  store i64 %t35429, ptr %t37745
+  %t37746 = or i64 %t37743, 4
+  %t37747 = call i64 @rt_set_box(i64 %t35449, i64 %t37746)
+  %t37748 = call i64 @rt_alloc_words(i64 5)
+  %t37749 = inttoptr i64 %t37748 to ptr
+  store i64 ptrtoint (ptr @code_6354 to i64), ptr %t37749
+  %t37750 = getelementptr i64, ptr %t37749, i64 1
+  store i64 %t35344, ptr %t37750
+  %t37751 = getelementptr i64, ptr %t37749, i64 2
+  store i64 %t35346, ptr %t37751
+  %t37752 = getelementptr i64, ptr %t37749, i64 3
+  store i64 %t35348, ptr %t37752
+  %t37753 = getelementptr i64, ptr %t37749, i64 4
+  store i64 %t35353, ptr %t37753
+  %t37754 = or i64 %t37748, 4
+  %t37755 = call i64 @rt_set_box(i64 %t35450, i64 %t37754)
+  %t37756 = call i64 @rt_alloc_words(i64 1)
+  %t37757 = inttoptr i64 %t37756 to ptr
+  store i64 ptrtoint (ptr @code_6356 to i64), ptr %t37757
+  %t37758 = or i64 %t37756, 4
+  %t37759 = call i64 @rt_set_box(i64 %t35451, i64 %t37758)
+  %t37760 = call i64 @rt_alloc_words(i64 2)
+  %t37761 = inttoptr i64 %t37760 to ptr
+  store i64 ptrtoint (ptr @code_6360 to i64), ptr %t37761
+  %t37762 = getelementptr i64, ptr %t37761, i64 1
+  store i64 %t35452, ptr %t37762
+  %t37763 = or i64 %t37760, 4
+  %t37764 = call i64 @rt_set_box(i64 %t35452, i64 %t37763)
+  %t37765 = call i64 @rt_alloc_words(i64 1)
+  %t37766 = inttoptr i64 %t37765 to ptr
+  store i64 ptrtoint (ptr @code_6362 to i64), ptr %t37766
+  %t37767 = or i64 %t37765, 4
+  %t37768 = call i64 @rt_set_box(i64 %t35453, i64 %t37767)
   %t37769 = call i64 @rt_alloc_words(i64 2)
   %t37770 = inttoptr i64 %t37769 to ptr
-  store i64 ptrtoint (ptr @code_6376 to i64), ptr %t37770
+  store i64 ptrtoint (ptr @code_6366 to i64), ptr %t37770
   %t37771 = getelementptr i64, ptr %t37770, i64 1
-  store i64 %t35385, ptr %t37771
+  store i64 %t35455, ptr %t37771
   %t37772 = or i64 %t37769, 4
-  %t37773 = call i64 @rt_set_box(i64 %t35387, i64 %t37772)
-  %t37774 = call i64 @rt_alloc_words(i64 5)
+  %t37773 = call i64 @rt_set_box(i64 %t35454, i64 %t37772)
+  %t37774 = call i64 @rt_alloc_words(i64 17)
   %t37775 = inttoptr i64 %t37774 to ptr
-  store i64 ptrtoint (ptr @code_6380 to i64), ptr %t37775
+  store i64 ptrtoint (ptr @code_6368 to i64), ptr %t37775
   %t37776 = getelementptr i64, ptr %t37775, i64 1
-  store i64 %t35385, ptr %t37776
+  store i64 %t35252, ptr %t37776
   %t37777 = getelementptr i64, ptr %t37775, i64 2
-  store i64 %t35383, ptr %t37777
+  store i64 %t35315, ptr %t37777
   %t37778 = getelementptr i64, ptr %t37775, i64 3
-  store i64 %t35381, ptr %t37778
+  store i64 %t35451, ptr %t37778
   %t37779 = getelementptr i64, ptr %t37775, i64 4
-  store i64 %t35389, ptr %t37779
-  %t37780 = or i64 %t37774, 4
-  %t37781 = call i64 @rt_set_box(i64 %t35388, i64 %t37780)
-  %t37782 = call i64 @rt_alloc_words(i64 6)
-  %t37783 = inttoptr i64 %t37782 to ptr
-  store i64 ptrtoint (ptr @code_6382 to i64), ptr %t37783
-  %t37784 = getelementptr i64, ptr %t37783, i64 1
-  store i64 %t35385, ptr %t37784
-  %t37785 = getelementptr i64, ptr %t37783, i64 2
-  store i64 %t35380, ptr %t37785
-  %t37786 = getelementptr i64, ptr %t37783, i64 3
-  store i64 %t35388, ptr %t37786
-  %t37787 = getelementptr i64, ptr %t37783, i64 4
-  store i64 %t35383, ptr %t37787
-  %t37788 = getelementptr i64, ptr %t37783, i64 5
-  store i64 %t35382, ptr %t37788
-  %t37789 = or i64 %t37782, 4
-  %t37790 = call i64 @rt_set_box(i64 %t35389, i64 %t37789)
-  %t37791 = call i64 @rt_alloc_words(i64 2)
-  %t37792 = inttoptr i64 %t37791 to ptr
-  store i64 ptrtoint (ptr @code_6386 to i64), ptr %t37792
-  %t37793 = getelementptr i64, ptr %t37792, i64 1
-  store i64 %t35380, ptr %t37793
-  %t37794 = or i64 %t37791, 4
-  %t37795 = call i64 @rt_set_box(i64 %t35390, i64 %t37794)
-  %t37796 = call i64 @rt_alloc_words(i64 4)
-  %t37797 = inttoptr i64 %t37796 to ptr
-  store i64 ptrtoint (ptr @code_6388 to i64), ptr %t37797
-  %t37798 = getelementptr i64, ptr %t37797, i64 1
-  store i64 %t35380, ptr %t37798
-  %t37799 = getelementptr i64, ptr %t37797, i64 2
-  store i64 %t35381, ptr %t37799
-  %t37800 = getelementptr i64, ptr %t37797, i64 3
-  store i64 %t35388, ptr %t37800
-  %t37801 = or i64 %t37796, 4
-  %t37802 = call i64 @rt_set_box(i64 %t35391, i64 %t37801)
-  %t37803 = call i64 @rt_alloc_words(i64 4)
-  %t37804 = inttoptr i64 %t37803 to ptr
-  store i64 ptrtoint (ptr @code_6390 to i64), ptr %t37804
-  %t37805 = getelementptr i64, ptr %t37804, i64 1
-  store i64 %t35352, ptr %t37805
-  %t37806 = getelementptr i64, ptr %t37804, i64 2
-  store i64 %t35390, ptr %t37806
-  %t37807 = getelementptr i64, ptr %t37804, i64 3
-  store i64 %t35391, ptr %t37807
-  %t37808 = or i64 %t37803, 4
-  %t37809 = call i64 @rt_set_box(i64 %t35392, i64 %t37808)
-  %t37810 = call i64 @rt_read_all_stdin()
-  %t37811 = call i64 @rt_unbox(i64 %t35392)
-  %t37812 = and i64 %t37811, -8
-  %t37813 = inttoptr i64 %t37812 to ptr
-  %t37814 = load i64, ptr %t37813
-  %t37815 = inttoptr i64 %t37814 to ptr
-  %t37816 = call fastcc i64%t37815(i64 %t37811, i64 1, i64 1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t37817 = call i64 @rt_unbox(i64 %t35356)
-  %t37818 = and i64 %t37817, -8
-  %t37819 = inttoptr i64 %t37818 to ptr
-  %t37820 = load i64, ptr %t37819
-  %t37821 = inttoptr i64 %t37820 to ptr
-  %t37822 = call fastcc i64%t37821(i64 %t37817, i64 2, i64 %t37810, i64 %t37816, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t37823 = call i64 @rt_display(i64 %t37822)
-  ret i64 %t37823
+  store i64 %t35247, ptr %t37779
+  %t37780 = getelementptr i64, ptr %t37775, i64 5
+  store i64 %t35428, ptr %t37780
+  %t37781 = getelementptr i64, ptr %t37775, i64 6
+  store i64 %t35279, ptr %t37781
+  %t37782 = getelementptr i64, ptr %t37775, i64 7
+  store i64 %t35281, ptr %t37782
+  %t37783 = getelementptr i64, ptr %t37775, i64 8
+  store i64 %t35294, ptr %t37783
+  %t37784 = getelementptr i64, ptr %t37775, i64 9
+  store i64 %t35298, ptr %t37784
+  %t37785 = getelementptr i64, ptr %t37775, i64 10
+  store i64 %t35445, ptr %t37785
+  %t37786 = getelementptr i64, ptr %t37775, i64 11
+  store i64 %t35257, ptr %t37786
+  %t37787 = getelementptr i64, ptr %t37775, i64 12
+  store i64 %t35424, ptr %t37787
+  %t37788 = getelementptr i64, ptr %t37775, i64 13
+  store i64 %t35447, ptr %t37788
+  %t37789 = getelementptr i64, ptr %t37775, i64 14
+  store i64 %t35452, ptr %t37789
+  %t37790 = getelementptr i64, ptr %t37775, i64 15
+  store i64 %t35453, ptr %t37790
+  %t37791 = getelementptr i64, ptr %t37775, i64 16
+  store i64 %t35446, ptr %t37791
+  %t37792 = or i64 %t37774, 4
+  %t37793 = call i64 @rt_set_box(i64 %t35455, i64 %t37792)
+  %t37794 = call i64 @rt_alloc_words(i64 20)
+  %t37795 = inttoptr i64 %t37794 to ptr
+  store i64 ptrtoint (ptr @code_6396 to i64), ptr %t37795
+  %t37796 = getelementptr i64, ptr %t37795, i64 1
+  store i64 %t35444, ptr %t37796
+  %t37797 = getelementptr i64, ptr %t37795, i64 2
+  store i64 %t35451, ptr %t37797
+  %t37798 = getelementptr i64, ptr %t37795, i64 3
+  store i64 %t35427, ptr %t37798
+  %t37799 = getelementptr i64, ptr %t37795, i64 4
+  store i64 %t35252, ptr %t37799
+  %t37800 = getelementptr i64, ptr %t37795, i64 5
+  store i64 %t35315, ptr %t37800
+  %t37801 = getelementptr i64, ptr %t37795, i64 6
+  store i64 %t35247, ptr %t37801
+  %t37802 = getelementptr i64, ptr %t37795, i64 7
+  store i64 %t35428, ptr %t37802
+  %t37803 = getelementptr i64, ptr %t37795, i64 8
+  store i64 %t35293, ptr %t37803
+  %t37804 = getelementptr i64, ptr %t37795, i64 9
+  store i64 %t35333, ptr %t37804
+  %t37805 = getelementptr i64, ptr %t37795, i64 10
+  store i64 %t35307, ptr %t37805
+  %t37806 = getelementptr i64, ptr %t37795, i64 11
+  store i64 %t35275, ptr %t37806
+  %t37807 = getelementptr i64, ptr %t37795, i64 12
+  store i64 %t35270, ptr %t37807
+  %t37808 = getelementptr i64, ptr %t37795, i64 13
+  store i64 %t35303, ptr %t37808
+  %t37809 = getelementptr i64, ptr %t37795, i64 14
+  store i64 %t35344, ptr %t37809
+  %t37810 = getelementptr i64, ptr %t37795, i64 15
+  store i64 %t35346, ptr %t37810
+  %t37811 = getelementptr i64, ptr %t37795, i64 16
+  store i64 %t35348, ptr %t37811
+  %t37812 = getelementptr i64, ptr %t37795, i64 17
+  store i64 %t35353, ptr %t37812
+  %t37813 = getelementptr i64, ptr %t37795, i64 18
+  store i64 %t35256, ptr %t37813
+  %t37814 = getelementptr i64, ptr %t37795, i64 19
+  store i64 %t35423, ptr %t37814
+  %t37815 = or i64 %t37794, 4
+  %t37816 = call i64 @rt_set_box(i64 %t35456, i64 %t37815)
+  %t37817 = call i64 @rt_alloc_words(i64 1)
+  %t37818 = inttoptr i64 %t37817 to ptr
+  store i64 ptrtoint (ptr @code_6402 to i64), ptr %t37818
+  %t37819 = or i64 %t37817, 4
+  %t37820 = call i64 @rt_set_box(i64 %t35457, i64 %t37819)
+  %t37821 = call i64 @rt_alloc_words(i64 1)
+  %t37822 = inttoptr i64 %t37821 to ptr
+  store i64 ptrtoint (ptr @code_6404 to i64), ptr %t37822
+  %t37823 = or i64 %t37821, 4
+  %t37824 = call i64 @rt_set_box(i64 %t35458, i64 %t37823)
+  %t37825 = call i64 @rt_alloc_words(i64 2)
+  %t37826 = inttoptr i64 %t37825 to ptr
+  store i64 ptrtoint (ptr @code_6406 to i64), ptr %t37826
+  %t37827 = getelementptr i64, ptr %t37826, i64 1
+  store i64 %t35457, ptr %t37827
+  %t37828 = or i64 %t37825, 4
+  %t37829 = call i64 @rt_set_box(i64 %t35459, i64 %t37828)
+  %t37830 = call i64 @rt_set_box(i64 %t35460, i64 624)
+  %t37831 = call i64 @rt_alloc_words(i64 1)
+  %t37832 = inttoptr i64 %t37831 to ptr
+  store i64 ptrtoint (ptr @code_6408 to i64), ptr %t37832
+  %t37833 = or i64 %t37831, 4
+  %t37834 = call i64 @rt_set_box(i64 %t35461, i64 %t37833)
+  %t37835 = call i64 @rt_alloc_words(i64 1)
+  %t37836 = inttoptr i64 %t37835 to ptr
+  store i64 ptrtoint (ptr @code_6412 to i64), ptr %t37836
+  %t37837 = or i64 %t37835, 4
+  %t37838 = call i64 @rt_set_box(i64 %t35462, i64 %t37837)
+  %t37839 = call i64 @rt_alloc_words(i64 5)
+  %t37840 = inttoptr i64 %t37839 to ptr
+  store i64 ptrtoint (ptr @code_6414 to i64), ptr %t37840
+  %t37841 = getelementptr i64, ptr %t37840, i64 1
+  store i64 %t35464, ptr %t37841
+  %t37842 = getelementptr i64, ptr %t37840, i64 2
+  store i64 %t35461, ptr %t37842
+  %t37843 = getelementptr i64, ptr %t37840, i64 3
+  store i64 %t35462, ptr %t37843
+  %t37844 = getelementptr i64, ptr %t37840, i64 4
+  store i64 %t35465, ptr %t37844
+  %t37845 = or i64 %t37839, 4
+  %t37846 = call i64 @rt_set_box(i64 %t35463, i64 %t37845)
+  %t37847 = call i64 @rt_alloc_words(i64 2)
+  %t37848 = inttoptr i64 %t37847 to ptr
+  store i64 ptrtoint (ptr @code_6416 to i64), ptr %t37848
+  %t37849 = getelementptr i64, ptr %t37848, i64 1
+  store i64 %t35463, ptr %t37849
+  %t37850 = or i64 %t37847, 4
+  %t37851 = call i64 @rt_set_box(i64 %t35464, i64 %t37850)
+  %t37852 = call i64 @rt_alloc_words(i64 2)
+  %t37853 = inttoptr i64 %t37852 to ptr
+  store i64 ptrtoint (ptr @code_6420 to i64), ptr %t37853
+  %t37854 = getelementptr i64, ptr %t37853, i64 1
+  store i64 %t35463, ptr %t37854
+  %t37855 = or i64 %t37852, 4
+  %t37856 = call i64 @rt_set_box(i64 %t35465, i64 %t37855)
+  %t37857 = call i64 @rt_alloc_words(i64 5)
+  %t37858 = inttoptr i64 %t37857 to ptr
+  store i64 ptrtoint (ptr @code_6424 to i64), ptr %t37858
+  %t37859 = getelementptr i64, ptr %t37858, i64 1
+  store i64 %t35463, ptr %t37859
+  %t37860 = getelementptr i64, ptr %t37858, i64 2
+  store i64 %t35460, ptr %t37860
+  %t37861 = getelementptr i64, ptr %t37858, i64 3
+  store i64 %t35458, ptr %t37861
+  %t37862 = getelementptr i64, ptr %t37858, i64 4
+  store i64 %t35467, ptr %t37862
+  %t37863 = or i64 %t37857, 4
+  %t37864 = call i64 @rt_set_box(i64 %t35466, i64 %t37863)
+  %t37865 = call i64 @rt_alloc_words(i64 6)
+  %t37866 = inttoptr i64 %t37865 to ptr
+  store i64 ptrtoint (ptr @code_6426 to i64), ptr %t37866
+  %t37867 = getelementptr i64, ptr %t37866, i64 1
+  store i64 %t35463, ptr %t37867
+  %t37868 = getelementptr i64, ptr %t37866, i64 2
+  store i64 %t35457, ptr %t37868
+  %t37869 = getelementptr i64, ptr %t37866, i64 3
+  store i64 %t35466, ptr %t37869
+  %t37870 = getelementptr i64, ptr %t37866, i64 4
+  store i64 %t35460, ptr %t37870
+  %t37871 = getelementptr i64, ptr %t37866, i64 5
+  store i64 %t35459, ptr %t37871
+  %t37872 = or i64 %t37865, 4
+  %t37873 = call i64 @rt_set_box(i64 %t35467, i64 %t37872)
+  %t37874 = call i64 @rt_alloc_words(i64 2)
+  %t37875 = inttoptr i64 %t37874 to ptr
+  store i64 ptrtoint (ptr @code_6430 to i64), ptr %t37875
+  %t37876 = getelementptr i64, ptr %t37875, i64 1
+  store i64 %t35457, ptr %t37876
+  %t37877 = or i64 %t37874, 4
+  %t37878 = call i64 @rt_set_box(i64 %t35468, i64 %t37877)
+  %t37879 = call i64 @rt_alloc_words(i64 4)
+  %t37880 = inttoptr i64 %t37879 to ptr
+  store i64 ptrtoint (ptr @code_6432 to i64), ptr %t37880
+  %t37881 = getelementptr i64, ptr %t37880, i64 1
+  store i64 %t35457, ptr %t37881
+  %t37882 = getelementptr i64, ptr %t37880, i64 2
+  store i64 %t35458, ptr %t37882
+  %t37883 = getelementptr i64, ptr %t37880, i64 3
+  store i64 %t35466, ptr %t37883
+  %t37884 = or i64 %t37879, 4
+  %t37885 = call i64 @rt_set_box(i64 %t35469, i64 %t37884)
+  %t37886 = call i64 @rt_alloc_words(i64 4)
+  %t37887 = inttoptr i64 %t37886 to ptr
+  store i64 ptrtoint (ptr @code_6434 to i64), ptr %t37887
+  %t37888 = getelementptr i64, ptr %t37887, i64 1
+  store i64 %t35429, ptr %t37888
+  %t37889 = getelementptr i64, ptr %t37887, i64 2
+  store i64 %t35468, ptr %t37889
+  %t37890 = getelementptr i64, ptr %t37887, i64 3
+  store i64 %t35469, ptr %t37890
+  %t37891 = or i64 %t37886, 4
+  %t37892 = call i64 @rt_set_box(i64 %t35470, i64 %t37891)
+  %t37893 = call i64 @rt_read_all_stdin()
+  %t37894 = call i64 @rt_unbox(i64 %t35470)
+  %t37895 = and i64 %t37894, -8
+  %t37896 = inttoptr i64 %t37895 to ptr
+  %t37897 = load i64, ptr %t37896
+  %t37898 = inttoptr i64 %t37897 to ptr
+  %t37899 = call fastcc i64%t37898(i64 %t37894, i64 1, i64 1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t37900 = call i64 @rt_unbox(i64 %t35433)
+  %t37901 = and i64 %t37900, -8
+  %t37902 = inttoptr i64 %t37901 to ptr
+  %t37903 = load i64, ptr %t37902
+  %t37904 = inttoptr i64 %t37903 to ptr
+  %t37905 = call fastcc i64%t37904(i64 %t37900, i64 2, i64 %t37893, i64 %t37899, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t37906 = call i64 @rt_display(i64 %t37905)
+  ret i64 %t37906
 }
 define internal i64 @__apply0(i64 %clos) {
 entry:
