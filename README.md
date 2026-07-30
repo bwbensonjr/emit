@@ -64,9 +64,9 @@ build/emit lib test/modules/mylib.sld -o build/lib
 # `emit repl` compiles each form IN-PROCESS.  Run it directly:
 build/emit repl                                                # ^D to exit
 build/emit repl --no-prelude                                   # faster start, no stdlib
-#   scheme> (define (sq n) (* n n))
-#   scheme> (sq 9)          => 81
-#   scheme> (define sq 100) => 100   ; redefinition; later forms see the new binding
+#   > (define (sq n) (* n n))
+#   > (sq 9)          => 81
+#   > (define sq 100) => 100   ; redefinition; later forms see the new binding
 
 # The batch text->IR filter compiler
 make schemec

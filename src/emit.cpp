@@ -649,13 +649,13 @@ static int emit_repl(int argc, char **argv) {
       std::cerr << "warning: auto-import (scheme base): " << scm_str(rt_cdr(r)) << "\n";
   }
 
-  std::cerr << "Emit REPL (embedded compiler, ORC/LLJIT).  ^D to exit.\n";
+  std::cerr << "Emit (embedded compiler, ORC/LLJIT).  ^D to exit.\n";
 
   // Accumulate stdin and drive the compiler.  After each line, ask the compiler
   // (form-complete?) whether the buffer starts with a complete form; when it does,
   // slice it off, compile+run it, and keep draining further complete forms.
   std::string buf, line;
-  std::cerr << "scheme> " << std::flush;
+  std::cerr << "> " << std::flush;
   while (std::getline(std::cin, line)) {
     buf += line;
     buf += "\n";
@@ -673,7 +673,7 @@ static int emit_repl(int argc, char **argv) {
       process_form(form);
       if (buf.find_first_not_of(" \t\r\n") == std::string::npos) { buf.clear(); break; }
     }
-    std::cerr << "scheme> " << std::flush;
+    std::cerr << "> " << std::flush;
   }
   std::cerr << "\n";
   return 0;

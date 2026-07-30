@@ -106,9 +106,9 @@
           (values 'error (read-file cc-path))))))
 
 (define (repl)
-  (fprintf err-port "Emit REPL (recompile-all mode; pre-Group-4).  ^D to exit.\n")
+  (fprintf err-port "Emit (recompile-all mode; pre-Group-4).  ^D to exit.\n")
   (let loop ([hist '()])
-    (fprintf err-port "scheme> ") (flush-output-port err-port)
+    (fprintf err-port "> ") (flush-output-port err-port)
     (let ([form (read)])
       (if (eof-object? form)
           (begin (fprintf err-port "\n") (exit 0))
