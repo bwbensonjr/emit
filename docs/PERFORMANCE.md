@@ -1,7 +1,9 @@
 # Performance & Size Backlog
 
 Known performance, memory, and binary-size debt — each item **deferred by design**, not
-overlooked. This is the working list the OpenSpec process chips away at: every entry names
+overlooked. This file is a *design* backlog: each entry is an essay with measurements and
+cross-item sequencing rationale, which is why it is a document rather than a ticket queue. Discrete
+correctness defects go to GitHub Issues instead. This is the working list the OpenSpec process chips away at: every entry names
 its symptom, its cause (with file references), a possible fix, its OpenSpec change (once one
 exists), and a check-off when remediation lands.
 
@@ -114,12 +116,16 @@ payload values). One shape:
   [ payload : 56 | subtype : 5 | 001 ]
     subtype 0 → boolean (#f / #t)
     subtype 1 → char    (payload = Unicode codepoint)
-    subtype 2 → eof-object       ┐ room to grow — future
-    subtype 3 → unspecified      ┘ immediates cost nothing
+    subtype 2 → unspecified      ┐ room to grow — future
+    subtype 3 → eof-object       ┘ immediates cost nothing
 ```
 
-Done this way it also future-proofs the immediate space for `eof-object`, the unspecified
-value, and similar singletons.
+Done this way it also future-proofs the immediate space for the unspecified value,
+`eof-object`, and similar singletons.
+
+**Follow-through.** Subtype 2 was subsequently spent on the unspecified value (change:
+`unspecified-value`; see [`return-values.md`](return-values.md)) — the sketch above is updated to
+match what shipped, which swapped the two speculative slots. `eof-object` still has subtype 3.
 
 **Cost / risk.** The tag scheme is "shared verbatim with the LLVM IR emitter", so three
 places must agree: `src/runtime/runtime.c` (tag/predicate/`make_char`/`eq` logic),

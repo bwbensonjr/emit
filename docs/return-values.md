@@ -579,8 +579,8 @@ separate answers, and only category 1 is settled by the above. Category 2 in par
 live: the JIT and AOT paths disagree on argument evaluation order
 ([demos/records.scm:16](../demos/records.scm)). Dev→ship fidelity is a stated project goal in
 [CLAUDE.md](../CLAUDE.md), and an unspecified-order divergence *between Emit's own two backends* is a
-fidelity bug in the project's own terms even though it is standards-conforming. That deserves its own
-change proposal; this document only flags it.
+fidelity bug in the project's own terms even though it is standards-conforming. Now tracked as
+[issue #6](https://github.com/bwbensonjr/emit/issues/6); it deserves its own change proposal.
 
 ### What implementation changed about the plan
 

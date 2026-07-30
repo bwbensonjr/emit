@@ -616,8 +616,9 @@
   (R e '()))
 
 ;; Lower one entered top-level form (an s-expr) against the REPL env, returning
-;; core IL for that form.  A `(define name init)` becomes a (global-set! sym ..)
-;; whose value is the stored value; any other form is just its own expression.
+;; core IL for that form.  A `(define name init)` becomes a (global-set! sym ..),
+;; whose value is the UNSPECIFIED value (change: unspecified-value) -- so a define
+;; echoes nothing at the REPL; any other form is just its own expression.
 ;;
 ;; Generation timing mirrors batch `build-program`'s letrec-vs-let split: a
 ;; lambda definition registers its new symbol BEFORE its init is resolved, so a

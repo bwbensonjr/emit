@@ -25,6 +25,18 @@
   (`define-library`, `import`, `export`).
 - This project uses OpenSpec for tracking designs and tasks (see
   `openspec/specs` and `openspec/changes`).
+- Correctness defects are tracked in **GitHub Issues** (`gh issue list`), not in a file.
+  When you find a bug you are not fixing now, open an issue — symptom with a
+  reproduction, cause with file references, a possible fix — rather than leaving it in
+  conversation or an inline TODO. Reference it from the fixing commit (`Fixes #N`).
+  Filing an issue touches no files, so it never muddies an in-flight change's diff.
+  Note `gh` may have several accounts authenticated; check `gh auth status` and use
+  `bwbensonjr` for this repo.
+- Speed, memory, and binary-size debt goes in `docs/PERFORMANCE.md` instead. That file is a
+  *design* backlog — entries are essays with measurements and cross-item sequencing
+  rationale — which is why it stays a document rather than a ticket queue.
+- An OpenSpec change is for work being started; issues and `PERFORMANCE.md` are for what is
+  known but not yet scheduled.
 - Tools narrate what they do. Every tool, script, and pipeline stage
   announces its action, names its inputs and outputs, and reports the
   relevant metrics (sizes, durations, counts) — concise by default,
