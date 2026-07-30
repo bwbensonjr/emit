@@ -16,8 +16,16 @@
 >   committed IR and leaves `test/self-host-fixpoint.sh` failing with diff lines in that one constant.
 > - **5.3 resolved:** the AOT/batch final-value print is NOT suppressed (only the REPL echo is), so
 >   `emit run` matches what the AOT executable prints. Recorded in a comment at both sites.
-> - **Baseline re-record:** `test/module-scaffold-baseline.sha256` was re-recorded, justified by a
->   70-demo before/after IR capture; the verification is logged in `module-scaffold-baseline.sh`.
+> - **A fourth site, found after the fact: top-level `define`.** It never appeared in the inventory
+>   because `define` is a definition, not an expression, so R7RS gives it no value — but its lowering
+>   `(global-set! sym init)` returned the stored value, so `(define f (lambda …))` echoed
+>   `#<procedure>`, and it disagreed with a local `(set! x v)` which already yielded the unspecified
+>   value via `rt_set_box`. `global-set!` now yields the unspecified value. ~16 REPL test expectations
+>   dropped a leading define echo; the two heap-survival tests gained an explicit bare-name form so
+>   they keep the evidence the echo used to provide.
+> - **Baseline re-record:** `test/module-scaffold-baseline.sha256` was re-recorded twice, each
+>   justified by a full before/after IR capture; both verifications are logged in
+>   `module-scaffold-baseline.sh`.
 
 ## 1. Runtime representation (inert on its own)
 

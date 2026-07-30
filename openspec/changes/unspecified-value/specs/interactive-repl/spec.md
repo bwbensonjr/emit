@@ -38,6 +38,13 @@ results that must still print.
 - **WHEN** the user enters `(vector-set! v 0 1)` at the REPL prompt
 - **THEN** the REPL prints nothing and prompts for the next form
 
+#### Scenario: A top-level define echoes nothing
+
+- **WHEN** the user enters `(define square (lambda (n) (* n n)))` at the REPL prompt
+- **THEN** the REPL prints nothing and prompts for the next form, rather than echoing
+  `#<procedure>` as though the definition evaluated to the procedure
+- **AND** a subsequent `(square 7)` prints `49`, so the definition took effect
+
 #### Scenario: Legitimate #f and empty-list results still print
 
 - **WHEN** the user enters `(null? 1)` and then `(list)` at the REPL prompt

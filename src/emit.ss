@@ -109,6 +109,13 @@
        g)]))
 
 ;; --- constants and primitives (must match runtime.c tags) ---
+;; THE unspecified value as an inline operand (change: unspecified-value).  A pure
+;; operand -- no emission, no call, no temp -- so it needs no `declare`.  MUST match
+;; UNSPEC_V in src/runtime/runtime.c: (SUB_UNSPEC << 3) | TAG_BOOL = (2 << 3) | 1 = 17.
+;; The one place this literal appears in the emitter; `%unspec` primcalls and
+;; `global-set!` both route through here.
+(define (encode-const-unspec) "17")
+
 ;; Immediates encode inline to an operand with no emission; a symbol emits an
 ;; rt_intern call and a pair materializes via rt_cons (recursing), so encode-const
 ;; may emit into the current function and returns the resulting operand.
@@ -232,7 +239,7 @@
      (let ([t (fresh-temp)])
        (emit! (string-append t " = load i64, ptr " (global-operand s)))
        t)]
-    [(global-set! ,s ,e)                     ; store into the slot; value = stored
+    [(global-set! ,s ,e)                     ; store into the slot; value = UNSPECIFIED
      ;; Route the value through rt_root so it survives GC: the JIT'd global slot
      ;; lives in memory libgc does not scan, so a value reachable only through the
      ;; slot would be collected (change: repl-embedded-incremental).
@@ -240,10 +247,20 @@
      ;; the result temp, so temp numbering is identical under Chez (right-to-left
      ;; let) and the embedded compiler (left-to-right) -- the cross-door unit
      ;; byte-identity guarantee (change: module-artifacts-vertical-slice).
+     ;;
+     ;; The node's VALUE is the unspecified immediate, not the stored value (change:
+     ;; unspecified-value).  This is a mutation, so R7RS leaves its value unspecified --
+     ;; and a local `(set! x v)`, which lowers to a set-box! primcall, already yields the
+     ;; unspecified value via rt_set_box.  Returning the stored value here made the two
+     ;; disagree, and made a top-level `(define f (lambda ...))` echo `#<procedure>` at
+     ;; the REPL as though the definition evaluated TO the procedure.  `t` is still bound:
+     ;; the rt_root call and the store are unchanged, so temp numbering (and the
+     ;; cross-door byte-identity guarantee above) is unaffected -- only the operand a
+     ;; consumer sees changes, and in statement position there is no consumer at all.
      (let* ([op (ev e env cp tc?)] [t (fresh-temp)])
        (emit! (string-append t " = call i64 @rt_root(i64 " op ")"))
        (emit! (string-append "store i64 " t ", ptr " (global-operand s)))
-       t)]
+       (encode-const-unspec))]
     [(if ,a ,b ,c) (ev-if a b c env cp tc?)]
     [(seq ,a ,b) (ev a env cp tc?) (ev b env cp tc?)]
     [(let ,binds ,body)
@@ -614,10 +631,9 @@
   ;; %unspec is special the other way: it emits NOTHING and lowers to the bare
   ;; unspecified-value immediate (change: unspecified-value).  Like the immediates in
   ;; encode-const it is a pure operand -- no call, so it needs no `declare` and no
-  ;; prim-table entry.  MUST match UNSPEC_V in src/runtime/runtime.c:
-  ;;   (SUB_UNSPEC << 3) | TAG_BOOL = (2 << 3) | 1 = 17
+  ;; prim-table entry.
   (if (eq? op '%unspec)
-      "17"
+      (encode-const-unspec)
   (if (eq? op '%run-guarded)
       (let ([t (fresh-temp)])
         (emit! (string-append t " = call i64 @rt_run_guarded(ptr @__apply0, i64 "

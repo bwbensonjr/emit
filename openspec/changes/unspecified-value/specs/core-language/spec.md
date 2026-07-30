@@ -38,6 +38,13 @@ program can explicitly declare that a procedure has no interesting result.
 - **WHEN** a program evaluates `(if (if #f #f) (quote a) (quote b))`
 - **THEN** it yields `a`, because the unspecified value is not `#f`
 
+#### Scenario: Assignment yields the unspecified value regardless of scope
+
+- **WHEN** a program evaluates a top-level `(define x 1)` and a local `(let ((y 0)) (set! y 1))`
+- **THEN** both forms yield the unspecified value — a definition is not an expression and an
+  assignment is a mutation, so neither has an interesting result, and the two SHALL NOT disagree
+  merely because one stores into a global slot and the other into a box
+
 #### Scenario: Every unspecified-result site yields the same value
 
 - **WHEN** a program evaluates `(list (eqv? (void) (if #f #f)) (eqv? (void) (when #f 1)) (eqv? (void) (newline)) (eqv? (void) (vector-set! (make-vector 1 0) 0 1)))`

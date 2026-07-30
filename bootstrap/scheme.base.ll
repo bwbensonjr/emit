@@ -6986,7 +6986,7 @@ entry:
   %t15 = or i64 %t13, 4
   %t16 = call i64 @rt_root(i64 %t15)
   store i64 %t16, ptr @"scheme.base:list"
-  ret i64 %t16
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_2"() {
@@ -6997,7 +6997,7 @@ entry:
   %t22 = or i64 %t20, 4
   %t23 = call i64 @rt_root(i64 %t22)
   store i64 %t23, ptr @"scheme.base:caar"
-  ret i64 %t23
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_3"() {
@@ -7008,7 +7008,7 @@ entry:
   %t29 = or i64 %t27, 4
   %t30 = call i64 @rt_root(i64 %t29)
   store i64 %t30, ptr @"scheme.base:cadr"
-  ret i64 %t30
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_4"() {
@@ -7019,7 +7019,7 @@ entry:
   %t36 = or i64 %t34, 4
   %t37 = call i64 @rt_root(i64 %t36)
   store i64 %t37, ptr @"scheme.base:cdar"
-  ret i64 %t37
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_5"() {
@@ -7030,7 +7030,7 @@ entry:
   %t43 = or i64 %t41, 4
   %t44 = call i64 @rt_root(i64 %t43)
   store i64 %t44, ptr @"scheme.base:cddr"
-  ret i64 %t44
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_6"() {
@@ -7041,7 +7041,7 @@ entry:
   %t55 = or i64 %t53, 4
   %t56 = call i64 @rt_root(i64 %t55)
   store i64 %t56, ptr @"scheme.base:caaar"
-  ret i64 %t56
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_7"() {
@@ -7052,7 +7052,7 @@ entry:
   %t67 = or i64 %t65, 4
   %t68 = call i64 @rt_root(i64 %t67)
   store i64 %t68, ptr @"scheme.base:caadr"
-  ret i64 %t68
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_8"() {
@@ -7063,7 +7063,7 @@ entry:
   %t79 = or i64 %t77, 4
   %t80 = call i64 @rt_root(i64 %t79)
   store i64 %t80, ptr @"scheme.base:cadar"
-  ret i64 %t80
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_9"() {
@@ -7074,7 +7074,7 @@ entry:
   %t91 = or i64 %t89, 4
   %t92 = call i64 @rt_root(i64 %t91)
   store i64 %t92, ptr @"scheme.base:caddr"
-  ret i64 %t92
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_10"() {
@@ -7085,7 +7085,7 @@ entry:
   %t103 = or i64 %t101, 4
   %t104 = call i64 @rt_root(i64 %t103)
   store i64 %t104, ptr @"scheme.base:cdaar"
-  ret i64 %t104
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_11"() {
@@ -7096,7 +7096,7 @@ entry:
   %t115 = or i64 %t113, 4
   %t116 = call i64 @rt_root(i64 %t115)
   store i64 %t116, ptr @"scheme.base:cdadr"
-  ret i64 %t116
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_12"() {
@@ -7107,7 +7107,7 @@ entry:
   %t127 = or i64 %t125, 4
   %t128 = call i64 @rt_root(i64 %t127)
   store i64 %t128, ptr @"scheme.base:cddar"
-  ret i64 %t128
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_13"() {
@@ -7118,7 +7118,7 @@ entry:
   %t139 = or i64 %t137, 4
   %t140 = call i64 @rt_root(i64 %t139)
   store i64 %t140, ptr @"scheme.base:cdddr"
-  ret i64 %t140
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_14"() {
@@ -7129,7 +7129,7 @@ entry:
   %t164 = or i64 %t162, 4
   %t165 = call i64 @rt_root(i64 %t164)
   store i64 %t165, ptr @"scheme.base:length"
-  ret i64 %t165
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_15"() {
@@ -7140,7 +7140,7 @@ entry:
   %t185 = or i64 %t183, 4
   %t186 = call i64 @rt_root(i64 %t185)
   store i64 %t186, ptr @"scheme.base:reverse"
-  ret i64 %t186
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_16"() {
@@ -7151,7 +7151,7 @@ entry:
   %t201 = or i64 %t199, 4
   %t202 = call i64 @rt_root(i64 %t201)
   store i64 %t202, ptr @"scheme.base:%append2"
-  ret i64 %t202
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_17"() {
@@ -7162,7 +7162,7 @@ entry:
   %t259 = or i64 %t257, 4
   %t260 = call i64 @rt_root(i64 %t259)
   store i64 %t260, ptr @"scheme.base:append"
-  ret i64 %t260
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_18"() {
@@ -7173,7 +7173,7 @@ entry:
   %t280 = or i64 %t278, 4
   %t281 = call i64 @rt_root(i64 %t280)
   store i64 %t281, ptr @"scheme.base:%map1"
-  ret i64 %t281
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_19"() {
@@ -7184,7 +7184,7 @@ entry:
   %t297 = or i64 %t295, 4
   %t298 = call i64 @rt_root(i64 %t297)
   store i64 %t298, ptr @"scheme.base:%any-null?"
-  ret i64 %t298
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_20"() {
@@ -7195,7 +7195,7 @@ entry:
   %t365 = or i64 %t363, 4
   %t366 = call i64 @rt_root(i64 %t365)
   store i64 %t366, ptr @"scheme.base:%mapn"
-  ret i64 %t366
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_21"() {
@@ -7206,7 +7206,7 @@ entry:
   %t396 = or i64 %t394, 4
   %t397 = call i64 @rt_root(i64 %t396)
   store i64 %t397, ptr @"scheme.base:map"
-  ret i64 %t397
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_22"() {
@@ -7217,7 +7217,7 @@ entry:
   %t413 = or i64 %t411, 4
   %t414 = call i64 @rt_root(i64 %t413)
   store i64 %t414, ptr @"scheme.base:memq"
-  ret i64 %t414
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_23"() {
@@ -7228,7 +7228,7 @@ entry:
   %t430 = or i64 %t428, 4
   %t431 = call i64 @rt_root(i64 %t430)
   store i64 %t431, ptr @"scheme.base:memv"
-  ret i64 %t431
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_24"() {
@@ -7239,7 +7239,7 @@ entry:
   %t449 = or i64 %t447, 4
   %t450 = call i64 @rt_root(i64 %t449)
   store i64 %t450, ptr @"scheme.base:assq"
-  ret i64 %t450
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_25"() {
@@ -7250,7 +7250,7 @@ entry:
   %t466 = or i64 %t464, 4
   %t467 = call i64 @rt_root(i64 %t466)
   store i64 %t467, ptr @"scheme.base:member"
-  ret i64 %t467
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_26"() {
@@ -7261,7 +7261,7 @@ entry:
   %t485 = or i64 %t483, 4
   %t486 = call i64 @rt_root(i64 %t485)
   store i64 %t486, ptr @"scheme.base:assoc"
-  ret i64 %t486
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_27"() {
@@ -7272,7 +7272,7 @@ entry:
   %t515 = or i64 %t513, 4
   %t516 = call i64 @rt_root(i64 %t515)
   store i64 %t516, ptr @"scheme.base:filter"
-  ret i64 %t516
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_28"() {
@@ -7283,7 +7283,7 @@ entry:
   %t535 = or i64 %t533, 4
   %t536 = call i64 @rt_root(i64 %t535)
   store i64 %t536, ptr @"scheme.base:fold-left"
-  ret i64 %t536
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_29"() {
@@ -7294,7 +7294,7 @@ entry:
   %t555 = or i64 %t553, 4
   %t556 = call i64 @rt_root(i64 %t555)
   store i64 %t556, ptr @"scheme.base:fold-right"
-  ret i64 %t556
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_30"() {
@@ -7305,7 +7305,7 @@ entry:
   %t576 = or i64 %t574, 4
   %t577 = call i64 @rt_root(i64 %t576)
   store i64 %t577, ptr @"scheme.base:%for-each1"
-  ret i64 %t577
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_31"() {
@@ -7316,7 +7316,7 @@ entry:
   %t644 = or i64 %t642, 4
   %t645 = call i64 @rt_root(i64 %t644)
   store i64 %t645, ptr @"scheme.base:%for-eachn"
-  ret i64 %t645
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_32"() {
@@ -7327,7 +7327,7 @@ entry:
   %t675 = or i64 %t673, 4
   %t676 = call i64 @rt_root(i64 %t675)
   store i64 %t676, ptr @"scheme.base:for-each"
-  ret i64 %t676
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_33"() {
@@ -7338,7 +7338,7 @@ entry:
   %t696 = or i64 %t694, 4
   %t697 = call i64 @rt_root(i64 %t696)
   store i64 %t697, ptr @"scheme.base:andmap"
-  ret i64 %t697
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_34"() {
@@ -7349,7 +7349,7 @@ entry:
   %t717 = or i64 %t715, 4
   %t718 = call i64 @rt_root(i64 %t717)
   store i64 %t718, ptr @"scheme.base:memp"
-  ret i64 %t718
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_35"() {
@@ -7360,7 +7360,7 @@ entry:
   %t729 = or i64 %t727, 4
   %t730 = call i64 @rt_root(i64 %t729)
   store i64 %t730, ptr @"scheme.base:cadddr"
-  ret i64 %t730
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_36"() {
@@ -7371,7 +7371,7 @@ entry:
   %t745 = or i64 %t743, 4
   %t746 = call i64 @rt_root(i64 %t745)
   store i64 %t746, ptr @"scheme.base:list?"
-  ret i64 %t746
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_37"() {
@@ -7382,7 +7382,7 @@ entry:
   %t757 = or i64 %t755, 4
   %t758 = call i64 @rt_root(i64 %t757)
   store i64 %t758, ptr @"scheme.base:zero?"
-  ret i64 %t758
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_38"() {
@@ -7393,7 +7393,7 @@ entry:
   %t782 = or i64 %t780, 4
   %t783 = call i64 @rt_root(i64 %t782)
   store i64 %t783, ptr @"scheme.base:list-tail"
-  ret i64 %t783
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_39"() {
@@ -7404,7 +7404,7 @@ entry:
   %t794 = or i64 %t792, 4
   %t795 = call i64 @rt_root(i64 %t794)
   store i64 %t795, ptr @"scheme.base:list-ref"
-  ret i64 %t795
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_40"() {
@@ -7415,7 +7415,7 @@ entry:
   %t821 = or i64 %t819, 4
   %t822 = call i64 @rt_root(i64 %t821)
   store i64 %t822, ptr @"scheme.base:list-head"
-  ret i64 %t822
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_41"() {
@@ -7426,7 +7426,7 @@ entry:
   %t846 = or i64 %t844, 4
   %t847 = call i64 @rt_root(i64 %t846)
   store i64 %t847, ptr @"scheme.base:make-list"
-  ret i64 %t847
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_42"() {
@@ -7437,7 +7437,7 @@ entry:
   %t888 = or i64 %t886, 4
   %t889 = call i64 @rt_root(i64 %t888)
   store i64 %t889, ptr @"scheme.base:iota"
-  ret i64 %t889
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_43"() {
@@ -7448,7 +7448,7 @@ entry:
   %t901 = or i64 %t899, 4
   %t902 = call i64 @rt_root(i64 %t901)
   store i64 %t902, ptr @"scheme.base:max"
-  ret i64 %t902
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_44"() {
@@ -7459,7 +7459,7 @@ entry:
   %t907 = or i64 %t905, 4
   %t908 = call i64 @rt_root(i64 %t907)
   store i64 %t908, ptr @"scheme.base:void"
-  ret i64 %t908
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_45"() {
@@ -7470,7 +7470,7 @@ entry:
   %t924 = or i64 %t922, 4
   %t925 = call i64 @rt_root(i64 %t924)
   store i64 %t925, ptr @"scheme.base:string"
-  ret i64 %t925
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_46"() {
@@ -7481,7 +7481,7 @@ entry:
   %t941 = or i64 %t939, 4
   %t942 = call i64 @rt_root(i64 %t941)
   store i64 %t942, ptr @"scheme.base:%str-concat"
-  ret i64 %t942
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_47"() {
@@ -7492,7 +7492,7 @@ entry:
   %t964 = or i64 %t962, 4
   %t965 = call i64 @rt_root(i64 %t964)
   store i64 %t965, ptr @"scheme.base:chr-cmp"
-  ret i64 %t965
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_48"() {
@@ -7503,7 +7503,7 @@ entry:
   %t997 = or i64 %t995, 4
   %t998 = call i64 @rt_root(i64 %t997)
   store i64 %t998, ptr @"scheme.base:char=?"
-  ret i64 %t998
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_49"() {
@@ -7514,7 +7514,7 @@ entry:
   %t1030 = or i64 %t1028, 4
   %t1031 = call i64 @rt_root(i64 %t1030)
   store i64 %t1031, ptr @"scheme.base:char<?"
-  ret i64 %t1031
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_50"() {
@@ -7525,7 +7525,7 @@ entry:
   %t1063 = or i64 %t1061, 4
   %t1064 = call i64 @rt_root(i64 %t1063)
   store i64 %t1064, ptr @"scheme.base:char>?"
-  ret i64 %t1064
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_51"() {
@@ -7536,7 +7536,7 @@ entry:
   %t1104 = or i64 %t1102, 4
   %t1105 = call i64 @rt_root(i64 %t1104)
   store i64 %t1105, ptr @"scheme.base:char<=?"
-  ret i64 %t1105
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_52"() {
@@ -7547,7 +7547,7 @@ entry:
   %t1145 = or i64 %t1143, 4
   %t1146 = call i64 @rt_root(i64 %t1145)
   store i64 %t1146, ptr @"scheme.base:char>=?"
-  ret i64 %t1146
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_53"() {
@@ -7558,7 +7558,7 @@ entry:
   %t1189 = or i64 %t1187, 4
   %t1190 = call i64 @rt_root(i64 %t1189)
   store i64 %t1190, ptr @"scheme.base:string->list"
-  ret i64 %t1190
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_54"() {
@@ -7569,7 +7569,7 @@ entry:
   %t1225 = or i64 %t1223, 4
   %t1226 = call i64 @rt_root(i64 %t1225)
   store i64 %t1226, ptr @"scheme.base:ns-digits"
-  ret i64 %t1226
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_55"() {
@@ -7580,7 +7580,7 @@ entry:
   %t1271 = or i64 %t1269, 4
   %t1272 = call i64 @rt_root(i64 %t1271)
   store i64 %t1272, ptr @"scheme.base:number->string"
-  ret i64 %t1272
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_56"() {
@@ -7591,7 +7591,7 @@ entry:
   %t1297 = or i64 %t1295, 4
   %t1298 = call i64 @rt_root(i64 %t1297)
   store i64 %t1298, ptr @"scheme.base:error"
-  ret i64 %t1298
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_57"() {
@@ -7602,7 +7602,7 @@ entry:
   %t1303 = or i64 %t1301, 4
   %t1304 = call i64 @rt_root(i64 %t1303)
   store i64 %t1304, ptr @"scheme.base:raise"
-  ret i64 %t1304
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_58"() {
@@ -7613,7 +7613,7 @@ entry:
   %t1309 = or i64 %t1307, 4
   %t1310 = call i64 @rt_root(i64 %t1309)
   store i64 %t1310, ptr @"scheme.base:error-object?"
-  ret i64 %t1310
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_59"() {
@@ -7624,7 +7624,7 @@ entry:
   %t1315 = or i64 %t1313, 4
   %t1316 = call i64 @rt_root(i64 %t1315)
   store i64 %t1316, ptr @"scheme.base:error-object-message"
-  ret i64 %t1316
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_60"() {
@@ -7635,7 +7635,7 @@ entry:
   %t1321 = or i64 %t1319, 4
   %t1322 = call i64 @rt_root(i64 %t1321)
   store i64 %t1322, ptr @"scheme.base:error-object-irritants"
-  ret i64 %t1322
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_61"() {
@@ -7646,7 +7646,7 @@ entry:
   %t1364 = or i64 %t1362, 4
   %t1365 = call i64 @rt_root(i64 %t1364)
   store i64 %t1365, ptr @"scheme.base:list->vector"
-  ret i64 %t1365
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_62"() {
@@ -7657,7 +7657,7 @@ entry:
   %t1386 = or i64 %t1384, 4
   %t1387 = call i64 @rt_root(i64 %t1386)
   store i64 %t1387, ptr @"scheme.base:vector"
-  ret i64 %t1387
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_63"() {
@@ -7668,7 +7668,7 @@ entry:
   %t1429 = or i64 %t1427, 4
   %t1430 = call i64 @rt_root(i64 %t1429)
   store i64 %t1430, ptr @"scheme.base:list->bytevector"
-  ret i64 %t1430
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_64"() {
@@ -7679,7 +7679,7 @@ entry:
   %t1451 = or i64 %t1449, 4
   %t1452 = call i64 @rt_root(i64 %t1451)
   store i64 %t1452, ptr @"scheme.base:bytevector"
-  ret i64 %t1452
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_65"() {
@@ -7690,7 +7690,7 @@ entry:
   %t1475 = or i64 %t1473, 4
   %t1476 = call i64 @rt_root(i64 %t1475)
   store i64 %t1476, ptr @"scheme.base:values"
-  ret i64 %t1476
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_66"() {
@@ -7701,21 +7701,21 @@ entry:
   %t1520 = or i64 %t1518, 4
   %t1521 = call i64 @rt_root(i64 %t1520)
   store i64 %t1521, ptr @"scheme.base:call-with-values"
-  ret i64 %t1521
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_67"() {
 entry:
   %t1522 = call i64 @rt_root(i64 64)
   store i64 %t1522, ptr @"scheme.base:%ht-initial-buckets"
-  ret i64 %t1522
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_68"() {
 entry:
   %t1523 = call i64 @rt_root(i64 24)
   store i64 %t1523, ptr @"scheme.base:%ht-load-factor"
-  ret i64 %t1523
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_69"() {
@@ -7726,7 +7726,7 @@ entry:
   %t1536 = or i64 %t1534, 4
   %t1537 = call i64 @rt_root(i64 %t1536)
   store i64 %t1537, ptr @"scheme.base:make-hash-table"
-  ret i64 %t1537
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_70"() {
@@ -7737,7 +7737,7 @@ entry:
   %t1542 = or i64 %t1540, 4
   %t1543 = call i64 @rt_root(i64 %t1542)
   store i64 %t1543, ptr @"scheme.base:hash-table?"
-  ret i64 %t1543
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_71"() {
@@ -7748,7 +7748,7 @@ entry:
   %t1549 = or i64 %t1547, 4
   %t1550 = call i64 @rt_root(i64 %t1549)
   store i64 %t1550, ptr @"scheme.base:%ht-count"
-  ret i64 %t1550
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_72"() {
@@ -7759,7 +7759,7 @@ entry:
   %t1556 = or i64 %t1554, 4
   %t1557 = call i64 @rt_root(i64 %t1556)
   store i64 %t1557, ptr @"scheme.base:%ht-buckets"
-  ret i64 %t1557
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_73"() {
@@ -7770,7 +7770,7 @@ entry:
   %t1563 = or i64 %t1561, 4
   %t1564 = call i64 @rt_root(i64 %t1563)
   store i64 %t1564, ptr @"scheme.base:%ht-set-count!"
-  ret i64 %t1564
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_74"() {
@@ -7781,7 +7781,7 @@ entry:
   %t1570 = or i64 %t1568, 4
   %t1571 = call i64 @rt_root(i64 %t1570)
   store i64 %t1571, ptr @"scheme.base:%ht-set-buckets!"
-  ret i64 %t1571
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_75"() {
@@ -7792,7 +7792,7 @@ entry:
   %t1577 = or i64 %t1575, 4
   %t1578 = call i64 @rt_root(i64 %t1577)
   store i64 %t1578, ptr @"scheme.base:%ht-index"
-  ret i64 %t1578
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_76"() {
@@ -7803,7 +7803,7 @@ entry:
   %t1596 = or i64 %t1594, 4
   %t1597 = call i64 @rt_root(i64 %t1596)
   store i64 %t1597, ptr @"scheme.base:%ht-assoc"
-  ret i64 %t1597
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_77"() {
@@ -7814,7 +7814,7 @@ entry:
   %t1617 = or i64 %t1615, 4
   %t1618 = call i64 @rt_root(i64 %t1617)
   store i64 %t1618, ptr @"scheme.base:%ht-remove"
-  ret i64 %t1618
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_78"() {
@@ -7825,7 +7825,7 @@ entry:
   %t1644 = or i64 %t1642, 4
   %t1645 = call i64 @rt_root(i64 %t1644)
   store i64 %t1645, ptr @"scheme.base:hash-table-ref/default"
-  ret i64 %t1645
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_79"() {
@@ -7836,7 +7836,7 @@ entry:
   %t1670 = or i64 %t1668, 4
   %t1671 = call i64 @rt_root(i64 %t1670)
   store i64 %t1671, ptr @"scheme.base:hash-table-contains?"
-  ret i64 %t1671
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_80"() {
@@ -7847,7 +7847,7 @@ entry:
   %t1704 = or i64 %t1702, 4
   %t1705 = call i64 @rt_root(i64 %t1704)
   store i64 %t1705, ptr @"scheme.base:hash-table-ref"
-  ret i64 %t1705
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_81"() {
@@ -7858,7 +7858,7 @@ entry:
   %t1787 = or i64 %t1785, 4
   %t1788 = call i64 @rt_root(i64 %t1787)
   store i64 %t1788, ptr @"scheme.base:hash-table-set!"
-  ret i64 %t1788
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_82"() {
@@ -7869,7 +7869,7 @@ entry:
   %t1838 = or i64 %t1836, 4
   %t1839 = call i64 @rt_root(i64 %t1838)
   store i64 %t1839, ptr @"scheme.base:hash-table-delete!"
-  ret i64 %t1839
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_83"() {
@@ -7880,7 +7880,7 @@ entry:
   %t1949 = or i64 %t1947, 4
   %t1950 = call i64 @rt_root(i64 %t1949)
   store i64 %t1950, ptr @"scheme.base:%ht-grow!"
-  ret i64 %t1950
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_84"() {
@@ -7891,7 +7891,7 @@ entry:
   %t1960 = or i64 %t1958, 4
   %t1961 = call i64 @rt_root(i64 %t1960)
   store i64 %t1961, ptr @"scheme.base:hash-table-size"
-  ret i64 %t1961
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_85"() {
@@ -7902,7 +7902,7 @@ entry:
   %t1980 = or i64 %t1978, 4
   %t1981 = call i64 @rt_root(i64 %t1980)
   store i64 %t1981, ptr @"scheme.base:%ht-fold-buckets"
-  ret i64 %t1981
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_86"() {
@@ -7913,7 +7913,7 @@ entry:
   %t2033 = or i64 %t2031, 4
   %t2034 = call i64 @rt_root(i64 %t2033)
   store i64 %t2034, ptr @"scheme.base:hash-table->alist"
-  ret i64 %t2034
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_87"() {
@@ -7924,7 +7924,7 @@ entry:
   %t2055 = or i64 %t2053, 4
   %t2056 = call i64 @rt_root(i64 %t2055)
   store i64 %t2056, ptr @"scheme.base:hash-table-keys"
-  ret i64 %t2056
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_88"() {
@@ -7935,7 +7935,7 @@ entry:
   %t2077 = or i64 %t2075, 4
   %t2078 = call i64 @rt_root(i64 %t2077)
   store i64 %t2078, ptr @"scheme.base:hash-table-values"
-  ret i64 %t2078
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_89"() {
@@ -7946,7 +7946,7 @@ entry:
   %t2114 = or i64 %t2112, 4
   %t2115 = call i64 @rt_root(i64 %t2114)
   store i64 %t2115, ptr @"scheme.base:rd-ws?"
-  ret i64 %t2115
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_90"() {
@@ -7957,7 +7957,7 @@ entry:
   %t2135 = or i64 %t2133, 4
   %t2136 = call i64 @rt_root(i64 %t2135)
   store i64 %t2136, ptr @"scheme.base:rd-digit?"
-  ret i64 %t2136
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_91"() {
@@ -7968,7 +7968,7 @@ entry:
   %t2195 = or i64 %t2193, 4
   %t2196 = call i64 @rt_root(i64 %t2195)
   store i64 %t2196, ptr @"scheme.base:rd-delim?"
-  ret i64 %t2196
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_92"() {
@@ -7979,7 +7979,7 @@ entry:
   %t2236 = or i64 %t2234, 4
   %t2237 = call i64 @rt_root(i64 %t2236)
   store i64 %t2237, ptr @"scheme.base:rd-skip-line"
-  ret i64 %t2237
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_93"() {
@@ -7990,7 +7990,7 @@ entry:
   %t2296 = or i64 %t2294, 4
   %t2297 = call i64 @rt_root(i64 %t2296)
   store i64 %t2297, ptr @"scheme.base:rd-skip-ws"
-  ret i64 %t2297
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_94"() {
@@ -8001,7 +8001,7 @@ entry:
   %t2329 = or i64 %t2327, 4
   %t2330 = call i64 @rt_root(i64 %t2329)
   store i64 %t2330, ptr @"scheme.base:rd-token-end"
-  ret i64 %t2330
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_95"() {
@@ -8012,7 +8012,7 @@ entry:
   %t2362 = or i64 %t2360, 4
   %t2363 = call i64 @rt_root(i64 %t2362)
   store i64 %t2363, ptr @"scheme.base:rd-all-digits?"
-  ret i64 %t2363
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_96"() {
@@ -8023,7 +8023,7 @@ entry:
   %t2423 = or i64 %t2421, 4
   %t2424 = call i64 @rt_root(i64 %t2423)
   store i64 %t2424, ptr @"scheme.base:rd-numeric?"
-  ret i64 %t2424
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_97"() {
@@ -8034,7 +8034,7 @@ entry:
   %t2469 = or i64 %t2467, 4
   %t2470 = call i64 @rt_root(i64 %t2469)
   store i64 %t2470, ptr @"scheme.base:rd-digits"
-  ret i64 %t2470
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_98"() {
@@ -8045,7 +8045,7 @@ entry:
   %t2517 = or i64 %t2515, 4
   %t2518 = call i64 @rt_root(i64 %t2517)
   store i64 %t2518, ptr @"scheme.base:rd-parse-int"
-  ret i64 %t2518
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_99"() {
@@ -8056,7 +8056,7 @@ entry:
   %t2530 = or i64 %t2528, 4
   %t2531 = call i64 @rt_root(i64 %t2530)
   store i64 %t2531, ptr @"scheme.base:rd-dotchar?"
-  ret i64 %t2531
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_100"() {
@@ -8067,7 +8067,7 @@ entry:
   %t2551 = or i64 %t2549, 4
   %t2552 = call i64 @rt_root(i64 %t2551)
   store i64 %t2552, ptr @"scheme.base:rd-exp-char?"
-  ret i64 %t2552
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_101"() {
@@ -8078,7 +8078,7 @@ entry:
   %t2572 = or i64 %t2570, 4
   %t2573 = call i64 @rt_root(i64 %t2572)
   store i64 %t2573, ptr @"scheme.base:rd-sign-char?"
-  ret i64 %t2573
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_102"() {
@@ -8089,7 +8089,7 @@ entry:
   %t2606 = or i64 %t2604, 4
   %t2607 = call i64 @rt_root(i64 %t2606)
   store i64 %t2607, ptr @"scheme.base:rd-scan-digits"
-  ret i64 %t2607
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_103"() {
@@ -8100,7 +8100,7 @@ entry:
   %t2788 = or i64 %t2786, 4
   %t2789 = call i64 @rt_root(i64 %t2788)
   store i64 %t2789, ptr @"scheme.base:rd-flonum?"
-  ret i64 %t2789
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_104"() {
@@ -8111,7 +8111,7 @@ entry:
   %t2825 = or i64 %t2823, 4
   %t2826 = call i64 @rt_root(i64 %t2825)
   store i64 %t2826, ptr @"scheme.base:rd-atom"
-  ret i64 %t2826
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_105"() {
@@ -8122,7 +8122,7 @@ entry:
   %t2900 = or i64 %t2898, 4
   %t2901 = call i64 @rt_root(i64 %t2900)
   store i64 %t2901, ptr @"scheme.base:rd-hex-digit"
-  ret i64 %t2901
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_106"() {
@@ -8133,7 +8133,7 @@ entry:
   %t2963 = or i64 %t2961, 4
   %t2964 = call i64 @rt_root(i64 %t2963)
   store i64 %t2964, ptr @"scheme.base:rd-hex"
-  ret i64 %t2964
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_107"() {
@@ -8144,7 +8144,7 @@ entry:
   %t2996 = or i64 %t2994, 4
   %t2997 = call i64 @rt_root(i64 %t2996)
   store i64 %t2997, ptr @"scheme.base:rd-str-esc"
-  ret i64 %t2997
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_108"() {
@@ -8155,7 +8155,7 @@ entry:
   %t3136 = or i64 %t3134, 4
   %t3137 = call i64 @rt_root(i64 %t3136)
   store i64 %t3137, ptr @"scheme.base:rd-string"
-  ret i64 %t3137
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_109"() {
@@ -8166,7 +8166,7 @@ entry:
   %t3303 = or i64 %t3301, 4
   %t3304 = call i64 @rt_root(i64 %t3303)
   store i64 %t3304, ptr @"scheme.base:rd-hash"
-  ret i64 %t3304
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_110"() {
@@ -8177,7 +8177,7 @@ entry:
   %t3345 = or i64 %t3343, 4
   %t3346 = call i64 @rt_root(i64 %t3345)
   store i64 %t3346, ptr @"scheme.base:rd-char-name"
-  ret i64 %t3346
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_111"() {
@@ -8188,7 +8188,7 @@ entry:
   %t3387 = or i64 %t3385, 4
   %t3388 = call i64 @rt_root(i64 %t3387)
   store i64 %t3388, ptr @"scheme.base:rd-char"
-  ret i64 %t3388
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_112"() {
@@ -8199,7 +8199,7 @@ entry:
   %t3414 = or i64 %t3412, 4
   %t3415 = call i64 @rt_root(i64 %t3414)
   store i64 %t3415, ptr @"scheme.base:rd-quote"
-  ret i64 %t3415
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_113"() {
@@ -8210,7 +8210,7 @@ entry:
   %t3441 = or i64 %t3439, 4
   %t3442 = call i64 @rt_root(i64 %t3441)
   store i64 %t3442, ptr @"scheme.base:rd-quasi"
-  ret i64 %t3442
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_114"() {
@@ -8221,7 +8221,7 @@ entry:
   %t3515 = or i64 %t3513, 4
   %t3516 = call i64 @rt_root(i64 %t3515)
   store i64 %t3516, ptr @"scheme.base:rd-unquote"
-  ret i64 %t3516
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_115"() {
@@ -8232,7 +8232,7 @@ entry:
   %t3555 = or i64 %t3553, 4
   %t3556 = call i64 @rt_root(i64 %t3555)
   store i64 %t3556, ptr @"scheme.base:rd-dot?"
-  ret i64 %t3556
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_116"() {
@@ -8243,7 +8243,7 @@ entry:
   %t3571 = or i64 %t3569, 4
   %t3572 = call i64 @rt_root(i64 %t3571)
   store i64 %t3572, ptr @"scheme.base:rd-append-reverse"
-  ret i64 %t3572
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_117"() {
@@ -8254,7 +8254,7 @@ entry:
   %t3690 = or i64 %t3688, 4
   %t3691 = call i64 @rt_root(i64 %t3690)
   store i64 %t3691, ptr @"scheme.base:rd-list"
-  ret i64 %t3691
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_118"() {
@@ -8265,7 +8265,7 @@ entry:
   %t3843 = or i64 %t3841, 4
   %t3844 = call i64 @rt_root(i64 %t3843)
   store i64 %t3844, ptr @"scheme.base:rd-datum"
-  ret i64 %t3844
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_119"() {
@@ -8276,7 +8276,7 @@ entry:
   %t3862 = or i64 %t3860, 4
   %t3863 = call i64 @rt_root(i64 %t3862)
   store i64 %t3863, ptr @"scheme.base:read-from-string"
-  ret i64 %t3863
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init_120"() {
@@ -8287,7 +8287,7 @@ entry:
   %t3936 = or i64 %t3934, 4
   %t3937 = call i64 @rt_root(i64 %t3936)
   store i64 %t3937, ptr @"scheme.base:read-all-from-string"
-  ret i64 %t3937
+  ret i64 17
 }
 
 define i64 @"scheme.base:__init"() {

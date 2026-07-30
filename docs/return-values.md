@@ -6,7 +6,8 @@ section, read [the policy in brief](#the-policy-in-brief).
 
 > **Status: adopted and implemented** (OpenSpec change `unspecified-value`). Emit now has one
 > distinguished unspecified value: a misc-immediate on subtype 2, distinct from `#f` and `()`, truthy,
-> written `#<unspecified>`, with no reader syntax and no predicate, suppressed by the REPL echo.
+> written `#<unspecified>`, with no reader syntax and no predicate, suppressed by the REPL echo — so
+> `define`, `set!`, mutators, and I/O procedures are all silent at the prompt.
 > [Where Emit stood before](#where-emit-stood-before) records what it replaced.
 >
 > **This is not a promise.** Following Chez's own caveat, what Emit returns at an unspecified-result
@@ -606,6 +607,18 @@ it is generated from the prelude and guarded for staleness.
 is embedded verbatim as a string constant in `bootstrap/embed.ll`, so a comment-only edit changes the
 committed IR. Skipping the regen leaves `test/self-host-fixpoint.sh` failing with a handful of
 diff lines in that one string constant, which reads like a compiler divergence and is not one.
+
+**A top-level `define` was a fourth site, found after the fact.** `define` is a *definition*, not an
+expression, so R7RS gives it no value and it never appeared in the category-1 inventory — but its
+lowering, `(global-set! sym init)`, returned the *stored value*, so `(define square (lambda (n) …))`
+echoed `#<procedure>` at the REPL as though the definition evaluated to the procedure. That also made
+it disagree with a local `(set! x v)`, which lowers to a `set-box!` primcall and so already yielded the
+unspecified value through `rt_set_box` — an internal inconsistency, not merely a cosmetic one.
+`global-set!` now yields the unspecified value, which makes `define` silent at the prompt (the echo
+suppression does the rest) and matches Chez, Racket, Guile, and Gambit. `define-syntax` was already
+quiet. Note the blast radius was almost entirely in *library initializers*: 8520 changed IR lines
+across 71 demos, every one a `ret` in a `scheme.base:__init_N` per-define thunk whose value is
+discarded, and none in any procedure body.
 
 ### Costs and counterarguments
 

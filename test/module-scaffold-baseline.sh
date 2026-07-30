@@ -53,6 +53,16 @@
 #     +1 new entry (unspecified-value), the change's own demo.  One demo's stdout also
 #     changed by design (mandelbrot.expected: `#f` -> `#<unspecified>`, since its
 #     `render` ends in a result-less `do` loop) -- which is the point of the change.
+#   unspecified-value, follow-up: `global-set!` (a top-level define's lowering) now yields
+#     the unspecified value instead of the stored value, so a `define` no longer echoes at
+#     the REPL and it agrees with a local `set!`, which already yielded the unspecified
+#     value via rt_set_box.  Verified: a 71-demo before/after capture differed in EXACTLY
+#     8520 lines, all of the form `ret i64 %tN` -> `ret i64 17`, with no additions, no
+#     deletions, and no structural change.  Every one of the 8520 was mechanically checked
+#     to sit inside a `@"scheme.base:__init_N"()` per-define initializer -- whose return
+#     value is discarded by the library `__init` -- and NOT inside any `code_N` function
+#     body, so no procedure's result changed.  The `rt_root` call and the `store` into the
+#     global slot are untouched; only the discarded return operand differs.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

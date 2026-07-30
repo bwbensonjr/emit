@@ -31,30 +31,34 @@ check () {  # name  flags  expected-newline-joined  <<session
 echo "interactive REPL end-to-end tests"
 
 # --- core model, no prelude (fast) ---
-check earlier-define --no-prelude "$(printf '41\n42')" <<'EOF'
+# NB: a top-level `define` echoes NOTHING (change: unspecified-value -- its value is the
+# unspecified value, which the REPL suppresses), so the expectations below carry only the
+# values of the non-define forms.  Each define's EFFECT is still asserted, by the form
+# that follows it.
+check earlier-define --no-prelude "42" <<'EOF'
 (define x 41)
 (+ x 1)
 EOF
 
-check redefinition --no-prelude "$(printf '1\n2\n4')" <<'EOF'
+check redefinition --no-prelude "4" <<'EOF'
 (define y 1)
 (define y 2)
 (+ y y)
 EOF
 
-check heap-persist --no-prelude "$(printf '(1 . 2)\n1')" <<'EOF'
+check heap-persist --no-prelude "1" <<'EOF'
 (define p (cons 1 2))
 (car p)
 EOF
 
-check error-recovery --no-prelude "$(printf '#<procedure>\n25\n36')" <<'EOF'
+check error-recovery --no-prelude "$(printf '25\n36')" <<'EOF'
 (define (sq n) (* n n))
 (sq 5)
 (nope 1)
 (sq 6)
 EOF
 
-check arity-trap-survives --no-prelude "$(printf '#<procedure>\n!trap: arity error: expected 1 argument(s), got 2\n81')" <<'EOF'
+check arity-trap-survives --no-prelude "$(printf '!trap: arity error: expected 1 argument(s), got 2\n81')" <<'EOF'
 (define (f n) (* n n))
 (f 1 2)
 (f 9)
@@ -62,20 +66,20 @@ EOF
 
 # spec: forward references are rejected (a referenced to b before b exists),
 # and the session recovers so later forms work
-check forward-ref-rejected --no-prelude "$(printf '10\n11')" <<'EOF'
+check forward-ref-rejected --no-prelude "11" <<'EOF'
 (define a (+ b 1))
 (define b 10)
 (+ b 1)
 EOF
 
 # spec: interned symbols stay eq? across forms (shared symbol table)
-check symbol-eq-persist --no-prelude "$(printf 'foo\n#t')" <<'EOF'
+check symbol-eq-persist --no-prelude "#t" <<'EOF'
 (define s (quote foo))
 (eq? s (quote foo))
 EOF
 
 # --- with prelude: macros, library, user macros, the in-language reader ---
-check cond-macro "" "$(printf '#<procedure>\nneg\npos')" <<'EOF'
+check cond-macro "" "$(printf 'neg\npos')" <<'EOF'
 (define (classify n) (cond ((< n 0) (quote neg)) (else (quote pos))))
 (classify -3)
 (classify 7)
@@ -99,7 +103,7 @@ EOF
 # spec (error-and-guard-conditions): (error who msg irritant) reports the
 # who/message/irritant diagnostic (echoed as !trap: ...) and the session
 # survives, so the following form still yields its value (7).
-check error-reports-and-survives "" "$(printf '#<procedure>\n!trap: parse: bad expression x\n7')" <<'EOF'
+check error-reports-and-survives "" "$(printf '!trap: parse: bad expression x\n7')" <<'EOF'
 (define (boom) (error 'parse "bad expression" 'x))
 (boom)
 (+ 3 4)
