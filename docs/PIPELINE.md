@@ -129,6 +129,27 @@ D3 lesson recorded there).
 | lambda-lift + lower | `(program (code …) entry)` with `(local x)｜(free-ref i)｜(make-closure …)｜(closure-block …)｜(app f (a…))` | `src/passes/lower.ss` |
 | emit | textual LLVM IR (opaque `ptr`, `tailcc`, `musttail`) | `src/emit.ss` |
 
+**Inspecting the stages (`--dump`).** Every door of the shipped binary prints the IL after
+each named pass to stderr — `build/emit run --dump prog.scm`, and likewise `build`, `lib`,
+and `repl`; `EMIT_DUMP_LEVEL=2 build/schemec` for the filter, which has no argument parser.
+No Chez required (change: `emit-dump-stages`); the Chez driver's `--dump` remains as the
+reference the shipped dump is checked against (`test/dump-parity-tests.sh`).
+
+Which stage names you see depends on which front half runs, and there are two:
+
+- **whole-program** (`compile-forms` — the `schemec` filter, and the Chez driver under
+  `--no-prelude`): `collect-toplevel`, `expand`, `parse+rename`, then the four above.
+- **modular** (`compile-program-with-imports` — what every shipped door takes, since
+  `(scheme base)` is auto-imported, and the Chez driver's default): the same ladder with
+  `parse+rename+imports`, that stage additionally resolving imported globals.
+
+A library's defines and the REPL's forms are lowered one form at a time (through
+`unit-lcode` / `repl-lcode`), so those stages repeat and each header names its form:
+`;; ==== after convert-closures [define fact] ====`. Library units other than the one under
+inspection are dumped only under `--dump-all`, tagged `[unit (scheme base)]` — otherwise the
+auto-imported standard library's ~600 stage dumps would bury the program's seven. See
+`docs/OUTPUT.md` for the flags and the level/environment channel.
+
 Two passes beyond the spike's three were new here: **lambda-lift + lowering** (hoist code,
 make closures explicit heap objects, calls indirect through `code_ptr`). Codegen upholds
 `LLVM.md`'s conventions: tagged-pointer values, heap closures, one uniform calling

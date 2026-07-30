@@ -137,13 +137,16 @@ Two defects the verification work surfaced, both fixed here:
 
 ## 7. Documentation
 
-- [ ] 7.1 `README.md` — add `--dump` to the quick-start door examples and state that stage
+- [x] 7.1 `README.md` — add `--dump` to the quick-start door examples and state that stage
   inspection no longer needs Chez; update the Chez-role paragraph to "verification and
   genesis only".
-- [ ] 7.2 `docs/PIPELINE.md` — update the `--dump` references to name the shipped binary,
+- [x] 7.2 `docs/PIPELINE.md` — update the `--dump` references to name the shipped binary,
   and document the modular/per-form stage coverage and the form-qualified headers.
-- [ ] 7.3 `docs/OUTPUT.md` — document `--dump`/`--dump-all`, `EMIT_DUMP_LEVEL`, its
+- [x] 7.3 `docs/OUTPUT.md` — document `--dump`/`--dump-all`, `EMIT_DUMP_LEVEL`, its
   relationship to `EMIT_VERBOSITY`, and the stderr/stdout discipline for dumps.
-- [ ] 7.4 `docs/PRIMITIVES.md` — record `%dump-level` and `%stderr-write` as reserved
+- [x] 7.4 `docs/PRIMITIVES.md` — record `%dump-level` and `%stderr-write` as reserved
   `%`-ops (not shadowable user-facing bindings) and note the staged bootstrap they required.
-- [ ] 7.5 Run `make catalogue` to refresh `docs/COMPLEXITY.md` after the source growth.
+- [x] 7.5 Run `make catalogue` to refresh `docs/COMPLEXITY.md` after the source growth
+  (authored 27 files/8162 LOC -> 28/8581). Note the refresh also absorbs pre-existing drift:
+  the last catalogue run was at `c00621e`, and `6cb266b` added `docs/r7rs/*.md` without one,
+  so docs/reference reclassify independently of this change.

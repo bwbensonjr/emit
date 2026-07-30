@@ -10,9 +10,11 @@ persistent LLVM ORC/LLJIT host, where each form is compiled by the
 **embedded compiler in-process** into a long-lived session. The
 compiler is written in Scheme and compiles its own source to a
 **byte-identical fixed point** — so the day-to-day build, run, REPL,
-and recompile loop needs **only a recent LLVM + libgc**. The ability to
-host with Chez Scheme survives as the historical genesis
-(`historical/genesis/`) and an optional CI trust-check. The
+inspect (`--dump`), and recompile loop needs **only a recent LLVM +
+libgc**. The ability to host with Chez Scheme survives as the historical
+genesis (`historical/genesis/`) and as the **verification** host: the
+anti-stale trust-check, the independent-host re-derivation of the fixed
+point, and the reference the shipped stage dump is checked against. The
 implementation prioritizes simple, transparent stages (see
 `CLAUDE.md`); development is OpenSpec-driven, tracked under
 `openspec/`. There is a high-level architectural goal of generating
@@ -49,6 +51,11 @@ build/emit run < demos/fact.scm                                # (stdin also wor
 # (emit IR in-process + clang link, all inside build/emit):
 build/emit build fact --manifest emit-libs.scm                 # -> the delivered exe
 build/emit run --emit < demos/fact.scm > /tmp/fact.ll          # (the emit step alone)
+
+# See inside the compiler: the IL after every pass, on stderr (no Chez needed).
+# Works on every verb; --dump-all adds (scheme base) and imported libraries.
+build/emit run --dump demos/fact.scm                           # 7 stages -> stderr
+build/emit repl --dump                                         # per-form, in the REPL
 
 # compile one library to its artifact (unit .ll + .exports), Chez-free:
 build/emit lib test/modules/mylib.sld -o build/lib
@@ -183,7 +190,8 @@ library-structured source are frozen under `historical/genesis/`.
 - `docs/MODULES.md` — using the module system: writing a `define-library`, `import`/`export`, the
   manifest (`emit-libs.scm`), building/running an importing program on each door, and `(scheme base)`.
 - `docs/OUTPUT.md` — the tool-output convention: message format, stderr/stdout discipline,
-  and the `EMIT_VERBOSITY` control that every build/compile/regen/test tool honors.
+  the `EMIT_VERBOSITY` control that every build/compile/regen/test tool honors, and the
+  `--dump` / `--dump-all` stage dumps.
 - `tools/log.sh` — the shared `say`/`vsay`/`bytes` helpers that implement that convention.
 - [`docs/COMPLEXITY.md`](docs/COMPLEXITY.md) — a catalogue of the tree by component, role, and
   language, separating the hand-authored system from generated IR, vendored code, and OpenSpec
