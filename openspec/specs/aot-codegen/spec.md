@@ -5,9 +5,7 @@
 Defines the ahead-of-time code generation backend: lowering the lambda-lifted core IL to
 textual LLVM IR, linking it into a native executable against the C runtime and Boehm GC,
 the value representation used at runtime, and the observability of each pipeline stage.
-
 ## Requirements
-
 ### Requirement: Emit textual LLVM IR and link a native executable
 
 The compiler SHALL lower the lambda-lifted core IL to textual LLVM IR (opaque `ptr`,
@@ -59,6 +57,13 @@ top-level `define`s into the core IL, and the `expand` pass — now a fixpoint
 derived forms `cond`, `and`, `or`, `when`, `unless`, `let*`, and named `let`, which are
 supplied as prelude macros) into core forms.
 
+The debug mode SHALL be reachable from the **shipped compiler binary** without Chez
+Scheme, and SHALL cover every compilation path the compiler takes — the whole-program
+path, the modular path used when libraries are imported (including the auto-imported
+`(scheme base)`), and the per-form path the REPL uses — not only the whole-program path.
+Where a path runs a pass once per top-level form, each dumped stage SHALL identify the
+form it belongs to.
+
 #### Scenario: Stage dump
 
 - **WHEN** a program is compiled with the stage-dump flag enabled
@@ -72,6 +77,28 @@ supplied as prelude macros) into core forms.
   with the stage-dump flag enabled
 - **THEN** the `expand` stage output contains only core forms and known primitive heads,
   with every macro use rewritten and no `define-syntax`/`syntax-rules` form remaining
+
+#### Scenario: The stage dump needs no Chez Scheme
+
+- **WHEN** a developer compiles a program with the stage-dump flag through the shipped
+  binary on a machine with no `chez` on `PATH`
+- **THEN** the IL after each named pass is printed, with the same stage names and the same
+  order the Chez driver's dump produces for the same program
+
+#### Scenario: The modular path dumps its mid-pipeline stages
+
+- **WHEN** a program that imports a library (or is compiled with the auto-imported
+  `(scheme base)`) is compiled with the stage-dump flag enabled
+- **THEN** the dump includes `recognize-let`, `convert-assignments`, and
+  `convert-closures` in addition to the top-level, `expand`, `parse+rename`, and lowering
+  stages
+
+#### Scenario: Per-form stages name their form
+
+- **WHEN** the per-form path (the REPL, or a modular program's per-form lowering) dumps a
+  stage that runs once per top-level form
+- **THEN** each stage header identifies which top-level form it belongs to, so repeated
+  stage names are unambiguous
 
 ### Requirement: Calling-convention decision for variadic application is evidence-backed and recorded
 
@@ -342,3 +369,4 @@ program's result SHALL be identical to a non-shaken build.
 - **THEN** exactly the bindings transitively reachable from that root set are retained, so a
   different root set (e.g. a library's exports rather than a program entry) selects a different
   retained set through the same mechanism
+
