@@ -140,6 +140,11 @@
 #     before/after capture: EXACTLY ONE demo differs in IR and stdout -- the new regression
 #     demo letrec-init, which did not compile at all before.  The other 75 are byte-identical
 #     in both, since no existing demo binds a non-lambda in a letrec.  +1 new entry.
+#   add letrec* (R7RS-small 4.2.2) -- a new form, so nothing existing could change.
+#     `parse` maps it onto the same `letrec` IL node, since that lowering already has
+#     letrec*'s left-to-right initialization (issue #9).  Verified against a 77-demo
+#     before/after capture: EXACTLY ONE demo differs, the new letrec-star, which did not
+#     compile before.  The other 76 are byte-identical in IR and stdout.  +1 new entry.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

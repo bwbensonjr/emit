@@ -282,6 +282,14 @@
        [(lambda ,params . ,body) `(lambda ,params ,(parse-body body))]
        [(let ,binds . ,body) `(let ,(map parse-bind binds) ,(parse-body body))]
        [(letrec ,binds . ,body) `(letrec ,(map parse-bind binds) ,(parse-body body))]
+       ;; `letrec*` collapses onto the same IL node.  The two differ only in
+       ;; initialization order -- letrec* is left to right, letrec leaves it
+       ;; unspecified -- and this compiler already gives the letrec* order:
+       ;; convert-assignments boxes every non-lambda binding and fills them in
+       ;; binding order (issue #9), while the lambdas that stay in the closure
+       ;; block are pure to create.  A left-to-right implementation satisfies
+       ;; `letrec` too, since any order does.
+       [(letrec* ,binds . ,body) `(letrec ,(map parse-bind binds) ,(parse-body body))]
        [(begin . ,body) (parse-body body)]
        [(define . ,rest) (error 'parse "'define' is only allowed at the top level" e)]
        [(set! ,x ,rhs) `(set! ,x ,(parse-expr rhs))]

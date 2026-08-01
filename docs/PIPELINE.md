@@ -180,7 +180,7 @@ D3 lesson recorded there).
 
 | stage | IL shape (s-expr) | file |
 |-------|-------------------|------|
-| core | `(const d)｜x｜(if …)｜(lambda (x…) e)｜(call e e…)｜(primcall op e…)｜(let/letrec …)｜(seq …)｜(set! x e)` | `src/parse.ss` |
+| core | `(const d)｜x｜(if …)｜(lambda (x…) e)｜(call e e…)｜(primcall op e…)｜(let/letrec …)｜(seq …)｜(set! x e)` — `letrec*` parses to the same `letrec` node, since that lowering already gives letrec*'s left-to-right initialization | `src/parse.ss` |
 | inline-primitives | same core IL; direct unshadowed integrable call `(call cons a b)` → `(primcall %cons a b)`, value/apply/wrong-arity use `cons` → `(lambda (p…) (primcall %cons p…))`; a shadowed (alpha-renamed) binding is left untouched | `src/parse.ss` |
 | recognize-let | + `(let …)` from `(call (lambda …) …)` | `src/passes/recognize-let.ss` |
 | convert-assignments | − `set!`; `+ (primcall box/unbox/set-box! …)`; a `letrec` binder that is assigned (issue #8) or not lambda-initialized (issue #9) splits out into an enclosing boxed `let`, so what reaches `lower` as a closure block is all-lambda | `src/passes/convert-assignments.ss` |

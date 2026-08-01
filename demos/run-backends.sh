@@ -73,6 +73,7 @@ run3 foldbound demos/fold-boundary.scm  '(#t #t #t #t #t)'  # fold == runtime at
 run3 fixlits   demos/fixnum-literals.scm '(72057594037927936 144115188075855872 576460752303423488 1152921504606846975 -576460752303423488 -1152921504606846975)'  # issue #7
 run3 redefine  demos/redefine-function.scm '(1 2 (10 20) 100 300 300)'  # issue #8
 run3 letrecini demos/letrec-init.scm 'ab(1 10 5 7 3 120)'  # issue #9
+run3 letrecstr demos/letrec-star.scm 'ab(1 7 #t 3 9)'  # letrec*
 run3 derived   demos/derived.scm        180
 run3 namedloop demos/named-let-loop.scm 42
 run3 naryarith demos/nary-arith.scm      43    # n-ary + - *, unary neg, identities

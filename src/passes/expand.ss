@@ -22,7 +22,7 @@
 ;; quasiquote/unquote/unquote-splicing are intercepted by `exp` (rewritten to
 ;; core forms before parse); they appear here only so hygiene's `known` set
 ;; leaves them un-renamed.
-(define *core-keywords* '(quote if lambda let letrec begin set! define apply
+(define *core-keywords* '(quote if lambda let letrec letrec* begin set! define apply
                           define-syntax syntax-rules
                           quasiquote unquote unquote-splicing))
 ;; comparison heads handled by the hand-written desugar but not in *prims*
@@ -257,7 +257,11 @@
              (if (symbol? (cadr e))               ; named let (overloads core `let`)
                  (exp1 (rewrite-named-let (cadr e) (caddr e) (cdddr e)))
                  `(let ,(map bind-exp (cadr e)) ,@(map exp1 (cddr e))))]
-            [(eq? h 'letrec) `(letrec ,(map bind-exp (cadr e)) ,@(map exp1 (cddr e)))]
+            ;; letrec and letrec* expand identically and are DISTINGUISHED here only
+            ;; so the post-expand dump still shows the form the user wrote; parse
+            ;; maps both to the one `letrec` IL node (see src/parse.ss).
+            [(memq h '(letrec letrec*))
+             `(,h ,(map bind-exp (cadr e)) ,@(map exp1 (cddr e)))]
             [(memq h '(+ - * /)) (expand-arith exp1 h (cdr e))]
             [(eq? h 'string-append) (expand-string-append exp1 (cdr e))]
             [(memq h '(= < > <= >= eq? eqv?)) (expand-compare exp1 h (cdr e))]
