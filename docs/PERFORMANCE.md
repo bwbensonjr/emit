@@ -385,9 +385,40 @@ as expected — it is self-recursive and already had B-self.
 24 of 77 demos' IR changed and **none grew** (`records` −7.4%, `fold-boundary` −4.7%, `toplevel`
 −3.3%, `case-cxr` −2.4%); all 77 values identical. `build/emit` is flat (+0.04%).
 
-What remains unscheduled is the *cross-unit* half — 808 of those sites call a `(scheme base)`
-global, which would need the closed-world AOT assumption `aot-release-profile` already relies on.
-That is a genuinely separate change with the dev→ship carve-out this one avoided.
+**The cross-unit half, investigated.** 808 of the surviving sites call a `(scheme base)` global.
+Making those direct turns out to be a different and larger problem than the intra-unit half, and
+the measurements invert the obvious expectation. On a 30-million-call probe against
+`scheme.base:zero?`, hand-patching the call site to `call fastcc @"scheme.base:code_N"`:
+
+| | no LTO | with `-flto` |
+|---|--------|--------------|
+| indirect (today) | 0.06s | 0.06s |
+| direct call | 0.06s | **0.01s** |
+
+**Neither piece is worth anything on its own.** The direct call alone saves only the
+code-pointer load, which is L1-resident behind a perfectly-predicted branch — no measurable win.
+LTO alone does nothing either, because the callee is a *runtime heap closure*: LLVM cannot
+devirtualize a value that `__init` allocated, no matter how much of the program it can see. Only
+together — a direct call LLVM can then inline across units — do they pay, and then by 6×.
+
+So this is a three-part change, not one:
+
+1. **Stable code-label naming for library exports.** The blocker. AOT tree-shaking recompiles
+   each unit per program, and labels come from the shared gensym counter, so they *renumber*:
+   `zero?` is `scheme.base:code_168` in the committed unit and `scheme.base:code_216` in a pruned
+   one. A program cannot name a callee whose label depends on a pruning decision driven by that
+   same program. Labels for lambda-valued exports would have to be derived from the binding name
+   instead of the counter — which renames every emitted label in every unit.
+2. **Export interface + linkage.** The `.exports` table carries only
+   `(external . mangled-symbol)`; it would need the code label and arity, and those labels would
+   need external linkage — which works against P1's stripping.
+3. **`-flto` on the AOT link**, without which parts 1 and 2 buy nothing.
+
+Plus the closed-world reasoning this item was always going to need. Worth doing for a 6× on
+library-call-heavy code, but it is an artifact-format and link-strategy change, not an emitter
+tweak — it wants its own OpenSpec change.
+
+**OpenSpec change:** _none yet_ (cross-unit half).
 
 ---
 
