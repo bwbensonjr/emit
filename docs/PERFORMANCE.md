@@ -409,16 +409,17 @@ So this is a three-part change, not one:
    one. A program cannot name a callee whose label depends on a pruning decision driven by that
    same program. Labels for lambda-valued exports would have to be derived from the binding name
    instead of the counter — which renames every emitted label in every unit.
-2. **Export interface + linkage.** The `.exports` table carries only
-   `(external . mangled-symbol)`; it would need the code label and arity, and those labels would
-   need external linkage — which works against P1's stripping.
+2. **Export interface.** The `.exports` table carries only `(external . mangled-symbol)`; it
+   would need the code label and arity. No linkage change is needed — library code labels are
+   already external, which is why the hand-patched probe linked; an earlier draft of this note
+   claimed otherwise and was wrong.
 3. **`-flto` on the AOT link**, without which parts 1 and 2 buy nothing.
 
 Plus the closed-world reasoning this item was always going to need. Worth doing for a 6× on
 library-call-heavy code, but it is an artifact-format and link-strategy change, not an emitter
 tweak — it wants its own OpenSpec change.
 
-**OpenSpec change:** _none yet_ (cross-unit half).
+**OpenSpec change:** `cross-unit-direct-calls` (cross-unit half; proposed, not implemented).
 
 ---
 
