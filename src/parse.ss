@@ -129,8 +129,11 @@
 ;; a left-fold `(lambda gs (loop IDENT gs))` where loop threads ACC over gs with
 ;; `(primcall RAW acc (car rest))`.  Used for `+`(0) `*`(1) `string-append`("").
 (define (left-fold-eta raw ident)
-  (let ([gs (fresh-name 'gs)] [loop (fresh-name 'loop)]
-        [acc (fresh-name 'acc)] [rest (fresh-name 'rest)])
+  ;; let* (not let): four counter-bumping inits, so a parallel `let` would number
+  ;; them in host order (issue #11) and the eta expansion's names would differ
+  ;; between the Chez driver and the shipped doors.
+  (let* ([gs (fresh-name 'gs)] [loop (fresh-name 'loop)]
+         [acc (fresh-name 'acc)] [rest (fresh-name 'rest)])
     `(lambda ,gs
        (letrec ([,loop (lambda (,acc ,rest)
                          (if (primcall %null? ,rest)
@@ -142,8 +145,11 @@
 ;; `-` as a value: `(- a)` negates, `(- a b ...)` subtracts left-to-right, `(- )`
 ;; is degenerate (0).  Distinct from the identity folds above.
 (define (diff-eta raw)
-  (let ([gs (fresh-name 'gs)] [loop (fresh-name 'loop)]
-        [acc (fresh-name 'acc)] [rest (fresh-name 'rest)])
+  ;; let* (not let): four counter-bumping inits, so a parallel `let` would number
+  ;; them in host order (issue #11) and the eta expansion's names would differ
+  ;; between the Chez driver and the shipped doors.
+  (let* ([gs (fresh-name 'gs)] [loop (fresh-name 'loop)]
+         [acc (fresh-name 'acc)] [rest (fresh-name 'rest)])
     `(lambda ,gs
        (if (primcall %null? ,gs)
            (const 0)
@@ -159,8 +165,11 @@
 ;; `/` as a value: `(/ a)` -> `(/ 1 a)` (reciprocal), `(/ a b ...)` divides
 ;; left-to-right, `(/)` is degenerate (1).  Mirrors diff-eta with a 1 identity.
 (define (div-eta raw)
-  (let ([gs (fresh-name 'gs)] [loop (fresh-name 'loop)]
-        [acc (fresh-name 'acc)] [rest (fresh-name 'rest)])
+  ;; let* (not let): four counter-bumping inits, so a parallel `let` would number
+  ;; them in host order (issue #11) and the eta expansion's names would differ
+  ;; between the Chez driver and the shipped doors.
+  (let* ([gs (fresh-name 'gs)] [loop (fresh-name 'loop)]
+         [acc (fresh-name 'acc)] [rest (fresh-name 'rest)])
     `(lambda ,gs
        (if (primcall %null? ,gs)
            (const 1)
@@ -175,8 +184,11 @@
 
 ;; `= `/`<` as a value: a short-circuit pairwise chain; 0 or 1 operand -> #t.
 (define (cmp-chain-eta raw)
-  (let ([gs (fresh-name 'gs)] [loop (fresh-name 'loop)]
-        [prev (fresh-name 'prev)] [rest (fresh-name 'rest)])
+  ;; let* (not let): four counter-bumping inits, so a parallel `let` would number
+  ;; them in host order (issue #11) and the eta expansion's names would differ
+  ;; between the Chez driver and the shipped doors.
+  (let* ([gs (fresh-name 'gs)] [loop (fresh-name 'loop)]
+         [prev (fresh-name 'prev)] [rest (fresh-name 'rest)])
     `(lambda ,gs
        (if (primcall %null? ,gs)
            (const #t)

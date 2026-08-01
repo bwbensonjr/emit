@@ -13,6 +13,34 @@
 (define (diff a b) (filter (lambda (x) (not (memq x b))) a))
 (define (mem? x s) (and (memq x s) #t))
 
+;; ---- order-pinned map (issue #11) -----------------------------------------
+;; R7RS leaves the ORDER in which `map` applies its procedure unspecified, and the
+;; two hosts genuinely differ: Chez applies in back-to-front PAIRS once the list is
+;; longer than three -- (map tick '(0 1 2 3 4 5 6 7)) yields (7 8 5 6 3 4 1 2) --
+;; while the prelude's `map` is strictly left-to-right.  So any `map` over a
+;; SIDE-EFFECTING procedure (one that allocates a temp, emits an instruction, or
+;; bumps the gensym counter) produces different output on the Chez-hosted driver
+;; than on the shipped self-hosted doors, for any list of more than three elements.
+;;
+;; That broke the cross-door byte-identity of library units (issue #11: `apply`
+;; spills K=8 slots through exactly such a map) and is the mechanism behind the
+;; operand-order divergence in issue #6 (a call with more than three arguments has
+;; its operands EMITTED, and therefore evaluated, in a different order per host).
+;;
+;; `map-lr` pins the order to left-to-right on both hosts.  Use it -- never `map` --
+;; wherever the procedure has an effect; plain `map` stays fine for pure rewrites.
+;; (`for-each` needs no equivalent: R7RS specifies it left-to-right.)
+(define (map-lr f xs)
+  (let loop ([xs xs] [acc '()])
+    (if (null? xs) (reverse acc) (loop (cdr xs) (cons (f (car xs)) acc)))))
+
+;; two-list sibling, for the `(map f as bs)` shape; same guarantee.
+(define (map-lr2 f xs ys)
+  (let loop ([xs xs] [ys ys] [acc '()])
+    (if (or (null? xs) (null? ys))
+        (reverse acc)
+        (loop (cdr xs) (cdr ys) (cons (f (car xs) (car ys)) acc)))))
+
 ;; deterministic gensym: a monotonic counter, reset per compile so output
 ;; (renamed IL, .ll labels) is stable and readable.
 (define counter 0)
