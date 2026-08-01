@@ -1,5 +1,11 @@
 ## Why
 
+This is **rung 3 of the `call/cc` staircase** already mapped in
+`openspec/explorations/continuations-and-control.md`: escape continuations plus unwind-only
+`dynamic-wind`, described there as covering "the dominant real-world `call/cc` pattern (non-local
+exit)". Rung 1 (multiple values) has shipped. Rung 4 (full re-entrant `call/cc`) is the one hard rung
+and stays deferred; this change does not touch that fork.
+
 R7RS conformance is a project goal, and three of its core control constructs are absent:
 `call-with-current-continuation`, `dynamic-wind`, and parameter objects
 (`make-parameter` / `parameterize`). A program cannot escape from a loop, cannot guarantee cleanup
@@ -9,13 +15,21 @@ They are being done **now, ahead of the I/O library** (`scheme-io-library`, on h
 code should be written against them rather than around them. Without parameter objects the I/O
 library would have to ship `current-output-port` as a plain procedure and omit
 `with-output-to-file`; without `dynamic-wind` it could not guarantee a port is closed when its body
-escapes. Both are exactly the kind of gap that is cheap to fill first and awkward to retrofit into
-library code already written.
+escapes. Both are cheap to fill first and awkward to retrofit into library code already written.
 
 The substrate is already there and already proven: `guard`/`raise` push a `setjmp` frame onto
 `rt_guard_env` and `longjmp` to it, and the runtime notes this is "only an upward, one-shot escape,
 so setjmp/longjmp suffices (no call/cc)". An escape continuation is that same frame, handed to the
 program as a procedure.
+
+**Rung 2 is not shipped, and this change settles its design question rather than working around it.**
+The exploration leaves open: *"Handler stack vs. guard stack — one unified dynamic stack of 'what to
+do on raise,' or two cooperating stacks? Decide against how `guard` (unwinding) and
+`with-exception-handler` (non-unwinding) must interleave."* Rung 3 cannot avoid answering it,
+because `guard` must now cooperate with `dynamic-wind`. Design D4 answers it — one handler stack,
+with `guard` expressed as a handler that escapes — and this change builds that stack. Rung 2 then
+becomes "expose two procedures over a stack that already exists," with no rework of the wind
+machinery.
 
 ## What Changes
 
@@ -30,8 +44,10 @@ program as a procedure.
 - **Parameter objects**: `make-parameter` (with the optional converter) and `parameterize`. A
   parameter object is callable with zero arguments and returns its current value, exactly as R7RS
   specifies, so it is indistinguishable from a plain accessor procedure at the call site.
-- **`guard` and `raise` are re-expressed over the same machinery**, so that a raise crossing a
-  `dynamic-wind` runs its `after` thunk. Today `rt_raise` longjmps directly, which would skip it.
+- **A dynamic handler stack**, and `guard` re-expressed over it the way R7RS itself specifies —
+  a handler that captures the guard's continuation and escapes to it. Today `rt_raise` longjmps
+  directly, which would skip the `after` thunk of any `dynamic-wind` it crosses. The stack is
+  internal in this change; rung 2 exposes `with-exception-handler` and `raise-continuable` over it.
 - The wind list lives **in Scheme**, and unwinding runs **before** the `longjmp`, not after — a
   `longjmp` cannot run intervening thunks (design D4).
 

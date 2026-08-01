@@ -25,11 +25,14 @@
 - [ ] 4.3 **Unwind BEFORE the longjmp** — the escaping side walks the wind list from the current depth down to the target's, running each `after` innermost-first on the still-live stack, and only then invokes the escape primitive. A `longjmp` cannot run intervening thunks; this is the correctness crux (design D4)
 - [ ] 4.4 `call/cc` over the capture primitive: the continuation object is a one-argument procedure that unwinds per 4.3 and then escapes
 
-## 5. `guard` / `raise` onto the shared machinery
+## 5. The handler stack, and `guard` / `raise` onto it (design D4)
 
-- [ ] 5.1 Re-express `raise` so it unwinds the wind list before transferring, rather than longjmping directly — otherwise an `after` between the raise and the handler is skipped
-- [ ] 5.2 Re-express `guard` over the shared frame stack, preserving its current specified behaviour exactly (clause selection, reraise, unhandled-raise rendering and exit status)
-- [ ] 5.3 Keep the runtime's error path free of Scheme calls (design D4's rejected alternative) — the unwinding is Scheme-side, the runtime only transfers control
+- [ ] 5.1 Add the Scheme-side handler stack — the R7RS "current exception handler" chain. This is the structure rung 2 will expose; building it here is what stops rung 3 from designing the seam blind (the exploration's open question)
+- [ ] 5.2 Re-express `raise` to CALL the current handler, with the stack popped to the outer one for the duration, instead of longjmping directly
+- [ ] 5.3 Re-express `guard` as a handler that captures the guard's continuation and escapes to it — R7RS's own formulation — so unwinding comes from the ordinary escape path and nothing special-cases exceptions
+- [ ] 5.4 Preserve `guard`'s current specified behaviour exactly: clause selection, reraise, and the unhandled-raise rendering and non-zero exit status
+- [ ] 5.5 Keep the runtime's error path free of Scheme calls (design D4's rejected alternative) — unwinding is Scheme-side, the runtime only transfers control
+- [ ] 5.6 Confirm the seam actually holds: sketch (do not implement) `with-exception-handler` and `raise-continuable` over the stack from 5.1 and check they need no change to the wind machinery. If they do, that is a design defect to fix NOW, not in rung 2
 
 ## 6. Parameter objects (design D3)
 
@@ -53,6 +56,7 @@
 ## 8. Close-out
 
 - [ ] 8.1 Record the escape-only restriction where a user meets it: the R7RS conformance notes and `docs/` — not only in the design
-- [ ] 8.2 Record the full-`call/cc` follow-up as an issue, carrying design D1's analysis while the evidence is fresh: CPS costs the direct-call optimizations and binary size; stack copying is more feasible here than usual because the calling convention holds no stack-interior pointers (overflow args use `rt_alloc_words`, closures are heap objects)
-- [ ] 8.3 Revise `openspec/changes/scheme-io-library`: D4 is superseded, `current-*-port` become parameter objects, `with-output-to-file` / `with-input-from-file` move from Non-Goals into scope, and the provisional "not parameter objects" requirement comes out of its delta
-- [ ] 8.4 Commit; note on the I/O change that it is unblocked
+- [ ] 8.2 **Feed the new fact back into `openspec/explorations/continuations-and-control.md`**: the calling convention holds no stack-interior pointers (overflow args use `rt_alloc_words`, closures are heap objects), so route (B)'s usual obstacle — relocating pointers into the copied stack — is absent here. Evidence for (B), and the exploration is where continuation research lives; do NOT open a competing issue
+- [ ] 8.3 Mark rung 3 done in the exploration's staircase and record that D4 settled its handler-stack-vs-guard-stack open question, so rung 2 starts from an answer
+- [ ] 8.4 Revise `openspec/changes/scheme-io-library`: D4 is superseded, `current-*-port` become parameter objects, `with-output-to-file` / `with-input-from-file` move from Non-Goals into scope, and the provisional "not parameter objects" requirement comes out of its delta
+- [ ] 8.5 Commit; note on the I/O change that it is unblocked

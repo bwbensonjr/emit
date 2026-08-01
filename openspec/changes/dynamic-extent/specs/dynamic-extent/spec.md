@@ -114,9 +114,14 @@ the dynamic extent of its body and restoring the previous values on exit. Restor
 
 ### Requirement: guard and raise participate in unwinding
 
-`guard` and `raise` SHALL share one unwinding mechanism with escape continuations, so that the
-`after` thunk of every `dynamic-wind` between the raise point and the handler runs, innermost first,
-**before** the handler's clauses are evaluated.
+The implementation SHALL maintain a single dynamic **handler stack** — the R7RS "current exception
+handler" chain. `raise` SHALL invoke the current handler rather than transferring control directly,
+and `guard` SHALL be expressed as a handler that escapes to the guard's continuation. There SHALL
+NOT be a second, parallel mechanism for exceptions.
+
+As a consequence, the `after` thunk of every `dynamic-wind` between the raise point and the handler
+SHALL run, innermost first, **before** the handler's clauses are evaluated — the escape that `guard`
+performs is an ordinary escape and unwinds on the ordinary path.
 
 The behaviour of `guard` and `raise` SHALL otherwise be unchanged: a raised object is delivered to
 the nearest enclosing `guard`, and an unhandled raise is rendered and terminates the program as
@@ -138,3 +143,9 @@ before.
 - **WHEN** a `dynamic-wind` sits between a `raise` and its `guard`, and both the `after` thunk and
   the guard clause record their execution
 - **THEN** the `after` thunk's record precedes the guard clause's
+
+#### Scenario: One mechanism, not two
+
+- **WHEN** a `guard` and an escape continuation both unwind past the same `dynamic-wind`
+- **THEN** the `after` thunk runs exactly once in each case, and the observable order is the same,
+  because both take the same unwinding path

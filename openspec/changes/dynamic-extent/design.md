@@ -1,3 +1,27 @@
+## Prior art — read first
+
+This change is **rung 3** of the staircase in
+`openspec/explorations/continuations-and-control.md`, which is the authority for anything about the
+continuation design space; `LLVM.md` §"First-class continuations (`call/cc`)" carries the same
+conclusion in short form. Neither is restated here. What that exploration already establishes, and
+this design simply relies on:
+
+- The four rungs, and that **rungs 1–3 need none of rung 4's machinery**. Rung 1 (multiple values)
+  shipped; rung 2 (`with-exception-handler` / `raise-continuable`) has not; this is rung 3.
+- That rung 4's mechanism is **an open decision, not a foregone conclusion** — backed by a cited,
+  twice-adversarially-verified research pass. LLVM coroutines are intrinsically one-shot; there is no
+  landed stock-LLVM stack-switching primitive; Farvardin & Reppy (PLDI 2020) is the map; and Effekt
+  (ICFP 2025) is a **verified existence proof** that route (B), own-your-stack with
+  copy-on-multishot, works efficiently on a real LLVM backend while preserving direct style.
+- That rung 3's escape machinery is a stepping-stone under either rung-4 route, not a throwaway,
+  "since escape semantics remain a correct fast path under CPS too."
+
+**One thing this change contributes back** to that exploration, found while sizing the work and not
+recorded there: **the calling convention holds no stack-interior pointers.** Overflow arguments are
+allocated with `rt_alloc_words` (GC heap) rather than `alloca`, and closures are heap objects. The
+usual obstacle to route (B) — relocating pointers that point into the stack being copied — is
+therefore absent here. That is evidence for (B), and it is fed back into the exploration as a task.
+
 ## Context
 
 The compiler is direct-style: calls are native `fastcc` calls on the C stack, closures are heap
@@ -19,14 +43,10 @@ static int     rt_guard_depth = 0;
 scope of this deliberately: "guard is only an upward, one-shot escape, so setjmp/longjmp suffices
 (no call/cc)."
 
-Two facts found while sizing this, both of which matter later:
-
-- **The calling convention holds no stack-interior pointers.** Overflow arguments are allocated with
-  `rt_alloc_words` (GC heap), not `alloca`, and closures are heap objects. So a future stack-copying
-  implementation would not have to relocate pointers into the stack — the usual killer.
-- **`longjmp` cannot run intervening thunks.** This is the constraint that shapes D4: once
-  `dynamic-wind` exists, a raise or escape crossing one must run its `after`, and a `longjmp` skips
-  everything between.
+The constraint that shapes D4: **`longjmp` cannot run intervening thunks.** Once `dynamic-wind`
+exists, a raise or escape crossing one must run its `after`, and a `longjmp` skips everything
+between. (The other fact found while sizing this — that the calling convention holds no
+stack-interior pointers — bears on rung 4, not on this change; see Prior art.)
 
 ## Goals / Non-Goals
 
@@ -43,33 +63,28 @@ Two facts found while sizing this, both of which matter later:
 
 - **Re-entrant (multi-shot, or upward-then-downward) continuations**, and therefore generators,
   coroutines, and backtracking. This is the significant restriction; D1 is the argument.
-- **`call-with-values` / `values` reform, `with-exception-handler`, or exception-handler stacks
-  beyond what `guard` already provides.**
+- **Rung 2's user-facing surface** — `with-exception-handler` and `raise-continuable`. The handler
+  stack they need is *built* here, because `guard` requires it (D4); only the two procedures are
+  deferred, and exposing them needs no further design.
 - Raising `RT_GUARD_MAX`, or making the frame stack growable. 256 nested extents is far past what
   any current program uses; it becomes a shared limit and stays a `rt_fatal`.
 
 ## Decisions
 
-### D1 — Escape continuations only, with out-of-extent invocation raising
+### D1 — Escape continuations only: taking rung 3, not opening rung 4
 
-Full `call/cc` requires the implementation to be able to resume a continuation after its frame has
-returned. In a direct-style native-stack compiler there are two ways:
+**Decision: implement the staircase's rung 3 as specified there, and do not touch the rung-4 fork.**
+A `call/cc` frame is a `setjmp` frame; invoking the continuation `longjmp`s to it with a value. This
+covers early exit, non-local return from a fold or loop, and — the reason it is on the critical path
+— everything `dynamic-wind` and `parameterize` need.
 
-- **CPS-convert the whole program.** Every call becomes a tail call to a heap-allocated
-  continuation. This is the general solution and it is the wrong trade here: it eliminates the
-  ordinary call, which is exactly what `self-app` and the cross-unit direct-call lowering optimize;
-  it inflates code size, against a stated goal; and it replaces straightforward control flow with a
-  transformed program, against another. The compiler is self-hosting, so it would pay these costs on
-  itself as well.
-- **Copy the stack** on capture and restore it on invoke. More surgical, and the two facts above make
-  it more feasible here than usual — the calling convention holds no stack-interior pointers. It
-  still needs the collector to scan saved stack copies, careful capture of callee-saved registers,
-  and platform care. It is a real option, and it is a *separate* change.
+The CPS-versus-own-your-stack argument is **not re-litigated here**; it is settled as deferred by the
+exploration, whose research pass is far better sourced than anything this change would produce. The
+relevant conclusion is only that rungs 1–3 require none of it, and that this rung's machinery
+survives either eventual answer.
 
-**Decision: provide escape continuations now.** A `call/cc` frame is a `setjmp` frame; invoking the
-continuation `longjmp`s to it with a value. This covers early exit, non-local return from a fold or
-loop, and — the reason it is on the critical path — everything `dynamic-wind` and `parameterize`
-need.
+What this change adds to that decision is the safety property below, which the exploration does not
+specify because it is an implementation concern rather than a roadmap one.
 
 **Out-of-extent invocation must be loud.** Longjmping to a frame whose function has returned is
 undefined behaviour, and the resulting corruption would be attributed to anything but the
@@ -106,28 +121,63 @@ converted new value and whose `after` restores the old one. This is the R7RS ref
 implementation, and it is the concrete reason the three constructs ship together: parameters are
 nearly free once D2 exists, and nearly impossible to get right without it.
 
-### D4 — The wind list is Scheme-side, and unwinding happens *before* the `longjmp`
+### D4 — One handler stack; `guard` is a handler that escapes. Unwinding happens *before* the `longjmp`
 
-This is the correctness crux, and the thing most likely to be got wrong.
+This answers the exploration's open question — *"one unified dynamic stack of 'what to do on raise,'
+or two cooperating stacks?"* — which rung 3 cannot dodge, because `guard` must now cooperate with
+`dynamic-wind`.
 
-`longjmp` transfers control directly to the `setjmp` point. It cannot run the `after` thunks of the
-`dynamic-wind`s it jumps over — by the time the catcher regains control, those frames are gone.
+Two facts force the shape:
 
-**Decision:** keep the wind list in Scheme, and make *escaping* a two-step operation performed by
-the escaping side:
+1. **`longjmp` cannot run intervening thunks.** It transfers straight to the `setjmp` point, so the
+   `after` thunk of any `dynamic-wind` it jumps over is skipped. Today's `rt_raise` longjmps
+   directly, which is correct only because `dynamic-wind` does not exist.
+2. **`guard` unwinds and `with-exception-handler` (rung 2) does not.** A handler installed by
+   `with-exception-handler` runs *at the raise point*, on top of the raising computation, and for
+   `raise-continuable` its return value flows back there. A `guard` clause runs *after* unwinding to
+   the guard's frame.
+
+**Decision: one handler stack, and `guard` is not a primitive mechanism — it is a handler that
+escapes.** This is R7RS's own formulation, and it dissolves the "one stack or two" question: the
+non-unwinding case is the *base* case, and unwinding is what a particular handler chooses to do.
+
+Three structures, each with exactly one job:
+
+| structure | lives in | job |
+|---|---|---|
+| escape frame stack | C (`rt_guard_env` generalized, + generation ids) | `setjmp` targets for escape continuations |
+| wind list | Scheme | active `dynamic-wind` `(before . after)` pairs |
+| handler stack | Scheme | the R7RS "current exception handler" chain |
+
+`raise` no longer longjmps. It **calls** the current handler, with the handler stack popped to the
+outer one for the duration. A `guard`'s handler is one that captures the guard's continuation and
+escapes to it — and *that escape* is what runs the intervening `after` thunks, via the ordinary
+escape path. Nothing special-cases exceptions.
+
+**Unwinding is a two-step operation performed by the escaping side**, never by `longjmp`:
 
 1. Walk the wind list from the current depth down to the target frame's depth, running each `after`
-   thunk in order, in Scheme, on the still-live stack.
+   thunk innermost-first, in Scheme, on the still-live stack.
 2. Only then invoke the primitive that `longjmp`s.
 
-The same applies to `raise`: it must unwind before transferring, which is why `guard` and `raise`
-move onto this machinery rather than sitting beside it. Two separate escape paths that each maintain
-their own idea of the wind depth would be a defect generator.
+*What this buys.* Rung 2 becomes exposing two procedures over a stack that already exists —
+`with-exception-handler` pushes, `raise-continuable` calls the handler and uses its return value —
+with no change to the wind machinery. That is the rework the exploration's open question was written
+to prevent.
 
-*Alternative considered.* Keep the wind stack in C and have `rt_raise` call back into Scheme to run
-each `after`. Rejected: it puts Scheme calls in the middle of the runtime's error path, where a
-raise from within an `after` thunk becomes re-entrant in the worst place. Doing it in Scheme keeps
-the runtime's job to "transfer control", which is all `longjmp` is good for.
+*Alternatives considered.*
+
+- **Two cooperating stacks** — keep the setjmp guard stack for `guard`, add a handler stack for rung
+  2. Rejected: they would both have to track the wind depth and agree about it, and every future
+  control construct would have to be taught both. The R7RS formulation needs only one.
+- **Wind stack in C, with `rt_raise` calling back into Scheme** to run each `after`. Rejected: it
+  puts Scheme calls in the middle of the runtime's error path, where a raise from within an `after`
+  thunk becomes re-entrant in the worst possible place. Keeping it in Scheme leaves the runtime's job
+  as "transfer control," which is all `longjmp` is good for.
+
+*Cost, stated plainly.* Today's `guard` is one `setjmp` and a `longjmp`. Re-expressed, it is a
+handler-stack push plus an escape continuation — still one `setjmp` frame, with a little more Scheme
+around it. The existing `guard` suites are the regression check.
 
 ### D5 — It is named `call/cc`, and the restriction is stated where a user meets it
 
@@ -179,6 +229,7 @@ Non-Goals into scope.
 - **Should `guard`'s reraise re-run winds?** A `guard` whose clause does not match reraises; that
   second raise starts from the handler's wind depth, not the original raise point. Confirm the
   resulting order matches R7RS.
-- **Does the full-`call/cc` follow-up want stack copying or CPS?** The two facts in Context lean
-  toward stack copying being viable here, which is worth recording now while the evidence is fresh,
-  even though the change is not scheduled.
+- ~~**Does the full-`call/cc` follow-up want stack copying or CPS?**~~ **Out of scope and already
+  studied** — `openspec/explorations/continuations-and-control.md` holds the sourced, twice-verified
+  analysis, and `LLVM.md` records it as an open decision. This change contributes one new data point
+  to it (no stack-interior pointers) and nothing else.
