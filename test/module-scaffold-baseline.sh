@@ -132,6 +132,14 @@
 #     own IR shrank 10.3% (schemec.ll) and build/emit 4.7%, which more than pays back the
 #     4.7% the simplify pass itself cost -- build/emit is now slightly SMALLER than before
 #     any of this work began.  No new entries.
+#   letrec with a non-lambda initializer (issue #9) -- `lower` only lowers lambdas in a
+#     letrec group (the two-phase closure-block protocol), and rejected anything else with
+#     an internal `match` failure, so legal R7RS like (letrec ((x (car (list 1 2)))) x)
+#     crashed the compiler.  convert-assignments now boxes such a binding and splits it out
+#     of the group, reusing the machinery added for issue #8.  Verified against a 76-demo
+#     before/after capture: EXACTLY ONE demo differs in IR and stdout -- the new regression
+#     demo letrec-init, which did not compile at all before.  The other 75 are byte-identical
+#     in both, since no existing demo binds a non-lambda in a letrec.  +1 new entry.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u
