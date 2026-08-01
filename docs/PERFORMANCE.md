@@ -325,8 +325,39 @@ top-levels) is **deferred**: it breaks REPL redefinition and needs the P1-style 
 carve-out, so it may ride with P1's link rework.
 
 **OpenSpec change:** `inline-fixnum-arith-and-self-calls` (A + B-self; implemented). B-general
-remains unscheduled — note it may now compose with `aot-release-profile`'s closed-world AOT door
+remains unscheduled, and it may compose with `aot-release-profile`'s closed-world AOT door
 (direct calls to immutable known top-levels are safe under the same closed-world assumption).
+
+**B-general re-measured after P6-B.** P6-B was expected to have absorbed much of this item. It has
+not, and the reason is structural: P6-B lets LLVM devirtualize a call only when the closure was
+allocated in the *same function*, because it works by forwarding the code-pointer store to the
+load. A call to a captured sibling loads its callee from `%self`'s environment, where there is no
+such store, and comes out of `-O2` with the whole chain intact:
+
+```llvm
+%t23 = and i64 %self, -8          ; still there after -O2
+%t25 = getelementptr i64, ptr %t24, i64 2
+%t26 = load i64, ptr %t25         ; the sibling's closure
+%t29 = load i64, ptr %t28         ; its code pointer
+%t31 = musttail call fastcc i64 %t30(...)
+```
+
+Scale, in the compiler's own module (the largest real program here) after `-O2`: **2786 indirect
+call sites versus 79 direct**. Classified by how the callee is obtained — 415 from a closure
+environment (captured siblings, which B-general can take with no closed-world assumption), 808
+from a module-level global (cross-unit, which need the AOT carve-out), 1563 unclassified or
+genuinely higher-order.
+
+Value, measured directly rather than inferred: hand-patching one call site from the indirect
+sequence to `call fastcc @code_N` — exactly what B-general would emit — on a 60-million-call probe
+took it from **0.06s to 0.02s** (best-of-5, identical results). The direct call is what lets LLVM
+inline the callee, so most of that is the inlining it unlocks. This is a call-dominated
+microbenchmark and an upper bound; code doing real work per call will see less.
+
+The **dev door gets nothing from P6-B** — it runs no IR passes at all — so B-general's value there
+is undiminished, and unlike P6-B it would help both doors.
+
+Verdict: still worth scheduling.
 
 ---
 
@@ -562,10 +593,14 @@ write down* are two different ceilings, and anything that manufactures a constan
 is bounded by the lower one.
 
 B landed separately (see **Result (B)** above), as an allocator-declaration change rather than the
-per-site `llvm.assume` originally sketched. It overlaps P5's still-deferred B-general: LLVM now
-devirtualizes many known-closure calls on the ship path, which is much of what B-general would
-have done in the emitter — so B-general should be re-measured before being scheduled, not assumed
-still worth its complexity.
+per-site `llvm.assume` originally sketched.
+
+**Correction.** This entry first claimed B unblocked LLVM for "many known-closure calls" and so
+subsumed much of P5's deferred B-general. That was measured afterwards and is **wrong**. B only
+helps where the closure is allocated in the *same function* as the call, because the win comes
+from forwarding the code-pointer store to the load. A call to a captured sibling — the dominant
+shape in real code — loads its callee out of `%self`'s environment, where there is no store to
+forward, and survives `-O2` completely untouched. See P5's B-general note for the numbers.
 
 ---
 
