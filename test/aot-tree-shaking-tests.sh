@@ -56,6 +56,37 @@ fi
 grep -q "shake (scheme base)" "$TMP/caronly.log" && ok "shake narrated" || bad "no shake narration"
 grep -q "0 exports reached"   "$TMP/caronly.log" && ok "car-only: 0 exports reached" || bad "car-only reached exports"
 
+# --- label stability across pruning (change: cross-unit-direct-calls) ---------
+# A program names its imported callees by code label, and the label it can name is
+# the one in the FULL unit -- while the unit it links against is a tree-shaken
+# recompile driven by that same program.  So a library procedure's label must not
+# depend on which siblings survived.  This is the check that would have caught the
+# counter-derived labels (`zero?` was code_168 whole and code_216 pruned): compare
+# the label of a procedure present in both.  A mismatch would surface as an
+# undefined symbol at link time, so this is a sharper, earlier signal.
+full=build/lib/scheme.base.ll
+pruned="$TMP/heavy.scheme.base.pruned.ll"
+if [ -f "$full" ] && [ -f "$pruned" ]; then
+  # every code label the PRUNED unit defines must be spelled identically in the full
+  # one (the pruned unit is a subset, so this is containment, not equality)
+  drift=0
+  while read -r lbl; do
+    grep -q "define fastcc i64 $lbl(" "$full" || { drift=$((drift+1)); echo "         drifted: $lbl"; }
+  done < <(grep -o 'define fastcc i64 @"scheme\.base:code:[^"]*"' "$pruned" | sed 's/^define fastcc i64 //')
+  n=$(grep -c 'define fastcc i64 @"scheme\.base:code:' "$pruned")
+  if [ "$drift" -eq 0 ] && [ "$n" -gt 0 ]; then
+    ok "procedure labels identical whole vs pruned ($n kept)"
+  else
+    bad "procedure labels drift between whole and pruned ($drift of $n)"
+  fi
+  # and the program actually names one of them
+  grep -q 'call fastcc i64 @"scheme\.base:code:' "$TMP/heavy.ll" \
+    && ok "program direct-calls an imported procedure" \
+    || bad "program emitted no cross-unit direct call"
+else
+  bad "label-stability check: missing $full or $pruned"
+fi
+
 echo
 echo "  $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

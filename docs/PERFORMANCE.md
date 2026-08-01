@@ -216,7 +216,8 @@ small-clean-binary goal.
 
 ## P5 — Arithmetic and call overhead (Ackermann benchmark)
 
-**Status:** ☑ done — A + B-self (change: `inline-fixnum-arith-and-self-calls`), then B-general.
+**Status:** ☑ done — A + B-self (change: `inline-fixnum-arith-and-self-calls`), then B-general,
+then the cross-unit half (change: `cross-unit-direct-calls`).
 
 **Result (A + B-self).** Inline fixnum arithmetic + direct self-calls cut Ackermann wall time
 under `emit run` by ~35–40%:
@@ -419,7 +420,63 @@ Plus the closed-world reasoning this item was always going to need. Worth doing 
 library-call-heavy code, but it is an artifact-format and link-strategy change, not an emitter
 tweak — it wants its own OpenSpec change.
 
-**OpenSpec change:** `cross-unit-direct-calls` (cross-unit half; proposed, not implemented).
+**Result (cross-unit half).** Implemented, as the three parts above, and the probe landed on its
+prediction: **0.07s → 0.01s**, a 7× on the 30-million-call probe (the proposal said 6×). The 2×2
+was re-measured end to end on the real tree-shaken artifact set rather than a hand-patch, and it
+reproduces exactly — neither piece is worth anything alone:
+
+| | `-O2` | `-O2 -flto` |
+|---|---|---|
+| indirect (before) | 0.07s | 0.07s |
+| direct call (after) | 0.07s | **0.01s** |
+
+Delivered through the AOT door — pre-change (indirect, `-O2`) versus post-change (direct,
+`-O2 -flto`), both tree-shaken, values byte-identical:
+
+| | before | after |
+|---|---|---|
+| compiler module, emitted | 1020 direct / 1975 indirect | **1455 direct / 1713 indirect** |
+| compiler module, after `-O2` | 755 / 2073 | **1275 / 1723** |
+| cross-unit sites converted | — | **401 of 872** |
+| delivered binary, 6 demos | 375,632 B | **234,416 B (−37.6%)** |
+
+**What did not convert, and why.** All 471 remaining cross-unit indirect sites call one of eight
+**variadic** exports — `map` (193), `list` (84), `append` (78), `error` (68), `for-each` (41),
+`string`, `char=?`, `vector`. A variadic export records no label, by design in this increment: the
+callee builds a rest list from `argc`, so a direct call would have to reproduce that protocol at
+the call site. 104 of `(scheme base)`'s 120 exports are fixed-arity and do carry one. Extending
+this to variadic callees is the obvious next increment and is where the other half of the 872
+sites is.
+
+**LTO is a large size win and an occasional speed loss.** Enabling `-flto` on the AOT link cuts
+the delivered binary by **−38%** across a spread of demos (57,984 → 34,768 on `ackermann`;
+−30.8% on the largest, `read-all`) and by −5.0% on the biggest program in the tree, the compiler
+itself. Link wall time is flat-to-faster on small programs (0.20s → 0.13s on `ackermann`) and
++15% on the compiler (1.19s → 1.37s). But it is **not** universally a speed win: on a loop
+dominated by `assq` over a 200-element list, LTO costs **~9%** (1.96s → 2.13s), and the 2×2
+attributes that entirely to LTO — the pre-change and post-change IR regress identically, and it
+persists when `runtime.c` is kept out of the LTO set, so it is cross-unit inlining of a large
+library procedure into a hot loop, not `rt_*` inlining. Ackermann and a string/number-heavy loop
+are flat. The setting is kept: the target workload gains 7×, size (a first-class concern here)
+improves by a third, and the one regression is a single-digit percentage on a shape where the
+callee body, not the call, is the cost.
+
+**Does LTO pay for itself independently?** (Design open question.) No, on speed: LTO alone leaves
+the probe at 0.07s and costs the `assq` loop 9%. It pays independently on **size**, which is why
+it is not being split out into its own backlog item — the size win arrives with this change and
+would be double-counted.
+
+**The immutability argument, settled.** The lowering assumes a library global is assigned once by
+its unit's `__init` and never reassigned, and that turned out to hold on **both** doors, so there
+is no AOT-only carve-out and the program module stays byte-identical across doors. Three
+independent reasons, all checked: a unit's globals are stored only by its own per-define
+`__init_N` thunks; `set!` on a top-level or imported name is a *compile error* on every path that
+produces a `global-set!` (a unit body and the REPL both reject it); and a REPL redefinition
+allocates a fresh **program** global `x.gN` rather than touching the library's slot, so
+previously-compiled code keeps the binding it captured. A future library-*reload* feature would
+invalidate the third reason and must revisit this.
+
+**OpenSpec change:** `cross-unit-direct-calls` (implemented).
 
 ---
 

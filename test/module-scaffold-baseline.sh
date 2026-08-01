@@ -179,6 +179,32 @@
 #     identical.  In the compiler's own module, emitted calls went to 1020 direct / 710
 #     indirect, and after -O2 to 755 direct / 2073 indirect (from 79 / 2786).  No new
 #     entries.
+#   cross-unit-direct-calls -- library procedure code labels are now derived from the
+#     binding name (scheme.base:code:zero?) instead of the gensym counter, so they are
+#     identical whether the unit is compiled whole or tree-shaken; the export table
+#     carries each fixed-arity procedure's label and arity; and a call to one lowers to
+#     a direct call.  ALL 77 demos' IR changed -- as it must, since every library label
+#     is respelled -- so the before/after capture was classified mechanically rather
+#     than eyeballed, splitting each snapshot at the unit boundary:
+#       library half (77/77): differs ONLY in code-label spellings.  With every code
+#         label normalized to a single token the two halves are byte-identical, i.e.
+#         nothing about the library's structure, temps, blocks or globals moved -- only
+#         which text names each code block.  (The counter labels that remain renumber
+#         because a top-level lambda no longer draws from the counter.)
+#       program half (77/77): differs ONLY by the direct-call rewrite.  Replaying that
+#         rewrite on the BEFORE text -- collapse `load global; and; inttoptr; load;
+#         inttoptr; call %tN` to `load global; call @"scheme.base:code:<name>"`, at
+#         exactly the sites the lowering rule fires (the callee is a fixed-arity export
+#         AND the argument count matches) -- makes the two halves identical modulo the
+#         `declare` lines and the temp renumbering that dropping 4 temps per site
+#         forces.  157 call sites converted across the suite; 40 declares emitted.
+#         PROGRAM-unit code labels are untouched: no program module defines a
+#         name-derived label, they are all still code_N.
+#     All 77 demos' stdout is byte-identical, through `emit run` and through the Chez
+#     AOT path.  Total demo IR grew 0.48% -- the declares and the longer label text,
+#     against the 4 instructions removed per site.  That is a pre-optimizer number, and
+#     what the change exists for is what `-O2 -flto` then does with it: the delivered
+#     binary gets both faster and smaller (docs/PERFORMANCE.md P5).  No new entries.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

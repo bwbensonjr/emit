@@ -23,8 +23,17 @@
 (define *repl-macro-env* (quote ()))         ; ((name . transformer) ...)
 (define *repl-known* (quote ()))             ; hygiene "known bindings" set
 (define *repl-n* 0)                          ; per-form thunk counter (@__repl_N)
-(define *repl-libs* (quote ()))              ; ((lib-name . exports-alist) ...) loaded units
-                                             ; (change: module-artifacts-vertical-slice)
+(define *repl-libs* (quote ()))              ; loaded units, each the export-table datum
+                                             ; (lib-name exports-alist call-rows) compile-library
+                                             ; returns -- so a loaded unit's session record IS
+                                             ; the import table its dependents need (changes:
+                                             ; module-artifacts-vertical-slice,
+                                             ; cross-unit-direct-calls)
+(define *repl-calls* (quote ()))             ; the session's direct-call table: mangled symbol ->
+                                             ; (label . arity), merged from each imported unit's
+                                             ; call rows, so an interactive form direct-calls a
+                                             ; library procedure exactly as a batch program does
+                                             ; (change: cross-unit-direct-calls)
 (define *repl-lib-imports* (quote ()))       ; ((lib-name . (import-name ...)) ...) each loaded
                                              ; unit's DIRECT imports -- the run door computes a
                                              ; program's transitive init closure in topological
@@ -114,6 +123,10 @@
                                        (string-append "form " (number->string (+ *repl-n* 1)))))]
                   [il (repl-lower-form *repl-env* (repl-expand-form form))])
              (d "parse+rename" il)
+             ;; the session's imported procedures are direct-callable from this form
+             ;; (change: cross-unit-direct-calls); set per form, so nothing an earlier
+             ;; library load left behind can leak into a session with no imports.
+             (set-import-calls! *repl-calls*)
              (let ([lc (repl-lcode il d)])
                (let ([m (emit-repl-module lc (+ *repl-n* 1))])
                  (set! *repl-n* (+ *repl-n* 1))
@@ -181,6 +194,7 @@
                                    (map car *integrable*))))
   (set! *repl-n* 0)
   (set! *repl-libs* (quote ()))
+  (set! *repl-calls* (quote ()))
   (set! *repl-lib-imports* (quote ()))
   ;; Stage 3 (module-prelude-scheme-base): the prelude's PROCEDURES now come from the
   ;; (scheme base) library -- the host preloads it and then calls mode 6 to auto-import
@@ -218,10 +232,18 @@
                ;; may introduce a reference to it (e.g. `case` -> `memv`) without
                ;; hygiene renaming it away (change: module-prelude-scheme-base).
                (set! *repl-known* (cons (car e) *repl-known*)))
-             (cdr entry))
+             (cadr entry))
+           ;; and its direct-callable procedures, keyed by the same mangled symbol a
+           ;; later form will resolve to (change: cross-unit-direct-calls).  A
+           ;; redefinition does not disturb these: it binds the NAME to a fresh
+           ;; program global (x.gN), which is not in this table, so the redefined
+           ;; name goes back to an indirect call while forms compiled earlier keep
+           ;; direct-calling the library slot they captured.
+           (set! *repl-calls*
+                 (append (import-tables->call-alist (list entry)) *repl-calls*))
            #t))))
 
-;; Assemble the import tables (list (name export-alist) ...) for a library's
+;; Assemble the import tables (list (name export-alist call-rows) ...) for a library's
 ;; direct imports from the already-loaded units in *repl-libs* (change:
 ;; module-generalize).  Returns #f if any import is not loaded yet, so the host
 ;; can defer this library and retry after its dependencies load (topological order
@@ -232,7 +254,9 @@
         (reverse acc)
         (let ([entry (assoc (car imps) *repl-libs*)])
           (and entry
-               (loop (cdr imps) (cons (list (car imps) (cdr entry)) acc)))))))
+               ;; the session record IS the export table (name exports calls), so it
+               ;; is handed to the core as-is (change: cross-unit-direct-calls).
+               (loop (cdr imps) (cons entry acc)))))))
 
 ;; Compile a library from its source text (host read the file): parse the
 ;; define-library, resolve its imports against already-loaded units, compile the
@@ -264,7 +288,7 @@
           (let ([res (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl) tables
                                      (make-dumper name))])
             (set! counter saved)                      ; undo compile-library's reset-counter!
-            (set! *repl-libs* (cons (cons name (cadr (cadr res))) *repl-libs*))
+            (set! *repl-libs* (cons (cadr res) *repl-libs*))   ; the export table itself
             ;; record this unit's DIRECT imports for the run door's init-closure
             ;; topological sort (change: run-door-user-libraries).
             (set! *repl-lib-imports* (cons (cons name (cadr dl)) *repl-lib-imports*))
@@ -371,7 +395,7 @@
            ;; the auto-imported (scheme base): incidental to the program, so level 3 only.
            [res  (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl) (quote ())
                                  (make-dumper name))])
-      (set! *repl-libs* (cons (cons name (cadr (cadr res))) *repl-libs*))
+      (set! *repl-libs* (cons (cadr res) *repl-libs*))         ; the export table itself
       (set! *repl-lib-imports* (cons (cons name (cadr dl)) *repl-lib-imports*))
       (cons (quote ok) (cons (car res) (mangle name "__init"))))))
 
@@ -411,7 +435,8 @@
 ;; (change: emit-cli-unification, design D3).  `emit lib` writes a library's unit
 ;; artifact: the `.ll` comes from the emit path (mode 7's single-define-library
 ;; branch); this mode surfaces the `.exports` sidecar the AOT door's artifact cache
-;; expects -- the (NAME ((external . "mangled") ...)) datum that compile-library
+;; expects -- the (NAME ((external . "mangled") ...) ((external "label" arity) ...))
+;; datum that compile-library
 ;; computes but only the Chez driver used to write out.  We compile the lone library
 ;; the SAME way compile-library-form does (mode 7's 'library path) and return its
 ;; export table (cadr of compile-library's result), keeping one compile-unit core.
@@ -436,6 +461,8 @@
     [(symbol? x) (symbol->string x)]
     [(null? x) "()"]
     [(pair? x) (string-append "(" (render-list-body x) ")")]
+    ;; the call rows carry an arity (change: cross-unit-direct-calls)
+    [(number? x) (number->string x)]
     [else "?"]))
 (define (render-list-body p)
   (let ([a (render-datum (car p))] [d (cdr p)])
@@ -557,10 +584,11 @@
       (set! *repl-n* (vector-ref s 3))
       (set! counter (vector-ref s 4))
       (set! *repl-libs* (vector-ref s 5))
-      (set! *repl-lib-imports* (vector-ref s 6)))))
+      (set! *repl-lib-imports* (vector-ref s 6))
+      (set! *repl-calls* (vector-ref s 7)))))
 (define (repl-save-state!)
   (repl-state-set! (vector *repl-env* *repl-macro-env* *repl-known* *repl-n* counter
-                           *repl-libs* *repl-lib-imports*)))
+                           *repl-libs* *repl-lib-imports* *repl-calls*)))
 
 ;; --- the dispatched embedded entry (design D2) -------------------------------
 ;; The host sets (repl-mode)/(repl-input) via rt_repl_set, then calls this ccc

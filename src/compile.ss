@@ -231,6 +231,16 @@
 ;; byte-identity and the self-hosting fixed point are unaffected.  The JIT/REPL (dev)
 ;; door is not gated by this.
 (define ship-opt "-O2")
+;; Link-time optimization for the AOT ship path (change: cross-unit-direct-calls,
+;; design D3).  The AOT link hands clang several separately-emitted modules -- the
+;; runtime, each library unit, the program -- so without `-flto` the optimizer never
+;; sees across a unit boundary and a cross-unit direct call buys nothing: measured on
+;; a 30-million-call probe, the direct call alone and LTO alone each change nothing
+;; (0.07s either way), while together they are 0.01s.  It also SHRINKS the delivered
+;; binary here (58144 -> 35024 bytes on that probe), so it does not cost the size wins
+;; P1 bought.  The JIT/REPL door is not gated by this, and the bitcode exit needs it
+;; even less: llvm-link already merges the whole set into one module before -O2.
+(define ship-lto "-flto")
 ;; One emitted OUT.ll drives three exits.  AOT uses `aot-cc` (a system clang when present,
 ;; else the discovered LLVM clang; see the toolchain-discovery block above).  The JIT and
 ;; bitcode exits use the discovered LLVM tools (`llvm-bin`, from EMIT_LLVM_BIN or
@@ -251,7 +261,7 @@
 
 ;; AOT (default): textual IR -> native exe via the system clang.  Unchanged.
 (define (link ll exe)
-  (sh "clang" (string-append aot-cc " " ship-opt " -I" gc-inc " -L" gc-lib " " runtime-c " " ll " -lgc -o " exe)))
+  (sh "clang" (string-append aot-cc " " ship-opt " " ship-lto " -I" gc-inc " -L" gc-lib " " runtime-c " " ll " -lgc -o " exe)))
 
 ;; Bitcode: assemble OUT.ll -> OUT.bc (the inspectable/opt-able artifact),
 ;; then codegen the .bc + runtime to a native exe (LLVM 22 clang).
@@ -641,9 +651,9 @@
 ;; AOT: clang links runtime + every unit + program -> native exe.
 (define (link-modular-aot unit-lls prog-ll exe)
   (sh "clang"
-      (string-append aot-cc " " ship-opt " -Wno-override-module -I" gc-inc " -L" gc-lib " " runtime-c " "
+      (string-append aot-cc " " ship-opt " " ship-lto " -Wno-override-module -I" gc-inc " -L" gc-lib " " runtime-c " "
                      (lls->string unit-lls) prog-ll " -lgc -o " exe))
-  (note "link ~a + ~a unit(s) -> ~a  [aot ~a, modules]\n" prog-ll (length unit-lls) exe ship-opt))
+  (note "link ~a + ~a unit(s) -> ~a  [aot ~a ~a, modules]\n" prog-ll (length unit-lls) exe ship-opt ship-lto))
 
 ;; assemble each .ll in the set to a sibling .bc; return the .bc paths in order.
 (define (assemble-set lls)

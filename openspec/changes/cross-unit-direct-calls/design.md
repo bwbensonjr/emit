@@ -112,6 +112,31 @@ one-compiler-core rule exists to prevent. Confirm the immutability claim first (
 fails, the fallback is the AOT-only carve-out with the byte-identity tests taught about it, and
 that should be re-proposed rather than absorbed silently.
 
+**Resolved: it holds, on both doors, so there is no carve-out.** The lowering is enabled
+everywhere and the program module stays byte-identical across doors. Three independent reasons
+were checked, and the argument depends on all three — a future library-*reload* feature would
+break the third and must revisit this decision:
+
+1. **A library global is written only by its own unit's `__init`.** Its slot is stored by the
+   per-define `@"L:__init_N"` thunks and nowhere else; an importing module declares it
+   `external global` and only ever loads it.
+2. **`set!` on a top-level or imported name is a compile error**, not a store. `resolve-globals`
+   only produces a `global-set!` from a top-level `define`; a `set!` whose target is not a
+   lexical local reaches `lower` as a free variable and raises `lower: unbound variable`.
+   Verified on both a program (`(set! car …)`) and a library body (a unit assigning its own
+   exported binding) — both are rejected at compile time.
+3. **A REPL redefinition allocates a fresh *program* global.** Under the generation-mangling
+   scheme `(define car …)` binds `car` to a new `car.gN` slot consed on top of the session
+   environment; `scheme.base:car` is untouched. Verified interactively: after redefining `car`,
+   the redefined name yields the new value while a procedure compiled earlier still yields what
+   the library's `car` returns. This is pinned as a regression test
+   (`test/cross-unit-direct-call-tests.sh`), not left as an assertion, because its failure mode
+   is silent misdispatch.
+
+The REPL preloads each unit once and has no reload path (`repl-load-library-text` returns
+`already` for a name in `*repl-libs*`), which is what makes (3) true today and what a reload
+feature would remove.
+
 ## Risks / Trade-offs
 
 - **A label mismatch between the full and pruned compile** → a link-time undefined symbol, which
@@ -130,11 +155,24 @@ that should be re-proposed rather than absorbed silently.
 
 ## Open Questions
 
-- **Does LTO pay for itself independently?** `runtime.c` is in the same link, so LTO may let
-  `rt_add`/`rt_car` inline into Scheme code — potentially a bigger win than this change. Measure
-  it standalone (task 4.4). If it is large, it deserves its own backlog item and should not be
-  folded into this one's justification.
-- **Variadic and multi-arity exports** are excluded from the first increment; worth revisiting
-  once the fixed-arity path is measured.
-- **User libraries** get this for free once the mechanism exists, but the measurements here are all
-  `(scheme base)`. Confirm on `test/modules/` before claiming it generally.
+- ~~**Does LTO pay for itself independently?**~~ **Answered: not on speed, yes on size.** LTO
+  alone leaves the 30M-call probe at 0.07s, so there is no independent speed win to double-count
+  — and the `rt_*`-inlining hypothesis does not hold either: on the one workload where LTO
+  *regresses* (a loop over `assq`, −9%), the regression survives keeping `runtime.c` out of the
+  LTO set, so it is cross-unit inlining of a large library procedure into a hot loop. LTO does
+  pay independently on **size**, −38% on the delivered binary, which arrives with this change
+  rather than as a separate item.
+- ~~**Variadic and multi-arity exports** are excluded from the first increment~~ — and that is
+  where the remaining work is: **all 471** unconverted cross-unit call sites in the compiler's
+  own module call one of eight variadic exports (`map` 193, `list` 84, `append` 78, `error` 68,
+  `for-each` 41, `string`, `char=?`, `vector`), against 401 converted. A direct call to a
+  variadic callee would have to build the rest list at the call site, which is a real design
+  question, not a flag flip. Worth its own item.
+- ~~**User libraries**~~ **Confirmed.** `(mylib)` from `test/modules/` gets the same treatment —
+  `((mylib) ((greet . "mylib:greet")) ((greet "mylib:code:greet" 0)))`, and an importing program
+  emits `call fastcc @"mylib:code:greet"`. Pinned in `test/cross-unit-direct-call-tests.sh`.
+- **New:** a library's calls to its *own* top-level procedures are still indirect — inside
+  `(scheme base)`, `zero?` resolves to that unit's own global, not an import, so the rule does
+  not fire. The labels are already stable and already in `*unit-procs*`, so this looks cheap, but
+  it needs a definition-order rule (a forward reference is not recorded yet when its caller is
+  lowered). Deliberately out of scope here.

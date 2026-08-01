@@ -745,6 +745,14 @@ static bool link_clang(const Toolchain &tc, const std::string &runtime_c,
   args.push_back(tc.cc);
   args.push_back("-Wno-override-module");
   args.push_back("-O2");
+  // Link-time optimization (change: cross-unit-direct-calls, design D3).  Each library
+  // unit, the program, and runtime.c are separate modules in this link, so without it
+  // the optimizer never crosses a unit boundary and the cross-unit direct calls the
+  // emitter now produces cannot be inlined -- measured, the direct call alone and LTO
+  // alone each change nothing, while together they are ~7x on a call-heavy probe.  It
+  // also shrinks the delivered binary rather than growing it.  Mirrors `ship-lto` in
+  // src/compile.ss; the JIT/REPL door is untouched.
+  args.push_back("-flto");
   args.push_back("-I" + tc.gc_inc);
   args.push_back("-L" + tc.gc_lib);
   args.push_back(runtime_c);
