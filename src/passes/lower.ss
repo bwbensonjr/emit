@@ -138,7 +138,7 @@
      (let* ([fvs (free-vars e)]
             [label (fresh-code-label)])
        (hoist-code! label params body fvs #f)            ; anonymous: no self-name
-       `(make-closure ,label ,(map (lambda (v) (lower v locals fmap self)) fvs)))]
+       `(make-closure ,label ,(map-lr (lambda (v) (lower v locals fmap self)) fvs)))]
     [(closures ,cbinds ,body)                            ; letrec group -> closure-block
      ;; Labels for the whole group are allocated BEFORE any body is lowered, so a
      ;; mutually recursive sibling can be direct-called from a body compiled first
@@ -146,17 +146,17 @@
      ;; interleaved with each body's temporaries.
      (let* ([xs (map car cbinds)]
             [locals2 (append xs locals)]
-            [labels (map (lambda (b) (fresh-code-label)) cbinds)]
+            [labels (map-lr (lambda (b) (fresh-code-label)) cbinds)]
             [ignored (add-known! xs labels)]
             [entries
-             (map (lambda (b label)
+             (map-lr2 (lambda (b label)
                     (match (caddr b)
                       [(lambda ,params ,lbody)
                        (let ([fvs (free-vars (caddr b))])
                          (hoist-code! label params lbody fvs (car b))  ; self-name = binding
                          ;; captures lowered in the group scope (siblings visible)
                          (list (car b) label
-                               (map (lambda (v) (lower v locals2 fmap self)) fvs)))]))
+                               (map-lr (lambda (v) (lower v locals2 fmap self)) fvs)))]))
                   cbinds labels)])
        `(closure-block ,entries ,(lower body locals2 fmap self)))]
     [(apply ,f . ,args) `(apply-app ,(L f) ,(map L args))]
@@ -204,7 +204,7 @@
         (unless (param-rest params)                ; fixed arity: direct-callable
           (add-unit-proc! s label (length (param-fixed params))))
         (hoist-code! label params body fvs #f)     ; anonymous: no self-name
-        `(make-closure ,label ,(map (lambda (v) (lower v locals fmap self)) fvs)))
+        `(make-closure ,label ,(map-lr (lambda (v) (lower v locals fmap self)) fvs)))
       (lower rhs locals fmap self)))
 
 ;; hoist a lambda body as a top-level code def; its body sees params (fixed +

@@ -293,7 +293,7 @@
     [(if ,a ,b ,c) (ev-if a b c env cp tc?)]
     [(seq ,a ,b) (ev a env cp tc?) (ev b env cp tc?)]
     [(let ,binds ,body)
-     (let* ([ops (map (lambda (b) (ev (cadr b) env cp tc?)) binds)]
+     (let* ([ops (map-lr (lambda (b) (ev (cadr b) env cp tc?)) binds)]
             [env2 (append (map (lambda (b op) (cons (car b) op)) binds ops) env)])
        (ev body env2 cp tc?))]
     [(primcall ,op . ,args)
@@ -301,27 +301,27 @@
      ;; flonum-unboxing); otherwise the existing per-op lowering, byte-identical.
      (if (flonum-region-root? op args *fset*)
          (emit-flonum-region e env cp tc?)
-         (emit-primcall op (map (lambda (a) (ev a env cp tc?)) args)))]
+         (emit-primcall op (map-lr (lambda (a) (ev a env cp tc?)) args)))]
     [(make-closure ,label ,caps)
-     (emit-make-closure label (map (lambda (c) (ev c env cp tc?)) caps))]
+     (emit-make-closure label (map-lr (lambda (c) (ev c env cp tc?)) caps))]
     [(closure-block ,entries ,body)
      (ev body (emit-closure-block entries env cp tc?) cp tc?)]
     [(apply-app ,f ,args)
      ;; sequence operands then callee explicitly (fix-emit-eval-order): don't
      ;; rely on host argument-evaluation order, so schemec and the Chez-hosted
      ;; compiler emit temps in the same order.  Operands-first matches Chez.
-     (let* ([aops (map (lambda (a) (ev a env cp tc?)) args)]
+     (let* ([aops (map-lr (lambda (a) (ev a env cp tc?)) args)]
             [fop  (ev f env cp tc?)])
        (emit-apply fop aops #f tc?))]
     [(app ,f ,args)
-     (let* ([aops (map (lambda (a) (ev a env cp tc?)) args)]
+     (let* ([aops (map-lr (lambda (a) (ev a env cp tc?)) args)]
             [fop  (ev f env cp tc?)])
        (emit-app fop aops #f tc?))]
     [(self-app ,label ,args)                       ; direct self-call (B-self)
-     (let ([aops (map (lambda (a) (ev a env cp tc?)) args)])
+     (let ([aops (map-lr (lambda (a) (ev a env cp tc?)) args)])
        (emit-self-app label aops #f tc? cp))]
     [(known-app ,label ,f ,args)                   ; direct call, known callee (B-general)
-     (let* ([aops (map (lambda (a) (ev a env cp tc?)) args)]
+     (let* ([aops (map-lr (lambda (a) (ev a env cp tc?)) args)]
             [fop  (ev f env cp tc?)])
        (emit-known-app label fop aops #f tc?))]))
 
@@ -330,24 +330,24 @@
     [(if ,a ,b ,c) (et-if a b c env cp tc?)]
     [(seq ,a ,b) (ev a env cp tc?) (et b env cp tc?)]
     [(let ,binds ,body)
-     (let* ([ops (map (lambda (b) (ev (cadr b) env cp tc?)) binds)]
+     (let* ([ops (map-lr (lambda (b) (ev (cadr b) env cp tc?)) binds)]
             [env2 (append (map (lambda (b op) (cons (car b) op)) binds ops) env)])
        (et body env2 cp tc?))]
     [(closure-block ,entries ,body)
      (et body (emit-closure-block entries env cp tc?) cp tc?)]
     [(apply-app ,f ,args)                          ; operands-first (fix-emit-eval-order)
-     (let* ([aops (map (lambda (a) (ev a env cp tc?)) args)]
+     (let* ([aops (map-lr (lambda (a) (ev a env cp tc?)) args)]
             [fop  (ev f env cp tc?)])
        (emit-apply fop aops #t tc?))]
     [(app ,f ,args)
-     (let* ([aops (map (lambda (a) (ev a env cp tc?)) args)]
+     (let* ([aops (map-lr (lambda (a) (ev a env cp tc?)) args)]
             [fop  (ev f env cp tc?)])
        (emit-app fop aops #t tc?))]
     [(self-app ,label ,args)                       ; direct self-call in tail position
-     (let ([aops (map (lambda (a) (ev a env cp tc?)) args)])
+     (let ([aops (map-lr (lambda (a) (ev a env cp tc?)) args)])
        (emit-self-app label aops #t tc? cp))]
     [(known-app ,label ,f ,args)                   ; known callee in tail position
-     (let* ([aops (map (lambda (a) (ev a env cp tc?)) args)]
+     (let* ([aops (map-lr (lambda (a) (ev a env cp tc?)) args)]
             [fop  (ev f env cp tc?)])
        (emit-known-app label fop aops #t tc?))]
     [else (emit! (string-append "ret i64 " (ev e env cp tc?)))]))
@@ -575,7 +575,7 @@
          [cmp?   (and (memq op '(%= %<)) #t)]
          [leaves (region-leaf-list root)]
          ;; pre-evaluate each distinct non-literal leaf ONCE, in source order
-         [leaf-ops (map (lambda (lf) (ev lf env cp tc?)) leaves)]
+         [leaf-ops (map-lr (lambda (lf) (ev lf env cp tc?)) leaves)]
          [leaf-map (map cons leaves leaf-ops)])
     ;; fast-arm value: whole tree in f64; arith root boxes, compare root selects
     (define (emit-fast)
@@ -593,7 +593,7 @@
             r)))
     (if (null? leaves)
         (emit-fast)                              ; all-literal: always flonum, no guard
-        (let* ([conds (map (lambda (lo)
+        (let* ([conds (map-lr (lambda (lo)
                              (let* ([p (fresh-temp)] [c (fresh-temp)])
                                (emit! (string-append p " = call i64 @rt_flonum_p(i64 " lo ")"))
                                (emit! (string-append c " = icmp ne i64 " p ", 1"))
@@ -734,7 +734,7 @@
 ;; two-phase: allocate + tag all, bind names, then fill env slots (may ref siblings)
 (define (emit-closure-block entries env cp tc?)
   (let* ([allocs
-          (map (lambda (ent)
+          (map-lr (lambda (ent)
                  (let* ([raw+p (emit-alloc-closure (cadr ent) (length (caddr ent)))]
                         [raw (car raw+p)] [p (cadr raw+p)])
                    (let ([c (fresh-temp)])
@@ -858,7 +858,7 @@
          [preptr (if (zero? n) "null" (emit-spill pre))]
          [m (fresh-temp)] [argc (fresh-temp)] [argv (fresh-temp)]
          [ovcmp (fresh-temp)] [ovg (fresh-temp)] [ov (fresh-temp)]
-         [slots (map (lambda (i) (fresh-temp)) (iota k))])
+         [slots (map-lr (lambda (i) (fresh-temp)) (iota k))])
     (emit! (string-append m " = call i64 @rt_list_length(i64 " lst ")"))
     (emit! (string-append argc " = add i64 " (number->string n) ", " m))
     (emit! (string-append argv " = call ptr @rt_apply_argv(i64 " (number->string n)
@@ -1003,8 +1003,14 @@
 ;; rt_build_rest to collect args [f, argc) (positional excess + overflow) into a
 ;; list.  Returns the operand holding that list.
 (define (emit-build-rest f k)
-  (let ([slots (emit-spill (map (lambda (i) (string-append "%a" (number->string i))) (iota k)))]
-        [r (fresh-temp)])
+  ;; let* (not let): `emit-spill` both emits instructions and allocates temps, so it
+  ;; MUST evaluate before the result temp -- a parallel `let` evaluates these two
+  ;; side-effecting inits in host order (Chez right-to-left vs Emit left-to-right),
+  ;; which numbered the spill and the result differently on the two doors and broke
+  ;; the cross-door byte-identity of every unit exporting a variadic procedure
+  ;; (issue #11; same rule as the global-set!/ev-if/et-if sites, fix-emit-eval-order).
+  (let* ([slots (emit-spill (map (lambda (i) (string-append "%a" (number->string i))) (iota k)))]
+         [r (fresh-temp)])
     (emit! (string-append r " = call i64 @rt_build_rest(i64 %argc, i64 " (number->string f)
                           ", i64 " (number->string k) ", ptr " slots ", ptr %overflow)"))
     r))
@@ -1051,7 +1057,7 @@
      (reset-symbols!)
      ;; emit bodies first (populating the symbol-global accumulator), then
      ;; assemble with the private string constants prepended to the module.
-     (let* ([body (apply string-append (map (lambda (d) (emit-code-def d *arity*)) defs))]
+     (let* ([body (apply string-append (map-lr (lambda (d) (emit-code-def d *arity*)) defs))]
             [ent  (emit-entry entry)])
        (string-append (rt-declarations)
                       (symbol-globals)
@@ -1244,7 +1250,7 @@
           (match prog
             [(program ,cdefs ,e)
              (let* ([body (apply string-append
-                            (map (lambda (d) (emit-code-def d repl-arity)) cdefs))]
+                            (map-lr (lambda (d) (emit-code-def d repl-arity)) cdefs))]
                     [name (string-append "__repl_" (number->string n))]
                     [thunk (emit-named-entry e name)]
                     [r (string-append "%r" (number->string n))]
@@ -1277,7 +1283,7 @@
         [(program ,cdefs ,entry)
          ;; emit bodies first so symbol-globals is populated before it is read
          (let* ([body  (apply string-append
-                         (map (lambda (d) (emit-code-def d repl-arity)) cdefs))]
+                         (map-lr (lambda (d) (emit-code-def d repl-arity)) cdefs))]
                 [thunk (emit-named-entry entry name)]
                 [exts  (apply string-append
                          (map (lambda (s) (string-append (global-operand s)
@@ -1330,7 +1336,7 @@
     [(program ,defs ,entry)
      (set! *arity* repl-arity)
      (reset-symbols!)
-     (let* ([body (apply string-append (map (lambda (d) (emit-code-def d *arity*)) defs))]
+     (let* ([body (apply string-append (map-lr (lambda (d) (emit-code-def d *arity*)) defs))]
             [ent  (emit-entry/inits entry init-libs)]
             [gdecls (apply string-append
                       (map (lambda (s) (string-append (global-operand s) " = external global i64\n"))
@@ -1400,7 +1406,7 @@
             (match prog
               [(program ,cdefs ,e)
                (let* ([body  (apply string-append
-                               (map (lambda (d) (emit-code-def d repl-arity)) cdefs))]
+                               (map-lr (lambda (d) (emit-code-def d repl-arity)) cdefs))]
                       [tname (string-append "\""
                                (mangle library-name (string-append "__init_" (number->string n)))
                                "\"")]

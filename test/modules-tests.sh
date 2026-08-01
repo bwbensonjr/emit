@@ -64,6 +64,7 @@ check aot-nocollide "$MOD/prog-both.scm"  43    # (liba)+(libb) same-named inter
 echo "generalize: transitive imports, rename, diamond (AOT door)"
 check aot-chain    "$MOD/prog-chain.scm"   15   # (chain-a) transitively imports (chain-b)
 check aot-rename   "$MOD/prog-rename.scm"  77   # (rename (rename-lib)); importer sees fmap
+check aot-variadic "$MOD/prog-varlib.scm" "(2 15)"  # (varlib): rest params + apply (issue #11)
 check aot-diamond  "$MOD/prog-diamond.scm" 35   # (dia-a)+(dia-b) both import (dia-c)
 
 echo "library artifact shape"
@@ -188,7 +189,10 @@ echo "dev->ship fidelity (cross-door byte-identity)"
 # build/emit run --emit compiles a lone define-library through the SAME core the
 # REPL host uses; compare it to the AOT unit (host target header stripped).
 if make emit >/dev/null 2>&1; then
-  for L in mylib; do
+  # mylib is all fixed-arity; varlib is variadic and uses `apply`.  Both shapes must
+  # be covered -- the variadic one is where the doors diverged (issue #11), and the
+  # suite was blind to it for as long as this loop named only mylib.
+  for L in mylib varlib; do
     aot="$TMP/$L.aot.ll"; repl="$TMP/$L.repl.ll"
     grep -v '^target ' "build/lib/$L.ll" > "$aot"
     build/emit run --emit < "$MOD/$L.sld" > "$repl" 2>/dev/null
