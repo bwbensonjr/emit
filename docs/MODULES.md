@@ -187,8 +187,14 @@ name and written under `-o DIR` (default `build/lib`):
 ```bash
 build/emit lib test/modules/mylib.sld -o build/lib
 # build/lib/mylib.ll        (byte-identical to the unit the run/AOT doors emit)
-# build/lib/mylib.exports   => ((mylib) ((greet . "mylib:greet")))
+# build/lib/mylib.exports   => ((mylib) ((greet . "mylib:greet"))
+#                                       ((greet "mylib:code:greet" 0)))
 ```
+
+The table has three parts: the library name, the **symbol** rows mapping each external name to its
+mangled global, and the **call** rows — for each export whose initializer is a fixed-arity lambda,
+its code label and that arity, so an importer can emit a direct call to the procedure's code with
+no access to the library's source (change: `cross-unit-direct-calls`).
 
 The four doors — `emit lib` / `emit build` / `emit run` / `emit repl` — are verbs of a single
 `emit` binary, the sole user-facing entry point (change: `emit-cli-unification`).
@@ -219,8 +225,27 @@ session** (and into the compiler's own build), as if the source began with `(imp
   `@"scheme.base:map"`); a `rename` is pure table indirection, so the emitted symbol tracks the
   *internal* name (`@"rename.lib:%fast-map"` for the `fmap` export). Importers reference these as
   external globals.
+- **Code labels** — a library top-level procedure's lifted code block is labelled from its
+  *binding name*, `@"libname:code:export"` (e.g. `@"scheme.base:code:zero?"`), not from the
+  compile's gensym counter. That makes the label identical whether the unit is compiled whole or
+  recompiled as a tree-shaken subset, which is what lets a program name it — the AOT shake
+  recompiles a unit against a root set derived from the very program that must name the callee.
+  Inner and anonymous lambdas, and all program-unit code, keep the counter (`@code_N`).
+- **Cross-unit direct calls** — a call whose operator resolves to an imported procedure with a
+  recorded label and a *matching* argument count is emitted as
+  `call fastcc @"libname:code:export"` instead of loading the code pointer out of the binding's
+  closure. The global is still loaded and passed as the callee's `self`, since it carries the
+  captured environment; only the four-instruction code-pointer chain disappears. An arity
+  mismatch, a value export, or a variadic export keeps the indirect path, so arity errors trap
+  exactly as before. The importing module `declare`s each label it names; no linkage change is
+  needed, as library code labels already have external linkage. This rests on a library global
+  being assigned once by its unit's `__init` and never reassigned — true on every door today (a
+  `set!` of a top-level or imported name is a compile error, and a REPL redefinition binds a
+  fresh *program* global rather than touching the library's slot), and a prerequisite any future
+  library-reload feature would have to revisit.
 - **Artifacts** — each library compiles to `<artifacts>/<name>.ll` plus a readable
-  `<name>.exports` table (`(NAME ((external . "mangled") …))`) and a `<name>.stamp` sidecar
+  `<name>.exports` table (`(NAME ((external . "mangled") …) ((external "label" arity) …))`) and a
+  `<name>.stamp` sidecar
   recording the compiler that produced them. Artifacts are reused only when fresh — the source
   is no newer than the artifact **and** the recorded compiler-identity stamp matches the current
   compiler — and rebuilt otherwise. The stamp is a version marker plus a content hash over the

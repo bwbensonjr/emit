@@ -55,6 +55,7 @@
 
 (define (compile-forms forms dump)
   (reset-counter!)
+  (set-import-calls! '())            ; no imports on this path (change: cross-unit-direct-calls)
   (let* ([me+rf (collect-define-syntax forms)]
          [macro-env (car me+rf)] [runtime-forms (cadr me+rf)])
     (let* ([known (compute-known macro-env runtime-forms)]
@@ -295,7 +296,7 @@
     d))
 
 ;; An import environment is an alist external-name -> mangled-symbol, built from a
-;; list of imported libraries' export tables (each `(name ((ext . mangled) ...))`,
+;; list of imported libraries' export tables (each `(name ((ext . mangled) ...) calls)`,
 ;; as returned by compile-library).  The mangled string is interned to a symbol so
 ;; resolution can emit it as a (global-ref sym); because that symbol is already
 ;; unit-qualified (`b:add1`), emit does not re-mangle it and it becomes an external
@@ -305,13 +306,49 @@
   (map (lambda (p) (cons (car p) (string->symbol (cdr p))))
        (apply append (map cadr import-tables))))
 
+;; The direct-call view of the same tables (change: cross-unit-direct-calls): an
+;; alist mangled-symbol -> (label . arity), keyed the way `lower` sees an imported
+;; reference -- as the `(global-ref sym)` the resolver produced -- so a call through
+;; one can be recognized as having a statically known callee.  Built by joining each
+;; table's CALL rows (external label arity) against its export alist on the external
+;; name.  A table with no call rows contributes nothing, so importing only values
+;; lowers exactly as before.
+(define (import-tables->call-alist import-tables)
+  (apply append
+    (map (lambda (t)
+           (let ([exports (cadr t)])
+             (map (lambda (c)
+                    (cons (string->symbol (cdr (assq (car c) exports)))
+                          (cons (cadr c) (caddr c))))
+                  (caddr t))))
+         import-tables)))
+
+;; The export table's CALL rows for a unit just lowered (change:
+;; cross-unit-direct-calls): for each export whose top-level initializer `lower`
+;; hoisted as a FIXED-ARITY lambda, its external name, the stable code label lower
+;; assigned it, and that arity -- everything an importer needs to emit a direct call
+;; with no access to the library's source.  `procs` is lower's own record of what it
+;; emitted (`unit-procs`), so the table can never advertise a label the unit does not
+;; define.  A value export, or a procedure of variable arity, gets no row and calls
+;; to it stay indirect.
+(define (export-call-rows exports procs)
+  (filter (lambda (x) x)
+          (map (lambda (e)
+                 (let ([p (assq (cdr e) procs)])
+                   (and p (list (car e) (cadr p) (caddr p)))))
+               exports)))
+
 ;; Compile a library's declarations into (list ir-text export-table).
 ;;   name          : library name (list of symbol parts)
 ;;   exports       : (external . internal) pairs (see normalize-export)
 ;;   body-forms    : the library's top-level defines (a mutually-recursive group)
 ;;   import-tables : the export tables of the libraries THIS library imports (its
 ;;                   direct dependencies); '() for an import-free library.
-;; export-table : (list name ((external-name . mangled-string) ...)).
+;; export-table : (list name ((external-name . mangled-string) ...)
+;;                     ((external-name code-label arity) ...))
+;; -- the symbol rows every importer needs, then the CALL rows for the exports whose
+;; initializer is a fixed-arity lambda, which let an importer emit a direct call to
+;; the procedure's code (change: cross-unit-direct-calls).
 ;; A library may import other libraries (change: module-generalize): its body
 ;; resolves those imports' exports as external globals, exactly as a program does.
 ;; Libraries do not share the prelude (that is Stage 3), so the body uses
@@ -347,6 +384,8 @@
 
 (define (compile-library* name imports exports body-forms import-tables dump keep-roots)
   (reset-counter!)
+  (reset-unit-procs!)                ; this unit's own call interface (cross-unit-direct-calls)
+  (set-import-calls! (import-tables->call-alist import-tables))   ; calls INTO its dependencies
   (let* ([me+rf (collect-define-syntax body-forms)]
          [macro-env (car me+rf)]
          [runtime (cadr me+rf)]
@@ -383,7 +422,8 @@
               ;; export table keys on the EXTERNAL name; the symbol is the INTERNAL name
               ;; mangled to this unit (rename is pure indirection).
               [export-table (map (lambda (e) (cons (car e) (mangle name (cdr e)))) exports)])
-          (list (emit-library-batch progs name) (list name export-table)))
+          (list (emit-library-batch progs name)
+                (list name export-table (export-call-rows exports (unit-procs)))))
         ;; PRUNED PATH (closed-world AOT tree-shake): expand each def ONCE, compute
         ;; the define->define reference graph, keep only what's reachable from the
         ;; roots, and lower/emit just those (in original order, so __init order is
@@ -409,9 +449,15 @@
                                                        (symbol->string (car ne)))
                                     acc))
                             (quote ()) kept))]
+               ;; the KEPT exports; both the symbol rows and the call rows are drawn
+               ;; from this one list, so the pruned table is exactly the full table
+               ;; restricted to what survived -- same names, same mangled symbols, and
+               ;; (because the labels are name-derived) the same labels.
+               [kept-exports (filter (lambda (e) (memq (cdr e) reachable)) exports)]
                [export-table (map (lambda (e) (cons (car e) (mangle name (cdr e))))
-                                  (filter (lambda (e) (memq (cdr e) reachable)) exports))])
-          (list (emit-library-batch progs name) (list name export-table))))))
+                                  kept-exports)])
+          (list (emit-library-batch progs name)
+                (list name export-table (export-call-rows kept-exports (unit-procs))))))))
 
 ;; Compile a program that imports libraries.  import-tables is a list of the
 ;; program's DIRECT imports' export tables (as returned by compile-library); the
@@ -428,6 +474,9 @@
          [import-env-alist (import-tables->env-alist import-tables)] ; (ext . mangled-sym)
          [forms (with-prelude prelude-forms runtime-user)])
     (reset-counter!)
+    ;; a call to one of these imports' fixed-arity procedures lowers to a direct call
+    ;; to its code label (change: cross-unit-direct-calls).
+    (set-import-calls! (import-tables->call-alist import-tables))
     (let* ([me+rf (collect-define-syntax forms)]
            [macro-env (car me+rf)] [runtime (cadr me+rf)]
            ;; Imported external names are "known" bindings too, so a derived-form

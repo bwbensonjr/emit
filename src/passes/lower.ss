@@ -38,6 +38,32 @@
 (define (add-known! xs labels)
   (set! *known-closures* (append (map cons xs labels) *known-closures*)))
 
+;; Imported library procedures whose code label this unit may name: an alist
+;; mangled-symbol -> (label . arity), from the import tables of the unit being
+;; compiled (change: cross-unit-direct-calls).  A call whose operator is a
+;; `(global-ref sym)` found here, with a matching argument count, is direct-called
+;; exactly like a known closure-block binding; anything else -- an arity mismatch, a
+;; value export, a variadic export, an unimported global -- keeps the indirect path,
+;; so an arity error still traps where it always did.
+;;
+;; This is per-UNIT state, not per-form: a library or program is lowered one
+;; top-level form at a time, so `lower-program` must NOT clear it.  Every core entry
+;; point sets it instead (compile-forms to '(), compile-library*/
+;; compile-program-with-imports to their imports', the REPL to the session's), which
+;; is what keeps one compilation's table from leaking into the next.
+;;
+;; Soundness rests on a library global being assigned once, by its unit's __init,
+;; and never reassigned -- see design D4.  That holds on BOTH doors: a unit's
+;; globals are stored only by its own per-define __init_N thunks, `set!` on a
+;; top-level/imported name is a compile error, and a REPL redefinition allocates a
+;; fresh PROGRAM global (x.gN) rather than touching the library's slot.  A future
+;; library-reload feature would have to revisit this.
+(define *import-calls* '())
+(define (set-import-calls! alist) (set! *import-calls* alist))
+(define (known-import sym n)
+  (let ([p (assq sym *import-calls*)])
+    (and p (= n (cddr p)) (cadr p))))
+
 ;; The current compilation unit's library name (change: module-resolution-scaffold),
 ;; threaded in by lower-program as module state alongside `*code-defs*`.  Lifted
 ;; code-block labels are named through it via `mangle`; the program unit is the
@@ -47,6 +73,34 @@
 ;; a fresh, unit-qualified code-block label: "code_N" for the program unit,
 ;; "L:code_N" for a library unit.
 (define (fresh-code-label) (mangle *unit* (fresh-label "code")))
+
+;; --- stable labels for library top-level procedures (change:
+;;     cross-unit-direct-calls, design D1) ------------------------------------
+;; A code label taken from the gensym counter is not knowable by an importer: the
+;; AOT tree-shake recompiles a unit against a root set derived from the very
+;; program that must name the callee, and a pruned unit lowers fewer forms, so the
+;; counter has reached a different value by the time a kept binding is lowered
+;; (`zero?` was scheme.base:code_168 whole and scheme.base:code_216 pruned).  A
+;; library TOP-LEVEL binding whose initializer is a lambda therefore gets
+;; "<unit>:code:<internal-name>" -- mangled through the same function as its value
+;; symbol, so it inherits that symbol's determinism and is identical whole or
+;; pruned.  Inner lambdas, anonymous lambdas, and every program-unit label keep the
+;; counter untouched (`*unit*` is the empty prefix off the library path).
+(define (stable-code-label s)
+  (mangle *unit* (string-append "code:" (symbol->string s))))
+
+;; The unit's exported-procedure call interface, accumulated as the stable labels
+;; above are handed out: (internal-name label arity) per FIXED-ARITY top-level
+;; lambda binding.  compile-library* reads this back to fill the export table's
+;; call rows (change: cross-unit-direct-calls), so what the table advertises is
+;; exactly what was emitted rather than a re-derivation from the source.  It spans
+;; a whole unit -- lower-program runs once per top-level form -- so the unit driver
+;; resets it, not lower-program.
+(define *unit-procs* '())
+(define (reset-unit-procs!) (set! *unit-procs* '()))
+(define (unit-procs) (reverse *unit-procs*))
+(define (add-unit-proc! name label arity)
+  (set! *unit-procs* (cons (list name label arity) *unit-procs*)))
 
 ;; `unit` is the compilation unit's library name (a list of symbol parts); the
 ;; program unit is `program-unit` (empty prefix).  It is optional so the pass
@@ -72,7 +126,7 @@
           [(assq x fmap) => (lambda (p) `(free-ref ,(cdr p)))]
           [else (error 'lower "unbound variable" x)])]
     [(global-ref ,s) `(global-ref ,s)]
-    [(global-set! ,s ,rhs) `(global-set! ,s ,(L rhs))]
+    [(global-set! ,s ,rhs) `(global-set! ,s ,(lower-global-init s rhs locals fmap self))]
     [(if ,a ,b ,c) `(if ,(L a) ,(L b) ,(L c))]
     [(seq ,a ,b) `(seq ,(L a) ,(L b))]
     [(primcall ,op . ,args) `(primcall ,op ,@(map L args))]
@@ -116,12 +170,42 @@
      ;; B-general: any other statically-known closure is called directly too, with
      ;; its own closure value as `self`.  A self-call stays a `self-app` because it
      ;; can reuse `%self` and skip loading the closure at all.
-     (let ([k (and (symbol? f) (known-closure f))])
+     ;; Cross-unit (change: cross-unit-direct-calls): an operator that resolved to an
+     ;; IMPORTED binding with a recorded label and matching arity is the same shape --
+     ;; the global is still loaded (it carries the captured environment) and passed as
+     ;; the callee's self; only the code-pointer load out of it disappears.
+     (let ([k (and (symbol? f) (known-closure f))]
+           [g (and (pair? f) (eq? (car f) 'global-ref)
+                   (known-import (cadr f) (length args)))])
        (cond
          [(and self (symbol? f) (eq? f (car self)) (not (memq f locals)))
           `(self-app ,(cdr self) ,(map L args))]
          [k `(known-app ,(cdr k) ,(L f) ,(map L args))]
+         [g `(known-app ,g ,(L f) ,(map L args))]
          [else `(app ,(L f) ,(map L args))]))]))
+
+;; The initializer of a top-level binding (change: cross-unit-direct-calls).  In a
+;; LIBRARY unit a lambda initializer is hoisted under the stable, name-derived label
+;; rather than a counter one, and -- when its arity is fixed -- recorded as part of
+;; the unit's call interface.  Everything else (a value initializer, and every
+;; program/REPL-unit binding, where `*unit*` is the empty prefix) falls through to
+;; the ordinary `lower`, so those paths are untouched.
+;;
+;; This mirrors `lower`'s standalone-lambda arm exactly apart from the label: the
+;; closure is still allocated and still captures the same free variables, since the
+;; binding's VALUE is a runtime closure either way.  Only its code is now nameable
+;; from another unit.
+(define (lower-global-init s rhs locals fmap self)
+  (if (and (not (null? *unit*)) (pair? rhs) (eq? (car rhs) 'lambda))
+      (let* ([params (cadr rhs)]
+             [body   (caddr rhs)]
+             [fvs    (free-vars rhs)]
+             [label  (stable-code-label s)])
+        (unless (param-rest params)                ; fixed arity: direct-callable
+          (add-unit-proc! s label (length (param-fixed params))))
+        (hoist-code! label params body fvs #f)     ; anonymous: no self-name
+        `(make-closure ,label ,(map (lambda (v) (lower v locals fmap self)) fvs)))
+      (lower rhs locals fmap self)))
 
 ;; hoist a lambda body as a top-level code def; its body sees params (fixed +
 ;; rest) as locals and free vars via an index map matching the capture order.

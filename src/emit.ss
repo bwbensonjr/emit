@@ -1117,6 +1117,74 @@
        (S entry)])
     (list defd refd)))
 
+;; --- external code labels (change: cross-unit-direct-calls) ------------------
+;; A cross-unit direct call names a code label another unit defines, so the calling
+;; module must `declare` it -- the same treatment an imported global gets, and it
+;; resolves the same way (at link time for the AOT door, in the JIT's dylib for the
+;; dev door).  No linkage change is needed on the defining side: a library's code
+;; labels are already emitted with default (external) linkage.
+;;
+;; The set is recovered from the lowered form rather than threaded down, so one
+;; scan serves every module shape.  A `known-app` label is external exactly when
+;; this module does not define it -- an intra-unit known call (P5-B-general) names
+;; a label right here, a cross-unit one does not.  Labels are STRINGS, so
+;; membership must compare by string=?: the same label text reaches the scanner as
+;; two different objects (one built by lower for the code def, one carried in the
+;; import table).
+(define (label-mem? l ls)
+  (cond [(null? ls) #f]
+        [(string=? l (car ls)) #t]
+        [else (label-mem? l (cdr ls))]))
+
+;; -> the direct-called-but-not-defined labels across a LIST of lowered progs (a
+;; library unit and the REPL batch are several progs; a program is one), in first-use
+;; order so the emitted declares are deterministic on both hosts.
+(define (scan-external-labels progs)
+  (let ([used '()] [defined '()])
+    (define (U l) (unless (label-mem? l used) (set! used (cons l used))))
+    (define (S e)
+      (match e
+        [(const ,d) (void)]
+        [(local ,x) (void)]
+        [(free-ref ,i) (void)]
+        [(global-ref ,s) (void)]
+        [(global-set! ,s ,e) (S e)]
+        [(if ,a ,b ,c) (S a) (S b) (S c)]
+        [(seq ,a ,b) (S a) (S b)]
+        [(primcall ,op . ,args) (for-each S args)]
+        [(let ,binds ,body) (for-each (lambda (b) (S (cadr b))) binds) (S body)]
+        [(make-closure ,label ,caps) (for-each S caps)]
+        [(closure-block ,entries ,body)
+         (for-each (lambda (en) (for-each S (caddr en))) entries) (S body)]
+        [(app ,f ,args) (S f) (for-each S args)]
+        [(apply-app ,f ,args) (S f) (for-each S args)]
+        [(self-app ,label ,args) (for-each S args)]        ; always this module's own
+        [(known-app ,label ,f ,args) (U label) (S f) (for-each S args)]))
+    (for-each
+      (lambda (prog)
+        (match prog
+          [(program ,cdefs ,entry)
+           (for-each (lambda (d)
+                       (match d [(code ,l ,self ,fixed ,rest ,body)
+                                 (set! defined (cons l defined)) (S body)]))
+                     cdefs)
+           (S entry)]))
+      progs)
+    (filter (lambda (l) (not (label-mem? l defined))) (reverse used))))
+
+;; `declare fastcc i64 @"L:code:f"(i64, i64, i64 x K, ptr)` -- the parameter list of
+;; emit-code-def, unnamed.  K must be the module's closure arity, or the declared
+;; type would not match the definition's.
+(define (external-label-decls labels k)
+  (apply string-append
+    (map (lambda (l)
+           (string-append "declare fastcc i64 " (label-operand l) "("
+                          (comma-join (append (list "i64" "i64")
+                                              (map (lambda (i) "i64") (iota k))
+                                              (list "ptr")))
+                          ")\n"))
+         labels)))
+
 (define (repl-check-arity prog)   ; enforce the pinned K (design D6)
   (match prog
     [(program ,cdefs ,entry)
@@ -1160,11 +1228,13 @@
                         (map (lambda (s) (string-append (global-operand s)
                                                         " = global i64 0\n"))
                              defd))]
+               ;; imported code labels the batch direct-calls (cross-unit-direct-calls)
+               [ldecls (external-label-decls (scan-external-labels progs) repl-arity)]
                [entry (string-append
                         "define i64 @" entry-name "() {\nentry:\n"
                         (apply string-append (reverse calls))
                         "  ret i64 " (or last "2") "\n}\n")])
-          (string-append (rt-declarations) (symbol-globals) slots
+          (string-append (rt-declarations) (symbol-globals) ldecls slots
                          (apply string-append (reverse bodies))
                          (apply string-append (reverse thunks))
                          entry (emit-apply0-trampoline repl-arity)))
@@ -1213,11 +1283,15 @@
                          (map (lambda (s) (string-append (global-operand s)
                                             " = external global i64\n"))
                               external))]
+                ;; imported code labels this form direct-calls (change:
+                ;; cross-unit-direct-calls) -- the JIT resolves them in the
+                ;; already-loaded unit's dylib, as it does the externals above.
+                [ldecls (external-label-decls (scan-external-labels (list prog)) repl-arity)]
                 [slots (apply string-append
                          (map (lambda (s) (string-append (global-operand s)
                                             " = global i64 0\n"))
                               defd))])
-           (list (string-append (rt-declarations) exts slots (symbol-globals)
+           (list (string-append (rt-declarations) exts ldecls slots (symbol-globals)
                                 body thunk (emit-apply0-trampoline repl-arity))
                  name defd))]))))
 
@@ -1264,8 +1338,12 @@
             [idecls (apply string-append
                       (map (lambda (lib)
                              (string-append "declare i64 @\"" (mangle lib "__init") "\"()\n"))
-                           init-libs))])
-       (string-append (rt-declarations) gdecls idecls (symbol-globals)
+                           init-libs))]
+            ;; the imported code labels this program direct-calls (change:
+            ;; cross-unit-direct-calls); empty when it direct-calls none, so a
+            ;; program importing only values is byte-identical to before.
+            [ldecls (external-label-decls (scan-external-labels (list prog)) *arity*)])
+       (string-append (rt-declarations) gdecls idecls ldecls (symbol-globals)
                       body ent (emit-apply0-trampoline *arity*)))]))
 
 ;; Emit a library UNIT module for `library-name` from its lowered form-progs.
@@ -1292,6 +1370,10 @@
                  [exts    (apply string-append
                             (map (lambda (s) (string-append (global-operand s) " = external global i64\n"))
                                  external))]
+                 ;; a library may direct-call ANOTHER library's export (change:
+                 ;; cross-unit-direct-calls); declare each such label, exactly as the
+                 ;; transitively-imported globals above are declared.
+                 [ldecls  (external-label-decls (scan-external-labels progs) repl-arity)]
                  [slots   (apply string-append
                             (map (lambda (s) (string-append (global-operand s) " = global i64 0\n"))
                                  defd))]
@@ -1307,7 +1389,7 @@
                             "  store i64 8, ptr " flag "\n"
                             (apply string-append (reverse calls))
                             "  ret i64 2\n}\n")])
-            (string-append (rt-declarations) (symbol-globals) exts flagdef slots
+            (string-append (rt-declarations) (symbol-globals) exts ldecls flagdef slots
                            (apply string-append (reverse bodies))
                            (apply string-append (reverse thunks))
                            init (emit-apply0-trampoline repl-arity)))

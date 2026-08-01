@@ -236,7 +236,7 @@ declare i64 @rt_error_object_irritants(i64)
 @"scheme.base:rd-datum" = global i64 0
 @"scheme.base:read-from-string" = global i64 0
 @"scheme.base:read-all-from-string" = global i64 0
-define fastcc i64 @"scheme.base:code_1"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:list"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1 = icmp sge i64 %argc, 0
   br i1 %t1, label %argok2, label %arityerr1
@@ -265,7 +265,7 @@ argok2:
   ret i64 %t11
 }
 
-define fastcc i64 @"scheme.base:code_4"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:caar"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t16 = icmp eq i64 %argc, 1
   br i1 %t16, label %argok4, label %arityerr3
@@ -278,7 +278,7 @@ argok4:
   ret i64 %t18
 }
 
-define fastcc i64 @"scheme.base:code_7"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:cadr"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t23 = icmp eq i64 %argc, 1
   br i1 %t23, label %argok6, label %arityerr5
@@ -291,7 +291,7 @@ argok6:
   ret i64 %t25
 }
 
-define fastcc i64 @"scheme.base:code_10"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:cdar"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t30 = icmp eq i64 %argc, 1
   br i1 %t30, label %argok8, label %arityerr7
@@ -304,7 +304,7 @@ argok8:
   ret i64 %t32
 }
 
-define fastcc i64 @"scheme.base:code_13"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:cddr"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t37 = icmp eq i64 %argc, 1
   br i1 %t37, label %argok10, label %arityerr9
@@ -317,7 +317,7 @@ argok10:
   ret i64 %t39
 }
 
-define fastcc i64 @"scheme.base:code_16"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:caaar"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t44 = icmp eq i64 %argc, 1
   br i1 %t44, label %argok12, label %arityerr11
@@ -335,7 +335,7 @@ argok12:
   ret i64 %t51
 }
 
-define fastcc i64 @"scheme.base:code_19"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:caadr"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t56 = icmp eq i64 %argc, 1
   br i1 %t56, label %argok14, label %arityerr13
@@ -353,7 +353,7 @@ argok14:
   ret i64 %t63
 }
 
-define fastcc i64 @"scheme.base:code_22"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:cadar"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t68 = icmp eq i64 %argc, 1
   br i1 %t68, label %argok16, label %arityerr15
@@ -371,7 +371,7 @@ argok16:
   ret i64 %t75
 }
 
-define fastcc i64 @"scheme.base:code_25"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:caddr"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t80 = icmp eq i64 %argc, 1
   br i1 %t80, label %argok18, label %arityerr17
@@ -389,7 +389,7 @@ argok18:
   ret i64 %t87
 }
 
-define fastcc i64 @"scheme.base:code_28"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:cdaar"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t92 = icmp eq i64 %argc, 1
   br i1 %t92, label %argok20, label %arityerr19
@@ -407,7 +407,7 @@ argok20:
   ret i64 %t99
 }
 
-define fastcc i64 @"scheme.base:code_31"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:cdadr"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t104 = icmp eq i64 %argc, 1
   br i1 %t104, label %argok22, label %arityerr21
@@ -425,7 +425,7 @@ argok22:
   ret i64 %t111
 }
 
-define fastcc i64 @"scheme.base:code_34"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:cddar"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t116 = icmp eq i64 %argc, 1
   br i1 %t116, label %argok24, label %arityerr23
@@ -443,7 +443,7 @@ argok24:
   ret i64 %t123
 }
 
-define fastcc i64 @"scheme.base:code_37"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:cdddr"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t128 = icmp eq i64 %argc, 1
   br i1 %t128, label %argok26, label %arityerr25
@@ -461,7 +461,7 @@ argok26:
   ret i64 %t135
 }
 
-define fastcc i64 @"scheme.base:code_45"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_31"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t140 = icmp eq i64 %argc, 2
   br i1 %t140, label %argok28, label %arityerr27
@@ -488,11 +488,11 @@ fixslow32:
   br label %fixmerge33
 fixmerge33:
   %t149 = phi i64 [ %t147, %fixfast31 ], [ %t148, %fixslow32 ]
-  %t150 = musttail call fastcc i64 @"scheme.base:code_45"(i64 %self, i64 2, i64 %t143, i64 %t149, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t150 = musttail call fastcc i64 @"scheme.base:code_31"(i64 %self, i64 2, i64 %t143, i64 %t149, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t150
 }
 
-define fastcc i64 @"scheme.base:code_43"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:length"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t151 = icmp eq i64 %argc, 1
   br i1 %t151, label %argok35, label %arityerr34
@@ -502,15 +502,15 @@ arityerr34:
 argok35:
   %t152 = call ptr @rt_alloc_words(i64 2)
   %t153 = ptrtoint ptr %t152 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_45" to i64), ptr %t152
+  store i64 ptrtoint (ptr @"scheme.base:code_31" to i64), ptr %t152
   %t154 = or i64 %t153, 4
   %t155 = getelementptr i64, ptr %t152, i64 1
   store i64 %t154, ptr %t155
-  %t156 = musttail call fastcc i64 @"scheme.base:code_45"(i64 %t154, i64 2, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t156 = musttail call fastcc i64 @"scheme.base:code_31"(i64 %t154, i64 2, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t156
 }
 
-define fastcc i64 @"scheme.base:code_53"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_38"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t161 = icmp eq i64 %argc, 2
   br i1 %t161, label %argok37, label %arityerr36
@@ -527,11 +527,11 @@ else39:
   %t164 = call i64 @rt_cdr(i64 %a0)
   %t165 = call i64 @rt_car(i64 %a0)
   %t166 = call i64 @rt_cons(i64 %t165, i64 %a1)
-  %t167 = musttail call fastcc i64 @"scheme.base:code_53"(i64 %self, i64 2, i64 %t164, i64 %t166, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t167 = musttail call fastcc i64 @"scheme.base:code_38"(i64 %self, i64 2, i64 %t164, i64 %t166, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t167
 }
 
-define fastcc i64 @"scheme.base:code_51"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:reverse"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t168 = icmp eq i64 %argc, 1
   br i1 %t168, label %argok41, label %arityerr40
@@ -541,15 +541,15 @@ arityerr40:
 argok41:
   %t169 = call ptr @rt_alloc_words(i64 2)
   %t170 = ptrtoint ptr %t169 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_53" to i64), ptr %t169
+  store i64 ptrtoint (ptr @"scheme.base:code_38" to i64), ptr %t169
   %t171 = or i64 %t170, 4
   %t172 = getelementptr i64, ptr %t169, i64 1
   store i64 %t171, ptr %t172
-  %t173 = musttail call fastcc i64 @"scheme.base:code_53"(i64 %t171, i64 2, i64 %a0, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t173 = musttail call fastcc i64 @"scheme.base:code_38"(i64 %t171, i64 2, i64 %a0, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t173
 }
 
-define fastcc i64 @"scheme.base:code_57"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:%append2"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t178 = icmp eq i64 %argc, 2
   br i1 %t178, label %argok43, label %arityerr42
@@ -575,7 +575,7 @@ else45:
   ret i64 %t189
 }
 
-define fastcc i64 @"scheme.base:code_60"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:append"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t194 = icmp sge i64 %argc, 0
   br i1 %t194, label %argok47, label %arityerr46
@@ -654,7 +654,7 @@ else51:
   ret i64 %t246
 }
 
-define fastcc i64 @"scheme.base:code_64"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:%map1"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t251 = icmp eq i64 %argc, 2
   br i1 %t251, label %argok53, label %arityerr52
@@ -685,7 +685,7 @@ else55:
   ret i64 %t267
 }
 
-define fastcc i64 @"scheme.base:code_67"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:%any-null?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t272 = icmp eq i64 %argc, 1
   br i1 %t272, label %argok57, label %arityerr56
@@ -716,7 +716,7 @@ else61:
   ret i64 %t284
 }
 
-define fastcc i64 @"scheme.base:code_75"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_55"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t289 = icmp eq i64 %argc, 1
   br i1 %t289, label %argok63, label %arityerr62
@@ -728,7 +728,7 @@ argok63:
   ret i64 %t290
 }
 
-define fastcc i64 @"scheme.base:code_77"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_57"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t291 = icmp eq i64 %argc, 1
   br i1 %t291, label %argok65, label %arityerr64
@@ -740,7 +740,7 @@ argok65:
   ret i64 %t292
 }
 
-define fastcc i64 @"scheme.base:code_73"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:%mapn"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t293 = icmp eq i64 %argc, 2
   br i1 %t293, label %argok67, label %arityerr66
@@ -761,7 +761,7 @@ then68:
 else69:
   %t301 = call ptr @rt_alloc_words(i64 1)
   %t302 = ptrtoint ptr %t301 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_75" to i64), ptr %t301
+  store i64 ptrtoint (ptr @"scheme.base:code_55" to i64), ptr %t301
   %t303 = or i64 %t302, 4
   %t304 = load i64, ptr @"scheme.base:%map1"
   %t305 = and i64 %t304, -8
@@ -798,7 +798,7 @@ else69:
   %t336 = call fastcc i64%t313(i64 %a0, i64 %t315, i64 %t320, i64 %t321, i64 %t322, i64 %t323, i64 %t324, i64 %t325, i64 %t326, i64 %t327, ptr %t319)
   %t337 = call ptr @rt_alloc_words(i64 1)
   %t338 = ptrtoint ptr %t337 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_77" to i64), ptr %t337
+  store i64 ptrtoint (ptr @"scheme.base:code_57" to i64), ptr %t337
   %t339 = or i64 %t338, 4
   %t340 = load i64, ptr @"scheme.base:%map1"
   %t341 = and i64 %t340, -8
@@ -816,7 +816,7 @@ else69:
   ret i64 %t352
 }
 
-define fastcc i64 @"scheme.base:code_82"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:map"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t357 = icmp sge i64 %argc, 2
   br i1 %t357, label %argok71, label %arityerr70
@@ -864,7 +864,7 @@ else73:
   ret i64 %t382
 }
 
-define fastcc i64 @"scheme.base:code_90"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:memq"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t387 = icmp eq i64 %argc, 2
   br i1 %t387, label %argok75, label %arityerr74
@@ -895,7 +895,7 @@ else79:
   ret i64 %t399
 }
 
-define fastcc i64 @"scheme.base:code_98"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:memv"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t404 = icmp eq i64 %argc, 2
   br i1 %t404, label %argok81, label %arityerr80
@@ -926,7 +926,7 @@ else85:
   ret i64 %t416
 }
 
-define fastcc i64 @"scheme.base:code_106"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:assq"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t421 = icmp eq i64 %argc, 2
   br i1 %t421, label %argok87, label %arityerr86
@@ -959,7 +959,7 @@ else91:
   ret i64 %t435
 }
 
-define fastcc i64 @"scheme.base:code_110"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:member"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t440 = icmp eq i64 %argc, 2
   br i1 %t440, label %argok93, label %arityerr92
@@ -990,7 +990,7 @@ else97:
   ret i64 %t452
 }
 
-define fastcc i64 @"scheme.base:code_114"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:assoc"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t457 = icmp eq i64 %argc, 2
   br i1 %t457, label %argok99, label %arityerr98
@@ -1023,7 +1023,7 @@ else103:
   ret i64 %t471
 }
 
-define fastcc i64 @"scheme.base:code_118"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:filter"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t476 = icmp eq i64 %argc, 2
   br i1 %t476, label %argok105, label %arityerr104
@@ -1067,7 +1067,7 @@ else109:
   ret i64 %t501
 }
 
-define fastcc i64 @"scheme.base:code_123"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:fold-left"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t506 = icmp eq i64 %argc, 3
   br i1 %t506, label %argok111, label %arityerr110
@@ -1097,7 +1097,7 @@ else113:
   ret i64 %t521
 }
 
-define fastcc i64 @"scheme.base:code_128"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:fold-right"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t526 = icmp eq i64 %argc, 3
   br i1 %t526, label %argok115, label %arityerr114
@@ -1127,7 +1127,7 @@ else117:
   ret i64 %t541
 }
 
-define fastcc i64 @"scheme.base:code_132"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:%for-each1"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t546 = icmp eq i64 %argc, 2
   br i1 %t546, label %argok119, label %arityerr118
@@ -1162,7 +1162,7 @@ else121:
   ret i64 %t562
 }
 
-define fastcc i64 @"scheme.base:code_140"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_109"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t567 = icmp eq i64 %argc, 1
   br i1 %t567, label %argok125, label %arityerr124
@@ -1174,7 +1174,7 @@ argok125:
   ret i64 %t568
 }
 
-define fastcc i64 @"scheme.base:code_142"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_111"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t569 = icmp eq i64 %argc, 1
   br i1 %t569, label %argok127, label %arityerr126
@@ -1186,7 +1186,7 @@ argok127:
   ret i64 %t570
 }
 
-define fastcc i64 @"scheme.base:code_138"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:%for-eachn"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t571 = icmp eq i64 %argc, 2
   br i1 %t571, label %argok129, label %arityerr128
@@ -1212,7 +1212,7 @@ else133:
 else131:
   %t580 = call ptr @rt_alloc_words(i64 1)
   %t581 = ptrtoint ptr %t580 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_140" to i64), ptr %t580
+  store i64 ptrtoint (ptr @"scheme.base:code_109" to i64), ptr %t580
   %t582 = or i64 %t581, 4
   %t583 = load i64, ptr @"scheme.base:%map1"
   %t584 = and i64 %t583, -8
@@ -1249,7 +1249,7 @@ else131:
   %t615 = call fastcc i64%t592(i64 %a0, i64 %t594, i64 %t599, i64 %t600, i64 %t601, i64 %t602, i64 %t603, i64 %t604, i64 %t605, i64 %t606, ptr %t598)
   %t616 = call ptr @rt_alloc_words(i64 1)
   %t617 = ptrtoint ptr %t616 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_142" to i64), ptr %t616
+  store i64 ptrtoint (ptr @"scheme.base:code_111" to i64), ptr %t616
   %t618 = or i64 %t617, 4
   %t619 = load i64, ptr @"scheme.base:%map1"
   %t620 = and i64 %t619, -8
@@ -1266,7 +1266,7 @@ else131:
   ret i64 %t630
 }
 
-define fastcc i64 @"scheme.base:code_147"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:for-each"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t635 = icmp sge i64 %argc, 2
   br i1 %t635, label %argok135, label %arityerr134
@@ -1314,7 +1314,7 @@ else137:
   ret i64 %t660
 }
 
-define fastcc i64 @"scheme.base:code_151"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:andmap"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t665 = icmp eq i64 %argc, 2
   br i1 %t665, label %argok139, label %arityerr138
@@ -1349,7 +1349,7 @@ else143:
   ret i64 1
 }
 
-define fastcc i64 @"scheme.base:code_155"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:memp"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t686 = icmp eq i64 %argc, 2
   br i1 %t686, label %argok145, label %arityerr144
@@ -1384,7 +1384,7 @@ else149:
   ret i64 %t702
 }
 
-define fastcc i64 @"scheme.base:code_158"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:cadddr"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t707 = icmp eq i64 %argc, 1
   br i1 %t707, label %argok151, label %arityerr150
@@ -1402,7 +1402,7 @@ argok151:
   ret i64 %t714
 }
 
-define fastcc i64 @"scheme.base:code_161"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:list?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t719 = icmp eq i64 %argc, 1
   br i1 %t719, label %argok153, label %arityerr152
@@ -1432,7 +1432,7 @@ else157:
   ret i64 1
 }
 
-define fastcc i64 @"scheme.base:code_168"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:zero?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t735 = icmp eq i64 %argc, 1
   br i1 %t735, label %argok159, label %arityerr158
@@ -1456,7 +1456,7 @@ fixmerge162:
   ret i64 %t742
 }
 
-define fastcc i64 @"scheme.base:code_172"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:list-tail"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t747 = icmp eq i64 %argc, 2
   br i1 %t747, label %argok164, label %arityerr163
@@ -1497,7 +1497,7 @@ fixmerge169:
   ret i64 %t767
 }
 
-define fastcc i64 @"scheme.base:code_176"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:list-ref"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t772 = icmp eq i64 %argc, 2
   br i1 %t772, label %argok171, label %arityerr170
@@ -1515,7 +1515,7 @@ argok171:
   ret i64 %t779
 }
 
-define fastcc i64 @"scheme.base:code_180"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:list-head"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t784 = icmp eq i64 %argc, 2
   br i1 %t784, label %argok173, label %arityerr172
@@ -1558,7 +1558,7 @@ fixmerge178:
   ret i64 %t806
 }
 
-define fastcc i64 @"scheme.base:code_184"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:make-list"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t811 = icmp eq i64 %argc, 2
   br i1 %t811, label %argok180, label %arityerr179
@@ -1599,7 +1599,7 @@ fixmerge185:
   ret i64 %t831
 }
 
-define fastcc i64 @"scheme.base:code_196"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_154"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t836 = icmp eq i64 %argc, 2
   br i1 %t836, label %argok187, label %arityerr186
@@ -1648,11 +1648,11 @@ fixslow194:
 fixmerge195:
   %t860 = phi i64 [ %t858, %fixfast193 ], [ %t859, %fixslow194 ]
   %t861 = call i64 @rt_cons(i64 %a0, i64 %a1)
-  %t862 = musttail call fastcc i64 @"scheme.base:code_196"(i64 %self, i64 2, i64 %t860, i64 %t861, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t862 = musttail call fastcc i64 @"scheme.base:code_154"(i64 %self, i64 2, i64 %t860, i64 %t861, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t862
 }
 
-define fastcc i64 @"scheme.base:code_194"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:iota"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t863 = icmp eq i64 %argc, 1
   br i1 %t863, label %argok197, label %arityerr196
@@ -1662,17 +1662,17 @@ arityerr196:
 argok197:
   %t864 = call ptr @rt_alloc_words(i64 3)
   %t865 = ptrtoint ptr %t864 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_196" to i64), ptr %t864
+  store i64 ptrtoint (ptr @"scheme.base:code_154" to i64), ptr %t864
   %t866 = or i64 %t865, 4
   %t867 = getelementptr i64, ptr %t864, i64 1
   store i64 %a0, ptr %t867
   %t868 = getelementptr i64, ptr %t864, i64 2
   store i64 %t866, ptr %t868
-  %t869 = musttail call fastcc i64 @"scheme.base:code_196"(i64 %t866, i64 2, i64 0, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t869 = musttail call fastcc i64 @"scheme.base:code_154"(i64 %t866, i64 2, i64 0, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t869
 }
 
-define fastcc i64 @"scheme.base:code_204"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:max"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t874 = icmp eq i64 %argc, 2
   br i1 %t874, label %argok199, label %arityerr198
@@ -1701,7 +1701,7 @@ else204:
   ret i64 %a0
 }
 
-define fastcc i64 @"scheme.base:code_206"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:void"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t887 = icmp eq i64 %argc, 0
   br i1 %t887, label %argok206, label %arityerr205
@@ -1717,7 +1717,7 @@ else208:
   ret i64 17
 }
 
-define fastcc i64 @"scheme.base:code_209"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:string"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t893 = icmp sge i64 %argc, 0
   br i1 %t893, label %argok210, label %arityerr209
@@ -1747,7 +1747,7 @@ argok210:
   ret i64 %t904
 }
 
-define fastcc i64 @"scheme.base:code_212"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:%str-concat"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t909 = icmp eq i64 %argc, 1
   br i1 %t909, label %argok212, label %arityerr211
@@ -1774,7 +1774,7 @@ else214:
   ret i64 %t921
 }
 
-define fastcc i64 @"scheme.base:code_218"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:chr-cmp"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t926 = icmp eq i64 %argc, 4
   br i1 %t926, label %argok216, label %arityerr215
@@ -1811,7 +1811,7 @@ else218:
   ret i64 1
 }
 
-define fastcc i64 @"scheme.base:code_231"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_183"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t949 = icmp eq i64 %argc, 2
   br i1 %t949, label %argok222, label %arityerr221
@@ -1835,7 +1835,7 @@ fixmerge225:
   ret i64 %t956
 }
 
-define fastcc i64 @"scheme.base:code_229"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:char=?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t957 = icmp sge i64 %argc, 2
   br i1 %t957, label %argok227, label %arityerr226
@@ -1863,7 +1863,7 @@ argok227:
   %t967 = call i64 @rt_build_rest(i64 %argc, i64 2, i64 8, ptr %t958, ptr %overflow)
   %t968 = call ptr @rt_alloc_words(i64 1)
   %t969 = ptrtoint ptr %t968 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_231" to i64), ptr %t968
+  store i64 ptrtoint (ptr @"scheme.base:code_183" to i64), ptr %t968
   %t970 = or i64 %t969, 4
   %t971 = load i64, ptr @"scheme.base:chr-cmp"
   %t972 = and i64 %t971, -8
@@ -1874,7 +1874,7 @@ argok227:
   ret i64 %t976
 }
 
-define fastcc i64 @"scheme.base:code_244"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_195"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t981 = icmp eq i64 %argc, 2
   br i1 %t981, label %argok229, label %arityerr228
@@ -1898,7 +1898,7 @@ fixmerge232:
   ret i64 %t988
 }
 
-define fastcc i64 @"scheme.base:code_242"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:char<?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t989 = icmp sge i64 %argc, 2
   br i1 %t989, label %argok234, label %arityerr233
@@ -1926,7 +1926,7 @@ argok234:
   %t999 = call i64 @rt_build_rest(i64 %argc, i64 2, i64 8, ptr %t990, ptr %overflow)
   %t1000 = call ptr @rt_alloc_words(i64 1)
   %t1001 = ptrtoint ptr %t1000 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_244" to i64), ptr %t1000
+  store i64 ptrtoint (ptr @"scheme.base:code_195" to i64), ptr %t1000
   %t1002 = or i64 %t1001, 4
   %t1003 = load i64, ptr @"scheme.base:chr-cmp"
   %t1004 = and i64 %t1003, -8
@@ -1937,7 +1937,7 @@ argok234:
   ret i64 %t1008
 }
 
-define fastcc i64 @"scheme.base:code_257"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_207"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1013 = icmp eq i64 %argc, 2
   br i1 %t1013, label %argok236, label %arityerr235
@@ -1961,7 +1961,7 @@ fixmerge239:
   ret i64 %t1020
 }
 
-define fastcc i64 @"scheme.base:code_255"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:char>?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1021 = icmp sge i64 %argc, 2
   br i1 %t1021, label %argok241, label %arityerr240
@@ -1989,7 +1989,7 @@ argok241:
   %t1031 = call i64 @rt_build_rest(i64 %argc, i64 2, i64 8, ptr %t1022, ptr %overflow)
   %t1032 = call ptr @rt_alloc_words(i64 1)
   %t1033 = ptrtoint ptr %t1032 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_257" to i64), ptr %t1032
+  store i64 ptrtoint (ptr @"scheme.base:code_207" to i64), ptr %t1032
   %t1034 = or i64 %t1033, 4
   %t1035 = load i64, ptr @"scheme.base:chr-cmp"
   %t1036 = and i64 %t1035, -8
@@ -2000,7 +2000,7 @@ argok241:
   ret i64 %t1040
 }
 
-define fastcc i64 @"scheme.base:code_270"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_219"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1045 = icmp eq i64 %argc, 2
   br i1 %t1045, label %argok243, label %arityerr242
@@ -2042,7 +2042,7 @@ fixmerge251:
   ret i64 %t1060
 }
 
-define fastcc i64 @"scheme.base:code_268"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:char<=?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1061 = icmp sge i64 %argc, 2
   br i1 %t1061, label %argok253, label %arityerr252
@@ -2070,7 +2070,7 @@ argok253:
   %t1071 = call i64 @rt_build_rest(i64 %argc, i64 2, i64 8, ptr %t1062, ptr %overflow)
   %t1072 = call ptr @rt_alloc_words(i64 1)
   %t1073 = ptrtoint ptr %t1072 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_270" to i64), ptr %t1072
+  store i64 ptrtoint (ptr @"scheme.base:code_219" to i64), ptr %t1072
   %t1074 = or i64 %t1073, 4
   %t1075 = load i64, ptr @"scheme.base:chr-cmp"
   %t1076 = and i64 %t1075, -8
@@ -2081,7 +2081,7 @@ argok253:
   ret i64 %t1080
 }
 
-define fastcc i64 @"scheme.base:code_283"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_231"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1085 = icmp eq i64 %argc, 2
   br i1 %t1085, label %argok255, label %arityerr254
@@ -2123,7 +2123,7 @@ fixmerge263:
   ret i64 %t1100
 }
 
-define fastcc i64 @"scheme.base:code_281"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:char>=?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1101 = icmp sge i64 %argc, 2
   br i1 %t1101, label %argok265, label %arityerr264
@@ -2151,7 +2151,7 @@ argok265:
   %t1111 = call i64 @rt_build_rest(i64 %argc, i64 2, i64 8, ptr %t1102, ptr %overflow)
   %t1112 = call ptr @rt_alloc_words(i64 1)
   %t1113 = ptrtoint ptr %t1112 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_283" to i64), ptr %t1112
+  store i64 ptrtoint (ptr @"scheme.base:code_231" to i64), ptr %t1112
   %t1114 = or i64 %t1113, 4
   %t1115 = load i64, ptr @"scheme.base:chr-cmp"
   %t1116 = and i64 %t1115, -8
@@ -2162,7 +2162,7 @@ argok265:
   ret i64 %t1120
 }
 
-define fastcc i64 @"scheme.base:code_295"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_242"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1125 = icmp eq i64 %argc, 2
   br i1 %t1125, label %argok267, label %arityerr266
@@ -2206,11 +2206,11 @@ fixmerge275:
   %t1143 = load i64, ptr %t1142
   %t1144 = call i64 @rt_string_ref(i64 %t1143, i64 %a0)
   %t1145 = call i64 @rt_cons(i64 %t1144, i64 %a1)
-  %t1146 = musttail call fastcc i64 @"scheme.base:code_295"(i64 %self, i64 2, i64 %t1139, i64 %t1145, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t1146 = musttail call fastcc i64 @"scheme.base:code_242"(i64 %self, i64 2, i64 %t1139, i64 %t1145, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t1146
 }
 
-define fastcc i64 @"scheme.base:code_293"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:string->list"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1147 = icmp eq i64 %argc, 1
   br i1 %t1147, label %argok277, label %arityerr276
@@ -2220,7 +2220,7 @@ arityerr276:
 argok277:
   %t1148 = call ptr @rt_alloc_words(i64 3)
   %t1149 = ptrtoint ptr %t1148 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_295" to i64), ptr %t1148
+  store i64 ptrtoint (ptr @"scheme.base:code_242" to i64), ptr %t1148
   %t1150 = or i64 %t1149, 4
   %t1151 = getelementptr i64, ptr %t1148, i64 1
   store i64 %t1150, ptr %t1151
@@ -2239,11 +2239,11 @@ fixslow279:
   br label %fixmerge280
 fixmerge280:
   %t1159 = phi i64 [ %t1157, %fixfast278 ], [ %t1158, %fixslow279 ]
-  %t1160 = musttail call fastcc i64 @"scheme.base:code_295"(i64 %t1150, i64 2, i64 %t1159, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t1160 = musttail call fastcc i64 @"scheme.base:code_242"(i64 %t1150, i64 2, i64 %t1159, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t1160
 }
 
-define fastcc i64 @"scheme.base:code_305"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:ns-digits"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1165 = icmp eq i64 %argc, 2
   br i1 %t1165, label %argok282, label %arityerr281
@@ -2307,7 +2307,7 @@ else293:
   ret i64 %t1196
 }
 
-define fastcc i64 @"scheme.base:code_316"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:number->string"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1201 = icmp eq i64 %argc, 1
   br i1 %t1201, label %argok295, label %arityerr294
@@ -2389,7 +2389,7 @@ else297:
   ret i64 %t1242
 }
 
-define fastcc i64 @"scheme.base:code_320"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:error"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1247 = icmp sge i64 %argc, 1
   br i1 %t1247, label %argok312, label %arityerr311
@@ -2432,7 +2432,7 @@ else314:
   ret i64 %t1267
 }
 
-define fastcc i64 @"scheme.base:code_323"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:raise"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1272 = icmp eq i64 %argc, 1
   br i1 %t1272, label %argok316, label %arityerr315
@@ -2444,7 +2444,7 @@ argok316:
   ret i64 %t1273
 }
 
-define fastcc i64 @"scheme.base:code_326"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:error-object?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1278 = icmp eq i64 %argc, 1
   br i1 %t1278, label %argok318, label %arityerr317
@@ -2456,7 +2456,7 @@ argok318:
   ret i64 %t1279
 }
 
-define fastcc i64 @"scheme.base:code_329"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:error-object-message"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1284 = icmp eq i64 %argc, 1
   br i1 %t1284, label %argok320, label %arityerr319
@@ -2468,7 +2468,7 @@ argok320:
   ret i64 %t1285
 }
 
-define fastcc i64 @"scheme.base:code_332"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:error-object-irritants"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1290 = icmp eq i64 %argc, 1
   br i1 %t1290, label %argok322, label %arityerr321
@@ -2480,7 +2480,7 @@ argok322:
   ret i64 %t1291
 }
 
-define fastcc i64 @"scheme.base:code_341"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_280"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1296 = icmp eq i64 %argc, 2
   br i1 %t1296, label %argok324, label %arityerr323
@@ -2517,11 +2517,11 @@ fixslow328:
   br label %fixmerge329
 fixmerge329:
   %t1315 = phi i64 [ %t1313, %fixfast327 ], [ %t1314, %fixslow328 ]
-  %t1316 = musttail call fastcc i64 @"scheme.base:code_341"(i64 %self, i64 2, i64 %t1309, i64 %t1315, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t1316 = musttail call fastcc i64 @"scheme.base:code_280"(i64 %self, i64 2, i64 %t1309, i64 %t1315, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t1316
 }
 
-define fastcc i64 @"scheme.base:code_339"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:list->vector"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1317 = icmp eq i64 %argc, 1
   br i1 %t1317, label %argok331, label %arityerr330
@@ -2538,17 +2538,17 @@ argok331:
   %t1324 = call i64 @rt_make_vector(i64 %t1323, i64 0)
   %t1325 = call ptr @rt_alloc_words(i64 3)
   %t1326 = ptrtoint ptr %t1325 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_341" to i64), ptr %t1325
+  store i64 ptrtoint (ptr @"scheme.base:code_280" to i64), ptr %t1325
   %t1327 = or i64 %t1326, 4
   %t1328 = getelementptr i64, ptr %t1325, i64 1
   store i64 %t1324, ptr %t1328
   %t1329 = getelementptr i64, ptr %t1325, i64 2
   store i64 %t1327, ptr %t1329
-  %t1330 = musttail call fastcc i64 @"scheme.base:code_341"(i64 %t1327, i64 2, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t1330 = musttail call fastcc i64 @"scheme.base:code_280"(i64 %t1327, i64 2, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t1330
 }
 
-define fastcc i64 @"scheme.base:code_344"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:vector"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1335 = icmp sge i64 %argc, 0
   br i1 %t1335, label %argok333, label %arityerr332
@@ -2583,7 +2583,7 @@ argok333:
   ret i64 %t1351
 }
 
-define fastcc i64 @"scheme.base:code_353"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_290"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1356 = icmp eq i64 %argc, 2
   br i1 %t1356, label %argok335, label %arityerr334
@@ -2620,11 +2620,11 @@ fixslow339:
   br label %fixmerge340
 fixmerge340:
   %t1375 = phi i64 [ %t1373, %fixfast338 ], [ %t1374, %fixslow339 ]
-  %t1376 = musttail call fastcc i64 @"scheme.base:code_353"(i64 %self, i64 2, i64 %t1369, i64 %t1375, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t1376 = musttail call fastcc i64 @"scheme.base:code_290"(i64 %self, i64 2, i64 %t1369, i64 %t1375, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t1376
 }
 
-define fastcc i64 @"scheme.base:code_351"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:list->bytevector"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1377 = icmp eq i64 %argc, 1
   br i1 %t1377, label %argok342, label %arityerr341
@@ -2641,17 +2641,17 @@ argok342:
   %t1384 = call i64 @rt_make_bytevector(i64 %t1383, i64 0)
   %t1385 = call ptr @rt_alloc_words(i64 3)
   %t1386 = ptrtoint ptr %t1385 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_353" to i64), ptr %t1385
+  store i64 ptrtoint (ptr @"scheme.base:code_290" to i64), ptr %t1385
   %t1387 = or i64 %t1386, 4
   %t1388 = getelementptr i64, ptr %t1385, i64 1
   store i64 %t1384, ptr %t1388
   %t1389 = getelementptr i64, ptr %t1385, i64 2
   store i64 %t1387, ptr %t1389
-  %t1390 = musttail call fastcc i64 @"scheme.base:code_353"(i64 %t1387, i64 2, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t1390 = musttail call fastcc i64 @"scheme.base:code_290"(i64 %t1387, i64 2, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t1390
 }
 
-define fastcc i64 @"scheme.base:code_356"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:bytevector"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1395 = icmp sge i64 %argc, 0
   br i1 %t1395, label %argok344, label %arityerr343
@@ -2686,7 +2686,7 @@ argok344:
   ret i64 %t1411
 }
 
-define fastcc i64 @"scheme.base:code_359"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:values"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1416 = icmp sge i64 %argc, 0
   br i1 %t1416, label %argok346, label %arityerr345
@@ -2733,7 +2733,7 @@ else351:
   ret i64 %t1434
 }
 
-define fastcc i64 @"scheme.base:code_364"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:call-with-values"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1439 = icmp eq i64 %argc, 2
   br i1 %t1439, label %argok353, label %arityerr352
@@ -2788,7 +2788,7 @@ else355:
   ret i64 %t1479
 }
 
-define fastcc i64 @"scheme.base:code_366"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:make-hash-table"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1486 = icmp eq i64 %argc, 0
   br i1 %t1486, label %argok357, label %arityerr356
@@ -2808,7 +2808,7 @@ argok357:
   ret i64 %t1495
 }
 
-define fastcc i64 @"scheme.base:code_369"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:hash-table?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1500 = icmp eq i64 %argc, 1
   br i1 %t1500, label %argok359, label %arityerr358
@@ -2820,7 +2820,7 @@ argok359:
   ret i64 %t1501
 }
 
-define fastcc i64 @"scheme.base:code_372"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:%ht-count"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1506 = icmp eq i64 %argc, 1
   br i1 %t1506, label %argok361, label %arityerr360
@@ -2833,7 +2833,7 @@ argok361:
   ret i64 %t1508
 }
 
-define fastcc i64 @"scheme.base:code_375"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:%ht-buckets"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1513 = icmp eq i64 %argc, 1
   br i1 %t1513, label %argok363, label %arityerr362
@@ -2846,7 +2846,7 @@ argok363:
   ret i64 %t1515
 }
 
-define fastcc i64 @"scheme.base:code_379"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:%ht-set-count!"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1520 = icmp eq i64 %argc, 2
   br i1 %t1520, label %argok365, label %arityerr364
@@ -2859,7 +2859,7 @@ argok365:
   ret i64 %t1522
 }
 
-define fastcc i64 @"scheme.base:code_383"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:%ht-set-buckets!"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1527 = icmp eq i64 %argc, 2
   br i1 %t1527, label %argok367, label %arityerr366
@@ -2872,7 +2872,7 @@ argok367:
   ret i64 %t1529
 }
 
-define fastcc i64 @"scheme.base:code_387"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:%ht-index"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1534 = icmp eq i64 %argc, 2
   br i1 %t1534, label %argok369, label %arityerr368
@@ -2885,7 +2885,7 @@ argok369:
   ret i64 %t1536
 }
 
-define fastcc i64 @"scheme.base:code_391"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:%ht-assoc"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1541 = icmp eq i64 %argc, 2
   br i1 %t1541, label %argok371, label %arityerr370
@@ -2918,7 +2918,7 @@ else375:
   ret i64 %t1555
 }
 
-define fastcc i64 @"scheme.base:code_395"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:%ht-remove"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1560 = icmp eq i64 %argc, 2
   br i1 %t1560, label %argok377, label %arityerr376
@@ -2953,7 +2953,7 @@ else381:
   ret i64 %t1576
 }
 
-define fastcc i64 @"scheme.base:code_402"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:hash-table-ref/default"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1581 = icmp eq i64 %argc, 3
   br i1 %t1581, label %argok383, label %arityerr382
@@ -2990,7 +2990,7 @@ else385:
   ret i64 %a2
 }
 
-define fastcc i64 @"scheme.base:code_407"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:hash-table-contains?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1608 = icmp eq i64 %argc, 2
   br i1 %t1608, label %argok387, label %arityerr386
@@ -3026,7 +3026,7 @@ else389:
   ret i64 1
 }
 
-define fastcc i64 @"scheme.base:code_413"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:hash-table-ref"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1634 = icmp eq i64 %argc, 2
   br i1 %t1634, label %argok391, label %arityerr390
@@ -3070,7 +3070,7 @@ else393:
   ret i64 %t1663
 }
 
-define fastcc i64 @"scheme.base:code_427"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:hash-table-set!"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1668 = icmp eq i64 %argc, 3
   br i1 %t1668, label %argok395, label %arityerr394
@@ -3191,7 +3191,7 @@ else411:
   ret i64 1
 }
 
-define fastcc i64 @"scheme.base:code_434"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:hash-table-delete!"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1751 = icmp eq i64 %argc, 2
   br i1 %t1751, label %argok413, label %arityerr412
@@ -3258,7 +3258,7 @@ else415:
   ret i64 1
 }
 
-define fastcc i64 @"scheme.base:code_454"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_373"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1802 = icmp eq i64 %argc, 1
   br i1 %t1802, label %argok420, label %arityerr419
@@ -3296,11 +3296,11 @@ else422:
   %t1826 = call i64 @rt_cons(i64 %t1805, i64 %t1825)
   %t1827 = call i64 @rt_vector_set(i64 %t1820, i64 %t1816, i64 %t1826)
   %t1828 = call i64 @rt_cdr(i64 %a0)
-  %t1829 = musttail call fastcc i64 @"scheme.base:code_454"(i64 %self, i64 1, i64 %t1828, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t1829 = musttail call fastcc i64 @"scheme.base:code_373"(i64 %self, i64 1, i64 %t1828, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t1829
 }
 
-define fastcc i64 @"scheme.base:code_452"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_371"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1830 = icmp eq i64 %argc, 1
   br i1 %t1830, label %argok424, label %arityerr423
@@ -3331,7 +3331,7 @@ fixmerge427:
 then428:
   %t1844 = call ptr @rt_alloc_words(i64 4)
   %t1845 = ptrtoint ptr %t1844 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_454" to i64), ptr %t1844
+  store i64 ptrtoint (ptr @"scheme.base:code_373" to i64), ptr %t1844
   %t1846 = or i64 %t1845, 4
   %t1847 = and i64 %self, -8
   %t1848 = inttoptr i64 %t1847 to ptr
@@ -3352,7 +3352,7 @@ then428:
   %t1860 = getelementptr i64, ptr %t1859, i64 1
   %t1861 = load i64, ptr %t1860
   %t1862 = call i64 @rt_vector_ref(i64 %t1861, i64 %a0)
-  %t1863 = call fastcc i64 @"scheme.base:code_454"(i64 %t1846, i64 1, i64 %t1862, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t1863 = call fastcc i64 @"scheme.base:code_373"(i64 %t1846, i64 1, i64 %t1862, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t1864 = or i64 %a0, 8
   %t1865 = and i64 %t1864, 7
   %t1866 = icmp eq i64 %t1865, 0
@@ -3365,13 +3365,13 @@ fixslow431:
   br label %fixmerge432
 fixmerge432:
   %t1869 = phi i64 [ %t1867, %fixfast430 ], [ %t1868, %fixslow431 ]
-  %t1870 = musttail call fastcc i64 @"scheme.base:code_452"(i64 %self, i64 1, i64 %t1869, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t1870 = musttail call fastcc i64 @"scheme.base:code_371"(i64 %self, i64 1, i64 %t1869, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t1870
 else429:
   ret i64 1
 }
 
-define fastcc i64 @"scheme.base:code_450"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:%ht-grow!"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1871 = icmp eq i64 %argc, 1
   br i1 %t1871, label %argok434, label %arityerr433
@@ -3402,7 +3402,7 @@ fixmerge437:
   %t1886 = call i64 @rt_make_vector(i64 %t1885, i64 2)
   %t1887 = call ptr @rt_alloc_words(i64 5)
   %t1888 = ptrtoint ptr %t1887 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_452" to i64), ptr %t1887
+  store i64 ptrtoint (ptr @"scheme.base:code_371" to i64), ptr %t1887
   %t1889 = or i64 %t1888, 4
   %t1890 = getelementptr i64, ptr %t1887, i64 1
   store i64 %t1877, ptr %t1890
@@ -3412,7 +3412,7 @@ fixmerge437:
   store i64 %t1886, ptr %t1892
   %t1893 = getelementptr i64, ptr %t1887, i64 4
   store i64 %t1889, ptr %t1893
-  %t1894 = call fastcc i64 @"scheme.base:code_452"(i64 %t1889, i64 1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t1894 = call fastcc i64 @"scheme.base:code_371"(i64 %t1889, i64 1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t1895 = load i64, ptr @"scheme.base:%ht-set-buckets!"
   %t1896 = and i64 %t1895, -8
   %t1897 = inttoptr i64 %t1896 to ptr
@@ -3422,7 +3422,7 @@ fixmerge437:
   ret i64 %t1900
 }
 
-define fastcc i64 @"scheme.base:code_457"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:hash-table-size"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1905 = icmp eq i64 %argc, 1
   br i1 %t1905, label %argok439, label %arityerr438
@@ -3439,7 +3439,7 @@ argok439:
   ret i64 %t1911
 }
 
-define fastcc i64 @"scheme.base:code_461"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:%ht-fold-buckets"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1916 = icmp eq i64 %argc, 2
   br i1 %t1916, label %argok441, label %arityerr440
@@ -3469,7 +3469,7 @@ else443:
   ret i64 %t1931
 }
 
-define fastcc i64 @"scheme.base:code_474"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_390"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1936 = icmp eq i64 %argc, 2
   br i1 %t1936, label %argok445, label %arityerr444
@@ -3521,13 +3521,13 @@ fixmerge453:
   %t1964 = load i64, ptr %t1963
   %t1965 = inttoptr i64 %t1964 to ptr
   %t1966 = call fastcc i64%t1965(i64 %t1961, i64 2, i64 %t1960, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t1967 = musttail call fastcc i64 @"scheme.base:code_474"(i64 %self, i64 2, i64 %t1955, i64 %t1966, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t1967 = musttail call fastcc i64 @"scheme.base:code_390"(i64 %self, i64 2, i64 %t1955, i64 %t1966, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t1967
 else450:
   ret i64 %a1
 }
 
-define fastcc i64 @"scheme.base:code_472"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:hash-table->alist"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1968 = icmp eq i64 %argc, 1
   br i1 %t1968, label %argok455, label %arityerr454
@@ -3543,17 +3543,17 @@ argok455:
   %t1974 = call fastcc i64%t1973(i64 %t1969, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t1975 = call ptr @rt_alloc_words(i64 3)
   %t1976 = ptrtoint ptr %t1975 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_474" to i64), ptr %t1975
+  store i64 ptrtoint (ptr @"scheme.base:code_390" to i64), ptr %t1975
   %t1977 = or i64 %t1976, 4
   %t1978 = getelementptr i64, ptr %t1975, i64 1
   store i64 %t1974, ptr %t1978
   %t1979 = getelementptr i64, ptr %t1975, i64 2
   store i64 %t1977, ptr %t1979
-  %t1980 = musttail call fastcc i64 @"scheme.base:code_474"(i64 %t1977, i64 2, i64 0, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t1980 = musttail call fastcc i64 @"scheme.base:code_390"(i64 %t1977, i64 2, i64 0, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t1980
 }
 
-define fastcc i64 @"scheme.base:code_480"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_395"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1985 = icmp eq i64 %argc, 1
   br i1 %t1985, label %argok457, label %arityerr456
@@ -3565,7 +3565,7 @@ argok457:
   ret i64 %t1986
 }
 
-define fastcc i64 @"scheme.base:code_478"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:hash-table-keys"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t1987 = icmp eq i64 %argc, 1
   br i1 %t1987, label %argok459, label %arityerr458
@@ -3575,7 +3575,7 @@ arityerr458:
 argok459:
   %t1988 = call ptr @rt_alloc_words(i64 1)
   %t1989 = ptrtoint ptr %t1988 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_480" to i64), ptr %t1988
+  store i64 ptrtoint (ptr @"scheme.base:code_395" to i64), ptr %t1988
   %t1990 = or i64 %t1989, 4
   %t1991 = load i64, ptr @"scheme.base:hash-table->alist"
   %t1992 = and i64 %t1991, -8
@@ -3592,7 +3592,7 @@ argok459:
   ret i64 %t2002
 }
 
-define fastcc i64 @"scheme.base:code_486"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_400"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2007 = icmp eq i64 %argc, 1
   br i1 %t2007, label %argok461, label %arityerr460
@@ -3604,7 +3604,7 @@ argok461:
   ret i64 %t2008
 }
 
-define fastcc i64 @"scheme.base:code_484"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:hash-table-values"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2009 = icmp eq i64 %argc, 1
   br i1 %t2009, label %argok463, label %arityerr462
@@ -3614,7 +3614,7 @@ arityerr462:
 argok463:
   %t2010 = call ptr @rt_alloc_words(i64 1)
   %t2011 = ptrtoint ptr %t2010 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_486" to i64), ptr %t2010
+  store i64 ptrtoint (ptr @"scheme.base:code_400" to i64), ptr %t2010
   %t2012 = or i64 %t2011, 4
   %t2013 = load i64, ptr @"scheme.base:hash-table->alist"
   %t2014 = and i64 %t2013, -8
@@ -3631,7 +3631,7 @@ argok463:
   ret i64 %t2024
 }
 
-define fastcc i64 @"scheme.base:code_512"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-ws?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2029 = icmp eq i64 %argc, 1
   br i1 %t2029, label %argok465, label %arityerr464
@@ -3710,7 +3710,7 @@ fixmerge483:
   ret i64 %t2061
 }
 
-define fastcc i64 @"scheme.base:code_524"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-digit?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2066 = icmp eq i64 %argc, 1
   br i1 %t2066, label %argok485, label %arityerr484
@@ -3753,7 +3753,7 @@ else490:
   ret i64 1
 }
 
-define fastcc i64 @"scheme.base:code_564"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-delim?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2087 = icmp eq i64 %argc, 1
   br i1 %t2087, label %argok495, label %arityerr494
@@ -3879,7 +3879,7 @@ fixmerge525:
   ret i64 %t2142
 }
 
-define fastcc i64 @"scheme.base:code_577"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-skip-line"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2147 = icmp eq i64 %argc, 3
   br i1 %t2147, label %argok527, label %arityerr526
@@ -3958,7 +3958,7 @@ else532:
   ret i64 %a2
 }
 
-define fastcc i64 @"scheme.base:code_591"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-skip-ws"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2188 = icmp eq i64 %argc, 3
   br i1 %t2188, label %argok545, label %arityerr544
@@ -4060,7 +4060,7 @@ else550:
   ret i64 %a2
 }
 
-define fastcc i64 @"scheme.base:code_600"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-token-end"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2248 = icmp eq i64 %argc, 3
   br i1 %t2248, label %argok565, label %arityerr564
@@ -4119,7 +4119,7 @@ else570:
   ret i64 %a2
 }
 
-define fastcc i64 @"scheme.base:code_609"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-all-digits?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2281 = icmp eq i64 %argc, 3
   br i1 %t2281, label %argok577, label %arityerr576
@@ -4178,7 +4178,7 @@ else582:
   ret i64 257
 }
 
-define fastcc i64 @"scheme.base:code_632"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-numeric?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2314 = icmp eq i64 %argc, 1
   br i1 %t2314, label %argok589, label %arityerr588
@@ -4291,7 +4291,7 @@ else594:
   ret i64 1
 }
 
-define fastcc i64 @"scheme.base:code_642"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-digits"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2375 = icmp eq i64 %argc, 4
   br i1 %t2375, label %argok614, label %arityerr613
@@ -4377,7 +4377,7 @@ else619:
   ret i64 %a3
 }
 
-define fastcc i64 @"scheme.base:code_655"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-parse-int"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2421 = icmp eq i64 %argc, 1
   br i1 %t2421, label %argok633, label %arityerr632
@@ -4457,7 +4457,7 @@ else646:
   ret i64 %t2464
 }
 
-define fastcc i64 @"scheme.base:code_662"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-dotchar?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2469 = icmp eq i64 %argc, 1
   br i1 %t2469, label %argok648, label %arityerr647
@@ -4482,7 +4482,7 @@ fixmerge651:
   ret i64 %t2477
 }
 
-define fastcc i64 @"scheme.base:code_676"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-exp-char?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2482 = icmp eq i64 %argc, 1
   br i1 %t2482, label %argok653, label %arityerr652
@@ -4525,7 +4525,7 @@ fixmerge661:
   ret i64 %t2498
 }
 
-define fastcc i64 @"scheme.base:code_690"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-sign-char?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2503 = icmp eq i64 %argc, 1
   br i1 %t2503, label %argok663, label %arityerr662
@@ -4568,7 +4568,7 @@ fixmerge671:
   ret i64 %t2519
 }
 
-define fastcc i64 @"scheme.base:code_699"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-scan-digits"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2524 = icmp eq i64 %argc, 3
   br i1 %t2524, label %argok673, label %arityerr672
@@ -4630,7 +4630,7 @@ else681:
   ret i64 %a1
 }
 
-define fastcc i64 @"scheme.base:code_759"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-flonum?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2558 = icmp eq i64 %argc, 1
   br i1 %t2558, label %argok686, label %arityerr685
@@ -4988,7 +4988,7 @@ else691:
   ret i64 1
 }
 
-define fastcc i64 @"scheme.base:code_766"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-atom"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2740 = icmp eq i64 %argc, 3
   br i1 %t2740, label %argok773, label %arityerr772
@@ -5043,7 +5043,7 @@ merge776:
   ret i64 %t2772
 }
 
-define fastcc i64 @"scheme.base:code_794"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-hex-digit"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2777 = icmp eq i64 %argc, 1
   br i1 %t2777, label %argok781, label %arityerr780
@@ -5208,7 +5208,7 @@ else820:
   ret i64 0
 }
 
-define fastcc i64 @"scheme.base:code_808"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-hex"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2852 = icmp eq i64 %argc, 4
   br i1 %t2852, label %argok825, label %arityerr824
@@ -5321,7 +5321,7 @@ else830:
   ret i64 %t2910
 }
 
-define fastcc i64 @"scheme.base:code_824"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-str-esc"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2915 = icmp eq i64 %argc, 1
   br i1 %t2915, label %argok849, label %arityerr848
@@ -5390,7 +5390,7 @@ else864:
   ret i64 %a0
 }
 
-define fastcc i64 @"scheme.base:code_854"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_748"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2948 = icmp eq i64 %argc, 2
   br i1 %t2948, label %argok866, label %arityerr865
@@ -5542,7 +5542,7 @@ fixmerge895:
   %t3038 = call i64 @rt_car(i64 %t3036)
   %t3039 = call i64 @rt_integer_to_char(i64 %t3038)
   %t3040 = call i64 @rt_cons(i64 %t3039, i64 %a1)
-  %t3041 = musttail call fastcc i64 @"scheme.base:code_854"(i64 %self, i64 2, i64 %t3037, i64 %t3040, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3041 = musttail call fastcc i64 @"scheme.base:code_748"(i64 %self, i64 2, i64 %t3037, i64 %t3040, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t3041
 else892:
   %t3042 = or i64 %a0, 16
@@ -5564,7 +5564,7 @@ fixmerge898:
   %t3052 = inttoptr i64 %t3051 to ptr
   %t3053 = call fastcc i64%t3052(i64 %t3048, i64 1, i64 %t3007, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t3054 = call i64 @rt_cons(i64 %t3053, i64 %a1)
-  %t3055 = musttail call fastcc i64 @"scheme.base:code_854"(i64 %self, i64 2, i64 %t3047, i64 %t3054, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3055 = musttail call fastcc i64 @"scheme.base:code_748"(i64 %self, i64 2, i64 %t3047, i64 %t3054, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t3055
 else884:
   %t3056 = or i64 %a0, 8
@@ -5580,7 +5580,7 @@ fixslow900:
 fixmerge901:
   %t3061 = phi i64 [ %t3059, %fixfast899 ], [ %t3060, %fixslow900 ]
   %t3062 = call i64 @rt_cons(i64 %t2965, i64 %a1)
-  %t3063 = musttail call fastcc i64 @"scheme.base:code_854"(i64 %self, i64 2, i64 %t3061, i64 %t3062, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3063 = musttail call fastcc i64 @"scheme.base:code_748"(i64 %self, i64 2, i64 %t3061, i64 %t3062, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t3063
 else871:
   %t3064 = load i64, ptr @"scheme.base:reverse"
@@ -5594,7 +5594,7 @@ else871:
   ret i64 %t3071
 }
 
-define fastcc i64 @"scheme.base:code_852"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-string"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3072 = icmp eq i64 %argc, 3
   br i1 %t3072, label %argok903, label %arityerr902
@@ -5604,7 +5604,7 @@ arityerr902:
 argok903:
   %t3073 = call ptr @rt_alloc_words(i64 4)
   %t3074 = ptrtoint ptr %t3073 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_854" to i64), ptr %t3073
+  store i64 ptrtoint (ptr @"scheme.base:code_748" to i64), ptr %t3073
   %t3075 = or i64 %t3074, 4
   %t3076 = getelementptr i64, ptr %t3073, i64 1
   store i64 %a1, ptr %t3076
@@ -5612,11 +5612,11 @@ argok903:
   store i64 %a0, ptr %t3077
   %t3078 = getelementptr i64, ptr %t3073, i64 3
   store i64 %t3075, ptr %t3078
-  %t3079 = musttail call fastcc i64 @"scheme.base:code_854"(i64 %t3075, i64 2, i64 %a2, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3079 = musttail call fastcc i64 @"scheme.base:code_748"(i64 %t3075, i64 2, i64 %a2, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t3079
 }
 
-define fastcc i64 @"scheme.base:code_895"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-hash"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3084 = icmp eq i64 %argc, 3
   br i1 %t3084, label %argok905, label %arityerr904
@@ -5917,7 +5917,7 @@ else966:
   ret i64 %t3246
 }
 
-define fastcc i64 @"scheme.base:code_898"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-char-name"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3251 = icmp eq i64 %argc, 1
   br i1 %t3251, label %argok971, label %arityerr970
@@ -6001,7 +6001,7 @@ else989:
   ret i64 %t3288
 }
 
-define fastcc i64 @"scheme.base:code_910"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-char"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3293 = icmp eq i64 %argc, 3
   br i1 %t3293, label %argok991, label %arityerr990
@@ -6071,7 +6071,7 @@ else1002:
   ret i64 %t3330
 }
 
-define fastcc i64 @"scheme.base:code_917"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-quote"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3335 = icmp eq i64 %argc, 3
   br i1 %t3335, label %argok1004, label %arityerr1003
@@ -6104,7 +6104,7 @@ argok1004:
   ret i64 %t3357
 }
 
-define fastcc i64 @"scheme.base:code_924"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-quasi"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3362 = icmp eq i64 %argc, 3
   br i1 %t3362, label %argok1006, label %arityerr1005
@@ -6137,7 +6137,7 @@ argok1006:
   ret i64 %t3384
 }
 
-define fastcc i64 @"scheme.base:code_941"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-unquote"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3389 = icmp eq i64 %argc, 3
   br i1 %t3389, label %argok1008, label %arityerr1007
@@ -6245,7 +6245,7 @@ else1019:
   ret i64 %t3458
 }
 
-define fastcc i64 @"scheme.base:code_954"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-dot?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3463 = icmp eq i64 %argc, 3
   br i1 %t3463, label %argok1024, label %arityerr1023
@@ -6319,7 +6319,7 @@ else1029:
   ret i64 1
 }
 
-define fastcc i64 @"scheme.base:code_958"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-append-reverse"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3503 = icmp eq i64 %argc, 2
   br i1 %t3503, label %argok1040, label %arityerr1039
@@ -6345,7 +6345,7 @@ else1042:
   ret i64 %t3514
 }
 
-define fastcc i64 @"scheme.base:code_983"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-list"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3519 = icmp eq i64 %argc, 4
   br i1 %t3519, label %argok1044, label %arityerr1043
@@ -6524,7 +6524,7 @@ else1049:
   ret i64 %t3633
 }
 
-define fastcc i64 @"scheme.base:code_1017"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-datum"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3638 = icmp eq i64 %argc, 3
   br i1 %t3638, label %argok1073, label %arityerr1072
@@ -6795,7 +6795,7 @@ else1126:
   ret i64 %t3786
 }
 
-define fastcc i64 @"scheme.base:code_1021"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:read-from-string"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3791 = icmp eq i64 %argc, 1
   br i1 %t3791, label %argok1131, label %arityerr1130
@@ -6820,7 +6820,7 @@ argok1131:
   ret i64 %t3805
 }
 
-define fastcc i64 @"scheme.base:code_1035"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_917"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3810 = icmp eq i64 %argc, 2
   br i1 %t3810, label %argok1133, label %arityerr1132
@@ -6879,7 +6879,7 @@ then1137:
   %t3851 = call fastcc i64%t3850(i64 %t3846, i64 3, i64 %t3840, i64 %t3844, i64 %t3845, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t3852 = call i64 @rt_car(i64 %t3836)
   %t3853 = call i64 @rt_cons(i64 %t3852, i64 %a1)
-  %t3854 = musttail call fastcc i64 @"scheme.base:code_1035"(i64 %self, i64 2, i64 %t3851, i64 %t3853, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3854 = musttail call fastcc i64 @"scheme.base:code_917"(i64 %self, i64 2, i64 %t3851, i64 %t3853, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t3854
 else1138:
   %t3855 = load i64, ptr @"scheme.base:reverse"
@@ -6891,7 +6891,7 @@ else1138:
   ret i64 %t3860
 }
 
-define fastcc i64 @"scheme.base:code_1033"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:read-all-from-string"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3861 = icmp eq i64 %argc, 1
   br i1 %t3861, label %argok1140, label %arityerr1139
@@ -6902,7 +6902,7 @@ argok1140:
   %t3862 = call i64 @rt_string_length(i64 %a0)
   %t3863 = call ptr @rt_alloc_words(i64 4)
   %t3864 = ptrtoint ptr %t3863 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_1035" to i64), ptr %t3863
+  store i64 ptrtoint (ptr @"scheme.base:code_917" to i64), ptr %t3863
   %t3865 = or i64 %t3864, 4
   %t3866 = getelementptr i64, ptr %t3863, i64 1
   store i64 %t3862, ptr %t3866
@@ -6916,7 +6916,7 @@ argok1140:
   %t3872 = load i64, ptr %t3871
   %t3873 = inttoptr i64 %t3872 to ptr
   %t3874 = call fastcc i64%t3873(i64 %t3869, i64 3, i64 %a0, i64 %t3862, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3875 = musttail call fastcc i64 @"scheme.base:code_1035"(i64 %t3865, i64 2, i64 %t3874, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3875 = musttail call fastcc i64 @"scheme.base:code_917"(i64 %t3865, i64 2, i64 %t3874, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t3875
 }
 
@@ -6924,7 +6924,7 @@ define i64 @"scheme.base:__init_1"() {
 entry:
   %t12 = call ptr @rt_alloc_words(i64 1)
   %t13 = ptrtoint ptr %t12 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_1" to i64), ptr %t12
+  store i64 ptrtoint (ptr @"scheme.base:code:list" to i64), ptr %t12
   %t14 = or i64 %t13, 4
   %t15 = call i64 @rt_root(i64 %t14)
   store i64 %t15, ptr @"scheme.base:list"
@@ -6935,7 +6935,7 @@ define i64 @"scheme.base:__init_2"() {
 entry:
   %t19 = call ptr @rt_alloc_words(i64 1)
   %t20 = ptrtoint ptr %t19 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_4" to i64), ptr %t19
+  store i64 ptrtoint (ptr @"scheme.base:code:caar" to i64), ptr %t19
   %t21 = or i64 %t20, 4
   %t22 = call i64 @rt_root(i64 %t21)
   store i64 %t22, ptr @"scheme.base:caar"
@@ -6946,7 +6946,7 @@ define i64 @"scheme.base:__init_3"() {
 entry:
   %t26 = call ptr @rt_alloc_words(i64 1)
   %t27 = ptrtoint ptr %t26 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_7" to i64), ptr %t26
+  store i64 ptrtoint (ptr @"scheme.base:code:cadr" to i64), ptr %t26
   %t28 = or i64 %t27, 4
   %t29 = call i64 @rt_root(i64 %t28)
   store i64 %t29, ptr @"scheme.base:cadr"
@@ -6957,7 +6957,7 @@ define i64 @"scheme.base:__init_4"() {
 entry:
   %t33 = call ptr @rt_alloc_words(i64 1)
   %t34 = ptrtoint ptr %t33 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_10" to i64), ptr %t33
+  store i64 ptrtoint (ptr @"scheme.base:code:cdar" to i64), ptr %t33
   %t35 = or i64 %t34, 4
   %t36 = call i64 @rt_root(i64 %t35)
   store i64 %t36, ptr @"scheme.base:cdar"
@@ -6968,7 +6968,7 @@ define i64 @"scheme.base:__init_5"() {
 entry:
   %t40 = call ptr @rt_alloc_words(i64 1)
   %t41 = ptrtoint ptr %t40 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_13" to i64), ptr %t40
+  store i64 ptrtoint (ptr @"scheme.base:code:cddr" to i64), ptr %t40
   %t42 = or i64 %t41, 4
   %t43 = call i64 @rt_root(i64 %t42)
   store i64 %t43, ptr @"scheme.base:cddr"
@@ -6979,7 +6979,7 @@ define i64 @"scheme.base:__init_6"() {
 entry:
   %t52 = call ptr @rt_alloc_words(i64 1)
   %t53 = ptrtoint ptr %t52 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_16" to i64), ptr %t52
+  store i64 ptrtoint (ptr @"scheme.base:code:caaar" to i64), ptr %t52
   %t54 = or i64 %t53, 4
   %t55 = call i64 @rt_root(i64 %t54)
   store i64 %t55, ptr @"scheme.base:caaar"
@@ -6990,7 +6990,7 @@ define i64 @"scheme.base:__init_7"() {
 entry:
   %t64 = call ptr @rt_alloc_words(i64 1)
   %t65 = ptrtoint ptr %t64 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_19" to i64), ptr %t64
+  store i64 ptrtoint (ptr @"scheme.base:code:caadr" to i64), ptr %t64
   %t66 = or i64 %t65, 4
   %t67 = call i64 @rt_root(i64 %t66)
   store i64 %t67, ptr @"scheme.base:caadr"
@@ -7001,7 +7001,7 @@ define i64 @"scheme.base:__init_8"() {
 entry:
   %t76 = call ptr @rt_alloc_words(i64 1)
   %t77 = ptrtoint ptr %t76 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_22" to i64), ptr %t76
+  store i64 ptrtoint (ptr @"scheme.base:code:cadar" to i64), ptr %t76
   %t78 = or i64 %t77, 4
   %t79 = call i64 @rt_root(i64 %t78)
   store i64 %t79, ptr @"scheme.base:cadar"
@@ -7012,7 +7012,7 @@ define i64 @"scheme.base:__init_9"() {
 entry:
   %t88 = call ptr @rt_alloc_words(i64 1)
   %t89 = ptrtoint ptr %t88 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_25" to i64), ptr %t88
+  store i64 ptrtoint (ptr @"scheme.base:code:caddr" to i64), ptr %t88
   %t90 = or i64 %t89, 4
   %t91 = call i64 @rt_root(i64 %t90)
   store i64 %t91, ptr @"scheme.base:caddr"
@@ -7023,7 +7023,7 @@ define i64 @"scheme.base:__init_10"() {
 entry:
   %t100 = call ptr @rt_alloc_words(i64 1)
   %t101 = ptrtoint ptr %t100 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_28" to i64), ptr %t100
+  store i64 ptrtoint (ptr @"scheme.base:code:cdaar" to i64), ptr %t100
   %t102 = or i64 %t101, 4
   %t103 = call i64 @rt_root(i64 %t102)
   store i64 %t103, ptr @"scheme.base:cdaar"
@@ -7034,7 +7034,7 @@ define i64 @"scheme.base:__init_11"() {
 entry:
   %t112 = call ptr @rt_alloc_words(i64 1)
   %t113 = ptrtoint ptr %t112 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_31" to i64), ptr %t112
+  store i64 ptrtoint (ptr @"scheme.base:code:cdadr" to i64), ptr %t112
   %t114 = or i64 %t113, 4
   %t115 = call i64 @rt_root(i64 %t114)
   store i64 %t115, ptr @"scheme.base:cdadr"
@@ -7045,7 +7045,7 @@ define i64 @"scheme.base:__init_12"() {
 entry:
   %t124 = call ptr @rt_alloc_words(i64 1)
   %t125 = ptrtoint ptr %t124 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_34" to i64), ptr %t124
+  store i64 ptrtoint (ptr @"scheme.base:code:cddar" to i64), ptr %t124
   %t126 = or i64 %t125, 4
   %t127 = call i64 @rt_root(i64 %t126)
   store i64 %t127, ptr @"scheme.base:cddar"
@@ -7056,7 +7056,7 @@ define i64 @"scheme.base:__init_13"() {
 entry:
   %t136 = call ptr @rt_alloc_words(i64 1)
   %t137 = ptrtoint ptr %t136 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_37" to i64), ptr %t136
+  store i64 ptrtoint (ptr @"scheme.base:code:cdddr" to i64), ptr %t136
   %t138 = or i64 %t137, 4
   %t139 = call i64 @rt_root(i64 %t138)
   store i64 %t139, ptr @"scheme.base:cdddr"
@@ -7067,7 +7067,7 @@ define i64 @"scheme.base:__init_14"() {
 entry:
   %t157 = call ptr @rt_alloc_words(i64 1)
   %t158 = ptrtoint ptr %t157 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_43" to i64), ptr %t157
+  store i64 ptrtoint (ptr @"scheme.base:code:length" to i64), ptr %t157
   %t159 = or i64 %t158, 4
   %t160 = call i64 @rt_root(i64 %t159)
   store i64 %t160, ptr @"scheme.base:length"
@@ -7078,7 +7078,7 @@ define i64 @"scheme.base:__init_15"() {
 entry:
   %t174 = call ptr @rt_alloc_words(i64 1)
   %t175 = ptrtoint ptr %t174 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_51" to i64), ptr %t174
+  store i64 ptrtoint (ptr @"scheme.base:code:reverse" to i64), ptr %t174
   %t176 = or i64 %t175, 4
   %t177 = call i64 @rt_root(i64 %t176)
   store i64 %t177, ptr @"scheme.base:reverse"
@@ -7089,7 +7089,7 @@ define i64 @"scheme.base:__init_16"() {
 entry:
   %t190 = call ptr @rt_alloc_words(i64 1)
   %t191 = ptrtoint ptr %t190 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_57" to i64), ptr %t190
+  store i64 ptrtoint (ptr @"scheme.base:code:%append2" to i64), ptr %t190
   %t192 = or i64 %t191, 4
   %t193 = call i64 @rt_root(i64 %t192)
   store i64 %t193, ptr @"scheme.base:%append2"
@@ -7100,7 +7100,7 @@ define i64 @"scheme.base:__init_17"() {
 entry:
   %t247 = call ptr @rt_alloc_words(i64 1)
   %t248 = ptrtoint ptr %t247 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_60" to i64), ptr %t247
+  store i64 ptrtoint (ptr @"scheme.base:code:append" to i64), ptr %t247
   %t249 = or i64 %t248, 4
   %t250 = call i64 @rt_root(i64 %t249)
   store i64 %t250, ptr @"scheme.base:append"
@@ -7111,7 +7111,7 @@ define i64 @"scheme.base:__init_18"() {
 entry:
   %t268 = call ptr @rt_alloc_words(i64 1)
   %t269 = ptrtoint ptr %t268 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_64" to i64), ptr %t268
+  store i64 ptrtoint (ptr @"scheme.base:code:%map1" to i64), ptr %t268
   %t270 = or i64 %t269, 4
   %t271 = call i64 @rt_root(i64 %t270)
   store i64 %t271, ptr @"scheme.base:%map1"
@@ -7122,7 +7122,7 @@ define i64 @"scheme.base:__init_19"() {
 entry:
   %t285 = call ptr @rt_alloc_words(i64 1)
   %t286 = ptrtoint ptr %t285 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_67" to i64), ptr %t285
+  store i64 ptrtoint (ptr @"scheme.base:code:%any-null?" to i64), ptr %t285
   %t287 = or i64 %t286, 4
   %t288 = call i64 @rt_root(i64 %t287)
   store i64 %t288, ptr @"scheme.base:%any-null?"
@@ -7133,7 +7133,7 @@ define i64 @"scheme.base:__init_20"() {
 entry:
   %t353 = call ptr @rt_alloc_words(i64 1)
   %t354 = ptrtoint ptr %t353 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_73" to i64), ptr %t353
+  store i64 ptrtoint (ptr @"scheme.base:code:%mapn" to i64), ptr %t353
   %t355 = or i64 %t354, 4
   %t356 = call i64 @rt_root(i64 %t355)
   store i64 %t356, ptr @"scheme.base:%mapn"
@@ -7144,7 +7144,7 @@ define i64 @"scheme.base:__init_21"() {
 entry:
   %t383 = call ptr @rt_alloc_words(i64 1)
   %t384 = ptrtoint ptr %t383 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_82" to i64), ptr %t383
+  store i64 ptrtoint (ptr @"scheme.base:code:map" to i64), ptr %t383
   %t385 = or i64 %t384, 4
   %t386 = call i64 @rt_root(i64 %t385)
   store i64 %t386, ptr @"scheme.base:map"
@@ -7155,7 +7155,7 @@ define i64 @"scheme.base:__init_22"() {
 entry:
   %t400 = call ptr @rt_alloc_words(i64 1)
   %t401 = ptrtoint ptr %t400 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_90" to i64), ptr %t400
+  store i64 ptrtoint (ptr @"scheme.base:code:memq" to i64), ptr %t400
   %t402 = or i64 %t401, 4
   %t403 = call i64 @rt_root(i64 %t402)
   store i64 %t403, ptr @"scheme.base:memq"
@@ -7166,7 +7166,7 @@ define i64 @"scheme.base:__init_23"() {
 entry:
   %t417 = call ptr @rt_alloc_words(i64 1)
   %t418 = ptrtoint ptr %t417 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_98" to i64), ptr %t417
+  store i64 ptrtoint (ptr @"scheme.base:code:memv" to i64), ptr %t417
   %t419 = or i64 %t418, 4
   %t420 = call i64 @rt_root(i64 %t419)
   store i64 %t420, ptr @"scheme.base:memv"
@@ -7177,7 +7177,7 @@ define i64 @"scheme.base:__init_24"() {
 entry:
   %t436 = call ptr @rt_alloc_words(i64 1)
   %t437 = ptrtoint ptr %t436 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_106" to i64), ptr %t436
+  store i64 ptrtoint (ptr @"scheme.base:code:assq" to i64), ptr %t436
   %t438 = or i64 %t437, 4
   %t439 = call i64 @rt_root(i64 %t438)
   store i64 %t439, ptr @"scheme.base:assq"
@@ -7188,7 +7188,7 @@ define i64 @"scheme.base:__init_25"() {
 entry:
   %t453 = call ptr @rt_alloc_words(i64 1)
   %t454 = ptrtoint ptr %t453 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_110" to i64), ptr %t453
+  store i64 ptrtoint (ptr @"scheme.base:code:member" to i64), ptr %t453
   %t455 = or i64 %t454, 4
   %t456 = call i64 @rt_root(i64 %t455)
   store i64 %t456, ptr @"scheme.base:member"
@@ -7199,7 +7199,7 @@ define i64 @"scheme.base:__init_26"() {
 entry:
   %t472 = call ptr @rt_alloc_words(i64 1)
   %t473 = ptrtoint ptr %t472 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_114" to i64), ptr %t472
+  store i64 ptrtoint (ptr @"scheme.base:code:assoc" to i64), ptr %t472
   %t474 = or i64 %t473, 4
   %t475 = call i64 @rt_root(i64 %t474)
   store i64 %t475, ptr @"scheme.base:assoc"
@@ -7210,7 +7210,7 @@ define i64 @"scheme.base:__init_27"() {
 entry:
   %t502 = call ptr @rt_alloc_words(i64 1)
   %t503 = ptrtoint ptr %t502 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_118" to i64), ptr %t502
+  store i64 ptrtoint (ptr @"scheme.base:code:filter" to i64), ptr %t502
   %t504 = or i64 %t503, 4
   %t505 = call i64 @rt_root(i64 %t504)
   store i64 %t505, ptr @"scheme.base:filter"
@@ -7221,7 +7221,7 @@ define i64 @"scheme.base:__init_28"() {
 entry:
   %t522 = call ptr @rt_alloc_words(i64 1)
   %t523 = ptrtoint ptr %t522 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_123" to i64), ptr %t522
+  store i64 ptrtoint (ptr @"scheme.base:code:fold-left" to i64), ptr %t522
   %t524 = or i64 %t523, 4
   %t525 = call i64 @rt_root(i64 %t524)
   store i64 %t525, ptr @"scheme.base:fold-left"
@@ -7232,7 +7232,7 @@ define i64 @"scheme.base:__init_29"() {
 entry:
   %t542 = call ptr @rt_alloc_words(i64 1)
   %t543 = ptrtoint ptr %t542 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_128" to i64), ptr %t542
+  store i64 ptrtoint (ptr @"scheme.base:code:fold-right" to i64), ptr %t542
   %t544 = or i64 %t543, 4
   %t545 = call i64 @rt_root(i64 %t544)
   store i64 %t545, ptr @"scheme.base:fold-right"
@@ -7243,7 +7243,7 @@ define i64 @"scheme.base:__init_30"() {
 entry:
   %t563 = call ptr @rt_alloc_words(i64 1)
   %t564 = ptrtoint ptr %t563 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_132" to i64), ptr %t563
+  store i64 ptrtoint (ptr @"scheme.base:code:%for-each1" to i64), ptr %t563
   %t565 = or i64 %t564, 4
   %t566 = call i64 @rt_root(i64 %t565)
   store i64 %t566, ptr @"scheme.base:%for-each1"
@@ -7254,7 +7254,7 @@ define i64 @"scheme.base:__init_31"() {
 entry:
   %t631 = call ptr @rt_alloc_words(i64 1)
   %t632 = ptrtoint ptr %t631 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_138" to i64), ptr %t631
+  store i64 ptrtoint (ptr @"scheme.base:code:%for-eachn" to i64), ptr %t631
   %t633 = or i64 %t632, 4
   %t634 = call i64 @rt_root(i64 %t633)
   store i64 %t634, ptr @"scheme.base:%for-eachn"
@@ -7265,7 +7265,7 @@ define i64 @"scheme.base:__init_32"() {
 entry:
   %t661 = call ptr @rt_alloc_words(i64 1)
   %t662 = ptrtoint ptr %t661 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_147" to i64), ptr %t661
+  store i64 ptrtoint (ptr @"scheme.base:code:for-each" to i64), ptr %t661
   %t663 = or i64 %t662, 4
   %t664 = call i64 @rt_root(i64 %t663)
   store i64 %t664, ptr @"scheme.base:for-each"
@@ -7276,7 +7276,7 @@ define i64 @"scheme.base:__init_33"() {
 entry:
   %t682 = call ptr @rt_alloc_words(i64 1)
   %t683 = ptrtoint ptr %t682 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_151" to i64), ptr %t682
+  store i64 ptrtoint (ptr @"scheme.base:code:andmap" to i64), ptr %t682
   %t684 = or i64 %t683, 4
   %t685 = call i64 @rt_root(i64 %t684)
   store i64 %t685, ptr @"scheme.base:andmap"
@@ -7287,7 +7287,7 @@ define i64 @"scheme.base:__init_34"() {
 entry:
   %t703 = call ptr @rt_alloc_words(i64 1)
   %t704 = ptrtoint ptr %t703 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_155" to i64), ptr %t703
+  store i64 ptrtoint (ptr @"scheme.base:code:memp" to i64), ptr %t703
   %t705 = or i64 %t704, 4
   %t706 = call i64 @rt_root(i64 %t705)
   store i64 %t706, ptr @"scheme.base:memp"
@@ -7298,7 +7298,7 @@ define i64 @"scheme.base:__init_35"() {
 entry:
   %t715 = call ptr @rt_alloc_words(i64 1)
   %t716 = ptrtoint ptr %t715 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_158" to i64), ptr %t715
+  store i64 ptrtoint (ptr @"scheme.base:code:cadddr" to i64), ptr %t715
   %t717 = or i64 %t716, 4
   %t718 = call i64 @rt_root(i64 %t717)
   store i64 %t718, ptr @"scheme.base:cadddr"
@@ -7309,7 +7309,7 @@ define i64 @"scheme.base:__init_36"() {
 entry:
   %t731 = call ptr @rt_alloc_words(i64 1)
   %t732 = ptrtoint ptr %t731 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_161" to i64), ptr %t731
+  store i64 ptrtoint (ptr @"scheme.base:code:list?" to i64), ptr %t731
   %t733 = or i64 %t732, 4
   %t734 = call i64 @rt_root(i64 %t733)
   store i64 %t734, ptr @"scheme.base:list?"
@@ -7320,7 +7320,7 @@ define i64 @"scheme.base:__init_37"() {
 entry:
   %t743 = call ptr @rt_alloc_words(i64 1)
   %t744 = ptrtoint ptr %t743 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_168" to i64), ptr %t743
+  store i64 ptrtoint (ptr @"scheme.base:code:zero?" to i64), ptr %t743
   %t745 = or i64 %t744, 4
   %t746 = call i64 @rt_root(i64 %t745)
   store i64 %t746, ptr @"scheme.base:zero?"
@@ -7331,7 +7331,7 @@ define i64 @"scheme.base:__init_38"() {
 entry:
   %t768 = call ptr @rt_alloc_words(i64 1)
   %t769 = ptrtoint ptr %t768 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_172" to i64), ptr %t768
+  store i64 ptrtoint (ptr @"scheme.base:code:list-tail" to i64), ptr %t768
   %t770 = or i64 %t769, 4
   %t771 = call i64 @rt_root(i64 %t770)
   store i64 %t771, ptr @"scheme.base:list-tail"
@@ -7342,7 +7342,7 @@ define i64 @"scheme.base:__init_39"() {
 entry:
   %t780 = call ptr @rt_alloc_words(i64 1)
   %t781 = ptrtoint ptr %t780 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_176" to i64), ptr %t780
+  store i64 ptrtoint (ptr @"scheme.base:code:list-ref" to i64), ptr %t780
   %t782 = or i64 %t781, 4
   %t783 = call i64 @rt_root(i64 %t782)
   store i64 %t783, ptr @"scheme.base:list-ref"
@@ -7353,7 +7353,7 @@ define i64 @"scheme.base:__init_40"() {
 entry:
   %t807 = call ptr @rt_alloc_words(i64 1)
   %t808 = ptrtoint ptr %t807 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_180" to i64), ptr %t807
+  store i64 ptrtoint (ptr @"scheme.base:code:list-head" to i64), ptr %t807
   %t809 = or i64 %t808, 4
   %t810 = call i64 @rt_root(i64 %t809)
   store i64 %t810, ptr @"scheme.base:list-head"
@@ -7364,7 +7364,7 @@ define i64 @"scheme.base:__init_41"() {
 entry:
   %t832 = call ptr @rt_alloc_words(i64 1)
   %t833 = ptrtoint ptr %t832 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_184" to i64), ptr %t832
+  store i64 ptrtoint (ptr @"scheme.base:code:make-list" to i64), ptr %t832
   %t834 = or i64 %t833, 4
   %t835 = call i64 @rt_root(i64 %t834)
   store i64 %t835, ptr @"scheme.base:make-list"
@@ -7375,7 +7375,7 @@ define i64 @"scheme.base:__init_42"() {
 entry:
   %t870 = call ptr @rt_alloc_words(i64 1)
   %t871 = ptrtoint ptr %t870 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_194" to i64), ptr %t870
+  store i64 ptrtoint (ptr @"scheme.base:code:iota" to i64), ptr %t870
   %t872 = or i64 %t871, 4
   %t873 = call i64 @rt_root(i64 %t872)
   store i64 %t873, ptr @"scheme.base:iota"
@@ -7386,7 +7386,7 @@ define i64 @"scheme.base:__init_43"() {
 entry:
   %t883 = call ptr @rt_alloc_words(i64 1)
   %t884 = ptrtoint ptr %t883 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_204" to i64), ptr %t883
+  store i64 ptrtoint (ptr @"scheme.base:code:max" to i64), ptr %t883
   %t885 = or i64 %t884, 4
   %t886 = call i64 @rt_root(i64 %t885)
   store i64 %t886, ptr @"scheme.base:max"
@@ -7397,7 +7397,7 @@ define i64 @"scheme.base:__init_44"() {
 entry:
   %t889 = call ptr @rt_alloc_words(i64 1)
   %t890 = ptrtoint ptr %t889 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_206" to i64), ptr %t889
+  store i64 ptrtoint (ptr @"scheme.base:code:void" to i64), ptr %t889
   %t891 = or i64 %t890, 4
   %t892 = call i64 @rt_root(i64 %t891)
   store i64 %t892, ptr @"scheme.base:void"
@@ -7408,7 +7408,7 @@ define i64 @"scheme.base:__init_45"() {
 entry:
   %t905 = call ptr @rt_alloc_words(i64 1)
   %t906 = ptrtoint ptr %t905 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_209" to i64), ptr %t905
+  store i64 ptrtoint (ptr @"scheme.base:code:string" to i64), ptr %t905
   %t907 = or i64 %t906, 4
   %t908 = call i64 @rt_root(i64 %t907)
   store i64 %t908, ptr @"scheme.base:string"
@@ -7419,7 +7419,7 @@ define i64 @"scheme.base:__init_46"() {
 entry:
   %t922 = call ptr @rt_alloc_words(i64 1)
   %t923 = ptrtoint ptr %t922 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_212" to i64), ptr %t922
+  store i64 ptrtoint (ptr @"scheme.base:code:%str-concat" to i64), ptr %t922
   %t924 = or i64 %t923, 4
   %t925 = call i64 @rt_root(i64 %t924)
   store i64 %t925, ptr @"scheme.base:%str-concat"
@@ -7430,7 +7430,7 @@ define i64 @"scheme.base:__init_47"() {
 entry:
   %t945 = call ptr @rt_alloc_words(i64 1)
   %t946 = ptrtoint ptr %t945 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_218" to i64), ptr %t945
+  store i64 ptrtoint (ptr @"scheme.base:code:chr-cmp" to i64), ptr %t945
   %t947 = or i64 %t946, 4
   %t948 = call i64 @rt_root(i64 %t947)
   store i64 %t948, ptr @"scheme.base:chr-cmp"
@@ -7441,7 +7441,7 @@ define i64 @"scheme.base:__init_48"() {
 entry:
   %t977 = call ptr @rt_alloc_words(i64 1)
   %t978 = ptrtoint ptr %t977 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_229" to i64), ptr %t977
+  store i64 ptrtoint (ptr @"scheme.base:code:char=?" to i64), ptr %t977
   %t979 = or i64 %t978, 4
   %t980 = call i64 @rt_root(i64 %t979)
   store i64 %t980, ptr @"scheme.base:char=?"
@@ -7452,7 +7452,7 @@ define i64 @"scheme.base:__init_49"() {
 entry:
   %t1009 = call ptr @rt_alloc_words(i64 1)
   %t1010 = ptrtoint ptr %t1009 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_242" to i64), ptr %t1009
+  store i64 ptrtoint (ptr @"scheme.base:code:char<?" to i64), ptr %t1009
   %t1011 = or i64 %t1010, 4
   %t1012 = call i64 @rt_root(i64 %t1011)
   store i64 %t1012, ptr @"scheme.base:char<?"
@@ -7463,7 +7463,7 @@ define i64 @"scheme.base:__init_50"() {
 entry:
   %t1041 = call ptr @rt_alloc_words(i64 1)
   %t1042 = ptrtoint ptr %t1041 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_255" to i64), ptr %t1041
+  store i64 ptrtoint (ptr @"scheme.base:code:char>?" to i64), ptr %t1041
   %t1043 = or i64 %t1042, 4
   %t1044 = call i64 @rt_root(i64 %t1043)
   store i64 %t1044, ptr @"scheme.base:char>?"
@@ -7474,7 +7474,7 @@ define i64 @"scheme.base:__init_51"() {
 entry:
   %t1081 = call ptr @rt_alloc_words(i64 1)
   %t1082 = ptrtoint ptr %t1081 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_268" to i64), ptr %t1081
+  store i64 ptrtoint (ptr @"scheme.base:code:char<=?" to i64), ptr %t1081
   %t1083 = or i64 %t1082, 4
   %t1084 = call i64 @rt_root(i64 %t1083)
   store i64 %t1084, ptr @"scheme.base:char<=?"
@@ -7485,7 +7485,7 @@ define i64 @"scheme.base:__init_52"() {
 entry:
   %t1121 = call ptr @rt_alloc_words(i64 1)
   %t1122 = ptrtoint ptr %t1121 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_281" to i64), ptr %t1121
+  store i64 ptrtoint (ptr @"scheme.base:code:char>=?" to i64), ptr %t1121
   %t1123 = or i64 %t1122, 4
   %t1124 = call i64 @rt_root(i64 %t1123)
   store i64 %t1124, ptr @"scheme.base:char>=?"
@@ -7496,7 +7496,7 @@ define i64 @"scheme.base:__init_53"() {
 entry:
   %t1161 = call ptr @rt_alloc_words(i64 1)
   %t1162 = ptrtoint ptr %t1161 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_293" to i64), ptr %t1161
+  store i64 ptrtoint (ptr @"scheme.base:code:string->list" to i64), ptr %t1161
   %t1163 = or i64 %t1162, 4
   %t1164 = call i64 @rt_root(i64 %t1163)
   store i64 %t1164, ptr @"scheme.base:string->list"
@@ -7507,7 +7507,7 @@ define i64 @"scheme.base:__init_54"() {
 entry:
   %t1197 = call ptr @rt_alloc_words(i64 1)
   %t1198 = ptrtoint ptr %t1197 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_305" to i64), ptr %t1197
+  store i64 ptrtoint (ptr @"scheme.base:code:ns-digits" to i64), ptr %t1197
   %t1199 = or i64 %t1198, 4
   %t1200 = call i64 @rt_root(i64 %t1199)
   store i64 %t1200, ptr @"scheme.base:ns-digits"
@@ -7518,7 +7518,7 @@ define i64 @"scheme.base:__init_55"() {
 entry:
   %t1243 = call ptr @rt_alloc_words(i64 1)
   %t1244 = ptrtoint ptr %t1243 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_316" to i64), ptr %t1243
+  store i64 ptrtoint (ptr @"scheme.base:code:number->string" to i64), ptr %t1243
   %t1245 = or i64 %t1244, 4
   %t1246 = call i64 @rt_root(i64 %t1245)
   store i64 %t1246, ptr @"scheme.base:number->string"
@@ -7529,7 +7529,7 @@ define i64 @"scheme.base:__init_56"() {
 entry:
   %t1268 = call ptr @rt_alloc_words(i64 1)
   %t1269 = ptrtoint ptr %t1268 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_320" to i64), ptr %t1268
+  store i64 ptrtoint (ptr @"scheme.base:code:error" to i64), ptr %t1268
   %t1270 = or i64 %t1269, 4
   %t1271 = call i64 @rt_root(i64 %t1270)
   store i64 %t1271, ptr @"scheme.base:error"
@@ -7540,7 +7540,7 @@ define i64 @"scheme.base:__init_57"() {
 entry:
   %t1274 = call ptr @rt_alloc_words(i64 1)
   %t1275 = ptrtoint ptr %t1274 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_323" to i64), ptr %t1274
+  store i64 ptrtoint (ptr @"scheme.base:code:raise" to i64), ptr %t1274
   %t1276 = or i64 %t1275, 4
   %t1277 = call i64 @rt_root(i64 %t1276)
   store i64 %t1277, ptr @"scheme.base:raise"
@@ -7551,7 +7551,7 @@ define i64 @"scheme.base:__init_58"() {
 entry:
   %t1280 = call ptr @rt_alloc_words(i64 1)
   %t1281 = ptrtoint ptr %t1280 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_326" to i64), ptr %t1280
+  store i64 ptrtoint (ptr @"scheme.base:code:error-object?" to i64), ptr %t1280
   %t1282 = or i64 %t1281, 4
   %t1283 = call i64 @rt_root(i64 %t1282)
   store i64 %t1283, ptr @"scheme.base:error-object?"
@@ -7562,7 +7562,7 @@ define i64 @"scheme.base:__init_59"() {
 entry:
   %t1286 = call ptr @rt_alloc_words(i64 1)
   %t1287 = ptrtoint ptr %t1286 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_329" to i64), ptr %t1286
+  store i64 ptrtoint (ptr @"scheme.base:code:error-object-message" to i64), ptr %t1286
   %t1288 = or i64 %t1287, 4
   %t1289 = call i64 @rt_root(i64 %t1288)
   store i64 %t1289, ptr @"scheme.base:error-object-message"
@@ -7573,7 +7573,7 @@ define i64 @"scheme.base:__init_60"() {
 entry:
   %t1292 = call ptr @rt_alloc_words(i64 1)
   %t1293 = ptrtoint ptr %t1292 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_332" to i64), ptr %t1292
+  store i64 ptrtoint (ptr @"scheme.base:code:error-object-irritants" to i64), ptr %t1292
   %t1294 = or i64 %t1293, 4
   %t1295 = call i64 @rt_root(i64 %t1294)
   store i64 %t1295, ptr @"scheme.base:error-object-irritants"
@@ -7584,7 +7584,7 @@ define i64 @"scheme.base:__init_61"() {
 entry:
   %t1331 = call ptr @rt_alloc_words(i64 1)
   %t1332 = ptrtoint ptr %t1331 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_339" to i64), ptr %t1331
+  store i64 ptrtoint (ptr @"scheme.base:code:list->vector" to i64), ptr %t1331
   %t1333 = or i64 %t1332, 4
   %t1334 = call i64 @rt_root(i64 %t1333)
   store i64 %t1334, ptr @"scheme.base:list->vector"
@@ -7595,7 +7595,7 @@ define i64 @"scheme.base:__init_62"() {
 entry:
   %t1352 = call ptr @rt_alloc_words(i64 1)
   %t1353 = ptrtoint ptr %t1352 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_344" to i64), ptr %t1352
+  store i64 ptrtoint (ptr @"scheme.base:code:vector" to i64), ptr %t1352
   %t1354 = or i64 %t1353, 4
   %t1355 = call i64 @rt_root(i64 %t1354)
   store i64 %t1355, ptr @"scheme.base:vector"
@@ -7606,7 +7606,7 @@ define i64 @"scheme.base:__init_63"() {
 entry:
   %t1391 = call ptr @rt_alloc_words(i64 1)
   %t1392 = ptrtoint ptr %t1391 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_351" to i64), ptr %t1391
+  store i64 ptrtoint (ptr @"scheme.base:code:list->bytevector" to i64), ptr %t1391
   %t1393 = or i64 %t1392, 4
   %t1394 = call i64 @rt_root(i64 %t1393)
   store i64 %t1394, ptr @"scheme.base:list->bytevector"
@@ -7617,7 +7617,7 @@ define i64 @"scheme.base:__init_64"() {
 entry:
   %t1412 = call ptr @rt_alloc_words(i64 1)
   %t1413 = ptrtoint ptr %t1412 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_356" to i64), ptr %t1412
+  store i64 ptrtoint (ptr @"scheme.base:code:bytevector" to i64), ptr %t1412
   %t1414 = or i64 %t1413, 4
   %t1415 = call i64 @rt_root(i64 %t1414)
   store i64 %t1415, ptr @"scheme.base:bytevector"
@@ -7628,7 +7628,7 @@ define i64 @"scheme.base:__init_65"() {
 entry:
   %t1435 = call ptr @rt_alloc_words(i64 1)
   %t1436 = ptrtoint ptr %t1435 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_359" to i64), ptr %t1435
+  store i64 ptrtoint (ptr @"scheme.base:code:values" to i64), ptr %t1435
   %t1437 = or i64 %t1436, 4
   %t1438 = call i64 @rt_root(i64 %t1437)
   store i64 %t1438, ptr @"scheme.base:values"
@@ -7639,7 +7639,7 @@ define i64 @"scheme.base:__init_66"() {
 entry:
   %t1480 = call ptr @rt_alloc_words(i64 1)
   %t1481 = ptrtoint ptr %t1480 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_364" to i64), ptr %t1480
+  store i64 ptrtoint (ptr @"scheme.base:code:call-with-values" to i64), ptr %t1480
   %t1482 = or i64 %t1481, 4
   %t1483 = call i64 @rt_root(i64 %t1482)
   store i64 %t1483, ptr @"scheme.base:call-with-values"
@@ -7664,7 +7664,7 @@ define i64 @"scheme.base:__init_69"() {
 entry:
   %t1496 = call ptr @rt_alloc_words(i64 1)
   %t1497 = ptrtoint ptr %t1496 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_366" to i64), ptr %t1496
+  store i64 ptrtoint (ptr @"scheme.base:code:make-hash-table" to i64), ptr %t1496
   %t1498 = or i64 %t1497, 4
   %t1499 = call i64 @rt_root(i64 %t1498)
   store i64 %t1499, ptr @"scheme.base:make-hash-table"
@@ -7675,7 +7675,7 @@ define i64 @"scheme.base:__init_70"() {
 entry:
   %t1502 = call ptr @rt_alloc_words(i64 1)
   %t1503 = ptrtoint ptr %t1502 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_369" to i64), ptr %t1502
+  store i64 ptrtoint (ptr @"scheme.base:code:hash-table?" to i64), ptr %t1502
   %t1504 = or i64 %t1503, 4
   %t1505 = call i64 @rt_root(i64 %t1504)
   store i64 %t1505, ptr @"scheme.base:hash-table?"
@@ -7686,7 +7686,7 @@ define i64 @"scheme.base:__init_71"() {
 entry:
   %t1509 = call ptr @rt_alloc_words(i64 1)
   %t1510 = ptrtoint ptr %t1509 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_372" to i64), ptr %t1509
+  store i64 ptrtoint (ptr @"scheme.base:code:%ht-count" to i64), ptr %t1509
   %t1511 = or i64 %t1510, 4
   %t1512 = call i64 @rt_root(i64 %t1511)
   store i64 %t1512, ptr @"scheme.base:%ht-count"
@@ -7697,7 +7697,7 @@ define i64 @"scheme.base:__init_72"() {
 entry:
   %t1516 = call ptr @rt_alloc_words(i64 1)
   %t1517 = ptrtoint ptr %t1516 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_375" to i64), ptr %t1516
+  store i64 ptrtoint (ptr @"scheme.base:code:%ht-buckets" to i64), ptr %t1516
   %t1518 = or i64 %t1517, 4
   %t1519 = call i64 @rt_root(i64 %t1518)
   store i64 %t1519, ptr @"scheme.base:%ht-buckets"
@@ -7708,7 +7708,7 @@ define i64 @"scheme.base:__init_73"() {
 entry:
   %t1523 = call ptr @rt_alloc_words(i64 1)
   %t1524 = ptrtoint ptr %t1523 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_379" to i64), ptr %t1523
+  store i64 ptrtoint (ptr @"scheme.base:code:%ht-set-count!" to i64), ptr %t1523
   %t1525 = or i64 %t1524, 4
   %t1526 = call i64 @rt_root(i64 %t1525)
   store i64 %t1526, ptr @"scheme.base:%ht-set-count!"
@@ -7719,7 +7719,7 @@ define i64 @"scheme.base:__init_74"() {
 entry:
   %t1530 = call ptr @rt_alloc_words(i64 1)
   %t1531 = ptrtoint ptr %t1530 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_383" to i64), ptr %t1530
+  store i64 ptrtoint (ptr @"scheme.base:code:%ht-set-buckets!" to i64), ptr %t1530
   %t1532 = or i64 %t1531, 4
   %t1533 = call i64 @rt_root(i64 %t1532)
   store i64 %t1533, ptr @"scheme.base:%ht-set-buckets!"
@@ -7730,7 +7730,7 @@ define i64 @"scheme.base:__init_75"() {
 entry:
   %t1537 = call ptr @rt_alloc_words(i64 1)
   %t1538 = ptrtoint ptr %t1537 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_387" to i64), ptr %t1537
+  store i64 ptrtoint (ptr @"scheme.base:code:%ht-index" to i64), ptr %t1537
   %t1539 = or i64 %t1538, 4
   %t1540 = call i64 @rt_root(i64 %t1539)
   store i64 %t1540, ptr @"scheme.base:%ht-index"
@@ -7741,7 +7741,7 @@ define i64 @"scheme.base:__init_76"() {
 entry:
   %t1556 = call ptr @rt_alloc_words(i64 1)
   %t1557 = ptrtoint ptr %t1556 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_391" to i64), ptr %t1556
+  store i64 ptrtoint (ptr @"scheme.base:code:%ht-assoc" to i64), ptr %t1556
   %t1558 = or i64 %t1557, 4
   %t1559 = call i64 @rt_root(i64 %t1558)
   store i64 %t1559, ptr @"scheme.base:%ht-assoc"
@@ -7752,7 +7752,7 @@ define i64 @"scheme.base:__init_77"() {
 entry:
   %t1577 = call ptr @rt_alloc_words(i64 1)
   %t1578 = ptrtoint ptr %t1577 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_395" to i64), ptr %t1577
+  store i64 ptrtoint (ptr @"scheme.base:code:%ht-remove" to i64), ptr %t1577
   %t1579 = or i64 %t1578, 4
   %t1580 = call i64 @rt_root(i64 %t1579)
   store i64 %t1580, ptr @"scheme.base:%ht-remove"
@@ -7763,7 +7763,7 @@ define i64 @"scheme.base:__init_78"() {
 entry:
   %t1604 = call ptr @rt_alloc_words(i64 1)
   %t1605 = ptrtoint ptr %t1604 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_402" to i64), ptr %t1604
+  store i64 ptrtoint (ptr @"scheme.base:code:hash-table-ref/default" to i64), ptr %t1604
   %t1606 = or i64 %t1605, 4
   %t1607 = call i64 @rt_root(i64 %t1606)
   store i64 %t1607, ptr @"scheme.base:hash-table-ref/default"
@@ -7774,7 +7774,7 @@ define i64 @"scheme.base:__init_79"() {
 entry:
   %t1630 = call ptr @rt_alloc_words(i64 1)
   %t1631 = ptrtoint ptr %t1630 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_407" to i64), ptr %t1630
+  store i64 ptrtoint (ptr @"scheme.base:code:hash-table-contains?" to i64), ptr %t1630
   %t1632 = or i64 %t1631, 4
   %t1633 = call i64 @rt_root(i64 %t1632)
   store i64 %t1633, ptr @"scheme.base:hash-table-contains?"
@@ -7785,7 +7785,7 @@ define i64 @"scheme.base:__init_80"() {
 entry:
   %t1664 = call ptr @rt_alloc_words(i64 1)
   %t1665 = ptrtoint ptr %t1664 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_413" to i64), ptr %t1664
+  store i64 ptrtoint (ptr @"scheme.base:code:hash-table-ref" to i64), ptr %t1664
   %t1666 = or i64 %t1665, 4
   %t1667 = call i64 @rt_root(i64 %t1666)
   store i64 %t1667, ptr @"scheme.base:hash-table-ref"
@@ -7796,7 +7796,7 @@ define i64 @"scheme.base:__init_81"() {
 entry:
   %t1747 = call ptr @rt_alloc_words(i64 1)
   %t1748 = ptrtoint ptr %t1747 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_427" to i64), ptr %t1747
+  store i64 ptrtoint (ptr @"scheme.base:code:hash-table-set!" to i64), ptr %t1747
   %t1749 = or i64 %t1748, 4
   %t1750 = call i64 @rt_root(i64 %t1749)
   store i64 %t1750, ptr @"scheme.base:hash-table-set!"
@@ -7807,7 +7807,7 @@ define i64 @"scheme.base:__init_82"() {
 entry:
   %t1798 = call ptr @rt_alloc_words(i64 1)
   %t1799 = ptrtoint ptr %t1798 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_434" to i64), ptr %t1798
+  store i64 ptrtoint (ptr @"scheme.base:code:hash-table-delete!" to i64), ptr %t1798
   %t1800 = or i64 %t1799, 4
   %t1801 = call i64 @rt_root(i64 %t1800)
   store i64 %t1801, ptr @"scheme.base:hash-table-delete!"
@@ -7818,7 +7818,7 @@ define i64 @"scheme.base:__init_83"() {
 entry:
   %t1901 = call ptr @rt_alloc_words(i64 1)
   %t1902 = ptrtoint ptr %t1901 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_450" to i64), ptr %t1901
+  store i64 ptrtoint (ptr @"scheme.base:code:%ht-grow!" to i64), ptr %t1901
   %t1903 = or i64 %t1902, 4
   %t1904 = call i64 @rt_root(i64 %t1903)
   store i64 %t1904, ptr @"scheme.base:%ht-grow!"
@@ -7829,7 +7829,7 @@ define i64 @"scheme.base:__init_84"() {
 entry:
   %t1912 = call ptr @rt_alloc_words(i64 1)
   %t1913 = ptrtoint ptr %t1912 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_457" to i64), ptr %t1912
+  store i64 ptrtoint (ptr @"scheme.base:code:hash-table-size" to i64), ptr %t1912
   %t1914 = or i64 %t1913, 4
   %t1915 = call i64 @rt_root(i64 %t1914)
   store i64 %t1915, ptr @"scheme.base:hash-table-size"
@@ -7840,7 +7840,7 @@ define i64 @"scheme.base:__init_85"() {
 entry:
   %t1932 = call ptr @rt_alloc_words(i64 1)
   %t1933 = ptrtoint ptr %t1932 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_461" to i64), ptr %t1932
+  store i64 ptrtoint (ptr @"scheme.base:code:%ht-fold-buckets" to i64), ptr %t1932
   %t1934 = or i64 %t1933, 4
   %t1935 = call i64 @rt_root(i64 %t1934)
   store i64 %t1935, ptr @"scheme.base:%ht-fold-buckets"
@@ -7851,7 +7851,7 @@ define i64 @"scheme.base:__init_86"() {
 entry:
   %t1981 = call ptr @rt_alloc_words(i64 1)
   %t1982 = ptrtoint ptr %t1981 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_472" to i64), ptr %t1981
+  store i64 ptrtoint (ptr @"scheme.base:code:hash-table->alist" to i64), ptr %t1981
   %t1983 = or i64 %t1982, 4
   %t1984 = call i64 @rt_root(i64 %t1983)
   store i64 %t1984, ptr @"scheme.base:hash-table->alist"
@@ -7862,7 +7862,7 @@ define i64 @"scheme.base:__init_87"() {
 entry:
   %t2003 = call ptr @rt_alloc_words(i64 1)
   %t2004 = ptrtoint ptr %t2003 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_478" to i64), ptr %t2003
+  store i64 ptrtoint (ptr @"scheme.base:code:hash-table-keys" to i64), ptr %t2003
   %t2005 = or i64 %t2004, 4
   %t2006 = call i64 @rt_root(i64 %t2005)
   store i64 %t2006, ptr @"scheme.base:hash-table-keys"
@@ -7873,7 +7873,7 @@ define i64 @"scheme.base:__init_88"() {
 entry:
   %t2025 = call ptr @rt_alloc_words(i64 1)
   %t2026 = ptrtoint ptr %t2025 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_484" to i64), ptr %t2025
+  store i64 ptrtoint (ptr @"scheme.base:code:hash-table-values" to i64), ptr %t2025
   %t2027 = or i64 %t2026, 4
   %t2028 = call i64 @rt_root(i64 %t2027)
   store i64 %t2028, ptr @"scheme.base:hash-table-values"
@@ -7884,7 +7884,7 @@ define i64 @"scheme.base:__init_89"() {
 entry:
   %t2062 = call ptr @rt_alloc_words(i64 1)
   %t2063 = ptrtoint ptr %t2062 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_512" to i64), ptr %t2062
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-ws?" to i64), ptr %t2062
   %t2064 = or i64 %t2063, 4
   %t2065 = call i64 @rt_root(i64 %t2064)
   store i64 %t2065, ptr @"scheme.base:rd-ws?"
@@ -7895,7 +7895,7 @@ define i64 @"scheme.base:__init_90"() {
 entry:
   %t2083 = call ptr @rt_alloc_words(i64 1)
   %t2084 = ptrtoint ptr %t2083 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_524" to i64), ptr %t2083
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-digit?" to i64), ptr %t2083
   %t2085 = or i64 %t2084, 4
   %t2086 = call i64 @rt_root(i64 %t2085)
   store i64 %t2086, ptr @"scheme.base:rd-digit?"
@@ -7906,7 +7906,7 @@ define i64 @"scheme.base:__init_91"() {
 entry:
   %t2143 = call ptr @rt_alloc_words(i64 1)
   %t2144 = ptrtoint ptr %t2143 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_564" to i64), ptr %t2143
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-delim?" to i64), ptr %t2143
   %t2145 = or i64 %t2144, 4
   %t2146 = call i64 @rt_root(i64 %t2145)
   store i64 %t2146, ptr @"scheme.base:rd-delim?"
@@ -7917,7 +7917,7 @@ define i64 @"scheme.base:__init_92"() {
 entry:
   %t2184 = call ptr @rt_alloc_words(i64 1)
   %t2185 = ptrtoint ptr %t2184 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_577" to i64), ptr %t2184
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-skip-line" to i64), ptr %t2184
   %t2186 = or i64 %t2185, 4
   %t2187 = call i64 @rt_root(i64 %t2186)
   store i64 %t2187, ptr @"scheme.base:rd-skip-line"
@@ -7928,7 +7928,7 @@ define i64 @"scheme.base:__init_93"() {
 entry:
   %t2244 = call ptr @rt_alloc_words(i64 1)
   %t2245 = ptrtoint ptr %t2244 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_591" to i64), ptr %t2244
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-skip-ws" to i64), ptr %t2244
   %t2246 = or i64 %t2245, 4
   %t2247 = call i64 @rt_root(i64 %t2246)
   store i64 %t2247, ptr @"scheme.base:rd-skip-ws"
@@ -7939,7 +7939,7 @@ define i64 @"scheme.base:__init_94"() {
 entry:
   %t2277 = call ptr @rt_alloc_words(i64 1)
   %t2278 = ptrtoint ptr %t2277 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_600" to i64), ptr %t2277
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-token-end" to i64), ptr %t2277
   %t2279 = or i64 %t2278, 4
   %t2280 = call i64 @rt_root(i64 %t2279)
   store i64 %t2280, ptr @"scheme.base:rd-token-end"
@@ -7950,7 +7950,7 @@ define i64 @"scheme.base:__init_95"() {
 entry:
   %t2310 = call ptr @rt_alloc_words(i64 1)
   %t2311 = ptrtoint ptr %t2310 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_609" to i64), ptr %t2310
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-all-digits?" to i64), ptr %t2310
   %t2312 = or i64 %t2311, 4
   %t2313 = call i64 @rt_root(i64 %t2312)
   store i64 %t2313, ptr @"scheme.base:rd-all-digits?"
@@ -7961,7 +7961,7 @@ define i64 @"scheme.base:__init_96"() {
 entry:
   %t2371 = call ptr @rt_alloc_words(i64 1)
   %t2372 = ptrtoint ptr %t2371 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_632" to i64), ptr %t2371
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-numeric?" to i64), ptr %t2371
   %t2373 = or i64 %t2372, 4
   %t2374 = call i64 @rt_root(i64 %t2373)
   store i64 %t2374, ptr @"scheme.base:rd-numeric?"
@@ -7972,7 +7972,7 @@ define i64 @"scheme.base:__init_97"() {
 entry:
   %t2417 = call ptr @rt_alloc_words(i64 1)
   %t2418 = ptrtoint ptr %t2417 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_642" to i64), ptr %t2417
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-digits" to i64), ptr %t2417
   %t2419 = or i64 %t2418, 4
   %t2420 = call i64 @rt_root(i64 %t2419)
   store i64 %t2420, ptr @"scheme.base:rd-digits"
@@ -7983,7 +7983,7 @@ define i64 @"scheme.base:__init_98"() {
 entry:
   %t2465 = call ptr @rt_alloc_words(i64 1)
   %t2466 = ptrtoint ptr %t2465 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_655" to i64), ptr %t2465
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-parse-int" to i64), ptr %t2465
   %t2467 = or i64 %t2466, 4
   %t2468 = call i64 @rt_root(i64 %t2467)
   store i64 %t2468, ptr @"scheme.base:rd-parse-int"
@@ -7994,7 +7994,7 @@ define i64 @"scheme.base:__init_99"() {
 entry:
   %t2478 = call ptr @rt_alloc_words(i64 1)
   %t2479 = ptrtoint ptr %t2478 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_662" to i64), ptr %t2478
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-dotchar?" to i64), ptr %t2478
   %t2480 = or i64 %t2479, 4
   %t2481 = call i64 @rt_root(i64 %t2480)
   store i64 %t2481, ptr @"scheme.base:rd-dotchar?"
@@ -8005,7 +8005,7 @@ define i64 @"scheme.base:__init_100"() {
 entry:
   %t2499 = call ptr @rt_alloc_words(i64 1)
   %t2500 = ptrtoint ptr %t2499 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_676" to i64), ptr %t2499
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-exp-char?" to i64), ptr %t2499
   %t2501 = or i64 %t2500, 4
   %t2502 = call i64 @rt_root(i64 %t2501)
   store i64 %t2502, ptr @"scheme.base:rd-exp-char?"
@@ -8016,7 +8016,7 @@ define i64 @"scheme.base:__init_101"() {
 entry:
   %t2520 = call ptr @rt_alloc_words(i64 1)
   %t2521 = ptrtoint ptr %t2520 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_690" to i64), ptr %t2520
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-sign-char?" to i64), ptr %t2520
   %t2522 = or i64 %t2521, 4
   %t2523 = call i64 @rt_root(i64 %t2522)
   store i64 %t2523, ptr @"scheme.base:rd-sign-char?"
@@ -8027,7 +8027,7 @@ define i64 @"scheme.base:__init_102"() {
 entry:
   %t2554 = call ptr @rt_alloc_words(i64 1)
   %t2555 = ptrtoint ptr %t2554 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_699" to i64), ptr %t2554
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-scan-digits" to i64), ptr %t2554
   %t2556 = or i64 %t2555, 4
   %t2557 = call i64 @rt_root(i64 %t2556)
   store i64 %t2557, ptr @"scheme.base:rd-scan-digits"
@@ -8038,7 +8038,7 @@ define i64 @"scheme.base:__init_103"() {
 entry:
   %t2736 = call ptr @rt_alloc_words(i64 1)
   %t2737 = ptrtoint ptr %t2736 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_759" to i64), ptr %t2736
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-flonum?" to i64), ptr %t2736
   %t2738 = or i64 %t2737, 4
   %t2739 = call i64 @rt_root(i64 %t2738)
   store i64 %t2739, ptr @"scheme.base:rd-flonum?"
@@ -8049,7 +8049,7 @@ define i64 @"scheme.base:__init_104"() {
 entry:
   %t2773 = call ptr @rt_alloc_words(i64 1)
   %t2774 = ptrtoint ptr %t2773 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_766" to i64), ptr %t2773
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-atom" to i64), ptr %t2773
   %t2775 = or i64 %t2774, 4
   %t2776 = call i64 @rt_root(i64 %t2775)
   store i64 %t2776, ptr @"scheme.base:rd-atom"
@@ -8060,7 +8060,7 @@ define i64 @"scheme.base:__init_105"() {
 entry:
   %t2848 = call ptr @rt_alloc_words(i64 1)
   %t2849 = ptrtoint ptr %t2848 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_794" to i64), ptr %t2848
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-hex-digit" to i64), ptr %t2848
   %t2850 = or i64 %t2849, 4
   %t2851 = call i64 @rt_root(i64 %t2850)
   store i64 %t2851, ptr @"scheme.base:rd-hex-digit"
@@ -8071,7 +8071,7 @@ define i64 @"scheme.base:__init_106"() {
 entry:
   %t2911 = call ptr @rt_alloc_words(i64 1)
   %t2912 = ptrtoint ptr %t2911 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_808" to i64), ptr %t2911
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-hex" to i64), ptr %t2911
   %t2913 = or i64 %t2912, 4
   %t2914 = call i64 @rt_root(i64 %t2913)
   store i64 %t2914, ptr @"scheme.base:rd-hex"
@@ -8082,7 +8082,7 @@ define i64 @"scheme.base:__init_107"() {
 entry:
   %t2944 = call ptr @rt_alloc_words(i64 1)
   %t2945 = ptrtoint ptr %t2944 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_824" to i64), ptr %t2944
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-str-esc" to i64), ptr %t2944
   %t2946 = or i64 %t2945, 4
   %t2947 = call i64 @rt_root(i64 %t2946)
   store i64 %t2947, ptr @"scheme.base:rd-str-esc"
@@ -8093,7 +8093,7 @@ define i64 @"scheme.base:__init_108"() {
 entry:
   %t3080 = call ptr @rt_alloc_words(i64 1)
   %t3081 = ptrtoint ptr %t3080 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_852" to i64), ptr %t3080
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-string" to i64), ptr %t3080
   %t3082 = or i64 %t3081, 4
   %t3083 = call i64 @rt_root(i64 %t3082)
   store i64 %t3083, ptr @"scheme.base:rd-string"
@@ -8104,7 +8104,7 @@ define i64 @"scheme.base:__init_109"() {
 entry:
   %t3247 = call ptr @rt_alloc_words(i64 1)
   %t3248 = ptrtoint ptr %t3247 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_895" to i64), ptr %t3247
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-hash" to i64), ptr %t3247
   %t3249 = or i64 %t3248, 4
   %t3250 = call i64 @rt_root(i64 %t3249)
   store i64 %t3250, ptr @"scheme.base:rd-hash"
@@ -8115,7 +8115,7 @@ define i64 @"scheme.base:__init_110"() {
 entry:
   %t3289 = call ptr @rt_alloc_words(i64 1)
   %t3290 = ptrtoint ptr %t3289 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_898" to i64), ptr %t3289
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-char-name" to i64), ptr %t3289
   %t3291 = or i64 %t3290, 4
   %t3292 = call i64 @rt_root(i64 %t3291)
   store i64 %t3292, ptr @"scheme.base:rd-char-name"
@@ -8126,7 +8126,7 @@ define i64 @"scheme.base:__init_111"() {
 entry:
   %t3331 = call ptr @rt_alloc_words(i64 1)
   %t3332 = ptrtoint ptr %t3331 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_910" to i64), ptr %t3331
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-char" to i64), ptr %t3331
   %t3333 = or i64 %t3332, 4
   %t3334 = call i64 @rt_root(i64 %t3333)
   store i64 %t3334, ptr @"scheme.base:rd-char"
@@ -8137,7 +8137,7 @@ define i64 @"scheme.base:__init_112"() {
 entry:
   %t3358 = call ptr @rt_alloc_words(i64 1)
   %t3359 = ptrtoint ptr %t3358 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_917" to i64), ptr %t3358
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-quote" to i64), ptr %t3358
   %t3360 = or i64 %t3359, 4
   %t3361 = call i64 @rt_root(i64 %t3360)
   store i64 %t3361, ptr @"scheme.base:rd-quote"
@@ -8148,7 +8148,7 @@ define i64 @"scheme.base:__init_113"() {
 entry:
   %t3385 = call ptr @rt_alloc_words(i64 1)
   %t3386 = ptrtoint ptr %t3385 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_924" to i64), ptr %t3385
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-quasi" to i64), ptr %t3385
   %t3387 = or i64 %t3386, 4
   %t3388 = call i64 @rt_root(i64 %t3387)
   store i64 %t3388, ptr @"scheme.base:rd-quasi"
@@ -8159,7 +8159,7 @@ define i64 @"scheme.base:__init_114"() {
 entry:
   %t3459 = call ptr @rt_alloc_words(i64 1)
   %t3460 = ptrtoint ptr %t3459 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_941" to i64), ptr %t3459
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-unquote" to i64), ptr %t3459
   %t3461 = or i64 %t3460, 4
   %t3462 = call i64 @rt_root(i64 %t3461)
   store i64 %t3462, ptr @"scheme.base:rd-unquote"
@@ -8170,7 +8170,7 @@ define i64 @"scheme.base:__init_115"() {
 entry:
   %t3499 = call ptr @rt_alloc_words(i64 1)
   %t3500 = ptrtoint ptr %t3499 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_954" to i64), ptr %t3499
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-dot?" to i64), ptr %t3499
   %t3501 = or i64 %t3500, 4
   %t3502 = call i64 @rt_root(i64 %t3501)
   store i64 %t3502, ptr @"scheme.base:rd-dot?"
@@ -8181,7 +8181,7 @@ define i64 @"scheme.base:__init_116"() {
 entry:
   %t3515 = call ptr @rt_alloc_words(i64 1)
   %t3516 = ptrtoint ptr %t3515 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_958" to i64), ptr %t3515
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-append-reverse" to i64), ptr %t3515
   %t3517 = or i64 %t3516, 4
   %t3518 = call i64 @rt_root(i64 %t3517)
   store i64 %t3518, ptr @"scheme.base:rd-append-reverse"
@@ -8192,7 +8192,7 @@ define i64 @"scheme.base:__init_117"() {
 entry:
   %t3634 = call ptr @rt_alloc_words(i64 1)
   %t3635 = ptrtoint ptr %t3634 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_983" to i64), ptr %t3634
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-list" to i64), ptr %t3634
   %t3636 = or i64 %t3635, 4
   %t3637 = call i64 @rt_root(i64 %t3636)
   store i64 %t3637, ptr @"scheme.base:rd-list"
@@ -8203,7 +8203,7 @@ define i64 @"scheme.base:__init_118"() {
 entry:
   %t3787 = call ptr @rt_alloc_words(i64 1)
   %t3788 = ptrtoint ptr %t3787 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_1017" to i64), ptr %t3787
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-datum" to i64), ptr %t3787
   %t3789 = or i64 %t3788, 4
   %t3790 = call i64 @rt_root(i64 %t3789)
   store i64 %t3790, ptr @"scheme.base:rd-datum"
@@ -8214,7 +8214,7 @@ define i64 @"scheme.base:__init_119"() {
 entry:
   %t3806 = call ptr @rt_alloc_words(i64 1)
   %t3807 = ptrtoint ptr %t3806 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_1021" to i64), ptr %t3806
+  store i64 ptrtoint (ptr @"scheme.base:code:read-from-string" to i64), ptr %t3806
   %t3808 = or i64 %t3807, 4
   %t3809 = call i64 @rt_root(i64 %t3808)
   store i64 %t3809, ptr @"scheme.base:read-from-string"
@@ -8225,7 +8225,7 @@ define i64 @"scheme.base:__init_120"() {
 entry:
   %t3876 = call ptr @rt_alloc_words(i64 1)
   %t3877 = ptrtoint ptr %t3876 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_1033" to i64), ptr %t3876
+  store i64 ptrtoint (ptr @"scheme.base:code:read-all-from-string" to i64), ptr %t3876
   %t3878 = or i64 %t3877, 4
   %t3879 = call i64 @rt_root(i64 %t3878)
   store i64 %t3879, ptr @"scheme.base:read-all-from-string"
