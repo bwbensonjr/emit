@@ -100,9 +100,32 @@
 ;; resets it, not lower-program.
 (define *unit-procs* '())
 (define (reset-unit-procs!) (set! *unit-procs* '()))
-(define (unit-procs) (reverse *unit-procs*))
 (define (add-unit-proc! name label arity)
   (set! *unit-procs* (cons (list name label arity) *unit-procs*)))
+
+;; The top-level names this unit ASSIGNS (change: library-toplevel-set, issue #14).
+;; A unit may `set!` its own top-level binding, so its slot can hold a different
+;; closure after __init -- and an importer that direct-called the label recorded
+;; above would keep running the code the slot held at link time.  The export table
+;; is the ONLY channel by which an importer learns a label, so withholding the row
+;; is what keeps the direct call sound; that is the invariant design D4 of
+;; cross-unit-direct-calls now rests on, in place of the old blanket prohibition.
+;; Recorded by `assign-global` as it resolves each form, and read below.
+(define *unit-assigned* '())
+(define (reset-unit-assigned!) (set! *unit-assigned* '()))
+(define (add-unit-assigned! name)
+  (set! *unit-assigned* (cons name *unit-assigned*)))
+(define (unit-assigned? name) (and (memq name *unit-assigned*) #t))
+
+;; The unit's advertised call interface: the rows above MINUS every assigned name.
+;; Filtering at the single reader -- `export-call-rows` runs once per unit, after
+;; every form is lowered -- is what makes a pre-pass unnecessary: the assigned set
+;; is complete by the time the table is built, whichever order the forms came in
+;; (design D1).  The withheld binding's code is still emitted under its stable
+;; label (its define's `make-closure` needs it); the label just stops being
+;; published, exactly as for a variadic export.
+(define (unit-procs)
+  (reverse (filter (lambda (p) (not (unit-assigned? (car p)))) *unit-procs*)))
 
 ;; `unit` is the compilation unit's library name (a list of symbol parts); the
 ;; program unit is `program-unit` (empty prefix).  It is optional so the pass
@@ -111,8 +134,29 @@
   (set! *code-defs* '())
   (set! *known-closures* '())
   (set! *unit* (if (null? opt) program-unit (car opt)))
-  (let ([entry (lower e '() '() #f)])       ; top level: no locals, no free vars, no self
+  (let ([entry (lower-top e)])              ; top level: no locals, no free vars, no self
     `(program ,(reverse *code-defs*) ,entry)))
+
+;; One lowered top-level form's SPINE (change: library-toplevel-set): the
+;; `global-set!` nodes that are this unit's top-level binding initializers, and the
+;; `seq` chain a define-record-type expands into (several mutually-visible top-level
+;; bindings in one form).  Only these positions get the stable, name-derived label.
+;;
+;; Position, not shape, is what tells a top-level initializer apart from an ordinary
+;; store.  Now that a unit can `set!` its own top level, `(set! f (lambda ...))` in a
+;; procedure body is ALSO a `global-set!` of `f` with a lambda rhs -- and if `lower`
+;; still routed it through `lower-global-init` it would claim `L:code:f` a second
+;; time and emit a duplicate function definition.  `locals`/`fmap` cannot separate
+;; them: a nullary procedure that captures nothing is lowered with the same empty
+;; ones as the top level.  So the spine is walked explicitly here and `lower`'s
+;; `global-set!` arm just lowers its rhs (design D2).
+(define (lower-top e)
+  (cond
+    [(and (pair? e) (eq? (car e) 'seq))
+     `(seq ,(lower-top (cadr e)) ,(lower-top (caddr e)))]
+    [(and (pair? e) (eq? (car e) 'global-set!))
+     `(global-set! ,(cadr e) ,(lower-global-init (cadr e) (caddr e) '() '() #f))]
+    [else (lower e '() '() #f)]))
 
 ;; lower expr in a code context: locals = names bound here; fmap = var -> env index.
 ;; `self` = (name . label) naming the enclosing function's self-binding and its code
@@ -128,7 +172,7 @@
           [(assq x fmap) => (lambda (p) `(free-ref ,(cdr p)))]
           [else (error 'lower "unbound variable" x)])]
     [(global-ref ,s) `(global-ref ,s)]
-    [(global-set! ,s ,rhs) `(global-set! ,s ,(lower-global-init s rhs locals fmap self))]
+    [(global-set! ,s ,rhs) `(global-set! ,s ,(L rhs))]   ; NESTED: see lower-top
     [(if ,a ,b ,c) `(if ,(L a) ,(L b) ,(L c))]
     [(seq ,a ,b) `(seq ,(L a) ,(L b))]
     [(primcall ,op . ,args) `(primcall ,op ,@(map L args))]
@@ -192,6 +236,10 @@
 ;; the unit's call interface.  Everything else (a value initializer, and every
 ;; program/REPL-unit binding, where `*unit*` is the empty prefix) falls through to
 ;; the ordinary `lower`, so those paths are untouched.
+;;
+;; Reached only from `lower-top`, i.e. only for a `global-set!` on a form's top-level
+;; spine; a nested one is an assignment, not an initializer, and must not take this
+;; label (change: library-toplevel-set, design D2).
 ;;
 ;; This mirrors `lower`'s standalone-lambda arm exactly apart from the label: the
 ;; closure is still allocated and still captures the same free variables, since the

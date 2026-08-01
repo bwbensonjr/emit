@@ -330,7 +330,9 @@
 ;; with no access to the library's source.  `procs` is lower's own record of what it
 ;; emitted (`unit-procs`), so the table can never advertise a label the unit does not
 ;; define.  A value export, or a procedure of variable arity, gets no row and calls
-;; to it stay indirect.
+;; to it stay indirect -- and so does a binding the unit ASSIGNS, which `unit-procs`
+;; filters out, since its slot can hold a different closure after __init (change:
+;; library-toplevel-set, issue #14).
 (define (export-call-rows exports procs)
   (filter (lambda (x) x)
           (map (lambda (e)
@@ -385,6 +387,7 @@
 (define (compile-library* name imports exports body-forms import-tables dump keep-roots)
   (reset-counter!)
   (reset-unit-procs!)                ; this unit's own call interface (cross-unit-direct-calls)
+  (reset-unit-assigned!)             ; ...minus what it assigns (library-toplevel-set)
   (set-import-calls! (import-tables->call-alist import-tables))   ; calls INTO its dependencies
   (let* ([me+rf (collect-define-syntax body-forms)]
          [macro-env (car me+rf)]
