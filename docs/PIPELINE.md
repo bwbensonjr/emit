@@ -99,10 +99,12 @@ restrictions keep it honest:
   the output — which matters for a project whose deliverable is small binaries. A
   self-recursive function references its own name and so is never a candidate, with no
   separate recursion test.
-- **A conservative folding window.** Folding is confined to operands within ±(2^30 − 1),
-  which is exactly the range in which no `+`, `-`, or `*` can leave the 61-bit fixnum range.
-  The compiler is self-hosted and emit's own fixnums wrap silently, so a fold may not compute
-  first and range-check afterwards. Constant *propagation* has no window (copying computes
+- **A conservative folding window.** Folding is confined to operands within ±(2^28 − 1).
+  Two ceilings apply and the lower wins: ±(2^30 − 1) is the range in which no `+`, `-`, or `*`
+  can leave the 61-bit fixnum range, but a folded result must also survive being *emitted*, and
+  `encode-const` mis-encodes any literal at or above 2^57 (issue #7) — so the encodable range is
+  the binding constraint until that is fixed. The compiler is self-hosted and emit's own fixnums
+  wrap silently, so a fold may not compute first and range-check afterwards. Constant *propagation* has no window (copying computes
   nothing) but is restricted to **immediates** — a string or pair constant materializes at run
   time, so duplicating it would allocate a second object and break `eq?` between references
   that used to name one.

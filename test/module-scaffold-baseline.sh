@@ -79,6 +79,16 @@
 #     globals, not a binding group, so the inlining rule finds nothing to inline).  All
 #     72 demos' stdout is byte-identical before and after -- this pass may not alter a
 #     single program's value.  +1 new entry (square), the change's own demo.
+#   simplify-known-calls, follow-up (fold-window clamp) -- the fold window went from
+#     +/-(2^30 - 1) to +/-(2^28 - 1).  The first value bounded the ARITHMETIC (no + - *
+#     escapes the fixnum range) but not the ENCODING: `encode-const` mis-emits any literal
+#     at or above 2^57 (issue #7), so a folded result in [2^57, 2^60) came out wrong on the
+#     self-hosted door -- `(* 1073741823 1073741823)` printed correctly before the pass and
+#     wrongly after.  The clamp puts the largest foldable product (2^56 - 2^29 + 1) below the
+#     encoding cliff.  Verified: no demo's IR changed as a result (none folds an operand
+#     between 2^28 and 2^30), so the only manifest delta is +1 new entry (fold-boundary),
+#     the regression demo -- it evaluates each folded expression alongside the same
+#     expression computed at run time and asserts they agree.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

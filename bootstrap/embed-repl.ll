@@ -67059,7 +67059,7 @@ entry:
   store i64 %t46200, ptr %t47582
   %t47583 = or i64 %t47575, 4
   %t47584 = call i64 @rt_set_box(i64 %t46272, i64 %t47583)
-  %t47585 = call i64 @rt_set_box(i64 %t46273, i64 8589934584)
+  %t47585 = call i64 @rt_set_box(i64 %t46273, i64 2147483640)
   %t47586 = call i64 @rt_alloc_words(i64 2)
   %t47587 = inttoptr i64 %t47586 to ptr
   store i64 ptrtoint (ptr @code_7634 to i64), ptr %t47587

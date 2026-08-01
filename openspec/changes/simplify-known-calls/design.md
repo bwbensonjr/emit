@@ -133,6 +133,15 @@ the better trade:
 - It needs **no fixnum-boundary literal anywhere in the pass**, so it does not depend on the
   compiler being able to encode one. It also deleted the ~20 lines of overflow pre-check logic.
 
+**Clamped again after shipping.** ±(2^30 − 1) bounds the *arithmetic* but not the *encoding*. A
+folded result must also survive `encode-const`, which mis-emits any literal at or above 2^57
+(issue #7) — so a product in [2^57, 2^60) was folded correctly and then written out wrong, and
+`(* 1073741823 1073741823)` printed correctly before this pass and wrongly after, on the shipped
+door only. The window is now **±(2^28 − 1)**, whose largest product (2^56 − 2^29 + 1) sits below
+the encoding cliff; it can widen back to the arithmetic ceiling once #7 is fixed. The lesson is
+that "what the arithmetic can compute" and "what the emitter can write down" are two different
+ceilings, and the fold guard is bounded by the lower one.
+
 It is deliberately a *sufficient* condition, not an exact one: `(* 2000000000 2000000000)` fits a
 fixnum but is left for the runtime. Constant *propagation* carries no window at all — copying a
 constant computes nothing — so a large literal still propagates fine.

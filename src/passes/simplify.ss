@@ -32,21 +32,32 @@
 ;; afterwards -- it would be checking an already-wrapped value.
 ;;
 ;; Rather than pre-checking each operation against the fixnum boundary, fold only
-;; operands small enough that NO operation can leave the range.  Fixnums are a
-;; 61-bit signed payload (3 tag bits; src/runtime/runtime.c), so with both
-;; operands in +/-(2^30 - 1) the largest product is (2^30-1)^2 = 2^60 - 2^31 + 1,
-;; still under the 2^60 - 1 maximum, and sums/differences are nowhere near it.
-;; 2^30 - 1 is exactly the largest bound for which that holds.
+;; operands small enough that NO operation can leave the range.  TWO ceilings
+;; apply, and the lower one wins:
+;;
+;;   arithmetic -- fixnums are a 61-bit signed payload (3 tag bits;
+;;     src/runtime/runtime.c), so operands within +/-(2^30 - 1) give a largest
+;;     product of (2^30-1)^2 = 2^60 - 2^31 + 1, just under the 2^60 - 1 maximum.
+;;
+;;   ENCODING -- but a folded result must also survive being emitted, and
+;;     `encode-const` (src/emit.ss) builds a fixnum literal's tagged word as
+;;     `(* d 8)` in the COMPILER'S OWN arithmetic, which overflows for any
+;;     |d| >= 2^57.  So a result the multiply handled correctly can still be
+;;     written out wrong by the self-hosted compiler.  That is GitHub issue #7,
+;;     and until it is fixed the encodable range is the binding constraint.
+;;
+;; Hence +/-(2^28 - 1): the largest product is (2^28-1)^2 = 2^56 - 2^29 + 1, below
+;; the 2^57 encoding cliff, and sums are nowhere near either ceiling.  When #7 is
+;; fixed this may widen back to 2^30 - 1, the arithmetic ceiling -- and the unit
+;; tests pin the encoding property, so widening it early fails loudly.
 ;;
 ;; This is deliberately a SUFFICIENT condition, not an exact one: a fold whose
 ;; result would fit but whose operands are larger is simply left for the runtime.
 ;; The failure mode is "folds less", never "folds wrong" -- and unlike an exact
-;; boundary test, it needs no fixnum-boundary literal anywhere in this file.  That
-;; matters concretely: emit currently mis-encodes any literal at or above 2^57
-;; (`encode-const` computes the tagged word as `(* d 8)`, which itself overflows),
-;; so a compiler compiling THIS pass could not represent its own bounds -- the
-;; guard would silently become either useless or wrong.  See GitHub issue #7.
-(define sfy-fold-limit 1073741823)              ; 2^30 - 1
+;; boundary test, it needs no fixnum-boundary literal anywhere in this file, which
+;; matters because issue #7 means a compiler compiling THIS pass could not
+;; represent one.
+(define sfy-fold-limit 268435455)               ; 2^28 - 1
 
 (define (sfy-foldable? d)
   (and (integer? d) (exact? d)

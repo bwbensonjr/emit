@@ -55,4 +55,5 @@
 ## 7. Follow-ups raised by this change (not in scope)
 
 - [x] 7.1 File the `encode-const` overflow defect as a GitHub issue — filed as [#7](https://github.com/bwbensonjr/emit/issues/7)
+- [x] 7.3 **Clamp the fold window from ±(2^30 − 1) to ±(2^28 − 1)** — the original window bounded the arithmetic but not the *encoding*: `encode-const` mis-emits any literal at or above 2^57 (issue #7), so a folded result in [2^57, 2^60) came out wrong on the self-hosted door. This shipped briefly as a value-changing regression (`(* 1073741823 1073741823)`). Added `demos/fold-boundary.scm`, which evaluates each folded expression alongside the same expression computed at run time and asserts they agree — it reproduces the bug on the unclamped compiler and passes on the clamped one. Verified no existing demo's IR changed
 - [ ] 7.2 Consider widening `build-program` (`src/parse.ss:453`) to emit a `letrec` for the lambda-initialized subset of top-level defines, so a program with one non-lambda define does not lose top-level inlining entirely — separate change

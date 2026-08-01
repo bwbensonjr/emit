@@ -131,13 +131,28 @@
 
 (printf "\nfoldable window\n")
 
-(define lim 1073741823)                 ; 2^30 - 1, the pass's window
-(define fx-max 1152921504606846975)     ; 2^60 - 1, the actual fixnum ceiling
+(define lim 268435455)                  ; 2^28 - 1, the pass's window
+(define fx-max 1152921504606846975)     ; 2^60 - 1, the fixnum ceiling
+(define enc-max 144115188075855871)     ; 2^57 - 1, the encode-const ceiling (issue #7)
 
 (check "the largest product in the window folds, and stays a fixnum"
   (let ([r (simplify `(primcall %* (const ,lim) (const ,lim)))])
     (list r (<= (cadr r) fx-max)))
   `((const ,(* lim lim)) #t))
+
+(check "no folded result can exceed what encode-const can emit (issue #7)"
+  ;; The window is what keeps a fold from producing a literal the self-hosted
+  ;; compiler would write out wrong.  Widening sfy-fold-limit past the encoding
+  ;; ceiling must fail HERE rather than silently miscompile a user's program.
+  (list (<= (* sfy-fold-limit sfy-fold-limit) enc-max)
+        (<= (+ sfy-fold-limit sfy-fold-limit) enc-max))
+  '(#t #t))
+
+(check "an operand past the window is left for the runtime, which gets it right"
+  ;; the regression this clamp fixes: 1073741823^2 is a perfectly good fixnum,
+  ;; but encode-const cannot emit it, so it must NOT be folded
+  (simplify '(primcall %* (const 1073741823) (const 1073741823)))
+  '(primcall %* (const 1073741823) (const 1073741823)))
 
 (check "the most negative product in the window folds"
   (simplify `(primcall %* (const ,(- 0 lim)) (const ,lim)))

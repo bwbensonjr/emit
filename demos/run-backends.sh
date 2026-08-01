@@ -69,6 +69,7 @@ run3 counter   demos/counter.scm        3     # GC: closures + boxes under lli
 run3 countdown demos/countdown.scm      999   # 10M tail iters: musttail under lli
 run3 toplevel  demos/toplevel.scm       102
 run3 square    demos/square.scm         1156  # simplify: whole program folds to a constant
+run3 foldbound demos/fold-boundary.scm  '(#t #t #t #t #t)'  # fold == runtime at the fold-window edge
 run3 derived   demos/derived.scm        180
 run3 namedloop demos/named-let-loop.scm 42
 run3 naryarith demos/nary-arith.scm      43    # n-ary + - *, unary neg, identities

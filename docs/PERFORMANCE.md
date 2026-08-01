@@ -510,6 +510,13 @@ window rather than an exact fixnum-boundary test (the exact version could not su
 folding in the shipped compiler; filed as issue #7), and constant propagation is
 restricted to immediates so a string or pair literal is never duplicated into two objects.
 
+The window was subsequently clamped from ±(2^30 − 1) to **±(2^28 − 1)**: the first value bounded
+the *arithmetic* correctly but not the *encoding*, and a folded result in [2^57, 2^60) is
+mis-emitted by the self-hosted compiler (issue #7). That shipped briefly as a value-changing
+regression — `(* 1073741823 1073741823)` printed correctly before the pass and wrongly after, on
+the shipped door only. `demos/fold-boundary.scm` now pins fold-equals-runtime at the window edge
+on every door. When #7 is fixed the window can widen back to the arithmetic ceiling.
+
 B is unscheduled — it is small enough to be its own change with its own measurement on the
 Ackermann probe, and it should be sequenced after P5's remaining B-general question is settled,
 since the two overlap.
