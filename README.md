@@ -202,10 +202,14 @@ library-structured source are frozen under `historical/genesis/`.
 Hand-rolled `match` passes, one observable intermediate language per `--dump` stage:
 
 ```
-read (host) → prepend prelude → collect-toplevel → expand → parse+rename → recognize-let
-            → convert-assignments → convert-closures → lambda-lift+lower
-            → emit .ll → clang (+ runtime, + libgc)
+read source → collect-toplevel → expand → parse+rename+imports → inline-primitives
+            → recognize-let → convert-assignments → simplify → convert-closures
+            → lambda-lift+lower → emit .ll → clang (+ units, + runtime, + libgc)
 ```
+
+The standard library is not prepended: it is the auto-imported module `(scheme base)`,
+compiled to its own unit and linked (or JIT-loaded) alongside the program — see
+[`docs/MODULES.md`](docs/MODULES.md).
 
 Values are tagged 64-bit words. All 8 tags are assigned: fixnum, boolean, nil, pair,
 closure, box, symbol (interned), and an extended/header-word object (tag 7) hosting strings
@@ -213,7 +217,7 @@ closure, box, symbol (interned), and an extended/header-word object (tag 7) host
 (inexact reals — a boxed IEEE double, `HDR_FLONUM`; a double needs all 64 bits, so it cannot
 be an immediate). The boolean tag `001` is a misc-immediate family (a 5-bit subtype selects
 boolean vs. character vs. reserved singletons), so characters are **immediate** words carrying
-their Unicode codepoint — no heap object, no interning. Every Scheme function shares one `tailcc`
+their Unicode codepoint — no heap object, no interning. Every Scheme function shares one `fastcc`
 prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `musttail`
 (bounded stack verified at 10M iterations).
 

@@ -1,6 +1,21 @@
-;;; compile.ss -- driver for the core-lambda-slice compiler.
+;;; compile.ss -- the CHEZ-HOSTED driver for the compiler core.
 ;;;
-;;; Usage (run from the repo root):
+;;; NOT the everyday entry point.  Emit is self-hosting: `build/emit`
+;;; (verbs run/repl/build/lib) is the sole user-facing door, and `make` builds it
+;;; from the committed IR with LLVM alone -- no Chez anywhere.  See src/README.md
+;;; and docs/PIPELINE.md.
+;;;
+;;; What this file is still for is being a SECOND, INDEPENDENT HOST for the same
+;;; core sources.  It `include`s the very flat files the Chez-free `cat` assembly
+;;; concatenates, so running a program through both and diffing the emitted IR
+;;; cross-checks the self-hosted compiler against an implementation that shares
+;;; none of its runtime.  That is what the Chez-gated suites do (./run-dev-tests.sh:
+;;; self-emission equivalence, the self-hosting fixed point, --dump parity, and the
+;;; cross-door byte-identity checks); ./run-all-tests.sh needs none of it.  It also
+;;; still owns one capability the Chez-free door lacks -- the closed-world
+;;; tree-shaking AOT ship path (docs/MODULES.md, "Scope & limits").
+;;;
+;;; Usage, when you do want it (run from the repo root; needs `chez` on PATH):
 ;;;   chez --libdirs src --script src/compile.ss SRC.scm [-o OUT] [--dump]
 ;;;
 ;;; Reads the top-level forms from SRC.scm (a sequence of `define`s and
@@ -8,6 +23,11 @@
 ;;; with --dump), emits OUT.ll, and links it with the C runtime + libgc into the
 ;;; executable OUT.
 
+;; Chez's own bindings, for the effects below (ports, `process`, `system`, time).
+;; This form is read ONLY by Chez: compile.ss is the driver, and the `cat` assembly
+;; that feeds the self-hosted compiler its own source (CORE_FLAT in tools/regen.sh)
+;; lists the included files below but never this one -- so Emit never sees, and does
+;; not need to understand, `(chezscheme)`.
 (import (chezscheme))
 
 ;; The Chez-hosted driver includes the SAME flat source the Chez-free `cat`

@@ -194,7 +194,7 @@ D3 lesson recorded there).
 | simplify | same IL, smaller: inlines a singly-referenced lambda binding into its one call site, propagates immediate constants, folds `%+ %- %* %= %<` over constants, drops unreferenced effect-free bindings | `src/passes/simplify.ss` |
 | convert-closures | − `letrec`; `+ (closures ([x (fv…) le]…) body)` — every `le` is a lambda, guaranteed by the split above | `src/passes/convert-closures.ss` |
 | lambda-lift + lower | `(program (code …) entry)` with `(local x)｜(free-ref i)｜(make-closure …)｜(closure-block …)｜(app f (a…))`; a call to a statically-known closure becomes `(known-app label f (a…))`, or `(self-app label (a…))` for a self-call, so no code pointer is loaded (P5-B). An operator that resolved to an **imported** procedure with a recorded label and matching arity takes the same `known-app` path across the unit boundary (P5, cross-unit); in a **library** unit a top-level lambda binding is lifted under the stable label `libname:code:<name>` rather than a counter one, so a tree-shaken recompile spells it identically | `src/passes/lower.ss` |
-| emit | textual LLVM IR (opaque `ptr`, `tailcc`, `musttail`); the allocator is declared `align 8` so `-O2` can see through a closure's tag mask (P6-B); each cross-unit `known-app` label is `declare`d, as an imported global is | `src/emit.ss` |
+| emit | textual LLVM IR (opaque `ptr`, `fastcc`, `musttail`); the allocator is declared `align 8` so `-O2` can see through a closure's tag mask (P6-B); each cross-unit `known-app` label is `declare`d, as an imported global is | `src/emit.ss` |
 
 **Inspecting the stages (`--dump`).** Every door of the shipped binary prints the IL after
 each named pass to stderr — `build/emit run --dump prog.scm`, and likewise `build`, `lib`,
@@ -239,7 +239,7 @@ runtime stays the single definition of numeric semantics, intra-expression inter
 allocate on the hot path (mandelbrot: ~66% fewer GC collections), and — because a region never
 fires for flonum-free code — the compiler's own IR is byte-identical (`make regen` stays clean).
 This is intra-*expression* only (Option A): the `let`-temps that `expand-compare` introduces and
-the `tailcc` back-edge remain escape points that box, so it needs neither ANF nor a
+the `fastcc` back-edge remain escape points that box, so it needs neither ANF nor a
 calling-convention change.
 
 ---
