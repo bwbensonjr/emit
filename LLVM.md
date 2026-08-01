@@ -288,7 +288,10 @@ OpenSpec change filed yet; open one when acting on this.
 ### Closures
 
 Closure conversion runs before codegen. A closure is a heap object of
-`{ code_ptr, env_slot_0, ..., env_slot_n }`. Calls go indirect through `code_ptr`.
+`{ code_ptr, env_slot_0, ..., env_slot_n }`. A call goes indirect through `code_ptr`
+unless the callee is statically known — a closure-block binding, or an imported library
+procedure of matching arity — in which case its code label is called directly and the
+closure is passed only as `self` (docs/PERFORMANCE.md P5).
 Free variables are captured explicitly into env slots; there are no nested LLVM
 functions.
 
@@ -307,18 +310,28 @@ with `0`. That was fixed-arity only: it could not express dotted rest params, va
 
 **Emitted convention (decided by the calling-convention spike; now implemented in
 `emit.ss`).** Every Scheme function shares the widened prototype
-`tailcc i64 (i64 self, i64 argc, i64 a0 … i64 a{K-1}, ptr overflow)`:
+`fastcc i64 (i64 self, i64 argc, i64 a0 … i64 a{K-1}, ptr overflow)`:
 
 - `argc` — real argument count. Every callee checks it at entry: fixed-arity requires
   `argc == f`, variadic requires `argc >= f`; a mismatch calls `rt_arity_error` and aborts
   (non-zero exit) instead of miscomputing.
-- `a0..a{K-1}` — positional slots (`K` = whole-program max fixed arity, as today).
+- `a0..a{K-1}` — positional slots. `K` is the whole-program max fixed arity on the
+  single-module path; on the **modular** path — the one every shipped door takes, where a
+  closure built in one unit is called from another — it is pinned to a fixed **8**, so the
+  prototype agrees across separately-emitted modules.
 - `overflow` — pointer to a heap vector of args beyond `K` (or null). A variadic callee
   binds `rest` to `rt_build_rest(argc, fixed, K, slots, overflow)`, which walks arg indices
   `[fixed, argc)` — reading `slots[i]` for `i < K` (the positional slots spilled to a small
   array) and `overflow[i-K]` beyond — building a proper list. `apply` fills the positional
   slots with the leading args and the first list elements, then points `overflow` at the
   remaining flattened args (`rt_apply_argv`), so it is unbounded regardless of `K`.
+
+**Why `fastcc`, not `tailcc`** (change: `fix-high-arity-call-convention`). The spike and
+the M1 convention above both used `tailcc`. A *non-tail* `call tailcc` with a stack-passed
+argument — which happens as soon as a call exceeds the register-passable slots — does not
+preserve the caller's live arguments, so a high-arity non-tail call miscompiled. `fastcc`
+preserves them and still guarantees `musttail`, which is all the tail calls need, so the
+prototype moved to `fastcc` with no other change. See the header of `src/emit.ss`.
 
 The convention is now **fully consumed** (as of the variadic/`apply` change). A direct
 call passes the true `argc`, the first `K` args in the positional slots, and either
