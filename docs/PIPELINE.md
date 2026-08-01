@@ -117,25 +117,32 @@ library units, whose top-level defines are persistent globals rather than a bind
 dead-binding removal still apply to local `let`s everywhere. This is a performance asymmetry
 only; values are identical on every door.
 
-**Top-level defines and boxing.** `build-program` emits letrec\* semantics in one of three
-shapes. All-lambda defines become a plain `letrec`. Otherwise the defines that need a mutable
-location go into an enclosing `let` of `'()` initialized by `set!` in source order, and the
-lambda-initialized ones into a `letrec` between the two — outside the `set!`s so those
-initializers can call the functions, inside the `let` so the functions' bodies can read the
-boxed names:
+**Top-level defines and boxing.** `build-program` hands the whole group over as **one
+`letrec`**, mixed initializers and all — that is enough on its own, because the `letrec`
+lowering accepts a non-lambda initializer and fills such bindings in binding order, which is
+exactly `letrec*`. It deliberately decides nothing about storage. The only exception is a name
+defined more than once, which keeps a sequential `let` + `set!` shape: the renamer resolves a
+duplicated `letrec` binder to the *first* binding, while top-level redefinition is last-wins.
 
-```scheme
-(let ([n '()])                    ; defines that still need a box
-  (letrec ([f (lambda …)] …)      ; lambda-initialized defines: unboxed, inlinable
-    (set! n 1)                    ; their initializers, in source order
-    body …))
-```
+`convert-assignments` then splits the group three ways, in binding order:
 
-Hoisting the lambdas ahead of the other initializers is unobservable, because creating a
-closure is pure and cannot read what it captures. A name defined twice stays boxed — its
-definitions must share one location, and a `letrec` binding would shadow the boxed one. Before
-this split, a single `(define n 1)` boxed *every* define in the program and cost it all
-top-level inlining.
+| | condition | lowering |
+|---|---|---|
+| closure block | unassigned lambda | stays in the `letrec` — recursion and inlining unaffected |
+| plain | unassigned non-lambda whose initializer needs nothing from the group but an *earlier plain* binding | an ordinary nested `let` binding — no location at all |
+| boxed | anything else | `'()`-box filled by `set-box!` in binding order |
+
+The plain test follows from where each part is emitted: plain bindings nest outermost, so their
+initializers run before the closures exist and before any box is filled. Nesting rather than
+one parallel `let` is what lets a later initializer read an earlier one, preserving `letrec*`
+order. A binding that fails the test is boxed, which is always correct — the rule only trades
+precision away, never soundness.
+
+This is where `(define n 1)` stopped costing a heap box and an `unbox` per read. The old
+desugaring emitted `let` + `set!` here, so *every* define was assigned by construction and
+therefore boxed — the storage question was being answered in the wrong place, before the
+compiler could tell a `set!` the program wrote from one the desugaring invented
+(`docs/PERFORMANCE.md` P7).
 
 **Macros (`expand`).** `expand` is a fixpoint `syntax-rules` macro expander. Before
 `collect-toplevel`, the driver lifts every top-level `(define-syntax name (syntax-rules …))`
@@ -183,7 +190,7 @@ D3 lesson recorded there).
 | core | `(const d)｜x｜(if …)｜(lambda (x…) e)｜(call e e…)｜(primcall op e…)｜(let/letrec …)｜(seq …)｜(set! x e)` — `letrec*` parses to the same `letrec` node, since that lowering already gives letrec*'s left-to-right initialization | `src/parse.ss` |
 | inline-primitives | same core IL; direct unshadowed integrable call `(call cons a b)` → `(primcall %cons a b)`, value/apply/wrong-arity use `cons` → `(lambda (p…) (primcall %cons p…))`; a shadowed (alpha-renamed) binding is left untouched | `src/parse.ss` |
 | recognize-let | + `(let …)` from `(call (lambda …) …)` | `src/passes/recognize-let.ss` |
-| convert-assignments | − `set!`; `+ (primcall box/unbox/set-box! …)`; a `letrec` binder that is assigned (issue #8) or not lambda-initialized (issue #9) splits out into an enclosing boxed `let`, so what reaches `lower` as a closure block is all-lambda | `src/passes/convert-assignments.ss` |
+| convert-assignments | − `set!`; `+ (primcall box/unbox/set-box! …)`; splits a `letrec` group into closure-block / plain-`let` / boxed bindings (issues #8, #9 and P7), so what reaches `lower` as a closure block is all-lambda and only real mutation gets a box | `src/passes/convert-assignments.ss` |
 | simplify | same IL, smaller: inlines a singly-referenced lambda binding into its one call site, propagates immediate constants, folds `%+ %- %* %= %<` over constants, drops unreferenced effect-free bindings | `src/passes/simplify.ss` |
 | convert-closures | − `letrec`; `+ (closures ([x (fv…) le]…) body)` — every `le` is a lambda, guaranteed by the split above | `src/passes/convert-closures.ss` |
 | lambda-lift + lower | `(program (code …) entry)` with `(local x)｜(free-ref i)｜(make-closure …)｜(closure-block …)｜(app f (a…))` | `src/passes/lower.ss` |

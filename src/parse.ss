@@ -466,47 +466,39 @@
       [(eq? (caar bs) x) (loop (cdr bs) (+ n 1))]
       [else (loop (cdr bs) n)])))
 
+(define (duplicate-name? binds)
+  (let loop ([bs binds])
+    (cond
+      [(null? bs) #f]
+      [(> (name-count (caar bs) binds) 1) #t]
+      [else (loop (cdr bs))])))
+
 ;; Top-level defines -> one binding form with letrec* semantics.
 ;;
-;; All-lambda programs become a plain `letrec`.  Anything else used to send EVERY
-;; define down the `let` + `set!` path, where assignment conversion boxes all of
-;; them -- so a single `(define n 1)` cost the whole program its top-level
-;; inlining, since `simplify` cannot inline a boxed binding (change:
-;; simplify-known-calls; docs/PERFORMANCE.md P6).  Now only the defines that
-;; actually need boxing take that path, and the lambda-initialized ones are
-;; letrec-bound and stay inlinable:
+;; The group becomes a single `letrec`, mixed initializers and all.  That is
+;; enough on its own: the letrec lowering accepts a non-lambda initializer and
+;; fills such bindings in binding order (issue #9), which IS letrec*.  Deciding
+;; which of them actually need a mutable location is deliberately NOT done here --
+;; `convert-assignments` does it on the alpha-renamed IL, where it can tell a
+;; `set!` the program wrote from one a desugaring invented (P7).
 ;;
-;;   (let ([x '()] ...)                  ; defines that still need a box
-;;     (letrec ([f (lambda ...)] ...)    ; lambda-initialized defines
-;;       (set! x ...) ...                ; their initializers, in source order
-;;       pre ... value))
+;; Emitting `let` + `set!` here, as this used to, decided it in the wrong place:
+;; every define was assigned by construction, so every define was boxed, and a box
+;; is opaque to `simplify` -- `(define n 1)` cost a heap allocation and an `unbox`
+;; per read for a value that never changes.
 ;;
-;; The nesting is forced from both sides: the boxed group must be OUTSIDE so the
-;; lambdas' bodies can see those names, and the letrec must enclose the `set!`s so
-;; the remaining initializers see the lambdas.  Hoisting the lambdas ahead of the
-;; other initializers is unobservable because creating a closure is pure and cannot
-;; read the bindings it captures.  A name defined more than once stays boxed: its
-;; definitions must keep sharing one location, and a letrec binding would shadow
-;; the boxed one for the later `set!`.
+;; The exception is a name defined more than once.  The renamer resolves a
+;; duplicated letrec binder to the FIRST binding, whereas top-level redefinition
+;; is last-wins, so such a group keeps the sequential `let` + `set!` shape.
 (define (build-program binds pre value)
   (cond
     [(null? binds) (seq-forms pre value)]
-    [(andmap (lambda (b) (lambda-init? (cadr b))) binds)
-     `(letrec ,binds ,(seq-forms pre value))]
-    [else
-     (let* ([hoist? (lambda (b)
-                      (and (lambda-init? (cadr b))
-                           (= (name-count (car b) binds) 1)))]
-            [fns   (filter hoist? binds)]
-            [boxed (filter (lambda (b) (not (hoist? b))) binds)]
-            [rest  `(,@(map (lambda (b) `(set! ,(car b) ,(cadr b))) boxed)
-                     ,@pre
-                     ,value)]
-            [inner (if (null? fns) rest (list `(letrec ,fns ,@rest)))])
-       ;; `boxed` is never empty here -- this branch runs only when some define is
-       ;; not lambda-initialized, and such a define is never hoisted.
-       `(let ,(map (lambda (b) (list (car b) '(quote ()))) boxed)
-          ,@inner))]))
+    [(duplicate-name? binds)
+     `(let ,(map (lambda (b) (list (car b) '(quote ()))) binds)
+        ,@(map (lambda (b) `(set! ,(car b) ,(cadr b))) binds)
+        ,@pre
+        ,value)]
+    [else `(letrec ,binds ,(seq-forms pre value))]))
 
 ;; internal defines: a body whose leading forms are (define ...) desugars via the
 ;; SAME builder as the top level, but with R7RS body rules -- the defines must

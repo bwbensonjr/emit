@@ -145,6 +145,19 @@
 #     letrec*'s left-to-right initialization (issue #9).  Verified against a 77-demo
 #     before/after capture: EXACTLY ONE demo differs, the new letrec-star, which did not
 #     compile before.  The other 76 are byte-identical in IR and stdout.  +1 new entry.
+#   P7 -- box only what is really mutated (docs/PERFORMANCE.md P7).  build-program used
+#     to desugar a non-lambda top-level define to `let` + `set!`, so EVERY define looked
+#     assigned and every one was boxed; `(define n 1)` cost a heap box and an unbox per
+#     read.  build-program now hands convert-assignments one letrec group and the
+#     plain/boxed/closure decision is made there, on alpha-renamed IL where a real set!
+#     is distinguishable from a desugaring's.  Verified against a 77-demo before/after
+#     capture: 12 demos' IR changed -- apply, case-cxr, char-intern, internal-define,
+#     letrec-init, letrec-star, mandelbrot, read-all, record-print, records, symbol-gc,
+#     toplevel -- and NONE grew.  Box operations across the whole suite fell 144 -> 58
+#     (-60%); toplevel, mandelbrot, records, read-all and internal-define went to ZERO
+#     box/unbox/set_box calls, while `counter` -- the demo whose subject is set! on a
+#     captured variable -- correctly kept all of its.  All 77 demos' stdout is
+#     byte-identical.  No new entries.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

@@ -21,7 +21,7 @@ speed items in this list.
 | [P4](#p4-on-codepoint-string-indexing) | O(n) codepoint string indexing | speed | low–med | med–high | `codepoint-string-indexing` | ☑ |
 | [P5](#p5-arithmetic-and-call-overhead-ackermann-benchmark) | Arithmetic & call overhead (Ackermann benchmark) | speed | high | med–high | `inline-fixnum-arith-and-self-calls` (A + B-self) | ◐ |
 | [P6](#p6-no-optimizer-pass-known-call-inlining-and-constant-folding) | No optimizer pass: known-call inlining & constant folding | speed + size | med–high | med | `simplify-known-calls` (A) | ◐ |
-| [P7](#p7-boxing-driven-by-desugaring-rather-than-by-mutation) | Boxing driven by desugaring rather than by mutation | speed + size | med | low–med | — | ☐ |
+| [P7](#p7-boxing-driven-by-desugaring-rather-than-by-mutation) | Boxing driven by desugaring rather than by mutation | speed + size | med | low–med | — | ☑ |
 
 Legend — **Value**: benefit if fixed. **Cost**: rough implementation effort/risk. These are
 estimates to aid sequencing, not commitments.
@@ -547,7 +547,37 @@ since the two overlap.
 
 ## P7 — Boxing driven by desugaring rather than by mutation
 
-**Status:** ☐ not started
+**Status:** ☑ done
+
+**Outcome.** `build-program` no longer decides storage. It hands the whole define group over as
+one `letrec` — legal since issue #9 made non-lambda initializers work, and already `letrec*`
+because such bindings are filled in binding order — and `convert-assignments` splits it three
+ways on the alpha-renamed IL, where a `set!` the program wrote is distinguishable from one a
+desugaring invented: unassigned lambdas stay a closure block, an unassigned non-lambda whose
+initializer needs nothing from the group but an earlier plain binding becomes an ordinary nested
+`let`, and only the remainder is boxed. A name defined twice keeps the old `let` + `set!` shape,
+because the renamer resolves a duplicated `letrec` binder to the first binding while top-level
+redefinition is last-wins.
+
+Across the 77-demo suite, box operations fell **144 → 58 (−60%)**. `toplevel`, `mandelbrot`,
+`records`, `read-all` and `internal-define` dropped to **zero** `box`/`unbox`/`set-box!` calls;
+`counter`, whose subject is `set!` on a captured variable, correctly kept all of its. 12 demos'
+IR changed, **none grew** (`internal-define` −9.6%, `toplevel` −3.3%, `read-all` −3.1%), and all
+77 stdout-identical. The headline case now folds outright:
+
+```scheme
+(define n 1) (define (f) n) (display (f))
+;; ==== after simplify ====      (was: box + set-box! + unbox)
+(primcall %display (const 1))
+```
+
+The compiler's own binaries grew ~1.6%, which decomposes the same way P6's did: compiling the
+*same* source with the new compiler is −9,736 bytes, and the rest is the classifier's own code.
+As predicted below, the compiler's top-level state (`counter`, `*code-defs*`, `sym-table`) is
+genuinely assigned and rightly stays boxed, so it is not the population this helps — user
+programs are.
+
+**Original analysis follows.**
 
 **Symptom.** A binding the program never mutates is still given a heap box, a `set-box!`, and
 an `unbox` on every read. The clearest case is a plain top-level constant:
@@ -638,7 +668,8 @@ calls. The textbook `letrec*` expansion (`(let ((v '())) (set! v i) ...)`) measu
 IR, twice the `unbox` count, and loses P5's direct self-call entirely, where an expansion onto
 `letrec` is byte-identical to the built-in form.
 
-**OpenSpec change:** _none yet._
+**OpenSpec change:** none — landed directly, as a follow-on to P6 with the same
+before/after IR capture discipline.
 
 ---
 

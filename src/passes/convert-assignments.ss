@@ -32,11 +32,64 @@
     [(apply ,f . ,args) (union (fa f) (union* (map fa args)))]
     [(call ,f . ,args) (union (fa f) (union* (map fa args)))]))
 
-;; letrec-bound names whose initializer is not a lambda (issue #9).  Collected
-;; globally by name, which is sound because the IL is alpha-renamed before this
-;; pass -- the same assumption `find-assigned` already makes.
-(define (find-letrec-boxed e)
-  (define (fb e) (find-letrec-boxed e))
+;; Every symbol occurring in reference position in `e`.  The IL is alpha-renamed
+;; before this pass, so a name identifies its binding uniquely and no scope
+;; tracking is needed.
+(define (il-refs e)
+  (define (r e) (il-refs e))
+  (define (r* es) (union* (map r es)))
+  (match e
+    [(const ,d) '()]
+    [,x (guard (symbol? x)) (list x)]
+    [(global-ref ,s) '()]
+    [(global-set! ,s ,rhs) (r rhs)]
+    [(set! ,x ,rhs) (union (list x) (r rhs))]
+    [(if ,a ,b ,c) (r* (list a b c))]
+    [(seq ,a ,b) (r* (list a b))]
+    [(primcall ,op . ,args) (r* args)]
+    [(lambda ,params ,body) (r body)]
+    [(let ,binds ,body) (union (r* (map cadr binds)) (r body))]
+    [(letrec ,binds ,body) (union (r* (map cadr binds)) (r body))]
+    [(apply ,f . ,args) (r* (cons f args))]
+    [(call ,f . ,args) (r* (cons f args))]))
+
+(define (il-lambda? e) (and (pair? e) (eq? (car e) 'lambda)))
+
+;; Split one letrec group three ways, in binding order (P7).  `assigned` is the
+;; set of names the PROGRAM assigns -- not the set that ends up boxed, which is
+;; what this computes.
+;;
+;;   keep  -- an unassigned lambda: stays in the letrec, lowered as a closure
+;;            block, so recursion and `simplify`'s inlining are unaffected
+;;   plain -- an unassigned non-lambda whose initializer references nothing in the
+;;            group except an EARLIER plain binding: an ordinary nested `let`
+;;            binding, no location at all
+;;   boxed -- everything else: a '()-box filled by `set-box!` in binding order
+;;
+;; The `plain` test is what it is because of where each part is emitted: plain
+;; bindings nest OUTSIDE, so their initializers run before the closures exist and
+;; before any box is filled.  Referencing an earlier plain binding is therefore
+;; fine and anything else in the group is not.  A binding that fails the test is
+;; boxed, which is always correct -- the rule only ever trades precision away.
+(define (classify-letrec binds assigned)
+  (let ([names (map car binds)])
+    (let loop ([bs binds] [plain '()] [boxed '()] [keep '()])
+      (if (null? bs)
+          (list (reverse plain) (reverse boxed) (reverse keep))
+          (let ([b (car bs)])
+            (cond
+              [(mem? (car b) assigned) (loop (cdr bs) plain (cons b boxed) keep)]
+              [(il-lambda? (cadr b))   (loop (cdr bs) plain boxed (cons b keep))]
+              [(null? (filter (lambda (x)
+                                (and (mem? x names) (not (mem? x (map car plain)))))
+                              (il-refs (cadr b))))
+               (loop (cdr bs) (cons b plain) boxed keep)]
+              [else (loop (cdr bs) plain (cons b boxed) keep)]))))))
+
+;; the letrec bindings that end up boxed, program-wide -- these need `unbox` at
+;; every reference, exactly like an assigned variable
+(define (find-letrec-boxed e assigned)
+  (define (fb e) (find-letrec-boxed e assigned))
   (define (binds-of bs) (union* (map (lambda (b) (fb (cadr b))) bs)))
   (match e
     [(const ,d) '()]
@@ -50,16 +103,14 @@
     [(lambda ,params ,body) (fb body)]
     [(let ,binds ,body) (union (binds-of binds) (fb body))]
     [(letrec ,binds ,body)
-     (union (map car (filter (lambda (b) (not (il-lambda? (cadr b)))) binds))
+     (union (map car (cadr (classify-letrec binds assigned)))
             (union (binds-of binds) (fb body)))]
     [(apply ,f . ,args) (union (fb f) (union* (map fb args)))]
     [(call ,f . ,args) (union (fb f) (union* (map fb args)))]))
 
-(define (il-lambda? e) (and (pair? e) (eq? (car e) 'lambda)))
-
 (define (convert-assignments prog)
   (define assigned (find-assigned prog))
-  (define boxed-names (union assigned (find-letrec-boxed prog)))
+  (define boxed-names (union assigned (find-letrec-boxed prog assigned)))
   (define (asgd? x) (mem? x boxed-names))
   ;; rename assigned binders to temps, box them at the top of the (converted)
   ;; body; return (list new-binders new-body)
@@ -99,47 +150,44 @@
          (let* ([nx+body (rebind xs (cvt body))]
                 [nx (car nx+body)] [body^ (cadr nx+body)])
            `(let ,(map list nx es) ,body^)))]
-      ;; Split the group: bindings that need no box stay in the letrec, so
-      ;; recursive functions keep their closure-block lowering (and stay inlinable
-      ;; by `simplify`); the rest move to an enclosing `let` of boxes filled by
-      ;; `set-box!` inside the letrec body, in binding order.  That is the shape
-      ;; `build-program` already uses for mixed top-level defines.
-      ;;
-      ;; Two kinds of binding take the boxed path, for different reasons:
-      ;;   * ASSIGNED (issue #8).  The pass used to assume letrec names are never
-      ;;     set! and skip rebinding them -- but `find-assigned` does report them,
-      ;;     so every reference still became `(unbox f)` and every assignment
-      ;;     `(set-box! f e)` against a binder that was never boxed.  Those ran on
-      ;;     the raw closure (rt_unbox reads word 0 = its CODE POINTER), so
-      ;;     calling a redefined top-level function crashed.
-      ;;   * NON-LAMBDA (issue #9).  `lower` lowers a letrec group through the
-      ;;     two-phase closure-block protocol, which only makes sense for lambdas;
-      ;;     it used to reject anything else with an internal `match` failure, so
-      ;;     `(letrec ((x (car (list 1 2)))) x)` -- legal R7RS -- crashed the
-      ;;     compiler.  A location holds the value instead.
-      ;;
-      ;; What stays in the letrec is therefore always all-lambda, which is what
-      ;; `lower` requires.  Hoisting those lambdas ahead of the boxed initializers
-      ;; is unobservable because creating a closure is pure and cannot read what it
-      ;; captures; the boxed ones keep their source order among themselves, which
-      ;; is the left-to-right initialization R7RS `letrec*` specifies.  A boxed
-      ;; binding starts as '(), so an initializer that reads a later one -- an
-      ;; error under R7RS -- sees '() rather than crashing.
+      ;; The three-way split (see classify-letrec).  What stays in the letrec is
+      ;; always all-lambda, which is what `lower` requires; the rest becomes plain
+      ;; nested `let` bindings or '()-boxes.  Three histories meet here:
+      ;;   * ASSIGNED (issue #8) -- a letrec binder that IS set! must be boxed.
+      ;;     This pass used to assume letrec names never are, so references still
+      ;;     became `(unbox f)` against a binder that was never boxed, i.e. against
+      ;;     the raw closure (rt_unbox reads word 0 = its CODE POINTER).
+      ;;   * NON-LAMBDA (issue #9) -- `lower` lowers a letrec group through the
+      ;;     two-phase closure-block protocol, which only makes sense for lambdas.
+      ;;   * NEITHER (P7) -- a non-lambda binding that is never assigned and whose
+      ;;     initializer needs nothing from the group does not need a location at
+      ;;     all.  It used to get one anyway, which is why `(define n 1)` cost a
+      ;;     heap box and an `unbox` per read: `build-program` desugared it to
+      ;;     `set!`, so it merely LOOKED assigned.  build-program now hands over a
+      ;;     plain letrec group and this is where the question is settled.
       [(letrec ,binds ,body)
-       (let ([boxed (filter (lambda (b) (asgd? (car b))) binds)]
-             [keep  (filter (lambda (b) (not (asgd? (car b)))) binds)])
-         (if (null? boxed)
-             `(letrec ,(map (lambda (b) (list (car b) (cvt (cadr b)))) binds) ,(cvt body))
-             (let* ([filled (fold-right
-                              (lambda (b acc)
-                                `(seq (primcall set-box! ,(car b) ,(cvt (cadr b))) ,acc))
-                              (cvt body) boxed)]
-                    [inner (if (null? keep)
-                               filled
-                               `(letrec ,(map (lambda (b) (list (car b) (cvt (cadr b)))) keep)
-                                  ,filled))])
-               `(let ,(map (lambda (b) (list (car b) '(primcall box (const ())))) boxed)
-                  ,inner))))]
+       (let* ([c     (classify-letrec binds assigned)]
+              [plain (car c)] [boxed (cadr c)] [keep (caddr c)]
+              ;; innermost: fill the boxes in binding order, then the body
+              [filled (fold-right
+                        (lambda (b acc)
+                          `(seq (primcall set-box! ,(car b) ,(cvt (cadr b))) ,acc))
+                        (cvt body) boxed)]
+              ;; the closure block, if any lambda survived unassigned
+              [with-fns (if (null? keep)
+                            filled
+                            `(letrec ,(map (lambda (b) (list (car b) (cvt (cadr b)))) keep)
+                               ,filled))]
+              [with-boxes (if (null? boxed)
+                              with-fns
+                              `(let ,(map (lambda (b)
+                                            (list (car b) '(primcall box (const ()))))
+                                          boxed)
+                                 ,with-fns))])
+         ;; plain bindings nest OUTSIDE, in binding order, so a later initializer
+         ;; can read an earlier one and letrec* order is preserved
+         (fold-right (lambda (b acc) `(let ((,(car b) ,(cvt (cadr b)))) ,acc))
+                     with-boxes plain))]
       [(apply ,f . ,args) `(apply ,(cvt f) ,@(map cvt args))]
       [(call ,f . ,args) `(call ,(cvt f) ,@(map cvt args))]))
   (cvt prog))
