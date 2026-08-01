@@ -1,10 +1,31 @@
-## MODIFIED Requirements
+## ADDED Requirements
 
-<!-- The "Library export table" block below carries the withheld-call-row paragraph and its two
-     scenarios from `library-toplevel-set` (issue #14), which modifies the same requirement and was
-     synced to the main spec first.  They are repeated here so that syncing THIS change is a no-op
-     on that rule rather than a silent regression of it: a MODIFIED requirement replaces the main
-     spec's block wholesale, so whichever of the two changes syncs last must carry both. -->
+### Requirement: A library unit may assign its own top-level binding
+
+A compilation unit SHALL be permitted to `set!` a name it defines at its own top level, per R7RS
+§5.3.1 (a definition introduces a mutable location). The assignment SHALL store into that unit's
+global slot, so that every subsequent read of the binding — from within the unit, and from every
+importing unit or program — observes the assigned value.
+
+Assignment to a binding the unit does **not** own SHALL remain an error: an **imported** binding
+(the slot belongs to the exporting unit) and a **primitive** (there is no slot) SHALL both be
+rejected at compile time with a diagnostic. A REPL session global SHALL remain assignable.
+
+#### Scenario: A library assigns its own exported procedure
+
+- **WHEN** a library defines `f` and also defines `bump` as a procedure whose body is
+  `(set! f <new-lambda>)`, and the library is compiled
+- **THEN** the library compiles without error
+- **AND** an importing program that calls `f`, then calls `bump`, then calls `f` again observes the
+  original value first and the assigned value second
+
+#### Scenario: Assignment to an imported binding is still rejected
+
+- **WHEN** a library imports `(scheme base)` and its body assigns an imported name such as
+  `(set! car …)`
+- **THEN** compilation fails with a diagnostic naming the binding, and no unit is emitted
+
+## MODIFIED Requirements
 
 ### Requirement: Library export table
 
@@ -67,27 +88,3 @@ longer points to. The binding SHALL still be exported and callable.
 - **THEN** only the top-level initializer takes the stable, name-derived label `mylib:code:f`; the
   assigned lambda is hoisted under an ordinary counter-derived label
 - **AND** the emitted unit defines each code label exactly once and links
-
-## ADDED Requirements
-
-### Requirement: Library procedure code labels are stable across pruning
-
-A library top-level procedure's code label SHALL be derived from its mangled binding name rather
-than from the compilation's gensym counter, so that the label is identical whether the unit is
-compiled whole or recompiled as a tree-shaken subset. Labels for inner and anonymous lambdas, and
-for all program-unit code, SHALL be unaffected.
-
-This is what makes a cross-unit direct call possible at all: the AOT tree-shake recompiles a unit
-against a root set derived from the very program that must name the callee, so a counter-derived
-label is not knowable by that program.
-
-#### Scenario: The same procedure has the same label whole and pruned
-
-- **WHEN** a library is compiled whole, and then recompiled as a tree-shaken subset that still
-  contains a given exported procedure
-- **THEN** that procedure's code label is identical in both units
-
-#### Scenario: Program-unit and inner-lambda labels are unchanged
-
-- **WHEN** a program with nested and anonymous lambdas is compiled
-- **THEN** its code labels are numbered exactly as before this change

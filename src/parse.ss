@@ -634,17 +634,23 @@
 ;; (issue #5).  Before, the set! arm assumed every target was a renamed local and
 ;; left the bare symbol in place, so a later pass died with "unbound variable" --
 ;; even though reading the same name worked.  Resolve it the way a read is
-;; resolved, and admit exactly the one case that is meaningful and sound:
+;; resolved, and admit the two cases where the slot being written belongs to the
+;; unit doing the writing:
 ;;
 ;;   REPL session global (`n.gN`)  -> (global-set! n.gN e).  The slot belongs to
 ;;     this session and nothing else can be holding its code, so assigning it is
 ;;     ordinary mutation.
-;;   another unit's export (`lib:x`) -> ERROR.  A unit's globals are written only
-;;     by its own __init, and cross-unit direct calls depend on that: a program
-;;     that direct-calls `lib:code:f` would keep calling the code that was there
-;;     while the slot pointed somewhere else (design D4 of cross-unit-direct-calls).
-;;   this unit's own top level (the symbol IS the name) -> ERROR, unchanged.  Same
-;;     hazard as above, from the inside; see the follow-up issue.
+;;   this unit's own top level (the symbol IS the name) -> (global-set! name e),
+;;     which R7RS 5.3.1 requires: a definition introduces a MUTABLE location
+;;     (change: library-toplevel-set, issue #14).  The name is recorded as assigned,
+;;     which withholds its direct-call row from the unit's export table -- an
+;;     importer learns a label only from that table, so a label is published only for
+;;     a binding whose closure cannot move after __init.  That is the invariant
+;;     cross-unit direct calls rest on; it used to be spelled as a blanket
+;;     prohibition here (design D4 of cross-unit-direct-calls, amended).
+;;   another unit's export (`lib:x`) -> ERROR.  A unit's globals are written only by
+;;     its own code; the exporter's table has already been published, so a foreign
+;;     store could invalidate a label this unit never saw.
 ;;   a primitive -> ERROR; there is no slot to store into.
 ;;
 ;; The three cases are told apart by the symbol's shape, which the three binders
@@ -657,9 +663,12 @@
        (error 'repl "cannot assign to an imported binding" name)]
       [(eq? (binding-kind b) 'primitive)
        (error 'repl "cannot assign to a primitive" name)]
-      [(eq? (binding-sym b) name)
-       (error 'repl "cannot assign to a unit's top-level binding" name)]
-      [else `(global-set! ,(binding-sym b) ,rhs)])))
+      [else
+       ;; a unit's own top-level binding is spelled by its plain name; a session
+       ;; global is `n.gN` and is never advertised in an export table, so it needs
+       ;; no record.
+       (when (eq? (binding-sym b) name) (add-unit-assigned! name))
+       `(global-set! ,(binding-sym b) ,rhs)])))
 
 ;; Post-rename resolution: a bare symbol that is not bound by an enclosing
 ;; lambda/let/letrec is a top-level reference.  Map each through the typed scope

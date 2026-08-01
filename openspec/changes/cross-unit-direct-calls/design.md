@@ -125,6 +125,20 @@ break the third and must revisit this decision:
    lexical local reaches `lower` as a free variable and raises `lower: unbound variable`.
    Verified on both a program (`(set! car …)`) and a library body (a unit assigning its own
    exported binding) — both are rejected at compile time.
+
+   **SUPERSEDED by `library-toplevel-set` (issue #14).** A unit MAY now assign its own top-level
+   binding, as R7RS §5.3.1 requires; assignment to an *imported* name is still an error. What
+   replaces this leg is the narrower property the direct call actually needs, stated positively:
+
+   > a unit's export table records a call label only for a binding whose slot cannot be
+   > reassigned after `__init` — i.e. a fixed-arity top-level lambda the unit does not itself
+   > assign.
+
+   That is sufficient because this table is the *only* channel by which an importer learns a
+   label (`import-tables->call-alist` → `known-import`): with no row, the call is lowered
+   indirectly and reads the slot on every call, which is correct by construction. See design D1
+   and D4 of `library-toplevel-set` for the mechanism (`*unit-assigned*`, filtered at
+   `unit-procs`) and for why the whole and pruned tables are allowed to differ.
 3. **A REPL redefinition allocates a fresh *program* global.** Under the generation-mangling
    scheme `(define car …)` binds `car` to a new `car.gN` slot consed on top of the session
    environment; `scheme.base:car` is untouched. Verified interactively: after redefining `car`,

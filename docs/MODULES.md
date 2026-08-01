@@ -196,6 +196,10 @@ mangled global, and the **call** rows — for each export whose initializer is a
 its code label and that arity, so an importer can emit a direct call to the procedure's code with
 no access to the library's source (change: `cross-unit-direct-calls`).
 
+A call row is recorded only for a binding whose slot cannot move after `__init`. A binding the
+library **assigns** therefore gets a symbol row but no call row, however its initializer is shaped
+(change: `library-toplevel-set`) — see *Cross-unit direct calls* under Semantics.
+
 The four doors — `emit lib` / `emit build` / `emit run` / `emit repl` — are verbs of a single
 `emit` binary, the sole user-facing entry point (change: `emit-cli-unification`).
 
@@ -238,13 +242,23 @@ session** (and into the compiler's own build), as if the source began with `(imp
   captured environment; only the four-instruction code-pointer chain disappears. An arity
   mismatch, a value export, or a variadic export keeps the indirect path, so arity errors trap
   exactly as before. The importing module `declare`s each label it names; no linkage change is
-  needed, as library code labels already have external linkage. This rests on a library global
-  being assigned once by its unit's `__init` and never reassigned — true on every door today (a
-  `set!` of a unit's own top-level binding, or of an imported one, is a compile error (a REPL
-  *session* global is assignable — issue #5 — but that is a program slot, not a unit's), and a
-  REPL redefinition binds a
-  fresh *program* global rather than touching the library's slot), and a prerequisite any future
+  needed, as library code labels already have external linkage. This rests on the callee's slot
+  still holding the closure its label belongs to, which the export table — the only channel by
+  which an importer learns a label — enforces by recording a label only for a binding no unit can
+  reassign after `__init`. Three things make that hold on every door: assignment to an *imported*
+  binding is a compile error, so no unit writes another unit's slot; a binding a unit assigns
+  **itself** has its call row withheld (below); and a REPL redefinition binds a fresh *program*
+  global rather than touching the library's slot (a REPL *session* global is assignable — issue #5
+  — but that is a program slot, not a unit's). The third is a prerequisite any future
   library-reload feature would have to revisit.
+- **A library may `set!` its own top-level binding** — R7RS §5.3.1: a definition introduces a
+  mutable location, so a library procedure may reassign a name its own library defines, and every
+  reader (the unit's other procedures, an importing program, a REPL session) sees the new value
+  (change: `library-toplevel-set`, issue #14). The cost is the direct call: that binding's call row
+  is withheld, so calls to it read the slot on each call. Assignment to an **imported** binding
+  remains an error — the unit does not own that slot, and the exporter's table has already been
+  published. A non-`define` form at a library top level, including a top-level `set!`, is currently
+  dropped rather than lowered (issue #16), so the assignment must live inside a procedure body.
 - **Artifacts** — each library compiles to `<artifacts>/<name>.ll` plus a readable
   `<name>.exports` table (`(NAME ((external . "mangled") …) ((external "label" arity) …))`) and a
   `<name>.stamp` sidecar

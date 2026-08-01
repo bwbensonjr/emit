@@ -54,6 +54,7 @@ run_suite "REPL persistent host"      test/repl-host-tests.sh
 run_suite "define-record-type syntax" test/record-type-syntax-tests.sh
 run_suite "inline arith + self-call IR" test/inline-arith-self-call-tests.sh
 run_suite "cross-unit direct calls"   test/cross-unit-direct-call-tests.sh
+run_suite "library top-level set!"    test/library-toplevel-set-tests.sh
 run_suite "module vertical-slice (REPL)" test/modules-repl-tests.sh
 run_suite "module run door (emit run)" test/modules-run-tests.sh
 run_suite "emit build + program resolver" test/emit-build-tests.sh
