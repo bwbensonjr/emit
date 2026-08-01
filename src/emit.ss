@@ -1271,12 +1271,23 @@
 ;; slot, which is referenced-not-defined here and so lands in `external` below.
 ;; No imported bindings are produced in this change, so this stays unexercised
 ;; until Stage 1 populates imports.
-(define (emit-repl-module prog n)
+;; `prior` (optional) lists the global slots the SESSION has already emitted, so a
+;; form that merely ASSIGNS an existing global does not re-define its slot (issue
+;; #5).  Both a define and a `set!` lower to `global-set!`, so the L-code alone
+;; cannot tell "introduces this slot" from "stores into that one" -- before `set!`
+;; on a global was allowed, every `global-set!` came from a define and so always
+;; introduced a fresh generation, and scanning the form was enough.  Now it is not:
+;; without `prior`, `(set! n 7)` would emit a second `@"n.g0" = global i64 0` and the
+;; JIT would reject the module with a duplicate-definition error.  Defaults to '()
+;; (every scanned global is new), which is the old behaviour exactly.
+(define (emit-repl-module prog n . opt)
   (reset-emit!) (reset-symbols!)
   (set! *arity* repl-arity)
   (repl-check-arity prog)
-  (let* ([defd+refd (repl-scan-globals prog)]
-         [defd (car defd+refd)] [refd (cadr defd+refd)])
+  (let* ([prior (if (pair? opt) (car opt) '())]
+         [defd+refd (repl-scan-globals prog)]
+         [defd (diff (car defd+refd) prior)]      ; slots THIS form introduces
+         [refd (cadr defd+refd)])
     (let ([external (diff refd defd)]
           [name (string-append "__repl_" (number->string n))])
       (match prog

@@ -121,6 +121,10 @@
                                    (if dn
                                        (string-append "define " (symbol->string dn))
                                        (string-append "form " (number->string (+ *repl-n* 1)))))]
+                  ;; the slots the session already has, snapshotted BEFORE this form
+                  ;; registers its own define -- so a `set!` of an existing global
+                  ;; references its slot instead of re-defining it (issue #5).
+                  [prior (map cdr (vector-ref *repl-env* 0))]
                   [il (repl-lower-form *repl-env* (repl-expand-form form))])
              (d "parse+rename" il)
              ;; the session's imported procedures are direct-callable from this form
@@ -128,7 +132,7 @@
              ;; library load left behind can leak into a session with no imports.
              (set-import-calls! *repl-calls*)
              (let ([lc (repl-lcode il d)])
-               (let ([m (emit-repl-module lc (+ *repl-n* 1))])
+               (let ([m (emit-repl-module lc (+ *repl-n* 1) prior)])
                  (set! *repl-n* (+ *repl-n* 1))
                  (cons (quote ok) (cons (car m) (cadr m)))))))]))))
 

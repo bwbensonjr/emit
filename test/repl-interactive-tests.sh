@@ -72,6 +72,47 @@ check forward-ref-rejected --no-prelude "11" <<'EOF'
 (+ b 1)
 EOF
 
+# issue #5: `set!` on a global defined earlier in the session.  Referencing one
+# always worked; assigning it was rejected as unbound, because resolve-globals'
+# set! arm assumed every target was a renamed local.  The store must hit the SAME
+# slot the define created, so a closure compiled before the set! sees the new value.
+check set-global --no-prelude "$(printf '5\n7\n7\n8')" <<'EOF'
+(define n 5)
+n
+(define (get) n)
+(set! n 7)
+n
+(get)
+(set! n (+ n 1))
+n
+EOF
+
+# ... and a define AFTER a set! still allocates a fresh generation
+check set-then-redefine --no-prelude "40" <<'EOF'
+(define n 1)
+(set! n 2)
+(define n 30)
+(set! n 40)
+n
+EOF
+
+# issue #5: what `set!` must still REFUSE.  An unbound name is an error as before;
+# an IMPORTED binding is refused because a unit's globals are written only by its
+# own __init, which is what cross-unit direct calls rest on (design D4 of
+# cross-unit-direct-calls) -- and the session recovers either way.
+check set-unbound-rejected --no-prelude "9" <<'EOF'
+(set! nope 1)
+(define ok 9)
+ok
+EOF
+
+check set-imported-rejected "" "$(printf '3\n3')" <<'EOF'
+(define (use-len xs) (length xs))
+(use-len (quote (1 2 3)))
+(set! length 1)
+(use-len (quote (1 2 3)))
+EOF
+
 # spec: interned symbols stay eq? across forms (shared symbol table)
 check symbol-eq-persist --no-prelude "#t" <<'EOF'
 (define s (quote foo))

@@ -67,6 +67,20 @@
 ;; a real library name to get "scheme.base:map" and the like.
 (define program-unit '())                 ; the empty-prefix (non-library) unit
 
+;; Does this symbol name a binding in ANOTHER unit -- i.e. has `mangle` already
+;; qualified it?  The separator is ":", and a unit's own names never contain one
+;; (they are plain names, or REPL generations `x.gN`), so a colon is exactly the
+;; "belongs to some other unit" test.  emit.ss's `global-operand` and
+;; `label-operand` key on the same encoding; this is the resolver-side reader of it
+;; (issue #5, and the immutability argument cross-unit direct calls rest on).
+(define (unit-qualified? s)
+  (let* ([str (if (symbol? s) (symbol->string s) s)]
+         [n (string-length str)])
+    (let loop ([i 0])
+      (cond [(= i n) #f]
+            [(char=? (string-ref str i) #\:) #t]
+            [else (loop (+ i 1))]))))
+
 (define (mangle library-name internal-name)
   (let ([x (if (symbol? internal-name)
                (symbol->string internal-name)
