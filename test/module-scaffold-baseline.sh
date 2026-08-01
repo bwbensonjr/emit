@@ -110,6 +110,15 @@
 #     also checked against exact arithmetic on every fixnum boundary, 2^0..2^60 with
 #     neighbours, and 200000 random in-range values: 0 mismatches.  +1 new entry
 #     (fixnum-literals); fold-boundary arrived with the preceding commit.
+#   fix set! on a letrec-bound name (issue #8) -- convert-assignments assumed letrec
+#     binders are never set!, so an assigned one was never boxed while its references
+#     were still rewritten to unbox/set-box!, which then ran against the raw closure
+#     (word 0 = its code pointer).  Redefining a top-level function crashed.  Assigned
+#     bindings now split out of the letrec into an enclosing let of boxes.  Verified
+#     against a 75-demo before/after capture: EXACTLY ONE demo differs in IR and stdout,
+#     the new regression demo redefine-function, which bus-errored on the old compiler
+#     and prints (1 2 (10 20) 100 300 300) on the new one.  The other 74 are byte-identical
+#     in both -- no existing demo assigns a letrec-bound name.  +1 new entry.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

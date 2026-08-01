@@ -66,8 +66,37 @@
          (let* ([nx+body (rebind xs (cvt body))]
                 [nx (car nx+body)] [body^ (cadr nx+body)])
            `(let ,(map list nx es) ,body^)))]
+      ;; A letrec binder that IS assigned must be boxed like any other assigned
+      ;; variable (issue #8).  The pass used to assume letrec names are never set!
+      ;; and skip rebinding them -- but `find-assigned` does report them, so every
+      ;; reference still became `(unbox f)` and every assignment `(set-box! f e)`
+      ;; against a binder that was never boxed.  Those then ran on the raw closure
+      ;; (rt_unbox reads word 0 = its CODE POINTER), so calling a redefined
+      ;; top-level function crashed.
+      ;;
+      ;; Split the group: unassigned bindings stay in the letrec, so recursive
+      ;; functions keep their closure-block lowering (and stay inlinable by
+      ;; `simplify`); assigned ones move to an enclosing `let` of boxes filled by
+      ;; `set-box!` inside the letrec body -- the shape `build-program` already
+      ;; uses for mixed top-level defines, which is why that path was correct.
+      ;; Initializers are lambdas (`lower` accepts nothing else in a letrec) and
+      ;; closure creation is pure, so filling the boxes after the letrec is
+      ;; unobservable; the boxed ones keep their source order among themselves.
       [(letrec ,binds ,body)
-       `(letrec ,(map (lambda (b) (list (car b) (cvt (cadr b)))) binds) ,(cvt body))]
+       (let ([boxed (filter (lambda (b) (asgd? (car b))) binds)]
+             [keep  (filter (lambda (b) (not (asgd? (car b)))) binds)])
+         (if (null? boxed)
+             `(letrec ,(map (lambda (b) (list (car b) (cvt (cadr b)))) binds) ,(cvt body))
+             (let* ([filled (fold-right
+                              (lambda (b acc)
+                                `(seq (primcall set-box! ,(car b) ,(cvt (cadr b))) ,acc))
+                              (cvt body) boxed)]
+                    [inner (if (null? keep)
+                               filled
+                               `(letrec ,(map (lambda (b) (list (car b) (cvt (cadr b)))) keep)
+                                  ,filled))])
+               `(let ,(map (lambda (b) (list (car b) '(primcall box (const ())))) boxed)
+                  ,inner))))]
       [(apply ,f . ,args) `(apply ,(cvt f) ,@(map cvt args))]
       [(call ,f . ,args) `(call ,(cvt f) ,@(map cvt args))]))
   (cvt prog))

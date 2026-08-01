@@ -86,6 +86,7 @@ check toplevel  demos/toplevel.scm  102   # multi-define program (letrec desugar
 check square    demos/square.scm    1156  # simplify: single-use helper inlined + folded to a constant
 check foldbound demos/fold-boundary.scm '(#t #t #t #t #t)'  # a fold must agree with the runtime it replaced (issue #7 boundary)
 check fixlits   demos/fixnum-literals.scm '(72057594037927936 144115188075855872 576460752303423488 1152921504606846975 -576460752303423488 -1152921504606846975)'  # literals across the top of the fixnum range (issue #7)
+check redefine  demos/redefine-function.scm '(1 2 (10 20) 100 300 300)'  # set! on a letrec-bound name (issue #8)
 check derived   demos/derived.scm   180   # cond/and/or/when/unless/let*/named-let
 check casecxr   demos/case-cxr.scm  1511  # case derived form + cxr combinators (caar..cadar)
 check intdef    demos/internal-define.scm '(30 100 105)'  # internal (body) defines, letrec* semantics

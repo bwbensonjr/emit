@@ -164,7 +164,7 @@ D3 lesson recorded there).
 | core | `(const d)｜x｜(if …)｜(lambda (x…) e)｜(call e e…)｜(primcall op e…)｜(let/letrec …)｜(seq …)｜(set! x e)` | `src/parse.ss` |
 | inline-primitives | same core IL; direct unshadowed integrable call `(call cons a b)` → `(primcall %cons a b)`, value/apply/wrong-arity use `cons` → `(lambda (p…) (primcall %cons p…))`; a shadowed (alpha-renamed) binding is left untouched | `src/parse.ss` |
 | recognize-let | + `(let …)` from `(call (lambda …) …)` | `src/passes/recognize-let.ss` |
-| convert-assignments | − `set!`; `+ (primcall box/unbox/set-box! …)` | `src/passes/convert-assignments.ss` |
+| convert-assignments | − `set!`; `+ (primcall box/unbox/set-box! …)`; an assigned `letrec` binder splits out into an enclosing boxed `let` (issue #8) | `src/passes/convert-assignments.ss` |
 | simplify | same IL, smaller: inlines a singly-referenced lambda binding into its one call site, propagates immediate constants, folds `%+ %- %* %= %<` over constants, drops unreferenced effect-free bindings | `src/passes/simplify.ss` |
 | convert-closures | − `letrec`; `+ (closures ([x (fv…) le]…) body)` | `src/passes/convert-closures.ss` |
 | lambda-lift + lower | `(program (code …) entry)` with `(local x)｜(free-ref i)｜(make-closure …)｜(closure-block …)｜(app f (a…))` | `src/passes/lower.ss` |
