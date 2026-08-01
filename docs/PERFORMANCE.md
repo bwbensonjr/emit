@@ -21,6 +21,7 @@ speed items in this list.
 | [P4](#p4-on-codepoint-string-indexing) | O(n) codepoint string indexing | speed | low–med | med–high | `codepoint-string-indexing` | ☑ |
 | [P5](#p5-arithmetic-and-call-overhead-ackermann-benchmark) | Arithmetic & call overhead (Ackermann benchmark) | speed | high | med–high | `inline-fixnum-arith-and-self-calls` (A + B-self) | ◐ |
 | [P6](#p6-no-optimizer-pass-known-call-inlining-and-constant-folding) | No optimizer pass: known-call inlining & constant folding | speed + size | med–high | med | `simplify-known-calls` (A) | ◐ |
+| [P7](#p7-boxing-driven-by-desugaring-rather-than-by-mutation) | Boxing driven by desugaring rather than by mutation | speed + size | med | low–med | — | ☐ |
 
 Legend — **Value**: benefit if fixed. **Cost**: rough implementation effort/risk. These are
 estimates to aid sequencing, not commitments.
@@ -33,7 +34,8 @@ speed value (it touches every numeric-heavy and call-heavy program); its two hal
 fixnum arithmetic and direct known-calls — are independent and can land separately. P6 follows
 P5 and overlaps it: P6-A is the first *optimizing* pass in the Scheme core (it removes work
 rather than translating it), while P6-B unblocks LLVM's own inliner and so partly subsumes
-P5's deferred B-general.
+P5's deferred B-general. P7 is P6's natural successor and should follow it: P6 taught the
+compiler to inline and fold, and P7 removes the boxes that hide bindings from it.
 
 ---
 
@@ -540,6 +542,103 @@ is bounded by the lower one.
 B is unscheduled — it is small enough to be its own change with its own measurement on the
 Ackermann probe, and it should be sequenced after P5's remaining B-general question is settled,
 since the two overlap.
+
+---
+
+## P7 — Boxing driven by desugaring rather than by mutation
+
+**Status:** ☐ not started
+
+**Symptom.** A binding the program never mutates is still given a heap box, a `set-box!`, and
+an `unbox` on every read. The clearest case is a plain top-level constant:
+
+```scheme
+(define n 1)
+(define (f) n)
+(display (f))
+```
+
+```
+;; ==== after simplify ====
+(let ((n.0 (primcall box (const ()))))
+  (seq (primcall set-box! n.0 (const 1))
+    (primcall %display (primcall unbox n.0))))
+```
+
+A heap allocation and two runtime box operations, for a program whose answer is the constant
+`1`. Write the same program so no `set!` is synthesized and the whole thing folds:
+
+```scheme
+(let ((n 1)) (letrec ((f (lambda () n))) (display (f))))
+;; ==== after simplify ====
+(primcall %display (const 1))
+```
+
+Residual boxes in demos with non-lambda top-level defines — `read-all` 4, `records` 3,
+`toplevel` 2, `mandelbrot` 2 — are almost all of this kind, not real mutation.
+
+**Cause.** Boxing is decided by `find-assigned` (`src/passes/convert-assignments.ss`), which
+is correct: it reports every `set!` in the term. The imprecision is upstream — **the `set!` is
+synthesized by the desugaring, not written by the user.** `build-program` (`src/parse.ss`)
+gives a non-lambda top-level define its `letrec*` semantics by binding the name to `'()` and
+assigning it:
+
+```
+;; ==== after collect-toplevel ====
+(let ((n (quote ()))) (letrec ((f (lambda () n))) (set! n 1) (display (f))))
+```
+
+So `n` is boxed because the desugaring made it mutable, not because the program did. The same
+mechanism appears in `convert-assignments`'s `letrec` clause, which boxes **every** non-lambda
+`letrec` binding (change: issue #9) — deliberately conservative, and the identical
+over-approximation:
+
+```scheme
+(letrec ((sq (lambda (n) (* n n)))) (let ((base 34)) (sq base)))  ; => (const 1156)
+(letrec* ((sq (lambda (n) (* n n))) (base 34)) (sq base))         ; => box + unbox survive
+```
+
+A box is opaque to everything downstream: `simplify` cannot inline, fold, or drop through one
+(P6), and the value is re-read from the heap on every reference. So this costs on both axes,
+and it costs most on exactly the small constants a program is most likely to define.
+
+**Possible fix.** A binding needs a location only if something can observe it changing. Neither
+desugaring needs to assign when neither condition holds:
+
+1. the program never `set!`s the name itself, **and**
+2. its initializer does not reference a name bound *later* in the same group (no forward
+   reference), so its value is available when the binding is created.
+
+Bindings meeting both can be emitted as ordinary nested `let` bindings — nested, not parallel,
+so a later initializer can still read an earlier one and `letrec*` order is preserved. Only
+genuinely assigned or forward-referencing bindings keep the `'()`-box. The two sites are
+independent and can land separately:
+
+- `build-program` (`src/parse.ss`) for top-level defines, and
+- the `letrec` clause of `convert-assignments` for `letrec` / `letrec*` groups.
+
+The forward-reference test is a small analysis over the group's initializers, on the same
+alpha-renamed IL both sites already have.
+
+**Cost / risk.** Contained, but it moves a *semantic* decision, so the hazards are worth naming.
+A binding wrongly judged un-forward-referencing would read an uninitialized name — today that
+yields `'()`, which is at least defined; a plain `let` would be a scope error caught at compile
+time, so the failure mode is loud rather than silent. Mutual recursion through a non-lambda
+initializer must stay boxed. The demo suite's values must be unchanged (this may not alter a
+single program's result), and the change touches the shape every program compiles to, so it
+wants the same before/after IR capture P6's items used. Expect the compiler's own binaries to
+shrink again: its top-level state (`counter`, `*code-defs*`, `sym-table`) is exactly the
+population this affects, though most of that *is* genuinely assigned and will rightly stay boxed.
+
+**Related.** This is the residue of P6: P6 taught the compiler to inline and fold, and the boxes
+left by desugaring are what still hides bindings from it. It also sharpens a rule worth applying
+to the rest of the R7RS surface — derived forms are macros here, and an expansion that
+introduces `set!` silently opts every binding it touches out of inlining, folding, and direct
+calls. The textbook `letrec*` expansion (`(let ((v '())) (set! v i) ...)`) measures ~3.5% larger
+IR, twice the `unbox` count, and loses P5's direct self-call entirely, where an expansion onto
+`letrec` is byte-identical to the built-in form.
+
+**OpenSpec change:** _none yet._
 
 ---
 
