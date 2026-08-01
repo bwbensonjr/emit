@@ -32,10 +32,10 @@
 - [x] 5.5 **Interaction with `library-toplevel-set` (design D5):** a library *top-level* `(set! f …)` now takes effect, and `f`'s call row is still withheld from the export table — the failure mode is silent misdispatch, so assert the table, not just the value
 - [x] 5.6 `build/lib/scheme.base.ll` is byte-identical to the 1.2 baseline, and `bootstrap/scheme.base.ll` is unchanged by the regen — the proof that no existing unit is affected
 - [x] 5.7 Register the new suite in `run-all-tests.sh`; `./run-all-tests.sh` and `./run-dev-tests.sh` green
-- [ ] 5.8 `make regen` reconverges (a second regen reproduces `bootstrap/*.ll` byte-for-byte) and `test/trust-check.sh` passes on the commit
+- [x] 5.8 `make regen` reconverges (a second regen reproduces `bootstrap/*.ll` byte-for-byte) and `test/trust-check.sh` passes on the commit
 
 ## 6. Close-out
 
 - [x] 6.1 Update `docs/MODULES.md`: the library body surface admits commands and `define-record-type`, declarations run in source order, and the `library-toplevel-set` note that a top-level `set!` is dropped is no longer true — remove it
 - [x] 6.2 Record the deferred items where they belong: `include`/`include-ci`/`include-library-declarations`/`cond-expand` filed as **#18**. The `docs/PERFORMANCE.md` half was conditional on a real library making it measurable — no library in the repo has a command, so nothing was added (the condition did not hold)
-- [ ] 6.3 Commit referencing `Fixes #16`
+- [x] 6.3 Commit referencing `Fixes #16`
