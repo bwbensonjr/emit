@@ -131,9 +131,9 @@
 
 (printf "\nfoldable window\n")
 
-(define lim 268435455)                  ; 2^28 - 1, the pass's window
+(define lim 1073741823)                 ; 2^30 - 1, the pass's window
 (define fx-max 1152921504606846975)     ; 2^60 - 1, the fixnum ceiling
-(define enc-max 144115188075855871)     ; 2^57 - 1, the encode-const ceiling (issue #7)
+(define enc-max fx-max)                 ; encode-const now reaches it too (issue #7 fixed)
 
 (check "the largest product in the window folds, and stays a fixnum"
   (let ([r (simplify `(primcall %* (const ,lim) (const ,lim)))])
@@ -141,18 +141,21 @@
   `((const ,(* lim lim)) #t))
 
 (check "no folded result can exceed what encode-const can emit (issue #7)"
-  ;; The window is what keeps a fold from producing a literal the self-hosted
-  ;; compiler would write out wrong.  Widening sfy-fold-limit past the encoding
-  ;; ceiling must fail HERE rather than silently miscompile a user's program.
+  ;; The window must never let a fold produce a literal the emitter would write
+  ;; out wrong.  encode-const once overflowed at 2^57, which forced the window
+  ;; down to 2^28 - 1; it now reaches the whole fixnum range.  If that ever
+  ;; regresses, or the window is widened past the emitter, it must fail HERE
+  ;; rather than silently miscompile a user's program.
   (list (<= (* sfy-fold-limit sfy-fold-limit) enc-max)
         (<= (+ sfy-fold-limit sfy-fold-limit) enc-max))
   '(#t #t))
 
-(check "an operand past the window is left for the runtime, which gets it right"
-  ;; the regression this clamp fixes: 1073741823^2 is a perfectly good fixnum,
-  ;; but encode-const cannot emit it, so it must NOT be folded
-  (simplify '(primcall %* (const 1073741823) (const 1073741823)))
-  '(primcall %* (const 1073741823) (const 1073741823)))
+(check "the largest foldable product round-trips through the emitter's encoding"
+  ;; 1073741823^2 is a valid fixnum but exceeds the old 2^57 encoding cliff --
+  ;; the exact case that miscompiled before issue #7 was fixed
+  (let ([r (simplify '(primcall %* (const 1073741823) (const 1073741823)))])
+    (list r (<= (cadr r) fx-max)))
+  '((const 1152921502459363329) #t))
 
 (check "the most negative product in the window folds"
   (simplify `(primcall %* (const ,(- 0 lim)) (const ,lim)))

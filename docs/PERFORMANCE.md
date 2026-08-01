@@ -510,12 +510,19 @@ window rather than an exact fixnum-boundary test (the exact version could not su
 folding in the shipped compiler; filed as issue #7), and constant propagation is
 restricted to immediates so a string or pair literal is never duplicated into two objects.
 
-The window was subsequently clamped from ±(2^30 − 1) to **±(2^28 − 1)**: the first value bounded
-the *arithmetic* correctly but not the *encoding*, and a folded result in [2^57, 2^60) is
-mis-emitted by the self-hosted compiler (issue #7). That shipped briefly as a value-changing
-regression — `(* 1073741823 1073741823)` printed correctly before the pass and wrongly after, on
-the shipped door only. `demos/fold-boundary.scm` now pins fold-equals-runtime at the window edge
-on every door. When #7 is fixed the window can widen back to the arithmetic ceiling.
+The window was briefly clamped to ±(2^28 − 1) and is now back at ±(2^30 − 1). The original value
+bounded the *arithmetic* correctly but not the *encoding*: `encode-const` mis-emitted any literal
+at or above 2^57, so a folded result in [2^57, 2^60) came out wrong on the self-hosted door
+(issue #7). That shipped briefly as a value-changing regression — `(* 1073741823 1073741823)`
+printed correctly before the pass and wrongly after. Fixing #7 (encode-const now multiplies in
+decimal on the digit string, where nothing can overflow) removed the tighter ceiling and let the
+window return to the arithmetic one. `demos/fold-boundary.scm` pins fold-equals-runtime at the
+window edge and `demos/fixnum-literals.scm` pins literal round-tripping across the top of the
+fixnum range, both on every door.
+
+The lesson generalizes past this pass: *what the arithmetic can compute* and *what the emitter can
+write down* are two different ceilings, and anything that manufactures a constant at compile time
+is bounded by the lower one.
 
 B is unscheduled — it is small enough to be its own change with its own measurement on the
 Ackermann probe, and it should be sequenced after P5's remaining B-general question is settled,

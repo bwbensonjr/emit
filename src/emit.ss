@@ -116,12 +116,41 @@
 ;; `global-set!` both route through here.
 (define (encode-const-unspec) "17")
 
+;; A fixnum's tagged word is d<<3, i.e. d*8 -- but computing that product in the
+;; COMPILER'S OWN arithmetic overflows once |d| >= 2^57, because the compiler's
+;; fixnums are the very 61-bit payload it is encoding for and they wrap silently
+;; (rt_mul: no overflow check, no bignums).  Self-hosted, `(number->string (* d 8))`
+;; therefore emitted a wrapped literal -- `(display 1152921504606846975)` compiled to
+;; the operand -8 and printed -1 -- while the Chez-hosted build, whose bignums make
+;; the product exact, got it right.  A silently wrong value AND a dev->ship
+;; divergence (GitHub issue #7).
+;;
+;; So do the multiply in DECIMAL, on the digit string, where nothing can overflow:
+;; each step is one digit times 8 plus a carry below 8.  For every literal the old
+;; expression already got right this returns the identical string, so emitted IR is
+;; unchanged wherever it was correct.
+(define (times-8-decimal digits)               ; "123" -> "984"
+  (let loop ([i (- (string-length digits) 1)] [carry 0] [acc '()])
+    (if (< i 0)
+        (list->string (if (= carry 0) acc (cons (integer->char (+ 48 carry)) acc)))
+        (let ([v (+ (* (- (char->integer (string-ref digits i)) 48) 8) carry)])
+          (loop (- i 1) (quotient v 10)
+                (cons (integer->char (+ 48 (remainder v 10))) acc))))))
+
+;; d -> the decimal text of its tagged word.  The sign is handled on the STRING, so
+;; the most negative fixnum never has to be negated (which would itself overflow).
+(define (fixnum-word d)
+  (let ([s (number->string d)])
+    (if (char=? (string-ref s 0) #\-)
+        (string-append "-" (times-8-decimal (substring s 1 (string-length s))))
+        (times-8-decimal s))))
+
 ;; Immediates encode inline to an operand with no emission; a symbol emits an
 ;; rt_intern call and a pair materializes via rt_cons (recursing), so encode-const
 ;; may emit into the current function and returns the resulting operand.
 (define (encode-const d)
   (cond
-    [(and (integer? d) (exact? d)) (number->string (* d 8))]  ; fixnum: n<<3
+    [(and (integer? d) (exact? d)) (fixnum-word d)]           ; fixnum: n<<3
     [(eq? d #t) "257"]                                        ; TRUE_V  (subtype BOOL, payload 1)
     [(eq? d #f) "1"]                                          ; FALSE_V (subtype BOOL, payload 0)
     [(null? d) "2"]                                           ; NIL_V

@@ -89,6 +89,27 @@
 #     between 2^28 and 2^30), so the only manifest delta is +1 new entry (fold-boundary),
 #     the regression demo -- it evaluates each folded expression alongside the same
 #     expression computed at run time and asserts they agree.
+#   fix encode-const overflow (issue #7), with the fold window widened back -- the fixnum
+#     tagged word d<<3 was computed as `(* d 8)` in the compiler's own arithmetic, which
+#     overflows for |d| >= 2^57, so the self-hosted compiler emitted a wrapped literal
+#     while the Chez-hosted one (bignums) emitted the right one.  Now multiplied in decimal
+#     on the digit string, where nothing can overflow; that in turn let simplify's fold
+#     window go back from +/-(2^28 - 1) to its arithmetic ceiling +/-(2^30 - 1).
+#     Verified against a 74-demo before/after capture (build/emit relinked from the
+#     previously committed IR): EXACTLY TWO demos' IR differs, and both are the regression
+#     demos that exist to cover this --
+#       fixnum-literals (new): the bug itself.  The old compiler printed
+#         (72057594037927936 -144115188075855872 0 -1 0 1); the new one prints all six
+#         literals correctly.  The only demo whose STDOUT changed.
+#       fold-boundary: its fourth pair now folds rather than being refused (the widened
+#         window), producing the literal 1152921502459363329 -- past the old 2^57 cliff,
+#         which is precisely the interaction being pinned.  Stdout unchanged (all #t
+#         before and after: correct when refused, correct when folded).
+#     The other 72 demos are byte-identical in both IR and stdout -- no other demo holds a
+#     literal at or above 2^57 or folds an operand above 2^28.  The decimal routine was
+#     also checked against exact arithmetic on every fixnum boundary, 2^0..2^60 with
+#     neighbours, and 200000 random in-range values: 0 mismatches.  +1 new entry
+#     (fixnum-literals); fold-boundary arrived with the preceding commit.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u
