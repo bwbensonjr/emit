@@ -118,7 +118,7 @@ compiling this pass could not represent the pass's own boundary constants: in th
 build `sfy-fixnum-max` evaluated to `-1` and `sfy-fixnum-min` to `0`, the guard rejected
 everything, and constant folding silently vanished from the shipped compiler while the
 Chez-hosted build folded normally — caught by `self-emit-equiv` and `dump-parity`, both of which
-compare the two hosts. (That encode-const defect is real and pre-existing; it is filed separately
+compare the two hosts. (That encode-const defect is real and pre-existing; it is filed as issue #7
 and this change no longer depends on it.)
 
 **The rule instead:** fold only when both operands are within **±(2^30 − 1)**. That is exactly

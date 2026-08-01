@@ -54,5 +54,5 @@
 
 ## 7. Follow-ups raised by this change (not in scope)
 
-- [ ] 7.1 File the `encode-const` overflow defect as a GitHub issue — draft written; **blocked**: `gh auth status` reports both accounts' tokens invalid
+- [x] 7.1 File the `encode-const` overflow defect as a GitHub issue — filed as [#7](https://github.com/bwbensonjr/emit/issues/7)
 - [ ] 7.2 Consider widening `build-program` (`src/parse.ss:453`) to emit a `letrec` for the lambda-initialized subset of top-level defines, so a program with one non-lambda define does not lose top-level inlining entirely — separate change

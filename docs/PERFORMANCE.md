@@ -507,7 +507,7 @@ suite must produce identical values. Two hazards to respect:
 implementation and are recorded in its design: folding is confined to a conservative ±(2^30 − 1)
 window rather than an exact fixnum-boundary test (the exact version could not survive self-hosting
 — `encode-const` cannot represent the boundary literals, so the guard silently disabled all
-folding in the shipped compiler; filed as a separate issue), and constant propagation is
+folding in the shipped compiler; filed as issue #7), and constant propagation is
 restricted to immediates so a string or pair literal is never duplicated into two objects.
 
 B is unscheduled — it is small enough to be its own change with its own measurement on the

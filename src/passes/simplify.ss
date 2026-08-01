@@ -45,8 +45,7 @@
 ;; matters concretely: emit currently mis-encodes any literal at or above 2^57
 ;; (`encode-const` computes the tagged word as `(* d 8)`, which itself overflows),
 ;; so a compiler compiling THIS pass could not represent its own bounds -- the
-;; guard would silently become either useless or wrong.  See GitHub issue on
-;; encode-const overflow.
+;; guard would silently become either useless or wrong.  See GitHub issue #7.
 (define sfy-fold-limit 1073741823)              ; 2^30 - 1
 
 (define (sfy-foldable? d)
