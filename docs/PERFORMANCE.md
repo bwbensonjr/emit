@@ -19,7 +19,7 @@ speed items in this list.
 | [P2](#p2-immediate-non-heap-characters) | Immediate (non-heap) characters | speed + cleanup | med | med | `immediate-characters` | ☑ |
 | [P3](#p3-precompiled-prelude--library-objects) | Precompiled prelude / library objects | build speed | low | low | — | ☐ |
 | [P4](#p4-on-codepoint-string-indexing) | O(n) codepoint string indexing | speed | low–med | med–high | `codepoint-string-indexing` | ☑ |
-| [P5](#p5-arithmetic-and-call-overhead-ackermann-benchmark) | Arithmetic & call overhead (Ackermann benchmark) | speed | high | med–high | `inline-fixnum-arith-and-self-calls` (A + B-self) | ◐ |
+| [P5](#p5-arithmetic-and-call-overhead-ackermann-benchmark) | Arithmetic & call overhead (Ackermann benchmark) | speed | high | med–high | `inline-fixnum-arith-and-self-calls` (A + B-self) | ☑ |
 | [P6](#p6-no-optimizer-pass-known-call-inlining-and-constant-folding) | No optimizer pass: known-call inlining & constant folding | speed + size | med–high | med | `simplify-known-calls` (A) | ☑ |
 | [P7](#p7-boxing-driven-by-desugaring-rather-than-by-mutation) | Boxing driven by desugaring rather than by mutation | speed + size | med | low–med | — | ☑ |
 
@@ -216,8 +216,7 @@ small-clean-binary goal.
 
 ## P5 — Arithmetic and call overhead (Ackermann benchmark)
 
-**Status:** ◐ in progress — A + B-self implemented (change: `inline-fixnum-arith-and-self-calls`);
-B-general still deferred.
+**Status:** ☑ done — A + B-self (change: `inline-fixnum-arith-and-self-calls`), then B-general.
 
 **Result (A + B-self).** Inline fixnum arithmetic + direct self-calls cut Ackermann wall time
 under `emit run` by ~35–40%:
@@ -358,6 +357,37 @@ The **dev door gets nothing from P6-B** — it runs no IR passes at all — so B
 is undiminished, and unlike P6-B it would help both doors.
 
 Verdict: still worth scheduling.
+
+**Result (B-general).** Implemented. A call whose operator is a closure-block binding now goes
+straight to its code label, passing the callee's own closure as `self` instead of loading a code
+pointer out of it — the `and`/`inttoptr`/`load`/`inttoptr` chain disappears, and the constant
+argc lets LLVM fold the callee's arity check and inline it.
+
+It needs **no closed-world carve-out**, which is what made it landable at last. The rule keys on a
+closure-block binding, and the REPL never produces one: there a top-level name lowers to
+`(global-ref …)`, so redefinition keeps working untouched. The dev→ship tension that deferred this
+item for so long simply does not arise for this subset.
+
+The one structural cost is in `lower`: a group's code labels must be allocated *before* any body
+is lowered, so mutually recursive siblings can see each other's labels. That renumbers labels
+globally, so emitted IR changes broadly even where call shapes do not.
+
+Measured against the prediction above, which called for 0.06s → 0.02s on the 60-million-call
+probe: **exactly that, 0.06s → 0.02s**, matching the hand-patched bound. Ackermann is unchanged,
+as expected — it is self-recursive and already had B-self.
+
+| | before | after |
+|---|---|---|
+| compiler module, emitted | ~all indirect | 1020 direct / 710 indirect |
+| compiler module, after `-O2` | 79 direct / 2786 indirect | **755 direct / 2073 indirect** |
+| committed IR | — | `schemec.ll` −3.3%, `embed-repl.ll` −3.5% |
+
+24 of 77 demos' IR changed and **none grew** (`records` −7.4%, `fold-boundary` −4.7%, `toplevel`
+−3.3%, `case-cxr` −2.4%); all 77 values identical. `build/emit` is flat (+0.04%).
+
+What remains unscheduled is the *cross-unit* half — 808 of those sites call a `(scheme base)`
+global, which would need the closed-world AOT assumption `aot-release-profile` already relies on.
+That is a genuinely separate change with the dev→ship carve-out this one avoided.
 
 ---
 

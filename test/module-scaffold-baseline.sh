@@ -169,6 +169,16 @@
 #     because emit-spill no longer needs its conversion at all.  All 77 stdout identical.
 #     Ship-door effect, indirect calls surviving -O2 in the program module: derived 4 -> 0,
 #     mandelbrot 3 -> 1, counter 2 -> 1, case-cxr 11 -> 10.  No new entries.
+#   P5-B-general -- direct calls to statically-known closures.  A call whose operator is a
+#     closure-block binding now goes straight to its code label, passing the callee's own
+#     closure as `self`, instead of loading a code pointer out of it.  lower allocates a
+#     group's labels BEFORE lowering any body so mutually recursive siblings can see each
+#     other, which renumbers labels -- so demo IR changes broadly even where the call
+#     shapes do not.  Verified against a 77-demo before/after capture: 24 demos' IR changed
+#     and NONE grew (case-cxr -2.4%, arity-error -1.1%, ackermann -0.9%); all 77 stdout
+#     identical.  In the compiler's own module, emitted calls went to 1020 direct / 710
+#     indirect, and after -O2 to 755 direct / 2073 indirect (from 79 / 2786).  No new
+#     entries.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

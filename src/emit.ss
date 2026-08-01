@@ -319,7 +319,11 @@
        (emit-app fop aops #f tc?))]
     [(self-app ,label ,args)                       ; direct self-call (B-self)
      (let ([aops (map (lambda (a) (ev a env cp tc?)) args)])
-       (emit-self-app label aops #f tc? cp))]))
+       (emit-self-app label aops #f tc? cp))]
+    [(known-app ,label ,f ,args)                   ; direct call, known callee (B-general)
+     (let* ([aops (map (lambda (a) (ev a env cp tc?)) args)]
+            [fop  (ev f env cp tc?)])
+       (emit-known-app label fop aops #f tc?))]))
 
 (define (et e env cp tc?)
   (match e
@@ -342,6 +346,10 @@
     [(self-app ,label ,args)                       ; direct self-call in tail position
      (let ([aops (map (lambda (a) (ev a env cp tc?)) args)])
        (emit-self-app label aops #t tc? cp))]
+    [(known-app ,label ,f ,args)                   ; known callee in tail position
+     (let* ([aops (map (lambda (a) (ev a env cp tc?)) args)]
+            [fop  (ev f env cp tc?)])
+       (emit-known-app label fop aops #t tc?))]
     [else (emit! (string-append "ret i64 " (ev e env cp tc?)))]))
 
 (define (ev-if a b c env cp tc?)
@@ -633,7 +641,8 @@
         [(apply-app ,f ,args) (S f) (for-each S args)]
         [(self-app ,l ,args)
          (when (equal? l label) (set! acc (cons args acc)))
-         (for-each S args)]))
+         (for-each S args)]
+        [(known-app ,l ,f ,args) (S f) (for-each S args)]))  ; not a back-edge
     (S body)
     acc))
 
@@ -793,14 +802,22 @@
                        (list (string-append "ptr " overflow))))])
     (finish-call fp callargs tail? tc?)))
 
-;; direct self-call (change: inline-fixnum-arith-and-self-calls): call the enclosing
-;; function's own code label instead of loading a code pointer from the closure, and
-;; reuse the current closure ptr `cp` (%self) as the callee's self -- correct because
-;; %self is a closure for this very function, which is exactly what the callee needs
-;; to load its free vars.  Same slot/overflow layout as emit-app; a direct call with
-;; a constant argc lets LLVM fold the callee's entry arity check.  A leading space
-;; before the label operand keeps `call fastcc i64 @code_N(...)` well-formed.
-(define (emit-self-app label aops tail? tc? cp)
+;; Direct call to a known code label, passing `selfop` as the callee's self.  Two
+;; call shapes share this:
+;;
+;;   self-app  (change: inline-fixnum-arith-and-self-calls) -- the callee IS the
+;;     enclosing function, so `%self` is already a closure for it and is reused
+;;     directly; nothing is loaded at all.
+;;   known-app (P5-B-general) -- the callee is some other statically-known
+;;     closure-block binding, so its closure value is evaluated (a local or a
+;;     free-ref) and passed as self, but its code pointer is NOT loaded out of it.
+;;
+;; Either way the code-pointer load chain -- mask, inttoptr, load, inttoptr --
+;; disappears, and the constant argc lets LLVM fold the callee's entry arity check
+;; and inline it, which is where most of the win comes from.  Same slot/overflow
+;; layout as emit-app.  A leading space before the label operand keeps
+;; `call fastcc i64 @code_N(...)` well-formed.
+(define (emit-direct-app label aops tail? tc? selfop)
   (let* ([n (length aops)]
          [k *arity*]
          [slots (if (>= n k)
@@ -809,7 +826,7 @@
          [overflow (if (> n k) (emit-spill (list-tail aops k)) "null")]
          [callargs (comma-join
                      (append
-                       (list (string-append "i64 " cp)
+                       (list (string-append "i64 " selfop)
                              (string-append "i64 " (number->string n)))
                        (map (lambda (o) (string-append "i64 " o)) slots)
                        (list (string-append "ptr " overflow))))]
@@ -823,6 +840,12 @@
         (begin
           (emit! (string-append r " = call fastcc i64 " (label-operand label) "(" callargs ")"))
           r))))
+
+(define (emit-self-app label aops tail? tc? cp)
+  (emit-direct-app label aops tail? tc? cp))
+
+(define (emit-known-app label fop aops tail? tc?)
+  (emit-direct-app label aops tail? tc? fop))
 
 ;; (apply f a1 .. aN lst): flatten the N leading args and the elements of lst
 ;; into a runtime argv, load the K positional slots, and point overflow past K.
@@ -1086,7 +1109,8 @@
          (for-each (lambda (en) (for-each S (caddr en))) entries) (S body)]
         [(app ,f ,args) (S f) (for-each S args)]
         [(apply-app ,f ,args) (S f) (for-each S args)]
-        [(self-app ,label ,args) (for-each S args)]))  ; label is static; no callee to walk
+        [(self-app ,label ,args) (for-each S args)]     ; label is static; no callee to walk
+        [(known-app ,label ,f ,args) (S f) (for-each S args)]))
     (match prog
       [(program ,cdefs ,entry)
        (for-each (lambda (d) (match d [(code ,l ,self ,fixed ,rest ,body) (S body)])) cdefs)

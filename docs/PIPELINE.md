@@ -193,7 +193,7 @@ D3 lesson recorded there).
 | convert-assignments | − `set!`; `+ (primcall box/unbox/set-box! …)`; splits a `letrec` group into closure-block / plain-`let` / boxed bindings (issues #8, #9 and P7), so what reaches `lower` as a closure block is all-lambda and only real mutation gets a box | `src/passes/convert-assignments.ss` |
 | simplify | same IL, smaller: inlines a singly-referenced lambda binding into its one call site, propagates immediate constants, folds `%+ %- %* %= %<` over constants, drops unreferenced effect-free bindings | `src/passes/simplify.ss` |
 | convert-closures | − `letrec`; `+ (closures ([x (fv…) le]…) body)` — every `le` is a lambda, guaranteed by the split above | `src/passes/convert-closures.ss` |
-| lambda-lift + lower | `(program (code …) entry)` with `(local x)｜(free-ref i)｜(make-closure …)｜(closure-block …)｜(app f (a…))` | `src/passes/lower.ss` |
+| lambda-lift + lower | `(program (code …) entry)` with `(local x)｜(free-ref i)｜(make-closure …)｜(closure-block …)｜(app f (a…))`; a call to a statically-known closure becomes `(known-app label f (a…))`, or `(self-app label (a…))` for a self-call, so no code pointer is loaded (P5-B) | `src/passes/lower.ss` |
 | emit | textual LLVM IR (opaque `ptr`, `tailcc`, `musttail`); the allocator is declared `align 8` so `-O2` can see through a closure's tag mask (P6-B) | `src/emit.ss` |
 
 **Inspecting the stages (`--dump`).** Every door of the shipped binary prints the IL after
