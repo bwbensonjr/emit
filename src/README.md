@@ -26,6 +26,7 @@ read (host) + prepend prelude.scm                             compile.ss
   -> parse + alpha-rename                                      parse.ss
   -> recognize-let                                             passes/recognize-let.ss
   -> convert-assignments  (set! -> boxes)                      passes/convert-assignments.ss
+  -> simplify             (inline / fold / drop; the one optimizer) passes/simplify.ss
   -> convert-closures     (letrec / lambda -> closures)        passes/convert-closures.ss
   -> lambda-lift + lower  (-> L-code)                          passes/lower.ss
   -> emit LLVM IR                                              emit.ss
@@ -33,7 +34,7 @@ read (host) + prepend prelude.scm                             compile.ss
 ```
 
 The `--dump` stages, in order, are `collect-toplevel`, `expand`, `parse+rename`,
-`recognize-let`, `convert-assignments`, `convert-closures`, and `lower`.
+`recognize-let`, `convert-assignments`, `simplify`, `convert-closures`, and `lower`.
 
 The three backends all consume one emitted `.ll`: AOT links it with the runtime
 via the system clang; bitcode assembles it to `.bc` and codegens a native exe
@@ -46,7 +47,7 @@ via LLVM 22; JIT links program + runtime bitcode and runs in-process under
 compile.ss         driver: pipeline, stage dumps, three backends, --repl
 parse.ss           source -> core IL, then alpha-rename
 passes/            one pass per file (expand, recognize-let,
-                     convert-assignments, convert-closures, lower)
+                     convert-assignments, simplify, convert-closures, lower)
 emit.ss            L-code -> textual LLVM IR (opaque ptrs, tailcc, musttail)
 prelude.scm        standard library, prepended to every program
 runtime/runtime.c  C runtime: tagged values, primitives, libgc, printer, main

@@ -42,7 +42,8 @@ cd "$(dirname "$0")/.."
 # driver keeps its own independent pretty-print dumper (emit-dump-stages, D5/D10).
 CORE_FLAT="src/match.scm src/util.scm src/parse.ss \
            src/passes/expand.ss src/passes/recognize-let.ss \
-           src/passes/convert-assignments.ss src/passes/convert-closures.ss \
+           src/passes/convert-assignments.ss src/passes/simplify.ss \
+           src/passes/convert-closures.ss \
            src/passes/lower.ss src/emit.ss src/core.ss src/dump.ss"
 
 mkdir -p build bootstrap

@@ -83,6 +83,7 @@ check length    demos/length.scm    3
 check counter   demos/counter.scm   3
 check countdown demos/countdown.scm 999   # 10M tail iterations in bounded stack
 check toplevel  demos/toplevel.scm  102   # multi-define program (letrec desugar)
+check square    demos/square.scm    1156  # simplify: single-use helper inlined + folded to a constant
 check derived   demos/derived.scm   180   # cond/and/or/when/unless/let*/named-let
 check casecxr   demos/case-cxr.scm  1511  # case derived form + cxr combinators (caar..cadar)
 check intdef    demos/internal-define.scm '(30 100 105)'  # internal (body) defines, letrec* semantics

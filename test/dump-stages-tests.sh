@@ -40,12 +40,13 @@ headers () { grep -o ';; ==== after [^=]*====' "$1" | sed 's/;; ==== after //; s
 echo "stage coverage"
 
 # 1. The modular path (every door takes it once (scheme base) is auto-imported) must
-#    show all seven stages, in ladder order -- three of them were run but never
-#    dumped before this change.
+#    show all eight stages, in ladder order -- three of them were run but never
+#    dumped before this change, and `simplify` joined the ladder with change
+#    simplify-known-calls.
 build/emit run --dump "$TMP/prog.scm" >"$TMP/run.out" 2>"$TMP/run.err"
 got="$(headers "$TMP/run.err" | tr '\n' ' ')"
-want="collect-toplevel expand parse+rename+imports recognize-let convert-assignments convert-closures lower "
-if [ "$got" = "$want" ]; then ok "emit run --dump: seven stages in ladder order"
+want="collect-toplevel expand parse+rename+imports recognize-let convert-assignments simplify convert-closures lower "
+if [ "$got" = "$want" ]; then ok "emit run --dump: eight stages in ladder order"
 else bad "emit run --dump stages: got [$got] want [$want]"; fi
 
 # 2. The program's value still lands on stdout, unpolluted by narration.

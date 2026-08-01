@@ -20,6 +20,7 @@ speed items in this list.
 | [P3](#p3-precompiled-prelude--library-objects) | Precompiled prelude / library objects | build speed | low | low | — | ☐ |
 | [P4](#p4-on-codepoint-string-indexing) | O(n) codepoint string indexing | speed | low–med | med–high | `codepoint-string-indexing` | ☑ |
 | [P5](#p5-arithmetic-and-call-overhead-ackermann-benchmark) | Arithmetic & call overhead (Ackermann benchmark) | speed | high | med–high | `inline-fixnum-arith-and-self-calls` (A + B-self) | ◐ |
+| [P6](#p6-no-optimizer-pass-known-call-inlining-and-constant-folding) | No optimizer pass: known-call inlining & constant folding | speed + size | med–high | med | `simplify-known-calls` (A) | ◐ |
 
 Legend — **Value**: benefit if fixed. **Cost**: rough implementation effort/risk. These are
 estimates to aid sequencing, not commitments.
@@ -29,7 +30,10 @@ up), then P1 (serves the flagship size goal, but carries a design decision — s
 with P3 folding into P1's link rework. P4 waits for a workload that actually random-indexes
 strings; it is the highest cost and lowest present value. P5 stands alone and has the broadest
 speed value (it touches every numeric-heavy and call-heavy program); its two halves — inline
-fixnum arithmetic and direct known-calls — are independent and can land separately.
+fixnum arithmetic and direct known-calls — are independent and can land separately. P6 follows
+P5 and overlaps it: P6-A is the first *optimizing* pass in the Scheme core (it removes work
+rather than translating it), while P6-B unblocks LLVM's own inliner and so partly subsumes
+P5's deferred B-general.
 
 ---
 
@@ -321,6 +325,194 @@ carve-out, so it may ride with P1's link rework.
 **OpenSpec change:** `inline-fixnum-arith-and-self-calls` (A + B-self; implemented). B-general
 remains unscheduled — note it may now compose with `aot-release-profile`'s closed-world AOT door
 (direct calls to immutable known top-levels are safe under the same closed-world assumption).
+
+---
+
+## P6 — No optimizer pass: known-call inlining and constant folding
+
+**Status:** ◐ A implemented (change: `simplify-known-calls`); B unscheduled
+
+**Result (A).** The `simplify` pass (`src/passes/simplify.ss`, between `convert-assignments` and
+`convert-closures`) inlines a singly-referenced lambda binding into its one call site, propagates
+immediate constants, folds `%+ %- %* %= %<` over them, and drops the bindings left unreferenced.
+`demos/square.scm` now reaches `convert-closures` as `(const 1156)` — the closure record, the
+indirect call and the multiply are all gone before the emitter runs, on **every** door rather than
+only under the ship path's `-O2`.
+
+Measured over the 72-demo suite (before = `build/emit` relinked from the previous committed IR):
+62 demos byte-identical, 10 changed, **every one smaller**, none larger. Program-module IR:
+
+| demo | before | after | |
+|------|--------|-------|---|
+| `nary-arith` | 15542 | 10007 | −35.6% |
+| `nary-compare` | 23876 | 17441 | −27.0% |
+| `internal-define` | 18656 | 14648 | −21.5% |
+| `derived` | 20950 | 17432 | −16.8% |
+| `square` | 10558 | 9517 | −9.9% |
+| `counter` | 12430 | 11725 | −5.7% |
+| `fact`, `mandelbrot`, … | — | — | 0% (recursive / multi-use; nothing to inline) |
+
+All 72 demos' stdout is byte-identical, the regen fixed point converges (iter 1), and all three
+backends stay byte-identical to each other.
+
+**Cost.** The committed compiler IR grew 2451232 → 2690633 bytes and `build/emit` 1112 KB →
+1164 KB (+4.7%). That is **the pass's own code**, not a regression: compiling the *same* source
+with the new compiler gives 2451232 → 2424494 (−1.1%, 650 → 635 functions). The compiler contains
+the pass; user binaries do not, so user programs pay nothing for it and collect the shrink.
+
+**Bounded more than expected.** The inlining rule needs a binding group, and `build-program`
+(`src/parse.ss:453`) emits a `letrec` only when *every* top-level define has a lambda initializer;
+one non-lambda define sends the whole program down the `let` + `set!` path, where the names are
+boxed and nothing is inlinable. The compiler's own source is in exactly that shape, and library
+units / the REPL define globals rather than a binding group — `simplify` runs over all 120 of
+`(scheme base)`'s defines and rewrites none. Folding and dead-binding removal still apply to local
+`let`s everywhere. Widening `build-program` to emit a `letrec` for the lambda-initialized subset
+would unlock top-level inlining generally; that is a separate change and is not yet scheduled.
+
+**Workload.** `demos/square.scm` — the smallest program in which the gap is visible end to end:
+
+```scheme
+(define (square n)
+  (* n n))
+(square 34)
+```
+
+**Symptom.** Nothing about this program is computed at compile time. `emit run --dump` shows the
+final IL still carrying the whole apparatus:
+
+```
+;; ==== after lower ====
+(program ((code "code_2" cp.3 (n.1) #f (primcall %* (local n.1) (local n.1))))
+  (closure-block ((square.0 "code_2" ())) (app (local square.0) ((const 34)))))
+```
+
+and the emitted `scheme_entry` allocates a one-word closure on the heap, stores the code pointer,
+tags it, masks it back off, reloads the code pointer, and issues an **indirect** call — to compute
+`34 × 34`. The multiply itself then runs the full inline-fixnum guard diamond from P5 at runtime.
+A whole-program constant is being recomputed on every execution, through a heap allocation and an
+opaque indirect call.
+
+This generalizes well past constant folding: *any* call to a lambda that is bound once, never
+assigned, and referenced only in operator position pays for a closure record and an indirect call
+that the compiler has enough information to remove.
+
+**Cause — two independent ones, one per door.**
+
+1. **There is no optimizing pass in the Scheme core.** The ladder is `expand` →
+   `recognize-let` → `convert-assignments` → `convert-closures` → `lower-program`
+   (`src/core.ss:62-67`, and again at `:286-289` / `:441-444`). Every one of those is a
+   *translation*: they change representation and none removes work. So no pass is in a position
+   to notice that `square.0` has exactly one reference, that the reference is an operator, or
+   that its argument is a constant.
+
+   The machinery is half-present. `recognize-let` (`src/passes/recognize-let.ss:23`) already
+   performs precisely this beta-reduction —
+
+   ```scheme
+   [(call (lambda ,params ,body) . ,args)  =>  (let ([p a] ...) body)]
+   ```
+
+   — but only when the lambda is *syntactically* in operator position. The `square` case is one
+   hop removed: `collect-toplevel` wraps the file in a `letrec`, so the operator is a name bound
+   to a lambda rather than the lambda itself.
+
+2. **LLVM cannot recover it on either door.**
+   - The **dev door** (`emit run`, REPL) builds a plain `LLJITBuilder()` with no IR transform
+     layer (`src/emit.cpp:404`, `:608`). There are no IR passes at all — no inlining, no
+     constant folding, nothing. Whatever the Scheme core emits is what runs.
+   - The **ship door** links at `-O2` (`src/compile.ss:232`, `src/emit.cpp:747`), and `-O2`
+     still does not fold this. Measured by extracting the program unit from `emit run --emit`
+     and running `opt -O2`: the allocation, the store, the masked reload and the indirect call
+     all survive verbatim.
+
+     The blocker is a *single instruction*. A closure is allocated by `emit-alloc-closure`
+     (`src/emit.ss:669`) via `rt_alloc_words`, which is an opaque external returning `i64`; the
+     call path then re-derives the base by masking the tagged word (`emit-load-code`,
+     `src/emit.ss:707-714` — `and i64 %fop, -8`). LLVM cannot prove the allocator's result is
+     8-aligned, hence cannot prove the masked pointer is the one it just stored through, hence
+     cannot forward the store to the load, hence cannot devirtualize, hence cannot inline. One
+     unprovable alignment fact blocks the entire chain.
+
+**Possible fix** (two independent halves; A is the one that serves the design goals, B is the
+cheap one):
+
+- **A — a `simplify` pass in the shared core.** Three rules, all standard:
+  1. *Inline a known, singly-referenced lambda binding.* If a `letrec`/`let` binder's RHS is a
+     `lambda`, the bound name occurs exactly once, that occurrence is the operator of a `call`,
+     and the arity matches, substitute the lambda in and drop the binding. Self-recursive
+     functions exclude themselves automatically — their own body pushes the occurrence count
+     above one. The single-use restriction means no code duplication, so this cannot grow the
+     binary.
+  2. *Constant-propagate and fold.* `(let ((n (const 34))) (primcall %* n n))` →
+     `(primcall %* (const 34) (const 34))` → `(const 1156)`. Substituting a `const` is
+     unconditionally safe: no duplicated work, no effects, no size growth.
+  3. *Drop dead bindings.* Without this the arithmetic folds but the closure is still allocated
+     and rooted — worth nothing on the size axis.
+
+  **Placement: after `convert-assignments`, before `convert-closures`.** At that point `set!`
+  is gone (assigned variables are already boxed into `primcall box`/`unbox`), so every remaining
+  variable is immutable and *both* substitution rules are valid with no assignment analysis at
+  all. Earlier in the ladder each rule would have to consult `find-assigned` for itself. The
+  pass forms the `let` itself rather than depending on a second `recognize-let` run.
+
+- **B — make the closure representation legible to LLVM.** Emit an alignment fact for the
+  allocator's result so the untag mask folds away. An `llvm.assume` on the *integer* (not on the
+  `inttoptr` result — an `align` operand bundle on the pointer does **not** propagate to the
+  integer's known-bits; measured) is enough:
+
+  ```llvm
+  %al1 = and i64 %raw, 7
+  %al2 = icmp eq i64 %al1, 0
+  call void @llvm.assume(i1 %al2)
+  ```
+
+  With that one addition, `opt -O2` on the unmodified `square` unit collapses `scheme_entry` to
+  `ret i64 9248` (= `1156 << 3`) — it forwards the store, devirtualizes, inlines `code_2`, folds
+  the fixnum tag check, and folds the multiply. Because it is stated at the allocation site it
+  applies to every masked untag, not just this call site: `emit-load-code` (`:710`), `load-free`
+  (`:353`), `unbox-flonum` (`:499`).
+
+- **B2 — (follow-on, unmeasured)** even after B, the now-dead allocation survives: LLVM will not
+  delete `rt_alloc_words` + its store without `noalias`/allocator attributes, and `noalias`
+  cannot be applied to an `i64` return (`opt` rejects it outright — verified). Deleting dead
+  allocations would mean changing `rt_alloc_words` to return `ptr`, which touches every emitted
+  allocation site. Only worth it if allocation removal shows up as a real win.
+
+**Why A is not redundant with B.** B helps only the **ship** door, because the dev door runs no
+IR passes at all — so B alone would mean a constant folded in the shipped binary and recomputed
+in the REPL, which is exactly the kind of dev→ship divergence `CLAUDE.md` rules out (values stay
+identical, but the performance characteristics diverge, and `--dump` stops describing what
+actually runs). A lands in the shared core, so both doors get it, and A additionally removes the
+allocation that B leaves behind. B remains worth doing on its own merits: it unblocks LLVM's
+inliner for *every* known-callee call site on the ship path, which is a large part of what P5's
+deferred B-general was after — reached through LLVM instead of through the emitter.
+
+**Cost / risk.** A is a new pass file plus one line in each of the three compile ladders in
+`src/core.ss`; it is pure IL→IL and directly unit-testable against dumped IL, and the whole demo
+suite must produce identical values. Two hazards to respect:
+
+- **Fold only within the target's fixnum range.** `rt_mul` is `FIX(UNFIX(a) * UNFIX(b))`
+  (`src/runtime/runtime.c:190-194`) — silent wraparound, no overflow check and no bignum. The
+  compiler is self-hosting, so a compile-time fold runs on the *host's* arithmetic, and the host
+  (Chez when bootstrapping, emit itself thereafter) has different overflow behavior. Folding
+  must be refused unless the result is representable as a 61-bit target fixnum, or
+  `(* 2000000000 2000000000)` will compile to a different answer than it computes. The same
+  restriction applies to any primitive folded.
+- **Self-hosting fixed point.** A changes emitted IR for the compiler's own sources, so `make
+  regen` must be re-run and reconverge, and the committed `bootstrap/*.ll` will change. Expect
+  the compiler's own binaries to *shrink* (dead closures removed), which is the size half of this
+  item.
+
+**OpenSpec change:** `simplify-known-calls` (A; implemented). Two decisions were forced during
+implementation and are recorded in its design: folding is confined to a conservative ±(2^30 − 1)
+window rather than an exact fixnum-boundary test (the exact version could not survive self-hosting
+— `encode-const` cannot represent the boundary literals, so the guard silently disabled all
+folding in the shipped compiler; filed as a separate issue), and constant propagation is
+restricted to immediates so a string or pair literal is never duplicated into two objects.
+
+B is unscheduled — it is small enough to be its own change with its own measurement on the
+Ackermann probe, and it should be sequenced after P5's remaining B-general question is settled,
+since the two overlap.
 
 ---
 

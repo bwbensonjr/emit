@@ -63,6 +63,22 @@
 #     value is discarded by the library `__init` -- and NOT inside any `code_N` function
 #     body, so no procedure's result changed.  The `rt_root` call and the `store` into the
 #     global slot are untouched; only the discarded return operand differs.
+#   simplify-known-calls -- the new `simplify` pass inlines a known singly-referenced
+#     lambda into its one call site, propagates immediate constants, folds primcalls over
+#     them, and drops the bindings left unreferenced.  Verified against a 72-demo
+#     before/after capture (build/emit relinked from HEAD's committed IR vs the rebuilt
+#     tree): 62 demos byte-IDENTICAL, and exactly 10 changed -- counter, derived,
+#     error-abort, flonum-unbox, high-arity-nontail, internal-define, macro-user,
+#     nary-arith, nary-compare, square.  Every one got SMALLER (-705 to -6435 bytes) and
+#     every change is a removal plus the label renumbering it shifts: fewer
+#     `define fastcc @code_N` blocks (each with its `rt_alloc_words` closure record and
+#     its closure-loaded indirect call), and arithmetic over literals replaced by the
+#     literal -- e.g. nary-arith's program module lost 213 lines and gained 16.  The
+#     (scheme base) prefix of every demo's IR is byte-identical: the pass runs over all
+#     120 of the library's defines and rewrites none of them (its top-level defines are
+#     globals, not a binding group, so the inlining rule finds nothing to inline).  All
+#     72 demos' stdout is byte-identical before and after -- this pass may not alter a
+#     single program's value.  +1 new entry (square), the change's own demo.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

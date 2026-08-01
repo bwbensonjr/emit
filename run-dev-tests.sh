@@ -56,6 +56,7 @@ run_suite "backend equivalence"         demos/run-backends.sh
 run_suite "expander units"              chez --libdirs src --script test/expander-tests.ss
 run_suite "read-all reader"             chez --libdirs src --script test/read-all-tests.ss
 run_suite "mangle (symbol naming)"      chez --libdirs src --script test/mangle-tests.ss
+run_suite "simplify pass units"         chez --libdirs src --script test/simplify-tests.ss
 run_suite "module vertical-slice (AOT)" test/modules-tests.sh
 run_suite "(scheme base) gen guard"     test/scheme-base-gen-check.sh
 run_suite "(scheme base) auto-import (AOT)" test/prelude-base-tests.sh

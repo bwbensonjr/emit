@@ -28,22 +28,29 @@ want () { if grep -Eq "$3" "$2"; then ok "$1"; else bad "$1 (missing: $3)"; fi; 
 # reject <name> <file> <regex> -- IR must NOT contain a line matching regex
 reject () { if grep -Eq "$3" "$2"; then bad "$1 (present but should not be: $3)"; else ok "$1"; fi; }
 
+# Every probe below calls its function TWICE (change: simplify-known-calls).  A
+# singly-called helper is now inlined into its one call site and, with constant
+# arguments, folded away entirely -- so a one-call probe would compile to a bare
+# constant and never reach the emitter path it is here to pin.  Two call sites
+# keep the function a function.  This is a property of the probes, not of the
+# codegen under test: the emitted shape for a real function is unchanged.
+
 echo "inline-fixnum-arith / direct-self-call IR-shape tests"
 
 # --- A: inline fixnum arithmetic --------------------------------------------
-ll="$(printf '(define (f a b) (+ a b)) (display (f 1 2))\n' | emit)"
+ll="$(printf '(define (f a b) (+ a b)) (display (f 1 2)) (display (f 3 4))\n' | emit)"
 want   "A: + fixnum guard"    "$ll" 'and i64 %t[0-9]+, 7'
 want   "A: + native add"      "$ll" 'add i64 %a0, %a1'
 want   "A: + rt_add slow path" "$ll" 'call i64 @rt_add\(i64 %a0, i64 %a1\)'
 
-ll="$(printf '(define (f a b) (- a b)) (display (f 3 1))\n' | emit)"
+ll="$(printf '(define (f a b) (- a b)) (display (f 3 1)) (display (f 9 4))\n' | emit)"
 want   "A: - native sub"      "$ll" 'sub i64 %a0, %a1'
 
-ll="$(printf '(define (f a b) (= a b)) (display (f 1 1))\n' | emit)"
+ll="$(printf '(define (f a b) (= a b)) (display (f 1 1)) (display (f 1 2))\n' | emit)"
 want   "A: = native icmp eq"  "$ll" 'icmp eq i64 %a0, %a1'
 want   "A: = boolean select"  "$ll" 'select i1 %t[0-9]+, i64 257, i64 1'
 
-ll="$(printf '(define (f a b) (< a b)) (display (f 1 2))\n' | emit)"
+ll="$(printf '(define (f a b) (< a b)) (display (f 1 2)) (display (f 4 3))\n' | emit)"
 want   "A: < native icmp slt" "$ll" 'icmp slt i64 %a0, %a1'
 
 # --- B-self: direct self-call -----------------------------------------------
@@ -54,8 +61,9 @@ want   "B-self: tail self-call is musttail"           "$ll" 'musttail call fastc
 
 # --- B-self negative: a call to a DIFFERENT function stays indirect ----------
 # (h calls g, not itself -> must remain a closure-loaded indirect call, B-general
-# is out of scope for this change)
-mut='(define (g x) (+ x 1)) (define (h y) (g y)) (display (h 5))'
+# is out of scope for this change).  Both are called twice so neither is inlined
+# away before the emitter sees the call (see the note on the probes above).
+mut='(define (g x) (+ x 1)) (define (h y) (g y)) (display (h 5)) (display (h 6)) (display (g 7))'
 ll="$(printf '%s\n' "$mut" | emit)"
 reject "B-self: non-self call NOT direct" "$ll" 'call fastcc i64 @code_[0-9]+\(i64 %self,'
 

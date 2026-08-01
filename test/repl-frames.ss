@@ -15,6 +15,7 @@
 (include "src/parse.ss")
 (include "src/passes/recognize-let.ss")
 (include "src/passes/convert-assignments.ss")
+(include "src/passes/simplify.ss")
 (include "src/passes/convert-closures.ss")
 (include "src/passes/lower.ss")
 (include "src/emit.ss")
@@ -30,9 +31,10 @@
 (define (form->lcode env form)
   (lower-program
     (convert-closures
-      (convert-assignments
-        (recognize-let
-          (repl-lower-form env form))))))
+      (simplify
+        (convert-assignments
+          (recognize-let
+            (repl-lower-form env form)))))))
 
 (define (main args)
   (when (null? args) (error 'repl-frames "usage: repl-frames.ss SRC.scm"))

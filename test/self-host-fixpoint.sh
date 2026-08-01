@@ -34,7 +34,8 @@ cd "$(dirname "$0")/.."
 # KEEP IN SYNC with tools/regen.sh's CORE_FLAT (see the note there on src/dump.ss).
 CORE_FLAT="src/match.scm src/util.scm src/parse.ss \
            src/passes/expand.ss src/passes/recognize-let.ss \
-           src/passes/convert-assignments.ss src/passes/convert-closures.ss \
+           src/passes/convert-assignments.ss src/passes/simplify.ss \
+           src/passes/convert-closures.ss \
            src/passes/lower.ss src/emit.ss src/core.ss src/dump.ss"
 
 work="$(mktemp -d)"

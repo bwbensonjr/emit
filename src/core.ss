@@ -63,11 +63,13 @@
            [core  (inline-primitives (rename-program (parse-program expd)))]
            [a     (recognize-let core)]
            [b     (convert-assignments a)]
-           [c     (convert-closures b)]
+           [s     (simplify b)]
+           [c     (convert-closures s)]
            [d     (lower-program c program-unit)])
       (dump "collect-toplevel" top) (dump "expand" expd)
       (dump "parse+rename" core) (dump "recognize-let" a)
-      (dump "convert-assignments" b) (dump "convert-closures" c) (dump "lower" d)
+      (dump "convert-assignments" b) (dump "simplify" s)
+      (dump "convert-closures" c) (dump "lower" d)
       (emit-program d))))
 
 ;; a source whose only top-level form is a (define-library ...) is a library unit
@@ -285,10 +287,11 @@
 (define (lcode-passes il unit dump)
   (let* ([a (recognize-let il)]
          [b (convert-assignments a)]
-         [c (convert-closures b)]
+         [s (simplify b)]
+         [c (convert-closures s)]
          [d (lower-program c unit)])
     (dump "recognize-let" a) (dump "convert-assignments" b)
-    (dump "convert-closures" c) (dump "lower" d)
+    (dump "simplify" s) (dump "convert-closures" c) (dump "lower" d)
     d))
 
 ;; An import environment is an alist external-name -> mangled-symbol, built from a
@@ -440,13 +443,15 @@
                         (resolve-globals core0 (vector import-env-alist 0))))]
            [a (recognize-let core)]
            [b (convert-assignments a)]
-           [c (convert-closures b)]
+           [s (simplify b)]
+           [c (convert-closures s)]
            [d (lower-program c program-unit)])
       ;; every stage, not just the four this path used to show: it runs the same
-      ;; recognize-let/convert-assignments/convert-closures ladder as compile-forms,
-      ;; and this is the path EVERY door takes once (scheme base) is auto-imported
-      ;; (change: emit-dump-stages).
+      ;; recognize-let/convert-assignments/simplify/convert-closures ladder as
+      ;; compile-forms, and this is the path EVERY door takes once (scheme base) is
+      ;; auto-imported (change: emit-dump-stages).
       (dump "collect-toplevel" top) (dump "expand" expd)
       (dump "parse+rename+imports" core) (dump "recognize-let" a)
-      (dump "convert-assignments" b) (dump "convert-closures" c) (dump "lower" d)
+      (dump "convert-assignments" b) (dump "simplify" s)
+      (dump "convert-closures" c) (dump "lower" d)
       (emit-program-with-imports d (or init-libs imported-libs) (map cdr import-env-alist)))))

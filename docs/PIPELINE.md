@@ -34,6 +34,7 @@ Mapping to Chez's passes (owned vs. delegated):
 | expander → `Lsrc`; `Lsrc`→`L1` normalize core | **us** |
 | `recognize-let` (L1→L2), `discover-names` (L2→L3) | us (bookkeeping / optional) |
 | **`convert-assignments`** (L3→L4) — remove `set!` via boxing | **us** ★ |
+| `cp0`-style source optimizer (inline, fold, drop) | us (`simplify`, a small subset) |
 | `name-anonymous-lambda` (…→L5) | us (bookkeeping) |
 | **`convert-closures`** (L5→L6) — `letrec` → explicit-free-var closures | **us** ★ |
 | **`lift` + `expand-closures`** (L6→L7) — lambda-lift, lower closures | **us** ★ |
@@ -63,7 +64,7 @@ one observable intermediate language per stage (`--dump`):
 
 ```
 read (host) → prepend prelude → collect-toplevel → expand → parse+rename → inline-primitives
-            → recognize-let → convert-assignments → convert-closures → lambda-lift+lower
+            → recognize-let → convert-assignments → simplify → convert-closures → lambda-lift+lower
             → emit .ll → clang(+runtime,+libgc)
 ```
 
@@ -77,6 +78,44 @@ compile-time). **User-wins shadowing** still holds (a user define of the same na
 import). `--no-prelude` skips the auto-import and macro merge, so prelude names and derived forms
 are unavailable. (The `prepend prelude` box above is the historical model; the current mechanism
 is the `(scheme base)` auto-import — see the module-system spec.)
+
+**Simplify.** `simplify` (change: `simplify-known-calls`) is the ladder's only *optimizing*
+pass — every other stage is a translation that changes representation and hands on the same
+amount of work. It applies three rules to a fixed point: inline a lambda binding that is
+referenced exactly once, in operator position, at matching fixed arity; propagate immediate
+constants and fold `%+ %- %* %= %<` over them; drop bindings left unreferenced whose
+right-hand side is syntactically effect-free. Together those collapse
+`(define (square n) (* n n))` / `(square 34)` to the single constant `1156`, with no closure
+record, no indirect call, and no multiply.
+
+Its position in the ladder is load-bearing. Running **after `convert-assignments`** means
+`set!` is already gone (assigned variables are boxed into `box`/`unbox`/`set-box!` primcalls),
+so every variable the pass can see is immutable and both substitution rules are valid with no
+assignment analysis of their own. A `set!` reaching the pass would invalidate that reasoning,
+so `simplify` has no `set!` clause and fails loudly rather than miscompiling. Two deliberate
+restrictions keep it honest:
+
+- **Single-use inlining only.** The body *moves*; it is never copied, so the pass cannot grow
+  the output — which matters for a project whose deliverable is small binaries. A
+  self-recursive function references its own name and so is never a candidate, with no
+  separate recursion test.
+- **A conservative folding window.** Folding is confined to operands within ±(2^30 − 1),
+  which is exactly the range in which no `+`, `-`, or `*` can leave the 61-bit fixnum range.
+  The compiler is self-hosted and emit's own fixnums wrap silently, so a fold may not compute
+  first and range-check afterwards. Constant *propagation* has no window (copying computes
+  nothing) but is restricted to **immediates** — a string or pair constant materializes at run
+  time, so duplicating it would allocate a second object and break `eq?` between references
+  that used to name one.
+
+**Where it does and does not fire.** The inlining rule needs a binding group, so it applies to
+a program file's top-level `define`s, which `collect-toplevel` folds into one `letrec` — but
+only when *every* top-level define has a lambda initializer. A single non-lambda define (`(define
+n 1)`) sends the whole program down `build-program`'s `let` + `set!` path instead, where the
+names are boxed and nothing is inlinable. It likewise finds nothing in the REPL or in library
+units, whose top-level defines are persistent globals rather than a binding group: `simplify`
+runs over all 120 of `(scheme base)`'s defines and rewrites none. Folding and dead-binding
+removal still apply to local `let`s everywhere. This is a performance asymmetry only — values
+are identical on every door.
 
 **Macros (`expand`).** `expand` is a fixpoint `syntax-rules` macro expander. Before
 `collect-toplevel`, the driver lifts every top-level `(define-syntax name (syntax-rules …))`
@@ -125,6 +164,7 @@ D3 lesson recorded there).
 | inline-primitives | same core IL; direct unshadowed integrable call `(call cons a b)` → `(primcall %cons a b)`, value/apply/wrong-arity use `cons` → `(lambda (p…) (primcall %cons p…))`; a shadowed (alpha-renamed) binding is left untouched | `src/parse.ss` |
 | recognize-let | + `(let …)` from `(call (lambda …) …)` | `src/passes/recognize-let.ss` |
 | convert-assignments | − `set!`; `+ (primcall box/unbox/set-box! …)` | `src/passes/convert-assignments.ss` |
+| simplify | same IL, smaller: inlines a singly-referenced lambda binding into its one call site, propagates immediate constants, folds `%+ %- %* %= %<` over constants, drops unreferenced effect-free bindings | `src/passes/simplify.ss` |
 | convert-closures | − `letrec`; `+ (closures ([x (fv…) le]…) body)` | `src/passes/convert-closures.ss` |
 | lambda-lift + lower | `(program (code …) entry)` with `(local x)｜(free-ref i)｜(make-closure …)｜(closure-block …)｜(app f (a…))` | `src/passes/lower.ss` |
 | emit | textual LLVM IR (opaque `ptr`, `tailcc`, `musttail`) | `src/emit.ss` |

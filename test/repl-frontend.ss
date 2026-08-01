@@ -14,6 +14,7 @@
 (include "src/parse.ss")
 (include "src/passes/recognize-let.ss")
 (include "src/passes/convert-assignments.ss")
+(include "src/passes/simplify.ss")
 (include "src/passes/convert-closures.ss")
 (include "src/passes/lower.ss")
 
@@ -95,8 +96,9 @@
   (let* ([il (repl-lower-form env '(+ g g))]
          [lc (lower-program
                (convert-closures
-                 (convert-assignments
-                   (recognize-let il))))])
+                 (simplify
+                   (convert-assignments
+                     (recognize-let il)))))])
     (check-pred "lowers to a program with global-ref"
                 lc (lambda (t) (and (eq? (car t) 'program) (mentions? 'g.g0 t))))))
 

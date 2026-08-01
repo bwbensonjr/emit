@@ -23,6 +23,7 @@
 (include "src/passes/expand.ss")
 (include "src/passes/recognize-let.ss")
 (include "src/passes/convert-assignments.ss")
+(include "src/passes/simplify.ss")
 (include "src/passes/convert-closures.ss")
 (include "src/passes/lower.ss")
 (include "src/emit.ss")
@@ -432,6 +433,7 @@
     "src/passes/expand.ss"
     "src/passes/recognize-let.ss"
     "src/passes/convert-assignments.ss"
+    "src/passes/simplify.ss"
     "src/passes/convert-closures.ss"
     "src/passes/lower.ss"
     "src/emit.ss"
