@@ -22,10 +22,10 @@
 - [x] 3.6 Same program through the AOT and run doors, and through the tree-shaking path, agrees on the value (design D3: the pruned table is discarded, so the program's indirect call must survive pruning)
 - [x] 3.7 Register the new suite in `run-all-tests.sh` (Chez-free, like `test/cross-unit-direct-call-tests.sh`)
 - [x] 3.8 `./run-all-tests.sh` and `./run-dev-tests.sh` green
-- [ ] 3.9 `make regen` reconverges (a second regen reproduces `bootstrap/*.ll` byte-for-byte) and `test/trust-check.sh` passes on the commit; the IR diff must be compiler churn only, with no change to `build/lib/scheme.base.ll`
+- [x] 3.9 `make regen` reconverges (a second regen reproduces `bootstrap/*.ll` byte-for-byte) and `test/trust-check.sh` passes on the commit; the IR diff must be compiler churn only, with no change to `build/lib/scheme.base.ll`
 
 ## 4. Close-out
 
 - [x] 4.1 Amend `openspec/changes/cross-unit-direct-calls/design.md` D4: reason (2) is superseded — record the withheld-row invariant and cross-reference this change, since that change is complete but unarchived and its delta modifies the same requirement
 - [x] 4.2 Update `docs/MODULES.md` for the export-table rule (a binding its unit assigns records no call row) and note the R7RS §5.3.1 behaviour is now supported inside a library
-- [ ] 4.3 Commit referencing `Fixes #14`, and confirm issue #16 (a library body's non-define top-level form is dropped) records the part deliberately left out
+- [x] 4.3 Commit referencing `Fixes #14`, and confirm issue #16 (a library body's non-define top-level form is dropped) records the part deliberately left out
