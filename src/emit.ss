@@ -695,10 +695,19 @@
          "  ret i64 %r\n}\n\n"))))
 
 ;; allocate {code_ptr, cap...}, tag TAG_CLOSURE (4)
+;;
+;; The allocator is declared to return an `align 8` POINTER (P6-B), which is the
+;; whole reason this takes the result as a ptr and converts DOWN to the integer
+;; rather than the other way round.  Tagging needs the low three bits zero; with
+;; that fact in the declaration LLVM can prove `and (or base, 4), -8` is `base`,
+;; forward the code-pointer store below to the load at a call site, devirtualize
+;; the call and inline the callee.  Stated the old way -- an i64 result widened to
+;; a pointer -- the alignment was invisible and every call through a
+;; just-allocated closure stayed indirect.  Instruction count is unchanged.
 (define (emit-alloc-closure label caps-count)
-  (let* ([raw (fresh-temp)] [p (fresh-temp)])
-    (emit! (string-append raw " = call i64 @rt_alloc_words(i64 " (number->string (+ caps-count 1)) ")"))
-    (emit! (string-append p " = inttoptr i64 " raw " to ptr"))
+  (let* ([p (fresh-temp)] [raw (fresh-temp)])
+    (emit! (string-append p " = call ptr @rt_alloc_words(i64 " (number->string (+ caps-count 1)) ")"))
+    (emit! (string-append raw " = ptrtoint ptr " p " to i64"))
     (emit! (string-append "store i64 ptrtoint (ptr " (label-operand label) " to i64), ptr " p))
     (list raw p)))
 
@@ -756,9 +765,8 @@
 
 ;; spill i64 operands into a fresh GC-allocated array; returns a ptr operand.
 (define (emit-spill ops)
-  (let* ([raw (fresh-temp)] [p (fresh-temp)] [len (length ops)])
-    (emit! (string-append raw " = call i64 @rt_alloc_words(i64 " (number->string len) ")"))
-    (emit! (string-append p " = inttoptr i64 " raw " to ptr"))
+  (let* ([p (fresh-temp)] [len (length ops)])     ; ptr result: no inttoptr needed
+    (emit! (string-append p " = call ptr @rt_alloc_words(i64 " (number->string len) ")"))
     (let loop ([i 0] [os ops])
       (unless (null? os)
         (let ([g (fresh-temp)])
@@ -856,7 +864,7 @@
 
 (define (rt-declarations)
   (string-append
-   "declare i64 @rt_alloc_words(i64)\n"
+   "declare align 8 ptr @rt_alloc_words(i64)\n"   ; align: see emit-alloc-closure (P6-B)
    "declare i64 @rt_cons(i64, i64)\n"
    "declare i64 @rt_car(i64)\n"
    "declare i64 @rt_cdr(i64)\n"

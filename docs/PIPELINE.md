@@ -194,7 +194,7 @@ D3 lesson recorded there).
 | simplify | same IL, smaller: inlines a singly-referenced lambda binding into its one call site, propagates immediate constants, folds `%+ %- %* %= %<` over constants, drops unreferenced effect-free bindings | `src/passes/simplify.ss` |
 | convert-closures | − `letrec`; `+ (closures ([x (fv…) le]…) body)` — every `le` is a lambda, guaranteed by the split above | `src/passes/convert-closures.ss` |
 | lambda-lift + lower | `(program (code …) entry)` with `(local x)｜(free-ref i)｜(make-closure …)｜(closure-block …)｜(app f (a…))` | `src/passes/lower.ss` |
-| emit | textual LLVM IR (opaque `ptr`, `tailcc`, `musttail`) | `src/emit.ss` |
+| emit | textual LLVM IR (opaque `ptr`, `tailcc`, `musttail`); the allocator is declared `align 8` so `-O2` can see through a closure's tag mask (P6-B) | `src/emit.ss` |
 
 **Inspecting the stages (`--dump`).** Every door of the shipped binary prints the IL after
 each named pass to stderr — `build/emit run --dump prog.scm`, and likewise `build`, `lib`,

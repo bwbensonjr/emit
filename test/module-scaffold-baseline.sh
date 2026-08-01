@@ -158,6 +158,17 @@
 #     box/unbox/set_box calls, while `counter` -- the demo whose subject is set! on a
 #     captured variable -- correctly kept all of its.  All 77 demos' stdout is
 #     byte-identical.  No new entries.
+#   P6-B -- state the allocator's alignment (docs/PERFORMANCE.md P6-B).  rt_alloc_words
+#     now returns a POINTER declared `align 8` instead of an i64, so LLVM knows the low
+#     three bits of a fresh object are zero.  Without that it could not prove that masking
+#     a tagged closure recovers the pointer it was built from, so it could not forward the
+#     code-pointer store to the load, and every call through a just-allocated closure
+#     stayed indirect and uninlinable at -O2.  ALL 77 demos' IR changed -- the declare line
+#     is in every module and every allocation site swaps inttoptr for ptrtoint -- and NONE
+#     grew; the committed IR shrank (embed-repl -2062, schemec -1862, scheme.base -524)
+#     because emit-spill no longer needs its conversion at all.  All 77 stdout identical.
+#     Ship-door effect, indirect calls surviving -O2 in the program module: derived 4 -> 0,
+#     mandelbrot 3 -> 1, counter 2 -> 1, case-cxr 11 -> 10.  No new entries.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

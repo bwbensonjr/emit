@@ -20,7 +20,7 @@ speed items in this list.
 | [P3](#p3-precompiled-prelude--library-objects) | Precompiled prelude / library objects | build speed | low | low | — | ☐ |
 | [P4](#p4-on-codepoint-string-indexing) | O(n) codepoint string indexing | speed | low–med | med–high | `codepoint-string-indexing` | ☑ |
 | [P5](#p5-arithmetic-and-call-overhead-ackermann-benchmark) | Arithmetic & call overhead (Ackermann benchmark) | speed | high | med–high | `inline-fixnum-arith-and-self-calls` (A + B-self) | ◐ |
-| [P6](#p6-no-optimizer-pass-known-call-inlining-and-constant-folding) | No optimizer pass: known-call inlining & constant folding | speed + size | med–high | med | `simplify-known-calls` (A) | ◐ |
+| [P6](#p6-no-optimizer-pass-known-call-inlining-and-constant-folding) | No optimizer pass: known-call inlining & constant folding | speed + size | med–high | med | `simplify-known-calls` (A) | ☑ |
 | [P7](#p7-boxing-driven-by-desugaring-rather-than-by-mutation) | Boxing driven by desugaring rather than by mutation | speed + size | med | low–med | — | ☑ |
 
 Legend — **Value**: benefit if fixed. **Cost**: rough implementation effort/risk. These are
@@ -332,7 +332,7 @@ remains unscheduled — note it may now compose with `aot-release-profile`'s clo
 
 ## P6 — No optimizer pass: known-call inlining and constant folding
 
-**Status:** ◐ A implemented (change: `simplify-known-calls`); B unscheduled
+**Status:** ☑ done — A (change: `simplify-known-calls`) and B, below
 
 **Result (A).** The `simplify` pass (`src/passes/simplify.ss`, between `convert-assignments` and
 `convert-closures`) inlines a singly-referenced lambda binding into its one call site, propagates
@@ -518,6 +518,28 @@ suite must produce identical values. Two hazards to respect:
   the compiler's own binaries to *shrink* (dead closures removed), which is the size half of this
   item.
 
+**Result (B).** `rt_alloc_words` now returns a **pointer declared `align 8`** rather than an
+`i64`. That single fact is what LLVM was missing: tagging needs the low three bits of a fresh
+object to be zero, and without it the optimizer could not prove that masking a tagged closure
+recovers the pointer it was built from — so it could not forward the code-pointer store to the
+load, could not devirtualize, and could not inline. Every call through a just-allocated closure
+stayed indirect at `-O2`.
+
+Indirect calls surviving `-O2` in the program module: `derived` 4 → **0**, `mandelbrot` 3 → 1,
+`counter` 2 → 1, `case-cxr` 11 → 10. On a two-call probe, the first call is devirtualized,
+inlined, and constant-folded outright — `(sq 3)` becomes the literal `72`.
+
+It also costs nothing: instruction count at a closure allocation is unchanged (a `ptrtoint`
+replaces an `inttoptr`), and `emit-spill` drops its conversion entirely, so the committed IR
+*shrank* (`embed-repl.ll` −2062, `schemec.ll` −1862, `scheme.base.ll` −524). All 77 demos' IR
+changed — the declaration is in every module — and none grew; all 77 values are unchanged.
+
+The `llvm.assume` sketched below was measured to work equally well and was **rejected**: at 847
+allocation sites it would have added ~2,500 lines of IR and left the dev door, which runs no IR
+passes, carrying dead instructions. Stating the fact in the declaration costs nothing anywhere.
+`noalias` was also measured and buys nothing here — it does not let LLVM delete a dead
+allocation, which would need allocator attributes and is the unmeasured B2 note below.
+
 **OpenSpec change:** `simplify-known-calls` (A; implemented). Two decisions were forced during
 implementation and are recorded in its design: folding is confined to a conservative ±(2^30 − 1)
 window rather than an exact fixnum-boundary test (the exact version could not survive self-hosting
@@ -539,9 +561,11 @@ The lesson generalizes past this pass: *what the arithmetic can compute* and *wh
 write down* are two different ceilings, and anything that manufactures a constant at compile time
 is bounded by the lower one.
 
-B is unscheduled — it is small enough to be its own change with its own measurement on the
-Ackermann probe, and it should be sequenced after P5's remaining B-general question is settled,
-since the two overlap.
+B landed separately (see **Result (B)** above), as an allocator-declaration change rather than the
+per-site `llvm.assume` originally sketched. It overlaps P5's still-deferred B-general: LLVM now
+devirtualizes many known-closure calls on the ship path, which is much of what B-general would
+have done in the emitter — so B-general should be re-measured before being scheduled, not assumed
+still worth its complexity.
 
 ---
 

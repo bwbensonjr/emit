@@ -111,8 +111,17 @@ static inline val truthy(int b) { return b ? TRUE_V : FALSE_V; }
 
 /* --- allocation -------------------------------------------------------- */
 /* raw n-word allocation; the emitter tags the result and fills the slots
- * (used for closures, whose size/content is per-lambda). */
-val rt_alloc_words(intptr_t n) { return (val)GC_MALLOC((size_t)n * sizeof(val)); }
+ * (used for closures, whose size/content is per-lambda).
+ *
+ * Returns a POINTER, not a `val`, so the emitter can declare it
+ * `align 8` (docs/PERFORMANCE.md P6-B).  Tagging needs the low three bits of the
+ * address to be zero, and without that fact stated LLVM cannot prove that masking
+ * a tagged closure word recovers the pointer it was built from -- so it could not
+ * forward the code-pointer store to the load, and every call through a closure it
+ * had just allocated stayed indirect and uninlinable.  GC_MALLOC is at least
+ * word-aligned, so the attribute is simply telling the optimizer what was already
+ * true. */
+void *rt_alloc_words(intptr_t n) { return GC_MALLOC((size_t)n * sizeof(val)); }
 
 /* --- pairs ------------------------------------------------------------- */
 val rt_cons(val a, val b) {
