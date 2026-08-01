@@ -240,7 +240,9 @@ session** (and into the compiler's own build), as if the source began with `(imp
   exactly as before. The importing module `declare`s each label it names; no linkage change is
   needed, as library code labels already have external linkage. This rests on a library global
   being assigned once by its unit's `__init` and never reassigned — true on every door today (a
-  `set!` of a top-level or imported name is a compile error, and a REPL redefinition binds a
+  `set!` of a unit's own top-level binding, or of an imported one, is a compile error (a REPL
+  *session* global is assignable — issue #5 — but that is a program slot, not a unit's), and a
+  REPL redefinition binds a
   fresh *program* global rather than touching the library's slot), and a prerequisite any future
   library-reload feature would have to revisit.
 - **Artifacts** — each library compiles to `<artifacts>/<name>.ll` plus a readable

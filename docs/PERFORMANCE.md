@@ -470,8 +470,9 @@ would be double-counted.
 its unit's `__init` and never reassigned, and that turned out to hold on **both** doors, so there
 is no AOT-only carve-out and the program module stays byte-identical across doors. Three
 independent reasons, all checked: a unit's globals are stored only by its own per-define
-`__init_N` thunks; `set!` on a top-level or imported name is a *compile error* on every path that
-produces a `global-set!` (a unit body and the REPL both reject it); and a REPL redefinition
+`__init_N` thunks; `set!` on a unit's own top-level binding, or on an imported one, is a
+*compile error* on every path that produces a `global-set!` into a unit's slot (issue #5 made a
+REPL **session** global assignable and deliberately stopped there); and a REPL redefinition
 allocates a fresh **program** global `x.gN` rather than touching the library's slot, so
 previously-compiled code keeps the binding it captured. A future library-*reload* feature would
 invalidate the third reason and must revisit this.

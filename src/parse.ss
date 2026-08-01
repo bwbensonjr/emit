@@ -617,10 +617,49 @@
 (define (scope-resolve env name)
   (let ([s (repl-env-lookup env name)])
     (cond
+      ;; An imported name resolves to the EXPORTER's already-qualified symbol
+      ;; (`scheme.base:car`), which is what tells it apart from one of this unit's
+      ;; own bindings.  The `imported` kind was structured for this from the start
+      ;; and left unpopulated ("ready for Stage 1"); populating it is what lets a
+      ;; `set!` refuse to store into another unit's slot (issue #5).  Reads are
+      ;; unaffected -- resolve-globals emits `(global-ref sym)` for local and
+      ;; imported alike, exactly as before.
+      [(and s (unit-qualified? s)) (make-binding 'imported s)]
       [s           (make-binding 'local s)]
       [(prim? name) (make-binding 'primitive name)]
       [(integrable? name) (make-binding 'primitive name)]  ; leave symbol; inline-primitives rewrites it
       [else #f])))
+
+;; `(set! x e)` whose target is NOT lexically bound assigns a TOP-LEVEL binding
+;; (issue #5).  Before, the set! arm assumed every target was a renamed local and
+;; left the bare symbol in place, so a later pass died with "unbound variable" --
+;; even though reading the same name worked.  Resolve it the way a read is
+;; resolved, and admit exactly the one case that is meaningful and sound:
+;;
+;;   REPL session global (`n.gN`)  -> (global-set! n.gN e).  The slot belongs to
+;;     this session and nothing else can be holding its code, so assigning it is
+;;     ordinary mutation.
+;;   another unit's export (`lib:x`) -> ERROR.  A unit's globals are written only
+;;     by its own __init, and cross-unit direct calls depend on that: a program
+;;     that direct-calls `lib:code:f` would keep calling the code that was there
+;;     while the slot pointed somewhere else (design D4 of cross-unit-direct-calls).
+;;   this unit's own top level (the symbol IS the name) -> ERROR, unchanged.  Same
+;;     hazard as above, from the inside; see the follow-up issue.
+;;   a primitive -> ERROR; there is no slot to store into.
+;;
+;; The three cases are told apart by the symbol's shape, which the three binders
+;; (repl-env-define! / unit-env-define! / the import seeding) make unambiguous.
+(define (assign-global name rhs env)
+  (let ([b (scope-resolve env name)])
+    (cond
+      [(not b) (error 'repl "unbound variable" name)]
+      [(eq? (binding-kind b) 'imported)
+       (error 'repl "cannot assign to an imported binding" name)]
+      [(eq? (binding-kind b) 'primitive)
+       (error 'repl "cannot assign to a primitive" name)]
+      [(eq? (binding-sym b) name)
+       (error 'repl "cannot assign to a unit's top-level binding" name)]
+      [else `(global-set! ,(binding-sym b) ,rhs)])))
 
 ;; Post-rename resolution: a bare symbol that is not bound by an enclosing
 ;; lambda/let/letrec is a top-level reference.  Map each through the typed scope
@@ -650,7 +689,8 @@
                   [else x])))]
       [(if ,a ,b ,c) `(if ,(Rb a) ,(Rb b) ,(Rb c))]
       [(seq ,a ,b) `(seq ,(Rb a) ,(Rb b))]
-      [(set! ,x ,rhs) `(set! ,x ,(Rb rhs))]        ; x is a renamed local
+      [(set! ,x ,rhs)                              ; a renamed local, else a global
+       (if (memq x bound) `(set! ,x ,(Rb rhs)) (assign-global x (Rb rhs) env))]
       [(primcall ,op . ,args) `(primcall ,op ,@(map Rb args))]
       [(apply ,f . ,args) `(apply ,(Rb f) ,@(map Rb args))]
       [(call ,f . ,args) `(call ,(Rb f) ,@(map Rb args))]

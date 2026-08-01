@@ -55,7 +55,9 @@
 ;; Soundness rests on a library global being assigned once, by its unit's __init,
 ;; and never reassigned -- see design D4.  That holds on BOTH doors: a unit's
 ;; globals are stored only by its own per-define __init_N thunks, `set!` on a
-;; top-level/imported name is a compile error, and a REPL redefinition allocates a
+;; own top-level binding, or on an imported one, is a compile error (issue #5 made a
+;; REPL SESSION global assignable, and deliberately stopped there), and a REPL
+;; redefinition allocates a
 ;; fresh PROGRAM global (x.gN) rather than touching the library's slot.  A future
 ;; library-reload feature would have to revisit this.
 (define *import-calls* '())
