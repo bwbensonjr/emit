@@ -78,49 +78,73 @@ source, which is exactly the class of bug this change exists to remove.
 *Dump tagging.* `unit-def-lcode` tags each form's stage dump with the define's name; a command has
 none. It gets a positional tag instead so `--dump` output stays legible and stable.
 
-### D2 — A record-type group registers in phase 1, through the unit's binder
+### D2 — A record-type declaration is spliced into plain defines, in place
 
-`define-record-type` expands to several mutually-visible top-level bindings, so it cannot be lowered
-as one opaque form: phase 1 has to know all of its names, or a sibling procedure's reference to an
-accessor is an unbound variable and an `(export make-pt)` is rejected.
+`define-record-type` introduces several mutually-visible top-level bindings, so phase 1 has to know
+all of its names, or a sibling procedure's reference to an accessor is an unbound variable and an
+`(export make-pt)` is rejected.
 
-`repl-lower-form*` already handles the shape — it calls `record-type-bindings`, registers every name,
-then emits a `seq` chain of stores, and `lower-top` (added by `library-toplevel-set`) already walks
-that `seq` spine so each binding keeps its stable, name-derived code label. What is wrong for a unit
-is the *binder*: that arm calls `repl-env-define!` unconditionally, which allocates a generation and
-yields `pt-x.g0`. A library needs the plain name (`unit-env-define!`), because the export table
-mangles the internal name and an importer resolves `reclib:pt-x`.
+**Decision:** normalize the body before it is split, replacing each `(define-record-type …)` with the
+sequence of `(define <name> <init>)` forms that `record-type-bindings` returns, in place. Everything
+downstream — phase-1 registration, per-form lowering, the export validator, the dependency graph — is
+then unchanged, because every body form is a `define` or a command and nothing else.
 
-**Decision:** make the record arm respect the register?/unit distinction the `define` arm already
-respects — phase 1 pre-registers the group's names with the unit binder, and phase 2 reuses them.
-This mirrors the existing letrec\*-group treatment of sibling defines rather than inventing a second
-mechanism.
+This is not a new mechanism: `collect-toplevel` already does exactly this for a *program*
+(`src/parse.ss:548` splices `record-type-bindings` into the letrec's binding list), so libraries end
+up handling the form the same way programs do rather than a second way.
 
-*Alternative considered.* Desugar `define-record-type` to a sequence of plain `define`s before the
-body is split, so the existing path handles it unchanged. Rejected: `record-type-bindings` and its
-shape validation (`validate-record-type-syntax`) already exist and are shared with the REPL and the
-program path; duplicating the desugaring for libraries alone would be a second source of truth for
-the record layout.
+*Consequences, both good:*
 
-### D3 — Tree-shake: a command is always kept; a record group is all-or-nothing
+- **`repl-lower-form*` is untouched.** Its `record-type-form?` arm binds through `repl-env-define!`
+  unconditionally, which would have given a library's record bindings generation-mangled symbols
+  (`pt-x.g0`) instead of the plain names the export table mangles. No record form reaches that arm on
+  the unit path, so the shared REPL behaviour carries no risk from this change.
+- **Pruning gets tighter, not coarser** — see D3.
+
+*Consequence found while implementing: a library using `define-record-type` must import
+`(scheme base)`.* The constructor the declaration lowers to builds its field vector with
+`(list …)`, and a library does not auto-import the prelude the way a program does — so a
+prelude-free library gets `unbound variable list`. That is correct behaviour rather than a defect
+(the name is genuinely free in the expansion), but it is surprising enough to document in
+`docs/MODULES.md` and to state in the fixture. Rewriting the desugaring over `%cons`/`'()` so records
+work prelude-free is the obvious follow-up, and is deliberately **not** folded in here: it would
+change the emitted IR of every existing record-using program and so churn `bootstrap/` for a reason
+unrelated to this change.
+
+*Determinism check.* The descriptor binding's name is a gensym (`rtd.N`), so it has to be identical
+in the whole compile and the pruned recompile or the two units disagree. It is: `compile-library*`
+calls `reset-counter!` first, and normalization runs over the same full body list before any lowering
+in both calls, so the counter is in the same state when `record-type-bindings` is reached. The
+constructor/predicate/accessor bindings are lambdas and take their stable labels from their own plain
+names, so `cross-unit-direct-calls` D1 holds for records unchanged.
+
+*Alternative considered — and initially chosen.* Keep the form intact, register its group of names in
+phase 1, and lower it through `repl-lower-form*`'s existing `record-type-form?` arm with that arm
+taught the unit binder. Rejected once the code was read: it is more code, it modifies a function the
+REPL shares (so interactive record redefinition becomes a regression risk for no gain), and it forces
+the coarser dependency node D3 describes. The original objection to splicing — that it would
+duplicate the record layout — was simply wrong: splicing *calls* `record-type-bindings`, it does not
+reimplement it.
+
+### D3 — Tree-shake: a command is always kept; a record's bindings prune independently
 
 The pruned path builds `expanded` as `(name . form)` pairs and prunes forms whose name is not
-reachable from the program's roots. Both new shapes break that keying: a command has no name, a
-record group has several.
+reachable from the program's roots. After D2 a record declaration is already several `define` forms,
+so the only shape that breaks that keying is the **command**, which defines no name.
 
-**Decision:** generalize the node from a name to a **set of defined names**, and give each shape a
-rule.
+**Decision:** keep the one-name-per-form node, and give the command a rule of its own.
 
-- **`(names . form)`**, with `names` = `(name)` for a define, the group's names for a record type,
-  and `'()` for a command. `dep-alist` maps *each* of a form's names to that form's dependencies, and
-  a form is kept when *any* of its names is reachable — which makes a record group all-or-nothing for
-  free, since the form emits its bindings together and cannot be partially emitted.
 - **A command is kept unconditionally, and the unit's own names it references join the root set.**
   A command's effect is a store into state that reachability analysis does not model, so there is no
   sound way to conclude it is dead: dropping a command that initializes a table the program reads
   through an exported accessor would produce a silently wrong answer, the same class of bug as the
   present drop. Keeping it is the conservative direction, and its references must become roots or the
   shake could prune a binding the kept command calls — a link-time undefined symbol.
+- **A record type's bindings prune independently**, which falls out of D2 and is *tighter* than
+  treating the declaration as one node. Each accessor, the constructor and the predicate all
+  reference the descriptor, so reaching any one of them keeps the descriptor it needs; but reaching
+  `pt-x` does not drag in `make-pt`. The bindings are separate globals over a shared descriptor, so
+  emitting a subset is well-defined — there is no group to keep whole.
 
 This is a pruning *loss* for a library with commands: it pins whatever they reference. That is
 correct rather than unfortunate, and it costs `(scheme base)` nothing, since it has no commands. Per

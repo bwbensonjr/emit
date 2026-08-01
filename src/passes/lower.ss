@@ -130,11 +130,19 @@
 ;; `unit` is the compilation unit's library name (a list of symbol parts); the
 ;; program unit is `program-unit` (empty prefix).  It is optional so the pass
 ;; tests that call (lower-program e) still get the program unit.
+;;
+;; `definition?` (second optional, default #t) says whether this form is a top-level
+;; DEFINITION, whose `global-set!` is an initializer entitled to the stable,
+;; name-derived code label -- as opposed to a COMMAND, whose `global-set!` is an
+;; ordinary assignment (change: library-body-declarations).  It defaults to #t because
+;; every caller that predates commands passes a define or runs in the program unit,
+;; where the stable-label path is inert (`*unit*` is the empty prefix).
 (define (lower-program e . opt)
   (set! *code-defs* '())
   (set! *known-closures* '())
   (set! *unit* (if (null? opt) program-unit (car opt)))
-  (let ([entry (lower-top e)])              ; top level: no locals, no free vars, no self
+  (let* ([definition? (or (null? opt) (null? (cdr opt)) (cadr opt))]
+         [entry (lower-top e definition?)])  ; top level: no locals, no free vars, no self
     `(program ,(reverse *code-defs*) ,entry)))
 
 ;; One lowered top-level form's SPINE (change: library-toplevel-set): the
@@ -149,11 +157,20 @@
 ;; time and emit a duplicate function definition.  `locals`/`fmap` cannot separate
 ;; them: a nullary procedure that captures nothing is lowered with the same empty
 ;; ones as the top level.  So the spine is walked explicitly here and `lower`'s
-;; `global-set!` arm just lowers its rhs (design D2).
-(define (lower-top e)
+;; `global-set!` arm just lowers its rhs (design D2 of library-toplevel-set).
+;;
+;; Position is not sufficient on its own, though.  Once a library body may contain
+;; COMMANDS (change: library-body-declarations), a top-level `(set! f (lambda ...))`
+;; is a `global-set!` in the very same position as a define's initializer -- and it
+;; would claim `L:code:f` a second time, the same duplicate definition, now reachable
+;; from a library's top level.  Only a form that IS a definition may hand out the
+;; stable label, which is what `definition?` carries down from the unit driver; a
+;; command's spine lowers like any other expression.
+(define (lower-top e definition?)
   (cond
+    [(not definition?) (lower e '() '() #f)]
     [(and (pair? e) (eq? (car e) 'seq))
-     `(seq ,(lower-top (cadr e)) ,(lower-top (caddr e)))]
+     `(seq ,(lower-top (cadr e) #t) ,(lower-top (caddr e) #t))]
     [(and (pair? e) (eq? (car e) 'global-set!))
      `(global-set! ,(cadr e) ,(lower-global-init (cadr e) (caddr e) '() '() #f))]
     [else (lower e '() '() #f)]))

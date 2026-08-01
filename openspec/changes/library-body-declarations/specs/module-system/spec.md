@@ -76,17 +76,20 @@ those written below it. A command SHALL NOT be discarded.
 - **THEN** the program observes the assigned value
 - **AND** the export table records no call label for `f`, as for any binding its unit assigns
 
-### Requirement: Tree-shaking covers nameless and multi-name body forms
+### Requirement: Tree-shaking covers a body form that defines no name
 
 The closed-world AOT tree-shake SHALL preserve the meaning of a pruned unit for every body-form
-shape. A form that defines **several** names (a `define-record-type` group) SHALL be kept or dropped
-as a whole, and SHALL be kept when any of its names is reachable. A form that defines **no** name (a
-command) SHALL always be kept, and the unit's own bindings it references SHALL be treated as
-reachability roots.
+shape. A form that defines **no** name — a command — SHALL always be kept, and the unit's own
+bindings it references SHALL be treated as reachability roots, so that the shake cannot prune a
+binding a surviving command calls.
 
 A command's effects are not modelled by reachability analysis, so a command SHALL NOT be dropped on
-the grounds that its names are unreachable; dropping one would reintroduce the silent
+the grounds that nothing references it; dropping one would reintroduce the silent
 lost-initialization failure this behaviour exists to prevent.
+
+A record type's bindings SHALL be reachable independently of one another. Each of the constructor,
+predicate, accessors, and modifiers references the type's descriptor, so reaching any one of them
+keeps the descriptor; reaching one SHALL NOT require keeping the others.
 
 #### Scenario: A pruned unit still runs its commands
 
@@ -101,9 +104,9 @@ lost-initialization failure this behaviour exists to prevent.
   never references
 - **THEN** the pruned unit still defines that procedure, and the program links
 
-#### Scenario: A reached record accessor keeps its whole group
+#### Scenario: A reached record accessor keeps the descriptor it needs
 
-- **WHEN** a program reaches one accessor of a library's record type and is built through the
-  tree-shaking path
-- **THEN** the pruned unit defines the record type's constructor, predicate, and remaining
-  accessors as well, and links
+- **WHEN** a program reaches a library's record constructor and one accessor, and is built through
+  the tree-shaking path
+- **THEN** the pruned unit defines the record type's descriptor alongside them, and the program
+  links and reads the field correctly

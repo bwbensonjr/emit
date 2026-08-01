@@ -257,8 +257,24 @@ session** (and into the compiler's own build), as if the source began with `(imp
   (change: `library-toplevel-set`, issue #14). The cost is the direct call: that binding's call row
   is withheld, so calls to it read the slot on each call. Assignment to an **imported** binding
   remains an error — the unit does not own that slot, and the exporter's table has already been
-  published. A non-`define` form at a library top level, including a top-level `set!`, is currently
-  dropped rather than lowered (issue #16), so the assignment must live inside a procedure body.
+  published. The assignment may be written at the library's top level or inside a procedure body;
+  either way only a *definition* takes the stable, name-derived code label, so a top-level
+  `(set! f (lambda …))` gets an ordinary counter one.
+- **A library body may contain commands and `define-record-type`, not only definitions** (change:
+  `library-body-declarations`, issue #16). Every body form is lowered — a **command** (an expression
+  evaluated for effect) becomes part of the unit's one-time initialization, and the declarations run
+  in **source order**, so a command sees the definitions written above it and not those below.
+  Before this, a command was discarded with no diagnostic and a record type could not be declared in
+  a library at all.
+  - A library using `define-record-type` **must `import (scheme base)`**: the constructor the
+    declaration lowers to builds its field vector with `(list …)`, and unlike a program a library
+    does not auto-import the prelude. Without it the unit fails with `unbound variable list`.
+  - The tree-shake always keeps a command and treats the unit's own bindings it references as
+    roots, since a command's effects are invisible to reachability analysis. A record type's
+    bindings prune independently of one another — reaching one accessor keeps the type's
+    descriptor, not the whole declaration.
+  - Still out of scope: the `include`, `include-ci`, `include-library-declarations`, and
+    `cond-expand` library declarations.
 - **Artifacts** — each library compiles to `<artifacts>/<name>.ll` plus a readable
   `<name>.exports` table (`(NAME ((external . "mangled") …) ((external "label" arity) …))`) and a
   `<name>.stamp` sidecar

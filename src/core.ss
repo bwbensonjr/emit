@@ -192,8 +192,11 @@
 ;; injected side-channel `compile-forms` takes -- optional, so a caller with nothing to
 ;; narrate (and the Chez driver, which never dumps per form) is unchanged
 ;; (change: emit-dump-stages).
+;; The REPL always passes #t for `definition?`: the stable-label path it selects is
+;; inert in the program unit (`*unit*` is the empty prefix), so a session form gets the
+;; same lowering either way (change: library-body-declarations).
 (define (repl-lcode il . opt)
-  (lcode-passes il program-unit (if (pair? opt) (car opt) no-dump)))
+  (lcode-passes il program-unit (if (pair? opt) (car opt) no-dump) #t))
 
 ;; ============================================================================
 ;; Module artifacts: define-library / import / export (change:
@@ -243,21 +246,56 @@
       [(import-form? (car fs)) (loop (cdr fs) (append (reverse (cdr (car fs))) imps) rt)]
       [else (loop (cdr fs) imps (cons (car fs) rt))])))
 
-;; Expand + lower ONE of a library's top-level defines, with every stage of its own
-;; lowering observable and tagged with the define's name (change: emit-dump-stages --
-;; `compile-library` took a `dump` but never used it, so libraries dumped nothing on
-;; any host).  Order of effects is unchanged: expand, then lower, then narrate.
-(define (unit-def-lcode env f macro-env known unit dump)
+;; Normalize a library body: replace each `(define-record-type ...)` with the
+;; (define <name> <init>) forms its group lowers to, spliced in place (change:
+;; library-body-declarations, issue #16, design D2).  This calls the SAME
+;; `record-type-bindings` that `collect-toplevel` splices for a program
+;; (src/parse.ss), so a library handles the form the way a program already does
+;; rather than a second way -- and no record form reaches `repl-lower-form*`'s
+;; generation-mangling arm, which would give a unit's record bindings `pt-x.g0`
+;; instead of the plain name the export table mangles.
+;;
+;; The descriptor's name is a gensym, so it must be identical in the whole and the
+;; pruned compile: this runs after `reset-counter!` over the same body list in both,
+;; so the counter is in the same state when it is reached.
+;;
+;; Everything downstream therefore sees only defines and commands.
+(define (splice-record-types forms)
+  (let loop ([fs forms] [acc (quote ())])
+    (cond
+      [(null? fs) (reverse acc)]
+      [(record-type-form? (car fs))
+       (loop (cdr fs)
+             (fold-left (lambda (a b) (cons (list 'define (car b) (cadr b)) a))
+                        acc (record-type-bindings (car fs))))]
+      [else (loop (cdr fs) (cons (car fs) acc))])))
+
+;; A body form's defined name, or #f when it defines none -- a COMMAND (change:
+;; library-body-declarations).  After splice-record-types those are the only two cases.
+(define (body-form-name f) (and (define-form? f) (car (normalize-define f))))
+
+;; The dump tag for one body form: its name, or a positional tag for a command, which
+;; has none.  `i` is the form's position in the unit's body, so a command's tag reads
+;; the same in the whole and the pruned compile (a command is never pruned).
+(define (body-form-tag nm i)
+  (if nm (symbol->string nm) (string-append "command " (number->string i))))
+
+;; Expand + lower ONE of a library's top-level body forms, with every stage of its own
+;; lowering observable and tagged (change: emit-dump-stages -- `compile-library` took a
+;; `dump` but never used it, so libraries dumped nothing on any host).  Order of effects
+;; is unchanged: expand, then lower, then narrate.
+(define (unit-def-lcode env f macro-env known unit dump i)
   (unit-lcode-tagged env (expand-unit-form f macro-env known) unit dump
-                     (symbol->string (car (normalize-define f)))))
+                     (body-form-tag (body-form-name f) i)
+                     (and (define-form? f) #t)))
 
 ;; The shared tail: lower one already-expanded unit form, narrating its parse+rename
 ;; result and each mid-pipeline stage under a `define <name>` tag.
-(define (unit-lcode-tagged env form unit dump name)
-  (let* ([d  (dump-tagged dump (string-append "define " name))]
+(define (unit-lcode-tagged env form unit dump name definition?)
+  (let* ([d  (dump-tagged dump (string-append (if definition? "define " "") name))]
          [il (repl-lower-form* env form #f)])
     (d "parse+rename" il)
-    (unit-lcode il unit d)))
+    (unit-lcode il unit d definition?)))
 
 ;; expand one top-level form (define init, or a bare expression) against macro-env
 (define (expand-unit-form f macro-env known)
@@ -267,8 +305,13 @@
       (expand f macro-env known)))
 
 ;; lower one core-IL expression for a unit named `unit` (code labels get @"L:..").
+;; `definition?` (second optional, default #t) distinguishes a top-level DEFINITION
+;; from a COMMAND; only the former's `global-set!` is an initializer entitled to the
+;; stable, name-derived code label (change: library-body-declarations).
 (define (unit-lcode il unit . opt)
-  (lcode-passes il unit (if (pair? opt) (car opt) no-dump)))
+  (lcode-passes il unit
+                (if (pair? opt) (car opt) no-dump)
+                (or (null? opt) (null? (cdr opt)) (cadr opt))))
 
 ;; A per-form view of a dumper (design D8): tag every stage NAME this dumper is given,
 ;; so the stages of a pass that runs once per top-level form can be told apart --
@@ -285,12 +328,12 @@
 ;; observable (change: emit-dump-stages).  Named stages match `compile-forms`, so one
 ;; splitter reads a dump from any path; `dump` is `no-dump` in every caller that is not
 ;; narrating, which makes this exactly the old one-liner.
-(define (lcode-passes il unit dump)
+(define (lcode-passes il unit dump definition?)
   (let* ([a (recognize-let il)]
          [b (convert-assignments a)]
          [s (simplify b)]
          [c (convert-closures s)]
-         [d (lower-program c unit)])
+         [d (lower-program c unit definition?)])
     (dump "recognize-let" a) (dump "convert-assignments" b)
     (dump "simplify" s) (dump "convert-closures" c) (dump "lower" d)
     d))
@@ -395,9 +438,16 @@
          [import-env-alist (import-tables->env-alist import-tables)]
          ;; imported external names are "known" too (see compile-program-with-imports),
          ;; so a macro introducing one is not hygiene-renamed away.
-         [known (union (compute-known macro-env runtime) (map car import-env-alist))]
-         [defs  (filter define-form? runtime)]
-         [defined-names (map (lambda (p) (car (normalize-define p))) defs)]
+         ;; EVERY body form is lowered, in source order (change: library-body-declarations,
+         ;; issue #16).  `defs` used to be (filter define-form? runtime), which silently
+         ;; dropped a command and made define-record-type unusable in a library.  After
+         ;; splice-record-types the body holds only defines and commands -- and it is
+         ;; computed BEFORE `known`, so a record's binding names count as known
+         ;; identifiers and hygiene does not rename references to them away.
+         [body  (splice-record-types runtime)]
+         [known (union (compute-known macro-env body) (map car import-env-alist))]
+         [defined-names (map (lambda (p) (car (normalize-define p)))
+                             (filter define-form? body))]
          [env   (make-repl-env)])
     ;; validate each export's INTERNAL name is defined at the library's top level.
     (for-each
@@ -408,8 +458,9 @@
     ;; seed the import environment FIRST, so the unit's own defines (registered
     ;; next, consed on top) shadow an imported name of the same spelling.
     (vector-set! env 0 import-env-alist)
-    ;; phase 1: register every top-level define (plain names) for mutual reference
-    (for-each (lambda (f) (unit-register-define! env f)) defs)
+    ;; phase 1: register every top-level define (plain names) for mutual reference.
+    ;; A command defines nothing, so it registers nothing and is simply skipped.
+    (for-each (lambda (f) (when (define-form? f) (unit-register-define! env f))) body)
     ;; phase 2: lower each define body as one mutually-recursive group (register? #f).
     ;; Use fold-left (left-to-right in BOTH hosts), not map: the gensym counter is
     ;; mutated per form, and Chez's map vs the prelude's map apply in different
@@ -417,39 +468,60 @@
     ;; keeps a library's emitted bytes identical across doors (dev->ship fidelity).
     (if (not keep-roots)
         ;; DEFAULT PATH (dev/REPL/JIT + committed artifacts): whole unit, unchanged.
+        ;; The fold carries the form's 1-based position alongside the accumulator, so a
+        ;; command (which has no name) can be tagged positionally in the dump.
         (let ([progs (reverse
-                       (fold-left
-                         (lambda (acc f)
-                           (cons (unit-def-lcode env f macro-env known name dump) acc))
-                         (quote ()) defs))]
+                       (cadr
+                         (fold-left
+                           (lambda (st f)
+                             (list (+ (car st) 1)
+                                   (cons (unit-def-lcode env f macro-env known name dump
+                                                         (car st))
+                                         (cadr st))))
+                           (list 1 (quote ())) body)))]
               ;; export table keys on the EXTERNAL name; the symbol is the INTERNAL name
               ;; mangled to this unit (rename is pure indirection).
               [export-table (map (lambda (e) (cons (car e) (mangle name (cdr e)))) exports)])
           (list (emit-library-batch progs name)
                 (list name export-table (export-call-rows exports (unit-procs)))))
-        ;; PRUNED PATH (closed-world AOT tree-shake): expand each def ONCE, compute
-        ;; the define->define reference graph, keep only what's reachable from the
-        ;; roots, and lower/emit just those (in original order, so __init order is
+        ;; PRUNED PATH (closed-world AOT tree-shake): expand each body form ONCE,
+        ;; compute the define->define reference graph, keep only what's reachable from
+        ;; the roots, and lower/emit just those (in original order, so __init order is
         ;; preserved).  fold-left = left-to-right in both hosts (deterministic).
+        ;;
+        ;; Each entry is (name-or-#f position expanded-form); #f marks a COMMAND, which
+        ;; defines no name and so cannot be reached BY one (change:
+        ;; library-body-declarations, design D3).
         (let* ([expanded (reverse
-                           (fold-left
-                             (lambda (acc f)
-                               (cons (cons (car (normalize-define f))
-                                           (expand-unit-form f macro-env known))
-                                     acc))
-                             (quote ()) defs))]
-               [dep-alist (map (lambda (ne)
-                                 (cons (car ne)
-                                       (filter (lambda (s) (memq s defined-names))
-                                               (all-symbols (cdr ne)))))
-                               expanded)]
-               [reachable (reachable-names keep-roots dep-alist)]
-               [kept    (filter (lambda (ne) (memq (car ne) reachable)) expanded)]
+                           (cadr
+                             (fold-left
+                               (lambda (st f)
+                                 (list (+ (car st) 1)
+                                       (cons (list (body-form-name f) (car st)
+                                                   (expand-unit-form f macro-env known))
+                                             (cadr st))))
+                               (list 1 (quote ())) body)))]
+               [unit-refs (lambda (ne)          ; this unit's own names the form mentions
+                            (filter (lambda (s) (memq s defined-names))
+                                    (all-symbols (caddr ne))))]
+               [dep-alist (map (lambda (ne) (cons (car ne) (unit-refs ne)))
+                               (filter car expanded))]
+               ;; A command's effects are not modelled by reachability, so it is ALWAYS
+               ;; kept -- and whatever it references must become a root, or the shake
+               ;; could prune a binding a surviving command calls into a link-time
+               ;; undefined symbol.
+               [cmd-roots (apply append (map unit-refs (filter (lambda (ne) (not (car ne)))
+                                                               expanded)))]
+               [reachable (reachable-names (append keep-roots cmd-roots) dep-alist)]
+               [kept    (filter (lambda (ne)
+                                  (or (not (car ne)) (memq (car ne) reachable)))
+                                expanded)]
                [progs   (reverse
                           (fold-left
                             (lambda (acc ne)
-                              (cons (unit-lcode-tagged env (cdr ne) name dump
-                                                       (symbol->string (car ne)))
+                              (cons (unit-lcode-tagged env (caddr ne) name dump
+                                                       (body-form-tag (car ne) (cadr ne))
+                                                       (and (car ne) #t))
                                     acc))
                             (quote ()) kept))]
                ;; the KEPT exports; both the symbol rows and the call rows are drawn
