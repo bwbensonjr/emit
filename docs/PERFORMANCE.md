@@ -360,14 +360,27 @@ backends stay byte-identical to each other.
 with the new compiler gives 2451232 → 2424494 (−1.1%, 650 → 635 functions). The compiler contains
 the pass; user binaries do not, so user programs pay nothing for it and collect the shrink.
 
-**Bounded more than expected.** The inlining rule needs a binding group, and `build-program`
-(`src/parse.ss:453`) emits a `letrec` only when *every* top-level define has a lambda initializer;
-one non-lambda define sends the whole program down the `let` + `set!` path, where the names are
-boxed and nothing is inlinable. The compiler's own source is in exactly that shape, and library
-units / the REPL define globals rather than a binding group — `simplify` runs over all 120 of
-`(scheme base)`'s defines and rewrites none. Folding and dead-binding removal still apply to local
-`let`s everywhere. Widening `build-program` to emit a `letrec` for the lambda-initialized subset
-would unlock top-level inlining generally; that is a separate change and is not yet scheduled.
+**Reach, and the follow-up that widened it.** The inlining rule needs a binding group, and
+`build-program` (`src/parse.ss`) originally emitted a `letrec` only when *every* top-level define
+had a lambda initializer; one non-lambda define sent the whole program down the `let` + `set!`
+path, where the names are boxed and nothing is inlinable. The compiler's own source was in exactly
+that shape, so it got no top-level inlining from its own pass.
+
+That was subsequently fixed: `build-program` now boxes only the defines that need a mutable
+location and letrec-binds the lambda-initialized rest, nested so that the functions' bodies still
+see the boxed names and the boxed initializers still see the functions. Its prerequisite was a
+crash — `set!` on a `letrec`-bound name compiled to `unbox`/`set-box!` against a binder that was
+never boxed (issue #8) — since the widening moves more names onto that path.
+
+**Result of the widening.** 9 of 75 demos' IR changed, every one smaller (program module: `records`
+21333 → 16548, −22.4%; `mandelbrot` 34896 → 29871, −14.4%), none larger, all 75 stdout-identical.
+The compiler's own IR shrank 10.3% and `build/emit` 4.7%, which more than repays the 4.7% the pass
+itself cost: `build/emit` is now marginally **smaller than before this whole item began**, while
+every compiled program gets the optimization.
+
+Still out of reach: library units and the REPL, whose top-level defines are persistent globals
+rather than a binding group — `simplify` runs over all 120 of `(scheme base)`'s defines and
+rewrites none. Folding and dead-binding removal still apply to local `let`s everywhere.
 
 **Workload.** `demos/square.scm` — the smallest program in which the gap is visible end to end:
 

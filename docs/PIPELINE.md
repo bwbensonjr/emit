@@ -108,15 +108,34 @@ restrictions keep it honest:
   time, so duplicating it would allocate a second object and break `eq?` between references
   that used to name one.
 
-**Where it does and does not fire.** The inlining rule needs a binding group, so it applies to
-a program file's top-level `define`s, which `collect-toplevel` folds into one `letrec` — but
-only when *every* top-level define has a lambda initializer. A single non-lambda define (`(define
-n 1)`) sends the whole program down `build-program`'s `let` + `set!` path instead, where the
-names are boxed and nothing is inlinable. It likewise finds nothing in the REPL or in library
-units, whose top-level defines are persistent globals rather than a binding group: `simplify`
-runs over all 120 of `(scheme base)`'s defines and rewrites none. Folding and dead-binding
-removal still apply to local `let`s everywhere. This is a performance asymmetry only — values
-are identical on every door.
+**Where it does and does not fire.** The inlining rule needs a binding group. `build-program`
+(`src/parse.ss`) gives it one for a program file's top-level `define`s: an all-lambda program
+becomes a plain `letrec`, and a mixed one boxes only the defines that need it while
+letrec-binding the lambda-initialized rest (see below). It finds nothing in the REPL or in
+library units, whose top-level defines are persistent globals rather than a binding group —
+`simplify` runs over all 120 of `(scheme base)`'s defines and rewrites none. Folding and
+dead-binding removal still apply to local `let`s everywhere. This is a performance asymmetry
+only; values are identical on every door.
+
+**Top-level defines and boxing.** `build-program` emits letrec\* semantics in one of three
+shapes. All-lambda defines become a plain `letrec`. Otherwise the defines that need a mutable
+location go into an enclosing `let` of `'()` initialized by `set!` in source order, and the
+lambda-initialized ones into a `letrec` between the two — outside the `set!`s so those
+initializers can call the functions, inside the `let` so the functions' bodies can read the
+boxed names:
+
+```scheme
+(let ([n '()])                    ; defines that still need a box
+  (letrec ([f (lambda …)] …)      ; lambda-initialized defines: unboxed, inlinable
+    (set! n 1)                    ; their initializers, in source order
+    body …))
+```
+
+Hoisting the lambdas ahead of the other initializers is unobservable, because creating a
+closure is pure and cannot read what it captures. A name defined twice stays boxed — its
+definitions must share one location, and a `letrec` binding would shadow the boxed one. Before
+this split, a single `(define n 1)` boxed *every* define in the program and cost it all
+top-level inlining.
 
 **Macros (`expand`).** `expand` is a fixpoint `syntax-rules` macro expander. Before
 `collect-toplevel`, the driver lifts every top-level `(define-syntax name (syntax-rules …))`

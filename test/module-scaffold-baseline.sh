@@ -119,6 +119,19 @@
 #     the new regression demo redefine-function, which bus-errored on the old compiler
 #     and prints (1 2 (10 20) 100 300 300) on the new one.  The other 74 are byte-identical
 #     in both -- no existing demo assigns a letrec-bound name.  +1 new entry.
+#   letrec-bind the lambda-initialized top-level defines (docs/PERFORMANCE.md P6, 7.2) --
+#     a program with even one non-lambda define used to send EVERY define down the
+#     let+set! path, where assignment conversion boxes them all, so `simplify` could
+#     inline none of them.  build-program now boxes only the defines that need it and
+#     letrec-binds the lambda-initialized ones.  Verified against a 75-demo before/after
+#     capture: 9 demos' IR changed -- apply, case-cxr, char-intern, internal-define,
+#     mandelbrot, record-print, records, symbol-gc, toplevel -- and every one got SMALLER
+#     (up to -22.4% on the program module alone; records 21333 -> 16548, mandelbrot
+#     34896 -> 29871).  ZERO grew.  All 75 demos' stdout is byte-identical: this changes
+#     which binding form a define lowers to, never what it evaluates to.  The compiler's
+#     own IR shrank 10.3% (schemec.ll) and build/emit 4.7%, which more than pays back the
+#     4.7% the simplify pass itself cost -- build/emit is now slightly SMALLER than before
+#     any of this work began.  No new entries.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u
