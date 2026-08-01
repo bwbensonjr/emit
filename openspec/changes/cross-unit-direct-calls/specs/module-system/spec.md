@@ -1,5 +1,11 @@
 ## MODIFIED Requirements
 
+<!-- The "Library export table" block below carries the withheld-call-row paragraph and its two
+     scenarios from `library-toplevel-set` (issue #14), which modifies the same requirement and was
+     synced to the main spec first.  They are repeated here so that syncing THIS change is a no-op
+     on that rule rather than a silent regression of it: a MODIFIED requirement replaces the main
+     spec's block wholesale, so whichever of the two changes syncs last must carry both. -->
+
 ### Requirement: Library export table
 
 Alongside the library unit the compiler SHALL produce a readable export table mapping each
@@ -15,6 +21,13 @@ additionally record the binding's **code label** and that arity, so that a progr
 against the table alone can emit a direct call to the procedure's code without loading a code
 pointer out of its closure. Exports that are not fixed-arity lambdas SHALL record no label, and
 calls to them SHALL continue to be lowered indirectly.
+
+The table SHALL record a code label only for a binding whose slot cannot be reassigned after the
+unit's initialization. A binding that the defining unit itself **assigns** SHALL therefore record
+no label, however its initializer is shaped, and calls to it SHALL be lowered indirectly. This is
+the property a cross-unit direct call depends on: an importer learns a callee's label only from
+this table, so withholding the label is what keeps a direct call from binding code that the slot no
+longer points to. The binding SHALL still be exported and callable.
 
 #### Scenario: Export table maps external name to mangled symbol
 
@@ -39,6 +52,21 @@ calls to them SHALL continue to be lowered indirectly.
 
 - **WHEN** `(mylib)` exports a value binding, or a procedure of variable arity
 - **THEN** the table records no code label for it, and calls to it are lowered indirectly
+
+#### Scenario: An export the unit assigns records no label
+
+- **WHEN** `(mylib)` exports `f`, defined as a fixed-arity lambda, and some procedure in `(mylib)`
+  assigns `f`
+- **THEN** the export table records `f`'s mangled symbol but no code label for it
+- **AND** an importing program lowers every call to `f` indirectly, reading the slot on each call
+
+#### Scenario: The stable label is not claimed twice within a unit
+
+- **WHEN** a library defines `f` as a top-level lambda and also assigns a lambda to `f` from inside
+  another procedure's body
+- **THEN** only the top-level initializer takes the stable, name-derived label `mylib:code:f`; the
+  assigned lambda is hoisted under an ordinary counter-derived label
+- **AND** the emitted unit defines each code label exactly once and links
 
 ## ADDED Requirements
 
