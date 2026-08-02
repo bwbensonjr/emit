@@ -68,7 +68,10 @@ classify() {
     # spike/ was removed by the retire-spikes change); this rule stays so any future
     # vendored tree classifies consistently.
     spike/nanopass/vendor/*)      role=vendored;  comp="nanopass-vendor" ;;
-    docs/r7rs-small.md)           role=reference; comp="reference-docs" ;;
+    # the imported R7RS-small report: a single docs/r7rs-small.md until commit 6cb266b
+    # split it into a per-chapter tree under docs/r7rs/ (README.md there is the report's
+    # own front matter, not project prose) -- both spellings stay matched.
+    docs/r7rs-small.md|docs/r7rs/*) role=reference; comp="reference-docs" ;;
     historical/*)                 role=reference; comp="historical" ;;
     # --- process / tracking / config ---
     openspec/changes/archive/*)   role=tracking;  comp="openspec-archive" ;;
