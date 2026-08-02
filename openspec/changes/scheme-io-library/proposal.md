@@ -40,9 +40,14 @@ It is also much smaller than it looks, because three pieces of the design are al
   behave exactly as now, so every existing program is unaffected.
 - **`read`, `read-char`, `peek-char`, `read-line`, `read-string`, `char-ready?`**, and
   **`eof-object`** / **`eof-object?`**, with the eof object as misc-immediate subtype 3.
-- **`current-output-port`, `current-input-port`, `current-error-port`** as procedures returning fixed
-  ports. **Not** parameter objects — there is no `make-parameter`, `parameterize`, or `dynamic-wind`
-  in the implementation, so `with-output-to-file` and friends are out of scope (see Non-Goals).
+- **`current-output-port`, `current-input-port`, `current-error-port` as parameter objects**, and
+  **`with-output-to-file` / `with-input-from-file`** over them. This became possible when
+  `dynamic-extent` shipped `make-parameter` / `parameterize` / `dynamic-wind` (2026-08-01); the
+  earlier version of this proposal shipped them as plain procedures and omitted the redirecting
+  forms, and design D4 recorded why. **That decision is now superseded** — see D4, and note that a
+  parameter is callable with zero arguments, so `(current-output-port)` reads identically either
+  way.
+- **`call-with-port`** and port cleanup that survives a non-local exit, via `dynamic-wind`.
 - New primitives, all thin wrappers over what `runtime.c` already does: file open/close/flush, a
   write-string-to-handle, and a read-file-to-string sibling of `rt_read_all_stdin`.
 

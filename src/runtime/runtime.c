@@ -1084,13 +1084,64 @@ static void err_write(char *buf, size_t cap, size_t *off, val v) {
  * is only an upward, one-shot escape, so setjmp/longjmp suffices (no call/cc).
  * Validated by a setjmp/longjmp guard prototype during design. */
 #define RT_GUARD_MAX 256
-static jmp_buf rt_guard_env[RT_GUARD_MAX];
-static val     rt_guard_raised[RT_GUARD_MAX];   /* held only across an immediate longjmp */
-static int     rt_guard_depth = 0;
 
-/* Reset the guard stack; a host calls this after catching an outermost trap so a
+/* --- escape frames (change: dynamic-extent, rung 3) -------------------------
+ * ONE frame stack serves `guard` and escape continuations, because they are the
+ * same thing: a setjmp point that a later longjmp delivers a value to.  What the
+ * stack gained for continuations is a per-frame GENERATION ID.
+ *
+ * A continuation object holds its frame's id, not its index.  Invoking it scans
+ * the LIVE frames for that id: if the capturing call has already returned, the id
+ * is gone and the escape is refused instead of longjmping into a dead frame --
+ * which would be undefined behaviour attributed to anything but the continuation.
+ * Ids are never reused (monotonic), so a recycled index cannot alias.
+ *
+ * Under design D4 `raise` no longer longjmps -- it calls the current handler in
+ * Scheme -- so the ONLY thing that transfers here is an escape, and the payload is
+ * uniformly "the value escaped with". */
+static jmp_buf  rt_esc_env[RT_GUARD_MAX];
+static val      rt_esc_value[RT_GUARD_MAX];   /* held only across an immediate longjmp */
+static intptr_t rt_esc_id[RT_GUARD_MAX];
+static intptr_t rt_esc_next_id = 1;           /* monotonic; 0 is never a live id */
+static int      rt_guard_depth = 0;
+
+/* Reset the frame stack; a host calls this after catching an outermost trap so a
  * longjmp that bypassed rt_run_guarded's pop does not leave stale frames. */
 void rt_guard_reset(void) { rt_guard_depth = 0; }
+
+/* The innermost live frame's id, for the thunk that was just entered under
+ * rt_run_guarded -- this is how `call/cc` learns which frame is its own. */
+val rt_escape_frame(void) {
+  if (rt_guard_depth <= 0) rt_fatal("escape frame requested outside any frame");
+  return FIX(rt_esc_id[rt_guard_depth - 1]);
+}
+
+/* Escape to the frame with ID, delivering VALUE.  Does not return on success.
+ * Returns #f when no LIVE frame carries that id -- the continuation's extent has
+ * ended.  Refusing here rather than jumping is what makes an escape-only `call/cc`
+ * incomplete instead of unsound; the caller turns the #f into a Scheme error, so
+ * the diagnostic travels the ordinary handler path (design D1/D4). */
+/* Is a continuation still invocable -- is its frame still live?  This must be
+ * checked BEFORE unwinding: unwinding to a dead continuation's wind depth tears
+ * down dynamic state for a transfer that cannot happen, and in particular runs the
+ * `after` that pops the very handler which should report the error. */
+val rt_escape_live_p(val id_v) {
+  intptr_t id = UNFIX(id_v);
+  for (int i = rt_guard_depth - 1; i >= 0; i--)
+    if (rt_esc_id[i] == id) return TRUE_V;
+  return FALSE_V;
+}
+
+val rt_escape_to(val id_v, val value) {
+  intptr_t id = UNFIX(id_v);
+  for (int i = rt_guard_depth - 1; i >= 0; i--) {
+    if (rt_esc_id[i] == id) {
+      rt_esc_value[i] = value;
+      longjmp(rt_esc_env[i], 1);
+    }
+  }
+  return FALSE_V;
+}
 
 val rt_make_error_object(val message, val irritants) {
   val *p = (val *)GC_MALLOC(3 * sizeof(val));
@@ -1101,12 +1152,13 @@ val rt_error_object_p(val v) { return truthy(tag_of(v) == TAG_EXT && ext_hdr(v) 
 val rt_error_object_message(val v)   { return as_ptr(v)[1]; }
 val rt_error_object_irritants(val v) { return as_ptr(v)[2]; }
 
-/* raise OBJ to the nearest enclosing guard; if none, render and trap as before. */
+/* An UNHANDLED raise: render and trap.  Under design D4 (change: dynamic-extent)
+ * `raise` is Scheme-level -- it calls the current handler off the Scheme handler
+ * stack -- so control only reaches here when no handler is installed.  The old
+ * longjmp-to-the-nearest-frame branch is gone: frames now carry escape VALUES, and
+ * a `guard` escapes to its own frame from its handler like any other escape, so a
+ * raise must never transfer here or it would be delivered as an escape value. */
 val rt_raise(val obj) {
-  if (rt_guard_depth > 0) {
-    rt_guard_raised[rt_guard_depth - 1] = obj;
-    longjmp(rt_guard_env[rt_guard_depth - 1], 1);
-  }
   size_t off = 0;
   err_write(rt_trap_msg, sizeof rt_trap_msg, &off, obj);
   fprintf(stderr, "%s\n", rt_trap_msg);
@@ -1124,14 +1176,15 @@ typedef val (*rt_apply0_t)(val);
  * raise landed here.  Frame is popped on both paths (and any deeper abandoned
  * frames are discarded on the caught path). */
 val rt_run_guarded(rt_apply0_t fn, val thunk) {
-  if (rt_guard_depth >= RT_GUARD_MAX) rt_fatal("guard nesting too deep");
+  if (rt_guard_depth >= RT_GUARD_MAX) rt_fatal("escape/guard nesting too deep");
   int i = rt_guard_depth++;
-  if (setjmp(rt_guard_env[i]) == 0) {
+  rt_esc_id[i] = rt_esc_next_id++;      /* never reused: see rt_escape_to */
+  if (setjmp(rt_esc_env[i]) == 0) {
     val v = fn(thunk);
     rt_guard_depth = i;
     return rt_cons(FALSE_V, v);
   } else {
-    val o = rt_guard_raised[i];
+    val o = rt_esc_value[i];
     rt_guard_depth = i;
     return rt_cons(TRUE_V, o);
   }

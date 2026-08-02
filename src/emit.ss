@@ -227,6 +227,10 @@
     (repl-mode "rt_repl_mode") (repl-input "rt_repl_input")
     (repl-state-ref "rt_repl_state_ref") (repl-state-set! "rt_repl_state_set")
     (%error-abort "rt_error") (%raise "rt_raise")
+    ;; change: dynamic-extent -- escape frames back call/cc AND guard (design D4)
+    (%make-error-object "rt_make_error_object")
+    (%escape-frame "rt_escape_frame") (%escape-to "rt_escape_to")
+    (%escape-live? "rt_escape_live_p")
     (%error-object? "rt_error_object_p")
     (%error-object-message "rt_error_object_message")
     (%error-object-irritants "rt_error_object_irritants")))
@@ -982,6 +986,10 @@
    "declare void @rt_arity_error(i64, i64)\n"
    "declare i64 @rt_error(i64, i64)\n"
    "declare i64 @rt_raise(i64)\n"
+   "declare i64 @rt_make_error_object(i64, i64)\n"
+   "declare i64 @rt_escape_frame()\n"
+   "declare i64 @rt_escape_to(i64, i64)\n"
+   "declare i64 @rt_escape_live_p(i64)\n"
    "declare i64 @rt_run_guarded(ptr, i64)\n"
    "declare i64 @rt_error_object_p(i64)\n"
    "declare i64 @rt_error_object_message(i64)\n"

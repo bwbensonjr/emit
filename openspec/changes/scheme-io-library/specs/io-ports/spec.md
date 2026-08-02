@@ -135,25 +135,30 @@ complete and readable once the port is closed.
   and calls `get-output-string`
 - **THEN** the result is `"abc"`
 
-### Requirement: The current ports are procedures, not parameter objects
+### Requirement: The current ports are parameter objects
 
 The language SHALL provide `current-output-port`, `current-input-port`, and `current-error-port` as
-procedures of no arguments returning the port for the process's standard output, standard input, and
-standard error respectively.
+**parameter objects** (change: `dynamic-extent`) whose initial values are the ports for the process's
+standard output, standard input, and standard error. Called with zero arguments each SHALL return its
+current port, so a call site cannot tell a parameter from a plain accessor.
 
-These SHALL NOT be parameter objects: the implementation provides no `make-parameter`,
-`parameterize`, or `dynamic-wind`, so they cannot be rebound dynamically. Accordingly the language
-SHALL NOT provide `with-output-to-file` or `with-input-from-file`, whose specified behaviour is to
-rebind them — a program calling one SHALL get an unbound-variable error rather than a procedure that
-appears standard and silently fails to redirect.
+The language SHALL provide `with-output-to-file` and `with-input-from-file`, rebinding the
+corresponding parameter for the dynamic extent of a thunk, and `call-with-port`. Each SHALL close the
+port and restore the parameter on **every** exit, including an escape or a raise.
 
 #### Scenario: current-output-port is the default output destination
 
 - **WHEN** a program evaluates `(display "x" (current-output-port))` and `(display "x")`
 - **THEN** both write the same byte to standard output
 
-#### Scenario: The redirecting forms are absent rather than wrong
+#### Scenario: with-output-to-file redirects for the dynamic extent
 
-- **WHEN** a program calls `with-output-to-file`
-- **THEN** compilation reports an unbound variable, rather than the program running with output
-  going to standard output
+- **WHEN** a program calls `with-output-to-file` on a path with a thunk that `display`s, then reads
+  the file back
+- **THEN** the file contains what the thunk displayed, and output after the call goes to standard
+  output again
+
+#### Scenario: The port closes when the body escapes
+
+- **WHEN** a program escapes via a continuation out of a `call-with-port` body
+- **THEN** the port is closed

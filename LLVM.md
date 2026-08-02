@@ -387,6 +387,12 @@ internal branches. Avoids per-call overhead but does not handle tail calls to
 
 ### First-class continuations (`call/cc`)
 
+**Shipped: ESCAPE continuations only** (change: `dynamic-extent`, 2026-08-01 — rung 3 of the
+staircase). `call/cc` works for non-local exit; a continuation invoked *after* its capturing call
+has returned raises `continuation invoked outside its extent` rather than resuming. Generators,
+coroutines, and backtracking need re-entrant continuations and are **not** supported. The rest of
+this section is about that remaining rung.
+
 Not in phase 1 — and the mechanism is an **open decision, not a foregone conclusion.**
 For multi-shot `call/cc` on LLVM there are two viable families (full 2020–2026 survey
 plus an adversarially-verified research pass in

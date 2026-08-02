@@ -222,13 +222,16 @@ Non-Goals into scope.
 
 ## Open Questions
 
-- **What should an `after` thunk that raises do?** R7RS is not prescriptive. Candidates: let it
-  propagate (abandoning the remaining unwinding), or run the remaining `after`s first and then
-  propagate. Decide when writing the spec scenarios; either way it must be specified rather than
-  emergent.
-- **Should `guard`'s reraise re-run winds?** A `guard` whose clause does not match reraises; that
-  second raise starts from the handler's wind depth, not the original raise point. Confirm the
-  resulting order matches R7RS.
+- ~~**What should an `after` thunk that raises do?**~~ **Settled (task 1.2), in the spec.** The wind
+  entry is popped *before* its `after` runs, so an `after` can never re-enter itself and unwinding
+  cannot loop. A raise or escape from inside an `after` becomes the new transfer and unwinds the
+  rest on its own way out — cleanup is not skipped, only the destination changes.
+- ~~**Should `guard`'s reraise re-run winds?**~~ **Settled (task 1.3), and it is a documented R7RS
+  deviation.** R7RS §4.2.7 requires the reraise to happen "within the dynamic environment of the
+  original call to `raise`", which means re-entering a continuation whose extent has ended —
+  precisely what escape continuations cannot do (D1). This implementation reraises in the *guard's*
+  dynamic environment; `after` thunks between the raise point and the guard have already run and do
+  not run again. This is the one place rung 3 is visibly not R7RS, and it disappears at rung 4.
 - ~~**Does the full-`call/cc` follow-up want stack copying or CPS?**~~ **Out of scope and already
   studied** — `openspec/explorations/continuations-and-control.md` holds the sourced, twice-verified
   analysis, and `LLVM.md` records it as an open decision. This change contributes one new data point

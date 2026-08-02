@@ -149,3 +149,52 @@ before.
 - **WHEN** a `guard` and an escape continuation both unwind past the same `dynamic-wind`
 - **THEN** the `after` thunk runs exactly once in each case, and the observable order is the same,
   because both take the same unwinding path
+
+### Requirement: An after thunk that itself raises or escapes
+
+A `dynamic-wind`'s entry SHALL be removed from the wind list **before** its `after` thunk runs, so
+that a raise or escape originating inside that `after` cannot re-enter it. An `after` thunk SHALL
+therefore never run twice, and unwinding SHALL never loop.
+
+When an `after` thunk raises or escapes during an unwind, the **new** transfer takes over: it
+unwinds from the (already shallower) wind depth to its own target, running the remaining `after`
+thunks on the way. The original transfer's destination is abandoned. Cleanup is therefore not
+skipped — only the destination changes.
+
+#### Scenario: An after thunk that raises does not run twice
+
+- **WHEN** a program escapes past a `dynamic-wind` whose `after` thunk raises, and that raise is
+  caught by an enclosing `guard`
+- **THEN** the `after` thunk has run exactly once, and the guard clause receives the object the
+  `after` raised — not the original escape's value
+
+#### Scenario: Outer cleanup still runs when an inner after thunk raises
+
+- **WHEN** two `dynamic-wind`s are being unwound, the inner one's `after` raises, and a `guard`
+  outside both catches it
+- **THEN** the outer `after` thunk still runs, because the new transfer unwinds through it
+
+### Requirement: A non-matching guard reraises in the guard's dynamic environment
+
+When no `guard` clause matches and there is no `else`, the object SHALL be reraised to the next
+enclosing handler.
+
+R7RS specifies that this reraise occurs "within the dynamic environment of the original call to
+`raise`". This implementation SHALL instead reraise in the **`guard`'s** dynamic environment, and
+SHALL document the deviation: returning to the raise point requires re-entering a continuation whose
+extent has ended, which escape continuations cannot do. A consequence is that any `dynamic-wind`
+`after` thunk between the raise point and the `guard` has already run by then, and SHALL NOT run
+again.
+
+#### Scenario: A non-matching guard passes the object outward
+
+- **WHEN** a raise is enclosed by an inner `guard` whose clauses all fail and an outer `guard` that
+  matches
+- **THEN** the outer `guard`'s clause receives the original object
+
+#### Scenario: Cleanup between the raise point and a non-matching guard runs once
+
+- **WHEN** a `dynamic-wind` sits between a raise and an inner non-matching `guard`, with an outer
+  `guard` that matches, and the `after` thunk records each run
+- **THEN** the `after` thunk has run exactly once by the time the outer clause is evaluated
+

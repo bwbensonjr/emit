@@ -14,9 +14,10 @@ reasons:
 | the reader | `rd-datum s n i` → `(datum . next-index)`, looped by `read-all-from-string` | one call **is** one `read` against a cursor |
 | the eof object | tag 001 misc-immediate family, `SUB_BOOL 0` / `SUB_CHAR 1` / `SUB_UNSPEC 2`, comment reserves "further singletons (eof-object)" | take subtype 3 |
 
-And three things genuinely are missing, which is what bounds the scope: there is no `make-parameter`,
-no `parameterize`, and no `dynamic-wind`. Every R7RS I/O procedure whose semantics rest on dynamic
-binding is therefore out of reach until those exist.
+`make-parameter`, `parameterize`, and `dynamic-wind` **now exist** (change: `dynamic-extent`,
+2026-08-01, sequenced deliberately ahead of this change), so the R7RS I/O procedures whose semantics
+rest on dynamic binding are in reach. An earlier version of this design was written before that and
+shipped `current-output-port` as a plain procedure; see D4.
 
 Records are available (`%make-record-type`, `%make-record`, `%record-ref`, `%record-set!`,
 `%record-of-type?`) and bytevectors are available, so neither ports nor binary I/O is blocked on the
@@ -36,10 +37,6 @@ object model.
 
 **Non-Goals:**
 
-- **`with-output-to-file`, `with-input-from-file`, and `current-*-port` as parameter objects.** All
-  three need dynamic binding, and the implementation has no `make-parameter` / `parameterize` /
-  `dynamic-wind`. `current-output-port` etc. ship as procedures returning fixed ports (D4); making
-  them rebindable is a separate change that starts with parameter objects.
 - **Binary ports** (`read-u8`, `write-u8`, `open-input-bytevector`, …). Feasible — bytevectors
   exist — but a second port flavour doubles the surface for no current payer. Textual only.
 - **Streaming input.** Input ports slurp at open (D2), so a file larger than memory cannot be read,
@@ -107,7 +104,18 @@ The alternative — a unique heap object, or reusing an existing sentinel like t
 either spends more or conflates eof with a value a program can legitimately compute. R7RS requires
 the eof object to be distinguishable from every other object, so reuse is not available.
 
-### D4 — `current-output-port` is a procedure returning a fixed port, not a parameter
+### D4 — SUPERSEDED by `dynamic-extent`: the current ports ARE parameter objects
+
+**This decision no longer applies.** `dynamic-extent` (2026-08-01) shipped `make-parameter`,
+`parameterize`, and `dynamic-wind`, so `current-output-port` and friends ship as real parameter
+objects and `with-output-to-file` / `with-input-from-file` are in scope. The reasoning below is
+kept because it records *why* the sequencing changed: rather than ship a knowingly-incomplete
+surface, the prerequisite was done first. The delta spec's provisional "not parameter objects"
+requirement comes out with it.
+
+<details><summary>Original decision (superseded)</summary>
+
+#### D4 (original) — `current-output-port` is a procedure returning a fixed port, not a parameter
 
 R7RS makes these parameter objects, so that `with-output-to-file` can rebind them dynamically. The
 implementation has no parameter objects, no `parameterize`, and no `dynamic-wind`, so honouring that
@@ -120,6 +128,8 @@ non-parameterizing `current-output-port` that a program `parameterize`s would be
 answer, which is the failure mode this project consistently refuses.
 
 Making them real parameters is a follow-up whose first task is `make-parameter`.
+
+</details>
 
 ### D5 — Binary size is a first-class review criterion for this change
 
@@ -144,9 +154,9 @@ note and move past.
   after; a material regression triggers the separate-library question rather than a footnote.
 - **A stale port index after `close-port`** → the table makes this a range/liveness check with a
   proper error, which is the entire reason for choosing it over a raw pointer (D1).
-- **Partial R7RS conformance reads as full conformance** → `current-output-port` exists but is not a
-  parameter, and `with-output-to-file` is absent. Both are stated in the spec deltas so the gap is
-  recorded where a reader looks, not only here.
+- **Cleanup on a non-local exit** → `call-with-port` and `with-output-to-file` must close their port
+  when the body escapes or raises, which is `dynamic-wind`'s job and must be tested that way, not
+  only on the normal path.
 - **The optional port argument touches the four existing output procedures** → their no-argument
   behaviour is byte-identical or the change has broken something; that is a task, checked against a
   captured baseline the way the last two changes did it.
