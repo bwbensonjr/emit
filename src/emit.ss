@@ -222,6 +222,20 @@
     (%boolean? "rt_boolean_p") (%integer? "rt_integer_p") (%exact? "rt_exact_p")
     (%read-all-stdin "rt_read_all_stdin") (%display "rt_display")
     (%write "rt_write_val") (%newline "rt_newline")
+    ;; change: scheme-io-library -- eof object, file/handle edge prims, and the
+    ;; port-directed forms of the output procedures (the same printer, with `out`
+    ;; taken from the port instead of hardwired to stdout).
+    (%eof-object "rt_eof_object") (%eof-object? "rt_eof_object_p")
+    (%read-file "rt_read_file")
+    (%port-open-output-file "rt_port_open_output_file")
+    (%port-open-output-string "rt_port_open_output_string")
+    (%port-get-output-string "rt_port_get_output_string")
+    (%port-flush "rt_port_flush") (%port-close "rt_port_close")
+    (%set-current-output! "rt_set_current_output")
+    (%write-string "rt_write_string")
+    (%display-port "rt_port_display") (%write-port "rt_port_write")
+    (%newline-port "rt_port_newline") (%write-char-port "rt_port_write_char")
+    (%write-string-port "rt_port_write_string")
     (%no-prelude? "rt_no_prelude_p")
     (%dump-level "rt_dump_level") (%stderr-write "rt_stderr_write")
     (repl-mode "rt_repl_mode") (repl-input "rt_repl_input")
@@ -980,6 +994,21 @@
    "declare i64 @rt_display(i64)\n"
    "declare i64 @rt_write_val(i64)\n"
    "declare i64 @rt_newline()\n"
+   "declare i64 @rt_eof_object()\n"
+   "declare i64 @rt_eof_object_p(i64)\n"
+   "declare i64 @rt_read_file(i64)\n"
+   "declare i64 @rt_port_open_output_file(i64)\n"
+   "declare i64 @rt_port_open_output_string()\n"
+   "declare i64 @rt_port_get_output_string(i64)\n"
+   "declare i64 @rt_port_flush(i64)\n"
+   "declare i64 @rt_port_close(i64)\n"
+   "declare i64 @rt_set_current_output(i64)\n"
+   "declare i64 @rt_write_string(i64)\n"
+   "declare i64 @rt_port_display(i64, i64)\n"
+   "declare i64 @rt_port_write(i64, i64)\n"
+   "declare i64 @rt_port_newline(i64)\n"
+   "declare i64 @rt_port_write_char(i64, i64)\n"
+   "declare i64 @rt_port_write_string(i64, i64)\n"
    "declare i64 @rt_list_length(i64)\n"
    "declare i64 @rt_build_rest(i64, i64, i64, ptr, ptr)\n"
    "declare ptr @rt_apply_argv(i64, ptr, i64, i64)\n"

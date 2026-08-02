@@ -9,7 +9,8 @@
  *                        subtype 0 boolean  (#f = 1, #t = 257)
  *                        subtype 1 char     (payload = Unicode codepoint)
  *                        subtype 2 unspec   (the unspecified value; only 17)
- *                        subtypes 3,4,... reserved (eof-object, ...)
+ *                        subtype 3 eof      (the end-of-file object; only 25)
+ *                        subtypes 4,5,... reserved
  *   tag 010  nil       immediate, the empty list (only value 0b010 = 2)
  *   tag 011  pair      pointer, heap {car, cdr}
  *   tag 100  closure   pointer, heap {code_ptr, free0, ...}
@@ -56,6 +57,7 @@ char rt_trap_msg[128] = "";
 #define SUB_BOOL    0
 #define SUB_CHAR    1
 #define SUB_UNSPEC  2   /* the unspecified value (change: unspecified-value) */
+#define SUB_EOF     3   /* the end-of-file object (change: scheme-io-library, design D3) */
 
 /* header codes for TAG_EXT objects (tags 0-6 are exhausted, so new heap types
  * live under tag 7 and are discriminated by this header word) */
@@ -92,6 +94,13 @@ char rt_trap_msg[128] = "";
  * unspecified-value, decision 4).  The emitter writes this same literal; the two must
  * agree (src/emit.ss). */
 #define UNSPEC_V   ((val)((SUB_UNSPEC << 3) | TAG_BOOL))  /* 17 (subtype UNSPEC, payload 0) */
+/* THE end-of-file object (change: scheme-io-library, design D3).  R7RS requires it to be
+ * distinguishable from every other object, so it cannot reuse #f, (), or UNSPEC_V -- a
+ * program that reads a #f datum must still be able to tell that from end of input.  It
+ * costs no header code and no allocation: subtype 3 is the slot the misc-immediate family
+ * comment reserved for exactly this.  Unlike UNSPEC_V it IS Scheme-visible, via the
+ * eof-object / eof-object? primitives. */
+#define EOF_V      ((val)((SUB_EOF << 3) | TAG_BOOL))     /* 25 (subtype EOF, payload 0) */
 #define tag_of(v)  (((intptr_t)(v)) & TAG_MASK)
 #define as_ptr(v)  ((val *)(((intptr_t)(v)) & ~(intptr_t)TAG_MASK))
 #define tag_ptr(p, t) ((val)(((intptr_t)(p)) | (t)))
@@ -106,6 +115,7 @@ char rt_trap_msg[128] = "";
 /* C-side only: used by the printer and by the REPL's echo suppression.  Deliberately
  * NOT surfaced as a Scheme predicate. */
 #define is_unspec(v)   (tag_of(v) == TAG_BOOL && imm_subtype(v) == SUB_UNSPEC)
+#define is_eof(v)      (tag_of(v) == TAG_BOOL && imm_subtype(v) == SUB_EOF)
 
 static inline val truthy(int b) { return b ? TRUE_V : FALSE_V; }
 
@@ -621,6 +631,34 @@ val rt_read_all_stdin(void) {
   return rt_make_string(buf, (intptr_t)len);
 }
 
+/* Read a whole named file into a fresh scheme string -- rt_read_all_stdin's slurp
+ * with an fopen in front of it (change: scheme-io-library, design D2).  Input ports
+ * slurp at open, which is what lets a file input port and a string input port be the
+ * SAME object with the same pure-Scheme operations over it.
+ *
+ * A file that cannot be opened returns #f, NOT an empty string: the two are
+ * indistinguishable to a caller otherwise, and "missing file" would silently become
+ * "empty file".  The prelude turns the #f into a catchable error naming the path. */
+val rt_read_file(val path) {
+  if (tag_of(path) != TAG_EXT || ext_hdr(path) != HDR_STRING) return FALSE_V;
+  FILE *f = fopen(str_bytes(path), "r");
+  if (!f) return FALSE_V;
+  size_t cap = 4096, len = 0;
+  char *buf = (char *)GC_MALLOC_ATOMIC(cap);
+  size_t n;
+  while ((n = fread(buf + len, 1, cap - len, f)) > 0) {
+    len += n;
+    if (len == cap) {
+      cap *= 2;
+      char *nb = (char *)GC_MALLOC_ATOMIC(cap);
+      memcpy(nb, buf, len);
+      buf = nb;
+    }
+  }
+  fclose(f);
+  return rt_make_string(buf, (intptr_t)len);
+}
+
 /* --no-prelude channel for the embedded batch entry (change:
  * embedded-runner-rehome).  The Chez-free runner (`emit run` / `emit build`)
  * forwards --no-prelude by setting EMIT_NO_PRELUDE in the environment; the
@@ -737,8 +775,40 @@ val rt_repl_state_set(val v) { rt_repl_cell(&rt_repl_state_cell, FALSE_V)[0] = v
  * non-string no longer dereferences as a string header and crashes.  Returns an
  * unspecified value (NIL) so it composes inside a `begin`. */
 static void print_val(FILE *out, val v, int display);   /* defined with rt_write below */
+
+/* WHERE THE PORT-LESS OUTPUT PROCEDURES WRITE (change: scheme-io-library).
+ *
+ * R7RS says `(display x)` writes to `(current-output-port)`, and
+ * `with-output-to-file` / `parameterize` rebind that parameter for a dynamic
+ * extent -- so a port-less `display` inside the extent must follow the rebinding.
+ * But `(display x)` compiles to a bare `rt_display` primcall, and keeping that
+ * primcall byte-identical is a requirement of this change (a port-free program's
+ * emitted code must not move).  Both hold at once by making the DESTINATION
+ * indirect instead of the call: the port-less entry points write to this cell
+ * rather than to the literal `stdout`, and the prelude's current-output-port
+ * parameter stores its port's stream here on every rebinding.  The cost is one
+ * global load per call; the emitted IR is unchanged.
+ *
+ * NULL means "not yet set" and reads as stdout, so this is correct before any
+ * Scheme runs -- the standard ports need no initialization order.  The REAL stdout
+ * stays reachable as handle 0 throughout, so the stdout PORT OBJECT keeps meaning
+ * stdout even while the current-output-port parameter points somewhere else. */
+static FILE *rt_current_out = NULL;
+static FILE *cur_out(void) { return rt_current_out ? rt_current_out : stdout; }
+static FILE *port_stream(intptr_t h);      /* fwd: the handle table, defined below */
+
+/* Point the port-less output procedures at the stream of HANDLE (called by the
+ * prelude's current-output-port parameter on every rebinding, including the
+ * restore leg of parameterize / with-output-to-file).  An unusable handle resets
+ * to stdout rather than leaving output going nowhere. */
+val rt_set_current_output(val handle) {
+  FILE *f = (tag_of(handle) == TAG_FIXNUM) ? port_stream(UNFIX(handle)) : NULL;
+  rt_current_out = f;
+  return UNSPEC_V;
+}
+
 val rt_display(val v) {
-  print_val(stdout, v, /*display=*/1);
+  print_val(cur_out(), v, /*display=*/1);
   return UNSPEC_V;
 }
 
@@ -749,7 +819,7 @@ val rt_display(val v) {
  * from that void entry: a primitive must return a val (the unspecified value)
  * so it composes inside a `begin`, whereas the runner entry returns nothing. */
 val rt_write_val(val v) {
-  print_val(stdout, v, /*display=*/0);
+  print_val(cur_out(), v, /*display=*/0);
   return UNSPEC_V;
 }
 
@@ -772,7 +842,7 @@ val rt_stderr_write(val v, val display_p) {
 /* newline: write a single line feed (U+000A) to standard output.  Nullary;
  * returns the unspecified value (NIL) so it composes inside a `begin`. */
 val rt_newline(void) {
-  putchar('\n');
+  fputc('\n', cur_out());
   return UNSPEC_V;
 }
 
@@ -781,7 +851,208 @@ val rt_newline(void) {
 val rt_write_char(val c) {
   unsigned char buf[4];
   int n = utf8_encode(CHAR_CP(c), buf);
-  fwrite(buf, 1, (size_t)n, stdout);
+  fwrite(buf, 1, (size_t)n, cur_out());
+  return UNSPEC_V;
+}
+
+/* --- the eof object (change: scheme-io-library, design D3) ----------------
+ * A singleton misc-immediate, so eof-object? is a tag+subtype test with no
+ * allocation and no dereference -- safe to apply to ANY value. */
+val rt_eof_object(void)        { return EOF_V; }
+val rt_eof_object_p(val v)     { return truthy(is_eof(v)); }
+
+/* --- output-port handle table (change: scheme-io-library, design D1) -------
+ * A Scheme record field holds a `val`, and a C `FILE *` is not one.  Rather than
+ * smuggle the pointer through a fixnum (where a stale one after close-port is a
+ * wild pointer the collector and printer can both see), the runtime owns the
+ * FILE * and hands Scheme a small integer INDEX into this table.  Every use is
+ * then a range + liveness check away from a proper diagnostic instead of a fault,
+ * which is the entire reason D1 chose a table over a raw pointer.
+ *
+ * Two handles are reserved and always live, so the standard ports need no table
+ * slot and no initialization order:
+ *   handle 0 = stdout      handle 1 = stderr
+ * Table slots are handles 2 and up.
+ *
+ * A STRING output port is a table slot too, backed by open_memstream (POSIX): it
+ * is a genuine FILE * writing into a growable memory buffer.  That is what keeps
+ * this simple -- print_val takes a FILE *, so display/write to a string port is
+ * the SAME printer with a different stream, not a second Scheme-side accumulation
+ * path.  get-output-string flushes and copies the buffer out.
+ *
+ * `slots` itself is GC_MALLOC_UNCOLLECTABLE (never scanned for Scheme values --
+ * it holds only C pointers and sizes) and grows by doubling. */
+typedef struct {
+  FILE  *f;         /* the stream; NULL once closed */
+  char  *membuf;    /* open_memstream buffer (string ports only), else NULL */
+  size_t memsize;   /* open_memstream size cell */
+  int    is_string; /* 1 = string port (get-output-string is legal) */
+} port_slot;
+
+static port_slot *port_slots = NULL;
+static intptr_t   port_count = 0, port_cap = 0;
+
+#define PORT_STDOUT 0
+#define PORT_STDERR 1
+#define PORT_FIRST  2      /* first table-backed handle */
+
+/* Allocate a fresh handle, growing the table by doubling. */
+static intptr_t port_alloc_slot(void) {
+  if (port_count == port_cap) {
+    intptr_t ncap = port_cap ? port_cap * 2 : 8;
+    port_slot *ns = (port_slot *)GC_MALLOC_UNCOLLECTABLE((size_t)ncap * sizeof(port_slot));
+    for (intptr_t i = 0; i < port_count; i++) ns[i] = port_slots[i];
+    if (port_slots) GC_free(port_slots);
+    port_slots = ns; port_cap = ncap;
+  }
+  port_slots[port_count].f = NULL;
+  port_slots[port_count].membuf = NULL;
+  port_slots[port_count].memsize = 0;
+  port_slots[port_count].is_string = 0;
+  return port_count++ + PORT_FIRST;
+}
+
+/* Resolve a handle to its live stream, or NULL.  The two reserved handles always
+ * resolve; a table handle resolves only while it is in range AND open, so a use
+ * after close-port lands on the caller's error path rather than in libc. */
+static FILE *port_stream(intptr_t h) {
+  if (h == PORT_STDOUT) return stdout;
+  if (h == PORT_STDERR) return stderr;
+  intptr_t i = h - PORT_FIRST;
+  if (i < 0 || i >= port_count) return NULL;
+  return port_slots[i].f;
+}
+
+/* Decode the port a Scheme-level output operation was handed.  The port passed to
+ * a port-directed primitive is the PORT RECORD, and this is the ONE place that
+ * knows the layout contract shared with src/prelude.scm:
+ *
+ *     a port record's FIELD 0 holds its handle, a fixnum.
+ *
+ * (A record is { HDR_RECORD, type-descriptor, field0, ... }, so field 0 is slot 2.)
+ * Keeping the decode here means the four port-directed output primitives stay bare
+ * primcalls -- no Scheme-side wrapper on the fast path -- at the cost of this one
+ * documented coupling.  The check is structural (a record whose field 0 is a
+ * fixnum naming a live handle), so it is memory-SAFE for any argument; it does not
+ * prove the record is a port, and a non-port record whose field 0 happens to be a
+ * live handle would write there.  That is a wrong-type bug, never a fault.
+ * Returns NULL when the argument is not a usable port, and the caller traps. */
+static FILE *port_arg_stream(val p) {
+  if (tag_of(p) != TAG_EXT || ext_hdr(p) != HDR_RECORD) return NULL;
+  val h = as_ptr(p)[2];
+  if (tag_of(h) != TAG_FIXNUM) return NULL;
+  return port_stream(UNFIX(h));
+}
+static FILE *port_arg_or_die(val p, const char *who) {
+  FILE *f = port_arg_stream(p);
+  if (!f) rt_fatal(who);
+  return f;
+}
+
+/* Open a file for textual output; returns the handle as a fixnum, or #f when the
+ * file cannot be opened.  Reporting failure as a VALUE (rather than trapping) lets
+ * the prelude raise a catchable R7RS error object with the offending path in it. */
+val rt_port_open_output_file(val path) {
+  if (tag_of(path) != TAG_EXT || ext_hdr(path) != HDR_STRING) return FALSE_V;
+  /* str_bytes is NUL-terminated (rt_make_string appends one for exactly this), so
+   * it is directly a C path; a path with an embedded NUL simply truncates there. */
+  FILE *f = fopen(str_bytes(path), "w");
+  if (!f) return FALSE_V;
+  intptr_t h = port_alloc_slot();
+  port_slots[h - PORT_FIRST].f = f;
+  return FIX(h);
+}
+
+/* Open an in-memory output port (open-output-string).  A memstream failure is
+ * reported the same way as a failed file open. */
+val rt_port_open_output_string(void) {
+  intptr_t h = port_alloc_slot();
+  port_slot *s = &port_slots[h - PORT_FIRST];
+  s->f = open_memstream(&s->membuf, &s->memsize);
+  if (!s->f) return FALSE_V;
+  s->is_string = 1;
+  return FIX(h);
+}
+
+/* The accumulated text of a string port, as a fresh Scheme string.  Flushing first
+ * is what makes the memstream buffer/size cells current.  Returns #f for a handle
+ * that is not a string port, so the prelude can raise a proper error for
+ * get-output-string on a file port.
+ *
+ * Deliberately works AFTER close-port: write-then-close-then-collect is the natural
+ * idiom, and closing a memstream finalizes its buffer and size rather than releasing
+ * them.  So this needs a live stream only for the flush.  (The consequence is that a
+ * string port's buffer -- malloc'd by open_memstream, outside the GC heap -- is never
+ * freed.  Bounded by the number of string ports a program opens; freeing it at close
+ * would be what makes this call impossible.) */
+val rt_port_get_output_string(val handle) {
+  intptr_t h = UNFIX(handle);
+  intptr_t i = h - PORT_FIRST;
+  if (tag_of(handle) != TAG_FIXNUM || i < 0 || i >= port_count) return FALSE_V;
+  port_slot *s = &port_slots[i];
+  if (!s->is_string) return FALSE_V;
+  if (s->f) fflush(s->f);
+  return rt_make_string(s->membuf ? s->membuf : "", (intptr_t)s->memsize);
+}
+
+/* Flush a port's buffered output through to its destination. */
+val rt_port_flush(val handle) {
+  FILE *f = port_stream(UNFIX(handle));
+  if (f) fflush(f);
+  return UNSPEC_V;
+}
+
+/* Close a port: flush, release the stream, mark the slot dead.  Closing an
+ * already-closed port is permitted and does nothing (R7RS), which falls out of
+ * the NULL check.  The reserved stdout/stderr handles are never closed -- a
+ * program that closes (current-output-port) must not take the process's stdout
+ * with it.  A string port keeps its membuf so get-output-string still works after
+ * close; the memstream is flushed and closed, which finalizes buffer and size. */
+val rt_port_close(val handle) {
+  intptr_t h = UNFIX(handle);
+  if (tag_of(handle) != TAG_FIXNUM || h < PORT_FIRST) return UNSPEC_V;
+  intptr_t i = h - PORT_FIRST;
+  if (i < 0 || i >= port_count) return UNSPEC_V;
+  port_slot *s = &port_slots[i];
+  if (s->f) { fflush(s->f); fclose(s->f); s->f = NULL; }
+  return UNSPEC_V;
+}
+
+/* --- port-directed output (change: scheme-io-library) ---------------------
+ * The two-argument forms of display / write / newline / write-char, plus
+ * write-string.  Each is the SAME print_val (or the same byte emission) as its
+ * one-argument sibling with `out` chosen from the port rather than hardwired to
+ * stdout -- which is the whole reason the printer already took a FILE *.  The
+ * one-argument entry points above are untouched, so a program that never passes a
+ * port emits byte-identical code. */
+val rt_port_display(val v, val p) {
+  print_val(port_arg_or_die(p, "display: not an open output port"), v, /*display=*/1);
+  return UNSPEC_V;
+}
+val rt_port_write(val v, val p) {
+  print_val(port_arg_or_die(p, "write: not an open output port"), v, /*display=*/0);
+  return UNSPEC_V;
+}
+val rt_port_newline(val p) {
+  fputc('\n', port_arg_or_die(p, "newline: not an open output port"));
+  return UNSPEC_V;
+}
+val rt_port_write_char(val c, val p) {
+  FILE *f = port_arg_or_die(p, "write-char: not an open output port");
+  unsigned char buf[4];
+  int n = utf8_encode(CHAR_CP(c), buf);
+  fwrite(buf, 1, (size_t)n, f);
+  return UNSPEC_V;
+}
+/* write-string: the string's bytes, literally -- no quotes, no escapes.  This is
+ * `display` narrowed to strings, NOT `write`; the one-argument form targets stdout. */
+val rt_write_string(val s) {
+  fwrite(str_bytes(s), 1, (size_t)str_len(s), cur_out());
+  return UNSPEC_V;
+}
+val rt_port_write_string(val s, val p) {
+  FILE *f = port_arg_or_die(p, "write-string: not an open output port");
+  fwrite(str_bytes(s), 1, (size_t)str_len(s), f);
   return UNSPEC_V;
 }
 
@@ -1035,6 +1306,8 @@ static void err_write(char *buf, size_t cap, size_t *off, val v) {
         unsigned char cb[4]; int cn = utf8_encode(CHAR_CP(v), cb);
         err_put(buf, cap, off, "#\\", 2);
         err_put(buf, cap, off, (const char *)cb, (size_t)cn);
+      } else if (is_eof(v)) {          /* eof object shares tag 001; not a boolean */
+        err_put(buf, cap, off, "#<eof>", 6);
       } else {
         err_put(buf, cap, off, v == FALSE_V ? "#f" : "#t", 2);
       }
@@ -1228,6 +1501,13 @@ static void print_val(FILE *out, val v, int display) {
          * same text.  The REPL suppresses the ECHO of this value (src/emit.cpp), but an
          * explicit (write (if #f #f)) still lands here and prints. */
         fprintf(out, "#<unspecified>");
+      } else if (is_eof(v)) {                   /* eof object shares tag 001 */
+        /* Non-readable, like #<unspecified>: no reader syntax, so write cannot
+         * round-trip it and display has nothing rawer to show.  Printing it must be
+         * safe -- a program that displays whatever read-char returned lands here at
+         * end of input -- so it gets an arm rather than falling into the boolean
+         * arm below, which would print it as "#t". */
+        fprintf(out, "#<eof>");
       } else {
         fputs(v == FALSE_V ? "#f" : "#t", out);   /* fputs: the string is not a literal */
       }

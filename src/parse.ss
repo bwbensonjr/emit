@@ -34,6 +34,16 @@
                   %flonum? %number? %real? %inexact? %exact->inexact %inexact->exact
                   %string->flonum %flonum->string
                   %read-all-stdin %display %write %write-char %newline
+                  ;; change: scheme-io-library -- the eof object, the file/handle
+                  ;; edge primitives the prelude's ports are built over, and the
+                  ;; port-directed (2-argument) forms of the output procedures.
+                  %eof-object %eof-object? %read-file
+                  %port-open-output-file %port-open-output-string
+                  %port-get-output-string %port-flush %port-close
+                  %set-current-output!
+                  %write-string
+                  %display-port %write-port %newline-port %write-char-port
+                  %write-string-port
                   %hash %make-hash-table %hash-table? %hash-table-spine
                   %make-record-type %make-record %record-ref %record-set! %record-of-type? %record?
                   %list->mv %mv? %mv->list
@@ -103,13 +113,43 @@
     (make-string %make-string 2) (string-copy %string-copy 1)
     (make-vector %make-vector 2) (make-bytevector %make-bytevector 2)
     (read-all-stdin %read-all-stdin 0)
-    (display %display 1) (write %write 1) (newline %newline 0)
+    ;; The four output procedures plus write-string carry an OPTIONAL port (change:
+    ;; scheme-io-library).  An integrable may have MORE THAN ONE entry, one per
+    ;; accepted arity, and a direct call selects by argument count -- so
+    ;; `(display x)` still inlines to the bare `%display` it always did (the emitted
+    ;; IR for a port-free program is byte-identical), while `(display x p)` inlines
+    ;; to the bare `%display-port`.  Neither form costs a closure call.
+    ;;
+    ;; The BASE arity must come first: value position (`(map display xs)`) etas the
+    ;; FIRST entry for a name, so `display` as a value stays the 1-argument
+    ;; procedure.  A port-directed call therefore has to be a direct call, which is
+    ;; how every existing fixed-arity primitive already behaves in Emit (cf.
+    ;; substring, exactly 3 here where R7RS allows 2).
+    (display %display 1) (display %display-port 2)
+    (write %write 1) (write %write-port 2)
+    (newline %newline 0) (newline %newline-port 1)
+    (write-char %write-char-port 2)                 ; arity 1 entry is above, with the flonum ops
+    (write-string %write-string 1) (write-string %write-string-port 2)
+    (eof-object %eof-object 0) (eof-object? %eof-object? 1)
     ;; string-append: expander folds n-ary operator calls to binary %string-append
     ;; (arity 2 for direct inlining); as a VALUE it is variadic, so its eta is the
     ;; self-contained `str` fold -- retiring the prelude `%str-concat` special case.
     (string-append %string-append 2 str)))
+;; The BASE entry for a name (lowest arity, since entries are ordered): what a
+;; value-position reference etas to, and what `integrable?` answers about.
 (define (integrable-lookup name) (assq name *integrable*))
 (define (integrable? name) (and (integrable-lookup name) #t))
+
+;; The entry for a name AT a given argument count, or #f (change:
+;; scheme-io-library).  A name may have several entries -- one per accepted arity --
+;; so a DIRECT call can pick the right raw op: `(display x)` -> %display,
+;; `(display x p)` -> %display-port.  Names with a single entry (nearly all of them)
+;; behave exactly as before: match on that one arity, otherwise #f.
+(define (integrable-lookup/arity name n)
+  (let loop ([es *integrable*])
+    (cond [(null? es) #f]
+          [(and (eq? (caar es) name) (= (caddr (car es)) n)) (car es)]
+          [else (loop (cdr es))])))
 
 (define (fresh-syms n)   ; n globally-unique param names for an eta lambda
   (let loop ([i n] [acc '()])
@@ -229,8 +269,12 @@
       [(primcall ,op . ,args) `(primcall ,op ,@(map I args))]
       [(apply ,f . ,args) `(apply ,(I f) ,@(map I args))]
       [(call ,f . ,args)
-       (let ([p (and (symbol? f) (integrable-lookup f))])
-         (if (and p (= (length args) (caddr p)))
+       ;; Select the entry by ARGUMENT COUNT, not by name alone: a name with several
+       ;; entries (the optional-port output procedures) inlines to the raw op for the
+       ;; arity actually called.  A single-entry name is unaffected -- the lookup
+       ;; matches its one arity or returns #f exactly as the old `=` test did.
+       (let ([p (and (symbol? f) (integrable-lookup/arity f (length args)))])
+         (if p
              `(primcall ,(cadr p) ,@(map I args))     ; direct unshadowed call -> bare op
              `(call ,(I f) ,@(map I args))))]         ; value/wrong-arity -> eta (via symbol case)
       [(lambda ,params ,body) `(lambda ,params ,(I body))]

@@ -169,15 +169,48 @@ changes `bootstrap/scheme.base.ll` legitimately moves.
 
 ## Open Questions
 
-- **Should ports live in `(scheme base)` or a separate library?** D5's measurement decides it. If
-  ports cost every binary meaningfully, a separately-imported library is the better shape and the
-  module system already supports it.
+All three are resolved; the answers are recorded here and in `docs/PRIMITIVES.md`.
+
+- ~~**Should ports live in `(scheme base)` or a separate library?**~~ **Resolved: keep them in
+  `(scheme base)`.** D5's measurement decides it, and it came out lopsided. `(scheme base)` grew
+  82 KB of IR (+25%), but on the **shaken AOT ship path** `hello.scm` grew **120 bytes
+  (+0.35%)** — the shake still reports "0 exports reached", so a program that never mentions a
+  port links none of it. The tree-shake does exactly the job D5 hoped, and it was measured, not
+  assumed. A separate library would therefore buy ~nothing on that path while costing R7RS
+  conformance (these procedures *are* `(scheme base)` procedures).
+  The finding the measurement *did* surface is a different one: the Chez-free `emit build` door
+  does not shake at all, so it paid the full **+20,352 bytes (+17.9%)**. That is a pre-existing
+  gap this change made expensive rather than a reason to split the library, and it is now
+  `docs/PERFORMANCE.md` **P8**.
 - ~~**Is `char-ready?` meaningful under slurp-on-open?**~~ **Resolved: omit it.** Under D2 it is `#t`
   for any port with input remaining, so it is conformant but carries no information, and a predicate
   that always says "yes" invites programs to poll on it as though it distinguished something. It is
   out of scope until input ports stream, at which point it becomes meaningful and can ship with the
   behaviour it implies.
-- **Does `read` need to share the reader with the compiler's own front end, or copy it?** They are
-  the same procedure today (`rd-datum` in the prelude). Keeping one copy is obviously right, but it
-  means a user-visible `read` and the compiler's reader move together — worth being deliberate about
-  before relying on it.
+- ~~**Does `read` need to share the reader with the compiler's own front end, or copy it?**~~
+  **Resolved: share it, deliberately.** User `read` is `rd-datum` at the port's cursor — one
+  reader, no copy. What makes this safe to rely on is that the coupling is now *tested* rather
+  than merely true: `test/io-ports-tests.sh` pins that `read` over a port accepts the reader's
+  external representations (vectors, strings, characters, flonums, dotted pairs) and skips
+  comments, so a change to the compiler's reader that altered user-visible `read` fails there.
+  The alternative — a second reader — would have to be kept in sync with no such signal.
+
+## What the implementation changed about the design
+
+Two things surfaced during implementation that the artifacts above did not anticipate:
+
+- **D4's supersession created a conflict with the "emitted code unchanged" goal.** Making the
+  current ports real parameter objects means R7RS requires a *port-less* `(display x)` to follow
+  `with-output-to-file` and `parameterize` — but `(display x)` compiles to a bare `rt_display`
+  primcall hardwired to `stdout`, and keeping that primcall byte-identical is also a requirement
+  of this change. Resolved by making the **destination** indirect instead of the call: the
+  port-less entry points write to a runtime cell (`rt_current_out`) that the `current-output-port`
+  parameter updates on every rebinding, including the restore leg. Both requirements hold; the
+  cost is one global load per port-less output call, and the emitted IR is unchanged (verified
+  byte-for-byte against the task 1.2 baseline).
+- **The optional port argument needed a new mechanism in the primitive layer.** `*integrable*`
+  was one-entry-per-name; it now accepts one entry **per arity**, and a direct call selects by
+  argument count. That is what keeps *both* `(display x)` and `(display x p)` bare primcalls. The
+  alternative — a prelude wrapper for the two-argument form — would have put a `(scheme base)`
+  call on every `display` and made a port-free `hello.scm` link the port machinery, which is
+  precisely what D5 was watching for.

@@ -5,6 +5,17 @@
 ;;; the spec scenarios (multi-form source, comments/whitespace, empty input) and
 ;;; cross-check its form list against Chez's own `read` over a sample file.
 ;;; Run from the repo root: chez --script test/read-all-tests.ss
+;;;
+;;; The prelude now defines its own port procedures (change: scheme-io-library),
+;;; which SHADOW the host's once it is loaded -- and the prelude's are written over
+;;; Emit primitives that do not exist under Chez.  The cross-check below needs the
+;;; HOST's reader to compare against, so bind those aliases before the load.
+(define host-open-input-file open-input-file)
+(define host-read read)
+(define host-read-char read-char)
+(define host-eof-object? eof-object?)
+(define host-close-port close-port)
+
 (load "src/prelude.scm")
 
 (define pass 0)
@@ -34,18 +45,18 @@
 
 ;; cross-check: same form list as Chez `read` over a sample source file
 (define (chez-read-all path)
-  (let ([p (open-input-file path)])
+  (let ([p (host-open-input-file path)])
     (let loop ([acc '()])
-      (let ([f (read p)])
-        (if (eof-object? f)
-            (begin (close-port p) (reverse acc))
+      (let ([f (host-read p)])
+        (if (host-eof-object? f)
+            (begin (host-close-port p) (reverse acc))
             (loop (cons f acc)))))))
 (define (file->string path)
-  (let ([p (open-input-file path)])
+  (let ([p (host-open-input-file path)])
     (let loop ([acc '()])
-      (let ([c (read-char p)])
-        (if (eof-object? c)
-            (begin (close-port p) (list->string (reverse acc)))
+      (let ([c (host-read-char p)])
+        (if (host-eof-object? c)
+            (begin (host-close-port p) (list->string (reverse acc)))
             (loop (cons c acc)))))))
 
 (let ([sample "test/read-all-sample.scm"])
