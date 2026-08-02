@@ -46,7 +46,7 @@
 - [x] 6.8 The eof object is distinct from `#f`, `'()`, and the unspecified value, and prints without faulting
 - [x] 6.9 **Size (design D5):** re-measure 1.1. Report the delta on `hello.scm` explicitly. A material regression is a reason to reconsider putting ports in a separate library, not a footnote — the tree-shake protecting this must be MEASURED, since `(scheme base)` is imported by everything. Capture the 1.1 baseline fresh rather than comparing against any number recorded before `simplify-known-calls` (2026-08-01), which moved every binary
 - [x] 6.10 New suite registered in `run-all-tests.sh`; `./run-all-tests.sh` and `./run-dev-tests.sh` green
-- [ ] 6.11 `make regen` reconverges and `test/trust-check.sh` passes on the commit. Unlike the last two changes `bootstrap/scheme.base.ll` legitimately MOVES here; confirm the compiler's own behaviour is unchanged (`self-emit-equiv`, `self-host-fixpoint`, `dump-parity`)
+- [x] 6.11 `make regen` reconverges and `test/trust-check.sh` passes on the commit. Unlike the last two changes `bootstrap/scheme.base.ll` legitimately MOVES here; confirm the compiler's own behaviour is unchanged (`self-emit-equiv`, `self-host-fixpoint`, `dump-parity`)
 
 ## 7. Close-out
 
