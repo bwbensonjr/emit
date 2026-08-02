@@ -6,7 +6,7 @@ Related: `src/runtime/runtime.c` (the `setjmp`/`longjmp` guard frame stack — `
 `guard`/`raise`/`error` subset); `LLVM.md` §"First-class continuations" and §"CPS, continuations,
 and GC on LLVM"; `docs/PIPELINE.md` (the deliberate no-CPS/no-ANF direct-style pipeline).
 First rung: `openspec/changes/multiple-values`.
-Captured: 2026-07-18 · Updated: 2026-07-18 (LLVM stack-switching research pass + a second adversarial re-verification of the Effekt/Lexa leads — see the dated section before "Open questions")
+Captured: 2026-07-18 · Updated: 2026-08-01 (rung 3 shipped; rung 2's open question answered — see the staircase and Open questions) (LLVM stack-switching research pass + a second adversarial re-verification of the Effekt/Lexa leads — see the dated section before "Open questions")
 
 ## The framing
 
@@ -87,15 +87,15 @@ The two surprises versus the README's "all need `call/cc`":
 ```
 
 1. **Multiple values** — a values-object + a tiny convention; zero continuation machinery.
-   Large R7RS breadth, immediately. → `openspec/changes/multiple-values` (this staircase's
-   first rung).
+   Large R7RS breadth, immediately. → **SHIPPED** (`multiple-values`).
 2. **Handler-stack exceptions** — `with-exception-handler` + `raise-continuable` on a dynamic
    handler stack beside the existing `rt_guard` stack. Completes the exception system already
    half-shipped (`guard`/`raise`/`error`).
 3. **Escape continuations + unwind-only `dynamic-wind`** — expose `call/cc` restricted to
    escape use (`call/ec`-style), generalizing `rt_run_guarded`; add a wind stack so cleanup
    (`after`) thunks fire on the way up. Covers the dominant real-world `call/cc` pattern
-   (non-local exit).
+   (non-local exit). → **SHIPPED** (`dynamic-extent`, 2026-08-01), together with parameter
+   objects, which are `dynamic-wind` plus a box.
 4. **Full re-entrant `call/cc`** — the only rung that forces the CPS-vs-stack-copy decision.
    Deferrable until a concrete need for re-entry (generators, `amb`, re-entrant `dynamic-wind`)
    arrives — by which point rungs 1–3 have shipped and there is far more system to judge the
@@ -218,6 +218,14 @@ Boehm + LLVM, and the verified evidence nudges the balance:
   get multi-shot **without** abandoning direct style — the more surprising and arguably more
   attractive option for this project, since it preserves the pipeline `PIPELINE.md` is built on.
 
+**A local data point for (B), found while implementing rung 3 (2026-08-01).** Emit's calling
+convention holds **no stack-interior pointers**: overflow arguments are allocated with
+`rt_alloc_words` (GC heap) rather than `alloca`, and closures are heap objects. The usual
+obstacle to stack copying — relocating pointers that point into the stack being copied — is
+therefore absent here, which lowers (B)'s cost for *this* implementation specifically. Rung 3's
+escape frames (`rt_esc_env` + monotonic generation ids) are also already the frame-identity
+bookkeeping (B) would extend.
+
 No stock-LLVM primitive shortcuts either path. So the concrete rung-4 next step, whenever it gets
 real, is: **read Effekt/ICFP 2025 first** (the (B)-style multi-shot recipe) and Lexa/OOPSLA 2024
 (the `preserve_none` + stack-switch mechanism), and weigh (B)-done-well against the CPS rewrite —
@@ -242,6 +250,20 @@ rather than treating CPS as the foregone conclusion `LLVM.md` currently implies.
   earlier and possibly skipping/short-circuiting rung 3.
 - **`let-values`/`define-values`/`receive`** are trivial `syntax-rules` macros over
   `call-with-values` — fold them into rung 1, or a small follow-on?
-- **Handler stack vs. guard stack (rung 2)** — one unified dynamic stack of "what to do on
-  raise," or two cooperating stacks? Decide against how `guard` (unwinding) and
-  `with-exception-handler` (non-unwinding) must interleave.
+- ~~**Handler stack vs. guard stack (rung 2)**~~ **ANSWERED by rung 3** (`dynamic-extent`
+  design D4, shipped 2026-08-01): **one** stack, because `guard` is not a mechanism of its own.
+  R7RS's own formulation makes `guard` a *handler that escapes* to the guard's continuation, so
+  the non-unwinding case is the base case and unwinding is what a particular handler chooses to
+  do. `raise` now CALLS the current handler instead of transferring. Three structures, one job
+  each: escape frames (C, with generation ids), the wind list (Scheme), the handler stack
+  (Scheme).
+
+  Rung 2 is therefore "expose two procedures over a stack that already exists." That was
+  **verified, not assumed**: `with-exception-handler` = the shipped `%with-handler`, and
+  `raise-continuable` = `raise` minus the unhandled fall-through; sketched in the prelude and
+  run, `(+ 1 (raise-continuable 5))` under a `(lambda (con) (+ con 100))` handler gives 106,
+  and it composes with `dynamic-wind` — with **no change to the wind machinery**.
+
+  One constraint found doing it: those two procedures must live in the **prelude**, not a user
+  library, because they mutate the handler-stack global and a program cannot `set!` an imported
+  binding (issue #5).

@@ -306,27 +306,119 @@
 ;;; in the runtime (rt_error) and raises it through the guard escape stack.
 (define (error a . rest)
   (if (string? a)
-      (%error-abort a rest)                          ; R7RS: (error message irritant ...)
-      (%error-abort (string-append (symbol->string a) (string-append ": " (car rest)))
-                    (cdr rest))))                     ; superset: (error who message ...)
+      (raise (%make-error-object a rest))            ; R7RS: (error message irritant ...)
+      (raise (%make-error-object
+               (string-append (symbol->string a) (string-append ": " (car rest)))
+               (cdr rest)))))                         ; superset: (error who message ...)
 
-;;; raise any object to the nearest enclosing guard (else render + abort).
-(define (raise obj) (%raise obj))
+;;; --- dynamic extent: winds, escape continuations, handlers (dynamic-extent) --
+;;; Rung 3 of the call/cc staircase (openspec/explorations/continuations-and-control.md).
+;;; THREE structures, each with one job (design D4):
+;;;   escape frames  -- in the runtime; setjmp targets, each with a generation id
+;;;   *winds*        -- here; active dynamic-wind (before . after) pairs, innermost first
+;;;   *handlers*     -- here; the R7RS current-exception-handler chain
+;;; `raise` CALLS the current handler (it does not transfer); `guard` is a handler
+;;; that escapes.  So there is one transfer mechanism, not two.
+(define *winds* (quote ()))
+(define *handlers* (quote ()))
+
+;;; Pop entries off the wind list until it is the captured TARGET, running each
+;;; `after`.  The entry is popped BEFORE its `after` runs, so a raise or escape from
+;;; inside an `after` cannot re-enter it and unwinding cannot loop; the new transfer
+;;; then unwinds the rest on its own way out.
+(define (%unwind-to target)
+  (if (eq? *winds* target)
+      #t
+      (if (null? *winds*)
+          #t                                  ; target is not on this chain
+          (let ((entry (car *winds*)))
+            (set! *winds* (cdr *winds*))
+            ((cdr entry))
+            (%unwind-to target)))))
+
+;;; dynamic-wind: before, body, after -- with `after` on EVERY exit.  The normal
+;;; path pops and runs it here; an escape or a raise runs it through %unwind-to.
+(define (dynamic-wind before thunk after)
+  (before)
+  (set! *winds* (cons (cons before after) *winds*))
+  (let ((r (thunk)))
+    (set! *winds* (cdr *winds*))
+    (after)
+    r))
+
+;;; call/cc, restricted to ESCAPE continuations (design D1).  %run-guarded pushes a
+;;; runtime escape frame and runs the thunk; %escape-frame reads that frame's id
+;;; (innermost = ours, since nothing has been pushed since); %escape-to delivers a
+;;; value to it.  %escape-to returns #f ONLY when no live frame carries the id --
+;;; the capturing call has returned -- which is a diagnostic, not a jump into a dead
+;;; frame.  Re-entrant continuations are rung 4 and are not supported.
+(define (call-with-current-continuation f)
+  (let ((saved-winds *winds*))
+    (cdr (%run-guarded
+          (lambda ()
+            (let ((id (%escape-frame)))
+              (f (lambda (v)
+                   ;; Liveness FIRST.  Unwinding to a dead continuation's depth would
+                   ;; run the `after` thunks -- including the one that pops the very
+                   ;; handler meant to report this error -- for a transfer that cannot
+                   ;; happen.  When live, %escape-to does not return.
+                   (if (%escape-live? id)
+                       (begin (%unwind-to saved-winds) (%escape-to id v))
+                       #f)
+                   (error 'call/cc
+                          "continuation invoked outside its extent")))))))))
+
+(define (call/cc f) (call-with-current-continuation f))
+
+;;; Install HANDLER for the dynamic extent of THUNK.  The push/pop rides
+;;; dynamic-wind, so an escape out of the thunk restores the chain for free.
+;;; (Rung 2 exposes this as `with-exception-handler`; it needs no new machinery.)
+(define (%with-handler handler thunk)
+  (let ((saved *handlers*))
+    (dynamic-wind
+      (lambda () (set! *handlers* (cons handler saved)))
+      thunk
+      (lambda () (set! *handlers* saved)))))
+
+;;; raise any object: call the current handler with the chain popped to the outer
+;;; one, per R7RS.  A handler for `raise` must not return -- `guard`'s escapes -- so
+;;; a normal return falls through to the unhandled path.  With no handler at all,
+;;; %raise renders and aborts exactly as before.
+(define (raise obj)
+  (if (null? *handlers*)
+      (%raise obj)
+      (let ((h (car *handlers*)) (saved *handlers*))
+        (set! *handlers* (cdr *handlers*))
+        (h obj)
+        (set! *handlers* saved)
+        (%raise obj))))
 
 ;;; R7RS error-object accessors over the runtime error-object representation.
 (define (error-object? x) (%error-object? x))
 (define (error-object-message x) (%error-object-message x))
 (define (error-object-irritants x) (%error-object-irritants x))
 
-;;; guard: evaluate BODY; if it raises (via raise/error), bind the object to VAR
-;;; and run the clauses as a `cond` in the guard's continuation.  No matching
-;;; clause (and no else) re-raises outward.  %run-guarded runs the thunk under a
-;;; runtime escape frame and returns (raised? . value-or-object); the emitter
-;;; passes the module's @__apply0 trampoline so the runtime can call the thunk.
+;;; guard: evaluate BODY; if it raises, bind the object to VAR and run the clauses
+;;; as a `cond` in the guard's continuation.  No matching clause (and no else)
+;;; re-raises outward.  This is R7RS's own shape (change: dynamic-extent, design
+;;; D4): `guard` is not a mechanism of its own -- it installs a HANDLER that escapes
+;;; to the guard's continuation, so the intervening dynamic-wind `after` thunks run
+;;; on the ordinary escape path.
+;;;
+;;; DEVIATION (recorded): R7RS reraises a non-matching guard "within the dynamic
+;;; environment of the original call to raise".  That needs re-entering a
+;;; continuation whose extent has ended (rung 4); here the reraise happens in the
+;;; GUARD's dynamic environment, so `after` thunks between the raise point and the
+;;; guard have already run and do not run again.
 (define-syntax guard
   (syntax-rules ()
     ((_ (var clause ...) body ...)
-     (let ((%gres (%run-guarded (lambda () body ...))))
+     (let ((%gres
+            (call-with-current-continuation
+              (lambda (%gk)
+                (%with-handler
+                  (lambda (%gobj) (%gk (cons #t %gobj)))
+                  (lambda () (cons #f (begin body ...))))))))
        (if (car %gres)
            (let ((var (cdr %gres))) (%guard-clauses var clause ...))
            (cdr %gres))))))
@@ -338,6 +430,37 @@
     ((_ v (test => proc) rest ...) (let ((gt test)) (if gt (proc gt) (%guard-clauses v rest ...))))
     ((_ v (test) rest ...) (let ((gt test)) (if gt gt (%guard-clauses v rest ...))))
     ((_ v (test e ...) rest ...) (if test (begin e ...) (%guard-clauses v rest ...)))))
+
+;;; --- parameter objects (change: dynamic-extent, design D3) -----------------
+;;; A parameter is a closure over a one-slot cell.  R7RS specifies the object as
+;;; callable with ZERO arguments returning its value, which is what makes it
+;;; substitutable for a plain accessor procedure at any call site.  The one- and
+;;; two-argument forms are internal to `parameterize`: one argument converts and
+;;; sets (a new binding), two restore a previously converted value unconverted.
+(define (make-parameter init . conv)
+  (let ((convert (if (null? conv) (lambda (x) x) (car conv)))
+        (cell (%make-vector 1 0)))
+    (%vector-set! cell 0 ((if (null? conv) (lambda (x) x) (car conv)) init))
+    (lambda args
+      (if (null? args)
+          (%vector-ref cell 0)
+          (if (null? (cdr args))
+              (%vector-set! cell 0 (convert (car args)))
+              (%vector-set! cell 0 (car args)))))))
+
+;;; parameterize rides dynamic-wind, so restoration on a normal exit, on an escape,
+;;; and on a raise all come from one place (design D3).
+(define (%with-parameters params vals thunk)
+  (let ((olds (map (lambda (p) (p)) params)))
+    (dynamic-wind
+      (lambda () (for-each (lambda (p v) (p v)) params vals))
+      thunk
+      (lambda () (for-each (lambda (p v) (p v #f)) params olds)))))
+
+(define-syntax parameterize
+  (syntax-rules ()
+    ((_ ((p v) ...) body ...)
+     (%with-parameters (list p ...) (list v ...) (lambda () body ...)))))
 
 ;;; --- vector constructors (vectors change) ---------------------------------
 ;;; make-vector/vector-ref/vector-set!/vector-length/vector? are primitives;

@@ -40,6 +40,7 @@
                   %no-prelude? %dump-level %stderr-write
                   repl-mode repl-input repl-state-ref repl-state-set!
                   %error-abort %raise %run-guarded
+                  %make-error-object %escape-frame %escape-to %escape-live?
                   %error-object? %error-object-message %error-object-irritants))
 (define (prim? op) (and (memq op *prims*) #t))
 
