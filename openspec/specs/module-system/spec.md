@@ -269,6 +269,28 @@ longer points to. The binding SHALL still be exported and callable.
   assigned lambda is hoisted under an ordinary counter-derived label
 - **AND** the emitted unit defines each code label exactly once and links
 
+### Requirement: Library procedure code labels are stable across pruning
+
+A library top-level procedure's code label SHALL be derived from its mangled binding name rather
+than from the compilation's gensym counter, so that the label is identical whether the unit is
+compiled whole or recompiled as a tree-shaken subset. Labels for inner and anonymous lambdas, and
+for all program-unit code, SHALL be unaffected.
+
+This is what makes a cross-unit direct call possible at all: the AOT tree-shake recompiles a unit
+against a root set derived from the very program that must name the callee, so a counter-derived
+label is not knowable by that program.
+
+#### Scenario: The same procedure has the same label whole and pruned
+
+- **WHEN** a library is compiled whole, and then recompiled as a tree-shaken subset that still
+  contains a given exported procedure
+- **THEN** that procedure's code label is identical in both units
+
+#### Scenario: Program-unit and inner-lambda labels are unchanged
+
+- **WHEN** a program with nested and anonymous lambdas is compiled
+- **THEN** its code labels are numbered exactly as before this change
+
 ### Requirement: A library unit may assign its own top-level binding
 
 A compilation unit SHALL be permitted to `set!` a name it defines at its own top level, per R7RS
