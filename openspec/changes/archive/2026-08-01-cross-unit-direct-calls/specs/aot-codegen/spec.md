@@ -42,6 +42,9 @@ The AOT/build door SHALL compile the linked module with an optimizing pipeline (
 the toolchain default, and SHALL additionally enable link-time optimization (`-flto`) so that the
 optimizer can act across compilation-unit boundaries.
 
+This optimization SHALL preserve observable behaviour: the delivered executable SHALL produce the
+same values and errors as an unoptimized build for every program.
+
 LTO is what makes a cross-unit direct call worth emitting: measured on a 30-million-call probe, the
 direct call alone and LTO alone each change nothing, while together they are ~6× faster than
 today's indirect call. Because binary size is a first-class concern for this project, the release
@@ -54,6 +57,8 @@ The interactive/JIT door SHALL remain unoptimized; this requirement governs the 
 
 - **WHEN** a program is delivered through the AOT/build door
 - **THEN** the linked module is compiled at `-O2` with link-time optimization enabled
+- **AND** the executable produces the same result as an unoptimized build (e.g. `(ack 3 12)` ⇒
+  `32765`)
 
 #### Scenario: Cross-unit calls are optimized across the unit boundary
 
@@ -65,3 +70,10 @@ The interactive/JIT door SHALL remain unoptimized; this requirement governs the 
 - **WHEN** link-time optimization is enabled
 - **THEN** the delivered executable's size is compared against a build without it, and the result
   is recorded
+#### Scenario: Emitted IR and bootstrap IR are unchanged
+
+- **WHEN** the AOT release optimization is enabled, including link-time optimization
+- **THEN** the emitter's per-form textual IR and the committed `bootstrap/*.ll` are byte-identical
+  to before — both `-O2` and `-flto` act at link/codegen time, not on emission — so IR
+  byte-identity and self-hosting fixed-point checks still hold
+
