@@ -835,3 +835,296 @@
           (let ([r (rd-datum s n i)])
             (loop (rd-skip-ws s n (cdr r)) (cons (car r) acc)))
           (reverse acc)))))
+
+;;; --- ports (change: scheme-io-library, design D1/D2) -----------------------
+;;; A port is a RECORD over the existing record layer, so `port?` is
+;;; `%record-of-type?` and a port is an ordinary first-class value -- no new heap
+;;; header code, no printer/GC/equality teaching (design D1).
+;;;
+;;; FIELD LAYOUT.  Field 0 is a CONTRACT SHARED WITH THE RUNTIME: the
+;;; port-directed output primitives (%display-port and friends) are handed the
+;;; port record and read slot 0 as their handle, so the two-argument output forms
+;;; stay bare primcalls with no Scheme wrapper on the path.  If this layout moves,
+;;; `port_arg_stream` in src/runtime/runtime.c moves with it.
+;;;
+;;;   0 handle    OUTPUT: fixnum handle into the runtime's FILE * table
+;;;                       (0 = stdout, 1 = stderr, 2+ = opened by this program)
+;;;               INPUT:  #f -- so a port-directed WRITE to an input port finds no
+;;;                       fixnum in slot 0 and reports an error instead of writing
+;;;   1 input?    #t input, #f output
+;;;   2 buf       INPUT: the whole source text, slurped (D2); #f = not yet slurped
+;;;               (the stdin port only -- see %port-buf), OUTPUT: #f
+;;;   3 pos       INPUT: cursor, a byte index into buf; OUTPUT: unused
+;;;   4 string?   #t for a string port (get-output-string is legal on it)
+;;;   5 closed?   #t once closed
+;;; The port type descriptor is made ON FIRST USE, not at load time.  Two reasons,
+;;; both load-bearing: this file is also `load`ed into the Chez bootstrap host by
+;;; the reader unit tests, where a `%`-primitive is unbound until Emit compiles it
+;;; -- so no top-level INITIALIZER here may call one (every other `%`-use in this
+;;; file is likewise inside a procedure body) -- and a program that never mentions
+;;; a port then runs no port initialization at all.
+(define %port-rtd-cell #f)
+(define (%port-rtd)
+  (if %port-rtd-cell
+      %port-rtd-cell
+      (begin (set! %port-rtd-cell (%make-record-type "port"))
+             %port-rtd-cell)))
+
+(define (%make-port handle input? buf pos string? closed?)
+  (%make-record (%port-rtd) (list handle input? buf pos string? closed?)))
+
+(define (port? p) (%record-of-type? p (%port-rtd)))
+(define (input-port? p) (and (port? p) (%record-ref p 1)))
+(define (output-port? p) (and (port? p) (not (%record-ref p 1))))
+;;; Every port this implementation makes is textual; binary ports are out of scope
+;;; (design non-goal), so textual-port? is port? until they exist.
+(define (textual-port? p) (port? p))
+(define (port-closed? p) (%record-ref p 5))
+(define (input-port-open? p) (and (input-port? p) (not (%record-ref p 5))))
+(define (output-port-open? p) (and (output-port? p) (not (%record-ref p 5))))
+
+;;; Guard every operation behind "is this the right kind of live port?", so a
+;;; wrong-type or use-after-close argument becomes a catchable R7RS error naming
+;;; the operation rather than a wrong tag walk (spec: an operation on a closed port
+;;; reports an error).
+(define (%check-input-port p who)
+  (if (not (input-port? p))
+      (error who "not an input port" p)
+      (if (%record-ref p 5) (error who "port is closed" p) p)))
+(define (%check-output-port p who)
+  (if (not (output-port? p))
+      (error who "not an output port" p)
+      (if (%record-ref p 5) (error who "port is closed" p) p)))
+
+;;; The source text of an input port, slurped on first use.  Every port EXCEPT the
+;;; stdin one arrives with its text already in hand (open-input-file slurps at open,
+;;; open-input-string is handed it).  current-input-port must NOT slurp when it is
+;;; created -- that would block every program at startup on a stdin nobody reads --
+;;; so it starts with #f here and pulls the stream in on the first actual read.
+(define (%port-buf p)
+  (let ((b (%record-ref p 2)))
+    (if b
+        b
+        (let ((s (%read-all-stdin)))
+          (%record-set! p 2 s)
+          s))))
+
+;;; --- input ports ----------------------------------------------------------
+;;; open-input-file SLURPS (design D2), which is precisely what makes a file port
+;;; and a string port the same object: both are a string plus a cursor, so every
+;;; input operation below is pure Scheme over data already in hand and `read` is
+;;; the reader this file already defines. The cost -- a source larger than memory
+;;; cannot be read, and input written after the open is not seen -- is documented
+;;; in the spec and docs/PRIMITIVES.md, not just here.
+(define (open-input-string s) (%make-port #f #t s 0 #t #f))
+(define (open-input-file path)
+  (let ((s (%read-file path)))
+    (if s
+        (%make-port #f #t s 0 #f #f)
+        (error 'open-input-file "cannot open file for input" path))))
+
+(define (%port-at-eof? p) (>= (%record-ref p 3) (string-length (%port-buf p))))
+
+(define (read-char p)
+  (%check-input-port p 'read-char)
+  (if (%port-at-eof? p)
+      (eof-object)
+      (let ((i (%record-ref p 3)))
+        (%record-set! p 3 (+ i 1))
+        (string-ref (%port-buf p) i))))
+
+(define (peek-char p)
+  (%check-input-port p 'peek-char)
+  (if (%port-at-eof? p)
+      (eof-object)
+      (string-ref (%port-buf p) (%record-ref p 3))))
+
+;;; read-line: up to but NOT including the next line feed, which is consumed; a
+;;; final line with no terminator is returned as-is.
+(define (read-line p)
+  (%check-input-port p 'read-line)
+  (if (%port-at-eof? p)
+      (eof-object)
+      (let* ((s (%port-buf p))
+             (n (string-length s)))
+        (let loop ((i (%record-ref p 3)))
+          (if (>= i n)
+              (let ((start (%record-ref p 3)))          ; unterminated final line
+                (%record-set! p 3 n)
+                (substring s start n))
+              (if (char=? (string-ref s i) #\newline)
+                  (let ((start (%record-ref p 3)))
+                    (%record-set! p 3 (+ i 1))          ; consume the line feed
+                    (substring s start i))
+                  (loop (+ i 1))))))))
+
+;;; read-string: up to k characters, short ONLY at end of input.
+(define (read-string k p)
+  (%check-input-port p 'read-string)
+  (if (%port-at-eof? p)
+      (eof-object)
+      (let* ((s (%port-buf p))
+             (n (string-length s))
+             (start (%record-ref p 3))
+             (end (if (> (+ start k) n) n (+ start k))))
+        (%record-set! p 3 end)
+        (substring s start end))))
+
+;;; read: ONE datum at the cursor, leaving the port positioned after it.  This is
+;;; a cursor discipline over the reader that already exists, NOT a second reader --
+;;; rd-datum returns (datum . next-index), which is exactly one `read` step, and
+;;; rd-skip-ws is what makes leading whitespace and ; comments disappear.  Sharing
+;;; one reader means a user-visible `read` and the compiler's own front end accept
+;;; the same external representations by construction.
+(define (read p)
+  (%check-input-port p 'read)
+  (let* ((s (%port-buf p))
+         (n (string-length s))
+         (i (rd-skip-ws s n (%record-ref p 3))))
+    (if (>= i n)
+        (begin (%record-set! p 3 n) (eof-object))
+        (let ((r (rd-datum s n i)))
+          (%record-set! p 3 (cdr r))
+          (car r)))))
+
+;;; --- output ports ---------------------------------------------------------
+;;; An output port streams through to its runtime handle on every operation (D2);
+;;; a string port is a handle too (an in-memory stream in the runtime), so ONE
+;;; printer serves both and nothing accumulates in Scheme.
+(define (open-output-file path)
+  (let ((h (%port-open-output-file path)))
+    (if h
+        (%make-port h #f #f 0 #f #f)
+        (error 'open-output-file "cannot open file for output" path))))
+
+(define (open-output-string)
+  (let ((h (%port-open-output-string)))
+    (if h
+        (%make-port h #f #f 0 #t #f)
+        (error 'open-output-string "cannot open an output string port"))))
+
+;;; get-output-string does NOT require the port to be open: write-then-close-then-
+;;; collect is the natural idiom, and closing a string port finalizes its buffer
+;;; rather than discarding it.  This reads accumulated state instead of reading FROM
+;;; or writing TO the port, so it is not the "operation on a closed port" the spec
+;;; requires to fail.
+(define (get-output-string p)
+  (if (not (output-port? p))
+      (error 'get-output-string "not an output port" p)
+      (if (not (%record-ref p 4))
+          (error 'get-output-string "not a string port" p)
+          (%port-get-output-string (%record-ref p 0)))))
+
+(define (flush-output-port p)
+  (%check-output-port p 'flush-output-port)
+  (%port-flush (%record-ref p 0)))
+
+;;; close-port: flush, then close, for either direction.  Closing an
+;;; already-closed port is permitted and does nothing (R7RS).  The runtime refuses
+;;; to close the reserved stdout/stderr handles, so closing (current-output-port)
+;;; cannot take the process's stdout with it.
+(define (close-port p)
+  (if (not (port? p))
+      (error 'close-port "not a port" p)
+      (if (%record-ref p 5)
+          (if #f #f)                                  ; already closed: no effect
+          (begin
+            (if (not (%record-ref p 1)) (%port-close (%record-ref p 0)))
+            (%record-set! p 5 #t)
+            (if #f #f)))))
+(define (close-input-port p)
+  (if (input-port? p) (close-port p) (error 'close-input-port "not an input port" p)))
+(define (close-output-port p)
+  (if (output-port? p) (close-port p) (error 'close-output-port "not an output port" p)))
+
+;;; --- the current ports, as parameter objects ------------------------------
+;;; R7RS makes these PARAMETER objects so that with-output-to-file can rebind them
+;;; for a dynamic extent.  That became possible when `dynamic-extent` shipped
+;;; make-parameter / parameterize / dynamic-wind, which is why this change was
+;;; sequenced after it (design D4, superseded).  A parameter is callable with zero
+;;; arguments, so `(current-output-port)` reads identically to the plain accessor
+;;; the earlier design would have shipped.
+;;;
+;;; The two reserved handles (0 stdout, 1 stderr) need no runtime table slot, so
+;;; these three cost one record each and no file descriptor.  The stdin port's text
+;;; is pulled in on first read, never here (see %port-buf).
+;;; These three are hand-written rather than `make-parameter` calls for two
+;;; reasons.  First, their initial port must be built LAZILY (see %port-rtd above),
+;;; so there is no value to hand `make-parameter` at load time.  Second,
+;;; current-output-port has to reach the RUNTIME as well as Scheme: `(display x)`
+;;; with no port compiles to a bare primcall whose destination is a runtime cell
+;;; (rt_current_out in src/runtime/runtime.c), which is how a port-less display
+;;; follows `with-output-to-file` while its emitted code stays byte-identical.
+;;; Every set must push the new port's handle into that cell -- INCLUDING the
+;;; restore leg, which arrives as the two-argument form `(p v #f)` that a
+;;; make-parameter converter would never see.
+;;;
+;;; The protocol is make-parameter's exactly -- zero arguments reads, one or two
+;;; set -- so `parameterize` drives these, and a call site cannot tell them from
+;;; plain accessor procedures.
+(define %stdout-port #f)
+(define %stderr-port #f)
+(define %stdin-port  #f)
+
+(define (current-output-port . args)
+  (if (null? args)
+      (begin
+        (if (not %stdout-port)
+            (begin (set! %stdout-port (%make-port 0 #f #f 0 #f #f))
+                   (%set-current-output! 0)))
+        %stdout-port)
+      (let ((p (car args)))
+        (set! %stdout-port p)
+        (%set-current-output! (%record-ref p 0))
+        (if #f #f))))
+
+(define (current-error-port . args)
+  (if (null? args)
+      (begin
+        (if (not %stderr-port) (set! %stderr-port (%make-port 1 #f #f 0 #f #f)))
+        %stderr-port)
+      (begin (set! %stderr-port (car args)) (if #f #f))))
+
+;;; The stdin port's TEXT is pulled in on the first read, never here (see
+;;; %port-buf) -- slurping at startup would block every program on a stdin nobody
+;;; reads.
+(define (current-input-port . args)
+  (if (null? args)
+      (begin
+        (if (not %stdin-port) (set! %stdin-port (%make-port #f #t #f 0 #f #f)))
+        %stdin-port)
+      (begin (set! %stdin-port (car args)) (if #f #f))))
+
+;;; call-with-port: hand the port to PROC and close it on EVERY exit -- a normal
+;;; return, an escape via a continuation, or a raise.  dynamic-wind is what makes
+;;; the escaping cases work; a version that just closed after the call would leak
+;;; the port exactly when it matters most.
+(define (call-with-port p proc)
+  (dynamic-wind
+    (lambda () (if #f #f))
+    (lambda () (proc p))
+    (lambda () (close-port p))))
+
+;;; with-output-to-file / with-input-from-file: rebind the corresponding parameter
+;;; for the dynamic extent of THUNK, then close the port and restore the parameter.
+;;; Both ride dynamic-wind for the same reason call-with-port does.
+(define (with-output-to-file path thunk)
+  (let ((p (open-output-file path))
+        (saved (current-output-port)))
+    (dynamic-wind
+      (lambda () (current-output-port p))
+      thunk
+      (lambda () (current-output-port saved #f) (close-port p)))))
+
+(define (with-input-from-file path thunk)
+  (let ((p (open-input-file path))
+        (saved (current-input-port)))
+    (dynamic-wind
+      (lambda () (current-input-port p))
+      thunk
+      (lambda () (current-input-port saved #f) (close-port p)))))
+
+(define (call-with-output-file path proc)
+  (call-with-port (open-output-file path) proc))
+(define (call-with-input-file path proc)
+  (call-with-port (open-input-file path) proc))

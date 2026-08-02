@@ -111,6 +111,40 @@ Each entry is `(name raw arity [fold-kind])`:
 | `arity` | the fixed arity for **direct-call** inlining (the expander has already reduced n-ary `(+ a b c)` to binary form, so `+` is arity 2 here) |
 | `fold-kind` | *optional*; present only for ops that are variadic **as a value** — `sum`, `product`, `str`, `diff`, `cmp`. Drives the value-position eta (below). `eq?`/`eqv?` are binary in R7RS, so they have no fold kind. |
 
+#### Several entries per name — optional arguments (change: `scheme-io-library`)
+
+A name may appear **more than once**, one entry per accepted arity, and a direct call selects
+the entry matching its argument count. That is how the output procedures got their optional
+port without anything else moving:
+
+```scheme
+(display %display 1) (display %display-port 2)
+(write %write 1)     (write %write-port 2)
+(newline %newline 0) (newline %newline-port 1)
+```
+
+`(display x)` still inlines to the bare `%display` it always did — the emitted IR of a
+port-free program is byte-identical — and `(display x p)` inlines to the bare `%display-port`.
+**Neither form costs a closure call**, which is the point: expressing the optional argument as
+a prelude wrapper would have put a `(scheme base)` procedure call on the path of every
+`display` in every program, and made a port-free `hello.scm` link the port machinery.
+
+Two rules keep this honest:
+
+- **The base arity must come first.** A value-position reference (`(map display xs)`) etas the
+  *first* entry for the name, so `display` as a value stays the one-argument procedure. A
+  port-directed call must therefore be a direct call — the same narrowing every fixed-arity
+  primitive already has here (`substring` is exactly 3 in Emit where R7RS allows 2).
+- **Single-entry names are unaffected.** `integrable-lookup/arity` matches the one arity or
+  returns `#f`, exactly as the old equality test on `(caddr entry)` did.
+
+Where the port itself is decoded is a related decision: `%display-port` is handed the **port
+record** and the runtime reads its handle out of field 0 (see `port_arg_stream` in
+`src/runtime/runtime.c`). That is one documented coupling between the runtime and the port
+record layout in `src/prelude.scm`, bought in exchange for the two-argument form staying a bare
+primcall. The check is structural, so it is memory-safe for any argument; it does not prove the
+record is a port.
+
 `*prims*` is the companion list of the reserved raw `%`-ops (and the handful of permanently
 internal ops). `prim?` and `integrable?` are the two predicates the resolver uses.
 
@@ -300,6 +334,86 @@ stage-1 synonym regen. Try direct first.
 
 If a new integrable is used inside macro templates, no extra work is needed: unioning
 `(map car *integrable*)` into both known-sets (§6) covers it automatically.
+
+---
+
+## The I/O primitives (change: `scheme-io-library`)
+
+The port surface is deliberately thin at the primitive layer: everything about *what a port
+is* lives in `src/prelude.scm` as a record, and the primitives are only the edges where the
+runtime must be involved.
+
+**Integrable (plain, shadowable names):**
+
+| name | arities | notes |
+|---|---|---|
+| `display` / `write` | 1, 2 | second argument is a textual output port |
+| `newline` | 0, 1 | |
+| `write-char` | 1, 2 | |
+| `write-string` | 1, 2 | contents **literally** — no quotes, no escaping. `display` narrowed to strings, not `write` |
+| `eof-object` | 0 | the singleton end-of-file object |
+| `eof-object?` | 1 | an immediate tag test; safe on any value |
+
+**Internal `%`-ops** (no plain name; the prelude's ports are built over them): `%read-file`,
+`%port-open-output-file`, `%port-open-output-string`, `%port-get-output-string`, `%port-flush`,
+`%port-close`, `%set-current-output!`, and the `%…-port` lowering targets of the table above.
+
+Three things are worth knowing about how these behave:
+
+- **The eof object is misc-immediate subtype 3.** No header code, no allocation, and
+  `eof-object?` is a tag+subtype test. R7RS requires it to be distinct from every other object,
+  so it is *not* `#f`, `()`, or the unspecified value — a program that reads a `#f` datum can
+  still tell that from end of input.
+- **A live OS file is a small integer, never a pointer.** The runtime owns a `FILE *` table and
+  Scheme holds an index, so a stale handle after `close-port` is a range check rather than a
+  wild pointer. Handles 0 and 1 are reserved (stdout, stderr) and are never closed, so closing
+  `(current-output-port)` cannot take the process's stdout with it.
+- **Where a port-less `display` writes is indirect.** `(display x)` compiles to a bare
+  `rt_display`, but R7RS requires it to follow `with-output-to-file` and `parameterize` on
+  `current-output-port`. Both hold at once because the port-less entry points write to a
+  runtime destination cell (`rt_current_out`) that the `current-output-port` parameter updates
+  on every rebinding, including the restore leg. The emitted IR is unchanged; the cost is one
+  global load per call.
+
+### Two error channels, deliberately
+
+Port errors come back two different ways, and the split is intentional:
+
+- **Prelude-level errors are catchable R7RS error objects** — a nonexistent file, a closed
+  port, `get-output-string` on a file port. `(guard (e (#t …)) (open-input-file "/nope"))`
+  works.
+- **A port-directed primitive handed a non-port aborts with a diagnostic**, exactly as
+  `(+ 1 "a")` does. It is a primitive type error, not a condition; it is memory-safe and
+  reports, but `guard` does not catch it.
+
+### Documented limitation — input ports slurp at open
+
+`open-input-file` reads the **whole file** at open time, which is what makes a file input port
+and a string input port the same object and every input operation pure Scheme over the reader
+that already exists (design D2). Two consequences you can actually hit:
+
+- a source **larger than memory** cannot be read;
+- input written to the source **after** the port is opened is never observed — so a port on an
+  interactive stream sees only what was already there.
+
+`(current-input-port)` softens the second case slightly: its text is pulled in on the *first
+read*, not when the parameter is created, so a program that never reads stdin never blocks on
+it. The port record is the seam to fix this behind if it ever bites — `read-char` and friends
+all go through it, so refilling a buffer would be one accessor's business.
+
+### Deliberate R7RS gaps
+
+- **`char-ready?` is omitted.** Under slurp-on-open it would be `#t` for any port with input
+  remaining: conformant, but carrying no information, and a predicate that always says "yes"
+  invites programs to poll on it as though it distinguished something. It becomes meaningful
+  only if input ports ever stream, which is where it belongs.
+- **Binary ports are out of scope** (`read-u8`, `write-u8`, `open-input-bytevector`, …).
+  Bytevectors exist, so this is feasible; a second port flavour just doubles the surface with
+  no current payer. Textual only.
+- **`(scheme file)` operations are a separate change** — `file-exists?`, `delete-file`, and
+  directory operations. Adjacent, not included.
+- **The input operations require their port argument.** R7RS lets it default to
+  `(current-input-port)`; here `(read-char p)` is the only spelling.
 
 ---
 

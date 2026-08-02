@@ -22,6 +22,7 @@ speed items in this list.
 | [P5](#p5-arithmetic-and-call-overhead-ackermann-benchmark) | Arithmetic & call overhead (Ackermann benchmark) | speed | high | med–high | `inline-fixnum-arith-and-self-calls` (A + B-self) | ☑ |
 | [P6](#p6-no-optimizer-pass-known-call-inlining-and-constant-folding) | No optimizer pass: known-call inlining & constant folding | speed + size | med–high | med | `simplify-known-calls` (A) | ☑ |
 | [P7](#p7-boxing-driven-by-desugaring-rather-than-by-mutation) | Boxing driven by desugaring rather than by mutation | speed + size | med | low–med | — | ☑ |
+| [P8](#p8-the-emit-build-door-does-not-tree-shake) | The `emit build` door does not tree-shake | size | med–high | med | — | ☐ |
 
 Legend — **Value**: benefit if fixed. **Cost**: rough implementation effort/risk. These are
 estimates to aid sequencing, not commitments.
@@ -849,6 +850,48 @@ IR, twice the `unbox` count, and loses P5's direct self-call entirely, where an 
 
 **OpenSpec change:** none — landed directly, as a follow-on to P6 with the same
 before/after IR capture discipline.
+
+---
+
+## P8 — The `emit build` door does not tree-shake
+
+**Status:** ☐ open
+
+**Symptom.** P1 gave the AOT ship path a root-set-driven shake, but it lives in the *Chez*
+driver (`build-modular-artifacts*` in `src/compile.ss`). The Chez-free `emit build` door links
+the whole committed `(scheme base)` instead, so the two ship paths differ by ~3× on the same
+program. Measured on `hello.scm` (2026-08-01, during `scheme-io-library`):
+
+| path | hello.scm | shaken? |
+|---|---|---|
+| `chez compile.ss` (AOT release profile) | **34,720 B** | ☑ 0 exports reached |
+| `emit build` | **134,248 B** | ☐ links all of `(scheme base)` |
+
+**Why it matters more now.** `scheme-io-library` was the first change in a while to *grow*
+`(scheme base)` — by 82 KB of IR (+25%). The shake absorbed it completely on the AOT path
+(**+120 B, +0.35%** on `hello.scm`), while the unshaken door paid the full **+20,352 B
+(+17.9%)**. That asymmetry is the whole finding: the size of a standalone binary is currently a
+function of *which door built it*, and only one door honours the "small, clean, self-contained
+executables" goal. Every future `(scheme base)` addition widens the gap on the wrong door.
+
+**Cause.** The shake is a Scheme-level pass over library units that the Chez driver runs before
+linking; the `emit build` verb emits the program IR in-process and forks `clang` over the
+committed unit IR without that step. Nothing about the pass is Chez-specific — it is
+`compile-library*` in `src/core.ss`, which the embedded compiler already contains — it simply
+is not wired into the Chez-free door's build sequence.
+
+**Fix sketch.** Have `emit build` call the same `compile-library*` reachability pass on each
+linked unit, driven by the program's root set, and link the pruned IR instead of the committed
+`bootstrap/scheme.base.ll`. The dev/REPL/JIT door keeps the full units (open world), exactly as
+today. The likely subtlety is that `emit build` links a *committed* artifact rather than one it
+compiled, so it needs the unit's export table to compute reachability — which
+`build/lib/*.exports` already carries.
+
+**Value:** med–high — it serves the flagship standalone-executable size goal, and it is the
+difference between 34 KB and 134 KB on a hello-world. **Cost:** med — the pass exists and is
+tested; this is wiring plus a root-set plumbing decision.
+
+**OpenSpec change:** none yet.
 
 ---
 
