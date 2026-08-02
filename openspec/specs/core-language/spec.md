@@ -1067,6 +1067,10 @@ always-present primitive layer, defined over a reserved raw primcall
 (`%write-char`); a direct, unshadowed call SHALL still compile to the bare
 primitive. It SHALL NOT require importing `(scheme base)`.
 
+This procedure SHALL additionally accept an OPTIONAL second argument that is a textual output
+port, in which case the output SHALL go to that port instead of standard output. With the argument
+omitted the behaviour SHALL be exactly as specified above, so existing programs are unaffected.
+
 #### Scenario: write-char emits a character's bytes
 
 - **WHEN** a program evaluates `(write-char #\A)` then `(write-char #\newline)`
@@ -1083,6 +1087,12 @@ primitive. It SHALL NOT require importing `(scheme base)`.
   defines `(define (write-char c) 'mine)`
 - **THEN** `write-char` behaves as an ordinary procedure value, and a user
   definition shadows it (user-wins)
+
+#### Scenario: write-char accepts an optional port
+
+- **WHEN** a program opens an output string port `p`, evaluates `(write-char #\A p)`, and calls
+  `(get-output-string p)`
+- **THEN** the result is `"A"` and nothing was written to standard output
 
 ### Requirement: do iteration macro
 
@@ -1533,6 +1543,10 @@ This is distinct from *write* style (used to print a program's final value),
 which quotes strings and prefixes characters with `#\`; that behavior is
 unchanged.
 
+This procedure SHALL additionally accept an OPTIONAL second argument that is a textual output
+port, in which case the output SHALL go to that port instead of standard output. With the argument
+omitted the behaviour SHALL be exactly as specified above, so existing programs are unaffected.
+
 #### Scenario: display of a fixnum prints its digits
 
 - **WHEN** a program runs `(display 42)`
@@ -1564,14 +1578,24 @@ unchanged.
 - **THEN** the program writes `"hello"` (with surrounding double quotes), as
   before
 
+#### Scenario: display accepts an optional port
+
+- **WHEN** a program opens an output string port `p`, evaluates `(display "hi" p)`, and calls
+  `(get-output-string p)`
+- **THEN** the result is `"hi"` and nothing was written to standard output
+
 ### Requirement: newline writes a line separator
 
 The `newline` primitive SHALL accept zero arguments and write a single newline
 character (U+000A, `\n`) to standard output. It SHALL return the unspecified
 value so it composes inside `begin` and after other output primitives.
 
-Calling `newline` with any arguments SHALL be an error (arity mismatch),
-consistent with how other fixed-arity primitives report arity errors.
+Calling `newline` with more than the one optional port argument SHALL be an error (arity
+mismatch), consistent with how other primitives report arity errors.
+
+This procedure SHALL additionally accept an OPTIONAL first argument that is a textual output
+port, in which case the output SHALL go to that port instead of standard output. With the argument
+omitted the behaviour SHALL be exactly as specified above, so existing programs are unaffected.
 
 #### Scenario: newline writes a single line feed
 
@@ -1584,6 +1608,12 @@ consistent with how other fixed-arity primitives report arity errors.
 - **WHEN** a program runs `(begin (newline) (quote done))`
 - **THEN** the program completes normally and its value is the symbol `done`
   (the `newline` call does not contribute a value)
+
+#### Scenario: newline accepts an optional port
+
+- **WHEN** a program opens an output string port `p`, evaluates `(newline p)`, and calls
+  `(get-output-string p)`
+- **THEN** the result is a single line feed and nothing was written to standard output
 
 ### Requirement: write writes any datum in write style
 
@@ -1603,6 +1633,10 @@ tag and SHALL NOT interpret a value as a type it is not. Passing any value to
 
 This is the write-style companion to the display-style `display` primitive, and
 uses the same value printer that renders a program's final top-level value.
+
+This procedure SHALL additionally accept an OPTIONAL second argument that is a textual output
+port, in which case the output SHALL go to that port instead of standard output. With the argument
+omitted the behaviour SHALL be exactly as specified above, so existing programs are unaffected.
 
 #### Scenario: write of a string keeps the quotes
 
@@ -1634,6 +1668,13 @@ uses the same value printer that renders a program's final top-level value.
   the bare expression `(list "a" #\b)` (printed by the runner as the top-level
   value)
 - **THEN** both programs write the identical bytes `("a" #\b)` to standard output
+
+#### Scenario: write accepts an optional port
+
+- **WHEN** a program opens an output string port `p`, evaluates `(write "hi" p)`, and calls
+  `(get-output-string p)`
+- **THEN** the result is the five characters `"hi"` including the quotes, and nothing was written
+  to standard output
 
 ### Requirement: Bytevector data type and operations
 
@@ -2019,4 +2060,29 @@ forms in write style, and whose output must therefore be readable data).
   the stage-dump flag
 - **THEN** every dumped stage reads back as data, and the form at each stage is equal to
   the form the Chez driver's dump shows for the same program
+
+### Requirement: write-string writes a string's characters
+
+The language SHALL provide `write-string`, which writes the characters of its string argument to
+standard output and returns the unspecified value. It SHALL write the string's contents literally —
+no surrounding quotes and no escaping — so it is `display` narrowed to strings, not `write`.
+
+`write-string` SHALL additionally accept an OPTIONAL second argument that is a textual output port,
+in which case the output SHALL go to that port instead of standard output.
+
+This is the one output procedure this change adds rather than extends; it exists because writing a
+string to a port is the operation port-directed output is overwhelmingly used for, and expressing it
+as `(for-each (lambda (c) (write-char c port)) (string->list s))` costs a list per write.
+
+#### Scenario: write-string writes contents without quoting
+
+- **WHEN** a program evaluates `(write-string "a\"b")`
+- **THEN** it writes the three characters `a"b` to standard output — unlike `write`, which would
+  quote and escape them
+
+#### Scenario: write-string accepts an optional port
+
+- **WHEN** a program opens an output string port `p`, evaluates `(write-string "hi" p)`, and calls
+  `(get-output-string p)`
+- **THEN** the result is `"hi"` and nothing was written to standard output
 
