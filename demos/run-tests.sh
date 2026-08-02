@@ -151,6 +151,9 @@ check rdbracket demos/reader-brackets.scm '((a (b c) (d 5)))'  # [...] brackets 
 echo "exceptions demos"
 check exceptions demos/exceptions.scm '(boom 7 "bad thing" (1 2) (outer y))'  # guard/raise/error objects
 
+echo "dynamic extent demos"
+check callcc  demos/call-cc.scm '(3 fell-through (before body after) (outer-before inner-before inner-after outer-after) (before after caught))'  # call/cc early exit + dynamic-wind after on normal return, escape, and raise (change: dynamic-extent)
+
 echo "output primitives"
 check display demos/display.scm '42 str z sym (1 . 2) (a b 3) done'  # display any datum (strings unquoted, chars raw), memory-safe on non-strings
 check write   demos/write.scm '"hi" #\a ("a" #\b 3) done'  # write any datum in write style (strings quoted, chars #\-prefixed, recurses)
