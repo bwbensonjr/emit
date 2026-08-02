@@ -23,14 +23,16 @@
 - [ ] 4.3 `read-char`, `peek-char`, `read-line`, `read-string` over the string-plus-cursor representation, each returning the eof object at end of input
 - [ ] 4.4 `read` as `rd-datum` at the port's cursor, storing the returned next-index back — the existing reader already returns `(datum . next-index)`, so this is a cursor discipline, NOT a second reader
 - [ ] 4.5 Output ports: `open-output-file` over the handle table, `open-output-string` / `get-output-string` accumulating in the record, `flush-output-port`, and `close-port` for both directions (flush before close; closing twice is permitted)
-- [ ] 4.6 `current-output-port` / `current-input-port` / `current-error-port` as procedures returning fixed ports; do NOT define `with-output-to-file` or `with-input-from-file` (design D4 — absent beats silently-not-redirecting)
-- [ ] 4.7 Regenerate `lib/scheme/base.sld` via `tools/gen-scheme-base.ss` and confirm `test/scheme-base-gen-check.sh` passes
+- [ ] 4.6 `current-output-port` / `current-input-port` / `current-error-port` as **parameter objects** over `make-parameter` (design D4 is SUPERSEDED — `dynamic-extent` shipped `make-parameter` / `parameterize` / `dynamic-wind`, which is why this change was sequenced after it), initialized to the stdout / stdin / stderr ports. A parameter is callable with zero arguments, so `(current-output-port)` reads identically to the plain accessor it replaces
+- [ ] 4.7 `with-output-to-file` / `with-input-from-file`, rebinding the corresponding parameter for the dynamic extent of a thunk, and `call-with-port`. Each closes the port and restores the parameter via `dynamic-wind`, so cleanup survives a non-local exit
+- [ ] 4.8 Regenerate `lib/scheme/base.sld` via `tools/gen-scheme-base.ss` and confirm `test/scheme-base-gen-check.sh` passes
 
-## 5. Optional port argument on the existing output procedures
+## 5. Port-directed output
 
 - [ ] 5.1 Give `display`, `write`, `newline`, and `write-char` an optional port argument routing to the port's handle; omitted, each keeps its current behaviour exactly
-- [ ] 5.2 Check the arity story: these are primitives today, and an optional argument may mean a prelude wrapper over the raw primcall — if so, confirm a direct unshadowed call still reaches bare-primcall codegen, or record what it costs
-- [ ] 5.3 The 1.2 IR baseline is unchanged for the no-argument forms
+- [ ] 5.2 Add `write-string` (string, optional port), writing contents literally — no quoting, no escaping — so it is `display` narrowed to strings rather than `write`. The only output procedure this change adds rather than extends
+- [ ] 5.3 Check the arity story: these are primitives today, and an optional argument may mean a prelude wrapper over the raw primcall — if so, confirm a direct unshadowed call still reaches bare-primcall codegen, or record what it costs
+- [ ] 5.4 The 1.2 IR baseline is unchanged for the no-argument forms
 
 ## 6. Verification
 
@@ -39,14 +41,16 @@
 - [ ] 6.3 `peek-char` does not consume; `read-line` splits correctly including a final unterminated line; `read-string` returns short only at end of input
 - [ ] 6.4 A file port and a string port produce identical results for the same text and the same operation sequence — the claim that makes slurp-on-open worth it
 - [ ] 6.5 Error paths, each a diagnostic rather than a fault: opening a nonexistent file, reading a closed port, `get-output-string` on a file port
-- [ ] 6.6 The eof object is distinct from `#f`, `'()`, and the unspecified value, and prints without faulting
-- [ ] 6.7 **Size (design D5):** re-measure 1.1. Report the delta on `hello.scm` explicitly. A material regression is a reason to reconsider putting ports in a separate library, not a footnote — the tree-shake protecting this must be MEASURED, since `(scheme base)` is imported by everything
-- [ ] 6.8 New suite registered in `run-all-tests.sh`; `./run-all-tests.sh` and `./run-dev-tests.sh` green
-- [ ] 6.9 `make regen` reconverges and `test/trust-check.sh` passes on the commit. Unlike the last two changes `bootstrap/scheme.base.ll` legitimately MOVES here; confirm the compiler's own behaviour is unchanged (`self-emit-equiv`, `self-host-fixpoint`, `dump-parity`)
+- [ ] 6.6 `write-string` writes contents literally — `(write-string "a\"b")` emits `a"b`, where `write` would quote and escape — both to stdout and to a port
+- [ ] 6.7 **Cleanup on a non-local exit (design risk, not the happy path):** `with-output-to-file` redirects for the dynamic extent and restores the parameter afterwards; `call-with-port` closes its port on normal return, on an escape via a continuation, AND on a raise. The escaping cases are the point — a test that only exercises normal return does not test `dynamic-wind`
+- [ ] 6.8 The eof object is distinct from `#f`, `'()`, and the unspecified value, and prints without faulting
+- [ ] 6.9 **Size (design D5):** re-measure 1.1. Report the delta on `hello.scm` explicitly. A material regression is a reason to reconsider putting ports in a separate library, not a footnote — the tree-shake protecting this must be MEASURED, since `(scheme base)` is imported by everything. Capture the 1.1 baseline fresh rather than comparing against any number recorded before `simplify-known-calls` (2026-08-01), which moved every binary
+- [ ] 6.10 New suite registered in `run-all-tests.sh`; `./run-all-tests.sh` and `./run-dev-tests.sh` green
+- [ ] 6.11 `make regen` reconverges and `test/trust-check.sh` passes on the commit. Unlike the last two changes `bootstrap/scheme.base.ll` legitimately MOVES here; confirm the compiler's own behaviour is unchanged (`self-emit-equiv`, `self-host-fixpoint`, `dump-parity`)
 
 ## 7. Close-out
 
 - [ ] 7.1 `docs/PRIMITIVES.md` for the new primitives; a docs note on the slurp-on-open limitation where a user will meet it, not only in the design
-- [ ] 7.2 Record the deliberate R7RS gaps where a reader looks: `current-*-port` are not parameters, `with-output-to-file`/`with-input-from-file` are absent, binary ports and `(scheme file)` operations are out of scope
-- [ ] 7.3 Resolve the design's open questions with what the implementation showed: ports in `(scheme base)` or a separate library (6.7 decides), whether `char-ready?` is worth having under slurp-on-open, and whether sharing `rd-datum` between user `read` and the compiler's front end should be relied on
+- [ ] 7.2 Record the deliberate R7RS gaps where a reader looks: `char-ready?` is omitted (vacuous under slurp-on-open — see the proposal), binary ports are out of scope, and `(scheme file)` operations (`file-exists?`, `delete-file`) are a separate change
+- [ ] 7.3 Resolve the design's remaining open questions with what the implementation showed: ports in `(scheme base)` or a separate library (6.9 decides), and whether sharing `rd-datum` between user `read` and the compiler's front end should be relied on. `char-ready?` is already resolved (omitted)
 - [ ] 7.4 Note on issue #18 that the file-reading half is now unblocked — the compiler core still stays I/O-free and would take an injected reader

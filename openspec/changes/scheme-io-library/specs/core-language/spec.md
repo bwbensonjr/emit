@@ -192,3 +192,30 @@ omitted the behaviour SHALL be exactly as specified above, so existing programs 
 - **WHEN** a program opens an output string port `p`, evaluates `(write-char #\A p)`, and calls
   `(get-output-string p)`
 - **THEN** the result is `"A"` and nothing was written to standard output
+
+## ADDED Requirements
+
+### Requirement: write-string writes a string's characters
+
+The language SHALL provide `write-string`, which writes the characters of its string argument to
+standard output and returns the unspecified value. It SHALL write the string's contents literally —
+no surrounding quotes and no escaping — so it is `display` narrowed to strings, not `write`.
+
+`write-string` SHALL additionally accept an OPTIONAL second argument that is a textual output port,
+in which case the output SHALL go to that port instead of standard output.
+
+This is the one output procedure this change adds rather than extends; it exists because writing a
+string to a port is the operation port-directed output is overwhelmingly used for, and expressing it
+as `(for-each (lambda (c) (write-char c port)) (string->list s))` costs a list per write.
+
+#### Scenario: write-string writes contents without quoting
+
+- **WHEN** a program evaluates `(write-string "a\"b")`
+- **THEN** it writes the three characters `a"b` to standard output — unlike `write`, which would
+  quote and escape them
+
+#### Scenario: write-string accepts an optional port
+
+- **WHEN** a program opens an output string port `p`, evaluates `(write-string "hi" p)`, and calls
+  `(get-output-string p)`
+- **THEN** the result is `"hi"` and nothing was written to standard output

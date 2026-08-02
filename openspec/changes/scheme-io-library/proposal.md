@@ -38,8 +38,12 @@ It is also much smaller than it looks, because three pieces of the design are al
 - **The output procedures gain an optional port argument**: `(display x)` and `(display x port)`,
   likewise `write`, `newline`, `write-char`, and a new `write-string`. With the argument omitted they
   behave exactly as now, so every existing program is unaffected.
-- **`read`, `read-char`, `peek-char`, `read-line`, `read-string`, `char-ready?`**, and
+- **`read`, `read-char`, `peek-char`, `read-line`, `read-string`**, and
   **`eof-object`** / **`eof-object?`**, with the eof object as misc-immediate subtype 3.
+  **`char-ready?` is deliberately omitted** — under slurp-on-open (design D2) it is `#t` for any
+  port with input remaining, which is conformant but vacuous, and shipping a predicate whose answer
+  carries no information invites programs to poll on it as though it did. It becomes meaningful only
+  if input ports ever stream, which is where it belongs.
 - **`current-output-port`, `current-input-port`, `current-error-port` as parameter objects**, and
   **`with-output-to-file` / `with-input-from-file`** over them. This became possible when
   `dynamic-extent` shipped `make-parameter` / `parameterize` / `dynamic-wind` (2026-08-01); the
@@ -62,7 +66,9 @@ It is also much smaller than it looks, because three pieces of the design are al
 ### Modified Capabilities
 
 - `core-language`: the existing `display` / `write` / `newline` / `write-char` requirements gain an
-  optional port argument, with the no-argument behaviour unchanged.
+  optional port argument, with the no-argument behaviour unchanged; and `write-string` is added as a
+  new output procedure of the same shape (a string, an optional port), grouped with its three
+  siblings rather than split into `io-ports`.
 
 `primitive-layer` needs no delta: its requirements govern how *any* primitive behaves — universally
 available, first-class, shadowable, bare-primcall for a direct call — and the new file and

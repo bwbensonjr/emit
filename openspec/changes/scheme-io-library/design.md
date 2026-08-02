@@ -172,9 +172,11 @@ changes `bootstrap/scheme.base.ll` legitimately moves.
 - **Should ports live in `(scheme base)` or a separate library?** D5's measurement decides it. If
   ports cost every binary meaningfully, a separately-imported library is the better shape and the
   module system already supports it.
-- **Is `char-ready?` meaningful under slurp-on-open?** It is trivially `#t` for a port with input
-  remaining, which is conformant but vacuous. Worth including for completeness, or omitting as
-  misleading — decide when writing the spec scenarios.
+- ~~**Is `char-ready?` meaningful under slurp-on-open?**~~ **Resolved: omit it.** Under D2 it is `#t`
+  for any port with input remaining, so it is conformant but carries no information, and a predicate
+  that always says "yes" invites programs to poll on it as though it distinguished something. It is
+  out of scope until input ports stream, at which point it becomes meaningful and can ship with the
+  behaviour it implies.
 - **Does `read` need to share the reader with the compiler's own front end, or copy it?** They are
   the same procedure today (`rd-datum` in the prelude). Keeping one copy is obviously right, but it
   means a user-visible `read` and the compiler's reader move together — worth being deliberate about
