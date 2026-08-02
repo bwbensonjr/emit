@@ -21,10 +21,22 @@ Boehm GC (`libgc`) into a runnable native executable.
 #### Scenario: Values are tagged pointers with heap objects under Boehm
 
 - **WHEN** the emitted IR and runtime represent values
-- **THEN** immediates (fixnums, booleans, `()`, and characters) are tagged inline, heap
+- **THEN** immediates (fixnums, booleans, `()`, characters, and the unspecified value) are tagged
+  inline, heap
   objects (pairs, closures, interned symbols, and header-tagged extended objects such as
   strings) are pointer-tagged and allocated through `libgc`, and closures are called
   indirectly through their `code_ptr`
+
+#### Scenario: The unspecified value is an inline immediate with AOT/JIT parity
+
+- **WHEN** the IR encodes the unspecified value, whether from a two-armed `if`, a no-match
+  `cond`/`case`, `when`/`unless`, or a side-effecting runtime entry point
+- **THEN** it is emitted as an inline **immediate** tagged constant in the same misc-immediate family
+  as booleans and characters — no heap allocation, no header word, and no runtime constructor call —
+  and the constant the emitter writes SHALL be bit-identical to the constant the C runtime uses, since
+  the value representation is shared verbatim between the two
+- **AND** the AOT and JIT paths SHALL agree: a program yielding the unspecified value SHALL produce
+  the same observable result compiled to a native executable as evaluated in the embedded JIT
 
 #### Scenario: Symbols are interned and quoted structure is materialized
 
