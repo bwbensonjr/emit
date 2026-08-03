@@ -189,5 +189,58 @@ check "integer? and the guard agree on what an integer is" \
   '(#t #t #f #f)'
 
 echo
+echo "every comparison is a first-class value; max/min are variadic (issue #26)"
+
+# --- operator position is UNCHANGED -------------------------------------------
+# Checked first: `> <= >=` are still frontend rewrites over `<`/`=` there, and the
+# value-position work must not disturb them.
+check "all five comparisons in operator position" \
+  '(list (= 4 4 4) (< 1 2 3) (> 3 2 1) (<= 1 1 2) (>= 3 3 2))' '(#t #t #t #t #t)'
+check "and their false cases" \
+  '(list (= 4 5) (< 3 2) (> 2 3) (<= 2 1) (>= 1 2))' '(#f #f #f #f #f)'
+check "operands are evaluated once each in a chain" \
+  '(let ((n 0)) (list (< 0 (begin (set! n (+ n 1)) 5) 10) n))' '(#t 1)'
+check "fewer than two operands compare true" \
+  '(list (> 5) (<= 5) (>=) (<))' '(#t #t #t #t)'
+
+# --- value position: the reported symptom -------------------------------------
+# `(map > ...)` reported "unbound variable >": the three derived comparisons were
+# frontend rewrites with no binding, unlike `=`/`<` which are integrable.
+check "the derived comparisons as values under map" \
+  '(list (map > (list 3 1) (list 2 4)) (map <= (list 1 5) (list 2 4)) (map >= (list 3 1) (list 3 4)))' \
+  '((#t #f) (#t #f) (#t #f))'
+check "the derived comparisons applied to a list" \
+  '(list (apply > (list 3 2 1)) (apply <= (list 1 1 2)) (apply >= (list 3 3 2)))' \
+  '(#t #t #t)'
+check "= and < as values still work" \
+  '(list (apply = (list 4 4)) (apply < (list 1 2 3)) (map < (list 1 5) (list 2 4)))' \
+  '(#t #t (#t #f))'
+check "a value-position comparison chains like the operator form" \
+  '(list (apply > (list 3 1 2)) (apply <= (list 1 2 2 3)) (apply >= (list 3 1)))' \
+  '(#f #t #t)'
+check "value and operator position agree on direction" \
+  '(list (> 3 2) (apply > (list 3 2)) (< 3 2) (apply < (list 3 2)))' '(#t #t #f #f)'
+check "trivial arity as a value" \
+  '(list (apply > (list 5)) (apply <= (quote ())))' '(#t #t)'
+check "a comparison passed to a higher-order procedure" \
+  '(letrec ((pick (lambda (op a b) (if (op a b) a b)))) (list (pick > 3 5) (pick <= 3 5)))' \
+  '(5 3)'
+
+# --- max / min ----------------------------------------------------------------
+check "max is variadic" '(list (max 1 2 3) (max 5) (max 3 1 2))' '(3 5 3)'
+check "min exists and is variadic" '(list (min 1 2 3) (min 5) (min -1 -2))' '(1 5 -2)'
+check "contagion when the winning argument is inexact" \
+  '(list (max 3 4.0) (min 3.0 4))' '(4.0 3.0)'
+# The case a naive fold gets wrong: the winner is exact, but an inexact argument
+# was present, so R7RS requires an inexact result.
+check "contagion when the winning argument is EXACT" \
+  '(list (max 3.0 4) (min 3 4.0))' '(4.0 3.0)'
+check "the contagion result really is inexact" \
+  '(list (inexact? (max 3.0 4)) (exact? (max 3 4)))' '(#t #t)'
+check "max/min are first-class and applicable" \
+  '(list (apply max (list 1 7 3)) (map min (list 1 5) (list 4 2)))' '(7 (1 2))'
+trap_msg "max of a non-number" "(max 1 'a)" "not a number"
+
+echo
 echo "  $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

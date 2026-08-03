@@ -226,8 +226,28 @@
   (let loop ([i 0] [acc (quote ())])
     (if (= i n) (reverse acc) (loop (+ i 1) (cons i acc)))))
 
-;; the larger of two numbers.
-(define (max a b) (if (< a b) b a))
+;;; --- max / min (R7RS 6.2.6) -----------------------------------------------
+;;; Variadic over one or more numbers (change: numeric-conformance, design D6 /
+;;; GitHub issue #26 -- `max` used to be strictly binary and `min` did not exist).
+;;;
+;;; R7RS requires INEXACTNESS CONTAGION: if any argument is inexact the result is
+;;; inexact, even when the argument that WON the comparison is exact.  That second
+;;; half is the one a naive implementation gets wrong -- `(max 3.0 4)` is 4.0, not 4
+;;; -- so the winner and the exactness are tracked separately: the fold carries a
+;;; flag for "some argument was inexact" and the conversion happens once, at the end.
+;;; Comparison itself is by numeric value across the exactness boundary, which `<`
+;;; already does.
+;;; The flag is `inex`, NOT `inexact?`: naming it after the predicate would shadow
+;;; the predicate this very fold calls, and the shadowed call would ask a boolean.
+(define (%minmax-fold pick xs best inex)
+  (if (null? xs)
+      (if inex (exact->inexact best) best)
+      (%minmax-fold pick (cdr xs) (pick best (car xs))
+                    (if inex #t (inexact? (car xs))))))
+(define (%minmax pick a rest)
+  (%minmax-fold pick rest a (inexact? a)))
+(define (max a . rest) (%minmax (lambda (x y) (if (< x y) y x)) a rest))
+(define (min a . rest) (%minmax (lambda (x y) (if (< y x) y x)) a rest))
 
 ;; THE unspecified value -- one distinguished immediate, distinct from #f and '() and
 ;; truthy (change: unspecified-value).  `(if #f #f)` is the two-armed form, so the parser

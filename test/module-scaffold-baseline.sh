@@ -255,6 +255,29 @@
 #     doors) plus 10 flonum cases in test/self-emit-equiv.sh (IR byte-equality between
 #     the Chez-hosted and self-hosted emitters); 8 of those 10 FAIL on the pre-change
 #     tree, which is what gives them teeth.
+#   numeric-conformance, group 3 (GitHub issue #26) -- `> <= >=` became value-position
+#     integrables and `max`/`min` became variadic prelude procedures.  ALL 80 demos'
+#     IR changed, because every demo embeds (scheme base) and declares its exports,
+#     and the drift is EXACTLY two things with nothing else in either direction:
+#       (1) PROGRAM half, all 80 identical in shape: +3 lines, 0 deletions, every one
+#           an `external global i64` declare for a new prelude binding
+#           (scheme.base:%minmax-fold, scheme.base:%minmax, scheme.base:min).
+#           Mechanically checked: 0 of 80 program halves deviate from "+3 declares,
+#           0 deletions, 0 non-declare additions".  Same shape as emit-dump-stages'
+#           +2 declare lines.
+#       (2) LIBRARY half: the NAMED function set went 161 -> 164, the additions being
+#           exactly code:%minmax-fold, code:%minmax, code:min and the removals being
+#           EMPTY (`max` already existed and kept its name while becoming variadic).
+#           __init_N went 338 -> 344, i.e. +3 per header for 3 new top-level defines
+#           (the header appears twice per demo IR).  All remaining drift is code_N
+#           renumbering, the anonymous lambdas shifting because three defines were
+#           inserted -- the same pattern as the rd-digits-neg re-record above.
+#     Operator position was separately proven UNCHANGED, which is the property the
+#     change promised: `build/schemec` output for a prelude-free program using
+#     `> <= >=` at binary AND n-ary arity is byte-identical to the pristine
+#     pre-change tree's (valid as a baseline since group 1 touched only flonum
+#     literals and group 2 changed no IR at all).  All 80 demos' stdout is
+#     byte-identical.  No new entries.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

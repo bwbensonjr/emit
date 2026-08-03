@@ -86,6 +86,14 @@
     ;; primcalls (see fold-eta) -- no prelude dependency, works under --no-prelude.
     ;; `eq?`/`eqv?` are binary in R7RS, so they keep the plain binary eta.
     (+ %+ 2 sum) (- %- 2 diff) (* %* 2 product) (/ %/ 2 quot) (= %= 2 cmp) (< %< 2 cmp)
+    ;; `> <= >=` are VALUE-POSITION ONLY (change: numeric-conformance, design D2 /
+    ;; GitHub issue #26).  In operator position they stay frontend rewrites over
+    ;; `<`/`=` (expand-compare), so they own no raw primcall and take arity #f: no
+    ;; direct-call lowering exists to pick the wrong one.  Being listed here is what
+    ;; BINDS them -- `(map car *integrable*)` feeds compute-known and *repl-known* --
+    ;; so `(map > ...)` and `(apply >= ...)` resolve instead of reporting an unbound
+    ;; variable.  The fold kind carries the operand order and the inclusivity.
+    (> %< #f cmp-rev) (<= %< #f cmp-le) (>= %< #f cmp-ge)
     (eq? %eq? 2) (eqv? %eqv? 2)
     (quotient %quotient 2) (remainder %remainder 2) (modulo %modulo 2)
     (car %car 1) (cdr %cdr 1) (null? %null? 1) (pair? %pair? 1)
@@ -145,10 +153,17 @@
 ;; so a DIRECT call can pick the right raw op: `(display x)` -> %display,
 ;; `(display x p)` -> %display-port.  Names with a single entry (nearly all of them)
 ;; behave exactly as before: match on that one arity, otherwise #f.
+;; Select the entry for a DIRECT call of `name` with n arguments.  An entry whose
+;; arity is #f is VALUE-POSITION ONLY (change: numeric-conformance, design D2) and
+;; never matches here: it has no raw primcall of its own, so there is no direct-call
+;; lowering to select.  `>`, `<=`, `>=` are the cases -- their etas are built over
+;; `%<`/`%=`, and substituting the raw op for the name would silently REVERSE `>`'s
+;; operands.  A direct call of one of them therefore falls through to the eta, which
+;; is correct at any arity.
 (define (integrable-lookup/arity name n)
   (let loop ([es *integrable*])
     (cond [(null? es) #f]
-          [(and (eq? (caar es) name) (= (caddr (car es)) n)) (car es)]
+          [(and (eq? (caar es) name) (caddr (car es)) (= (caddr (car es)) n)) (car es)]
           [else (loop (cdr es))])))
 
 (define (fresh-syms n)   ; n globally-unique param names for an eta lambda
@@ -223,13 +238,34 @@
                                                  (primcall %cdr ,rest))))])
                  (call ,loop (primcall %car ,gs) (primcall %cdr ,gs))))))))
 
-;; `= `/`<` as a value: a short-circuit pairwise chain; 0 or 1 operand -> #t.
-(define (cmp-chain-eta raw)
-  ;; let* (not let): four counter-bumping inits, so a parallel `let` would number
+;; THE pairwise comparison rule, in IL (change: numeric-conformance, design D2).
+;;
+;; This is one half of a two-representation pair, and the halves must agree:
+;;   * OPERATOR position is expanded before parsing, so `cmp-pair` in
+;;     src/passes/expand.ss states the rule in SURFACE syntax -- `(> x y)` becomes
+;;     `(< y x)`, `(<= x y)` becomes `(if (< x y) #t (= x y))`;
+;;   * VALUE position is built after parsing, so the rule is stated HERE in IL, for
+;;     the chain the eta folds.
+;; Same five clauses, same operand order, same inclusivity -- keep them in step.
+;; Getting this wrong is not a compile error but a WRONG ANSWER (`>` silently
+;; comparing in the other direction), which is why the two sites cross-reference.
+(define (cmp-pair-il kind raw x y)
+  (case kind
+    [(cmp)     `(primcall ,raw ,x ,y)]                 ; `=` and `<`: the raw op
+    [(cmp-rev) `(primcall ,raw ,y ,x)]                 ; `>`: `<` with the operands swapped
+    [(cmp-le)  `(if (primcall ,raw ,x ,y) (const #t) (primcall %= ,x ,y))]
+    [(cmp-ge)  `(if (primcall ,raw ,y ,x) (const #t) (primcall %= ,x ,y))]
+    [else (error 'parse "unknown comparison kind" kind)]))
+
+;; A comparison as a VALUE: a short-circuit pairwise chain; 0 or 1 operand -> #t.
+;; Serves all five of `= < > <= >=`; the kind decides the pairwise test.
+(define (cmp-chain-eta raw kind)
+  ;; let* (not let): five counter-bumping inits, so a parallel `let` would number
   ;; them in host order (issue #11) and the eta expansion's names would differ
   ;; between the Chez driver and the shipped doors.
   (let* ([gs (fresh-name 'gs)] [loop (fresh-name 'loop)]
-         [prev (fresh-name 'prev)] [rest (fresh-name 'rest)])
+         [prev (fresh-name 'prev)] [rest (fresh-name 'rest)]
+         [cur (fresh-name 'cur)])
     `(lambda ,gs
        (if (primcall %null? ,gs)
            (const #t)
@@ -238,9 +274,12 @@
                (letrec ([,loop (lambda (,prev ,rest)
                                  (if (primcall %null? ,rest)
                                      (const #t)
-                                     (if (primcall ,raw ,prev (primcall %car ,rest))
-                                         (call ,loop (primcall %car ,rest) (primcall %cdr ,rest))
-                                         (const #f))))])
+                                     ;; `cur` is let-bound: the inclusive kinds name
+                                     ;; the operand twice, and one %car beats three.
+                                     (let ([,cur (primcall %car ,rest)])
+                                       (if ,(cmp-pair-il kind raw prev cur)
+                                           (call ,loop ,cur (primcall %cdr ,rest))
+                                           (const #f)))))])
                  (call ,loop (primcall %car ,gs) (primcall %cdr ,gs))))))))
 
 (define (fold-eta raw kind)
@@ -250,7 +289,8 @@
     [(str)     (left-fold-eta raw '(const ""))]
     [(diff)    (diff-eta raw)]
     [(quot)    (div-eta raw)]
-    [(cmp)     (cmp-chain-eta raw)]
+    ;; the four comparison kinds share one chain; the kind picks the pairwise test
+    [(cmp cmp-rev cmp-le cmp-ge) (cmp-chain-eta raw kind)]
     [else (error 'parse "unknown integrable fold kind" kind)]))
 
 ;; inline-primitives: a universal pass run AFTER rename/resolve in every compile
