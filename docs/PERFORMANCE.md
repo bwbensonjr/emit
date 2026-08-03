@@ -478,7 +478,41 @@ allocates a fresh **program** global `x.gN` rather than touching the library's s
 previously-compiled code keeps the binding it captured. A future library-*reload* feature would
 invalidate the third reason and must revisit this.
 
-**OpenSpec change:** `cross-unit-direct-calls` (implemented).
+**The overflow guard, completed (change: `fixnum-overflow-trap`).** Option A above specified the
+inline path as a tag test → native `add`/`sub`/`icmp` *"with an overflow guard for `+ - *`"*,
+falling back to `rt_*` on the *"non-fixnum / overflow / bignum"* path. What shipped was the tag
+guard alone, so the A2 seam routed on tag but **not** on overflow: a both-fixnum operation that
+overflowed never reached the runtime and silently wrapped past 2^60. That is now closed — the
+fast arm runs `@llvm.{sadd,ssub,smul}.with.overflow.i64` on the tagged words (a tagged fixnum is
+`value<<3`, so an i64 overflow of the tagged result is *exactly* the fixnum-range condition — no
+extra arithmetic) and branches on the overflow bit into the **same** `rt_*` call the tag test
+uses. Slow blocks are shared, not cloned.
+
+Measured against `HEAD` in a worktree, same toolchain, arm64:
+
+| | before | after | delta |
+|---|---|---|---|
+| `build/emit` `__text` | 722 772 B | 726 560 B | **+0.52%** |
+| `build/schemec` `__text` | 358 304 B | 360 252 B | **+0.54%** |
+| delivered `ackermann` exe | 34 856 B | 34 936 B | **+0.23%** |
+| `(ack 3 13)`, AOT, min of 7 | 9.35 s | 9.94 s | **+6.3%** |
+| `(ack 3 13)`, AOT, median of 7 | 9.78 s | 10.09 s | **+3.2%** |
+| `(ack 3 10)`, `emit run`, min of 3 | 0.61 s | 0.62 s | ~noise |
+
+The size cost is an order of magnitude smaller than the original guard diamond's ~4%, because the
+branch merges into a slow block that already existed. The runtime cost is real but is measured on
+the deliberate worst case: Ackermann is a near-pure probe of small-integer arithmetic and calls
+with almost no allocation, so ~+4–6% there is the ceiling, not the typical figure — the whole demo
+suite shows no measurable change. Correctness bought at a few percent on the most arithmetic-bound
+program we have is the right trade, and the branch is predicted-not-taken, so the cost is mostly
+the extra instruction rather than a misprediction.
+
+Worth revisiting only if a numeric workload becomes size- or speed-critical; the obvious lever is
+teaching the emitter to skip the check where a result is provably in range (e.g. both operands
+already range-narrowed), which the current `simplify` pass has no type information to do.
+
+**OpenSpec change:** `cross-unit-direct-calls` (implemented); overflow guard completed by
+`fixnum-overflow-trap`.
 
 ---
 

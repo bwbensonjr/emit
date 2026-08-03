@@ -151,6 +151,9 @@ check rdbracket demos/reader-brackets.scm '((a (b c) (d 5)))'  # [...] brackets 
 echo "exceptions demos"
 check exceptions demos/exceptions.scm '(boom 7 "bad thing" (1 2) (outer y))'  # guard/raise/error objects
 
+echo "exact integer range demos"
+check exactrange demos/exact-range.scm '(1152921504606846975 -1152921504606846976 1152921504606846974 -1152921504606846975 1152921504606846974 576460752303423488 0 #t #t 1000000000000000000)'  # both fixnum bounds compute, print, and round-trip exactly (change: fixnum-overflow-trap)
+
 echo "dynamic extent demos"
 check callcc  demos/call-cc.scm '(3 fell-through (before body after) (outer-before inner-before inner-after outer-after) (before after caught))'  # call/cc early exit + dynamic-wind after on normal return, escape, and raise (change: dynamic-extent)
 

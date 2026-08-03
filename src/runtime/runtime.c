@@ -22,6 +22,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
@@ -193,21 +194,75 @@ static void rt_fatal(const char *msg) {
   exit(1);
 }
 
+/* Same, with a printf-style message.  Formats straight into the static trap
+ * buffer -- no allocation, so it is safe on any trap path.  Used by the overflow
+ * diagnostics, where naming the operands is most of the diagnostic's value: a
+ * wrapped source literal reports the multiply that overflowed while reading it. */
+static void rt_fatalf(const char *fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  vsnprintf(rt_trap_msg, sizeof rt_trap_msg, fmt, ap);
+  va_end(ap);
+  fprintf(stderr, "%s\n", rt_trap_msg);
+  if (rt_trap) longjmp(*rt_trap, 1);
+  exit(1);
+}
+
+/* --- the exact-integer range ---------------------------------------------
+ * Fixnums carry a 61-bit signed payload (the tag takes the low 3 bits), so the
+ * exact integers Emit represents are [-2^60, 2^60).  R7RS 6.2.3 permits this
+ * restriction but allows only two outcomes when a result leaves the range:
+ * report the violation, or coerce to inexact.  Emit reports (change:
+ * fixnum-overflow-trap, design D1) -- chosen because it is the outcome a later
+ * arbitrary-precision change makes UNREACHABLE, rather than one it would have to
+ * contradict.  fits_fixnum is the single definition of the range; FIX is only
+ * ever applied to a value that has passed it. */
+#define FIXNUM_MAX ((intptr_t)1 << 60)          /* one past the largest fixnum */
+#define FIXNUM_MIN (-((intptr_t)1 << 60))
+static int fits_fixnum(intptr_t v) { return v >= FIXNUM_MIN && v < FIXNUM_MAX; }
+
 /* Two-type numeric tower (change: inexact-numbers).  Both-fixnum keeps the exact
  * fixnum path unchanged; any flonum operand promotes to double arithmetic
- * (contagion) and returns a flonum; a non-number operand traps. */
+ * (contagion) and returns a flonum; a non-number operand traps.
+ *
+ * Exact overflow traps (change: fixnum-overflow-trap).  __builtin_*_overflow does
+ * the arithmetic and reports whether it wrapped, which also retires the signed-
+ * overflow UB the old `FIX(UNFIX(a) * UNFIX(b))` carried at -O2.  Two checks are
+ * needed, not one: the product of two 61-bit values can overflow intptr_t itself,
+ * and a result that fits intptr_t can still leave the narrower fixnum range (where
+ * the shift in FIX would drop its top bits).
+ *
+ * These are ALSO the target of the emitter's inline fast path when its own
+ * overflow test fires (design D3), so the decision about what overflow means lives
+ * here and only here: a later arbitrary-precision change replaces the rt_fatalf
+ * call with a bignum allocation and touches nothing outside this file. */
 val rt_add(val a, val b) {
-  if (tag_of(a) == TAG_FIXNUM && tag_of(b) == TAG_FIXNUM) return FIX(UNFIX(a) + UNFIX(b));
+  if (tag_of(a) == TAG_FIXNUM && tag_of(b) == TAG_FIXNUM) {
+    intptr_t r;
+    if (__builtin_add_overflow(UNFIX(a), UNFIX(b), &r) || !fits_fixnum(r))
+      rt_fatalf("+: fixnum overflow: %ld + %ld", (long)UNFIX(a), (long)UNFIX(b));
+    return FIX(r);
+  }
   if (is_number(a) && is_number(b)) return rt_make_flonum(to_double(a) + to_double(b));
   rt_fatal("+: not a number"); return NIL_V;
 }
 val rt_sub(val a, val b) {
-  if (tag_of(a) == TAG_FIXNUM && tag_of(b) == TAG_FIXNUM) return FIX(UNFIX(a) - UNFIX(b));
+  if (tag_of(a) == TAG_FIXNUM && tag_of(b) == TAG_FIXNUM) {
+    intptr_t r;
+    if (__builtin_sub_overflow(UNFIX(a), UNFIX(b), &r) || !fits_fixnum(r))
+      rt_fatalf("-: fixnum overflow: %ld - %ld", (long)UNFIX(a), (long)UNFIX(b));
+    return FIX(r);
+  }
   if (is_number(a) && is_number(b)) return rt_make_flonum(to_double(a) - to_double(b));
   rt_fatal("-: not a number"); return NIL_V;
 }
 val rt_mul(val a, val b) {
-  if (tag_of(a) == TAG_FIXNUM && tag_of(b) == TAG_FIXNUM) return FIX(UNFIX(a) * UNFIX(b));
+  if (tag_of(a) == TAG_FIXNUM && tag_of(b) == TAG_FIXNUM) {
+    intptr_t r;
+    if (__builtin_mul_overflow(UNFIX(a), UNFIX(b), &r) || !fits_fixnum(r))
+      rt_fatalf("*: fixnum overflow: %ld * %ld", (long)UNFIX(a), (long)UNFIX(b));
+    return FIX(r);
+  }
   if (is_number(a) && is_number(b)) return rt_make_flonum(to_double(a) * to_double(b));
   rt_fatal("*: not a number"); return NIL_V;
 }
@@ -221,16 +276,26 @@ val rt_div(val a, val b) {
   if (bfix && UNFIX(b) == 0) { rt_fatal("division by zero: /"); return NIL_V; }
   if (tag_of(a) == TAG_FIXNUM && bfix) {
     intptr_t da = UNFIX(a), db = UNFIX(b);
-    if (da % db == 0) return FIX(da / db);
+    if (da % db == 0) {
+      /* The one exact quotient that leaves the range: FIXNUM_MIN / -1 = 2^60
+       * (change: fixnum-overflow-trap, design D6). */
+      if (!fits_fixnum(da / db))
+        rt_fatalf("/: fixnum overflow: %ld / %ld", (long)da, (long)db);
+      return FIX(da / db);
+    }
     return rt_make_flonum((double)da / (double)db);
   }
   return rt_make_flonum(to_double(a) / to_double(b));
 }
 /* quotient/remainder: C integer division truncates toward zero, which is
- * exactly R7RS quotient/remainder.  Division by zero traps. */
+ * exactly R7RS quotient/remainder.  Division by zero traps.  So does the single
+ * out-of-range quotient, FIXNUM_MIN / -1 (change: fixnum-overflow-trap, D6);
+ * `remainder` and `modulo` are in range for every input and need no check. */
 val rt_quotient(val a, val b) {
   intptr_t d = UNFIX(b);
   if (d == 0) rt_fatal("division by zero: quotient");
+  if (!fits_fixnum(UNFIX(a) / d))
+    rt_fatalf("quotient: fixnum overflow: %ld / %ld", (long)UNFIX(a), (long)d);
   return FIX(UNFIX(a) / d);
 }
 val rt_remainder(val a, val b) {
@@ -1242,7 +1307,17 @@ val rt_inexact_to_exact(val v) {
   if (tag_of(v) == TAG_FIXNUM) return v;
   if (is_flonum(v)) {
     double d = flo_val(v);
-    if (isfinite(d) && d == floor(d)) return FIX((intptr_t)d);
+    if (isfinite(d) && d == floor(d)) {
+      /* Range-check BEFORE the cast (change: fixnum-overflow-trap, design D5):
+       * a double outside intptr_t makes (intptr_t)d undefined, and one merely
+       * outside the fixnum range would lose its top bits in FIX.  The bounds are
+       * compared in double, where both are exactly representable powers of two. */
+      if (!(d >= (double)FIXNUM_MIN && d < (double)FIXNUM_MAX)) {
+        rt_fatalf("inexact->exact: value outside fixnum range: %g", d);
+        return NIL_V;
+      }
+      return FIX((intptr_t)d);
+    }
     rt_fatal("inexact->exact: not an integer"); return NIL_V;
   }
   rt_fatal("inexact->exact: not a number"); return NIL_V;

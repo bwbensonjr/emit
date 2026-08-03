@@ -309,9 +309,15 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
   hygienic for macro-introduced identifiers only).
 - **Numeric tower** — fixnums + inexact reals (flonums), with fixnum/flonum contagion on
   `+ - * /` and the comparisons, real division `/`, and `modulo`; still no bignums or exact
-  rationals, and no overflow promotion (fixnums wrap). Flonums are boxed doubles today;
-  keeping intermediates unboxed in registers is a planned codegen follow-on (see
-  `openspec/explorations/flonum-unboxing.md`).
+  rationals. Exact integers span `[-2^60, 2^60)`; a result outside that range is a
+  **diagnostic**, not a wrapped value. R7RS §6.2.3 permits an implementation with a bounded
+  exact range but allows only two outcomes when the bound is reached — report the violation of
+  an implementation restriction, or coerce to inexact — and Emit reports. This is an
+  implementation restriction, not a permanent language limitation: arbitrary-precision integers
+  would make these traps unreachable without changing the result of any program that produces a
+  value today, and the inline fast path is already wired so that change lands in the `rt_*`
+  runtime alone. Flonums are boxed doubles today; keeping intermediates unboxed in registers is
+  a planned codegen follow-on (see `openspec/explorations/flonum-unboxing.md`).
 - **Control**: `call/cc`, `dynamic-wind`; and the rest of the R7RS exception system beyond the
   shipped subset — `with-exception-handler` and `raise-continuable` (their
   non-unwinding/resumable semantics need `call/cc`), `read-error?`/`file-error?`.

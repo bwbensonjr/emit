@@ -650,10 +650,23 @@
   (if (< a m)
       (rd-digits tok (+ a 1) m (+ (* acc 10) (- (char->integer (string-ref tok a)) 48)))
       acc))
+;;; A negative literal accumulates DOWNWARD rather than being built positive and
+;;; negated (change: fixnum-overflow-trap).  The fixnum range is asymmetric --
+;;; -2^60 is representable but +2^60 is not -- so the old (- 0 (rd-digits ...))
+;;; formed an out-of-range positive for the most negative fixnum and got the right
+;;; answer only because it wrapped twice.  Now that overflow traps, that literal
+;;; would be unreadable.  Accumulating negatively never leaves the range for any
+;;; in-range literal, and an out-of-range one still traps in the same `*`/`-` the
+;;; positive side traps in.  `ns-digits` (number->string) and `fixnum-word`
+;;; (src/emit.ss) already avoid negating for exactly this reason.
+(define (rd-digits-neg tok a m acc)
+  (if (< a m)
+      (rd-digits-neg tok (+ a 1) m (- (* acc 10) (- (char->integer (string-ref tok a)) 48)))
+      acc))
 (define (rd-parse-int tok)
   (let ([m (string-length tok)] [c0 (char->integer (string-ref tok 0))])
     (cond
-      [(= c0 45) (- 0 (rd-digits tok 1 m 0))]
+      [(= c0 45) (rd-digits-neg tok 1 m 0)]
       [(= c0 43) (rd-digits tok 1 m 0)]
       [else (rd-digits tok 0 m 0)])))
 

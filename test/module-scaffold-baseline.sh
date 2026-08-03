@@ -205,6 +205,38 @@
 #     against the 4 instructions removed per site.  That is a pre-optimizer number, and
 #     what the change exists for is what `-O2 -flto` then does with it: the delivered
 #     binary gets both faster and smaller (docs/PERFORMANCE.md P5).  No new entries.
+#   call-cc demo -- +1 new entry (call-cc), the demo added alongside the existing
+#     test/dynamic-extent-tests.sh coverage.  NO existing hash changed: the manifest
+#     diff was exactly one added line, since a new demo file cannot affect any other
+#     demo's IR.  Nothing else was re-recorded.
+#   fixnum-overflow-trap -- the inline fixnum fast path for + - * now detects overflow
+#     and branches to the SAME rt_* slow call the tag test uses, so every arithmetic
+#     diamond changes shape.  All 79 demos' IR moved; all 79 demos' stdout stayed
+#     byte-identical (the demo suite passes unchanged on both backends).  Verified by
+#     capturing before/after and diffing with SSA temps and block labels normalized
+#     (raw diffs are dominated by renumbering).  The normalized drift is EXACTLY,
+#     with zero unexplained lines in either direction:
+#       added   24346 = 5968 `br i1 %ovf, label %fixslow, label %fixmerge`
+#                     + 11936 `extractvalue {i64, i1}` (two per site)
+#                     +  5968 `call {i64, i1} @llvm.{sadd,ssub,smul}.with.overflow.i64`
+#                     +   474 declare lines (3 intrinsics x 158 module headers --
+#                             79 demos, header emitted twice per demo IR)
+#       deleted 11936 = 5968 `br label %fixmerge` (the old unconditional fast exit)
+#                     + 5968 bare `add`/`sub`/`mul i64` (replaced by the intrinsic)
+#     i.e. 5968 arithmetic sites each traded one bare op + one unconditional branch
+#     for a checked intrinsic + two extracts + a conditional branch.  The comparison
+#     diamonds (= <) are untouched, and no slow block was cloned: branch targets
+#     outnumber fixslow block definitions, which test/inline-arith-self-call-tests.sh
+#     now pins directly.
+#     A SECOND re-record followed in the same change, for two reasons: (a) the
+#     prelude gained `rd-digits-neg` -- a negative integer literal now accumulates
+#     downward instead of being built positive and negated, since the most negative
+#     fixnum has no positive counterpart and the old code only worked by wrapping
+#     TWICE, which the new trap turned into an unreadable literal.  Verified by
+#     diffing the defined-function sets: exactly one new name
+#     (scheme.base:code:rd-digits-neg), +2 definitions and +94 lines per demo, all
+#     other drift being code_N renumbering.  (b) +1 new entry (exact-range), the
+#     change's own demo.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

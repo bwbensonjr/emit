@@ -53,6 +53,7 @@ run_suite "module-scaffold byte-identity" test/module-scaffold-baseline.sh check
 run_suite "REPL persistent host"      test/repl-host-tests.sh
 run_suite "define-record-type syntax" test/record-type-syntax-tests.sh
 run_suite "inline arith + self-call IR" test/inline-arith-self-call-tests.sh
+run_suite "fixnum overflow traps"     test/fixnum-overflow-tests.sh
 run_suite "cross-unit direct calls"   test/cross-unit-direct-call-tests.sh
 run_suite "library top-level set!"    test/library-toplevel-set-tests.sh
 run_suite "library body declarations" test/library-body-declarations-tests.sh
