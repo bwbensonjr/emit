@@ -336,6 +336,16 @@
     (%inexact? "rt_inexact_p") (%exact->inexact "rt_exact_to_inexact")
     (%inexact->exact "rt_inexact_to_exact")
     (%string->flonum "rt_string_to_flonum") (%flonum->string "rt_flonum_to_string")
+    ;; classification, rounding, and libm (change: numeric-conformance).  All
+    ;; permanently-internal: the prelude and (scheme inexact) wrap them, so none is
+    ;; integrable and none of these names is in scope for a user program.
+    (%finite? "rt_finite_p") (%nan? "rt_nan_p")
+    (%flo-floor "rt_flo_floor") (%flo-ceiling "rt_flo_ceiling")
+    (%flo-truncate "rt_flo_truncate") (%flo-round "rt_flo_round")
+    (%sqrt "rt_sqrt") (%exp "rt_exp") (%log "rt_log")
+    (%sin "rt_sin") (%cos "rt_cos") (%tan "rt_tan")
+    (%asin "rt_asin") (%acos "rt_acos") (%atan "rt_atan") (%atan2 "rt_atan2")
+    (%pow "rt_pow")
     (%write-char "rt_write_char")
     (%cons "rt_cons") (%car "rt_car") (%cdr "rt_cdr")
     (%null? "rt_null_p") (%pair? "rt_pair_p") (%eq? "rt_eq_p")
@@ -1108,6 +1118,24 @@
    "declare i64 @rt_inexact_p(i64)\n"
    "declare i64 @rt_exact_to_inexact(i64)\n"
    "declare i64 @rt_inexact_to_exact(i64)\n"
+   ;; classification / rounding / libm (change: numeric-conformance)
+   "declare i64 @rt_finite_p(i64)\n"
+   "declare i64 @rt_nan_p(i64)\n"
+   "declare i64 @rt_flo_floor(i64)\n"
+   "declare i64 @rt_flo_ceiling(i64)\n"
+   "declare i64 @rt_flo_truncate(i64)\n"
+   "declare i64 @rt_flo_round(i64)\n"
+   "declare i64 @rt_sqrt(i64)\n"
+   "declare i64 @rt_exp(i64)\n"
+   "declare i64 @rt_log(i64)\n"
+   "declare i64 @rt_sin(i64)\n"
+   "declare i64 @rt_cos(i64)\n"
+   "declare i64 @rt_tan(i64)\n"
+   "declare i64 @rt_asin(i64)\n"
+   "declare i64 @rt_acos(i64)\n"
+   "declare i64 @rt_atan(i64)\n"
+   "declare i64 @rt_atan2(i64, i64)\n"
+   "declare i64 @rt_pow(i64, i64)\n"
    "declare i64 @rt_write_char(i64)\n"
    "declare i64 @rt_null_p(i64)\n"
    "declare i64 @rt_pair_p(i64)\n"

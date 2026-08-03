@@ -86,25 +86,25 @@ change needs new primitives in THREE places, not one. Adding them in three stage
 would mean three fixed-point cycles, three IR-baseline re-records, and (for `rational?`)
 writing a temporary arithmetic version to delete later. One staging serves all of it.
 
-- [ ] 5.1 Stage 1a — add the runtime C functions for all three groups to
+- [x] 4.1 Stage 1a — add the runtime C functions for all three groups to
       `src/runtime/runtime.c`: rounding (`rt_flo_floor`, `rt_flo_ceiling`, `rt_flo_truncate`,
       `rt_flo_round` — `rint` for round-half-to-even, NOT `floor(x+0.5)`), classification
       (`rt_finite_p`, `rt_nan_p`), and the libm wrappers behind `(scheme inexact)`
       (`rt_sqrt`, `rt_exp`, `rt_log`, `rt_sin`, `rt_cos`, `rt_tan`, `rt_asin`, `rt_acos`,
       `rt_atan`, `rt_atan2`, `rt_pow`). Each accepts an exact or inexact argument and returns
       a flonum; out-of-domain follows IEEE (NaN/infinity), never a trap.
-- [ ] 5.2 Stage 1b — their `prim-table` entries and `declare` lines in `src/emit.ss`, and the
+- [x] 4.2 Stage 1b — their `prim-table` entries and `declare` lines in `src/emit.ss`, and the
       `%`-names in `*prims*` (`src/parse.ss`). No call sites yet, so the current seed compiles
       all of it. They are permanently-internal `%`-ops: none enters `*integrable*`, which is
       what keeps `sqrt`/`sin`/`log` out of the universal namespace where R7RS does not put them.
-- [ ] 5.3 `make regen` so the committed seed learns the new primcall heads; confirm the fixed
+- [x] 4.3 `make regen` so the committed seed learns the new primcall heads; confirm the fixed
       point converges. Try the direct regen first (the D3 lesson: two regens is a safe upper
       bound, not always required).
-- [ ] 5.4 Re-record `test/module-scaffold-baseline.sha256` for the new `declare` lines, with a
+- [x] 4.4 Re-record `test/module-scaffold-baseline.sha256` for the new `declare` lines, with a
       before/after capture proving the drift is ONLY those lines (they land in every module's
       header, so expect the per-demo line count to grow by the number of new prims times the
       two headers per demo IR).
-- [ ] 5.5 Full dev suite, then commit `bootstrap/*.ll` at this stable point and re-run
+- [ ] 4.5 Full dev suite, then commit `bootstrap/*.ll` at this stable point and re-run
       `test/trust-check.sh` (it skips while `bootstrap/` is dirty).
 
 ## 5. The (scheme base) numeric inventory (#27, design D4/D6/D7)

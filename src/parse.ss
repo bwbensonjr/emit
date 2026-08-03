@@ -33,6 +33,13 @@
                   %symbol? %string? %char? %boolean? %integer? %exact?
                   %flonum? %number? %real? %inexact? %exact->inexact %inexact->exact
                   %string->flonum %flonum->string
+                  ;; change: numeric-conformance -- classification, the flonum arm of
+                  ;; the rounding family, and the libm ops behind (scheme inexact).
+                  ;; Permanently internal: the prelude and the library wrap them, so
+                  ;; none of these enters *integrable* and none is user-visible.
+                  %finite? %nan?
+                  %flo-floor %flo-ceiling %flo-truncate %flo-round
+                  %sqrt %exp %log %sin %cos %tan %asin %acos %atan %atan2 %pow
                   %read-all-stdin %display %write %write-char %newline
                   ;; change: scheme-io-library -- the eof object, the file/handle
                   ;; edge primitives the prelude's ports are built over, and the

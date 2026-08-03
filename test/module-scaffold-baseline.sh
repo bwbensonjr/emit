@@ -278,6 +278,23 @@
 #     pre-change tree's (valid as a baseline since group 1 touched only flonum
 #     literals and group 2 changed no IR at all).  All 80 demos' stdout is
 #     byte-identical.  No new entries.
+#   numeric-conformance, group 4 (the primitive staging) -- 17 new permanently-internal
+#     `%`-ops added in ONE staged bootstrap: classification (%finite? %nan?), the flonum
+#     arm of the rounding family (%flo-floor %flo-ceiling %flo-truncate %flo-round), and
+#     the libm ops behind (scheme inexact) (%sqrt %exp %log %sin %cos %tan %asin %acos
+#     %atan %atan2 %pow).  Stage 1: tables + runtime only, NO call sites, so the current
+#     seed compiles all of it.  Verified against an 80-demo before/after capture: every
+#     demo differs by EXACTLY +34 lines and 0 deletions, every added line a
+#     `declare i64 @rt_*` -- 17 declares x the two headers per demo IR.  0 of 80 demos
+#     deviate from that shape and there are no non-declare additions anywhere
+#     (2720 added lines total = 80 x 34).  All 80 demos' stdout byte-identical.
+#     Size, measured: committed IR +0.44-0.48% (+13.2KB each); build/emit +1200 bytes;
+#     build/schemec +17744 (+3.2%) -- the larger figure because schemec links
+#     src/runtime/runtime.c directly, so the 17 new C functions land in it whether a
+#     program calls them or not (no -ffunction-sections/--gc-sections, and they are
+#     exported rt_* symbols).  The declare header is emitted unconditionally for the
+#     whole prim table, so this cost is paid by every module regardless of use; noted in
+#     docs/PERFORMANCE.md alongside P8.  No new entries.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

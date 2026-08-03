@@ -1353,6 +1353,70 @@ val rt_inexact_p(val v) { return truthy(is_flonum(v)); }
 val rt_flonum_p(val v)  { return truthy(is_flonum(v)); }
 val rt_number_p(val v)  { return truthy(is_number(v)); }
 val rt_real_p(val v)    { return truthy(is_number(v)); }
+
+/* --- classification, rounding, and libm (change: numeric-conformance) --------
+ * Three families of primitive that all need C, added in one staged bootstrap
+ * because the alternative was three separate regen cycles (see the change's
+ * group 4).  All are permanently-internal `%`-ops: none is integrable, so
+ * `sqrt`/`sin`/`log` stay OUT of the universal namespace -- R7RS puts them behind
+ * `(import (scheme inexact))`, and the library wraps these.
+ *
+ * Every one takes its argument as a number, exact or inexact, and returns a
+ * FLONUM (the rounding family excepted -- see below).  Out-of-domain arguments
+ * follow IEEE 754 rather than trapping: a mathematically undefined or complex
+ * result is a NaN, a divergent one an infinity.  Emit is real-only so no complex
+ * result is available, R7RS 6.2.3 permits the inexact non-finite answer, and a NaN
+ * stays testable with `nan?` where an uncatchable trap would not. */
+
+/* Classification.  finite? is true of every EXACT integer as well as a finite
+ * flonum; nan? only of a NaN.  A non-number traps -- these are predicates about
+ * numbers, not type tests. */
+val rt_finite_p(val v) {
+  if (tag_of(v) == TAG_FIXNUM) return TRUE_V;
+  if (is_flonum(v)) return truthy(isfinite(flo_val(v)));
+  rt_fatal("finite?: not a number"); return NIL_V;
+}
+val rt_nan_p(val v) {
+  if (tag_of(v) == TAG_FIXNUM) return FALSE_V;
+  if (is_flonum(v)) return truthy(isnan(flo_val(v)));
+  rt_fatal("nan?: not a number"); return NIL_V;
+}
+
+/* Rounding.  These take the FLONUM arm only: an exact integer is already rounded,
+ * so the prelude returns it unchanged and never calls in here.  Keeping the work
+ * in double means a magnitude too large for a fixnum rounds to itself instead of
+ * raising an overflow diagnostic.  rt_flo_round is `rint`, which under the default
+ * rounding mode is round-half-to-EVEN as R7RS 6.2.6 requires -- floor(x + 0.5)
+ * would round 2.5 to 3.0 and 0.49999999999999994 up, both wrong. */
+static double flo_arg(val v, const char *who) {
+  if (!is_number(v)) { rt_fatalf("%s: not a number", who); return 0.0; }
+  return to_double(v);
+}
+val rt_flo_floor(val v)    { return rt_make_flonum(floor(flo_arg(v, "floor"))); }
+val rt_flo_ceiling(val v)  { return rt_make_flonum(ceil (flo_arg(v, "ceiling"))); }
+val rt_flo_truncate(val v) { return rt_make_flonum(trunc(flo_arg(v, "truncate"))); }
+val rt_flo_round(val v)    { return rt_make_flonum(rint (flo_arg(v, "round"))); }
+
+/* libm, behind (scheme inexact).  One-argument forms; the optional-argument forms
+ * (`log` with a base, two-argument `atan`) are composed in the library from these. */
+val rt_sqrt(val v) { return rt_make_flonum(sqrt(flo_arg(v, "sqrt"))); }
+val rt_exp(val v)  { return rt_make_flonum(exp (flo_arg(v, "exp"))); }
+val rt_log(val v)  { return rt_make_flonum(log (flo_arg(v, "log"))); }
+val rt_sin(val v)  { return rt_make_flonum(sin (flo_arg(v, "sin"))); }
+val rt_cos(val v)  { return rt_make_flonum(cos (flo_arg(v, "cos"))); }
+val rt_tan(val v)  { return rt_make_flonum(tan (flo_arg(v, "tan"))); }
+val rt_asin(val v) { return rt_make_flonum(asin(flo_arg(v, "asin"))); }
+val rt_acos(val v) { return rt_make_flonum(acos(flo_arg(v, "acos"))); }
+val rt_atan(val v) { return rt_make_flonum(atan(flo_arg(v, "atan"))); }
+val rt_atan2(val y, val x) {
+  return rt_make_flonum(atan2(flo_arg(y, "atan"), flo_arg(x, "atan")));
+}
+/* pow serves `expt` once either argument is inexact; the exact-integer case is
+ * repeated squaring in the prelude, which keeps an exact result exact. */
+val rt_pow(val b, val e) {
+  return rt_make_flonum(pow(flo_arg(b, "expt"), flo_arg(e, "expt")));
+}
+
 /* exact->inexact: fixnum -> flonum (flonum unchanged).  inexact->exact:
  * integral flonum -> fixnum (fixnum unchanged); a non-integral flonum traps,
  * since there are no exact rationals. */
