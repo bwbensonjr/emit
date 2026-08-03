@@ -448,11 +448,12 @@ then compile and run the program against the import environment built from its d
 export tables — all without Chez and without a second library-resolution path (it drives the
 same manifest resolution and compile-unit core the AOT and REPL doors use).
 
-The manifest SHALL be located the same way the other doors locate it: the `EMIT_MANIFEST`
-environment variable if set, otherwise `--manifest FILE` if given, otherwise the default
-`emit-libs.scm`. When no manifest is present and the program imports only `(scheme base)` (or
-imports nothing), the runner SHALL behave exactly as before (no regression), since the
-manifest is consulted only to resolve a non-baked-in imported library.
+The manifest SHALL be located by the ordered procedure specified in the **Library manifest**
+requirement — `--manifest FILE` first, then `EMIT_MANIFEST`, then `./emit-libs.scm`, then the
+executable-relative and installed-prefix candidates — identically to every other door. When no
+manifest is found and the program imports only `(scheme base)` (or imports nothing), the runner
+SHALL behave exactly as before (no regression), since the manifest is consulted only to resolve a
+non-baked-in imported library.
 
 A library that is not in the program's transitive import closure SHALL NOT be initialized
 or linked into the program's initialization sequence, so it can have no observable effect on
@@ -485,6 +486,12 @@ initializer).
   nothing, with no manifest present
 - **THEN** it behaves exactly as before this change — the value is identical and no manifest
   is required
+
+#### Scenario: `--manifest` outranks the environment variable
+
+- **WHEN** `emit run` is given `--manifest FILE` while `EMIT_MANIFEST` is also set to a
+  different, existing manifest
+- **THEN** the manifest named by `--manifest` is the one used
 
 ### Requirement: Run door matches the AOT door (dev→ship fidelity)
 
@@ -528,13 +535,41 @@ Two libraries compiled independently, each with an internal helper and lifted co
 
 ### Requirement: Library manifest
 
-Library discovery SHALL be driven by a readable s-expression manifest (default
-`./emit-libs.scm`, overridable) mapping each library name to its source file and an optional
-artifact directory; compiled artifacts SHALL default under a build directory rather than the
-source tree. The manifest MAY list any number of libraries. Resolving an imported library
-that has no manifest entry SHALL be a compile-time error naming the missing library. The
-standard library `(scheme base)` SHALL be resolvable through the manifest like any other
-library, so both doors build/load it through the same machinery.
+Library discovery SHALL be driven by a readable s-expression manifest mapping each library name
+to its source file and an optional artifact directory; compiled artifacts SHALL default under a
+build directory rather than the source tree. The manifest MAY list any number of libraries.
+Resolving an imported library that has no manifest entry SHALL be a compile-time error naming the
+missing library. The standard library `(scheme base)` SHALL be resolvable through the manifest like
+any other library, so both doors build/load it through the same machinery.
+
+**Locating the manifest.** Every door SHALL locate the manifest by the same ordered procedure,
+taking the first candidate that exists and is readable:
+
+1. the `--manifest FILE` argument, when the door accepts one and it is given;
+2. the `EMIT_MANIFEST` environment variable, when set;
+3. `./emit-libs.scm`, relative to the current working directory;
+4. `<dir of the resolved real path of the running executable>/../share/emit/emit-libs.scm`,
+   where the executable's path SHALL be resolved through symbolic links so that a symlinked
+   launcher locates the manifest installed beside the real binary;
+5. a compiled-in installation default, `<install prefix>/share/emit/emit-libs.scm`.
+
+Candidates 1 and 2 are explicit requests: when either is given but names a file that does not
+exist, the door SHALL report that named file as missing rather than silently falling through to a
+later candidate. Candidates 3–5 are searched, so a missing candidate is not an error. Finding no
+manifest at all SHALL remain non-fatal — a program that imports only baked-in libraries runs
+unaffected — and the resulting failure SHALL be reported by import resolution, naming the
+unresolved library.
+
+**Paths inside a manifest.** A relative path appearing in a manifest entry — a library's
+`(source …)`, a program entry's `(source …)`, and a program entry's `(output …)` — SHALL be
+resolved against the directory containing the manifest in which it appears, not against the
+current working directory. An absolute path SHALL be used as given. A manifest therefore carries
+its own library sources with it and resolves identically no matter which directory the door is
+invoked from.
+
+**Narration.** Each door SHALL narrate which manifest it resolved, on standard error, in the
+project's tool-output format, suppressed at `EMIT_VERBOSITY=quiet` and never altering standard
+output.
 
 The manifest MAY additionally contain **program entries** of the form
 `(program NAME (source S) [(output O)])`, where `NAME` is a bare symbol naming a
@@ -575,7 +610,41 @@ program entries in any order.
 
 - **WHEN** the manifest contains `(program my-app (source "app.scm") (output "build/app"))`
   and the program `my-app` is looked up
-- **THEN** the manifest yields its source (`app.scm`) and output (`build/app`)
+- **THEN** the manifest yields its source (`app.scm`) and output (`build/app`), each resolved
+  against the directory containing that manifest
+
+#### Scenario: An installed manifest is found from an unrelated directory
+
+- **WHEN** a door is invoked from a directory containing no `emit-libs.scm`, and a manifest is
+  installed at `<prefix>/share/emit/emit-libs.scm` beside the running executable
+- **THEN** the installed manifest is located through the executable-relative candidate and its
+  libraries resolve, so a program importing a non-baked-in standard library runs successfully
+
+#### Scenario: A symlinked executable locates its installed manifest
+
+- **WHEN** the running executable is reached through a symbolic link whose own directory has no
+  `../share/emit/emit-libs.scm`, while the link's target directory does
+- **THEN** the executable's real path is resolved first, so the manifest beside the real binary
+  is the one found
+
+#### Scenario: Manifest sources resolve against the manifest's own directory
+
+- **WHEN** a manifest at `<dir>/emit-libs.scm` maps `(mylib)` to the relative source
+  `"mylib.sld"`, and a door is invoked from a different current working directory
+- **THEN** the source is read from `<dir>/mylib.sld`, and the same manifest resolves identically
+  regardless of the directory the door was invoked from
+
+#### Scenario: An explicitly named manifest that is missing is reported
+
+- **WHEN** `--manifest FILE` (or `EMIT_MANIFEST`) names a file that does not exist
+- **THEN** the door reports that named file as missing and does not fall through to
+  `./emit-libs.scm` or to an installed manifest
+
+#### Scenario: The resolved manifest is narrated
+
+- **WHEN** a door resolves a manifest at default verbosity
+- **THEN** it names the resolved manifest path on standard error, and at
+  `EMIT_VERBOSITY=quiet` that line is absent while standard output is byte-identical either way
 
 ### Requirement: Transitive library imports
 

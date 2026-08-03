@@ -122,4 +122,9 @@
       both suites, and the Chez-gated trust-check (`make regen` reproduces the committed IR)
       passed. Final verification: Chez-free 20 suites / 0 failed; Chez-gated 20 suites / 0 failed,
       including self-emission equivalence, the self-hosting fixed point, and --dump parity vs chez.
-- [ ] 7.3 `openspec validate manifest-search-path`; sync specs and archive.
+- [x] 7.3 `openspec validate manifest-search-path`; sync specs and archive.
+      **Synced:** created `openspec/specs/distribution/spec.md` (new capability, 3 requirements)
+      and replaced the two `module-system` requirements in place. `openspec validate --all
+      --strict` passes 21/21. The old run-door text that had `EMIT_MANIFEST` outranking
+      `--manifest` is gone, resolving the contradiction with the implementation and
+      `docs/MODULES.md` that the proposal flagged.
