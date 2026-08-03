@@ -75,8 +75,11 @@ Library *names* are mapped to *source files* by a manifest — an s-expression f
 
 - `source` is the `.sld` path. `artifacts` is where the compiled `.ll`/`.exports` land (default
   `build/lib`). **Entry order is irrelevant** — the build computes the topological order itself.
-- The default `emit-libs.scm` at the repo root lists only `(scheme base)`; point `--manifest` at
-  your own for additional libraries (as the test suites do with `test/modules/emit-libs.scm`).
+- The default `emit-libs.scm` at the repo root lists the two standard libraries — `(scheme base)`
+  and `(scheme inexact)`; point `--manifest` at your own for additional libraries (as the test
+  suites do with `test/modules/emit-libs.scm`). Listing a library costs a program nothing unless
+  it imports it: the run door preloads lazily (see below) and `emit build` links only the
+  program's import closure.
 
 A manifest may also carry **program entries** — the deliverables `emit build` produces (change:
 `emit-build-bin-entry`):
@@ -141,7 +144,9 @@ build/emit run --manifest test/modules/emit-libs.scm test/modules/prog-mylib.scm
 ```
 
 The run door reuses the REPL door's Chez-free machinery: the host reads the manifest and each
-library source and hands the text to the embedded compiler through a small mode protocol, then the
+NEEDED library source — the transitive closure of the program's imports, not the whole manifest
+(see [Lazy preload](#lazy-preload-on-the-run-door)) — and hands the text to the embedded
+compiler through a small mode protocol, then the
 program's `@scheme_entry` initializes the imported units in topological order before running — so
 the emitted program module is **byte-identical** to the AOT door's for the same manifest (dev→ship
 fidelity). `emit build` uses the same `--emit` path for the native build.
@@ -216,6 +221,46 @@ session** (and into the compiler's own build), as if the source began with `(imp
   forms unbound — for a program that wants only primitives and its own definitions.
 - Do not edit `lib/scheme/base.sld` by hand; it is generated (`tools/gen-scheme-base.ss`, guarded by
   `test/scheme-base-gen-check.sh`). Edit `src/prelude.scm` and regenerate.
+
+## `(scheme inexact)` — the second standard library
+
+`(scheme inexact)` (change: `numeric-conformance`) is R7RS's inexact-only surface: `finite?`,
+`infinite?`, `nan?`, `exp`, `log`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `sqrt`. It is
+the first library besides `(scheme base)` in the default manifest, and it is deliberately
+**ordinary** where `(scheme base)` is special:
+
+| | `(scheme base)` | `(scheme inexact)` |
+|---|---|---|
+| source | generated from `src/prelude.scm` | hand-written `lib/scheme/inexact.sld` |
+| reached by | auto-imported everywhere | an explicit `(import (scheme inexact))` |
+| how it is found | baked into the compiler (`*prelude-source*`) | resolved through the manifest |
+
+Being ordinary is the point: it makes Emit's second standard library a *demonstration that the
+module system works* rather than a second special case, and it keeps `sqrt`/`sin`/`log` out of
+the universal namespace — without the import those names are unbound and a program may define
+its own.
+
+## Lazy preload on the run door
+
+The run door loads only the libraries the program **needs**: it walks the transitive closure of
+the program's imports over the manifest index and preloads that, rather than every manifest
+entry. Mechanically, `preload_user_libraries` (`src/emit.cpp`) drives two compiler modes — mode
+9 returns `KEY<TAB>PATH` for each manifest library, mode 12 answers "which libraries does this
+source import?" for a program and a `.sld` alike — and follows each reached `.sld`'s own
+imports. Reading those files stays in the host because the core performs no I/O by design.
+
+**The REPL host stays eager** (mode 5), and should: a session is an open world where any prompt
+may import anything, so everything on the manifest must already be loaded. Only the run door,
+compiling one known program, can be lazy.
+
+This was not an optimization. Eager preload was invisible while the manifest held exactly one
+library; the moment a second one landed it (a) put units a program never imported into its
+emitted IR, (b) made `--no-prelude` — which promises a single self-contained module — emit a
+preloaded unit's boundary marker anyway, and (c) broke the byte-identical program IR between the
+run door and the Chez driver, which resolves imports on demand. All three are pinned by
+`test/prelude-base-run-tests.sh`. Note the shape: the Chez driver already did this with
+`toposort-libs`, so this was a resolution strategy that existed on one door being wired into the
+other — the same gap as `docs/PERFORMANCE.md` P8.
 
 ## Semantics
 

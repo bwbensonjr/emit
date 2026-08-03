@@ -317,6 +317,12 @@
 ;; from the manifest -- doing so would emit a duplicate/spurious (scheme base) module
 ;; (change: run-door-user-libraries).  Used by the run host (mode 9); the REPL host
 ;; still wants (scheme base) from the manifest and uses mode 5.
+;; Each line is "KEY<TAB>PATH" (change: numeric-conformance).  The key is
+;; `(mangle name "")` -- the same canonical unit prefix the emitted symbols carry --
+;; so the run host can index the manifest by library name using plain string
+;; comparison, without re-implementing library-name equality in C++.  It needs that
+;; index because the run door now preloads LAZILY: only the libraries in the
+;; program's transitive import closure, rather than every entry in the manifest.
 (define (repl-manifest-user-paths text)
   (let loop ([es (car (read-all-from-string text))] [acc ""])
     (if (null? es)
@@ -328,8 +334,29 @@
                             (cond [(assq (quote source) (cddr entry)) => cadr] [else #f]))])
           (loop (cdr es)
                 (if (and src (not (equal? name (quote (scheme base)))))
-                    (string-append acc src "\n")
+                    (string-append acc (mangle name "") "\t" src "\n")
                     acc))))))
+
+;; A SOURCE TEXT's direct imports, one canonical key per line (change:
+;; numeric-conformance).  Serves both shapes the run door's lazy preload walks:
+;; a PROGRAM (its leading `(import ...)` forms, via the same collect-imports the
+;; compile paths use) and a LIBRARY .sld (its `import` declaration, via the same
+;; parse-define-library that loading one uses).  Answering for both from one entry
+;; point is what lets the host walk the closure outward -- program, then each .sld it
+;; reaches -- without the core doing any I/O.  Keys match repl-manifest-user-paths.
+;;
+;; This is a pure query: it reads and parses, and registers nothing.
+(define (repl-source-imports text)
+  (let* ([forms (read-all-from-string text)]
+         [lib?  (and (pair? forms) (pair? (car forms))
+                     (eq? (car (car forms)) (quote define-library)))]
+         [names (if lib?
+                    (cadr (parse-define-library (car forms)))
+                    (car (collect-imports forms)))])
+    (let loop ([ns names] [acc ""])
+      (if (null? ns)
+          acc
+          (loop (cdr ns) (string-append acc (mangle (car ns) "") "\n"))))))
 
 ;; List the manifest's PROGRAM entries for the emit build door (Chez-free; change:
 ;; emit-build-bin-entry).  Each `(program NAME (source S) [(output O)])` entry yields
@@ -603,9 +630,10 @@
 ;;   4 load-library (source text -> unit IR + __init)   5 manifest text -> source paths
 ;;   6 auto-import (scheme base) into the session (after the host preloads it, Stage 3)
 ;;   7 run door: compile a whole program with imports  8 run door: register baked (scheme base)
-;;   9 run door: manifest text -> user-library paths (omitting (scheme base))
+;;   9 run door: manifest text -> "KEY\tPATH" per user library (omitting (scheme base))
 ;;  10 emit build door: manifest text -> program entries (NAME/source/output triples)
 ;;  11 emit lib door: library source -> "<basename>\n<export-table datum>"
+;;  12 run door: a source text -> the library keys it imports (for the lazy preload)
 ;; State is restored before and saved after each op (init modes seed it fresh).
 (define (repl-dispatch)
   (repl-restore-state!)
@@ -623,6 +651,7 @@
              [(= mode 9) (repl-manifest-user-paths (repl-input))] ; run door: manifest paths sans (scheme base)
              [(= mode 10) (repl-manifest-programs (repl-input))]  ; emit build door: program entries
              [(= mode 11) (repl-library-exports-text (repl-input))] ; emit lib door: export table
+             [(= mode 12) (repl-source-imports (repl-input))]     ; run door: a source's imports
              [else       (compile-one-form-text (repl-input))])])
       (repl-save-state!)
       result)))

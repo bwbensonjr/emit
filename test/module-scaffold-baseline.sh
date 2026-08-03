@@ -237,6 +237,110 @@
 #     (scheme.base:code:rd-digits-neg), +2 definitions and +94 lines per demo, all
 #     other drift being code_N renumbering.  (b) +1 new entry (exact-range), the
 #     change's own demo.
+#   numeric-conformance, group 1 (GitHub issue #24) -- a flonum literal's IR text now
+#     comes from the emitter's own canonical formatter instead of the host's
+#     number->string, so it is valid LLVM in a `double` position and byte-identical on
+#     every door.  Verified against an 80-demo before/after capture (build/emit built in
+#     a detached-HEAD worktree at 5d38be0 vs the regenerated tree): EXACTLY ONE demo
+#     differs, by EXACTLY ONE line --
+#       exact-range.ll: @.flo.lit.0 `"1e+18"` -> `"1.0e18"` (6 -> 7 byte array).
+#     Nothing else moved in the other 79 demos.  The small drift is expected and is
+#     itself evidence for the diagnosis: only a literal whose shortest decimal carries
+#     an exponent AND lands in an unboxed region emitted invalid IR, and no demo had
+#     one -- exact-range's `1e18` sits on the BOXED path, where the old text was a C
+#     string that strtod happened to accept.  Every other flonum literal in the demos
+#     (2.0, 2.5, 0.5, 1.0, ...) already printed with a '.', so its canonical form is the
+#     text it already had.  All 80 demos' stdout is byte-identical.  No new entries --
+#     the regression coverage is test/numeric-conformance-tests.sh (values, all four
+#     doors) plus 10 flonum cases in test/self-emit-equiv.sh (IR byte-equality between
+#     the Chez-hosted and self-hosted emitters); 8 of those 10 FAIL on the pre-change
+#     tree, which is what gives them teeth.
+#   numeric-conformance, group 3 (GitHub issue #26) -- `> <= >=` became value-position
+#     integrables and `max`/`min` became variadic prelude procedures.  ALL 80 demos'
+#     IR changed, because every demo embeds (scheme base) and declares its exports,
+#     and the drift is EXACTLY two things with nothing else in either direction:
+#       (1) PROGRAM half, all 80 identical in shape: +3 lines, 0 deletions, every one
+#           an `external global i64` declare for a new prelude binding
+#           (scheme.base:%minmax-fold, scheme.base:%minmax, scheme.base:min).
+#           Mechanically checked: 0 of 80 program halves deviate from "+3 declares,
+#           0 deletions, 0 non-declare additions".  Same shape as emit-dump-stages'
+#           +2 declare lines.
+#       (2) LIBRARY half: the NAMED function set went 161 -> 164, the additions being
+#           exactly code:%minmax-fold, code:%minmax, code:min and the removals being
+#           EMPTY (`max` already existed and kept its name while becoming variadic).
+#           __init_N went 338 -> 344, i.e. +3 per header for 3 new top-level defines
+#           (the header appears twice per demo IR).  All remaining drift is code_N
+#           renumbering, the anonymous lambdas shifting because three defines were
+#           inserted -- the same pattern as the rd-digits-neg re-record above.
+#     Operator position was separately proven UNCHANGED, which is the property the
+#     change promised: `build/schemec` output for a prelude-free program using
+#     `> <= >=` at binary AND n-ary arity is byte-identical to the pristine
+#     pre-change tree's (valid as a baseline since group 1 touched only flonum
+#     literals and group 2 changed no IR at all).  All 80 demos' stdout is
+#     byte-identical.  No new entries.
+#   numeric-conformance, group 4 (the primitive staging) -- 17 new permanently-internal
+#     `%`-ops added in ONE staged bootstrap: classification (%finite? %nan?), the flonum
+#     arm of the rounding family (%flo-floor %flo-ceiling %flo-truncate %flo-round), and
+#     the libm ops behind (scheme inexact) (%sqrt %exp %log %sin %cos %tan %asin %acos
+#     %atan %atan2 %pow).  Stage 1: tables + runtime only, NO call sites, so the current
+#     seed compiles all of it.  Verified against an 80-demo before/after capture: every
+#     demo differs by EXACTLY +34 lines and 0 deletions, every added line a
+#     `declare i64 @rt_*` -- 17 declares x the two headers per demo IR.  0 of 80 demos
+#     deviate from that shape and there are no non-declare additions anywhere
+#     (2720 added lines total = 80 x 34).  All 80 demos' stdout byte-identical.
+#     Size, measured: committed IR +0.44-0.48% (+13.2KB each); build/emit +1200 bytes;
+#     build/schemec +17744 (+3.2%) -- the larger figure because schemec links
+#     src/runtime/runtime.c directly, so the 17 new C functions land in it whether a
+#     program calls them or not (no -ffunction-sections/--gc-sections, and they are
+#     exported rt_* symbols).  The declare header is emitted unconditionally for the
+#     whole prim table, so this cost is paid by every module regardless of use; noted in
+#     docs/PERFORMANCE.md alongside P8.  No new entries.
+#   numeric-conformance, group 5 (GitHub issue #27) -- ~40 R7RS 6.2 procedures added to the
+#     prelude, so (scheme base) went 172 -> 212 exports.  Drift, verified against an
+#     80-demo before/after capture:
+#       (1) LIBRARY half: the NAMED function set went 164 -> 204 -- exactly 40 additions
+#           (abs ceiling complex? denominator even? exact exact-integer-sqrt
+#           exact-integer? expt floor floor-quotient floor-remainder floor/ gcd inexact
+#           lcm negative? ns-digits-radix numerator odd? positive? rational? round square
+#           string->number truncate truncate-quotient truncate-remainder truncate/ and the
+#           %-prefixed helpers) and ZERO removals; the rest is code_N renumbering.
+#       (2) PROGRAM half: 79 of 80 demos gained exactly +40 `external global i64` declares
+#           with 0 deletions and no non-declare change -- one per new export.
+#       (3) exact-range.ll ALONE also changed shape (+109 -66), and the reason is worth
+#           recording: it is the only demo that calls `number->string`, which R7RS requires
+#           to take an optional radix and which therefore became variadic.  A rest-parameter
+#           callee cannot use the cross-unit DIRECT call convention, so its one call site
+#           became an indirect call through the closure (load closure -> load code pointer ->
+#           call).  Measured at +22% on a number->string-dominated loop; filed as
+#           docs/PERFORMANCE.md P9 rather than worked around here, since the right fix
+#           covers every variadic callee.
+#     All 80 demos' stdout byte-identical.  Size: the shaken Chez AOT door is BYTE-IDENTICAL
+#     for a program using none of the new procedures (34,968 B at 5d38be0, at the staging
+#     commit, and here), while `emit build` grew +19,808 B (+14.7%) -- the shake removes
+#     100% of the growth and the unshaken door pays all of it, which is P8, now quantified
+#     in that item.  No new entries.
+#   numeric-conformance, groups 6+7 (GitHub issue #25; (scheme inexact)) -- the reader
+#     learned the three non-finite tokens (+inf.0/-inf.0/+nan.0), and (scheme inexact)
+#     joined the default manifest as Emit's second standard library.  Drift, verified
+#     against an 80-demo before/after capture:
+#       LIBRARY half: exactly ONE named addition, code:rd-nonfinite (204 -> 205 named,
+#         0 removals).  Net +83 lines per demo; the rest of the raw diff (+6743/-6660)
+#         is code_N renumbering, since the new define sits mid-reader and shifts every
+#         anonymous label after it.
+#       PROGRAM half: all 80 demos gained exactly +1 `external global i64` declare, 0
+#         deletions, 0 non-declare changes -- one per new export.
+#     Each demo's IR still holds exactly TWO units (one boundary marker), which is the
+#     part worth recording.  Adding a second library to the default manifest first made
+#     it THREE, because the run door preloaded every manifest entry whether the program
+#     imported it or not -- which also made `--no-prelude` emit a unit it had promised
+#     not to, and broke the run-door/Chez-driver program-IR parity this suite's sibling
+#     (test/prelude-base-run-tests.sh) pins.  The preload is now LAZY: the run door walks
+#     the transitive closure of the program's imports over the manifest and loads only
+#     that (src/emit.cpp preload_user_libraries, compiler modes 9 + 12).  The REPL host
+#     stays eager on purpose -- an interactive session is an open world.  So a program
+#     that does not import (scheme inexact) is unaffected in IR and in bytes: a delivered
+#     executable is byte-identical with and without the manifest entry (154,312 B both).
+#     All 80 demos' stdout byte-identical.  No new entries.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

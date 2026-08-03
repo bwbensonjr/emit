@@ -216,10 +216,40 @@ table — shadowing is respected for free.
   | `str`     | `string-append` | left fold from `""` over `%string-append` |
   | `diff`    | `-` | `(- a)` negates, `(- a b …)` subtracts left-to-right |
   | `cmp`     | `= <` | short-circuit pairwise chain (0/1 operand → `#t`) |
+  | `cmp-rev` | `>` | the same chain over `%<` with the operands **swapped** |
+  | `cmp-le`  | `<=` | the same chain, pairwise `(if (%< x y) #t (%= x y))` |
+  | `cmp-ge`  | `>=` | the same chain, pairwise `(if (%< y x) #t (%= x y))` |
 
   Because these fold over *raw* `%`-ops, the synthesized closure has **no prelude dependency**
   and works identically under `--no-prelude`. This is what let `string-append` become
   fully first-class and shadowable, retiring the last parse-time special case.
+
+#### Value-position-ONLY entries: arity `#f` (change: `numeric-conformance`)
+
+`>`, `<=`, and `>=` own no raw primcall. In **operator** position they stay frontend rewrites
+over `<`/`=` (`expand-compare`); what they needed was a *binding*, so that `(map > …)` and
+`(apply >= …)` resolve instead of reporting an unbound variable — being listed in
+`*integrable*` is what supplies one, since `(map car *integrable*)` feeds `compute-known` and
+`*repl-known*`.
+
+Their entries therefore carry **arity `#f`**, meaning *value position only*:
+
+```scheme
+(> %< #f cmp-rev) (<= %< #f cmp-le) (>= %< #f cmp-ge)
+```
+
+`integrable-lookup/arity` never matches an `#f` arity, so `inline-primitives` has **no
+direct-call lowering available** for these names and a direct call falls through to the eta
+(correct at any arity). That is the whole point of the marker rather than a convention: an
+ordinary entry like `(> %< 2 cmp)` would let a surviving `(> a b)` lower to `(primcall %< a b)`
+with the operands **silently reversed**. No such call survives expansion today, but that
+invariant lives in a *different pass*, and the failure mode is a wrong answer rather than an
+error.
+
+The pairwise rule consequently exists in two representations, which must agree: `cmp-pair`
+(`src/passes/expand.ss`) states it in **surface syntax** for operator position, and
+`cmp-pair-il` (`src/parse.ss`) states it in **IL** for the eta. They cross-reference each
+other; keep them in step.
 
 ### 6. Universality and the REPL — the "known" sets
 
@@ -414,6 +444,43 @@ all go through it, so refilling a buffer would be one accessor's business.
   directory operations. Adjacent, not included.
 - **The input operations require their port argument.** R7RS lets it default to
   `(current-input-port)`; here `(read-char p)` is the only spelling.
+
+---
+
+## The numeric primitives (change: `numeric-conformance`)
+
+Seventeen `%`-ops added in **one** staged bootstrap, for the three places R7RS §6.2 needs C.
+None is integrable — every one is wrapped by Scheme, and that is deliberate.
+
+| group | ops | wrapped by |
+|---|---|---|
+| classification | `%finite?` `%nan?` | `rational?` in the prelude; `finite?`/`nan?`/`infinite?` in `(scheme inexact)` |
+| rounding | `%flo-floor` `%flo-ceiling` `%flo-truncate` `%flo-round` | `floor` `ceiling` `truncate` `round` in the prelude |
+| libm | `%sqrt` `%exp` `%log` `%sin` `%cos` `%tan` `%asin` `%acos` `%atan` `%atan2` `%pow` | `(scheme inexact)`; `%pow` also serves the prelude's `expt` |
+
+Three things worth knowing about them:
+
+- **Why they are internal, not integrable.** An integrable name is universally available with
+  no import. R7RS puts `sqrt`/`sin`/`log` behind `(import (scheme inexact))`, so making them
+  integrable would put them in scope for every program — including one that wants to define
+  its own `sqrt`. Wrapping is what keeps the surface honest; verified by the suite, where
+  `sqrt` is an unbound variable without the import.
+- **The rounding ops take the FLONUM arm only.** An exact integer is already rounded, so
+  `(floor n)` returns it unchanged and never calls in. That is both the R7RS exactness rule and
+  the reason `(floor 1e30)` does not raise an overflow: the inexact arm stays in `double`
+  instead of routing a large magnitude through the fixnum range. `%flo-round` is `rint`
+  (round-half-to-**even**); `floor(x + 0.5)` would get `2.5` and `0.49999999999999994` wrong.
+- **Out-of-domain follows IEEE, not a trap.** `(sqrt -1.0)`, `(log -1.0)`, `(asin 2.0)` are
+  NaN; `(log 0.0)` and `(exp 1000.0)` are infinities. Emit is real-only so no complex result is
+  available, R7RS §6.2.3 permits the inexact non-finite answer, and a NaN stays testable with
+  `nan?` where a trap — being uncatchable — would end the program.
+
+**Cost, measured.** The `declare` header is emitted unconditionally for the whole prim table,
+so these added +34 lines to every demo's IR (17 declares × the two headers per demo IR) whether
+a program calls them or not. In a delivered `emit build` executable the C functions cost only
+**+416 B** (LTO drops the unreferenced ones), but `build/schemec` grew **+17,744 B (+3.2%)**
+because it links `runtime.c` without `-ffunction-sections`/`--gc-sections`. Recorded alongside
+`docs/PERFORMANCE.md` P8.
 
 ---
 

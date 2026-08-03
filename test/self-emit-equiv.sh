@@ -35,6 +35,30 @@ check closure-cap '(letrec ([make (lambda (n) (lambda (x) (+ x n)))]) ((make 10)
 check recursion   '(letrec ([fact (lambda (n) (if (= n 0) 1 (* n (fact (- n 1)))))]) (fact 5))'
 check apply       '(letrec ([f (lambda (a b) (+ a b))]) (apply f (quote (3 4))))'
 
+# Flonum literals (change: numeric-conformance, design D1 / GitHub issue #24).
+#
+# This suite could not see #24: every case above is exact, and the emitter used to
+# render a flonum literal with the HOST's number->string.  The two hosts print the
+# same shortest-round-trip DIGITS with different framing -- Chez `100.0`/`1e15`/
+# `5e-324|1` vs Emit's %g loop `1e+02`/`1e+15`/`5e-324` -- so the IR text diverged
+# by door, and self-hosted the `1e+02` form was not even valid LLVM (an integer
+# constant in a `double` position).  Byte equality here is the assertion that the
+# canonical formatter, not the host printer, decides the text.
+#
+# The spread is chosen for the framing disagreements: an integral value (no '.' in
+# Emit's output), the exponent threshold in both directions, a subnormal (where Chez
+# appends `|BITS`), and a 17-significant-digit value.
+check flo-boxed-integral  '(letrec ([f (lambda (x) x)]) (f 100.0))'
+check flo-unboxed-exp     '(letrec ([f (lambda (x) (* x 2.0))]) (f 100.0))'
+check flo-large           '(letrec ([f (lambda (x) (+ x 1.0))]) (f 1e15))'
+check flo-huge            '(letrec ([f (lambda (x) (* x 10.0))]) (f 1e308))'
+check flo-small           '(letrec ([f (lambda (x) (* x 1.0))]) (f 1e-7))'
+check flo-tiny-positional '(letrec ([f (lambda (x) (* x 1.0))]) (f 0.000123))'
+check flo-subnormal       '(letrec ([f (lambda (x) x)]) (f 5e-324))'
+check flo-17-digits       '(letrec ([f (lambda (x) (* x 1.0))]) (f 1.4142135623730951))'
+check flo-negative        '(letrec ([f (lambda (x) (+ x -2.5))]) (f -0.9))'
+check flo-mixed-region    '(letrec ([f (lambda (x) (* (+ x 100.0) 1e15))]) (f 2.5))'
+
 echo
 echo "  $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

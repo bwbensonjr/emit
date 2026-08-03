@@ -226,8 +226,139 @@
   (let loop ([i 0] [acc (quote ())])
     (if (= i n) (reverse acc) (loop (+ i 1) (cons i acc)))))
 
-;; the larger of two numbers.
-(define (max a b) (if (< a b) b a))
+;;; --- max / min (R7RS 6.2.6) -----------------------------------------------
+;;; Variadic over one or more numbers (change: numeric-conformance, design D6 /
+;;; GitHub issue #26 -- `max` used to be strictly binary and `min` did not exist).
+;;;
+;;; R7RS requires INEXACTNESS CONTAGION: if any argument is inexact the result is
+;;; inexact, even when the argument that WON the comparison is exact.  That second
+;;; half is the one a naive implementation gets wrong -- `(max 3.0 4)` is 4.0, not 4
+;;; -- so the winner and the exactness are tracked separately: the fold carries a
+;;; flag for "some argument was inexact" and the conversion happens once, at the end.
+;;; Comparison itself is by numeric value across the exactness boundary, which `<`
+;;; already does.
+;;; The flag is `inex`, NOT `inexact?`: naming it after the predicate would shadow
+;;; the predicate this very fold calls, and the shadowed call would ask a boolean.
+(define (%minmax-fold pick xs best inex)
+  (if (null? xs)
+      (if inex (exact->inexact best) best)
+      (%minmax-fold pick (cdr xs) (pick best (car xs))
+                    (if inex #t (inexact? (car xs))))))
+(define (%minmax pick a rest)
+  (%minmax-fold pick rest a (inexact? a)))
+(define (max a . rest) (%minmax (lambda (x y) (if (< x y) y x)) a rest))
+(define (min a . rest) (%minmax (lambda (x y) (if (< y x) y x)) a rest))
+
+;;; --- the R7RS 6.2 numeric inventory (change: numeric-conformance) -----------
+;;; Emit's tower is two types -- a 61-bit exact integer and a double -- which R7RS
+;;; 6.2.3 explicitly permits ("an implementation in which exact numbers are always
+;;; integer").  Everything below is Scheme over the existing primitives; only what
+;;; genuinely needs C (the flonum arm of the rounding family, classification, libm)
+;;; is a `%`-op, which is what kept the staged-bootstrap cost proportional.
+;;;
+;;; The 6.2.3 exact-for-exact guarantee is honored throughout: abs, ceiling, floor,
+;;; gcd, lcm, max, min, round, square, truncate and the division family all return
+;;; exact results for exact arguments.  A result that leaves the fixnum range traps
+;;; through the existing overflow diagnostic -- (abs FIXNUM_MIN) among them, whose
+;;; magnitude is one past the range -- inherited from `+ - *`, not re-implemented.
+
+;;; Type predicates apply to ANY object and answer #f for a non-number (R7RS 6.2.6),
+;;; unlike the arithmetic predicates below them, which require a number.
+(define (complex? n) (number? n))
+(define (exact-integer? n) (if (exact? n) (integer? n) #f))
+;;; `rational?` is the finite reals: every exact integer, and a flonum that is
+;;; neither an infinity nor a NaN.  %finite? is the runtime's isfinite, so there is
+;;; one definition of finiteness shared with (scheme inexact)'s `finite?`.
+(define (rational? n) (if (number? n) (%finite? n) #f))
+
+;;; Sign and parity require a number; `<` and `remainder` supply the trap, and
+;;; remainder's integrality guard is what makes (odd? 7.5) an error rather than an
+;;; answer.
+(define (positive? n) (< 0 n))
+(define (negative? n) (< n 0))
+(define (even? n) (= 0 (remainder n 2)))
+(define (odd? n) (if (= 0 (remainder n 2)) #f #t))
+
+(define (abs n) (if (< n 0) (- 0 n) n))
+(define (square n) (* n n))
+
+;;; gcd/lcm: variadic, non-negative, exact for exact.  Identities are 0 and 1, so
+;;; the no-argument cases fall out of the fold rather than being special-cased.
+(define (%gcd2 a b) (if (= b 0) a (%gcd2 b (remainder a b))))
+(define (%gcd-fold ns acc)
+  (if (null? ns) acc (%gcd-fold (cdr ns) (%gcd2 (abs (car ns)) (abs acc)))))
+(define (%lcm-fold ns acc)
+  (if (null? ns)
+      acc
+      (let ([a (abs (car ns))])
+        (if (= a 0) 0 (%lcm-fold (cdr ns) (quotient (* acc a) (%gcd2 acc a)))))))
+(define (gcd . ns) (%gcd-fold ns 0))
+(define (lcm . ns) (%lcm-fold ns 1))
+
+;;; expt.  An exact base with a non-negative exact integer exponent stays EXACT, by
+;;; repeated squaring -- so (expt 2 60) is exact and (expt 2 61) traps on overflow
+;;; rather than silently going inexact.  A negative exponent has no exact value
+;;; here (no rationals), so it returns the inexact one, which is the same 6.2.3
+;;; licence `/` already uses for a non-integral exact quotient.  Any inexact
+;;; operand routes to %pow (libm).  (expt 0 0) is 1, per 6.2.6.
+(define (%expt-exact b e acc)
+  (if (= e 0)
+      acc
+      (%expt-exact (* b b) (quotient e 2) (if (odd? e) (* acc b) acc))))
+(define (expt b e)
+  (if (exact? e)
+      (if (< e 0)
+          (%pow b e)
+          (if (exact? b) (%expt-exact b e 1) (%expt-exact b e 1.0)))
+      (%pow b e)))
+
+;;; exact-integer-sqrt: Newton's method on exact integers, returning TWO values --
+;;; the root and the remainder -- through the same `values` the rest of the library
+;;; uses.  Stays exact end to end, which is the point of it existing alongside
+;;; (scheme inexact)'s `sqrt`.
+(define (%isqrt-loop n g)
+  (let ([g2 (quotient (+ g (quotient n g)) 2)])
+    (if (< g2 g) (%isqrt-loop n g2) g)))
+(define (%isqrt n) (if (= n 0) 0 (%isqrt-loop n n)))
+(define (exact-integer-sqrt n)
+  (let ([s (%isqrt n)]) (values s (- n (* s s)))))
+
+;;; Rounding.  An exact integer is already rounded, so it is returned UNCHANGED --
+;;; which is both the R7RS exactness rule and the reason a large-magnitude flonum
+;;; never routes through the fixnum range: the inexact arm stays in double.
+;;; `round` is round-half-to-EVEN (%flo-round is rint), so 2.5 -> 2.0 and 3.5 -> 4.0.
+(define (floor n)    (if (exact? n) n (%flo-floor n)))
+(define (ceiling n)  (if (exact? n) n (%flo-ceiling n)))
+(define (truncate n) (if (exact? n) n (%flo-truncate n)))
+(define (round n)    (if (exact? n) n (%flo-round n)))
+
+;;; The R7RS 6.2.6 division operators, over the truncating and flooring primitives
+;;; that already exist -- so all six inherit their argument-domain rules (an
+;;; integral flonum is accepted with contagion, anything else non-integer traps)
+;;; and their division-by-zero trap, with no second implementation to keep in step.
+;;; floor-quotient is derived rather than branched on signs: subtracting the
+;;; flooring remainder makes the division exact, so the truncating quotient of the
+;;; difference IS the flooring quotient.
+(define (truncate-quotient n d) (quotient n d))
+(define (truncate-remainder n d) (remainder n d))
+(define (floor-remainder n d) (modulo n d))
+(define (floor-quotient n d) (quotient (- n (modulo n d)) d))
+(define (truncate/ n d) (values (quotient n d) (remainder n d)))
+(define (floor/ n d) (values (floor-quotient n d) (modulo n d)))
+
+;;; numerator/denominator, restricted to integer-VALUED arguments: n/1 for an exact
+;;; integer and n/1.0 for an integral flonum.  R7RS defines them over rationals,
+;;; which Emit does not represent, and 6.2.3 sanctions restricting the domain -- a
+;;; best-effort rational reconstruction of a double would be misleading, not useful.
+(define (numerator n)
+  (if (integer? n) n (error "numerator: not an integer" n)))
+(define (denominator n)
+  (if (integer? n) (if (exact? n) 1 1.0) (error "denominator: not an integer" n)))
+
+;;; The R7RS spellings of the exactness conversions.  The R5RS names remain, so
+;;; both are available and neither is deprecated here.
+(define (inexact n) (exact->inexact n))
+(define (exact n) (inexact->exact n))
 
 ;; THE unspecified value -- one distinguished immediate, distinct from #f and '() and
 ;; truthy (change: unspecified-value).  `(if #f #f)` is the two-armed form, so the parser
@@ -278,23 +409,85 @@
 ;;; handled exactly, INCLUDING the most-negative fixnum -- whose magnitude has no
 ;;; positive fixnum representation, so a negate-first approach would overflow.
 (define (ns-digits m acc)                ; m <= 0 -> chars of |m|, prepended to acc
-  (let ([ch (integer->char (+ 48 (- 0 (remainder m 10))))]
-        [rest (quotient m 10)])
+  (ns-digits-radix m 10 acc))
+;;; The same peel, in any supported radix (change: numeric-conformance).  Digits
+;;; above 9 are lowercase, which is what the reader's rd-hex-digit accepts, so the
+;;; radix forms round-trip too.
+(define (%ns-digit-char d)
+  (if (< d 10) (integer->char (+ 48 d)) (integer->char (+ 87 d))))   ; 87 + 10 = #\a
+(define (ns-digits-radix m r acc)        ; m <= 0 -> chars of |m| in radix r
+  (let ([ch (%ns-digit-char (- 0 (remainder m r)))]
+        [rest (quotient m r)])
     (if (= rest 0)
         (cons ch acc)
-        (ns-digits rest (cons ch acc)))))
+        (ns-digits-radix rest r (cons ch acc)))))
 ;;; Flonums route to the runtime formatter (%flonum->string: shortest round-
 ;;; trippable decimal, always with a '.').  `exact?` gates it -- exact? is true
 ;;; only for fixnums, so the integer path is unchanged; the flonum branch is
 ;;; never reached with a fixnum (and so is dead during the bootstrap regen, where
 ;;; %flonum->string is not yet a known primcall).  (change: inexact-numbers)
-(define (number->string n)
-  (if (exact? n)
-      (cond
-        [(= n 0) "0"]
-        [(< n 0) (list->string (cons #\- (ns-digits n (quote ()))))]
-        [else    (list->string (ns-digits (- 0 n) (quote ())))])
-      (%flonum->string n)))
+;;; The optional radix argument (change: numeric-conformance) takes 2, 8, 10, or 16
+;;; for an exact integer.  An inexact number requires radix 10: R7RS 6.2.6 permits
+;;; an error for the other radices, which is better than inventing a rendering the
+;;; reader could not read back.
+(define (%radix-ok? r)
+  (if (= r 10) #t (if (= r 16) #t (if (= r 8) #t (= r 2)))))
+(define (number->string n . rest)
+  (let ([r (if (null? rest) 10 (car rest))])
+    (if (%radix-ok? r)
+        (if (exact? n)
+            (cond
+              [(= n 0) "0"]
+              [(< n 0) (list->string (cons #\- (ns-digits-radix n r (quote ()))))]
+              [else    (list->string (ns-digits-radix (- 0 n) r (quote ())))])
+            (if (= r 10)
+                (%flonum->string n)
+                (error "number->string: radix must be 10 for an inexact number" r)))
+        (error "number->string: unsupported radix" r))))
+
+;;; string->number: the INVERSE, and deliberately built from the reader's own
+;;; classifiers (rd-numeric?/rd-flonum?/rd-parse-int) rather than a second numeric
+;;; grammar that could drift from the one the reader accepts.  Returns #f -- not an
+;;; error -- for text that is not a number, per R7RS 6.2.6.  When the radix
+;;; prefixes (#x/#b/#o/#e/#i) land in the reader, this inherits them for free.
+(define (%digit-in-radix c r)            ; digit value, or #f if not a digit in r
+  (let ([v (let ([k (char->integer c)])
+             (cond
+               [(and (< 47 k) (< k 58)) (- k 48)]      ; 0-9
+               [(and (< 96 k) (< k 123)) (- k 87)]     ; a-z
+               [(and (< 64 k) (< k 91)) (- k 55)]      ; A-Z
+               [else 99]))])
+    (if (< v r) v #f)))
+(define (%radix-digits s i m r acc)      ; accumulate DOWNWARD (see rd-digits-neg)
+  (if (< i m)
+      (let ([d (%digit-in-radix (string-ref s i) r)])
+        (if d (%radix-digits s (+ i 1) m r (- (* acc r) d)) #f))
+      acc))
+(define (%string->int s r)               ; signed integer in radix r, or #f
+  (let ([m (string-length s)])
+    (if (= m 0)
+        #f
+        (let ([c0 (char->integer (string-ref s 0))])
+          (if (= c0 45)                                  ; leading '-'
+              (if (< 1 m) (%radix-digits s 1 m r 0) #f)
+              (let ([start (if (= c0 43) 1 0)])           ; optional leading '+'
+                (if (< start m)
+                    (let ([neg (%radix-digits s start m r 0)])
+                      (if neg (- 0 neg) #f))
+                    #f)))))))
+(define (string->number s . rest)
+  (let ([r (if (null? rest) 10 (car rest))])
+    (if (%radix-ok? r)
+        (if (= r 10)
+            ;; radix 10 goes through the reader's own classifiers, so anything the
+            ;; reader calls a number is a number here, with the same value.
+            (cond
+              [(rd-numeric? s) (rd-parse-int s)]
+              [(rd-nonfinite s)]              ; +inf.0 / -inf.0 / +nan.0, as the reader does
+              [(rd-flonum? s) (%string->flonum s)]
+              [else #f])
+            (%string->int s r))
+        (error "string->number: unsupported radix" r))))
 
 ;;; --- exceptions: error objects, raise, guard (r7rs-exceptions-subset) ------
 ;;; R7RS `(error message irritant ...)` builds a CATCHABLE error object and raises
@@ -701,10 +894,26 @@
                             (= i4 m)                      ; consumed the whole token
                             (or had-dot (< i3 i4)))))))))))))   ; a dot OR an exponent
 
+;;; The three non-finite tokens (change: numeric-conformance, design D8 / GitHub
+;;; issue #25).  The PRINTER has always emitted these -- (/ 1.0 0.0) prints as
+;;; +inf.0 -- but rd-flonum? requires at least one digit, so they fell through to
+;;; string->symbol and a program could not read back its own output: write/read
+;;; silently turned a number into an identifier.  They are exact literal strings, so
+;;; recognizing them costs one comparison ahead of the classifier.  %string->flonum
+;;; is strtod, which reads "inf"/"nan" (and stops before the ".0"), so the VALUES
+;;; come from the same converter as every other inexact literal rather than from
+;;; arithmetic like (/ 1.0 0.0) that would depend on the host's division.
+(define (rd-nonfinite tok)               ; the value, or #f if not one of the three
+  (cond [(string=? tok "+inf.0") (%string->flonum "inf")]
+        [(string=? tok "-inf.0") (%string->flonum "-inf")]
+        [(string=? tok "+nan.0") (%string->flonum "nan")]
+        [else #f]))
+
 (define (rd-atom s n i)                  ; token -> integer, flonum, or interned symbol
   (let ([j (rd-token-end s n i)])
     (let ([tok (substring s i j)])
       (cons (cond [(rd-numeric? tok) (rd-parse-int tok)]
+                  [(rd-nonfinite tok)]              ; cond's test-only form: the value
                   [(rd-flonum? tok) (%string->flonum tok)]
                   [else (string->symbol tok)])
             j))))
