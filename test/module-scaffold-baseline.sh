@@ -341,6 +341,42 @@
 #     that does not import (scheme inexact) is unaffected in IR and in bytes: a delivered
 #     executable is byte-identical with and without the manifest entry (154,312 B both).
 #     All 80 demos' stdout byte-identical.  No new entries.
+#   scheme-base-declared-surface (GitHub issue #29) -- (scheme base)'s public surface is now
+#     DECLARED (src/prelude-surface.scm) instead of derived from every top-level define, so
+#     it went 213 -> 136 exports (77 internal helpers left the export list and stayed in the
+#     library BODY).  Drift, verified against an 80-demo before/after capture:
+#       PROGRAM half: all 80 demos lost exactly 77 `external global i64` declares -- 6,160
+#         deletions, ZERO additions, zero non-declare changes, zero reordering.  The shape is
+#         pure deletion because the export list is the prelude's defines in SOURCE ORDER
+#         minus a subtracted set, so curating it cannot permute what remains.
+#       LIBRARY half: bootstrap/scheme.base.ll BYTE-IDENTICAL.  Library emission and code
+#         labels key on binding names, not export status (emit-library-batch; the
+#         stable-code-label mangle), so de-exporting a helper is inert for the unit.
+#     Sizes, measured: the shaken Chez AOT door is byte-identical (34,664 / 35,640 / 36,280 B
+#       for the three tree-shaking programs, unchanged), because an unreferenced `external
+#       global` declaration creates no relocation and program-root-internals is
+#       reference-driven, not export-driven.  So this is a namespace/API-commitment change,
+#       NOT a size change -- it is no substitute for docs/PERFORMANCE.md P8.  The COMPILER
+#       binaries do pay for the new declaration table: build/emit +16,512 B (1,375,752 ->
+#       1,392,264), build/schemec unchanged at 589,784 B; committed IR embed.ll +10,776,
+#       embed-repl.ll +11,015, schemec.ll -3,741 (the declaration's own symbols against 77
+#       fewer declares per program module).
+#     All 80 demos' stdout byte-identical.  No new entries.
+#   scheme-base-declared-surface, the renames (same change, second re-record) -- the two
+#     helpers the derived forms expand to were renamed to honest public spellings, since a
+#     macro template is instantiated in the IMPORTER's scope and so publishes whatever name
+#     it mentions: `%with-handler` -> `with-exception-handler` (R7RS 6.11, a conformance
+#     gain) and `%with-parameters` -> `with-parameters` (an extension).  Export COUNT is
+#     unchanged at 136.  Drift, verified against an 80-demo before/after capture: every
+#     changed line mentions one of the renamed names -- 20 lines per demo (10 occurrences:
+#     the global slot, the code label, its definition, the init store, and the loads),
+#     1,632 lines across the 80, and ZERO lines that do not.  Unlike the export curation
+#     above, this one DOES move the library: bootstrap/scheme.base.ll +32 B (512,562 ->
+#     512,594), 16 changed lines, all of them the renamed symbols -- labels are
+#     name-derived (stable-code-label), so a rename shows up in the unit.  The fixed point
+#     needed 2 iterations rather than 1, which is expected when the prelude source itself
+#     changes: the baked *prelude-source* string feeds the next generation's output.
+#     All 80 demos' stdout byte-identical.  No new entries.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

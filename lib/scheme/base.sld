@@ -3,10 +3,150 @@
 ;;; tools/gen-scheme-base.ss -- DO NOT EDIT BY HAND.  Edit src/prelude.scm and
 ;;; regenerate (guarded by test/scheme-base-gen-check.sh).
 ;;;
-;;; The runtime half of the prelude: every prelude procedure is exported; the
-;;; derived-form macros stay in the body (used by the procedures, not exported).
+;;; The runtime half of the prelude: the DECLARED public surface is exported
+;;; (src/prelude-surface.scm -- every top-level define minus the private set);
+;;; the private helpers and the derived-form macros stay in the body, where the
+;;; exported procedures still call them.  One export per line, so a change to
+;;; the public surface is a reviewable one-line diff.
 (define-library (scheme base)
-  (export list caar cadr cdar cddr caaar caadr cadar caddr cdaar cdadr cddar cdddr length reverse %append2 append %map1 %any-null? %mapn map memq memv assq member assoc filter fold-left fold-right %for-each1 %for-eachn for-each andmap memp cadddr list? zero? list-tail list-ref list-head make-list iota %minmax-fold %minmax max min complex? exact-integer? rational? positive? negative? even? odd? abs square %gcd2 %gcd-fold %lcm-fold gcd lcm %expt-exact expt %isqrt-loop %isqrt exact-integer-sqrt floor ceiling truncate round truncate-quotient truncate-remainder floor-remainder floor-quotient truncate/ floor/ numerator denominator inexact exact void string %str-concat chr-cmp char=? char<? char>? char<=? char>=? string->list ns-digits %ns-digit-char ns-digits-radix %radix-ok? number->string %digit-in-radix %radix-digits %string->int string->number error *winds* *handlers* %unwind-to dynamic-wind call-with-current-continuation call/cc %with-handler raise error-object? error-object-message error-object-irritants make-parameter %with-parameters list->vector vector list->bytevector bytevector values call-with-values %ht-initial-buckets %ht-load-factor make-hash-table hash-table? %ht-count %ht-buckets %ht-set-count! %ht-set-buckets! %ht-index %ht-assoc %ht-remove hash-table-ref/default hash-table-contains? hash-table-ref hash-table-set! hash-table-delete! %ht-grow! hash-table-size %ht-fold-buckets hash-table->alist hash-table-keys hash-table-values rd-ws? rd-digit? rd-delim? rd-skip-line rd-skip-ws rd-token-end rd-all-digits? rd-numeric? rd-digits rd-digits-neg rd-parse-int rd-dotchar? rd-exp-char? rd-sign-char? rd-scan-digits rd-flonum? rd-nonfinite rd-atom rd-hex-digit rd-hex rd-str-esc rd-string rd-hash rd-char-name rd-char rd-quote rd-quasi rd-unquote rd-dot? rd-append-reverse rd-list rd-datum read-from-string read-all-from-string %port-rtd-cell %port-rtd %make-port port? input-port? output-port? textual-port? port-closed? input-port-open? output-port-open? %check-input-port %check-output-port %port-buf open-input-string open-input-file %port-at-eof? read-char peek-char read-line read-string read open-output-file open-output-string get-output-string flush-output-port close-port close-input-port close-output-port %stdout-port %stderr-port %stdin-port current-output-port current-error-port current-input-port call-with-port with-output-to-file with-input-from-file call-with-output-file call-with-input-file)
+  (export
+    list
+    caar
+    cadr
+    cdar
+    cddr
+    caaar
+    caadr
+    cadar
+    caddr
+    cdaar
+    cdadr
+    cddar
+    cdddr
+    length
+    reverse
+    append
+    map
+    memq
+    memv
+    assq
+    member
+    assoc
+    filter
+    fold-left
+    fold-right
+    for-each
+    andmap
+    memp
+    cadddr
+    list?
+    zero?
+    list-tail
+    list-ref
+    list-head
+    make-list
+    iota
+    max
+    min
+    complex?
+    exact-integer?
+    rational?
+    positive?
+    negative?
+    even?
+    odd?
+    abs
+    square
+    gcd
+    lcm
+    expt
+    exact-integer-sqrt
+    floor
+    ceiling
+    truncate
+    round
+    truncate-quotient
+    truncate-remainder
+    floor-remainder
+    floor-quotient
+    truncate/
+    floor/
+    numerator
+    denominator
+    inexact
+    exact
+    void
+    string
+    char=?
+    char<?
+    char>?
+    char<=?
+    char>=?
+    string->list
+    number->string
+    string->number
+    error
+    dynamic-wind
+    call-with-current-continuation
+    call/cc
+    with-exception-handler
+    raise
+    error-object?
+    error-object-message
+    error-object-irritants
+    make-parameter
+    with-parameters
+    list->vector
+    vector
+    list->bytevector
+    bytevector
+    values
+    call-with-values
+    make-hash-table
+    hash-table?
+    hash-table-ref/default
+    hash-table-contains?
+    hash-table-ref
+    hash-table-set!
+    hash-table-delete!
+    hash-table-size
+    hash-table->alist
+    hash-table-keys
+    hash-table-values
+    rd-skip-ws
+    rd-token-end
+    read-from-string
+    read-all-from-string
+    port?
+    input-port?
+    output-port?
+    textual-port?
+    port-closed?
+    input-port-open?
+    output-port-open?
+    open-input-string
+    open-input-file
+    read-char
+    peek-char
+    read-line
+    read-string
+    read
+    open-output-file
+    open-output-string
+    get-output-string
+    flush-output-port
+    close-port
+    close-input-port
+    close-output-port
+    current-output-port
+    current-error-port
+    current-input-port
+    call-with-port
+    with-output-to-file
+    with-input-from-file
+    call-with-output-file
+    call-with-input-file
+    )
   (begin
     (define-syntax and (syntax-rules () ((_) #t) ((_ e) e) ((_ e1 e2 ...) (if e1 (and e2 ...) #f))))
     (define-syntax or (syntax-rules () ((_) #f) ((_ e) e) ((_ e1 e2 ...) (let ((t e1)) (if t t (or e2 ...))))))
@@ -122,16 +262,16 @@
     (define (dynamic-wind before thunk after) (before) (set! *winds* (cons (cons before after) *winds*)) (let ((r (thunk))) (set! *winds* (cdr *winds*)) (after) r))
     (define (call-with-current-continuation f) (let ((saved-winds *winds*)) (cdr (%run-guarded (lambda () (let ((id (%escape-frame))) (f (lambda (v) (if (%escape-live? id) (begin (%unwind-to saved-winds) (%escape-to id v)) #f) (error (quote call/cc) "continuation invoked outside its extent")))))))))
     (define (call/cc f) (call-with-current-continuation f))
-    (define (%with-handler handler thunk) (let ((saved *handlers*)) (dynamic-wind (lambda () (set! *handlers* (cons handler saved))) thunk (lambda () (set! *handlers* saved)))))
+    (define (with-exception-handler handler thunk) (let ((saved *handlers*)) (dynamic-wind (lambda () (set! *handlers* (cons handler saved))) thunk (lambda () (set! *handlers* saved)))))
     (define (raise obj) (if (null? *handlers*) (%raise obj) (let ((h (car *handlers*)) (saved *handlers*)) (set! *handlers* (cdr *handlers*)) (h obj) (set! *handlers* saved) (%raise obj))))
     (define (error-object? x) (%error-object? x))
     (define (error-object-message x) (%error-object-message x))
     (define (error-object-irritants x) (%error-object-irritants x))
-    (define-syntax guard (syntax-rules () ((_ (var clause ...) body ...) (let ((%gres (call-with-current-continuation (lambda (%gk) (%with-handler (lambda (%gobj) (%gk (cons #t %gobj))) (lambda () (cons #f (begin body ...)))))))) (if (car %gres) (let ((var (cdr %gres))) (%guard-clauses var clause ...)) (cdr %gres))))))
+    (define-syntax guard (syntax-rules () ((_ (var clause ...) body ...) (let ((%gres (call-with-current-continuation (lambda (%gk) (with-exception-handler (lambda (%gobj) (%gk (cons #t %gobj))) (lambda () (cons #f (begin body ...)))))))) (if (car %gres) (let ((var (cdr %gres))) (%guard-clauses var clause ...)) (cdr %gres))))))
     (define-syntax %guard-clauses (syntax-rules (else =>) ((_ v) (raise v)) ((_ v (else e ...)) (begin e ...)) ((_ v (test => proc) rest ...) (let ((gt test)) (if gt (proc gt) (%guard-clauses v rest ...)))) ((_ v (test) rest ...) (let ((gt test)) (if gt gt (%guard-clauses v rest ...)))) ((_ v (test e ...) rest ...) (if test (begin e ...) (%guard-clauses v rest ...)))))
     (define (make-parameter init . conv) (let ((convert (if (null? conv) (lambda (x) x) (car conv))) (cell (%make-vector 1 0))) (%vector-set! cell 0 ((if (null? conv) (lambda (x) x) (car conv)) init)) (lambda args (if (null? args) (%vector-ref cell 0) (if (null? (cdr args)) (%vector-set! cell 0 (convert (car args))) (%vector-set! cell 0 (car args)))))))
-    (define (%with-parameters params vals thunk) (let ((olds (map (lambda (p) (p)) params))) (dynamic-wind (lambda () (for-each (lambda (p v) (p v)) params vals)) thunk (lambda () (for-each (lambda (p v) (p v #f)) params olds)))))
-    (define-syntax parameterize (syntax-rules () ((_ ((p v) ...) body ...) (%with-parameters (list p ...) (list v ...) (lambda () body ...)))))
+    (define (with-parameters params vals thunk) (let ((olds (map (lambda (p) (p)) params))) (dynamic-wind (lambda () (for-each (lambda (p v) (p v)) params vals)) thunk (lambda () (for-each (lambda (p v) (p v #f)) params olds)))))
+    (define-syntax parameterize (syntax-rules () ((_ ((p v) ...) body ...) (with-parameters (list p ...) (list v ...) (lambda () body ...)))))
     (define (list->vector xs) (let ((v (make-vector (length xs) 0))) (let loop ((xs xs) (i 0)) (if (null? xs) v (begin (vector-set! v i (car xs)) (loop (cdr xs) (+ i 1)))))))
     (define (vector . xs) (list->vector xs))
     (define (list->bytevector bs) (let ((bv (make-bytevector (length bs) 0))) (let loop ((bs bs) (i 0)) (if (null? bs) bv (begin (bytevector-u8-set! bv i (car bs)) (loop (cdr bs) (+ i 1)))))))

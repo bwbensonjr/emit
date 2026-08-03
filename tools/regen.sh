@@ -44,7 +44,8 @@ CORE_FLAT="src/match.scm src/util.scm src/parse.ss \
            src/passes/expand.ss src/passes/recognize-let.ss \
            src/passes/convert-assignments.ss src/passes/simplify.ss \
            src/passes/convert-closures.ss \
-           src/passes/lower.ss src/emit.ss src/core.ss src/dump.ss"
+           src/passes/lower.ss src/emit.ss src/prelude-surface.scm src/core.ss \
+           src/dump.ss"
 
 mkdir -p build bootstrap
 

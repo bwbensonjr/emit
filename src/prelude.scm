@@ -372,11 +372,14 @@
 (define (string . cs) (list->string cs))
 
 ;;; --- string-append over a list (self-host-gap-sweep G8) --------------------
-;;; Compiler support for `string-append` in value position: the parser eta-expands
-;;; a bare `string-append` to `(lambda gs (%str-concat gs))`, so `(apply
-;;; string-append xs)` works for any arity.  Written in the common subset -- each
-;;; `(string-append a b)` here is 2-arg, i.e. native under Chez and the binary
-;;; primcall under Emit -- so the prelude still loads and runs under Chez.
+;;; HISTORICAL: this was the callee of the parser's eta for a bare `string-append`
+;;; in value position.  That special case was retired in favour of the
+;;; self-contained `str` fold over raw primcalls (see `*integrable*` in
+;;; src/parse.ss), so nothing calls this now; it is private (issue #29) and kept
+;;; only because it is harmless and the fold's shape is easier to read beside it.
+;;; Written in the common subset -- each `(string-append a b)` here is 2-arg, i.e.
+;;; native under Chez and the binary primcall under Emit -- so the prelude still
+;;; loads and runs under Chez.
 (define (%str-concat xs)
   (if (null? xs) "" (string-append (car xs) (%str-concat (cdr xs)))))
 
@@ -563,10 +566,15 @@
 
 (define (call/cc f) (call-with-current-continuation f))
 
-;;; Install HANDLER for the dynamic extent of THUNK.  The push/pop rides
-;;; dynamic-wind, so an escape out of the thunk restores the chain for free.
-;;; (Rung 2 exposes this as `with-exception-handler`; it needs no new machinery.)
-(define (%with-handler handler thunk)
+;;; Install HANDLER for the dynamic extent of THUNK, returning the thunk's value.
+;;; The push/pop rides dynamic-wind, so an escape out of the thunk restores the
+;;; chain for free.  This IS R7RS 6.11's `with-exception-handler` -- same signature,
+;;; same semantics -- and it is spelled that way rather than `%…` because `guard`'s
+;;; template calls it in the IMPORTER's scope, so the name is published either way
+;;; (change: scheme-base-declared-surface, issue #29); publishing the R7RS spelling
+;;; is a conformance gain instead of an internal leak.  `raise-continuable` is still
+;;; absent: a handler that returns normally falls through to the unhandled path.
+(define (with-exception-handler handler thunk)
   (let ((saved *handlers*))
     (dynamic-wind
       (lambda () (set! *handlers* (cons handler saved)))
@@ -609,7 +617,7 @@
      (let ((%gres
             (call-with-current-continuation
               (lambda (%gk)
-                (%with-handler
+                (with-exception-handler
                   (lambda (%gobj) (%gk (cons #t %gobj)))
                   (lambda () (cons #f (begin body ...))))))))
        (if (car %gres)
@@ -642,8 +650,12 @@
               (%vector-set! cell 0 (car args)))))))
 
 ;;; parameterize rides dynamic-wind, so restoration on a normal exit, on an escape,
-;;; and on a raise all come from one place (design D3).
-(define (%with-parameters params vals thunk)
+;;; and on a raise all come from one place (design D3).  Unsigiled and published as an
+;;; EXTENSION (R7RS has no name for it): `parameterize`'s template calls it in the
+;;; importer's scope, so it is exported either way (change:
+;;; scheme-base-declared-surface, issue #29), and an honest 3-line procedure taking
+;;; (params vals thunk) is better than a `%`-name that pretends to be private.
+(define (with-parameters params vals thunk)
   (let ((olds (map (lambda (p) (p)) params)))
     (dynamic-wind
       (lambda () (for-each (lambda (p v) (p v)) params vals))
@@ -653,7 +665,7 @@
 (define-syntax parameterize
   (syntax-rules ()
     ((_ ((p v) ...) body ...)
-     (%with-parameters (list p ...) (list v ...) (lambda () body ...)))))
+     (with-parameters (list p ...) (list v ...) (lambda () body ...)))))
 
 ;;; --- vector constructors (vectors change) ---------------------------------
 ;;; make-vector/vector-ref/vector-set!/vector-length/vector? are primitives;

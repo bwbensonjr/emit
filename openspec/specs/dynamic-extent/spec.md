@@ -90,6 +90,11 @@ The language SHALL provide `parameterize`, binding one or more parameter objects
 the dynamic extent of its body and restoring the previous values on exit. Restoration SHALL occur on
 **every** exit, including an escape and an unhandled raise, on the same terms as `dynamic-wind`.
 
+The procedure `parameterize` expands into SHALL be `with-parameters`, taking a list of parameter
+objects, a list of values, and a thunk — a declared **extension** of `(scheme base)` (R7RS has no name
+for it), so `parameterize` mentions only public names and the restoration logic lives in exactly one
+place.
+
 #### Scenario: A parameter returns its value when called
 
 - **WHEN** a program evaluates `(let ((p (make-parameter 10))) (p))`
@@ -119,6 +124,43 @@ the dynamic extent of its body and restoring the previous values on exit. Restor
   receiver calls it
 - **THEN** the parameter's current value is returned, so a parameter is substitutable for a plain
   accessor at the call site
+
+#### Scenario: The binding procedure is callable directly
+
+- **WHEN** a program calls `with-parameters` with a computed list of parameters and values and a
+  thunk
+- **THEN** the parameters hold those values for the thunk's dynamic extent and are restored on exit,
+  identically to `parameterize`
+
+### Requirement: with-exception-handler is a named, public procedure
+
+The language SHALL provide `with-exception-handler`, taking a handler procedure and a thunk, which
+installs the handler as the current exception handler for the dynamic extent of the thunk and returns
+the thunk's value. Installation and removal SHALL ride `dynamic-wind`, so an escape or a raise out of
+the thunk restores the previous handler chain. `guard` SHALL be expressed in terms of this procedure
+rather than a differently-spelled internal one, and the name SHALL be part of `(scheme base)`'s
+declared public surface — it is R7RS's own spelling for exactly this operation.
+
+`raise-continuable` remains unimplemented; a handler that returns normally SHALL fall through to the
+unhandled path, as before.
+
+#### Scenario: A handler installed by with-exception-handler sees a raised object
+
+- **WHEN** a program calls `with-exception-handler` with a handler that escapes to a captured
+  continuation, and the thunk raises
+- **THEN** the handler runs with the raised object and control reaches the escape target
+
+#### Scenario: The handler chain is restored on exit
+
+- **WHEN** a program returns normally from `with-exception-handler`, and then raises with no
+  enclosing handler
+- **THEN** the raise takes the unhandled path, showing the installed handler was removed on exit
+
+#### Scenario: guard is built on the public procedure
+
+- **WHEN** a program with no explicit import uses `guard`
+- **THEN** the expansion resolves `with-exception-handler` as a `(scheme base)` export and behaves as
+  specified for `guard`
 
 ### Requirement: guard and raise participate in unwinding
 

@@ -45,6 +45,23 @@ run_unbound no-prelude '(map (lambda (x) x) (list 1 2 3))' --no-prelude
 # a primitive still works under --no-prelude (proves only the prelude was dropped).
 run_val no-prelude-prim '(+ 2 3)' '5' --no-prelude
 
+# The DECLARED surface (change: scheme-base-declared-surface, GitHub issue #29): the
+# prelude's internal helpers are in the library BODY but NOT in the export list, so the
+# auto-import no longer puts them in every program's scope.  This is the issue's own
+# repro -- it printed four procedures before the surface was curated.
+echo "declared surface: prelude internals are not auto-imported"
+run_unbound private-reader '(display rd-atom)'
+run_unbound private-list   '(display %map1)'
+run_unbound private-port   '(display %port-buf)'
+run_unbound private-state  '(display *winds*)'
+# the public names beside them still resolve, and the exported procedures that CALL the
+# private helpers still work -- only the export list shrank, not the library body.
+run_val surface-public  '(list (map car (list (list 1))) (read-from-string "(1 2)"))' \
+        '((1) (1 2))'
+# the two internals that ARE exported on purpose (declared unstable: the REPL's
+# input-completeness probe reuses the reader's lexeme helpers) still resolve.
+run_val surface-unstable '(rd-skip-ws "  x" 3 0)' '2'
+
 echo "emit build AOT (in-process IR emit, clang links all units)"
 compile_val () {  # name  source  expected  [extra emit build args...]
   local name="$1" src="$2" want="$3"; shift 3

@@ -75,6 +75,7 @@ emit.ss            L-code -> textual LLVM IR (opaque ptrs, fastcc, musttail)
 repl-core.ss       interactive session state; assembled into the REPL compiler only
 dump.ss            the --dump stage dumper (%-ops; not linked by the Chez driver)
 prelude.scm        standard library; the source of the (scheme base) module
+prelude-surface.scm  which prelude defines (scheme base) EXPORTS (issue #29)
 util.scm           set ops, deterministic fresh names, unit-qualified mangling
 match.scm          vendored match macro (from akeep/scheme-to-llvm)
 

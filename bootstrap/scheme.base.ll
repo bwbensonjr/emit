@@ -301,13 +301,13 @@ declare {i64, i1} @llvm.smul.with.overflow.i64(i64, i64)
 @"scheme.base:dynamic-wind" = global i64 0
 @"scheme.base:call-with-current-continuation" = global i64 0
 @"scheme.base:call/cc" = global i64 0
-@"scheme.base:%with-handler" = global i64 0
+@"scheme.base:with-exception-handler" = global i64 0
 @"scheme.base:raise" = global i64 0
 @"scheme.base:error-object?" = global i64 0
 @"scheme.base:error-object-message" = global i64 0
 @"scheme.base:error-object-irritants" = global i64 0
 @"scheme.base:make-parameter" = global i64 0
-@"scheme.base:%with-parameters" = global i64 0
+@"scheme.base:with-parameters" = global i64 0
 @"scheme.base:list->vector" = global i64 0
 @"scheme.base:vector" = global i64 0
 @"scheme.base:list->bytevector" = global i64 0
@@ -4778,7 +4778,7 @@ argok693:
   ret i64 17
 }
 
-define fastcc i64 @"scheme.base:code:%with-handler"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:with-exception-handler"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2498 = icmp eq i64 %argc, 2
   br i1 %t2498, label %argok695, label %arityerr694
@@ -5148,7 +5148,7 @@ argok733:
   ret i64 %t2697
 }
 
-define fastcc i64 @"scheme.base:code:%with-parameters"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:with-parameters"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2698 = icmp eq i64 %argc, 3
   br i1 %t2698, label %argok735, label %arityerr734
@@ -12657,10 +12657,10 @@ define i64 @"scheme.base:__init_106"() {
 entry:
   %t2515 = call ptr @rt_alloc_words(i64 1)
   %t2516 = ptrtoint ptr %t2515 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:%with-handler" to i64), ptr %t2515
+  store i64 ptrtoint (ptr @"scheme.base:code:with-exception-handler" to i64), ptr %t2515
   %t2517 = or i64 %t2516, 4
   %t2518 = call i64 @rt_root(i64 %t2517)
-  store i64 %t2518, ptr @"scheme.base:%with-handler"
+  store i64 %t2518, ptr @"scheme.base:with-exception-handler"
   ret i64 17
 }
 
@@ -12723,10 +12723,10 @@ define i64 @"scheme.base:__init_112"() {
 entry:
   %t2724 = call ptr @rt_alloc_words(i64 1)
   %t2725 = ptrtoint ptr %t2724 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:%with-parameters" to i64), ptr %t2724
+  store i64 ptrtoint (ptr @"scheme.base:code:with-parameters" to i64), ptr %t2724
   %t2726 = or i64 %t2725, 4
   %t2727 = call i64 @rt_root(i64 %t2726)
-  store i64 %t2727, ptr @"scheme.base:%with-parameters"
+  store i64 %t2727, ptr @"scheme.base:with-parameters"
   ret i64 17
 }
 

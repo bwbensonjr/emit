@@ -132,18 +132,28 @@
 ;; so the host splits the two modules unambiguously.
 (define *emit-unit-boundary* "; ==EMIT-UNIT-BOUNDARY==\n")
 
-;; Build the (scheme base) define-library form from the prelude's forms: every
-;; top-level (define NAME ...) is exported; ALL prelude forms (procedures + the
-;; derived-form macros) stay in the body, so the library self-compiles and its
-;; macros are lifted into the unit's compile-time macro-env.  Mirrors
-;; tools/gen-scheme-base.ss exactly, but in the portable core -- the baked-in
-;; prelude source is the single source of truth, so no lib/scheme/base.sld read.
-;; Built with cons/list (not quasiquote) to stay in the plainest self-hostable
-;; subset.
+;; The (scheme base) export list: the prelude's top-level (define NAME ...) names in
+;; SOURCE ORDER, minus the declared private set (src/prelude-surface.scm -- the surface
+;; is DECLARED, not derived; change: scheme-base-declared-surface, issue #29).  Order
+;; comes from the prelude, so this and tools/gen-scheme-base.ss produce the same list in
+;; the same order from the same two files -- which is what keeps the run door's program
+;; module byte-identical to the driver's prog.ll.
+(define (scheme-base-export-names prelude-forms)
+  (filter (lambda (n) (and n (not (memq n *scheme-base-private*))))
+          (map define-name prelude-forms)))
+
+;; Build the (scheme base) define-library form from the prelude's forms: the declared
+;; surface is exported; ALL prelude forms (procedures + the derived-form macros) stay in
+;; the body, so the private helpers still exist for the exported procedures that call
+;; them, the library self-compiles, and its macros are lifted into the unit's
+;; compile-time macro-env.  Mirrors tools/gen-scheme-base.ss exactly, but in the portable
+;; core -- the baked-in prelude source is the single source of truth, so no
+;; lib/scheme/base.sld read.  Built with cons/list (not quasiquote) to stay in the
+;; plainest self-hostable subset.
 (define (scheme-base-library-form prelude-forms)
   (cons 'define-library
         (cons '(scheme base)
-              (cons (cons 'export (filter (lambda (x) x) (map define-name prelude-forms)))
+              (cons (cons 'export (scheme-base-export-names prelude-forms))
                     (list (cons 'begin prelude-forms))))))
 
 ;; the prelude's derived-form macros (its compile-time half), merged into a user

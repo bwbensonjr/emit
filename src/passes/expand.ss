@@ -335,8 +335,9 @@
 ;; N-ary `string-append` -> left-folded binary primcalls (the runtime op is
 ;; binary), mirroring the arithmetic fold.  Identities: () -> "", one arg -> that
 ;; arg.  A bare `string-append` in value position is handled separately by the
-;; parser (eta-expansion over the prelude `%str-concat`); this only rewrites the
-;; direct-call form the core uses pervasively in `emit.ss`.
+;; parser (the self-contained `str` fold over raw primcalls -- see *integrable*;
+;; the old eta over the prelude's `%str-concat` was retired).  This only rewrites
+;; the direct-call form the core uses pervasively in `emit.ss`.
 (define (expand-string-append exp1 args)
   (let ([xs (map exp1 args)])
     (cond [(null? xs) ""]
