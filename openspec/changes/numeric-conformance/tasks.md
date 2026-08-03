@@ -217,4 +217,8 @@ writing a temporary arithmetic version to delete later. One staging serves all o
 - [x] 8.6 Close #23, #24, #26 and the non-finite-token half of #25; update #25 to cover only the
       deferred reader prefixes and rational syntax; update #27's inventory table to what remains
       (`rationalize`, radix/exactness prefixes) and note #29 is now the next surface item.
-- [ ] 8.7 Reference the issues from the fixing commits (`Fixes #N`), one commit per task group.
+- [x] 8.7 Reference the issues from the fixing commits (`Fixes #N`), one commit per task group.
+      Seven commits, one per group (the staging and the inventory split group 4/5 as restructured):
+      0812f13 `Fixes #24`, dfe0014 `Fixes #23`, 8bdf8cf `Fixes #26`, ed75577 (the primitive
+      staging, no issue of its own), f0f0d54 `Progresses #27`, 515e173 `Fixes #25 partially`,
+      d4233b4 (specs and docs).
