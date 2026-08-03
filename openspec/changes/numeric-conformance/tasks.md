@@ -197,24 +197,24 @@ writing a temporary arithmetic version to delete later. One staging serves all o
       — plus `(sqrt 4)` being the flonum `2.0` and not the exact `2`.
 - [x] 7.6 Measure `emit run` startup on a trivial program before and after the manifest entry, to
       confirm the eager preload cost stays inside the noise as D5 measured.
-- [ ] 7.7 Regen for the library's call sites (the primitives were already staged in group 4, so
+- [x] 7.7 Regen for the library's call sites (the primitives were already staged in group 4, so
       this is the stage-2 half), full dev-suite run, and re-run the trust-check after committing.
 
 ## 8. Specs, docs, and issue hygiene
 
-- [ ] 8.1 Sync the delta specs into `openspec/specs/` (`core-language`, `aot-codegen`, and the new
+- [x] 8.1 Sync the delta specs into `openspec/specs/` (`core-language`, `aot-codegen`, and the new
       `inexact-math`) and validate.
-- [ ] 8.2 Document the new primitives in `docs/PRIMITIVES.md` — the libm `%`-ops in the
+- [x] 8.2 Document the new primitives in `docs/PRIMITIVES.md` — the libm `%`-ops in the
       permanently-internal section, and the eta-only integrable marker in the value-position eta
       section (§5), including why `>` must not get a direct-call lowering.
-- [ ] 8.3 Update `docs/MODULES.md`: `(scheme inexact)` as a second standard library, the default
+- [x] 8.3 Update `docs/MODULES.md`: `(scheme inexact)` as a second standard library, the default
       manifest now carrying two entries, and the distinction between baked-in `(scheme base)` and a
       manifest-resolved standard library.
-- [ ] 8.4 Record in `docs/PERFORMANCE.md` that `<=`/`>=` still cost two comparisons in operator
+- [x] 8.4 Record in `docs/PERFORMANCE.md` that `<=`/`>=` still cost two comparisons in operator
       position (design D2's rejected alternative C), so the real-primitive option is captured with
       its rationale rather than lost.
-- [ ] 8.5 Refresh `docs/COMPLEXITY.md` via the complexity-catalogue skill.
-- [ ] 8.6 Close #23, #24, #26 and the non-finite-token half of #25; update #25 to cover only the
+- [x] 8.5 Refresh `docs/COMPLEXITY.md` via the complexity-catalogue skill.
+- [x] 8.6 Close #23, #24, #26 and the non-finite-token half of #25; update #25 to cover only the
       deferred reader prefixes and rational syntax; update #27's inventory table to what remains
       (`rationalize`, radix/exactness prefixes) and note #29 is now the next surface item.
 - [ ] 8.7 Reference the issues from the fixing commits (`Fixes #N`), one commit per task group.
