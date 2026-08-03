@@ -28,6 +28,19 @@ check repl-case   $'(case 2 ((1) (quote one)) ((2) 2) (else (quote x)))\n'      
 check repl-cond   $'(cond ((zero? 0) (quote z)) (else (quote n)))\n'                              z
 check repl-shadow $'(define (map f xs) (quote mine))\n(map car (list))\n'                         mine
 
+# The DECLARED surface (change: scheme-base-declared-surface, issue #29): a prelude
+# INTERNAL is not in the session scope, while the public name beside it still is.
+echo "declared surface: internals are not in session scope"
+priv_err="$(printf '(rd-atom "x" 1 1)\n' | $HOST 2>&1 >/dev/null)"
+if echo "$priv_err" | grep -q "unbound variable rd-atom"; then
+  echo "  [OK  ] private-unbound  (rd-atom is not exported)"; pass=$((pass+1))
+else
+  echo "  [FAIL] private-unbound  (rd-atom should be unbound, got: $priv_err)"; fail=$((fail+1))
+fi
+# ... and the exported reader entry point that CALLS it still works, because the
+# helper is present in the library body -- only the export list shrank.
+check repl-reader $'(read-from-string "(1 2 3)")\n' "(1 2 3)"
+
 # --no-prelude: prelude names (procedure AND macro) unbound; primitives still work.
 echo "--no-prelude REPL (empty session)"
 np_proc_err="$(printf '(map (lambda (x) x) (list 1))\n' | $HOST --no-prelude 2>&1 >/dev/null)"

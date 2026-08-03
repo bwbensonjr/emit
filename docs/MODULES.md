@@ -222,6 +222,44 @@ session** (and into the compiler's own build), as if the source began with `(imp
 - Do not edit `lib/scheme/base.sld` by hand; it is generated (`tools/gen-scheme-base.ss`, guarded by
   `test/scheme-base-gen-check.sh`). Edit `src/prelude.scm` and regenerate.
 
+### The public surface is declared, not derived
+
+`src/prelude.scm` says what `(scheme base)` **contains**; `src/prelude-surface.scm` says what it
+**exports** (change: `scheme-base-declared-surface`, GitHub issue #29). The export list is the
+prelude's top-level defines in *source order* minus `*scheme-base-private*` — 136 of 213 today. A
+private helper stays in the library **body**, where the exported procedures still call it; it is
+simply not in scope in a program that imports the library, and not an API commitment. Because the
+auto-import is universal, that distinction is the difference between a namespace and a published
+interface: before this, all 77 helpers (`%map1`, `rd-atom`, `%port-buf`, `*winds*`, …) were in scope
+in every program, unasked.
+
+Both derivations of the export list read that one declaration — `tools/gen-scheme-base.ss` (which
+writes the committed `.sld` for the Chez driver) and `scheme-base-export-names` in `src/core.ss` (the
+portable derivation used by `emit run`/`emit build`/the run door, from the baked-in prelude source) —
+so the two doors cannot disagree. Order comes from the prelude, not from the declaration, so
+regrouping the declaration cannot move emitted IR.
+
+The exported surface has three tiers:
+
+| Tier | What it means |
+|---|---|
+| **R7RS** | names R7RS-small defines. A few R7RS puts in another library — the depth-3+ `cxr` forms are `(scheme cxr)`, `read` is `(scheme read)`, the file procedures are `(scheme file)`. Recorded conformance debt. |
+| **extension** | Emit additions with no R7RS home: `filter`, `fold-left`, `fold-right`, `andmap`, `memp`, `iota`, `list-head`, `void`, `list->bytevector`, `port-closed?`, `read-from-string`, `read-all-from-string`, `with-parameters`, and the `hash-table-*` family. Published deliberately, spelled R6RS/SRFI. |
+| **unstable** | exported *only* because something outside the library must resolve the name — `rd-skip-ws` and `rd-token-end`, which the REPL's input-completeness probe shares with the reader so the two cannot drift. No stability guarantee; each entry records its reason in the declaration. |
+
+Two mechanics follow from how macros expand, and are worth knowing before curating further:
+
+- A macro's template is instantiated in the **importer's** scope, so every name it mentions must be
+  exported under exactly that spelling — which is why `guard` and `parameterize` reach
+  `with-exception-handler` and `with-parameters` as public names.
+- `(rename internal external)` cannot be used to hide such a name: it keys the importer's table by
+  the *external* name, leaving the template's spelling unresolvable.
+
+`lib/scheme/base.sld`'s export list is a committed golden, one name per line, so a surface change is
+a reviewable one-line diff. `test/scheme-base-surface-check.sh` (Chez-free, in `run-all-tests.sh`)
+recomputes it from the two sources: a prelude definition that is neither declared private nor
+published fails the default suite, so adding a helper forces a visibility decision.
+
 ## `(scheme inexact)` — the second standard library
 
 `(scheme inexact)` (change: `numeric-conformance`) is R7RS's inexact-only surface: `finite?`,

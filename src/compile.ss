@@ -47,6 +47,7 @@
 (include "src/passes/convert-closures.ss")
 (include "src/passes/lower.ss")
 (include "src/emit.ss")
+(include "src/prelude-surface.scm")
 (include "src/core.ss")
 
 ;; Port-based reader (Chez I/O; the driver owns effects).  `core.ss` no longer
@@ -467,6 +468,7 @@
     "src/passes/convert-closures.ss"
     "src/passes/lower.ss"
     "src/emit.ss"
+    "src/prelude-surface.scm"
     "src/core.ss"
     "src/compile.ss"))
 

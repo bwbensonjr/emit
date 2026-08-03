@@ -142,6 +142,26 @@ check "an escape out of parameterize restores the previous value" \
 check "a parameter is substitutable for a plain accessor" \
   '(let ((p (make-parameter 5))) ((lambda (get) (get)) p))' '5'
 
+# --- the two procedures the derived forms are built on, now public names ------
+# (change: scheme-base-declared-surface, issue #29.  A macro template is instantiated
+# in the importer's scope, so `guard` and `parameterize` publish their helpers whatever
+# they are called; these are the honest spellings -- R7RS 6.11 for the handler
+# installer, an Emit extension for the parameter binder.)
+check "with-exception-handler runs the handler on a raise" \
+  '(call/cc (lambda (k)
+     (with-exception-handler (lambda (e) (k (list (quote caught) e)))
+                             (lambda () (raise (quote boom))))))' \
+  '(caught boom)'
+check "with-exception-handler returns the thunk value and restores the chain" \
+  '(list (with-exception-handler (lambda (e) 0) (lambda () 41))
+         (guard (e (#t (list (quote outer) e))) (raise (quote after))))' \
+  '(41 (outer after))'
+check "with-parameters binds a computed list for the thunk extent" \
+  '(let ((p (make-parameter 1)) (q (make-parameter 2)))
+     (list (with-parameters (list p q) (list 10 20) (lambda () (list (p) (q))))
+           (p) (q)))' \
+  '((10 20) 1 2)'
+
 # --- guard / raise unchanged -------------------------------------------------
 check "guard still catches and selects a clause" \
   '(guard (e ((symbol? e) (list (quote sym) e)) (else (quote other))) (raise (quote boom)))' \
