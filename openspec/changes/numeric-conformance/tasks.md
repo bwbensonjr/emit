@@ -160,32 +160,42 @@ writing a temporary arithmetic version to delete later. One staging serves all o
 
 ## 6. The non-finite reader tokens (#25, design D8)
 
-- [ ] 6.1 Recognize `+inf.0`, `-inf.0`, `+nan.0` in `rd-atom` (`src/prelude.scm`) before the flonum
+- [x] 6.1 Recognize `+inf.0`, `-inf.0`, `+nan.0` in `rd-atom` (`src/prelude.scm`) before the flonum
       classifier runs, as three exact literal-string cases.
-- [ ] 6.2 Make the same three tokens numbers in the bootstrap reader's `const` path
+- [x] 6.2 Make the same three tokens numbers in the bootstrap reader's `const` path
       (`src/parse.ss`), so the two readers agree on what a datum means.
-- [ ] 6.3 Tests: `(number? (read-from-string "+inf.0"))` and its two siblings; the
+- [x] 6.3 Tests: `(number? (read-from-string "+inf.0"))` and its two siblings; the
       write→read round trip through `(/ 1.0 0.0)`; and a door-parity check that both readers produce
       the same datum for the same source.
-- [ ] 6.4 Confirm the deferred half of #25 is untouched and still reported clearly: `#x1f`, `#e1.0`,
+- [x] 6.4 Confirm the deferred half of #25 is untouched and still reported clearly: `#x1f`, `#e1.0`,
       and `1/2` behave as they do today (no silent change), and the issue records what remains.
 
 ## 7. The (scheme inexact) library (design D5)
 
-- [ ] 7.1 Write `lib/scheme/inexact.sld` by hand — `finite?`, `infinite?`, `nan?`, `exp`, `log`
+- [x] 7.1 Write `lib/scheme/inexact.sld` by hand — `finite?`, `infinite?`, `nan?`, `exp`, `log`
       (optional base), `sin`, `cos`, `tan`, `asin`, `acos`, `atan` (optional second argument),
       `sqrt` — as thin wrappers over the `%`-ops, each accepting exact or inexact arguments and
       returning an inexact result.
-- [ ] 7.2 Add the `(scheme inexact)` entry to `emit-libs.scm` — the first non-`(scheme base)`
+- [x] 7.2 Add the `(scheme inexact)` entry to `emit-libs.scm` — the first non-`(scheme base)`
       library in the default manifest.
-- [ ] 7.3 Verify the library on all three doors: `emit run`, `emit repl`, and an `emit build`
+      This surfaced a design issue D5 had not considered, resolved by adding LAZY MANIFEST
+      PRELOAD to the run door (approved mid-implementation as option A). Eager preload compiled
+      every manifest entry regardless of the program's imports, which with a second library
+      (a) put units a program never imported into its emitted IR, (b) made `--no-prelude` emit a
+      boundary marker it had promised not to, and (c) broke run-door/Chez-driver program-IR
+      parity — a dev→ship fidelity break of the same class this change's group 1 fixed. The run
+      door now walks the transitive closure of the program's imports over the manifest
+      (`preload_user_libraries`, compiler modes 9 + 12); the REPL host stays eager because an
+      interactive session is an open world. All three invariants restored WITH the library in
+      the default manifest, which was impossible before.
+- [x] 7.3 Verify the library on all three doors: `emit run`, `emit repl`, and an `emit build`
       executable, each importing `(scheme inexact)` and agreeing on results.
-- [ ] 7.4 Verify the negative cases: without the import, `sqrt` is an unbound variable; and a
+- [x] 7.4 Verify the negative cases: without the import, `sqrt` is an unbound variable; and a
       program defining its own `sqrt` without the import uses its own.
-- [ ] 7.5 Tests for the IEEE domain behaviour — `(sqrt -1.0)`, `(log -1.0)`, `(asin 2.0)` are NaN
+- [x] 7.5 Tests for the IEEE domain behaviour — `(sqrt -1.0)`, `(log -1.0)`, `(asin 2.0)` are NaN
       and `nan?`-detectable; `(log 0.0)` and `(exp 1000.0)` are infinities and `infinite?`-detectable
       — plus `(sqrt 4)` being the flonum `2.0` and not the exact `2`.
-- [ ] 7.6 Measure `emit run` startup on a trivial program before and after the manifest entry, to
+- [x] 7.6 Measure `emit run` startup on a trivial program before and after the manifest entry, to
       confirm the eager preload cost stays inside the noise as D5 measured.
 - [ ] 7.7 Regen for the library's call sites (the primitives were already staged in group 4, so
       this is the stage-2 half), full dev-suite run, and re-run the trust-check after committing.

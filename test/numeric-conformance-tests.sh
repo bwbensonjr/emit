@@ -335,5 +335,77 @@ check "string->number agrees with the reader" \
 trap_msg "an unsupported radix" '(string->number "1" 5)' "unsupported radix"
 
 echo
+echo "the reader accepts the non-finite numeric tokens (issue #25)"
+
+# The printer always emitted these, but the reader classified them as SYMBOLS, so a
+# program could not read back its own output -- write/read silently turned a number
+# into an identifier.
+check "the three tokens read as numbers" \
+  '(list (number? (read-from-string "+inf.0")) (number? (read-from-string "-inf.0")) (number? (read-from-string "+nan.0")))' \
+  '(#t #t #t)'
+check "and are no longer symbols" \
+  '(list (symbol? (read-from-string "+inf.0")) (symbol? (read-from-string "+nan.0")))' \
+  '(#f #f)'
+check "with the right values" \
+  '(list (read-from-string "+inf.0") (read-from-string "-inf.0") (read-from-string "+nan.0"))' \
+  '(+inf.0 -inf.0 +nan.0)'
+check "write/read now round-trips an infinity" \
+  '(list (= (read-from-string (number->string (/ 1.0 0.0))) (/ 1.0 0.0)) (= (read-from-string (number->string (/ -1.0 0.0))) (/ -1.0 0.0)))' \
+  '(#t #t)'
+# A NaN is not = to itself, which is correct IEEE behaviour and the reason `nan?`
+# exists in (scheme inexact) -- pinned here so a "fix" never makes it self-equal.
+check "a read NaN is still not equal to itself" \
+  '(= (read-from-string "+nan.0") (read-from-string "+nan.0"))' '#f'
+check "string->number agrees with the reader on them" \
+  '(list (string->number "+inf.0") (string->number "+nan.0"))' '(+inf.0 +nan.0)'
+check "as source literals too" '(list +inf.0 -inf.0)' '(+inf.0 -inf.0)'
+# Only the three exact tokens: a near miss stays a symbol, so the special case cannot
+# swallow ordinary identifiers.
+check "near-miss tokens remain symbols" \
+  '(list (symbol? (read-from-string "+inf")) (symbol? (read-from-string "inf.0")) (symbol? (read-from-string "+inf.00")) (symbol? (read-from-string "+nan.1")))' \
+  '(#t #t #t #t)'
+# The rest of #25 is deliberately deferred (radix/exactness prefixes, rationals);
+# pinned so the deferral is visible rather than assumed.
+check "the deferred reader syntax is unchanged" \
+  '(list (symbol? (read-from-string "1/2")) (symbol? (read-from-string "#e1.0")) (string->number "1/2"))' \
+  '(#t #t #f)'
+
+echo
+echo "(scheme inexact): Emit's second standard library"
+
+# An ordinary manifest-resolved library, NOT auto-imported and NOT baked in -- which
+# is what makes it a test of the module system rather than a second special case.
+check "importing it makes its procedures available" \
+  '(import (scheme inexact)) (list (sqrt 4) (exp 0) (log 1) (sin 0) (cos 0))' \
+  '(2.0 1.0 0.0 0.0 1.0)'
+# (sqrt 4) is 2.0, NOT the exact 2: the exact root is exact-integer-sqrt in
+# (scheme base).  An exact argument is accepted and the result is always inexact.
+check "an exact argument yields an inexact result" \
+  '(import (scheme inexact)) (list (sqrt 4) (inexact? (sqrt 4)) (exact? (sqrt 4)))' \
+  '(2.0 #t #f)'
+check "the optional second arguments" \
+  '(import (scheme inexact)) (list (log 8 2) (atan 1 1))' \
+  '(3.0 0.7853981633974483)'
+check "the non-finite predicates" \
+  '(import (scheme inexact)) (list (finite? 3) (finite? 3.5) (infinite? (/ 1.0 0.0)) (infinite? 3.5) (nan? 3.5))' \
+  '(#t #t #t #f #f)'
+# Out-of-domain follows IEEE: a NaN, not a trap.  Emit is real-only so no complex
+# result is available, and a NaN stays testable where an uncatchable trap would not.
+check "out-of-domain arguments yield NaN and the program continues" \
+  '(import (scheme inexact)) (list (nan? (sqrt -1.0)) (nan? (log -1.0)) (nan? (asin 2.0)))' \
+  '(#t #t #t)'
+check "divergent arguments yield an infinity" \
+  '(import (scheme inexact)) (list (infinite? (log 0.0)) (infinite? (exp 1000.0)) (log 0.0))' \
+  '(#t #t -inf.0)'
+# The whole point of the library being a library: its names are ABSENT without the
+# import, so they stay available for a program to define itself.
+check "a program may define the names itself when it does not import" \
+  '(define (sqrt x) (quote mine)) (list (sqrt 4) (sqrt 9))' '(mine mine)'
+check "user-wins shadowing still applies with the import" \
+  '(import (scheme inexact)) (define (sqrt x) (quote mine)) (list (sqrt 4) (exp 0))' \
+  '(mine 1.0)'
+trap_msg "without the import the names are unbound" '(sqrt 4)' "unbound variable sqrt"
+
+echo
 echo "  $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

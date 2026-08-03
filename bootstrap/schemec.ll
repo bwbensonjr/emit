@@ -293,6 +293,7 @@ declare {i64, i1} @llvm.smul.with.overflow.i64(i64, i64)
 @"scheme.base:rd-sign-char?" = external global i64
 @"scheme.base:rd-scan-digits" = external global i64
 @"scheme.base:rd-flonum?" = external global i64
+@"scheme.base:rd-nonfinite" = external global i64
 @"scheme.base:rd-atom" = external global i64
 @"scheme.base:rd-hex-digit" = external global i64
 @"scheme.base:rd-hex" = external global i64

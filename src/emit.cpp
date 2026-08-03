@@ -42,6 +42,8 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <map>                             // manifest index for the lazy preload
+#include <set>
 
 #include <unistd.h>
 #include <sys/wait.h>
@@ -191,25 +193,83 @@ static std::string repo_root() {
 // run door -- in-process compile-and-run (was src/run.cpp).
 // ===========================================================================
 
-// Preload every user library named in the manifest into `modules` (change:
-// run-door-user-libraries).  The compiler owns resolution (modes 9 + 4); this only
-// COLLECTS each unit's IR -- it does NOT run __init (the program's @scheme_entry
-// does).  A library resolves against already-loaded units, so we iterate to a
-// fixpoint (topological order regardless of manifest order).  Returns false on a
-// hard error.
-static bool preload_user_libraries(const std::string &manifest, std::vector<std::string> &modules) {
+// Ask the compiler which libraries a source text imports (mode 12), as canonical
+// keys matching the manifest index.  A pure query: it reads and parses, registering
+// nothing.
+static std::vector<std::string> source_imports(const std::string &text) {
+  std::vector<std::string> out;
+  rt_repl_set(12, text.data(), (intptr_t)text.size());
+  std::string s = scm_str(scheme_entry());
+  std::istringstream lines(s);
+  std::string line;
+  while (std::getline(lines, line))
+    if (!line.empty()) out.push_back(line);
+  return out;
+}
+
+// Preload the user libraries the PROGRAM NEEDS into `modules` (changes:
+// run-door-user-libraries; lazy closure in numeric-conformance).  The compiler owns
+// resolution (modes 9 + 12 + 4); this only COLLECTS each unit's IR -- it does NOT run
+// __init (the program's @scheme_entry does).  A library resolves against
+// already-loaded units, so we iterate to a fixpoint (topological order regardless of
+// manifest order).  Returns false on a hard error.
+//
+// LAZY, not every manifest entry.  Preloading the whole manifest was fine while it
+// held exactly one library, but a second entry showed three things wrong with it: a
+// program's emitted IR carried units it never imported; `--no-prelude` -- which
+// promises a single self-contained module -- emitted a preloaded unit's boundary
+// marker anyway; and the run door's program IR stopped matching the Chez driver's,
+// which resolves imports on demand, breaking the door-parity invariant that
+// test/prelude-base-run-tests.sh pins.  So this walks the transitive closure of the
+// program's imports over the manifest index instead, which is what the Chez driver's
+// toposort-libs already does on its side.
+//
+// The REPL host deliberately stays EAGER (mode 5): a session is an open world where
+// the user may import anything at any prompt, so everything on the manifest must
+// already be loaded.  Only this door, compiling one known program, can be lazy.
+static bool preload_user_libraries(const std::string &manifest, std::vector<std::string> &modules,
+                                   const std::string &program_src) {
   std::ifstream probe(manifest);
   if (!probe.good()) return true;            // no manifest: no user libraries
 
   std::string mtext = read_file(manifest);
-  rt_repl_set(9, mtext.data(), (intptr_t)mtext.size());  // manifest paths sans (scheme base)
-  std::string paths = scm_str(scheme_entry());
+  rt_repl_set(9, mtext.data(), (intptr_t)mtext.size());  // "KEY\tPATH" sans (scheme base)
+  std::string index = scm_str(scheme_entry());
+
+  std::map<std::string, std::string> path_of;      // library key -> source path
+  {
+    std::istringstream lines(index);
+    std::string line;
+    while (std::getline(lines, line)) {
+      std::string::size_type tab = line.find('\t');
+      if (tab == std::string::npos) continue;
+      path_of[line.substr(0, tab)] = line.substr(tab + 1);
+    }
+  }
+  if (path_of.empty()) return true;
+
+  // The closure walk: start at the program's imports and follow each reached .sld's
+  // own imports.  Reading those files is why this loop lives here and not in the
+  // core, which performs no I/O by design.
+  std::set<std::string> needed;
+  std::vector<std::string> work = source_imports(program_src);
+  while (!work.empty()) {
+    std::string key = work.back();
+    work.pop_back();
+    if (needed.count(key)) continue;
+    std::map<std::string, std::string>::const_iterator it = path_of.find(key);
+    // Not in the manifest: either (scheme base), which is baked in, or a genuinely
+    // missing library -- which the program's own compile reports precisely, so
+    // guessing here would only produce a worse diagnostic.
+    if (it == path_of.end()) continue;
+    needed.insert(key);
+    std::vector<std::string> deps = source_imports(read_file(it->second));
+    for (size_t i = 0; i < deps.size(); i++) work.push_back(deps[i]);
+  }
 
   std::vector<std::string> pending;
-  std::istringstream lines(paths);
-  std::string path;
-  while (std::getline(lines, path))
-    if (!path.empty()) pending.push_back(path);
+  for (std::set<std::string>::const_iterator k = needed.begin(); k != needed.end(); ++k)
+    pending.push_back(path_of[*k]);
 
   while (!pending.empty()) {
     std::vector<std::string> deferred;
@@ -305,7 +365,7 @@ static bool compile_program(const std::string &prog_src, const std::string &mani
     modules.push_back(scm_str(rt_car(rt_cdr(r))));
   }
 
-  if (!preload_user_libraries(manifest, modules)) return false;
+  if (!preload_user_libraries(manifest, modules, prog_src)) return false;
 
   rt_repl_set(7, prog_src.data(), (intptr_t)prog_src.size());   // compile program
   intptr_t pr = scheme_entry();

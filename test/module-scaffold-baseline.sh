@@ -319,6 +319,28 @@
 #     commit, and here), while `emit build` grew +19,808 B (+14.7%) -- the shake removes
 #     100% of the growth and the unshaken door pays all of it, which is P8, now quantified
 #     in that item.  No new entries.
+#   numeric-conformance, groups 6+7 (GitHub issue #25; (scheme inexact)) -- the reader
+#     learned the three non-finite tokens (+inf.0/-inf.0/+nan.0), and (scheme inexact)
+#     joined the default manifest as Emit's second standard library.  Drift, verified
+#     against an 80-demo before/after capture:
+#       LIBRARY half: exactly ONE named addition, code:rd-nonfinite (204 -> 205 named,
+#         0 removals).  Net +83 lines per demo; the rest of the raw diff (+6743/-6660)
+#         is code_N renumbering, since the new define sits mid-reader and shifts every
+#         anonymous label after it.
+#       PROGRAM half: all 80 demos gained exactly +1 `external global i64` declare, 0
+#         deletions, 0 non-declare changes -- one per new export.
+#     Each demo's IR still holds exactly TWO units (one boundary marker), which is the
+#     part worth recording.  Adding a second library to the default manifest first made
+#     it THREE, because the run door preloaded every manifest entry whether the program
+#     imported it or not -- which also made `--no-prelude` emit a unit it had promised
+#     not to, and broke the run-door/Chez-driver program-IR parity this suite's sibling
+#     (test/prelude-base-run-tests.sh) pins.  The preload is now LAZY: the run door walks
+#     the transitive closure of the program's imports over the manifest and loads only
+#     that (src/emit.cpp preload_user_libraries, compiler modes 9 + 12).  The REPL host
+#     stays eager on purpose -- an interactive session is an open world.  So a program
+#     that does not import (scheme inexact) is unaffected in IR and in bytes: a delivered
+#     executable is byte-identical with and without the manifest entry (154,312 B both).
+#     All 80 demos' stdout byte-identical.  No new entries.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

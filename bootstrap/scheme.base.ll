@@ -150,45 +150,51 @@ declare {i64, i1} @llvm.smul.with.overflow.i64(i64, i64)
 @.str.sym.10 = private unnamed_addr constant [8 x i8] c"call/cc\00"
 @.str.lit.11 = private unnamed_addr constant [40 x i8] c"continuation invoked outside its extent\00"
 @.str.lit.12 = private unnamed_addr constant [30 x i8] c"hash-table-ref: key not found\00"
-@.str.lit.13 = private unnamed_addr constant [6 x i8] c"space\00"
-@.str.lit.14 = private unnamed_addr constant [8 x i8] c"newline\00"
-@.str.lit.15 = private unnamed_addr constant [4 x i8] c"tab\00"
-@.str.lit.16 = private unnamed_addr constant [7 x i8] c"return\00"
-@.str.lit.17 = private unnamed_addr constant [4 x i8] c"nul\00"
-@.str.lit.18 = private unnamed_addr constant [5 x i8] c"null\00"
-@.str.lit.19 = private unnamed_addr constant [7 x i8] c"delete\00"
-@.str.lit.20 = private unnamed_addr constant [8 x i8] c"altmode\00"
-@.str.lit.21 = private unnamed_addr constant [4 x i8] c"esc\00"
-@.str.sym.22 = private unnamed_addr constant [6 x i8] c"quote\00"
-@.str.sym.23 = private unnamed_addr constant [11 x i8] c"quasiquote\00"
-@.str.sym.24 = private unnamed_addr constant [17 x i8] c"unquote-splicing\00"
-@.str.sym.25 = private unnamed_addr constant [8 x i8] c"unquote\00"
-@.str.lit.26 = private unnamed_addr constant [5 x i8] c"port\00"
-@.str.lit.27 = private unnamed_addr constant [18 x i8] c"not an input port\00"
-@.str.lit.28 = private unnamed_addr constant [15 x i8] c"port is closed\00"
-@.str.lit.29 = private unnamed_addr constant [19 x i8] c"not an output port\00"
-@.str.lit.30 = private unnamed_addr constant [15 x i8] c"port is closed\00"
-@.str.sym.31 = private unnamed_addr constant [16 x i8] c"open-input-file\00"
-@.str.lit.32 = private unnamed_addr constant [27 x i8] c"cannot open file for input\00"
-@.str.sym.33 = private unnamed_addr constant [10 x i8] c"read-char\00"
-@.str.sym.34 = private unnamed_addr constant [10 x i8] c"peek-char\00"
-@.str.sym.35 = private unnamed_addr constant [10 x i8] c"read-line\00"
-@.str.sym.36 = private unnamed_addr constant [12 x i8] c"read-string\00"
-@.str.sym.37 = private unnamed_addr constant [5 x i8] c"read\00"
-@.str.sym.38 = private unnamed_addr constant [17 x i8] c"open-output-file\00"
-@.str.lit.39 = private unnamed_addr constant [28 x i8] c"cannot open file for output\00"
-@.str.sym.40 = private unnamed_addr constant [19 x i8] c"open-output-string\00"
-@.str.lit.41 = private unnamed_addr constant [34 x i8] c"cannot open an output string port\00"
-@.str.sym.42 = private unnamed_addr constant [18 x i8] c"get-output-string\00"
-@.str.lit.43 = private unnamed_addr constant [19 x i8] c"not an output port\00"
-@.str.lit.44 = private unnamed_addr constant [18 x i8] c"not a string port\00"
-@.str.sym.45 = private unnamed_addr constant [18 x i8] c"flush-output-port\00"
-@.str.sym.46 = private unnamed_addr constant [11 x i8] c"close-port\00"
-@.str.lit.47 = private unnamed_addr constant [11 x i8] c"not a port\00"
-@.str.sym.48 = private unnamed_addr constant [17 x i8] c"close-input-port\00"
-@.str.lit.49 = private unnamed_addr constant [18 x i8] c"not an input port\00"
-@.str.sym.50 = private unnamed_addr constant [18 x i8] c"close-output-port\00"
-@.str.lit.51 = private unnamed_addr constant [19 x i8] c"not an output port\00"
+@.str.lit.13 = private unnamed_addr constant [7 x i8] c"+inf.0\00"
+@.str.lit.14 = private unnamed_addr constant [4 x i8] c"inf\00"
+@.str.lit.15 = private unnamed_addr constant [7 x i8] c"-inf.0\00"
+@.str.lit.16 = private unnamed_addr constant [5 x i8] c"-inf\00"
+@.str.lit.17 = private unnamed_addr constant [7 x i8] c"+nan.0\00"
+@.str.lit.18 = private unnamed_addr constant [4 x i8] c"nan\00"
+@.str.lit.19 = private unnamed_addr constant [6 x i8] c"space\00"
+@.str.lit.20 = private unnamed_addr constant [8 x i8] c"newline\00"
+@.str.lit.21 = private unnamed_addr constant [4 x i8] c"tab\00"
+@.str.lit.22 = private unnamed_addr constant [7 x i8] c"return\00"
+@.str.lit.23 = private unnamed_addr constant [4 x i8] c"nul\00"
+@.str.lit.24 = private unnamed_addr constant [5 x i8] c"null\00"
+@.str.lit.25 = private unnamed_addr constant [7 x i8] c"delete\00"
+@.str.lit.26 = private unnamed_addr constant [8 x i8] c"altmode\00"
+@.str.lit.27 = private unnamed_addr constant [4 x i8] c"esc\00"
+@.str.sym.28 = private unnamed_addr constant [6 x i8] c"quote\00"
+@.str.sym.29 = private unnamed_addr constant [11 x i8] c"quasiquote\00"
+@.str.sym.30 = private unnamed_addr constant [17 x i8] c"unquote-splicing\00"
+@.str.sym.31 = private unnamed_addr constant [8 x i8] c"unquote\00"
+@.str.lit.32 = private unnamed_addr constant [5 x i8] c"port\00"
+@.str.lit.33 = private unnamed_addr constant [18 x i8] c"not an input port\00"
+@.str.lit.34 = private unnamed_addr constant [15 x i8] c"port is closed\00"
+@.str.lit.35 = private unnamed_addr constant [19 x i8] c"not an output port\00"
+@.str.lit.36 = private unnamed_addr constant [15 x i8] c"port is closed\00"
+@.str.sym.37 = private unnamed_addr constant [16 x i8] c"open-input-file\00"
+@.str.lit.38 = private unnamed_addr constant [27 x i8] c"cannot open file for input\00"
+@.str.sym.39 = private unnamed_addr constant [10 x i8] c"read-char\00"
+@.str.sym.40 = private unnamed_addr constant [10 x i8] c"peek-char\00"
+@.str.sym.41 = private unnamed_addr constant [10 x i8] c"read-line\00"
+@.str.sym.42 = private unnamed_addr constant [12 x i8] c"read-string\00"
+@.str.sym.43 = private unnamed_addr constant [5 x i8] c"read\00"
+@.str.sym.44 = private unnamed_addr constant [17 x i8] c"open-output-file\00"
+@.str.lit.45 = private unnamed_addr constant [28 x i8] c"cannot open file for output\00"
+@.str.sym.46 = private unnamed_addr constant [19 x i8] c"open-output-string\00"
+@.str.lit.47 = private unnamed_addr constant [34 x i8] c"cannot open an output string port\00"
+@.str.sym.48 = private unnamed_addr constant [18 x i8] c"get-output-string\00"
+@.str.lit.49 = private unnamed_addr constant [19 x i8] c"not an output port\00"
+@.str.lit.50 = private unnamed_addr constant [18 x i8] c"not a string port\00"
+@.str.sym.51 = private unnamed_addr constant [18 x i8] c"flush-output-port\00"
+@.str.sym.52 = private unnamed_addr constant [11 x i8] c"close-port\00"
+@.str.lit.53 = private unnamed_addr constant [11 x i8] c"not a port\00"
+@.str.sym.54 = private unnamed_addr constant [17 x i8] c"close-input-port\00"
+@.str.lit.55 = private unnamed_addr constant [18 x i8] c"not an input port\00"
+@.str.sym.56 = private unnamed_addr constant [18 x i8] c"close-output-port\00"
+@.str.lit.57 = private unnamed_addr constant [19 x i8] c"not an output port\00"
 @"scheme.base:__inited" = global i64 0
 @"scheme.base:list" = global i64 0
 @"scheme.base:caar" = global i64 0
@@ -346,6 +352,7 @@ declare {i64, i1} @llvm.smul.with.overflow.i64(i64, i64)
 @"scheme.base:rd-sign-char?" = global i64 0
 @"scheme.base:rd-scan-digits" = global i64 0
 @"scheme.base:rd-flonum?" = global i64 0
+@"scheme.base:rd-nonfinite" = global i64 0
 @"scheme.base:rd-atom" = global i64 0
 @"scheme.base:rd-hex-digit" = global i64 0
 @"scheme.base:rd-hex" = global i64 0
@@ -4437,7 +4444,7 @@ then661:
   %t2279 = musttail call fastcc i64 %t2278(i64 %t2274, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t2279
 else662:
-  %t2280 = load i64, ptr @"scheme.base:rd-flonum?"
+  %t2280 = load i64, ptr @"scheme.base:rd-nonfinite"
   %t2281 = and i64 %t2280, -8
   %t2282 = inttoptr i64 %t2281 to ptr
   %t2283 = load i64, ptr %t2282
@@ -4446,437 +4453,437 @@ else662:
   %t2286 = icmp ne i64 %t2285, 1
   br i1 %t2286, label %then663, label %else664
 then663:
-  %t2287 = call i64 @rt_string_to_flonum(i64 %a0)
-  ret i64 %t2287
+  ret i64 %t2285
 else664:
+  %t2287 = load i64, ptr @"scheme.base:rd-flonum?"
+  %t2288 = and i64 %t2287, -8
+  %t2289 = inttoptr i64 %t2288 to ptr
+  %t2290 = load i64, ptr %t2289
+  %t2291 = inttoptr i64 %t2290 to ptr
+  %t2292 = call fastcc i64%t2291(i64 %t2287, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t2293 = icmp ne i64 %t2292, 1
+  br i1 %t2293, label %then665, label %else666
+then665:
+  %t2294 = call i64 @rt_string_to_flonum(i64 %a0)
+  ret i64 %t2294
+else666:
   ret i64 1
 else660:
-  %t2288 = load i64, ptr @"scheme.base:%string->int"
-  %t2289 = and i64 %t2288, -8
-  %t2290 = inttoptr i64 %t2289 to ptr
-  %t2291 = load i64, ptr %t2290
-  %t2292 = inttoptr i64 %t2291 to ptr
-  %t2293 = musttail call fastcc i64 %t2292(i64 %t2288, i64 2, i64 %a0, i64 %t2251, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t2293
-else655:
-  %t2294 = call i64 @rt_make_string(ptr @.str.lit.8, i64 33)
-  %t2295 = load i64, ptr @"scheme.base:error"
+  %t2295 = load i64, ptr @"scheme.base:%string->int"
   %t2296 = and i64 %t2295, -8
   %t2297 = inttoptr i64 %t2296 to ptr
   %t2298 = load i64, ptr %t2297
   %t2299 = inttoptr i64 %t2298 to ptr
-  %t2300 = musttail call fastcc i64 %t2299(i64 %t2295, i64 2, i64 %t2294, i64 %t2251, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t2300 = musttail call fastcc i64 %t2299(i64 %t2295, i64 2, i64 %a0, i64 %t2251, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t2300
+else655:
+  %t2301 = call i64 @rt_make_string(ptr @.str.lit.8, i64 33)
+  %t2302 = load i64, ptr @"scheme.base:error"
+  %t2303 = and i64 %t2302, -8
+  %t2304 = inttoptr i64 %t2303 to ptr
+  %t2305 = load i64, ptr %t2304
+  %t2306 = inttoptr i64 %t2305 to ptr
+  %t2307 = musttail call fastcc i64 %t2306(i64 %t2302, i64 2, i64 %t2301, i64 %t2251, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t2307
 }
 
 define fastcc i64 @"scheme.base:code:error"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2305 = icmp sge i64 %argc, 1
-  br i1 %t2305, label %argok666, label %arityerr665
-arityerr665:
+  %t2312 = icmp sge i64 %argc, 1
+  br i1 %t2312, label %argok668, label %arityerr667
+arityerr667:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok666:
-  %t2306 = call ptr @rt_alloc_words(i64 8)
-  %t2307 = getelementptr i64, ptr %t2306, i64 0
-  store i64 %a0, ptr %t2307
-  %t2308 = getelementptr i64, ptr %t2306, i64 1
-  store i64 %a1, ptr %t2308
-  %t2309 = getelementptr i64, ptr %t2306, i64 2
-  store i64 %a2, ptr %t2309
-  %t2310 = getelementptr i64, ptr %t2306, i64 3
-  store i64 %a3, ptr %t2310
-  %t2311 = getelementptr i64, ptr %t2306, i64 4
-  store i64 %a4, ptr %t2311
-  %t2312 = getelementptr i64, ptr %t2306, i64 5
-  store i64 %a5, ptr %t2312
-  %t2313 = getelementptr i64, ptr %t2306, i64 6
-  store i64 %a6, ptr %t2313
-  %t2314 = getelementptr i64, ptr %t2306, i64 7
-  store i64 %a7, ptr %t2314
-  %t2315 = call i64 @rt_build_rest(i64 %argc, i64 1, i64 8, ptr %t2306, ptr %overflow)
-  %t2316 = call i64 @rt_string_p(i64 %a0)
-  %t2317 = icmp ne i64 %t2316, 1
-  br i1 %t2317, label %then667, label %else668
-then667:
-  %t2318 = call i64 @rt_make_error_object(i64 %a0, i64 %t2315)
-  %t2319 = load i64, ptr @"scheme.base:raise"
-  %t2320 = and i64 %t2319, -8
-  %t2321 = inttoptr i64 %t2320 to ptr
-  %t2322 = load i64, ptr %t2321
-  %t2323 = inttoptr i64 %t2322 to ptr
-  %t2324 = musttail call fastcc i64 %t2323(i64 %t2319, i64 1, i64 %t2318, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t2324
-else668:
-  %t2325 = call i64 @rt_symbol_to_string(i64 %a0)
-  %t2326 = call i64 @rt_make_string(ptr @.str.lit.9, i64 2)
-  %t2327 = call i64 @rt_car(i64 %t2315)
-  %t2328 = call i64 @rt_string_append(i64 %t2326, i64 %t2327)
-  %t2329 = call i64 @rt_string_append(i64 %t2325, i64 %t2328)
-  %t2330 = call i64 @rt_cdr(i64 %t2315)
-  %t2331 = call i64 @rt_make_error_object(i64 %t2329, i64 %t2330)
-  %t2332 = load i64, ptr @"scheme.base:raise"
-  %t2333 = and i64 %t2332, -8
-  %t2334 = inttoptr i64 %t2333 to ptr
-  %t2335 = load i64, ptr %t2334
-  %t2336 = inttoptr i64 %t2335 to ptr
-  %t2337 = musttail call fastcc i64 %t2336(i64 %t2332, i64 1, i64 %t2331, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t2337
+argok668:
+  %t2313 = call ptr @rt_alloc_words(i64 8)
+  %t2314 = getelementptr i64, ptr %t2313, i64 0
+  store i64 %a0, ptr %t2314
+  %t2315 = getelementptr i64, ptr %t2313, i64 1
+  store i64 %a1, ptr %t2315
+  %t2316 = getelementptr i64, ptr %t2313, i64 2
+  store i64 %a2, ptr %t2316
+  %t2317 = getelementptr i64, ptr %t2313, i64 3
+  store i64 %a3, ptr %t2317
+  %t2318 = getelementptr i64, ptr %t2313, i64 4
+  store i64 %a4, ptr %t2318
+  %t2319 = getelementptr i64, ptr %t2313, i64 5
+  store i64 %a5, ptr %t2319
+  %t2320 = getelementptr i64, ptr %t2313, i64 6
+  store i64 %a6, ptr %t2320
+  %t2321 = getelementptr i64, ptr %t2313, i64 7
+  store i64 %a7, ptr %t2321
+  %t2322 = call i64 @rt_build_rest(i64 %argc, i64 1, i64 8, ptr %t2313, ptr %overflow)
+  %t2323 = call i64 @rt_string_p(i64 %a0)
+  %t2324 = icmp ne i64 %t2323, 1
+  br i1 %t2324, label %then669, label %else670
+then669:
+  %t2325 = call i64 @rt_make_error_object(i64 %a0, i64 %t2322)
+  %t2326 = load i64, ptr @"scheme.base:raise"
+  %t2327 = and i64 %t2326, -8
+  %t2328 = inttoptr i64 %t2327 to ptr
+  %t2329 = load i64, ptr %t2328
+  %t2330 = inttoptr i64 %t2329 to ptr
+  %t2331 = musttail call fastcc i64 %t2330(i64 %t2326, i64 1, i64 %t2325, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t2331
+else670:
+  %t2332 = call i64 @rt_symbol_to_string(i64 %a0)
+  %t2333 = call i64 @rt_make_string(ptr @.str.lit.9, i64 2)
+  %t2334 = call i64 @rt_car(i64 %t2322)
+  %t2335 = call i64 @rt_string_append(i64 %t2333, i64 %t2334)
+  %t2336 = call i64 @rt_string_append(i64 %t2332, i64 %t2335)
+  %t2337 = call i64 @rt_cdr(i64 %t2322)
+  %t2338 = call i64 @rt_make_error_object(i64 %t2336, i64 %t2337)
+  %t2339 = load i64, ptr @"scheme.base:raise"
+  %t2340 = and i64 %t2339, -8
+  %t2341 = inttoptr i64 %t2340 to ptr
+  %t2342 = load i64, ptr %t2341
+  %t2343 = inttoptr i64 %t2342 to ptr
+  %t2344 = musttail call fastcc i64 %t2343(i64 %t2339, i64 1, i64 %t2338, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t2344
 }
 
 define fastcc i64 @"scheme.base:code:%unwind-to"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2344 = icmp eq i64 %argc, 1
-  br i1 %t2344, label %argok670, label %arityerr669
-arityerr669:
+  %t2351 = icmp eq i64 %argc, 1
+  br i1 %t2351, label %argok672, label %arityerr671
+arityerr671:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok670:
-  %t2345 = load i64, ptr @"scheme.base:*winds*"
-  %t2346 = call i64 @rt_eq_p(i64 %t2345, i64 %a0)
-  %t2347 = icmp ne i64 %t2346, 1
-  br i1 %t2347, label %then671, label %else672
-then671:
-  ret i64 257
-else672:
-  %t2348 = load i64, ptr @"scheme.base:*winds*"
-  %t2349 = call i64 @rt_null_p(i64 %t2348)
-  %t2350 = icmp ne i64 %t2349, 1
-  br i1 %t2350, label %then673, label %else674
+argok672:
+  %t2352 = load i64, ptr @"scheme.base:*winds*"
+  %t2353 = call i64 @rt_eq_p(i64 %t2352, i64 %a0)
+  %t2354 = icmp ne i64 %t2353, 1
+  br i1 %t2354, label %then673, label %else674
 then673:
   ret i64 257
 else674:
-  %t2351 = load i64, ptr @"scheme.base:*winds*"
-  %t2352 = call i64 @rt_car(i64 %t2351)
-  %t2353 = load i64, ptr @"scheme.base:*winds*"
-  %t2354 = call i64 @rt_cdr(i64 %t2353)
-  %t2355 = call i64 @rt_root(i64 %t2354)
-  store i64 %t2355, ptr @"scheme.base:*winds*"
-  %t2356 = call i64 @rt_cdr(i64 %t2352)
-  %t2357 = and i64 %t2356, -8
-  %t2358 = inttoptr i64 %t2357 to ptr
-  %t2359 = load i64, ptr %t2358
-  %t2360 = inttoptr i64 %t2359 to ptr
-  %t2361 = call fastcc i64%t2360(i64 %t2356, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t2362 = load i64, ptr @"scheme.base:%unwind-to"
-  %t2363 = and i64 %t2362, -8
-  %t2364 = inttoptr i64 %t2363 to ptr
-  %t2365 = load i64, ptr %t2364
-  %t2366 = inttoptr i64 %t2365 to ptr
-  %t2367 = musttail call fastcc i64 %t2366(i64 %t2362, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t2367
+  %t2355 = load i64, ptr @"scheme.base:*winds*"
+  %t2356 = call i64 @rt_null_p(i64 %t2355)
+  %t2357 = icmp ne i64 %t2356, 1
+  br i1 %t2357, label %then675, label %else676
+then675:
+  ret i64 257
+else676:
+  %t2358 = load i64, ptr @"scheme.base:*winds*"
+  %t2359 = call i64 @rt_car(i64 %t2358)
+  %t2360 = load i64, ptr @"scheme.base:*winds*"
+  %t2361 = call i64 @rt_cdr(i64 %t2360)
+  %t2362 = call i64 @rt_root(i64 %t2361)
+  store i64 %t2362, ptr @"scheme.base:*winds*"
+  %t2363 = call i64 @rt_cdr(i64 %t2359)
+  %t2364 = and i64 %t2363, -8
+  %t2365 = inttoptr i64 %t2364 to ptr
+  %t2366 = load i64, ptr %t2365
+  %t2367 = inttoptr i64 %t2366 to ptr
+  %t2368 = call fastcc i64%t2367(i64 %t2363, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t2369 = load i64, ptr @"scheme.base:%unwind-to"
+  %t2370 = and i64 %t2369, -8
+  %t2371 = inttoptr i64 %t2370 to ptr
+  %t2372 = load i64, ptr %t2371
+  %t2373 = inttoptr i64 %t2372 to ptr
+  %t2374 = musttail call fastcc i64 %t2373(i64 %t2369, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t2374
 }
 
 define fastcc i64 @"scheme.base:code:dynamic-wind"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2372 = icmp eq i64 %argc, 3
-  br i1 %t2372, label %argok676, label %arityerr675
-arityerr675:
+  %t2379 = icmp eq i64 %argc, 3
+  br i1 %t2379, label %argok678, label %arityerr677
+arityerr677:
   call void @rt_arity_error(i64 3, i64 %argc)
   unreachable
-argok676:
-  %t2373 = and i64 %a0, -8
-  %t2374 = inttoptr i64 %t2373 to ptr
-  %t2375 = load i64, ptr %t2374
-  %t2376 = inttoptr i64 %t2375 to ptr
-  %t2377 = call fastcc i64%t2376(i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t2378 = call i64 @rt_cons(i64 %a0, i64 %a2)
-  %t2379 = load i64, ptr @"scheme.base:*winds*"
-  %t2380 = call i64 @rt_cons(i64 %t2378, i64 %t2379)
-  %t2381 = call i64 @rt_root(i64 %t2380)
-  store i64 %t2381, ptr @"scheme.base:*winds*"
-  %t2382 = and i64 %a1, -8
+argok678:
+  %t2380 = and i64 %a0, -8
+  %t2381 = inttoptr i64 %t2380 to ptr
+  %t2382 = load i64, ptr %t2381
   %t2383 = inttoptr i64 %t2382 to ptr
-  %t2384 = load i64, ptr %t2383
-  %t2385 = inttoptr i64 %t2384 to ptr
-  %t2386 = call fastcc i64%t2385(i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t2387 = load i64, ptr @"scheme.base:*winds*"
-  %t2388 = call i64 @rt_cdr(i64 %t2387)
-  %t2389 = call i64 @rt_root(i64 %t2388)
-  store i64 %t2389, ptr @"scheme.base:*winds*"
-  %t2390 = and i64 %a2, -8
-  %t2391 = inttoptr i64 %t2390 to ptr
-  %t2392 = load i64, ptr %t2391
-  %t2393 = inttoptr i64 %t2392 to ptr
-  %t2394 = call fastcc i64%t2393(i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t2386
+  %t2384 = call fastcc i64%t2383(i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t2385 = call i64 @rt_cons(i64 %a0, i64 %a2)
+  %t2386 = load i64, ptr @"scheme.base:*winds*"
+  %t2387 = call i64 @rt_cons(i64 %t2385, i64 %t2386)
+  %t2388 = call i64 @rt_root(i64 %t2387)
+  store i64 %t2388, ptr @"scheme.base:*winds*"
+  %t2389 = and i64 %a1, -8
+  %t2390 = inttoptr i64 %t2389 to ptr
+  %t2391 = load i64, ptr %t2390
+  %t2392 = inttoptr i64 %t2391 to ptr
+  %t2393 = call fastcc i64%t2392(i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t2394 = load i64, ptr @"scheme.base:*winds*"
+  %t2395 = call i64 @rt_cdr(i64 %t2394)
+  %t2396 = call i64 @rt_root(i64 %t2395)
+  store i64 %t2396, ptr @"scheme.base:*winds*"
+  %t2397 = and i64 %a2, -8
+  %t2398 = inttoptr i64 %t2397 to ptr
+  %t2399 = load i64, ptr %t2398
+  %t2400 = inttoptr i64 %t2399 to ptr
+  %t2401 = call fastcc i64%t2400(i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t2393
+}
+
+define fastcc i64 @"scheme.base:code_550"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+entry:
+  %t2406 = icmp eq i64 %argc, 1
+  br i1 %t2406, label %argok680, label %arityerr679
+arityerr679:
+  call void @rt_arity_error(i64 1, i64 %argc)
+  unreachable
+argok680:
+  %t2407 = and i64 %self, -8
+  %t2408 = inttoptr i64 %t2407 to ptr
+  %t2409 = getelementptr i64, ptr %t2408, i64 1
+  %t2410 = load i64, ptr %t2409
+  %t2411 = call i64 @rt_escape_live_p(i64 %t2410)
+  %t2412 = icmp ne i64 %t2411, 1
+  br i1 %t2412, label %then681, label %else682
+then681:
+  %t2413 = and i64 %self, -8
+  %t2414 = inttoptr i64 %t2413 to ptr
+  %t2415 = getelementptr i64, ptr %t2414, i64 2
+  %t2416 = load i64, ptr %t2415
+  %t2417 = load i64, ptr @"scheme.base:%unwind-to"
+  %t2418 = and i64 %t2417, -8
+  %t2419 = inttoptr i64 %t2418 to ptr
+  %t2420 = load i64, ptr %t2419
+  %t2421 = inttoptr i64 %t2420 to ptr
+  %t2422 = call fastcc i64%t2421(i64 %t2417, i64 1, i64 %t2416, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t2423 = and i64 %self, -8
+  %t2424 = inttoptr i64 %t2423 to ptr
+  %t2425 = getelementptr i64, ptr %t2424, i64 1
+  %t2426 = load i64, ptr %t2425
+  %t2427 = call i64 @rt_escape_to(i64 %t2426, i64 %a0)
+  br label %merge683
+else682:
+  br label %merge683
+merge683:
+  %t2428 = phi i64 [ %t2427, %then681 ], [ 1, %else682 ]
+  %t2429 = call i64 @rt_intern(ptr @.str.sym.10)
+  %t2430 = call i64 @rt_make_string(ptr @.str.lit.11, i64 39)
+  %t2431 = load i64, ptr @"scheme.base:error"
+  %t2432 = and i64 %t2431, -8
+  %t2433 = inttoptr i64 %t2432 to ptr
+  %t2434 = load i64, ptr %t2433
+  %t2435 = inttoptr i64 %t2434 to ptr
+  %t2436 = musttail call fastcc i64 %t2435(i64 %t2431, i64 2, i64 %t2429, i64 %t2430, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t2436
 }
 
 define fastcc i64 @"scheme.base:code_548"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2399 = icmp eq i64 %argc, 1
-  br i1 %t2399, label %argok678, label %arityerr677
-arityerr677:
-  call void @rt_arity_error(i64 1, i64 %argc)
-  unreachable
-argok678:
-  %t2400 = and i64 %self, -8
-  %t2401 = inttoptr i64 %t2400 to ptr
-  %t2402 = getelementptr i64, ptr %t2401, i64 1
-  %t2403 = load i64, ptr %t2402
-  %t2404 = call i64 @rt_escape_live_p(i64 %t2403)
-  %t2405 = icmp ne i64 %t2404, 1
-  br i1 %t2405, label %then679, label %else680
-then679:
-  %t2406 = and i64 %self, -8
-  %t2407 = inttoptr i64 %t2406 to ptr
-  %t2408 = getelementptr i64, ptr %t2407, i64 2
-  %t2409 = load i64, ptr %t2408
-  %t2410 = load i64, ptr @"scheme.base:%unwind-to"
-  %t2411 = and i64 %t2410, -8
-  %t2412 = inttoptr i64 %t2411 to ptr
-  %t2413 = load i64, ptr %t2412
-  %t2414 = inttoptr i64 %t2413 to ptr
-  %t2415 = call fastcc i64%t2414(i64 %t2410, i64 1, i64 %t2409, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t2416 = and i64 %self, -8
-  %t2417 = inttoptr i64 %t2416 to ptr
-  %t2418 = getelementptr i64, ptr %t2417, i64 1
-  %t2419 = load i64, ptr %t2418
-  %t2420 = call i64 @rt_escape_to(i64 %t2419, i64 %a0)
-  br label %merge681
-else680:
-  br label %merge681
-merge681:
-  %t2421 = phi i64 [ %t2420, %then679 ], [ 1, %else680 ]
-  %t2422 = call i64 @rt_intern(ptr @.str.sym.10)
-  %t2423 = call i64 @rt_make_string(ptr @.str.lit.11, i64 39)
-  %t2424 = load i64, ptr @"scheme.base:error"
-  %t2425 = and i64 %t2424, -8
-  %t2426 = inttoptr i64 %t2425 to ptr
-  %t2427 = load i64, ptr %t2426
-  %t2428 = inttoptr i64 %t2427 to ptr
-  %t2429 = musttail call fastcc i64 %t2428(i64 %t2424, i64 2, i64 %t2422, i64 %t2423, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t2429
-}
-
-define fastcc i64 @"scheme.base:code_546"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
-entry:
-  %t2430 = icmp eq i64 %argc, 0
-  br i1 %t2430, label %argok683, label %arityerr682
-arityerr682:
+  %t2437 = icmp eq i64 %argc, 0
+  br i1 %t2437, label %argok685, label %arityerr684
+arityerr684:
   call void @rt_arity_error(i64 0, i64 %argc)
   unreachable
-argok683:
-  %t2431 = call i64 @rt_escape_frame()
-  %t2432 = and i64 %self, -8
-  %t2433 = inttoptr i64 %t2432 to ptr
-  %t2434 = getelementptr i64, ptr %t2433, i64 2
-  %t2435 = load i64, ptr %t2434
-  %t2436 = call ptr @rt_alloc_words(i64 3)
-  %t2437 = ptrtoint ptr %t2436 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_548" to i64), ptr %t2436
-  %t2438 = getelementptr i64, ptr %t2436, i64 1
-  store i64 %t2431, ptr %t2438
-  %t2439 = getelementptr i64, ptr %t2436, i64 2
-  store i64 %t2435, ptr %t2439
-  %t2440 = or i64 %t2437, 4
-  %t2441 = and i64 %self, -8
-  %t2442 = inttoptr i64 %t2441 to ptr
-  %t2443 = getelementptr i64, ptr %t2442, i64 1
-  %t2444 = load i64, ptr %t2443
-  %t2445 = and i64 %t2444, -8
-  %t2446 = inttoptr i64 %t2445 to ptr
-  %t2447 = load i64, ptr %t2446
-  %t2448 = inttoptr i64 %t2447 to ptr
-  %t2449 = musttail call fastcc i64 %t2448(i64 %t2444, i64 1, i64 %t2440, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t2449
+argok685:
+  %t2438 = call i64 @rt_escape_frame()
+  %t2439 = and i64 %self, -8
+  %t2440 = inttoptr i64 %t2439 to ptr
+  %t2441 = getelementptr i64, ptr %t2440, i64 2
+  %t2442 = load i64, ptr %t2441
+  %t2443 = call ptr @rt_alloc_words(i64 3)
+  %t2444 = ptrtoint ptr %t2443 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_550" to i64), ptr %t2443
+  %t2445 = getelementptr i64, ptr %t2443, i64 1
+  store i64 %t2438, ptr %t2445
+  %t2446 = getelementptr i64, ptr %t2443, i64 2
+  store i64 %t2442, ptr %t2446
+  %t2447 = or i64 %t2444, 4
+  %t2448 = and i64 %self, -8
+  %t2449 = inttoptr i64 %t2448 to ptr
+  %t2450 = getelementptr i64, ptr %t2449, i64 1
+  %t2451 = load i64, ptr %t2450
+  %t2452 = and i64 %t2451, -8
+  %t2453 = inttoptr i64 %t2452 to ptr
+  %t2454 = load i64, ptr %t2453
+  %t2455 = inttoptr i64 %t2454 to ptr
+  %t2456 = musttail call fastcc i64 %t2455(i64 %t2451, i64 1, i64 %t2447, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t2456
 }
 
 define fastcc i64 @"scheme.base:code:call-with-current-continuation"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2450 = icmp eq i64 %argc, 1
-  br i1 %t2450, label %argok685, label %arityerr684
-arityerr684:
-  call void @rt_arity_error(i64 1, i64 %argc)
-  unreachable
-argok685:
-  %t2451 = load i64, ptr @"scheme.base:*winds*"
-  %t2452 = call ptr @rt_alloc_words(i64 3)
-  %t2453 = ptrtoint ptr %t2452 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_546" to i64), ptr %t2452
-  %t2454 = getelementptr i64, ptr %t2452, i64 1
-  store i64 %a0, ptr %t2454
-  %t2455 = getelementptr i64, ptr %t2452, i64 2
-  store i64 %t2451, ptr %t2455
-  %t2456 = or i64 %t2453, 4
-  %t2457 = call i64 @rt_run_guarded(ptr @__apply0, i64 %t2456)
-  %t2458 = call i64 @rt_cdr(i64 %t2457)
-  ret i64 %t2458
-}
-
-define fastcc i64 @"scheme.base:code:call/cc"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
-entry:
-  %t2463 = icmp eq i64 %argc, 1
-  br i1 %t2463, label %argok687, label %arityerr686
+  %t2457 = icmp eq i64 %argc, 1
+  br i1 %t2457, label %argok687, label %arityerr686
 arityerr686:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
 argok687:
-  %t2464 = load i64, ptr @"scheme.base:call-with-current-continuation"
-  %t2465 = and i64 %t2464, -8
-  %t2466 = inttoptr i64 %t2465 to ptr
-  %t2467 = load i64, ptr %t2466
-  %t2468 = inttoptr i64 %t2467 to ptr
-  %t2469 = musttail call fastcc i64 %t2468(i64 %t2464, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t2469
+  %t2458 = load i64, ptr @"scheme.base:*winds*"
+  %t2459 = call ptr @rt_alloc_words(i64 3)
+  %t2460 = ptrtoint ptr %t2459 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_548" to i64), ptr %t2459
+  %t2461 = getelementptr i64, ptr %t2459, i64 1
+  store i64 %a0, ptr %t2461
+  %t2462 = getelementptr i64, ptr %t2459, i64 2
+  store i64 %t2458, ptr %t2462
+  %t2463 = or i64 %t2460, 4
+  %t2464 = call i64 @rt_run_guarded(ptr @__apply0, i64 %t2463)
+  %t2465 = call i64 @rt_cdr(i64 %t2464)
+  ret i64 %t2465
 }
 
-define fastcc i64 @"scheme.base:code_556"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:call/cc"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2474 = icmp eq i64 %argc, 0
-  br i1 %t2474, label %argok689, label %arityerr688
+  %t2470 = icmp eq i64 %argc, 1
+  br i1 %t2470, label %argok689, label %arityerr688
 arityerr688:
-  call void @rt_arity_error(i64 0, i64 %argc)
+  call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
 argok689:
-  %t2475 = and i64 %self, -8
-  %t2476 = inttoptr i64 %t2475 to ptr
-  %t2477 = getelementptr i64, ptr %t2476, i64 1
-  %t2478 = load i64, ptr %t2477
-  %t2479 = and i64 %self, -8
-  %t2480 = inttoptr i64 %t2479 to ptr
-  %t2481 = getelementptr i64, ptr %t2480, i64 2
-  %t2482 = load i64, ptr %t2481
-  %t2483 = call i64 @rt_cons(i64 %t2478, i64 %t2482)
-  %t2484 = call i64 @rt_root(i64 %t2483)
-  store i64 %t2484, ptr @"scheme.base:*handlers*"
-  ret i64 17
+  %t2471 = load i64, ptr @"scheme.base:call-with-current-continuation"
+  %t2472 = and i64 %t2471, -8
+  %t2473 = inttoptr i64 %t2472 to ptr
+  %t2474 = load i64, ptr %t2473
+  %t2475 = inttoptr i64 %t2474 to ptr
+  %t2476 = musttail call fastcc i64 %t2475(i64 %t2471, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t2476
 }
 
 define fastcc i64 @"scheme.base:code_558"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2485 = icmp eq i64 %argc, 0
-  br i1 %t2485, label %argok691, label %arityerr690
+  %t2481 = icmp eq i64 %argc, 0
+  br i1 %t2481, label %argok691, label %arityerr690
 arityerr690:
   call void @rt_arity_error(i64 0, i64 %argc)
   unreachable
 argok691:
+  %t2482 = and i64 %self, -8
+  %t2483 = inttoptr i64 %t2482 to ptr
+  %t2484 = getelementptr i64, ptr %t2483, i64 1
+  %t2485 = load i64, ptr %t2484
   %t2486 = and i64 %self, -8
   %t2487 = inttoptr i64 %t2486 to ptr
-  %t2488 = getelementptr i64, ptr %t2487, i64 1
+  %t2488 = getelementptr i64, ptr %t2487, i64 2
   %t2489 = load i64, ptr %t2488
-  %t2490 = call i64 @rt_root(i64 %t2489)
-  store i64 %t2490, ptr @"scheme.base:*handlers*"
+  %t2490 = call i64 @rt_cons(i64 %t2485, i64 %t2489)
+  %t2491 = call i64 @rt_root(i64 %t2490)
+  store i64 %t2491, ptr @"scheme.base:*handlers*"
+  ret i64 17
+}
+
+define fastcc i64 @"scheme.base:code_560"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+entry:
+  %t2492 = icmp eq i64 %argc, 0
+  br i1 %t2492, label %argok693, label %arityerr692
+arityerr692:
+  call void @rt_arity_error(i64 0, i64 %argc)
+  unreachable
+argok693:
+  %t2493 = and i64 %self, -8
+  %t2494 = inttoptr i64 %t2493 to ptr
+  %t2495 = getelementptr i64, ptr %t2494, i64 1
+  %t2496 = load i64, ptr %t2495
+  %t2497 = call i64 @rt_root(i64 %t2496)
+  store i64 %t2497, ptr @"scheme.base:*handlers*"
   ret i64 17
 }
 
 define fastcc i64 @"scheme.base:code:%with-handler"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2491 = icmp eq i64 %argc, 2
-  br i1 %t2491, label %argok693, label %arityerr692
-arityerr692:
+  %t2498 = icmp eq i64 %argc, 2
+  br i1 %t2498, label %argok695, label %arityerr694
+arityerr694:
   call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
-argok693:
-  %t2492 = load i64, ptr @"scheme.base:*handlers*"
-  %t2493 = call ptr @rt_alloc_words(i64 3)
-  %t2494 = ptrtoint ptr %t2493 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_556" to i64), ptr %t2493
-  %t2495 = getelementptr i64, ptr %t2493, i64 1
-  store i64 %a0, ptr %t2495
-  %t2496 = getelementptr i64, ptr %t2493, i64 2
-  store i64 %t2492, ptr %t2496
-  %t2497 = or i64 %t2494, 4
-  %t2498 = call ptr @rt_alloc_words(i64 2)
-  %t2499 = ptrtoint ptr %t2498 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_558" to i64), ptr %t2498
-  %t2500 = getelementptr i64, ptr %t2498, i64 1
-  store i64 %t2492, ptr %t2500
-  %t2501 = or i64 %t2499, 4
-  %t2502 = load i64, ptr @"scheme.base:dynamic-wind"
-  %t2503 = and i64 %t2502, -8
-  %t2504 = inttoptr i64 %t2503 to ptr
-  %t2505 = load i64, ptr %t2504
-  %t2506 = inttoptr i64 %t2505 to ptr
-  %t2507 = musttail call fastcc i64 %t2506(i64 %t2502, i64 3, i64 %t2497, i64 %a1, i64 %t2501, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t2507
+argok695:
+  %t2499 = load i64, ptr @"scheme.base:*handlers*"
+  %t2500 = call ptr @rt_alloc_words(i64 3)
+  %t2501 = ptrtoint ptr %t2500 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_558" to i64), ptr %t2500
+  %t2502 = getelementptr i64, ptr %t2500, i64 1
+  store i64 %a0, ptr %t2502
+  %t2503 = getelementptr i64, ptr %t2500, i64 2
+  store i64 %t2499, ptr %t2503
+  %t2504 = or i64 %t2501, 4
+  %t2505 = call ptr @rt_alloc_words(i64 2)
+  %t2506 = ptrtoint ptr %t2505 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_560" to i64), ptr %t2505
+  %t2507 = getelementptr i64, ptr %t2505, i64 1
+  store i64 %t2499, ptr %t2507
+  %t2508 = or i64 %t2506, 4
+  %t2509 = load i64, ptr @"scheme.base:dynamic-wind"
+  %t2510 = and i64 %t2509, -8
+  %t2511 = inttoptr i64 %t2510 to ptr
+  %t2512 = load i64, ptr %t2511
+  %t2513 = inttoptr i64 %t2512 to ptr
+  %t2514 = musttail call fastcc i64 %t2513(i64 %t2509, i64 3, i64 %t2504, i64 %a1, i64 %t2508, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t2514
 }
 
 define fastcc i64 @"scheme.base:code:raise"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2512 = icmp eq i64 %argc, 1
-  br i1 %t2512, label %argok695, label %arityerr694
-arityerr694:
+  %t2519 = icmp eq i64 %argc, 1
+  br i1 %t2519, label %argok697, label %arityerr696
+arityerr696:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok695:
-  %t2513 = load i64, ptr @"scheme.base:*handlers*"
-  %t2514 = call i64 @rt_null_p(i64 %t2513)
-  %t2515 = icmp ne i64 %t2514, 1
-  br i1 %t2515, label %then696, label %else697
-then696:
-  %t2516 = call i64 @rt_raise(i64 %a0)
-  ret i64 %t2516
-else697:
-  %t2517 = load i64, ptr @"scheme.base:*handlers*"
-  %t2518 = call i64 @rt_car(i64 %t2517)
-  %t2519 = load i64, ptr @"scheme.base:*handlers*"
+argok697:
   %t2520 = load i64, ptr @"scheme.base:*handlers*"
-  %t2521 = call i64 @rt_cdr(i64 %t2520)
-  %t2522 = call i64 @rt_root(i64 %t2521)
-  store i64 %t2522, ptr @"scheme.base:*handlers*"
-  %t2523 = and i64 %t2518, -8
-  %t2524 = inttoptr i64 %t2523 to ptr
-  %t2525 = load i64, ptr %t2524
-  %t2526 = inttoptr i64 %t2525 to ptr
-  %t2527 = call fastcc i64%t2526(i64 %t2518, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t2528 = call i64 @rt_root(i64 %t2519)
-  store i64 %t2528, ptr @"scheme.base:*handlers*"
-  %t2529 = call i64 @rt_raise(i64 %a0)
-  ret i64 %t2529
+  %t2521 = call i64 @rt_null_p(i64 %t2520)
+  %t2522 = icmp ne i64 %t2521, 1
+  br i1 %t2522, label %then698, label %else699
+then698:
+  %t2523 = call i64 @rt_raise(i64 %a0)
+  ret i64 %t2523
+else699:
+  %t2524 = load i64, ptr @"scheme.base:*handlers*"
+  %t2525 = call i64 @rt_car(i64 %t2524)
+  %t2526 = load i64, ptr @"scheme.base:*handlers*"
+  %t2527 = load i64, ptr @"scheme.base:*handlers*"
+  %t2528 = call i64 @rt_cdr(i64 %t2527)
+  %t2529 = call i64 @rt_root(i64 %t2528)
+  store i64 %t2529, ptr @"scheme.base:*handlers*"
+  %t2530 = and i64 %t2525, -8
+  %t2531 = inttoptr i64 %t2530 to ptr
+  %t2532 = load i64, ptr %t2531
+  %t2533 = inttoptr i64 %t2532 to ptr
+  %t2534 = call fastcc i64%t2533(i64 %t2525, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t2535 = call i64 @rt_root(i64 %t2526)
+  store i64 %t2535, ptr @"scheme.base:*handlers*"
+  %t2536 = call i64 @rt_raise(i64 %a0)
+  ret i64 %t2536
 }
 
 define fastcc i64 @"scheme.base:code:error-object?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2534 = icmp eq i64 %argc, 1
-  br i1 %t2534, label %argok699, label %arityerr698
-arityerr698:
-  call void @rt_arity_error(i64 1, i64 %argc)
-  unreachable
-argok699:
-  %t2535 = call i64 @rt_error_object_p(i64 %a0)
-  ret i64 %t2535
-}
-
-define fastcc i64 @"scheme.base:code:error-object-message"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
-entry:
-  %t2540 = icmp eq i64 %argc, 1
-  br i1 %t2540, label %argok701, label %arityerr700
+  %t2541 = icmp eq i64 %argc, 1
+  br i1 %t2541, label %argok701, label %arityerr700
 arityerr700:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
 argok701:
-  %t2541 = call i64 @rt_error_object_message(i64 %a0)
-  ret i64 %t2541
+  %t2542 = call i64 @rt_error_object_p(i64 %a0)
+  ret i64 %t2542
 }
 
-define fastcc i64 @"scheme.base:code:error-object-irritants"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:error-object-message"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2546 = icmp eq i64 %argc, 1
-  br i1 %t2546, label %argok703, label %arityerr702
+  %t2547 = icmp eq i64 %argc, 1
+  br i1 %t2547, label %argok703, label %arityerr702
 arityerr702:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
 argok703:
-  %t2547 = call i64 @rt_error_object_irritants(i64 %a0)
-  ret i64 %t2547
+  %t2548 = call i64 @rt_error_object_message(i64 %a0)
+  ret i64 %t2548
 }
 
-define fastcc i64 @"scheme.base:code_578"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:error-object-irritants"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2552 = icmp eq i64 %argc, 1
-  br i1 %t2552, label %argok705, label %arityerr704
+  %t2553 = icmp eq i64 %argc, 1
+  br i1 %t2553, label %argok705, label %arityerr704
 arityerr704:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
 argok705:
-  ret i64 %a0
+  %t2554 = call i64 @rt_error_object_irritants(i64 %a0)
+  ret i64 %t2554
 }
 
 define fastcc i64 @"scheme.base:code_580"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2553 = icmp eq i64 %argc, 1
-  br i1 %t2553, label %argok707, label %arityerr706
+  %t2559 = icmp eq i64 %argc, 1
+  br i1 %t2559, label %argok707, label %arityerr706
 arityerr706:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
@@ -4886,651 +4893,649 @@ argok707:
 
 define fastcc i64 @"scheme.base:code_582"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2554 = icmp sge i64 %argc, 0
-  br i1 %t2554, label %argok709, label %arityerr708
+  %t2560 = icmp eq i64 %argc, 1
+  br i1 %t2560, label %argok709, label %arityerr708
 arityerr708:
-  call void @rt_arity_error(i64 0, i64 %argc)
+  call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
 argok709:
-  %t2555 = call ptr @rt_alloc_words(i64 8)
-  %t2556 = getelementptr i64, ptr %t2555, i64 0
-  store i64 %a0, ptr %t2556
-  %t2557 = getelementptr i64, ptr %t2555, i64 1
-  store i64 %a1, ptr %t2557
-  %t2558 = getelementptr i64, ptr %t2555, i64 2
-  store i64 %a2, ptr %t2558
-  %t2559 = getelementptr i64, ptr %t2555, i64 3
-  store i64 %a3, ptr %t2559
-  %t2560 = getelementptr i64, ptr %t2555, i64 4
-  store i64 %a4, ptr %t2560
-  %t2561 = getelementptr i64, ptr %t2555, i64 5
-  store i64 %a5, ptr %t2561
-  %t2562 = getelementptr i64, ptr %t2555, i64 6
-  store i64 %a6, ptr %t2562
-  %t2563 = getelementptr i64, ptr %t2555, i64 7
-  store i64 %a7, ptr %t2563
-  %t2564 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t2555, ptr %overflow)
-  %t2565 = call i64 @rt_null_p(i64 %t2564)
-  %t2566 = icmp ne i64 %t2565, 1
-  br i1 %t2566, label %then710, label %else711
-then710:
-  %t2567 = and i64 %self, -8
-  %t2568 = inttoptr i64 %t2567 to ptr
-  %t2569 = getelementptr i64, ptr %t2568, i64 1
-  %t2570 = load i64, ptr %t2569
-  %t2571 = call i64 @rt_vector_ref(i64 %t2570, i64 0)
-  ret i64 %t2571
-else711:
-  %t2572 = call i64 @rt_cdr(i64 %t2564)
-  %t2573 = call i64 @rt_null_p(i64 %t2572)
-  %t2574 = icmp ne i64 %t2573, 1
-  br i1 %t2574, label %then712, label %else713
+  ret i64 %a0
+}
+
+define fastcc i64 @"scheme.base:code_584"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+entry:
+  %t2561 = icmp sge i64 %argc, 0
+  br i1 %t2561, label %argok711, label %arityerr710
+arityerr710:
+  call void @rt_arity_error(i64 0, i64 %argc)
+  unreachable
+argok711:
+  %t2562 = call ptr @rt_alloc_words(i64 8)
+  %t2563 = getelementptr i64, ptr %t2562, i64 0
+  store i64 %a0, ptr %t2563
+  %t2564 = getelementptr i64, ptr %t2562, i64 1
+  store i64 %a1, ptr %t2564
+  %t2565 = getelementptr i64, ptr %t2562, i64 2
+  store i64 %a2, ptr %t2565
+  %t2566 = getelementptr i64, ptr %t2562, i64 3
+  store i64 %a3, ptr %t2566
+  %t2567 = getelementptr i64, ptr %t2562, i64 4
+  store i64 %a4, ptr %t2567
+  %t2568 = getelementptr i64, ptr %t2562, i64 5
+  store i64 %a5, ptr %t2568
+  %t2569 = getelementptr i64, ptr %t2562, i64 6
+  store i64 %a6, ptr %t2569
+  %t2570 = getelementptr i64, ptr %t2562, i64 7
+  store i64 %a7, ptr %t2570
+  %t2571 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t2562, ptr %overflow)
+  %t2572 = call i64 @rt_null_p(i64 %t2571)
+  %t2573 = icmp ne i64 %t2572, 1
+  br i1 %t2573, label %then712, label %else713
 then712:
-  %t2575 = and i64 %self, -8
-  %t2576 = inttoptr i64 %t2575 to ptr
-  %t2577 = getelementptr i64, ptr %t2576, i64 1
-  %t2578 = load i64, ptr %t2577
-  %t2579 = call i64 @rt_car(i64 %t2564)
-  %t2580 = and i64 %self, -8
-  %t2581 = inttoptr i64 %t2580 to ptr
-  %t2582 = getelementptr i64, ptr %t2581, i64 2
-  %t2583 = load i64, ptr %t2582
-  %t2584 = and i64 %t2583, -8
-  %t2585 = inttoptr i64 %t2584 to ptr
-  %t2586 = load i64, ptr %t2585
-  %t2587 = inttoptr i64 %t2586 to ptr
-  %t2588 = call fastcc i64%t2587(i64 %t2583, i64 1, i64 %t2579, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t2589 = call i64 @rt_vector_set(i64 %t2578, i64 0, i64 %t2588)
-  ret i64 %t2589
+  %t2574 = and i64 %self, -8
+  %t2575 = inttoptr i64 %t2574 to ptr
+  %t2576 = getelementptr i64, ptr %t2575, i64 1
+  %t2577 = load i64, ptr %t2576
+  %t2578 = call i64 @rt_vector_ref(i64 %t2577, i64 0)
+  ret i64 %t2578
 else713:
-  %t2590 = and i64 %self, -8
-  %t2591 = inttoptr i64 %t2590 to ptr
-  %t2592 = getelementptr i64, ptr %t2591, i64 1
+  %t2579 = call i64 @rt_cdr(i64 %t2571)
+  %t2580 = call i64 @rt_null_p(i64 %t2579)
+  %t2581 = icmp ne i64 %t2580, 1
+  br i1 %t2581, label %then714, label %else715
+then714:
+  %t2582 = and i64 %self, -8
+  %t2583 = inttoptr i64 %t2582 to ptr
+  %t2584 = getelementptr i64, ptr %t2583, i64 1
+  %t2585 = load i64, ptr %t2584
+  %t2586 = call i64 @rt_car(i64 %t2571)
+  %t2587 = and i64 %self, -8
+  %t2588 = inttoptr i64 %t2587 to ptr
+  %t2589 = getelementptr i64, ptr %t2588, i64 2
+  %t2590 = load i64, ptr %t2589
+  %t2591 = and i64 %t2590, -8
+  %t2592 = inttoptr i64 %t2591 to ptr
   %t2593 = load i64, ptr %t2592
-  %t2594 = call i64 @rt_car(i64 %t2564)
-  %t2595 = call i64 @rt_vector_set(i64 %t2593, i64 0, i64 %t2594)
-  ret i64 %t2595
+  %t2594 = inttoptr i64 %t2593 to ptr
+  %t2595 = call fastcc i64%t2594(i64 %t2590, i64 1, i64 %t2586, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t2596 = call i64 @rt_vector_set(i64 %t2585, i64 0, i64 %t2595)
+  ret i64 %t2596
+else715:
+  %t2597 = and i64 %self, -8
+  %t2598 = inttoptr i64 %t2597 to ptr
+  %t2599 = getelementptr i64, ptr %t2598, i64 1
+  %t2600 = load i64, ptr %t2599
+  %t2601 = call i64 @rt_car(i64 %t2571)
+  %t2602 = call i64 @rt_vector_set(i64 %t2600, i64 0, i64 %t2601)
+  ret i64 %t2602
 }
 
 define fastcc i64 @"scheme.base:code:make-parameter"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2596 = icmp sge i64 %argc, 1
-  br i1 %t2596, label %argok715, label %arityerr714
-arityerr714:
+  %t2603 = icmp sge i64 %argc, 1
+  br i1 %t2603, label %argok717, label %arityerr716
+arityerr716:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok715:
-  %t2597 = call ptr @rt_alloc_words(i64 8)
-  %t2598 = getelementptr i64, ptr %t2597, i64 0
-  store i64 %a0, ptr %t2598
-  %t2599 = getelementptr i64, ptr %t2597, i64 1
-  store i64 %a1, ptr %t2599
-  %t2600 = getelementptr i64, ptr %t2597, i64 2
-  store i64 %a2, ptr %t2600
-  %t2601 = getelementptr i64, ptr %t2597, i64 3
-  store i64 %a3, ptr %t2601
-  %t2602 = getelementptr i64, ptr %t2597, i64 4
-  store i64 %a4, ptr %t2602
-  %t2603 = getelementptr i64, ptr %t2597, i64 5
-  store i64 %a5, ptr %t2603
-  %t2604 = getelementptr i64, ptr %t2597, i64 6
-  store i64 %a6, ptr %t2604
-  %t2605 = getelementptr i64, ptr %t2597, i64 7
-  store i64 %a7, ptr %t2605
-  %t2606 = call i64 @rt_build_rest(i64 %argc, i64 1, i64 8, ptr %t2597, ptr %overflow)
-  %t2607 = call i64 @rt_null_p(i64 %t2606)
-  %t2608 = icmp ne i64 %t2607, 1
-  br i1 %t2608, label %then716, label %else717
-then716:
-  %t2609 = call ptr @rt_alloc_words(i64 1)
-  %t2610 = ptrtoint ptr %t2609 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_578" to i64), ptr %t2609
-  %t2611 = or i64 %t2610, 4
-  br label %merge718
-else717:
-  %t2612 = call i64 @rt_car(i64 %t2606)
-  br label %merge718
-merge718:
-  %t2613 = phi i64 [ %t2611, %then716 ], [ %t2612, %else717 ]
-  %t2614 = call i64 @rt_make_vector(i64 8, i64 0)
-  %t2615 = call i64 @rt_null_p(i64 %t2606)
-  %t2616 = icmp ne i64 %t2615, 1
-  br i1 %t2616, label %then719, label %else720
-then719:
-  %t2617 = call ptr @rt_alloc_words(i64 1)
-  %t2618 = ptrtoint ptr %t2617 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_580" to i64), ptr %t2617
-  %t2619 = or i64 %t2618, 4
-  br label %merge721
-else720:
-  %t2620 = call i64 @rt_car(i64 %t2606)
-  br label %merge721
-merge721:
-  %t2621 = phi i64 [ %t2619, %then719 ], [ %t2620, %else720 ]
-  %t2622 = and i64 %t2621, -8
-  %t2623 = inttoptr i64 %t2622 to ptr
-  %t2624 = load i64, ptr %t2623
-  %t2625 = inttoptr i64 %t2624 to ptr
-  %t2626 = call fastcc i64%t2625(i64 %t2621, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t2627 = call i64 @rt_vector_set(i64 %t2614, i64 0, i64 %t2626)
-  %t2628 = call ptr @rt_alloc_words(i64 3)
-  %t2629 = ptrtoint ptr %t2628 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_582" to i64), ptr %t2628
-  %t2630 = getelementptr i64, ptr %t2628, i64 1
-  store i64 %t2614, ptr %t2630
-  %t2631 = getelementptr i64, ptr %t2628, i64 2
-  store i64 %t2613, ptr %t2631
-  %t2632 = or i64 %t2629, 4
-  ret i64 %t2632
-}
-
-define fastcc i64 @"scheme.base:code_594"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
-entry:
-  %t2637 = icmp eq i64 %argc, 1
-  br i1 %t2637, label %argok723, label %arityerr722
-arityerr722:
-  call void @rt_arity_error(i64 1, i64 %argc)
-  unreachable
-argok723:
-  %t2638 = and i64 %a0, -8
-  %t2639 = inttoptr i64 %t2638 to ptr
-  %t2640 = load i64, ptr %t2639
-  %t2641 = inttoptr i64 %t2640 to ptr
-  %t2642 = musttail call fastcc i64 %t2641(i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t2642
-}
-
-define fastcc i64 @"scheme.base:code_598"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
-entry:
-  %t2643 = icmp eq i64 %argc, 2
-  br i1 %t2643, label %argok725, label %arityerr724
-arityerr724:
-  call void @rt_arity_error(i64 2, i64 %argc)
-  unreachable
-argok725:
-  %t2644 = and i64 %a0, -8
-  %t2645 = inttoptr i64 %t2644 to ptr
-  %t2646 = load i64, ptr %t2645
-  %t2647 = inttoptr i64 %t2646 to ptr
-  %t2648 = musttail call fastcc i64 %t2647(i64 %a0, i64 1, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t2648
+argok717:
+  %t2604 = call ptr @rt_alloc_words(i64 8)
+  %t2605 = getelementptr i64, ptr %t2604, i64 0
+  store i64 %a0, ptr %t2605
+  %t2606 = getelementptr i64, ptr %t2604, i64 1
+  store i64 %a1, ptr %t2606
+  %t2607 = getelementptr i64, ptr %t2604, i64 2
+  store i64 %a2, ptr %t2607
+  %t2608 = getelementptr i64, ptr %t2604, i64 3
+  store i64 %a3, ptr %t2608
+  %t2609 = getelementptr i64, ptr %t2604, i64 4
+  store i64 %a4, ptr %t2609
+  %t2610 = getelementptr i64, ptr %t2604, i64 5
+  store i64 %a5, ptr %t2610
+  %t2611 = getelementptr i64, ptr %t2604, i64 6
+  store i64 %a6, ptr %t2611
+  %t2612 = getelementptr i64, ptr %t2604, i64 7
+  store i64 %a7, ptr %t2612
+  %t2613 = call i64 @rt_build_rest(i64 %argc, i64 1, i64 8, ptr %t2604, ptr %overflow)
+  %t2614 = call i64 @rt_null_p(i64 %t2613)
+  %t2615 = icmp ne i64 %t2614, 1
+  br i1 %t2615, label %then718, label %else719
+then718:
+  %t2616 = call ptr @rt_alloc_words(i64 1)
+  %t2617 = ptrtoint ptr %t2616 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_580" to i64), ptr %t2616
+  %t2618 = or i64 %t2617, 4
+  br label %merge720
+else719:
+  %t2619 = call i64 @rt_car(i64 %t2613)
+  br label %merge720
+merge720:
+  %t2620 = phi i64 [ %t2618, %then718 ], [ %t2619, %else719 ]
+  %t2621 = call i64 @rt_make_vector(i64 8, i64 0)
+  %t2622 = call i64 @rt_null_p(i64 %t2613)
+  %t2623 = icmp ne i64 %t2622, 1
+  br i1 %t2623, label %then721, label %else722
+then721:
+  %t2624 = call ptr @rt_alloc_words(i64 1)
+  %t2625 = ptrtoint ptr %t2624 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_582" to i64), ptr %t2624
+  %t2626 = or i64 %t2625, 4
+  br label %merge723
+else722:
+  %t2627 = call i64 @rt_car(i64 %t2613)
+  br label %merge723
+merge723:
+  %t2628 = phi i64 [ %t2626, %then721 ], [ %t2627, %else722 ]
+  %t2629 = and i64 %t2628, -8
+  %t2630 = inttoptr i64 %t2629 to ptr
+  %t2631 = load i64, ptr %t2630
+  %t2632 = inttoptr i64 %t2631 to ptr
+  %t2633 = call fastcc i64%t2632(i64 %t2628, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t2634 = call i64 @rt_vector_set(i64 %t2621, i64 0, i64 %t2633)
+  %t2635 = call ptr @rt_alloc_words(i64 3)
+  %t2636 = ptrtoint ptr %t2635 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_584" to i64), ptr %t2635
+  %t2637 = getelementptr i64, ptr %t2635, i64 1
+  store i64 %t2621, ptr %t2637
+  %t2638 = getelementptr i64, ptr %t2635, i64 2
+  store i64 %t2620, ptr %t2638
+  %t2639 = or i64 %t2636, 4
+  ret i64 %t2639
 }
 
 define fastcc i64 @"scheme.base:code_596"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2649 = icmp eq i64 %argc, 0
-  br i1 %t2649, label %argok727, label %arityerr726
-arityerr726:
-  call void @rt_arity_error(i64 0, i64 %argc)
+  %t2644 = icmp eq i64 %argc, 1
+  br i1 %t2644, label %argok725, label %arityerr724
+arityerr724:
+  call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok727:
-  %t2650 = call ptr @rt_alloc_words(i64 1)
-  %t2651 = ptrtoint ptr %t2650 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_598" to i64), ptr %t2650
-  %t2652 = or i64 %t2651, 4
-  %t2653 = and i64 %self, -8
-  %t2654 = inttoptr i64 %t2653 to ptr
-  %t2655 = getelementptr i64, ptr %t2654, i64 1
-  %t2656 = load i64, ptr %t2655
-  %t2657 = and i64 %self, -8
-  %t2658 = inttoptr i64 %t2657 to ptr
-  %t2659 = getelementptr i64, ptr %t2658, i64 2
-  %t2660 = load i64, ptr %t2659
-  %t2661 = load i64, ptr @"scheme.base:for-each"
-  %t2662 = and i64 %t2661, -8
-  %t2663 = inttoptr i64 %t2662 to ptr
-  %t2664 = load i64, ptr %t2663
-  %t2665 = inttoptr i64 %t2664 to ptr
-  %t2666 = musttail call fastcc i64 %t2665(i64 %t2661, i64 3, i64 %t2652, i64 %t2656, i64 %t2660, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t2666
-}
-
-define fastcc i64 @"scheme.base:code_602"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
-entry:
-  %t2667 = icmp eq i64 %argc, 2
-  br i1 %t2667, label %argok729, label %arityerr728
-arityerr728:
-  call void @rt_arity_error(i64 2, i64 %argc)
-  unreachable
-argok729:
-  %t2668 = and i64 %a0, -8
-  %t2669 = inttoptr i64 %t2668 to ptr
-  %t2670 = load i64, ptr %t2669
-  %t2671 = inttoptr i64 %t2670 to ptr
-  %t2672 = musttail call fastcc i64 %t2671(i64 %a0, i64 2, i64 %a1, i64 1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t2672
+argok725:
+  %t2645 = and i64 %a0, -8
+  %t2646 = inttoptr i64 %t2645 to ptr
+  %t2647 = load i64, ptr %t2646
+  %t2648 = inttoptr i64 %t2647 to ptr
+  %t2649 = musttail call fastcc i64 %t2648(i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t2649
 }
 
 define fastcc i64 @"scheme.base:code_600"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2673 = icmp eq i64 %argc, 0
-  br i1 %t2673, label %argok731, label %arityerr730
-arityerr730:
+  %t2650 = icmp eq i64 %argc, 2
+  br i1 %t2650, label %argok727, label %arityerr726
+arityerr726:
+  call void @rt_arity_error(i64 2, i64 %argc)
+  unreachable
+argok727:
+  %t2651 = and i64 %a0, -8
+  %t2652 = inttoptr i64 %t2651 to ptr
+  %t2653 = load i64, ptr %t2652
+  %t2654 = inttoptr i64 %t2653 to ptr
+  %t2655 = musttail call fastcc i64 %t2654(i64 %a0, i64 1, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t2655
+}
+
+define fastcc i64 @"scheme.base:code_598"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+entry:
+  %t2656 = icmp eq i64 %argc, 0
+  br i1 %t2656, label %argok729, label %arityerr728
+arityerr728:
   call void @rt_arity_error(i64 0, i64 %argc)
   unreachable
+argok729:
+  %t2657 = call ptr @rt_alloc_words(i64 1)
+  %t2658 = ptrtoint ptr %t2657 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_600" to i64), ptr %t2657
+  %t2659 = or i64 %t2658, 4
+  %t2660 = and i64 %self, -8
+  %t2661 = inttoptr i64 %t2660 to ptr
+  %t2662 = getelementptr i64, ptr %t2661, i64 1
+  %t2663 = load i64, ptr %t2662
+  %t2664 = and i64 %self, -8
+  %t2665 = inttoptr i64 %t2664 to ptr
+  %t2666 = getelementptr i64, ptr %t2665, i64 2
+  %t2667 = load i64, ptr %t2666
+  %t2668 = load i64, ptr @"scheme.base:for-each"
+  %t2669 = and i64 %t2668, -8
+  %t2670 = inttoptr i64 %t2669 to ptr
+  %t2671 = load i64, ptr %t2670
+  %t2672 = inttoptr i64 %t2671 to ptr
+  %t2673 = musttail call fastcc i64 %t2672(i64 %t2668, i64 3, i64 %t2659, i64 %t2663, i64 %t2667, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t2673
+}
+
+define fastcc i64 @"scheme.base:code_604"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+entry:
+  %t2674 = icmp eq i64 %argc, 2
+  br i1 %t2674, label %argok731, label %arityerr730
+arityerr730:
+  call void @rt_arity_error(i64 2, i64 %argc)
+  unreachable
 argok731:
-  %t2674 = call ptr @rt_alloc_words(i64 1)
-  %t2675 = ptrtoint ptr %t2674 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_602" to i64), ptr %t2674
-  %t2676 = or i64 %t2675, 4
-  %t2677 = and i64 %self, -8
+  %t2675 = and i64 %a0, -8
+  %t2676 = inttoptr i64 %t2675 to ptr
+  %t2677 = load i64, ptr %t2676
   %t2678 = inttoptr i64 %t2677 to ptr
-  %t2679 = getelementptr i64, ptr %t2678, i64 1
-  %t2680 = load i64, ptr %t2679
-  %t2681 = and i64 %self, -8
-  %t2682 = inttoptr i64 %t2681 to ptr
-  %t2683 = getelementptr i64, ptr %t2682, i64 2
-  %t2684 = load i64, ptr %t2683
-  %t2685 = load i64, ptr @"scheme.base:for-each"
-  %t2686 = and i64 %t2685, -8
-  %t2687 = inttoptr i64 %t2686 to ptr
-  %t2688 = load i64, ptr %t2687
+  %t2679 = musttail call fastcc i64 %t2678(i64 %a0, i64 2, i64 %a1, i64 1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t2679
+}
+
+define fastcc i64 @"scheme.base:code_602"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+entry:
+  %t2680 = icmp eq i64 %argc, 0
+  br i1 %t2680, label %argok733, label %arityerr732
+arityerr732:
+  call void @rt_arity_error(i64 0, i64 %argc)
+  unreachable
+argok733:
+  %t2681 = call ptr @rt_alloc_words(i64 1)
+  %t2682 = ptrtoint ptr %t2681 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_604" to i64), ptr %t2681
+  %t2683 = or i64 %t2682, 4
+  %t2684 = and i64 %self, -8
+  %t2685 = inttoptr i64 %t2684 to ptr
+  %t2686 = getelementptr i64, ptr %t2685, i64 1
+  %t2687 = load i64, ptr %t2686
+  %t2688 = and i64 %self, -8
   %t2689 = inttoptr i64 %t2688 to ptr
-  %t2690 = musttail call fastcc i64 %t2689(i64 %t2685, i64 3, i64 %t2676, i64 %t2680, i64 %t2684, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t2690
+  %t2690 = getelementptr i64, ptr %t2689, i64 2
+  %t2691 = load i64, ptr %t2690
+  %t2692 = load i64, ptr @"scheme.base:for-each"
+  %t2693 = and i64 %t2692, -8
+  %t2694 = inttoptr i64 %t2693 to ptr
+  %t2695 = load i64, ptr %t2694
+  %t2696 = inttoptr i64 %t2695 to ptr
+  %t2697 = musttail call fastcc i64 %t2696(i64 %t2692, i64 3, i64 %t2683, i64 %t2687, i64 %t2691, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t2697
 }
 
 define fastcc i64 @"scheme.base:code:%with-parameters"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2691 = icmp eq i64 %argc, 3
-  br i1 %t2691, label %argok733, label %arityerr732
-arityerr732:
+  %t2698 = icmp eq i64 %argc, 3
+  br i1 %t2698, label %argok735, label %arityerr734
+arityerr734:
   call void @rt_arity_error(i64 3, i64 %argc)
   unreachable
-argok733:
-  %t2692 = call ptr @rt_alloc_words(i64 1)
-  %t2693 = ptrtoint ptr %t2692 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_594" to i64), ptr %t2692
-  %t2694 = or i64 %t2693, 4
-  %t2695 = load i64, ptr @"scheme.base:map"
-  %t2696 = and i64 %t2695, -8
-  %t2697 = inttoptr i64 %t2696 to ptr
-  %t2698 = load i64, ptr %t2697
-  %t2699 = inttoptr i64 %t2698 to ptr
-  %t2700 = call fastcc i64%t2699(i64 %t2695, i64 2, i64 %t2694, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t2701 = call ptr @rt_alloc_words(i64 3)
-  %t2702 = ptrtoint ptr %t2701 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_596" to i64), ptr %t2701
-  %t2703 = getelementptr i64, ptr %t2701, i64 1
-  store i64 %a0, ptr %t2703
-  %t2704 = getelementptr i64, ptr %t2701, i64 2
-  store i64 %a1, ptr %t2704
-  %t2705 = or i64 %t2702, 4
-  %t2706 = call ptr @rt_alloc_words(i64 3)
-  %t2707 = ptrtoint ptr %t2706 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_600" to i64), ptr %t2706
-  %t2708 = getelementptr i64, ptr %t2706, i64 1
-  store i64 %a0, ptr %t2708
-  %t2709 = getelementptr i64, ptr %t2706, i64 2
-  store i64 %t2700, ptr %t2709
-  %t2710 = or i64 %t2707, 4
-  %t2711 = load i64, ptr @"scheme.base:dynamic-wind"
-  %t2712 = and i64 %t2711, -8
-  %t2713 = inttoptr i64 %t2712 to ptr
-  %t2714 = load i64, ptr %t2713
-  %t2715 = inttoptr i64 %t2714 to ptr
-  %t2716 = musttail call fastcc i64 %t2715(i64 %t2711, i64 3, i64 %t2705, i64 %a2, i64 %t2710, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t2716
+argok735:
+  %t2699 = call ptr @rt_alloc_words(i64 1)
+  %t2700 = ptrtoint ptr %t2699 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_596" to i64), ptr %t2699
+  %t2701 = or i64 %t2700, 4
+  %t2702 = load i64, ptr @"scheme.base:map"
+  %t2703 = and i64 %t2702, -8
+  %t2704 = inttoptr i64 %t2703 to ptr
+  %t2705 = load i64, ptr %t2704
+  %t2706 = inttoptr i64 %t2705 to ptr
+  %t2707 = call fastcc i64%t2706(i64 %t2702, i64 2, i64 %t2701, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t2708 = call ptr @rt_alloc_words(i64 3)
+  %t2709 = ptrtoint ptr %t2708 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_598" to i64), ptr %t2708
+  %t2710 = getelementptr i64, ptr %t2708, i64 1
+  store i64 %a0, ptr %t2710
+  %t2711 = getelementptr i64, ptr %t2708, i64 2
+  store i64 %a1, ptr %t2711
+  %t2712 = or i64 %t2709, 4
+  %t2713 = call ptr @rt_alloc_words(i64 3)
+  %t2714 = ptrtoint ptr %t2713 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_602" to i64), ptr %t2713
+  %t2715 = getelementptr i64, ptr %t2713, i64 1
+  store i64 %a0, ptr %t2715
+  %t2716 = getelementptr i64, ptr %t2713, i64 2
+  store i64 %t2707, ptr %t2716
+  %t2717 = or i64 %t2714, 4
+  %t2718 = load i64, ptr @"scheme.base:dynamic-wind"
+  %t2719 = and i64 %t2718, -8
+  %t2720 = inttoptr i64 %t2719 to ptr
+  %t2721 = load i64, ptr %t2720
+  %t2722 = inttoptr i64 %t2721 to ptr
+  %t2723 = musttail call fastcc i64 %t2722(i64 %t2718, i64 3, i64 %t2712, i64 %a2, i64 %t2717, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t2723
 }
 
-define fastcc i64 @"scheme.base:code_610"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_612"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2721 = icmp eq i64 %argc, 2
-  br i1 %t2721, label %argok735, label %arityerr734
-arityerr734:
+  %t2728 = icmp eq i64 %argc, 2
+  br i1 %t2728, label %argok737, label %arityerr736
+arityerr736:
   call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
-argok735:
-  %t2722 = call i64 @rt_null_p(i64 %a0)
-  %t2723 = icmp ne i64 %t2722, 1
-  br i1 %t2723, label %then736, label %else737
-then736:
-  %t2724 = and i64 %self, -8
-  %t2725 = inttoptr i64 %t2724 to ptr
-  %t2726 = getelementptr i64, ptr %t2725, i64 1
-  %t2727 = load i64, ptr %t2726
-  ret i64 %t2727
-else737:
-  %t2728 = and i64 %self, -8
-  %t2729 = inttoptr i64 %t2728 to ptr
-  %t2730 = getelementptr i64, ptr %t2729, i64 1
-  %t2731 = load i64, ptr %t2730
-  %t2732 = call i64 @rt_car(i64 %a0)
-  %t2733 = call i64 @rt_vector_set(i64 %t2731, i64 %a1, i64 %t2732)
-  %t2734 = call i64 @rt_cdr(i64 %a0)
-  %t2735 = or i64 %a1, 8
-  %t2736 = and i64 %t2735, 7
-  %t2737 = icmp eq i64 %t2736, 0
-  br i1 %t2737, label %fixfast738, label %fixslow739
-fixfast738:
-  %t2738 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a1, i64 8)
-  %t2739 = extractvalue {i64, i1} %t2738, 0
-  %t2740 = extractvalue {i64, i1} %t2738, 1
-  br i1 %t2740, label %fixslow739, label %fixmerge740
-fixslow739:
-  %t2741 = call i64 @rt_add(i64 %a1, i64 8)
-  br label %fixmerge740
-fixmerge740:
-  %t2742 = phi i64 [ %t2739, %fixfast738 ], [ %t2741, %fixslow739 ]
-  %t2743 = musttail call fastcc i64 @"scheme.base:code_610"(i64 %self, i64 2, i64 %t2734, i64 %t2742, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t2743
+argok737:
+  %t2729 = call i64 @rt_null_p(i64 %a0)
+  %t2730 = icmp ne i64 %t2729, 1
+  br i1 %t2730, label %then738, label %else739
+then738:
+  %t2731 = and i64 %self, -8
+  %t2732 = inttoptr i64 %t2731 to ptr
+  %t2733 = getelementptr i64, ptr %t2732, i64 1
+  %t2734 = load i64, ptr %t2733
+  ret i64 %t2734
+else739:
+  %t2735 = and i64 %self, -8
+  %t2736 = inttoptr i64 %t2735 to ptr
+  %t2737 = getelementptr i64, ptr %t2736, i64 1
+  %t2738 = load i64, ptr %t2737
+  %t2739 = call i64 @rt_car(i64 %a0)
+  %t2740 = call i64 @rt_vector_set(i64 %t2738, i64 %a1, i64 %t2739)
+  %t2741 = call i64 @rt_cdr(i64 %a0)
+  %t2742 = or i64 %a1, 8
+  %t2743 = and i64 %t2742, 7
+  %t2744 = icmp eq i64 %t2743, 0
+  br i1 %t2744, label %fixfast740, label %fixslow741
+fixfast740:
+  %t2745 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a1, i64 8)
+  %t2746 = extractvalue {i64, i1} %t2745, 0
+  %t2747 = extractvalue {i64, i1} %t2745, 1
+  br i1 %t2747, label %fixslow741, label %fixmerge742
+fixslow741:
+  %t2748 = call i64 @rt_add(i64 %a1, i64 8)
+  br label %fixmerge742
+fixmerge742:
+  %t2749 = phi i64 [ %t2746, %fixfast740 ], [ %t2748, %fixslow741 ]
+  %t2750 = musttail call fastcc i64 @"scheme.base:code_612"(i64 %self, i64 2, i64 %t2741, i64 %t2749, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t2750
 }
 
 define fastcc i64 @"scheme.base:code:list->vector"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2744 = icmp eq i64 %argc, 1
-  br i1 %t2744, label %argok742, label %arityerr741
-arityerr741:
+  %t2751 = icmp eq i64 %argc, 1
+  br i1 %t2751, label %argok744, label %arityerr743
+arityerr743:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok742:
-  %t2745 = load i64, ptr @"scheme.base:length"
-  %t2746 = and i64 %t2745, -8
-  %t2747 = inttoptr i64 %t2746 to ptr
-  %t2748 = load i64, ptr %t2747
-  %t2749 = inttoptr i64 %t2748 to ptr
-  %t2750 = call fastcc i64%t2749(i64 %t2745, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t2751 = call i64 @rt_make_vector(i64 %t2750, i64 0)
-  %t2752 = call ptr @rt_alloc_words(i64 3)
-  %t2753 = ptrtoint ptr %t2752 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_610" to i64), ptr %t2752
-  %t2754 = or i64 %t2753, 4
-  %t2755 = getelementptr i64, ptr %t2752, i64 1
-  store i64 %t2751, ptr %t2755
-  %t2756 = getelementptr i64, ptr %t2752, i64 2
-  store i64 %t2754, ptr %t2756
-  %t2757 = musttail call fastcc i64 @"scheme.base:code_610"(i64 %t2754, i64 2, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t2757
+argok744:
+  %t2752 = load i64, ptr @"scheme.base:length"
+  %t2753 = and i64 %t2752, -8
+  %t2754 = inttoptr i64 %t2753 to ptr
+  %t2755 = load i64, ptr %t2754
+  %t2756 = inttoptr i64 %t2755 to ptr
+  %t2757 = call fastcc i64%t2756(i64 %t2752, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t2758 = call i64 @rt_make_vector(i64 %t2757, i64 0)
+  %t2759 = call ptr @rt_alloc_words(i64 3)
+  %t2760 = ptrtoint ptr %t2759 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_612" to i64), ptr %t2759
+  %t2761 = or i64 %t2760, 4
+  %t2762 = getelementptr i64, ptr %t2759, i64 1
+  store i64 %t2758, ptr %t2762
+  %t2763 = getelementptr i64, ptr %t2759, i64 2
+  store i64 %t2761, ptr %t2763
+  %t2764 = musttail call fastcc i64 @"scheme.base:code_612"(i64 %t2761, i64 2, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t2764
 }
 
 define fastcc i64 @"scheme.base:code:vector"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2762 = icmp sge i64 %argc, 0
-  br i1 %t2762, label %argok744, label %arityerr743
-arityerr743:
+  %t2769 = icmp sge i64 %argc, 0
+  br i1 %t2769, label %argok746, label %arityerr745
+arityerr745:
   call void @rt_arity_error(i64 0, i64 %argc)
   unreachable
-argok744:
-  %t2763 = call ptr @rt_alloc_words(i64 8)
-  %t2764 = getelementptr i64, ptr %t2763, i64 0
-  store i64 %a0, ptr %t2764
-  %t2765 = getelementptr i64, ptr %t2763, i64 1
-  store i64 %a1, ptr %t2765
-  %t2766 = getelementptr i64, ptr %t2763, i64 2
-  store i64 %a2, ptr %t2766
-  %t2767 = getelementptr i64, ptr %t2763, i64 3
-  store i64 %a3, ptr %t2767
-  %t2768 = getelementptr i64, ptr %t2763, i64 4
-  store i64 %a4, ptr %t2768
-  %t2769 = getelementptr i64, ptr %t2763, i64 5
-  store i64 %a5, ptr %t2769
-  %t2770 = getelementptr i64, ptr %t2763, i64 6
-  store i64 %a6, ptr %t2770
-  %t2771 = getelementptr i64, ptr %t2763, i64 7
-  store i64 %a7, ptr %t2771
-  %t2772 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t2763, ptr %overflow)
-  %t2773 = load i64, ptr @"scheme.base:list->vector"
-  %t2774 = and i64 %t2773, -8
-  %t2775 = inttoptr i64 %t2774 to ptr
-  %t2776 = load i64, ptr %t2775
-  %t2777 = inttoptr i64 %t2776 to ptr
-  %t2778 = musttail call fastcc i64 %t2777(i64 %t2773, i64 1, i64 %t2772, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t2778
+argok746:
+  %t2770 = call ptr @rt_alloc_words(i64 8)
+  %t2771 = getelementptr i64, ptr %t2770, i64 0
+  store i64 %a0, ptr %t2771
+  %t2772 = getelementptr i64, ptr %t2770, i64 1
+  store i64 %a1, ptr %t2772
+  %t2773 = getelementptr i64, ptr %t2770, i64 2
+  store i64 %a2, ptr %t2773
+  %t2774 = getelementptr i64, ptr %t2770, i64 3
+  store i64 %a3, ptr %t2774
+  %t2775 = getelementptr i64, ptr %t2770, i64 4
+  store i64 %a4, ptr %t2775
+  %t2776 = getelementptr i64, ptr %t2770, i64 5
+  store i64 %a5, ptr %t2776
+  %t2777 = getelementptr i64, ptr %t2770, i64 6
+  store i64 %a6, ptr %t2777
+  %t2778 = getelementptr i64, ptr %t2770, i64 7
+  store i64 %a7, ptr %t2778
+  %t2779 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t2770, ptr %overflow)
+  %t2780 = load i64, ptr @"scheme.base:list->vector"
+  %t2781 = and i64 %t2780, -8
+  %t2782 = inttoptr i64 %t2781 to ptr
+  %t2783 = load i64, ptr %t2782
+  %t2784 = inttoptr i64 %t2783 to ptr
+  %t2785 = musttail call fastcc i64 %t2784(i64 %t2780, i64 1, i64 %t2779, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t2785
 }
 
-define fastcc i64 @"scheme.base:code_620"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_622"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2783 = icmp eq i64 %argc, 2
-  br i1 %t2783, label %argok746, label %arityerr745
-arityerr745:
+  %t2790 = icmp eq i64 %argc, 2
+  br i1 %t2790, label %argok748, label %arityerr747
+arityerr747:
   call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
-argok746:
-  %t2784 = call i64 @rt_null_p(i64 %a0)
-  %t2785 = icmp ne i64 %t2784, 1
-  br i1 %t2785, label %then747, label %else748
-then747:
-  %t2786 = and i64 %self, -8
-  %t2787 = inttoptr i64 %t2786 to ptr
-  %t2788 = getelementptr i64, ptr %t2787, i64 1
-  %t2789 = load i64, ptr %t2788
-  ret i64 %t2789
-else748:
-  %t2790 = and i64 %self, -8
-  %t2791 = inttoptr i64 %t2790 to ptr
-  %t2792 = getelementptr i64, ptr %t2791, i64 1
-  %t2793 = load i64, ptr %t2792
-  %t2794 = call i64 @rt_car(i64 %a0)
-  %t2795 = call i64 @rt_bytevector_u8_set(i64 %t2793, i64 %a1, i64 %t2794)
-  %t2796 = call i64 @rt_cdr(i64 %a0)
-  %t2797 = or i64 %a1, 8
-  %t2798 = and i64 %t2797, 7
-  %t2799 = icmp eq i64 %t2798, 0
-  br i1 %t2799, label %fixfast749, label %fixslow750
-fixfast749:
-  %t2800 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a1, i64 8)
-  %t2801 = extractvalue {i64, i1} %t2800, 0
-  %t2802 = extractvalue {i64, i1} %t2800, 1
-  br i1 %t2802, label %fixslow750, label %fixmerge751
-fixslow750:
-  %t2803 = call i64 @rt_add(i64 %a1, i64 8)
-  br label %fixmerge751
-fixmerge751:
-  %t2804 = phi i64 [ %t2801, %fixfast749 ], [ %t2803, %fixslow750 ]
-  %t2805 = musttail call fastcc i64 @"scheme.base:code_620"(i64 %self, i64 2, i64 %t2796, i64 %t2804, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t2805
+argok748:
+  %t2791 = call i64 @rt_null_p(i64 %a0)
+  %t2792 = icmp ne i64 %t2791, 1
+  br i1 %t2792, label %then749, label %else750
+then749:
+  %t2793 = and i64 %self, -8
+  %t2794 = inttoptr i64 %t2793 to ptr
+  %t2795 = getelementptr i64, ptr %t2794, i64 1
+  %t2796 = load i64, ptr %t2795
+  ret i64 %t2796
+else750:
+  %t2797 = and i64 %self, -8
+  %t2798 = inttoptr i64 %t2797 to ptr
+  %t2799 = getelementptr i64, ptr %t2798, i64 1
+  %t2800 = load i64, ptr %t2799
+  %t2801 = call i64 @rt_car(i64 %a0)
+  %t2802 = call i64 @rt_bytevector_u8_set(i64 %t2800, i64 %a1, i64 %t2801)
+  %t2803 = call i64 @rt_cdr(i64 %a0)
+  %t2804 = or i64 %a1, 8
+  %t2805 = and i64 %t2804, 7
+  %t2806 = icmp eq i64 %t2805, 0
+  br i1 %t2806, label %fixfast751, label %fixslow752
+fixfast751:
+  %t2807 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a1, i64 8)
+  %t2808 = extractvalue {i64, i1} %t2807, 0
+  %t2809 = extractvalue {i64, i1} %t2807, 1
+  br i1 %t2809, label %fixslow752, label %fixmerge753
+fixslow752:
+  %t2810 = call i64 @rt_add(i64 %a1, i64 8)
+  br label %fixmerge753
+fixmerge753:
+  %t2811 = phi i64 [ %t2808, %fixfast751 ], [ %t2810, %fixslow752 ]
+  %t2812 = musttail call fastcc i64 @"scheme.base:code_622"(i64 %self, i64 2, i64 %t2803, i64 %t2811, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t2812
 }
 
 define fastcc i64 @"scheme.base:code:list->bytevector"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2806 = icmp eq i64 %argc, 1
-  br i1 %t2806, label %argok753, label %arityerr752
-arityerr752:
+  %t2813 = icmp eq i64 %argc, 1
+  br i1 %t2813, label %argok755, label %arityerr754
+arityerr754:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok753:
-  %t2807 = load i64, ptr @"scheme.base:length"
-  %t2808 = and i64 %t2807, -8
-  %t2809 = inttoptr i64 %t2808 to ptr
-  %t2810 = load i64, ptr %t2809
-  %t2811 = inttoptr i64 %t2810 to ptr
-  %t2812 = call fastcc i64%t2811(i64 %t2807, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t2813 = call i64 @rt_make_bytevector(i64 %t2812, i64 0)
-  %t2814 = call ptr @rt_alloc_words(i64 3)
-  %t2815 = ptrtoint ptr %t2814 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_620" to i64), ptr %t2814
-  %t2816 = or i64 %t2815, 4
-  %t2817 = getelementptr i64, ptr %t2814, i64 1
-  store i64 %t2813, ptr %t2817
-  %t2818 = getelementptr i64, ptr %t2814, i64 2
-  store i64 %t2816, ptr %t2818
-  %t2819 = musttail call fastcc i64 @"scheme.base:code_620"(i64 %t2816, i64 2, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t2819
+argok755:
+  %t2814 = load i64, ptr @"scheme.base:length"
+  %t2815 = and i64 %t2814, -8
+  %t2816 = inttoptr i64 %t2815 to ptr
+  %t2817 = load i64, ptr %t2816
+  %t2818 = inttoptr i64 %t2817 to ptr
+  %t2819 = call fastcc i64%t2818(i64 %t2814, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t2820 = call i64 @rt_make_bytevector(i64 %t2819, i64 0)
+  %t2821 = call ptr @rt_alloc_words(i64 3)
+  %t2822 = ptrtoint ptr %t2821 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_622" to i64), ptr %t2821
+  %t2823 = or i64 %t2822, 4
+  %t2824 = getelementptr i64, ptr %t2821, i64 1
+  store i64 %t2820, ptr %t2824
+  %t2825 = getelementptr i64, ptr %t2821, i64 2
+  store i64 %t2823, ptr %t2825
+  %t2826 = musttail call fastcc i64 @"scheme.base:code_622"(i64 %t2823, i64 2, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t2826
 }
 
 define fastcc i64 @"scheme.base:code:bytevector"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2824 = icmp sge i64 %argc, 0
-  br i1 %t2824, label %argok755, label %arityerr754
-arityerr754:
-  call void @rt_arity_error(i64 0, i64 %argc)
-  unreachable
-argok755:
-  %t2825 = call ptr @rt_alloc_words(i64 8)
-  %t2826 = getelementptr i64, ptr %t2825, i64 0
-  store i64 %a0, ptr %t2826
-  %t2827 = getelementptr i64, ptr %t2825, i64 1
-  store i64 %a1, ptr %t2827
-  %t2828 = getelementptr i64, ptr %t2825, i64 2
-  store i64 %a2, ptr %t2828
-  %t2829 = getelementptr i64, ptr %t2825, i64 3
-  store i64 %a3, ptr %t2829
-  %t2830 = getelementptr i64, ptr %t2825, i64 4
-  store i64 %a4, ptr %t2830
-  %t2831 = getelementptr i64, ptr %t2825, i64 5
-  store i64 %a5, ptr %t2831
-  %t2832 = getelementptr i64, ptr %t2825, i64 6
-  store i64 %a6, ptr %t2832
-  %t2833 = getelementptr i64, ptr %t2825, i64 7
-  store i64 %a7, ptr %t2833
-  %t2834 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t2825, ptr %overflow)
-  %t2835 = load i64, ptr @"scheme.base:list->bytevector"
-  %t2836 = and i64 %t2835, -8
-  %t2837 = inttoptr i64 %t2836 to ptr
-  %t2838 = load i64, ptr %t2837
-  %t2839 = inttoptr i64 %t2838 to ptr
-  %t2840 = musttail call fastcc i64 %t2839(i64 %t2835, i64 1, i64 %t2834, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t2840
-}
-
-define fastcc i64 @"scheme.base:code:values"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
-entry:
-  %t2845 = icmp sge i64 %argc, 0
-  br i1 %t2845, label %argok757, label %arityerr756
+  %t2831 = icmp sge i64 %argc, 0
+  br i1 %t2831, label %argok757, label %arityerr756
 arityerr756:
   call void @rt_arity_error(i64 0, i64 %argc)
   unreachable
 argok757:
-  %t2846 = call ptr @rt_alloc_words(i64 8)
-  %t2847 = getelementptr i64, ptr %t2846, i64 0
-  store i64 %a0, ptr %t2847
-  %t2848 = getelementptr i64, ptr %t2846, i64 1
-  store i64 %a1, ptr %t2848
-  %t2849 = getelementptr i64, ptr %t2846, i64 2
-  store i64 %a2, ptr %t2849
-  %t2850 = getelementptr i64, ptr %t2846, i64 3
-  store i64 %a3, ptr %t2850
-  %t2851 = getelementptr i64, ptr %t2846, i64 4
-  store i64 %a4, ptr %t2851
-  %t2852 = getelementptr i64, ptr %t2846, i64 5
-  store i64 %a5, ptr %t2852
-  %t2853 = getelementptr i64, ptr %t2846, i64 6
-  store i64 %a6, ptr %t2853
-  %t2854 = getelementptr i64, ptr %t2846, i64 7
-  store i64 %a7, ptr %t2854
-  %t2855 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t2846, ptr %overflow)
-  %t2856 = call i64 @rt_pair_p(i64 %t2855)
-  %t2857 = icmp ne i64 %t2856, 1
-  br i1 %t2857, label %then758, label %else759
-then758:
-  %t2858 = call i64 @rt_cdr(i64 %t2855)
-  %t2859 = call i64 @rt_null_p(i64 %t2858)
-  br label %merge760
-else759:
-  br label %merge760
-merge760:
-  %t2860 = phi i64 [ %t2859, %then758 ], [ 1, %else759 ]
-  %t2861 = icmp ne i64 %t2860, 1
-  br i1 %t2861, label %then761, label %else762
-then761:
-  %t2862 = call i64 @rt_car(i64 %t2855)
-  ret i64 %t2862
-else762:
-  %t2863 = call i64 @rt_list_to_mv(i64 %t2855)
-  ret i64 %t2863
+  %t2832 = call ptr @rt_alloc_words(i64 8)
+  %t2833 = getelementptr i64, ptr %t2832, i64 0
+  store i64 %a0, ptr %t2833
+  %t2834 = getelementptr i64, ptr %t2832, i64 1
+  store i64 %a1, ptr %t2834
+  %t2835 = getelementptr i64, ptr %t2832, i64 2
+  store i64 %a2, ptr %t2835
+  %t2836 = getelementptr i64, ptr %t2832, i64 3
+  store i64 %a3, ptr %t2836
+  %t2837 = getelementptr i64, ptr %t2832, i64 4
+  store i64 %a4, ptr %t2837
+  %t2838 = getelementptr i64, ptr %t2832, i64 5
+  store i64 %a5, ptr %t2838
+  %t2839 = getelementptr i64, ptr %t2832, i64 6
+  store i64 %a6, ptr %t2839
+  %t2840 = getelementptr i64, ptr %t2832, i64 7
+  store i64 %a7, ptr %t2840
+  %t2841 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t2832, ptr %overflow)
+  %t2842 = load i64, ptr @"scheme.base:list->bytevector"
+  %t2843 = and i64 %t2842, -8
+  %t2844 = inttoptr i64 %t2843 to ptr
+  %t2845 = load i64, ptr %t2844
+  %t2846 = inttoptr i64 %t2845 to ptr
+  %t2847 = musttail call fastcc i64 %t2846(i64 %t2842, i64 1, i64 %t2841, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t2847
+}
+
+define fastcc i64 @"scheme.base:code:values"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+entry:
+  %t2852 = icmp sge i64 %argc, 0
+  br i1 %t2852, label %argok759, label %arityerr758
+arityerr758:
+  call void @rt_arity_error(i64 0, i64 %argc)
+  unreachable
+argok759:
+  %t2853 = call ptr @rt_alloc_words(i64 8)
+  %t2854 = getelementptr i64, ptr %t2853, i64 0
+  store i64 %a0, ptr %t2854
+  %t2855 = getelementptr i64, ptr %t2853, i64 1
+  store i64 %a1, ptr %t2855
+  %t2856 = getelementptr i64, ptr %t2853, i64 2
+  store i64 %a2, ptr %t2856
+  %t2857 = getelementptr i64, ptr %t2853, i64 3
+  store i64 %a3, ptr %t2857
+  %t2858 = getelementptr i64, ptr %t2853, i64 4
+  store i64 %a4, ptr %t2858
+  %t2859 = getelementptr i64, ptr %t2853, i64 5
+  store i64 %a5, ptr %t2859
+  %t2860 = getelementptr i64, ptr %t2853, i64 6
+  store i64 %a6, ptr %t2860
+  %t2861 = getelementptr i64, ptr %t2853, i64 7
+  store i64 %a7, ptr %t2861
+  %t2862 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t2853, ptr %overflow)
+  %t2863 = call i64 @rt_pair_p(i64 %t2862)
+  %t2864 = icmp ne i64 %t2863, 1
+  br i1 %t2864, label %then760, label %else761
+then760:
+  %t2865 = call i64 @rt_cdr(i64 %t2862)
+  %t2866 = call i64 @rt_null_p(i64 %t2865)
+  br label %merge762
+else761:
+  br label %merge762
+merge762:
+  %t2867 = phi i64 [ %t2866, %then760 ], [ 1, %else761 ]
+  %t2868 = icmp ne i64 %t2867, 1
+  br i1 %t2868, label %then763, label %else764
+then763:
+  %t2869 = call i64 @rt_car(i64 %t2862)
+  ret i64 %t2869
+else764:
+  %t2870 = call i64 @rt_list_to_mv(i64 %t2862)
+  ret i64 %t2870
 }
 
 define fastcc i64 @"scheme.base:code:call-with-values"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2868 = icmp eq i64 %argc, 2
-  br i1 %t2868, label %argok764, label %arityerr763
-arityerr763:
+  %t2875 = icmp eq i64 %argc, 2
+  br i1 %t2875, label %argok766, label %arityerr765
+arityerr765:
   call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
-argok764:
-  %t2869 = and i64 %a0, -8
-  %t2870 = inttoptr i64 %t2869 to ptr
-  %t2871 = load i64, ptr %t2870
-  %t2872 = inttoptr i64 %t2871 to ptr
-  %t2873 = call fastcc i64%t2872(i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t2874 = call i64 @rt_mv_p(i64 %t2873)
-  %t2875 = icmp ne i64 %t2874, 1
-  br i1 %t2875, label %then765, label %else766
-then765:
-  %t2876 = call i64 @rt_mv_to_list(i64 %t2873)
-  %t2877 = and i64 %a1, -8
-  %t2878 = inttoptr i64 %t2877 to ptr
-  %t2879 = load i64, ptr %t2878
-  %t2880 = inttoptr i64 %t2879 to ptr
-  %t2881 = call i64 @rt_list_length(i64 %t2876)
-  %t2882 = add i64 0, %t2881
-  %t2883 = call ptr @rt_apply_argv(i64 0, ptr null, i64 %t2876, i64 8)
-  %t2895 = getelementptr i64, ptr %t2883, i64 0
-  %t2887 = load i64, ptr %t2895
-  %t2896 = getelementptr i64, ptr %t2883, i64 1
-  %t2888 = load i64, ptr %t2896
-  %t2897 = getelementptr i64, ptr %t2883, i64 2
-  %t2889 = load i64, ptr %t2897
-  %t2898 = getelementptr i64, ptr %t2883, i64 3
-  %t2890 = load i64, ptr %t2898
-  %t2899 = getelementptr i64, ptr %t2883, i64 4
-  %t2891 = load i64, ptr %t2899
-  %t2900 = getelementptr i64, ptr %t2883, i64 5
-  %t2892 = load i64, ptr %t2900
-  %t2901 = getelementptr i64, ptr %t2883, i64 6
-  %t2893 = load i64, ptr %t2901
-  %t2902 = getelementptr i64, ptr %t2883, i64 7
+argok766:
+  %t2876 = and i64 %a0, -8
+  %t2877 = inttoptr i64 %t2876 to ptr
+  %t2878 = load i64, ptr %t2877
+  %t2879 = inttoptr i64 %t2878 to ptr
+  %t2880 = call fastcc i64%t2879(i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t2881 = call i64 @rt_mv_p(i64 %t2880)
+  %t2882 = icmp ne i64 %t2881, 1
+  br i1 %t2882, label %then767, label %else768
+then767:
+  %t2883 = call i64 @rt_mv_to_list(i64 %t2880)
+  %t2884 = and i64 %a1, -8
+  %t2885 = inttoptr i64 %t2884 to ptr
+  %t2886 = load i64, ptr %t2885
+  %t2887 = inttoptr i64 %t2886 to ptr
+  %t2888 = call i64 @rt_list_length(i64 %t2883)
+  %t2889 = add i64 0, %t2888
+  %t2890 = call ptr @rt_apply_argv(i64 0, ptr null, i64 %t2883, i64 8)
+  %t2902 = getelementptr i64, ptr %t2890, i64 0
   %t2894 = load i64, ptr %t2902
-  %t2884 = icmp sgt i64 %t2882, 8
-  %t2885 = getelementptr i64, ptr %t2883, i64 8
-  %t2886 = select i1 %t2884, ptr %t2885, ptr null
-  %t2903 = musttail call fastcc i64 %t2880(i64 %a1, i64 %t2882, i64 %t2887, i64 %t2888, i64 %t2889, i64 %t2890, i64 %t2891, i64 %t2892, i64 %t2893, i64 %t2894, ptr %t2886)
-  ret i64 %t2903
-else766:
-  %t2904 = and i64 %a1, -8
-  %t2905 = inttoptr i64 %t2904 to ptr
-  %t2906 = load i64, ptr %t2905
-  %t2907 = inttoptr i64 %t2906 to ptr
-  %t2908 = musttail call fastcc i64 %t2907(i64 %a1, i64 1, i64 %t2873, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t2908
+  %t2903 = getelementptr i64, ptr %t2890, i64 1
+  %t2895 = load i64, ptr %t2903
+  %t2904 = getelementptr i64, ptr %t2890, i64 2
+  %t2896 = load i64, ptr %t2904
+  %t2905 = getelementptr i64, ptr %t2890, i64 3
+  %t2897 = load i64, ptr %t2905
+  %t2906 = getelementptr i64, ptr %t2890, i64 4
+  %t2898 = load i64, ptr %t2906
+  %t2907 = getelementptr i64, ptr %t2890, i64 5
+  %t2899 = load i64, ptr %t2907
+  %t2908 = getelementptr i64, ptr %t2890, i64 6
+  %t2900 = load i64, ptr %t2908
+  %t2909 = getelementptr i64, ptr %t2890, i64 7
+  %t2901 = load i64, ptr %t2909
+  %t2891 = icmp sgt i64 %t2889, 8
+  %t2892 = getelementptr i64, ptr %t2890, i64 8
+  %t2893 = select i1 %t2891, ptr %t2892, ptr null
+  %t2910 = musttail call fastcc i64 %t2887(i64 %a1, i64 %t2889, i64 %t2894, i64 %t2895, i64 %t2896, i64 %t2897, i64 %t2898, i64 %t2899, i64 %t2900, i64 %t2901, ptr %t2893)
+  ret i64 %t2910
+else768:
+  %t2911 = and i64 %a1, -8
+  %t2912 = inttoptr i64 %t2911 to ptr
+  %t2913 = load i64, ptr %t2912
+  %t2914 = inttoptr i64 %t2913 to ptr
+  %t2915 = musttail call fastcc i64 %t2914(i64 %a1, i64 1, i64 %t2880, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t2915
 }
 
 define fastcc i64 @"scheme.base:code:make-hash-table"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2915 = icmp eq i64 %argc, 0
-  br i1 %t2915, label %argok768, label %arityerr767
-arityerr767:
+  %t2922 = icmp eq i64 %argc, 0
+  br i1 %t2922, label %argok770, label %arityerr769
+arityerr769:
   call void @rt_arity_error(i64 0, i64 %argc)
   unreachable
-argok768:
-  %t2916 = load i64, ptr @"scheme.base:%ht-initial-buckets"
-  %t2917 = call i64 @rt_make_vector(i64 %t2916, i64 2)
-  %t2918 = load i64, ptr @"scheme.base:vector"
-  %t2919 = and i64 %t2918, -8
-  %t2920 = inttoptr i64 %t2919 to ptr
-  %t2921 = load i64, ptr %t2920
-  %t2922 = inttoptr i64 %t2921 to ptr
-  %t2923 = call fastcc i64%t2922(i64 %t2918, i64 3, i64 0, i64 %t2917, i64 1, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t2924 = call i64 @rt_make_hash_table(i64 %t2923)
-  ret i64 %t2924
+argok770:
+  %t2923 = load i64, ptr @"scheme.base:%ht-initial-buckets"
+  %t2924 = call i64 @rt_make_vector(i64 %t2923, i64 2)
+  %t2925 = load i64, ptr @"scheme.base:vector"
+  %t2926 = and i64 %t2925, -8
+  %t2927 = inttoptr i64 %t2926 to ptr
+  %t2928 = load i64, ptr %t2927
+  %t2929 = inttoptr i64 %t2928 to ptr
+  %t2930 = call fastcc i64%t2929(i64 %t2925, i64 3, i64 0, i64 %t2924, i64 1, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t2931 = call i64 @rt_make_hash_table(i64 %t2930)
+  ret i64 %t2931
 }
 
 define fastcc i64 @"scheme.base:code:hash-table?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2929 = icmp eq i64 %argc, 1
-  br i1 %t2929, label %argok770, label %arityerr769
-arityerr769:
-  call void @rt_arity_error(i64 1, i64 %argc)
-  unreachable
-argok770:
-  %t2930 = call i64 @rt_hash_table_p(i64 %a0)
-  ret i64 %t2930
-}
-
-define fastcc i64 @"scheme.base:code:%ht-count"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
-entry:
-  %t2935 = icmp eq i64 %argc, 1
-  br i1 %t2935, label %argok772, label %arityerr771
+  %t2936 = icmp eq i64 %argc, 1
+  br i1 %t2936, label %argok772, label %arityerr771
 arityerr771:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
 argok772:
-  %t2936 = call i64 @rt_hash_table_spine(i64 %a0)
-  %t2937 = call i64 @rt_vector_ref(i64 %t2936, i64 0)
+  %t2937 = call i64 @rt_hash_table_p(i64 %a0)
   ret i64 %t2937
 }
 
-define fastcc i64 @"scheme.base:code:%ht-buckets"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:%ht-count"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2942 = icmp eq i64 %argc, 1
   br i1 %t2942, label %argok774, label %arityerr773
@@ -5539,24 +5544,24 @@ arityerr773:
   unreachable
 argok774:
   %t2943 = call i64 @rt_hash_table_spine(i64 %a0)
-  %t2944 = call i64 @rt_vector_ref(i64 %t2943, i64 8)
+  %t2944 = call i64 @rt_vector_ref(i64 %t2943, i64 0)
   ret i64 %t2944
 }
 
-define fastcc i64 @"scheme.base:code:%ht-set-count!"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:%ht-buckets"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2949 = icmp eq i64 %argc, 2
+  %t2949 = icmp eq i64 %argc, 1
   br i1 %t2949, label %argok776, label %arityerr775
 arityerr775:
-  call void @rt_arity_error(i64 2, i64 %argc)
+  call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
 argok776:
   %t2950 = call i64 @rt_hash_table_spine(i64 %a0)
-  %t2951 = call i64 @rt_vector_set(i64 %t2950, i64 0, i64 %a1)
+  %t2951 = call i64 @rt_vector_ref(i64 %t2950, i64 8)
   ret i64 %t2951
 }
 
-define fastcc i64 @"scheme.base:code:%ht-set-buckets!"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:%ht-set-count!"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2956 = icmp eq i64 %argc, 2
   br i1 %t2956, label %argok778, label %arityerr777
@@ -5565,11 +5570,11 @@ arityerr777:
   unreachable
 argok778:
   %t2957 = call i64 @rt_hash_table_spine(i64 %a0)
-  %t2958 = call i64 @rt_vector_set(i64 %t2957, i64 8, i64 %a1)
+  %t2958 = call i64 @rt_vector_set(i64 %t2957, i64 0, i64 %a1)
   ret i64 %t2958
 }
 
-define fastcc i64 @"scheme.base:code:%ht-index"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:%ht-set-buckets!"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2963 = icmp eq i64 %argc, 2
   br i1 %t2963, label %argok780, label %arityerr779
@@ -5577,12 +5582,12 @@ arityerr779:
   call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
 argok780:
-  %t2964 = call i64 @rt_hash(i64 %a0)
-  %t2965 = call i64 @rt_remainder(i64 %t2964, i64 %a1)
+  %t2964 = call i64 @rt_hash_table_spine(i64 %a0)
+  %t2965 = call i64 @rt_vector_set(i64 %t2964, i64 8, i64 %a1)
   ret i64 %t2965
 }
 
-define fastcc i64 @"scheme.base:code:%ht-assoc"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:%ht-index"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2970 = icmp eq i64 %argc, 2
   br i1 %t2970, label %argok782, label %arityerr781
@@ -5590,4798 +5595,4824 @@ arityerr781:
   call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
 argok782:
-  %t2971 = call i64 @rt_null_p(i64 %a1)
-  %t2972 = icmp ne i64 %t2971, 1
-  br i1 %t2972, label %then783, label %else784
-then783:
-  ret i64 1
-else784:
-  %t2973 = call i64 @rt_car(i64 %a1)
-  %t2974 = call i64 @rt_car(i64 %t2973)
-  %t2975 = call i64 @rt_equal(i64 %a0, i64 %t2974)
-  %t2976 = icmp ne i64 %t2975, 1
-  br i1 %t2976, label %then785, label %else786
+  %t2971 = call i64 @rt_hash(i64 %a0)
+  %t2972 = call i64 @rt_remainder(i64 %t2971, i64 %a1)
+  ret i64 %t2972
+}
+
+define fastcc i64 @"scheme.base:code:%ht-assoc"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+entry:
+  %t2977 = icmp eq i64 %argc, 2
+  br i1 %t2977, label %argok784, label %arityerr783
+arityerr783:
+  call void @rt_arity_error(i64 2, i64 %argc)
+  unreachable
+argok784:
+  %t2978 = call i64 @rt_null_p(i64 %a1)
+  %t2979 = icmp ne i64 %t2978, 1
+  br i1 %t2979, label %then785, label %else786
 then785:
-  %t2977 = call i64 @rt_car(i64 %a1)
-  ret i64 %t2977
+  ret i64 1
 else786:
-  %t2978 = call i64 @rt_cdr(i64 %a1)
-  %t2979 = load i64, ptr @"scheme.base:%ht-assoc"
-  %t2980 = and i64 %t2979, -8
-  %t2981 = inttoptr i64 %t2980 to ptr
-  %t2982 = load i64, ptr %t2981
-  %t2983 = inttoptr i64 %t2982 to ptr
-  %t2984 = musttail call fastcc i64 %t2983(i64 %t2979, i64 2, i64 %a0, i64 %t2978, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t2980 = call i64 @rt_car(i64 %a1)
+  %t2981 = call i64 @rt_car(i64 %t2980)
+  %t2982 = call i64 @rt_equal(i64 %a0, i64 %t2981)
+  %t2983 = icmp ne i64 %t2982, 1
+  br i1 %t2983, label %then787, label %else788
+then787:
+  %t2984 = call i64 @rt_car(i64 %a1)
   ret i64 %t2984
+else788:
+  %t2985 = call i64 @rt_cdr(i64 %a1)
+  %t2986 = load i64, ptr @"scheme.base:%ht-assoc"
+  %t2987 = and i64 %t2986, -8
+  %t2988 = inttoptr i64 %t2987 to ptr
+  %t2989 = load i64, ptr %t2988
+  %t2990 = inttoptr i64 %t2989 to ptr
+  %t2991 = musttail call fastcc i64 %t2990(i64 %t2986, i64 2, i64 %a0, i64 %t2985, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t2991
 }
 
 define fastcc i64 @"scheme.base:code:%ht-remove"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t2989 = icmp eq i64 %argc, 2
-  br i1 %t2989, label %argok788, label %arityerr787
-arityerr787:
+  %t2996 = icmp eq i64 %argc, 2
+  br i1 %t2996, label %argok790, label %arityerr789
+arityerr789:
   call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
-argok788:
-  %t2990 = call i64 @rt_null_p(i64 %a1)
-  %t2991 = icmp ne i64 %t2990, 1
-  br i1 %t2991, label %then789, label %else790
-then789:
-  ret i64 2
-else790:
-  %t2992 = call i64 @rt_car(i64 %a1)
-  %t2993 = call i64 @rt_car(i64 %t2992)
-  %t2994 = call i64 @rt_equal(i64 %a0, i64 %t2993)
-  %t2995 = icmp ne i64 %t2994, 1
-  br i1 %t2995, label %then791, label %else792
+argok790:
+  %t2997 = call i64 @rt_null_p(i64 %a1)
+  %t2998 = icmp ne i64 %t2997, 1
+  br i1 %t2998, label %then791, label %else792
 then791:
-  %t2996 = call i64 @rt_cdr(i64 %a1)
-  ret i64 %t2996
+  ret i64 2
 else792:
-  %t2997 = call i64 @rt_car(i64 %a1)
-  %t2998 = call i64 @rt_cdr(i64 %a1)
-  %t2999 = load i64, ptr @"scheme.base:%ht-remove"
-  %t3000 = and i64 %t2999, -8
-  %t3001 = inttoptr i64 %t3000 to ptr
-  %t3002 = load i64, ptr %t3001
-  %t3003 = inttoptr i64 %t3002 to ptr
-  %t3004 = call fastcc i64%t3003(i64 %t2999, i64 2, i64 %a0, i64 %t2998, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3005 = call i64 @rt_cons(i64 %t2997, i64 %t3004)
-  ret i64 %t3005
+  %t2999 = call i64 @rt_car(i64 %a1)
+  %t3000 = call i64 @rt_car(i64 %t2999)
+  %t3001 = call i64 @rt_equal(i64 %a0, i64 %t3000)
+  %t3002 = icmp ne i64 %t3001, 1
+  br i1 %t3002, label %then793, label %else794
+then793:
+  %t3003 = call i64 @rt_cdr(i64 %a1)
+  ret i64 %t3003
+else794:
+  %t3004 = call i64 @rt_car(i64 %a1)
+  %t3005 = call i64 @rt_cdr(i64 %a1)
+  %t3006 = load i64, ptr @"scheme.base:%ht-remove"
+  %t3007 = and i64 %t3006, -8
+  %t3008 = inttoptr i64 %t3007 to ptr
+  %t3009 = load i64, ptr %t3008
+  %t3010 = inttoptr i64 %t3009 to ptr
+  %t3011 = call fastcc i64%t3010(i64 %t3006, i64 2, i64 %a0, i64 %t3005, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3012 = call i64 @rt_cons(i64 %t3004, i64 %t3011)
+  ret i64 %t3012
 }
 
 define fastcc i64 @"scheme.base:code:hash-table-ref/default"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3010 = icmp eq i64 %argc, 3
-  br i1 %t3010, label %argok794, label %arityerr793
-arityerr793:
+  %t3017 = icmp eq i64 %argc, 3
+  br i1 %t3017, label %argok796, label %arityerr795
+arityerr795:
   call void @rt_arity_error(i64 3, i64 %argc)
   unreachable
-argok794:
-  %t3011 = load i64, ptr @"scheme.base:%ht-buckets"
-  %t3012 = and i64 %t3011, -8
-  %t3013 = inttoptr i64 %t3012 to ptr
-  %t3014 = load i64, ptr %t3013
-  %t3015 = inttoptr i64 %t3014 to ptr
-  %t3016 = call fastcc i64%t3015(i64 %t3011, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3017 = call i64 @rt_vector_length(i64 %t3016)
-  %t3018 = load i64, ptr @"scheme.base:%ht-index"
+argok796:
+  %t3018 = load i64, ptr @"scheme.base:%ht-buckets"
   %t3019 = and i64 %t3018, -8
   %t3020 = inttoptr i64 %t3019 to ptr
   %t3021 = load i64, ptr %t3020
   %t3022 = inttoptr i64 %t3021 to ptr
-  %t3023 = call fastcc i64%t3022(i64 %t3018, i64 2, i64 %a1, i64 %t3017, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3024 = call i64 @rt_vector_ref(i64 %t3016, i64 %t3023)
-  %t3025 = load i64, ptr @"scheme.base:%ht-assoc"
+  %t3023 = call fastcc i64%t3022(i64 %t3018, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3024 = call i64 @rt_vector_length(i64 %t3023)
+  %t3025 = load i64, ptr @"scheme.base:%ht-index"
   %t3026 = and i64 %t3025, -8
   %t3027 = inttoptr i64 %t3026 to ptr
   %t3028 = load i64, ptr %t3027
   %t3029 = inttoptr i64 %t3028 to ptr
   %t3030 = call fastcc i64%t3029(i64 %t3025, i64 2, i64 %a1, i64 %t3024, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3031 = icmp ne i64 %t3030, 1
-  br i1 %t3031, label %then795, label %else796
-then795:
-  %t3032 = call i64 @rt_cdr(i64 %t3030)
-  ret i64 %t3032
-else796:
+  %t3031 = call i64 @rt_vector_ref(i64 %t3023, i64 %t3030)
+  %t3032 = load i64, ptr @"scheme.base:%ht-assoc"
+  %t3033 = and i64 %t3032, -8
+  %t3034 = inttoptr i64 %t3033 to ptr
+  %t3035 = load i64, ptr %t3034
+  %t3036 = inttoptr i64 %t3035 to ptr
+  %t3037 = call fastcc i64%t3036(i64 %t3032, i64 2, i64 %a1, i64 %t3031, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3038 = icmp ne i64 %t3037, 1
+  br i1 %t3038, label %then797, label %else798
+then797:
+  %t3039 = call i64 @rt_cdr(i64 %t3037)
+  ret i64 %t3039
+else798:
   ret i64 %a2
 }
 
 define fastcc i64 @"scheme.base:code:hash-table-contains?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3037 = icmp eq i64 %argc, 2
-  br i1 %t3037, label %argok798, label %arityerr797
-arityerr797:
+  %t3044 = icmp eq i64 %argc, 2
+  br i1 %t3044, label %argok800, label %arityerr799
+arityerr799:
   call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
-argok798:
-  %t3038 = load i64, ptr @"scheme.base:%ht-buckets"
-  %t3039 = and i64 %t3038, -8
-  %t3040 = inttoptr i64 %t3039 to ptr
-  %t3041 = load i64, ptr %t3040
-  %t3042 = inttoptr i64 %t3041 to ptr
-  %t3043 = call fastcc i64%t3042(i64 %t3038, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3044 = call i64 @rt_vector_length(i64 %t3043)
-  %t3045 = load i64, ptr @"scheme.base:%ht-index"
+argok800:
+  %t3045 = load i64, ptr @"scheme.base:%ht-buckets"
   %t3046 = and i64 %t3045, -8
   %t3047 = inttoptr i64 %t3046 to ptr
   %t3048 = load i64, ptr %t3047
   %t3049 = inttoptr i64 %t3048 to ptr
-  %t3050 = call fastcc i64%t3049(i64 %t3045, i64 2, i64 %a1, i64 %t3044, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3051 = call i64 @rt_vector_ref(i64 %t3043, i64 %t3050)
-  %t3052 = load i64, ptr @"scheme.base:%ht-assoc"
+  %t3050 = call fastcc i64%t3049(i64 %t3045, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3051 = call i64 @rt_vector_length(i64 %t3050)
+  %t3052 = load i64, ptr @"scheme.base:%ht-index"
   %t3053 = and i64 %t3052, -8
   %t3054 = inttoptr i64 %t3053 to ptr
   %t3055 = load i64, ptr %t3054
   %t3056 = inttoptr i64 %t3055 to ptr
   %t3057 = call fastcc i64%t3056(i64 %t3052, i64 2, i64 %a1, i64 %t3051, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3058 = icmp ne i64 %t3057, 1
-  br i1 %t3058, label %then799, label %else800
-then799:
+  %t3058 = call i64 @rt_vector_ref(i64 %t3050, i64 %t3057)
+  %t3059 = load i64, ptr @"scheme.base:%ht-assoc"
+  %t3060 = and i64 %t3059, -8
+  %t3061 = inttoptr i64 %t3060 to ptr
+  %t3062 = load i64, ptr %t3061
+  %t3063 = inttoptr i64 %t3062 to ptr
+  %t3064 = call fastcc i64%t3063(i64 %t3059, i64 2, i64 %a1, i64 %t3058, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3065 = icmp ne i64 %t3064, 1
+  br i1 %t3065, label %then801, label %else802
+then801:
   ret i64 257
-else800:
+else802:
   ret i64 1
 }
 
 define fastcc i64 @"scheme.base:code:hash-table-ref"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3063 = icmp eq i64 %argc, 2
-  br i1 %t3063, label %argok802, label %arityerr801
-arityerr801:
+  %t3070 = icmp eq i64 %argc, 2
+  br i1 %t3070, label %argok804, label %arityerr803
+arityerr803:
   call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
-argok802:
-  %t3064 = load i64, ptr @"scheme.base:%ht-buckets"
-  %t3065 = and i64 %t3064, -8
-  %t3066 = inttoptr i64 %t3065 to ptr
-  %t3067 = load i64, ptr %t3066
-  %t3068 = inttoptr i64 %t3067 to ptr
-  %t3069 = call fastcc i64%t3068(i64 %t3064, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3070 = call i64 @rt_vector_length(i64 %t3069)
-  %t3071 = load i64, ptr @"scheme.base:%ht-index"
+argok804:
+  %t3071 = load i64, ptr @"scheme.base:%ht-buckets"
   %t3072 = and i64 %t3071, -8
   %t3073 = inttoptr i64 %t3072 to ptr
   %t3074 = load i64, ptr %t3073
   %t3075 = inttoptr i64 %t3074 to ptr
-  %t3076 = call fastcc i64%t3075(i64 %t3071, i64 2, i64 %a1, i64 %t3070, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3077 = call i64 @rt_vector_ref(i64 %t3069, i64 %t3076)
-  %t3078 = load i64, ptr @"scheme.base:%ht-assoc"
+  %t3076 = call fastcc i64%t3075(i64 %t3071, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3077 = call i64 @rt_vector_length(i64 %t3076)
+  %t3078 = load i64, ptr @"scheme.base:%ht-index"
   %t3079 = and i64 %t3078, -8
   %t3080 = inttoptr i64 %t3079 to ptr
   %t3081 = load i64, ptr %t3080
   %t3082 = inttoptr i64 %t3081 to ptr
   %t3083 = call fastcc i64%t3082(i64 %t3078, i64 2, i64 %a1, i64 %t3077, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3084 = icmp ne i64 %t3083, 1
-  br i1 %t3084, label %then803, label %else804
-then803:
-  %t3085 = call i64 @rt_cdr(i64 %t3083)
-  ret i64 %t3085
-else804:
-  %t3086 = call i64 @rt_make_string(ptr @.str.lit.12, i64 29)
-  %t3087 = load i64, ptr @"scheme.base:error"
-  %t3088 = and i64 %t3087, -8
+  %t3084 = call i64 @rt_vector_ref(i64 %t3076, i64 %t3083)
+  %t3085 = load i64, ptr @"scheme.base:%ht-assoc"
+  %t3086 = and i64 %t3085, -8
+  %t3087 = inttoptr i64 %t3086 to ptr
+  %t3088 = load i64, ptr %t3087
   %t3089 = inttoptr i64 %t3088 to ptr
-  %t3090 = load i64, ptr %t3089
-  %t3091 = inttoptr i64 %t3090 to ptr
-  %t3092 = musttail call fastcc i64 %t3091(i64 %t3087, i64 2, i64 %t3086, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3090 = call fastcc i64%t3089(i64 %t3085, i64 2, i64 %a1, i64 %t3084, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3091 = icmp ne i64 %t3090, 1
+  br i1 %t3091, label %then805, label %else806
+then805:
+  %t3092 = call i64 @rt_cdr(i64 %t3090)
   ret i64 %t3092
+else806:
+  %t3093 = call i64 @rt_make_string(ptr @.str.lit.12, i64 29)
+  %t3094 = load i64, ptr @"scheme.base:error"
+  %t3095 = and i64 %t3094, -8
+  %t3096 = inttoptr i64 %t3095 to ptr
+  %t3097 = load i64, ptr %t3096
+  %t3098 = inttoptr i64 %t3097 to ptr
+  %t3099 = musttail call fastcc i64 %t3098(i64 %t3094, i64 2, i64 %t3093, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t3099
 }
 
 define fastcc i64 @"scheme.base:code:hash-table-set!"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3097 = icmp eq i64 %argc, 3
-  br i1 %t3097, label %argok806, label %arityerr805
-arityerr805:
+  %t3104 = icmp eq i64 %argc, 3
+  br i1 %t3104, label %argok808, label %arityerr807
+arityerr807:
   call void @rt_arity_error(i64 3, i64 %argc)
   unreachable
-argok806:
-  %t3098 = load i64, ptr @"scheme.base:%ht-buckets"
-  %t3099 = and i64 %t3098, -8
-  %t3100 = inttoptr i64 %t3099 to ptr
-  %t3101 = load i64, ptr %t3100
-  %t3102 = inttoptr i64 %t3101 to ptr
-  %t3103 = call fastcc i64%t3102(i64 %t3098, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3104 = call i64 @rt_vector_length(i64 %t3103)
-  %t3105 = load i64, ptr @"scheme.base:%ht-index"
+argok808:
+  %t3105 = load i64, ptr @"scheme.base:%ht-buckets"
   %t3106 = and i64 %t3105, -8
   %t3107 = inttoptr i64 %t3106 to ptr
   %t3108 = load i64, ptr %t3107
   %t3109 = inttoptr i64 %t3108 to ptr
-  %t3110 = call fastcc i64%t3109(i64 %t3105, i64 2, i64 %a1, i64 %t3104, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3111 = call i64 @rt_vector_ref(i64 %t3103, i64 %t3110)
-  %t3112 = load i64, ptr @"scheme.base:%ht-assoc"
+  %t3110 = call fastcc i64%t3109(i64 %t3105, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3111 = call i64 @rt_vector_length(i64 %t3110)
+  %t3112 = load i64, ptr @"scheme.base:%ht-index"
   %t3113 = and i64 %t3112, -8
   %t3114 = inttoptr i64 %t3113 to ptr
   %t3115 = load i64, ptr %t3114
   %t3116 = inttoptr i64 %t3115 to ptr
   %t3117 = call fastcc i64%t3116(i64 %t3112, i64 2, i64 %a1, i64 %t3111, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3118 = call i64 @rt_cons(i64 %a1, i64 %a2)
-  %t3119 = icmp ne i64 %t3117, 1
-  br i1 %t3119, label %then807, label %else808
-then807:
-  %t3120 = load i64, ptr @"scheme.base:%ht-remove"
-  %t3121 = and i64 %t3120, -8
-  %t3122 = inttoptr i64 %t3121 to ptr
-  %t3123 = load i64, ptr %t3122
-  %t3124 = inttoptr i64 %t3123 to ptr
-  %t3125 = call fastcc i64%t3124(i64 %t3120, i64 2, i64 %a1, i64 %t3111, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  br label %merge809
-else808:
-  br label %merge809
-merge809:
-  %t3126 = phi i64 [ %t3125, %then807 ], [ %t3111, %else808 ]
-  %t3127 = call i64 @rt_cons(i64 %t3118, i64 %t3126)
-  %t3128 = call i64 @rt_vector_set(i64 %t3103, i64 %t3110, i64 %t3127)
-  %t3129 = icmp ne i64 %t3117, 1
-  br i1 %t3129, label %then810, label %else811
-then810:
+  %t3118 = call i64 @rt_vector_ref(i64 %t3110, i64 %t3117)
+  %t3119 = load i64, ptr @"scheme.base:%ht-assoc"
+  %t3120 = and i64 %t3119, -8
+  %t3121 = inttoptr i64 %t3120 to ptr
+  %t3122 = load i64, ptr %t3121
+  %t3123 = inttoptr i64 %t3122 to ptr
+  %t3124 = call fastcc i64%t3123(i64 %t3119, i64 2, i64 %a1, i64 %t3118, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3125 = call i64 @rt_cons(i64 %a1, i64 %a2)
+  %t3126 = icmp ne i64 %t3124, 1
+  br i1 %t3126, label %then809, label %else810
+then809:
+  %t3127 = load i64, ptr @"scheme.base:%ht-remove"
+  %t3128 = and i64 %t3127, -8
+  %t3129 = inttoptr i64 %t3128 to ptr
+  %t3130 = load i64, ptr %t3129
+  %t3131 = inttoptr i64 %t3130 to ptr
+  %t3132 = call fastcc i64%t3131(i64 %t3127, i64 2, i64 %a1, i64 %t3118, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  br label %merge811
+else810:
+  br label %merge811
+merge811:
+  %t3133 = phi i64 [ %t3132, %then809 ], [ %t3118, %else810 ]
+  %t3134 = call i64 @rt_cons(i64 %t3125, i64 %t3133)
+  %t3135 = call i64 @rt_vector_set(i64 %t3110, i64 %t3117, i64 %t3134)
+  %t3136 = icmp ne i64 %t3124, 1
+  br i1 %t3136, label %then812, label %else813
+then812:
   ret i64 1
-else811:
-  %t3130 = load i64, ptr @"scheme.base:%ht-count"
-  %t3131 = and i64 %t3130, -8
-  %t3132 = inttoptr i64 %t3131 to ptr
-  %t3133 = load i64, ptr %t3132
-  %t3134 = inttoptr i64 %t3133 to ptr
-  %t3135 = call fastcc i64%t3134(i64 %t3130, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3136 = or i64 %t3135, 8
-  %t3137 = and i64 %t3136, 7
-  %t3138 = icmp eq i64 %t3137, 0
-  br i1 %t3138, label %fixfast812, label %fixslow813
-fixfast812:
-  %t3139 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t3135, i64 8)
-  %t3140 = extractvalue {i64, i1} %t3139, 0
-  %t3141 = extractvalue {i64, i1} %t3139, 1
-  br i1 %t3141, label %fixslow813, label %fixmerge814
-fixslow813:
-  %t3142 = call i64 @rt_add(i64 %t3135, i64 8)
-  br label %fixmerge814
-fixmerge814:
-  %t3143 = phi i64 [ %t3140, %fixfast812 ], [ %t3142, %fixslow813 ]
-  %t3144 = load i64, ptr @"scheme.base:%ht-set-count!"
-  %t3145 = and i64 %t3144, -8
-  %t3146 = inttoptr i64 %t3145 to ptr
-  %t3147 = load i64, ptr %t3146
-  %t3148 = inttoptr i64 %t3147 to ptr
-  %t3149 = call fastcc i64%t3148(i64 %t3144, i64 2, i64 %a0, i64 %t3143, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3150 = load i64, ptr @"scheme.base:%ht-count"
-  %t3151 = and i64 %t3150, -8
-  %t3152 = inttoptr i64 %t3151 to ptr
-  %t3153 = load i64, ptr %t3152
-  %t3154 = inttoptr i64 %t3153 to ptr
-  %t3155 = call fastcc i64%t3154(i64 %t3150, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3156 = load i64, ptr @"scheme.base:%ht-load-factor"
-  %t3157 = or i64 %t3156, %t3104
-  %t3158 = and i64 %t3157, 7
-  %t3159 = icmp eq i64 %t3158, 0
-  br i1 %t3159, label %fixfast815, label %fixslow816
-fixfast815:
-  %t3160 = ashr i64 %t3156, 3
-  %t3161 = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %t3160, i64 %t3104)
-  %t3162 = extractvalue {i64, i1} %t3161, 0
-  %t3163 = extractvalue {i64, i1} %t3161, 1
-  br i1 %t3163, label %fixslow816, label %fixmerge817
-fixslow816:
-  %t3164 = call i64 @rt_mul(i64 %t3156, i64 %t3104)
-  br label %fixmerge817
-fixmerge817:
-  %t3165 = phi i64 [ %t3162, %fixfast815 ], [ %t3164, %fixslow816 ]
-  %t3166 = or i64 %t3165, %t3155
-  %t3167 = and i64 %t3166, 7
-  %t3168 = icmp eq i64 %t3167, 0
-  br i1 %t3168, label %fixfast818, label %fixslow819
-fixfast818:
-  %t3169 = icmp slt i64 %t3165, %t3155
-  %t3170 = select i1 %t3169, i64 257, i64 1
-  br label %fixmerge820
-fixslow819:
-  %t3171 = call i64 @rt_lt(i64 %t3165, i64 %t3155)
-  br label %fixmerge820
-fixmerge820:
-  %t3172 = phi i64 [ %t3170, %fixfast818 ], [ %t3171, %fixslow819 ]
-  %t3173 = icmp ne i64 %t3172, 1
-  br i1 %t3173, label %then821, label %else822
-then821:
-  %t3174 = load i64, ptr @"scheme.base:%ht-grow!"
-  %t3175 = and i64 %t3174, -8
-  %t3176 = inttoptr i64 %t3175 to ptr
-  %t3177 = load i64, ptr %t3176
-  %t3178 = inttoptr i64 %t3177 to ptr
-  %t3179 = musttail call fastcc i64 %t3178(i64 %t3174, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t3179
-else822:
+else813:
+  %t3137 = load i64, ptr @"scheme.base:%ht-count"
+  %t3138 = and i64 %t3137, -8
+  %t3139 = inttoptr i64 %t3138 to ptr
+  %t3140 = load i64, ptr %t3139
+  %t3141 = inttoptr i64 %t3140 to ptr
+  %t3142 = call fastcc i64%t3141(i64 %t3137, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3143 = or i64 %t3142, 8
+  %t3144 = and i64 %t3143, 7
+  %t3145 = icmp eq i64 %t3144, 0
+  br i1 %t3145, label %fixfast814, label %fixslow815
+fixfast814:
+  %t3146 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t3142, i64 8)
+  %t3147 = extractvalue {i64, i1} %t3146, 0
+  %t3148 = extractvalue {i64, i1} %t3146, 1
+  br i1 %t3148, label %fixslow815, label %fixmerge816
+fixslow815:
+  %t3149 = call i64 @rt_add(i64 %t3142, i64 8)
+  br label %fixmerge816
+fixmerge816:
+  %t3150 = phi i64 [ %t3147, %fixfast814 ], [ %t3149, %fixslow815 ]
+  %t3151 = load i64, ptr @"scheme.base:%ht-set-count!"
+  %t3152 = and i64 %t3151, -8
+  %t3153 = inttoptr i64 %t3152 to ptr
+  %t3154 = load i64, ptr %t3153
+  %t3155 = inttoptr i64 %t3154 to ptr
+  %t3156 = call fastcc i64%t3155(i64 %t3151, i64 2, i64 %a0, i64 %t3150, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3157 = load i64, ptr @"scheme.base:%ht-count"
+  %t3158 = and i64 %t3157, -8
+  %t3159 = inttoptr i64 %t3158 to ptr
+  %t3160 = load i64, ptr %t3159
+  %t3161 = inttoptr i64 %t3160 to ptr
+  %t3162 = call fastcc i64%t3161(i64 %t3157, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3163 = load i64, ptr @"scheme.base:%ht-load-factor"
+  %t3164 = or i64 %t3163, %t3111
+  %t3165 = and i64 %t3164, 7
+  %t3166 = icmp eq i64 %t3165, 0
+  br i1 %t3166, label %fixfast817, label %fixslow818
+fixfast817:
+  %t3167 = ashr i64 %t3163, 3
+  %t3168 = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %t3167, i64 %t3111)
+  %t3169 = extractvalue {i64, i1} %t3168, 0
+  %t3170 = extractvalue {i64, i1} %t3168, 1
+  br i1 %t3170, label %fixslow818, label %fixmerge819
+fixslow818:
+  %t3171 = call i64 @rt_mul(i64 %t3163, i64 %t3111)
+  br label %fixmerge819
+fixmerge819:
+  %t3172 = phi i64 [ %t3169, %fixfast817 ], [ %t3171, %fixslow818 ]
+  %t3173 = or i64 %t3172, %t3162
+  %t3174 = and i64 %t3173, 7
+  %t3175 = icmp eq i64 %t3174, 0
+  br i1 %t3175, label %fixfast820, label %fixslow821
+fixfast820:
+  %t3176 = icmp slt i64 %t3172, %t3162
+  %t3177 = select i1 %t3176, i64 257, i64 1
+  br label %fixmerge822
+fixslow821:
+  %t3178 = call i64 @rt_lt(i64 %t3172, i64 %t3162)
+  br label %fixmerge822
+fixmerge822:
+  %t3179 = phi i64 [ %t3177, %fixfast820 ], [ %t3178, %fixslow821 ]
+  %t3180 = icmp ne i64 %t3179, 1
+  br i1 %t3180, label %then823, label %else824
+then823:
+  %t3181 = load i64, ptr @"scheme.base:%ht-grow!"
+  %t3182 = and i64 %t3181, -8
+  %t3183 = inttoptr i64 %t3182 to ptr
+  %t3184 = load i64, ptr %t3183
+  %t3185 = inttoptr i64 %t3184 to ptr
+  %t3186 = musttail call fastcc i64 %t3185(i64 %t3181, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t3186
+else824:
   ret i64 1
 }
 
 define fastcc i64 @"scheme.base:code:hash-table-delete!"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3184 = icmp eq i64 %argc, 2
-  br i1 %t3184, label %argok824, label %arityerr823
-arityerr823:
+  %t3191 = icmp eq i64 %argc, 2
+  br i1 %t3191, label %argok826, label %arityerr825
+arityerr825:
   call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
-argok824:
-  %t3185 = load i64, ptr @"scheme.base:%ht-buckets"
-  %t3186 = and i64 %t3185, -8
-  %t3187 = inttoptr i64 %t3186 to ptr
-  %t3188 = load i64, ptr %t3187
-  %t3189 = inttoptr i64 %t3188 to ptr
-  %t3190 = call fastcc i64%t3189(i64 %t3185, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3191 = call i64 @rt_vector_length(i64 %t3190)
-  %t3192 = load i64, ptr @"scheme.base:%ht-index"
+argok826:
+  %t3192 = load i64, ptr @"scheme.base:%ht-buckets"
   %t3193 = and i64 %t3192, -8
   %t3194 = inttoptr i64 %t3193 to ptr
   %t3195 = load i64, ptr %t3194
   %t3196 = inttoptr i64 %t3195 to ptr
-  %t3197 = call fastcc i64%t3196(i64 %t3192, i64 2, i64 %a1, i64 %t3191, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3198 = call i64 @rt_vector_ref(i64 %t3190, i64 %t3197)
-  %t3199 = load i64, ptr @"scheme.base:%ht-assoc"
+  %t3197 = call fastcc i64%t3196(i64 %t3192, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3198 = call i64 @rt_vector_length(i64 %t3197)
+  %t3199 = load i64, ptr @"scheme.base:%ht-index"
   %t3200 = and i64 %t3199, -8
   %t3201 = inttoptr i64 %t3200 to ptr
   %t3202 = load i64, ptr %t3201
   %t3203 = inttoptr i64 %t3202 to ptr
   %t3204 = call fastcc i64%t3203(i64 %t3199, i64 2, i64 %a1, i64 %t3198, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3205 = icmp ne i64 %t3204, 1
-  br i1 %t3205, label %then825, label %else826
-then825:
-  %t3206 = load i64, ptr @"scheme.base:%ht-remove"
+  %t3205 = call i64 @rt_vector_ref(i64 %t3197, i64 %t3204)
+  %t3206 = load i64, ptr @"scheme.base:%ht-assoc"
   %t3207 = and i64 %t3206, -8
   %t3208 = inttoptr i64 %t3207 to ptr
   %t3209 = load i64, ptr %t3208
   %t3210 = inttoptr i64 %t3209 to ptr
-  %t3211 = call fastcc i64%t3210(i64 %t3206, i64 2, i64 %a1, i64 %t3198, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3212 = call i64 @rt_vector_set(i64 %t3190, i64 %t3197, i64 %t3211)
-  %t3213 = load i64, ptr @"scheme.base:%ht-count"
+  %t3211 = call fastcc i64%t3210(i64 %t3206, i64 2, i64 %a1, i64 %t3205, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3212 = icmp ne i64 %t3211, 1
+  br i1 %t3212, label %then827, label %else828
+then827:
+  %t3213 = load i64, ptr @"scheme.base:%ht-remove"
   %t3214 = and i64 %t3213, -8
   %t3215 = inttoptr i64 %t3214 to ptr
   %t3216 = load i64, ptr %t3215
   %t3217 = inttoptr i64 %t3216 to ptr
-  %t3218 = call fastcc i64%t3217(i64 %t3213, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3219 = or i64 %t3218, 8
-  %t3220 = and i64 %t3219, 7
-  %t3221 = icmp eq i64 %t3220, 0
-  br i1 %t3221, label %fixfast827, label %fixslow828
-fixfast827:
-  %t3222 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %t3218, i64 8)
-  %t3223 = extractvalue {i64, i1} %t3222, 0
-  %t3224 = extractvalue {i64, i1} %t3222, 1
-  br i1 %t3224, label %fixslow828, label %fixmerge829
-fixslow828:
-  %t3225 = call i64 @rt_sub(i64 %t3218, i64 8)
-  br label %fixmerge829
-fixmerge829:
-  %t3226 = phi i64 [ %t3223, %fixfast827 ], [ %t3225, %fixslow828 ]
-  %t3227 = load i64, ptr @"scheme.base:%ht-set-count!"
-  %t3228 = and i64 %t3227, -8
-  %t3229 = inttoptr i64 %t3228 to ptr
-  %t3230 = load i64, ptr %t3229
-  %t3231 = inttoptr i64 %t3230 to ptr
-  %t3232 = musttail call fastcc i64 %t3231(i64 %t3227, i64 2, i64 %a0, i64 %t3226, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t3232
-else826:
+  %t3218 = call fastcc i64%t3217(i64 %t3213, i64 2, i64 %a1, i64 %t3205, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3219 = call i64 @rt_vector_set(i64 %t3197, i64 %t3204, i64 %t3218)
+  %t3220 = load i64, ptr @"scheme.base:%ht-count"
+  %t3221 = and i64 %t3220, -8
+  %t3222 = inttoptr i64 %t3221 to ptr
+  %t3223 = load i64, ptr %t3222
+  %t3224 = inttoptr i64 %t3223 to ptr
+  %t3225 = call fastcc i64%t3224(i64 %t3220, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3226 = or i64 %t3225, 8
+  %t3227 = and i64 %t3226, 7
+  %t3228 = icmp eq i64 %t3227, 0
+  br i1 %t3228, label %fixfast829, label %fixslow830
+fixfast829:
+  %t3229 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %t3225, i64 8)
+  %t3230 = extractvalue {i64, i1} %t3229, 0
+  %t3231 = extractvalue {i64, i1} %t3229, 1
+  br i1 %t3231, label %fixslow830, label %fixmerge831
+fixslow830:
+  %t3232 = call i64 @rt_sub(i64 %t3225, i64 8)
+  br label %fixmerge831
+fixmerge831:
+  %t3233 = phi i64 [ %t3230, %fixfast829 ], [ %t3232, %fixslow830 ]
+  %t3234 = load i64, ptr @"scheme.base:%ht-set-count!"
+  %t3235 = and i64 %t3234, -8
+  %t3236 = inttoptr i64 %t3235 to ptr
+  %t3237 = load i64, ptr %t3236
+  %t3238 = inttoptr i64 %t3237 to ptr
+  %t3239 = musttail call fastcc i64 %t3238(i64 %t3234, i64 2, i64 %a0, i64 %t3233, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t3239
+else828:
   ret i64 1
+}
+
+define fastcc i64 @"scheme.base:code_705"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+entry:
+  %t3244 = icmp eq i64 %argc, 1
+  br i1 %t3244, label %argok833, label %arityerr832
+arityerr832:
+  call void @rt_arity_error(i64 1, i64 %argc)
+  unreachable
+argok833:
+  %t3245 = call i64 @rt_null_p(i64 %a0)
+  %t3246 = icmp ne i64 %t3245, 1
+  br i1 %t3246, label %then834, label %else835
+then834:
+  ret i64 1
+else835:
+  %t3247 = call i64 @rt_car(i64 %a0)
+  %t3248 = call i64 @rt_car(i64 %t3247)
+  %t3249 = and i64 %self, -8
+  %t3250 = inttoptr i64 %t3249 to ptr
+  %t3251 = getelementptr i64, ptr %t3250, i64 1
+  %t3252 = load i64, ptr %t3251
+  %t3253 = load i64, ptr @"scheme.base:%ht-index"
+  %t3254 = and i64 %t3253, -8
+  %t3255 = inttoptr i64 %t3254 to ptr
+  %t3256 = load i64, ptr %t3255
+  %t3257 = inttoptr i64 %t3256 to ptr
+  %t3258 = call fastcc i64%t3257(i64 %t3253, i64 2, i64 %t3248, i64 %t3252, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3259 = and i64 %self, -8
+  %t3260 = inttoptr i64 %t3259 to ptr
+  %t3261 = getelementptr i64, ptr %t3260, i64 2
+  %t3262 = load i64, ptr %t3261
+  %t3263 = and i64 %self, -8
+  %t3264 = inttoptr i64 %t3263 to ptr
+  %t3265 = getelementptr i64, ptr %t3264, i64 2
+  %t3266 = load i64, ptr %t3265
+  %t3267 = call i64 @rt_vector_ref(i64 %t3266, i64 %t3258)
+  %t3268 = call i64 @rt_cons(i64 %t3247, i64 %t3267)
+  %t3269 = call i64 @rt_vector_set(i64 %t3262, i64 %t3258, i64 %t3268)
+  %t3270 = call i64 @rt_cdr(i64 %a0)
+  %t3271 = musttail call fastcc i64 @"scheme.base:code_705"(i64 %self, i64 1, i64 %t3270, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t3271
 }
 
 define fastcc i64 @"scheme.base:code_703"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3237 = icmp eq i64 %argc, 1
-  br i1 %t3237, label %argok831, label %arityerr830
-arityerr830:
+  %t3272 = icmp eq i64 %argc, 1
+  br i1 %t3272, label %argok837, label %arityerr836
+arityerr836:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok831:
-  %t3238 = call i64 @rt_null_p(i64 %a0)
-  %t3239 = icmp ne i64 %t3238, 1
-  br i1 %t3239, label %then832, label %else833
-then832:
-  ret i64 1
-else833:
-  %t3240 = call i64 @rt_car(i64 %a0)
-  %t3241 = call i64 @rt_car(i64 %t3240)
-  %t3242 = and i64 %self, -8
-  %t3243 = inttoptr i64 %t3242 to ptr
-  %t3244 = getelementptr i64, ptr %t3243, i64 1
-  %t3245 = load i64, ptr %t3244
-  %t3246 = load i64, ptr @"scheme.base:%ht-index"
-  %t3247 = and i64 %t3246, -8
-  %t3248 = inttoptr i64 %t3247 to ptr
-  %t3249 = load i64, ptr %t3248
-  %t3250 = inttoptr i64 %t3249 to ptr
-  %t3251 = call fastcc i64%t3250(i64 %t3246, i64 2, i64 %t3241, i64 %t3245, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3252 = and i64 %self, -8
-  %t3253 = inttoptr i64 %t3252 to ptr
-  %t3254 = getelementptr i64, ptr %t3253, i64 2
-  %t3255 = load i64, ptr %t3254
-  %t3256 = and i64 %self, -8
-  %t3257 = inttoptr i64 %t3256 to ptr
-  %t3258 = getelementptr i64, ptr %t3257, i64 2
-  %t3259 = load i64, ptr %t3258
-  %t3260 = call i64 @rt_vector_ref(i64 %t3259, i64 %t3251)
-  %t3261 = call i64 @rt_cons(i64 %t3240, i64 %t3260)
-  %t3262 = call i64 @rt_vector_set(i64 %t3255, i64 %t3251, i64 %t3261)
-  %t3263 = call i64 @rt_cdr(i64 %a0)
-  %t3264 = musttail call fastcc i64 @"scheme.base:code_703"(i64 %self, i64 1, i64 %t3263, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t3264
-}
-
-define fastcc i64 @"scheme.base:code_701"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
-entry:
-  %t3265 = icmp eq i64 %argc, 1
-  br i1 %t3265, label %argok835, label %arityerr834
-arityerr834:
-  call void @rt_arity_error(i64 1, i64 %argc)
-  unreachable
-argok835:
-  %t3266 = and i64 %self, -8
-  %t3267 = inttoptr i64 %t3266 to ptr
-  %t3268 = getelementptr i64, ptr %t3267, i64 1
-  %t3269 = load i64, ptr %t3268
-  %t3270 = call i64 @rt_vector_length(i64 %t3269)
-  %t3271 = or i64 %a0, %t3270
-  %t3272 = and i64 %t3271, 7
-  %t3273 = icmp eq i64 %t3272, 0
-  br i1 %t3273, label %fixfast836, label %fixslow837
-fixfast836:
-  %t3274 = icmp slt i64 %a0, %t3270
-  %t3275 = select i1 %t3274, i64 257, i64 1
-  br label %fixmerge838
-fixslow837:
-  %t3276 = call i64 @rt_lt(i64 %a0, i64 %t3270)
-  br label %fixmerge838
-fixmerge838:
-  %t3277 = phi i64 [ %t3275, %fixfast836 ], [ %t3276, %fixslow837 ]
-  %t3278 = icmp ne i64 %t3277, 1
-  br i1 %t3278, label %then839, label %else840
-then839:
-  %t3279 = call ptr @rt_alloc_words(i64 4)
-  %t3280 = ptrtoint ptr %t3279 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_703" to i64), ptr %t3279
-  %t3281 = or i64 %t3280, 4
-  %t3282 = and i64 %self, -8
-  %t3283 = inttoptr i64 %t3282 to ptr
-  %t3284 = getelementptr i64, ptr %t3283, i64 2
-  %t3285 = load i64, ptr %t3284
-  %t3286 = getelementptr i64, ptr %t3279, i64 1
-  store i64 %t3285, ptr %t3286
-  %t3287 = and i64 %self, -8
-  %t3288 = inttoptr i64 %t3287 to ptr
-  %t3289 = getelementptr i64, ptr %t3288, i64 3
-  %t3290 = load i64, ptr %t3289
-  %t3291 = getelementptr i64, ptr %t3279, i64 2
-  store i64 %t3290, ptr %t3291
-  %t3292 = getelementptr i64, ptr %t3279, i64 3
-  store i64 %t3281, ptr %t3292
-  %t3293 = and i64 %self, -8
-  %t3294 = inttoptr i64 %t3293 to ptr
-  %t3295 = getelementptr i64, ptr %t3294, i64 1
-  %t3296 = load i64, ptr %t3295
-  %t3297 = call i64 @rt_vector_ref(i64 %t3296, i64 %a0)
-  %t3298 = call fastcc i64 @"scheme.base:code_703"(i64 %t3281, i64 1, i64 %t3297, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3299 = or i64 %a0, 8
-  %t3300 = and i64 %t3299, 7
-  %t3301 = icmp eq i64 %t3300, 0
-  br i1 %t3301, label %fixfast841, label %fixslow842
-fixfast841:
-  %t3302 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a0, i64 8)
-  %t3303 = extractvalue {i64, i1} %t3302, 0
-  %t3304 = extractvalue {i64, i1} %t3302, 1
-  br i1 %t3304, label %fixslow842, label %fixmerge843
-fixslow842:
-  %t3305 = call i64 @rt_add(i64 %a0, i64 8)
-  br label %fixmerge843
-fixmerge843:
-  %t3306 = phi i64 [ %t3303, %fixfast841 ], [ %t3305, %fixslow842 ]
-  %t3307 = musttail call fastcc i64 @"scheme.base:code_701"(i64 %self, i64 1, i64 %t3306, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t3307
-else840:
+argok837:
+  %t3273 = and i64 %self, -8
+  %t3274 = inttoptr i64 %t3273 to ptr
+  %t3275 = getelementptr i64, ptr %t3274, i64 1
+  %t3276 = load i64, ptr %t3275
+  %t3277 = call i64 @rt_vector_length(i64 %t3276)
+  %t3278 = or i64 %a0, %t3277
+  %t3279 = and i64 %t3278, 7
+  %t3280 = icmp eq i64 %t3279, 0
+  br i1 %t3280, label %fixfast838, label %fixslow839
+fixfast838:
+  %t3281 = icmp slt i64 %a0, %t3277
+  %t3282 = select i1 %t3281, i64 257, i64 1
+  br label %fixmerge840
+fixslow839:
+  %t3283 = call i64 @rt_lt(i64 %a0, i64 %t3277)
+  br label %fixmerge840
+fixmerge840:
+  %t3284 = phi i64 [ %t3282, %fixfast838 ], [ %t3283, %fixslow839 ]
+  %t3285 = icmp ne i64 %t3284, 1
+  br i1 %t3285, label %then841, label %else842
+then841:
+  %t3286 = call ptr @rt_alloc_words(i64 4)
+  %t3287 = ptrtoint ptr %t3286 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_705" to i64), ptr %t3286
+  %t3288 = or i64 %t3287, 4
+  %t3289 = and i64 %self, -8
+  %t3290 = inttoptr i64 %t3289 to ptr
+  %t3291 = getelementptr i64, ptr %t3290, i64 2
+  %t3292 = load i64, ptr %t3291
+  %t3293 = getelementptr i64, ptr %t3286, i64 1
+  store i64 %t3292, ptr %t3293
+  %t3294 = and i64 %self, -8
+  %t3295 = inttoptr i64 %t3294 to ptr
+  %t3296 = getelementptr i64, ptr %t3295, i64 3
+  %t3297 = load i64, ptr %t3296
+  %t3298 = getelementptr i64, ptr %t3286, i64 2
+  store i64 %t3297, ptr %t3298
+  %t3299 = getelementptr i64, ptr %t3286, i64 3
+  store i64 %t3288, ptr %t3299
+  %t3300 = and i64 %self, -8
+  %t3301 = inttoptr i64 %t3300 to ptr
+  %t3302 = getelementptr i64, ptr %t3301, i64 1
+  %t3303 = load i64, ptr %t3302
+  %t3304 = call i64 @rt_vector_ref(i64 %t3303, i64 %a0)
+  %t3305 = call fastcc i64 @"scheme.base:code_705"(i64 %t3288, i64 1, i64 %t3304, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3306 = or i64 %a0, 8
+  %t3307 = and i64 %t3306, 7
+  %t3308 = icmp eq i64 %t3307, 0
+  br i1 %t3308, label %fixfast843, label %fixslow844
+fixfast843:
+  %t3309 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a0, i64 8)
+  %t3310 = extractvalue {i64, i1} %t3309, 0
+  %t3311 = extractvalue {i64, i1} %t3309, 1
+  br i1 %t3311, label %fixslow844, label %fixmerge845
+fixslow844:
+  %t3312 = call i64 @rt_add(i64 %a0, i64 8)
+  br label %fixmerge845
+fixmerge845:
+  %t3313 = phi i64 [ %t3310, %fixfast843 ], [ %t3312, %fixslow844 ]
+  %t3314 = musttail call fastcc i64 @"scheme.base:code_703"(i64 %self, i64 1, i64 %t3313, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t3314
+else842:
   ret i64 1
 }
 
 define fastcc i64 @"scheme.base:code:%ht-grow!"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3308 = icmp eq i64 %argc, 1
-  br i1 %t3308, label %argok845, label %arityerr844
-arityerr844:
+  %t3315 = icmp eq i64 %argc, 1
+  br i1 %t3315, label %argok847, label %arityerr846
+arityerr846:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok845:
-  %t3309 = load i64, ptr @"scheme.base:%ht-buckets"
-  %t3310 = and i64 %t3309, -8
-  %t3311 = inttoptr i64 %t3310 to ptr
-  %t3312 = load i64, ptr %t3311
-  %t3313 = inttoptr i64 %t3312 to ptr
-  %t3314 = call fastcc i64%t3313(i64 %t3309, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3315 = call i64 @rt_vector_length(i64 %t3314)
-  %t3316 = or i64 16, %t3315
-  %t3317 = and i64 %t3316, 7
-  %t3318 = icmp eq i64 %t3317, 0
-  br i1 %t3318, label %fixfast846, label %fixslow847
-fixfast846:
-  %t3319 = ashr i64 16, 3
-  %t3320 = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %t3319, i64 %t3315)
-  %t3321 = extractvalue {i64, i1} %t3320, 0
-  %t3322 = extractvalue {i64, i1} %t3320, 1
-  br i1 %t3322, label %fixslow847, label %fixmerge848
-fixslow847:
-  %t3323 = call i64 @rt_mul(i64 16, i64 %t3315)
-  br label %fixmerge848
-fixmerge848:
-  %t3324 = phi i64 [ %t3321, %fixfast846 ], [ %t3323, %fixslow847 ]
-  %t3325 = call i64 @rt_make_vector(i64 %t3324, i64 2)
-  %t3326 = call ptr @rt_alloc_words(i64 5)
-  %t3327 = ptrtoint ptr %t3326 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_701" to i64), ptr %t3326
-  %t3328 = or i64 %t3327, 4
-  %t3329 = getelementptr i64, ptr %t3326, i64 1
-  store i64 %t3314, ptr %t3329
-  %t3330 = getelementptr i64, ptr %t3326, i64 2
-  store i64 %t3324, ptr %t3330
-  %t3331 = getelementptr i64, ptr %t3326, i64 3
-  store i64 %t3325, ptr %t3331
-  %t3332 = getelementptr i64, ptr %t3326, i64 4
-  store i64 %t3328, ptr %t3332
-  %t3333 = call fastcc i64 @"scheme.base:code_701"(i64 %t3328, i64 1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3334 = load i64, ptr @"scheme.base:%ht-set-buckets!"
-  %t3335 = and i64 %t3334, -8
-  %t3336 = inttoptr i64 %t3335 to ptr
-  %t3337 = load i64, ptr %t3336
-  %t3338 = inttoptr i64 %t3337 to ptr
-  %t3339 = musttail call fastcc i64 %t3338(i64 %t3334, i64 2, i64 %a0, i64 %t3325, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t3339
+argok847:
+  %t3316 = load i64, ptr @"scheme.base:%ht-buckets"
+  %t3317 = and i64 %t3316, -8
+  %t3318 = inttoptr i64 %t3317 to ptr
+  %t3319 = load i64, ptr %t3318
+  %t3320 = inttoptr i64 %t3319 to ptr
+  %t3321 = call fastcc i64%t3320(i64 %t3316, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3322 = call i64 @rt_vector_length(i64 %t3321)
+  %t3323 = or i64 16, %t3322
+  %t3324 = and i64 %t3323, 7
+  %t3325 = icmp eq i64 %t3324, 0
+  br i1 %t3325, label %fixfast848, label %fixslow849
+fixfast848:
+  %t3326 = ashr i64 16, 3
+  %t3327 = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %t3326, i64 %t3322)
+  %t3328 = extractvalue {i64, i1} %t3327, 0
+  %t3329 = extractvalue {i64, i1} %t3327, 1
+  br i1 %t3329, label %fixslow849, label %fixmerge850
+fixslow849:
+  %t3330 = call i64 @rt_mul(i64 16, i64 %t3322)
+  br label %fixmerge850
+fixmerge850:
+  %t3331 = phi i64 [ %t3328, %fixfast848 ], [ %t3330, %fixslow849 ]
+  %t3332 = call i64 @rt_make_vector(i64 %t3331, i64 2)
+  %t3333 = call ptr @rt_alloc_words(i64 5)
+  %t3334 = ptrtoint ptr %t3333 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_703" to i64), ptr %t3333
+  %t3335 = or i64 %t3334, 4
+  %t3336 = getelementptr i64, ptr %t3333, i64 1
+  store i64 %t3321, ptr %t3336
+  %t3337 = getelementptr i64, ptr %t3333, i64 2
+  store i64 %t3331, ptr %t3337
+  %t3338 = getelementptr i64, ptr %t3333, i64 3
+  store i64 %t3332, ptr %t3338
+  %t3339 = getelementptr i64, ptr %t3333, i64 4
+  store i64 %t3335, ptr %t3339
+  %t3340 = call fastcc i64 @"scheme.base:code_703"(i64 %t3335, i64 1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3341 = load i64, ptr @"scheme.base:%ht-set-buckets!"
+  %t3342 = and i64 %t3341, -8
+  %t3343 = inttoptr i64 %t3342 to ptr
+  %t3344 = load i64, ptr %t3343
+  %t3345 = inttoptr i64 %t3344 to ptr
+  %t3346 = musttail call fastcc i64 %t3345(i64 %t3341, i64 2, i64 %a0, i64 %t3332, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t3346
 }
 
 define fastcc i64 @"scheme.base:code:hash-table-size"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3344 = icmp eq i64 %argc, 1
-  br i1 %t3344, label %argok850, label %arityerr849
-arityerr849:
+  %t3351 = icmp eq i64 %argc, 1
+  br i1 %t3351, label %argok852, label %arityerr851
+arityerr851:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok850:
-  %t3345 = load i64, ptr @"scheme.base:%ht-count"
-  %t3346 = and i64 %t3345, -8
-  %t3347 = inttoptr i64 %t3346 to ptr
-  %t3348 = load i64, ptr %t3347
-  %t3349 = inttoptr i64 %t3348 to ptr
-  %t3350 = musttail call fastcc i64 %t3349(i64 %t3345, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t3350
+argok852:
+  %t3352 = load i64, ptr @"scheme.base:%ht-count"
+  %t3353 = and i64 %t3352, -8
+  %t3354 = inttoptr i64 %t3353 to ptr
+  %t3355 = load i64, ptr %t3354
+  %t3356 = inttoptr i64 %t3355 to ptr
+  %t3357 = musttail call fastcc i64 %t3356(i64 %t3352, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t3357
 }
 
 define fastcc i64 @"scheme.base:code:%ht-fold-buckets"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3355 = icmp eq i64 %argc, 2
-  br i1 %t3355, label %argok852, label %arityerr851
-arityerr851:
+  %t3362 = icmp eq i64 %argc, 2
+  br i1 %t3362, label %argok854, label %arityerr853
+arityerr853:
   call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
-argok852:
-  %t3356 = call i64 @rt_null_p(i64 %a0)
-  %t3357 = icmp ne i64 %t3356, 1
-  br i1 %t3357, label %then853, label %else854
-then853:
+argok854:
+  %t3363 = call i64 @rt_null_p(i64 %a0)
+  %t3364 = icmp ne i64 %t3363, 1
+  br i1 %t3364, label %then855, label %else856
+then855:
   ret i64 %a1
-else854:
-  %t3358 = call i64 @rt_car(i64 %a0)
-  %t3359 = call i64 @rt_car(i64 %t3358)
-  %t3360 = call i64 @rt_car(i64 %a0)
-  %t3361 = call i64 @rt_cdr(i64 %t3360)
-  %t3362 = call i64 @rt_cons(i64 %t3359, i64 %t3361)
-  %t3363 = call i64 @rt_cdr(i64 %a0)
-  %t3364 = load i64, ptr @"scheme.base:%ht-fold-buckets"
-  %t3365 = and i64 %t3364, -8
-  %t3366 = inttoptr i64 %t3365 to ptr
-  %t3367 = load i64, ptr %t3366
-  %t3368 = inttoptr i64 %t3367 to ptr
-  %t3369 = call fastcc i64%t3368(i64 %t3364, i64 2, i64 %t3363, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3370 = call i64 @rt_cons(i64 %t3362, i64 %t3369)
-  ret i64 %t3370
+else856:
+  %t3365 = call i64 @rt_car(i64 %a0)
+  %t3366 = call i64 @rt_car(i64 %t3365)
+  %t3367 = call i64 @rt_car(i64 %a0)
+  %t3368 = call i64 @rt_cdr(i64 %t3367)
+  %t3369 = call i64 @rt_cons(i64 %t3366, i64 %t3368)
+  %t3370 = call i64 @rt_cdr(i64 %a0)
+  %t3371 = load i64, ptr @"scheme.base:%ht-fold-buckets"
+  %t3372 = and i64 %t3371, -8
+  %t3373 = inttoptr i64 %t3372 to ptr
+  %t3374 = load i64, ptr %t3373
+  %t3375 = inttoptr i64 %t3374 to ptr
+  %t3376 = call fastcc i64%t3375(i64 %t3371, i64 2, i64 %t3370, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3377 = call i64 @rt_cons(i64 %t3369, i64 %t3376)
+  ret i64 %t3377
 }
 
-define fastcc i64 @"scheme.base:code_720"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_722"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3375 = icmp eq i64 %argc, 2
-  br i1 %t3375, label %argok856, label %arityerr855
-arityerr855:
+  %t3382 = icmp eq i64 %argc, 2
+  br i1 %t3382, label %argok858, label %arityerr857
+arityerr857:
   call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
-argok856:
-  %t3376 = and i64 %self, -8
-  %t3377 = inttoptr i64 %t3376 to ptr
-  %t3378 = getelementptr i64, ptr %t3377, i64 1
-  %t3379 = load i64, ptr %t3378
-  %t3380 = call i64 @rt_vector_length(i64 %t3379)
-  %t3381 = or i64 %a0, %t3380
-  %t3382 = and i64 %t3381, 7
-  %t3383 = icmp eq i64 %t3382, 0
-  br i1 %t3383, label %fixfast857, label %fixslow858
-fixfast857:
-  %t3384 = icmp slt i64 %a0, %t3380
-  %t3385 = select i1 %t3384, i64 257, i64 1
-  br label %fixmerge859
-fixslow858:
-  %t3386 = call i64 @rt_lt(i64 %a0, i64 %t3380)
-  br label %fixmerge859
-fixmerge859:
-  %t3387 = phi i64 [ %t3385, %fixfast857 ], [ %t3386, %fixslow858 ]
-  %t3388 = icmp ne i64 %t3387, 1
-  br i1 %t3388, label %then860, label %else861
-then860:
-  %t3389 = or i64 %a0, 8
-  %t3390 = and i64 %t3389, 7
-  %t3391 = icmp eq i64 %t3390, 0
-  br i1 %t3391, label %fixfast862, label %fixslow863
-fixfast862:
-  %t3392 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a0, i64 8)
-  %t3393 = extractvalue {i64, i1} %t3392, 0
-  %t3394 = extractvalue {i64, i1} %t3392, 1
-  br i1 %t3394, label %fixslow863, label %fixmerge864
-fixslow863:
-  %t3395 = call i64 @rt_add(i64 %a0, i64 8)
-  br label %fixmerge864
-fixmerge864:
-  %t3396 = phi i64 [ %t3393, %fixfast862 ], [ %t3395, %fixslow863 ]
-  %t3397 = and i64 %self, -8
-  %t3398 = inttoptr i64 %t3397 to ptr
-  %t3399 = getelementptr i64, ptr %t3398, i64 1
-  %t3400 = load i64, ptr %t3399
-  %t3401 = call i64 @rt_vector_ref(i64 %t3400, i64 %a0)
-  %t3402 = load i64, ptr @"scheme.base:%ht-fold-buckets"
-  %t3403 = and i64 %t3402, -8
-  %t3404 = inttoptr i64 %t3403 to ptr
-  %t3405 = load i64, ptr %t3404
-  %t3406 = inttoptr i64 %t3405 to ptr
-  %t3407 = call fastcc i64%t3406(i64 %t3402, i64 2, i64 %t3401, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3408 = musttail call fastcc i64 @"scheme.base:code_720"(i64 %self, i64 2, i64 %t3396, i64 %t3407, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t3408
-else861:
+argok858:
+  %t3383 = and i64 %self, -8
+  %t3384 = inttoptr i64 %t3383 to ptr
+  %t3385 = getelementptr i64, ptr %t3384, i64 1
+  %t3386 = load i64, ptr %t3385
+  %t3387 = call i64 @rt_vector_length(i64 %t3386)
+  %t3388 = or i64 %a0, %t3387
+  %t3389 = and i64 %t3388, 7
+  %t3390 = icmp eq i64 %t3389, 0
+  br i1 %t3390, label %fixfast859, label %fixslow860
+fixfast859:
+  %t3391 = icmp slt i64 %a0, %t3387
+  %t3392 = select i1 %t3391, i64 257, i64 1
+  br label %fixmerge861
+fixslow860:
+  %t3393 = call i64 @rt_lt(i64 %a0, i64 %t3387)
+  br label %fixmerge861
+fixmerge861:
+  %t3394 = phi i64 [ %t3392, %fixfast859 ], [ %t3393, %fixslow860 ]
+  %t3395 = icmp ne i64 %t3394, 1
+  br i1 %t3395, label %then862, label %else863
+then862:
+  %t3396 = or i64 %a0, 8
+  %t3397 = and i64 %t3396, 7
+  %t3398 = icmp eq i64 %t3397, 0
+  br i1 %t3398, label %fixfast864, label %fixslow865
+fixfast864:
+  %t3399 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a0, i64 8)
+  %t3400 = extractvalue {i64, i1} %t3399, 0
+  %t3401 = extractvalue {i64, i1} %t3399, 1
+  br i1 %t3401, label %fixslow865, label %fixmerge866
+fixslow865:
+  %t3402 = call i64 @rt_add(i64 %a0, i64 8)
+  br label %fixmerge866
+fixmerge866:
+  %t3403 = phi i64 [ %t3400, %fixfast864 ], [ %t3402, %fixslow865 ]
+  %t3404 = and i64 %self, -8
+  %t3405 = inttoptr i64 %t3404 to ptr
+  %t3406 = getelementptr i64, ptr %t3405, i64 1
+  %t3407 = load i64, ptr %t3406
+  %t3408 = call i64 @rt_vector_ref(i64 %t3407, i64 %a0)
+  %t3409 = load i64, ptr @"scheme.base:%ht-fold-buckets"
+  %t3410 = and i64 %t3409, -8
+  %t3411 = inttoptr i64 %t3410 to ptr
+  %t3412 = load i64, ptr %t3411
+  %t3413 = inttoptr i64 %t3412 to ptr
+  %t3414 = call fastcc i64%t3413(i64 %t3409, i64 2, i64 %t3408, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3415 = musttail call fastcc i64 @"scheme.base:code_722"(i64 %self, i64 2, i64 %t3403, i64 %t3414, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t3415
+else863:
   ret i64 %a1
 }
 
 define fastcc i64 @"scheme.base:code:hash-table->alist"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3409 = icmp eq i64 %argc, 1
-  br i1 %t3409, label %argok866, label %arityerr865
-arityerr865:
-  call void @rt_arity_error(i64 1, i64 %argc)
-  unreachable
-argok866:
-  %t3410 = load i64, ptr @"scheme.base:%ht-buckets"
-  %t3411 = and i64 %t3410, -8
-  %t3412 = inttoptr i64 %t3411 to ptr
-  %t3413 = load i64, ptr %t3412
-  %t3414 = inttoptr i64 %t3413 to ptr
-  %t3415 = call fastcc i64%t3414(i64 %t3410, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3416 = call ptr @rt_alloc_words(i64 3)
-  %t3417 = ptrtoint ptr %t3416 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_720" to i64), ptr %t3416
-  %t3418 = or i64 %t3417, 4
-  %t3419 = getelementptr i64, ptr %t3416, i64 1
-  store i64 %t3415, ptr %t3419
-  %t3420 = getelementptr i64, ptr %t3416, i64 2
-  store i64 %t3418, ptr %t3420
-  %t3421 = musttail call fastcc i64 @"scheme.base:code_720"(i64 %t3418, i64 2, i64 0, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t3421
-}
-
-define fastcc i64 @"scheme.base:code_725"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
-entry:
-  %t3426 = icmp eq i64 %argc, 1
-  br i1 %t3426, label %argok868, label %arityerr867
+  %t3416 = icmp eq i64 %argc, 1
+  br i1 %t3416, label %argok868, label %arityerr867
 arityerr867:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
 argok868:
-  %t3427 = call i64 @rt_car(i64 %a0)
-  ret i64 %t3427
+  %t3417 = load i64, ptr @"scheme.base:%ht-buckets"
+  %t3418 = and i64 %t3417, -8
+  %t3419 = inttoptr i64 %t3418 to ptr
+  %t3420 = load i64, ptr %t3419
+  %t3421 = inttoptr i64 %t3420 to ptr
+  %t3422 = call fastcc i64%t3421(i64 %t3417, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3423 = call ptr @rt_alloc_words(i64 3)
+  %t3424 = ptrtoint ptr %t3423 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_722" to i64), ptr %t3423
+  %t3425 = or i64 %t3424, 4
+  %t3426 = getelementptr i64, ptr %t3423, i64 1
+  store i64 %t3422, ptr %t3426
+  %t3427 = getelementptr i64, ptr %t3423, i64 2
+  store i64 %t3425, ptr %t3427
+  %t3428 = musttail call fastcc i64 @"scheme.base:code_722"(i64 %t3425, i64 2, i64 0, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t3428
 }
 
-define fastcc i64 @"scheme.base:code:hash-table-keys"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_727"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3428 = icmp eq i64 %argc, 1
-  br i1 %t3428, label %argok870, label %arityerr869
+  %t3433 = icmp eq i64 %argc, 1
+  br i1 %t3433, label %argok870, label %arityerr869
 arityerr869:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
 argok870:
-  %t3429 = call ptr @rt_alloc_words(i64 1)
-  %t3430 = ptrtoint ptr %t3429 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_725" to i64), ptr %t3429
-  %t3431 = or i64 %t3430, 4
-  %t3432 = load i64, ptr @"scheme.base:hash-table->alist"
-  %t3433 = and i64 %t3432, -8
-  %t3434 = inttoptr i64 %t3433 to ptr
-  %t3435 = load i64, ptr %t3434
-  %t3436 = inttoptr i64 %t3435 to ptr
-  %t3437 = call fastcc i64%t3436(i64 %t3432, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3438 = load i64, ptr @"scheme.base:map"
-  %t3439 = and i64 %t3438, -8
-  %t3440 = inttoptr i64 %t3439 to ptr
-  %t3441 = load i64, ptr %t3440
-  %t3442 = inttoptr i64 %t3441 to ptr
-  %t3443 = musttail call fastcc i64 %t3442(i64 %t3438, i64 2, i64 %t3431, i64 %t3437, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t3443
+  %t3434 = call i64 @rt_car(i64 %a0)
+  ret i64 %t3434
 }
 
-define fastcc i64 @"scheme.base:code_730"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:hash-table-keys"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3448 = icmp eq i64 %argc, 1
-  br i1 %t3448, label %argok872, label %arityerr871
+  %t3435 = icmp eq i64 %argc, 1
+  br i1 %t3435, label %argok872, label %arityerr871
 arityerr871:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
 argok872:
-  %t3449 = call i64 @rt_cdr(i64 %a0)
-  ret i64 %t3449
+  %t3436 = call ptr @rt_alloc_words(i64 1)
+  %t3437 = ptrtoint ptr %t3436 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_727" to i64), ptr %t3436
+  %t3438 = or i64 %t3437, 4
+  %t3439 = load i64, ptr @"scheme.base:hash-table->alist"
+  %t3440 = and i64 %t3439, -8
+  %t3441 = inttoptr i64 %t3440 to ptr
+  %t3442 = load i64, ptr %t3441
+  %t3443 = inttoptr i64 %t3442 to ptr
+  %t3444 = call fastcc i64%t3443(i64 %t3439, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3445 = load i64, ptr @"scheme.base:map"
+  %t3446 = and i64 %t3445, -8
+  %t3447 = inttoptr i64 %t3446 to ptr
+  %t3448 = load i64, ptr %t3447
+  %t3449 = inttoptr i64 %t3448 to ptr
+  %t3450 = musttail call fastcc i64 %t3449(i64 %t3445, i64 2, i64 %t3438, i64 %t3444, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t3450
 }
 
-define fastcc i64 @"scheme.base:code:hash-table-values"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_732"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3450 = icmp eq i64 %argc, 1
-  br i1 %t3450, label %argok874, label %arityerr873
+  %t3455 = icmp eq i64 %argc, 1
+  br i1 %t3455, label %argok874, label %arityerr873
 arityerr873:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
 argok874:
-  %t3451 = call ptr @rt_alloc_words(i64 1)
-  %t3452 = ptrtoint ptr %t3451 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_730" to i64), ptr %t3451
-  %t3453 = or i64 %t3452, 4
-  %t3454 = load i64, ptr @"scheme.base:hash-table->alist"
-  %t3455 = and i64 %t3454, -8
-  %t3456 = inttoptr i64 %t3455 to ptr
-  %t3457 = load i64, ptr %t3456
-  %t3458 = inttoptr i64 %t3457 to ptr
-  %t3459 = call fastcc i64%t3458(i64 %t3454, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3460 = load i64, ptr @"scheme.base:map"
-  %t3461 = and i64 %t3460, -8
-  %t3462 = inttoptr i64 %t3461 to ptr
-  %t3463 = load i64, ptr %t3462
-  %t3464 = inttoptr i64 %t3463 to ptr
-  %t3465 = musttail call fastcc i64 %t3464(i64 %t3460, i64 2, i64 %t3453, i64 %t3459, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t3465
+  %t3456 = call i64 @rt_cdr(i64 %a0)
+  ret i64 %t3456
 }
 
-define fastcc i64 @"scheme.base:code:rd-ws?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:hash-table-values"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3470 = icmp eq i64 %argc, 1
-  br i1 %t3470, label %argok876, label %arityerr875
+  %t3457 = icmp eq i64 %argc, 1
+  br i1 %t3457, label %argok876, label %arityerr875
 arityerr875:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
 argok876:
-  %t3471 = call i64 @rt_char_to_integer(i64 %a0)
-  %t3472 = or i64 %t3471, 256
-  %t3473 = and i64 %t3472, 7
-  %t3474 = icmp eq i64 %t3473, 0
-  br i1 %t3474, label %fixfast877, label %fixslow878
-fixfast877:
-  %t3475 = icmp eq i64 %t3471, 256
-  %t3476 = select i1 %t3475, i64 257, i64 1
-  br label %fixmerge879
-fixslow878:
-  %t3477 = call i64 @rt_num_eq(i64 %t3471, i64 256)
-  br label %fixmerge879
-fixmerge879:
-  %t3478 = phi i64 [ %t3476, %fixfast877 ], [ %t3477, %fixslow878 ]
-  %t3479 = icmp ne i64 %t3478, 1
-  br i1 %t3479, label %then880, label %else881
-then880:
-  ret i64 %t3478
-else881:
-  %t3480 = or i64 %t3471, 72
-  %t3481 = and i64 %t3480, 7
-  %t3482 = icmp eq i64 %t3481, 0
-  br i1 %t3482, label %fixfast882, label %fixslow883
-fixfast882:
-  %t3483 = icmp eq i64 %t3471, 72
-  %t3484 = select i1 %t3483, i64 257, i64 1
-  br label %fixmerge884
-fixslow883:
-  %t3485 = call i64 @rt_num_eq(i64 %t3471, i64 72)
-  br label %fixmerge884
-fixmerge884:
-  %t3486 = phi i64 [ %t3484, %fixfast882 ], [ %t3485, %fixslow883 ]
-  %t3487 = icmp ne i64 %t3486, 1
-  br i1 %t3487, label %then885, label %else886
-then885:
-  ret i64 %t3486
-else886:
-  %t3488 = or i64 %t3471, 80
-  %t3489 = and i64 %t3488, 7
-  %t3490 = icmp eq i64 %t3489, 0
-  br i1 %t3490, label %fixfast887, label %fixslow888
-fixfast887:
-  %t3491 = icmp eq i64 %t3471, 80
-  %t3492 = select i1 %t3491, i64 257, i64 1
-  br label %fixmerge889
-fixslow888:
-  %t3493 = call i64 @rt_num_eq(i64 %t3471, i64 80)
-  br label %fixmerge889
-fixmerge889:
-  %t3494 = phi i64 [ %t3492, %fixfast887 ], [ %t3493, %fixslow888 ]
-  %t3495 = icmp ne i64 %t3494, 1
-  br i1 %t3495, label %then890, label %else891
-then890:
-  ret i64 %t3494
-else891:
-  %t3496 = or i64 %t3471, 104
-  %t3497 = and i64 %t3496, 7
-  %t3498 = icmp eq i64 %t3497, 0
-  br i1 %t3498, label %fixfast892, label %fixslow893
-fixfast892:
-  %t3499 = icmp eq i64 %t3471, 104
-  %t3500 = select i1 %t3499, i64 257, i64 1
-  br label %fixmerge894
-fixslow893:
-  %t3501 = call i64 @rt_num_eq(i64 %t3471, i64 104)
-  br label %fixmerge894
-fixmerge894:
-  %t3502 = phi i64 [ %t3500, %fixfast892 ], [ %t3501, %fixslow893 ]
-  ret i64 %t3502
+  %t3458 = call ptr @rt_alloc_words(i64 1)
+  %t3459 = ptrtoint ptr %t3458 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_732" to i64), ptr %t3458
+  %t3460 = or i64 %t3459, 4
+  %t3461 = load i64, ptr @"scheme.base:hash-table->alist"
+  %t3462 = and i64 %t3461, -8
+  %t3463 = inttoptr i64 %t3462 to ptr
+  %t3464 = load i64, ptr %t3463
+  %t3465 = inttoptr i64 %t3464 to ptr
+  %t3466 = call fastcc i64%t3465(i64 %t3461, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3467 = load i64, ptr @"scheme.base:map"
+  %t3468 = and i64 %t3467, -8
+  %t3469 = inttoptr i64 %t3468 to ptr
+  %t3470 = load i64, ptr %t3469
+  %t3471 = inttoptr i64 %t3470 to ptr
+  %t3472 = musttail call fastcc i64 %t3471(i64 %t3467, i64 2, i64 %t3460, i64 %t3466, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t3472
+}
+
+define fastcc i64 @"scheme.base:code:rd-ws?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+entry:
+  %t3477 = icmp eq i64 %argc, 1
+  br i1 %t3477, label %argok878, label %arityerr877
+arityerr877:
+  call void @rt_arity_error(i64 1, i64 %argc)
+  unreachable
+argok878:
+  %t3478 = call i64 @rt_char_to_integer(i64 %a0)
+  %t3479 = or i64 %t3478, 256
+  %t3480 = and i64 %t3479, 7
+  %t3481 = icmp eq i64 %t3480, 0
+  br i1 %t3481, label %fixfast879, label %fixslow880
+fixfast879:
+  %t3482 = icmp eq i64 %t3478, 256
+  %t3483 = select i1 %t3482, i64 257, i64 1
+  br label %fixmerge881
+fixslow880:
+  %t3484 = call i64 @rt_num_eq(i64 %t3478, i64 256)
+  br label %fixmerge881
+fixmerge881:
+  %t3485 = phi i64 [ %t3483, %fixfast879 ], [ %t3484, %fixslow880 ]
+  %t3486 = icmp ne i64 %t3485, 1
+  br i1 %t3486, label %then882, label %else883
+then882:
+  ret i64 %t3485
+else883:
+  %t3487 = or i64 %t3478, 72
+  %t3488 = and i64 %t3487, 7
+  %t3489 = icmp eq i64 %t3488, 0
+  br i1 %t3489, label %fixfast884, label %fixslow885
+fixfast884:
+  %t3490 = icmp eq i64 %t3478, 72
+  %t3491 = select i1 %t3490, i64 257, i64 1
+  br label %fixmerge886
+fixslow885:
+  %t3492 = call i64 @rt_num_eq(i64 %t3478, i64 72)
+  br label %fixmerge886
+fixmerge886:
+  %t3493 = phi i64 [ %t3491, %fixfast884 ], [ %t3492, %fixslow885 ]
+  %t3494 = icmp ne i64 %t3493, 1
+  br i1 %t3494, label %then887, label %else888
+then887:
+  ret i64 %t3493
+else888:
+  %t3495 = or i64 %t3478, 80
+  %t3496 = and i64 %t3495, 7
+  %t3497 = icmp eq i64 %t3496, 0
+  br i1 %t3497, label %fixfast889, label %fixslow890
+fixfast889:
+  %t3498 = icmp eq i64 %t3478, 80
+  %t3499 = select i1 %t3498, i64 257, i64 1
+  br label %fixmerge891
+fixslow890:
+  %t3500 = call i64 @rt_num_eq(i64 %t3478, i64 80)
+  br label %fixmerge891
+fixmerge891:
+  %t3501 = phi i64 [ %t3499, %fixfast889 ], [ %t3500, %fixslow890 ]
+  %t3502 = icmp ne i64 %t3501, 1
+  br i1 %t3502, label %then892, label %else893
+then892:
+  ret i64 %t3501
+else893:
+  %t3503 = or i64 %t3478, 104
+  %t3504 = and i64 %t3503, 7
+  %t3505 = icmp eq i64 %t3504, 0
+  br i1 %t3505, label %fixfast894, label %fixslow895
+fixfast894:
+  %t3506 = icmp eq i64 %t3478, 104
+  %t3507 = select i1 %t3506, i64 257, i64 1
+  br label %fixmerge896
+fixslow895:
+  %t3508 = call i64 @rt_num_eq(i64 %t3478, i64 104)
+  br label %fixmerge896
+fixmerge896:
+  %t3509 = phi i64 [ %t3507, %fixfast894 ], [ %t3508, %fixslow895 ]
+  ret i64 %t3509
 }
 
 define fastcc i64 @"scheme.base:code:rd-digit?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3507 = icmp eq i64 %argc, 1
-  br i1 %t3507, label %argok896, label %arityerr895
-arityerr895:
+  %t3514 = icmp eq i64 %argc, 1
+  br i1 %t3514, label %argok898, label %arityerr897
+arityerr897:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok896:
-  %t3508 = call i64 @rt_char_to_integer(i64 %a0)
-  %t3509 = or i64 376, %t3508
-  %t3510 = and i64 %t3509, 7
-  %t3511 = icmp eq i64 %t3510, 0
-  br i1 %t3511, label %fixfast897, label %fixslow898
-fixfast897:
-  %t3512 = icmp slt i64 376, %t3508
-  %t3513 = select i1 %t3512, i64 257, i64 1
-  br label %fixmerge899
-fixslow898:
-  %t3514 = call i64 @rt_lt(i64 376, i64 %t3508)
-  br label %fixmerge899
-fixmerge899:
-  %t3515 = phi i64 [ %t3513, %fixfast897 ], [ %t3514, %fixslow898 ]
-  %t3516 = icmp ne i64 %t3515, 1
-  br i1 %t3516, label %then900, label %else901
-then900:
-  %t3517 = or i64 %t3508, 464
-  %t3518 = and i64 %t3517, 7
-  %t3519 = icmp eq i64 %t3518, 0
-  br i1 %t3519, label %fixfast902, label %fixslow903
-fixfast902:
-  %t3520 = icmp slt i64 %t3508, 464
-  %t3521 = select i1 %t3520, i64 257, i64 1
-  br label %fixmerge904
-fixslow903:
-  %t3522 = call i64 @rt_lt(i64 %t3508, i64 464)
-  br label %fixmerge904
-fixmerge904:
-  %t3523 = phi i64 [ %t3521, %fixfast902 ], [ %t3522, %fixslow903 ]
-  ret i64 %t3523
-else901:
+argok898:
+  %t3515 = call i64 @rt_char_to_integer(i64 %a0)
+  %t3516 = or i64 376, %t3515
+  %t3517 = and i64 %t3516, 7
+  %t3518 = icmp eq i64 %t3517, 0
+  br i1 %t3518, label %fixfast899, label %fixslow900
+fixfast899:
+  %t3519 = icmp slt i64 376, %t3515
+  %t3520 = select i1 %t3519, i64 257, i64 1
+  br label %fixmerge901
+fixslow900:
+  %t3521 = call i64 @rt_lt(i64 376, i64 %t3515)
+  br label %fixmerge901
+fixmerge901:
+  %t3522 = phi i64 [ %t3520, %fixfast899 ], [ %t3521, %fixslow900 ]
+  %t3523 = icmp ne i64 %t3522, 1
+  br i1 %t3523, label %then902, label %else903
+then902:
+  %t3524 = or i64 %t3515, 464
+  %t3525 = and i64 %t3524, 7
+  %t3526 = icmp eq i64 %t3525, 0
+  br i1 %t3526, label %fixfast904, label %fixslow905
+fixfast904:
+  %t3527 = icmp slt i64 %t3515, 464
+  %t3528 = select i1 %t3527, i64 257, i64 1
+  br label %fixmerge906
+fixslow905:
+  %t3529 = call i64 @rt_lt(i64 %t3515, i64 464)
+  br label %fixmerge906
+fixmerge906:
+  %t3530 = phi i64 [ %t3528, %fixfast904 ], [ %t3529, %fixslow905 ]
+  ret i64 %t3530
+else903:
   ret i64 1
 }
 
 define fastcc i64 @"scheme.base:code:rd-delim?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3528 = icmp eq i64 %argc, 1
-  br i1 %t3528, label %argok906, label %arityerr905
-arityerr905:
+  %t3535 = icmp eq i64 %argc, 1
+  br i1 %t3535, label %argok908, label %arityerr907
+arityerr907:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok906:
-  %t3529 = call i64 @rt_char_to_integer(i64 %a0)
-  %t3530 = load i64, ptr @"scheme.base:rd-ws?"
-  %t3531 = and i64 %t3530, -8
-  %t3532 = inttoptr i64 %t3531 to ptr
-  %t3533 = load i64, ptr %t3532
-  %t3534 = inttoptr i64 %t3533 to ptr
-  %t3535 = call fastcc i64%t3534(i64 %t3530, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3536 = icmp ne i64 %t3535, 1
-  br i1 %t3536, label %then907, label %else908
-then907:
-  ret i64 %t3535
-else908:
-  %t3537 = or i64 %t3529, 320
-  %t3538 = and i64 %t3537, 7
-  %t3539 = icmp eq i64 %t3538, 0
-  br i1 %t3539, label %fixfast909, label %fixslow910
-fixfast909:
-  %t3540 = icmp eq i64 %t3529, 320
-  %t3541 = select i1 %t3540, i64 257, i64 1
-  br label %fixmerge911
-fixslow910:
-  %t3542 = call i64 @rt_num_eq(i64 %t3529, i64 320)
-  br label %fixmerge911
-fixmerge911:
-  %t3543 = phi i64 [ %t3541, %fixfast909 ], [ %t3542, %fixslow910 ]
-  %t3544 = icmp ne i64 %t3543, 1
-  br i1 %t3544, label %then912, label %else913
-then912:
-  ret i64 %t3543
-else913:
-  %t3545 = or i64 %t3529, 328
-  %t3546 = and i64 %t3545, 7
-  %t3547 = icmp eq i64 %t3546, 0
-  br i1 %t3547, label %fixfast914, label %fixslow915
-fixfast914:
-  %t3548 = icmp eq i64 %t3529, 328
-  %t3549 = select i1 %t3548, i64 257, i64 1
-  br label %fixmerge916
-fixslow915:
-  %t3550 = call i64 @rt_num_eq(i64 %t3529, i64 328)
-  br label %fixmerge916
-fixmerge916:
-  %t3551 = phi i64 [ %t3549, %fixfast914 ], [ %t3550, %fixslow915 ]
-  %t3552 = icmp ne i64 %t3551, 1
-  br i1 %t3552, label %then917, label %else918
-then917:
-  ret i64 %t3551
-else918:
-  %t3553 = or i64 %t3529, 728
-  %t3554 = and i64 %t3553, 7
-  %t3555 = icmp eq i64 %t3554, 0
-  br i1 %t3555, label %fixfast919, label %fixslow920
-fixfast919:
-  %t3556 = icmp eq i64 %t3529, 728
-  %t3557 = select i1 %t3556, i64 257, i64 1
-  br label %fixmerge921
-fixslow920:
-  %t3558 = call i64 @rt_num_eq(i64 %t3529, i64 728)
-  br label %fixmerge921
-fixmerge921:
-  %t3559 = phi i64 [ %t3557, %fixfast919 ], [ %t3558, %fixslow920 ]
-  %t3560 = icmp ne i64 %t3559, 1
-  br i1 %t3560, label %then922, label %else923
-then922:
-  ret i64 %t3559
-else923:
-  %t3561 = or i64 %t3529, 744
-  %t3562 = and i64 %t3561, 7
-  %t3563 = icmp eq i64 %t3562, 0
-  br i1 %t3563, label %fixfast924, label %fixslow925
-fixfast924:
-  %t3564 = icmp eq i64 %t3529, 744
-  %t3565 = select i1 %t3564, i64 257, i64 1
-  br label %fixmerge926
-fixslow925:
-  %t3566 = call i64 @rt_num_eq(i64 %t3529, i64 744)
-  br label %fixmerge926
-fixmerge926:
-  %t3567 = phi i64 [ %t3565, %fixfast924 ], [ %t3566, %fixslow925 ]
-  %t3568 = icmp ne i64 %t3567, 1
-  br i1 %t3568, label %then927, label %else928
-then927:
-  ret i64 %t3567
-else928:
-  %t3569 = or i64 %t3529, 272
-  %t3570 = and i64 %t3569, 7
-  %t3571 = icmp eq i64 %t3570, 0
-  br i1 %t3571, label %fixfast929, label %fixslow930
-fixfast929:
-  %t3572 = icmp eq i64 %t3529, 272
-  %t3573 = select i1 %t3572, i64 257, i64 1
-  br label %fixmerge931
-fixslow930:
-  %t3574 = call i64 @rt_num_eq(i64 %t3529, i64 272)
-  br label %fixmerge931
-fixmerge931:
-  %t3575 = phi i64 [ %t3573, %fixfast929 ], [ %t3574, %fixslow930 ]
-  %t3576 = icmp ne i64 %t3575, 1
-  br i1 %t3576, label %then932, label %else933
-then932:
-  ret i64 %t3575
-else933:
-  %t3577 = or i64 %t3529, 472
-  %t3578 = and i64 %t3577, 7
-  %t3579 = icmp eq i64 %t3578, 0
-  br i1 %t3579, label %fixfast934, label %fixslow935
-fixfast934:
-  %t3580 = icmp eq i64 %t3529, 472
-  %t3581 = select i1 %t3580, i64 257, i64 1
-  br label %fixmerge936
-fixslow935:
-  %t3582 = call i64 @rt_num_eq(i64 %t3529, i64 472)
-  br label %fixmerge936
-fixmerge936:
-  %t3583 = phi i64 [ %t3581, %fixfast934 ], [ %t3582, %fixslow935 ]
-  ret i64 %t3583
+argok908:
+  %t3536 = call i64 @rt_char_to_integer(i64 %a0)
+  %t3537 = load i64, ptr @"scheme.base:rd-ws?"
+  %t3538 = and i64 %t3537, -8
+  %t3539 = inttoptr i64 %t3538 to ptr
+  %t3540 = load i64, ptr %t3539
+  %t3541 = inttoptr i64 %t3540 to ptr
+  %t3542 = call fastcc i64%t3541(i64 %t3537, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3543 = icmp ne i64 %t3542, 1
+  br i1 %t3543, label %then909, label %else910
+then909:
+  ret i64 %t3542
+else910:
+  %t3544 = or i64 %t3536, 320
+  %t3545 = and i64 %t3544, 7
+  %t3546 = icmp eq i64 %t3545, 0
+  br i1 %t3546, label %fixfast911, label %fixslow912
+fixfast911:
+  %t3547 = icmp eq i64 %t3536, 320
+  %t3548 = select i1 %t3547, i64 257, i64 1
+  br label %fixmerge913
+fixslow912:
+  %t3549 = call i64 @rt_num_eq(i64 %t3536, i64 320)
+  br label %fixmerge913
+fixmerge913:
+  %t3550 = phi i64 [ %t3548, %fixfast911 ], [ %t3549, %fixslow912 ]
+  %t3551 = icmp ne i64 %t3550, 1
+  br i1 %t3551, label %then914, label %else915
+then914:
+  ret i64 %t3550
+else915:
+  %t3552 = or i64 %t3536, 328
+  %t3553 = and i64 %t3552, 7
+  %t3554 = icmp eq i64 %t3553, 0
+  br i1 %t3554, label %fixfast916, label %fixslow917
+fixfast916:
+  %t3555 = icmp eq i64 %t3536, 328
+  %t3556 = select i1 %t3555, i64 257, i64 1
+  br label %fixmerge918
+fixslow917:
+  %t3557 = call i64 @rt_num_eq(i64 %t3536, i64 328)
+  br label %fixmerge918
+fixmerge918:
+  %t3558 = phi i64 [ %t3556, %fixfast916 ], [ %t3557, %fixslow917 ]
+  %t3559 = icmp ne i64 %t3558, 1
+  br i1 %t3559, label %then919, label %else920
+then919:
+  ret i64 %t3558
+else920:
+  %t3560 = or i64 %t3536, 728
+  %t3561 = and i64 %t3560, 7
+  %t3562 = icmp eq i64 %t3561, 0
+  br i1 %t3562, label %fixfast921, label %fixslow922
+fixfast921:
+  %t3563 = icmp eq i64 %t3536, 728
+  %t3564 = select i1 %t3563, i64 257, i64 1
+  br label %fixmerge923
+fixslow922:
+  %t3565 = call i64 @rt_num_eq(i64 %t3536, i64 728)
+  br label %fixmerge923
+fixmerge923:
+  %t3566 = phi i64 [ %t3564, %fixfast921 ], [ %t3565, %fixslow922 ]
+  %t3567 = icmp ne i64 %t3566, 1
+  br i1 %t3567, label %then924, label %else925
+then924:
+  ret i64 %t3566
+else925:
+  %t3568 = or i64 %t3536, 744
+  %t3569 = and i64 %t3568, 7
+  %t3570 = icmp eq i64 %t3569, 0
+  br i1 %t3570, label %fixfast926, label %fixslow927
+fixfast926:
+  %t3571 = icmp eq i64 %t3536, 744
+  %t3572 = select i1 %t3571, i64 257, i64 1
+  br label %fixmerge928
+fixslow927:
+  %t3573 = call i64 @rt_num_eq(i64 %t3536, i64 744)
+  br label %fixmerge928
+fixmerge928:
+  %t3574 = phi i64 [ %t3572, %fixfast926 ], [ %t3573, %fixslow927 ]
+  %t3575 = icmp ne i64 %t3574, 1
+  br i1 %t3575, label %then929, label %else930
+then929:
+  ret i64 %t3574
+else930:
+  %t3576 = or i64 %t3536, 272
+  %t3577 = and i64 %t3576, 7
+  %t3578 = icmp eq i64 %t3577, 0
+  br i1 %t3578, label %fixfast931, label %fixslow932
+fixfast931:
+  %t3579 = icmp eq i64 %t3536, 272
+  %t3580 = select i1 %t3579, i64 257, i64 1
+  br label %fixmerge933
+fixslow932:
+  %t3581 = call i64 @rt_num_eq(i64 %t3536, i64 272)
+  br label %fixmerge933
+fixmerge933:
+  %t3582 = phi i64 [ %t3580, %fixfast931 ], [ %t3581, %fixslow932 ]
+  %t3583 = icmp ne i64 %t3582, 1
+  br i1 %t3583, label %then934, label %else935
+then934:
+  ret i64 %t3582
+else935:
+  %t3584 = or i64 %t3536, 472
+  %t3585 = and i64 %t3584, 7
+  %t3586 = icmp eq i64 %t3585, 0
+  br i1 %t3586, label %fixfast936, label %fixslow937
+fixfast936:
+  %t3587 = icmp eq i64 %t3536, 472
+  %t3588 = select i1 %t3587, i64 257, i64 1
+  br label %fixmerge938
+fixslow937:
+  %t3589 = call i64 @rt_num_eq(i64 %t3536, i64 472)
+  br label %fixmerge938
+fixmerge938:
+  %t3590 = phi i64 [ %t3588, %fixfast936 ], [ %t3589, %fixslow937 ]
+  ret i64 %t3590
 }
 
 define fastcc i64 @"scheme.base:code:rd-skip-line"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3588 = icmp eq i64 %argc, 3
-  br i1 %t3588, label %argok938, label %arityerr937
-arityerr937:
+  %t3595 = icmp eq i64 %argc, 3
+  br i1 %t3595, label %argok940, label %arityerr939
+arityerr939:
   call void @rt_arity_error(i64 3, i64 %argc)
   unreachable
-argok938:
-  %t3589 = or i64 %a2, %a1
-  %t3590 = and i64 %t3589, 7
-  %t3591 = icmp eq i64 %t3590, 0
-  br i1 %t3591, label %fixfast939, label %fixslow940
-fixfast939:
-  %t3592 = icmp slt i64 %a2, %a1
-  %t3593 = select i1 %t3592, i64 257, i64 1
-  br label %fixmerge941
-fixslow940:
-  %t3594 = call i64 @rt_lt(i64 %a2, i64 %a1)
-  br label %fixmerge941
-fixmerge941:
-  %t3595 = phi i64 [ %t3593, %fixfast939 ], [ %t3594, %fixslow940 ]
-  %t3596 = icmp ne i64 %t3595, 1
-  br i1 %t3596, label %then942, label %else943
-then942:
-  %t3597 = call i64 @rt_string_ref(i64 %a0, i64 %a2)
-  %t3598 = call i64 @rt_char_to_integer(i64 %t3597)
-  %t3599 = or i64 %t3598, 80
-  %t3600 = and i64 %t3599, 7
-  %t3601 = icmp eq i64 %t3600, 0
-  br i1 %t3601, label %fixfast944, label %fixslow945
-fixfast944:
-  %t3602 = icmp eq i64 %t3598, 80
-  %t3603 = select i1 %t3602, i64 257, i64 1
-  br label %fixmerge946
-fixslow945:
-  %t3604 = call i64 @rt_num_eq(i64 %t3598, i64 80)
-  br label %fixmerge946
-fixmerge946:
-  %t3605 = phi i64 [ %t3603, %fixfast944 ], [ %t3604, %fixslow945 ]
-  %t3606 = icmp ne i64 %t3605, 1
-  br i1 %t3606, label %then947, label %else948
-then947:
-  %t3607 = or i64 %a2, 8
-  %t3608 = and i64 %t3607, 7
-  %t3609 = icmp eq i64 %t3608, 0
-  br i1 %t3609, label %fixfast949, label %fixslow950
-fixfast949:
-  %t3610 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
-  %t3611 = extractvalue {i64, i1} %t3610, 0
-  %t3612 = extractvalue {i64, i1} %t3610, 1
-  br i1 %t3612, label %fixslow950, label %fixmerge951
-fixslow950:
-  %t3613 = call i64 @rt_add(i64 %a2, i64 8)
-  br label %fixmerge951
-fixmerge951:
-  %t3614 = phi i64 [ %t3611, %fixfast949 ], [ %t3613, %fixslow950 ]
-  ret i64 %t3614
-else948:
-  %t3615 = or i64 %a2, 8
-  %t3616 = and i64 %t3615, 7
-  %t3617 = icmp eq i64 %t3616, 0
-  br i1 %t3617, label %fixfast952, label %fixslow953
-fixfast952:
-  %t3618 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
-  %t3619 = extractvalue {i64, i1} %t3618, 0
-  %t3620 = extractvalue {i64, i1} %t3618, 1
-  br i1 %t3620, label %fixslow953, label %fixmerge954
-fixslow953:
-  %t3621 = call i64 @rt_add(i64 %a2, i64 8)
-  br label %fixmerge954
-fixmerge954:
-  %t3622 = phi i64 [ %t3619, %fixfast952 ], [ %t3621, %fixslow953 ]
-  %t3623 = load i64, ptr @"scheme.base:rd-skip-line"
-  %t3624 = and i64 %t3623, -8
-  %t3625 = inttoptr i64 %t3624 to ptr
-  %t3626 = load i64, ptr %t3625
-  %t3627 = inttoptr i64 %t3626 to ptr
-  %t3628 = musttail call fastcc i64 %t3627(i64 %t3623, i64 3, i64 %a0, i64 %a1, i64 %t3622, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t3628
-else943:
+argok940:
+  %t3596 = or i64 %a2, %a1
+  %t3597 = and i64 %t3596, 7
+  %t3598 = icmp eq i64 %t3597, 0
+  br i1 %t3598, label %fixfast941, label %fixslow942
+fixfast941:
+  %t3599 = icmp slt i64 %a2, %a1
+  %t3600 = select i1 %t3599, i64 257, i64 1
+  br label %fixmerge943
+fixslow942:
+  %t3601 = call i64 @rt_lt(i64 %a2, i64 %a1)
+  br label %fixmerge943
+fixmerge943:
+  %t3602 = phi i64 [ %t3600, %fixfast941 ], [ %t3601, %fixslow942 ]
+  %t3603 = icmp ne i64 %t3602, 1
+  br i1 %t3603, label %then944, label %else945
+then944:
+  %t3604 = call i64 @rt_string_ref(i64 %a0, i64 %a2)
+  %t3605 = call i64 @rt_char_to_integer(i64 %t3604)
+  %t3606 = or i64 %t3605, 80
+  %t3607 = and i64 %t3606, 7
+  %t3608 = icmp eq i64 %t3607, 0
+  br i1 %t3608, label %fixfast946, label %fixslow947
+fixfast946:
+  %t3609 = icmp eq i64 %t3605, 80
+  %t3610 = select i1 %t3609, i64 257, i64 1
+  br label %fixmerge948
+fixslow947:
+  %t3611 = call i64 @rt_num_eq(i64 %t3605, i64 80)
+  br label %fixmerge948
+fixmerge948:
+  %t3612 = phi i64 [ %t3610, %fixfast946 ], [ %t3611, %fixslow947 ]
+  %t3613 = icmp ne i64 %t3612, 1
+  br i1 %t3613, label %then949, label %else950
+then949:
+  %t3614 = or i64 %a2, 8
+  %t3615 = and i64 %t3614, 7
+  %t3616 = icmp eq i64 %t3615, 0
+  br i1 %t3616, label %fixfast951, label %fixslow952
+fixfast951:
+  %t3617 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
+  %t3618 = extractvalue {i64, i1} %t3617, 0
+  %t3619 = extractvalue {i64, i1} %t3617, 1
+  br i1 %t3619, label %fixslow952, label %fixmerge953
+fixslow952:
+  %t3620 = call i64 @rt_add(i64 %a2, i64 8)
+  br label %fixmerge953
+fixmerge953:
+  %t3621 = phi i64 [ %t3618, %fixfast951 ], [ %t3620, %fixslow952 ]
+  ret i64 %t3621
+else950:
+  %t3622 = or i64 %a2, 8
+  %t3623 = and i64 %t3622, 7
+  %t3624 = icmp eq i64 %t3623, 0
+  br i1 %t3624, label %fixfast954, label %fixslow955
+fixfast954:
+  %t3625 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
+  %t3626 = extractvalue {i64, i1} %t3625, 0
+  %t3627 = extractvalue {i64, i1} %t3625, 1
+  br i1 %t3627, label %fixslow955, label %fixmerge956
+fixslow955:
+  %t3628 = call i64 @rt_add(i64 %a2, i64 8)
+  br label %fixmerge956
+fixmerge956:
+  %t3629 = phi i64 [ %t3626, %fixfast954 ], [ %t3628, %fixslow955 ]
+  %t3630 = load i64, ptr @"scheme.base:rd-skip-line"
+  %t3631 = and i64 %t3630, -8
+  %t3632 = inttoptr i64 %t3631 to ptr
+  %t3633 = load i64, ptr %t3632
+  %t3634 = inttoptr i64 %t3633 to ptr
+  %t3635 = musttail call fastcc i64 %t3634(i64 %t3630, i64 3, i64 %a0, i64 %a1, i64 %t3629, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t3635
+else945:
   ret i64 %a2
 }
 
 define fastcc i64 @"scheme.base:code:rd-skip-ws"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3633 = icmp eq i64 %argc, 3
-  br i1 %t3633, label %argok956, label %arityerr955
-arityerr955:
+  %t3640 = icmp eq i64 %argc, 3
+  br i1 %t3640, label %argok958, label %arityerr957
+arityerr957:
   call void @rt_arity_error(i64 3, i64 %argc)
   unreachable
-argok956:
-  %t3634 = or i64 %a2, %a1
-  %t3635 = and i64 %t3634, 7
-  %t3636 = icmp eq i64 %t3635, 0
-  br i1 %t3636, label %fixfast957, label %fixslow958
-fixfast957:
-  %t3637 = icmp slt i64 %a2, %a1
-  %t3638 = select i1 %t3637, i64 257, i64 1
-  br label %fixmerge959
-fixslow958:
-  %t3639 = call i64 @rt_lt(i64 %a2, i64 %a1)
-  br label %fixmerge959
-fixmerge959:
-  %t3640 = phi i64 [ %t3638, %fixfast957 ], [ %t3639, %fixslow958 ]
-  %t3641 = icmp ne i64 %t3640, 1
-  br i1 %t3641, label %then960, label %else961
-then960:
-  %t3642 = call i64 @rt_string_ref(i64 %a0, i64 %a2)
-  %t3643 = load i64, ptr @"scheme.base:rd-ws?"
-  %t3644 = and i64 %t3643, -8
-  %t3645 = inttoptr i64 %t3644 to ptr
-  %t3646 = load i64, ptr %t3645
-  %t3647 = inttoptr i64 %t3646 to ptr
-  %t3648 = call fastcc i64%t3647(i64 %t3643, i64 1, i64 %t3642, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3649 = icmp ne i64 %t3648, 1
-  br i1 %t3649, label %then962, label %else963
+argok958:
+  %t3641 = or i64 %a2, %a1
+  %t3642 = and i64 %t3641, 7
+  %t3643 = icmp eq i64 %t3642, 0
+  br i1 %t3643, label %fixfast959, label %fixslow960
+fixfast959:
+  %t3644 = icmp slt i64 %a2, %a1
+  %t3645 = select i1 %t3644, i64 257, i64 1
+  br label %fixmerge961
+fixslow960:
+  %t3646 = call i64 @rt_lt(i64 %a2, i64 %a1)
+  br label %fixmerge961
+fixmerge961:
+  %t3647 = phi i64 [ %t3645, %fixfast959 ], [ %t3646, %fixslow960 ]
+  %t3648 = icmp ne i64 %t3647, 1
+  br i1 %t3648, label %then962, label %else963
 then962:
-  %t3650 = or i64 %a2, 8
-  %t3651 = and i64 %t3650, 7
-  %t3652 = icmp eq i64 %t3651, 0
-  br i1 %t3652, label %fixfast964, label %fixslow965
-fixfast964:
-  %t3653 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
-  %t3654 = extractvalue {i64, i1} %t3653, 0
-  %t3655 = extractvalue {i64, i1} %t3653, 1
-  br i1 %t3655, label %fixslow965, label %fixmerge966
-fixslow965:
-  %t3656 = call i64 @rt_add(i64 %a2, i64 8)
-  br label %fixmerge966
-fixmerge966:
-  %t3657 = phi i64 [ %t3654, %fixfast964 ], [ %t3656, %fixslow965 ]
-  %t3658 = load i64, ptr @"scheme.base:rd-skip-ws"
-  %t3659 = and i64 %t3658, -8
-  %t3660 = inttoptr i64 %t3659 to ptr
-  %t3661 = load i64, ptr %t3660
-  %t3662 = inttoptr i64 %t3661 to ptr
-  %t3663 = musttail call fastcc i64 %t3662(i64 %t3658, i64 3, i64 %a0, i64 %a1, i64 %t3657, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t3663
-else963:
-  %t3664 = call i64 @rt_char_to_integer(i64 %t3642)
-  %t3665 = or i64 %t3664, 472
-  %t3666 = and i64 %t3665, 7
-  %t3667 = icmp eq i64 %t3666, 0
-  br i1 %t3667, label %fixfast967, label %fixslow968
-fixfast967:
-  %t3668 = icmp eq i64 %t3664, 472
-  %t3669 = select i1 %t3668, i64 257, i64 1
-  br label %fixmerge969
-fixslow968:
-  %t3670 = call i64 @rt_num_eq(i64 %t3664, i64 472)
-  br label %fixmerge969
-fixmerge969:
-  %t3671 = phi i64 [ %t3669, %fixfast967 ], [ %t3670, %fixslow968 ]
-  %t3672 = icmp ne i64 %t3671, 1
-  br i1 %t3672, label %then970, label %else971
-then970:
-  %t3673 = or i64 %a2, 8
-  %t3674 = and i64 %t3673, 7
-  %t3675 = icmp eq i64 %t3674, 0
-  br i1 %t3675, label %fixfast972, label %fixslow973
-fixfast972:
-  %t3676 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
-  %t3677 = extractvalue {i64, i1} %t3676, 0
-  %t3678 = extractvalue {i64, i1} %t3676, 1
-  br i1 %t3678, label %fixslow973, label %fixmerge974
-fixslow973:
-  %t3679 = call i64 @rt_add(i64 %a2, i64 8)
-  br label %fixmerge974
-fixmerge974:
-  %t3680 = phi i64 [ %t3677, %fixfast972 ], [ %t3679, %fixslow973 ]
-  %t3681 = load i64, ptr @"scheme.base:rd-skip-line"
-  %t3682 = and i64 %t3681, -8
-  %t3683 = inttoptr i64 %t3682 to ptr
-  %t3684 = load i64, ptr %t3683
-  %t3685 = inttoptr i64 %t3684 to ptr
-  %t3686 = call fastcc i64%t3685(i64 %t3681, i64 3, i64 %a0, i64 %a1, i64 %t3680, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3687 = load i64, ptr @"scheme.base:rd-skip-ws"
-  %t3688 = and i64 %t3687, -8
-  %t3689 = inttoptr i64 %t3688 to ptr
-  %t3690 = load i64, ptr %t3689
-  %t3691 = inttoptr i64 %t3690 to ptr
-  %t3692 = musttail call fastcc i64 %t3691(i64 %t3687, i64 3, i64 %a0, i64 %a1, i64 %t3686, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t3692
-else971:
+  %t3649 = call i64 @rt_string_ref(i64 %a0, i64 %a2)
+  %t3650 = load i64, ptr @"scheme.base:rd-ws?"
+  %t3651 = and i64 %t3650, -8
+  %t3652 = inttoptr i64 %t3651 to ptr
+  %t3653 = load i64, ptr %t3652
+  %t3654 = inttoptr i64 %t3653 to ptr
+  %t3655 = call fastcc i64%t3654(i64 %t3650, i64 1, i64 %t3649, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3656 = icmp ne i64 %t3655, 1
+  br i1 %t3656, label %then964, label %else965
+then964:
+  %t3657 = or i64 %a2, 8
+  %t3658 = and i64 %t3657, 7
+  %t3659 = icmp eq i64 %t3658, 0
+  br i1 %t3659, label %fixfast966, label %fixslow967
+fixfast966:
+  %t3660 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
+  %t3661 = extractvalue {i64, i1} %t3660, 0
+  %t3662 = extractvalue {i64, i1} %t3660, 1
+  br i1 %t3662, label %fixslow967, label %fixmerge968
+fixslow967:
+  %t3663 = call i64 @rt_add(i64 %a2, i64 8)
+  br label %fixmerge968
+fixmerge968:
+  %t3664 = phi i64 [ %t3661, %fixfast966 ], [ %t3663, %fixslow967 ]
+  %t3665 = load i64, ptr @"scheme.base:rd-skip-ws"
+  %t3666 = and i64 %t3665, -8
+  %t3667 = inttoptr i64 %t3666 to ptr
+  %t3668 = load i64, ptr %t3667
+  %t3669 = inttoptr i64 %t3668 to ptr
+  %t3670 = musttail call fastcc i64 %t3669(i64 %t3665, i64 3, i64 %a0, i64 %a1, i64 %t3664, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t3670
+else965:
+  %t3671 = call i64 @rt_char_to_integer(i64 %t3649)
+  %t3672 = or i64 %t3671, 472
+  %t3673 = and i64 %t3672, 7
+  %t3674 = icmp eq i64 %t3673, 0
+  br i1 %t3674, label %fixfast969, label %fixslow970
+fixfast969:
+  %t3675 = icmp eq i64 %t3671, 472
+  %t3676 = select i1 %t3675, i64 257, i64 1
+  br label %fixmerge971
+fixslow970:
+  %t3677 = call i64 @rt_num_eq(i64 %t3671, i64 472)
+  br label %fixmerge971
+fixmerge971:
+  %t3678 = phi i64 [ %t3676, %fixfast969 ], [ %t3677, %fixslow970 ]
+  %t3679 = icmp ne i64 %t3678, 1
+  br i1 %t3679, label %then972, label %else973
+then972:
+  %t3680 = or i64 %a2, 8
+  %t3681 = and i64 %t3680, 7
+  %t3682 = icmp eq i64 %t3681, 0
+  br i1 %t3682, label %fixfast974, label %fixslow975
+fixfast974:
+  %t3683 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
+  %t3684 = extractvalue {i64, i1} %t3683, 0
+  %t3685 = extractvalue {i64, i1} %t3683, 1
+  br i1 %t3685, label %fixslow975, label %fixmerge976
+fixslow975:
+  %t3686 = call i64 @rt_add(i64 %a2, i64 8)
+  br label %fixmerge976
+fixmerge976:
+  %t3687 = phi i64 [ %t3684, %fixfast974 ], [ %t3686, %fixslow975 ]
+  %t3688 = load i64, ptr @"scheme.base:rd-skip-line"
+  %t3689 = and i64 %t3688, -8
+  %t3690 = inttoptr i64 %t3689 to ptr
+  %t3691 = load i64, ptr %t3690
+  %t3692 = inttoptr i64 %t3691 to ptr
+  %t3693 = call fastcc i64%t3692(i64 %t3688, i64 3, i64 %a0, i64 %a1, i64 %t3687, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3694 = load i64, ptr @"scheme.base:rd-skip-ws"
+  %t3695 = and i64 %t3694, -8
+  %t3696 = inttoptr i64 %t3695 to ptr
+  %t3697 = load i64, ptr %t3696
+  %t3698 = inttoptr i64 %t3697 to ptr
+  %t3699 = musttail call fastcc i64 %t3698(i64 %t3694, i64 3, i64 %a0, i64 %a1, i64 %t3693, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t3699
+else973:
   ret i64 %a2
-else961:
+else963:
   ret i64 %a2
 }
 
 define fastcc i64 @"scheme.base:code:rd-token-end"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3697 = icmp eq i64 %argc, 3
-  br i1 %t3697, label %argok976, label %arityerr975
-arityerr975:
+  %t3704 = icmp eq i64 %argc, 3
+  br i1 %t3704, label %argok978, label %arityerr977
+arityerr977:
   call void @rt_arity_error(i64 3, i64 %argc)
   unreachable
-argok976:
-  %t3698 = or i64 %a2, %a1
-  %t3699 = and i64 %t3698, 7
-  %t3700 = icmp eq i64 %t3699, 0
-  br i1 %t3700, label %fixfast977, label %fixslow978
-fixfast977:
-  %t3701 = icmp slt i64 %a2, %a1
-  %t3702 = select i1 %t3701, i64 257, i64 1
-  br label %fixmerge979
-fixslow978:
-  %t3703 = call i64 @rt_lt(i64 %a2, i64 %a1)
-  br label %fixmerge979
-fixmerge979:
-  %t3704 = phi i64 [ %t3702, %fixfast977 ], [ %t3703, %fixslow978 ]
-  %t3705 = icmp ne i64 %t3704, 1
-  br i1 %t3705, label %then980, label %else981
-then980:
-  %t3706 = call i64 @rt_string_ref(i64 %a0, i64 %a2)
-  %t3707 = load i64, ptr @"scheme.base:rd-delim?"
-  %t3708 = and i64 %t3707, -8
-  %t3709 = inttoptr i64 %t3708 to ptr
-  %t3710 = load i64, ptr %t3709
-  %t3711 = inttoptr i64 %t3710 to ptr
-  %t3712 = call fastcc i64%t3711(i64 %t3707, i64 1, i64 %t3706, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3713 = icmp ne i64 %t3712, 1
-  br i1 %t3713, label %then982, label %else983
+argok978:
+  %t3705 = or i64 %a2, %a1
+  %t3706 = and i64 %t3705, 7
+  %t3707 = icmp eq i64 %t3706, 0
+  br i1 %t3707, label %fixfast979, label %fixslow980
+fixfast979:
+  %t3708 = icmp slt i64 %a2, %a1
+  %t3709 = select i1 %t3708, i64 257, i64 1
+  br label %fixmerge981
+fixslow980:
+  %t3710 = call i64 @rt_lt(i64 %a2, i64 %a1)
+  br label %fixmerge981
+fixmerge981:
+  %t3711 = phi i64 [ %t3709, %fixfast979 ], [ %t3710, %fixslow980 ]
+  %t3712 = icmp ne i64 %t3711, 1
+  br i1 %t3712, label %then982, label %else983
 then982:
+  %t3713 = call i64 @rt_string_ref(i64 %a0, i64 %a2)
+  %t3714 = load i64, ptr @"scheme.base:rd-delim?"
+  %t3715 = and i64 %t3714, -8
+  %t3716 = inttoptr i64 %t3715 to ptr
+  %t3717 = load i64, ptr %t3716
+  %t3718 = inttoptr i64 %t3717 to ptr
+  %t3719 = call fastcc i64%t3718(i64 %t3714, i64 1, i64 %t3713, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3720 = icmp ne i64 %t3719, 1
+  br i1 %t3720, label %then984, label %else985
+then984:
   ret i64 %a2
+else985:
+  %t3721 = or i64 %a2, 8
+  %t3722 = and i64 %t3721, 7
+  %t3723 = icmp eq i64 %t3722, 0
+  br i1 %t3723, label %fixfast986, label %fixslow987
+fixfast986:
+  %t3724 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
+  %t3725 = extractvalue {i64, i1} %t3724, 0
+  %t3726 = extractvalue {i64, i1} %t3724, 1
+  br i1 %t3726, label %fixslow987, label %fixmerge988
+fixslow987:
+  %t3727 = call i64 @rt_add(i64 %a2, i64 8)
+  br label %fixmerge988
+fixmerge988:
+  %t3728 = phi i64 [ %t3725, %fixfast986 ], [ %t3727, %fixslow987 ]
+  %t3729 = load i64, ptr @"scheme.base:rd-token-end"
+  %t3730 = and i64 %t3729, -8
+  %t3731 = inttoptr i64 %t3730 to ptr
+  %t3732 = load i64, ptr %t3731
+  %t3733 = inttoptr i64 %t3732 to ptr
+  %t3734 = musttail call fastcc i64 %t3733(i64 %t3729, i64 3, i64 %a0, i64 %a1, i64 %t3728, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t3734
 else983:
-  %t3714 = or i64 %a2, 8
-  %t3715 = and i64 %t3714, 7
-  %t3716 = icmp eq i64 %t3715, 0
-  br i1 %t3716, label %fixfast984, label %fixslow985
-fixfast984:
-  %t3717 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
-  %t3718 = extractvalue {i64, i1} %t3717, 0
-  %t3719 = extractvalue {i64, i1} %t3717, 1
-  br i1 %t3719, label %fixslow985, label %fixmerge986
-fixslow985:
-  %t3720 = call i64 @rt_add(i64 %a2, i64 8)
-  br label %fixmerge986
-fixmerge986:
-  %t3721 = phi i64 [ %t3718, %fixfast984 ], [ %t3720, %fixslow985 ]
-  %t3722 = load i64, ptr @"scheme.base:rd-token-end"
-  %t3723 = and i64 %t3722, -8
-  %t3724 = inttoptr i64 %t3723 to ptr
-  %t3725 = load i64, ptr %t3724
-  %t3726 = inttoptr i64 %t3725 to ptr
-  %t3727 = musttail call fastcc i64 %t3726(i64 %t3722, i64 3, i64 %a0, i64 %a1, i64 %t3721, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t3727
-else981:
   ret i64 %a2
 }
 
 define fastcc i64 @"scheme.base:code:rd-all-digits?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3732 = icmp eq i64 %argc, 3
-  br i1 %t3732, label %argok988, label %arityerr987
-arityerr987:
+  %t3739 = icmp eq i64 %argc, 3
+  br i1 %t3739, label %argok990, label %arityerr989
+arityerr989:
   call void @rt_arity_error(i64 3, i64 %argc)
   unreachable
-argok988:
-  %t3733 = or i64 %a1, %a2
-  %t3734 = and i64 %t3733, 7
-  %t3735 = icmp eq i64 %t3734, 0
-  br i1 %t3735, label %fixfast989, label %fixslow990
-fixfast989:
-  %t3736 = icmp slt i64 %a1, %a2
-  %t3737 = select i1 %t3736, i64 257, i64 1
-  br label %fixmerge991
-fixslow990:
-  %t3738 = call i64 @rt_lt(i64 %a1, i64 %a2)
-  br label %fixmerge991
-fixmerge991:
-  %t3739 = phi i64 [ %t3737, %fixfast989 ], [ %t3738, %fixslow990 ]
-  %t3740 = icmp ne i64 %t3739, 1
-  br i1 %t3740, label %then992, label %else993
-then992:
-  %t3741 = call i64 @rt_string_ref(i64 %a0, i64 %a1)
-  %t3742 = load i64, ptr @"scheme.base:rd-digit?"
-  %t3743 = and i64 %t3742, -8
-  %t3744 = inttoptr i64 %t3743 to ptr
-  %t3745 = load i64, ptr %t3744
-  %t3746 = inttoptr i64 %t3745 to ptr
-  %t3747 = call fastcc i64%t3746(i64 %t3742, i64 1, i64 %t3741, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3748 = icmp ne i64 %t3747, 1
-  br i1 %t3748, label %then994, label %else995
+argok990:
+  %t3740 = or i64 %a1, %a2
+  %t3741 = and i64 %t3740, 7
+  %t3742 = icmp eq i64 %t3741, 0
+  br i1 %t3742, label %fixfast991, label %fixslow992
+fixfast991:
+  %t3743 = icmp slt i64 %a1, %a2
+  %t3744 = select i1 %t3743, i64 257, i64 1
+  br label %fixmerge993
+fixslow992:
+  %t3745 = call i64 @rt_lt(i64 %a1, i64 %a2)
+  br label %fixmerge993
+fixmerge993:
+  %t3746 = phi i64 [ %t3744, %fixfast991 ], [ %t3745, %fixslow992 ]
+  %t3747 = icmp ne i64 %t3746, 1
+  br i1 %t3747, label %then994, label %else995
 then994:
-  %t3749 = or i64 %a1, 8
-  %t3750 = and i64 %t3749, 7
-  %t3751 = icmp eq i64 %t3750, 0
-  br i1 %t3751, label %fixfast996, label %fixslow997
-fixfast996:
-  %t3752 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a1, i64 8)
-  %t3753 = extractvalue {i64, i1} %t3752, 0
-  %t3754 = extractvalue {i64, i1} %t3752, 1
-  br i1 %t3754, label %fixslow997, label %fixmerge998
-fixslow997:
-  %t3755 = call i64 @rt_add(i64 %a1, i64 8)
-  br label %fixmerge998
-fixmerge998:
-  %t3756 = phi i64 [ %t3753, %fixfast996 ], [ %t3755, %fixslow997 ]
-  %t3757 = load i64, ptr @"scheme.base:rd-all-digits?"
-  %t3758 = and i64 %t3757, -8
-  %t3759 = inttoptr i64 %t3758 to ptr
-  %t3760 = load i64, ptr %t3759
-  %t3761 = inttoptr i64 %t3760 to ptr
-  %t3762 = musttail call fastcc i64 %t3761(i64 %t3757, i64 3, i64 %a0, i64 %t3756, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t3762
-else995:
+  %t3748 = call i64 @rt_string_ref(i64 %a0, i64 %a1)
+  %t3749 = load i64, ptr @"scheme.base:rd-digit?"
+  %t3750 = and i64 %t3749, -8
+  %t3751 = inttoptr i64 %t3750 to ptr
+  %t3752 = load i64, ptr %t3751
+  %t3753 = inttoptr i64 %t3752 to ptr
+  %t3754 = call fastcc i64%t3753(i64 %t3749, i64 1, i64 %t3748, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3755 = icmp ne i64 %t3754, 1
+  br i1 %t3755, label %then996, label %else997
+then996:
+  %t3756 = or i64 %a1, 8
+  %t3757 = and i64 %t3756, 7
+  %t3758 = icmp eq i64 %t3757, 0
+  br i1 %t3758, label %fixfast998, label %fixslow999
+fixfast998:
+  %t3759 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a1, i64 8)
+  %t3760 = extractvalue {i64, i1} %t3759, 0
+  %t3761 = extractvalue {i64, i1} %t3759, 1
+  br i1 %t3761, label %fixslow999, label %fixmerge1000
+fixslow999:
+  %t3762 = call i64 @rt_add(i64 %a1, i64 8)
+  br label %fixmerge1000
+fixmerge1000:
+  %t3763 = phi i64 [ %t3760, %fixfast998 ], [ %t3762, %fixslow999 ]
+  %t3764 = load i64, ptr @"scheme.base:rd-all-digits?"
+  %t3765 = and i64 %t3764, -8
+  %t3766 = inttoptr i64 %t3765 to ptr
+  %t3767 = load i64, ptr %t3766
+  %t3768 = inttoptr i64 %t3767 to ptr
+  %t3769 = musttail call fastcc i64 %t3768(i64 %t3764, i64 3, i64 %a0, i64 %t3763, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t3769
+else997:
   ret i64 1
-else993:
+else995:
   ret i64 257
 }
 
 define fastcc i64 @"scheme.base:code:rd-numeric?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3767 = icmp eq i64 %argc, 1
-  br i1 %t3767, label %argok1000, label %arityerr999
-arityerr999:
+  %t3774 = icmp eq i64 %argc, 1
+  br i1 %t3774, label %argok1002, label %arityerr1001
+arityerr1001:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1000:
-  %t3768 = call i64 @rt_string_length(i64 %a0)
-  %t3769 = or i64 0, %t3768
-  %t3770 = and i64 %t3769, 7
-  %t3771 = icmp eq i64 %t3770, 0
-  br i1 %t3771, label %fixfast1001, label %fixslow1002
-fixfast1001:
-  %t3772 = icmp slt i64 0, %t3768
-  %t3773 = select i1 %t3772, i64 257, i64 1
-  br label %fixmerge1003
-fixslow1002:
-  %t3774 = call i64 @rt_lt(i64 0, i64 %t3768)
-  br label %fixmerge1003
-fixmerge1003:
-  %t3775 = phi i64 [ %t3773, %fixfast1001 ], [ %t3774, %fixslow1002 ]
-  %t3776 = icmp ne i64 %t3775, 1
-  br i1 %t3776, label %then1004, label %else1005
-then1004:
-  %t3777 = call i64 @rt_string_ref(i64 %a0, i64 0)
-  %t3778 = call i64 @rt_char_to_integer(i64 %t3777)
-  %t3779 = call i64 @rt_string_ref(i64 %a0, i64 0)
-  %t3780 = load i64, ptr @"scheme.base:rd-digit?"
-  %t3781 = and i64 %t3780, -8
-  %t3782 = inttoptr i64 %t3781 to ptr
-  %t3783 = load i64, ptr %t3782
-  %t3784 = inttoptr i64 %t3783 to ptr
-  %t3785 = call fastcc i64%t3784(i64 %t3780, i64 1, i64 %t3779, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t3786 = icmp ne i64 %t3785, 1
-  br i1 %t3786, label %then1006, label %else1007
+argok1002:
+  %t3775 = call i64 @rt_string_length(i64 %a0)
+  %t3776 = or i64 0, %t3775
+  %t3777 = and i64 %t3776, 7
+  %t3778 = icmp eq i64 %t3777, 0
+  br i1 %t3778, label %fixfast1003, label %fixslow1004
+fixfast1003:
+  %t3779 = icmp slt i64 0, %t3775
+  %t3780 = select i1 %t3779, i64 257, i64 1
+  br label %fixmerge1005
+fixslow1004:
+  %t3781 = call i64 @rt_lt(i64 0, i64 %t3775)
+  br label %fixmerge1005
+fixmerge1005:
+  %t3782 = phi i64 [ %t3780, %fixfast1003 ], [ %t3781, %fixslow1004 ]
+  %t3783 = icmp ne i64 %t3782, 1
+  br i1 %t3783, label %then1006, label %else1007
 then1006:
-  %t3787 = load i64, ptr @"scheme.base:rd-all-digits?"
+  %t3784 = call i64 @rt_string_ref(i64 %a0, i64 0)
+  %t3785 = call i64 @rt_char_to_integer(i64 %t3784)
+  %t3786 = call i64 @rt_string_ref(i64 %a0, i64 0)
+  %t3787 = load i64, ptr @"scheme.base:rd-digit?"
   %t3788 = and i64 %t3787, -8
   %t3789 = inttoptr i64 %t3788 to ptr
   %t3790 = load i64, ptr %t3789
   %t3791 = inttoptr i64 %t3790 to ptr
-  %t3792 = musttail call fastcc i64 %t3791(i64 %t3787, i64 3, i64 %a0, i64 0, i64 %t3768, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t3792
+  %t3792 = call fastcc i64%t3791(i64 %t3787, i64 1, i64 %t3786, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3793 = icmp ne i64 %t3792, 1
+  br i1 %t3793, label %then1008, label %else1009
+then1008:
+  %t3794 = load i64, ptr @"scheme.base:rd-all-digits?"
+  %t3795 = and i64 %t3794, -8
+  %t3796 = inttoptr i64 %t3795 to ptr
+  %t3797 = load i64, ptr %t3796
+  %t3798 = inttoptr i64 %t3797 to ptr
+  %t3799 = musttail call fastcc i64 %t3798(i64 %t3794, i64 3, i64 %a0, i64 0, i64 %t3775, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t3799
+else1009:
+  %t3800 = or i64 %t3785, 360
+  %t3801 = and i64 %t3800, 7
+  %t3802 = icmp eq i64 %t3801, 0
+  br i1 %t3802, label %fixfast1010, label %fixslow1011
+fixfast1010:
+  %t3803 = icmp eq i64 %t3785, 360
+  %t3804 = select i1 %t3803, i64 257, i64 1
+  br label %fixmerge1012
+fixslow1011:
+  %t3805 = call i64 @rt_num_eq(i64 %t3785, i64 360)
+  br label %fixmerge1012
+fixmerge1012:
+  %t3806 = phi i64 [ %t3804, %fixfast1010 ], [ %t3805, %fixslow1011 ]
+  %t3807 = icmp ne i64 %t3806, 1
+  br i1 %t3807, label %then1013, label %else1014
+then1013:
+  br label %merge1015
+else1014:
+  %t3808 = or i64 %t3785, 344
+  %t3809 = and i64 %t3808, 7
+  %t3810 = icmp eq i64 %t3809, 0
+  br i1 %t3810, label %fixfast1016, label %fixslow1017
+fixfast1016:
+  %t3811 = icmp eq i64 %t3785, 344
+  %t3812 = select i1 %t3811, i64 257, i64 1
+  br label %fixmerge1018
+fixslow1017:
+  %t3813 = call i64 @rt_num_eq(i64 %t3785, i64 344)
+  br label %fixmerge1018
+fixmerge1018:
+  %t3814 = phi i64 [ %t3812, %fixfast1016 ], [ %t3813, %fixslow1017 ]
+  br label %merge1015
+merge1015:
+  %t3815 = phi i64 [ %t3806, %then1013 ], [ %t3814, %fixmerge1018 ]
+  %t3816 = icmp ne i64 %t3815, 1
+  br i1 %t3816, label %then1019, label %else1020
+then1019:
+  %t3817 = or i64 8, %t3775
+  %t3818 = and i64 %t3817, 7
+  %t3819 = icmp eq i64 %t3818, 0
+  br i1 %t3819, label %fixfast1021, label %fixslow1022
+fixfast1021:
+  %t3820 = icmp slt i64 8, %t3775
+  %t3821 = select i1 %t3820, i64 257, i64 1
+  br label %fixmerge1023
+fixslow1022:
+  %t3822 = call i64 @rt_lt(i64 8, i64 %t3775)
+  br label %fixmerge1023
+fixmerge1023:
+  %t3823 = phi i64 [ %t3821, %fixfast1021 ], [ %t3822, %fixslow1022 ]
+  %t3824 = icmp ne i64 %t3823, 1
+  br i1 %t3824, label %then1024, label %else1025
+then1024:
+  %t3825 = load i64, ptr @"scheme.base:rd-all-digits?"
+  %t3826 = and i64 %t3825, -8
+  %t3827 = inttoptr i64 %t3826 to ptr
+  %t3828 = load i64, ptr %t3827
+  %t3829 = inttoptr i64 %t3828 to ptr
+  %t3830 = musttail call fastcc i64 %t3829(i64 %t3825, i64 3, i64 %a0, i64 8, i64 %t3775, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t3830
+else1025:
+  ret i64 1
+else1020:
+  ret i64 1
 else1007:
-  %t3793 = or i64 %t3778, 360
-  %t3794 = and i64 %t3793, 7
-  %t3795 = icmp eq i64 %t3794, 0
-  br i1 %t3795, label %fixfast1008, label %fixslow1009
-fixfast1008:
-  %t3796 = icmp eq i64 %t3778, 360
-  %t3797 = select i1 %t3796, i64 257, i64 1
-  br label %fixmerge1010
-fixslow1009:
-  %t3798 = call i64 @rt_num_eq(i64 %t3778, i64 360)
-  br label %fixmerge1010
-fixmerge1010:
-  %t3799 = phi i64 [ %t3797, %fixfast1008 ], [ %t3798, %fixslow1009 ]
-  %t3800 = icmp ne i64 %t3799, 1
-  br i1 %t3800, label %then1011, label %else1012
-then1011:
-  br label %merge1013
-else1012:
-  %t3801 = or i64 %t3778, 344
-  %t3802 = and i64 %t3801, 7
-  %t3803 = icmp eq i64 %t3802, 0
-  br i1 %t3803, label %fixfast1014, label %fixslow1015
-fixfast1014:
-  %t3804 = icmp eq i64 %t3778, 344
-  %t3805 = select i1 %t3804, i64 257, i64 1
-  br label %fixmerge1016
-fixslow1015:
-  %t3806 = call i64 @rt_num_eq(i64 %t3778, i64 344)
-  br label %fixmerge1016
-fixmerge1016:
-  %t3807 = phi i64 [ %t3805, %fixfast1014 ], [ %t3806, %fixslow1015 ]
-  br label %merge1013
-merge1013:
-  %t3808 = phi i64 [ %t3799, %then1011 ], [ %t3807, %fixmerge1016 ]
-  %t3809 = icmp ne i64 %t3808, 1
-  br i1 %t3809, label %then1017, label %else1018
-then1017:
-  %t3810 = or i64 8, %t3768
-  %t3811 = and i64 %t3810, 7
-  %t3812 = icmp eq i64 %t3811, 0
-  br i1 %t3812, label %fixfast1019, label %fixslow1020
-fixfast1019:
-  %t3813 = icmp slt i64 8, %t3768
-  %t3814 = select i1 %t3813, i64 257, i64 1
-  br label %fixmerge1021
-fixslow1020:
-  %t3815 = call i64 @rt_lt(i64 8, i64 %t3768)
-  br label %fixmerge1021
-fixmerge1021:
-  %t3816 = phi i64 [ %t3814, %fixfast1019 ], [ %t3815, %fixslow1020 ]
-  %t3817 = icmp ne i64 %t3816, 1
-  br i1 %t3817, label %then1022, label %else1023
-then1022:
-  %t3818 = load i64, ptr @"scheme.base:rd-all-digits?"
-  %t3819 = and i64 %t3818, -8
-  %t3820 = inttoptr i64 %t3819 to ptr
-  %t3821 = load i64, ptr %t3820
-  %t3822 = inttoptr i64 %t3821 to ptr
-  %t3823 = musttail call fastcc i64 %t3822(i64 %t3818, i64 3, i64 %a0, i64 8, i64 %t3768, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t3823
-else1023:
-  ret i64 1
-else1018:
-  ret i64 1
-else1005:
   ret i64 1
 }
 
 define fastcc i64 @"scheme.base:code:rd-digits"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3828 = icmp eq i64 %argc, 4
-  br i1 %t3828, label %argok1025, label %arityerr1024
-arityerr1024:
+  %t3835 = icmp eq i64 %argc, 4
+  br i1 %t3835, label %argok1027, label %arityerr1026
+arityerr1026:
   call void @rt_arity_error(i64 4, i64 %argc)
   unreachable
-argok1025:
-  %t3829 = or i64 %a1, %a2
-  %t3830 = and i64 %t3829, 7
-  %t3831 = icmp eq i64 %t3830, 0
-  br i1 %t3831, label %fixfast1026, label %fixslow1027
-fixfast1026:
-  %t3832 = icmp slt i64 %a1, %a2
-  %t3833 = select i1 %t3832, i64 257, i64 1
-  br label %fixmerge1028
-fixslow1027:
-  %t3834 = call i64 @rt_lt(i64 %a1, i64 %a2)
-  br label %fixmerge1028
-fixmerge1028:
-  %t3835 = phi i64 [ %t3833, %fixfast1026 ], [ %t3834, %fixslow1027 ]
-  %t3836 = icmp ne i64 %t3835, 1
-  br i1 %t3836, label %then1029, label %else1030
-then1029:
-  %t3837 = or i64 %a1, 8
-  %t3838 = and i64 %t3837, 7
-  %t3839 = icmp eq i64 %t3838, 0
-  br i1 %t3839, label %fixfast1031, label %fixslow1032
-fixfast1031:
-  %t3840 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a1, i64 8)
-  %t3841 = extractvalue {i64, i1} %t3840, 0
-  %t3842 = extractvalue {i64, i1} %t3840, 1
-  br i1 %t3842, label %fixslow1032, label %fixmerge1033
-fixslow1032:
-  %t3843 = call i64 @rt_add(i64 %a1, i64 8)
-  br label %fixmerge1033
-fixmerge1033:
-  %t3844 = phi i64 [ %t3841, %fixfast1031 ], [ %t3843, %fixslow1032 ]
-  %t3845 = or i64 %a3, 80
-  %t3846 = and i64 %t3845, 7
-  %t3847 = icmp eq i64 %t3846, 0
-  br i1 %t3847, label %fixfast1034, label %fixslow1035
-fixfast1034:
-  %t3848 = ashr i64 %a3, 3
-  %t3849 = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %t3848, i64 80)
-  %t3850 = extractvalue {i64, i1} %t3849, 0
-  %t3851 = extractvalue {i64, i1} %t3849, 1
-  br i1 %t3851, label %fixslow1035, label %fixmerge1036
-fixslow1035:
-  %t3852 = call i64 @rt_mul(i64 %a3, i64 80)
-  br label %fixmerge1036
-fixmerge1036:
-  %t3853 = phi i64 [ %t3850, %fixfast1034 ], [ %t3852, %fixslow1035 ]
-  %t3854 = call i64 @rt_string_ref(i64 %a0, i64 %a1)
-  %t3855 = call i64 @rt_char_to_integer(i64 %t3854)
-  %t3856 = or i64 %t3855, 384
-  %t3857 = and i64 %t3856, 7
-  %t3858 = icmp eq i64 %t3857, 0
-  br i1 %t3858, label %fixfast1037, label %fixslow1038
-fixfast1037:
-  %t3859 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %t3855, i64 384)
-  %t3860 = extractvalue {i64, i1} %t3859, 0
-  %t3861 = extractvalue {i64, i1} %t3859, 1
-  br i1 %t3861, label %fixslow1038, label %fixmerge1039
-fixslow1038:
-  %t3862 = call i64 @rt_sub(i64 %t3855, i64 384)
-  br label %fixmerge1039
-fixmerge1039:
-  %t3863 = phi i64 [ %t3860, %fixfast1037 ], [ %t3862, %fixslow1038 ]
-  %t3864 = or i64 %t3853, %t3863
-  %t3865 = and i64 %t3864, 7
-  %t3866 = icmp eq i64 %t3865, 0
-  br i1 %t3866, label %fixfast1040, label %fixslow1041
-fixfast1040:
-  %t3867 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t3853, i64 %t3863)
-  %t3868 = extractvalue {i64, i1} %t3867, 0
-  %t3869 = extractvalue {i64, i1} %t3867, 1
-  br i1 %t3869, label %fixslow1041, label %fixmerge1042
-fixslow1041:
-  %t3870 = call i64 @rt_add(i64 %t3853, i64 %t3863)
-  br label %fixmerge1042
-fixmerge1042:
-  %t3871 = phi i64 [ %t3868, %fixfast1040 ], [ %t3870, %fixslow1041 ]
-  %t3872 = load i64, ptr @"scheme.base:rd-digits"
-  %t3873 = and i64 %t3872, -8
-  %t3874 = inttoptr i64 %t3873 to ptr
-  %t3875 = load i64, ptr %t3874
-  %t3876 = inttoptr i64 %t3875 to ptr
-  %t3877 = musttail call fastcc i64 %t3876(i64 %t3872, i64 4, i64 %a0, i64 %t3844, i64 %a2, i64 %t3871, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t3877
-else1030:
+argok1027:
+  %t3836 = or i64 %a1, %a2
+  %t3837 = and i64 %t3836, 7
+  %t3838 = icmp eq i64 %t3837, 0
+  br i1 %t3838, label %fixfast1028, label %fixslow1029
+fixfast1028:
+  %t3839 = icmp slt i64 %a1, %a2
+  %t3840 = select i1 %t3839, i64 257, i64 1
+  br label %fixmerge1030
+fixslow1029:
+  %t3841 = call i64 @rt_lt(i64 %a1, i64 %a2)
+  br label %fixmerge1030
+fixmerge1030:
+  %t3842 = phi i64 [ %t3840, %fixfast1028 ], [ %t3841, %fixslow1029 ]
+  %t3843 = icmp ne i64 %t3842, 1
+  br i1 %t3843, label %then1031, label %else1032
+then1031:
+  %t3844 = or i64 %a1, 8
+  %t3845 = and i64 %t3844, 7
+  %t3846 = icmp eq i64 %t3845, 0
+  br i1 %t3846, label %fixfast1033, label %fixslow1034
+fixfast1033:
+  %t3847 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a1, i64 8)
+  %t3848 = extractvalue {i64, i1} %t3847, 0
+  %t3849 = extractvalue {i64, i1} %t3847, 1
+  br i1 %t3849, label %fixslow1034, label %fixmerge1035
+fixslow1034:
+  %t3850 = call i64 @rt_add(i64 %a1, i64 8)
+  br label %fixmerge1035
+fixmerge1035:
+  %t3851 = phi i64 [ %t3848, %fixfast1033 ], [ %t3850, %fixslow1034 ]
+  %t3852 = or i64 %a3, 80
+  %t3853 = and i64 %t3852, 7
+  %t3854 = icmp eq i64 %t3853, 0
+  br i1 %t3854, label %fixfast1036, label %fixslow1037
+fixfast1036:
+  %t3855 = ashr i64 %a3, 3
+  %t3856 = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %t3855, i64 80)
+  %t3857 = extractvalue {i64, i1} %t3856, 0
+  %t3858 = extractvalue {i64, i1} %t3856, 1
+  br i1 %t3858, label %fixslow1037, label %fixmerge1038
+fixslow1037:
+  %t3859 = call i64 @rt_mul(i64 %a3, i64 80)
+  br label %fixmerge1038
+fixmerge1038:
+  %t3860 = phi i64 [ %t3857, %fixfast1036 ], [ %t3859, %fixslow1037 ]
+  %t3861 = call i64 @rt_string_ref(i64 %a0, i64 %a1)
+  %t3862 = call i64 @rt_char_to_integer(i64 %t3861)
+  %t3863 = or i64 %t3862, 384
+  %t3864 = and i64 %t3863, 7
+  %t3865 = icmp eq i64 %t3864, 0
+  br i1 %t3865, label %fixfast1039, label %fixslow1040
+fixfast1039:
+  %t3866 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %t3862, i64 384)
+  %t3867 = extractvalue {i64, i1} %t3866, 0
+  %t3868 = extractvalue {i64, i1} %t3866, 1
+  br i1 %t3868, label %fixslow1040, label %fixmerge1041
+fixslow1040:
+  %t3869 = call i64 @rt_sub(i64 %t3862, i64 384)
+  br label %fixmerge1041
+fixmerge1041:
+  %t3870 = phi i64 [ %t3867, %fixfast1039 ], [ %t3869, %fixslow1040 ]
+  %t3871 = or i64 %t3860, %t3870
+  %t3872 = and i64 %t3871, 7
+  %t3873 = icmp eq i64 %t3872, 0
+  br i1 %t3873, label %fixfast1042, label %fixslow1043
+fixfast1042:
+  %t3874 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t3860, i64 %t3870)
+  %t3875 = extractvalue {i64, i1} %t3874, 0
+  %t3876 = extractvalue {i64, i1} %t3874, 1
+  br i1 %t3876, label %fixslow1043, label %fixmerge1044
+fixslow1043:
+  %t3877 = call i64 @rt_add(i64 %t3860, i64 %t3870)
+  br label %fixmerge1044
+fixmerge1044:
+  %t3878 = phi i64 [ %t3875, %fixfast1042 ], [ %t3877, %fixslow1043 ]
+  %t3879 = load i64, ptr @"scheme.base:rd-digits"
+  %t3880 = and i64 %t3879, -8
+  %t3881 = inttoptr i64 %t3880 to ptr
+  %t3882 = load i64, ptr %t3881
+  %t3883 = inttoptr i64 %t3882 to ptr
+  %t3884 = musttail call fastcc i64 %t3883(i64 %t3879, i64 4, i64 %a0, i64 %t3851, i64 %a2, i64 %t3878, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t3884
+else1032:
   ret i64 %a3
 }
 
 define fastcc i64 @"scheme.base:code:rd-digits-neg"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3882 = icmp eq i64 %argc, 4
-  br i1 %t3882, label %argok1044, label %arityerr1043
-arityerr1043:
+  %t3889 = icmp eq i64 %argc, 4
+  br i1 %t3889, label %argok1046, label %arityerr1045
+arityerr1045:
   call void @rt_arity_error(i64 4, i64 %argc)
   unreachable
-argok1044:
-  %t3883 = or i64 %a1, %a2
-  %t3884 = and i64 %t3883, 7
-  %t3885 = icmp eq i64 %t3884, 0
-  br i1 %t3885, label %fixfast1045, label %fixslow1046
-fixfast1045:
-  %t3886 = icmp slt i64 %a1, %a2
-  %t3887 = select i1 %t3886, i64 257, i64 1
-  br label %fixmerge1047
-fixslow1046:
-  %t3888 = call i64 @rt_lt(i64 %a1, i64 %a2)
-  br label %fixmerge1047
-fixmerge1047:
-  %t3889 = phi i64 [ %t3887, %fixfast1045 ], [ %t3888, %fixslow1046 ]
-  %t3890 = icmp ne i64 %t3889, 1
-  br i1 %t3890, label %then1048, label %else1049
-then1048:
-  %t3891 = or i64 %a1, 8
-  %t3892 = and i64 %t3891, 7
-  %t3893 = icmp eq i64 %t3892, 0
-  br i1 %t3893, label %fixfast1050, label %fixslow1051
-fixfast1050:
-  %t3894 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a1, i64 8)
-  %t3895 = extractvalue {i64, i1} %t3894, 0
-  %t3896 = extractvalue {i64, i1} %t3894, 1
-  br i1 %t3896, label %fixslow1051, label %fixmerge1052
-fixslow1051:
-  %t3897 = call i64 @rt_add(i64 %a1, i64 8)
-  br label %fixmerge1052
-fixmerge1052:
-  %t3898 = phi i64 [ %t3895, %fixfast1050 ], [ %t3897, %fixslow1051 ]
-  %t3899 = or i64 %a3, 80
-  %t3900 = and i64 %t3899, 7
-  %t3901 = icmp eq i64 %t3900, 0
-  br i1 %t3901, label %fixfast1053, label %fixslow1054
-fixfast1053:
-  %t3902 = ashr i64 %a3, 3
-  %t3903 = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %t3902, i64 80)
-  %t3904 = extractvalue {i64, i1} %t3903, 0
-  %t3905 = extractvalue {i64, i1} %t3903, 1
-  br i1 %t3905, label %fixslow1054, label %fixmerge1055
-fixslow1054:
-  %t3906 = call i64 @rt_mul(i64 %a3, i64 80)
-  br label %fixmerge1055
-fixmerge1055:
-  %t3907 = phi i64 [ %t3904, %fixfast1053 ], [ %t3906, %fixslow1054 ]
-  %t3908 = call i64 @rt_string_ref(i64 %a0, i64 %a1)
-  %t3909 = call i64 @rt_char_to_integer(i64 %t3908)
-  %t3910 = or i64 %t3909, 384
-  %t3911 = and i64 %t3910, 7
-  %t3912 = icmp eq i64 %t3911, 0
-  br i1 %t3912, label %fixfast1056, label %fixslow1057
-fixfast1056:
-  %t3913 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %t3909, i64 384)
-  %t3914 = extractvalue {i64, i1} %t3913, 0
-  %t3915 = extractvalue {i64, i1} %t3913, 1
-  br i1 %t3915, label %fixslow1057, label %fixmerge1058
-fixslow1057:
-  %t3916 = call i64 @rt_sub(i64 %t3909, i64 384)
-  br label %fixmerge1058
-fixmerge1058:
-  %t3917 = phi i64 [ %t3914, %fixfast1056 ], [ %t3916, %fixslow1057 ]
-  %t3918 = or i64 %t3907, %t3917
-  %t3919 = and i64 %t3918, 7
-  %t3920 = icmp eq i64 %t3919, 0
-  br i1 %t3920, label %fixfast1059, label %fixslow1060
-fixfast1059:
-  %t3921 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %t3907, i64 %t3917)
-  %t3922 = extractvalue {i64, i1} %t3921, 0
-  %t3923 = extractvalue {i64, i1} %t3921, 1
-  br i1 %t3923, label %fixslow1060, label %fixmerge1061
-fixslow1060:
-  %t3924 = call i64 @rt_sub(i64 %t3907, i64 %t3917)
-  br label %fixmerge1061
-fixmerge1061:
-  %t3925 = phi i64 [ %t3922, %fixfast1059 ], [ %t3924, %fixslow1060 ]
-  %t3926 = load i64, ptr @"scheme.base:rd-digits-neg"
-  %t3927 = and i64 %t3926, -8
-  %t3928 = inttoptr i64 %t3927 to ptr
-  %t3929 = load i64, ptr %t3928
-  %t3930 = inttoptr i64 %t3929 to ptr
-  %t3931 = musttail call fastcc i64 %t3930(i64 %t3926, i64 4, i64 %a0, i64 %t3898, i64 %a2, i64 %t3925, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t3931
-else1049:
+argok1046:
+  %t3890 = or i64 %a1, %a2
+  %t3891 = and i64 %t3890, 7
+  %t3892 = icmp eq i64 %t3891, 0
+  br i1 %t3892, label %fixfast1047, label %fixslow1048
+fixfast1047:
+  %t3893 = icmp slt i64 %a1, %a2
+  %t3894 = select i1 %t3893, i64 257, i64 1
+  br label %fixmerge1049
+fixslow1048:
+  %t3895 = call i64 @rt_lt(i64 %a1, i64 %a2)
+  br label %fixmerge1049
+fixmerge1049:
+  %t3896 = phi i64 [ %t3894, %fixfast1047 ], [ %t3895, %fixslow1048 ]
+  %t3897 = icmp ne i64 %t3896, 1
+  br i1 %t3897, label %then1050, label %else1051
+then1050:
+  %t3898 = or i64 %a1, 8
+  %t3899 = and i64 %t3898, 7
+  %t3900 = icmp eq i64 %t3899, 0
+  br i1 %t3900, label %fixfast1052, label %fixslow1053
+fixfast1052:
+  %t3901 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a1, i64 8)
+  %t3902 = extractvalue {i64, i1} %t3901, 0
+  %t3903 = extractvalue {i64, i1} %t3901, 1
+  br i1 %t3903, label %fixslow1053, label %fixmerge1054
+fixslow1053:
+  %t3904 = call i64 @rt_add(i64 %a1, i64 8)
+  br label %fixmerge1054
+fixmerge1054:
+  %t3905 = phi i64 [ %t3902, %fixfast1052 ], [ %t3904, %fixslow1053 ]
+  %t3906 = or i64 %a3, 80
+  %t3907 = and i64 %t3906, 7
+  %t3908 = icmp eq i64 %t3907, 0
+  br i1 %t3908, label %fixfast1055, label %fixslow1056
+fixfast1055:
+  %t3909 = ashr i64 %a3, 3
+  %t3910 = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %t3909, i64 80)
+  %t3911 = extractvalue {i64, i1} %t3910, 0
+  %t3912 = extractvalue {i64, i1} %t3910, 1
+  br i1 %t3912, label %fixslow1056, label %fixmerge1057
+fixslow1056:
+  %t3913 = call i64 @rt_mul(i64 %a3, i64 80)
+  br label %fixmerge1057
+fixmerge1057:
+  %t3914 = phi i64 [ %t3911, %fixfast1055 ], [ %t3913, %fixslow1056 ]
+  %t3915 = call i64 @rt_string_ref(i64 %a0, i64 %a1)
+  %t3916 = call i64 @rt_char_to_integer(i64 %t3915)
+  %t3917 = or i64 %t3916, 384
+  %t3918 = and i64 %t3917, 7
+  %t3919 = icmp eq i64 %t3918, 0
+  br i1 %t3919, label %fixfast1058, label %fixslow1059
+fixfast1058:
+  %t3920 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %t3916, i64 384)
+  %t3921 = extractvalue {i64, i1} %t3920, 0
+  %t3922 = extractvalue {i64, i1} %t3920, 1
+  br i1 %t3922, label %fixslow1059, label %fixmerge1060
+fixslow1059:
+  %t3923 = call i64 @rt_sub(i64 %t3916, i64 384)
+  br label %fixmerge1060
+fixmerge1060:
+  %t3924 = phi i64 [ %t3921, %fixfast1058 ], [ %t3923, %fixslow1059 ]
+  %t3925 = or i64 %t3914, %t3924
+  %t3926 = and i64 %t3925, 7
+  %t3927 = icmp eq i64 %t3926, 0
+  br i1 %t3927, label %fixfast1061, label %fixslow1062
+fixfast1061:
+  %t3928 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %t3914, i64 %t3924)
+  %t3929 = extractvalue {i64, i1} %t3928, 0
+  %t3930 = extractvalue {i64, i1} %t3928, 1
+  br i1 %t3930, label %fixslow1062, label %fixmerge1063
+fixslow1062:
+  %t3931 = call i64 @rt_sub(i64 %t3914, i64 %t3924)
+  br label %fixmerge1063
+fixmerge1063:
+  %t3932 = phi i64 [ %t3929, %fixfast1061 ], [ %t3931, %fixslow1062 ]
+  %t3933 = load i64, ptr @"scheme.base:rd-digits-neg"
+  %t3934 = and i64 %t3933, -8
+  %t3935 = inttoptr i64 %t3934 to ptr
+  %t3936 = load i64, ptr %t3935
+  %t3937 = inttoptr i64 %t3936 to ptr
+  %t3938 = musttail call fastcc i64 %t3937(i64 %t3933, i64 4, i64 %a0, i64 %t3905, i64 %a2, i64 %t3932, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t3938
+else1051:
   ret i64 %a3
 }
 
 define fastcc i64 @"scheme.base:code:rd-parse-int"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3936 = icmp eq i64 %argc, 1
-  br i1 %t3936, label %argok1063, label %arityerr1062
-arityerr1062:
+  %t3943 = icmp eq i64 %argc, 1
+  br i1 %t3943, label %argok1065, label %arityerr1064
+arityerr1064:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1063:
-  %t3937 = call i64 @rt_string_length(i64 %a0)
-  %t3938 = call i64 @rt_string_ref(i64 %a0, i64 0)
-  %t3939 = call i64 @rt_char_to_integer(i64 %t3938)
-  %t3940 = or i64 %t3939, 360
-  %t3941 = and i64 %t3940, 7
-  %t3942 = icmp eq i64 %t3941, 0
-  br i1 %t3942, label %fixfast1064, label %fixslow1065
-fixfast1064:
-  %t3943 = icmp eq i64 %t3939, 360
-  %t3944 = select i1 %t3943, i64 257, i64 1
-  br label %fixmerge1066
-fixslow1065:
-  %t3945 = call i64 @rt_num_eq(i64 %t3939, i64 360)
-  br label %fixmerge1066
-fixmerge1066:
-  %t3946 = phi i64 [ %t3944, %fixfast1064 ], [ %t3945, %fixslow1065 ]
-  %t3947 = icmp ne i64 %t3946, 1
-  br i1 %t3947, label %then1067, label %else1068
-then1067:
-  %t3948 = load i64, ptr @"scheme.base:rd-digits-neg"
-  %t3949 = and i64 %t3948, -8
-  %t3950 = inttoptr i64 %t3949 to ptr
-  %t3951 = load i64, ptr %t3950
-  %t3952 = inttoptr i64 %t3951 to ptr
-  %t3953 = musttail call fastcc i64 %t3952(i64 %t3948, i64 4, i64 %a0, i64 8, i64 %t3937, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t3953
-else1068:
-  %t3954 = or i64 %t3939, 344
-  %t3955 = and i64 %t3954, 7
-  %t3956 = icmp eq i64 %t3955, 0
-  br i1 %t3956, label %fixfast1069, label %fixslow1070
-fixfast1069:
-  %t3957 = icmp eq i64 %t3939, 344
-  %t3958 = select i1 %t3957, i64 257, i64 1
-  br label %fixmerge1071
-fixslow1070:
-  %t3959 = call i64 @rt_num_eq(i64 %t3939, i64 344)
-  br label %fixmerge1071
-fixmerge1071:
-  %t3960 = phi i64 [ %t3958, %fixfast1069 ], [ %t3959, %fixslow1070 ]
-  %t3961 = icmp ne i64 %t3960, 1
-  br i1 %t3961, label %then1072, label %else1073
-then1072:
-  %t3962 = load i64, ptr @"scheme.base:rd-digits"
-  %t3963 = and i64 %t3962, -8
-  %t3964 = inttoptr i64 %t3963 to ptr
-  %t3965 = load i64, ptr %t3964
-  %t3966 = inttoptr i64 %t3965 to ptr
-  %t3967 = musttail call fastcc i64 %t3966(i64 %t3962, i64 4, i64 %a0, i64 8, i64 %t3937, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t3967
-else1073:
-  %t3968 = load i64, ptr @"scheme.base:rd-digits"
-  %t3969 = and i64 %t3968, -8
-  %t3970 = inttoptr i64 %t3969 to ptr
-  %t3971 = load i64, ptr %t3970
-  %t3972 = inttoptr i64 %t3971 to ptr
-  %t3973 = musttail call fastcc i64 %t3972(i64 %t3968, i64 4, i64 %a0, i64 0, i64 %t3937, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t3973
+argok1065:
+  %t3944 = call i64 @rt_string_length(i64 %a0)
+  %t3945 = call i64 @rt_string_ref(i64 %a0, i64 0)
+  %t3946 = call i64 @rt_char_to_integer(i64 %t3945)
+  %t3947 = or i64 %t3946, 360
+  %t3948 = and i64 %t3947, 7
+  %t3949 = icmp eq i64 %t3948, 0
+  br i1 %t3949, label %fixfast1066, label %fixslow1067
+fixfast1066:
+  %t3950 = icmp eq i64 %t3946, 360
+  %t3951 = select i1 %t3950, i64 257, i64 1
+  br label %fixmerge1068
+fixslow1067:
+  %t3952 = call i64 @rt_num_eq(i64 %t3946, i64 360)
+  br label %fixmerge1068
+fixmerge1068:
+  %t3953 = phi i64 [ %t3951, %fixfast1066 ], [ %t3952, %fixslow1067 ]
+  %t3954 = icmp ne i64 %t3953, 1
+  br i1 %t3954, label %then1069, label %else1070
+then1069:
+  %t3955 = load i64, ptr @"scheme.base:rd-digits-neg"
+  %t3956 = and i64 %t3955, -8
+  %t3957 = inttoptr i64 %t3956 to ptr
+  %t3958 = load i64, ptr %t3957
+  %t3959 = inttoptr i64 %t3958 to ptr
+  %t3960 = musttail call fastcc i64 %t3959(i64 %t3955, i64 4, i64 %a0, i64 8, i64 %t3944, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t3960
+else1070:
+  %t3961 = or i64 %t3946, 344
+  %t3962 = and i64 %t3961, 7
+  %t3963 = icmp eq i64 %t3962, 0
+  br i1 %t3963, label %fixfast1071, label %fixslow1072
+fixfast1071:
+  %t3964 = icmp eq i64 %t3946, 344
+  %t3965 = select i1 %t3964, i64 257, i64 1
+  br label %fixmerge1073
+fixslow1072:
+  %t3966 = call i64 @rt_num_eq(i64 %t3946, i64 344)
+  br label %fixmerge1073
+fixmerge1073:
+  %t3967 = phi i64 [ %t3965, %fixfast1071 ], [ %t3966, %fixslow1072 ]
+  %t3968 = icmp ne i64 %t3967, 1
+  br i1 %t3968, label %then1074, label %else1075
+then1074:
+  %t3969 = load i64, ptr @"scheme.base:rd-digits"
+  %t3970 = and i64 %t3969, -8
+  %t3971 = inttoptr i64 %t3970 to ptr
+  %t3972 = load i64, ptr %t3971
+  %t3973 = inttoptr i64 %t3972 to ptr
+  %t3974 = musttail call fastcc i64 %t3973(i64 %t3969, i64 4, i64 %a0, i64 8, i64 %t3944, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t3974
+else1075:
+  %t3975 = load i64, ptr @"scheme.base:rd-digits"
+  %t3976 = and i64 %t3975, -8
+  %t3977 = inttoptr i64 %t3976 to ptr
+  %t3978 = load i64, ptr %t3977
+  %t3979 = inttoptr i64 %t3978 to ptr
+  %t3980 = musttail call fastcc i64 %t3979(i64 %t3975, i64 4, i64 %a0, i64 0, i64 %t3944, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t3980
 }
 
 define fastcc i64 @"scheme.base:code:rd-dotchar?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3978 = icmp eq i64 %argc, 1
-  br i1 %t3978, label %argok1075, label %arityerr1074
-arityerr1074:
+  %t3985 = icmp eq i64 %argc, 1
+  br i1 %t3985, label %argok1077, label %arityerr1076
+arityerr1076:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1075:
-  %t3979 = call i64 @rt_char_to_integer(i64 %a0)
-  %t3980 = or i64 %t3979, 368
-  %t3981 = and i64 %t3980, 7
-  %t3982 = icmp eq i64 %t3981, 0
-  br i1 %t3982, label %fixfast1076, label %fixslow1077
-fixfast1076:
-  %t3983 = icmp eq i64 %t3979, 368
-  %t3984 = select i1 %t3983, i64 257, i64 1
-  br label %fixmerge1078
-fixslow1077:
-  %t3985 = call i64 @rt_num_eq(i64 %t3979, i64 368)
-  br label %fixmerge1078
-fixmerge1078:
-  %t3986 = phi i64 [ %t3984, %fixfast1076 ], [ %t3985, %fixslow1077 ]
-  ret i64 %t3986
+argok1077:
+  %t3986 = call i64 @rt_char_to_integer(i64 %a0)
+  %t3987 = or i64 %t3986, 368
+  %t3988 = and i64 %t3987, 7
+  %t3989 = icmp eq i64 %t3988, 0
+  br i1 %t3989, label %fixfast1078, label %fixslow1079
+fixfast1078:
+  %t3990 = icmp eq i64 %t3986, 368
+  %t3991 = select i1 %t3990, i64 257, i64 1
+  br label %fixmerge1080
+fixslow1079:
+  %t3992 = call i64 @rt_num_eq(i64 %t3986, i64 368)
+  br label %fixmerge1080
+fixmerge1080:
+  %t3993 = phi i64 [ %t3991, %fixfast1078 ], [ %t3992, %fixslow1079 ]
+  ret i64 %t3993
 }
 
 define fastcc i64 @"scheme.base:code:rd-exp-char?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t3991 = icmp eq i64 %argc, 1
-  br i1 %t3991, label %argok1080, label %arityerr1079
-arityerr1079:
+  %t3998 = icmp eq i64 %argc, 1
+  br i1 %t3998, label %argok1082, label %arityerr1081
+arityerr1081:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1080:
-  %t3992 = call i64 @rt_char_to_integer(i64 %a0)
-  %t3993 = or i64 %t3992, 808
-  %t3994 = and i64 %t3993, 7
-  %t3995 = icmp eq i64 %t3994, 0
-  br i1 %t3995, label %fixfast1081, label %fixslow1082
-fixfast1081:
-  %t3996 = icmp eq i64 %t3992, 808
-  %t3997 = select i1 %t3996, i64 257, i64 1
-  br label %fixmerge1083
-fixslow1082:
-  %t3998 = call i64 @rt_num_eq(i64 %t3992, i64 808)
-  br label %fixmerge1083
-fixmerge1083:
-  %t3999 = phi i64 [ %t3997, %fixfast1081 ], [ %t3998, %fixslow1082 ]
-  %t4000 = icmp ne i64 %t3999, 1
-  br i1 %t4000, label %then1084, label %else1085
-then1084:
-  ret i64 %t3999
-else1085:
-  %t4001 = or i64 %t3992, 552
-  %t4002 = and i64 %t4001, 7
-  %t4003 = icmp eq i64 %t4002, 0
-  br i1 %t4003, label %fixfast1086, label %fixslow1087
-fixfast1086:
-  %t4004 = icmp eq i64 %t3992, 552
-  %t4005 = select i1 %t4004, i64 257, i64 1
-  br label %fixmerge1088
-fixslow1087:
-  %t4006 = call i64 @rt_num_eq(i64 %t3992, i64 552)
-  br label %fixmerge1088
-fixmerge1088:
-  %t4007 = phi i64 [ %t4005, %fixfast1086 ], [ %t4006, %fixslow1087 ]
-  ret i64 %t4007
+argok1082:
+  %t3999 = call i64 @rt_char_to_integer(i64 %a0)
+  %t4000 = or i64 %t3999, 808
+  %t4001 = and i64 %t4000, 7
+  %t4002 = icmp eq i64 %t4001, 0
+  br i1 %t4002, label %fixfast1083, label %fixslow1084
+fixfast1083:
+  %t4003 = icmp eq i64 %t3999, 808
+  %t4004 = select i1 %t4003, i64 257, i64 1
+  br label %fixmerge1085
+fixslow1084:
+  %t4005 = call i64 @rt_num_eq(i64 %t3999, i64 808)
+  br label %fixmerge1085
+fixmerge1085:
+  %t4006 = phi i64 [ %t4004, %fixfast1083 ], [ %t4005, %fixslow1084 ]
+  %t4007 = icmp ne i64 %t4006, 1
+  br i1 %t4007, label %then1086, label %else1087
+then1086:
+  ret i64 %t4006
+else1087:
+  %t4008 = or i64 %t3999, 552
+  %t4009 = and i64 %t4008, 7
+  %t4010 = icmp eq i64 %t4009, 0
+  br i1 %t4010, label %fixfast1088, label %fixslow1089
+fixfast1088:
+  %t4011 = icmp eq i64 %t3999, 552
+  %t4012 = select i1 %t4011, i64 257, i64 1
+  br label %fixmerge1090
+fixslow1089:
+  %t4013 = call i64 @rt_num_eq(i64 %t3999, i64 552)
+  br label %fixmerge1090
+fixmerge1090:
+  %t4014 = phi i64 [ %t4012, %fixfast1088 ], [ %t4013, %fixslow1089 ]
+  ret i64 %t4014
 }
 
 define fastcc i64 @"scheme.base:code:rd-sign-char?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t4012 = icmp eq i64 %argc, 1
-  br i1 %t4012, label %argok1090, label %arityerr1089
-arityerr1089:
+  %t4019 = icmp eq i64 %argc, 1
+  br i1 %t4019, label %argok1092, label %arityerr1091
+arityerr1091:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1090:
-  %t4013 = call i64 @rt_char_to_integer(i64 %a0)
-  %t4014 = or i64 %t4013, 344
-  %t4015 = and i64 %t4014, 7
-  %t4016 = icmp eq i64 %t4015, 0
-  br i1 %t4016, label %fixfast1091, label %fixslow1092
-fixfast1091:
-  %t4017 = icmp eq i64 %t4013, 344
-  %t4018 = select i1 %t4017, i64 257, i64 1
-  br label %fixmerge1093
-fixslow1092:
-  %t4019 = call i64 @rt_num_eq(i64 %t4013, i64 344)
-  br label %fixmerge1093
-fixmerge1093:
-  %t4020 = phi i64 [ %t4018, %fixfast1091 ], [ %t4019, %fixslow1092 ]
-  %t4021 = icmp ne i64 %t4020, 1
-  br i1 %t4021, label %then1094, label %else1095
-then1094:
-  ret i64 %t4020
-else1095:
-  %t4022 = or i64 %t4013, 360
-  %t4023 = and i64 %t4022, 7
-  %t4024 = icmp eq i64 %t4023, 0
-  br i1 %t4024, label %fixfast1096, label %fixslow1097
-fixfast1096:
-  %t4025 = icmp eq i64 %t4013, 360
-  %t4026 = select i1 %t4025, i64 257, i64 1
-  br label %fixmerge1098
-fixslow1097:
-  %t4027 = call i64 @rt_num_eq(i64 %t4013, i64 360)
-  br label %fixmerge1098
-fixmerge1098:
-  %t4028 = phi i64 [ %t4026, %fixfast1096 ], [ %t4027, %fixslow1097 ]
-  ret i64 %t4028
+argok1092:
+  %t4020 = call i64 @rt_char_to_integer(i64 %a0)
+  %t4021 = or i64 %t4020, 344
+  %t4022 = and i64 %t4021, 7
+  %t4023 = icmp eq i64 %t4022, 0
+  br i1 %t4023, label %fixfast1093, label %fixslow1094
+fixfast1093:
+  %t4024 = icmp eq i64 %t4020, 344
+  %t4025 = select i1 %t4024, i64 257, i64 1
+  br label %fixmerge1095
+fixslow1094:
+  %t4026 = call i64 @rt_num_eq(i64 %t4020, i64 344)
+  br label %fixmerge1095
+fixmerge1095:
+  %t4027 = phi i64 [ %t4025, %fixfast1093 ], [ %t4026, %fixslow1094 ]
+  %t4028 = icmp ne i64 %t4027, 1
+  br i1 %t4028, label %then1096, label %else1097
+then1096:
+  ret i64 %t4027
+else1097:
+  %t4029 = or i64 %t4020, 360
+  %t4030 = and i64 %t4029, 7
+  %t4031 = icmp eq i64 %t4030, 0
+  br i1 %t4031, label %fixfast1098, label %fixslow1099
+fixfast1098:
+  %t4032 = icmp eq i64 %t4020, 360
+  %t4033 = select i1 %t4032, i64 257, i64 1
+  br label %fixmerge1100
+fixslow1099:
+  %t4034 = call i64 @rt_num_eq(i64 %t4020, i64 360)
+  br label %fixmerge1100
+fixmerge1100:
+  %t4035 = phi i64 [ %t4033, %fixfast1098 ], [ %t4034, %fixslow1099 ]
+  ret i64 %t4035
 }
 
 define fastcc i64 @"scheme.base:code:rd-scan-digits"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t4033 = icmp eq i64 %argc, 3
-  br i1 %t4033, label %argok1100, label %arityerr1099
-arityerr1099:
+  %t4040 = icmp eq i64 %argc, 3
+  br i1 %t4040, label %argok1102, label %arityerr1101
+arityerr1101:
   call void @rt_arity_error(i64 3, i64 %argc)
   unreachable
-argok1100:
-  %t4034 = or i64 %a1, %a2
-  %t4035 = and i64 %t4034, 7
-  %t4036 = icmp eq i64 %t4035, 0
-  br i1 %t4036, label %fixfast1101, label %fixslow1102
-fixfast1101:
-  %t4037 = icmp slt i64 %a1, %a2
-  %t4038 = select i1 %t4037, i64 257, i64 1
-  br label %fixmerge1103
-fixslow1102:
-  %t4039 = call i64 @rt_lt(i64 %a1, i64 %a2)
-  br label %fixmerge1103
-fixmerge1103:
-  %t4040 = phi i64 [ %t4038, %fixfast1101 ], [ %t4039, %fixslow1102 ]
-  %t4041 = icmp ne i64 %t4040, 1
-  br i1 %t4041, label %then1104, label %else1105
-then1104:
-  %t4042 = call i64 @rt_string_ref(i64 %a0, i64 %a1)
-  %t4043 = load i64, ptr @"scheme.base:rd-digit?"
-  %t4044 = and i64 %t4043, -8
-  %t4045 = inttoptr i64 %t4044 to ptr
-  %t4046 = load i64, ptr %t4045
-  %t4047 = inttoptr i64 %t4046 to ptr
-  %t4048 = call fastcc i64%t4047(i64 %t4043, i64 1, i64 %t4042, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  br label %merge1106
-else1105:
-  br label %merge1106
-merge1106:
-  %t4049 = phi i64 [ %t4048, %then1104 ], [ 1, %else1105 ]
-  %t4050 = icmp ne i64 %t4049, 1
-  br i1 %t4050, label %then1107, label %else1108
-then1107:
-  %t4051 = or i64 %a1, 8
-  %t4052 = and i64 %t4051, 7
-  %t4053 = icmp eq i64 %t4052, 0
-  br i1 %t4053, label %fixfast1109, label %fixslow1110
-fixfast1109:
-  %t4054 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a1, i64 8)
-  %t4055 = extractvalue {i64, i1} %t4054, 0
-  %t4056 = extractvalue {i64, i1} %t4054, 1
-  br i1 %t4056, label %fixslow1110, label %fixmerge1111
-fixslow1110:
-  %t4057 = call i64 @rt_add(i64 %a1, i64 8)
-  br label %fixmerge1111
-fixmerge1111:
-  %t4058 = phi i64 [ %t4055, %fixfast1109 ], [ %t4057, %fixslow1110 ]
-  %t4059 = load i64, ptr @"scheme.base:rd-scan-digits"
-  %t4060 = and i64 %t4059, -8
-  %t4061 = inttoptr i64 %t4060 to ptr
-  %t4062 = load i64, ptr %t4061
-  %t4063 = inttoptr i64 %t4062 to ptr
-  %t4064 = musttail call fastcc i64 %t4063(i64 %t4059, i64 3, i64 %a0, i64 %t4058, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t4064
-else1108:
+argok1102:
+  %t4041 = or i64 %a1, %a2
+  %t4042 = and i64 %t4041, 7
+  %t4043 = icmp eq i64 %t4042, 0
+  br i1 %t4043, label %fixfast1103, label %fixslow1104
+fixfast1103:
+  %t4044 = icmp slt i64 %a1, %a2
+  %t4045 = select i1 %t4044, i64 257, i64 1
+  br label %fixmerge1105
+fixslow1104:
+  %t4046 = call i64 @rt_lt(i64 %a1, i64 %a2)
+  br label %fixmerge1105
+fixmerge1105:
+  %t4047 = phi i64 [ %t4045, %fixfast1103 ], [ %t4046, %fixslow1104 ]
+  %t4048 = icmp ne i64 %t4047, 1
+  br i1 %t4048, label %then1106, label %else1107
+then1106:
+  %t4049 = call i64 @rt_string_ref(i64 %a0, i64 %a1)
+  %t4050 = load i64, ptr @"scheme.base:rd-digit?"
+  %t4051 = and i64 %t4050, -8
+  %t4052 = inttoptr i64 %t4051 to ptr
+  %t4053 = load i64, ptr %t4052
+  %t4054 = inttoptr i64 %t4053 to ptr
+  %t4055 = call fastcc i64%t4054(i64 %t4050, i64 1, i64 %t4049, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  br label %merge1108
+else1107:
+  br label %merge1108
+merge1108:
+  %t4056 = phi i64 [ %t4055, %then1106 ], [ 1, %else1107 ]
+  %t4057 = icmp ne i64 %t4056, 1
+  br i1 %t4057, label %then1109, label %else1110
+then1109:
+  %t4058 = or i64 %a1, 8
+  %t4059 = and i64 %t4058, 7
+  %t4060 = icmp eq i64 %t4059, 0
+  br i1 %t4060, label %fixfast1111, label %fixslow1112
+fixfast1111:
+  %t4061 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a1, i64 8)
+  %t4062 = extractvalue {i64, i1} %t4061, 0
+  %t4063 = extractvalue {i64, i1} %t4061, 1
+  br i1 %t4063, label %fixslow1112, label %fixmerge1113
+fixslow1112:
+  %t4064 = call i64 @rt_add(i64 %a1, i64 8)
+  br label %fixmerge1113
+fixmerge1113:
+  %t4065 = phi i64 [ %t4062, %fixfast1111 ], [ %t4064, %fixslow1112 ]
+  %t4066 = load i64, ptr @"scheme.base:rd-scan-digits"
+  %t4067 = and i64 %t4066, -8
+  %t4068 = inttoptr i64 %t4067 to ptr
+  %t4069 = load i64, ptr %t4068
+  %t4070 = inttoptr i64 %t4069 to ptr
+  %t4071 = musttail call fastcc i64 %t4070(i64 %t4066, i64 3, i64 %a0, i64 %t4065, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t4071
+else1110:
   ret i64 %a1
 }
 
 define fastcc i64 @"scheme.base:code:rd-flonum?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t4069 = icmp eq i64 %argc, 1
-  br i1 %t4069, label %argok1113, label %arityerr1112
-arityerr1112:
+  %t4076 = icmp eq i64 %argc, 1
+  br i1 %t4076, label %argok1115, label %arityerr1114
+arityerr1114:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1113:
-  %t4070 = call i64 @rt_string_length(i64 %a0)
-  %t4071 = or i64 0, %t4070
-  %t4072 = and i64 %t4071, 7
-  %t4073 = icmp eq i64 %t4072, 0
-  br i1 %t4073, label %fixfast1114, label %fixslow1115
-fixfast1114:
-  %t4074 = icmp slt i64 0, %t4070
-  %t4075 = select i1 %t4074, i64 257, i64 1
-  br label %fixmerge1116
-fixslow1115:
-  %t4076 = call i64 @rt_lt(i64 0, i64 %t4070)
-  br label %fixmerge1116
-fixmerge1116:
-  %t4077 = phi i64 [ %t4075, %fixfast1114 ], [ %t4076, %fixslow1115 ]
-  %t4078 = icmp ne i64 %t4077, 1
-  br i1 %t4078, label %then1117, label %else1118
-then1117:
-  %t4079 = call i64 @rt_string_ref(i64 %a0, i64 0)
-  %t4080 = load i64, ptr @"scheme.base:rd-sign-char?"
-  %t4081 = and i64 %t4080, -8
-  %t4082 = inttoptr i64 %t4081 to ptr
-  %t4083 = load i64, ptr %t4082
-  %t4084 = inttoptr i64 %t4083 to ptr
-  %t4085 = call fastcc i64%t4084(i64 %t4080, i64 1, i64 %t4079, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4086 = icmp ne i64 %t4085, 1
-  br i1 %t4086, label %then1119, label %else1120
+argok1115:
+  %t4077 = call i64 @rt_string_length(i64 %a0)
+  %t4078 = or i64 0, %t4077
+  %t4079 = and i64 %t4078, 7
+  %t4080 = icmp eq i64 %t4079, 0
+  br i1 %t4080, label %fixfast1116, label %fixslow1117
+fixfast1116:
+  %t4081 = icmp slt i64 0, %t4077
+  %t4082 = select i1 %t4081, i64 257, i64 1
+  br label %fixmerge1118
+fixslow1117:
+  %t4083 = call i64 @rt_lt(i64 0, i64 %t4077)
+  br label %fixmerge1118
+fixmerge1118:
+  %t4084 = phi i64 [ %t4082, %fixfast1116 ], [ %t4083, %fixslow1117 ]
+  %t4085 = icmp ne i64 %t4084, 1
+  br i1 %t4085, label %then1119, label %else1120
 then1119:
-  br label %merge1121
-else1120:
-  br label %merge1121
-merge1121:
-  %t4087 = phi i64 [ 8, %then1119 ], [ 0, %else1120 ]
-  %t4088 = load i64, ptr @"scheme.base:rd-scan-digits"
-  %t4089 = and i64 %t4088, -8
-  %t4090 = inttoptr i64 %t4089 to ptr
-  %t4091 = load i64, ptr %t4090
-  %t4092 = inttoptr i64 %t4091 to ptr
-  %t4093 = call fastcc i64%t4092(i64 %t4088, i64 3, i64 %a0, i64 %t4087, i64 %t4070, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4094 = or i64 %t4093, %t4070
-  %t4095 = and i64 %t4094, 7
-  %t4096 = icmp eq i64 %t4095, 0
-  br i1 %t4096, label %fixfast1122, label %fixslow1123
-fixfast1122:
-  %t4097 = icmp slt i64 %t4093, %t4070
-  %t4098 = select i1 %t4097, i64 257, i64 1
-  br label %fixmerge1124
-fixslow1123:
-  %t4099 = call i64 @rt_lt(i64 %t4093, i64 %t4070)
-  br label %fixmerge1124
-fixmerge1124:
-  %t4100 = phi i64 [ %t4098, %fixfast1122 ], [ %t4099, %fixslow1123 ]
-  %t4101 = icmp ne i64 %t4100, 1
-  br i1 %t4101, label %then1125, label %else1126
-then1125:
-  %t4102 = call i64 @rt_string_ref(i64 %a0, i64 %t4093)
-  %t4103 = load i64, ptr @"scheme.base:rd-dotchar?"
-  %t4104 = and i64 %t4103, -8
-  %t4105 = inttoptr i64 %t4104 to ptr
-  %t4106 = load i64, ptr %t4105
-  %t4107 = inttoptr i64 %t4106 to ptr
-  %t4108 = call fastcc i64%t4107(i64 %t4103, i64 1, i64 %t4102, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  br label %merge1127
-else1126:
-  br label %merge1127
-merge1127:
-  %t4109 = phi i64 [ %t4108, %then1125 ], [ 1, %else1126 ]
-  %t4110 = icmp ne i64 %t4109, 1
-  br i1 %t4110, label %then1128, label %else1129
-then1128:
-  %t4111 = or i64 %t4093, 8
-  %t4112 = and i64 %t4111, 7
-  %t4113 = icmp eq i64 %t4112, 0
-  br i1 %t4113, label %fixfast1131, label %fixslow1132
-fixfast1131:
-  %t4114 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t4093, i64 8)
-  %t4115 = extractvalue {i64, i1} %t4114, 0
-  %t4116 = extractvalue {i64, i1} %t4114, 1
-  br i1 %t4116, label %fixslow1132, label %fixmerge1133
-fixslow1132:
-  %t4117 = call i64 @rt_add(i64 %t4093, i64 8)
-  br label %fixmerge1133
-fixmerge1133:
-  %t4118 = phi i64 [ %t4115, %fixfast1131 ], [ %t4117, %fixslow1132 ]
-  br label %merge1130
-else1129:
-  br label %merge1130
-merge1130:
-  %t4119 = phi i64 [ %t4118, %fixmerge1133 ], [ %t4093, %else1129 ]
-  %t4120 = or i64 %t4093, %t4119
-  %t4121 = and i64 %t4120, 7
-  %t4122 = icmp eq i64 %t4121, 0
-  br i1 %t4122, label %fixfast1134, label %fixslow1135
-fixfast1134:
-  %t4123 = icmp slt i64 %t4093, %t4119
-  %t4124 = select i1 %t4123, i64 257, i64 1
-  br label %fixmerge1136
-fixslow1135:
-  %t4125 = call i64 @rt_lt(i64 %t4093, i64 %t4119)
-  br label %fixmerge1136
-fixmerge1136:
-  %t4126 = phi i64 [ %t4124, %fixfast1134 ], [ %t4125, %fixslow1135 ]
-  %t4127 = load i64, ptr @"scheme.base:rd-scan-digits"
-  %t4128 = and i64 %t4127, -8
-  %t4129 = inttoptr i64 %t4128 to ptr
-  %t4130 = load i64, ptr %t4129
-  %t4131 = inttoptr i64 %t4130 to ptr
-  %t4132 = call fastcc i64%t4131(i64 %t4127, i64 3, i64 %a0, i64 %t4119, i64 %t4070, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4133 = or i64 %t4087, %t4093
-  %t4134 = and i64 %t4133, 7
-  %t4135 = icmp eq i64 %t4134, 0
-  br i1 %t4135, label %fixfast1137, label %fixslow1138
-fixfast1137:
-  %t4136 = icmp slt i64 %t4087, %t4093
-  %t4137 = select i1 %t4136, i64 257, i64 1
-  br label %fixmerge1139
-fixslow1138:
-  %t4138 = call i64 @rt_lt(i64 %t4087, i64 %t4093)
-  br label %fixmerge1139
-fixmerge1139:
-  %t4139 = phi i64 [ %t4137, %fixfast1137 ], [ %t4138, %fixslow1138 ]
-  %t4140 = icmp ne i64 %t4139, 1
-  br i1 %t4140, label %then1140, label %else1141
-then1140:
-  br label %merge1142
-else1141:
-  %t4141 = or i64 %t4119, %t4132
-  %t4142 = and i64 %t4141, 7
-  %t4143 = icmp eq i64 %t4142, 0
-  br i1 %t4143, label %fixfast1143, label %fixslow1144
-fixfast1143:
-  %t4144 = icmp slt i64 %t4119, %t4132
-  %t4145 = select i1 %t4144, i64 257, i64 1
-  br label %fixmerge1145
-fixslow1144:
-  %t4146 = call i64 @rt_lt(i64 %t4119, i64 %t4132)
-  br label %fixmerge1145
-fixmerge1145:
-  %t4147 = phi i64 [ %t4145, %fixfast1143 ], [ %t4146, %fixslow1144 ]
-  br label %merge1142
-merge1142:
-  %t4148 = phi i64 [ %t4139, %then1140 ], [ %t4147, %fixmerge1145 ]
-  %t4149 = icmp ne i64 %t4148, 1
-  br i1 %t4149, label %then1146, label %else1147
-then1146:
-  %t4150 = or i64 %t4132, %t4070
-  %t4151 = and i64 %t4150, 7
-  %t4152 = icmp eq i64 %t4151, 0
-  br i1 %t4152, label %fixfast1148, label %fixslow1149
-fixfast1148:
-  %t4153 = icmp slt i64 %t4132, %t4070
-  %t4154 = select i1 %t4153, i64 257, i64 1
-  br label %fixmerge1150
-fixslow1149:
-  %t4155 = call i64 @rt_lt(i64 %t4132, i64 %t4070)
-  br label %fixmerge1150
-fixmerge1150:
-  %t4156 = phi i64 [ %t4154, %fixfast1148 ], [ %t4155, %fixslow1149 ]
-  %t4157 = icmp ne i64 %t4156, 1
-  br i1 %t4157, label %then1151, label %else1152
-then1151:
-  %t4158 = call i64 @rt_string_ref(i64 %a0, i64 %t4132)
-  %t4159 = load i64, ptr @"scheme.base:rd-exp-char?"
-  %t4160 = and i64 %t4159, -8
-  %t4161 = inttoptr i64 %t4160 to ptr
-  %t4162 = load i64, ptr %t4161
-  %t4163 = inttoptr i64 %t4162 to ptr
-  %t4164 = call fastcc i64%t4163(i64 %t4159, i64 1, i64 %t4158, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  br label %merge1153
-else1152:
-  br label %merge1153
-merge1153:
-  %t4165 = phi i64 [ %t4164, %then1151 ], [ 1, %else1152 ]
-  %t4166 = icmp ne i64 %t4165, 1
-  br i1 %t4166, label %then1154, label %else1155
-then1154:
-  %t4167 = or i64 %t4132, 8
-  %t4168 = and i64 %t4167, 7
-  %t4169 = icmp eq i64 %t4168, 0
-  br i1 %t4169, label %fixfast1157, label %fixslow1158
-fixfast1157:
-  %t4170 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t4132, i64 8)
-  %t4171 = extractvalue {i64, i1} %t4170, 0
-  %t4172 = extractvalue {i64, i1} %t4170, 1
-  br i1 %t4172, label %fixslow1158, label %fixmerge1159
-fixslow1158:
-  %t4173 = call i64 @rt_add(i64 %t4132, i64 8)
-  br label %fixmerge1159
-fixmerge1159:
-  %t4174 = phi i64 [ %t4171, %fixfast1157 ], [ %t4173, %fixslow1158 ]
-  %t4175 = or i64 %t4174, %t4070
-  %t4176 = and i64 %t4175, 7
-  %t4177 = icmp eq i64 %t4176, 0
-  br i1 %t4177, label %fixfast1160, label %fixslow1161
-fixfast1160:
-  %t4178 = icmp slt i64 %t4174, %t4070
-  %t4179 = select i1 %t4178, i64 257, i64 1
-  br label %fixmerge1162
-fixslow1161:
-  %t4180 = call i64 @rt_lt(i64 %t4174, i64 %t4070)
-  br label %fixmerge1162
-fixmerge1162:
-  %t4181 = phi i64 [ %t4179, %fixfast1160 ], [ %t4180, %fixslow1161 ]
-  %t4182 = icmp ne i64 %t4181, 1
-  br i1 %t4182, label %then1163, label %else1164
-then1163:
-  %t4183 = or i64 %t4132, 8
-  %t4184 = and i64 %t4183, 7
-  %t4185 = icmp eq i64 %t4184, 0
-  br i1 %t4185, label %fixfast1166, label %fixslow1167
-fixfast1166:
-  %t4186 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t4132, i64 8)
-  %t4187 = extractvalue {i64, i1} %t4186, 0
-  %t4188 = extractvalue {i64, i1} %t4186, 1
-  br i1 %t4188, label %fixslow1167, label %fixmerge1168
-fixslow1167:
-  %t4189 = call i64 @rt_add(i64 %t4132, i64 8)
-  br label %fixmerge1168
-fixmerge1168:
-  %t4190 = phi i64 [ %t4187, %fixfast1166 ], [ %t4189, %fixslow1167 ]
-  %t4191 = call i64 @rt_string_ref(i64 %a0, i64 %t4190)
-  %t4192 = load i64, ptr @"scheme.base:rd-sign-char?"
-  %t4193 = and i64 %t4192, -8
-  %t4194 = inttoptr i64 %t4193 to ptr
-  %t4195 = load i64, ptr %t4194
-  %t4196 = inttoptr i64 %t4195 to ptr
-  %t4197 = call fastcc i64%t4196(i64 %t4192, i64 1, i64 %t4191, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  br label %merge1165
-else1164:
-  br label %merge1165
-merge1165:
-  %t4198 = phi i64 [ %t4197, %fixmerge1168 ], [ 1, %else1164 ]
-  %t4199 = icmp ne i64 %t4198, 1
-  br i1 %t4199, label %then1169, label %else1170
-then1169:
-  %t4200 = or i64 %t4132, 16
-  %t4201 = and i64 %t4200, 7
-  %t4202 = icmp eq i64 %t4201, 0
-  br i1 %t4202, label %fixfast1172, label %fixslow1173
-fixfast1172:
-  %t4203 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t4132, i64 16)
-  %t4204 = extractvalue {i64, i1} %t4203, 0
-  %t4205 = extractvalue {i64, i1} %t4203, 1
-  br i1 %t4205, label %fixslow1173, label %fixmerge1174
-fixslow1173:
-  %t4206 = call i64 @rt_add(i64 %t4132, i64 16)
-  br label %fixmerge1174
-fixmerge1174:
-  %t4207 = phi i64 [ %t4204, %fixfast1172 ], [ %t4206, %fixslow1173 ]
-  br label %merge1171
-else1170:
-  %t4208 = or i64 %t4132, 8
-  %t4209 = and i64 %t4208, 7
-  %t4210 = icmp eq i64 %t4209, 0
-  br i1 %t4210, label %fixfast1175, label %fixslow1176
-fixfast1175:
-  %t4211 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t4132, i64 8)
-  %t4212 = extractvalue {i64, i1} %t4211, 0
-  %t4213 = extractvalue {i64, i1} %t4211, 1
-  br i1 %t4213, label %fixslow1176, label %fixmerge1177
-fixslow1176:
-  %t4214 = call i64 @rt_add(i64 %t4132, i64 8)
-  br label %fixmerge1177
-fixmerge1177:
-  %t4215 = phi i64 [ %t4212, %fixfast1175 ], [ %t4214, %fixslow1176 ]
-  br label %merge1171
-merge1171:
-  %t4216 = phi i64 [ %t4207, %fixmerge1174 ], [ %t4215, %fixmerge1177 ]
-  %t4217 = load i64, ptr @"scheme.base:rd-scan-digits"
-  %t4218 = and i64 %t4217, -8
-  %t4219 = inttoptr i64 %t4218 to ptr
-  %t4220 = load i64, ptr %t4219
-  %t4221 = inttoptr i64 %t4220 to ptr
-  %t4222 = call fastcc i64%t4221(i64 %t4217, i64 3, i64 %a0, i64 %t4216, i64 %t4070, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4223 = or i64 %t4216, %t4222
-  %t4224 = and i64 %t4223, 7
-  %t4225 = icmp eq i64 %t4224, 0
-  br i1 %t4225, label %fixfast1178, label %fixslow1179
-fixfast1178:
-  %t4226 = icmp slt i64 %t4216, %t4222
-  %t4227 = select i1 %t4226, i64 257, i64 1
-  br label %fixmerge1180
-fixslow1179:
-  %t4228 = call i64 @rt_lt(i64 %t4216, i64 %t4222)
-  br label %fixmerge1180
-fixmerge1180:
-  %t4229 = phi i64 [ %t4227, %fixfast1178 ], [ %t4228, %fixslow1179 ]
-  %t4230 = icmp ne i64 %t4229, 1
-  br i1 %t4230, label %then1181, label %else1182
-then1181:
-  br label %merge1183
-else1182:
-  br label %merge1183
-merge1183:
-  %t4231 = phi i64 [ %t4222, %then1181 ], [ -8, %else1182 ]
-  br label %merge1156
-else1155:
-  br label %merge1156
-merge1156:
-  %t4232 = phi i64 [ %t4231, %merge1183 ], [ %t4132, %else1155 ]
-  %t4233 = or i64 -8, %t4232
-  %t4234 = and i64 %t4233, 7
-  %t4235 = icmp eq i64 %t4234, 0
-  br i1 %t4235, label %fixfast1184, label %fixslow1185
-fixfast1184:
-  %t4236 = icmp slt i64 -8, %t4232
-  %t4237 = select i1 %t4236, i64 257, i64 1
-  br label %fixmerge1186
-fixslow1185:
-  %t4238 = call i64 @rt_lt(i64 -8, i64 %t4232)
-  br label %fixmerge1186
-fixmerge1186:
-  %t4239 = phi i64 [ %t4237, %fixfast1184 ], [ %t4238, %fixslow1185 ]
-  %t4240 = icmp ne i64 %t4239, 1
-  br i1 %t4240, label %then1187, label %else1188
-then1187:
-  %t4241 = or i64 %t4232, %t4070
-  %t4242 = and i64 %t4241, 7
-  %t4243 = icmp eq i64 %t4242, 0
-  br i1 %t4243, label %fixfast1189, label %fixslow1190
-fixfast1189:
-  %t4244 = icmp eq i64 %t4232, %t4070
-  %t4245 = select i1 %t4244, i64 257, i64 1
-  br label %fixmerge1191
-fixslow1190:
-  %t4246 = call i64 @rt_num_eq(i64 %t4232, i64 %t4070)
-  br label %fixmerge1191
-fixmerge1191:
-  %t4247 = phi i64 [ %t4245, %fixfast1189 ], [ %t4246, %fixslow1190 ]
-  %t4248 = icmp ne i64 %t4247, 1
-  br i1 %t4248, label %then1192, label %else1193
-then1192:
-  %t4249 = icmp ne i64 %t4126, 1
-  br i1 %t4249, label %then1194, label %else1195
+  %t4086 = call i64 @rt_string_ref(i64 %a0, i64 0)
+  %t4087 = load i64, ptr @"scheme.base:rd-sign-char?"
+  %t4088 = and i64 %t4087, -8
+  %t4089 = inttoptr i64 %t4088 to ptr
+  %t4090 = load i64, ptr %t4089
+  %t4091 = inttoptr i64 %t4090 to ptr
+  %t4092 = call fastcc i64%t4091(i64 %t4087, i64 1, i64 %t4086, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4093 = icmp ne i64 %t4092, 1
+  br i1 %t4093, label %then1121, label %else1122
+then1121:
+  br label %merge1123
+else1122:
+  br label %merge1123
+merge1123:
+  %t4094 = phi i64 [ 8, %then1121 ], [ 0, %else1122 ]
+  %t4095 = load i64, ptr @"scheme.base:rd-scan-digits"
+  %t4096 = and i64 %t4095, -8
+  %t4097 = inttoptr i64 %t4096 to ptr
+  %t4098 = load i64, ptr %t4097
+  %t4099 = inttoptr i64 %t4098 to ptr
+  %t4100 = call fastcc i64%t4099(i64 %t4095, i64 3, i64 %a0, i64 %t4094, i64 %t4077, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4101 = or i64 %t4100, %t4077
+  %t4102 = and i64 %t4101, 7
+  %t4103 = icmp eq i64 %t4102, 0
+  br i1 %t4103, label %fixfast1124, label %fixslow1125
+fixfast1124:
+  %t4104 = icmp slt i64 %t4100, %t4077
+  %t4105 = select i1 %t4104, i64 257, i64 1
+  br label %fixmerge1126
+fixslow1125:
+  %t4106 = call i64 @rt_lt(i64 %t4100, i64 %t4077)
+  br label %fixmerge1126
+fixmerge1126:
+  %t4107 = phi i64 [ %t4105, %fixfast1124 ], [ %t4106, %fixslow1125 ]
+  %t4108 = icmp ne i64 %t4107, 1
+  br i1 %t4108, label %then1127, label %else1128
+then1127:
+  %t4109 = call i64 @rt_string_ref(i64 %a0, i64 %t4100)
+  %t4110 = load i64, ptr @"scheme.base:rd-dotchar?"
+  %t4111 = and i64 %t4110, -8
+  %t4112 = inttoptr i64 %t4111 to ptr
+  %t4113 = load i64, ptr %t4112
+  %t4114 = inttoptr i64 %t4113 to ptr
+  %t4115 = call fastcc i64%t4114(i64 %t4110, i64 1, i64 %t4109, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  br label %merge1129
+else1128:
+  br label %merge1129
+merge1129:
+  %t4116 = phi i64 [ %t4115, %then1127 ], [ 1, %else1128 ]
+  %t4117 = icmp ne i64 %t4116, 1
+  br i1 %t4117, label %then1130, label %else1131
+then1130:
+  %t4118 = or i64 %t4100, 8
+  %t4119 = and i64 %t4118, 7
+  %t4120 = icmp eq i64 %t4119, 0
+  br i1 %t4120, label %fixfast1133, label %fixslow1134
+fixfast1133:
+  %t4121 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t4100, i64 8)
+  %t4122 = extractvalue {i64, i1} %t4121, 0
+  %t4123 = extractvalue {i64, i1} %t4121, 1
+  br i1 %t4123, label %fixslow1134, label %fixmerge1135
+fixslow1134:
+  %t4124 = call i64 @rt_add(i64 %t4100, i64 8)
+  br label %fixmerge1135
+fixmerge1135:
+  %t4125 = phi i64 [ %t4122, %fixfast1133 ], [ %t4124, %fixslow1134 ]
+  br label %merge1132
+else1131:
+  br label %merge1132
+merge1132:
+  %t4126 = phi i64 [ %t4125, %fixmerge1135 ], [ %t4100, %else1131 ]
+  %t4127 = or i64 %t4100, %t4126
+  %t4128 = and i64 %t4127, 7
+  %t4129 = icmp eq i64 %t4128, 0
+  br i1 %t4129, label %fixfast1136, label %fixslow1137
+fixfast1136:
+  %t4130 = icmp slt i64 %t4100, %t4126
+  %t4131 = select i1 %t4130, i64 257, i64 1
+  br label %fixmerge1138
+fixslow1137:
+  %t4132 = call i64 @rt_lt(i64 %t4100, i64 %t4126)
+  br label %fixmerge1138
+fixmerge1138:
+  %t4133 = phi i64 [ %t4131, %fixfast1136 ], [ %t4132, %fixslow1137 ]
+  %t4134 = load i64, ptr @"scheme.base:rd-scan-digits"
+  %t4135 = and i64 %t4134, -8
+  %t4136 = inttoptr i64 %t4135 to ptr
+  %t4137 = load i64, ptr %t4136
+  %t4138 = inttoptr i64 %t4137 to ptr
+  %t4139 = call fastcc i64%t4138(i64 %t4134, i64 3, i64 %a0, i64 %t4126, i64 %t4077, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4140 = or i64 %t4094, %t4100
+  %t4141 = and i64 %t4140, 7
+  %t4142 = icmp eq i64 %t4141, 0
+  br i1 %t4142, label %fixfast1139, label %fixslow1140
+fixfast1139:
+  %t4143 = icmp slt i64 %t4094, %t4100
+  %t4144 = select i1 %t4143, i64 257, i64 1
+  br label %fixmerge1141
+fixslow1140:
+  %t4145 = call i64 @rt_lt(i64 %t4094, i64 %t4100)
+  br label %fixmerge1141
+fixmerge1141:
+  %t4146 = phi i64 [ %t4144, %fixfast1139 ], [ %t4145, %fixslow1140 ]
+  %t4147 = icmp ne i64 %t4146, 1
+  br i1 %t4147, label %then1142, label %else1143
+then1142:
+  br label %merge1144
+else1143:
+  %t4148 = or i64 %t4126, %t4139
+  %t4149 = and i64 %t4148, 7
+  %t4150 = icmp eq i64 %t4149, 0
+  br i1 %t4150, label %fixfast1145, label %fixslow1146
+fixfast1145:
+  %t4151 = icmp slt i64 %t4126, %t4139
+  %t4152 = select i1 %t4151, i64 257, i64 1
+  br label %fixmerge1147
+fixslow1146:
+  %t4153 = call i64 @rt_lt(i64 %t4126, i64 %t4139)
+  br label %fixmerge1147
+fixmerge1147:
+  %t4154 = phi i64 [ %t4152, %fixfast1145 ], [ %t4153, %fixslow1146 ]
+  br label %merge1144
+merge1144:
+  %t4155 = phi i64 [ %t4146, %then1142 ], [ %t4154, %fixmerge1147 ]
+  %t4156 = icmp ne i64 %t4155, 1
+  br i1 %t4156, label %then1148, label %else1149
+then1148:
+  %t4157 = or i64 %t4139, %t4077
+  %t4158 = and i64 %t4157, 7
+  %t4159 = icmp eq i64 %t4158, 0
+  br i1 %t4159, label %fixfast1150, label %fixslow1151
+fixfast1150:
+  %t4160 = icmp slt i64 %t4139, %t4077
+  %t4161 = select i1 %t4160, i64 257, i64 1
+  br label %fixmerge1152
+fixslow1151:
+  %t4162 = call i64 @rt_lt(i64 %t4139, i64 %t4077)
+  br label %fixmerge1152
+fixmerge1152:
+  %t4163 = phi i64 [ %t4161, %fixfast1150 ], [ %t4162, %fixslow1151 ]
+  %t4164 = icmp ne i64 %t4163, 1
+  br i1 %t4164, label %then1153, label %else1154
+then1153:
+  %t4165 = call i64 @rt_string_ref(i64 %a0, i64 %t4139)
+  %t4166 = load i64, ptr @"scheme.base:rd-exp-char?"
+  %t4167 = and i64 %t4166, -8
+  %t4168 = inttoptr i64 %t4167 to ptr
+  %t4169 = load i64, ptr %t4168
+  %t4170 = inttoptr i64 %t4169 to ptr
+  %t4171 = call fastcc i64%t4170(i64 %t4166, i64 1, i64 %t4165, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  br label %merge1155
+else1154:
+  br label %merge1155
+merge1155:
+  %t4172 = phi i64 [ %t4171, %then1153 ], [ 1, %else1154 ]
+  %t4173 = icmp ne i64 %t4172, 1
+  br i1 %t4173, label %then1156, label %else1157
+then1156:
+  %t4174 = or i64 %t4139, 8
+  %t4175 = and i64 %t4174, 7
+  %t4176 = icmp eq i64 %t4175, 0
+  br i1 %t4176, label %fixfast1159, label %fixslow1160
+fixfast1159:
+  %t4177 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t4139, i64 8)
+  %t4178 = extractvalue {i64, i1} %t4177, 0
+  %t4179 = extractvalue {i64, i1} %t4177, 1
+  br i1 %t4179, label %fixslow1160, label %fixmerge1161
+fixslow1160:
+  %t4180 = call i64 @rt_add(i64 %t4139, i64 8)
+  br label %fixmerge1161
+fixmerge1161:
+  %t4181 = phi i64 [ %t4178, %fixfast1159 ], [ %t4180, %fixslow1160 ]
+  %t4182 = or i64 %t4181, %t4077
+  %t4183 = and i64 %t4182, 7
+  %t4184 = icmp eq i64 %t4183, 0
+  br i1 %t4184, label %fixfast1162, label %fixslow1163
+fixfast1162:
+  %t4185 = icmp slt i64 %t4181, %t4077
+  %t4186 = select i1 %t4185, i64 257, i64 1
+  br label %fixmerge1164
+fixslow1163:
+  %t4187 = call i64 @rt_lt(i64 %t4181, i64 %t4077)
+  br label %fixmerge1164
+fixmerge1164:
+  %t4188 = phi i64 [ %t4186, %fixfast1162 ], [ %t4187, %fixslow1163 ]
+  %t4189 = icmp ne i64 %t4188, 1
+  br i1 %t4189, label %then1165, label %else1166
+then1165:
+  %t4190 = or i64 %t4139, 8
+  %t4191 = and i64 %t4190, 7
+  %t4192 = icmp eq i64 %t4191, 0
+  br i1 %t4192, label %fixfast1168, label %fixslow1169
+fixfast1168:
+  %t4193 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t4139, i64 8)
+  %t4194 = extractvalue {i64, i1} %t4193, 0
+  %t4195 = extractvalue {i64, i1} %t4193, 1
+  br i1 %t4195, label %fixslow1169, label %fixmerge1170
+fixslow1169:
+  %t4196 = call i64 @rt_add(i64 %t4139, i64 8)
+  br label %fixmerge1170
+fixmerge1170:
+  %t4197 = phi i64 [ %t4194, %fixfast1168 ], [ %t4196, %fixslow1169 ]
+  %t4198 = call i64 @rt_string_ref(i64 %a0, i64 %t4197)
+  %t4199 = load i64, ptr @"scheme.base:rd-sign-char?"
+  %t4200 = and i64 %t4199, -8
+  %t4201 = inttoptr i64 %t4200 to ptr
+  %t4202 = load i64, ptr %t4201
+  %t4203 = inttoptr i64 %t4202 to ptr
+  %t4204 = call fastcc i64%t4203(i64 %t4199, i64 1, i64 %t4198, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  br label %merge1167
+else1166:
+  br label %merge1167
+merge1167:
+  %t4205 = phi i64 [ %t4204, %fixmerge1170 ], [ 1, %else1166 ]
+  %t4206 = icmp ne i64 %t4205, 1
+  br i1 %t4206, label %then1171, label %else1172
+then1171:
+  %t4207 = or i64 %t4139, 16
+  %t4208 = and i64 %t4207, 7
+  %t4209 = icmp eq i64 %t4208, 0
+  br i1 %t4209, label %fixfast1174, label %fixslow1175
+fixfast1174:
+  %t4210 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t4139, i64 16)
+  %t4211 = extractvalue {i64, i1} %t4210, 0
+  %t4212 = extractvalue {i64, i1} %t4210, 1
+  br i1 %t4212, label %fixslow1175, label %fixmerge1176
+fixslow1175:
+  %t4213 = call i64 @rt_add(i64 %t4139, i64 16)
+  br label %fixmerge1176
+fixmerge1176:
+  %t4214 = phi i64 [ %t4211, %fixfast1174 ], [ %t4213, %fixslow1175 ]
+  br label %merge1173
+else1172:
+  %t4215 = or i64 %t4139, 8
+  %t4216 = and i64 %t4215, 7
+  %t4217 = icmp eq i64 %t4216, 0
+  br i1 %t4217, label %fixfast1177, label %fixslow1178
+fixfast1177:
+  %t4218 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t4139, i64 8)
+  %t4219 = extractvalue {i64, i1} %t4218, 0
+  %t4220 = extractvalue {i64, i1} %t4218, 1
+  br i1 %t4220, label %fixslow1178, label %fixmerge1179
+fixslow1178:
+  %t4221 = call i64 @rt_add(i64 %t4139, i64 8)
+  br label %fixmerge1179
+fixmerge1179:
+  %t4222 = phi i64 [ %t4219, %fixfast1177 ], [ %t4221, %fixslow1178 ]
+  br label %merge1173
+merge1173:
+  %t4223 = phi i64 [ %t4214, %fixmerge1176 ], [ %t4222, %fixmerge1179 ]
+  %t4224 = load i64, ptr @"scheme.base:rd-scan-digits"
+  %t4225 = and i64 %t4224, -8
+  %t4226 = inttoptr i64 %t4225 to ptr
+  %t4227 = load i64, ptr %t4226
+  %t4228 = inttoptr i64 %t4227 to ptr
+  %t4229 = call fastcc i64%t4228(i64 %t4224, i64 3, i64 %a0, i64 %t4223, i64 %t4077, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4230 = or i64 %t4223, %t4229
+  %t4231 = and i64 %t4230, 7
+  %t4232 = icmp eq i64 %t4231, 0
+  br i1 %t4232, label %fixfast1180, label %fixslow1181
+fixfast1180:
+  %t4233 = icmp slt i64 %t4223, %t4229
+  %t4234 = select i1 %t4233, i64 257, i64 1
+  br label %fixmerge1182
+fixslow1181:
+  %t4235 = call i64 @rt_lt(i64 %t4223, i64 %t4229)
+  br label %fixmerge1182
+fixmerge1182:
+  %t4236 = phi i64 [ %t4234, %fixfast1180 ], [ %t4235, %fixslow1181 ]
+  %t4237 = icmp ne i64 %t4236, 1
+  br i1 %t4237, label %then1183, label %else1184
+then1183:
+  br label %merge1185
+else1184:
+  br label %merge1185
+merge1185:
+  %t4238 = phi i64 [ %t4229, %then1183 ], [ -8, %else1184 ]
+  br label %merge1158
+else1157:
+  br label %merge1158
+merge1158:
+  %t4239 = phi i64 [ %t4238, %merge1185 ], [ %t4139, %else1157 ]
+  %t4240 = or i64 -8, %t4239
+  %t4241 = and i64 %t4240, 7
+  %t4242 = icmp eq i64 %t4241, 0
+  br i1 %t4242, label %fixfast1186, label %fixslow1187
+fixfast1186:
+  %t4243 = icmp slt i64 -8, %t4239
+  %t4244 = select i1 %t4243, i64 257, i64 1
+  br label %fixmerge1188
+fixslow1187:
+  %t4245 = call i64 @rt_lt(i64 -8, i64 %t4239)
+  br label %fixmerge1188
+fixmerge1188:
+  %t4246 = phi i64 [ %t4244, %fixfast1186 ], [ %t4245, %fixslow1187 ]
+  %t4247 = icmp ne i64 %t4246, 1
+  br i1 %t4247, label %then1189, label %else1190
+then1189:
+  %t4248 = or i64 %t4239, %t4077
+  %t4249 = and i64 %t4248, 7
+  %t4250 = icmp eq i64 %t4249, 0
+  br i1 %t4250, label %fixfast1191, label %fixslow1192
+fixfast1191:
+  %t4251 = icmp eq i64 %t4239, %t4077
+  %t4252 = select i1 %t4251, i64 257, i64 1
+  br label %fixmerge1193
+fixslow1192:
+  %t4253 = call i64 @rt_num_eq(i64 %t4239, i64 %t4077)
+  br label %fixmerge1193
+fixmerge1193:
+  %t4254 = phi i64 [ %t4252, %fixfast1191 ], [ %t4253, %fixslow1192 ]
+  %t4255 = icmp ne i64 %t4254, 1
+  br i1 %t4255, label %then1194, label %else1195
 then1194:
-  ret i64 %t4126
+  %t4256 = icmp ne i64 %t4133, 1
+  br i1 %t4256, label %then1196, label %else1197
+then1196:
+  ret i64 %t4133
+else1197:
+  %t4257 = or i64 %t4139, %t4239
+  %t4258 = and i64 %t4257, 7
+  %t4259 = icmp eq i64 %t4258, 0
+  br i1 %t4259, label %fixfast1198, label %fixslow1199
+fixfast1198:
+  %t4260 = icmp slt i64 %t4139, %t4239
+  %t4261 = select i1 %t4260, i64 257, i64 1
+  br label %fixmerge1200
+fixslow1199:
+  %t4262 = call i64 @rt_lt(i64 %t4139, i64 %t4239)
+  br label %fixmerge1200
+fixmerge1200:
+  %t4263 = phi i64 [ %t4261, %fixfast1198 ], [ %t4262, %fixslow1199 ]
+  ret i64 %t4263
 else1195:
-  %t4250 = or i64 %t4132, %t4232
-  %t4251 = and i64 %t4250, 7
-  %t4252 = icmp eq i64 %t4251, 0
-  br i1 %t4252, label %fixfast1196, label %fixslow1197
-fixfast1196:
-  %t4253 = icmp slt i64 %t4132, %t4232
-  %t4254 = select i1 %t4253, i64 257, i64 1
-  br label %fixmerge1198
-fixslow1197:
-  %t4255 = call i64 @rt_lt(i64 %t4132, i64 %t4232)
-  br label %fixmerge1198
-fixmerge1198:
-  %t4256 = phi i64 [ %t4254, %fixfast1196 ], [ %t4255, %fixslow1197 ]
-  ret i64 %t4256
-else1193:
   ret i64 1
-else1188:
+else1190:
   ret i64 1
-else1147:
+else1149:
   ret i64 1
-else1118:
+else1120:
+  ret i64 1
+}
+
+define fastcc i64 @"scheme.base:code:rd-nonfinite"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+entry:
+  %t4268 = icmp eq i64 %argc, 1
+  br i1 %t4268, label %argok1202, label %arityerr1201
+arityerr1201:
+  call void @rt_arity_error(i64 1, i64 %argc)
+  unreachable
+argok1202:
+  %t4269 = call i64 @rt_make_string(ptr @.str.lit.13, i64 6)
+  %t4270 = call i64 @rt_string_eq(i64 %a0, i64 %t4269)
+  %t4271 = icmp ne i64 %t4270, 1
+  br i1 %t4271, label %then1203, label %else1204
+then1203:
+  %t4272 = call i64 @rt_make_string(ptr @.str.lit.14, i64 3)
+  %t4273 = call i64 @rt_string_to_flonum(i64 %t4272)
+  ret i64 %t4273
+else1204:
+  %t4274 = call i64 @rt_make_string(ptr @.str.lit.15, i64 6)
+  %t4275 = call i64 @rt_string_eq(i64 %a0, i64 %t4274)
+  %t4276 = icmp ne i64 %t4275, 1
+  br i1 %t4276, label %then1205, label %else1206
+then1205:
+  %t4277 = call i64 @rt_make_string(ptr @.str.lit.16, i64 4)
+  %t4278 = call i64 @rt_string_to_flonum(i64 %t4277)
+  ret i64 %t4278
+else1206:
+  %t4279 = call i64 @rt_make_string(ptr @.str.lit.17, i64 6)
+  %t4280 = call i64 @rt_string_eq(i64 %a0, i64 %t4279)
+  %t4281 = icmp ne i64 %t4280, 1
+  br i1 %t4281, label %then1207, label %else1208
+then1207:
+  %t4282 = call i64 @rt_make_string(ptr @.str.lit.18, i64 3)
+  %t4283 = call i64 @rt_string_to_flonum(i64 %t4282)
+  ret i64 %t4283
+else1208:
   ret i64 1
 }
 
 define fastcc i64 @"scheme.base:code:rd-atom"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t4261 = icmp eq i64 %argc, 3
-  br i1 %t4261, label %argok1200, label %arityerr1199
-arityerr1199:
+  %t4288 = icmp eq i64 %argc, 3
+  br i1 %t4288, label %argok1210, label %arityerr1209
+arityerr1209:
   call void @rt_arity_error(i64 3, i64 %argc)
   unreachable
-argok1200:
-  %t4262 = load i64, ptr @"scheme.base:rd-token-end"
-  %t4263 = and i64 %t4262, -8
-  %t4264 = inttoptr i64 %t4263 to ptr
-  %t4265 = load i64, ptr %t4264
-  %t4266 = inttoptr i64 %t4265 to ptr
-  %t4267 = call fastcc i64%t4266(i64 %t4262, i64 3, i64 %a0, i64 %a1, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4268 = call i64 @rt_substring(i64 %a0, i64 %a2, i64 %t4267)
-  %t4269 = load i64, ptr @"scheme.base:rd-numeric?"
-  %t4270 = and i64 %t4269, -8
-  %t4271 = inttoptr i64 %t4270 to ptr
-  %t4272 = load i64, ptr %t4271
-  %t4273 = inttoptr i64 %t4272 to ptr
-  %t4274 = call fastcc i64%t4273(i64 %t4269, i64 1, i64 %t4268, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4275 = icmp ne i64 %t4274, 1
-  br i1 %t4275, label %then1201, label %else1202
-then1201:
-  %t4276 = load i64, ptr @"scheme.base:rd-parse-int"
-  %t4277 = and i64 %t4276, -8
-  %t4278 = inttoptr i64 %t4277 to ptr
-  %t4279 = load i64, ptr %t4278
-  %t4280 = inttoptr i64 %t4279 to ptr
-  %t4281 = call fastcc i64%t4280(i64 %t4276, i64 1, i64 %t4268, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  br label %merge1203
-else1202:
-  %t4282 = load i64, ptr @"scheme.base:rd-flonum?"
-  %t4283 = and i64 %t4282, -8
-  %t4284 = inttoptr i64 %t4283 to ptr
-  %t4285 = load i64, ptr %t4284
-  %t4286 = inttoptr i64 %t4285 to ptr
-  %t4287 = call fastcc i64%t4286(i64 %t4282, i64 1, i64 %t4268, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4288 = icmp ne i64 %t4287, 1
-  br i1 %t4288, label %then1204, label %else1205
-then1204:
-  %t4289 = call i64 @rt_string_to_flonum(i64 %t4268)
-  br label %merge1206
-else1205:
-  %t4290 = call i64 @rt_string_to_symbol(i64 %t4268)
-  br label %merge1206
-merge1206:
-  %t4291 = phi i64 [ %t4289, %then1204 ], [ %t4290, %else1205 ]
-  br label %merge1203
-merge1203:
-  %t4292 = phi i64 [ %t4281, %then1201 ], [ %t4291, %merge1206 ]
-  %t4293 = call i64 @rt_cons(i64 %t4292, i64 %t4267)
-  ret i64 %t4293
+argok1210:
+  %t4289 = load i64, ptr @"scheme.base:rd-token-end"
+  %t4290 = and i64 %t4289, -8
+  %t4291 = inttoptr i64 %t4290 to ptr
+  %t4292 = load i64, ptr %t4291
+  %t4293 = inttoptr i64 %t4292 to ptr
+  %t4294 = call fastcc i64%t4293(i64 %t4289, i64 3, i64 %a0, i64 %a1, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4295 = call i64 @rt_substring(i64 %a0, i64 %a2, i64 %t4294)
+  %t4296 = load i64, ptr @"scheme.base:rd-numeric?"
+  %t4297 = and i64 %t4296, -8
+  %t4298 = inttoptr i64 %t4297 to ptr
+  %t4299 = load i64, ptr %t4298
+  %t4300 = inttoptr i64 %t4299 to ptr
+  %t4301 = call fastcc i64%t4300(i64 %t4296, i64 1, i64 %t4295, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4302 = icmp ne i64 %t4301, 1
+  br i1 %t4302, label %then1211, label %else1212
+then1211:
+  %t4303 = load i64, ptr @"scheme.base:rd-parse-int"
+  %t4304 = and i64 %t4303, -8
+  %t4305 = inttoptr i64 %t4304 to ptr
+  %t4306 = load i64, ptr %t4305
+  %t4307 = inttoptr i64 %t4306 to ptr
+  %t4308 = call fastcc i64%t4307(i64 %t4303, i64 1, i64 %t4295, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  br label %merge1213
+else1212:
+  %t4309 = load i64, ptr @"scheme.base:rd-nonfinite"
+  %t4310 = and i64 %t4309, -8
+  %t4311 = inttoptr i64 %t4310 to ptr
+  %t4312 = load i64, ptr %t4311
+  %t4313 = inttoptr i64 %t4312 to ptr
+  %t4314 = call fastcc i64%t4313(i64 %t4309, i64 1, i64 %t4295, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4315 = icmp ne i64 %t4314, 1
+  br i1 %t4315, label %then1214, label %else1215
+then1214:
+  br label %merge1216
+else1215:
+  %t4316 = load i64, ptr @"scheme.base:rd-flonum?"
+  %t4317 = and i64 %t4316, -8
+  %t4318 = inttoptr i64 %t4317 to ptr
+  %t4319 = load i64, ptr %t4318
+  %t4320 = inttoptr i64 %t4319 to ptr
+  %t4321 = call fastcc i64%t4320(i64 %t4316, i64 1, i64 %t4295, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4322 = icmp ne i64 %t4321, 1
+  br i1 %t4322, label %then1217, label %else1218
+then1217:
+  %t4323 = call i64 @rt_string_to_flonum(i64 %t4295)
+  br label %merge1219
+else1218:
+  %t4324 = call i64 @rt_string_to_symbol(i64 %t4295)
+  br label %merge1219
+merge1219:
+  %t4325 = phi i64 [ %t4323, %then1217 ], [ %t4324, %else1218 ]
+  br label %merge1216
+merge1216:
+  %t4326 = phi i64 [ %t4314, %then1214 ], [ %t4325, %merge1219 ]
+  br label %merge1213
+merge1213:
+  %t4327 = phi i64 [ %t4308, %then1211 ], [ %t4326, %merge1216 ]
+  %t4328 = call i64 @rt_cons(i64 %t4327, i64 %t4294)
+  ret i64 %t4328
 }
 
 define fastcc i64 @"scheme.base:code:rd-hex-digit"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t4298 = icmp eq i64 %argc, 1
-  br i1 %t4298, label %argok1208, label %arityerr1207
-arityerr1207:
+  %t4333 = icmp eq i64 %argc, 1
+  br i1 %t4333, label %argok1221, label %arityerr1220
+arityerr1220:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1208:
-  %t4299 = call i64 @rt_char_to_integer(i64 %a0)
-  %t4300 = or i64 376, %t4299
-  %t4301 = and i64 %t4300, 7
-  %t4302 = icmp eq i64 %t4301, 0
-  br i1 %t4302, label %fixfast1209, label %fixslow1210
-fixfast1209:
-  %t4303 = icmp slt i64 376, %t4299
-  %t4304 = select i1 %t4303, i64 257, i64 1
-  br label %fixmerge1211
-fixslow1210:
-  %t4305 = call i64 @rt_lt(i64 376, i64 %t4299)
-  br label %fixmerge1211
-fixmerge1211:
-  %t4306 = phi i64 [ %t4304, %fixfast1209 ], [ %t4305, %fixslow1210 ]
-  %t4307 = icmp ne i64 %t4306, 1
-  br i1 %t4307, label %then1212, label %else1213
-then1212:
-  %t4308 = or i64 %t4299, 464
-  %t4309 = and i64 %t4308, 7
-  %t4310 = icmp eq i64 %t4309, 0
-  br i1 %t4310, label %fixfast1215, label %fixslow1216
-fixfast1215:
-  %t4311 = icmp slt i64 %t4299, 464
-  %t4312 = select i1 %t4311, i64 257, i64 1
-  br label %fixmerge1217
-fixslow1216:
-  %t4313 = call i64 @rt_lt(i64 %t4299, i64 464)
-  br label %fixmerge1217
-fixmerge1217:
-  %t4314 = phi i64 [ %t4312, %fixfast1215 ], [ %t4313, %fixslow1216 ]
-  br label %merge1214
-else1213:
-  br label %merge1214
-merge1214:
-  %t4315 = phi i64 [ %t4314, %fixmerge1217 ], [ 1, %else1213 ]
-  %t4316 = icmp ne i64 %t4315, 1
-  br i1 %t4316, label %then1218, label %else1219
-then1218:
-  %t4317 = or i64 %t4299, 384
-  %t4318 = and i64 %t4317, 7
-  %t4319 = icmp eq i64 %t4318, 0
-  br i1 %t4319, label %fixfast1220, label %fixslow1221
-fixfast1220:
-  %t4320 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %t4299, i64 384)
-  %t4321 = extractvalue {i64, i1} %t4320, 0
-  %t4322 = extractvalue {i64, i1} %t4320, 1
-  br i1 %t4322, label %fixslow1221, label %fixmerge1222
-fixslow1221:
-  %t4323 = call i64 @rt_sub(i64 %t4299, i64 384)
-  br label %fixmerge1222
-fixmerge1222:
-  %t4324 = phi i64 [ %t4321, %fixfast1220 ], [ %t4323, %fixslow1221 ]
-  ret i64 %t4324
-else1219:
-  %t4325 = or i64 768, %t4299
-  %t4326 = and i64 %t4325, 7
-  %t4327 = icmp eq i64 %t4326, 0
-  br i1 %t4327, label %fixfast1223, label %fixslow1224
-fixfast1223:
-  %t4328 = icmp slt i64 768, %t4299
-  %t4329 = select i1 %t4328, i64 257, i64 1
-  br label %fixmerge1225
-fixslow1224:
-  %t4330 = call i64 @rt_lt(i64 768, i64 %t4299)
-  br label %fixmerge1225
-fixmerge1225:
-  %t4331 = phi i64 [ %t4329, %fixfast1223 ], [ %t4330, %fixslow1224 ]
-  %t4332 = icmp ne i64 %t4331, 1
-  br i1 %t4332, label %then1226, label %else1227
-then1226:
-  %t4333 = or i64 %t4299, 824
-  %t4334 = and i64 %t4333, 7
-  %t4335 = icmp eq i64 %t4334, 0
-  br i1 %t4335, label %fixfast1229, label %fixslow1230
-fixfast1229:
-  %t4336 = icmp slt i64 %t4299, 824
-  %t4337 = select i1 %t4336, i64 257, i64 1
-  br label %fixmerge1231
-fixslow1230:
-  %t4338 = call i64 @rt_lt(i64 %t4299, i64 824)
-  br label %fixmerge1231
-fixmerge1231:
-  %t4339 = phi i64 [ %t4337, %fixfast1229 ], [ %t4338, %fixslow1230 ]
-  br label %merge1228
-else1227:
-  br label %merge1228
-merge1228:
-  %t4340 = phi i64 [ %t4339, %fixmerge1231 ], [ 1, %else1227 ]
-  %t4341 = icmp ne i64 %t4340, 1
-  br i1 %t4341, label %then1232, label %else1233
-then1232:
-  %t4342 = or i64 %t4299, 696
-  %t4343 = and i64 %t4342, 7
-  %t4344 = icmp eq i64 %t4343, 0
-  br i1 %t4344, label %fixfast1234, label %fixslow1235
-fixfast1234:
-  %t4345 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %t4299, i64 696)
-  %t4346 = extractvalue {i64, i1} %t4345, 0
-  %t4347 = extractvalue {i64, i1} %t4345, 1
-  br i1 %t4347, label %fixslow1235, label %fixmerge1236
-fixslow1235:
-  %t4348 = call i64 @rt_sub(i64 %t4299, i64 696)
-  br label %fixmerge1236
-fixmerge1236:
-  %t4349 = phi i64 [ %t4346, %fixfast1234 ], [ %t4348, %fixslow1235 ]
-  ret i64 %t4349
-else1233:
-  %t4350 = or i64 512, %t4299
-  %t4351 = and i64 %t4350, 7
-  %t4352 = icmp eq i64 %t4351, 0
-  br i1 %t4352, label %fixfast1237, label %fixslow1238
-fixfast1237:
-  %t4353 = icmp slt i64 512, %t4299
-  %t4354 = select i1 %t4353, i64 257, i64 1
-  br label %fixmerge1239
-fixslow1238:
-  %t4355 = call i64 @rt_lt(i64 512, i64 %t4299)
-  br label %fixmerge1239
-fixmerge1239:
-  %t4356 = phi i64 [ %t4354, %fixfast1237 ], [ %t4355, %fixslow1238 ]
-  %t4357 = icmp ne i64 %t4356, 1
-  br i1 %t4357, label %then1240, label %else1241
-then1240:
-  %t4358 = or i64 %t4299, 568
-  %t4359 = and i64 %t4358, 7
-  %t4360 = icmp eq i64 %t4359, 0
-  br i1 %t4360, label %fixfast1243, label %fixslow1244
-fixfast1243:
-  %t4361 = icmp slt i64 %t4299, 568
-  %t4362 = select i1 %t4361, i64 257, i64 1
-  br label %fixmerge1245
-fixslow1244:
-  %t4363 = call i64 @rt_lt(i64 %t4299, i64 568)
-  br label %fixmerge1245
-fixmerge1245:
-  %t4364 = phi i64 [ %t4362, %fixfast1243 ], [ %t4363, %fixslow1244 ]
-  br label %merge1242
-else1241:
-  br label %merge1242
-merge1242:
-  %t4365 = phi i64 [ %t4364, %fixmerge1245 ], [ 1, %else1241 ]
-  %t4366 = icmp ne i64 %t4365, 1
-  br i1 %t4366, label %then1246, label %else1247
-then1246:
-  %t4367 = or i64 %t4299, 440
-  %t4368 = and i64 %t4367, 7
-  %t4369 = icmp eq i64 %t4368, 0
-  br i1 %t4369, label %fixfast1248, label %fixslow1249
-fixfast1248:
-  %t4370 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %t4299, i64 440)
-  %t4371 = extractvalue {i64, i1} %t4370, 0
-  %t4372 = extractvalue {i64, i1} %t4370, 1
-  br i1 %t4372, label %fixslow1249, label %fixmerge1250
-fixslow1249:
-  %t4373 = call i64 @rt_sub(i64 %t4299, i64 440)
-  br label %fixmerge1250
-fixmerge1250:
-  %t4374 = phi i64 [ %t4371, %fixfast1248 ], [ %t4373, %fixslow1249 ]
-  ret i64 %t4374
-else1247:
+argok1221:
+  %t4334 = call i64 @rt_char_to_integer(i64 %a0)
+  %t4335 = or i64 376, %t4334
+  %t4336 = and i64 %t4335, 7
+  %t4337 = icmp eq i64 %t4336, 0
+  br i1 %t4337, label %fixfast1222, label %fixslow1223
+fixfast1222:
+  %t4338 = icmp slt i64 376, %t4334
+  %t4339 = select i1 %t4338, i64 257, i64 1
+  br label %fixmerge1224
+fixslow1223:
+  %t4340 = call i64 @rt_lt(i64 376, i64 %t4334)
+  br label %fixmerge1224
+fixmerge1224:
+  %t4341 = phi i64 [ %t4339, %fixfast1222 ], [ %t4340, %fixslow1223 ]
+  %t4342 = icmp ne i64 %t4341, 1
+  br i1 %t4342, label %then1225, label %else1226
+then1225:
+  %t4343 = or i64 %t4334, 464
+  %t4344 = and i64 %t4343, 7
+  %t4345 = icmp eq i64 %t4344, 0
+  br i1 %t4345, label %fixfast1228, label %fixslow1229
+fixfast1228:
+  %t4346 = icmp slt i64 %t4334, 464
+  %t4347 = select i1 %t4346, i64 257, i64 1
+  br label %fixmerge1230
+fixslow1229:
+  %t4348 = call i64 @rt_lt(i64 %t4334, i64 464)
+  br label %fixmerge1230
+fixmerge1230:
+  %t4349 = phi i64 [ %t4347, %fixfast1228 ], [ %t4348, %fixslow1229 ]
+  br label %merge1227
+else1226:
+  br label %merge1227
+merge1227:
+  %t4350 = phi i64 [ %t4349, %fixmerge1230 ], [ 1, %else1226 ]
+  %t4351 = icmp ne i64 %t4350, 1
+  br i1 %t4351, label %then1231, label %else1232
+then1231:
+  %t4352 = or i64 %t4334, 384
+  %t4353 = and i64 %t4352, 7
+  %t4354 = icmp eq i64 %t4353, 0
+  br i1 %t4354, label %fixfast1233, label %fixslow1234
+fixfast1233:
+  %t4355 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %t4334, i64 384)
+  %t4356 = extractvalue {i64, i1} %t4355, 0
+  %t4357 = extractvalue {i64, i1} %t4355, 1
+  br i1 %t4357, label %fixslow1234, label %fixmerge1235
+fixslow1234:
+  %t4358 = call i64 @rt_sub(i64 %t4334, i64 384)
+  br label %fixmerge1235
+fixmerge1235:
+  %t4359 = phi i64 [ %t4356, %fixfast1233 ], [ %t4358, %fixslow1234 ]
+  ret i64 %t4359
+else1232:
+  %t4360 = or i64 768, %t4334
+  %t4361 = and i64 %t4360, 7
+  %t4362 = icmp eq i64 %t4361, 0
+  br i1 %t4362, label %fixfast1236, label %fixslow1237
+fixfast1236:
+  %t4363 = icmp slt i64 768, %t4334
+  %t4364 = select i1 %t4363, i64 257, i64 1
+  br label %fixmerge1238
+fixslow1237:
+  %t4365 = call i64 @rt_lt(i64 768, i64 %t4334)
+  br label %fixmerge1238
+fixmerge1238:
+  %t4366 = phi i64 [ %t4364, %fixfast1236 ], [ %t4365, %fixslow1237 ]
+  %t4367 = icmp ne i64 %t4366, 1
+  br i1 %t4367, label %then1239, label %else1240
+then1239:
+  %t4368 = or i64 %t4334, 824
+  %t4369 = and i64 %t4368, 7
+  %t4370 = icmp eq i64 %t4369, 0
+  br i1 %t4370, label %fixfast1242, label %fixslow1243
+fixfast1242:
+  %t4371 = icmp slt i64 %t4334, 824
+  %t4372 = select i1 %t4371, i64 257, i64 1
+  br label %fixmerge1244
+fixslow1243:
+  %t4373 = call i64 @rt_lt(i64 %t4334, i64 824)
+  br label %fixmerge1244
+fixmerge1244:
+  %t4374 = phi i64 [ %t4372, %fixfast1242 ], [ %t4373, %fixslow1243 ]
+  br label %merge1241
+else1240:
+  br label %merge1241
+merge1241:
+  %t4375 = phi i64 [ %t4374, %fixmerge1244 ], [ 1, %else1240 ]
+  %t4376 = icmp ne i64 %t4375, 1
+  br i1 %t4376, label %then1245, label %else1246
+then1245:
+  %t4377 = or i64 %t4334, 696
+  %t4378 = and i64 %t4377, 7
+  %t4379 = icmp eq i64 %t4378, 0
+  br i1 %t4379, label %fixfast1247, label %fixslow1248
+fixfast1247:
+  %t4380 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %t4334, i64 696)
+  %t4381 = extractvalue {i64, i1} %t4380, 0
+  %t4382 = extractvalue {i64, i1} %t4380, 1
+  br i1 %t4382, label %fixslow1248, label %fixmerge1249
+fixslow1248:
+  %t4383 = call i64 @rt_sub(i64 %t4334, i64 696)
+  br label %fixmerge1249
+fixmerge1249:
+  %t4384 = phi i64 [ %t4381, %fixfast1247 ], [ %t4383, %fixslow1248 ]
+  ret i64 %t4384
+else1246:
+  %t4385 = or i64 512, %t4334
+  %t4386 = and i64 %t4385, 7
+  %t4387 = icmp eq i64 %t4386, 0
+  br i1 %t4387, label %fixfast1250, label %fixslow1251
+fixfast1250:
+  %t4388 = icmp slt i64 512, %t4334
+  %t4389 = select i1 %t4388, i64 257, i64 1
+  br label %fixmerge1252
+fixslow1251:
+  %t4390 = call i64 @rt_lt(i64 512, i64 %t4334)
+  br label %fixmerge1252
+fixmerge1252:
+  %t4391 = phi i64 [ %t4389, %fixfast1250 ], [ %t4390, %fixslow1251 ]
+  %t4392 = icmp ne i64 %t4391, 1
+  br i1 %t4392, label %then1253, label %else1254
+then1253:
+  %t4393 = or i64 %t4334, 568
+  %t4394 = and i64 %t4393, 7
+  %t4395 = icmp eq i64 %t4394, 0
+  br i1 %t4395, label %fixfast1256, label %fixslow1257
+fixfast1256:
+  %t4396 = icmp slt i64 %t4334, 568
+  %t4397 = select i1 %t4396, i64 257, i64 1
+  br label %fixmerge1258
+fixslow1257:
+  %t4398 = call i64 @rt_lt(i64 %t4334, i64 568)
+  br label %fixmerge1258
+fixmerge1258:
+  %t4399 = phi i64 [ %t4397, %fixfast1256 ], [ %t4398, %fixslow1257 ]
+  br label %merge1255
+else1254:
+  br label %merge1255
+merge1255:
+  %t4400 = phi i64 [ %t4399, %fixmerge1258 ], [ 1, %else1254 ]
+  %t4401 = icmp ne i64 %t4400, 1
+  br i1 %t4401, label %then1259, label %else1260
+then1259:
+  %t4402 = or i64 %t4334, 440
+  %t4403 = and i64 %t4402, 7
+  %t4404 = icmp eq i64 %t4403, 0
+  br i1 %t4404, label %fixfast1261, label %fixslow1262
+fixfast1261:
+  %t4405 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %t4334, i64 440)
+  %t4406 = extractvalue {i64, i1} %t4405, 0
+  %t4407 = extractvalue {i64, i1} %t4405, 1
+  br i1 %t4407, label %fixslow1262, label %fixmerge1263
+fixslow1262:
+  %t4408 = call i64 @rt_sub(i64 %t4334, i64 440)
+  br label %fixmerge1263
+fixmerge1263:
+  %t4409 = phi i64 [ %t4406, %fixfast1261 ], [ %t4408, %fixslow1262 ]
+  ret i64 %t4409
+else1260:
   ret i64 0
 }
 
 define fastcc i64 @"scheme.base:code:rd-hex"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t4379 = icmp eq i64 %argc, 4
-  br i1 %t4379, label %argok1252, label %arityerr1251
-arityerr1251:
+  %t4414 = icmp eq i64 %argc, 4
+  br i1 %t4414, label %argok1265, label %arityerr1264
+arityerr1264:
   call void @rt_arity_error(i64 4, i64 %argc)
   unreachable
-argok1252:
-  %t4380 = or i64 %a2, %a1
-  %t4381 = and i64 %t4380, 7
-  %t4382 = icmp eq i64 %t4381, 0
-  br i1 %t4382, label %fixfast1253, label %fixslow1254
-fixfast1253:
-  %t4383 = icmp slt i64 %a2, %a1
-  %t4384 = select i1 %t4383, i64 257, i64 1
-  br label %fixmerge1255
-fixslow1254:
-  %t4385 = call i64 @rt_lt(i64 %a2, i64 %a1)
-  br label %fixmerge1255
-fixmerge1255:
-  %t4386 = phi i64 [ %t4384, %fixfast1253 ], [ %t4385, %fixslow1254 ]
-  %t4387 = icmp ne i64 %t4386, 1
-  br i1 %t4387, label %then1256, label %else1257
-then1256:
-  %t4388 = call i64 @rt_string_ref(i64 %a0, i64 %a2)
-  %t4389 = call i64 @rt_char_to_integer(i64 %t4388)
-  %t4390 = or i64 %t4389, 472
-  %t4391 = and i64 %t4390, 7
-  %t4392 = icmp eq i64 %t4391, 0
-  br i1 %t4392, label %fixfast1258, label %fixslow1259
-fixfast1258:
-  %t4393 = icmp eq i64 %t4389, 472
-  %t4394 = select i1 %t4393, i64 257, i64 1
-  br label %fixmerge1260
-fixslow1259:
-  %t4395 = call i64 @rt_num_eq(i64 %t4389, i64 472)
-  br label %fixmerge1260
-fixmerge1260:
-  %t4396 = phi i64 [ %t4394, %fixfast1258 ], [ %t4395, %fixslow1259 ]
-  %t4397 = icmp ne i64 %t4396, 1
-  br i1 %t4397, label %then1261, label %else1262
-then1261:
-  %t4398 = or i64 %a2, 8
-  %t4399 = and i64 %t4398, 7
-  %t4400 = icmp eq i64 %t4399, 0
-  br i1 %t4400, label %fixfast1263, label %fixslow1264
-fixfast1263:
-  %t4401 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
-  %t4402 = extractvalue {i64, i1} %t4401, 0
-  %t4403 = extractvalue {i64, i1} %t4401, 1
-  br i1 %t4403, label %fixslow1264, label %fixmerge1265
-fixslow1264:
-  %t4404 = call i64 @rt_add(i64 %a2, i64 8)
-  br label %fixmerge1265
-fixmerge1265:
-  %t4405 = phi i64 [ %t4402, %fixfast1263 ], [ %t4404, %fixslow1264 ]
-  %t4406 = call i64 @rt_cons(i64 %a3, i64 %t4405)
-  ret i64 %t4406
-else1262:
-  %t4407 = or i64 %a2, 8
-  %t4408 = and i64 %t4407, 7
-  %t4409 = icmp eq i64 %t4408, 0
-  br i1 %t4409, label %fixfast1266, label %fixslow1267
-fixfast1266:
-  %t4410 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
-  %t4411 = extractvalue {i64, i1} %t4410, 0
-  %t4412 = extractvalue {i64, i1} %t4410, 1
-  br i1 %t4412, label %fixslow1267, label %fixmerge1268
-fixslow1267:
-  %t4413 = call i64 @rt_add(i64 %a2, i64 8)
-  br label %fixmerge1268
-fixmerge1268:
-  %t4414 = phi i64 [ %t4411, %fixfast1266 ], [ %t4413, %fixslow1267 ]
-  %t4415 = or i64 %a3, 128
+argok1265:
+  %t4415 = or i64 %a2, %a1
   %t4416 = and i64 %t4415, 7
   %t4417 = icmp eq i64 %t4416, 0
-  br i1 %t4417, label %fixfast1269, label %fixslow1270
-fixfast1269:
-  %t4418 = ashr i64 %a3, 3
-  %t4419 = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %t4418, i64 128)
-  %t4420 = extractvalue {i64, i1} %t4419, 0
-  %t4421 = extractvalue {i64, i1} %t4419, 1
-  br i1 %t4421, label %fixslow1270, label %fixmerge1271
-fixslow1270:
-  %t4422 = call i64 @rt_mul(i64 %a3, i64 128)
-  br label %fixmerge1271
-fixmerge1271:
-  %t4423 = phi i64 [ %t4420, %fixfast1269 ], [ %t4422, %fixslow1270 ]
-  %t4424 = call i64 @rt_string_ref(i64 %a0, i64 %a2)
-  %t4425 = load i64, ptr @"scheme.base:rd-hex-digit"
-  %t4426 = and i64 %t4425, -8
-  %t4427 = inttoptr i64 %t4426 to ptr
-  %t4428 = load i64, ptr %t4427
-  %t4429 = inttoptr i64 %t4428 to ptr
-  %t4430 = call fastcc i64%t4429(i64 %t4425, i64 1, i64 %t4424, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4431 = or i64 %t4423, %t4430
-  %t4432 = and i64 %t4431, 7
-  %t4433 = icmp eq i64 %t4432, 0
-  br i1 %t4433, label %fixfast1272, label %fixslow1273
-fixfast1272:
-  %t4434 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t4423, i64 %t4430)
-  %t4435 = extractvalue {i64, i1} %t4434, 0
-  %t4436 = extractvalue {i64, i1} %t4434, 1
-  br i1 %t4436, label %fixslow1273, label %fixmerge1274
-fixslow1273:
-  %t4437 = call i64 @rt_add(i64 %t4423, i64 %t4430)
-  br label %fixmerge1274
-fixmerge1274:
-  %t4438 = phi i64 [ %t4435, %fixfast1272 ], [ %t4437, %fixslow1273 ]
-  %t4439 = load i64, ptr @"scheme.base:rd-hex"
-  %t4440 = and i64 %t4439, -8
-  %t4441 = inttoptr i64 %t4440 to ptr
-  %t4442 = load i64, ptr %t4441
-  %t4443 = inttoptr i64 %t4442 to ptr
-  %t4444 = musttail call fastcc i64 %t4443(i64 %t4439, i64 4, i64 %a0, i64 %a1, i64 %t4414, i64 %t4438, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t4444
-else1257:
-  %t4445 = call i64 @rt_cons(i64 %a3, i64 %a2)
-  ret i64 %t4445
+  br i1 %t4417, label %fixfast1266, label %fixslow1267
+fixfast1266:
+  %t4418 = icmp slt i64 %a2, %a1
+  %t4419 = select i1 %t4418, i64 257, i64 1
+  br label %fixmerge1268
+fixslow1267:
+  %t4420 = call i64 @rt_lt(i64 %a2, i64 %a1)
+  br label %fixmerge1268
+fixmerge1268:
+  %t4421 = phi i64 [ %t4419, %fixfast1266 ], [ %t4420, %fixslow1267 ]
+  %t4422 = icmp ne i64 %t4421, 1
+  br i1 %t4422, label %then1269, label %else1270
+then1269:
+  %t4423 = call i64 @rt_string_ref(i64 %a0, i64 %a2)
+  %t4424 = call i64 @rt_char_to_integer(i64 %t4423)
+  %t4425 = or i64 %t4424, 472
+  %t4426 = and i64 %t4425, 7
+  %t4427 = icmp eq i64 %t4426, 0
+  br i1 %t4427, label %fixfast1271, label %fixslow1272
+fixfast1271:
+  %t4428 = icmp eq i64 %t4424, 472
+  %t4429 = select i1 %t4428, i64 257, i64 1
+  br label %fixmerge1273
+fixslow1272:
+  %t4430 = call i64 @rt_num_eq(i64 %t4424, i64 472)
+  br label %fixmerge1273
+fixmerge1273:
+  %t4431 = phi i64 [ %t4429, %fixfast1271 ], [ %t4430, %fixslow1272 ]
+  %t4432 = icmp ne i64 %t4431, 1
+  br i1 %t4432, label %then1274, label %else1275
+then1274:
+  %t4433 = or i64 %a2, 8
+  %t4434 = and i64 %t4433, 7
+  %t4435 = icmp eq i64 %t4434, 0
+  br i1 %t4435, label %fixfast1276, label %fixslow1277
+fixfast1276:
+  %t4436 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
+  %t4437 = extractvalue {i64, i1} %t4436, 0
+  %t4438 = extractvalue {i64, i1} %t4436, 1
+  br i1 %t4438, label %fixslow1277, label %fixmerge1278
+fixslow1277:
+  %t4439 = call i64 @rt_add(i64 %a2, i64 8)
+  br label %fixmerge1278
+fixmerge1278:
+  %t4440 = phi i64 [ %t4437, %fixfast1276 ], [ %t4439, %fixslow1277 ]
+  %t4441 = call i64 @rt_cons(i64 %a3, i64 %t4440)
+  ret i64 %t4441
+else1275:
+  %t4442 = or i64 %a2, 8
+  %t4443 = and i64 %t4442, 7
+  %t4444 = icmp eq i64 %t4443, 0
+  br i1 %t4444, label %fixfast1279, label %fixslow1280
+fixfast1279:
+  %t4445 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
+  %t4446 = extractvalue {i64, i1} %t4445, 0
+  %t4447 = extractvalue {i64, i1} %t4445, 1
+  br i1 %t4447, label %fixslow1280, label %fixmerge1281
+fixslow1280:
+  %t4448 = call i64 @rt_add(i64 %a2, i64 8)
+  br label %fixmerge1281
+fixmerge1281:
+  %t4449 = phi i64 [ %t4446, %fixfast1279 ], [ %t4448, %fixslow1280 ]
+  %t4450 = or i64 %a3, 128
+  %t4451 = and i64 %t4450, 7
+  %t4452 = icmp eq i64 %t4451, 0
+  br i1 %t4452, label %fixfast1282, label %fixslow1283
+fixfast1282:
+  %t4453 = ashr i64 %a3, 3
+  %t4454 = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %t4453, i64 128)
+  %t4455 = extractvalue {i64, i1} %t4454, 0
+  %t4456 = extractvalue {i64, i1} %t4454, 1
+  br i1 %t4456, label %fixslow1283, label %fixmerge1284
+fixslow1283:
+  %t4457 = call i64 @rt_mul(i64 %a3, i64 128)
+  br label %fixmerge1284
+fixmerge1284:
+  %t4458 = phi i64 [ %t4455, %fixfast1282 ], [ %t4457, %fixslow1283 ]
+  %t4459 = call i64 @rt_string_ref(i64 %a0, i64 %a2)
+  %t4460 = load i64, ptr @"scheme.base:rd-hex-digit"
+  %t4461 = and i64 %t4460, -8
+  %t4462 = inttoptr i64 %t4461 to ptr
+  %t4463 = load i64, ptr %t4462
+  %t4464 = inttoptr i64 %t4463 to ptr
+  %t4465 = call fastcc i64%t4464(i64 %t4460, i64 1, i64 %t4459, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4466 = or i64 %t4458, %t4465
+  %t4467 = and i64 %t4466, 7
+  %t4468 = icmp eq i64 %t4467, 0
+  br i1 %t4468, label %fixfast1285, label %fixslow1286
+fixfast1285:
+  %t4469 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t4458, i64 %t4465)
+  %t4470 = extractvalue {i64, i1} %t4469, 0
+  %t4471 = extractvalue {i64, i1} %t4469, 1
+  br i1 %t4471, label %fixslow1286, label %fixmerge1287
+fixslow1286:
+  %t4472 = call i64 @rt_add(i64 %t4458, i64 %t4465)
+  br label %fixmerge1287
+fixmerge1287:
+  %t4473 = phi i64 [ %t4470, %fixfast1285 ], [ %t4472, %fixslow1286 ]
+  %t4474 = load i64, ptr @"scheme.base:rd-hex"
+  %t4475 = and i64 %t4474, -8
+  %t4476 = inttoptr i64 %t4475 to ptr
+  %t4477 = load i64, ptr %t4476
+  %t4478 = inttoptr i64 %t4477 to ptr
+  %t4479 = musttail call fastcc i64 %t4478(i64 %t4474, i64 4, i64 %a0, i64 %a1, i64 %t4449, i64 %t4473, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t4479
+else1270:
+  %t4480 = call i64 @rt_cons(i64 %a3, i64 %a2)
+  ret i64 %t4480
 }
 
 define fastcc i64 @"scheme.base:code:rd-str-esc"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t4450 = icmp eq i64 %argc, 1
-  br i1 %t4450, label %argok1276, label %arityerr1275
-arityerr1275:
+  %t4485 = icmp eq i64 %argc, 1
+  br i1 %t4485, label %argok1289, label %arityerr1288
+arityerr1288:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1276:
-  %t4451 = call i64 @rt_char_to_integer(i64 %a0)
-  %t4452 = or i64 %t4451, 880
-  %t4453 = and i64 %t4452, 7
-  %t4454 = icmp eq i64 %t4453, 0
-  br i1 %t4454, label %fixfast1277, label %fixslow1278
-fixfast1277:
-  %t4455 = icmp eq i64 %t4451, 880
-  %t4456 = select i1 %t4455, i64 257, i64 1
-  br label %fixmerge1279
-fixslow1278:
-  %t4457 = call i64 @rt_num_eq(i64 %t4451, i64 880)
-  br label %fixmerge1279
-fixmerge1279:
-  %t4458 = phi i64 [ %t4456, %fixfast1277 ], [ %t4457, %fixslow1278 ]
-  %t4459 = icmp ne i64 %t4458, 1
-  br i1 %t4459, label %then1280, label %else1281
-then1280:
-  %t4460 = call i64 @rt_integer_to_char(i64 80)
-  ret i64 %t4460
-else1281:
-  %t4461 = or i64 %t4451, 928
-  %t4462 = and i64 %t4461, 7
-  %t4463 = icmp eq i64 %t4462, 0
-  br i1 %t4463, label %fixfast1282, label %fixslow1283
-fixfast1282:
-  %t4464 = icmp eq i64 %t4451, 928
-  %t4465 = select i1 %t4464, i64 257, i64 1
-  br label %fixmerge1284
-fixslow1283:
-  %t4466 = call i64 @rt_num_eq(i64 %t4451, i64 928)
-  br label %fixmerge1284
-fixmerge1284:
-  %t4467 = phi i64 [ %t4465, %fixfast1282 ], [ %t4466, %fixslow1283 ]
-  %t4468 = icmp ne i64 %t4467, 1
-  br i1 %t4468, label %then1285, label %else1286
-then1285:
-  %t4469 = call i64 @rt_integer_to_char(i64 72)
-  ret i64 %t4469
-else1286:
-  %t4470 = or i64 %t4451, 912
-  %t4471 = and i64 %t4470, 7
-  %t4472 = icmp eq i64 %t4471, 0
-  br i1 %t4472, label %fixfast1287, label %fixslow1288
-fixfast1287:
-  %t4473 = icmp eq i64 %t4451, 912
-  %t4474 = select i1 %t4473, i64 257, i64 1
-  br label %fixmerge1289
-fixslow1288:
-  %t4475 = call i64 @rt_num_eq(i64 %t4451, i64 912)
-  br label %fixmerge1289
-fixmerge1289:
-  %t4476 = phi i64 [ %t4474, %fixfast1287 ], [ %t4475, %fixslow1288 ]
-  %t4477 = icmp ne i64 %t4476, 1
-  br i1 %t4477, label %then1290, label %else1291
-then1290:
-  %t4478 = call i64 @rt_integer_to_char(i64 104)
-  ret i64 %t4478
-else1291:
+argok1289:
+  %t4486 = call i64 @rt_char_to_integer(i64 %a0)
+  %t4487 = or i64 %t4486, 880
+  %t4488 = and i64 %t4487, 7
+  %t4489 = icmp eq i64 %t4488, 0
+  br i1 %t4489, label %fixfast1290, label %fixslow1291
+fixfast1290:
+  %t4490 = icmp eq i64 %t4486, 880
+  %t4491 = select i1 %t4490, i64 257, i64 1
+  br label %fixmerge1292
+fixslow1291:
+  %t4492 = call i64 @rt_num_eq(i64 %t4486, i64 880)
+  br label %fixmerge1292
+fixmerge1292:
+  %t4493 = phi i64 [ %t4491, %fixfast1290 ], [ %t4492, %fixslow1291 ]
+  %t4494 = icmp ne i64 %t4493, 1
+  br i1 %t4494, label %then1293, label %else1294
+then1293:
+  %t4495 = call i64 @rt_integer_to_char(i64 80)
+  ret i64 %t4495
+else1294:
+  %t4496 = or i64 %t4486, 928
+  %t4497 = and i64 %t4496, 7
+  %t4498 = icmp eq i64 %t4497, 0
+  br i1 %t4498, label %fixfast1295, label %fixslow1296
+fixfast1295:
+  %t4499 = icmp eq i64 %t4486, 928
+  %t4500 = select i1 %t4499, i64 257, i64 1
+  br label %fixmerge1297
+fixslow1296:
+  %t4501 = call i64 @rt_num_eq(i64 %t4486, i64 928)
+  br label %fixmerge1297
+fixmerge1297:
+  %t4502 = phi i64 [ %t4500, %fixfast1295 ], [ %t4501, %fixslow1296 ]
+  %t4503 = icmp ne i64 %t4502, 1
+  br i1 %t4503, label %then1298, label %else1299
+then1298:
+  %t4504 = call i64 @rt_integer_to_char(i64 72)
+  ret i64 %t4504
+else1299:
+  %t4505 = or i64 %t4486, 912
+  %t4506 = and i64 %t4505, 7
+  %t4507 = icmp eq i64 %t4506, 0
+  br i1 %t4507, label %fixfast1300, label %fixslow1301
+fixfast1300:
+  %t4508 = icmp eq i64 %t4486, 912
+  %t4509 = select i1 %t4508, i64 257, i64 1
+  br label %fixmerge1302
+fixslow1301:
+  %t4510 = call i64 @rt_num_eq(i64 %t4486, i64 912)
+  br label %fixmerge1302
+fixmerge1302:
+  %t4511 = phi i64 [ %t4509, %fixfast1300 ], [ %t4510, %fixslow1301 ]
+  %t4512 = icmp ne i64 %t4511, 1
+  br i1 %t4512, label %then1303, label %else1304
+then1303:
+  %t4513 = call i64 @rt_integer_to_char(i64 104)
+  ret i64 %t4513
+else1304:
   ret i64 %a0
 }
 
-define fastcc i64 @"scheme.base:code_1087"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_1093"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t4483 = icmp eq i64 %argc, 2
-  br i1 %t4483, label %argok1293, label %arityerr1292
-arityerr1292:
+  %t4518 = icmp eq i64 %argc, 2
+  br i1 %t4518, label %argok1306, label %arityerr1305
+arityerr1305:
   call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
-argok1293:
-  %t4484 = and i64 %self, -8
-  %t4485 = inttoptr i64 %t4484 to ptr
-  %t4486 = getelementptr i64, ptr %t4485, i64 1
-  %t4487 = load i64, ptr %t4486
-  %t4488 = or i64 %a0, %t4487
-  %t4489 = and i64 %t4488, 7
-  %t4490 = icmp eq i64 %t4489, 0
-  br i1 %t4490, label %fixfast1294, label %fixslow1295
-fixfast1294:
-  %t4491 = icmp slt i64 %a0, %t4487
-  %t4492 = select i1 %t4491, i64 257, i64 1
-  br label %fixmerge1296
-fixslow1295:
-  %t4493 = call i64 @rt_lt(i64 %a0, i64 %t4487)
-  br label %fixmerge1296
-fixmerge1296:
-  %t4494 = phi i64 [ %t4492, %fixfast1294 ], [ %t4493, %fixslow1295 ]
-  %t4495 = icmp ne i64 %t4494, 1
-  br i1 %t4495, label %then1297, label %else1298
-then1297:
-  %t4496 = and i64 %self, -8
-  %t4497 = inttoptr i64 %t4496 to ptr
-  %t4498 = getelementptr i64, ptr %t4497, i64 2
-  %t4499 = load i64, ptr %t4498
-  %t4500 = call i64 @rt_string_ref(i64 %t4499, i64 %a0)
-  %t4501 = call i64 @rt_char_to_integer(i64 %t4500)
-  %t4502 = or i64 %t4501, 272
-  %t4503 = and i64 %t4502, 7
-  %t4504 = icmp eq i64 %t4503, 0
-  br i1 %t4504, label %fixfast1299, label %fixslow1300
-fixfast1299:
-  %t4505 = icmp eq i64 %t4501, 272
-  %t4506 = select i1 %t4505, i64 257, i64 1
-  br label %fixmerge1301
-fixslow1300:
-  %t4507 = call i64 @rt_num_eq(i64 %t4501, i64 272)
-  br label %fixmerge1301
-fixmerge1301:
-  %t4508 = phi i64 [ %t4506, %fixfast1299 ], [ %t4507, %fixslow1300 ]
-  %t4509 = icmp ne i64 %t4508, 1
-  br i1 %t4509, label %then1302, label %else1303
-then1302:
-  %t4510 = load i64, ptr @"scheme.base:reverse"
-  %t4511 = and i64 %t4510, -8
-  %t4512 = inttoptr i64 %t4511 to ptr
-  %t4513 = load i64, ptr %t4512
-  %t4514 = inttoptr i64 %t4513 to ptr
-  %t4515 = call fastcc i64%t4514(i64 %t4510, i64 1, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4516 = call i64 @rt_list_to_string(i64 %t4515)
-  %t4517 = or i64 %a0, 8
-  %t4518 = and i64 %t4517, 7
-  %t4519 = icmp eq i64 %t4518, 0
-  br i1 %t4519, label %fixfast1304, label %fixslow1305
-fixfast1304:
-  %t4520 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a0, i64 8)
-  %t4521 = extractvalue {i64, i1} %t4520, 0
-  %t4522 = extractvalue {i64, i1} %t4520, 1
-  br i1 %t4522, label %fixslow1305, label %fixmerge1306
-fixslow1305:
-  %t4523 = call i64 @rt_add(i64 %a0, i64 8)
-  br label %fixmerge1306
-fixmerge1306:
-  %t4524 = phi i64 [ %t4521, %fixfast1304 ], [ %t4523, %fixslow1305 ]
-  %t4525 = call i64 @rt_cons(i64 %t4516, i64 %t4524)
-  ret i64 %t4525
-else1303:
-  %t4526 = or i64 %t4501, 736
-  %t4527 = and i64 %t4526, 7
-  %t4528 = icmp eq i64 %t4527, 0
-  br i1 %t4528, label %fixfast1307, label %fixslow1308
+argok1306:
+  %t4519 = and i64 %self, -8
+  %t4520 = inttoptr i64 %t4519 to ptr
+  %t4521 = getelementptr i64, ptr %t4520, i64 1
+  %t4522 = load i64, ptr %t4521
+  %t4523 = or i64 %a0, %t4522
+  %t4524 = and i64 %t4523, 7
+  %t4525 = icmp eq i64 %t4524, 0
+  br i1 %t4525, label %fixfast1307, label %fixslow1308
 fixfast1307:
-  %t4529 = icmp eq i64 %t4501, 736
-  %t4530 = select i1 %t4529, i64 257, i64 1
+  %t4526 = icmp slt i64 %a0, %t4522
+  %t4527 = select i1 %t4526, i64 257, i64 1
   br label %fixmerge1309
 fixslow1308:
-  %t4531 = call i64 @rt_num_eq(i64 %t4501, i64 736)
+  %t4528 = call i64 @rt_lt(i64 %a0, i64 %t4522)
   br label %fixmerge1309
 fixmerge1309:
-  %t4532 = phi i64 [ %t4530, %fixfast1307 ], [ %t4531, %fixslow1308 ]
-  %t4533 = icmp ne i64 %t4532, 1
-  br i1 %t4533, label %then1310, label %else1311
+  %t4529 = phi i64 [ %t4527, %fixfast1307 ], [ %t4528, %fixslow1308 ]
+  %t4530 = icmp ne i64 %t4529, 1
+  br i1 %t4530, label %then1310, label %else1311
 then1310:
-  %t4534 = and i64 %self, -8
-  %t4535 = inttoptr i64 %t4534 to ptr
-  %t4536 = getelementptr i64, ptr %t4535, i64 2
-  %t4537 = load i64, ptr %t4536
-  %t4538 = or i64 %a0, 8
-  %t4539 = and i64 %t4538, 7
-  %t4540 = icmp eq i64 %t4539, 0
-  br i1 %t4540, label %fixfast1312, label %fixslow1313
+  %t4531 = and i64 %self, -8
+  %t4532 = inttoptr i64 %t4531 to ptr
+  %t4533 = getelementptr i64, ptr %t4532, i64 2
+  %t4534 = load i64, ptr %t4533
+  %t4535 = call i64 @rt_string_ref(i64 %t4534, i64 %a0)
+  %t4536 = call i64 @rt_char_to_integer(i64 %t4535)
+  %t4537 = or i64 %t4536, 272
+  %t4538 = and i64 %t4537, 7
+  %t4539 = icmp eq i64 %t4538, 0
+  br i1 %t4539, label %fixfast1312, label %fixslow1313
 fixfast1312:
-  %t4541 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a0, i64 8)
-  %t4542 = extractvalue {i64, i1} %t4541, 0
-  %t4543 = extractvalue {i64, i1} %t4541, 1
-  br i1 %t4543, label %fixslow1313, label %fixmerge1314
+  %t4540 = icmp eq i64 %t4536, 272
+  %t4541 = select i1 %t4540, i64 257, i64 1
+  br label %fixmerge1314
 fixslow1313:
-  %t4544 = call i64 @rt_add(i64 %a0, i64 8)
+  %t4542 = call i64 @rt_num_eq(i64 %t4536, i64 272)
   br label %fixmerge1314
 fixmerge1314:
-  %t4545 = phi i64 [ %t4542, %fixfast1312 ], [ %t4544, %fixslow1313 ]
-  %t4546 = call i64 @rt_string_ref(i64 %t4537, i64 %t4545)
-  %t4547 = call i64 @rt_char_to_integer(i64 %t4546)
-  %t4548 = or i64 %t4547, 960
-  %t4549 = and i64 %t4548, 7
-  %t4550 = icmp eq i64 %t4549, 0
-  br i1 %t4550, label %fixfast1315, label %fixslow1316
-fixfast1315:
-  %t4551 = icmp eq i64 %t4547, 960
-  %t4552 = select i1 %t4551, i64 257, i64 1
-  br label %fixmerge1317
-fixslow1316:
-  %t4553 = call i64 @rt_num_eq(i64 %t4547, i64 960)
-  br label %fixmerge1317
-fixmerge1317:
-  %t4554 = phi i64 [ %t4552, %fixfast1315 ], [ %t4553, %fixslow1316 ]
-  %t4555 = icmp ne i64 %t4554, 1
-  br i1 %t4555, label %then1318, label %else1319
-then1318:
-  %t4556 = and i64 %self, -8
-  %t4557 = inttoptr i64 %t4556 to ptr
-  %t4558 = getelementptr i64, ptr %t4557, i64 2
-  %t4559 = load i64, ptr %t4558
-  %t4560 = and i64 %self, -8
-  %t4561 = inttoptr i64 %t4560 to ptr
-  %t4562 = getelementptr i64, ptr %t4561, i64 1
-  %t4563 = load i64, ptr %t4562
-  %t4564 = or i64 %a0, 16
-  %t4565 = and i64 %t4564, 7
-  %t4566 = icmp eq i64 %t4565, 0
-  br i1 %t4566, label %fixfast1320, label %fixslow1321
+  %t4543 = phi i64 [ %t4541, %fixfast1312 ], [ %t4542, %fixslow1313 ]
+  %t4544 = icmp ne i64 %t4543, 1
+  br i1 %t4544, label %then1315, label %else1316
+then1315:
+  %t4545 = load i64, ptr @"scheme.base:reverse"
+  %t4546 = and i64 %t4545, -8
+  %t4547 = inttoptr i64 %t4546 to ptr
+  %t4548 = load i64, ptr %t4547
+  %t4549 = inttoptr i64 %t4548 to ptr
+  %t4550 = call fastcc i64%t4549(i64 %t4545, i64 1, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4551 = call i64 @rt_list_to_string(i64 %t4550)
+  %t4552 = or i64 %a0, 8
+  %t4553 = and i64 %t4552, 7
+  %t4554 = icmp eq i64 %t4553, 0
+  br i1 %t4554, label %fixfast1317, label %fixslow1318
+fixfast1317:
+  %t4555 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a0, i64 8)
+  %t4556 = extractvalue {i64, i1} %t4555, 0
+  %t4557 = extractvalue {i64, i1} %t4555, 1
+  br i1 %t4557, label %fixslow1318, label %fixmerge1319
+fixslow1318:
+  %t4558 = call i64 @rt_add(i64 %a0, i64 8)
+  br label %fixmerge1319
+fixmerge1319:
+  %t4559 = phi i64 [ %t4556, %fixfast1317 ], [ %t4558, %fixslow1318 ]
+  %t4560 = call i64 @rt_cons(i64 %t4551, i64 %t4559)
+  ret i64 %t4560
+else1316:
+  %t4561 = or i64 %t4536, 736
+  %t4562 = and i64 %t4561, 7
+  %t4563 = icmp eq i64 %t4562, 0
+  br i1 %t4563, label %fixfast1320, label %fixslow1321
 fixfast1320:
-  %t4567 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a0, i64 16)
-  %t4568 = extractvalue {i64, i1} %t4567, 0
-  %t4569 = extractvalue {i64, i1} %t4567, 1
-  br i1 %t4569, label %fixslow1321, label %fixmerge1322
+  %t4564 = icmp eq i64 %t4536, 736
+  %t4565 = select i1 %t4564, i64 257, i64 1
+  br label %fixmerge1322
 fixslow1321:
-  %t4570 = call i64 @rt_add(i64 %a0, i64 16)
+  %t4566 = call i64 @rt_num_eq(i64 %t4536, i64 736)
   br label %fixmerge1322
 fixmerge1322:
-  %t4571 = phi i64 [ %t4568, %fixfast1320 ], [ %t4570, %fixslow1321 ]
-  %t4572 = load i64, ptr @"scheme.base:rd-hex"
-  %t4573 = and i64 %t4572, -8
-  %t4574 = inttoptr i64 %t4573 to ptr
-  %t4575 = load i64, ptr %t4574
-  %t4576 = inttoptr i64 %t4575 to ptr
-  %t4577 = call fastcc i64%t4576(i64 %t4572, i64 4, i64 %t4559, i64 %t4563, i64 %t4571, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4578 = call i64 @rt_cdr(i64 %t4577)
-  %t4579 = call i64 @rt_car(i64 %t4577)
-  %t4580 = call i64 @rt_integer_to_char(i64 %t4579)
-  %t4581 = call i64 @rt_cons(i64 %t4580, i64 %a1)
-  %t4582 = musttail call fastcc i64 @"scheme.base:code_1087"(i64 %self, i64 2, i64 %t4578, i64 %t4581, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t4582
-else1319:
-  %t4583 = or i64 %a0, 16
+  %t4567 = phi i64 [ %t4565, %fixfast1320 ], [ %t4566, %fixslow1321 ]
+  %t4568 = icmp ne i64 %t4567, 1
+  br i1 %t4568, label %then1323, label %else1324
+then1323:
+  %t4569 = and i64 %self, -8
+  %t4570 = inttoptr i64 %t4569 to ptr
+  %t4571 = getelementptr i64, ptr %t4570, i64 2
+  %t4572 = load i64, ptr %t4571
+  %t4573 = or i64 %a0, 8
+  %t4574 = and i64 %t4573, 7
+  %t4575 = icmp eq i64 %t4574, 0
+  br i1 %t4575, label %fixfast1325, label %fixslow1326
+fixfast1325:
+  %t4576 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a0, i64 8)
+  %t4577 = extractvalue {i64, i1} %t4576, 0
+  %t4578 = extractvalue {i64, i1} %t4576, 1
+  br i1 %t4578, label %fixslow1326, label %fixmerge1327
+fixslow1326:
+  %t4579 = call i64 @rt_add(i64 %a0, i64 8)
+  br label %fixmerge1327
+fixmerge1327:
+  %t4580 = phi i64 [ %t4577, %fixfast1325 ], [ %t4579, %fixslow1326 ]
+  %t4581 = call i64 @rt_string_ref(i64 %t4572, i64 %t4580)
+  %t4582 = call i64 @rt_char_to_integer(i64 %t4581)
+  %t4583 = or i64 %t4582, 960
   %t4584 = and i64 %t4583, 7
   %t4585 = icmp eq i64 %t4584, 0
-  br i1 %t4585, label %fixfast1323, label %fixslow1324
-fixfast1323:
-  %t4586 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a0, i64 16)
-  %t4587 = extractvalue {i64, i1} %t4586, 0
-  %t4588 = extractvalue {i64, i1} %t4586, 1
-  br i1 %t4588, label %fixslow1324, label %fixmerge1325
-fixslow1324:
-  %t4589 = call i64 @rt_add(i64 %a0, i64 16)
-  br label %fixmerge1325
-fixmerge1325:
-  %t4590 = phi i64 [ %t4587, %fixfast1323 ], [ %t4589, %fixslow1324 ]
-  %t4591 = load i64, ptr @"scheme.base:rd-str-esc"
-  %t4592 = and i64 %t4591, -8
-  %t4593 = inttoptr i64 %t4592 to ptr
+  br i1 %t4585, label %fixfast1328, label %fixslow1329
+fixfast1328:
+  %t4586 = icmp eq i64 %t4582, 960
+  %t4587 = select i1 %t4586, i64 257, i64 1
+  br label %fixmerge1330
+fixslow1329:
+  %t4588 = call i64 @rt_num_eq(i64 %t4582, i64 960)
+  br label %fixmerge1330
+fixmerge1330:
+  %t4589 = phi i64 [ %t4587, %fixfast1328 ], [ %t4588, %fixslow1329 ]
+  %t4590 = icmp ne i64 %t4589, 1
+  br i1 %t4590, label %then1331, label %else1332
+then1331:
+  %t4591 = and i64 %self, -8
+  %t4592 = inttoptr i64 %t4591 to ptr
+  %t4593 = getelementptr i64, ptr %t4592, i64 2
   %t4594 = load i64, ptr %t4593
-  %t4595 = inttoptr i64 %t4594 to ptr
-  %t4596 = call fastcc i64%t4595(i64 %t4591, i64 1, i64 %t4546, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4597 = call i64 @rt_cons(i64 %t4596, i64 %a1)
-  %t4598 = musttail call fastcc i64 @"scheme.base:code_1087"(i64 %self, i64 2, i64 %t4590, i64 %t4597, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t4598
-else1311:
-  %t4599 = or i64 %a0, 8
+  %t4595 = and i64 %self, -8
+  %t4596 = inttoptr i64 %t4595 to ptr
+  %t4597 = getelementptr i64, ptr %t4596, i64 1
+  %t4598 = load i64, ptr %t4597
+  %t4599 = or i64 %a0, 16
   %t4600 = and i64 %t4599, 7
   %t4601 = icmp eq i64 %t4600, 0
-  br i1 %t4601, label %fixfast1326, label %fixslow1327
-fixfast1326:
-  %t4602 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a0, i64 8)
+  br i1 %t4601, label %fixfast1333, label %fixslow1334
+fixfast1333:
+  %t4602 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a0, i64 16)
   %t4603 = extractvalue {i64, i1} %t4602, 0
   %t4604 = extractvalue {i64, i1} %t4602, 1
-  br i1 %t4604, label %fixslow1327, label %fixmerge1328
-fixslow1327:
-  %t4605 = call i64 @rt_add(i64 %a0, i64 8)
-  br label %fixmerge1328
-fixmerge1328:
-  %t4606 = phi i64 [ %t4603, %fixfast1326 ], [ %t4605, %fixslow1327 ]
-  %t4607 = call i64 @rt_cons(i64 %t4500, i64 %a1)
-  %t4608 = musttail call fastcc i64 @"scheme.base:code_1087"(i64 %self, i64 2, i64 %t4606, i64 %t4607, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t4608
-else1298:
-  %t4609 = load i64, ptr @"scheme.base:reverse"
-  %t4610 = and i64 %t4609, -8
+  br i1 %t4604, label %fixslow1334, label %fixmerge1335
+fixslow1334:
+  %t4605 = call i64 @rt_add(i64 %a0, i64 16)
+  br label %fixmerge1335
+fixmerge1335:
+  %t4606 = phi i64 [ %t4603, %fixfast1333 ], [ %t4605, %fixslow1334 ]
+  %t4607 = load i64, ptr @"scheme.base:rd-hex"
+  %t4608 = and i64 %t4607, -8
+  %t4609 = inttoptr i64 %t4608 to ptr
+  %t4610 = load i64, ptr %t4609
   %t4611 = inttoptr i64 %t4610 to ptr
-  %t4612 = load i64, ptr %t4611
-  %t4613 = inttoptr i64 %t4612 to ptr
-  %t4614 = call fastcc i64%t4613(i64 %t4609, i64 1, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4615 = call i64 @rt_list_to_string(i64 %t4614)
-  %t4616 = call i64 @rt_cons(i64 %t4615, i64 %a0)
-  ret i64 %t4616
+  %t4612 = call fastcc i64%t4611(i64 %t4607, i64 4, i64 %t4594, i64 %t4598, i64 %t4606, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4613 = call i64 @rt_cdr(i64 %t4612)
+  %t4614 = call i64 @rt_car(i64 %t4612)
+  %t4615 = call i64 @rt_integer_to_char(i64 %t4614)
+  %t4616 = call i64 @rt_cons(i64 %t4615, i64 %a1)
+  %t4617 = musttail call fastcc i64 @"scheme.base:code_1093"(i64 %self, i64 2, i64 %t4613, i64 %t4616, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t4617
+else1332:
+  %t4618 = or i64 %a0, 16
+  %t4619 = and i64 %t4618, 7
+  %t4620 = icmp eq i64 %t4619, 0
+  br i1 %t4620, label %fixfast1336, label %fixslow1337
+fixfast1336:
+  %t4621 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a0, i64 16)
+  %t4622 = extractvalue {i64, i1} %t4621, 0
+  %t4623 = extractvalue {i64, i1} %t4621, 1
+  br i1 %t4623, label %fixslow1337, label %fixmerge1338
+fixslow1337:
+  %t4624 = call i64 @rt_add(i64 %a0, i64 16)
+  br label %fixmerge1338
+fixmerge1338:
+  %t4625 = phi i64 [ %t4622, %fixfast1336 ], [ %t4624, %fixslow1337 ]
+  %t4626 = load i64, ptr @"scheme.base:rd-str-esc"
+  %t4627 = and i64 %t4626, -8
+  %t4628 = inttoptr i64 %t4627 to ptr
+  %t4629 = load i64, ptr %t4628
+  %t4630 = inttoptr i64 %t4629 to ptr
+  %t4631 = call fastcc i64%t4630(i64 %t4626, i64 1, i64 %t4581, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4632 = call i64 @rt_cons(i64 %t4631, i64 %a1)
+  %t4633 = musttail call fastcc i64 @"scheme.base:code_1093"(i64 %self, i64 2, i64 %t4625, i64 %t4632, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t4633
+else1324:
+  %t4634 = or i64 %a0, 8
+  %t4635 = and i64 %t4634, 7
+  %t4636 = icmp eq i64 %t4635, 0
+  br i1 %t4636, label %fixfast1339, label %fixslow1340
+fixfast1339:
+  %t4637 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a0, i64 8)
+  %t4638 = extractvalue {i64, i1} %t4637, 0
+  %t4639 = extractvalue {i64, i1} %t4637, 1
+  br i1 %t4639, label %fixslow1340, label %fixmerge1341
+fixslow1340:
+  %t4640 = call i64 @rt_add(i64 %a0, i64 8)
+  br label %fixmerge1341
+fixmerge1341:
+  %t4641 = phi i64 [ %t4638, %fixfast1339 ], [ %t4640, %fixslow1340 ]
+  %t4642 = call i64 @rt_cons(i64 %t4535, i64 %a1)
+  %t4643 = musttail call fastcc i64 @"scheme.base:code_1093"(i64 %self, i64 2, i64 %t4641, i64 %t4642, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t4643
+else1311:
+  %t4644 = load i64, ptr @"scheme.base:reverse"
+  %t4645 = and i64 %t4644, -8
+  %t4646 = inttoptr i64 %t4645 to ptr
+  %t4647 = load i64, ptr %t4646
+  %t4648 = inttoptr i64 %t4647 to ptr
+  %t4649 = call fastcc i64%t4648(i64 %t4644, i64 1, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4650 = call i64 @rt_list_to_string(i64 %t4649)
+  %t4651 = call i64 @rt_cons(i64 %t4650, i64 %a0)
+  ret i64 %t4651
 }
 
 define fastcc i64 @"scheme.base:code:rd-string"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t4617 = icmp eq i64 %argc, 3
-  br i1 %t4617, label %argok1330, label %arityerr1329
-arityerr1329:
+  %t4652 = icmp eq i64 %argc, 3
+  br i1 %t4652, label %argok1343, label %arityerr1342
+arityerr1342:
   call void @rt_arity_error(i64 3, i64 %argc)
   unreachable
-argok1330:
-  %t4618 = call ptr @rt_alloc_words(i64 4)
-  %t4619 = ptrtoint ptr %t4618 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_1087" to i64), ptr %t4618
-  %t4620 = or i64 %t4619, 4
-  %t4621 = getelementptr i64, ptr %t4618, i64 1
-  store i64 %a1, ptr %t4621
-  %t4622 = getelementptr i64, ptr %t4618, i64 2
-  store i64 %a0, ptr %t4622
-  %t4623 = getelementptr i64, ptr %t4618, i64 3
-  store i64 %t4620, ptr %t4623
-  %t4624 = musttail call fastcc i64 @"scheme.base:code_1087"(i64 %t4620, i64 2, i64 %a2, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t4624
+argok1343:
+  %t4653 = call ptr @rt_alloc_words(i64 4)
+  %t4654 = ptrtoint ptr %t4653 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_1093" to i64), ptr %t4653
+  %t4655 = or i64 %t4654, 4
+  %t4656 = getelementptr i64, ptr %t4653, i64 1
+  store i64 %a1, ptr %t4656
+  %t4657 = getelementptr i64, ptr %t4653, i64 2
+  store i64 %a0, ptr %t4657
+  %t4658 = getelementptr i64, ptr %t4653, i64 3
+  store i64 %t4655, ptr %t4658
+  %t4659 = musttail call fastcc i64 @"scheme.base:code_1093"(i64 %t4655, i64 2, i64 %a2, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t4659
 }
 
 define fastcc i64 @"scheme.base:code:rd-hash"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t4629 = icmp eq i64 %argc, 3
-  br i1 %t4629, label %argok1332, label %arityerr1331
-arityerr1331:
+  %t4664 = icmp eq i64 %argc, 3
+  br i1 %t4664, label %argok1345, label %arityerr1344
+arityerr1344:
   call void @rt_arity_error(i64 3, i64 %argc)
   unreachable
-argok1332:
-  %t4630 = call i64 @rt_string_ref(i64 %a0, i64 %a2)
-  %t4631 = call i64 @rt_char_to_integer(i64 %t4630)
-  %t4632 = or i64 %t4631, 928
-  %t4633 = and i64 %t4632, 7
-  %t4634 = icmp eq i64 %t4633, 0
-  br i1 %t4634, label %fixfast1333, label %fixslow1334
-fixfast1333:
-  %t4635 = icmp eq i64 %t4631, 928
-  %t4636 = select i1 %t4635, i64 257, i64 1
-  br label %fixmerge1335
-fixslow1334:
-  %t4637 = call i64 @rt_num_eq(i64 %t4631, i64 928)
-  br label %fixmerge1335
-fixmerge1335:
-  %t4638 = phi i64 [ %t4636, %fixfast1333 ], [ %t4637, %fixslow1334 ]
-  %t4639 = icmp ne i64 %t4638, 1
-  br i1 %t4639, label %then1336, label %else1337
-then1336:
-  %t4640 = or i64 %a2, 8
-  %t4641 = and i64 %t4640, 7
-  %t4642 = icmp eq i64 %t4641, 0
-  br i1 %t4642, label %fixfast1338, label %fixslow1339
-fixfast1338:
-  %t4643 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
-  %t4644 = extractvalue {i64, i1} %t4643, 0
-  %t4645 = extractvalue {i64, i1} %t4643, 1
-  br i1 %t4645, label %fixslow1339, label %fixmerge1340
-fixslow1339:
-  %t4646 = call i64 @rt_add(i64 %a2, i64 8)
-  br label %fixmerge1340
-fixmerge1340:
-  %t4647 = phi i64 [ %t4644, %fixfast1338 ], [ %t4646, %fixslow1339 ]
-  %t4648 = call i64 @rt_cons(i64 257, i64 %t4647)
-  ret i64 %t4648
-else1337:
-  %t4649 = or i64 %t4631, 816
-  %t4650 = and i64 %t4649, 7
-  %t4651 = icmp eq i64 %t4650, 0
-  br i1 %t4651, label %fixfast1341, label %fixslow1342
-fixfast1341:
-  %t4652 = icmp eq i64 %t4631, 816
-  %t4653 = select i1 %t4652, i64 257, i64 1
-  br label %fixmerge1343
-fixslow1342:
-  %t4654 = call i64 @rt_num_eq(i64 %t4631, i64 816)
-  br label %fixmerge1343
-fixmerge1343:
-  %t4655 = phi i64 [ %t4653, %fixfast1341 ], [ %t4654, %fixslow1342 ]
-  %t4656 = icmp ne i64 %t4655, 1
-  br i1 %t4656, label %then1344, label %else1345
-then1344:
-  %t4657 = or i64 %a2, 8
-  %t4658 = and i64 %t4657, 7
-  %t4659 = icmp eq i64 %t4658, 0
-  br i1 %t4659, label %fixfast1346, label %fixslow1347
+argok1345:
+  %t4665 = call i64 @rt_string_ref(i64 %a0, i64 %a2)
+  %t4666 = call i64 @rt_char_to_integer(i64 %t4665)
+  %t4667 = or i64 %t4666, 928
+  %t4668 = and i64 %t4667, 7
+  %t4669 = icmp eq i64 %t4668, 0
+  br i1 %t4669, label %fixfast1346, label %fixslow1347
 fixfast1346:
-  %t4660 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
-  %t4661 = extractvalue {i64, i1} %t4660, 0
-  %t4662 = extractvalue {i64, i1} %t4660, 1
-  br i1 %t4662, label %fixslow1347, label %fixmerge1348
+  %t4670 = icmp eq i64 %t4666, 928
+  %t4671 = select i1 %t4670, i64 257, i64 1
+  br label %fixmerge1348
 fixslow1347:
-  %t4663 = call i64 @rt_add(i64 %a2, i64 8)
+  %t4672 = call i64 @rt_num_eq(i64 %t4666, i64 928)
   br label %fixmerge1348
 fixmerge1348:
-  %t4664 = phi i64 [ %t4661, %fixfast1346 ], [ %t4663, %fixslow1347 ]
-  %t4665 = call i64 @rt_cons(i64 1, i64 %t4664)
-  ret i64 %t4665
-else1345:
-  %t4666 = or i64 %t4631, 736
-  %t4667 = and i64 %t4666, 7
-  %t4668 = icmp eq i64 %t4667, 0
-  br i1 %t4668, label %fixfast1349, label %fixslow1350
-fixfast1349:
-  %t4669 = icmp eq i64 %t4631, 736
-  %t4670 = select i1 %t4669, i64 257, i64 1
-  br label %fixmerge1351
-fixslow1350:
-  %t4671 = call i64 @rt_num_eq(i64 %t4631, i64 736)
-  br label %fixmerge1351
-fixmerge1351:
-  %t4672 = phi i64 [ %t4670, %fixfast1349 ], [ %t4671, %fixslow1350 ]
-  %t4673 = icmp ne i64 %t4672, 1
-  br i1 %t4673, label %then1352, label %else1353
-then1352:
-  %t4674 = load i64, ptr @"scheme.base:rd-char"
-  %t4675 = and i64 %t4674, -8
-  %t4676 = inttoptr i64 %t4675 to ptr
-  %t4677 = load i64, ptr %t4676
-  %t4678 = inttoptr i64 %t4677 to ptr
-  %t4679 = musttail call fastcc i64 %t4678(i64 %t4674, i64 3, i64 %a0, i64 %a1, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t4679
-else1353:
-  %t4680 = or i64 %t4631, 320
-  %t4681 = and i64 %t4680, 7
-  %t4682 = icmp eq i64 %t4681, 0
-  br i1 %t4682, label %fixfast1354, label %fixslow1355
+  %t4673 = phi i64 [ %t4671, %fixfast1346 ], [ %t4672, %fixslow1347 ]
+  %t4674 = icmp ne i64 %t4673, 1
+  br i1 %t4674, label %then1349, label %else1350
+then1349:
+  %t4675 = or i64 %a2, 8
+  %t4676 = and i64 %t4675, 7
+  %t4677 = icmp eq i64 %t4676, 0
+  br i1 %t4677, label %fixfast1351, label %fixslow1352
+fixfast1351:
+  %t4678 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
+  %t4679 = extractvalue {i64, i1} %t4678, 0
+  %t4680 = extractvalue {i64, i1} %t4678, 1
+  br i1 %t4680, label %fixslow1352, label %fixmerge1353
+fixslow1352:
+  %t4681 = call i64 @rt_add(i64 %a2, i64 8)
+  br label %fixmerge1353
+fixmerge1353:
+  %t4682 = phi i64 [ %t4679, %fixfast1351 ], [ %t4681, %fixslow1352 ]
+  %t4683 = call i64 @rt_cons(i64 257, i64 %t4682)
+  ret i64 %t4683
+else1350:
+  %t4684 = or i64 %t4666, 816
+  %t4685 = and i64 %t4684, 7
+  %t4686 = icmp eq i64 %t4685, 0
+  br i1 %t4686, label %fixfast1354, label %fixslow1355
 fixfast1354:
-  %t4683 = icmp eq i64 %t4631, 320
-  %t4684 = select i1 %t4683, i64 257, i64 1
+  %t4687 = icmp eq i64 %t4666, 816
+  %t4688 = select i1 %t4687, i64 257, i64 1
   br label %fixmerge1356
 fixslow1355:
-  %t4685 = call i64 @rt_num_eq(i64 %t4631, i64 320)
+  %t4689 = call i64 @rt_num_eq(i64 %t4666, i64 816)
   br label %fixmerge1356
 fixmerge1356:
-  %t4686 = phi i64 [ %t4684, %fixfast1354 ], [ %t4685, %fixslow1355 ]
-  %t4687 = icmp ne i64 %t4686, 1
-  br i1 %t4687, label %then1357, label %else1358
+  %t4690 = phi i64 [ %t4688, %fixfast1354 ], [ %t4689, %fixslow1355 ]
+  %t4691 = icmp ne i64 %t4690, 1
+  br i1 %t4691, label %then1357, label %else1358
 then1357:
-  %t4688 = or i64 %a2, 8
-  %t4689 = and i64 %t4688, 7
-  %t4690 = icmp eq i64 %t4689, 0
-  br i1 %t4690, label %fixfast1359, label %fixslow1360
+  %t4692 = or i64 %a2, 8
+  %t4693 = and i64 %t4692, 7
+  %t4694 = icmp eq i64 %t4693, 0
+  br i1 %t4694, label %fixfast1359, label %fixslow1360
 fixfast1359:
-  %t4691 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
-  %t4692 = extractvalue {i64, i1} %t4691, 0
-  %t4693 = extractvalue {i64, i1} %t4691, 1
-  br i1 %t4693, label %fixslow1360, label %fixmerge1361
+  %t4695 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
+  %t4696 = extractvalue {i64, i1} %t4695, 0
+  %t4697 = extractvalue {i64, i1} %t4695, 1
+  br i1 %t4697, label %fixslow1360, label %fixmerge1361
 fixslow1360:
-  %t4694 = call i64 @rt_add(i64 %a2, i64 8)
+  %t4698 = call i64 @rt_add(i64 %a2, i64 8)
   br label %fixmerge1361
 fixmerge1361:
-  %t4695 = phi i64 [ %t4692, %fixfast1359 ], [ %t4694, %fixslow1360 ]
-  %t4696 = load i64, ptr @"scheme.base:rd-list"
-  %t4697 = and i64 %t4696, -8
-  %t4698 = inttoptr i64 %t4697 to ptr
-  %t4699 = load i64, ptr %t4698
-  %t4700 = inttoptr i64 %t4699 to ptr
-  %t4701 = call fastcc i64%t4700(i64 %t4696, i64 4, i64 %a0, i64 %a1, i64 %t4695, i64 2, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4702 = call i64 @rt_car(i64 %t4701)
-  %t4703 = load i64, ptr @"scheme.base:list->vector"
-  %t4704 = and i64 %t4703, -8
-  %t4705 = inttoptr i64 %t4704 to ptr
-  %t4706 = load i64, ptr %t4705
-  %t4707 = inttoptr i64 %t4706 to ptr
-  %t4708 = call fastcc i64%t4707(i64 %t4703, i64 1, i64 %t4702, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4709 = call i64 @rt_cdr(i64 %t4701)
-  %t4710 = call i64 @rt_cons(i64 %t4708, i64 %t4709)
-  ret i64 %t4710
+  %t4699 = phi i64 [ %t4696, %fixfast1359 ], [ %t4698, %fixslow1360 ]
+  %t4700 = call i64 @rt_cons(i64 1, i64 %t4699)
+  ret i64 %t4700
 else1358:
-  %t4711 = or i64 %t4631, 936
-  %t4712 = and i64 %t4711, 7
-  %t4713 = icmp eq i64 %t4712, 0
-  br i1 %t4713, label %fixfast1362, label %fixslow1363
+  %t4701 = or i64 %t4666, 736
+  %t4702 = and i64 %t4701, 7
+  %t4703 = icmp eq i64 %t4702, 0
+  br i1 %t4703, label %fixfast1362, label %fixslow1363
 fixfast1362:
-  %t4714 = icmp eq i64 %t4631, 936
-  %t4715 = select i1 %t4714, i64 257, i64 1
+  %t4704 = icmp eq i64 %t4666, 736
+  %t4705 = select i1 %t4704, i64 257, i64 1
   br label %fixmerge1364
 fixslow1363:
-  %t4716 = call i64 @rt_num_eq(i64 %t4631, i64 936)
+  %t4706 = call i64 @rt_num_eq(i64 %t4666, i64 736)
   br label %fixmerge1364
 fixmerge1364:
-  %t4717 = phi i64 [ %t4715, %fixfast1362 ], [ %t4716, %fixslow1363 ]
-  %t4718 = icmp ne i64 %t4717, 1
-  br i1 %t4718, label %then1365, label %else1366
+  %t4707 = phi i64 [ %t4705, %fixfast1362 ], [ %t4706, %fixslow1363 ]
+  %t4708 = icmp ne i64 %t4707, 1
+  br i1 %t4708, label %then1365, label %else1366
 then1365:
-  %t4719 = or i64 %a2, 16
-  %t4720 = and i64 %t4719, 7
-  %t4721 = icmp eq i64 %t4720, 0
-  br i1 %t4721, label %fixfast1368, label %fixslow1369
-fixfast1368:
-  %t4722 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 16)
-  %t4723 = extractvalue {i64, i1} %t4722, 0
-  %t4724 = extractvalue {i64, i1} %t4722, 1
-  br i1 %t4724, label %fixslow1369, label %fixmerge1370
-fixslow1369:
-  %t4725 = call i64 @rt_add(i64 %a2, i64 16)
-  br label %fixmerge1370
-fixmerge1370:
-  %t4726 = phi i64 [ %t4723, %fixfast1368 ], [ %t4725, %fixslow1369 ]
-  %t4727 = or i64 %t4726, %a1
-  %t4728 = and i64 %t4727, 7
-  %t4729 = icmp eq i64 %t4728, 0
-  br i1 %t4729, label %fixfast1371, label %fixslow1372
-fixfast1371:
-  %t4730 = icmp slt i64 %t4726, %a1
-  %t4731 = select i1 %t4730, i64 257, i64 1
-  br label %fixmerge1373
-fixslow1372:
-  %t4732 = call i64 @rt_lt(i64 %t4726, i64 %a1)
-  br label %fixmerge1373
-fixmerge1373:
-  %t4733 = phi i64 [ %t4731, %fixfast1371 ], [ %t4732, %fixslow1372 ]
-  %t4734 = icmp ne i64 %t4733, 1
-  br i1 %t4734, label %then1374, label %else1375
-then1374:
-  %t4735 = or i64 %a2, 8
-  %t4736 = and i64 %t4735, 7
-  %t4737 = icmp eq i64 %t4736, 0
-  br i1 %t4737, label %fixfast1377, label %fixslow1378
-fixfast1377:
-  %t4738 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
-  %t4739 = extractvalue {i64, i1} %t4738, 0
-  %t4740 = extractvalue {i64, i1} %t4738, 1
-  br i1 %t4740, label %fixslow1378, label %fixmerge1379
-fixslow1378:
-  %t4741 = call i64 @rt_add(i64 %a2, i64 8)
-  br label %fixmerge1379
-fixmerge1379:
-  %t4742 = phi i64 [ %t4739, %fixfast1377 ], [ %t4741, %fixslow1378 ]
-  %t4743 = call i64 @rt_string_ref(i64 %a0, i64 %t4742)
-  %t4744 = call i64 @rt_char_to_integer(i64 %t4743)
-  %t4745 = or i64 %t4744, 448
-  %t4746 = and i64 %t4745, 7
-  %t4747 = icmp eq i64 %t4746, 0
-  br i1 %t4747, label %fixfast1380, label %fixslow1381
-fixfast1380:
-  %t4748 = icmp eq i64 %t4744, 448
-  %t4749 = select i1 %t4748, i64 257, i64 1
-  br label %fixmerge1382
-fixslow1381:
-  %t4750 = call i64 @rt_num_eq(i64 %t4744, i64 448)
-  br label %fixmerge1382
-fixmerge1382:
-  %t4751 = phi i64 [ %t4749, %fixfast1380 ], [ %t4750, %fixslow1381 ]
-  %t4752 = icmp ne i64 %t4751, 1
-  br i1 %t4752, label %then1383, label %else1384
-then1383:
-  %t4753 = or i64 %a2, 16
-  %t4754 = and i64 %t4753, 7
-  %t4755 = icmp eq i64 %t4754, 0
-  br i1 %t4755, label %fixfast1386, label %fixslow1387
-fixfast1386:
-  %t4756 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 16)
-  %t4757 = extractvalue {i64, i1} %t4756, 0
-  %t4758 = extractvalue {i64, i1} %t4756, 1
-  br i1 %t4758, label %fixslow1387, label %fixmerge1388
-fixslow1387:
-  %t4759 = call i64 @rt_add(i64 %a2, i64 16)
-  br label %fixmerge1388
-fixmerge1388:
-  %t4760 = phi i64 [ %t4757, %fixfast1386 ], [ %t4759, %fixslow1387 ]
-  %t4761 = call i64 @rt_string_ref(i64 %a0, i64 %t4760)
-  %t4762 = call i64 @rt_char_to_integer(i64 %t4761)
-  %t4763 = or i64 %t4762, 320
-  %t4764 = and i64 %t4763, 7
-  %t4765 = icmp eq i64 %t4764, 0
-  br i1 %t4765, label %fixfast1389, label %fixslow1390
-fixfast1389:
-  %t4766 = icmp eq i64 %t4762, 320
-  %t4767 = select i1 %t4766, i64 257, i64 1
-  br label %fixmerge1391
-fixslow1390:
-  %t4768 = call i64 @rt_num_eq(i64 %t4762, i64 320)
-  br label %fixmerge1391
-fixmerge1391:
-  %t4769 = phi i64 [ %t4767, %fixfast1389 ], [ %t4768, %fixslow1390 ]
-  br label %merge1385
-else1384:
-  br label %merge1385
-merge1385:
-  %t4770 = phi i64 [ %t4769, %fixmerge1391 ], [ 1, %else1384 ]
-  br label %merge1376
-else1375:
-  br label %merge1376
-merge1376:
-  %t4771 = phi i64 [ %t4770, %merge1385 ], [ 1, %else1375 ]
-  br label %merge1367
+  %t4709 = load i64, ptr @"scheme.base:rd-char"
+  %t4710 = and i64 %t4709, -8
+  %t4711 = inttoptr i64 %t4710 to ptr
+  %t4712 = load i64, ptr %t4711
+  %t4713 = inttoptr i64 %t4712 to ptr
+  %t4714 = musttail call fastcc i64 %t4713(i64 %t4709, i64 3, i64 %a0, i64 %a1, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t4714
 else1366:
-  br label %merge1367
-merge1367:
-  %t4772 = phi i64 [ %t4771, %merge1376 ], [ 1, %else1366 ]
-  %t4773 = icmp ne i64 %t4772, 1
-  br i1 %t4773, label %then1392, label %else1393
-then1392:
-  %t4774 = or i64 %a2, 24
-  %t4775 = and i64 %t4774, 7
-  %t4776 = icmp eq i64 %t4775, 0
-  br i1 %t4776, label %fixfast1394, label %fixslow1395
-fixfast1394:
-  %t4777 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 24)
-  %t4778 = extractvalue {i64, i1} %t4777, 0
-  %t4779 = extractvalue {i64, i1} %t4777, 1
-  br i1 %t4779, label %fixslow1395, label %fixmerge1396
-fixslow1395:
-  %t4780 = call i64 @rt_add(i64 %a2, i64 24)
-  br label %fixmerge1396
-fixmerge1396:
-  %t4781 = phi i64 [ %t4778, %fixfast1394 ], [ %t4780, %fixslow1395 ]
-  %t4782 = load i64, ptr @"scheme.base:rd-list"
-  %t4783 = and i64 %t4782, -8
-  %t4784 = inttoptr i64 %t4783 to ptr
-  %t4785 = load i64, ptr %t4784
-  %t4786 = inttoptr i64 %t4785 to ptr
-  %t4787 = call fastcc i64%t4786(i64 %t4782, i64 4, i64 %a0, i64 %a1, i64 %t4781, i64 2, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4788 = call i64 @rt_car(i64 %t4787)
-  %t4789 = load i64, ptr @"scheme.base:list->bytevector"
-  %t4790 = and i64 %t4789, -8
-  %t4791 = inttoptr i64 %t4790 to ptr
-  %t4792 = load i64, ptr %t4791
-  %t4793 = inttoptr i64 %t4792 to ptr
-  %t4794 = call fastcc i64%t4793(i64 %t4789, i64 1, i64 %t4788, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4795 = call i64 @rt_cdr(i64 %t4787)
-  %t4796 = call i64 @rt_cons(i64 %t4794, i64 %t4795)
-  ret i64 %t4796
-else1393:
-  %t4797 = load i64, ptr @"scheme.base:rd-token-end"
-  %t4798 = and i64 %t4797, -8
-  %t4799 = inttoptr i64 %t4798 to ptr
-  %t4800 = load i64, ptr %t4799
-  %t4801 = inttoptr i64 %t4800 to ptr
-  %t4802 = call fastcc i64%t4801(i64 %t4797, i64 3, i64 %a0, i64 %a1, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4803 = call i64 @rt_substring(i64 %a0, i64 %a2, i64 %t4802)
-  %t4804 = call i64 @rt_string_to_symbol(i64 %t4803)
-  %t4805 = call i64 @rt_cons(i64 %t4804, i64 %t4802)
-  ret i64 %t4805
+  %t4715 = or i64 %t4666, 320
+  %t4716 = and i64 %t4715, 7
+  %t4717 = icmp eq i64 %t4716, 0
+  br i1 %t4717, label %fixfast1367, label %fixslow1368
+fixfast1367:
+  %t4718 = icmp eq i64 %t4666, 320
+  %t4719 = select i1 %t4718, i64 257, i64 1
+  br label %fixmerge1369
+fixslow1368:
+  %t4720 = call i64 @rt_num_eq(i64 %t4666, i64 320)
+  br label %fixmerge1369
+fixmerge1369:
+  %t4721 = phi i64 [ %t4719, %fixfast1367 ], [ %t4720, %fixslow1368 ]
+  %t4722 = icmp ne i64 %t4721, 1
+  br i1 %t4722, label %then1370, label %else1371
+then1370:
+  %t4723 = or i64 %a2, 8
+  %t4724 = and i64 %t4723, 7
+  %t4725 = icmp eq i64 %t4724, 0
+  br i1 %t4725, label %fixfast1372, label %fixslow1373
+fixfast1372:
+  %t4726 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
+  %t4727 = extractvalue {i64, i1} %t4726, 0
+  %t4728 = extractvalue {i64, i1} %t4726, 1
+  br i1 %t4728, label %fixslow1373, label %fixmerge1374
+fixslow1373:
+  %t4729 = call i64 @rt_add(i64 %a2, i64 8)
+  br label %fixmerge1374
+fixmerge1374:
+  %t4730 = phi i64 [ %t4727, %fixfast1372 ], [ %t4729, %fixslow1373 ]
+  %t4731 = load i64, ptr @"scheme.base:rd-list"
+  %t4732 = and i64 %t4731, -8
+  %t4733 = inttoptr i64 %t4732 to ptr
+  %t4734 = load i64, ptr %t4733
+  %t4735 = inttoptr i64 %t4734 to ptr
+  %t4736 = call fastcc i64%t4735(i64 %t4731, i64 4, i64 %a0, i64 %a1, i64 %t4730, i64 2, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4737 = call i64 @rt_car(i64 %t4736)
+  %t4738 = load i64, ptr @"scheme.base:list->vector"
+  %t4739 = and i64 %t4738, -8
+  %t4740 = inttoptr i64 %t4739 to ptr
+  %t4741 = load i64, ptr %t4740
+  %t4742 = inttoptr i64 %t4741 to ptr
+  %t4743 = call fastcc i64%t4742(i64 %t4738, i64 1, i64 %t4737, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4744 = call i64 @rt_cdr(i64 %t4736)
+  %t4745 = call i64 @rt_cons(i64 %t4743, i64 %t4744)
+  ret i64 %t4745
+else1371:
+  %t4746 = or i64 %t4666, 936
+  %t4747 = and i64 %t4746, 7
+  %t4748 = icmp eq i64 %t4747, 0
+  br i1 %t4748, label %fixfast1375, label %fixslow1376
+fixfast1375:
+  %t4749 = icmp eq i64 %t4666, 936
+  %t4750 = select i1 %t4749, i64 257, i64 1
+  br label %fixmerge1377
+fixslow1376:
+  %t4751 = call i64 @rt_num_eq(i64 %t4666, i64 936)
+  br label %fixmerge1377
+fixmerge1377:
+  %t4752 = phi i64 [ %t4750, %fixfast1375 ], [ %t4751, %fixslow1376 ]
+  %t4753 = icmp ne i64 %t4752, 1
+  br i1 %t4753, label %then1378, label %else1379
+then1378:
+  %t4754 = or i64 %a2, 16
+  %t4755 = and i64 %t4754, 7
+  %t4756 = icmp eq i64 %t4755, 0
+  br i1 %t4756, label %fixfast1381, label %fixslow1382
+fixfast1381:
+  %t4757 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 16)
+  %t4758 = extractvalue {i64, i1} %t4757, 0
+  %t4759 = extractvalue {i64, i1} %t4757, 1
+  br i1 %t4759, label %fixslow1382, label %fixmerge1383
+fixslow1382:
+  %t4760 = call i64 @rt_add(i64 %a2, i64 16)
+  br label %fixmerge1383
+fixmerge1383:
+  %t4761 = phi i64 [ %t4758, %fixfast1381 ], [ %t4760, %fixslow1382 ]
+  %t4762 = or i64 %t4761, %a1
+  %t4763 = and i64 %t4762, 7
+  %t4764 = icmp eq i64 %t4763, 0
+  br i1 %t4764, label %fixfast1384, label %fixslow1385
+fixfast1384:
+  %t4765 = icmp slt i64 %t4761, %a1
+  %t4766 = select i1 %t4765, i64 257, i64 1
+  br label %fixmerge1386
+fixslow1385:
+  %t4767 = call i64 @rt_lt(i64 %t4761, i64 %a1)
+  br label %fixmerge1386
+fixmerge1386:
+  %t4768 = phi i64 [ %t4766, %fixfast1384 ], [ %t4767, %fixslow1385 ]
+  %t4769 = icmp ne i64 %t4768, 1
+  br i1 %t4769, label %then1387, label %else1388
+then1387:
+  %t4770 = or i64 %a2, 8
+  %t4771 = and i64 %t4770, 7
+  %t4772 = icmp eq i64 %t4771, 0
+  br i1 %t4772, label %fixfast1390, label %fixslow1391
+fixfast1390:
+  %t4773 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
+  %t4774 = extractvalue {i64, i1} %t4773, 0
+  %t4775 = extractvalue {i64, i1} %t4773, 1
+  br i1 %t4775, label %fixslow1391, label %fixmerge1392
+fixslow1391:
+  %t4776 = call i64 @rt_add(i64 %a2, i64 8)
+  br label %fixmerge1392
+fixmerge1392:
+  %t4777 = phi i64 [ %t4774, %fixfast1390 ], [ %t4776, %fixslow1391 ]
+  %t4778 = call i64 @rt_string_ref(i64 %a0, i64 %t4777)
+  %t4779 = call i64 @rt_char_to_integer(i64 %t4778)
+  %t4780 = or i64 %t4779, 448
+  %t4781 = and i64 %t4780, 7
+  %t4782 = icmp eq i64 %t4781, 0
+  br i1 %t4782, label %fixfast1393, label %fixslow1394
+fixfast1393:
+  %t4783 = icmp eq i64 %t4779, 448
+  %t4784 = select i1 %t4783, i64 257, i64 1
+  br label %fixmerge1395
+fixslow1394:
+  %t4785 = call i64 @rt_num_eq(i64 %t4779, i64 448)
+  br label %fixmerge1395
+fixmerge1395:
+  %t4786 = phi i64 [ %t4784, %fixfast1393 ], [ %t4785, %fixslow1394 ]
+  %t4787 = icmp ne i64 %t4786, 1
+  br i1 %t4787, label %then1396, label %else1397
+then1396:
+  %t4788 = or i64 %a2, 16
+  %t4789 = and i64 %t4788, 7
+  %t4790 = icmp eq i64 %t4789, 0
+  br i1 %t4790, label %fixfast1399, label %fixslow1400
+fixfast1399:
+  %t4791 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 16)
+  %t4792 = extractvalue {i64, i1} %t4791, 0
+  %t4793 = extractvalue {i64, i1} %t4791, 1
+  br i1 %t4793, label %fixslow1400, label %fixmerge1401
+fixslow1400:
+  %t4794 = call i64 @rt_add(i64 %a2, i64 16)
+  br label %fixmerge1401
+fixmerge1401:
+  %t4795 = phi i64 [ %t4792, %fixfast1399 ], [ %t4794, %fixslow1400 ]
+  %t4796 = call i64 @rt_string_ref(i64 %a0, i64 %t4795)
+  %t4797 = call i64 @rt_char_to_integer(i64 %t4796)
+  %t4798 = or i64 %t4797, 320
+  %t4799 = and i64 %t4798, 7
+  %t4800 = icmp eq i64 %t4799, 0
+  br i1 %t4800, label %fixfast1402, label %fixslow1403
+fixfast1402:
+  %t4801 = icmp eq i64 %t4797, 320
+  %t4802 = select i1 %t4801, i64 257, i64 1
+  br label %fixmerge1404
+fixslow1403:
+  %t4803 = call i64 @rt_num_eq(i64 %t4797, i64 320)
+  br label %fixmerge1404
+fixmerge1404:
+  %t4804 = phi i64 [ %t4802, %fixfast1402 ], [ %t4803, %fixslow1403 ]
+  br label %merge1398
+else1397:
+  br label %merge1398
+merge1398:
+  %t4805 = phi i64 [ %t4804, %fixmerge1404 ], [ 1, %else1397 ]
+  br label %merge1389
+else1388:
+  br label %merge1389
+merge1389:
+  %t4806 = phi i64 [ %t4805, %merge1398 ], [ 1, %else1388 ]
+  br label %merge1380
+else1379:
+  br label %merge1380
+merge1380:
+  %t4807 = phi i64 [ %t4806, %merge1389 ], [ 1, %else1379 ]
+  %t4808 = icmp ne i64 %t4807, 1
+  br i1 %t4808, label %then1405, label %else1406
+then1405:
+  %t4809 = or i64 %a2, 24
+  %t4810 = and i64 %t4809, 7
+  %t4811 = icmp eq i64 %t4810, 0
+  br i1 %t4811, label %fixfast1407, label %fixslow1408
+fixfast1407:
+  %t4812 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 24)
+  %t4813 = extractvalue {i64, i1} %t4812, 0
+  %t4814 = extractvalue {i64, i1} %t4812, 1
+  br i1 %t4814, label %fixslow1408, label %fixmerge1409
+fixslow1408:
+  %t4815 = call i64 @rt_add(i64 %a2, i64 24)
+  br label %fixmerge1409
+fixmerge1409:
+  %t4816 = phi i64 [ %t4813, %fixfast1407 ], [ %t4815, %fixslow1408 ]
+  %t4817 = load i64, ptr @"scheme.base:rd-list"
+  %t4818 = and i64 %t4817, -8
+  %t4819 = inttoptr i64 %t4818 to ptr
+  %t4820 = load i64, ptr %t4819
+  %t4821 = inttoptr i64 %t4820 to ptr
+  %t4822 = call fastcc i64%t4821(i64 %t4817, i64 4, i64 %a0, i64 %a1, i64 %t4816, i64 2, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4823 = call i64 @rt_car(i64 %t4822)
+  %t4824 = load i64, ptr @"scheme.base:list->bytevector"
+  %t4825 = and i64 %t4824, -8
+  %t4826 = inttoptr i64 %t4825 to ptr
+  %t4827 = load i64, ptr %t4826
+  %t4828 = inttoptr i64 %t4827 to ptr
+  %t4829 = call fastcc i64%t4828(i64 %t4824, i64 1, i64 %t4823, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4830 = call i64 @rt_cdr(i64 %t4822)
+  %t4831 = call i64 @rt_cons(i64 %t4829, i64 %t4830)
+  ret i64 %t4831
+else1406:
+  %t4832 = load i64, ptr @"scheme.base:rd-token-end"
+  %t4833 = and i64 %t4832, -8
+  %t4834 = inttoptr i64 %t4833 to ptr
+  %t4835 = load i64, ptr %t4834
+  %t4836 = inttoptr i64 %t4835 to ptr
+  %t4837 = call fastcc i64%t4836(i64 %t4832, i64 3, i64 %a0, i64 %a1, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4838 = call i64 @rt_substring(i64 %a0, i64 %a2, i64 %t4837)
+  %t4839 = call i64 @rt_string_to_symbol(i64 %t4838)
+  %t4840 = call i64 @rt_cons(i64 %t4839, i64 %t4837)
+  ret i64 %t4840
 }
 
 define fastcc i64 @"scheme.base:code:rd-char-name"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t4810 = icmp eq i64 %argc, 1
-  br i1 %t4810, label %argok1398, label %arityerr1397
-arityerr1397:
+  %t4845 = icmp eq i64 %argc, 1
+  br i1 %t4845, label %argok1411, label %arityerr1410
+arityerr1410:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1398:
-  %t4811 = call i64 @rt_make_string(ptr @.str.lit.13, i64 5)
-  %t4812 = call i64 @rt_string_eq(i64 %a0, i64 %t4811)
-  %t4813 = icmp ne i64 %t4812, 1
-  br i1 %t4813, label %then1399, label %else1400
-then1399:
-  %t4814 = call i64 @rt_integer_to_char(i64 256)
-  ret i64 %t4814
-else1400:
-  %t4815 = call i64 @rt_make_string(ptr @.str.lit.14, i64 7)
-  %t4816 = call i64 @rt_string_eq(i64 %a0, i64 %t4815)
-  %t4817 = icmp ne i64 %t4816, 1
-  br i1 %t4817, label %then1401, label %else1402
-then1401:
-  %t4818 = call i64 @rt_integer_to_char(i64 80)
-  ret i64 %t4818
-else1402:
-  %t4819 = call i64 @rt_make_string(ptr @.str.lit.15, i64 3)
-  %t4820 = call i64 @rt_string_eq(i64 %a0, i64 %t4819)
-  %t4821 = icmp ne i64 %t4820, 1
-  br i1 %t4821, label %then1403, label %else1404
-then1403:
-  %t4822 = call i64 @rt_integer_to_char(i64 72)
-  ret i64 %t4822
-else1404:
-  %t4823 = call i64 @rt_make_string(ptr @.str.lit.16, i64 6)
-  %t4824 = call i64 @rt_string_eq(i64 %a0, i64 %t4823)
-  %t4825 = icmp ne i64 %t4824, 1
-  br i1 %t4825, label %then1405, label %else1406
-then1405:
-  %t4826 = call i64 @rt_integer_to_char(i64 104)
-  ret i64 %t4826
-else1406:
-  %t4827 = call i64 @rt_make_string(ptr @.str.lit.17, i64 3)
-  %t4828 = call i64 @rt_string_eq(i64 %a0, i64 %t4827)
-  %t4829 = icmp ne i64 %t4828, 1
-  br i1 %t4829, label %then1407, label %else1408
-then1407:
-  %t4830 = call i64 @rt_integer_to_char(i64 0)
-  ret i64 %t4830
-else1408:
-  %t4831 = call i64 @rt_make_string(ptr @.str.lit.18, i64 4)
-  %t4832 = call i64 @rt_string_eq(i64 %a0, i64 %t4831)
-  %t4833 = icmp ne i64 %t4832, 1
-  br i1 %t4833, label %then1409, label %else1410
-then1409:
-  %t4834 = call i64 @rt_integer_to_char(i64 0)
-  ret i64 %t4834
-else1410:
-  %t4835 = call i64 @rt_make_string(ptr @.str.lit.19, i64 6)
-  %t4836 = call i64 @rt_string_eq(i64 %a0, i64 %t4835)
-  %t4837 = icmp ne i64 %t4836, 1
-  br i1 %t4837, label %then1411, label %else1412
-then1411:
-  %t4838 = call i64 @rt_integer_to_char(i64 1016)
-  ret i64 %t4838
-else1412:
-  %t4839 = call i64 @rt_make_string(ptr @.str.lit.20, i64 7)
-  %t4840 = call i64 @rt_string_eq(i64 %a0, i64 %t4839)
-  %t4841 = icmp ne i64 %t4840, 1
-  br i1 %t4841, label %then1413, label %else1414
-then1413:
-  %t4842 = call i64 @rt_integer_to_char(i64 216)
-  ret i64 %t4842
-else1414:
-  %t4843 = call i64 @rt_make_string(ptr @.str.lit.21, i64 3)
-  %t4844 = call i64 @rt_string_eq(i64 %a0, i64 %t4843)
-  %t4845 = icmp ne i64 %t4844, 1
-  br i1 %t4845, label %then1415, label %else1416
-then1415:
-  %t4846 = call i64 @rt_integer_to_char(i64 216)
-  ret i64 %t4846
-else1416:
-  %t4847 = call i64 @rt_string_ref(i64 %a0, i64 0)
-  ret i64 %t4847
+argok1411:
+  %t4846 = call i64 @rt_make_string(ptr @.str.lit.19, i64 5)
+  %t4847 = call i64 @rt_string_eq(i64 %a0, i64 %t4846)
+  %t4848 = icmp ne i64 %t4847, 1
+  br i1 %t4848, label %then1412, label %else1413
+then1412:
+  %t4849 = call i64 @rt_integer_to_char(i64 256)
+  ret i64 %t4849
+else1413:
+  %t4850 = call i64 @rt_make_string(ptr @.str.lit.20, i64 7)
+  %t4851 = call i64 @rt_string_eq(i64 %a0, i64 %t4850)
+  %t4852 = icmp ne i64 %t4851, 1
+  br i1 %t4852, label %then1414, label %else1415
+then1414:
+  %t4853 = call i64 @rt_integer_to_char(i64 80)
+  ret i64 %t4853
+else1415:
+  %t4854 = call i64 @rt_make_string(ptr @.str.lit.21, i64 3)
+  %t4855 = call i64 @rt_string_eq(i64 %a0, i64 %t4854)
+  %t4856 = icmp ne i64 %t4855, 1
+  br i1 %t4856, label %then1416, label %else1417
+then1416:
+  %t4857 = call i64 @rt_integer_to_char(i64 72)
+  ret i64 %t4857
+else1417:
+  %t4858 = call i64 @rt_make_string(ptr @.str.lit.22, i64 6)
+  %t4859 = call i64 @rt_string_eq(i64 %a0, i64 %t4858)
+  %t4860 = icmp ne i64 %t4859, 1
+  br i1 %t4860, label %then1418, label %else1419
+then1418:
+  %t4861 = call i64 @rt_integer_to_char(i64 104)
+  ret i64 %t4861
+else1419:
+  %t4862 = call i64 @rt_make_string(ptr @.str.lit.23, i64 3)
+  %t4863 = call i64 @rt_string_eq(i64 %a0, i64 %t4862)
+  %t4864 = icmp ne i64 %t4863, 1
+  br i1 %t4864, label %then1420, label %else1421
+then1420:
+  %t4865 = call i64 @rt_integer_to_char(i64 0)
+  ret i64 %t4865
+else1421:
+  %t4866 = call i64 @rt_make_string(ptr @.str.lit.24, i64 4)
+  %t4867 = call i64 @rt_string_eq(i64 %a0, i64 %t4866)
+  %t4868 = icmp ne i64 %t4867, 1
+  br i1 %t4868, label %then1422, label %else1423
+then1422:
+  %t4869 = call i64 @rt_integer_to_char(i64 0)
+  ret i64 %t4869
+else1423:
+  %t4870 = call i64 @rt_make_string(ptr @.str.lit.25, i64 6)
+  %t4871 = call i64 @rt_string_eq(i64 %a0, i64 %t4870)
+  %t4872 = icmp ne i64 %t4871, 1
+  br i1 %t4872, label %then1424, label %else1425
+then1424:
+  %t4873 = call i64 @rt_integer_to_char(i64 1016)
+  ret i64 %t4873
+else1425:
+  %t4874 = call i64 @rt_make_string(ptr @.str.lit.26, i64 7)
+  %t4875 = call i64 @rt_string_eq(i64 %a0, i64 %t4874)
+  %t4876 = icmp ne i64 %t4875, 1
+  br i1 %t4876, label %then1426, label %else1427
+then1426:
+  %t4877 = call i64 @rt_integer_to_char(i64 216)
+  ret i64 %t4877
+else1427:
+  %t4878 = call i64 @rt_make_string(ptr @.str.lit.27, i64 3)
+  %t4879 = call i64 @rt_string_eq(i64 %a0, i64 %t4878)
+  %t4880 = icmp ne i64 %t4879, 1
+  br i1 %t4880, label %then1428, label %else1429
+then1428:
+  %t4881 = call i64 @rt_integer_to_char(i64 216)
+  ret i64 %t4881
+else1429:
+  %t4882 = call i64 @rt_string_ref(i64 %a0, i64 0)
+  ret i64 %t4882
 }
 
 define fastcc i64 @"scheme.base:code:rd-char"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t4852 = icmp eq i64 %argc, 3
-  br i1 %t4852, label %argok1418, label %arityerr1417
-arityerr1417:
-  call void @rt_arity_error(i64 3, i64 %argc)
-  unreachable
-argok1418:
-  %t4853 = or i64 %a2, 8
-  %t4854 = and i64 %t4853, 7
-  %t4855 = icmp eq i64 %t4854, 0
-  br i1 %t4855, label %fixfast1419, label %fixslow1420
-fixfast1419:
-  %t4856 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
-  %t4857 = extractvalue {i64, i1} %t4856, 0
-  %t4858 = extractvalue {i64, i1} %t4856, 1
-  br i1 %t4858, label %fixslow1420, label %fixmerge1421
-fixslow1420:
-  %t4859 = call i64 @rt_add(i64 %a2, i64 8)
-  br label %fixmerge1421
-fixmerge1421:
-  %t4860 = phi i64 [ %t4857, %fixfast1419 ], [ %t4859, %fixslow1420 ]
-  %t4861 = or i64 %t4860, 8
-  %t4862 = and i64 %t4861, 7
-  %t4863 = icmp eq i64 %t4862, 0
-  br i1 %t4863, label %fixfast1422, label %fixslow1423
-fixfast1422:
-  %t4864 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t4860, i64 8)
-  %t4865 = extractvalue {i64, i1} %t4864, 0
-  %t4866 = extractvalue {i64, i1} %t4864, 1
-  br i1 %t4866, label %fixslow1423, label %fixmerge1424
-fixslow1423:
-  %t4867 = call i64 @rt_add(i64 %t4860, i64 8)
-  br label %fixmerge1424
-fixmerge1424:
-  %t4868 = phi i64 [ %t4865, %fixfast1422 ], [ %t4867, %fixslow1423 ]
-  %t4869 = load i64, ptr @"scheme.base:rd-token-end"
-  %t4870 = and i64 %t4869, -8
-  %t4871 = inttoptr i64 %t4870 to ptr
-  %t4872 = load i64, ptr %t4871
-  %t4873 = inttoptr i64 %t4872 to ptr
-  %t4874 = call fastcc i64%t4873(i64 %t4869, i64 3, i64 %a0, i64 %a1, i64 %t4868, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4875 = call i64 @rt_substring(i64 %a0, i64 %t4860, i64 %t4874)
-  %t4876 = call i64 @rt_string_length(i64 %t4875)
-  %t4877 = or i64 %t4876, 8
-  %t4878 = and i64 %t4877, 7
-  %t4879 = icmp eq i64 %t4878, 0
-  br i1 %t4879, label %fixfast1425, label %fixslow1426
-fixfast1425:
-  %t4880 = icmp eq i64 %t4876, 8
-  %t4881 = select i1 %t4880, i64 257, i64 1
-  br label %fixmerge1427
-fixslow1426:
-  %t4882 = call i64 @rt_num_eq(i64 %t4876, i64 8)
-  br label %fixmerge1427
-fixmerge1427:
-  %t4883 = phi i64 [ %t4881, %fixfast1425 ], [ %t4882, %fixslow1426 ]
-  %t4884 = icmp ne i64 %t4883, 1
-  br i1 %t4884, label %then1428, label %else1429
-then1428:
-  %t4885 = call i64 @rt_string_ref(i64 %a0, i64 %t4860)
-  %t4886 = call i64 @rt_cons(i64 %t4885, i64 %t4874)
-  ret i64 %t4886
-else1429:
-  %t4887 = load i64, ptr @"scheme.base:rd-char-name"
-  %t4888 = and i64 %t4887, -8
-  %t4889 = inttoptr i64 %t4888 to ptr
-  %t4890 = load i64, ptr %t4889
-  %t4891 = inttoptr i64 %t4890 to ptr
-  %t4892 = call fastcc i64%t4891(i64 %t4887, i64 1, i64 %t4875, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4893 = call i64 @rt_cons(i64 %t4892, i64 %t4874)
-  ret i64 %t4893
-}
-
-define fastcc i64 @"scheme.base:code:rd-quote"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
-entry:
-  %t4898 = icmp eq i64 %argc, 3
-  br i1 %t4898, label %argok1431, label %arityerr1430
+  %t4887 = icmp eq i64 %argc, 3
+  br i1 %t4887, label %argok1431, label %arityerr1430
 arityerr1430:
   call void @rt_arity_error(i64 3, i64 %argc)
   unreachable
 argok1431:
-  %t4899 = load i64, ptr @"scheme.base:rd-skip-ws"
-  %t4900 = and i64 %t4899, -8
-  %t4901 = inttoptr i64 %t4900 to ptr
-  %t4902 = load i64, ptr %t4901
-  %t4903 = inttoptr i64 %t4902 to ptr
-  %t4904 = call fastcc i64%t4903(i64 %t4899, i64 3, i64 %a0, i64 %a1, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4905 = load i64, ptr @"scheme.base:rd-datum"
-  %t4906 = and i64 %t4905, -8
-  %t4907 = inttoptr i64 %t4906 to ptr
-  %t4908 = load i64, ptr %t4907
-  %t4909 = inttoptr i64 %t4908 to ptr
-  %t4910 = call fastcc i64%t4909(i64 %t4905, i64 3, i64 %a0, i64 %a1, i64 %t4904, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4911 = call i64 @rt_intern(ptr @.str.sym.22)
-  %t4912 = call i64 @rt_car(i64 %t4910)
-  %t4913 = load i64, ptr @"scheme.base:list"
-  %t4914 = and i64 %t4913, -8
-  %t4915 = inttoptr i64 %t4914 to ptr
-  %t4916 = load i64, ptr %t4915
-  %t4917 = inttoptr i64 %t4916 to ptr
-  %t4918 = call fastcc i64%t4917(i64 %t4913, i64 2, i64 %t4911, i64 %t4912, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4919 = call i64 @rt_cdr(i64 %t4910)
-  %t4920 = call i64 @rt_cons(i64 %t4918, i64 %t4919)
-  ret i64 %t4920
+  %t4888 = or i64 %a2, 8
+  %t4889 = and i64 %t4888, 7
+  %t4890 = icmp eq i64 %t4889, 0
+  br i1 %t4890, label %fixfast1432, label %fixslow1433
+fixfast1432:
+  %t4891 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
+  %t4892 = extractvalue {i64, i1} %t4891, 0
+  %t4893 = extractvalue {i64, i1} %t4891, 1
+  br i1 %t4893, label %fixslow1433, label %fixmerge1434
+fixslow1433:
+  %t4894 = call i64 @rt_add(i64 %a2, i64 8)
+  br label %fixmerge1434
+fixmerge1434:
+  %t4895 = phi i64 [ %t4892, %fixfast1432 ], [ %t4894, %fixslow1433 ]
+  %t4896 = or i64 %t4895, 8
+  %t4897 = and i64 %t4896, 7
+  %t4898 = icmp eq i64 %t4897, 0
+  br i1 %t4898, label %fixfast1435, label %fixslow1436
+fixfast1435:
+  %t4899 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t4895, i64 8)
+  %t4900 = extractvalue {i64, i1} %t4899, 0
+  %t4901 = extractvalue {i64, i1} %t4899, 1
+  br i1 %t4901, label %fixslow1436, label %fixmerge1437
+fixslow1436:
+  %t4902 = call i64 @rt_add(i64 %t4895, i64 8)
+  br label %fixmerge1437
+fixmerge1437:
+  %t4903 = phi i64 [ %t4900, %fixfast1435 ], [ %t4902, %fixslow1436 ]
+  %t4904 = load i64, ptr @"scheme.base:rd-token-end"
+  %t4905 = and i64 %t4904, -8
+  %t4906 = inttoptr i64 %t4905 to ptr
+  %t4907 = load i64, ptr %t4906
+  %t4908 = inttoptr i64 %t4907 to ptr
+  %t4909 = call fastcc i64%t4908(i64 %t4904, i64 3, i64 %a0, i64 %a1, i64 %t4903, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4910 = call i64 @rt_substring(i64 %a0, i64 %t4895, i64 %t4909)
+  %t4911 = call i64 @rt_string_length(i64 %t4910)
+  %t4912 = or i64 %t4911, 8
+  %t4913 = and i64 %t4912, 7
+  %t4914 = icmp eq i64 %t4913, 0
+  br i1 %t4914, label %fixfast1438, label %fixslow1439
+fixfast1438:
+  %t4915 = icmp eq i64 %t4911, 8
+  %t4916 = select i1 %t4915, i64 257, i64 1
+  br label %fixmerge1440
+fixslow1439:
+  %t4917 = call i64 @rt_num_eq(i64 %t4911, i64 8)
+  br label %fixmerge1440
+fixmerge1440:
+  %t4918 = phi i64 [ %t4916, %fixfast1438 ], [ %t4917, %fixslow1439 ]
+  %t4919 = icmp ne i64 %t4918, 1
+  br i1 %t4919, label %then1441, label %else1442
+then1441:
+  %t4920 = call i64 @rt_string_ref(i64 %a0, i64 %t4895)
+  %t4921 = call i64 @rt_cons(i64 %t4920, i64 %t4909)
+  ret i64 %t4921
+else1442:
+  %t4922 = load i64, ptr @"scheme.base:rd-char-name"
+  %t4923 = and i64 %t4922, -8
+  %t4924 = inttoptr i64 %t4923 to ptr
+  %t4925 = load i64, ptr %t4924
+  %t4926 = inttoptr i64 %t4925 to ptr
+  %t4927 = call fastcc i64%t4926(i64 %t4922, i64 1, i64 %t4910, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4928 = call i64 @rt_cons(i64 %t4927, i64 %t4909)
+  ret i64 %t4928
 }
 
-define fastcc i64 @"scheme.base:code:rd-quasi"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:rd-quote"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t4925 = icmp eq i64 %argc, 3
-  br i1 %t4925, label %argok1433, label %arityerr1432
-arityerr1432:
+  %t4933 = icmp eq i64 %argc, 3
+  br i1 %t4933, label %argok1444, label %arityerr1443
+arityerr1443:
   call void @rt_arity_error(i64 3, i64 %argc)
   unreachable
-argok1433:
-  %t4926 = load i64, ptr @"scheme.base:rd-skip-ws"
-  %t4927 = and i64 %t4926, -8
-  %t4928 = inttoptr i64 %t4927 to ptr
-  %t4929 = load i64, ptr %t4928
-  %t4930 = inttoptr i64 %t4929 to ptr
-  %t4931 = call fastcc i64%t4930(i64 %t4926, i64 3, i64 %a0, i64 %a1, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4932 = load i64, ptr @"scheme.base:rd-datum"
-  %t4933 = and i64 %t4932, -8
-  %t4934 = inttoptr i64 %t4933 to ptr
-  %t4935 = load i64, ptr %t4934
+argok1444:
+  %t4934 = load i64, ptr @"scheme.base:rd-skip-ws"
+  %t4935 = and i64 %t4934, -8
   %t4936 = inttoptr i64 %t4935 to ptr
-  %t4937 = call fastcc i64%t4936(i64 %t4932, i64 3, i64 %a0, i64 %a1, i64 %t4931, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4938 = call i64 @rt_intern(ptr @.str.sym.23)
-  %t4939 = call i64 @rt_car(i64 %t4937)
-  %t4940 = load i64, ptr @"scheme.base:list"
+  %t4937 = load i64, ptr %t4936
+  %t4938 = inttoptr i64 %t4937 to ptr
+  %t4939 = call fastcc i64%t4938(i64 %t4934, i64 3, i64 %a0, i64 %a1, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4940 = load i64, ptr @"scheme.base:rd-datum"
   %t4941 = and i64 %t4940, -8
   %t4942 = inttoptr i64 %t4941 to ptr
   %t4943 = load i64, ptr %t4942
   %t4944 = inttoptr i64 %t4943 to ptr
-  %t4945 = call fastcc i64%t4944(i64 %t4940, i64 2, i64 %t4938, i64 %t4939, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4946 = call i64 @rt_cdr(i64 %t4937)
-  %t4947 = call i64 @rt_cons(i64 %t4945, i64 %t4946)
-  ret i64 %t4947
+  %t4945 = call fastcc i64%t4944(i64 %t4940, i64 3, i64 %a0, i64 %a1, i64 %t4939, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4946 = call i64 @rt_intern(ptr @.str.sym.28)
+  %t4947 = call i64 @rt_car(i64 %t4945)
+  %t4948 = load i64, ptr @"scheme.base:list"
+  %t4949 = and i64 %t4948, -8
+  %t4950 = inttoptr i64 %t4949 to ptr
+  %t4951 = load i64, ptr %t4950
+  %t4952 = inttoptr i64 %t4951 to ptr
+  %t4953 = call fastcc i64%t4952(i64 %t4948, i64 2, i64 %t4946, i64 %t4947, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4954 = call i64 @rt_cdr(i64 %t4945)
+  %t4955 = call i64 @rt_cons(i64 %t4953, i64 %t4954)
+  ret i64 %t4955
+}
+
+define fastcc i64 @"scheme.base:code:rd-quasi"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+entry:
+  %t4960 = icmp eq i64 %argc, 3
+  br i1 %t4960, label %argok1446, label %arityerr1445
+arityerr1445:
+  call void @rt_arity_error(i64 3, i64 %argc)
+  unreachable
+argok1446:
+  %t4961 = load i64, ptr @"scheme.base:rd-skip-ws"
+  %t4962 = and i64 %t4961, -8
+  %t4963 = inttoptr i64 %t4962 to ptr
+  %t4964 = load i64, ptr %t4963
+  %t4965 = inttoptr i64 %t4964 to ptr
+  %t4966 = call fastcc i64%t4965(i64 %t4961, i64 3, i64 %a0, i64 %a1, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4967 = load i64, ptr @"scheme.base:rd-datum"
+  %t4968 = and i64 %t4967, -8
+  %t4969 = inttoptr i64 %t4968 to ptr
+  %t4970 = load i64, ptr %t4969
+  %t4971 = inttoptr i64 %t4970 to ptr
+  %t4972 = call fastcc i64%t4971(i64 %t4967, i64 3, i64 %a0, i64 %a1, i64 %t4966, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4973 = call i64 @rt_intern(ptr @.str.sym.29)
+  %t4974 = call i64 @rt_car(i64 %t4972)
+  %t4975 = load i64, ptr @"scheme.base:list"
+  %t4976 = and i64 %t4975, -8
+  %t4977 = inttoptr i64 %t4976 to ptr
+  %t4978 = load i64, ptr %t4977
+  %t4979 = inttoptr i64 %t4978 to ptr
+  %t4980 = call fastcc i64%t4979(i64 %t4975, i64 2, i64 %t4973, i64 %t4974, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t4981 = call i64 @rt_cdr(i64 %t4972)
+  %t4982 = call i64 @rt_cons(i64 %t4980, i64 %t4981)
+  ret i64 %t4982
 }
 
 define fastcc i64 @"scheme.base:code:rd-unquote"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t4952 = icmp eq i64 %argc, 3
-  br i1 %t4952, label %argok1435, label %arityerr1434
-arityerr1434:
+  %t4987 = icmp eq i64 %argc, 3
+  br i1 %t4987, label %argok1448, label %arityerr1447
+arityerr1447:
   call void @rt_arity_error(i64 3, i64 %argc)
   unreachable
-argok1435:
-  %t4953 = or i64 %a2, %a1
-  %t4954 = and i64 %t4953, 7
-  %t4955 = icmp eq i64 %t4954, 0
-  br i1 %t4955, label %fixfast1436, label %fixslow1437
-fixfast1436:
-  %t4956 = icmp slt i64 %a2, %a1
-  %t4957 = select i1 %t4956, i64 257, i64 1
-  br label %fixmerge1438
-fixslow1437:
-  %t4958 = call i64 @rt_lt(i64 %a2, i64 %a1)
-  br label %fixmerge1438
-fixmerge1438:
-  %t4959 = phi i64 [ %t4957, %fixfast1436 ], [ %t4958, %fixslow1437 ]
-  %t4960 = icmp ne i64 %t4959, 1
-  br i1 %t4960, label %then1439, label %else1440
-then1439:
-  %t4961 = call i64 @rt_string_ref(i64 %a0, i64 %a2)
-  %t4962 = call i64 @rt_char_to_integer(i64 %t4961)
-  %t4963 = or i64 %t4962, 512
-  %t4964 = and i64 %t4963, 7
-  %t4965 = icmp eq i64 %t4964, 0
-  br i1 %t4965, label %fixfast1442, label %fixslow1443
-fixfast1442:
-  %t4966 = icmp eq i64 %t4962, 512
-  %t4967 = select i1 %t4966, i64 257, i64 1
-  br label %fixmerge1444
-fixslow1443:
-  %t4968 = call i64 @rt_num_eq(i64 %t4962, i64 512)
-  br label %fixmerge1444
-fixmerge1444:
-  %t4969 = phi i64 [ %t4967, %fixfast1442 ], [ %t4968, %fixslow1443 ]
-  br label %merge1441
-else1440:
-  br label %merge1441
-merge1441:
-  %t4970 = phi i64 [ %t4969, %fixmerge1444 ], [ 1, %else1440 ]
-  %t4971 = icmp ne i64 %t4970, 1
-  br i1 %t4971, label %then1445, label %else1446
-then1445:
-  %t4972 = or i64 %a2, 8
-  %t4973 = and i64 %t4972, 7
-  %t4974 = icmp eq i64 %t4973, 0
-  br i1 %t4974, label %fixfast1447, label %fixslow1448
-fixfast1447:
-  %t4975 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
-  %t4976 = extractvalue {i64, i1} %t4975, 0
-  %t4977 = extractvalue {i64, i1} %t4975, 1
-  br i1 %t4977, label %fixslow1448, label %fixmerge1449
-fixslow1448:
-  %t4978 = call i64 @rt_add(i64 %a2, i64 8)
-  br label %fixmerge1449
-fixmerge1449:
-  %t4979 = phi i64 [ %t4976, %fixfast1447 ], [ %t4978, %fixslow1448 ]
-  %t4980 = load i64, ptr @"scheme.base:rd-skip-ws"
-  %t4981 = and i64 %t4980, -8
-  %t4982 = inttoptr i64 %t4981 to ptr
-  %t4983 = load i64, ptr %t4982
-  %t4984 = inttoptr i64 %t4983 to ptr
-  %t4985 = call fastcc i64%t4984(i64 %t4980, i64 3, i64 %a0, i64 %a1, i64 %t4979, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4986 = load i64, ptr @"scheme.base:rd-datum"
-  %t4987 = and i64 %t4986, -8
-  %t4988 = inttoptr i64 %t4987 to ptr
-  %t4989 = load i64, ptr %t4988
-  %t4990 = inttoptr i64 %t4989 to ptr
-  %t4991 = call fastcc i64%t4990(i64 %t4986, i64 3, i64 %a0, i64 %a1, i64 %t4985, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t4992 = call i64 @rt_intern(ptr @.str.sym.24)
-  %t4993 = call i64 @rt_car(i64 %t4991)
-  %t4994 = load i64, ptr @"scheme.base:list"
-  %t4995 = and i64 %t4994, -8
-  %t4996 = inttoptr i64 %t4995 to ptr
-  %t4997 = load i64, ptr %t4996
-  %t4998 = inttoptr i64 %t4997 to ptr
-  %t4999 = call fastcc i64%t4998(i64 %t4994, i64 2, i64 %t4992, i64 %t4993, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5000 = call i64 @rt_cdr(i64 %t4991)
-  %t5001 = call i64 @rt_cons(i64 %t4999, i64 %t5000)
-  ret i64 %t5001
-else1446:
-  %t5002 = load i64, ptr @"scheme.base:rd-skip-ws"
-  %t5003 = and i64 %t5002, -8
-  %t5004 = inttoptr i64 %t5003 to ptr
-  %t5005 = load i64, ptr %t5004
-  %t5006 = inttoptr i64 %t5005 to ptr
-  %t5007 = call fastcc i64%t5006(i64 %t5002, i64 3, i64 %a0, i64 %a1, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5008 = load i64, ptr @"scheme.base:rd-datum"
-  %t5009 = and i64 %t5008, -8
-  %t5010 = inttoptr i64 %t5009 to ptr
-  %t5011 = load i64, ptr %t5010
-  %t5012 = inttoptr i64 %t5011 to ptr
-  %t5013 = call fastcc i64%t5012(i64 %t5008, i64 3, i64 %a0, i64 %a1, i64 %t5007, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5014 = call i64 @rt_intern(ptr @.str.sym.25)
-  %t5015 = call i64 @rt_car(i64 %t5013)
-  %t5016 = load i64, ptr @"scheme.base:list"
-  %t5017 = and i64 %t5016, -8
-  %t5018 = inttoptr i64 %t5017 to ptr
-  %t5019 = load i64, ptr %t5018
-  %t5020 = inttoptr i64 %t5019 to ptr
-  %t5021 = call fastcc i64%t5020(i64 %t5016, i64 2, i64 %t5014, i64 %t5015, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5022 = call i64 @rt_cdr(i64 %t5013)
-  %t5023 = call i64 @rt_cons(i64 %t5021, i64 %t5022)
-  ret i64 %t5023
+argok1448:
+  %t4988 = or i64 %a2, %a1
+  %t4989 = and i64 %t4988, 7
+  %t4990 = icmp eq i64 %t4989, 0
+  br i1 %t4990, label %fixfast1449, label %fixslow1450
+fixfast1449:
+  %t4991 = icmp slt i64 %a2, %a1
+  %t4992 = select i1 %t4991, i64 257, i64 1
+  br label %fixmerge1451
+fixslow1450:
+  %t4993 = call i64 @rt_lt(i64 %a2, i64 %a1)
+  br label %fixmerge1451
+fixmerge1451:
+  %t4994 = phi i64 [ %t4992, %fixfast1449 ], [ %t4993, %fixslow1450 ]
+  %t4995 = icmp ne i64 %t4994, 1
+  br i1 %t4995, label %then1452, label %else1453
+then1452:
+  %t4996 = call i64 @rt_string_ref(i64 %a0, i64 %a2)
+  %t4997 = call i64 @rt_char_to_integer(i64 %t4996)
+  %t4998 = or i64 %t4997, 512
+  %t4999 = and i64 %t4998, 7
+  %t5000 = icmp eq i64 %t4999, 0
+  br i1 %t5000, label %fixfast1455, label %fixslow1456
+fixfast1455:
+  %t5001 = icmp eq i64 %t4997, 512
+  %t5002 = select i1 %t5001, i64 257, i64 1
+  br label %fixmerge1457
+fixslow1456:
+  %t5003 = call i64 @rt_num_eq(i64 %t4997, i64 512)
+  br label %fixmerge1457
+fixmerge1457:
+  %t5004 = phi i64 [ %t5002, %fixfast1455 ], [ %t5003, %fixslow1456 ]
+  br label %merge1454
+else1453:
+  br label %merge1454
+merge1454:
+  %t5005 = phi i64 [ %t5004, %fixmerge1457 ], [ 1, %else1453 ]
+  %t5006 = icmp ne i64 %t5005, 1
+  br i1 %t5006, label %then1458, label %else1459
+then1458:
+  %t5007 = or i64 %a2, 8
+  %t5008 = and i64 %t5007, 7
+  %t5009 = icmp eq i64 %t5008, 0
+  br i1 %t5009, label %fixfast1460, label %fixslow1461
+fixfast1460:
+  %t5010 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
+  %t5011 = extractvalue {i64, i1} %t5010, 0
+  %t5012 = extractvalue {i64, i1} %t5010, 1
+  br i1 %t5012, label %fixslow1461, label %fixmerge1462
+fixslow1461:
+  %t5013 = call i64 @rt_add(i64 %a2, i64 8)
+  br label %fixmerge1462
+fixmerge1462:
+  %t5014 = phi i64 [ %t5011, %fixfast1460 ], [ %t5013, %fixslow1461 ]
+  %t5015 = load i64, ptr @"scheme.base:rd-skip-ws"
+  %t5016 = and i64 %t5015, -8
+  %t5017 = inttoptr i64 %t5016 to ptr
+  %t5018 = load i64, ptr %t5017
+  %t5019 = inttoptr i64 %t5018 to ptr
+  %t5020 = call fastcc i64%t5019(i64 %t5015, i64 3, i64 %a0, i64 %a1, i64 %t5014, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5021 = load i64, ptr @"scheme.base:rd-datum"
+  %t5022 = and i64 %t5021, -8
+  %t5023 = inttoptr i64 %t5022 to ptr
+  %t5024 = load i64, ptr %t5023
+  %t5025 = inttoptr i64 %t5024 to ptr
+  %t5026 = call fastcc i64%t5025(i64 %t5021, i64 3, i64 %a0, i64 %a1, i64 %t5020, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5027 = call i64 @rt_intern(ptr @.str.sym.30)
+  %t5028 = call i64 @rt_car(i64 %t5026)
+  %t5029 = load i64, ptr @"scheme.base:list"
+  %t5030 = and i64 %t5029, -8
+  %t5031 = inttoptr i64 %t5030 to ptr
+  %t5032 = load i64, ptr %t5031
+  %t5033 = inttoptr i64 %t5032 to ptr
+  %t5034 = call fastcc i64%t5033(i64 %t5029, i64 2, i64 %t5027, i64 %t5028, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5035 = call i64 @rt_cdr(i64 %t5026)
+  %t5036 = call i64 @rt_cons(i64 %t5034, i64 %t5035)
+  ret i64 %t5036
+else1459:
+  %t5037 = load i64, ptr @"scheme.base:rd-skip-ws"
+  %t5038 = and i64 %t5037, -8
+  %t5039 = inttoptr i64 %t5038 to ptr
+  %t5040 = load i64, ptr %t5039
+  %t5041 = inttoptr i64 %t5040 to ptr
+  %t5042 = call fastcc i64%t5041(i64 %t5037, i64 3, i64 %a0, i64 %a1, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5043 = load i64, ptr @"scheme.base:rd-datum"
+  %t5044 = and i64 %t5043, -8
+  %t5045 = inttoptr i64 %t5044 to ptr
+  %t5046 = load i64, ptr %t5045
+  %t5047 = inttoptr i64 %t5046 to ptr
+  %t5048 = call fastcc i64%t5047(i64 %t5043, i64 3, i64 %a0, i64 %a1, i64 %t5042, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5049 = call i64 @rt_intern(ptr @.str.sym.31)
+  %t5050 = call i64 @rt_car(i64 %t5048)
+  %t5051 = load i64, ptr @"scheme.base:list"
+  %t5052 = and i64 %t5051, -8
+  %t5053 = inttoptr i64 %t5052 to ptr
+  %t5054 = load i64, ptr %t5053
+  %t5055 = inttoptr i64 %t5054 to ptr
+  %t5056 = call fastcc i64%t5055(i64 %t5051, i64 2, i64 %t5049, i64 %t5050, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5057 = call i64 @rt_cdr(i64 %t5048)
+  %t5058 = call i64 @rt_cons(i64 %t5056, i64 %t5057)
+  ret i64 %t5058
 }
 
 define fastcc i64 @"scheme.base:code:rd-dot?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5028 = icmp eq i64 %argc, 3
-  br i1 %t5028, label %argok1451, label %arityerr1450
-arityerr1450:
+  %t5063 = icmp eq i64 %argc, 3
+  br i1 %t5063, label %argok1464, label %arityerr1463
+arityerr1463:
   call void @rt_arity_error(i64 3, i64 %argc)
   unreachable
-argok1451:
-  %t5029 = call i64 @rt_string_ref(i64 %a0, i64 %a2)
-  %t5030 = call i64 @rt_char_to_integer(i64 %t5029)
-  %t5031 = or i64 %t5030, 368
-  %t5032 = and i64 %t5031, 7
-  %t5033 = icmp eq i64 %t5032, 0
-  br i1 %t5033, label %fixfast1452, label %fixslow1453
-fixfast1452:
-  %t5034 = icmp eq i64 %t5030, 368
-  %t5035 = select i1 %t5034, i64 257, i64 1
-  br label %fixmerge1454
-fixslow1453:
-  %t5036 = call i64 @rt_num_eq(i64 %t5030, i64 368)
-  br label %fixmerge1454
-fixmerge1454:
-  %t5037 = phi i64 [ %t5035, %fixfast1452 ], [ %t5036, %fixslow1453 ]
-  %t5038 = icmp ne i64 %t5037, 1
-  br i1 %t5038, label %then1455, label %else1456
-then1455:
-  %t5039 = or i64 %a2, 8
-  %t5040 = and i64 %t5039, 7
-  %t5041 = icmp eq i64 %t5040, 0
-  br i1 %t5041, label %fixfast1457, label %fixslow1458
-fixfast1457:
-  %t5042 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
-  %t5043 = extractvalue {i64, i1} %t5042, 0
-  %t5044 = extractvalue {i64, i1} %t5042, 1
-  br i1 %t5044, label %fixslow1458, label %fixmerge1459
-fixslow1458:
-  %t5045 = call i64 @rt_add(i64 %a2, i64 8)
-  br label %fixmerge1459
-fixmerge1459:
-  %t5046 = phi i64 [ %t5043, %fixfast1457 ], [ %t5045, %fixslow1458 ]
-  %t5047 = load i64, ptr @"scheme.base:rd-token-end"
-  %t5048 = and i64 %t5047, -8
-  %t5049 = inttoptr i64 %t5048 to ptr
-  %t5050 = load i64, ptr %t5049
-  %t5051 = inttoptr i64 %t5050 to ptr
-  %t5052 = call fastcc i64%t5051(i64 %t5047, i64 3, i64 %a0, i64 %a1, i64 %t5046, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5053 = or i64 %a2, 8
-  %t5054 = and i64 %t5053, 7
-  %t5055 = icmp eq i64 %t5054, 0
-  br i1 %t5055, label %fixfast1460, label %fixslow1461
-fixfast1460:
-  %t5056 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
-  %t5057 = extractvalue {i64, i1} %t5056, 0
-  %t5058 = extractvalue {i64, i1} %t5056, 1
-  br i1 %t5058, label %fixslow1461, label %fixmerge1462
-fixslow1461:
-  %t5059 = call i64 @rt_add(i64 %a2, i64 8)
-  br label %fixmerge1462
-fixmerge1462:
-  %t5060 = phi i64 [ %t5057, %fixfast1460 ], [ %t5059, %fixslow1461 ]
-  %t5061 = or i64 %t5052, %t5060
-  %t5062 = and i64 %t5061, 7
-  %t5063 = icmp eq i64 %t5062, 0
-  br i1 %t5063, label %fixfast1463, label %fixslow1464
-fixfast1463:
-  %t5064 = icmp eq i64 %t5052, %t5060
-  %t5065 = select i1 %t5064, i64 257, i64 1
-  br label %fixmerge1465
-fixslow1464:
-  %t5066 = call i64 @rt_num_eq(i64 %t5052, i64 %t5060)
-  br label %fixmerge1465
-fixmerge1465:
-  %t5067 = phi i64 [ %t5065, %fixfast1463 ], [ %t5066, %fixslow1464 ]
-  ret i64 %t5067
-else1456:
+argok1464:
+  %t5064 = call i64 @rt_string_ref(i64 %a0, i64 %a2)
+  %t5065 = call i64 @rt_char_to_integer(i64 %t5064)
+  %t5066 = or i64 %t5065, 368
+  %t5067 = and i64 %t5066, 7
+  %t5068 = icmp eq i64 %t5067, 0
+  br i1 %t5068, label %fixfast1465, label %fixslow1466
+fixfast1465:
+  %t5069 = icmp eq i64 %t5065, 368
+  %t5070 = select i1 %t5069, i64 257, i64 1
+  br label %fixmerge1467
+fixslow1466:
+  %t5071 = call i64 @rt_num_eq(i64 %t5065, i64 368)
+  br label %fixmerge1467
+fixmerge1467:
+  %t5072 = phi i64 [ %t5070, %fixfast1465 ], [ %t5071, %fixslow1466 ]
+  %t5073 = icmp ne i64 %t5072, 1
+  br i1 %t5073, label %then1468, label %else1469
+then1468:
+  %t5074 = or i64 %a2, 8
+  %t5075 = and i64 %t5074, 7
+  %t5076 = icmp eq i64 %t5075, 0
+  br i1 %t5076, label %fixfast1470, label %fixslow1471
+fixfast1470:
+  %t5077 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
+  %t5078 = extractvalue {i64, i1} %t5077, 0
+  %t5079 = extractvalue {i64, i1} %t5077, 1
+  br i1 %t5079, label %fixslow1471, label %fixmerge1472
+fixslow1471:
+  %t5080 = call i64 @rt_add(i64 %a2, i64 8)
+  br label %fixmerge1472
+fixmerge1472:
+  %t5081 = phi i64 [ %t5078, %fixfast1470 ], [ %t5080, %fixslow1471 ]
+  %t5082 = load i64, ptr @"scheme.base:rd-token-end"
+  %t5083 = and i64 %t5082, -8
+  %t5084 = inttoptr i64 %t5083 to ptr
+  %t5085 = load i64, ptr %t5084
+  %t5086 = inttoptr i64 %t5085 to ptr
+  %t5087 = call fastcc i64%t5086(i64 %t5082, i64 3, i64 %a0, i64 %a1, i64 %t5081, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5088 = or i64 %a2, 8
+  %t5089 = and i64 %t5088, 7
+  %t5090 = icmp eq i64 %t5089, 0
+  br i1 %t5090, label %fixfast1473, label %fixslow1474
+fixfast1473:
+  %t5091 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
+  %t5092 = extractvalue {i64, i1} %t5091, 0
+  %t5093 = extractvalue {i64, i1} %t5091, 1
+  br i1 %t5093, label %fixslow1474, label %fixmerge1475
+fixslow1474:
+  %t5094 = call i64 @rt_add(i64 %a2, i64 8)
+  br label %fixmerge1475
+fixmerge1475:
+  %t5095 = phi i64 [ %t5092, %fixfast1473 ], [ %t5094, %fixslow1474 ]
+  %t5096 = or i64 %t5087, %t5095
+  %t5097 = and i64 %t5096, 7
+  %t5098 = icmp eq i64 %t5097, 0
+  br i1 %t5098, label %fixfast1476, label %fixslow1477
+fixfast1476:
+  %t5099 = icmp eq i64 %t5087, %t5095
+  %t5100 = select i1 %t5099, i64 257, i64 1
+  br label %fixmerge1478
+fixslow1477:
+  %t5101 = call i64 @rt_num_eq(i64 %t5087, i64 %t5095)
+  br label %fixmerge1478
+fixmerge1478:
+  %t5102 = phi i64 [ %t5100, %fixfast1476 ], [ %t5101, %fixslow1477 ]
+  ret i64 %t5102
+else1469:
   ret i64 1
 }
 
 define fastcc i64 @"scheme.base:code:rd-append-reverse"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5072 = icmp eq i64 %argc, 2
-  br i1 %t5072, label %argok1467, label %arityerr1466
-arityerr1466:
+  %t5107 = icmp eq i64 %argc, 2
+  br i1 %t5107, label %argok1480, label %arityerr1479
+arityerr1479:
   call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
-argok1467:
-  %t5073 = call i64 @rt_null_p(i64 %a0)
-  %t5074 = icmp ne i64 %t5073, 1
-  br i1 %t5074, label %then1468, label %else1469
-then1468:
+argok1480:
+  %t5108 = call i64 @rt_null_p(i64 %a0)
+  %t5109 = icmp ne i64 %t5108, 1
+  br i1 %t5109, label %then1481, label %else1482
+then1481:
   ret i64 %a1
-else1469:
-  %t5075 = call i64 @rt_cdr(i64 %a0)
-  %t5076 = call i64 @rt_car(i64 %a0)
-  %t5077 = call i64 @rt_cons(i64 %t5076, i64 %a1)
-  %t5078 = load i64, ptr @"scheme.base:rd-append-reverse"
-  %t5079 = and i64 %t5078, -8
-  %t5080 = inttoptr i64 %t5079 to ptr
-  %t5081 = load i64, ptr %t5080
-  %t5082 = inttoptr i64 %t5081 to ptr
-  %t5083 = musttail call fastcc i64 %t5082(i64 %t5078, i64 2, i64 %t5075, i64 %t5077, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t5083
+else1482:
+  %t5110 = call i64 @rt_cdr(i64 %a0)
+  %t5111 = call i64 @rt_car(i64 %a0)
+  %t5112 = call i64 @rt_cons(i64 %t5111, i64 %a1)
+  %t5113 = load i64, ptr @"scheme.base:rd-append-reverse"
+  %t5114 = and i64 %t5113, -8
+  %t5115 = inttoptr i64 %t5114 to ptr
+  %t5116 = load i64, ptr %t5115
+  %t5117 = inttoptr i64 %t5116 to ptr
+  %t5118 = musttail call fastcc i64 %t5117(i64 %t5113, i64 2, i64 %t5110, i64 %t5112, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t5118
 }
 
 define fastcc i64 @"scheme.base:code:rd-list"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5088 = icmp eq i64 %argc, 4
-  br i1 %t5088, label %argok1471, label %arityerr1470
-arityerr1470:
+  %t5123 = icmp eq i64 %argc, 4
+  br i1 %t5123, label %argok1484, label %arityerr1483
+arityerr1483:
   call void @rt_arity_error(i64 4, i64 %argc)
   unreachable
-argok1471:
-  %t5089 = load i64, ptr @"scheme.base:rd-skip-ws"
-  %t5090 = and i64 %t5089, -8
-  %t5091 = inttoptr i64 %t5090 to ptr
-  %t5092 = load i64, ptr %t5091
-  %t5093 = inttoptr i64 %t5092 to ptr
-  %t5094 = call fastcc i64%t5093(i64 %t5089, i64 3, i64 %a0, i64 %a1, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5095 = or i64 %t5094, %a1
-  %t5096 = and i64 %t5095, 7
-  %t5097 = icmp eq i64 %t5096, 0
-  br i1 %t5097, label %fixfast1472, label %fixslow1473
-fixfast1472:
-  %t5098 = icmp slt i64 %t5094, %a1
-  %t5099 = select i1 %t5098, i64 257, i64 1
-  br label %fixmerge1474
-fixslow1473:
-  %t5100 = call i64 @rt_lt(i64 %t5094, i64 %a1)
-  br label %fixmerge1474
-fixmerge1474:
-  %t5101 = phi i64 [ %t5099, %fixfast1472 ], [ %t5100, %fixslow1473 ]
-  %t5102 = icmp ne i64 %t5101, 1
-  br i1 %t5102, label %then1475, label %else1476
-then1475:
-  %t5103 = call i64 @rt_string_ref(i64 %a0, i64 %t5094)
-  %t5104 = call i64 @rt_char_to_integer(i64 %t5103)
-  %t5105 = or i64 %t5104, 328
-  %t5106 = and i64 %t5105, 7
-  %t5107 = icmp eq i64 %t5106, 0
-  br i1 %t5107, label %fixfast1477, label %fixslow1478
-fixfast1477:
-  %t5108 = icmp eq i64 %t5104, 328
-  %t5109 = select i1 %t5108, i64 257, i64 1
-  br label %fixmerge1479
-fixslow1478:
-  %t5110 = call i64 @rt_num_eq(i64 %t5104, i64 328)
-  br label %fixmerge1479
-fixmerge1479:
-  %t5111 = phi i64 [ %t5109, %fixfast1477 ], [ %t5110, %fixslow1478 ]
-  %t5112 = icmp ne i64 %t5111, 1
-  br i1 %t5112, label %then1480, label %else1481
-then1480:
-  br label %merge1482
-else1481:
-  %t5113 = or i64 %t5104, 744
-  %t5114 = and i64 %t5113, 7
-  %t5115 = icmp eq i64 %t5114, 0
-  br i1 %t5115, label %fixfast1483, label %fixslow1484
-fixfast1483:
-  %t5116 = icmp eq i64 %t5104, 744
-  %t5117 = select i1 %t5116, i64 257, i64 1
-  br label %fixmerge1485
-fixslow1484:
-  %t5118 = call i64 @rt_num_eq(i64 %t5104, i64 744)
-  br label %fixmerge1485
-fixmerge1485:
-  %t5119 = phi i64 [ %t5117, %fixfast1483 ], [ %t5118, %fixslow1484 ]
-  br label %merge1482
-merge1482:
-  %t5120 = phi i64 [ %t5111, %then1480 ], [ %t5119, %fixmerge1485 ]
-  %t5121 = icmp ne i64 %t5120, 1
-  br i1 %t5121, label %then1486, label %else1487
-then1486:
-  %t5122 = load i64, ptr @"scheme.base:reverse"
-  %t5123 = and i64 %t5122, -8
-  %t5124 = inttoptr i64 %t5123 to ptr
-  %t5125 = load i64, ptr %t5124
+argok1484:
+  %t5124 = load i64, ptr @"scheme.base:rd-skip-ws"
+  %t5125 = and i64 %t5124, -8
   %t5126 = inttoptr i64 %t5125 to ptr
-  %t5127 = call fastcc i64%t5126(i64 %t5122, i64 1, i64 %a3, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5128 = or i64 %t5094, 8
-  %t5129 = and i64 %t5128, 7
-  %t5130 = icmp eq i64 %t5129, 0
-  br i1 %t5130, label %fixfast1488, label %fixslow1489
-fixfast1488:
-  %t5131 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t5094, i64 8)
-  %t5132 = extractvalue {i64, i1} %t5131, 0
-  %t5133 = extractvalue {i64, i1} %t5131, 1
-  br i1 %t5133, label %fixslow1489, label %fixmerge1490
-fixslow1489:
-  %t5134 = call i64 @rt_add(i64 %t5094, i64 8)
-  br label %fixmerge1490
-fixmerge1490:
-  %t5135 = phi i64 [ %t5132, %fixfast1488 ], [ %t5134, %fixslow1489 ]
-  %t5136 = call i64 @rt_cons(i64 %t5127, i64 %t5135)
-  ret i64 %t5136
-else1487:
-  %t5137 = load i64, ptr @"scheme.base:rd-dot?"
-  %t5138 = and i64 %t5137, -8
-  %t5139 = inttoptr i64 %t5138 to ptr
-  %t5140 = load i64, ptr %t5139
-  %t5141 = inttoptr i64 %t5140 to ptr
-  %t5142 = call fastcc i64%t5141(i64 %t5137, i64 3, i64 %a0, i64 %a1, i64 %t5094, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5143 = icmp ne i64 %t5142, 1
-  br i1 %t5143, label %then1491, label %else1492
-then1491:
-  %t5144 = or i64 %t5094, 8
-  %t5145 = and i64 %t5144, 7
-  %t5146 = icmp eq i64 %t5145, 0
-  br i1 %t5146, label %fixfast1493, label %fixslow1494
-fixfast1493:
-  %t5147 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t5094, i64 8)
-  %t5148 = extractvalue {i64, i1} %t5147, 0
-  %t5149 = extractvalue {i64, i1} %t5147, 1
-  br i1 %t5149, label %fixslow1494, label %fixmerge1495
-fixslow1494:
-  %t5150 = call i64 @rt_add(i64 %t5094, i64 8)
-  br label %fixmerge1495
-fixmerge1495:
-  %t5151 = phi i64 [ %t5148, %fixfast1493 ], [ %t5150, %fixslow1494 ]
-  %t5152 = load i64, ptr @"scheme.base:rd-skip-ws"
-  %t5153 = and i64 %t5152, -8
-  %t5154 = inttoptr i64 %t5153 to ptr
-  %t5155 = load i64, ptr %t5154
-  %t5156 = inttoptr i64 %t5155 to ptr
-  %t5157 = call fastcc i64%t5156(i64 %t5152, i64 3, i64 %a0, i64 %a1, i64 %t5151, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5158 = load i64, ptr @"scheme.base:rd-datum"
-  %t5159 = and i64 %t5158, -8
-  %t5160 = inttoptr i64 %t5159 to ptr
-  %t5161 = load i64, ptr %t5160
-  %t5162 = inttoptr i64 %t5161 to ptr
-  %t5163 = call fastcc i64%t5162(i64 %t5158, i64 3, i64 %a0, i64 %a1, i64 %t5157, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5164 = call i64 @rt_cdr(i64 %t5163)
-  %t5165 = load i64, ptr @"scheme.base:rd-skip-ws"
-  %t5166 = and i64 %t5165, -8
-  %t5167 = inttoptr i64 %t5166 to ptr
-  %t5168 = load i64, ptr %t5167
-  %t5169 = inttoptr i64 %t5168 to ptr
-  %t5170 = call fastcc i64%t5169(i64 %t5165, i64 3, i64 %a0, i64 %a1, i64 %t5164, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5171 = call i64 @rt_car(i64 %t5163)
-  %t5172 = load i64, ptr @"scheme.base:rd-append-reverse"
+  %t5127 = load i64, ptr %t5126
+  %t5128 = inttoptr i64 %t5127 to ptr
+  %t5129 = call fastcc i64%t5128(i64 %t5124, i64 3, i64 %a0, i64 %a1, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5130 = or i64 %t5129, %a1
+  %t5131 = and i64 %t5130, 7
+  %t5132 = icmp eq i64 %t5131, 0
+  br i1 %t5132, label %fixfast1485, label %fixslow1486
+fixfast1485:
+  %t5133 = icmp slt i64 %t5129, %a1
+  %t5134 = select i1 %t5133, i64 257, i64 1
+  br label %fixmerge1487
+fixslow1486:
+  %t5135 = call i64 @rt_lt(i64 %t5129, i64 %a1)
+  br label %fixmerge1487
+fixmerge1487:
+  %t5136 = phi i64 [ %t5134, %fixfast1485 ], [ %t5135, %fixslow1486 ]
+  %t5137 = icmp ne i64 %t5136, 1
+  br i1 %t5137, label %then1488, label %else1489
+then1488:
+  %t5138 = call i64 @rt_string_ref(i64 %a0, i64 %t5129)
+  %t5139 = call i64 @rt_char_to_integer(i64 %t5138)
+  %t5140 = or i64 %t5139, 328
+  %t5141 = and i64 %t5140, 7
+  %t5142 = icmp eq i64 %t5141, 0
+  br i1 %t5142, label %fixfast1490, label %fixslow1491
+fixfast1490:
+  %t5143 = icmp eq i64 %t5139, 328
+  %t5144 = select i1 %t5143, i64 257, i64 1
+  br label %fixmerge1492
+fixslow1491:
+  %t5145 = call i64 @rt_num_eq(i64 %t5139, i64 328)
+  br label %fixmerge1492
+fixmerge1492:
+  %t5146 = phi i64 [ %t5144, %fixfast1490 ], [ %t5145, %fixslow1491 ]
+  %t5147 = icmp ne i64 %t5146, 1
+  br i1 %t5147, label %then1493, label %else1494
+then1493:
+  br label %merge1495
+else1494:
+  %t5148 = or i64 %t5139, 744
+  %t5149 = and i64 %t5148, 7
+  %t5150 = icmp eq i64 %t5149, 0
+  br i1 %t5150, label %fixfast1496, label %fixslow1497
+fixfast1496:
+  %t5151 = icmp eq i64 %t5139, 744
+  %t5152 = select i1 %t5151, i64 257, i64 1
+  br label %fixmerge1498
+fixslow1497:
+  %t5153 = call i64 @rt_num_eq(i64 %t5139, i64 744)
+  br label %fixmerge1498
+fixmerge1498:
+  %t5154 = phi i64 [ %t5152, %fixfast1496 ], [ %t5153, %fixslow1497 ]
+  br label %merge1495
+merge1495:
+  %t5155 = phi i64 [ %t5146, %then1493 ], [ %t5154, %fixmerge1498 ]
+  %t5156 = icmp ne i64 %t5155, 1
+  br i1 %t5156, label %then1499, label %else1500
+then1499:
+  %t5157 = load i64, ptr @"scheme.base:reverse"
+  %t5158 = and i64 %t5157, -8
+  %t5159 = inttoptr i64 %t5158 to ptr
+  %t5160 = load i64, ptr %t5159
+  %t5161 = inttoptr i64 %t5160 to ptr
+  %t5162 = call fastcc i64%t5161(i64 %t5157, i64 1, i64 %a3, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5163 = or i64 %t5129, 8
+  %t5164 = and i64 %t5163, 7
+  %t5165 = icmp eq i64 %t5164, 0
+  br i1 %t5165, label %fixfast1501, label %fixslow1502
+fixfast1501:
+  %t5166 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t5129, i64 8)
+  %t5167 = extractvalue {i64, i1} %t5166, 0
+  %t5168 = extractvalue {i64, i1} %t5166, 1
+  br i1 %t5168, label %fixslow1502, label %fixmerge1503
+fixslow1502:
+  %t5169 = call i64 @rt_add(i64 %t5129, i64 8)
+  br label %fixmerge1503
+fixmerge1503:
+  %t5170 = phi i64 [ %t5167, %fixfast1501 ], [ %t5169, %fixslow1502 ]
+  %t5171 = call i64 @rt_cons(i64 %t5162, i64 %t5170)
+  ret i64 %t5171
+else1500:
+  %t5172 = load i64, ptr @"scheme.base:rd-dot?"
   %t5173 = and i64 %t5172, -8
   %t5174 = inttoptr i64 %t5173 to ptr
   %t5175 = load i64, ptr %t5174
   %t5176 = inttoptr i64 %t5175 to ptr
-  %t5177 = call fastcc i64%t5176(i64 %t5172, i64 2, i64 %a3, i64 %t5171, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5178 = or i64 %t5170, 8
-  %t5179 = and i64 %t5178, 7
-  %t5180 = icmp eq i64 %t5179, 0
-  br i1 %t5180, label %fixfast1496, label %fixslow1497
-fixfast1496:
-  %t5181 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t5170, i64 8)
-  %t5182 = extractvalue {i64, i1} %t5181, 0
-  %t5183 = extractvalue {i64, i1} %t5181, 1
-  br i1 %t5183, label %fixslow1497, label %fixmerge1498
-fixslow1497:
-  %t5184 = call i64 @rt_add(i64 %t5170, i64 8)
-  br label %fixmerge1498
-fixmerge1498:
-  %t5185 = phi i64 [ %t5182, %fixfast1496 ], [ %t5184, %fixslow1497 ]
-  %t5186 = call i64 @rt_cons(i64 %t5177, i64 %t5185)
-  ret i64 %t5186
-else1492:
-  %t5187 = load i64, ptr @"scheme.base:rd-datum"
+  %t5177 = call fastcc i64%t5176(i64 %t5172, i64 3, i64 %a0, i64 %a1, i64 %t5129, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5178 = icmp ne i64 %t5177, 1
+  br i1 %t5178, label %then1504, label %else1505
+then1504:
+  %t5179 = or i64 %t5129, 8
+  %t5180 = and i64 %t5179, 7
+  %t5181 = icmp eq i64 %t5180, 0
+  br i1 %t5181, label %fixfast1506, label %fixslow1507
+fixfast1506:
+  %t5182 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t5129, i64 8)
+  %t5183 = extractvalue {i64, i1} %t5182, 0
+  %t5184 = extractvalue {i64, i1} %t5182, 1
+  br i1 %t5184, label %fixslow1507, label %fixmerge1508
+fixslow1507:
+  %t5185 = call i64 @rt_add(i64 %t5129, i64 8)
+  br label %fixmerge1508
+fixmerge1508:
+  %t5186 = phi i64 [ %t5183, %fixfast1506 ], [ %t5185, %fixslow1507 ]
+  %t5187 = load i64, ptr @"scheme.base:rd-skip-ws"
   %t5188 = and i64 %t5187, -8
   %t5189 = inttoptr i64 %t5188 to ptr
   %t5190 = load i64, ptr %t5189
   %t5191 = inttoptr i64 %t5190 to ptr
-  %t5192 = call fastcc i64%t5191(i64 %t5187, i64 3, i64 %a0, i64 %a1, i64 %t5094, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5193 = call i64 @rt_cdr(i64 %t5192)
-  %t5194 = call i64 @rt_car(i64 %t5192)
-  %t5195 = call i64 @rt_cons(i64 %t5194, i64 %a3)
-  %t5196 = load i64, ptr @"scheme.base:rd-list"
-  %t5197 = and i64 %t5196, -8
-  %t5198 = inttoptr i64 %t5197 to ptr
-  %t5199 = load i64, ptr %t5198
-  %t5200 = inttoptr i64 %t5199 to ptr
-  %t5201 = musttail call fastcc i64 %t5200(i64 %t5196, i64 4, i64 %a0, i64 %a1, i64 %t5193, i64 %t5195, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t5201
-else1476:
-  %t5202 = load i64, ptr @"scheme.base:reverse"
-  %t5203 = and i64 %t5202, -8
+  %t5192 = call fastcc i64%t5191(i64 %t5187, i64 3, i64 %a0, i64 %a1, i64 %t5186, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5193 = load i64, ptr @"scheme.base:rd-datum"
+  %t5194 = and i64 %t5193, -8
+  %t5195 = inttoptr i64 %t5194 to ptr
+  %t5196 = load i64, ptr %t5195
+  %t5197 = inttoptr i64 %t5196 to ptr
+  %t5198 = call fastcc i64%t5197(i64 %t5193, i64 3, i64 %a0, i64 %a1, i64 %t5192, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5199 = call i64 @rt_cdr(i64 %t5198)
+  %t5200 = load i64, ptr @"scheme.base:rd-skip-ws"
+  %t5201 = and i64 %t5200, -8
+  %t5202 = inttoptr i64 %t5201 to ptr
+  %t5203 = load i64, ptr %t5202
   %t5204 = inttoptr i64 %t5203 to ptr
-  %t5205 = load i64, ptr %t5204
-  %t5206 = inttoptr i64 %t5205 to ptr
-  %t5207 = call fastcc i64%t5206(i64 %t5202, i64 1, i64 %a3, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5208 = call i64 @rt_cons(i64 %t5207, i64 %t5094)
-  ret i64 %t5208
+  %t5205 = call fastcc i64%t5204(i64 %t5200, i64 3, i64 %a0, i64 %a1, i64 %t5199, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5206 = call i64 @rt_car(i64 %t5198)
+  %t5207 = load i64, ptr @"scheme.base:rd-append-reverse"
+  %t5208 = and i64 %t5207, -8
+  %t5209 = inttoptr i64 %t5208 to ptr
+  %t5210 = load i64, ptr %t5209
+  %t5211 = inttoptr i64 %t5210 to ptr
+  %t5212 = call fastcc i64%t5211(i64 %t5207, i64 2, i64 %a3, i64 %t5206, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5213 = or i64 %t5205, 8
+  %t5214 = and i64 %t5213, 7
+  %t5215 = icmp eq i64 %t5214, 0
+  br i1 %t5215, label %fixfast1509, label %fixslow1510
+fixfast1509:
+  %t5216 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t5205, i64 8)
+  %t5217 = extractvalue {i64, i1} %t5216, 0
+  %t5218 = extractvalue {i64, i1} %t5216, 1
+  br i1 %t5218, label %fixslow1510, label %fixmerge1511
+fixslow1510:
+  %t5219 = call i64 @rt_add(i64 %t5205, i64 8)
+  br label %fixmerge1511
+fixmerge1511:
+  %t5220 = phi i64 [ %t5217, %fixfast1509 ], [ %t5219, %fixslow1510 ]
+  %t5221 = call i64 @rt_cons(i64 %t5212, i64 %t5220)
+  ret i64 %t5221
+else1505:
+  %t5222 = load i64, ptr @"scheme.base:rd-datum"
+  %t5223 = and i64 %t5222, -8
+  %t5224 = inttoptr i64 %t5223 to ptr
+  %t5225 = load i64, ptr %t5224
+  %t5226 = inttoptr i64 %t5225 to ptr
+  %t5227 = call fastcc i64%t5226(i64 %t5222, i64 3, i64 %a0, i64 %a1, i64 %t5129, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5228 = call i64 @rt_cdr(i64 %t5227)
+  %t5229 = call i64 @rt_car(i64 %t5227)
+  %t5230 = call i64 @rt_cons(i64 %t5229, i64 %a3)
+  %t5231 = load i64, ptr @"scheme.base:rd-list"
+  %t5232 = and i64 %t5231, -8
+  %t5233 = inttoptr i64 %t5232 to ptr
+  %t5234 = load i64, ptr %t5233
+  %t5235 = inttoptr i64 %t5234 to ptr
+  %t5236 = musttail call fastcc i64 %t5235(i64 %t5231, i64 4, i64 %a0, i64 %a1, i64 %t5228, i64 %t5230, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t5236
+else1489:
+  %t5237 = load i64, ptr @"scheme.base:reverse"
+  %t5238 = and i64 %t5237, -8
+  %t5239 = inttoptr i64 %t5238 to ptr
+  %t5240 = load i64, ptr %t5239
+  %t5241 = inttoptr i64 %t5240 to ptr
+  %t5242 = call fastcc i64%t5241(i64 %t5237, i64 1, i64 %a3, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5243 = call i64 @rt_cons(i64 %t5242, i64 %t5129)
+  ret i64 %t5243
 }
 
 define fastcc i64 @"scheme.base:code:rd-datum"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5213 = icmp eq i64 %argc, 3
-  br i1 %t5213, label %argok1500, label %arityerr1499
-arityerr1499:
+  %t5248 = icmp eq i64 %argc, 3
+  br i1 %t5248, label %argok1513, label %arityerr1512
+arityerr1512:
   call void @rt_arity_error(i64 3, i64 %argc)
   unreachable
-argok1500:
-  %t5214 = call i64 @rt_string_ref(i64 %a0, i64 %a2)
-  %t5215 = call i64 @rt_char_to_integer(i64 %t5214)
-  %t5216 = or i64 %t5215, 320
-  %t5217 = and i64 %t5216, 7
-  %t5218 = icmp eq i64 %t5217, 0
-  br i1 %t5218, label %fixfast1501, label %fixslow1502
-fixfast1501:
-  %t5219 = icmp eq i64 %t5215, 320
-  %t5220 = select i1 %t5219, i64 257, i64 1
-  br label %fixmerge1503
-fixslow1502:
-  %t5221 = call i64 @rt_num_eq(i64 %t5215, i64 320)
-  br label %fixmerge1503
-fixmerge1503:
-  %t5222 = phi i64 [ %t5220, %fixfast1501 ], [ %t5221, %fixslow1502 ]
-  %t5223 = icmp ne i64 %t5222, 1
-  br i1 %t5223, label %then1504, label %else1505
-then1504:
-  %t5224 = or i64 %a2, 8
-  %t5225 = and i64 %t5224, 7
-  %t5226 = icmp eq i64 %t5225, 0
-  br i1 %t5226, label %fixfast1506, label %fixslow1507
-fixfast1506:
-  %t5227 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
-  %t5228 = extractvalue {i64, i1} %t5227, 0
-  %t5229 = extractvalue {i64, i1} %t5227, 1
-  br i1 %t5229, label %fixslow1507, label %fixmerge1508
-fixslow1507:
-  %t5230 = call i64 @rt_add(i64 %a2, i64 8)
-  br label %fixmerge1508
-fixmerge1508:
-  %t5231 = phi i64 [ %t5228, %fixfast1506 ], [ %t5230, %fixslow1507 ]
-  %t5232 = load i64, ptr @"scheme.base:rd-list"
-  %t5233 = and i64 %t5232, -8
-  %t5234 = inttoptr i64 %t5233 to ptr
-  %t5235 = load i64, ptr %t5234
-  %t5236 = inttoptr i64 %t5235 to ptr
-  %t5237 = musttail call fastcc i64 %t5236(i64 %t5232, i64 4, i64 %a0, i64 %a1, i64 %t5231, i64 2, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t5237
-else1505:
-  %t5238 = or i64 %t5215, 728
-  %t5239 = and i64 %t5238, 7
-  %t5240 = icmp eq i64 %t5239, 0
-  br i1 %t5240, label %fixfast1509, label %fixslow1510
-fixfast1509:
-  %t5241 = icmp eq i64 %t5215, 728
-  %t5242 = select i1 %t5241, i64 257, i64 1
-  br label %fixmerge1511
-fixslow1510:
-  %t5243 = call i64 @rt_num_eq(i64 %t5215, i64 728)
-  br label %fixmerge1511
-fixmerge1511:
-  %t5244 = phi i64 [ %t5242, %fixfast1509 ], [ %t5243, %fixslow1510 ]
-  %t5245 = icmp ne i64 %t5244, 1
-  br i1 %t5245, label %then1512, label %else1513
-then1512:
-  %t5246 = or i64 %a2, 8
-  %t5247 = and i64 %t5246, 7
-  %t5248 = icmp eq i64 %t5247, 0
-  br i1 %t5248, label %fixfast1514, label %fixslow1515
+argok1513:
+  %t5249 = call i64 @rt_string_ref(i64 %a0, i64 %a2)
+  %t5250 = call i64 @rt_char_to_integer(i64 %t5249)
+  %t5251 = or i64 %t5250, 320
+  %t5252 = and i64 %t5251, 7
+  %t5253 = icmp eq i64 %t5252, 0
+  br i1 %t5253, label %fixfast1514, label %fixslow1515
 fixfast1514:
-  %t5249 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
-  %t5250 = extractvalue {i64, i1} %t5249, 0
-  %t5251 = extractvalue {i64, i1} %t5249, 1
-  br i1 %t5251, label %fixslow1515, label %fixmerge1516
+  %t5254 = icmp eq i64 %t5250, 320
+  %t5255 = select i1 %t5254, i64 257, i64 1
+  br label %fixmerge1516
 fixslow1515:
-  %t5252 = call i64 @rt_add(i64 %a2, i64 8)
+  %t5256 = call i64 @rt_num_eq(i64 %t5250, i64 320)
   br label %fixmerge1516
 fixmerge1516:
-  %t5253 = phi i64 [ %t5250, %fixfast1514 ], [ %t5252, %fixslow1515 ]
-  %t5254 = load i64, ptr @"scheme.base:rd-list"
-  %t5255 = and i64 %t5254, -8
-  %t5256 = inttoptr i64 %t5255 to ptr
-  %t5257 = load i64, ptr %t5256
-  %t5258 = inttoptr i64 %t5257 to ptr
-  %t5259 = musttail call fastcc i64 %t5258(i64 %t5254, i64 4, i64 %a0, i64 %a1, i64 %t5253, i64 2, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t5259
-else1513:
-  %t5260 = or i64 %t5215, 312
-  %t5261 = and i64 %t5260, 7
-  %t5262 = icmp eq i64 %t5261, 0
-  br i1 %t5262, label %fixfast1517, label %fixslow1518
-fixfast1517:
-  %t5263 = icmp eq i64 %t5215, 312
-  %t5264 = select i1 %t5263, i64 257, i64 1
-  br label %fixmerge1519
-fixslow1518:
-  %t5265 = call i64 @rt_num_eq(i64 %t5215, i64 312)
-  br label %fixmerge1519
-fixmerge1519:
-  %t5266 = phi i64 [ %t5264, %fixfast1517 ], [ %t5265, %fixslow1518 ]
-  %t5267 = icmp ne i64 %t5266, 1
-  br i1 %t5267, label %then1520, label %else1521
-then1520:
-  %t5268 = or i64 %a2, 8
-  %t5269 = and i64 %t5268, 7
-  %t5270 = icmp eq i64 %t5269, 0
-  br i1 %t5270, label %fixfast1522, label %fixslow1523
+  %t5257 = phi i64 [ %t5255, %fixfast1514 ], [ %t5256, %fixslow1515 ]
+  %t5258 = icmp ne i64 %t5257, 1
+  br i1 %t5258, label %then1517, label %else1518
+then1517:
+  %t5259 = or i64 %a2, 8
+  %t5260 = and i64 %t5259, 7
+  %t5261 = icmp eq i64 %t5260, 0
+  br i1 %t5261, label %fixfast1519, label %fixslow1520
+fixfast1519:
+  %t5262 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
+  %t5263 = extractvalue {i64, i1} %t5262, 0
+  %t5264 = extractvalue {i64, i1} %t5262, 1
+  br i1 %t5264, label %fixslow1520, label %fixmerge1521
+fixslow1520:
+  %t5265 = call i64 @rt_add(i64 %a2, i64 8)
+  br label %fixmerge1521
+fixmerge1521:
+  %t5266 = phi i64 [ %t5263, %fixfast1519 ], [ %t5265, %fixslow1520 ]
+  %t5267 = load i64, ptr @"scheme.base:rd-list"
+  %t5268 = and i64 %t5267, -8
+  %t5269 = inttoptr i64 %t5268 to ptr
+  %t5270 = load i64, ptr %t5269
+  %t5271 = inttoptr i64 %t5270 to ptr
+  %t5272 = musttail call fastcc i64 %t5271(i64 %t5267, i64 4, i64 %a0, i64 %a1, i64 %t5266, i64 2, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t5272
+else1518:
+  %t5273 = or i64 %t5250, 728
+  %t5274 = and i64 %t5273, 7
+  %t5275 = icmp eq i64 %t5274, 0
+  br i1 %t5275, label %fixfast1522, label %fixslow1523
 fixfast1522:
-  %t5271 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
-  %t5272 = extractvalue {i64, i1} %t5271, 0
-  %t5273 = extractvalue {i64, i1} %t5271, 1
-  br i1 %t5273, label %fixslow1523, label %fixmerge1524
+  %t5276 = icmp eq i64 %t5250, 728
+  %t5277 = select i1 %t5276, i64 257, i64 1
+  br label %fixmerge1524
 fixslow1523:
-  %t5274 = call i64 @rt_add(i64 %a2, i64 8)
+  %t5278 = call i64 @rt_num_eq(i64 %t5250, i64 728)
   br label %fixmerge1524
 fixmerge1524:
-  %t5275 = phi i64 [ %t5272, %fixfast1522 ], [ %t5274, %fixslow1523 ]
-  %t5276 = load i64, ptr @"scheme.base:rd-quote"
-  %t5277 = and i64 %t5276, -8
-  %t5278 = inttoptr i64 %t5277 to ptr
-  %t5279 = load i64, ptr %t5278
-  %t5280 = inttoptr i64 %t5279 to ptr
-  %t5281 = musttail call fastcc i64 %t5280(i64 %t5276, i64 3, i64 %a0, i64 %a1, i64 %t5275, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t5281
-else1521:
-  %t5282 = or i64 %t5215, 768
-  %t5283 = and i64 %t5282, 7
-  %t5284 = icmp eq i64 %t5283, 0
-  br i1 %t5284, label %fixfast1525, label %fixslow1526
-fixfast1525:
-  %t5285 = icmp eq i64 %t5215, 768
-  %t5286 = select i1 %t5285, i64 257, i64 1
-  br label %fixmerge1527
-fixslow1526:
-  %t5287 = call i64 @rt_num_eq(i64 %t5215, i64 768)
-  br label %fixmerge1527
-fixmerge1527:
-  %t5288 = phi i64 [ %t5286, %fixfast1525 ], [ %t5287, %fixslow1526 ]
-  %t5289 = icmp ne i64 %t5288, 1
-  br i1 %t5289, label %then1528, label %else1529
-then1528:
-  %t5290 = or i64 %a2, 8
-  %t5291 = and i64 %t5290, 7
-  %t5292 = icmp eq i64 %t5291, 0
-  br i1 %t5292, label %fixfast1530, label %fixslow1531
+  %t5279 = phi i64 [ %t5277, %fixfast1522 ], [ %t5278, %fixslow1523 ]
+  %t5280 = icmp ne i64 %t5279, 1
+  br i1 %t5280, label %then1525, label %else1526
+then1525:
+  %t5281 = or i64 %a2, 8
+  %t5282 = and i64 %t5281, 7
+  %t5283 = icmp eq i64 %t5282, 0
+  br i1 %t5283, label %fixfast1527, label %fixslow1528
+fixfast1527:
+  %t5284 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
+  %t5285 = extractvalue {i64, i1} %t5284, 0
+  %t5286 = extractvalue {i64, i1} %t5284, 1
+  br i1 %t5286, label %fixslow1528, label %fixmerge1529
+fixslow1528:
+  %t5287 = call i64 @rt_add(i64 %a2, i64 8)
+  br label %fixmerge1529
+fixmerge1529:
+  %t5288 = phi i64 [ %t5285, %fixfast1527 ], [ %t5287, %fixslow1528 ]
+  %t5289 = load i64, ptr @"scheme.base:rd-list"
+  %t5290 = and i64 %t5289, -8
+  %t5291 = inttoptr i64 %t5290 to ptr
+  %t5292 = load i64, ptr %t5291
+  %t5293 = inttoptr i64 %t5292 to ptr
+  %t5294 = musttail call fastcc i64 %t5293(i64 %t5289, i64 4, i64 %a0, i64 %a1, i64 %t5288, i64 2, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t5294
+else1526:
+  %t5295 = or i64 %t5250, 312
+  %t5296 = and i64 %t5295, 7
+  %t5297 = icmp eq i64 %t5296, 0
+  br i1 %t5297, label %fixfast1530, label %fixslow1531
 fixfast1530:
-  %t5293 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
-  %t5294 = extractvalue {i64, i1} %t5293, 0
-  %t5295 = extractvalue {i64, i1} %t5293, 1
-  br i1 %t5295, label %fixslow1531, label %fixmerge1532
+  %t5298 = icmp eq i64 %t5250, 312
+  %t5299 = select i1 %t5298, i64 257, i64 1
+  br label %fixmerge1532
 fixslow1531:
-  %t5296 = call i64 @rt_add(i64 %a2, i64 8)
+  %t5300 = call i64 @rt_num_eq(i64 %t5250, i64 312)
   br label %fixmerge1532
 fixmerge1532:
-  %t5297 = phi i64 [ %t5294, %fixfast1530 ], [ %t5296, %fixslow1531 ]
-  %t5298 = load i64, ptr @"scheme.base:rd-quasi"
-  %t5299 = and i64 %t5298, -8
-  %t5300 = inttoptr i64 %t5299 to ptr
-  %t5301 = load i64, ptr %t5300
-  %t5302 = inttoptr i64 %t5301 to ptr
-  %t5303 = musttail call fastcc i64 %t5302(i64 %t5298, i64 3, i64 %a0, i64 %a1, i64 %t5297, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t5303
-else1529:
-  %t5304 = or i64 %t5215, 352
-  %t5305 = and i64 %t5304, 7
-  %t5306 = icmp eq i64 %t5305, 0
-  br i1 %t5306, label %fixfast1533, label %fixslow1534
-fixfast1533:
-  %t5307 = icmp eq i64 %t5215, 352
-  %t5308 = select i1 %t5307, i64 257, i64 1
-  br label %fixmerge1535
-fixslow1534:
-  %t5309 = call i64 @rt_num_eq(i64 %t5215, i64 352)
-  br label %fixmerge1535
-fixmerge1535:
-  %t5310 = phi i64 [ %t5308, %fixfast1533 ], [ %t5309, %fixslow1534 ]
-  %t5311 = icmp ne i64 %t5310, 1
-  br i1 %t5311, label %then1536, label %else1537
-then1536:
-  %t5312 = or i64 %a2, 8
-  %t5313 = and i64 %t5312, 7
-  %t5314 = icmp eq i64 %t5313, 0
-  br i1 %t5314, label %fixfast1538, label %fixslow1539
+  %t5301 = phi i64 [ %t5299, %fixfast1530 ], [ %t5300, %fixslow1531 ]
+  %t5302 = icmp ne i64 %t5301, 1
+  br i1 %t5302, label %then1533, label %else1534
+then1533:
+  %t5303 = or i64 %a2, 8
+  %t5304 = and i64 %t5303, 7
+  %t5305 = icmp eq i64 %t5304, 0
+  br i1 %t5305, label %fixfast1535, label %fixslow1536
+fixfast1535:
+  %t5306 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
+  %t5307 = extractvalue {i64, i1} %t5306, 0
+  %t5308 = extractvalue {i64, i1} %t5306, 1
+  br i1 %t5308, label %fixslow1536, label %fixmerge1537
+fixslow1536:
+  %t5309 = call i64 @rt_add(i64 %a2, i64 8)
+  br label %fixmerge1537
+fixmerge1537:
+  %t5310 = phi i64 [ %t5307, %fixfast1535 ], [ %t5309, %fixslow1536 ]
+  %t5311 = load i64, ptr @"scheme.base:rd-quote"
+  %t5312 = and i64 %t5311, -8
+  %t5313 = inttoptr i64 %t5312 to ptr
+  %t5314 = load i64, ptr %t5313
+  %t5315 = inttoptr i64 %t5314 to ptr
+  %t5316 = musttail call fastcc i64 %t5315(i64 %t5311, i64 3, i64 %a0, i64 %a1, i64 %t5310, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t5316
+else1534:
+  %t5317 = or i64 %t5250, 768
+  %t5318 = and i64 %t5317, 7
+  %t5319 = icmp eq i64 %t5318, 0
+  br i1 %t5319, label %fixfast1538, label %fixslow1539
 fixfast1538:
-  %t5315 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
-  %t5316 = extractvalue {i64, i1} %t5315, 0
-  %t5317 = extractvalue {i64, i1} %t5315, 1
-  br i1 %t5317, label %fixslow1539, label %fixmerge1540
+  %t5320 = icmp eq i64 %t5250, 768
+  %t5321 = select i1 %t5320, i64 257, i64 1
+  br label %fixmerge1540
 fixslow1539:
-  %t5318 = call i64 @rt_add(i64 %a2, i64 8)
+  %t5322 = call i64 @rt_num_eq(i64 %t5250, i64 768)
   br label %fixmerge1540
 fixmerge1540:
-  %t5319 = phi i64 [ %t5316, %fixfast1538 ], [ %t5318, %fixslow1539 ]
-  %t5320 = load i64, ptr @"scheme.base:rd-unquote"
-  %t5321 = and i64 %t5320, -8
-  %t5322 = inttoptr i64 %t5321 to ptr
-  %t5323 = load i64, ptr %t5322
-  %t5324 = inttoptr i64 %t5323 to ptr
-  %t5325 = musttail call fastcc i64 %t5324(i64 %t5320, i64 3, i64 %a0, i64 %a1, i64 %t5319, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t5325
-else1537:
-  %t5326 = or i64 %t5215, 272
-  %t5327 = and i64 %t5326, 7
-  %t5328 = icmp eq i64 %t5327, 0
-  br i1 %t5328, label %fixfast1541, label %fixslow1542
-fixfast1541:
-  %t5329 = icmp eq i64 %t5215, 272
-  %t5330 = select i1 %t5329, i64 257, i64 1
-  br label %fixmerge1543
-fixslow1542:
-  %t5331 = call i64 @rt_num_eq(i64 %t5215, i64 272)
-  br label %fixmerge1543
-fixmerge1543:
-  %t5332 = phi i64 [ %t5330, %fixfast1541 ], [ %t5331, %fixslow1542 ]
-  %t5333 = icmp ne i64 %t5332, 1
-  br i1 %t5333, label %then1544, label %else1545
-then1544:
-  %t5334 = or i64 %a2, 8
-  %t5335 = and i64 %t5334, 7
-  %t5336 = icmp eq i64 %t5335, 0
-  br i1 %t5336, label %fixfast1546, label %fixslow1547
+  %t5323 = phi i64 [ %t5321, %fixfast1538 ], [ %t5322, %fixslow1539 ]
+  %t5324 = icmp ne i64 %t5323, 1
+  br i1 %t5324, label %then1541, label %else1542
+then1541:
+  %t5325 = or i64 %a2, 8
+  %t5326 = and i64 %t5325, 7
+  %t5327 = icmp eq i64 %t5326, 0
+  br i1 %t5327, label %fixfast1543, label %fixslow1544
+fixfast1543:
+  %t5328 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
+  %t5329 = extractvalue {i64, i1} %t5328, 0
+  %t5330 = extractvalue {i64, i1} %t5328, 1
+  br i1 %t5330, label %fixslow1544, label %fixmerge1545
+fixslow1544:
+  %t5331 = call i64 @rt_add(i64 %a2, i64 8)
+  br label %fixmerge1545
+fixmerge1545:
+  %t5332 = phi i64 [ %t5329, %fixfast1543 ], [ %t5331, %fixslow1544 ]
+  %t5333 = load i64, ptr @"scheme.base:rd-quasi"
+  %t5334 = and i64 %t5333, -8
+  %t5335 = inttoptr i64 %t5334 to ptr
+  %t5336 = load i64, ptr %t5335
+  %t5337 = inttoptr i64 %t5336 to ptr
+  %t5338 = musttail call fastcc i64 %t5337(i64 %t5333, i64 3, i64 %a0, i64 %a1, i64 %t5332, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t5338
+else1542:
+  %t5339 = or i64 %t5250, 352
+  %t5340 = and i64 %t5339, 7
+  %t5341 = icmp eq i64 %t5340, 0
+  br i1 %t5341, label %fixfast1546, label %fixslow1547
 fixfast1546:
-  %t5337 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
-  %t5338 = extractvalue {i64, i1} %t5337, 0
-  %t5339 = extractvalue {i64, i1} %t5337, 1
-  br i1 %t5339, label %fixslow1547, label %fixmerge1548
+  %t5342 = icmp eq i64 %t5250, 352
+  %t5343 = select i1 %t5342, i64 257, i64 1
+  br label %fixmerge1548
 fixslow1547:
-  %t5340 = call i64 @rt_add(i64 %a2, i64 8)
+  %t5344 = call i64 @rt_num_eq(i64 %t5250, i64 352)
   br label %fixmerge1548
 fixmerge1548:
-  %t5341 = phi i64 [ %t5338, %fixfast1546 ], [ %t5340, %fixslow1547 ]
-  %t5342 = load i64, ptr @"scheme.base:rd-string"
-  %t5343 = and i64 %t5342, -8
-  %t5344 = inttoptr i64 %t5343 to ptr
-  %t5345 = load i64, ptr %t5344
-  %t5346 = inttoptr i64 %t5345 to ptr
-  %t5347 = musttail call fastcc i64 %t5346(i64 %t5342, i64 3, i64 %a0, i64 %a1, i64 %t5341, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t5347
-else1545:
-  %t5348 = or i64 %t5215, 280
-  %t5349 = and i64 %t5348, 7
-  %t5350 = icmp eq i64 %t5349, 0
-  br i1 %t5350, label %fixfast1549, label %fixslow1550
-fixfast1549:
-  %t5351 = icmp eq i64 %t5215, 280
-  %t5352 = select i1 %t5351, i64 257, i64 1
-  br label %fixmerge1551
-fixslow1550:
-  %t5353 = call i64 @rt_num_eq(i64 %t5215, i64 280)
-  br label %fixmerge1551
-fixmerge1551:
-  %t5354 = phi i64 [ %t5352, %fixfast1549 ], [ %t5353, %fixslow1550 ]
-  %t5355 = icmp ne i64 %t5354, 1
-  br i1 %t5355, label %then1552, label %else1553
-then1552:
-  %t5356 = or i64 %a2, 8
-  %t5357 = and i64 %t5356, 7
-  %t5358 = icmp eq i64 %t5357, 0
-  br i1 %t5358, label %fixfast1554, label %fixslow1555
+  %t5345 = phi i64 [ %t5343, %fixfast1546 ], [ %t5344, %fixslow1547 ]
+  %t5346 = icmp ne i64 %t5345, 1
+  br i1 %t5346, label %then1549, label %else1550
+then1549:
+  %t5347 = or i64 %a2, 8
+  %t5348 = and i64 %t5347, 7
+  %t5349 = icmp eq i64 %t5348, 0
+  br i1 %t5349, label %fixfast1551, label %fixslow1552
+fixfast1551:
+  %t5350 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
+  %t5351 = extractvalue {i64, i1} %t5350, 0
+  %t5352 = extractvalue {i64, i1} %t5350, 1
+  br i1 %t5352, label %fixslow1552, label %fixmerge1553
+fixslow1552:
+  %t5353 = call i64 @rt_add(i64 %a2, i64 8)
+  br label %fixmerge1553
+fixmerge1553:
+  %t5354 = phi i64 [ %t5351, %fixfast1551 ], [ %t5353, %fixslow1552 ]
+  %t5355 = load i64, ptr @"scheme.base:rd-unquote"
+  %t5356 = and i64 %t5355, -8
+  %t5357 = inttoptr i64 %t5356 to ptr
+  %t5358 = load i64, ptr %t5357
+  %t5359 = inttoptr i64 %t5358 to ptr
+  %t5360 = musttail call fastcc i64 %t5359(i64 %t5355, i64 3, i64 %a0, i64 %a1, i64 %t5354, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t5360
+else1550:
+  %t5361 = or i64 %t5250, 272
+  %t5362 = and i64 %t5361, 7
+  %t5363 = icmp eq i64 %t5362, 0
+  br i1 %t5363, label %fixfast1554, label %fixslow1555
 fixfast1554:
-  %t5359 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
-  %t5360 = extractvalue {i64, i1} %t5359, 0
-  %t5361 = extractvalue {i64, i1} %t5359, 1
-  br i1 %t5361, label %fixslow1555, label %fixmerge1556
+  %t5364 = icmp eq i64 %t5250, 272
+  %t5365 = select i1 %t5364, i64 257, i64 1
+  br label %fixmerge1556
 fixslow1555:
-  %t5362 = call i64 @rt_add(i64 %a2, i64 8)
+  %t5366 = call i64 @rt_num_eq(i64 %t5250, i64 272)
   br label %fixmerge1556
 fixmerge1556:
-  %t5363 = phi i64 [ %t5360, %fixfast1554 ], [ %t5362, %fixslow1555 ]
-  %t5364 = load i64, ptr @"scheme.base:rd-hash"
-  %t5365 = and i64 %t5364, -8
-  %t5366 = inttoptr i64 %t5365 to ptr
-  %t5367 = load i64, ptr %t5366
-  %t5368 = inttoptr i64 %t5367 to ptr
-  %t5369 = musttail call fastcc i64 %t5368(i64 %t5364, i64 3, i64 %a0, i64 %a1, i64 %t5363, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t5369
-else1553:
-  %t5370 = load i64, ptr @"scheme.base:rd-atom"
-  %t5371 = and i64 %t5370, -8
-  %t5372 = inttoptr i64 %t5371 to ptr
-  %t5373 = load i64, ptr %t5372
-  %t5374 = inttoptr i64 %t5373 to ptr
-  %t5375 = musttail call fastcc i64 %t5374(i64 %t5370, i64 3, i64 %a0, i64 %a1, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t5375
+  %t5367 = phi i64 [ %t5365, %fixfast1554 ], [ %t5366, %fixslow1555 ]
+  %t5368 = icmp ne i64 %t5367, 1
+  br i1 %t5368, label %then1557, label %else1558
+then1557:
+  %t5369 = or i64 %a2, 8
+  %t5370 = and i64 %t5369, 7
+  %t5371 = icmp eq i64 %t5370, 0
+  br i1 %t5371, label %fixfast1559, label %fixslow1560
+fixfast1559:
+  %t5372 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
+  %t5373 = extractvalue {i64, i1} %t5372, 0
+  %t5374 = extractvalue {i64, i1} %t5372, 1
+  br i1 %t5374, label %fixslow1560, label %fixmerge1561
+fixslow1560:
+  %t5375 = call i64 @rt_add(i64 %a2, i64 8)
+  br label %fixmerge1561
+fixmerge1561:
+  %t5376 = phi i64 [ %t5373, %fixfast1559 ], [ %t5375, %fixslow1560 ]
+  %t5377 = load i64, ptr @"scheme.base:rd-string"
+  %t5378 = and i64 %t5377, -8
+  %t5379 = inttoptr i64 %t5378 to ptr
+  %t5380 = load i64, ptr %t5379
+  %t5381 = inttoptr i64 %t5380 to ptr
+  %t5382 = musttail call fastcc i64 %t5381(i64 %t5377, i64 3, i64 %a0, i64 %a1, i64 %t5376, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t5382
+else1558:
+  %t5383 = or i64 %t5250, 280
+  %t5384 = and i64 %t5383, 7
+  %t5385 = icmp eq i64 %t5384, 0
+  br i1 %t5385, label %fixfast1562, label %fixslow1563
+fixfast1562:
+  %t5386 = icmp eq i64 %t5250, 280
+  %t5387 = select i1 %t5386, i64 257, i64 1
+  br label %fixmerge1564
+fixslow1563:
+  %t5388 = call i64 @rt_num_eq(i64 %t5250, i64 280)
+  br label %fixmerge1564
+fixmerge1564:
+  %t5389 = phi i64 [ %t5387, %fixfast1562 ], [ %t5388, %fixslow1563 ]
+  %t5390 = icmp ne i64 %t5389, 1
+  br i1 %t5390, label %then1565, label %else1566
+then1565:
+  %t5391 = or i64 %a2, 8
+  %t5392 = and i64 %t5391, 7
+  %t5393 = icmp eq i64 %t5392, 0
+  br i1 %t5393, label %fixfast1567, label %fixslow1568
+fixfast1567:
+  %t5394 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a2, i64 8)
+  %t5395 = extractvalue {i64, i1} %t5394, 0
+  %t5396 = extractvalue {i64, i1} %t5394, 1
+  br i1 %t5396, label %fixslow1568, label %fixmerge1569
+fixslow1568:
+  %t5397 = call i64 @rt_add(i64 %a2, i64 8)
+  br label %fixmerge1569
+fixmerge1569:
+  %t5398 = phi i64 [ %t5395, %fixfast1567 ], [ %t5397, %fixslow1568 ]
+  %t5399 = load i64, ptr @"scheme.base:rd-hash"
+  %t5400 = and i64 %t5399, -8
+  %t5401 = inttoptr i64 %t5400 to ptr
+  %t5402 = load i64, ptr %t5401
+  %t5403 = inttoptr i64 %t5402 to ptr
+  %t5404 = musttail call fastcc i64 %t5403(i64 %t5399, i64 3, i64 %a0, i64 %a1, i64 %t5398, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t5404
+else1566:
+  %t5405 = load i64, ptr @"scheme.base:rd-atom"
+  %t5406 = and i64 %t5405, -8
+  %t5407 = inttoptr i64 %t5406 to ptr
+  %t5408 = load i64, ptr %t5407
+  %t5409 = inttoptr i64 %t5408 to ptr
+  %t5410 = musttail call fastcc i64 %t5409(i64 %t5405, i64 3, i64 %a0, i64 %a1, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t5410
 }
 
 define fastcc i64 @"scheme.base:code:read-from-string"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5380 = icmp eq i64 %argc, 1
-  br i1 %t5380, label %argok1558, label %arityerr1557
-arityerr1557:
+  %t5415 = icmp eq i64 %argc, 1
+  br i1 %t5415, label %argok1571, label %arityerr1570
+arityerr1570:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1558:
-  %t5381 = call i64 @rt_string_length(i64 %a0)
-  %t5382 = load i64, ptr @"scheme.base:rd-skip-ws"
-  %t5383 = and i64 %t5382, -8
-  %t5384 = inttoptr i64 %t5383 to ptr
-  %t5385 = load i64, ptr %t5384
-  %t5386 = inttoptr i64 %t5385 to ptr
-  %t5387 = call fastcc i64%t5386(i64 %t5382, i64 3, i64 %a0, i64 %t5381, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5388 = load i64, ptr @"scheme.base:rd-datum"
-  %t5389 = and i64 %t5388, -8
-  %t5390 = inttoptr i64 %t5389 to ptr
-  %t5391 = load i64, ptr %t5390
-  %t5392 = inttoptr i64 %t5391 to ptr
-  %t5393 = call fastcc i64%t5392(i64 %t5388, i64 3, i64 %a0, i64 %t5381, i64 %t5387, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5394 = call i64 @rt_car(i64 %t5393)
-  ret i64 %t5394
+argok1571:
+  %t5416 = call i64 @rt_string_length(i64 %a0)
+  %t5417 = load i64, ptr @"scheme.base:rd-skip-ws"
+  %t5418 = and i64 %t5417, -8
+  %t5419 = inttoptr i64 %t5418 to ptr
+  %t5420 = load i64, ptr %t5419
+  %t5421 = inttoptr i64 %t5420 to ptr
+  %t5422 = call fastcc i64%t5421(i64 %t5417, i64 3, i64 %a0, i64 %t5416, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5423 = load i64, ptr @"scheme.base:rd-datum"
+  %t5424 = and i64 %t5423, -8
+  %t5425 = inttoptr i64 %t5424 to ptr
+  %t5426 = load i64, ptr %t5425
+  %t5427 = inttoptr i64 %t5426 to ptr
+  %t5428 = call fastcc i64%t5427(i64 %t5423, i64 3, i64 %a0, i64 %t5416, i64 %t5422, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5429 = call i64 @rt_car(i64 %t5428)
+  ret i64 %t5429
 }
 
-define fastcc i64 @"scheme.base:code_1256"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_1262"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5399 = icmp eq i64 %argc, 2
-  br i1 %t5399, label %argok1560, label %arityerr1559
-arityerr1559:
+  %t5434 = icmp eq i64 %argc, 2
+  br i1 %t5434, label %argok1573, label %arityerr1572
+arityerr1572:
   call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
-argok1560:
-  %t5400 = and i64 %self, -8
-  %t5401 = inttoptr i64 %t5400 to ptr
-  %t5402 = getelementptr i64, ptr %t5401, i64 1
-  %t5403 = load i64, ptr %t5402
-  %t5404 = or i64 %a0, %t5403
-  %t5405 = and i64 %t5404, 7
-  %t5406 = icmp eq i64 %t5405, 0
-  br i1 %t5406, label %fixfast1561, label %fixslow1562
-fixfast1561:
-  %t5407 = icmp slt i64 %a0, %t5403
-  %t5408 = select i1 %t5407, i64 257, i64 1
-  br label %fixmerge1563
-fixslow1562:
-  %t5409 = call i64 @rt_lt(i64 %a0, i64 %t5403)
-  br label %fixmerge1563
-fixmerge1563:
-  %t5410 = phi i64 [ %t5408, %fixfast1561 ], [ %t5409, %fixslow1562 ]
-  %t5411 = icmp ne i64 %t5410, 1
-  br i1 %t5411, label %then1564, label %else1565
-then1564:
-  %t5412 = and i64 %self, -8
-  %t5413 = inttoptr i64 %t5412 to ptr
-  %t5414 = getelementptr i64, ptr %t5413, i64 2
-  %t5415 = load i64, ptr %t5414
-  %t5416 = and i64 %self, -8
-  %t5417 = inttoptr i64 %t5416 to ptr
-  %t5418 = getelementptr i64, ptr %t5417, i64 1
-  %t5419 = load i64, ptr %t5418
-  %t5420 = load i64, ptr @"scheme.base:rd-datum"
-  %t5421 = and i64 %t5420, -8
-  %t5422 = inttoptr i64 %t5421 to ptr
-  %t5423 = load i64, ptr %t5422
-  %t5424 = inttoptr i64 %t5423 to ptr
-  %t5425 = call fastcc i64%t5424(i64 %t5420, i64 3, i64 %t5415, i64 %t5419, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5426 = and i64 %self, -8
-  %t5427 = inttoptr i64 %t5426 to ptr
-  %t5428 = getelementptr i64, ptr %t5427, i64 2
-  %t5429 = load i64, ptr %t5428
-  %t5430 = and i64 %self, -8
-  %t5431 = inttoptr i64 %t5430 to ptr
-  %t5432 = getelementptr i64, ptr %t5431, i64 1
-  %t5433 = load i64, ptr %t5432
-  %t5434 = call i64 @rt_cdr(i64 %t5425)
-  %t5435 = load i64, ptr @"scheme.base:rd-skip-ws"
-  %t5436 = and i64 %t5435, -8
-  %t5437 = inttoptr i64 %t5436 to ptr
+argok1573:
+  %t5435 = and i64 %self, -8
+  %t5436 = inttoptr i64 %t5435 to ptr
+  %t5437 = getelementptr i64, ptr %t5436, i64 1
   %t5438 = load i64, ptr %t5437
-  %t5439 = inttoptr i64 %t5438 to ptr
-  %t5440 = call fastcc i64%t5439(i64 %t5435, i64 3, i64 %t5429, i64 %t5433, i64 %t5434, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5441 = call i64 @rt_car(i64 %t5425)
-  %t5442 = call i64 @rt_cons(i64 %t5441, i64 %a1)
-  %t5443 = musttail call fastcc i64 @"scheme.base:code_1256"(i64 %self, i64 2, i64 %t5440, i64 %t5442, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t5443
-else1565:
-  %t5444 = load i64, ptr @"scheme.base:reverse"
-  %t5445 = and i64 %t5444, -8
-  %t5446 = inttoptr i64 %t5445 to ptr
-  %t5447 = load i64, ptr %t5446
+  %t5439 = or i64 %a0, %t5438
+  %t5440 = and i64 %t5439, 7
+  %t5441 = icmp eq i64 %t5440, 0
+  br i1 %t5441, label %fixfast1574, label %fixslow1575
+fixfast1574:
+  %t5442 = icmp slt i64 %a0, %t5438
+  %t5443 = select i1 %t5442, i64 257, i64 1
+  br label %fixmerge1576
+fixslow1575:
+  %t5444 = call i64 @rt_lt(i64 %a0, i64 %t5438)
+  br label %fixmerge1576
+fixmerge1576:
+  %t5445 = phi i64 [ %t5443, %fixfast1574 ], [ %t5444, %fixslow1575 ]
+  %t5446 = icmp ne i64 %t5445, 1
+  br i1 %t5446, label %then1577, label %else1578
+then1577:
+  %t5447 = and i64 %self, -8
   %t5448 = inttoptr i64 %t5447 to ptr
-  %t5449 = musttail call fastcc i64 %t5448(i64 %t5444, i64 1, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t5449
+  %t5449 = getelementptr i64, ptr %t5448, i64 2
+  %t5450 = load i64, ptr %t5449
+  %t5451 = and i64 %self, -8
+  %t5452 = inttoptr i64 %t5451 to ptr
+  %t5453 = getelementptr i64, ptr %t5452, i64 1
+  %t5454 = load i64, ptr %t5453
+  %t5455 = load i64, ptr @"scheme.base:rd-datum"
+  %t5456 = and i64 %t5455, -8
+  %t5457 = inttoptr i64 %t5456 to ptr
+  %t5458 = load i64, ptr %t5457
+  %t5459 = inttoptr i64 %t5458 to ptr
+  %t5460 = call fastcc i64%t5459(i64 %t5455, i64 3, i64 %t5450, i64 %t5454, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5461 = and i64 %self, -8
+  %t5462 = inttoptr i64 %t5461 to ptr
+  %t5463 = getelementptr i64, ptr %t5462, i64 2
+  %t5464 = load i64, ptr %t5463
+  %t5465 = and i64 %self, -8
+  %t5466 = inttoptr i64 %t5465 to ptr
+  %t5467 = getelementptr i64, ptr %t5466, i64 1
+  %t5468 = load i64, ptr %t5467
+  %t5469 = call i64 @rt_cdr(i64 %t5460)
+  %t5470 = load i64, ptr @"scheme.base:rd-skip-ws"
+  %t5471 = and i64 %t5470, -8
+  %t5472 = inttoptr i64 %t5471 to ptr
+  %t5473 = load i64, ptr %t5472
+  %t5474 = inttoptr i64 %t5473 to ptr
+  %t5475 = call fastcc i64%t5474(i64 %t5470, i64 3, i64 %t5464, i64 %t5468, i64 %t5469, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5476 = call i64 @rt_car(i64 %t5460)
+  %t5477 = call i64 @rt_cons(i64 %t5476, i64 %a1)
+  %t5478 = musttail call fastcc i64 @"scheme.base:code_1262"(i64 %self, i64 2, i64 %t5475, i64 %t5477, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t5478
+else1578:
+  %t5479 = load i64, ptr @"scheme.base:reverse"
+  %t5480 = and i64 %t5479, -8
+  %t5481 = inttoptr i64 %t5480 to ptr
+  %t5482 = load i64, ptr %t5481
+  %t5483 = inttoptr i64 %t5482 to ptr
+  %t5484 = musttail call fastcc i64 %t5483(i64 %t5479, i64 1, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t5484
 }
 
 define fastcc i64 @"scheme.base:code:read-all-from-string"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5450 = icmp eq i64 %argc, 1
-  br i1 %t5450, label %argok1567, label %arityerr1566
-arityerr1566:
+  %t5485 = icmp eq i64 %argc, 1
+  br i1 %t5485, label %argok1580, label %arityerr1579
+arityerr1579:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1567:
-  %t5451 = call i64 @rt_string_length(i64 %a0)
-  %t5452 = call ptr @rt_alloc_words(i64 4)
-  %t5453 = ptrtoint ptr %t5452 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_1256" to i64), ptr %t5452
-  %t5454 = or i64 %t5453, 4
-  %t5455 = getelementptr i64, ptr %t5452, i64 1
-  store i64 %t5451, ptr %t5455
-  %t5456 = getelementptr i64, ptr %t5452, i64 2
-  store i64 %a0, ptr %t5456
-  %t5457 = getelementptr i64, ptr %t5452, i64 3
-  store i64 %t5454, ptr %t5457
-  %t5458 = load i64, ptr @"scheme.base:rd-skip-ws"
-  %t5459 = and i64 %t5458, -8
-  %t5460 = inttoptr i64 %t5459 to ptr
-  %t5461 = load i64, ptr %t5460
-  %t5462 = inttoptr i64 %t5461 to ptr
-  %t5463 = call fastcc i64%t5462(i64 %t5458, i64 3, i64 %a0, i64 %t5451, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5464 = musttail call fastcc i64 @"scheme.base:code_1256"(i64 %t5454, i64 2, i64 %t5463, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t5464
+argok1580:
+  %t5486 = call i64 @rt_string_length(i64 %a0)
+  %t5487 = call ptr @rt_alloc_words(i64 4)
+  %t5488 = ptrtoint ptr %t5487 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_1262" to i64), ptr %t5487
+  %t5489 = or i64 %t5488, 4
+  %t5490 = getelementptr i64, ptr %t5487, i64 1
+  store i64 %t5486, ptr %t5490
+  %t5491 = getelementptr i64, ptr %t5487, i64 2
+  store i64 %a0, ptr %t5491
+  %t5492 = getelementptr i64, ptr %t5487, i64 3
+  store i64 %t5489, ptr %t5492
+  %t5493 = load i64, ptr @"scheme.base:rd-skip-ws"
+  %t5494 = and i64 %t5493, -8
+  %t5495 = inttoptr i64 %t5494 to ptr
+  %t5496 = load i64, ptr %t5495
+  %t5497 = inttoptr i64 %t5496 to ptr
+  %t5498 = call fastcc i64%t5497(i64 %t5493, i64 3, i64 %a0, i64 %t5486, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5499 = musttail call fastcc i64 @"scheme.base:code_1262"(i64 %t5489, i64 2, i64 %t5498, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t5499
 }
 
 define fastcc i64 @"scheme.base:code:%port-rtd"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5470 = icmp eq i64 %argc, 0
-  br i1 %t5470, label %argok1569, label %arityerr1568
-arityerr1568:
+  %t5505 = icmp eq i64 %argc, 0
+  br i1 %t5505, label %argok1582, label %arityerr1581
+arityerr1581:
   call void @rt_arity_error(i64 0, i64 %argc)
   unreachable
-argok1569:
-  %t5471 = load i64, ptr @"scheme.base:%port-rtd-cell"
-  %t5472 = icmp ne i64 %t5471, 1
-  br i1 %t5472, label %then1570, label %else1571
-then1570:
-  %t5473 = load i64, ptr @"scheme.base:%port-rtd-cell"
-  ret i64 %t5473
-else1571:
-  %t5474 = call i64 @rt_make_string(ptr @.str.lit.26, i64 4)
-  %t5475 = call i64 @rt_make_record_type(i64 %t5474)
-  %t5476 = call i64 @rt_root(i64 %t5475)
-  store i64 %t5476, ptr @"scheme.base:%port-rtd-cell"
-  %t5477 = load i64, ptr @"scheme.base:%port-rtd-cell"
-  ret i64 %t5477
+argok1582:
+  %t5506 = load i64, ptr @"scheme.base:%port-rtd-cell"
+  %t5507 = icmp ne i64 %t5506, 1
+  br i1 %t5507, label %then1583, label %else1584
+then1583:
+  %t5508 = load i64, ptr @"scheme.base:%port-rtd-cell"
+  ret i64 %t5508
+else1584:
+  %t5509 = call i64 @rt_make_string(ptr @.str.lit.32, i64 4)
+  %t5510 = call i64 @rt_make_record_type(i64 %t5509)
+  %t5511 = call i64 @rt_root(i64 %t5510)
+  store i64 %t5511, ptr @"scheme.base:%port-rtd-cell"
+  %t5512 = load i64, ptr @"scheme.base:%port-rtd-cell"
+  ret i64 %t5512
 }
 
 define fastcc i64 @"scheme.base:code:%make-port"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5482 = icmp eq i64 %argc, 6
-  br i1 %t5482, label %argok1573, label %arityerr1572
-arityerr1572:
+  %t5517 = icmp eq i64 %argc, 6
+  br i1 %t5517, label %argok1586, label %arityerr1585
+arityerr1585:
   call void @rt_arity_error(i64 6, i64 %argc)
   unreachable
-argok1573:
-  %t5483 = load i64, ptr @"scheme.base:%port-rtd"
-  %t5484 = and i64 %t5483, -8
-  %t5485 = inttoptr i64 %t5484 to ptr
-  %t5486 = load i64, ptr %t5485
-  %t5487 = inttoptr i64 %t5486 to ptr
-  %t5488 = call fastcc i64%t5487(i64 %t5483, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5489 = load i64, ptr @"scheme.base:list"
-  %t5490 = and i64 %t5489, -8
-  %t5491 = inttoptr i64 %t5490 to ptr
-  %t5492 = load i64, ptr %t5491
-  %t5493 = inttoptr i64 %t5492 to ptr
-  %t5494 = call fastcc i64%t5493(i64 %t5489, i64 6, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 0, i64 0, ptr null)
-  %t5495 = call i64 @rt_make_record(i64 %t5488, i64 %t5494)
-  ret i64 %t5495
+argok1586:
+  %t5518 = load i64, ptr @"scheme.base:%port-rtd"
+  %t5519 = and i64 %t5518, -8
+  %t5520 = inttoptr i64 %t5519 to ptr
+  %t5521 = load i64, ptr %t5520
+  %t5522 = inttoptr i64 %t5521 to ptr
+  %t5523 = call fastcc i64%t5522(i64 %t5518, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5524 = load i64, ptr @"scheme.base:list"
+  %t5525 = and i64 %t5524, -8
+  %t5526 = inttoptr i64 %t5525 to ptr
+  %t5527 = load i64, ptr %t5526
+  %t5528 = inttoptr i64 %t5527 to ptr
+  %t5529 = call fastcc i64%t5528(i64 %t5524, i64 6, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 0, i64 0, ptr null)
+  %t5530 = call i64 @rt_make_record(i64 %t5523, i64 %t5529)
+  ret i64 %t5530
 }
 
 define fastcc i64 @"scheme.base:code:port?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5500 = icmp eq i64 %argc, 1
-  br i1 %t5500, label %argok1575, label %arityerr1574
-arityerr1574:
+  %t5535 = icmp eq i64 %argc, 1
+  br i1 %t5535, label %argok1588, label %arityerr1587
+arityerr1587:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1575:
-  %t5501 = load i64, ptr @"scheme.base:%port-rtd"
-  %t5502 = and i64 %t5501, -8
-  %t5503 = inttoptr i64 %t5502 to ptr
-  %t5504 = load i64, ptr %t5503
-  %t5505 = inttoptr i64 %t5504 to ptr
-  %t5506 = call fastcc i64%t5505(i64 %t5501, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5507 = call i64 @rt_record_of_type_p(i64 %a0, i64 %t5506)
-  ret i64 %t5507
+argok1588:
+  %t5536 = load i64, ptr @"scheme.base:%port-rtd"
+  %t5537 = and i64 %t5536, -8
+  %t5538 = inttoptr i64 %t5537 to ptr
+  %t5539 = load i64, ptr %t5538
+  %t5540 = inttoptr i64 %t5539 to ptr
+  %t5541 = call fastcc i64%t5540(i64 %t5536, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5542 = call i64 @rt_record_of_type_p(i64 %a0, i64 %t5541)
+  ret i64 %t5542
 }
 
 define fastcc i64 @"scheme.base:code:input-port?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5512 = icmp eq i64 %argc, 1
-  br i1 %t5512, label %argok1577, label %arityerr1576
-arityerr1576:
+  %t5547 = icmp eq i64 %argc, 1
+  br i1 %t5547, label %argok1590, label %arityerr1589
+arityerr1589:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1577:
-  %t5513 = load i64, ptr @"scheme.base:port?"
-  %t5514 = and i64 %t5513, -8
-  %t5515 = inttoptr i64 %t5514 to ptr
-  %t5516 = load i64, ptr %t5515
-  %t5517 = inttoptr i64 %t5516 to ptr
-  %t5518 = call fastcc i64%t5517(i64 %t5513, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5519 = icmp ne i64 %t5518, 1
-  br i1 %t5519, label %then1578, label %else1579
-then1578:
-  %t5520 = call i64 @rt_record_ref(i64 %a0, i64 8)
-  ret i64 %t5520
-else1579:
+argok1590:
+  %t5548 = load i64, ptr @"scheme.base:port?"
+  %t5549 = and i64 %t5548, -8
+  %t5550 = inttoptr i64 %t5549 to ptr
+  %t5551 = load i64, ptr %t5550
+  %t5552 = inttoptr i64 %t5551 to ptr
+  %t5553 = call fastcc i64%t5552(i64 %t5548, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5554 = icmp ne i64 %t5553, 1
+  br i1 %t5554, label %then1591, label %else1592
+then1591:
+  %t5555 = call i64 @rt_record_ref(i64 %a0, i64 8)
+  ret i64 %t5555
+else1592:
   ret i64 1
 }
 
 define fastcc i64 @"scheme.base:code:output-port?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5525 = icmp eq i64 %argc, 1
-  br i1 %t5525, label %argok1581, label %arityerr1580
-arityerr1580:
+  %t5560 = icmp eq i64 %argc, 1
+  br i1 %t5560, label %argok1594, label %arityerr1593
+arityerr1593:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1581:
-  %t5526 = load i64, ptr @"scheme.base:port?"
-  %t5527 = and i64 %t5526, -8
-  %t5528 = inttoptr i64 %t5527 to ptr
-  %t5529 = load i64, ptr %t5528
-  %t5530 = inttoptr i64 %t5529 to ptr
-  %t5531 = call fastcc i64%t5530(i64 %t5526, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5532 = icmp ne i64 %t5531, 1
-  br i1 %t5532, label %then1582, label %else1583
-then1582:
-  %t5533 = call i64 @rt_record_ref(i64 %a0, i64 8)
-  %t5534 = call i64 @rt_not(i64 %t5533)
-  ret i64 %t5534
-else1583:
+argok1594:
+  %t5561 = load i64, ptr @"scheme.base:port?"
+  %t5562 = and i64 %t5561, -8
+  %t5563 = inttoptr i64 %t5562 to ptr
+  %t5564 = load i64, ptr %t5563
+  %t5565 = inttoptr i64 %t5564 to ptr
+  %t5566 = call fastcc i64%t5565(i64 %t5561, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5567 = icmp ne i64 %t5566, 1
+  br i1 %t5567, label %then1595, label %else1596
+then1595:
+  %t5568 = call i64 @rt_record_ref(i64 %a0, i64 8)
+  %t5569 = call i64 @rt_not(i64 %t5568)
+  ret i64 %t5569
+else1596:
   ret i64 1
 }
 
 define fastcc i64 @"scheme.base:code:textual-port?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5539 = icmp eq i64 %argc, 1
-  br i1 %t5539, label %argok1585, label %arityerr1584
-arityerr1584:
+  %t5574 = icmp eq i64 %argc, 1
+  br i1 %t5574, label %argok1598, label %arityerr1597
+arityerr1597:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1585:
-  %t5540 = load i64, ptr @"scheme.base:port?"
-  %t5541 = and i64 %t5540, -8
-  %t5542 = inttoptr i64 %t5541 to ptr
-  %t5543 = load i64, ptr %t5542
-  %t5544 = inttoptr i64 %t5543 to ptr
-  %t5545 = musttail call fastcc i64 %t5544(i64 %t5540, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t5545
+argok1598:
+  %t5575 = load i64, ptr @"scheme.base:port?"
+  %t5576 = and i64 %t5575, -8
+  %t5577 = inttoptr i64 %t5576 to ptr
+  %t5578 = load i64, ptr %t5577
+  %t5579 = inttoptr i64 %t5578 to ptr
+  %t5580 = musttail call fastcc i64 %t5579(i64 %t5575, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t5580
 }
 
 define fastcc i64 @"scheme.base:code:port-closed?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5550 = icmp eq i64 %argc, 1
-  br i1 %t5550, label %argok1587, label %arityerr1586
-arityerr1586:
+  %t5585 = icmp eq i64 %argc, 1
+  br i1 %t5585, label %argok1600, label %arityerr1599
+arityerr1599:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1587:
-  %t5551 = call i64 @rt_record_ref(i64 %a0, i64 40)
-  ret i64 %t5551
+argok1600:
+  %t5586 = call i64 @rt_record_ref(i64 %a0, i64 40)
+  ret i64 %t5586
 }
 
 define fastcc i64 @"scheme.base:code:input-port-open?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5556 = icmp eq i64 %argc, 1
-  br i1 %t5556, label %argok1589, label %arityerr1588
-arityerr1588:
+  %t5591 = icmp eq i64 %argc, 1
+  br i1 %t5591, label %argok1602, label %arityerr1601
+arityerr1601:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1589:
-  %t5557 = load i64, ptr @"scheme.base:input-port?"
-  %t5558 = and i64 %t5557, -8
-  %t5559 = inttoptr i64 %t5558 to ptr
-  %t5560 = load i64, ptr %t5559
-  %t5561 = inttoptr i64 %t5560 to ptr
-  %t5562 = call fastcc i64%t5561(i64 %t5557, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5563 = icmp ne i64 %t5562, 1
-  br i1 %t5563, label %then1590, label %else1591
-then1590:
-  %t5564 = call i64 @rt_record_ref(i64 %a0, i64 40)
-  %t5565 = call i64 @rt_not(i64 %t5564)
-  ret i64 %t5565
-else1591:
+argok1602:
+  %t5592 = load i64, ptr @"scheme.base:input-port?"
+  %t5593 = and i64 %t5592, -8
+  %t5594 = inttoptr i64 %t5593 to ptr
+  %t5595 = load i64, ptr %t5594
+  %t5596 = inttoptr i64 %t5595 to ptr
+  %t5597 = call fastcc i64%t5596(i64 %t5592, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5598 = icmp ne i64 %t5597, 1
+  br i1 %t5598, label %then1603, label %else1604
+then1603:
+  %t5599 = call i64 @rt_record_ref(i64 %a0, i64 40)
+  %t5600 = call i64 @rt_not(i64 %t5599)
+  ret i64 %t5600
+else1604:
   ret i64 1
 }
 
 define fastcc i64 @"scheme.base:code:output-port-open?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5570 = icmp eq i64 %argc, 1
-  br i1 %t5570, label %argok1593, label %arityerr1592
-arityerr1592:
+  %t5605 = icmp eq i64 %argc, 1
+  br i1 %t5605, label %argok1606, label %arityerr1605
+arityerr1605:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1593:
-  %t5571 = load i64, ptr @"scheme.base:output-port?"
-  %t5572 = and i64 %t5571, -8
-  %t5573 = inttoptr i64 %t5572 to ptr
-  %t5574 = load i64, ptr %t5573
-  %t5575 = inttoptr i64 %t5574 to ptr
-  %t5576 = call fastcc i64%t5575(i64 %t5571, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5577 = icmp ne i64 %t5576, 1
-  br i1 %t5577, label %then1594, label %else1595
-then1594:
-  %t5578 = call i64 @rt_record_ref(i64 %a0, i64 40)
-  %t5579 = call i64 @rt_not(i64 %t5578)
-  ret i64 %t5579
-else1595:
+argok1606:
+  %t5606 = load i64, ptr @"scheme.base:output-port?"
+  %t5607 = and i64 %t5606, -8
+  %t5608 = inttoptr i64 %t5607 to ptr
+  %t5609 = load i64, ptr %t5608
+  %t5610 = inttoptr i64 %t5609 to ptr
+  %t5611 = call fastcc i64%t5610(i64 %t5606, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5612 = icmp ne i64 %t5611, 1
+  br i1 %t5612, label %then1607, label %else1608
+then1607:
+  %t5613 = call i64 @rt_record_ref(i64 %a0, i64 40)
+  %t5614 = call i64 @rt_not(i64 %t5613)
+  ret i64 %t5614
+else1608:
   ret i64 1
 }
 
 define fastcc i64 @"scheme.base:code:%check-input-port"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5584 = icmp eq i64 %argc, 2
-  br i1 %t5584, label %argok1597, label %arityerr1596
-arityerr1596:
+  %t5619 = icmp eq i64 %argc, 2
+  br i1 %t5619, label %argok1610, label %arityerr1609
+arityerr1609:
   call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
-argok1597:
-  %t5585 = load i64, ptr @"scheme.base:input-port?"
-  %t5586 = and i64 %t5585, -8
-  %t5587 = inttoptr i64 %t5586 to ptr
-  %t5588 = load i64, ptr %t5587
-  %t5589 = inttoptr i64 %t5588 to ptr
-  %t5590 = call fastcc i64%t5589(i64 %t5585, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5591 = call i64 @rt_not(i64 %t5590)
-  %t5592 = icmp ne i64 %t5591, 1
-  br i1 %t5592, label %then1598, label %else1599
-then1598:
-  %t5593 = call i64 @rt_make_string(ptr @.str.lit.27, i64 17)
-  %t5594 = load i64, ptr @"scheme.base:error"
-  %t5595 = and i64 %t5594, -8
-  %t5596 = inttoptr i64 %t5595 to ptr
-  %t5597 = load i64, ptr %t5596
-  %t5598 = inttoptr i64 %t5597 to ptr
-  %t5599 = musttail call fastcc i64 %t5598(i64 %t5594, i64 3, i64 %a1, i64 %t5593, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t5599
-else1599:
-  %t5600 = call i64 @rt_record_ref(i64 %a0, i64 40)
-  %t5601 = icmp ne i64 %t5600, 1
-  br i1 %t5601, label %then1600, label %else1601
-then1600:
-  %t5602 = call i64 @rt_make_string(ptr @.str.lit.28, i64 14)
-  %t5603 = load i64, ptr @"scheme.base:error"
-  %t5604 = and i64 %t5603, -8
-  %t5605 = inttoptr i64 %t5604 to ptr
-  %t5606 = load i64, ptr %t5605
-  %t5607 = inttoptr i64 %t5606 to ptr
-  %t5608 = musttail call fastcc i64 %t5607(i64 %t5603, i64 3, i64 %a1, i64 %t5602, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t5608
-else1601:
+argok1610:
+  %t5620 = load i64, ptr @"scheme.base:input-port?"
+  %t5621 = and i64 %t5620, -8
+  %t5622 = inttoptr i64 %t5621 to ptr
+  %t5623 = load i64, ptr %t5622
+  %t5624 = inttoptr i64 %t5623 to ptr
+  %t5625 = call fastcc i64%t5624(i64 %t5620, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5626 = call i64 @rt_not(i64 %t5625)
+  %t5627 = icmp ne i64 %t5626, 1
+  br i1 %t5627, label %then1611, label %else1612
+then1611:
+  %t5628 = call i64 @rt_make_string(ptr @.str.lit.33, i64 17)
+  %t5629 = load i64, ptr @"scheme.base:error"
+  %t5630 = and i64 %t5629, -8
+  %t5631 = inttoptr i64 %t5630 to ptr
+  %t5632 = load i64, ptr %t5631
+  %t5633 = inttoptr i64 %t5632 to ptr
+  %t5634 = musttail call fastcc i64 %t5633(i64 %t5629, i64 3, i64 %a1, i64 %t5628, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t5634
+else1612:
+  %t5635 = call i64 @rt_record_ref(i64 %a0, i64 40)
+  %t5636 = icmp ne i64 %t5635, 1
+  br i1 %t5636, label %then1613, label %else1614
+then1613:
+  %t5637 = call i64 @rt_make_string(ptr @.str.lit.34, i64 14)
+  %t5638 = load i64, ptr @"scheme.base:error"
+  %t5639 = and i64 %t5638, -8
+  %t5640 = inttoptr i64 %t5639 to ptr
+  %t5641 = load i64, ptr %t5640
+  %t5642 = inttoptr i64 %t5641 to ptr
+  %t5643 = musttail call fastcc i64 %t5642(i64 %t5638, i64 3, i64 %a1, i64 %t5637, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t5643
+else1614:
   ret i64 %a0
 }
 
 define fastcc i64 @"scheme.base:code:%check-output-port"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5613 = icmp eq i64 %argc, 2
-  br i1 %t5613, label %argok1603, label %arityerr1602
-arityerr1602:
+  %t5648 = icmp eq i64 %argc, 2
+  br i1 %t5648, label %argok1616, label %arityerr1615
+arityerr1615:
   call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
-argok1603:
-  %t5614 = load i64, ptr @"scheme.base:output-port?"
-  %t5615 = and i64 %t5614, -8
-  %t5616 = inttoptr i64 %t5615 to ptr
-  %t5617 = load i64, ptr %t5616
-  %t5618 = inttoptr i64 %t5617 to ptr
-  %t5619 = call fastcc i64%t5618(i64 %t5614, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5620 = call i64 @rt_not(i64 %t5619)
-  %t5621 = icmp ne i64 %t5620, 1
-  br i1 %t5621, label %then1604, label %else1605
-then1604:
-  %t5622 = call i64 @rt_make_string(ptr @.str.lit.29, i64 18)
-  %t5623 = load i64, ptr @"scheme.base:error"
-  %t5624 = and i64 %t5623, -8
-  %t5625 = inttoptr i64 %t5624 to ptr
-  %t5626 = load i64, ptr %t5625
-  %t5627 = inttoptr i64 %t5626 to ptr
-  %t5628 = musttail call fastcc i64 %t5627(i64 %t5623, i64 3, i64 %a1, i64 %t5622, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t5628
-else1605:
-  %t5629 = call i64 @rt_record_ref(i64 %a0, i64 40)
-  %t5630 = icmp ne i64 %t5629, 1
-  br i1 %t5630, label %then1606, label %else1607
-then1606:
-  %t5631 = call i64 @rt_make_string(ptr @.str.lit.30, i64 14)
-  %t5632 = load i64, ptr @"scheme.base:error"
-  %t5633 = and i64 %t5632, -8
-  %t5634 = inttoptr i64 %t5633 to ptr
-  %t5635 = load i64, ptr %t5634
-  %t5636 = inttoptr i64 %t5635 to ptr
-  %t5637 = musttail call fastcc i64 %t5636(i64 %t5632, i64 3, i64 %a1, i64 %t5631, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t5637
-else1607:
+argok1616:
+  %t5649 = load i64, ptr @"scheme.base:output-port?"
+  %t5650 = and i64 %t5649, -8
+  %t5651 = inttoptr i64 %t5650 to ptr
+  %t5652 = load i64, ptr %t5651
+  %t5653 = inttoptr i64 %t5652 to ptr
+  %t5654 = call fastcc i64%t5653(i64 %t5649, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5655 = call i64 @rt_not(i64 %t5654)
+  %t5656 = icmp ne i64 %t5655, 1
+  br i1 %t5656, label %then1617, label %else1618
+then1617:
+  %t5657 = call i64 @rt_make_string(ptr @.str.lit.35, i64 18)
+  %t5658 = load i64, ptr @"scheme.base:error"
+  %t5659 = and i64 %t5658, -8
+  %t5660 = inttoptr i64 %t5659 to ptr
+  %t5661 = load i64, ptr %t5660
+  %t5662 = inttoptr i64 %t5661 to ptr
+  %t5663 = musttail call fastcc i64 %t5662(i64 %t5658, i64 3, i64 %a1, i64 %t5657, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t5663
+else1618:
+  %t5664 = call i64 @rt_record_ref(i64 %a0, i64 40)
+  %t5665 = icmp ne i64 %t5664, 1
+  br i1 %t5665, label %then1619, label %else1620
+then1619:
+  %t5666 = call i64 @rt_make_string(ptr @.str.lit.36, i64 14)
+  %t5667 = load i64, ptr @"scheme.base:error"
+  %t5668 = and i64 %t5667, -8
+  %t5669 = inttoptr i64 %t5668 to ptr
+  %t5670 = load i64, ptr %t5669
+  %t5671 = inttoptr i64 %t5670 to ptr
+  %t5672 = musttail call fastcc i64 %t5671(i64 %t5667, i64 3, i64 %a1, i64 %t5666, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t5672
+else1620:
   ret i64 %a0
 }
 
 define fastcc i64 @"scheme.base:code:%port-buf"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5642 = icmp eq i64 %argc, 1
-  br i1 %t5642, label %argok1609, label %arityerr1608
-arityerr1608:
+  %t5677 = icmp eq i64 %argc, 1
+  br i1 %t5677, label %argok1622, label %arityerr1621
+arityerr1621:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1609:
-  %t5643 = call i64 @rt_record_ref(i64 %a0, i64 16)
-  %t5644 = icmp ne i64 %t5643, 1
-  br i1 %t5644, label %then1610, label %else1611
-then1610:
-  ret i64 %t5643
-else1611:
-  %t5645 = call i64 @rt_read_all_stdin()
-  %t5646 = call i64 @rt_record_set(i64 %a0, i64 16, i64 %t5645)
-  ret i64 %t5645
+argok1622:
+  %t5678 = call i64 @rt_record_ref(i64 %a0, i64 16)
+  %t5679 = icmp ne i64 %t5678, 1
+  br i1 %t5679, label %then1623, label %else1624
+then1623:
+  ret i64 %t5678
+else1624:
+  %t5680 = call i64 @rt_read_all_stdin()
+  %t5681 = call i64 @rt_record_set(i64 %a0, i64 16, i64 %t5680)
+  ret i64 %t5680
 }
 
 define fastcc i64 @"scheme.base:code:open-input-string"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5651 = icmp eq i64 %argc, 1
-  br i1 %t5651, label %argok1613, label %arityerr1612
-arityerr1612:
+  %t5686 = icmp eq i64 %argc, 1
+  br i1 %t5686, label %argok1626, label %arityerr1625
+arityerr1625:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1613:
-  %t5652 = load i64, ptr @"scheme.base:%make-port"
-  %t5653 = and i64 %t5652, -8
-  %t5654 = inttoptr i64 %t5653 to ptr
-  %t5655 = load i64, ptr %t5654
-  %t5656 = inttoptr i64 %t5655 to ptr
-  %t5657 = musttail call fastcc i64 %t5656(i64 %t5652, i64 6, i64 1, i64 257, i64 %a0, i64 0, i64 257, i64 1, i64 0, i64 0, ptr null)
-  ret i64 %t5657
+argok1626:
+  %t5687 = load i64, ptr @"scheme.base:%make-port"
+  %t5688 = and i64 %t5687, -8
+  %t5689 = inttoptr i64 %t5688 to ptr
+  %t5690 = load i64, ptr %t5689
+  %t5691 = inttoptr i64 %t5690 to ptr
+  %t5692 = musttail call fastcc i64 %t5691(i64 %t5687, i64 6, i64 1, i64 257, i64 %a0, i64 0, i64 257, i64 1, i64 0, i64 0, ptr null)
+  ret i64 %t5692
 }
 
 define fastcc i64 @"scheme.base:code:open-input-file"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5662 = icmp eq i64 %argc, 1
-  br i1 %t5662, label %argok1615, label %arityerr1614
-arityerr1614:
+  %t5697 = icmp eq i64 %argc, 1
+  br i1 %t5697, label %argok1628, label %arityerr1627
+arityerr1627:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1615:
-  %t5663 = call i64 @rt_read_file(i64 %a0)
-  %t5664 = icmp ne i64 %t5663, 1
-  br i1 %t5664, label %then1616, label %else1617
-then1616:
-  %t5665 = load i64, ptr @"scheme.base:%make-port"
-  %t5666 = and i64 %t5665, -8
-  %t5667 = inttoptr i64 %t5666 to ptr
-  %t5668 = load i64, ptr %t5667
-  %t5669 = inttoptr i64 %t5668 to ptr
-  %t5670 = musttail call fastcc i64 %t5669(i64 %t5665, i64 6, i64 1, i64 257, i64 %t5663, i64 0, i64 1, i64 1, i64 0, i64 0, ptr null)
-  ret i64 %t5670
-else1617:
-  %t5671 = call i64 @rt_intern(ptr @.str.sym.31)
-  %t5672 = call i64 @rt_make_string(ptr @.str.lit.32, i64 26)
-  %t5673 = load i64, ptr @"scheme.base:error"
-  %t5674 = and i64 %t5673, -8
-  %t5675 = inttoptr i64 %t5674 to ptr
-  %t5676 = load i64, ptr %t5675
-  %t5677 = inttoptr i64 %t5676 to ptr
-  %t5678 = musttail call fastcc i64 %t5677(i64 %t5673, i64 3, i64 %t5671, i64 %t5672, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t5678
+argok1628:
+  %t5698 = call i64 @rt_read_file(i64 %a0)
+  %t5699 = icmp ne i64 %t5698, 1
+  br i1 %t5699, label %then1629, label %else1630
+then1629:
+  %t5700 = load i64, ptr @"scheme.base:%make-port"
+  %t5701 = and i64 %t5700, -8
+  %t5702 = inttoptr i64 %t5701 to ptr
+  %t5703 = load i64, ptr %t5702
+  %t5704 = inttoptr i64 %t5703 to ptr
+  %t5705 = musttail call fastcc i64 %t5704(i64 %t5700, i64 6, i64 1, i64 257, i64 %t5698, i64 0, i64 1, i64 1, i64 0, i64 0, ptr null)
+  ret i64 %t5705
+else1630:
+  %t5706 = call i64 @rt_intern(ptr @.str.sym.37)
+  %t5707 = call i64 @rt_make_string(ptr @.str.lit.38, i64 26)
+  %t5708 = load i64, ptr @"scheme.base:error"
+  %t5709 = and i64 %t5708, -8
+  %t5710 = inttoptr i64 %t5709 to ptr
+  %t5711 = load i64, ptr %t5710
+  %t5712 = inttoptr i64 %t5711 to ptr
+  %t5713 = musttail call fastcc i64 %t5712(i64 %t5708, i64 3, i64 %t5706, i64 %t5707, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t5713
 }
 
 define fastcc i64 @"scheme.base:code:%port-at-eof?"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5683 = icmp eq i64 %argc, 1
-  br i1 %t5683, label %argok1619, label %arityerr1618
-arityerr1618:
+  %t5718 = icmp eq i64 %argc, 1
+  br i1 %t5718, label %argok1632, label %arityerr1631
+arityerr1631:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1619:
-  %t5684 = call i64 @rt_record_ref(i64 %a0, i64 24)
-  %t5685 = load i64, ptr @"scheme.base:%port-buf"
-  %t5686 = and i64 %t5685, -8
-  %t5687 = inttoptr i64 %t5686 to ptr
-  %t5688 = load i64, ptr %t5687
-  %t5689 = inttoptr i64 %t5688 to ptr
-  %t5690 = call fastcc i64%t5689(i64 %t5685, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5691 = call i64 @rt_string_length(i64 %t5690)
-  %t5692 = or i64 %t5691, %t5684
-  %t5693 = and i64 %t5692, 7
-  %t5694 = icmp eq i64 %t5693, 0
-  br i1 %t5694, label %fixfast1620, label %fixslow1621
-fixfast1620:
-  %t5695 = icmp slt i64 %t5691, %t5684
-  %t5696 = select i1 %t5695, i64 257, i64 1
-  br label %fixmerge1622
-fixslow1621:
-  %t5697 = call i64 @rt_lt(i64 %t5691, i64 %t5684)
-  br label %fixmerge1622
-fixmerge1622:
-  %t5698 = phi i64 [ %t5696, %fixfast1620 ], [ %t5697, %fixslow1621 ]
-  %t5699 = icmp ne i64 %t5698, 1
-  br i1 %t5699, label %then1623, label %else1624
-then1623:
+argok1632:
+  %t5719 = call i64 @rt_record_ref(i64 %a0, i64 24)
+  %t5720 = load i64, ptr @"scheme.base:%port-buf"
+  %t5721 = and i64 %t5720, -8
+  %t5722 = inttoptr i64 %t5721 to ptr
+  %t5723 = load i64, ptr %t5722
+  %t5724 = inttoptr i64 %t5723 to ptr
+  %t5725 = call fastcc i64%t5724(i64 %t5720, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5726 = call i64 @rt_string_length(i64 %t5725)
+  %t5727 = or i64 %t5726, %t5719
+  %t5728 = and i64 %t5727, 7
+  %t5729 = icmp eq i64 %t5728, 0
+  br i1 %t5729, label %fixfast1633, label %fixslow1634
+fixfast1633:
+  %t5730 = icmp slt i64 %t5726, %t5719
+  %t5731 = select i1 %t5730, i64 257, i64 1
+  br label %fixmerge1635
+fixslow1634:
+  %t5732 = call i64 @rt_lt(i64 %t5726, i64 %t5719)
+  br label %fixmerge1635
+fixmerge1635:
+  %t5733 = phi i64 [ %t5731, %fixfast1633 ], [ %t5732, %fixslow1634 ]
+  %t5734 = icmp ne i64 %t5733, 1
+  br i1 %t5734, label %then1636, label %else1637
+then1636:
   ret i64 257
-else1624:
-  %t5700 = or i64 %t5684, %t5691
-  %t5701 = and i64 %t5700, 7
-  %t5702 = icmp eq i64 %t5701, 0
-  br i1 %t5702, label %fixfast1625, label %fixslow1626
-fixfast1625:
-  %t5703 = icmp eq i64 %t5684, %t5691
-  %t5704 = select i1 %t5703, i64 257, i64 1
-  br label %fixmerge1627
-fixslow1626:
-  %t5705 = call i64 @rt_num_eq(i64 %t5684, i64 %t5691)
-  br label %fixmerge1627
-fixmerge1627:
-  %t5706 = phi i64 [ %t5704, %fixfast1625 ], [ %t5705, %fixslow1626 ]
-  ret i64 %t5706
+else1637:
+  %t5735 = or i64 %t5719, %t5726
+  %t5736 = and i64 %t5735, 7
+  %t5737 = icmp eq i64 %t5736, 0
+  br i1 %t5737, label %fixfast1638, label %fixslow1639
+fixfast1638:
+  %t5738 = icmp eq i64 %t5719, %t5726
+  %t5739 = select i1 %t5738, i64 257, i64 1
+  br label %fixmerge1640
+fixslow1639:
+  %t5740 = call i64 @rt_num_eq(i64 %t5719, i64 %t5726)
+  br label %fixmerge1640
+fixmerge1640:
+  %t5741 = phi i64 [ %t5739, %fixfast1638 ], [ %t5740, %fixslow1639 ]
+  ret i64 %t5741
 }
 
 define fastcc i64 @"scheme.base:code:read-char"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5711 = icmp eq i64 %argc, 1
-  br i1 %t5711, label %argok1629, label %arityerr1628
-arityerr1628:
+  %t5746 = icmp eq i64 %argc, 1
+  br i1 %t5746, label %argok1642, label %arityerr1641
+arityerr1641:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1629:
-  %t5712 = call i64 @rt_intern(ptr @.str.sym.33)
-  %t5713 = load i64, ptr @"scheme.base:%check-input-port"
-  %t5714 = and i64 %t5713, -8
-  %t5715 = inttoptr i64 %t5714 to ptr
-  %t5716 = load i64, ptr %t5715
-  %t5717 = inttoptr i64 %t5716 to ptr
-  %t5718 = call fastcc i64%t5717(i64 %t5713, i64 2, i64 %a0, i64 %t5712, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5719 = load i64, ptr @"scheme.base:%port-at-eof?"
-  %t5720 = and i64 %t5719, -8
-  %t5721 = inttoptr i64 %t5720 to ptr
-  %t5722 = load i64, ptr %t5721
-  %t5723 = inttoptr i64 %t5722 to ptr
-  %t5724 = call fastcc i64%t5723(i64 %t5719, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5725 = icmp ne i64 %t5724, 1
-  br i1 %t5725, label %then1630, label %else1631
-then1630:
-  %t5726 = call i64 @rt_eof_object()
-  ret i64 %t5726
-else1631:
-  %t5727 = call i64 @rt_record_ref(i64 %a0, i64 24)
-  %t5728 = or i64 %t5727, 8
-  %t5729 = and i64 %t5728, 7
-  %t5730 = icmp eq i64 %t5729, 0
-  br i1 %t5730, label %fixfast1632, label %fixslow1633
-fixfast1632:
-  %t5731 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t5727, i64 8)
-  %t5732 = extractvalue {i64, i1} %t5731, 0
-  %t5733 = extractvalue {i64, i1} %t5731, 1
-  br i1 %t5733, label %fixslow1633, label %fixmerge1634
-fixslow1633:
-  %t5734 = call i64 @rt_add(i64 %t5727, i64 8)
-  br label %fixmerge1634
-fixmerge1634:
-  %t5735 = phi i64 [ %t5732, %fixfast1632 ], [ %t5734, %fixslow1633 ]
-  %t5736 = call i64 @rt_record_set(i64 %a0, i64 24, i64 %t5735)
-  %t5737 = load i64, ptr @"scheme.base:%port-buf"
-  %t5738 = and i64 %t5737, -8
-  %t5739 = inttoptr i64 %t5738 to ptr
-  %t5740 = load i64, ptr %t5739
-  %t5741 = inttoptr i64 %t5740 to ptr
-  %t5742 = call fastcc i64%t5741(i64 %t5737, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5743 = call i64 @rt_string_ref(i64 %t5742, i64 %t5727)
-  ret i64 %t5743
+argok1642:
+  %t5747 = call i64 @rt_intern(ptr @.str.sym.39)
+  %t5748 = load i64, ptr @"scheme.base:%check-input-port"
+  %t5749 = and i64 %t5748, -8
+  %t5750 = inttoptr i64 %t5749 to ptr
+  %t5751 = load i64, ptr %t5750
+  %t5752 = inttoptr i64 %t5751 to ptr
+  %t5753 = call fastcc i64%t5752(i64 %t5748, i64 2, i64 %a0, i64 %t5747, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5754 = load i64, ptr @"scheme.base:%port-at-eof?"
+  %t5755 = and i64 %t5754, -8
+  %t5756 = inttoptr i64 %t5755 to ptr
+  %t5757 = load i64, ptr %t5756
+  %t5758 = inttoptr i64 %t5757 to ptr
+  %t5759 = call fastcc i64%t5758(i64 %t5754, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5760 = icmp ne i64 %t5759, 1
+  br i1 %t5760, label %then1643, label %else1644
+then1643:
+  %t5761 = call i64 @rt_eof_object()
+  ret i64 %t5761
+else1644:
+  %t5762 = call i64 @rt_record_ref(i64 %a0, i64 24)
+  %t5763 = or i64 %t5762, 8
+  %t5764 = and i64 %t5763, 7
+  %t5765 = icmp eq i64 %t5764, 0
+  br i1 %t5765, label %fixfast1645, label %fixslow1646
+fixfast1645:
+  %t5766 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t5762, i64 8)
+  %t5767 = extractvalue {i64, i1} %t5766, 0
+  %t5768 = extractvalue {i64, i1} %t5766, 1
+  br i1 %t5768, label %fixslow1646, label %fixmerge1647
+fixslow1646:
+  %t5769 = call i64 @rt_add(i64 %t5762, i64 8)
+  br label %fixmerge1647
+fixmerge1647:
+  %t5770 = phi i64 [ %t5767, %fixfast1645 ], [ %t5769, %fixslow1646 ]
+  %t5771 = call i64 @rt_record_set(i64 %a0, i64 24, i64 %t5770)
+  %t5772 = load i64, ptr @"scheme.base:%port-buf"
+  %t5773 = and i64 %t5772, -8
+  %t5774 = inttoptr i64 %t5773 to ptr
+  %t5775 = load i64, ptr %t5774
+  %t5776 = inttoptr i64 %t5775 to ptr
+  %t5777 = call fastcc i64%t5776(i64 %t5772, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5778 = call i64 @rt_string_ref(i64 %t5777, i64 %t5762)
+  ret i64 %t5778
 }
 
 define fastcc i64 @"scheme.base:code:peek-char"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5748 = icmp eq i64 %argc, 1
-  br i1 %t5748, label %argok1636, label %arityerr1635
-arityerr1635:
+  %t5783 = icmp eq i64 %argc, 1
+  br i1 %t5783, label %argok1649, label %arityerr1648
+arityerr1648:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1636:
-  %t5749 = call i64 @rt_intern(ptr @.str.sym.34)
-  %t5750 = load i64, ptr @"scheme.base:%check-input-port"
-  %t5751 = and i64 %t5750, -8
-  %t5752 = inttoptr i64 %t5751 to ptr
-  %t5753 = load i64, ptr %t5752
-  %t5754 = inttoptr i64 %t5753 to ptr
-  %t5755 = call fastcc i64%t5754(i64 %t5750, i64 2, i64 %a0, i64 %t5749, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5756 = load i64, ptr @"scheme.base:%port-at-eof?"
-  %t5757 = and i64 %t5756, -8
-  %t5758 = inttoptr i64 %t5757 to ptr
-  %t5759 = load i64, ptr %t5758
-  %t5760 = inttoptr i64 %t5759 to ptr
-  %t5761 = call fastcc i64%t5760(i64 %t5756, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5762 = icmp ne i64 %t5761, 1
-  br i1 %t5762, label %then1637, label %else1638
-then1637:
-  %t5763 = call i64 @rt_eof_object()
-  ret i64 %t5763
-else1638:
-  %t5764 = load i64, ptr @"scheme.base:%port-buf"
-  %t5765 = and i64 %t5764, -8
-  %t5766 = inttoptr i64 %t5765 to ptr
-  %t5767 = load i64, ptr %t5766
-  %t5768 = inttoptr i64 %t5767 to ptr
-  %t5769 = call fastcc i64%t5768(i64 %t5764, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5770 = call i64 @rt_record_ref(i64 %a0, i64 24)
-  %t5771 = call i64 @rt_string_ref(i64 %t5769, i64 %t5770)
-  ret i64 %t5771
-}
-
-define fastcc i64 @"scheme.base:code_1318"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
-entry:
-  %t5776 = icmp eq i64 %argc, 1
-  br i1 %t5776, label %argok1640, label %arityerr1639
-arityerr1639:
-  call void @rt_arity_error(i64 1, i64 %argc)
-  unreachable
-argok1640:
-  %t5777 = and i64 %self, -8
-  %t5778 = inttoptr i64 %t5777 to ptr
-  %t5779 = getelementptr i64, ptr %t5778, i64 1
-  %t5780 = load i64, ptr %t5779
-  %t5781 = or i64 %t5780, %a0
-  %t5782 = and i64 %t5781, 7
-  %t5783 = icmp eq i64 %t5782, 0
-  br i1 %t5783, label %fixfast1641, label %fixslow1642
-fixfast1641:
-  %t5784 = icmp slt i64 %t5780, %a0
-  %t5785 = select i1 %t5784, i64 257, i64 1
-  br label %fixmerge1643
-fixslow1642:
-  %t5786 = call i64 @rt_lt(i64 %t5780, i64 %a0)
-  br label %fixmerge1643
-fixmerge1643:
-  %t5787 = phi i64 [ %t5785, %fixfast1641 ], [ %t5786, %fixslow1642 ]
-  %t5788 = icmp ne i64 %t5787, 1
-  br i1 %t5788, label %then1644, label %else1645
-then1644:
-  br label %merge1646
-else1645:
-  %t5789 = or i64 %a0, %t5780
-  %t5790 = and i64 %t5789, 7
-  %t5791 = icmp eq i64 %t5790, 0
-  br i1 %t5791, label %fixfast1647, label %fixslow1648
-fixfast1647:
-  %t5792 = icmp eq i64 %a0, %t5780
-  %t5793 = select i1 %t5792, i64 257, i64 1
-  br label %fixmerge1649
-fixslow1648:
-  %t5794 = call i64 @rt_num_eq(i64 %a0, i64 %t5780)
-  br label %fixmerge1649
-fixmerge1649:
-  %t5795 = phi i64 [ %t5793, %fixfast1647 ], [ %t5794, %fixslow1648 ]
-  br label %merge1646
-merge1646:
-  %t5796 = phi i64 [ 257, %then1644 ], [ %t5795, %fixmerge1649 ]
+argok1649:
+  %t5784 = call i64 @rt_intern(ptr @.str.sym.40)
+  %t5785 = load i64, ptr @"scheme.base:%check-input-port"
+  %t5786 = and i64 %t5785, -8
+  %t5787 = inttoptr i64 %t5786 to ptr
+  %t5788 = load i64, ptr %t5787
+  %t5789 = inttoptr i64 %t5788 to ptr
+  %t5790 = call fastcc i64%t5789(i64 %t5785, i64 2, i64 %a0, i64 %t5784, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5791 = load i64, ptr @"scheme.base:%port-at-eof?"
+  %t5792 = and i64 %t5791, -8
+  %t5793 = inttoptr i64 %t5792 to ptr
+  %t5794 = load i64, ptr %t5793
+  %t5795 = inttoptr i64 %t5794 to ptr
+  %t5796 = call fastcc i64%t5795(i64 %t5791, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t5797 = icmp ne i64 %t5796, 1
   br i1 %t5797, label %then1650, label %else1651
 then1650:
-  %t5798 = and i64 %self, -8
-  %t5799 = inttoptr i64 %t5798 to ptr
-  %t5800 = getelementptr i64, ptr %t5799, i64 2
-  %t5801 = load i64, ptr %t5800
-  %t5802 = call i64 @rt_record_ref(i64 %t5801, i64 24)
-  %t5803 = and i64 %self, -8
-  %t5804 = inttoptr i64 %t5803 to ptr
-  %t5805 = getelementptr i64, ptr %t5804, i64 2
-  %t5806 = load i64, ptr %t5805
-  %t5807 = and i64 %self, -8
-  %t5808 = inttoptr i64 %t5807 to ptr
-  %t5809 = getelementptr i64, ptr %t5808, i64 1
-  %t5810 = load i64, ptr %t5809
-  %t5811 = call i64 @rt_record_set(i64 %t5806, i64 24, i64 %t5810)
+  %t5798 = call i64 @rt_eof_object()
+  ret i64 %t5798
+else1651:
+  %t5799 = load i64, ptr @"scheme.base:%port-buf"
+  %t5800 = and i64 %t5799, -8
+  %t5801 = inttoptr i64 %t5800 to ptr
+  %t5802 = load i64, ptr %t5801
+  %t5803 = inttoptr i64 %t5802 to ptr
+  %t5804 = call fastcc i64%t5803(i64 %t5799, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5805 = call i64 @rt_record_ref(i64 %a0, i64 24)
+  %t5806 = call i64 @rt_string_ref(i64 %t5804, i64 %t5805)
+  ret i64 %t5806
+}
+
+define fastcc i64 @"scheme.base:code_1324"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+entry:
+  %t5811 = icmp eq i64 %argc, 1
+  br i1 %t5811, label %argok1653, label %arityerr1652
+arityerr1652:
+  call void @rt_arity_error(i64 1, i64 %argc)
+  unreachable
+argok1653:
   %t5812 = and i64 %self, -8
   %t5813 = inttoptr i64 %t5812 to ptr
-  %t5814 = getelementptr i64, ptr %t5813, i64 3
+  %t5814 = getelementptr i64, ptr %t5813, i64 1
   %t5815 = load i64, ptr %t5814
-  %t5816 = and i64 %self, -8
-  %t5817 = inttoptr i64 %t5816 to ptr
-  %t5818 = getelementptr i64, ptr %t5817, i64 1
-  %t5819 = load i64, ptr %t5818
-  %t5820 = call i64 @rt_substring(i64 %t5815, i64 %t5802, i64 %t5819)
-  ret i64 %t5820
-else1651:
-  %t5821 = and i64 %self, -8
-  %t5822 = inttoptr i64 %t5821 to ptr
-  %t5823 = getelementptr i64, ptr %t5822, i64 3
-  %t5824 = load i64, ptr %t5823
-  %t5825 = call i64 @rt_string_ref(i64 %t5824, i64 %a0)
-  %t5826 = load i64, ptr @"scheme.base:char=?"
-  %t5827 = and i64 %t5826, -8
-  %t5828 = inttoptr i64 %t5827 to ptr
-  %t5829 = load i64, ptr %t5828
-  %t5830 = inttoptr i64 %t5829 to ptr
-  %t5831 = call fastcc i64%t5830(i64 %t5826, i64 2, i64 %t5825, i64 2569, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5816 = or i64 %t5815, %a0
+  %t5817 = and i64 %t5816, 7
+  %t5818 = icmp eq i64 %t5817, 0
+  br i1 %t5818, label %fixfast1654, label %fixslow1655
+fixfast1654:
+  %t5819 = icmp slt i64 %t5815, %a0
+  %t5820 = select i1 %t5819, i64 257, i64 1
+  br label %fixmerge1656
+fixslow1655:
+  %t5821 = call i64 @rt_lt(i64 %t5815, i64 %a0)
+  br label %fixmerge1656
+fixmerge1656:
+  %t5822 = phi i64 [ %t5820, %fixfast1654 ], [ %t5821, %fixslow1655 ]
+  %t5823 = icmp ne i64 %t5822, 1
+  br i1 %t5823, label %then1657, label %else1658
+then1657:
+  br label %merge1659
+else1658:
+  %t5824 = or i64 %a0, %t5815
+  %t5825 = and i64 %t5824, 7
+  %t5826 = icmp eq i64 %t5825, 0
+  br i1 %t5826, label %fixfast1660, label %fixslow1661
+fixfast1660:
+  %t5827 = icmp eq i64 %a0, %t5815
+  %t5828 = select i1 %t5827, i64 257, i64 1
+  br label %fixmerge1662
+fixslow1661:
+  %t5829 = call i64 @rt_num_eq(i64 %a0, i64 %t5815)
+  br label %fixmerge1662
+fixmerge1662:
+  %t5830 = phi i64 [ %t5828, %fixfast1660 ], [ %t5829, %fixslow1661 ]
+  br label %merge1659
+merge1659:
+  %t5831 = phi i64 [ 257, %then1657 ], [ %t5830, %fixmerge1662 ]
   %t5832 = icmp ne i64 %t5831, 1
-  br i1 %t5832, label %then1652, label %else1653
-then1652:
+  br i1 %t5832, label %then1663, label %else1664
+then1663:
   %t5833 = and i64 %self, -8
   %t5834 = inttoptr i64 %t5833 to ptr
   %t5835 = getelementptr i64, ptr %t5834, i64 2
@@ -10391,603 +10422,577 @@ then1652:
   %t5839 = inttoptr i64 %t5838 to ptr
   %t5840 = getelementptr i64, ptr %t5839, i64 2
   %t5841 = load i64, ptr %t5840
-  %t5842 = or i64 %a0, 8
-  %t5843 = and i64 %t5842, 7
-  %t5844 = icmp eq i64 %t5843, 0
-  br i1 %t5844, label %fixfast1654, label %fixslow1655
-fixfast1654:
-  %t5845 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a0, i64 8)
-  %t5846 = extractvalue {i64, i1} %t5845, 0
-  %t5847 = extractvalue {i64, i1} %t5845, 1
-  br i1 %t5847, label %fixslow1655, label %fixmerge1656
-fixslow1655:
-  %t5848 = call i64 @rt_add(i64 %a0, i64 8)
-  br label %fixmerge1656
-fixmerge1656:
-  %t5849 = phi i64 [ %t5846, %fixfast1654 ], [ %t5848, %fixslow1655 ]
-  %t5850 = call i64 @rt_record_set(i64 %t5841, i64 24, i64 %t5849)
+  %t5842 = and i64 %self, -8
+  %t5843 = inttoptr i64 %t5842 to ptr
+  %t5844 = getelementptr i64, ptr %t5843, i64 1
+  %t5845 = load i64, ptr %t5844
+  %t5846 = call i64 @rt_record_set(i64 %t5841, i64 24, i64 %t5845)
+  %t5847 = and i64 %self, -8
+  %t5848 = inttoptr i64 %t5847 to ptr
+  %t5849 = getelementptr i64, ptr %t5848, i64 3
+  %t5850 = load i64, ptr %t5849
   %t5851 = and i64 %self, -8
   %t5852 = inttoptr i64 %t5851 to ptr
-  %t5853 = getelementptr i64, ptr %t5852, i64 3
+  %t5853 = getelementptr i64, ptr %t5852, i64 1
   %t5854 = load i64, ptr %t5853
-  %t5855 = call i64 @rt_substring(i64 %t5854, i64 %t5837, i64 %a0)
+  %t5855 = call i64 @rt_substring(i64 %t5850, i64 %t5837, i64 %t5854)
   ret i64 %t5855
-else1653:
-  %t5856 = or i64 %a0, 8
-  %t5857 = and i64 %t5856, 7
-  %t5858 = icmp eq i64 %t5857, 0
-  br i1 %t5858, label %fixfast1657, label %fixslow1658
-fixfast1657:
-  %t5859 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a0, i64 8)
-  %t5860 = extractvalue {i64, i1} %t5859, 0
-  %t5861 = extractvalue {i64, i1} %t5859, 1
-  br i1 %t5861, label %fixslow1658, label %fixmerge1659
-fixslow1658:
-  %t5862 = call i64 @rt_add(i64 %a0, i64 8)
-  br label %fixmerge1659
-fixmerge1659:
-  %t5863 = phi i64 [ %t5860, %fixfast1657 ], [ %t5862, %fixslow1658 ]
-  %t5864 = musttail call fastcc i64 @"scheme.base:code_1318"(i64 %self, i64 1, i64 %t5863, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t5864
+else1664:
+  %t5856 = and i64 %self, -8
+  %t5857 = inttoptr i64 %t5856 to ptr
+  %t5858 = getelementptr i64, ptr %t5857, i64 3
+  %t5859 = load i64, ptr %t5858
+  %t5860 = call i64 @rt_string_ref(i64 %t5859, i64 %a0)
+  %t5861 = load i64, ptr @"scheme.base:char=?"
+  %t5862 = and i64 %t5861, -8
+  %t5863 = inttoptr i64 %t5862 to ptr
+  %t5864 = load i64, ptr %t5863
+  %t5865 = inttoptr i64 %t5864 to ptr
+  %t5866 = call fastcc i64%t5865(i64 %t5861, i64 2, i64 %t5860, i64 2569, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5867 = icmp ne i64 %t5866, 1
+  br i1 %t5867, label %then1665, label %else1666
+then1665:
+  %t5868 = and i64 %self, -8
+  %t5869 = inttoptr i64 %t5868 to ptr
+  %t5870 = getelementptr i64, ptr %t5869, i64 2
+  %t5871 = load i64, ptr %t5870
+  %t5872 = call i64 @rt_record_ref(i64 %t5871, i64 24)
+  %t5873 = and i64 %self, -8
+  %t5874 = inttoptr i64 %t5873 to ptr
+  %t5875 = getelementptr i64, ptr %t5874, i64 2
+  %t5876 = load i64, ptr %t5875
+  %t5877 = or i64 %a0, 8
+  %t5878 = and i64 %t5877, 7
+  %t5879 = icmp eq i64 %t5878, 0
+  br i1 %t5879, label %fixfast1667, label %fixslow1668
+fixfast1667:
+  %t5880 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a0, i64 8)
+  %t5881 = extractvalue {i64, i1} %t5880, 0
+  %t5882 = extractvalue {i64, i1} %t5880, 1
+  br i1 %t5882, label %fixslow1668, label %fixmerge1669
+fixslow1668:
+  %t5883 = call i64 @rt_add(i64 %a0, i64 8)
+  br label %fixmerge1669
+fixmerge1669:
+  %t5884 = phi i64 [ %t5881, %fixfast1667 ], [ %t5883, %fixslow1668 ]
+  %t5885 = call i64 @rt_record_set(i64 %t5876, i64 24, i64 %t5884)
+  %t5886 = and i64 %self, -8
+  %t5887 = inttoptr i64 %t5886 to ptr
+  %t5888 = getelementptr i64, ptr %t5887, i64 3
+  %t5889 = load i64, ptr %t5888
+  %t5890 = call i64 @rt_substring(i64 %t5889, i64 %t5872, i64 %a0)
+  ret i64 %t5890
+else1666:
+  %t5891 = or i64 %a0, 8
+  %t5892 = and i64 %t5891, 7
+  %t5893 = icmp eq i64 %t5892, 0
+  br i1 %t5893, label %fixfast1670, label %fixslow1671
+fixfast1670:
+  %t5894 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %a0, i64 8)
+  %t5895 = extractvalue {i64, i1} %t5894, 0
+  %t5896 = extractvalue {i64, i1} %t5894, 1
+  br i1 %t5896, label %fixslow1671, label %fixmerge1672
+fixslow1671:
+  %t5897 = call i64 @rt_add(i64 %a0, i64 8)
+  br label %fixmerge1672
+fixmerge1672:
+  %t5898 = phi i64 [ %t5895, %fixfast1670 ], [ %t5897, %fixslow1671 ]
+  %t5899 = musttail call fastcc i64 @"scheme.base:code_1324"(i64 %self, i64 1, i64 %t5898, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t5899
 }
 
 define fastcc i64 @"scheme.base:code:read-line"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5865 = icmp eq i64 %argc, 1
-  br i1 %t5865, label %argok1661, label %arityerr1660
-arityerr1660:
+  %t5900 = icmp eq i64 %argc, 1
+  br i1 %t5900, label %argok1674, label %arityerr1673
+arityerr1673:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1661:
-  %t5866 = call i64 @rt_intern(ptr @.str.sym.35)
-  %t5867 = load i64, ptr @"scheme.base:%check-input-port"
-  %t5868 = and i64 %t5867, -8
-  %t5869 = inttoptr i64 %t5868 to ptr
-  %t5870 = load i64, ptr %t5869
-  %t5871 = inttoptr i64 %t5870 to ptr
-  %t5872 = call fastcc i64%t5871(i64 %t5867, i64 2, i64 %a0, i64 %t5866, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5873 = load i64, ptr @"scheme.base:%port-at-eof?"
-  %t5874 = and i64 %t5873, -8
-  %t5875 = inttoptr i64 %t5874 to ptr
-  %t5876 = load i64, ptr %t5875
-  %t5877 = inttoptr i64 %t5876 to ptr
-  %t5878 = call fastcc i64%t5877(i64 %t5873, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5879 = icmp ne i64 %t5878, 1
-  br i1 %t5879, label %then1662, label %else1663
-then1662:
-  %t5880 = call i64 @rt_eof_object()
-  ret i64 %t5880
-else1663:
-  %t5881 = load i64, ptr @"scheme.base:%port-buf"
-  %t5882 = and i64 %t5881, -8
-  %t5883 = inttoptr i64 %t5882 to ptr
-  %t5884 = load i64, ptr %t5883
-  %t5885 = inttoptr i64 %t5884 to ptr
-  %t5886 = call fastcc i64%t5885(i64 %t5881, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5887 = call i64 @rt_string_length(i64 %t5886)
-  %t5888 = call ptr @rt_alloc_words(i64 5)
-  %t5889 = ptrtoint ptr %t5888 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_1318" to i64), ptr %t5888
-  %t5890 = or i64 %t5889, 4
-  %t5891 = getelementptr i64, ptr %t5888, i64 1
-  store i64 %t5887, ptr %t5891
-  %t5892 = getelementptr i64, ptr %t5888, i64 2
-  store i64 %a0, ptr %t5892
-  %t5893 = getelementptr i64, ptr %t5888, i64 3
-  store i64 %t5886, ptr %t5893
-  %t5894 = getelementptr i64, ptr %t5888, i64 4
-  store i64 %t5890, ptr %t5894
-  %t5895 = call i64 @rt_record_ref(i64 %a0, i64 24)
-  %t5896 = musttail call fastcc i64 @"scheme.base:code_1318"(i64 %t5890, i64 1, i64 %t5895, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t5896
+argok1674:
+  %t5901 = call i64 @rt_intern(ptr @.str.sym.41)
+  %t5902 = load i64, ptr @"scheme.base:%check-input-port"
+  %t5903 = and i64 %t5902, -8
+  %t5904 = inttoptr i64 %t5903 to ptr
+  %t5905 = load i64, ptr %t5904
+  %t5906 = inttoptr i64 %t5905 to ptr
+  %t5907 = call fastcc i64%t5906(i64 %t5902, i64 2, i64 %a0, i64 %t5901, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5908 = load i64, ptr @"scheme.base:%port-at-eof?"
+  %t5909 = and i64 %t5908, -8
+  %t5910 = inttoptr i64 %t5909 to ptr
+  %t5911 = load i64, ptr %t5910
+  %t5912 = inttoptr i64 %t5911 to ptr
+  %t5913 = call fastcc i64%t5912(i64 %t5908, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5914 = icmp ne i64 %t5913, 1
+  br i1 %t5914, label %then1675, label %else1676
+then1675:
+  %t5915 = call i64 @rt_eof_object()
+  ret i64 %t5915
+else1676:
+  %t5916 = load i64, ptr @"scheme.base:%port-buf"
+  %t5917 = and i64 %t5916, -8
+  %t5918 = inttoptr i64 %t5917 to ptr
+  %t5919 = load i64, ptr %t5918
+  %t5920 = inttoptr i64 %t5919 to ptr
+  %t5921 = call fastcc i64%t5920(i64 %t5916, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5922 = call i64 @rt_string_length(i64 %t5921)
+  %t5923 = call ptr @rt_alloc_words(i64 5)
+  %t5924 = ptrtoint ptr %t5923 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_1324" to i64), ptr %t5923
+  %t5925 = or i64 %t5924, 4
+  %t5926 = getelementptr i64, ptr %t5923, i64 1
+  store i64 %t5922, ptr %t5926
+  %t5927 = getelementptr i64, ptr %t5923, i64 2
+  store i64 %a0, ptr %t5927
+  %t5928 = getelementptr i64, ptr %t5923, i64 3
+  store i64 %t5921, ptr %t5928
+  %t5929 = getelementptr i64, ptr %t5923, i64 4
+  store i64 %t5925, ptr %t5929
+  %t5930 = call i64 @rt_record_ref(i64 %a0, i64 24)
+  %t5931 = musttail call fastcc i64 @"scheme.base:code_1324"(i64 %t5925, i64 1, i64 %t5930, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t5931
 }
 
 define fastcc i64 @"scheme.base:code:read-string"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5901 = icmp eq i64 %argc, 2
-  br i1 %t5901, label %argok1665, label %arityerr1664
-arityerr1664:
+  %t5936 = icmp eq i64 %argc, 2
+  br i1 %t5936, label %argok1678, label %arityerr1677
+arityerr1677:
   call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
-argok1665:
-  %t5902 = call i64 @rt_intern(ptr @.str.sym.36)
-  %t5903 = load i64, ptr @"scheme.base:%check-input-port"
-  %t5904 = and i64 %t5903, -8
-  %t5905 = inttoptr i64 %t5904 to ptr
-  %t5906 = load i64, ptr %t5905
-  %t5907 = inttoptr i64 %t5906 to ptr
-  %t5908 = call fastcc i64%t5907(i64 %t5903, i64 2, i64 %a1, i64 %t5902, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5909 = load i64, ptr @"scheme.base:%port-at-eof?"
-  %t5910 = and i64 %t5909, -8
-  %t5911 = inttoptr i64 %t5910 to ptr
-  %t5912 = load i64, ptr %t5911
-  %t5913 = inttoptr i64 %t5912 to ptr
-  %t5914 = call fastcc i64%t5913(i64 %t5909, i64 1, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5915 = icmp ne i64 %t5914, 1
-  br i1 %t5915, label %then1666, label %else1667
-then1666:
-  %t5916 = call i64 @rt_eof_object()
-  ret i64 %t5916
-else1667:
-  %t5917 = load i64, ptr @"scheme.base:%port-buf"
-  %t5918 = and i64 %t5917, -8
-  %t5919 = inttoptr i64 %t5918 to ptr
-  %t5920 = load i64, ptr %t5919
-  %t5921 = inttoptr i64 %t5920 to ptr
-  %t5922 = call fastcc i64%t5921(i64 %t5917, i64 1, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5923 = call i64 @rt_string_length(i64 %t5922)
-  %t5924 = call i64 @rt_record_ref(i64 %a1, i64 24)
-  %t5925 = or i64 %t5924, %a0
-  %t5926 = and i64 %t5925, 7
-  %t5927 = icmp eq i64 %t5926, 0
-  br i1 %t5927, label %fixfast1668, label %fixslow1669
-fixfast1668:
-  %t5928 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t5924, i64 %a0)
-  %t5929 = extractvalue {i64, i1} %t5928, 0
-  %t5930 = extractvalue {i64, i1} %t5928, 1
-  br i1 %t5930, label %fixslow1669, label %fixmerge1670
-fixslow1669:
-  %t5931 = call i64 @rt_add(i64 %t5924, i64 %a0)
-  br label %fixmerge1670
-fixmerge1670:
-  %t5932 = phi i64 [ %t5929, %fixfast1668 ], [ %t5931, %fixslow1669 ]
-  %t5933 = or i64 %t5923, %t5932
-  %t5934 = and i64 %t5933, 7
-  %t5935 = icmp eq i64 %t5934, 0
-  br i1 %t5935, label %fixfast1671, label %fixslow1672
-fixfast1671:
-  %t5936 = icmp slt i64 %t5923, %t5932
-  %t5937 = select i1 %t5936, i64 257, i64 1
-  br label %fixmerge1673
-fixslow1672:
-  %t5938 = call i64 @rt_lt(i64 %t5923, i64 %t5932)
-  br label %fixmerge1673
-fixmerge1673:
-  %t5939 = phi i64 [ %t5937, %fixfast1671 ], [ %t5938, %fixslow1672 ]
-  %t5940 = icmp ne i64 %t5939, 1
-  br i1 %t5940, label %then1674, label %else1675
-then1674:
-  br label %merge1676
-else1675:
-  %t5941 = or i64 %t5924, %a0
-  %t5942 = and i64 %t5941, 7
-  %t5943 = icmp eq i64 %t5942, 0
-  br i1 %t5943, label %fixfast1677, label %fixslow1678
-fixfast1677:
-  %t5944 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t5924, i64 %a0)
-  %t5945 = extractvalue {i64, i1} %t5944, 0
-  %t5946 = extractvalue {i64, i1} %t5944, 1
-  br i1 %t5946, label %fixslow1678, label %fixmerge1679
-fixslow1678:
-  %t5947 = call i64 @rt_add(i64 %t5924, i64 %a0)
-  br label %fixmerge1679
-fixmerge1679:
-  %t5948 = phi i64 [ %t5945, %fixfast1677 ], [ %t5947, %fixslow1678 ]
-  br label %merge1676
-merge1676:
-  %t5949 = phi i64 [ %t5923, %then1674 ], [ %t5948, %fixmerge1679 ]
-  %t5950 = call i64 @rt_record_set(i64 %a1, i64 24, i64 %t5949)
-  %t5951 = call i64 @rt_substring(i64 %t5922, i64 %t5924, i64 %t5949)
+argok1678:
+  %t5937 = call i64 @rt_intern(ptr @.str.sym.42)
+  %t5938 = load i64, ptr @"scheme.base:%check-input-port"
+  %t5939 = and i64 %t5938, -8
+  %t5940 = inttoptr i64 %t5939 to ptr
+  %t5941 = load i64, ptr %t5940
+  %t5942 = inttoptr i64 %t5941 to ptr
+  %t5943 = call fastcc i64%t5942(i64 %t5938, i64 2, i64 %a1, i64 %t5937, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5944 = load i64, ptr @"scheme.base:%port-at-eof?"
+  %t5945 = and i64 %t5944, -8
+  %t5946 = inttoptr i64 %t5945 to ptr
+  %t5947 = load i64, ptr %t5946
+  %t5948 = inttoptr i64 %t5947 to ptr
+  %t5949 = call fastcc i64%t5948(i64 %t5944, i64 1, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5950 = icmp ne i64 %t5949, 1
+  br i1 %t5950, label %then1679, label %else1680
+then1679:
+  %t5951 = call i64 @rt_eof_object()
   ret i64 %t5951
+else1680:
+  %t5952 = load i64, ptr @"scheme.base:%port-buf"
+  %t5953 = and i64 %t5952, -8
+  %t5954 = inttoptr i64 %t5953 to ptr
+  %t5955 = load i64, ptr %t5954
+  %t5956 = inttoptr i64 %t5955 to ptr
+  %t5957 = call fastcc i64%t5956(i64 %t5952, i64 1, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5958 = call i64 @rt_string_length(i64 %t5957)
+  %t5959 = call i64 @rt_record_ref(i64 %a1, i64 24)
+  %t5960 = or i64 %t5959, %a0
+  %t5961 = and i64 %t5960, 7
+  %t5962 = icmp eq i64 %t5961, 0
+  br i1 %t5962, label %fixfast1681, label %fixslow1682
+fixfast1681:
+  %t5963 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t5959, i64 %a0)
+  %t5964 = extractvalue {i64, i1} %t5963, 0
+  %t5965 = extractvalue {i64, i1} %t5963, 1
+  br i1 %t5965, label %fixslow1682, label %fixmerge1683
+fixslow1682:
+  %t5966 = call i64 @rt_add(i64 %t5959, i64 %a0)
+  br label %fixmerge1683
+fixmerge1683:
+  %t5967 = phi i64 [ %t5964, %fixfast1681 ], [ %t5966, %fixslow1682 ]
+  %t5968 = or i64 %t5958, %t5967
+  %t5969 = and i64 %t5968, 7
+  %t5970 = icmp eq i64 %t5969, 0
+  br i1 %t5970, label %fixfast1684, label %fixslow1685
+fixfast1684:
+  %t5971 = icmp slt i64 %t5958, %t5967
+  %t5972 = select i1 %t5971, i64 257, i64 1
+  br label %fixmerge1686
+fixslow1685:
+  %t5973 = call i64 @rt_lt(i64 %t5958, i64 %t5967)
+  br label %fixmerge1686
+fixmerge1686:
+  %t5974 = phi i64 [ %t5972, %fixfast1684 ], [ %t5973, %fixslow1685 ]
+  %t5975 = icmp ne i64 %t5974, 1
+  br i1 %t5975, label %then1687, label %else1688
+then1687:
+  br label %merge1689
+else1688:
+  %t5976 = or i64 %t5959, %a0
+  %t5977 = and i64 %t5976, 7
+  %t5978 = icmp eq i64 %t5977, 0
+  br i1 %t5978, label %fixfast1690, label %fixslow1691
+fixfast1690:
+  %t5979 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %t5959, i64 %a0)
+  %t5980 = extractvalue {i64, i1} %t5979, 0
+  %t5981 = extractvalue {i64, i1} %t5979, 1
+  br i1 %t5981, label %fixslow1691, label %fixmerge1692
+fixslow1691:
+  %t5982 = call i64 @rt_add(i64 %t5959, i64 %a0)
+  br label %fixmerge1692
+fixmerge1692:
+  %t5983 = phi i64 [ %t5980, %fixfast1690 ], [ %t5982, %fixslow1691 ]
+  br label %merge1689
+merge1689:
+  %t5984 = phi i64 [ %t5958, %then1687 ], [ %t5983, %fixmerge1692 ]
+  %t5985 = call i64 @rt_record_set(i64 %a1, i64 24, i64 %t5984)
+  %t5986 = call i64 @rt_substring(i64 %t5957, i64 %t5959, i64 %t5984)
+  ret i64 %t5986
 }
 
 define fastcc i64 @"scheme.base:code:read"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t5956 = icmp eq i64 %argc, 1
-  br i1 %t5956, label %argok1681, label %arityerr1680
-arityerr1680:
-  call void @rt_arity_error(i64 1, i64 %argc)
-  unreachable
-argok1681:
-  %t5957 = call i64 @rt_intern(ptr @.str.sym.37)
-  %t5958 = load i64, ptr @"scheme.base:%check-input-port"
-  %t5959 = and i64 %t5958, -8
-  %t5960 = inttoptr i64 %t5959 to ptr
-  %t5961 = load i64, ptr %t5960
-  %t5962 = inttoptr i64 %t5961 to ptr
-  %t5963 = call fastcc i64%t5962(i64 %t5958, i64 2, i64 %a0, i64 %t5957, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5964 = load i64, ptr @"scheme.base:%port-buf"
-  %t5965 = and i64 %t5964, -8
-  %t5966 = inttoptr i64 %t5965 to ptr
-  %t5967 = load i64, ptr %t5966
-  %t5968 = inttoptr i64 %t5967 to ptr
-  %t5969 = call fastcc i64%t5968(i64 %t5964, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5970 = call i64 @rt_string_length(i64 %t5969)
-  %t5971 = call i64 @rt_record_ref(i64 %a0, i64 24)
-  %t5972 = load i64, ptr @"scheme.base:rd-skip-ws"
-  %t5973 = and i64 %t5972, -8
-  %t5974 = inttoptr i64 %t5973 to ptr
-  %t5975 = load i64, ptr %t5974
-  %t5976 = inttoptr i64 %t5975 to ptr
-  %t5977 = call fastcc i64%t5976(i64 %t5972, i64 3, i64 %t5969, i64 %t5970, i64 %t5971, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t5978 = or i64 %t5970, %t5977
-  %t5979 = and i64 %t5978, 7
-  %t5980 = icmp eq i64 %t5979, 0
-  br i1 %t5980, label %fixfast1682, label %fixslow1683
-fixfast1682:
-  %t5981 = icmp slt i64 %t5970, %t5977
-  %t5982 = select i1 %t5981, i64 257, i64 1
-  br label %fixmerge1684
-fixslow1683:
-  %t5983 = call i64 @rt_lt(i64 %t5970, i64 %t5977)
-  br label %fixmerge1684
-fixmerge1684:
-  %t5984 = phi i64 [ %t5982, %fixfast1682 ], [ %t5983, %fixslow1683 ]
-  %t5985 = icmp ne i64 %t5984, 1
-  br i1 %t5985, label %then1685, label %else1686
-then1685:
-  br label %merge1687
-else1686:
-  %t5986 = or i64 %t5977, %t5970
-  %t5987 = and i64 %t5986, 7
-  %t5988 = icmp eq i64 %t5987, 0
-  br i1 %t5988, label %fixfast1688, label %fixslow1689
-fixfast1688:
-  %t5989 = icmp eq i64 %t5977, %t5970
-  %t5990 = select i1 %t5989, i64 257, i64 1
-  br label %fixmerge1690
-fixslow1689:
-  %t5991 = call i64 @rt_num_eq(i64 %t5977, i64 %t5970)
-  br label %fixmerge1690
-fixmerge1690:
-  %t5992 = phi i64 [ %t5990, %fixfast1688 ], [ %t5991, %fixslow1689 ]
-  br label %merge1687
-merge1687:
-  %t5993 = phi i64 [ 257, %then1685 ], [ %t5992, %fixmerge1690 ]
-  %t5994 = icmp ne i64 %t5993, 1
-  br i1 %t5994, label %then1691, label %else1692
-then1691:
-  %t5995 = call i64 @rt_record_set(i64 %a0, i64 24, i64 %t5970)
-  %t5996 = call i64 @rt_eof_object()
-  ret i64 %t5996
-else1692:
-  %t5997 = load i64, ptr @"scheme.base:rd-datum"
-  %t5998 = and i64 %t5997, -8
-  %t5999 = inttoptr i64 %t5998 to ptr
-  %t6000 = load i64, ptr %t5999
-  %t6001 = inttoptr i64 %t6000 to ptr
-  %t6002 = call fastcc i64%t6001(i64 %t5997, i64 3, i64 %t5969, i64 %t5970, i64 %t5977, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t6003 = call i64 @rt_cdr(i64 %t6002)
-  %t6004 = call i64 @rt_record_set(i64 %a0, i64 24, i64 %t6003)
-  %t6005 = call i64 @rt_car(i64 %t6002)
-  ret i64 %t6005
-}
-
-define fastcc i64 @"scheme.base:code:open-output-file"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
-entry:
-  %t6010 = icmp eq i64 %argc, 1
-  br i1 %t6010, label %argok1694, label %arityerr1693
+  %t5991 = icmp eq i64 %argc, 1
+  br i1 %t5991, label %argok1694, label %arityerr1693
 arityerr1693:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
 argok1694:
-  %t6011 = call i64 @rt_port_open_output_file(i64 %a0)
-  %t6012 = icmp ne i64 %t6011, 1
-  br i1 %t6012, label %then1695, label %else1696
-then1695:
-  %t6013 = load i64, ptr @"scheme.base:%make-port"
-  %t6014 = and i64 %t6013, -8
-  %t6015 = inttoptr i64 %t6014 to ptr
-  %t6016 = load i64, ptr %t6015
-  %t6017 = inttoptr i64 %t6016 to ptr
-  %t6018 = musttail call fastcc i64 %t6017(i64 %t6013, i64 6, i64 %t6011, i64 1, i64 1, i64 0, i64 1, i64 1, i64 0, i64 0, ptr null)
-  ret i64 %t6018
-else1696:
-  %t6019 = call i64 @rt_intern(ptr @.str.sym.38)
-  %t6020 = call i64 @rt_make_string(ptr @.str.lit.39, i64 27)
-  %t6021 = load i64, ptr @"scheme.base:error"
-  %t6022 = and i64 %t6021, -8
-  %t6023 = inttoptr i64 %t6022 to ptr
-  %t6024 = load i64, ptr %t6023
-  %t6025 = inttoptr i64 %t6024 to ptr
-  %t6026 = musttail call fastcc i64 %t6025(i64 %t6021, i64 3, i64 %t6019, i64 %t6020, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t6026
+  %t5992 = call i64 @rt_intern(ptr @.str.sym.43)
+  %t5993 = load i64, ptr @"scheme.base:%check-input-port"
+  %t5994 = and i64 %t5993, -8
+  %t5995 = inttoptr i64 %t5994 to ptr
+  %t5996 = load i64, ptr %t5995
+  %t5997 = inttoptr i64 %t5996 to ptr
+  %t5998 = call fastcc i64%t5997(i64 %t5993, i64 2, i64 %a0, i64 %t5992, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t5999 = load i64, ptr @"scheme.base:%port-buf"
+  %t6000 = and i64 %t5999, -8
+  %t6001 = inttoptr i64 %t6000 to ptr
+  %t6002 = load i64, ptr %t6001
+  %t6003 = inttoptr i64 %t6002 to ptr
+  %t6004 = call fastcc i64%t6003(i64 %t5999, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t6005 = call i64 @rt_string_length(i64 %t6004)
+  %t6006 = call i64 @rt_record_ref(i64 %a0, i64 24)
+  %t6007 = load i64, ptr @"scheme.base:rd-skip-ws"
+  %t6008 = and i64 %t6007, -8
+  %t6009 = inttoptr i64 %t6008 to ptr
+  %t6010 = load i64, ptr %t6009
+  %t6011 = inttoptr i64 %t6010 to ptr
+  %t6012 = call fastcc i64%t6011(i64 %t6007, i64 3, i64 %t6004, i64 %t6005, i64 %t6006, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t6013 = or i64 %t6005, %t6012
+  %t6014 = and i64 %t6013, 7
+  %t6015 = icmp eq i64 %t6014, 0
+  br i1 %t6015, label %fixfast1695, label %fixslow1696
+fixfast1695:
+  %t6016 = icmp slt i64 %t6005, %t6012
+  %t6017 = select i1 %t6016, i64 257, i64 1
+  br label %fixmerge1697
+fixslow1696:
+  %t6018 = call i64 @rt_lt(i64 %t6005, i64 %t6012)
+  br label %fixmerge1697
+fixmerge1697:
+  %t6019 = phi i64 [ %t6017, %fixfast1695 ], [ %t6018, %fixslow1696 ]
+  %t6020 = icmp ne i64 %t6019, 1
+  br i1 %t6020, label %then1698, label %else1699
+then1698:
+  br label %merge1700
+else1699:
+  %t6021 = or i64 %t6012, %t6005
+  %t6022 = and i64 %t6021, 7
+  %t6023 = icmp eq i64 %t6022, 0
+  br i1 %t6023, label %fixfast1701, label %fixslow1702
+fixfast1701:
+  %t6024 = icmp eq i64 %t6012, %t6005
+  %t6025 = select i1 %t6024, i64 257, i64 1
+  br label %fixmerge1703
+fixslow1702:
+  %t6026 = call i64 @rt_num_eq(i64 %t6012, i64 %t6005)
+  br label %fixmerge1703
+fixmerge1703:
+  %t6027 = phi i64 [ %t6025, %fixfast1701 ], [ %t6026, %fixslow1702 ]
+  br label %merge1700
+merge1700:
+  %t6028 = phi i64 [ 257, %then1698 ], [ %t6027, %fixmerge1703 ]
+  %t6029 = icmp ne i64 %t6028, 1
+  br i1 %t6029, label %then1704, label %else1705
+then1704:
+  %t6030 = call i64 @rt_record_set(i64 %a0, i64 24, i64 %t6005)
+  %t6031 = call i64 @rt_eof_object()
+  ret i64 %t6031
+else1705:
+  %t6032 = load i64, ptr @"scheme.base:rd-datum"
+  %t6033 = and i64 %t6032, -8
+  %t6034 = inttoptr i64 %t6033 to ptr
+  %t6035 = load i64, ptr %t6034
+  %t6036 = inttoptr i64 %t6035 to ptr
+  %t6037 = call fastcc i64%t6036(i64 %t6032, i64 3, i64 %t6004, i64 %t6005, i64 %t6012, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t6038 = call i64 @rt_cdr(i64 %t6037)
+  %t6039 = call i64 @rt_record_set(i64 %a0, i64 24, i64 %t6038)
+  %t6040 = call i64 @rt_car(i64 %t6037)
+  ret i64 %t6040
+}
+
+define fastcc i64 @"scheme.base:code:open-output-file"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+entry:
+  %t6045 = icmp eq i64 %argc, 1
+  br i1 %t6045, label %argok1707, label %arityerr1706
+arityerr1706:
+  call void @rt_arity_error(i64 1, i64 %argc)
+  unreachable
+argok1707:
+  %t6046 = call i64 @rt_port_open_output_file(i64 %a0)
+  %t6047 = icmp ne i64 %t6046, 1
+  br i1 %t6047, label %then1708, label %else1709
+then1708:
+  %t6048 = load i64, ptr @"scheme.base:%make-port"
+  %t6049 = and i64 %t6048, -8
+  %t6050 = inttoptr i64 %t6049 to ptr
+  %t6051 = load i64, ptr %t6050
+  %t6052 = inttoptr i64 %t6051 to ptr
+  %t6053 = musttail call fastcc i64 %t6052(i64 %t6048, i64 6, i64 %t6046, i64 1, i64 1, i64 0, i64 1, i64 1, i64 0, i64 0, ptr null)
+  ret i64 %t6053
+else1709:
+  %t6054 = call i64 @rt_intern(ptr @.str.sym.44)
+  %t6055 = call i64 @rt_make_string(ptr @.str.lit.45, i64 27)
+  %t6056 = load i64, ptr @"scheme.base:error"
+  %t6057 = and i64 %t6056, -8
+  %t6058 = inttoptr i64 %t6057 to ptr
+  %t6059 = load i64, ptr %t6058
+  %t6060 = inttoptr i64 %t6059 to ptr
+  %t6061 = musttail call fastcc i64 %t6060(i64 %t6056, i64 3, i64 %t6054, i64 %t6055, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t6061
 }
 
 define fastcc i64 @"scheme.base:code:open-output-string"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t6031 = icmp eq i64 %argc, 0
-  br i1 %t6031, label %argok1698, label %arityerr1697
-arityerr1697:
+  %t6066 = icmp eq i64 %argc, 0
+  br i1 %t6066, label %argok1711, label %arityerr1710
+arityerr1710:
   call void @rt_arity_error(i64 0, i64 %argc)
   unreachable
-argok1698:
-  %t6032 = call i64 @rt_port_open_output_string()
-  %t6033 = icmp ne i64 %t6032, 1
-  br i1 %t6033, label %then1699, label %else1700
-then1699:
-  %t6034 = load i64, ptr @"scheme.base:%make-port"
-  %t6035 = and i64 %t6034, -8
-  %t6036 = inttoptr i64 %t6035 to ptr
-  %t6037 = load i64, ptr %t6036
-  %t6038 = inttoptr i64 %t6037 to ptr
-  %t6039 = musttail call fastcc i64 %t6038(i64 %t6034, i64 6, i64 %t6032, i64 1, i64 1, i64 0, i64 257, i64 1, i64 0, i64 0, ptr null)
-  ret i64 %t6039
-else1700:
-  %t6040 = call i64 @rt_intern(ptr @.str.sym.40)
-  %t6041 = call i64 @rt_make_string(ptr @.str.lit.41, i64 33)
-  %t6042 = load i64, ptr @"scheme.base:error"
-  %t6043 = and i64 %t6042, -8
-  %t6044 = inttoptr i64 %t6043 to ptr
-  %t6045 = load i64, ptr %t6044
-  %t6046 = inttoptr i64 %t6045 to ptr
-  %t6047 = musttail call fastcc i64 %t6046(i64 %t6042, i64 2, i64 %t6040, i64 %t6041, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t6047
+argok1711:
+  %t6067 = call i64 @rt_port_open_output_string()
+  %t6068 = icmp ne i64 %t6067, 1
+  br i1 %t6068, label %then1712, label %else1713
+then1712:
+  %t6069 = load i64, ptr @"scheme.base:%make-port"
+  %t6070 = and i64 %t6069, -8
+  %t6071 = inttoptr i64 %t6070 to ptr
+  %t6072 = load i64, ptr %t6071
+  %t6073 = inttoptr i64 %t6072 to ptr
+  %t6074 = musttail call fastcc i64 %t6073(i64 %t6069, i64 6, i64 %t6067, i64 1, i64 1, i64 0, i64 257, i64 1, i64 0, i64 0, ptr null)
+  ret i64 %t6074
+else1713:
+  %t6075 = call i64 @rt_intern(ptr @.str.sym.46)
+  %t6076 = call i64 @rt_make_string(ptr @.str.lit.47, i64 33)
+  %t6077 = load i64, ptr @"scheme.base:error"
+  %t6078 = and i64 %t6077, -8
+  %t6079 = inttoptr i64 %t6078 to ptr
+  %t6080 = load i64, ptr %t6079
+  %t6081 = inttoptr i64 %t6080 to ptr
+  %t6082 = musttail call fastcc i64 %t6081(i64 %t6077, i64 2, i64 %t6075, i64 %t6076, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t6082
 }
 
 define fastcc i64 @"scheme.base:code:get-output-string"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t6052 = icmp eq i64 %argc, 1
-  br i1 %t6052, label %argok1702, label %arityerr1701
-arityerr1701:
+  %t6087 = icmp eq i64 %argc, 1
+  br i1 %t6087, label %argok1715, label %arityerr1714
+arityerr1714:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1702:
-  %t6053 = load i64, ptr @"scheme.base:output-port?"
-  %t6054 = and i64 %t6053, -8
-  %t6055 = inttoptr i64 %t6054 to ptr
-  %t6056 = load i64, ptr %t6055
-  %t6057 = inttoptr i64 %t6056 to ptr
-  %t6058 = call fastcc i64%t6057(i64 %t6053, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t6059 = call i64 @rt_not(i64 %t6058)
-  %t6060 = icmp ne i64 %t6059, 1
-  br i1 %t6060, label %then1703, label %else1704
-then1703:
-  %t6061 = call i64 @rt_intern(ptr @.str.sym.42)
-  %t6062 = call i64 @rt_make_string(ptr @.str.lit.43, i64 18)
-  %t6063 = load i64, ptr @"scheme.base:error"
-  %t6064 = and i64 %t6063, -8
-  %t6065 = inttoptr i64 %t6064 to ptr
-  %t6066 = load i64, ptr %t6065
-  %t6067 = inttoptr i64 %t6066 to ptr
-  %t6068 = musttail call fastcc i64 %t6067(i64 %t6063, i64 3, i64 %t6061, i64 %t6062, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t6068
-else1704:
-  %t6069 = call i64 @rt_record_ref(i64 %a0, i64 32)
-  %t6070 = call i64 @rt_not(i64 %t6069)
-  %t6071 = icmp ne i64 %t6070, 1
-  br i1 %t6071, label %then1705, label %else1706
-then1705:
-  %t6072 = call i64 @rt_intern(ptr @.str.sym.42)
-  %t6073 = call i64 @rt_make_string(ptr @.str.lit.44, i64 17)
-  %t6074 = load i64, ptr @"scheme.base:error"
-  %t6075 = and i64 %t6074, -8
-  %t6076 = inttoptr i64 %t6075 to ptr
-  %t6077 = load i64, ptr %t6076
-  %t6078 = inttoptr i64 %t6077 to ptr
-  %t6079 = musttail call fastcc i64 %t6078(i64 %t6074, i64 3, i64 %t6072, i64 %t6073, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t6079
-else1706:
-  %t6080 = call i64 @rt_record_ref(i64 %a0, i64 0)
-  %t6081 = call i64 @rt_port_get_output_string(i64 %t6080)
-  ret i64 %t6081
-}
-
-define fastcc i64 @"scheme.base:code:flush-output-port"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
-entry:
-  %t6086 = icmp eq i64 %argc, 1
-  br i1 %t6086, label %argok1708, label %arityerr1707
-arityerr1707:
-  call void @rt_arity_error(i64 1, i64 %argc)
-  unreachable
-argok1708:
-  %t6087 = call i64 @rt_intern(ptr @.str.sym.45)
-  %t6088 = load i64, ptr @"scheme.base:%check-output-port"
+argok1715:
+  %t6088 = load i64, ptr @"scheme.base:output-port?"
   %t6089 = and i64 %t6088, -8
   %t6090 = inttoptr i64 %t6089 to ptr
   %t6091 = load i64, ptr %t6090
   %t6092 = inttoptr i64 %t6091 to ptr
-  %t6093 = call fastcc i64%t6092(i64 %t6088, i64 2, i64 %a0, i64 %t6087, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t6094 = call i64 @rt_record_ref(i64 %a0, i64 0)
-  %t6095 = call i64 @rt_port_flush(i64 %t6094)
-  ret i64 %t6095
+  %t6093 = call fastcc i64%t6092(i64 %t6088, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t6094 = call i64 @rt_not(i64 %t6093)
+  %t6095 = icmp ne i64 %t6094, 1
+  br i1 %t6095, label %then1716, label %else1717
+then1716:
+  %t6096 = call i64 @rt_intern(ptr @.str.sym.48)
+  %t6097 = call i64 @rt_make_string(ptr @.str.lit.49, i64 18)
+  %t6098 = load i64, ptr @"scheme.base:error"
+  %t6099 = and i64 %t6098, -8
+  %t6100 = inttoptr i64 %t6099 to ptr
+  %t6101 = load i64, ptr %t6100
+  %t6102 = inttoptr i64 %t6101 to ptr
+  %t6103 = musttail call fastcc i64 %t6102(i64 %t6098, i64 3, i64 %t6096, i64 %t6097, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t6103
+else1717:
+  %t6104 = call i64 @rt_record_ref(i64 %a0, i64 32)
+  %t6105 = call i64 @rt_not(i64 %t6104)
+  %t6106 = icmp ne i64 %t6105, 1
+  br i1 %t6106, label %then1718, label %else1719
+then1718:
+  %t6107 = call i64 @rt_intern(ptr @.str.sym.48)
+  %t6108 = call i64 @rt_make_string(ptr @.str.lit.50, i64 17)
+  %t6109 = load i64, ptr @"scheme.base:error"
+  %t6110 = and i64 %t6109, -8
+  %t6111 = inttoptr i64 %t6110 to ptr
+  %t6112 = load i64, ptr %t6111
+  %t6113 = inttoptr i64 %t6112 to ptr
+  %t6114 = musttail call fastcc i64 %t6113(i64 %t6109, i64 3, i64 %t6107, i64 %t6108, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t6114
+else1719:
+  %t6115 = call i64 @rt_record_ref(i64 %a0, i64 0)
+  %t6116 = call i64 @rt_port_get_output_string(i64 %t6115)
+  ret i64 %t6116
+}
+
+define fastcc i64 @"scheme.base:code:flush-output-port"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+entry:
+  %t6121 = icmp eq i64 %argc, 1
+  br i1 %t6121, label %argok1721, label %arityerr1720
+arityerr1720:
+  call void @rt_arity_error(i64 1, i64 %argc)
+  unreachable
+argok1721:
+  %t6122 = call i64 @rt_intern(ptr @.str.sym.51)
+  %t6123 = load i64, ptr @"scheme.base:%check-output-port"
+  %t6124 = and i64 %t6123, -8
+  %t6125 = inttoptr i64 %t6124 to ptr
+  %t6126 = load i64, ptr %t6125
+  %t6127 = inttoptr i64 %t6126 to ptr
+  %t6128 = call fastcc i64%t6127(i64 %t6123, i64 2, i64 %a0, i64 %t6122, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t6129 = call i64 @rt_record_ref(i64 %a0, i64 0)
+  %t6130 = call i64 @rt_port_flush(i64 %t6129)
+  ret i64 %t6130
 }
 
 define fastcc i64 @"scheme.base:code:close-port"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t6100 = icmp eq i64 %argc, 1
-  br i1 %t6100, label %argok1710, label %arityerr1709
-arityerr1709:
+  %t6135 = icmp eq i64 %argc, 1
+  br i1 %t6135, label %argok1723, label %arityerr1722
+arityerr1722:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1710:
-  %t6101 = load i64, ptr @"scheme.base:port?"
-  %t6102 = and i64 %t6101, -8
-  %t6103 = inttoptr i64 %t6102 to ptr
-  %t6104 = load i64, ptr %t6103
-  %t6105 = inttoptr i64 %t6104 to ptr
-  %t6106 = call fastcc i64%t6105(i64 %t6101, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t6107 = call i64 @rt_not(i64 %t6106)
-  %t6108 = icmp ne i64 %t6107, 1
-  br i1 %t6108, label %then1711, label %else1712
-then1711:
-  %t6109 = call i64 @rt_intern(ptr @.str.sym.46)
-  %t6110 = call i64 @rt_make_string(ptr @.str.lit.47, i64 10)
-  %t6111 = load i64, ptr @"scheme.base:error"
-  %t6112 = and i64 %t6111, -8
-  %t6113 = inttoptr i64 %t6112 to ptr
-  %t6114 = load i64, ptr %t6113
-  %t6115 = inttoptr i64 %t6114 to ptr
-  %t6116 = musttail call fastcc i64 %t6115(i64 %t6111, i64 3, i64 %t6109, i64 %t6110, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t6116
-else1712:
-  %t6117 = call i64 @rt_record_ref(i64 %a0, i64 40)
-  %t6118 = icmp ne i64 %t6117, 1
-  br i1 %t6118, label %then1713, label %else1714
-then1713:
-  %t6119 = icmp ne i64 1, 1
-  br i1 %t6119, label %then1715, label %else1716
-then1715:
+argok1723:
+  %t6136 = load i64, ptr @"scheme.base:port?"
+  %t6137 = and i64 %t6136, -8
+  %t6138 = inttoptr i64 %t6137 to ptr
+  %t6139 = load i64, ptr %t6138
+  %t6140 = inttoptr i64 %t6139 to ptr
+  %t6141 = call fastcc i64%t6140(i64 %t6136, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t6142 = call i64 @rt_not(i64 %t6141)
+  %t6143 = icmp ne i64 %t6142, 1
+  br i1 %t6143, label %then1724, label %else1725
+then1724:
+  %t6144 = call i64 @rt_intern(ptr @.str.sym.52)
+  %t6145 = call i64 @rt_make_string(ptr @.str.lit.53, i64 10)
+  %t6146 = load i64, ptr @"scheme.base:error"
+  %t6147 = and i64 %t6146, -8
+  %t6148 = inttoptr i64 %t6147 to ptr
+  %t6149 = load i64, ptr %t6148
+  %t6150 = inttoptr i64 %t6149 to ptr
+  %t6151 = musttail call fastcc i64 %t6150(i64 %t6146, i64 3, i64 %t6144, i64 %t6145, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t6151
+else1725:
+  %t6152 = call i64 @rt_record_ref(i64 %a0, i64 40)
+  %t6153 = icmp ne i64 %t6152, 1
+  br i1 %t6153, label %then1726, label %else1727
+then1726:
+  %t6154 = icmp ne i64 1, 1
+  br i1 %t6154, label %then1728, label %else1729
+then1728:
   ret i64 1
-else1716:
+else1729:
   ret i64 17
-else1714:
-  %t6120 = call i64 @rt_record_ref(i64 %a0, i64 8)
-  %t6121 = call i64 @rt_not(i64 %t6120)
-  %t6122 = icmp ne i64 %t6121, 1
-  br i1 %t6122, label %then1717, label %else1718
-then1717:
-  %t6123 = call i64 @rt_record_ref(i64 %a0, i64 0)
-  %t6124 = call i64 @rt_port_close(i64 %t6123)
-  br label %merge1719
-else1718:
-  br label %merge1719
-merge1719:
-  %t6125 = phi i64 [ %t6124, %then1717 ], [ 17, %else1718 ]
-  %t6126 = call i64 @rt_record_set(i64 %a0, i64 40, i64 257)
-  %t6127 = icmp ne i64 1, 1
-  br i1 %t6127, label %then1720, label %else1721
-then1720:
+else1727:
+  %t6155 = call i64 @rt_record_ref(i64 %a0, i64 8)
+  %t6156 = call i64 @rt_not(i64 %t6155)
+  %t6157 = icmp ne i64 %t6156, 1
+  br i1 %t6157, label %then1730, label %else1731
+then1730:
+  %t6158 = call i64 @rt_record_ref(i64 %a0, i64 0)
+  %t6159 = call i64 @rt_port_close(i64 %t6158)
+  br label %merge1732
+else1731:
+  br label %merge1732
+merge1732:
+  %t6160 = phi i64 [ %t6159, %then1730 ], [ 17, %else1731 ]
+  %t6161 = call i64 @rt_record_set(i64 %a0, i64 40, i64 257)
+  %t6162 = icmp ne i64 1, 1
+  br i1 %t6162, label %then1733, label %else1734
+then1733:
   ret i64 1
-else1721:
+else1734:
   ret i64 17
 }
 
 define fastcc i64 @"scheme.base:code:close-input-port"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t6132 = icmp eq i64 %argc, 1
-  br i1 %t6132, label %argok1723, label %arityerr1722
-arityerr1722:
+  %t6167 = icmp eq i64 %argc, 1
+  br i1 %t6167, label %argok1736, label %arityerr1735
+arityerr1735:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1723:
-  %t6133 = load i64, ptr @"scheme.base:input-port?"
-  %t6134 = and i64 %t6133, -8
-  %t6135 = inttoptr i64 %t6134 to ptr
-  %t6136 = load i64, ptr %t6135
-  %t6137 = inttoptr i64 %t6136 to ptr
-  %t6138 = call fastcc i64%t6137(i64 %t6133, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t6139 = icmp ne i64 %t6138, 1
-  br i1 %t6139, label %then1724, label %else1725
-then1724:
-  %t6140 = load i64, ptr @"scheme.base:close-port"
-  %t6141 = and i64 %t6140, -8
-  %t6142 = inttoptr i64 %t6141 to ptr
-  %t6143 = load i64, ptr %t6142
-  %t6144 = inttoptr i64 %t6143 to ptr
-  %t6145 = musttail call fastcc i64 %t6144(i64 %t6140, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t6145
-else1725:
-  %t6146 = call i64 @rt_intern(ptr @.str.sym.48)
-  %t6147 = call i64 @rt_make_string(ptr @.str.lit.49, i64 17)
-  %t6148 = load i64, ptr @"scheme.base:error"
-  %t6149 = and i64 %t6148, -8
-  %t6150 = inttoptr i64 %t6149 to ptr
-  %t6151 = load i64, ptr %t6150
-  %t6152 = inttoptr i64 %t6151 to ptr
-  %t6153 = musttail call fastcc i64 %t6152(i64 %t6148, i64 3, i64 %t6146, i64 %t6147, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t6153
+argok1736:
+  %t6168 = load i64, ptr @"scheme.base:input-port?"
+  %t6169 = and i64 %t6168, -8
+  %t6170 = inttoptr i64 %t6169 to ptr
+  %t6171 = load i64, ptr %t6170
+  %t6172 = inttoptr i64 %t6171 to ptr
+  %t6173 = call fastcc i64%t6172(i64 %t6168, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t6174 = icmp ne i64 %t6173, 1
+  br i1 %t6174, label %then1737, label %else1738
+then1737:
+  %t6175 = load i64, ptr @"scheme.base:close-port"
+  %t6176 = and i64 %t6175, -8
+  %t6177 = inttoptr i64 %t6176 to ptr
+  %t6178 = load i64, ptr %t6177
+  %t6179 = inttoptr i64 %t6178 to ptr
+  %t6180 = musttail call fastcc i64 %t6179(i64 %t6175, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t6180
+else1738:
+  %t6181 = call i64 @rt_intern(ptr @.str.sym.54)
+  %t6182 = call i64 @rt_make_string(ptr @.str.lit.55, i64 17)
+  %t6183 = load i64, ptr @"scheme.base:error"
+  %t6184 = and i64 %t6183, -8
+  %t6185 = inttoptr i64 %t6184 to ptr
+  %t6186 = load i64, ptr %t6185
+  %t6187 = inttoptr i64 %t6186 to ptr
+  %t6188 = musttail call fastcc i64 %t6187(i64 %t6183, i64 3, i64 %t6181, i64 %t6182, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t6188
 }
 
 define fastcc i64 @"scheme.base:code:close-output-port"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t6158 = icmp eq i64 %argc, 1
-  br i1 %t6158, label %argok1727, label %arityerr1726
-arityerr1726:
+  %t6193 = icmp eq i64 %argc, 1
+  br i1 %t6193, label %argok1740, label %arityerr1739
+arityerr1739:
   call void @rt_arity_error(i64 1, i64 %argc)
   unreachable
-argok1727:
-  %t6159 = load i64, ptr @"scheme.base:output-port?"
-  %t6160 = and i64 %t6159, -8
-  %t6161 = inttoptr i64 %t6160 to ptr
-  %t6162 = load i64, ptr %t6161
-  %t6163 = inttoptr i64 %t6162 to ptr
-  %t6164 = call fastcc i64%t6163(i64 %t6159, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t6165 = icmp ne i64 %t6164, 1
-  br i1 %t6165, label %then1728, label %else1729
-then1728:
-  %t6166 = load i64, ptr @"scheme.base:close-port"
-  %t6167 = and i64 %t6166, -8
-  %t6168 = inttoptr i64 %t6167 to ptr
-  %t6169 = load i64, ptr %t6168
-  %t6170 = inttoptr i64 %t6169 to ptr
-  %t6171 = musttail call fastcc i64 %t6170(i64 %t6166, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t6171
-else1729:
-  %t6172 = call i64 @rt_intern(ptr @.str.sym.50)
-  %t6173 = call i64 @rt_make_string(ptr @.str.lit.51, i64 18)
-  %t6174 = load i64, ptr @"scheme.base:error"
-  %t6175 = and i64 %t6174, -8
-  %t6176 = inttoptr i64 %t6175 to ptr
-  %t6177 = load i64, ptr %t6176
-  %t6178 = inttoptr i64 %t6177 to ptr
-  %t6179 = musttail call fastcc i64 %t6178(i64 %t6174, i64 3, i64 %t6172, i64 %t6173, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t6179
+argok1740:
+  %t6194 = load i64, ptr @"scheme.base:output-port?"
+  %t6195 = and i64 %t6194, -8
+  %t6196 = inttoptr i64 %t6195 to ptr
+  %t6197 = load i64, ptr %t6196
+  %t6198 = inttoptr i64 %t6197 to ptr
+  %t6199 = call fastcc i64%t6198(i64 %t6194, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t6200 = icmp ne i64 %t6199, 1
+  br i1 %t6200, label %then1741, label %else1742
+then1741:
+  %t6201 = load i64, ptr @"scheme.base:close-port"
+  %t6202 = and i64 %t6201, -8
+  %t6203 = inttoptr i64 %t6202 to ptr
+  %t6204 = load i64, ptr %t6203
+  %t6205 = inttoptr i64 %t6204 to ptr
+  %t6206 = musttail call fastcc i64 %t6205(i64 %t6201, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t6206
+else1742:
+  %t6207 = call i64 @rt_intern(ptr @.str.sym.56)
+  %t6208 = call i64 @rt_make_string(ptr @.str.lit.57, i64 18)
+  %t6209 = load i64, ptr @"scheme.base:error"
+  %t6210 = and i64 %t6209, -8
+  %t6211 = inttoptr i64 %t6210 to ptr
+  %t6212 = load i64, ptr %t6211
+  %t6213 = inttoptr i64 %t6212 to ptr
+  %t6214 = musttail call fastcc i64 %t6213(i64 %t6209, i64 3, i64 %t6207, i64 %t6208, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t6214
 }
 
 define fastcc i64 @"scheme.base:code:current-output-port"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t6187 = icmp sge i64 %argc, 0
-  br i1 %t6187, label %argok1731, label %arityerr1730
-arityerr1730:
-  call void @rt_arity_error(i64 0, i64 %argc)
-  unreachable
-argok1731:
-  %t6188 = call ptr @rt_alloc_words(i64 8)
-  %t6189 = getelementptr i64, ptr %t6188, i64 0
-  store i64 %a0, ptr %t6189
-  %t6190 = getelementptr i64, ptr %t6188, i64 1
-  store i64 %a1, ptr %t6190
-  %t6191 = getelementptr i64, ptr %t6188, i64 2
-  store i64 %a2, ptr %t6191
-  %t6192 = getelementptr i64, ptr %t6188, i64 3
-  store i64 %a3, ptr %t6192
-  %t6193 = getelementptr i64, ptr %t6188, i64 4
-  store i64 %a4, ptr %t6193
-  %t6194 = getelementptr i64, ptr %t6188, i64 5
-  store i64 %a5, ptr %t6194
-  %t6195 = getelementptr i64, ptr %t6188, i64 6
-  store i64 %a6, ptr %t6195
-  %t6196 = getelementptr i64, ptr %t6188, i64 7
-  store i64 %a7, ptr %t6196
-  %t6197 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t6188, ptr %overflow)
-  %t6198 = call i64 @rt_null_p(i64 %t6197)
-  %t6199 = icmp ne i64 %t6198, 1
-  br i1 %t6199, label %then1732, label %else1733
-then1732:
-  %t6200 = load i64, ptr @"scheme.base:%stdout-port"
-  %t6201 = call i64 @rt_not(i64 %t6200)
-  %t6202 = icmp ne i64 %t6201, 1
-  br i1 %t6202, label %then1734, label %else1735
-then1734:
-  %t6203 = load i64, ptr @"scheme.base:%make-port"
-  %t6204 = and i64 %t6203, -8
-  %t6205 = inttoptr i64 %t6204 to ptr
-  %t6206 = load i64, ptr %t6205
-  %t6207 = inttoptr i64 %t6206 to ptr
-  %t6208 = call fastcc i64%t6207(i64 %t6203, i64 6, i64 0, i64 1, i64 1, i64 0, i64 1, i64 1, i64 0, i64 0, ptr null)
-  %t6209 = call i64 @rt_root(i64 %t6208)
-  store i64 %t6209, ptr @"scheme.base:%stdout-port"
-  %t6210 = call i64 @rt_set_current_output(i64 0)
-  br label %merge1736
-else1735:
-  br label %merge1736
-merge1736:
-  %t6211 = phi i64 [ %t6210, %then1734 ], [ 17, %else1735 ]
-  %t6212 = load i64, ptr @"scheme.base:%stdout-port"
-  ret i64 %t6212
-else1733:
-  %t6213 = call i64 @rt_car(i64 %t6197)
-  %t6214 = call i64 @rt_root(i64 %t6213)
-  store i64 %t6214, ptr @"scheme.base:%stdout-port"
-  %t6215 = call i64 @rt_record_ref(i64 %t6213, i64 0)
-  %t6216 = call i64 @rt_set_current_output(i64 %t6215)
-  %t6217 = icmp ne i64 1, 1
-  br i1 %t6217, label %then1737, label %else1738
-then1737:
-  ret i64 1
-else1738:
-  ret i64 17
-}
-
-define fastcc i64 @"scheme.base:code:current-error-port"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
-entry:
   %t6222 = icmp sge i64 %argc, 0
-  br i1 %t6222, label %argok1740, label %arityerr1739
-arityerr1739:
+  br i1 %t6222, label %argok1744, label %arityerr1743
+arityerr1743:
   call void @rt_arity_error(i64 0, i64 %argc)
   unreachable
-argok1740:
+argok1744:
   %t6223 = call ptr @rt_alloc_words(i64 8)
   %t6224 = getelementptr i64, ptr %t6223, i64 0
   store i64 %a0, ptr %t6224
@@ -11008,432 +11013,497 @@ argok1740:
   %t6232 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t6223, ptr %overflow)
   %t6233 = call i64 @rt_null_p(i64 %t6232)
   %t6234 = icmp ne i64 %t6233, 1
-  br i1 %t6234, label %then1741, label %else1742
-then1741:
-  %t6235 = load i64, ptr @"scheme.base:%stderr-port"
+  br i1 %t6234, label %then1745, label %else1746
+then1745:
+  %t6235 = load i64, ptr @"scheme.base:%stdout-port"
   %t6236 = call i64 @rt_not(i64 %t6235)
   %t6237 = icmp ne i64 %t6236, 1
-  br i1 %t6237, label %then1743, label %else1744
-then1743:
+  br i1 %t6237, label %then1747, label %else1748
+then1747:
   %t6238 = load i64, ptr @"scheme.base:%make-port"
   %t6239 = and i64 %t6238, -8
   %t6240 = inttoptr i64 %t6239 to ptr
   %t6241 = load i64, ptr %t6240
   %t6242 = inttoptr i64 %t6241 to ptr
-  %t6243 = call fastcc i64%t6242(i64 %t6238, i64 6, i64 8, i64 1, i64 1, i64 0, i64 1, i64 1, i64 0, i64 0, ptr null)
+  %t6243 = call fastcc i64%t6242(i64 %t6238, i64 6, i64 0, i64 1, i64 1, i64 0, i64 1, i64 1, i64 0, i64 0, ptr null)
   %t6244 = call i64 @rt_root(i64 %t6243)
-  store i64 %t6244, ptr @"scheme.base:%stderr-port"
-  br label %merge1745
-else1744:
-  br label %merge1745
-merge1745:
-  %t6245 = phi i64 [ 17, %then1743 ], [ 17, %else1744 ]
-  %t6246 = load i64, ptr @"scheme.base:%stderr-port"
-  ret i64 %t6246
-else1742:
-  %t6247 = call i64 @rt_car(i64 %t6232)
-  %t6248 = call i64 @rt_root(i64 %t6247)
-  store i64 %t6248, ptr @"scheme.base:%stderr-port"
-  %t6249 = icmp ne i64 1, 1
-  br i1 %t6249, label %then1746, label %else1747
-then1746:
-  ret i64 1
-else1747:
-  ret i64 17
-}
-
-define fastcc i64 @"scheme.base:code:current-input-port"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
-entry:
-  %t6254 = icmp sge i64 %argc, 0
-  br i1 %t6254, label %argok1749, label %arityerr1748
-arityerr1748:
-  call void @rt_arity_error(i64 0, i64 %argc)
-  unreachable
-argok1749:
-  %t6255 = call ptr @rt_alloc_words(i64 8)
-  %t6256 = getelementptr i64, ptr %t6255, i64 0
-  store i64 %a0, ptr %t6256
-  %t6257 = getelementptr i64, ptr %t6255, i64 1
-  store i64 %a1, ptr %t6257
-  %t6258 = getelementptr i64, ptr %t6255, i64 2
-  store i64 %a2, ptr %t6258
-  %t6259 = getelementptr i64, ptr %t6255, i64 3
-  store i64 %a3, ptr %t6259
-  %t6260 = getelementptr i64, ptr %t6255, i64 4
-  store i64 %a4, ptr %t6260
-  %t6261 = getelementptr i64, ptr %t6255, i64 5
-  store i64 %a5, ptr %t6261
-  %t6262 = getelementptr i64, ptr %t6255, i64 6
-  store i64 %a6, ptr %t6262
-  %t6263 = getelementptr i64, ptr %t6255, i64 7
-  store i64 %a7, ptr %t6263
-  %t6264 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t6255, ptr %overflow)
-  %t6265 = call i64 @rt_null_p(i64 %t6264)
-  %t6266 = icmp ne i64 %t6265, 1
-  br i1 %t6266, label %then1750, label %else1751
+  store i64 %t6244, ptr @"scheme.base:%stdout-port"
+  %t6245 = call i64 @rt_set_current_output(i64 0)
+  br label %merge1749
+else1748:
+  br label %merge1749
+merge1749:
+  %t6246 = phi i64 [ %t6245, %then1747 ], [ 17, %else1748 ]
+  %t6247 = load i64, ptr @"scheme.base:%stdout-port"
+  ret i64 %t6247
+else1746:
+  %t6248 = call i64 @rt_car(i64 %t6232)
+  %t6249 = call i64 @rt_root(i64 %t6248)
+  store i64 %t6249, ptr @"scheme.base:%stdout-port"
+  %t6250 = call i64 @rt_record_ref(i64 %t6248, i64 0)
+  %t6251 = call i64 @rt_set_current_output(i64 %t6250)
+  %t6252 = icmp ne i64 1, 1
+  br i1 %t6252, label %then1750, label %else1751
 then1750:
-  %t6267 = load i64, ptr @"scheme.base:%stdin-port"
-  %t6268 = call i64 @rt_not(i64 %t6267)
-  %t6269 = icmp ne i64 %t6268, 1
-  br i1 %t6269, label %then1752, label %else1753
-then1752:
-  %t6270 = load i64, ptr @"scheme.base:%make-port"
-  %t6271 = and i64 %t6270, -8
-  %t6272 = inttoptr i64 %t6271 to ptr
-  %t6273 = load i64, ptr %t6272
-  %t6274 = inttoptr i64 %t6273 to ptr
-  %t6275 = call fastcc i64%t6274(i64 %t6270, i64 6, i64 1, i64 257, i64 1, i64 0, i64 1, i64 1, i64 0, i64 0, ptr null)
-  %t6276 = call i64 @rt_root(i64 %t6275)
-  store i64 %t6276, ptr @"scheme.base:%stdin-port"
-  br label %merge1754
-else1753:
-  br label %merge1754
-merge1754:
-  %t6277 = phi i64 [ 17, %then1752 ], [ 17, %else1753 ]
-  %t6278 = load i64, ptr @"scheme.base:%stdin-port"
-  ret i64 %t6278
-else1751:
-  %t6279 = call i64 @rt_car(i64 %t6264)
-  %t6280 = call i64 @rt_root(i64 %t6279)
-  store i64 %t6280, ptr @"scheme.base:%stdin-port"
-  %t6281 = icmp ne i64 1, 1
-  br i1 %t6281, label %then1755, label %else1756
-then1755:
   ret i64 1
-else1756:
+else1751:
   ret i64 17
 }
 
-define fastcc i64 @"scheme.base:code_1366"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:current-error-port"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t6286 = icmp eq i64 %argc, 0
-  br i1 %t6286, label %argok1758, label %arityerr1757
-arityerr1757:
+  %t6257 = icmp sge i64 %argc, 0
+  br i1 %t6257, label %argok1753, label %arityerr1752
+arityerr1752:
   call void @rt_arity_error(i64 0, i64 %argc)
   unreachable
-argok1758:
-  %t6287 = icmp ne i64 1, 1
-  br i1 %t6287, label %then1759, label %else1760
+argok1753:
+  %t6258 = call ptr @rt_alloc_words(i64 8)
+  %t6259 = getelementptr i64, ptr %t6258, i64 0
+  store i64 %a0, ptr %t6259
+  %t6260 = getelementptr i64, ptr %t6258, i64 1
+  store i64 %a1, ptr %t6260
+  %t6261 = getelementptr i64, ptr %t6258, i64 2
+  store i64 %a2, ptr %t6261
+  %t6262 = getelementptr i64, ptr %t6258, i64 3
+  store i64 %a3, ptr %t6262
+  %t6263 = getelementptr i64, ptr %t6258, i64 4
+  store i64 %a4, ptr %t6263
+  %t6264 = getelementptr i64, ptr %t6258, i64 5
+  store i64 %a5, ptr %t6264
+  %t6265 = getelementptr i64, ptr %t6258, i64 6
+  store i64 %a6, ptr %t6265
+  %t6266 = getelementptr i64, ptr %t6258, i64 7
+  store i64 %a7, ptr %t6266
+  %t6267 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t6258, ptr %overflow)
+  %t6268 = call i64 @rt_null_p(i64 %t6267)
+  %t6269 = icmp ne i64 %t6268, 1
+  br i1 %t6269, label %then1754, label %else1755
+then1754:
+  %t6270 = load i64, ptr @"scheme.base:%stderr-port"
+  %t6271 = call i64 @rt_not(i64 %t6270)
+  %t6272 = icmp ne i64 %t6271, 1
+  br i1 %t6272, label %then1756, label %else1757
+then1756:
+  %t6273 = load i64, ptr @"scheme.base:%make-port"
+  %t6274 = and i64 %t6273, -8
+  %t6275 = inttoptr i64 %t6274 to ptr
+  %t6276 = load i64, ptr %t6275
+  %t6277 = inttoptr i64 %t6276 to ptr
+  %t6278 = call fastcc i64%t6277(i64 %t6273, i64 6, i64 8, i64 1, i64 1, i64 0, i64 1, i64 1, i64 0, i64 0, ptr null)
+  %t6279 = call i64 @rt_root(i64 %t6278)
+  store i64 %t6279, ptr @"scheme.base:%stderr-port"
+  br label %merge1758
+else1757:
+  br label %merge1758
+merge1758:
+  %t6280 = phi i64 [ 17, %then1756 ], [ 17, %else1757 ]
+  %t6281 = load i64, ptr @"scheme.base:%stderr-port"
+  ret i64 %t6281
+else1755:
+  %t6282 = call i64 @rt_car(i64 %t6267)
+  %t6283 = call i64 @rt_root(i64 %t6282)
+  store i64 %t6283, ptr @"scheme.base:%stderr-port"
+  %t6284 = icmp ne i64 1, 1
+  br i1 %t6284, label %then1759, label %else1760
 then1759:
   ret i64 1
 else1760:
   ret i64 17
 }
 
-define fastcc i64 @"scheme.base:code_1368"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code:current-input-port"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t6288 = icmp eq i64 %argc, 0
-  br i1 %t6288, label %argok1762, label %arityerr1761
+  %t6289 = icmp sge i64 %argc, 0
+  br i1 %t6289, label %argok1762, label %arityerr1761
 arityerr1761:
   call void @rt_arity_error(i64 0, i64 %argc)
   unreachable
 argok1762:
-  %t6289 = and i64 %self, -8
-  %t6290 = inttoptr i64 %t6289 to ptr
-  %t6291 = getelementptr i64, ptr %t6290, i64 2
-  %t6292 = load i64, ptr %t6291
-  %t6293 = and i64 %self, -8
-  %t6294 = inttoptr i64 %t6293 to ptr
-  %t6295 = getelementptr i64, ptr %t6294, i64 1
-  %t6296 = load i64, ptr %t6295
-  %t6297 = and i64 %t6296, -8
-  %t6298 = inttoptr i64 %t6297 to ptr
-  %t6299 = load i64, ptr %t6298
-  %t6300 = inttoptr i64 %t6299 to ptr
-  %t6301 = musttail call fastcc i64 %t6300(i64 %t6296, i64 1, i64 %t6292, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t6301
+  %t6290 = call ptr @rt_alloc_words(i64 8)
+  %t6291 = getelementptr i64, ptr %t6290, i64 0
+  store i64 %a0, ptr %t6291
+  %t6292 = getelementptr i64, ptr %t6290, i64 1
+  store i64 %a1, ptr %t6292
+  %t6293 = getelementptr i64, ptr %t6290, i64 2
+  store i64 %a2, ptr %t6293
+  %t6294 = getelementptr i64, ptr %t6290, i64 3
+  store i64 %a3, ptr %t6294
+  %t6295 = getelementptr i64, ptr %t6290, i64 4
+  store i64 %a4, ptr %t6295
+  %t6296 = getelementptr i64, ptr %t6290, i64 5
+  store i64 %a5, ptr %t6296
+  %t6297 = getelementptr i64, ptr %t6290, i64 6
+  store i64 %a6, ptr %t6297
+  %t6298 = getelementptr i64, ptr %t6290, i64 7
+  store i64 %a7, ptr %t6298
+  %t6299 = call i64 @rt_build_rest(i64 %argc, i64 0, i64 8, ptr %t6290, ptr %overflow)
+  %t6300 = call i64 @rt_null_p(i64 %t6299)
+  %t6301 = icmp ne i64 %t6300, 1
+  br i1 %t6301, label %then1763, label %else1764
+then1763:
+  %t6302 = load i64, ptr @"scheme.base:%stdin-port"
+  %t6303 = call i64 @rt_not(i64 %t6302)
+  %t6304 = icmp ne i64 %t6303, 1
+  br i1 %t6304, label %then1765, label %else1766
+then1765:
+  %t6305 = load i64, ptr @"scheme.base:%make-port"
+  %t6306 = and i64 %t6305, -8
+  %t6307 = inttoptr i64 %t6306 to ptr
+  %t6308 = load i64, ptr %t6307
+  %t6309 = inttoptr i64 %t6308 to ptr
+  %t6310 = call fastcc i64%t6309(i64 %t6305, i64 6, i64 1, i64 257, i64 1, i64 0, i64 1, i64 1, i64 0, i64 0, ptr null)
+  %t6311 = call i64 @rt_root(i64 %t6310)
+  store i64 %t6311, ptr @"scheme.base:%stdin-port"
+  br label %merge1767
+else1766:
+  br label %merge1767
+merge1767:
+  %t6312 = phi i64 [ 17, %then1765 ], [ 17, %else1766 ]
+  %t6313 = load i64, ptr @"scheme.base:%stdin-port"
+  ret i64 %t6313
+else1764:
+  %t6314 = call i64 @rt_car(i64 %t6299)
+  %t6315 = call i64 @rt_root(i64 %t6314)
+  store i64 %t6315, ptr @"scheme.base:%stdin-port"
+  %t6316 = icmp ne i64 1, 1
+  br i1 %t6316, label %then1768, label %else1769
+then1768:
+  ret i64 1
+else1769:
+  ret i64 17
 }
 
-define fastcc i64 @"scheme.base:code_1370"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_1372"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t6302 = icmp eq i64 %argc, 0
-  br i1 %t6302, label %argok1764, label %arityerr1763
-arityerr1763:
+  %t6321 = icmp eq i64 %argc, 0
+  br i1 %t6321, label %argok1771, label %arityerr1770
+arityerr1770:
   call void @rt_arity_error(i64 0, i64 %argc)
   unreachable
-argok1764:
-  %t6303 = and i64 %self, -8
-  %t6304 = inttoptr i64 %t6303 to ptr
-  %t6305 = getelementptr i64, ptr %t6304, i64 1
-  %t6306 = load i64, ptr %t6305
-  %t6307 = load i64, ptr @"scheme.base:close-port"
-  %t6308 = and i64 %t6307, -8
-  %t6309 = inttoptr i64 %t6308 to ptr
-  %t6310 = load i64, ptr %t6309
-  %t6311 = inttoptr i64 %t6310 to ptr
-  %t6312 = musttail call fastcc i64 %t6311(i64 %t6307, i64 1, i64 %t6306, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t6312
+argok1771:
+  %t6322 = icmp ne i64 1, 1
+  br i1 %t6322, label %then1772, label %else1773
+then1772:
+  ret i64 1
+else1773:
+  ret i64 17
+}
+
+define fastcc i64 @"scheme.base:code_1374"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+entry:
+  %t6323 = icmp eq i64 %argc, 0
+  br i1 %t6323, label %argok1775, label %arityerr1774
+arityerr1774:
+  call void @rt_arity_error(i64 0, i64 %argc)
+  unreachable
+argok1775:
+  %t6324 = and i64 %self, -8
+  %t6325 = inttoptr i64 %t6324 to ptr
+  %t6326 = getelementptr i64, ptr %t6325, i64 2
+  %t6327 = load i64, ptr %t6326
+  %t6328 = and i64 %self, -8
+  %t6329 = inttoptr i64 %t6328 to ptr
+  %t6330 = getelementptr i64, ptr %t6329, i64 1
+  %t6331 = load i64, ptr %t6330
+  %t6332 = and i64 %t6331, -8
+  %t6333 = inttoptr i64 %t6332 to ptr
+  %t6334 = load i64, ptr %t6333
+  %t6335 = inttoptr i64 %t6334 to ptr
+  %t6336 = musttail call fastcc i64 %t6335(i64 %t6331, i64 1, i64 %t6327, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t6336
+}
+
+define fastcc i64 @"scheme.base:code_1376"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+entry:
+  %t6337 = icmp eq i64 %argc, 0
+  br i1 %t6337, label %argok1777, label %arityerr1776
+arityerr1776:
+  call void @rt_arity_error(i64 0, i64 %argc)
+  unreachable
+argok1777:
+  %t6338 = and i64 %self, -8
+  %t6339 = inttoptr i64 %t6338 to ptr
+  %t6340 = getelementptr i64, ptr %t6339, i64 1
+  %t6341 = load i64, ptr %t6340
+  %t6342 = load i64, ptr @"scheme.base:close-port"
+  %t6343 = and i64 %t6342, -8
+  %t6344 = inttoptr i64 %t6343 to ptr
+  %t6345 = load i64, ptr %t6344
+  %t6346 = inttoptr i64 %t6345 to ptr
+  %t6347 = musttail call fastcc i64 %t6346(i64 %t6342, i64 1, i64 %t6341, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t6347
 }
 
 define fastcc i64 @"scheme.base:code:call-with-port"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t6313 = icmp eq i64 %argc, 2
-  br i1 %t6313, label %argok1766, label %arityerr1765
-arityerr1765:
+  %t6348 = icmp eq i64 %argc, 2
+  br i1 %t6348, label %argok1779, label %arityerr1778
+arityerr1778:
   call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
-argok1766:
-  %t6314 = call ptr @rt_alloc_words(i64 1)
-  %t6315 = ptrtoint ptr %t6314 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_1366" to i64), ptr %t6314
-  %t6316 = or i64 %t6315, 4
-  %t6317 = call ptr @rt_alloc_words(i64 3)
-  %t6318 = ptrtoint ptr %t6317 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_1368" to i64), ptr %t6317
-  %t6319 = getelementptr i64, ptr %t6317, i64 1
-  store i64 %a1, ptr %t6319
-  %t6320 = getelementptr i64, ptr %t6317, i64 2
-  store i64 %a0, ptr %t6320
-  %t6321 = or i64 %t6318, 4
-  %t6322 = call ptr @rt_alloc_words(i64 2)
-  %t6323 = ptrtoint ptr %t6322 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_1370" to i64), ptr %t6322
-  %t6324 = getelementptr i64, ptr %t6322, i64 1
-  store i64 %a0, ptr %t6324
-  %t6325 = or i64 %t6323, 4
-  %t6326 = load i64, ptr @"scheme.base:dynamic-wind"
-  %t6327 = and i64 %t6326, -8
-  %t6328 = inttoptr i64 %t6327 to ptr
-  %t6329 = load i64, ptr %t6328
-  %t6330 = inttoptr i64 %t6329 to ptr
-  %t6331 = musttail call fastcc i64 %t6330(i64 %t6326, i64 3, i64 %t6316, i64 %t6321, i64 %t6325, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t6331
+argok1779:
+  %t6349 = call ptr @rt_alloc_words(i64 1)
+  %t6350 = ptrtoint ptr %t6349 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_1372" to i64), ptr %t6349
+  %t6351 = or i64 %t6350, 4
+  %t6352 = call ptr @rt_alloc_words(i64 3)
+  %t6353 = ptrtoint ptr %t6352 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_1374" to i64), ptr %t6352
+  %t6354 = getelementptr i64, ptr %t6352, i64 1
+  store i64 %a1, ptr %t6354
+  %t6355 = getelementptr i64, ptr %t6352, i64 2
+  store i64 %a0, ptr %t6355
+  %t6356 = or i64 %t6353, 4
+  %t6357 = call ptr @rt_alloc_words(i64 2)
+  %t6358 = ptrtoint ptr %t6357 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_1376" to i64), ptr %t6357
+  %t6359 = getelementptr i64, ptr %t6357, i64 1
+  store i64 %a0, ptr %t6359
+  %t6360 = or i64 %t6358, 4
+  %t6361 = load i64, ptr @"scheme.base:dynamic-wind"
+  %t6362 = and i64 %t6361, -8
+  %t6363 = inttoptr i64 %t6362 to ptr
+  %t6364 = load i64, ptr %t6363
+  %t6365 = inttoptr i64 %t6364 to ptr
+  %t6366 = musttail call fastcc i64 %t6365(i64 %t6361, i64 3, i64 %t6351, i64 %t6356, i64 %t6360, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t6366
 }
 
-define fastcc i64 @"scheme.base:code_1377"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_1383"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t6336 = icmp eq i64 %argc, 0
-  br i1 %t6336, label %argok1768, label %arityerr1767
-arityerr1767:
+  %t6371 = icmp eq i64 %argc, 0
+  br i1 %t6371, label %argok1781, label %arityerr1780
+arityerr1780:
   call void @rt_arity_error(i64 0, i64 %argc)
   unreachable
-argok1768:
-  %t6337 = and i64 %self, -8
-  %t6338 = inttoptr i64 %t6337 to ptr
-  %t6339 = getelementptr i64, ptr %t6338, i64 1
-  %t6340 = load i64, ptr %t6339
-  %t6341 = load i64, ptr @"scheme.base:current-output-port"
-  %t6342 = and i64 %t6341, -8
-  %t6343 = inttoptr i64 %t6342 to ptr
-  %t6344 = load i64, ptr %t6343
-  %t6345 = inttoptr i64 %t6344 to ptr
-  %t6346 = musttail call fastcc i64 %t6345(i64 %t6341, i64 1, i64 %t6340, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t6346
+argok1781:
+  %t6372 = and i64 %self, -8
+  %t6373 = inttoptr i64 %t6372 to ptr
+  %t6374 = getelementptr i64, ptr %t6373, i64 1
+  %t6375 = load i64, ptr %t6374
+  %t6376 = load i64, ptr @"scheme.base:current-output-port"
+  %t6377 = and i64 %t6376, -8
+  %t6378 = inttoptr i64 %t6377 to ptr
+  %t6379 = load i64, ptr %t6378
+  %t6380 = inttoptr i64 %t6379 to ptr
+  %t6381 = musttail call fastcc i64 %t6380(i64 %t6376, i64 1, i64 %t6375, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t6381
 }
 
-define fastcc i64 @"scheme.base:code_1379"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_1385"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t6347 = icmp eq i64 %argc, 0
-  br i1 %t6347, label %argok1770, label %arityerr1769
-arityerr1769:
+  %t6382 = icmp eq i64 %argc, 0
+  br i1 %t6382, label %argok1783, label %arityerr1782
+arityerr1782:
   call void @rt_arity_error(i64 0, i64 %argc)
   unreachable
-argok1770:
-  %t6348 = and i64 %self, -8
-  %t6349 = inttoptr i64 %t6348 to ptr
-  %t6350 = getelementptr i64, ptr %t6349, i64 1
-  %t6351 = load i64, ptr %t6350
-  %t6352 = load i64, ptr @"scheme.base:current-output-port"
-  %t6353 = and i64 %t6352, -8
-  %t6354 = inttoptr i64 %t6353 to ptr
-  %t6355 = load i64, ptr %t6354
-  %t6356 = inttoptr i64 %t6355 to ptr
-  %t6357 = call fastcc i64%t6356(i64 %t6352, i64 2, i64 %t6351, i64 1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t6358 = and i64 %self, -8
-  %t6359 = inttoptr i64 %t6358 to ptr
-  %t6360 = getelementptr i64, ptr %t6359, i64 2
-  %t6361 = load i64, ptr %t6360
-  %t6362 = load i64, ptr @"scheme.base:close-port"
-  %t6363 = and i64 %t6362, -8
-  %t6364 = inttoptr i64 %t6363 to ptr
-  %t6365 = load i64, ptr %t6364
-  %t6366 = inttoptr i64 %t6365 to ptr
-  %t6367 = musttail call fastcc i64 %t6366(i64 %t6362, i64 1, i64 %t6361, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t6367
+argok1783:
+  %t6383 = and i64 %self, -8
+  %t6384 = inttoptr i64 %t6383 to ptr
+  %t6385 = getelementptr i64, ptr %t6384, i64 1
+  %t6386 = load i64, ptr %t6385
+  %t6387 = load i64, ptr @"scheme.base:current-output-port"
+  %t6388 = and i64 %t6387, -8
+  %t6389 = inttoptr i64 %t6388 to ptr
+  %t6390 = load i64, ptr %t6389
+  %t6391 = inttoptr i64 %t6390 to ptr
+  %t6392 = call fastcc i64%t6391(i64 %t6387, i64 2, i64 %t6386, i64 1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t6393 = and i64 %self, -8
+  %t6394 = inttoptr i64 %t6393 to ptr
+  %t6395 = getelementptr i64, ptr %t6394, i64 2
+  %t6396 = load i64, ptr %t6395
+  %t6397 = load i64, ptr @"scheme.base:close-port"
+  %t6398 = and i64 %t6397, -8
+  %t6399 = inttoptr i64 %t6398 to ptr
+  %t6400 = load i64, ptr %t6399
+  %t6401 = inttoptr i64 %t6400 to ptr
+  %t6402 = musttail call fastcc i64 %t6401(i64 %t6397, i64 1, i64 %t6396, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t6402
 }
 
 define fastcc i64 @"scheme.base:code:with-output-to-file"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t6368 = icmp eq i64 %argc, 2
-  br i1 %t6368, label %argok1772, label %arityerr1771
-arityerr1771:
+  %t6403 = icmp eq i64 %argc, 2
+  br i1 %t6403, label %argok1785, label %arityerr1784
+arityerr1784:
   call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
-argok1772:
-  %t6369 = load i64, ptr @"scheme.base:open-output-file"
-  %t6370 = and i64 %t6369, -8
-  %t6371 = inttoptr i64 %t6370 to ptr
-  %t6372 = load i64, ptr %t6371
-  %t6373 = inttoptr i64 %t6372 to ptr
-  %t6374 = call fastcc i64%t6373(i64 %t6369, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t6375 = load i64, ptr @"scheme.base:current-output-port"
-  %t6376 = and i64 %t6375, -8
-  %t6377 = inttoptr i64 %t6376 to ptr
-  %t6378 = load i64, ptr %t6377
-  %t6379 = inttoptr i64 %t6378 to ptr
-  %t6380 = call fastcc i64%t6379(i64 %t6375, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t6381 = call ptr @rt_alloc_words(i64 2)
-  %t6382 = ptrtoint ptr %t6381 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_1377" to i64), ptr %t6381
-  %t6383 = getelementptr i64, ptr %t6381, i64 1
-  store i64 %t6374, ptr %t6383
-  %t6384 = or i64 %t6382, 4
-  %t6385 = call ptr @rt_alloc_words(i64 3)
-  %t6386 = ptrtoint ptr %t6385 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_1379" to i64), ptr %t6385
-  %t6387 = getelementptr i64, ptr %t6385, i64 1
-  store i64 %t6380, ptr %t6387
-  %t6388 = getelementptr i64, ptr %t6385, i64 2
-  store i64 %t6374, ptr %t6388
-  %t6389 = or i64 %t6386, 4
-  %t6390 = load i64, ptr @"scheme.base:dynamic-wind"
-  %t6391 = and i64 %t6390, -8
-  %t6392 = inttoptr i64 %t6391 to ptr
-  %t6393 = load i64, ptr %t6392
-  %t6394 = inttoptr i64 %t6393 to ptr
-  %t6395 = musttail call fastcc i64 %t6394(i64 %t6390, i64 3, i64 %t6384, i64 %a1, i64 %t6389, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t6395
+argok1785:
+  %t6404 = load i64, ptr @"scheme.base:open-output-file"
+  %t6405 = and i64 %t6404, -8
+  %t6406 = inttoptr i64 %t6405 to ptr
+  %t6407 = load i64, ptr %t6406
+  %t6408 = inttoptr i64 %t6407 to ptr
+  %t6409 = call fastcc i64%t6408(i64 %t6404, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t6410 = load i64, ptr @"scheme.base:current-output-port"
+  %t6411 = and i64 %t6410, -8
+  %t6412 = inttoptr i64 %t6411 to ptr
+  %t6413 = load i64, ptr %t6412
+  %t6414 = inttoptr i64 %t6413 to ptr
+  %t6415 = call fastcc i64%t6414(i64 %t6410, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t6416 = call ptr @rt_alloc_words(i64 2)
+  %t6417 = ptrtoint ptr %t6416 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_1383" to i64), ptr %t6416
+  %t6418 = getelementptr i64, ptr %t6416, i64 1
+  store i64 %t6409, ptr %t6418
+  %t6419 = or i64 %t6417, 4
+  %t6420 = call ptr @rt_alloc_words(i64 3)
+  %t6421 = ptrtoint ptr %t6420 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_1385" to i64), ptr %t6420
+  %t6422 = getelementptr i64, ptr %t6420, i64 1
+  store i64 %t6415, ptr %t6422
+  %t6423 = getelementptr i64, ptr %t6420, i64 2
+  store i64 %t6409, ptr %t6423
+  %t6424 = or i64 %t6421, 4
+  %t6425 = load i64, ptr @"scheme.base:dynamic-wind"
+  %t6426 = and i64 %t6425, -8
+  %t6427 = inttoptr i64 %t6426 to ptr
+  %t6428 = load i64, ptr %t6427
+  %t6429 = inttoptr i64 %t6428 to ptr
+  %t6430 = musttail call fastcc i64 %t6429(i64 %t6425, i64 3, i64 %t6419, i64 %a1, i64 %t6424, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t6430
 }
 
-define fastcc i64 @"scheme.base:code_1386"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_1392"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t6400 = icmp eq i64 %argc, 0
-  br i1 %t6400, label %argok1774, label %arityerr1773
-arityerr1773:
+  %t6435 = icmp eq i64 %argc, 0
+  br i1 %t6435, label %argok1787, label %arityerr1786
+arityerr1786:
   call void @rt_arity_error(i64 0, i64 %argc)
   unreachable
-argok1774:
-  %t6401 = and i64 %self, -8
-  %t6402 = inttoptr i64 %t6401 to ptr
-  %t6403 = getelementptr i64, ptr %t6402, i64 1
-  %t6404 = load i64, ptr %t6403
-  %t6405 = load i64, ptr @"scheme.base:current-input-port"
-  %t6406 = and i64 %t6405, -8
-  %t6407 = inttoptr i64 %t6406 to ptr
-  %t6408 = load i64, ptr %t6407
-  %t6409 = inttoptr i64 %t6408 to ptr
-  %t6410 = musttail call fastcc i64 %t6409(i64 %t6405, i64 1, i64 %t6404, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t6410
+argok1787:
+  %t6436 = and i64 %self, -8
+  %t6437 = inttoptr i64 %t6436 to ptr
+  %t6438 = getelementptr i64, ptr %t6437, i64 1
+  %t6439 = load i64, ptr %t6438
+  %t6440 = load i64, ptr @"scheme.base:current-input-port"
+  %t6441 = and i64 %t6440, -8
+  %t6442 = inttoptr i64 %t6441 to ptr
+  %t6443 = load i64, ptr %t6442
+  %t6444 = inttoptr i64 %t6443 to ptr
+  %t6445 = musttail call fastcc i64 %t6444(i64 %t6440, i64 1, i64 %t6439, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t6445
 }
 
-define fastcc i64 @"scheme.base:code_1388"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"scheme.base:code_1394"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t6411 = icmp eq i64 %argc, 0
-  br i1 %t6411, label %argok1776, label %arityerr1775
-arityerr1775:
+  %t6446 = icmp eq i64 %argc, 0
+  br i1 %t6446, label %argok1789, label %arityerr1788
+arityerr1788:
   call void @rt_arity_error(i64 0, i64 %argc)
   unreachable
-argok1776:
-  %t6412 = and i64 %self, -8
-  %t6413 = inttoptr i64 %t6412 to ptr
-  %t6414 = getelementptr i64, ptr %t6413, i64 1
-  %t6415 = load i64, ptr %t6414
-  %t6416 = load i64, ptr @"scheme.base:current-input-port"
-  %t6417 = and i64 %t6416, -8
-  %t6418 = inttoptr i64 %t6417 to ptr
-  %t6419 = load i64, ptr %t6418
-  %t6420 = inttoptr i64 %t6419 to ptr
-  %t6421 = call fastcc i64%t6420(i64 %t6416, i64 2, i64 %t6415, i64 1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t6422 = and i64 %self, -8
-  %t6423 = inttoptr i64 %t6422 to ptr
-  %t6424 = getelementptr i64, ptr %t6423, i64 2
-  %t6425 = load i64, ptr %t6424
-  %t6426 = load i64, ptr @"scheme.base:close-port"
-  %t6427 = and i64 %t6426, -8
-  %t6428 = inttoptr i64 %t6427 to ptr
-  %t6429 = load i64, ptr %t6428
-  %t6430 = inttoptr i64 %t6429 to ptr
-  %t6431 = musttail call fastcc i64 %t6430(i64 %t6426, i64 1, i64 %t6425, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t6431
+argok1789:
+  %t6447 = and i64 %self, -8
+  %t6448 = inttoptr i64 %t6447 to ptr
+  %t6449 = getelementptr i64, ptr %t6448, i64 1
+  %t6450 = load i64, ptr %t6449
+  %t6451 = load i64, ptr @"scheme.base:current-input-port"
+  %t6452 = and i64 %t6451, -8
+  %t6453 = inttoptr i64 %t6452 to ptr
+  %t6454 = load i64, ptr %t6453
+  %t6455 = inttoptr i64 %t6454 to ptr
+  %t6456 = call fastcc i64%t6455(i64 %t6451, i64 2, i64 %t6450, i64 1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t6457 = and i64 %self, -8
+  %t6458 = inttoptr i64 %t6457 to ptr
+  %t6459 = getelementptr i64, ptr %t6458, i64 2
+  %t6460 = load i64, ptr %t6459
+  %t6461 = load i64, ptr @"scheme.base:close-port"
+  %t6462 = and i64 %t6461, -8
+  %t6463 = inttoptr i64 %t6462 to ptr
+  %t6464 = load i64, ptr %t6463
+  %t6465 = inttoptr i64 %t6464 to ptr
+  %t6466 = musttail call fastcc i64 %t6465(i64 %t6461, i64 1, i64 %t6460, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t6466
 }
 
 define fastcc i64 @"scheme.base:code:with-input-from-file"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t6432 = icmp eq i64 %argc, 2
-  br i1 %t6432, label %argok1778, label %arityerr1777
-arityerr1777:
+  %t6467 = icmp eq i64 %argc, 2
+  br i1 %t6467, label %argok1791, label %arityerr1790
+arityerr1790:
   call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
-argok1778:
-  %t6433 = load i64, ptr @"scheme.base:open-input-file"
-  %t6434 = and i64 %t6433, -8
-  %t6435 = inttoptr i64 %t6434 to ptr
-  %t6436 = load i64, ptr %t6435
-  %t6437 = inttoptr i64 %t6436 to ptr
-  %t6438 = call fastcc i64%t6437(i64 %t6433, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t6439 = load i64, ptr @"scheme.base:current-input-port"
-  %t6440 = and i64 %t6439, -8
-  %t6441 = inttoptr i64 %t6440 to ptr
-  %t6442 = load i64, ptr %t6441
-  %t6443 = inttoptr i64 %t6442 to ptr
-  %t6444 = call fastcc i64%t6443(i64 %t6439, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t6445 = call ptr @rt_alloc_words(i64 2)
-  %t6446 = ptrtoint ptr %t6445 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_1386" to i64), ptr %t6445
-  %t6447 = getelementptr i64, ptr %t6445, i64 1
-  store i64 %t6438, ptr %t6447
-  %t6448 = or i64 %t6446, 4
-  %t6449 = call ptr @rt_alloc_words(i64 3)
-  %t6450 = ptrtoint ptr %t6449 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code_1388" to i64), ptr %t6449
-  %t6451 = getelementptr i64, ptr %t6449, i64 1
-  store i64 %t6444, ptr %t6451
-  %t6452 = getelementptr i64, ptr %t6449, i64 2
-  store i64 %t6438, ptr %t6452
-  %t6453 = or i64 %t6450, 4
-  %t6454 = load i64, ptr @"scheme.base:dynamic-wind"
-  %t6455 = and i64 %t6454, -8
-  %t6456 = inttoptr i64 %t6455 to ptr
-  %t6457 = load i64, ptr %t6456
-  %t6458 = inttoptr i64 %t6457 to ptr
-  %t6459 = musttail call fastcc i64 %t6458(i64 %t6454, i64 3, i64 %t6448, i64 %a1, i64 %t6453, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t6459
+argok1791:
+  %t6468 = load i64, ptr @"scheme.base:open-input-file"
+  %t6469 = and i64 %t6468, -8
+  %t6470 = inttoptr i64 %t6469 to ptr
+  %t6471 = load i64, ptr %t6470
+  %t6472 = inttoptr i64 %t6471 to ptr
+  %t6473 = call fastcc i64%t6472(i64 %t6468, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t6474 = load i64, ptr @"scheme.base:current-input-port"
+  %t6475 = and i64 %t6474, -8
+  %t6476 = inttoptr i64 %t6475 to ptr
+  %t6477 = load i64, ptr %t6476
+  %t6478 = inttoptr i64 %t6477 to ptr
+  %t6479 = call fastcc i64%t6478(i64 %t6474, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t6480 = call ptr @rt_alloc_words(i64 2)
+  %t6481 = ptrtoint ptr %t6480 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_1392" to i64), ptr %t6480
+  %t6482 = getelementptr i64, ptr %t6480, i64 1
+  store i64 %t6473, ptr %t6482
+  %t6483 = or i64 %t6481, 4
+  %t6484 = call ptr @rt_alloc_words(i64 3)
+  %t6485 = ptrtoint ptr %t6484 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code_1394" to i64), ptr %t6484
+  %t6486 = getelementptr i64, ptr %t6484, i64 1
+  store i64 %t6479, ptr %t6486
+  %t6487 = getelementptr i64, ptr %t6484, i64 2
+  store i64 %t6473, ptr %t6487
+  %t6488 = or i64 %t6485, 4
+  %t6489 = load i64, ptr @"scheme.base:dynamic-wind"
+  %t6490 = and i64 %t6489, -8
+  %t6491 = inttoptr i64 %t6490 to ptr
+  %t6492 = load i64, ptr %t6491
+  %t6493 = inttoptr i64 %t6492 to ptr
+  %t6494 = musttail call fastcc i64 %t6493(i64 %t6489, i64 3, i64 %t6483, i64 %a1, i64 %t6488, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t6494
 }
 
 define fastcc i64 @"scheme.base:code:call-with-output-file"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t6464 = icmp eq i64 %argc, 2
-  br i1 %t6464, label %argok1780, label %arityerr1779
-arityerr1779:
+  %t6499 = icmp eq i64 %argc, 2
+  br i1 %t6499, label %argok1793, label %arityerr1792
+arityerr1792:
   call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
-argok1780:
-  %t6465 = load i64, ptr @"scheme.base:open-output-file"
-  %t6466 = and i64 %t6465, -8
-  %t6467 = inttoptr i64 %t6466 to ptr
-  %t6468 = load i64, ptr %t6467
-  %t6469 = inttoptr i64 %t6468 to ptr
-  %t6470 = call fastcc i64%t6469(i64 %t6465, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t6471 = load i64, ptr @"scheme.base:call-with-port"
-  %t6472 = and i64 %t6471, -8
-  %t6473 = inttoptr i64 %t6472 to ptr
-  %t6474 = load i64, ptr %t6473
-  %t6475 = inttoptr i64 %t6474 to ptr
-  %t6476 = musttail call fastcc i64 %t6475(i64 %t6471, i64 2, i64 %t6470, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t6476
+argok1793:
+  %t6500 = load i64, ptr @"scheme.base:open-output-file"
+  %t6501 = and i64 %t6500, -8
+  %t6502 = inttoptr i64 %t6501 to ptr
+  %t6503 = load i64, ptr %t6502
+  %t6504 = inttoptr i64 %t6503 to ptr
+  %t6505 = call fastcc i64%t6504(i64 %t6500, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t6506 = load i64, ptr @"scheme.base:call-with-port"
+  %t6507 = and i64 %t6506, -8
+  %t6508 = inttoptr i64 %t6507 to ptr
+  %t6509 = load i64, ptr %t6508
+  %t6510 = inttoptr i64 %t6509 to ptr
+  %t6511 = musttail call fastcc i64 %t6510(i64 %t6506, i64 2, i64 %t6505, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t6511
 }
 
 define fastcc i64 @"scheme.base:code:call-with-input-file"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
-  %t6481 = icmp eq i64 %argc, 2
-  br i1 %t6481, label %argok1782, label %arityerr1781
-arityerr1781:
+  %t6516 = icmp eq i64 %argc, 2
+  br i1 %t6516, label %argok1795, label %arityerr1794
+arityerr1794:
   call void @rt_arity_error(i64 2, i64 %argc)
   unreachable
-argok1782:
-  %t6482 = load i64, ptr @"scheme.base:open-input-file"
-  %t6483 = and i64 %t6482, -8
-  %t6484 = inttoptr i64 %t6483 to ptr
-  %t6485 = load i64, ptr %t6484
-  %t6486 = inttoptr i64 %t6485 to ptr
-  %t6487 = call fastcc i64%t6486(i64 %t6482, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  %t6488 = load i64, ptr @"scheme.base:call-with-port"
-  %t6489 = and i64 %t6488, -8
-  %t6490 = inttoptr i64 %t6489 to ptr
-  %t6491 = load i64, ptr %t6490
-  %t6492 = inttoptr i64 %t6491 to ptr
-  %t6493 = musttail call fastcc i64 %t6492(i64 %t6488, i64 2, i64 %t6487, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
-  ret i64 %t6493
+argok1795:
+  %t6517 = load i64, ptr @"scheme.base:open-input-file"
+  %t6518 = and i64 %t6517, -8
+  %t6519 = inttoptr i64 %t6518 to ptr
+  %t6520 = load i64, ptr %t6519
+  %t6521 = inttoptr i64 %t6520 to ptr
+  %t6522 = call fastcc i64%t6521(i64 %t6517, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t6523 = load i64, ptr @"scheme.base:call-with-port"
+  %t6524 = and i64 %t6523, -8
+  %t6525 = inttoptr i64 %t6524 to ptr
+  %t6526 = load i64, ptr %t6525
+  %t6527 = inttoptr i64 %t6526 to ptr
+  %t6528 = musttail call fastcc i64 %t6527(i64 %t6523, i64 2, i64 %t6522, i64 %a1, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  ret i64 %t6528
 }
 
 define i64 @"scheme.base:__init_1"() {
@@ -12505,1234 +12575,1245 @@ entry:
 
 define i64 @"scheme.base:__init_98"() {
 entry:
-  %t2301 = call ptr @rt_alloc_words(i64 1)
-  %t2302 = ptrtoint ptr %t2301 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:string->number" to i64), ptr %t2301
-  %t2303 = or i64 %t2302, 4
-  %t2304 = call i64 @rt_root(i64 %t2303)
-  store i64 %t2304, ptr @"scheme.base:string->number"
+  %t2308 = call ptr @rt_alloc_words(i64 1)
+  %t2309 = ptrtoint ptr %t2308 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:string->number" to i64), ptr %t2308
+  %t2310 = or i64 %t2309, 4
+  %t2311 = call i64 @rt_root(i64 %t2310)
+  store i64 %t2311, ptr @"scheme.base:string->number"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_99"() {
 entry:
-  %t2338 = call ptr @rt_alloc_words(i64 1)
-  %t2339 = ptrtoint ptr %t2338 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:error" to i64), ptr %t2338
-  %t2340 = or i64 %t2339, 4
-  %t2341 = call i64 @rt_root(i64 %t2340)
-  store i64 %t2341, ptr @"scheme.base:error"
+  %t2345 = call ptr @rt_alloc_words(i64 1)
+  %t2346 = ptrtoint ptr %t2345 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:error" to i64), ptr %t2345
+  %t2347 = or i64 %t2346, 4
+  %t2348 = call i64 @rt_root(i64 %t2347)
+  store i64 %t2348, ptr @"scheme.base:error"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_100"() {
 entry:
-  %t2342 = call i64 @rt_root(i64 2)
-  store i64 %t2342, ptr @"scheme.base:*winds*"
+  %t2349 = call i64 @rt_root(i64 2)
+  store i64 %t2349, ptr @"scheme.base:*winds*"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_101"() {
 entry:
-  %t2343 = call i64 @rt_root(i64 2)
-  store i64 %t2343, ptr @"scheme.base:*handlers*"
+  %t2350 = call i64 @rt_root(i64 2)
+  store i64 %t2350, ptr @"scheme.base:*handlers*"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_102"() {
 entry:
-  %t2368 = call ptr @rt_alloc_words(i64 1)
-  %t2369 = ptrtoint ptr %t2368 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:%unwind-to" to i64), ptr %t2368
-  %t2370 = or i64 %t2369, 4
-  %t2371 = call i64 @rt_root(i64 %t2370)
-  store i64 %t2371, ptr @"scheme.base:%unwind-to"
+  %t2375 = call ptr @rt_alloc_words(i64 1)
+  %t2376 = ptrtoint ptr %t2375 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:%unwind-to" to i64), ptr %t2375
+  %t2377 = or i64 %t2376, 4
+  %t2378 = call i64 @rt_root(i64 %t2377)
+  store i64 %t2378, ptr @"scheme.base:%unwind-to"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_103"() {
 entry:
-  %t2395 = call ptr @rt_alloc_words(i64 1)
-  %t2396 = ptrtoint ptr %t2395 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:dynamic-wind" to i64), ptr %t2395
-  %t2397 = or i64 %t2396, 4
-  %t2398 = call i64 @rt_root(i64 %t2397)
-  store i64 %t2398, ptr @"scheme.base:dynamic-wind"
+  %t2402 = call ptr @rt_alloc_words(i64 1)
+  %t2403 = ptrtoint ptr %t2402 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:dynamic-wind" to i64), ptr %t2402
+  %t2404 = or i64 %t2403, 4
+  %t2405 = call i64 @rt_root(i64 %t2404)
+  store i64 %t2405, ptr @"scheme.base:dynamic-wind"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_104"() {
 entry:
-  %t2459 = call ptr @rt_alloc_words(i64 1)
-  %t2460 = ptrtoint ptr %t2459 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:call-with-current-continuation" to i64), ptr %t2459
-  %t2461 = or i64 %t2460, 4
-  %t2462 = call i64 @rt_root(i64 %t2461)
-  store i64 %t2462, ptr @"scheme.base:call-with-current-continuation"
+  %t2466 = call ptr @rt_alloc_words(i64 1)
+  %t2467 = ptrtoint ptr %t2466 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:call-with-current-continuation" to i64), ptr %t2466
+  %t2468 = or i64 %t2467, 4
+  %t2469 = call i64 @rt_root(i64 %t2468)
+  store i64 %t2469, ptr @"scheme.base:call-with-current-continuation"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_105"() {
 entry:
-  %t2470 = call ptr @rt_alloc_words(i64 1)
-  %t2471 = ptrtoint ptr %t2470 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:call/cc" to i64), ptr %t2470
-  %t2472 = or i64 %t2471, 4
-  %t2473 = call i64 @rt_root(i64 %t2472)
-  store i64 %t2473, ptr @"scheme.base:call/cc"
+  %t2477 = call ptr @rt_alloc_words(i64 1)
+  %t2478 = ptrtoint ptr %t2477 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:call/cc" to i64), ptr %t2477
+  %t2479 = or i64 %t2478, 4
+  %t2480 = call i64 @rt_root(i64 %t2479)
+  store i64 %t2480, ptr @"scheme.base:call/cc"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_106"() {
 entry:
-  %t2508 = call ptr @rt_alloc_words(i64 1)
-  %t2509 = ptrtoint ptr %t2508 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:%with-handler" to i64), ptr %t2508
-  %t2510 = or i64 %t2509, 4
-  %t2511 = call i64 @rt_root(i64 %t2510)
-  store i64 %t2511, ptr @"scheme.base:%with-handler"
+  %t2515 = call ptr @rt_alloc_words(i64 1)
+  %t2516 = ptrtoint ptr %t2515 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:%with-handler" to i64), ptr %t2515
+  %t2517 = or i64 %t2516, 4
+  %t2518 = call i64 @rt_root(i64 %t2517)
+  store i64 %t2518, ptr @"scheme.base:%with-handler"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_107"() {
 entry:
-  %t2530 = call ptr @rt_alloc_words(i64 1)
-  %t2531 = ptrtoint ptr %t2530 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:raise" to i64), ptr %t2530
-  %t2532 = or i64 %t2531, 4
-  %t2533 = call i64 @rt_root(i64 %t2532)
-  store i64 %t2533, ptr @"scheme.base:raise"
+  %t2537 = call ptr @rt_alloc_words(i64 1)
+  %t2538 = ptrtoint ptr %t2537 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:raise" to i64), ptr %t2537
+  %t2539 = or i64 %t2538, 4
+  %t2540 = call i64 @rt_root(i64 %t2539)
+  store i64 %t2540, ptr @"scheme.base:raise"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_108"() {
 entry:
-  %t2536 = call ptr @rt_alloc_words(i64 1)
-  %t2537 = ptrtoint ptr %t2536 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:error-object?" to i64), ptr %t2536
-  %t2538 = or i64 %t2537, 4
-  %t2539 = call i64 @rt_root(i64 %t2538)
-  store i64 %t2539, ptr @"scheme.base:error-object?"
+  %t2543 = call ptr @rt_alloc_words(i64 1)
+  %t2544 = ptrtoint ptr %t2543 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:error-object?" to i64), ptr %t2543
+  %t2545 = or i64 %t2544, 4
+  %t2546 = call i64 @rt_root(i64 %t2545)
+  store i64 %t2546, ptr @"scheme.base:error-object?"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_109"() {
 entry:
-  %t2542 = call ptr @rt_alloc_words(i64 1)
-  %t2543 = ptrtoint ptr %t2542 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:error-object-message" to i64), ptr %t2542
-  %t2544 = or i64 %t2543, 4
-  %t2545 = call i64 @rt_root(i64 %t2544)
-  store i64 %t2545, ptr @"scheme.base:error-object-message"
+  %t2549 = call ptr @rt_alloc_words(i64 1)
+  %t2550 = ptrtoint ptr %t2549 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:error-object-message" to i64), ptr %t2549
+  %t2551 = or i64 %t2550, 4
+  %t2552 = call i64 @rt_root(i64 %t2551)
+  store i64 %t2552, ptr @"scheme.base:error-object-message"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_110"() {
 entry:
-  %t2548 = call ptr @rt_alloc_words(i64 1)
-  %t2549 = ptrtoint ptr %t2548 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:error-object-irritants" to i64), ptr %t2548
-  %t2550 = or i64 %t2549, 4
-  %t2551 = call i64 @rt_root(i64 %t2550)
-  store i64 %t2551, ptr @"scheme.base:error-object-irritants"
+  %t2555 = call ptr @rt_alloc_words(i64 1)
+  %t2556 = ptrtoint ptr %t2555 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:error-object-irritants" to i64), ptr %t2555
+  %t2557 = or i64 %t2556, 4
+  %t2558 = call i64 @rt_root(i64 %t2557)
+  store i64 %t2558, ptr @"scheme.base:error-object-irritants"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_111"() {
 entry:
-  %t2633 = call ptr @rt_alloc_words(i64 1)
-  %t2634 = ptrtoint ptr %t2633 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:make-parameter" to i64), ptr %t2633
-  %t2635 = or i64 %t2634, 4
-  %t2636 = call i64 @rt_root(i64 %t2635)
-  store i64 %t2636, ptr @"scheme.base:make-parameter"
+  %t2640 = call ptr @rt_alloc_words(i64 1)
+  %t2641 = ptrtoint ptr %t2640 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:make-parameter" to i64), ptr %t2640
+  %t2642 = or i64 %t2641, 4
+  %t2643 = call i64 @rt_root(i64 %t2642)
+  store i64 %t2643, ptr @"scheme.base:make-parameter"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_112"() {
 entry:
-  %t2717 = call ptr @rt_alloc_words(i64 1)
-  %t2718 = ptrtoint ptr %t2717 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:%with-parameters" to i64), ptr %t2717
-  %t2719 = or i64 %t2718, 4
-  %t2720 = call i64 @rt_root(i64 %t2719)
-  store i64 %t2720, ptr @"scheme.base:%with-parameters"
+  %t2724 = call ptr @rt_alloc_words(i64 1)
+  %t2725 = ptrtoint ptr %t2724 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:%with-parameters" to i64), ptr %t2724
+  %t2726 = or i64 %t2725, 4
+  %t2727 = call i64 @rt_root(i64 %t2726)
+  store i64 %t2727, ptr @"scheme.base:%with-parameters"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_113"() {
 entry:
-  %t2758 = call ptr @rt_alloc_words(i64 1)
-  %t2759 = ptrtoint ptr %t2758 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:list->vector" to i64), ptr %t2758
-  %t2760 = or i64 %t2759, 4
-  %t2761 = call i64 @rt_root(i64 %t2760)
-  store i64 %t2761, ptr @"scheme.base:list->vector"
+  %t2765 = call ptr @rt_alloc_words(i64 1)
+  %t2766 = ptrtoint ptr %t2765 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:list->vector" to i64), ptr %t2765
+  %t2767 = or i64 %t2766, 4
+  %t2768 = call i64 @rt_root(i64 %t2767)
+  store i64 %t2768, ptr @"scheme.base:list->vector"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_114"() {
 entry:
-  %t2779 = call ptr @rt_alloc_words(i64 1)
-  %t2780 = ptrtoint ptr %t2779 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:vector" to i64), ptr %t2779
-  %t2781 = or i64 %t2780, 4
-  %t2782 = call i64 @rt_root(i64 %t2781)
-  store i64 %t2782, ptr @"scheme.base:vector"
+  %t2786 = call ptr @rt_alloc_words(i64 1)
+  %t2787 = ptrtoint ptr %t2786 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:vector" to i64), ptr %t2786
+  %t2788 = or i64 %t2787, 4
+  %t2789 = call i64 @rt_root(i64 %t2788)
+  store i64 %t2789, ptr @"scheme.base:vector"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_115"() {
 entry:
-  %t2820 = call ptr @rt_alloc_words(i64 1)
-  %t2821 = ptrtoint ptr %t2820 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:list->bytevector" to i64), ptr %t2820
-  %t2822 = or i64 %t2821, 4
-  %t2823 = call i64 @rt_root(i64 %t2822)
-  store i64 %t2823, ptr @"scheme.base:list->bytevector"
+  %t2827 = call ptr @rt_alloc_words(i64 1)
+  %t2828 = ptrtoint ptr %t2827 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:list->bytevector" to i64), ptr %t2827
+  %t2829 = or i64 %t2828, 4
+  %t2830 = call i64 @rt_root(i64 %t2829)
+  store i64 %t2830, ptr @"scheme.base:list->bytevector"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_116"() {
 entry:
-  %t2841 = call ptr @rt_alloc_words(i64 1)
-  %t2842 = ptrtoint ptr %t2841 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:bytevector" to i64), ptr %t2841
-  %t2843 = or i64 %t2842, 4
-  %t2844 = call i64 @rt_root(i64 %t2843)
-  store i64 %t2844, ptr @"scheme.base:bytevector"
+  %t2848 = call ptr @rt_alloc_words(i64 1)
+  %t2849 = ptrtoint ptr %t2848 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:bytevector" to i64), ptr %t2848
+  %t2850 = or i64 %t2849, 4
+  %t2851 = call i64 @rt_root(i64 %t2850)
+  store i64 %t2851, ptr @"scheme.base:bytevector"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_117"() {
 entry:
-  %t2864 = call ptr @rt_alloc_words(i64 1)
-  %t2865 = ptrtoint ptr %t2864 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:values" to i64), ptr %t2864
-  %t2866 = or i64 %t2865, 4
-  %t2867 = call i64 @rt_root(i64 %t2866)
-  store i64 %t2867, ptr @"scheme.base:values"
+  %t2871 = call ptr @rt_alloc_words(i64 1)
+  %t2872 = ptrtoint ptr %t2871 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:values" to i64), ptr %t2871
+  %t2873 = or i64 %t2872, 4
+  %t2874 = call i64 @rt_root(i64 %t2873)
+  store i64 %t2874, ptr @"scheme.base:values"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_118"() {
 entry:
-  %t2909 = call ptr @rt_alloc_words(i64 1)
-  %t2910 = ptrtoint ptr %t2909 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:call-with-values" to i64), ptr %t2909
-  %t2911 = or i64 %t2910, 4
-  %t2912 = call i64 @rt_root(i64 %t2911)
-  store i64 %t2912, ptr @"scheme.base:call-with-values"
+  %t2916 = call ptr @rt_alloc_words(i64 1)
+  %t2917 = ptrtoint ptr %t2916 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:call-with-values" to i64), ptr %t2916
+  %t2918 = or i64 %t2917, 4
+  %t2919 = call i64 @rt_root(i64 %t2918)
+  store i64 %t2919, ptr @"scheme.base:call-with-values"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_119"() {
 entry:
-  %t2913 = call i64 @rt_root(i64 64)
-  store i64 %t2913, ptr @"scheme.base:%ht-initial-buckets"
+  %t2920 = call i64 @rt_root(i64 64)
+  store i64 %t2920, ptr @"scheme.base:%ht-initial-buckets"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_120"() {
 entry:
-  %t2914 = call i64 @rt_root(i64 24)
-  store i64 %t2914, ptr @"scheme.base:%ht-load-factor"
+  %t2921 = call i64 @rt_root(i64 24)
+  store i64 %t2921, ptr @"scheme.base:%ht-load-factor"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_121"() {
 entry:
-  %t2925 = call ptr @rt_alloc_words(i64 1)
-  %t2926 = ptrtoint ptr %t2925 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:make-hash-table" to i64), ptr %t2925
-  %t2927 = or i64 %t2926, 4
-  %t2928 = call i64 @rt_root(i64 %t2927)
-  store i64 %t2928, ptr @"scheme.base:make-hash-table"
+  %t2932 = call ptr @rt_alloc_words(i64 1)
+  %t2933 = ptrtoint ptr %t2932 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:make-hash-table" to i64), ptr %t2932
+  %t2934 = or i64 %t2933, 4
+  %t2935 = call i64 @rt_root(i64 %t2934)
+  store i64 %t2935, ptr @"scheme.base:make-hash-table"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_122"() {
 entry:
-  %t2931 = call ptr @rt_alloc_words(i64 1)
-  %t2932 = ptrtoint ptr %t2931 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:hash-table?" to i64), ptr %t2931
-  %t2933 = or i64 %t2932, 4
-  %t2934 = call i64 @rt_root(i64 %t2933)
-  store i64 %t2934, ptr @"scheme.base:hash-table?"
+  %t2938 = call ptr @rt_alloc_words(i64 1)
+  %t2939 = ptrtoint ptr %t2938 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:hash-table?" to i64), ptr %t2938
+  %t2940 = or i64 %t2939, 4
+  %t2941 = call i64 @rt_root(i64 %t2940)
+  store i64 %t2941, ptr @"scheme.base:hash-table?"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_123"() {
 entry:
-  %t2938 = call ptr @rt_alloc_words(i64 1)
-  %t2939 = ptrtoint ptr %t2938 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:%ht-count" to i64), ptr %t2938
-  %t2940 = or i64 %t2939, 4
-  %t2941 = call i64 @rt_root(i64 %t2940)
-  store i64 %t2941, ptr @"scheme.base:%ht-count"
+  %t2945 = call ptr @rt_alloc_words(i64 1)
+  %t2946 = ptrtoint ptr %t2945 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:%ht-count" to i64), ptr %t2945
+  %t2947 = or i64 %t2946, 4
+  %t2948 = call i64 @rt_root(i64 %t2947)
+  store i64 %t2948, ptr @"scheme.base:%ht-count"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_124"() {
 entry:
-  %t2945 = call ptr @rt_alloc_words(i64 1)
-  %t2946 = ptrtoint ptr %t2945 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:%ht-buckets" to i64), ptr %t2945
-  %t2947 = or i64 %t2946, 4
-  %t2948 = call i64 @rt_root(i64 %t2947)
-  store i64 %t2948, ptr @"scheme.base:%ht-buckets"
+  %t2952 = call ptr @rt_alloc_words(i64 1)
+  %t2953 = ptrtoint ptr %t2952 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:%ht-buckets" to i64), ptr %t2952
+  %t2954 = or i64 %t2953, 4
+  %t2955 = call i64 @rt_root(i64 %t2954)
+  store i64 %t2955, ptr @"scheme.base:%ht-buckets"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_125"() {
 entry:
-  %t2952 = call ptr @rt_alloc_words(i64 1)
-  %t2953 = ptrtoint ptr %t2952 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:%ht-set-count!" to i64), ptr %t2952
-  %t2954 = or i64 %t2953, 4
-  %t2955 = call i64 @rt_root(i64 %t2954)
-  store i64 %t2955, ptr @"scheme.base:%ht-set-count!"
+  %t2959 = call ptr @rt_alloc_words(i64 1)
+  %t2960 = ptrtoint ptr %t2959 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:%ht-set-count!" to i64), ptr %t2959
+  %t2961 = or i64 %t2960, 4
+  %t2962 = call i64 @rt_root(i64 %t2961)
+  store i64 %t2962, ptr @"scheme.base:%ht-set-count!"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_126"() {
 entry:
-  %t2959 = call ptr @rt_alloc_words(i64 1)
-  %t2960 = ptrtoint ptr %t2959 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:%ht-set-buckets!" to i64), ptr %t2959
-  %t2961 = or i64 %t2960, 4
-  %t2962 = call i64 @rt_root(i64 %t2961)
-  store i64 %t2962, ptr @"scheme.base:%ht-set-buckets!"
+  %t2966 = call ptr @rt_alloc_words(i64 1)
+  %t2967 = ptrtoint ptr %t2966 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:%ht-set-buckets!" to i64), ptr %t2966
+  %t2968 = or i64 %t2967, 4
+  %t2969 = call i64 @rt_root(i64 %t2968)
+  store i64 %t2969, ptr @"scheme.base:%ht-set-buckets!"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_127"() {
 entry:
-  %t2966 = call ptr @rt_alloc_words(i64 1)
-  %t2967 = ptrtoint ptr %t2966 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:%ht-index" to i64), ptr %t2966
-  %t2968 = or i64 %t2967, 4
-  %t2969 = call i64 @rt_root(i64 %t2968)
-  store i64 %t2969, ptr @"scheme.base:%ht-index"
+  %t2973 = call ptr @rt_alloc_words(i64 1)
+  %t2974 = ptrtoint ptr %t2973 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:%ht-index" to i64), ptr %t2973
+  %t2975 = or i64 %t2974, 4
+  %t2976 = call i64 @rt_root(i64 %t2975)
+  store i64 %t2976, ptr @"scheme.base:%ht-index"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_128"() {
 entry:
-  %t2985 = call ptr @rt_alloc_words(i64 1)
-  %t2986 = ptrtoint ptr %t2985 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:%ht-assoc" to i64), ptr %t2985
-  %t2987 = or i64 %t2986, 4
-  %t2988 = call i64 @rt_root(i64 %t2987)
-  store i64 %t2988, ptr @"scheme.base:%ht-assoc"
+  %t2992 = call ptr @rt_alloc_words(i64 1)
+  %t2993 = ptrtoint ptr %t2992 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:%ht-assoc" to i64), ptr %t2992
+  %t2994 = or i64 %t2993, 4
+  %t2995 = call i64 @rt_root(i64 %t2994)
+  store i64 %t2995, ptr @"scheme.base:%ht-assoc"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_129"() {
 entry:
-  %t3006 = call ptr @rt_alloc_words(i64 1)
-  %t3007 = ptrtoint ptr %t3006 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:%ht-remove" to i64), ptr %t3006
-  %t3008 = or i64 %t3007, 4
-  %t3009 = call i64 @rt_root(i64 %t3008)
-  store i64 %t3009, ptr @"scheme.base:%ht-remove"
+  %t3013 = call ptr @rt_alloc_words(i64 1)
+  %t3014 = ptrtoint ptr %t3013 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:%ht-remove" to i64), ptr %t3013
+  %t3015 = or i64 %t3014, 4
+  %t3016 = call i64 @rt_root(i64 %t3015)
+  store i64 %t3016, ptr @"scheme.base:%ht-remove"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_130"() {
 entry:
-  %t3033 = call ptr @rt_alloc_words(i64 1)
-  %t3034 = ptrtoint ptr %t3033 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:hash-table-ref/default" to i64), ptr %t3033
-  %t3035 = or i64 %t3034, 4
-  %t3036 = call i64 @rt_root(i64 %t3035)
-  store i64 %t3036, ptr @"scheme.base:hash-table-ref/default"
+  %t3040 = call ptr @rt_alloc_words(i64 1)
+  %t3041 = ptrtoint ptr %t3040 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:hash-table-ref/default" to i64), ptr %t3040
+  %t3042 = or i64 %t3041, 4
+  %t3043 = call i64 @rt_root(i64 %t3042)
+  store i64 %t3043, ptr @"scheme.base:hash-table-ref/default"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_131"() {
 entry:
-  %t3059 = call ptr @rt_alloc_words(i64 1)
-  %t3060 = ptrtoint ptr %t3059 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:hash-table-contains?" to i64), ptr %t3059
-  %t3061 = or i64 %t3060, 4
-  %t3062 = call i64 @rt_root(i64 %t3061)
-  store i64 %t3062, ptr @"scheme.base:hash-table-contains?"
+  %t3066 = call ptr @rt_alloc_words(i64 1)
+  %t3067 = ptrtoint ptr %t3066 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:hash-table-contains?" to i64), ptr %t3066
+  %t3068 = or i64 %t3067, 4
+  %t3069 = call i64 @rt_root(i64 %t3068)
+  store i64 %t3069, ptr @"scheme.base:hash-table-contains?"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_132"() {
 entry:
-  %t3093 = call ptr @rt_alloc_words(i64 1)
-  %t3094 = ptrtoint ptr %t3093 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:hash-table-ref" to i64), ptr %t3093
-  %t3095 = or i64 %t3094, 4
-  %t3096 = call i64 @rt_root(i64 %t3095)
-  store i64 %t3096, ptr @"scheme.base:hash-table-ref"
+  %t3100 = call ptr @rt_alloc_words(i64 1)
+  %t3101 = ptrtoint ptr %t3100 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:hash-table-ref" to i64), ptr %t3100
+  %t3102 = or i64 %t3101, 4
+  %t3103 = call i64 @rt_root(i64 %t3102)
+  store i64 %t3103, ptr @"scheme.base:hash-table-ref"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_133"() {
 entry:
-  %t3180 = call ptr @rt_alloc_words(i64 1)
-  %t3181 = ptrtoint ptr %t3180 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:hash-table-set!" to i64), ptr %t3180
-  %t3182 = or i64 %t3181, 4
-  %t3183 = call i64 @rt_root(i64 %t3182)
-  store i64 %t3183, ptr @"scheme.base:hash-table-set!"
+  %t3187 = call ptr @rt_alloc_words(i64 1)
+  %t3188 = ptrtoint ptr %t3187 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:hash-table-set!" to i64), ptr %t3187
+  %t3189 = or i64 %t3188, 4
+  %t3190 = call i64 @rt_root(i64 %t3189)
+  store i64 %t3190, ptr @"scheme.base:hash-table-set!"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_134"() {
 entry:
-  %t3233 = call ptr @rt_alloc_words(i64 1)
-  %t3234 = ptrtoint ptr %t3233 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:hash-table-delete!" to i64), ptr %t3233
-  %t3235 = or i64 %t3234, 4
-  %t3236 = call i64 @rt_root(i64 %t3235)
-  store i64 %t3236, ptr @"scheme.base:hash-table-delete!"
+  %t3240 = call ptr @rt_alloc_words(i64 1)
+  %t3241 = ptrtoint ptr %t3240 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:hash-table-delete!" to i64), ptr %t3240
+  %t3242 = or i64 %t3241, 4
+  %t3243 = call i64 @rt_root(i64 %t3242)
+  store i64 %t3243, ptr @"scheme.base:hash-table-delete!"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_135"() {
 entry:
-  %t3340 = call ptr @rt_alloc_words(i64 1)
-  %t3341 = ptrtoint ptr %t3340 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:%ht-grow!" to i64), ptr %t3340
-  %t3342 = or i64 %t3341, 4
-  %t3343 = call i64 @rt_root(i64 %t3342)
-  store i64 %t3343, ptr @"scheme.base:%ht-grow!"
+  %t3347 = call ptr @rt_alloc_words(i64 1)
+  %t3348 = ptrtoint ptr %t3347 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:%ht-grow!" to i64), ptr %t3347
+  %t3349 = or i64 %t3348, 4
+  %t3350 = call i64 @rt_root(i64 %t3349)
+  store i64 %t3350, ptr @"scheme.base:%ht-grow!"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_136"() {
 entry:
-  %t3351 = call ptr @rt_alloc_words(i64 1)
-  %t3352 = ptrtoint ptr %t3351 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:hash-table-size" to i64), ptr %t3351
-  %t3353 = or i64 %t3352, 4
-  %t3354 = call i64 @rt_root(i64 %t3353)
-  store i64 %t3354, ptr @"scheme.base:hash-table-size"
+  %t3358 = call ptr @rt_alloc_words(i64 1)
+  %t3359 = ptrtoint ptr %t3358 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:hash-table-size" to i64), ptr %t3358
+  %t3360 = or i64 %t3359, 4
+  %t3361 = call i64 @rt_root(i64 %t3360)
+  store i64 %t3361, ptr @"scheme.base:hash-table-size"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_137"() {
 entry:
-  %t3371 = call ptr @rt_alloc_words(i64 1)
-  %t3372 = ptrtoint ptr %t3371 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:%ht-fold-buckets" to i64), ptr %t3371
-  %t3373 = or i64 %t3372, 4
-  %t3374 = call i64 @rt_root(i64 %t3373)
-  store i64 %t3374, ptr @"scheme.base:%ht-fold-buckets"
+  %t3378 = call ptr @rt_alloc_words(i64 1)
+  %t3379 = ptrtoint ptr %t3378 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:%ht-fold-buckets" to i64), ptr %t3378
+  %t3380 = or i64 %t3379, 4
+  %t3381 = call i64 @rt_root(i64 %t3380)
+  store i64 %t3381, ptr @"scheme.base:%ht-fold-buckets"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_138"() {
 entry:
-  %t3422 = call ptr @rt_alloc_words(i64 1)
-  %t3423 = ptrtoint ptr %t3422 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:hash-table->alist" to i64), ptr %t3422
-  %t3424 = or i64 %t3423, 4
-  %t3425 = call i64 @rt_root(i64 %t3424)
-  store i64 %t3425, ptr @"scheme.base:hash-table->alist"
+  %t3429 = call ptr @rt_alloc_words(i64 1)
+  %t3430 = ptrtoint ptr %t3429 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:hash-table->alist" to i64), ptr %t3429
+  %t3431 = or i64 %t3430, 4
+  %t3432 = call i64 @rt_root(i64 %t3431)
+  store i64 %t3432, ptr @"scheme.base:hash-table->alist"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_139"() {
 entry:
-  %t3444 = call ptr @rt_alloc_words(i64 1)
-  %t3445 = ptrtoint ptr %t3444 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:hash-table-keys" to i64), ptr %t3444
-  %t3446 = or i64 %t3445, 4
-  %t3447 = call i64 @rt_root(i64 %t3446)
-  store i64 %t3447, ptr @"scheme.base:hash-table-keys"
+  %t3451 = call ptr @rt_alloc_words(i64 1)
+  %t3452 = ptrtoint ptr %t3451 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:hash-table-keys" to i64), ptr %t3451
+  %t3453 = or i64 %t3452, 4
+  %t3454 = call i64 @rt_root(i64 %t3453)
+  store i64 %t3454, ptr @"scheme.base:hash-table-keys"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_140"() {
 entry:
-  %t3466 = call ptr @rt_alloc_words(i64 1)
-  %t3467 = ptrtoint ptr %t3466 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:hash-table-values" to i64), ptr %t3466
-  %t3468 = or i64 %t3467, 4
-  %t3469 = call i64 @rt_root(i64 %t3468)
-  store i64 %t3469, ptr @"scheme.base:hash-table-values"
+  %t3473 = call ptr @rt_alloc_words(i64 1)
+  %t3474 = ptrtoint ptr %t3473 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:hash-table-values" to i64), ptr %t3473
+  %t3475 = or i64 %t3474, 4
+  %t3476 = call i64 @rt_root(i64 %t3475)
+  store i64 %t3476, ptr @"scheme.base:hash-table-values"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_141"() {
 entry:
-  %t3503 = call ptr @rt_alloc_words(i64 1)
-  %t3504 = ptrtoint ptr %t3503 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-ws?" to i64), ptr %t3503
-  %t3505 = or i64 %t3504, 4
-  %t3506 = call i64 @rt_root(i64 %t3505)
-  store i64 %t3506, ptr @"scheme.base:rd-ws?"
+  %t3510 = call ptr @rt_alloc_words(i64 1)
+  %t3511 = ptrtoint ptr %t3510 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-ws?" to i64), ptr %t3510
+  %t3512 = or i64 %t3511, 4
+  %t3513 = call i64 @rt_root(i64 %t3512)
+  store i64 %t3513, ptr @"scheme.base:rd-ws?"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_142"() {
 entry:
-  %t3524 = call ptr @rt_alloc_words(i64 1)
-  %t3525 = ptrtoint ptr %t3524 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-digit?" to i64), ptr %t3524
-  %t3526 = or i64 %t3525, 4
-  %t3527 = call i64 @rt_root(i64 %t3526)
-  store i64 %t3527, ptr @"scheme.base:rd-digit?"
+  %t3531 = call ptr @rt_alloc_words(i64 1)
+  %t3532 = ptrtoint ptr %t3531 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-digit?" to i64), ptr %t3531
+  %t3533 = or i64 %t3532, 4
+  %t3534 = call i64 @rt_root(i64 %t3533)
+  store i64 %t3534, ptr @"scheme.base:rd-digit?"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_143"() {
 entry:
-  %t3584 = call ptr @rt_alloc_words(i64 1)
-  %t3585 = ptrtoint ptr %t3584 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-delim?" to i64), ptr %t3584
-  %t3586 = or i64 %t3585, 4
-  %t3587 = call i64 @rt_root(i64 %t3586)
-  store i64 %t3587, ptr @"scheme.base:rd-delim?"
+  %t3591 = call ptr @rt_alloc_words(i64 1)
+  %t3592 = ptrtoint ptr %t3591 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-delim?" to i64), ptr %t3591
+  %t3593 = or i64 %t3592, 4
+  %t3594 = call i64 @rt_root(i64 %t3593)
+  store i64 %t3594, ptr @"scheme.base:rd-delim?"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_144"() {
 entry:
-  %t3629 = call ptr @rt_alloc_words(i64 1)
-  %t3630 = ptrtoint ptr %t3629 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-skip-line" to i64), ptr %t3629
-  %t3631 = or i64 %t3630, 4
-  %t3632 = call i64 @rt_root(i64 %t3631)
-  store i64 %t3632, ptr @"scheme.base:rd-skip-line"
+  %t3636 = call ptr @rt_alloc_words(i64 1)
+  %t3637 = ptrtoint ptr %t3636 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-skip-line" to i64), ptr %t3636
+  %t3638 = or i64 %t3637, 4
+  %t3639 = call i64 @rt_root(i64 %t3638)
+  store i64 %t3639, ptr @"scheme.base:rd-skip-line"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_145"() {
 entry:
-  %t3693 = call ptr @rt_alloc_words(i64 1)
-  %t3694 = ptrtoint ptr %t3693 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-skip-ws" to i64), ptr %t3693
-  %t3695 = or i64 %t3694, 4
-  %t3696 = call i64 @rt_root(i64 %t3695)
-  store i64 %t3696, ptr @"scheme.base:rd-skip-ws"
+  %t3700 = call ptr @rt_alloc_words(i64 1)
+  %t3701 = ptrtoint ptr %t3700 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-skip-ws" to i64), ptr %t3700
+  %t3702 = or i64 %t3701, 4
+  %t3703 = call i64 @rt_root(i64 %t3702)
+  store i64 %t3703, ptr @"scheme.base:rd-skip-ws"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_146"() {
 entry:
-  %t3728 = call ptr @rt_alloc_words(i64 1)
-  %t3729 = ptrtoint ptr %t3728 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-token-end" to i64), ptr %t3728
-  %t3730 = or i64 %t3729, 4
-  %t3731 = call i64 @rt_root(i64 %t3730)
-  store i64 %t3731, ptr @"scheme.base:rd-token-end"
+  %t3735 = call ptr @rt_alloc_words(i64 1)
+  %t3736 = ptrtoint ptr %t3735 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-token-end" to i64), ptr %t3735
+  %t3737 = or i64 %t3736, 4
+  %t3738 = call i64 @rt_root(i64 %t3737)
+  store i64 %t3738, ptr @"scheme.base:rd-token-end"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_147"() {
 entry:
-  %t3763 = call ptr @rt_alloc_words(i64 1)
-  %t3764 = ptrtoint ptr %t3763 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-all-digits?" to i64), ptr %t3763
-  %t3765 = or i64 %t3764, 4
-  %t3766 = call i64 @rt_root(i64 %t3765)
-  store i64 %t3766, ptr @"scheme.base:rd-all-digits?"
+  %t3770 = call ptr @rt_alloc_words(i64 1)
+  %t3771 = ptrtoint ptr %t3770 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-all-digits?" to i64), ptr %t3770
+  %t3772 = or i64 %t3771, 4
+  %t3773 = call i64 @rt_root(i64 %t3772)
+  store i64 %t3773, ptr @"scheme.base:rd-all-digits?"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_148"() {
 entry:
-  %t3824 = call ptr @rt_alloc_words(i64 1)
-  %t3825 = ptrtoint ptr %t3824 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-numeric?" to i64), ptr %t3824
-  %t3826 = or i64 %t3825, 4
-  %t3827 = call i64 @rt_root(i64 %t3826)
-  store i64 %t3827, ptr @"scheme.base:rd-numeric?"
+  %t3831 = call ptr @rt_alloc_words(i64 1)
+  %t3832 = ptrtoint ptr %t3831 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-numeric?" to i64), ptr %t3831
+  %t3833 = or i64 %t3832, 4
+  %t3834 = call i64 @rt_root(i64 %t3833)
+  store i64 %t3834, ptr @"scheme.base:rd-numeric?"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_149"() {
 entry:
-  %t3878 = call ptr @rt_alloc_words(i64 1)
-  %t3879 = ptrtoint ptr %t3878 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-digits" to i64), ptr %t3878
-  %t3880 = or i64 %t3879, 4
-  %t3881 = call i64 @rt_root(i64 %t3880)
-  store i64 %t3881, ptr @"scheme.base:rd-digits"
+  %t3885 = call ptr @rt_alloc_words(i64 1)
+  %t3886 = ptrtoint ptr %t3885 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-digits" to i64), ptr %t3885
+  %t3887 = or i64 %t3886, 4
+  %t3888 = call i64 @rt_root(i64 %t3887)
+  store i64 %t3888, ptr @"scheme.base:rd-digits"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_150"() {
 entry:
-  %t3932 = call ptr @rt_alloc_words(i64 1)
-  %t3933 = ptrtoint ptr %t3932 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-digits-neg" to i64), ptr %t3932
-  %t3934 = or i64 %t3933, 4
-  %t3935 = call i64 @rt_root(i64 %t3934)
-  store i64 %t3935, ptr @"scheme.base:rd-digits-neg"
+  %t3939 = call ptr @rt_alloc_words(i64 1)
+  %t3940 = ptrtoint ptr %t3939 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-digits-neg" to i64), ptr %t3939
+  %t3941 = or i64 %t3940, 4
+  %t3942 = call i64 @rt_root(i64 %t3941)
+  store i64 %t3942, ptr @"scheme.base:rd-digits-neg"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_151"() {
 entry:
-  %t3974 = call ptr @rt_alloc_words(i64 1)
-  %t3975 = ptrtoint ptr %t3974 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-parse-int" to i64), ptr %t3974
-  %t3976 = or i64 %t3975, 4
-  %t3977 = call i64 @rt_root(i64 %t3976)
-  store i64 %t3977, ptr @"scheme.base:rd-parse-int"
+  %t3981 = call ptr @rt_alloc_words(i64 1)
+  %t3982 = ptrtoint ptr %t3981 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-parse-int" to i64), ptr %t3981
+  %t3983 = or i64 %t3982, 4
+  %t3984 = call i64 @rt_root(i64 %t3983)
+  store i64 %t3984, ptr @"scheme.base:rd-parse-int"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_152"() {
 entry:
-  %t3987 = call ptr @rt_alloc_words(i64 1)
-  %t3988 = ptrtoint ptr %t3987 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-dotchar?" to i64), ptr %t3987
-  %t3989 = or i64 %t3988, 4
-  %t3990 = call i64 @rt_root(i64 %t3989)
-  store i64 %t3990, ptr @"scheme.base:rd-dotchar?"
+  %t3994 = call ptr @rt_alloc_words(i64 1)
+  %t3995 = ptrtoint ptr %t3994 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-dotchar?" to i64), ptr %t3994
+  %t3996 = or i64 %t3995, 4
+  %t3997 = call i64 @rt_root(i64 %t3996)
+  store i64 %t3997, ptr @"scheme.base:rd-dotchar?"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_153"() {
 entry:
-  %t4008 = call ptr @rt_alloc_words(i64 1)
-  %t4009 = ptrtoint ptr %t4008 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-exp-char?" to i64), ptr %t4008
-  %t4010 = or i64 %t4009, 4
-  %t4011 = call i64 @rt_root(i64 %t4010)
-  store i64 %t4011, ptr @"scheme.base:rd-exp-char?"
+  %t4015 = call ptr @rt_alloc_words(i64 1)
+  %t4016 = ptrtoint ptr %t4015 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-exp-char?" to i64), ptr %t4015
+  %t4017 = or i64 %t4016, 4
+  %t4018 = call i64 @rt_root(i64 %t4017)
+  store i64 %t4018, ptr @"scheme.base:rd-exp-char?"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_154"() {
 entry:
-  %t4029 = call ptr @rt_alloc_words(i64 1)
-  %t4030 = ptrtoint ptr %t4029 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-sign-char?" to i64), ptr %t4029
-  %t4031 = or i64 %t4030, 4
-  %t4032 = call i64 @rt_root(i64 %t4031)
-  store i64 %t4032, ptr @"scheme.base:rd-sign-char?"
+  %t4036 = call ptr @rt_alloc_words(i64 1)
+  %t4037 = ptrtoint ptr %t4036 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-sign-char?" to i64), ptr %t4036
+  %t4038 = or i64 %t4037, 4
+  %t4039 = call i64 @rt_root(i64 %t4038)
+  store i64 %t4039, ptr @"scheme.base:rd-sign-char?"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_155"() {
 entry:
-  %t4065 = call ptr @rt_alloc_words(i64 1)
-  %t4066 = ptrtoint ptr %t4065 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-scan-digits" to i64), ptr %t4065
-  %t4067 = or i64 %t4066, 4
-  %t4068 = call i64 @rt_root(i64 %t4067)
-  store i64 %t4068, ptr @"scheme.base:rd-scan-digits"
+  %t4072 = call ptr @rt_alloc_words(i64 1)
+  %t4073 = ptrtoint ptr %t4072 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-scan-digits" to i64), ptr %t4072
+  %t4074 = or i64 %t4073, 4
+  %t4075 = call i64 @rt_root(i64 %t4074)
+  store i64 %t4075, ptr @"scheme.base:rd-scan-digits"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_156"() {
 entry:
-  %t4257 = call ptr @rt_alloc_words(i64 1)
-  %t4258 = ptrtoint ptr %t4257 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-flonum?" to i64), ptr %t4257
-  %t4259 = or i64 %t4258, 4
-  %t4260 = call i64 @rt_root(i64 %t4259)
-  store i64 %t4260, ptr @"scheme.base:rd-flonum?"
+  %t4264 = call ptr @rt_alloc_words(i64 1)
+  %t4265 = ptrtoint ptr %t4264 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-flonum?" to i64), ptr %t4264
+  %t4266 = or i64 %t4265, 4
+  %t4267 = call i64 @rt_root(i64 %t4266)
+  store i64 %t4267, ptr @"scheme.base:rd-flonum?"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_157"() {
 entry:
-  %t4294 = call ptr @rt_alloc_words(i64 1)
-  %t4295 = ptrtoint ptr %t4294 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-atom" to i64), ptr %t4294
-  %t4296 = or i64 %t4295, 4
-  %t4297 = call i64 @rt_root(i64 %t4296)
-  store i64 %t4297, ptr @"scheme.base:rd-atom"
+  %t4284 = call ptr @rt_alloc_words(i64 1)
+  %t4285 = ptrtoint ptr %t4284 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-nonfinite" to i64), ptr %t4284
+  %t4286 = or i64 %t4285, 4
+  %t4287 = call i64 @rt_root(i64 %t4286)
+  store i64 %t4287, ptr @"scheme.base:rd-nonfinite"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_158"() {
 entry:
-  %t4375 = call ptr @rt_alloc_words(i64 1)
-  %t4376 = ptrtoint ptr %t4375 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-hex-digit" to i64), ptr %t4375
-  %t4377 = or i64 %t4376, 4
-  %t4378 = call i64 @rt_root(i64 %t4377)
-  store i64 %t4378, ptr @"scheme.base:rd-hex-digit"
+  %t4329 = call ptr @rt_alloc_words(i64 1)
+  %t4330 = ptrtoint ptr %t4329 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-atom" to i64), ptr %t4329
+  %t4331 = or i64 %t4330, 4
+  %t4332 = call i64 @rt_root(i64 %t4331)
+  store i64 %t4332, ptr @"scheme.base:rd-atom"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_159"() {
 entry:
-  %t4446 = call ptr @rt_alloc_words(i64 1)
-  %t4447 = ptrtoint ptr %t4446 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-hex" to i64), ptr %t4446
-  %t4448 = or i64 %t4447, 4
-  %t4449 = call i64 @rt_root(i64 %t4448)
-  store i64 %t4449, ptr @"scheme.base:rd-hex"
+  %t4410 = call ptr @rt_alloc_words(i64 1)
+  %t4411 = ptrtoint ptr %t4410 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-hex-digit" to i64), ptr %t4410
+  %t4412 = or i64 %t4411, 4
+  %t4413 = call i64 @rt_root(i64 %t4412)
+  store i64 %t4413, ptr @"scheme.base:rd-hex-digit"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_160"() {
 entry:
-  %t4479 = call ptr @rt_alloc_words(i64 1)
-  %t4480 = ptrtoint ptr %t4479 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-str-esc" to i64), ptr %t4479
-  %t4481 = or i64 %t4480, 4
-  %t4482 = call i64 @rt_root(i64 %t4481)
-  store i64 %t4482, ptr @"scheme.base:rd-str-esc"
+  %t4481 = call ptr @rt_alloc_words(i64 1)
+  %t4482 = ptrtoint ptr %t4481 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-hex" to i64), ptr %t4481
+  %t4483 = or i64 %t4482, 4
+  %t4484 = call i64 @rt_root(i64 %t4483)
+  store i64 %t4484, ptr @"scheme.base:rd-hex"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_161"() {
 entry:
-  %t4625 = call ptr @rt_alloc_words(i64 1)
-  %t4626 = ptrtoint ptr %t4625 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-string" to i64), ptr %t4625
-  %t4627 = or i64 %t4626, 4
-  %t4628 = call i64 @rt_root(i64 %t4627)
-  store i64 %t4628, ptr @"scheme.base:rd-string"
+  %t4514 = call ptr @rt_alloc_words(i64 1)
+  %t4515 = ptrtoint ptr %t4514 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-str-esc" to i64), ptr %t4514
+  %t4516 = or i64 %t4515, 4
+  %t4517 = call i64 @rt_root(i64 %t4516)
+  store i64 %t4517, ptr @"scheme.base:rd-str-esc"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_162"() {
 entry:
-  %t4806 = call ptr @rt_alloc_words(i64 1)
-  %t4807 = ptrtoint ptr %t4806 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-hash" to i64), ptr %t4806
-  %t4808 = or i64 %t4807, 4
-  %t4809 = call i64 @rt_root(i64 %t4808)
-  store i64 %t4809, ptr @"scheme.base:rd-hash"
+  %t4660 = call ptr @rt_alloc_words(i64 1)
+  %t4661 = ptrtoint ptr %t4660 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-string" to i64), ptr %t4660
+  %t4662 = or i64 %t4661, 4
+  %t4663 = call i64 @rt_root(i64 %t4662)
+  store i64 %t4663, ptr @"scheme.base:rd-string"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_163"() {
 entry:
-  %t4848 = call ptr @rt_alloc_words(i64 1)
-  %t4849 = ptrtoint ptr %t4848 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-char-name" to i64), ptr %t4848
-  %t4850 = or i64 %t4849, 4
-  %t4851 = call i64 @rt_root(i64 %t4850)
-  store i64 %t4851, ptr @"scheme.base:rd-char-name"
+  %t4841 = call ptr @rt_alloc_words(i64 1)
+  %t4842 = ptrtoint ptr %t4841 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-hash" to i64), ptr %t4841
+  %t4843 = or i64 %t4842, 4
+  %t4844 = call i64 @rt_root(i64 %t4843)
+  store i64 %t4844, ptr @"scheme.base:rd-hash"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_164"() {
 entry:
-  %t4894 = call ptr @rt_alloc_words(i64 1)
-  %t4895 = ptrtoint ptr %t4894 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-char" to i64), ptr %t4894
-  %t4896 = or i64 %t4895, 4
-  %t4897 = call i64 @rt_root(i64 %t4896)
-  store i64 %t4897, ptr @"scheme.base:rd-char"
+  %t4883 = call ptr @rt_alloc_words(i64 1)
+  %t4884 = ptrtoint ptr %t4883 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-char-name" to i64), ptr %t4883
+  %t4885 = or i64 %t4884, 4
+  %t4886 = call i64 @rt_root(i64 %t4885)
+  store i64 %t4886, ptr @"scheme.base:rd-char-name"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_165"() {
 entry:
-  %t4921 = call ptr @rt_alloc_words(i64 1)
-  %t4922 = ptrtoint ptr %t4921 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-quote" to i64), ptr %t4921
-  %t4923 = or i64 %t4922, 4
-  %t4924 = call i64 @rt_root(i64 %t4923)
-  store i64 %t4924, ptr @"scheme.base:rd-quote"
+  %t4929 = call ptr @rt_alloc_words(i64 1)
+  %t4930 = ptrtoint ptr %t4929 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-char" to i64), ptr %t4929
+  %t4931 = or i64 %t4930, 4
+  %t4932 = call i64 @rt_root(i64 %t4931)
+  store i64 %t4932, ptr @"scheme.base:rd-char"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_166"() {
 entry:
-  %t4948 = call ptr @rt_alloc_words(i64 1)
-  %t4949 = ptrtoint ptr %t4948 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-quasi" to i64), ptr %t4948
-  %t4950 = or i64 %t4949, 4
-  %t4951 = call i64 @rt_root(i64 %t4950)
-  store i64 %t4951, ptr @"scheme.base:rd-quasi"
+  %t4956 = call ptr @rt_alloc_words(i64 1)
+  %t4957 = ptrtoint ptr %t4956 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-quote" to i64), ptr %t4956
+  %t4958 = or i64 %t4957, 4
+  %t4959 = call i64 @rt_root(i64 %t4958)
+  store i64 %t4959, ptr @"scheme.base:rd-quote"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_167"() {
 entry:
-  %t5024 = call ptr @rt_alloc_words(i64 1)
-  %t5025 = ptrtoint ptr %t5024 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-unquote" to i64), ptr %t5024
-  %t5026 = or i64 %t5025, 4
-  %t5027 = call i64 @rt_root(i64 %t5026)
-  store i64 %t5027, ptr @"scheme.base:rd-unquote"
+  %t4983 = call ptr @rt_alloc_words(i64 1)
+  %t4984 = ptrtoint ptr %t4983 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-quasi" to i64), ptr %t4983
+  %t4985 = or i64 %t4984, 4
+  %t4986 = call i64 @rt_root(i64 %t4985)
+  store i64 %t4986, ptr @"scheme.base:rd-quasi"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_168"() {
 entry:
-  %t5068 = call ptr @rt_alloc_words(i64 1)
-  %t5069 = ptrtoint ptr %t5068 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-dot?" to i64), ptr %t5068
-  %t5070 = or i64 %t5069, 4
-  %t5071 = call i64 @rt_root(i64 %t5070)
-  store i64 %t5071, ptr @"scheme.base:rd-dot?"
+  %t5059 = call ptr @rt_alloc_words(i64 1)
+  %t5060 = ptrtoint ptr %t5059 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-unquote" to i64), ptr %t5059
+  %t5061 = or i64 %t5060, 4
+  %t5062 = call i64 @rt_root(i64 %t5061)
+  store i64 %t5062, ptr @"scheme.base:rd-unquote"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_169"() {
 entry:
-  %t5084 = call ptr @rt_alloc_words(i64 1)
-  %t5085 = ptrtoint ptr %t5084 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-append-reverse" to i64), ptr %t5084
-  %t5086 = or i64 %t5085, 4
-  %t5087 = call i64 @rt_root(i64 %t5086)
-  store i64 %t5087, ptr @"scheme.base:rd-append-reverse"
+  %t5103 = call ptr @rt_alloc_words(i64 1)
+  %t5104 = ptrtoint ptr %t5103 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-dot?" to i64), ptr %t5103
+  %t5105 = or i64 %t5104, 4
+  %t5106 = call i64 @rt_root(i64 %t5105)
+  store i64 %t5106, ptr @"scheme.base:rd-dot?"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_170"() {
 entry:
-  %t5209 = call ptr @rt_alloc_words(i64 1)
-  %t5210 = ptrtoint ptr %t5209 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-list" to i64), ptr %t5209
-  %t5211 = or i64 %t5210, 4
-  %t5212 = call i64 @rt_root(i64 %t5211)
-  store i64 %t5212, ptr @"scheme.base:rd-list"
+  %t5119 = call ptr @rt_alloc_words(i64 1)
+  %t5120 = ptrtoint ptr %t5119 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-append-reverse" to i64), ptr %t5119
+  %t5121 = or i64 %t5120, 4
+  %t5122 = call i64 @rt_root(i64 %t5121)
+  store i64 %t5122, ptr @"scheme.base:rd-append-reverse"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_171"() {
 entry:
-  %t5376 = call ptr @rt_alloc_words(i64 1)
-  %t5377 = ptrtoint ptr %t5376 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:rd-datum" to i64), ptr %t5376
-  %t5378 = or i64 %t5377, 4
-  %t5379 = call i64 @rt_root(i64 %t5378)
-  store i64 %t5379, ptr @"scheme.base:rd-datum"
+  %t5244 = call ptr @rt_alloc_words(i64 1)
+  %t5245 = ptrtoint ptr %t5244 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-list" to i64), ptr %t5244
+  %t5246 = or i64 %t5245, 4
+  %t5247 = call i64 @rt_root(i64 %t5246)
+  store i64 %t5247, ptr @"scheme.base:rd-list"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_172"() {
 entry:
-  %t5395 = call ptr @rt_alloc_words(i64 1)
-  %t5396 = ptrtoint ptr %t5395 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:read-from-string" to i64), ptr %t5395
-  %t5397 = or i64 %t5396, 4
-  %t5398 = call i64 @rt_root(i64 %t5397)
-  store i64 %t5398, ptr @"scheme.base:read-from-string"
+  %t5411 = call ptr @rt_alloc_words(i64 1)
+  %t5412 = ptrtoint ptr %t5411 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:rd-datum" to i64), ptr %t5411
+  %t5413 = or i64 %t5412, 4
+  %t5414 = call i64 @rt_root(i64 %t5413)
+  store i64 %t5414, ptr @"scheme.base:rd-datum"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_173"() {
 entry:
-  %t5465 = call ptr @rt_alloc_words(i64 1)
-  %t5466 = ptrtoint ptr %t5465 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:read-all-from-string" to i64), ptr %t5465
-  %t5467 = or i64 %t5466, 4
-  %t5468 = call i64 @rt_root(i64 %t5467)
-  store i64 %t5468, ptr @"scheme.base:read-all-from-string"
+  %t5430 = call ptr @rt_alloc_words(i64 1)
+  %t5431 = ptrtoint ptr %t5430 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:read-from-string" to i64), ptr %t5430
+  %t5432 = or i64 %t5431, 4
+  %t5433 = call i64 @rt_root(i64 %t5432)
+  store i64 %t5433, ptr @"scheme.base:read-from-string"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_174"() {
 entry:
-  %t5469 = call i64 @rt_root(i64 1)
-  store i64 %t5469, ptr @"scheme.base:%port-rtd-cell"
+  %t5500 = call ptr @rt_alloc_words(i64 1)
+  %t5501 = ptrtoint ptr %t5500 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:read-all-from-string" to i64), ptr %t5500
+  %t5502 = or i64 %t5501, 4
+  %t5503 = call i64 @rt_root(i64 %t5502)
+  store i64 %t5503, ptr @"scheme.base:read-all-from-string"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_175"() {
 entry:
-  %t5478 = call ptr @rt_alloc_words(i64 1)
-  %t5479 = ptrtoint ptr %t5478 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:%port-rtd" to i64), ptr %t5478
-  %t5480 = or i64 %t5479, 4
-  %t5481 = call i64 @rt_root(i64 %t5480)
-  store i64 %t5481, ptr @"scheme.base:%port-rtd"
+  %t5504 = call i64 @rt_root(i64 1)
+  store i64 %t5504, ptr @"scheme.base:%port-rtd-cell"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_176"() {
 entry:
-  %t5496 = call ptr @rt_alloc_words(i64 1)
-  %t5497 = ptrtoint ptr %t5496 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:%make-port" to i64), ptr %t5496
-  %t5498 = or i64 %t5497, 4
-  %t5499 = call i64 @rt_root(i64 %t5498)
-  store i64 %t5499, ptr @"scheme.base:%make-port"
+  %t5513 = call ptr @rt_alloc_words(i64 1)
+  %t5514 = ptrtoint ptr %t5513 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:%port-rtd" to i64), ptr %t5513
+  %t5515 = or i64 %t5514, 4
+  %t5516 = call i64 @rt_root(i64 %t5515)
+  store i64 %t5516, ptr @"scheme.base:%port-rtd"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_177"() {
 entry:
-  %t5508 = call ptr @rt_alloc_words(i64 1)
-  %t5509 = ptrtoint ptr %t5508 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:port?" to i64), ptr %t5508
-  %t5510 = or i64 %t5509, 4
-  %t5511 = call i64 @rt_root(i64 %t5510)
-  store i64 %t5511, ptr @"scheme.base:port?"
+  %t5531 = call ptr @rt_alloc_words(i64 1)
+  %t5532 = ptrtoint ptr %t5531 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:%make-port" to i64), ptr %t5531
+  %t5533 = or i64 %t5532, 4
+  %t5534 = call i64 @rt_root(i64 %t5533)
+  store i64 %t5534, ptr @"scheme.base:%make-port"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_178"() {
 entry:
-  %t5521 = call ptr @rt_alloc_words(i64 1)
-  %t5522 = ptrtoint ptr %t5521 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:input-port?" to i64), ptr %t5521
-  %t5523 = or i64 %t5522, 4
-  %t5524 = call i64 @rt_root(i64 %t5523)
-  store i64 %t5524, ptr @"scheme.base:input-port?"
+  %t5543 = call ptr @rt_alloc_words(i64 1)
+  %t5544 = ptrtoint ptr %t5543 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:port?" to i64), ptr %t5543
+  %t5545 = or i64 %t5544, 4
+  %t5546 = call i64 @rt_root(i64 %t5545)
+  store i64 %t5546, ptr @"scheme.base:port?"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_179"() {
 entry:
-  %t5535 = call ptr @rt_alloc_words(i64 1)
-  %t5536 = ptrtoint ptr %t5535 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:output-port?" to i64), ptr %t5535
-  %t5537 = or i64 %t5536, 4
-  %t5538 = call i64 @rt_root(i64 %t5537)
-  store i64 %t5538, ptr @"scheme.base:output-port?"
+  %t5556 = call ptr @rt_alloc_words(i64 1)
+  %t5557 = ptrtoint ptr %t5556 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:input-port?" to i64), ptr %t5556
+  %t5558 = or i64 %t5557, 4
+  %t5559 = call i64 @rt_root(i64 %t5558)
+  store i64 %t5559, ptr @"scheme.base:input-port?"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_180"() {
 entry:
-  %t5546 = call ptr @rt_alloc_words(i64 1)
-  %t5547 = ptrtoint ptr %t5546 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:textual-port?" to i64), ptr %t5546
-  %t5548 = or i64 %t5547, 4
-  %t5549 = call i64 @rt_root(i64 %t5548)
-  store i64 %t5549, ptr @"scheme.base:textual-port?"
+  %t5570 = call ptr @rt_alloc_words(i64 1)
+  %t5571 = ptrtoint ptr %t5570 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:output-port?" to i64), ptr %t5570
+  %t5572 = or i64 %t5571, 4
+  %t5573 = call i64 @rt_root(i64 %t5572)
+  store i64 %t5573, ptr @"scheme.base:output-port?"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_181"() {
 entry:
-  %t5552 = call ptr @rt_alloc_words(i64 1)
-  %t5553 = ptrtoint ptr %t5552 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:port-closed?" to i64), ptr %t5552
-  %t5554 = or i64 %t5553, 4
-  %t5555 = call i64 @rt_root(i64 %t5554)
-  store i64 %t5555, ptr @"scheme.base:port-closed?"
+  %t5581 = call ptr @rt_alloc_words(i64 1)
+  %t5582 = ptrtoint ptr %t5581 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:textual-port?" to i64), ptr %t5581
+  %t5583 = or i64 %t5582, 4
+  %t5584 = call i64 @rt_root(i64 %t5583)
+  store i64 %t5584, ptr @"scheme.base:textual-port?"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_182"() {
 entry:
-  %t5566 = call ptr @rt_alloc_words(i64 1)
-  %t5567 = ptrtoint ptr %t5566 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:input-port-open?" to i64), ptr %t5566
-  %t5568 = or i64 %t5567, 4
-  %t5569 = call i64 @rt_root(i64 %t5568)
-  store i64 %t5569, ptr @"scheme.base:input-port-open?"
+  %t5587 = call ptr @rt_alloc_words(i64 1)
+  %t5588 = ptrtoint ptr %t5587 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:port-closed?" to i64), ptr %t5587
+  %t5589 = or i64 %t5588, 4
+  %t5590 = call i64 @rt_root(i64 %t5589)
+  store i64 %t5590, ptr @"scheme.base:port-closed?"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_183"() {
 entry:
-  %t5580 = call ptr @rt_alloc_words(i64 1)
-  %t5581 = ptrtoint ptr %t5580 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:output-port-open?" to i64), ptr %t5580
-  %t5582 = or i64 %t5581, 4
-  %t5583 = call i64 @rt_root(i64 %t5582)
-  store i64 %t5583, ptr @"scheme.base:output-port-open?"
+  %t5601 = call ptr @rt_alloc_words(i64 1)
+  %t5602 = ptrtoint ptr %t5601 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:input-port-open?" to i64), ptr %t5601
+  %t5603 = or i64 %t5602, 4
+  %t5604 = call i64 @rt_root(i64 %t5603)
+  store i64 %t5604, ptr @"scheme.base:input-port-open?"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_184"() {
 entry:
-  %t5609 = call ptr @rt_alloc_words(i64 1)
-  %t5610 = ptrtoint ptr %t5609 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:%check-input-port" to i64), ptr %t5609
-  %t5611 = or i64 %t5610, 4
-  %t5612 = call i64 @rt_root(i64 %t5611)
-  store i64 %t5612, ptr @"scheme.base:%check-input-port"
+  %t5615 = call ptr @rt_alloc_words(i64 1)
+  %t5616 = ptrtoint ptr %t5615 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:output-port-open?" to i64), ptr %t5615
+  %t5617 = or i64 %t5616, 4
+  %t5618 = call i64 @rt_root(i64 %t5617)
+  store i64 %t5618, ptr @"scheme.base:output-port-open?"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_185"() {
 entry:
-  %t5638 = call ptr @rt_alloc_words(i64 1)
-  %t5639 = ptrtoint ptr %t5638 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:%check-output-port" to i64), ptr %t5638
-  %t5640 = or i64 %t5639, 4
-  %t5641 = call i64 @rt_root(i64 %t5640)
-  store i64 %t5641, ptr @"scheme.base:%check-output-port"
+  %t5644 = call ptr @rt_alloc_words(i64 1)
+  %t5645 = ptrtoint ptr %t5644 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:%check-input-port" to i64), ptr %t5644
+  %t5646 = or i64 %t5645, 4
+  %t5647 = call i64 @rt_root(i64 %t5646)
+  store i64 %t5647, ptr @"scheme.base:%check-input-port"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_186"() {
 entry:
-  %t5647 = call ptr @rt_alloc_words(i64 1)
-  %t5648 = ptrtoint ptr %t5647 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:%port-buf" to i64), ptr %t5647
-  %t5649 = or i64 %t5648, 4
-  %t5650 = call i64 @rt_root(i64 %t5649)
-  store i64 %t5650, ptr @"scheme.base:%port-buf"
+  %t5673 = call ptr @rt_alloc_words(i64 1)
+  %t5674 = ptrtoint ptr %t5673 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:%check-output-port" to i64), ptr %t5673
+  %t5675 = or i64 %t5674, 4
+  %t5676 = call i64 @rt_root(i64 %t5675)
+  store i64 %t5676, ptr @"scheme.base:%check-output-port"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_187"() {
 entry:
-  %t5658 = call ptr @rt_alloc_words(i64 1)
-  %t5659 = ptrtoint ptr %t5658 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:open-input-string" to i64), ptr %t5658
-  %t5660 = or i64 %t5659, 4
-  %t5661 = call i64 @rt_root(i64 %t5660)
-  store i64 %t5661, ptr @"scheme.base:open-input-string"
+  %t5682 = call ptr @rt_alloc_words(i64 1)
+  %t5683 = ptrtoint ptr %t5682 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:%port-buf" to i64), ptr %t5682
+  %t5684 = or i64 %t5683, 4
+  %t5685 = call i64 @rt_root(i64 %t5684)
+  store i64 %t5685, ptr @"scheme.base:%port-buf"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_188"() {
 entry:
-  %t5679 = call ptr @rt_alloc_words(i64 1)
-  %t5680 = ptrtoint ptr %t5679 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:open-input-file" to i64), ptr %t5679
-  %t5681 = or i64 %t5680, 4
-  %t5682 = call i64 @rt_root(i64 %t5681)
-  store i64 %t5682, ptr @"scheme.base:open-input-file"
+  %t5693 = call ptr @rt_alloc_words(i64 1)
+  %t5694 = ptrtoint ptr %t5693 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:open-input-string" to i64), ptr %t5693
+  %t5695 = or i64 %t5694, 4
+  %t5696 = call i64 @rt_root(i64 %t5695)
+  store i64 %t5696, ptr @"scheme.base:open-input-string"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_189"() {
 entry:
-  %t5707 = call ptr @rt_alloc_words(i64 1)
-  %t5708 = ptrtoint ptr %t5707 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:%port-at-eof?" to i64), ptr %t5707
-  %t5709 = or i64 %t5708, 4
-  %t5710 = call i64 @rt_root(i64 %t5709)
-  store i64 %t5710, ptr @"scheme.base:%port-at-eof?"
+  %t5714 = call ptr @rt_alloc_words(i64 1)
+  %t5715 = ptrtoint ptr %t5714 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:open-input-file" to i64), ptr %t5714
+  %t5716 = or i64 %t5715, 4
+  %t5717 = call i64 @rt_root(i64 %t5716)
+  store i64 %t5717, ptr @"scheme.base:open-input-file"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_190"() {
 entry:
-  %t5744 = call ptr @rt_alloc_words(i64 1)
-  %t5745 = ptrtoint ptr %t5744 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:read-char" to i64), ptr %t5744
-  %t5746 = or i64 %t5745, 4
-  %t5747 = call i64 @rt_root(i64 %t5746)
-  store i64 %t5747, ptr @"scheme.base:read-char"
+  %t5742 = call ptr @rt_alloc_words(i64 1)
+  %t5743 = ptrtoint ptr %t5742 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:%port-at-eof?" to i64), ptr %t5742
+  %t5744 = or i64 %t5743, 4
+  %t5745 = call i64 @rt_root(i64 %t5744)
+  store i64 %t5745, ptr @"scheme.base:%port-at-eof?"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_191"() {
 entry:
-  %t5772 = call ptr @rt_alloc_words(i64 1)
-  %t5773 = ptrtoint ptr %t5772 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:peek-char" to i64), ptr %t5772
-  %t5774 = or i64 %t5773, 4
-  %t5775 = call i64 @rt_root(i64 %t5774)
-  store i64 %t5775, ptr @"scheme.base:peek-char"
+  %t5779 = call ptr @rt_alloc_words(i64 1)
+  %t5780 = ptrtoint ptr %t5779 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:read-char" to i64), ptr %t5779
+  %t5781 = or i64 %t5780, 4
+  %t5782 = call i64 @rt_root(i64 %t5781)
+  store i64 %t5782, ptr @"scheme.base:read-char"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_192"() {
 entry:
-  %t5897 = call ptr @rt_alloc_words(i64 1)
-  %t5898 = ptrtoint ptr %t5897 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:read-line" to i64), ptr %t5897
-  %t5899 = or i64 %t5898, 4
-  %t5900 = call i64 @rt_root(i64 %t5899)
-  store i64 %t5900, ptr @"scheme.base:read-line"
+  %t5807 = call ptr @rt_alloc_words(i64 1)
+  %t5808 = ptrtoint ptr %t5807 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:peek-char" to i64), ptr %t5807
+  %t5809 = or i64 %t5808, 4
+  %t5810 = call i64 @rt_root(i64 %t5809)
+  store i64 %t5810, ptr @"scheme.base:peek-char"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_193"() {
 entry:
-  %t5952 = call ptr @rt_alloc_words(i64 1)
-  %t5953 = ptrtoint ptr %t5952 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:read-string" to i64), ptr %t5952
-  %t5954 = or i64 %t5953, 4
-  %t5955 = call i64 @rt_root(i64 %t5954)
-  store i64 %t5955, ptr @"scheme.base:read-string"
+  %t5932 = call ptr @rt_alloc_words(i64 1)
+  %t5933 = ptrtoint ptr %t5932 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:read-line" to i64), ptr %t5932
+  %t5934 = or i64 %t5933, 4
+  %t5935 = call i64 @rt_root(i64 %t5934)
+  store i64 %t5935, ptr @"scheme.base:read-line"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_194"() {
 entry:
-  %t6006 = call ptr @rt_alloc_words(i64 1)
-  %t6007 = ptrtoint ptr %t6006 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:read" to i64), ptr %t6006
-  %t6008 = or i64 %t6007, 4
-  %t6009 = call i64 @rt_root(i64 %t6008)
-  store i64 %t6009, ptr @"scheme.base:read"
+  %t5987 = call ptr @rt_alloc_words(i64 1)
+  %t5988 = ptrtoint ptr %t5987 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:read-string" to i64), ptr %t5987
+  %t5989 = or i64 %t5988, 4
+  %t5990 = call i64 @rt_root(i64 %t5989)
+  store i64 %t5990, ptr @"scheme.base:read-string"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_195"() {
 entry:
-  %t6027 = call ptr @rt_alloc_words(i64 1)
-  %t6028 = ptrtoint ptr %t6027 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:open-output-file" to i64), ptr %t6027
-  %t6029 = or i64 %t6028, 4
-  %t6030 = call i64 @rt_root(i64 %t6029)
-  store i64 %t6030, ptr @"scheme.base:open-output-file"
+  %t6041 = call ptr @rt_alloc_words(i64 1)
+  %t6042 = ptrtoint ptr %t6041 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:read" to i64), ptr %t6041
+  %t6043 = or i64 %t6042, 4
+  %t6044 = call i64 @rt_root(i64 %t6043)
+  store i64 %t6044, ptr @"scheme.base:read"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_196"() {
 entry:
-  %t6048 = call ptr @rt_alloc_words(i64 1)
-  %t6049 = ptrtoint ptr %t6048 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:open-output-string" to i64), ptr %t6048
-  %t6050 = or i64 %t6049, 4
-  %t6051 = call i64 @rt_root(i64 %t6050)
-  store i64 %t6051, ptr @"scheme.base:open-output-string"
+  %t6062 = call ptr @rt_alloc_words(i64 1)
+  %t6063 = ptrtoint ptr %t6062 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:open-output-file" to i64), ptr %t6062
+  %t6064 = or i64 %t6063, 4
+  %t6065 = call i64 @rt_root(i64 %t6064)
+  store i64 %t6065, ptr @"scheme.base:open-output-file"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_197"() {
 entry:
-  %t6082 = call ptr @rt_alloc_words(i64 1)
-  %t6083 = ptrtoint ptr %t6082 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:get-output-string" to i64), ptr %t6082
-  %t6084 = or i64 %t6083, 4
-  %t6085 = call i64 @rt_root(i64 %t6084)
-  store i64 %t6085, ptr @"scheme.base:get-output-string"
+  %t6083 = call ptr @rt_alloc_words(i64 1)
+  %t6084 = ptrtoint ptr %t6083 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:open-output-string" to i64), ptr %t6083
+  %t6085 = or i64 %t6084, 4
+  %t6086 = call i64 @rt_root(i64 %t6085)
+  store i64 %t6086, ptr @"scheme.base:open-output-string"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_198"() {
 entry:
-  %t6096 = call ptr @rt_alloc_words(i64 1)
-  %t6097 = ptrtoint ptr %t6096 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:flush-output-port" to i64), ptr %t6096
-  %t6098 = or i64 %t6097, 4
-  %t6099 = call i64 @rt_root(i64 %t6098)
-  store i64 %t6099, ptr @"scheme.base:flush-output-port"
+  %t6117 = call ptr @rt_alloc_words(i64 1)
+  %t6118 = ptrtoint ptr %t6117 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:get-output-string" to i64), ptr %t6117
+  %t6119 = or i64 %t6118, 4
+  %t6120 = call i64 @rt_root(i64 %t6119)
+  store i64 %t6120, ptr @"scheme.base:get-output-string"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_199"() {
 entry:
-  %t6128 = call ptr @rt_alloc_words(i64 1)
-  %t6129 = ptrtoint ptr %t6128 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:close-port" to i64), ptr %t6128
-  %t6130 = or i64 %t6129, 4
-  %t6131 = call i64 @rt_root(i64 %t6130)
-  store i64 %t6131, ptr @"scheme.base:close-port"
+  %t6131 = call ptr @rt_alloc_words(i64 1)
+  %t6132 = ptrtoint ptr %t6131 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:flush-output-port" to i64), ptr %t6131
+  %t6133 = or i64 %t6132, 4
+  %t6134 = call i64 @rt_root(i64 %t6133)
+  store i64 %t6134, ptr @"scheme.base:flush-output-port"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_200"() {
 entry:
-  %t6154 = call ptr @rt_alloc_words(i64 1)
-  %t6155 = ptrtoint ptr %t6154 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:close-input-port" to i64), ptr %t6154
-  %t6156 = or i64 %t6155, 4
-  %t6157 = call i64 @rt_root(i64 %t6156)
-  store i64 %t6157, ptr @"scheme.base:close-input-port"
+  %t6163 = call ptr @rt_alloc_words(i64 1)
+  %t6164 = ptrtoint ptr %t6163 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:close-port" to i64), ptr %t6163
+  %t6165 = or i64 %t6164, 4
+  %t6166 = call i64 @rt_root(i64 %t6165)
+  store i64 %t6166, ptr @"scheme.base:close-port"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_201"() {
 entry:
-  %t6180 = call ptr @rt_alloc_words(i64 1)
-  %t6181 = ptrtoint ptr %t6180 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:close-output-port" to i64), ptr %t6180
-  %t6182 = or i64 %t6181, 4
-  %t6183 = call i64 @rt_root(i64 %t6182)
-  store i64 %t6183, ptr @"scheme.base:close-output-port"
+  %t6189 = call ptr @rt_alloc_words(i64 1)
+  %t6190 = ptrtoint ptr %t6189 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:close-input-port" to i64), ptr %t6189
+  %t6191 = or i64 %t6190, 4
+  %t6192 = call i64 @rt_root(i64 %t6191)
+  store i64 %t6192, ptr @"scheme.base:close-input-port"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_202"() {
 entry:
-  %t6184 = call i64 @rt_root(i64 1)
-  store i64 %t6184, ptr @"scheme.base:%stdout-port"
+  %t6215 = call ptr @rt_alloc_words(i64 1)
+  %t6216 = ptrtoint ptr %t6215 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:close-output-port" to i64), ptr %t6215
+  %t6217 = or i64 %t6216, 4
+  %t6218 = call i64 @rt_root(i64 %t6217)
+  store i64 %t6218, ptr @"scheme.base:close-output-port"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_203"() {
 entry:
-  %t6185 = call i64 @rt_root(i64 1)
-  store i64 %t6185, ptr @"scheme.base:%stderr-port"
+  %t6219 = call i64 @rt_root(i64 1)
+  store i64 %t6219, ptr @"scheme.base:%stdout-port"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_204"() {
 entry:
-  %t6186 = call i64 @rt_root(i64 1)
-  store i64 %t6186, ptr @"scheme.base:%stdin-port"
+  %t6220 = call i64 @rt_root(i64 1)
+  store i64 %t6220, ptr @"scheme.base:%stderr-port"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_205"() {
 entry:
-  %t6218 = call ptr @rt_alloc_words(i64 1)
-  %t6219 = ptrtoint ptr %t6218 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:current-output-port" to i64), ptr %t6218
-  %t6220 = or i64 %t6219, 4
-  %t6221 = call i64 @rt_root(i64 %t6220)
-  store i64 %t6221, ptr @"scheme.base:current-output-port"
+  %t6221 = call i64 @rt_root(i64 1)
+  store i64 %t6221, ptr @"scheme.base:%stdin-port"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_206"() {
 entry:
-  %t6250 = call ptr @rt_alloc_words(i64 1)
-  %t6251 = ptrtoint ptr %t6250 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:current-error-port" to i64), ptr %t6250
-  %t6252 = or i64 %t6251, 4
-  %t6253 = call i64 @rt_root(i64 %t6252)
-  store i64 %t6253, ptr @"scheme.base:current-error-port"
+  %t6253 = call ptr @rt_alloc_words(i64 1)
+  %t6254 = ptrtoint ptr %t6253 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:current-output-port" to i64), ptr %t6253
+  %t6255 = or i64 %t6254, 4
+  %t6256 = call i64 @rt_root(i64 %t6255)
+  store i64 %t6256, ptr @"scheme.base:current-output-port"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_207"() {
 entry:
-  %t6282 = call ptr @rt_alloc_words(i64 1)
-  %t6283 = ptrtoint ptr %t6282 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:current-input-port" to i64), ptr %t6282
-  %t6284 = or i64 %t6283, 4
-  %t6285 = call i64 @rt_root(i64 %t6284)
-  store i64 %t6285, ptr @"scheme.base:current-input-port"
+  %t6285 = call ptr @rt_alloc_words(i64 1)
+  %t6286 = ptrtoint ptr %t6285 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:current-error-port" to i64), ptr %t6285
+  %t6287 = or i64 %t6286, 4
+  %t6288 = call i64 @rt_root(i64 %t6287)
+  store i64 %t6288, ptr @"scheme.base:current-error-port"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_208"() {
 entry:
-  %t6332 = call ptr @rt_alloc_words(i64 1)
-  %t6333 = ptrtoint ptr %t6332 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:call-with-port" to i64), ptr %t6332
-  %t6334 = or i64 %t6333, 4
-  %t6335 = call i64 @rt_root(i64 %t6334)
-  store i64 %t6335, ptr @"scheme.base:call-with-port"
+  %t6317 = call ptr @rt_alloc_words(i64 1)
+  %t6318 = ptrtoint ptr %t6317 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:current-input-port" to i64), ptr %t6317
+  %t6319 = or i64 %t6318, 4
+  %t6320 = call i64 @rt_root(i64 %t6319)
+  store i64 %t6320, ptr @"scheme.base:current-input-port"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_209"() {
 entry:
-  %t6396 = call ptr @rt_alloc_words(i64 1)
-  %t6397 = ptrtoint ptr %t6396 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:with-output-to-file" to i64), ptr %t6396
-  %t6398 = or i64 %t6397, 4
-  %t6399 = call i64 @rt_root(i64 %t6398)
-  store i64 %t6399, ptr @"scheme.base:with-output-to-file"
+  %t6367 = call ptr @rt_alloc_words(i64 1)
+  %t6368 = ptrtoint ptr %t6367 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:call-with-port" to i64), ptr %t6367
+  %t6369 = or i64 %t6368, 4
+  %t6370 = call i64 @rt_root(i64 %t6369)
+  store i64 %t6370, ptr @"scheme.base:call-with-port"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_210"() {
 entry:
-  %t6460 = call ptr @rt_alloc_words(i64 1)
-  %t6461 = ptrtoint ptr %t6460 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:with-input-from-file" to i64), ptr %t6460
-  %t6462 = or i64 %t6461, 4
-  %t6463 = call i64 @rt_root(i64 %t6462)
-  store i64 %t6463, ptr @"scheme.base:with-input-from-file"
+  %t6431 = call ptr @rt_alloc_words(i64 1)
+  %t6432 = ptrtoint ptr %t6431 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:with-output-to-file" to i64), ptr %t6431
+  %t6433 = or i64 %t6432, 4
+  %t6434 = call i64 @rt_root(i64 %t6433)
+  store i64 %t6434, ptr @"scheme.base:with-output-to-file"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_211"() {
 entry:
-  %t6477 = call ptr @rt_alloc_words(i64 1)
-  %t6478 = ptrtoint ptr %t6477 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:call-with-output-file" to i64), ptr %t6477
-  %t6479 = or i64 %t6478, 4
-  %t6480 = call i64 @rt_root(i64 %t6479)
-  store i64 %t6480, ptr @"scheme.base:call-with-output-file"
+  %t6495 = call ptr @rt_alloc_words(i64 1)
+  %t6496 = ptrtoint ptr %t6495 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:with-input-from-file" to i64), ptr %t6495
+  %t6497 = or i64 %t6496, 4
+  %t6498 = call i64 @rt_root(i64 %t6497)
+  store i64 %t6498, ptr @"scheme.base:with-input-from-file"
   ret i64 17
 }
 
 define i64 @"scheme.base:__init_212"() {
 entry:
-  %t6494 = call ptr @rt_alloc_words(i64 1)
-  %t6495 = ptrtoint ptr %t6494 to i64
-  store i64 ptrtoint (ptr @"scheme.base:code:call-with-input-file" to i64), ptr %t6494
-  %t6496 = or i64 %t6495, 4
-  %t6497 = call i64 @rt_root(i64 %t6496)
-  store i64 %t6497, ptr @"scheme.base:call-with-input-file"
+  %t6512 = call ptr @rt_alloc_words(i64 1)
+  %t6513 = ptrtoint ptr %t6512 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:call-with-output-file" to i64), ptr %t6512
+  %t6514 = or i64 %t6513, 4
+  %t6515 = call i64 @rt_root(i64 %t6514)
+  store i64 %t6515, ptr @"scheme.base:call-with-output-file"
+  ret i64 17
+}
+
+define i64 @"scheme.base:__init_213"() {
+entry:
+  %t6529 = call ptr @rt_alloc_words(i64 1)
+  %t6530 = ptrtoint ptr %t6529 to i64
+  store i64 ptrtoint (ptr @"scheme.base:code:call-with-input-file" to i64), ptr %t6529
+  %t6531 = or i64 %t6530, 4
+  %t6532 = call i64 @rt_root(i64 %t6531)
+  store i64 %t6532, ptr @"scheme.base:call-with-input-file"
   ret i64 17
 }
 
@@ -13957,6 +14038,7 @@ run:
   call i64 @"scheme.base:__init_210"()
   call i64 @"scheme.base:__init_211"()
   call i64 @"scheme.base:__init_212"()
+  call i64 @"scheme.base:__init_213"()
   ret i64 2
 }
 define internal i64 @__apply0(i64 %clos) {

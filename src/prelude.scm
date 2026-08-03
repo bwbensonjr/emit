@@ -483,6 +483,7 @@
             ;; reader calls a number is a number here, with the same value.
             (cond
               [(rd-numeric? s) (rd-parse-int s)]
+              [(rd-nonfinite s)]              ; +inf.0 / -inf.0 / +nan.0, as the reader does
               [(rd-flonum? s) (%string->flonum s)]
               [else #f])
             (%string->int s r))
@@ -893,10 +894,26 @@
                             (= i4 m)                      ; consumed the whole token
                             (or had-dot (< i3 i4)))))))))))))   ; a dot OR an exponent
 
+;;; The three non-finite tokens (change: numeric-conformance, design D8 / GitHub
+;;; issue #25).  The PRINTER has always emitted these -- (/ 1.0 0.0) prints as
+;;; +inf.0 -- but rd-flonum? requires at least one digit, so they fell through to
+;;; string->symbol and a program could not read back its own output: write/read
+;;; silently turned a number into an identifier.  They are exact literal strings, so
+;;; recognizing them costs one comparison ahead of the classifier.  %string->flonum
+;;; is strtod, which reads "inf"/"nan" (and stops before the ".0"), so the VALUES
+;;; come from the same converter as every other inexact literal rather than from
+;;; arithmetic like (/ 1.0 0.0) that would depend on the host's division.
+(define (rd-nonfinite tok)               ; the value, or #f if not one of the three
+  (cond [(string=? tok "+inf.0") (%string->flonum "inf")]
+        [(string=? tok "-inf.0") (%string->flonum "-inf")]
+        [(string=? tok "+nan.0") (%string->flonum "nan")]
+        [else #f]))
+
 (define (rd-atom s n i)                  ; token -> integer, flonum, or interned symbol
   (let ([j (rd-token-end s n i)])
     (let ([tok (substring s i j)])
       (cons (cond [(rd-numeric? tok) (rd-parse-int tok)]
+                  [(rd-nonfinite tok)]              ; cond's test-only form: the value
                   [(rd-flonum? tok) (%string->flonum tok)]
                   [else (string->symbol tok)])
             j))))
