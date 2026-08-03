@@ -237,6 +237,24 @@
 #     (scheme.base:code:rd-digits-neg), +2 definitions and +94 lines per demo, all
 #     other drift being code_N renumbering.  (b) +1 new entry (exact-range), the
 #     change's own demo.
+#   numeric-conformance, group 1 (GitHub issue #24) -- a flonum literal's IR text now
+#     comes from the emitter's own canonical formatter instead of the host's
+#     number->string, so it is valid LLVM in a `double` position and byte-identical on
+#     every door.  Verified against an 80-demo before/after capture (build/emit built in
+#     a detached-HEAD worktree at 5d38be0 vs the regenerated tree): EXACTLY ONE demo
+#     differs, by EXACTLY ONE line --
+#       exact-range.ll: @.flo.lit.0 `"1e+18"` -> `"1.0e18"` (6 -> 7 byte array).
+#     Nothing else moved in the other 79 demos.  The small drift is expected and is
+#     itself evidence for the diagnosis: only a literal whose shortest decimal carries
+#     an exponent AND lands in an unboxed region emitted invalid IR, and no demo had
+#     one -- exact-range's `1e18` sits on the BOXED path, where the old text was a C
+#     string that strtod happened to accept.  Every other flonum literal in the demos
+#     (2.0, 2.5, 0.5, 1.0, ...) already printed with a '.', so its canonical form is the
+#     text it already had.  All 80 demos' stdout is byte-identical.  No new entries --
+#     the regression coverage is test/numeric-conformance-tests.sh (values, all four
+#     doors) plus 10 flonum cases in test/self-emit-equiv.sh (IR byte-equality between
+#     the Chez-hosted and self-hosted emitters); 8 of those 10 FAIL on the pre-change
+#     tree, which is what gives them teeth.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

@@ -145,6 +145,147 @@
         (string-append "-" (times-8-decimal (substring s 1 (string-length s))))
         (times-8-decimal s))))
 
+;; --- flonum literal text (change: numeric-conformance, design D1) -------------
+;; The same lesson as fixnum-word above, for inexact literals: text the emitter
+;; puts in its output must not be whatever the HOST printer happened to produce.
+;; Two defects rode on `(number->string d)` (GitHub issue #24):
+;;
+;;   1. LLVM rejects a `double` constant carrying neither '.' nor the 0x form, so
+;;      `(* 100.0 2.0)` emitted `fmul double 1e+02, 2.0` and the module would not
+;;      parse -- self-hosted only, because Chez prints `100.0`.
+;;   2. Even where it parsed, the emitted TEXT differed by door: Chez prints
+;;      `1e15`/`1.23e-4`/`5e-324|1` where Emit's %g loop prints
+;;      `1e+15`/`0.000123`/`5e-324`.  Same value, same digits, different framing --
+;;      and IR text that depends on which door compiled it is a fidelity break
+;;      whether or not it parses.
+;;
+;; Both printers produce the SHORTEST ROUND-TRIPPABLE DIGITS (which are unique);
+;; only the framing differs.  So we decompose their output into sign + digits +
+;; decimal point position -- string operations only, no float arithmetic -- and
+;; re-frame it canonically.  Chez also appends `|BITS` to a subnormal
+;; (`5e-324|1`), which is stripped as part of the decomposition.
+;;
+;; Framing rule: emit whichever of the positional and scientific spellings is
+;; SHORTER, positional on a tie.  A deterministic function of (digits, point) with
+;; no magic threshold, it keeps the literals that actually occur readable
+;; (`100.0`, `15.0`, `2.5`) while never spelling out `1e18` as twenty digits, and
+;; it minimizes IR size, which is a design concern here.
+
+;; "12" 3 -> "000"   (n zero characters)
+(define (zeros n)
+  (let loop ([i n] [acc ""]) (if (<= i 0) acc (loop (- i 1) (string-append acc "0")))))
+
+(define (all-zeros? s)
+  (let loop ([i 0])
+    (cond [(>= i (string-length s)) #t]
+          [(char=? (string-ref s i) #\0) (loop (+ i 1))]
+          [else #f])))
+
+;; index of the first occurrence of char c in s, or -1
+(define (str-index s c)
+  (let loop ([i 0])
+    (cond [(>= i (string-length s)) -1]
+          [(char=? (string-ref s i) c) i]
+          [else (loop (+ i 1))])))
+
+;; "-123" -> -123.  Only ever applied to a printed exponent, so it is small and
+;; cannot overflow; kept local so the emitter needs no string->number.
+(define (digits->int s)
+  (let* ([neg? (char=? (string-ref s 0) #\-)]
+         [start (if (or neg? (char=? (string-ref s 0) #\+)) 1 0)])
+    (let loop ([i start] [n 0])
+      (if (>= i (string-length s))
+          (if neg? (- 0 n) n)
+          (loop (+ i 1) (+ (* n 10) (- (char->integer (string-ref s i)) 48)))))))
+
+;; A printed flonum -> (SIGN DIGITS POINT), where the value is
+;; SIGN 0.DIGITS x 10^POINT, DIGITS has no leading or trailing zero, and DIGITS is
+;; "" exactly for zero.  Handles both doors' framing and Chez's `|BITS` suffix.
+(define (flonum-parts s0)
+  (let* ([bar (str-index s0 #\|)]                     ; Chez subnormal annotation
+         [s1  (if (< bar 0) s0 (substring s0 0 bar))]
+         [neg? (char=? (string-ref s1 0) #\-)]
+         [sign (if neg? "-" "")]
+         [s   (if (or neg? (char=? (string-ref s1 0) #\+))
+                  (substring s1 1 (string-length s1))
+                  s1)]
+         [epos (let ([l (str-index s #\e)]) (if (< l 0) (str-index s #\E) l))]
+         [mant (if (< epos 0) s (substring s 0 epos))]
+         [ex   (if (< epos 0) 0 (digits->int (substring s (+ epos 1) (string-length s))))]
+         [dot  (str-index mant #\.)]
+         [ipart (if (< dot 0) mant (substring mant 0 dot))]
+         [fpart (if (< dot 0) "" (substring mant (+ dot 1) (string-length mant)))]
+         [raw  (string-append ipart fpart)]
+         [point (+ (string-length ipart) ex)])
+    (if (all-zeros? raw)
+        (list sign "" 0)
+        ;; strip leading zeros (each one moves the point left), then trailing ones
+        (let* ([lead (let loop ([i 0])
+                       (if (char=? (string-ref raw i) #\0) (loop (+ i 1)) i))]
+               [d1 (substring raw lead (string-length raw))]
+               [p  (- point lead)]
+               [end (let loop ([i (string-length d1)])
+                      (if (char=? (string-ref d1 (- i 1)) #\0) (loop (- i 1)) i))])
+          (list sign (substring d1 0 end) p)))))
+
+;; digits+point -> "123.45" / "0.00123" / "12300.0" (always exactly one '.')
+(define (positional-text digits point)
+  (let ([n (string-length digits)])
+    (cond
+      [(<= point 0) (string-append "0." (zeros (- 0 point)) digits)]
+      [(>= point n) (string-append digits (zeros (- point n)) ".0")]
+      [else (string-append (substring digits 0 point) "."
+                           (substring digits point n))])))
+
+;; digits+point -> "1.2345e17" (one digit before the '.', bare '-' exponent)
+(define (scientific-text digits point)
+  (let ([n (string-length digits)])
+    (string-append (substring digits 0 1) "."
+                   (if (= n 1) "0" (substring digits 1 n))
+                   "e" (number->string (- point 1)))))
+
+;; The canonical decimal for a FINITE flonum: shorter spelling wins, ties to
+;; positional.  Always carries a '.', so LLVM never reads it as an integer.
+(define (canonical-decimal d)
+  (let* ([parts (flonum-parts (number->string d))]
+         [sign (car parts)] [digits (cadr parts)] [point (caddr parts)])
+    (if (string=? digits "")
+        (string-append sign "0.0")
+        (let ([pos (positional-text digits point)]
+              [sci (scientific-text digits point)])
+          (string-append sign
+                         (if (<= (string-length pos) (string-length sci)) pos sci))))))
+
+;; The non-finite values, classified off the PRINTED text: both doors print
+;; +inf.0/-inf.0/+nan.0, so this needs no float comparison (and no primitive that
+;; the Chez host, which EVALUATES this file, would not have).
+(define (flonum-inf+nan-text s)
+  (cond [(string=? s "+inf.0") "inf"]
+        [(string=? s "-inf.0") "-inf"]
+        [(string=? s "+nan.0") "nan"]
+        [(string=? s "-nan.0") "nan"]
+        [else #f]))
+
+;; d -> the operand text for a `double` position in emitted IR.  A non-finite
+;; value has no decimal spelling LLVM accepts, so it emits the hexadecimal
+;; bit-pattern form (which is exactly the IEEE-754 bits of the double).
+(define (ir-double d)
+  (let ([s (number->string d)])
+    (cond
+      [(string=? s "+inf.0") "0x7FF0000000000000"]
+      [(string=? s "-inf.0") "0xFFF0000000000000"]
+      [(flonum-inf+nan-text s) "0x7FF8000000000000"]        ; the NaNs
+      [else (canonical-decimal d)])))
+
+;; d -> the C string text handed to rt_flonum_lit, which rebuilds the double with
+;; strtod.  Shares ir-double's decimal core -- the two cannot drift on a finite
+;; value -- and differs only where it must: strtod reads `inf`/`nan`, not LLVM's
+;; 0x bit-pattern form, and this text is a C string, not a `double` operand.
+(define (flonum-lit-text d)
+  (let ([s (number->string d)])
+    (let ([special (flonum-inf+nan-text s)])
+      (if special special (canonical-decimal d)))))
+
 ;; Immediates encode inline to an operand with no emission; a symbol emits an
 ;; rt_intern call and a pair materializes via rt_cons (recursing), so encode-const
 ;; may emit into the current function and returns the resulting operand.
@@ -173,14 +314,15 @@
             [t  (fresh-temp)])
        (emit! (string-append t " = call i64 @rt_cons(i64 " a ", i64 " dd ")"))
        t)]
-    ;; inexact real (flonum) literal (change: inexact-numbers): emit its shortest
-    ;; round-trippable decimal as a C string constant and rebuild the flonum at
-    ;; runtime with rt_flonum_lit (strtod, correctly rounded -> the same double).
-    ;; number->string round-trips under both the Chez host and Emit.  Placed after
-    ;; the exact/char/symbol/string/pair clauses; an integral flonum (3.0) reaches
-    ;; here because it fails clause 1's exact? test.
+    ;; inexact real (flonum) literal (change: inexact-numbers): emit its canonical
+    ;; decimal as a C string constant and rebuild the flonum at runtime with
+    ;; rt_flonum_lit (strtod, correctly rounded -> the same double).  The text comes
+    ;; from flonum-lit-text, NOT the host printer, so it is identical on every door
+    ;; (change: numeric-conformance, design D1).  Placed after the
+    ;; exact/char/symbol/string/pair clauses; an integral flonum (3.0) reaches here
+    ;; because it fails clause 1's exact? test.
     [(and (real? d) (not (exact? d)))
-     (let* ([g+len (emit-cstring-global "@.flo.lit." (number->string d))]
+     (let* ([g+len (emit-cstring-global "@.flo.lit." (flonum-lit-text d))]
             [g (car g+len)] [t (fresh-temp)])
        (emit! (string-append t " = call i64 @rt_flonum_lit(ptr " g ")"))
        t)]
@@ -603,7 +745,10 @@
                [t (fresh-temp)])
           (emit! (string-append t " = " instr " double " da ", " db))
           t)])]
-    [(flonum-const? node) (match node [(const ,d) (number->string d)])]
+    ;; An immediate double operand: canonical text, never the host printer's
+    ;; (change: numeric-conformance, design D1 -- this is the site GitHub issue #24
+    ;; reported, where `1e+02` was rejected as an integer constant).
+    [(flonum-const? node) (match node [(const ,d) (ir-double d)])]
     [else (unbox-flonum (cdr (assoc node leaf-map)))]))
 
 ;; Emit the region tree in the EXISTING boxed lowering; return an i64 operand.
