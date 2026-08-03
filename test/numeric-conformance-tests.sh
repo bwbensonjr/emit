@@ -62,6 +62,18 @@ EOF
   else bad "$1 (built) => $got (expected $3)"; sed 's/^/         /' "$TMP/be"; fi
 }
 
+# A program whose diagnostic is the point: it must FAIL and name the operation.
+trap_msg () {  # <name> <program-text> <substring the diagnostic must contain>
+  printf '%s\n' "$2" > "$TMP/p.scm"
+  if $RUN < "$TMP/p.scm" >"$TMP/o" 2>"$TMP/e"; then
+    bad "$1 (no trap; produced $(cat "$TMP/o"))"
+  elif grep -qF -- "$3" "$TMP/e"; then
+    ok "$1 => $(head -1 "$TMP/e")"
+  else
+    bad "$1 (trapped, but the message lacks '$3'): $(head -1 "$TMP/e")"
+  fi
+}
+
 # The same program in the interactive REPL door.
 check_repl () {  # <name> <expression-text> <expected substring of the output>
   local got
@@ -110,6 +122,71 @@ check_built "exponent-framed literal" '(* 100.0 2.0)' '2e+02'
 check_built "17 significant digits"   '1.4142135623730951' '1.4142135623730951'
 check_repl  "exponent-framed literal" '(* 100.0 2.0)' '2e+02'
 check_repl  "17 significant digits"   '1.4142135623730951' '1.4142135623730951'
+
+echo
+echo "the integer-division family validates its arguments (issue #23)"
+
+# --- the exact behaviour is UNCHANGED -----------------------------------------
+# Checked first: a guard that is wrong about fixnums breaks these, not the traps.
+check "quotient and remainder on exact integers" \
+  '(list (quotient 17 5) (remainder 17 5) (modulo 17 5))' '(3 2 2)'
+check "truncation toward zero with negatives" \
+  '(list (quotient -17 5) (remainder -17 5) (modulo -17 5))' '(-3 -2 3)'
+check "modulo takes the sign of the divisor" \
+  '(list (modulo -7 3) (modulo 7 -3) (remainder -7 3))' '(2 -2 -1)'
+
+# --- an integral flonum is accepted, with contagion ---------------------------
+# `(quotient 7.0 2)` used to return a shifted heap pointer -- a different number on
+# each run.  The rule is uniform across the family: integer-VALUED is what matters,
+# and an inexact argument makes the result inexact.
+check "integral flonum dividend" \
+  '(list (quotient 7.0 2) (remainder 7.0 2) (modulo 7.0 2))' '(3.0 1.0 1.0)'
+check "integral flonum divisor" \
+  '(list (quotient 7 2.0) (remainder 7 2.0) (modulo 7 2.0))' '(3.0 1.0 1.0)'
+check "negative integral flonums keep the family's signs" \
+  '(list (quotient -7.0 2.0) (remainder -7.0 2.0) (modulo -7.0 2.0))' '(-3.0 -1.0 1.0)'
+check "the result is inexact, not merely equal" \
+  '(list (inexact? (quotient 7.0 2)) (exact? (quotient 7 2)))' '(#t #t)'
+
+# --- a non-integral or non-numeric argument traps -----------------------------
+trap_msg "quotient of a non-integral flonum" '(quotient 7.5 2)' \
+  "quotient: not an integer: 7.5"
+trap_msg "remainder of a non-integral flonum" '(remainder 7.5 2)' \
+  "remainder: not an integer: 7.5"
+# modulo used to return the fractional 1.5 here -- unspecified before, a trap now.
+trap_msg "modulo of a non-integral flonum" '(modulo 7.5 2)' \
+  "modulo: not an integer: 7.5"
+trap_msg "non-integral divisor" '(quotient 7 2.5)' "quotient: not an integer: 2.5"
+trap_msg "quotient of a symbol" "(quotient 'a 2)" "quotient: not a number"
+trap_msg "remainder of a string" '(remainder "x" 2)' "remainder: not a number"
+trap_msg "modulo of a list" "(modulo (list 1) 2)" "modulo: not a number"
+trap_msg "division by zero still traps with its own message" '(quotient 1 0)' \
+  "division by zero: quotient"
+trap_msg "inexact division by zero traps too" '(quotient 7.0 0.0)' \
+  "division by zero: quotient"
+
+# --- integer->char requires a Unicode scalar value ----------------------------
+# Compared as code points: writing the characters themselves would put a raw NUL
+# byte in the expected output.
+check "ordinary code points still work" \
+  '(list (char->integer (integer->char 65)) (char->integer (integer->char 955)) (char->integer (integer->char 0)))' \
+  '(65 955 0)'
+check "the top of the range works" '(char->integer (integer->char 1114111))' '1114111'
+trap_msg "a code point past the Unicode range" '(integer->char 1152921504606846975)' \
+  "integer->char: not a Unicode scalar value"
+trap_msg "a negative code point" '(integer->char -1)' \
+  "integer->char: not a Unicode scalar value: -1"
+trap_msg "just past the top of the range" '(integer->char 1114112)' \
+  "integer->char: not a Unicode scalar value: 1114112"
+trap_msg "a surrogate code point" '(integer->char 55296)' \
+  "integer->char: not a Unicode scalar value: 55296"
+trap_msg "an inexact code point" '(integer->char 65.0)' \
+  "integer->char: not an exact integer"
+
+# `integer?` is the predicate the guard is defined against, so it must agree.
+check "integer? and the guard agree on what an integer is" \
+  '(list (integer? 7) (integer? 7.0) (integer? 7.5) (integer? (/ 1.0 0.0)))' \
+  '(#t #t #f #f)'
 
 echo
 echo "  $pass passed, $fail failed"

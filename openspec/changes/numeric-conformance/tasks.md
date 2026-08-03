@@ -33,21 +33,21 @@
 
 ## 2. Integer-division and code-point guards (#23, design D3)
 
-- [ ] 2.1 Give `rt_quotient` and `rt_remainder` (`src/runtime/runtime.c`) `rt_modulo`'s opening
+- [x] 2.1 Give `rt_quotient` and `rt_remainder` (`src/runtime/runtime.c`) `rt_modulo`'s opening
       guard plus an integrality check: non-number or non-integral flonum traps with a message
       naming the operation; integral flonum takes the contagion path and returns a flonum.
-- [ ] 2.2 Add the same integrality check to `rt_modulo`, so all three agree — this changes
+- [x] 2.2 Add the same integrality check to `rt_modulo`, so all three agree — this changes
       `(modulo 7.5 2)` from `1.5` to a trap. Land it as its own reviewed step with a test, not as a
       side effect of 2.1.
-- [ ] 2.3 Range-check `rt_integer_to_char`: reject a negative code point, anything above
+- [x] 2.3 Range-check `rt_integer_to_char`: reject a negative code point, anything above
       `#x10FFFF`, and the surrogate range `#xD800`–`#xDFFF`, with a diagnostic rather than a junk
       character.
-- [ ] 2.4 Confirm no emitter work is needed — verify `quotient`/`remainder`/`modulo` are absent
+- [x] 2.4 Confirm no emitter work is needed — verify `quotient`/`remainder`/`modulo` are absent
       from `inline-arith-table`, so the runtime guard is the only path.
-- [ ] 2.5 Tests: the issue's reproductions (`(quotient 7.0 2)`, `(remainder 7.0 2)`,
+- [x] 2.5 Tests: the issue's reproductions (`(quotient 7.0 2)`, `(remainder 7.0 2)`,
       `(quotient 'a 2)`, `(integer->char 1152921504606846975)`) plus the accepted integral-flonum
       cases and the retained exact behaviour for `(quotient -17 5)` / `(remainder -17 5)`.
-- [ ] 2.6 Run the full suite: no IR change, so `run-all-tests.sh` and `run-dev-tests.sh` should pass
+- [x] 2.6 Run the full suite: no IR change, so `run-all-tests.sh` and `run-dev-tests.sh` should pass
       without a regen.
 
 ## 3. First-class comparisons and variadic max/min (#26, design D2/D6)

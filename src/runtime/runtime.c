@@ -162,6 +162,18 @@ val rt_make_flonum(double d) {
 }
 static int    is_number(val v) { return tag_of(v) == TAG_FIXNUM || is_flonum(v); }
 static double to_double(val v) { return tag_of(v) == TAG_FIXNUM ? (double)UNFIX(v) : flo_val(v); }
+/* Is v INTEGER-VALUED?  True for every fixnum and for a finite flonum with no
+ * fractional part (3.0 but not 2.5, and never an infinity or a NaN).  This is the
+ * one definition of what `integer?` means, shared by that predicate, the
+ * exactness conversions, and the integer-division family's argument guard
+ * (change: numeric-conformance, design D3) -- the test was open-coded in three
+ * places before, which is how quotient/remainder came to have none at all. */
+static int is_integer_valued(val v) {
+  if (tag_of(v) == TAG_FIXNUM) return 1;
+  if (!is_flonum(v)) return 0;
+  double d = flo_val(v);
+  return isfinite(d) && d == floor(d);
+}
 
 /* Format a flonum as the shortest decimal that reads back exactly (the classic
  * increase-precision-until-round-trips loop), ALWAYS carrying a '.' or exponent
@@ -287,26 +299,62 @@ val rt_div(val a, val b) {
   }
   return rt_make_flonum(to_double(a) / to_double(b));
 }
+/* The integer-division family's shared argument guard (change:
+ * numeric-conformance, design D3 / GitHub issue #23).
+ *
+ * R7RS defines quotient/remainder/modulo on INTEGERS, and Emit's tower admits
+ * integral flonums -- `integer?` is true of 7.0 and false of 7.5 -- so the rule is
+ * uniform across all three: an integer-valued argument is accepted, with an
+ * inexact one making the result inexact by contagion; a non-integral flonum or a
+ * non-number traps.  Contagion rather than "trap on any flonum" follows rt_modulo,
+ * which already made that choice and was the only one of the three with settled
+ * behaviour.
+ *
+ * Before this, rt_quotient and rt_remainder applied UNFIX unconditionally, so a
+ * flonum or a symbol was reinterpreted as a fixnum payload and the result was
+ * whatever fell out of shifting a heap address -- `(quotient 7.0 2)` returned a
+ * different number on each run.  rt_modulo guarded its TYPES but not integrality,
+ * so `(modulo 7.5 2)` returned the fractional 1.5; it now traps, which no spec
+ * scenario covered and no correct program can depend on. */
+static void check_int_operand(val v, const char *who) {
+  if (!is_number(v)) rt_fatalf("%s: not a number", who);
+  /* Reached only for a number, so to_double is safe -- and %g is how the other
+   * numeric diagnostics render an offending inexact value. */
+  if (!is_integer_valued(v)) rt_fatalf("%s: not an integer: %g", who, to_double(v));
+}
+
 /* quotient/remainder: C integer division truncates toward zero, which is
  * exactly R7RS quotient/remainder.  Division by zero traps.  So does the single
  * out-of-range quotient, FIXNUM_MIN / -1 (change: fixnum-overflow-trap, D6);
  * `remainder` and `modulo` are in range for every input and need no check. */
 val rt_quotient(val a, val b) {
-  intptr_t d = UNFIX(b);
-  if (d == 0) rt_fatal("division by zero: quotient");
-  if (!fits_fixnum(UNFIX(a) / d))
-    rt_fatalf("quotient: fixnum overflow: %ld / %ld", (long)UNFIX(a), (long)d);
-  return FIX(UNFIX(a) / d);
+  check_int_operand(a, "quotient"); check_int_operand(b, "quotient");
+  if (tag_of(a) == TAG_FIXNUM && tag_of(b) == TAG_FIXNUM) {
+    intptr_t d = UNFIX(b);
+    if (d == 0) rt_fatal("division by zero: quotient");
+    if (!fits_fixnum(UNFIX(a) / d))
+      rt_fatalf("quotient: fixnum overflow: %ld / %ld", (long)UNFIX(a), (long)d);
+    return FIX(UNFIX(a) / d);
+  }
+  double da = to_double(a), db = to_double(b);
+  if (db == 0) { rt_fatal("division by zero: quotient"); return NIL_V; }
+  return rt_make_flonum(trunc(da / db));
 }
 val rt_remainder(val a, val b) {
-  intptr_t d = UNFIX(b);
-  if (d == 0) rt_fatal("division by zero: remainder");
-  return FIX(UNFIX(a) % d);
+  check_int_operand(a, "remainder"); check_int_operand(b, "remainder");
+  if (tag_of(a) == TAG_FIXNUM && tag_of(b) == TAG_FIXNUM) {
+    intptr_t d = UNFIX(b);
+    if (d == 0) rt_fatal("division by zero: remainder");
+    return FIX(UNFIX(a) % d);
+  }
+  double da = to_double(a), db = to_double(b);
+  if (db == 0) { rt_fatal("division by zero: remainder"); return NIL_V; }
+  return rt_make_flonum(fmod(da, db));      /* truncating: sign of the dividend */
 }
 /* modulo: flooring remainder -- the result takes the sign of the divisor
  * (unlike remainder, which takes the dividend's).  Distinct name/semantics. */
 val rt_modulo(val a, val b) {
-  if (!is_number(a) || !is_number(b)) { rt_fatal("modulo: not a number"); return NIL_V; }
+  check_int_operand(a, "modulo"); check_int_operand(b, "modulo");
   if (tag_of(a) == TAG_FIXNUM && tag_of(b) == TAG_FIXNUM) {
     intptr_t da = UNFIX(a), db = UNFIX(b);
     if (db == 0) { rt_fatal("division by zero: modulo"); return NIL_V; }
@@ -582,7 +630,21 @@ static intptr_t cpidx_offset(val s, intptr_t cp) {
 
 /* --- character operations ---------------------------------------------- */
 val rt_char_to_integer(val c) { return FIX(CHAR_CP(c)); }
-val rt_integer_to_char(val n) { return rt_make_char(UNFIX(n)); }
+/* integer->char requires an exact integer that is a Unicode SCALAR VALUE: in
+ * [0, #x10FFFF] and outside the surrogate range #xD800-#xDFFF (change:
+ * numeric-conformance, design D3 / GitHub issue #23).  It used to apply UNFIX
+ * unconditionally and hand the result to rt_make_char, so an out-of-range or
+ * non-numeric argument produced a junk character instead of a diagnostic --
+ * `(integer->char 1152921504606846975)` among them. */
+val rt_integer_to_char(val n) {
+  if (tag_of(n) != TAG_FIXNUM) { rt_fatal("integer->char: not an exact integer"); return NIL_V; }
+  intptr_t cp = UNFIX(n);
+  if (cp < 0 || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) {
+    rt_fatalf("integer->char: not a Unicode scalar value: %ld", (long)cp);
+    return NIL_V;
+  }
+  return rt_make_char(cp);
+}
 
 /* --- string operations (codepoint-indexed over UTF-8 storage, design D1) --- */
 val rt_string_length(val s) { return FIX(str_cplen(s)); }   /* O(1): stored count */
@@ -1285,11 +1347,7 @@ val rt_boolean_p(val v) { return truthy(is_bool(v)); }
 /* Two number types now exist (change: inexact-numbers): exact? is fixnum-only,
  * inexact?/flonum? are flonum-only, number?/real? are either, and integer? spans
  * fixnums and integral-valued flonums (3.0 but not 2.5). */
-val rt_integer_p(val v) {
-  if (tag_of(v) == TAG_FIXNUM) return TRUE_V;
-  if (is_flonum(v)) { double d = flo_val(v); return truthy(isfinite(d) && d == floor(d)); }
-  return FALSE_V;
-}
+val rt_integer_p(val v) { return truthy(is_integer_valued(v)); }
 val rt_exact_p(val v)   { return truthy(tag_of(v) == TAG_FIXNUM); }
 val rt_inexact_p(val v) { return truthy(is_flonum(v)); }
 val rt_flonum_p(val v)  { return truthy(is_flonum(v)); }
@@ -1307,7 +1365,7 @@ val rt_inexact_to_exact(val v) {
   if (tag_of(v) == TAG_FIXNUM) return v;
   if (is_flonum(v)) {
     double d = flo_val(v);
-    if (isfinite(d) && d == floor(d)) {
+    if (is_integer_valued(v)) {
       /* Range-check BEFORE the cast (change: fixnum-overflow-trap, design D5):
        * a double outside intptr_t makes (intptr_t)d undefined, and one merely
        * outside the fixnum range would lose its top bits in FIX.  The bounds are
