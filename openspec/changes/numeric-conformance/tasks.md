@@ -104,7 +104,7 @@ writing a temporary arithmetic version to delete later. One staging serves all o
       before/after capture proving the drift is ONLY those lines (they land in every module's
       header, so expect the per-demo line count to grow by the number of new prims times the
       two headers per demo IR).
-- [ ] 4.5 Full dev suite, then commit `bootstrap/*.ll` at this stable point and re-run
+- [x] 4.5 Full dev suite, then commit `bootstrap/*.ll` at this stable point and re-run
       `test/trust-check.sh` (it skips while `bootstrap/` is dirty).
 
 ## 5. The (scheme base) numeric inventory (#27, design D4/D6/D7)
@@ -119,36 +119,44 @@ writing a temporary arithmetic version to delete later. One staging serves all o
       (`src/compile.ss:26-29`), so Emit never compiles that expression and it keeps resolving to
       Chez's own `expt`. The new prelude `expt` must not be routed into it. No other name
       collides; `demos/exact-range.scm` matched only as `round-trip`.
-- [ ] 5.2 Predicates in `src/prelude.scm`: `complex?`, `rational?` (finite real), `exact-integer?`,
+- [x] 5.2 Predicates in `src/prelude.scm`: `complex?`, `rational?` (finite real), `exact-integer?`,
       `positive?`, `negative?`, `odd?`, `even?` — with the integrality requirement on the parity
       predicates and a trap for a non-numeric argument.
-- [ ] 5.3 `abs`, `square`, and variadic `gcd`/`lcm` (identities `0` and `1`, non-negative results),
+- [x] 5.3 `abs`, `square`, and variadic `gcd`/`lcm` (identities `0` and `1`, non-negative results),
       exact for exact arguments, with `(abs FIXNUM_MIN)` and large `lcm` reaching the overflow
       diagnostic rather than wrapping.
-- [ ] 5.4 `expt`: exact by repeated squaring for an exact base and non-negative exact integer
+- [x] 5.4 `expt`: exact by repeated squaring for an exact base and non-negative exact integer
       exponent; inexact for a negative exponent; `(expt 0 0)` = `1`; overflow traps.
-- [ ] 5.5 `exact-integer-sqrt` returning two values — resolve the design's open question by
+- [x] 5.5 `exact-integer-sqrt` returning two values — resolve the design's open question by
       confirming the landed `multiple-values` machinery supports this from prelude Scheme before
       committing to the shape.
-- [ ] 5.6 The rounding family: `floor`, `ceiling`, `truncate`, `round` — identity on exact
+- [x] 5.6 The rounding family: `floor`, `ceiling`, `truncate`, `round` — identity on exact
       arguments, flonum arm in C (`floor`/`ceil`/`trunc`/`rint`) so a large magnitude does not
       route through the fixnum range, and `round` half-to-**even** (not `floor(x + 0.5)`).
-- [ ] 5.7 The R7RS division operators over the existing primitives: `truncate-quotient`,
+- [x] 5.7 The R7RS division operators over the existing primitives: `truncate-quotient`,
       `truncate-remainder`, `floor-quotient`, `floor-remainder`, and the two-value `truncate/` and
       `floor/`, all inheriting group 2's argument-domain rules.
-- [ ] 5.8 `numerator` / `denominator` restricted to integer-valued arguments, trapping otherwise.
-- [ ] 5.9 The R7RS conversion spellings `exact` and `inexact` as equivalents of
+- [x] 5.8 `numerator` / `denominator` restricted to integer-valued arguments, trapping otherwise.
+- [x] 5.9 The R7RS conversion spellings `exact` and `inexact` as equivalents of
       `inexact->exact` / `exact->inexact`, retaining the R5RS names.
-- [ ] 5.10 `number->string` radix argument (2/8/10/16 for exact integers; non-decimal radix with an
+- [x] 5.10 `number->string` radix argument (2/8/10/16 for exact integers; non-decimal radix with an
       inexact argument is an error) and `string->number` reusing the reader's classifier and
       parsers, returning `#f` on failure.
-- [ ] 5.11 Tests for every scenario in the `core-language` delta, including the exactness
+- [x] 5.11 Tests for every scenario in the `core-language` delta, including the exactness
       assertions (`(exact? (round 5))`, `(exact? (gcd 32 -36))`), the overflow traps, and the
       `string->number` / `number->string` round trips.
-- [ ] 5.12 Regenerate `lib/scheme/base.sld`, run `test/scheme-base-gen-check.sh`, and measure a
+- [x] 5.12 Regenerate `lib/scheme/base.sld`, run `test/scheme-base-gen-check.sh`, and measure a
       demo's binary size before and after to confirm the AOT tree-shake keeps an unrelated program
       unchanged — record the numbers in `docs/PERFORMANCE.md` if it leaks.
-- [ ] 5.13 `make regen` and confirm the fixed point converges with the enlarged prelude.
+      RESULT: the shake keeps it BYTE-IDENTICAL (34,968 B for a `fib` program at 5d38be0, at the
+      staging commit, and after the inventory — it removes 100% of the growth). `emit build` grew
+      +19,808 B (+14.7%) because that door has no shake, which is the known P8; quantified there
+      with the three-commit table. A second finding recorded as a NEW P9: `number->string` became
+      variadic for the optional radix, and a rest-parameter callee cannot use the cross-unit
+      direct-call convention, so every call site goes indirect — measured +22% on a
+      number->string-dominated loop. Not worked around here, since the right fix covers every
+      variadic callee.
+- [x] 5.13 `make regen` and confirm the fixed point converges with the enlarged prelude.
 
 ## 6. The non-finite reader tokens (#25, design D8)
 

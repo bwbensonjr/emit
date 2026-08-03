@@ -23,6 +23,7 @@ speed items in this list.
 | [P6](#p6-no-optimizer-pass-known-call-inlining-and-constant-folding) | No optimizer pass: known-call inlining & constant folding | speed + size | med–high | med | `simplify-known-calls` (A) | ☑ |
 | [P7](#p7-boxing-driven-by-desugaring-rather-than-by-mutation) | Boxing driven by desugaring rather than by mutation | speed + size | med | low–med | — | ☑ |
 | [P8](#p8-the-emit-build-door-does-not-tree-shake) | The `emit build` door does not tree-shake | size | med–high | med | — | ☐ |
+| [P9](#p9--an-optional-argument-costs-every-call-site-its-cross-unit-direct-call) | An optional argument costs every call site its cross-unit direct call | speed | med | med | — | ☐ |
 
 Legend — **Value**: benefit if fixed. **Cost**: rough implementation effort/risk. These are
 estimates to aid sequencing, not commitments.
@@ -908,6 +909,30 @@ program. Measured on `hello.scm` (2026-08-01, during `scheme-io-library`):
 function of *which door built it*, and only one door honours the "small, clean, self-contained
 executables" goal. Every future `(scheme base)` addition widens the gap on the wrong door.
 
+**Confirmed again, and quantified, by `numeric-conformance` (2026-08-03).** That change adds
+~40 R7RS §6.2 procedures to the prelude and 17 internal `%`-op primitives. Measured on one
+program (`fib`, which references *none* of them), same source at three commits, both doors:
+
+| commit | `chez compile.ss` (shaken) | `emit build` (unshaken) |
+|---|---|---|
+| `5d38be0` (before the change) | 34,968 B | 134,408 B |
+| `ed75577` (+17 C primitives, no Scheme yet) | 34,968 B | 134,824 B |
+| after the §6.2 inventory (+40 procedures) | **34,968 B** | **154,216 B** |
+
+The shaken door is **byte-identical across all three** — the shake is not merely absorbing the
+growth, it is removing 100% of it — while the unshaken door grew **+19,808 B (+14.7%)**. The
+middle row isolates a second, smaller effect worth knowing: 17 new `rt_*` C functions cost only
+**+416 B** in an `emit build` executable (LTO drops the unreferenced ones) but **+17,744 B
+(+3.2%)** in `build/schemec`, which links `runtime.c` without `-ffunction-sections`/
+`--gc-sections`. The `declare` header is also emitted unconditionally for the whole prim table
+(+34 lines per demo IR here), so prim-table growth is paid by every module regardless of use.
+
+Two consequences for sequencing. First, P8 is now the single largest lever on the flagship
+size goal and its cost rises with every prelude addition — this change alone raised the
+door gap from ~100 KB to ~119 KB. Second, a future change that curates `(scheme base)`'s export
+surface (GitHub issue #29) does **not** substitute for P8: the shake already achieves the ideal
+here, so the problem is entirely the door that lacks it, not the size of the library.
+
 **Cause.** The shake is a Scheme-level pass over library units that the Chez driver runs before
 linking; the `emit build` verb emits the program IR in-process and forks `clang` over the
 committed unit IR without that step. Nothing about the pass is Chez-specific — it is
@@ -926,6 +951,66 @@ difference between 34 KB and 134 KB on a hello-world. **Cost:** med — the pass
 tested; this is wiring plus a root-set plumbing decision.
 
 **OpenSpec change:** none yet.
+
+---
+
+## P9 — An optional argument costs every call site its cross-unit direct call
+
+**Status:** ☐ open
+
+**Symptom.** Giving a prelude procedure an optional argument turns *every* call to it, at every
+arity, from a direct cross-unit call into an indirect call through the closure. Found while
+implementing `numeric-conformance`: R7RS requires `(number->string z [radix])`, so
+`number->string` gained a rest parameter, and `demos/exact-range.scm` — the only demo that calls
+it — was the single demo whose program-module IR changed shape rather than just gaining declares:
+
+```llvm
+;; before: a direct call to the callee's code label (change: cross-unit-direct-calls)
+%t3 = call fastcc i64 @"scheme.base:code:number->string"(i64 %t2, i64 1, i64 %a0, ...)
+
+;; after: load the closure, load its code pointer, call through it
+%t3 = and i64 %t2, -8
+%t4 = inttoptr i64 %t3 to ptr
+%t5 = load i64, ptr %t4
+%t6 = inttoptr i64 %t5 to ptr
+%t7 = call fastcc i64 %t6(i64 %t2, i64 1, i64 %a0, ...)
+```
+
+**Measured cost.** A 3,000,000-iteration loop whose body is
+`(string-length (number->string i))`, built with `emit build`, same source both sides:
+
+| | best of 3 |
+|---|---|
+| `number->string` fixed-arity (direct call) | **0.32 s** |
+| `number->string` with a rest parameter (indirect) | **0.39 s** |
+
+**+22%** on a call-dominated loop, about 23 ns per call. It applies to `max` as well (also newly
+variadic) and to any future prelude procedure that acquires an optional argument. It matters
+most for `number->string` specifically because the *compiler itself* calls it for every integer
+it emits.
+
+**Cause.** The direct-call rule requires a callee whose arity is fixed, since a rest-parameter
+callee needs its rest list built before the body runs; the caller cannot jump straight to the
+code label under the fixed convention. So the moment a callee becomes variadic, every call site
+— including the ones passing exactly the required arguments — falls back to the indirect path.
+The arity is nearly always known at the call site, so the information needed to do better is
+present and simply unused.
+
+**Fix sketch.** At a call site whose argument count is statically known and whose callee is a
+known rest-parameter procedure, build the rest list at the call site (empty list in the common
+no-optional-argument case) and keep the direct call to the code label. Equivalently: emit a
+fixed-arity entry point alongside the variadic one for such callees and have known-arity call
+sites target it. Either way the win is largest exactly where it is needed, the
+one-required-argument call.
+
+**Value:** med — it recovers a regression that R7RS conformance will keep re-introducing as more
+procedures gain optional arguments, and `number->string` is on the compiler's own hot path.
+**Cost:** med — the direct-call machinery and the arity information both exist; this is a
+lowering decision plus rest-list construction at the call site.
+
+**OpenSpec change:** none yet. Deliberately NOT bundled into `numeric-conformance`: that change
+is about the accepted language, and this is a codegen improvement whose correct scope is every
+variadic callee, not the three procedures that happened to expose it.
 
 ---
 

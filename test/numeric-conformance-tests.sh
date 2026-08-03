@@ -242,5 +242,98 @@ check "max/min are first-class and applicable" \
 trap_msg "max of a non-number" "(max 1 'a)" "not a number"
 
 echo
+echo "the R7RS 6.2 procedure inventory (issue #27)"
+
+# --- predicates ---------------------------------------------------------------
+# The TYPE predicates apply to any object; the arithmetic ones require a number.
+check "tower predicates over both types" \
+  '(list (complex? 3) (rational? 3.5) (exact-integer? 3) (exact-integer? 3.0))' \
+  '(#t #t #t #f)'
+check "rational? is false for the non-finite values" \
+  '(list (rational? (/ 1.0 0.0)) (rational? (- (/ 1.0 0.0) (/ 1.0 0.0))) (rational? "x"))' \
+  '(#f #f #f)'
+check "sign and parity" \
+  '(list (positive? 3) (negative? -3.5) (odd? 7) (even? 7) (even? 8.0))' \
+  '(#t #t #t #f #t)'
+trap_msg "parity of a non-integral argument" '(odd? 7.5)' "not an integer: 7.5"
+
+# --- integer arithmetic -------------------------------------------------------
+check "absolute value, square, and powers" \
+  '(list (abs -7) (abs -7.5) (square 5) (expt 2 10))' '(7 7.5 25 1024)'
+check "exactness of gcd and lcm" \
+  '(list (gcd 32 -36) (gcd) (lcm 32 -36) (lcm) (gcd 12 18 27))' '(4 0 288 1 3)'
+check "a negative exponent yields an inexact result" '(expt 2 -1)' '0.5'
+check "expt corner cases" '(list (expt 0 0) (expt 2.0 3) (expt 2 0))' '(1 8.0 1)'
+check "exact-integer-sqrt returns two values" \
+  '(call-with-values (lambda () (exact-integer-sqrt 17)) list)' '(4 1)'
+check "exact-integer-sqrt on a perfect square" \
+  '(call-with-values (lambda () (exact-integer-sqrt 16)) list)' '(4 0)'
+# The overflow rule is INHERITED from + - *, not reimplemented: (abs FIXNUM_MIN) is
+# 2^60, one past the range.
+trap_msg "abs of the most negative fixnum" '(abs -1152921504606846976)' \
+  "fixnum overflow"
+trap_msg "expt past the fixnum range" '(expt 2 61)' "fixnum overflow"
+trap_msg "lcm past the fixnum range" '(lcm 1152921504606846975 3)' "fixnum overflow"
+
+# --- rounding -----------------------------------------------------------------
+check "the four roundings" \
+  '(list (floor 2.7) (ceiling 2.1) (truncate -2.7) (round 2.7))' '(2.0 3.0 -2.0 3.0)'
+# R7RS requires round-half-to-EVEN, which floor(x + 0.5) would get wrong.
+check "ties round to even" '(list (round 2.5) (round 3.5) (round -2.5) (round 0.5))' \
+  '(2.0 4.0 -2.0 0.0)'
+check "an exact argument is returned exactly" \
+  '(list (floor 5) (round 5) (exact? (round 5)) (ceiling -5))' '(5 5 #t -5)'
+# The inexact arm stays in double, so a magnitude too large for a fixnum rounds to
+# itself instead of raising the overflow diagnostic.
+check "a large-magnitude flonum rounds without overflow" '(floor 1e30)' '1e+30'
+
+# --- the R7RS division operators ----------------------------------------------
+check "truncating operators agree with quotient/remainder" \
+  '(list (truncate-quotient -17 5) (truncate-remainder -17 5) (quotient -17 5) (remainder -17 5))' \
+  '(-3 -2 -3 -2)'
+check "flooring operators round toward negative infinity" \
+  '(list (floor-quotient -17 5) (floor-remainder -17 5) (modulo -17 5))' '(-4 3 3)'
+check "flooring quotient over the four sign combinations" \
+  '(list (floor-quotient 17 5) (floor-quotient -17 5) (floor-quotient 17 -5) (floor-quotient -17 -5))' \
+  '(3 -4 -4 3)'
+check "the two-value forms" \
+  '(list (call-with-values (lambda () (floor/ -17 5)) list) (call-with-values (lambda () (truncate/ -17 5)) list))' \
+  '((-4 3) (-3 -2))'
+trap_msg "division by zero in the two-value form" '(floor/ 5 0)' "division by zero"
+
+# --- rational parts and the conversion spellings ------------------------------
+check "integer-valued rational parts" \
+  '(list (numerator 7) (denominator 7) (numerator 7.0) (denominator 7.0))' '(7 1 7.0 1.0)'
+trap_msg "a non-integral argument to denominator" '(denominator 0.5)' "not an integer"
+check "the R7RS conversion spellings" \
+  '(list (inexact 3) (exact 3.0) (inexact? (inexact 3)) (exact? (exact 3.0)))' \
+  '(3.0 3 #t #t)'
+trap_msg "exact of a non-integral flonum still traps" '(exact 2.5)' "not an integer"
+
+# --- number I/O ---------------------------------------------------------------
+check "number->string in each radix" \
+  '(list (number->string 255 16) (number->string 10 2) (number->string -8 8) (number->string 420))' \
+  '("ff" "1010" "-10" "420")'
+check "number->string still handles the boundaries" \
+  '(list (number->string 0) (number->string -7) (number->string -1152921504606846976))' \
+  '("0" "-7" "-1152921504606846976")'
+trap_msg "a non-decimal radix with an inexact argument" '(number->string 1.5 16)' \
+  "radix must be 10"
+check "string->number: integers, flonums, and failure" \
+  '(list (string->number "42") (string->number "-2.5") (string->number "abc") (string->number ""))' \
+  '(42 -2.5 #f #f)'
+check "string->number in a radix" \
+  '(list (string->number "ff" 16) (string->number "1010" 2) (string->number "ff" 10))' \
+  '(255 10 #f)'
+check "string->number round-trips with number->string" \
+  '(list (string->number (number->string 1234)) (string->number (number->string -2.5)) (string->number (number->string 255 16) 16))' \
+  '(1234 -2.5 255)'
+# string->number shares the READER's grammar, so the two must agree on every token.
+check "string->number agrees with the reader" \
+  '(list (equal? (string->number "42") (read-from-string "42")) (equal? (string->number "-2.5") (read-from-string "-2.5")))' \
+  '(#t #t)'
+trap_msg "an unsupported radix" '(string->number "1" 5)' "unsupported radix"
+
+echo
 echo "  $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

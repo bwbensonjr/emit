@@ -295,6 +295,30 @@
 #     exported rt_* symbols).  The declare header is emitted unconditionally for the
 #     whole prim table, so this cost is paid by every module regardless of use; noted in
 #     docs/PERFORMANCE.md alongside P8.  No new entries.
+#   numeric-conformance, group 5 (GitHub issue #27) -- ~40 R7RS 6.2 procedures added to the
+#     prelude, so (scheme base) went 172 -> 212 exports.  Drift, verified against an
+#     80-demo before/after capture:
+#       (1) LIBRARY half: the NAMED function set went 164 -> 204 -- exactly 40 additions
+#           (abs ceiling complex? denominator even? exact exact-integer-sqrt
+#           exact-integer? expt floor floor-quotient floor-remainder floor/ gcd inexact
+#           lcm negative? ns-digits-radix numerator odd? positive? rational? round square
+#           string->number truncate truncate-quotient truncate-remainder truncate/ and the
+#           %-prefixed helpers) and ZERO removals; the rest is code_N renumbering.
+#       (2) PROGRAM half: 79 of 80 demos gained exactly +40 `external global i64` declares
+#           with 0 deletions and no non-declare change -- one per new export.
+#       (3) exact-range.ll ALONE also changed shape (+109 -66), and the reason is worth
+#           recording: it is the only demo that calls `number->string`, which R7RS requires
+#           to take an optional radix and which therefore became variadic.  A rest-parameter
+#           callee cannot use the cross-unit DIRECT call convention, so its one call site
+#           became an indirect call through the closure (load closure -> load code pointer ->
+#           call).  Measured at +22% on a number->string-dominated loop; filed as
+#           docs/PERFORMANCE.md P9 rather than worked around here, since the right fix
+#           covers every variadic callee.
+#     All 80 demos' stdout byte-identical.  Size: the shaken Chez AOT door is BYTE-IDENTICAL
+#     for a program using none of the new procedures (34,968 B at 5d38be0, at the staging
+#     commit, and here), while `emit build` grew +19,808 B (+14.7%) -- the shake removes
+#     100% of the growth and the unshaken door pays all of it, which is P8, now quantified
+#     in that item.  No new entries.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u
