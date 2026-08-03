@@ -417,37 +417,58 @@
 ;;   (scheme-op  rt-name  kind  llvm-instr)
 ;; where `kind` picks the fast-path shape.  Fixnums are tag 000 (payload value<<3),
 ;; so the tagged word IS value<<3 and the ops fall out with no shifts (except *):
-;;   add : % = <instr> i64 a, b            (+ -> add, - -> sub)
-;;   mul : untag one operand (ashr 3) then mul  ((a>>3)*b = (va*vb)<<3)
+;;   add : overflow-checked add/sub on the tagged words   (+ -> sadd, - -> ssub)
+;;   mul : untag one operand (ashr 3) then checked mul  ((a>>3)*b = (va*vb)<<3)
 ;;   cmp : <instr> i64 a, b (i1) then select TRUE_V/FALSE_V   (= -> eq, < -> slt)
 ;; The runtime primitive remains the single definition of numeric semantics: it is
 ;; the slow path, so a future flonum/bignum change lands in rt_* and non-fixnum
 ;; operands are routed there automatically (design: A2 tag-checked seam).  N-ary
 ;; arithmetic and chained comparisons are already reduced to binary primcalls in
 ;; expand.ss, so hooking here covers every arity and `> >= <=`.
+;;
+;; The arithmetic ops ALSO route to rt_* when the result leaves the fixnum range
+;; (change: fixnum-overflow-trap) -- completing that same seam, which until now
+;; branched on tag but not on overflow, so an overflowing both-fixnum operation
+;; never reached the runtime at all and silently wrapped.
 (define inline-arith-table
-  '((%+ "rt_add"    add "add")
-    (%- "rt_sub"    add "sub")
-    (%* "rt_mul"    mul "mul")
+  '((%+ "rt_add"    add "sadd")
+    (%- "rt_sub"    add "ssub")
+    (%* "rt_mul"    mul "smul")
     (%= "rt_num_eq" cmp "icmp eq")
     (%< "rt_lt"     cmp "icmp slt")))
 
-(define (emit-inline-fast kind instr a b)  ; emit the fast-path op, return its operand
+;; Emit the fast-path op; returns (value-operand . overflow-operand), where the
+;; overflow operand is an i1 set exactly when the result left the fixnum range, or
+;; #f for the comparisons, which cannot overflow.
+;;
+;; Detection runs on the TAGGED words (design D2), which is what makes it free: a
+;; tagged fixnum is value<<3, so the tagged sum is (va+vb)<<3, and an i64 overflow
+;; of THAT is exactly the condition va+vb leaves [-2^60, 2^60) -- the fixnum range.
+;; The mul arm's (a>>3)*b = (va*vb)<<3 overflows on the same condition.  So the
+;; checked intrinsic replaces the bare instruction on the very same operands: no
+;; extra shifts, no range comparison, no false positives or negatives.
+(define (emit-inline-fast kind instr a b)
   (cond
-    [(eq? kind 'add)                          ; + -> add, - -> sub (tag 000, no shift)
-     (let ([f (fresh-temp)])
-       (emit! (string-append f " = " instr " i64 " a ", " b))
-       f)]
+    [(eq? kind 'add)                          ; + -> sadd, - -> ssub (tag 000, no shift)
+     (let* ([s (fresh-temp)] [f (fresh-temp)] [o (fresh-temp)])
+       (emit! (string-append s " = call {i64, i1} @llvm." instr
+                             ".with.overflow.i64(i64 " a ", i64 " b ")"))
+       (emit! (string-append f " = extractvalue {i64, i1} " s ", 0"))
+       (emit! (string-append o " = extractvalue {i64, i1} " s ", 1"))
+       (cons f o))]
     [(eq? kind 'mul)                          ; (a>>3) * b = (va*vb)<<3
-     (let* ([s (fresh-temp)] [f (fresh-temp)])
-       (emit! (string-append s " = ashr i64 " a ", 3"))
-       (emit! (string-append f " = mul i64 " s ", " b))
-       f)]
+     (let* ([sh (fresh-temp)] [s (fresh-temp)] [f (fresh-temp)] [o (fresh-temp)])
+       (emit! (string-append sh " = ashr i64 " a ", 3"))
+       (emit! (string-append s " = call {i64, i1} @llvm." instr
+                             ".with.overflow.i64(i64 " sh ", i64 " b ")"))
+       (emit! (string-append f " = extractvalue {i64, i1} " s ", 0"))
+       (emit! (string-append o " = extractvalue {i64, i1} " s ", 1"))
+       (cons f o))]
     [(eq? kind 'cmp)                          ; icmp (i1) then select TRUE_V(257)/FALSE_V(1)
      (let* ([c (fresh-temp)] [f (fresh-temp)])
        (emit! (string-append c " = " instr " i64 " a ", " b))
        (emit! (string-append f " = select i1 " c ", i64 257, i64 1"))
-       f)]
+       (cons f #f))]
     [else (error 'emit "bad inline arith kind" kind)]))
 
 (define (emit-inline-arith entry a b)  ; guard -> fast op | slow rt_* call, joined by phi
@@ -463,8 +484,19 @@
     (emit! (string-append g3 " = icmp eq i64 " g2 ", 0"))
     (emit! (string-append "br i1 " g3 ", label %" fast ", label %" slow))
     (start-bb fast)
-    (let* ([fv (emit-inline-fast kind instr a b)] [fbb current-bb])
-      (emit! (string-append "br label %" mrg))
+    (let* ([fo  (emit-inline-fast kind instr a b)]
+           [fv  (car fo)]
+           [ovf (cdr fo)]
+           [fbb current-bb])
+      ;; An overflowing fast op takes the SAME exit as a non-fixnum operand
+      ;; (design D3).  The emitter detects; the runtime primitive decides what
+      ;; overflow MEANS -- so replacing today's trap with a bignum promotion is a
+      ;; change to rt_* alone, with no edit here and no new IR shape.  The `slow`
+      ;; block simply gains a second predecessor; it carries no phi, so nothing
+      ;; else moves.
+      (if ovf
+          (emit! (string-append "br i1 " ovf ", label %" slow ", label %" mrg))
+          (emit! (string-append "br label %" mrg)))
       (start-bb slow)
       (let ([sv (fresh-temp)])
         (emit! (string-append sv " = call i64 @" rt "(i64 " a ", i64 " b ")"))
@@ -1022,7 +1054,12 @@
    "declare i64 @rt_run_guarded(ptr, i64)\n"
    "declare i64 @rt_error_object_p(i64)\n"
    "declare i64 @rt_error_object_message(i64)\n"
-   "declare i64 @rt_error_object_irritants(i64)\n\n"))
+   "declare i64 @rt_error_object_irritants(i64)\n"
+   ;; LLVM overflow-checked arithmetic, used by the inline fixnum fast path
+   ;; (change: fixnum-overflow-trap).  Each returns { i64 result, i1 overflowed }.
+   "declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64)\n"
+   "declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64)\n"
+   "declare {i64, i1} @llvm.smul.with.overflow.i64(i64, i64)\n\n"))
 
 ;; entry arity check: fixed callee requires argc == f, variadic requires
 ;; argc >= f; a mismatch calls rt_arity_error (which aborts).  Leaves emission

@@ -224,6 +224,20 @@ the test fails, SHALL delegate to the existing runtime primitive (`rt_add`, `rt_
 semantics: the inline path is a transparent accelerator that MUST produce a result identical to
 the runtime primitive for fixnum operands.
 
+The inline fixnum path for the arithmetic primitives `+`, `-`, and `*` SHALL ALSO detect when the
+operation's result is **not representable as a fixnum**, and on detection SHALL delegate to the
+same runtime primitive the fixnum-tag test delegates to. The emitter SHALL NOT decide the outcome
+of an overflow itself: it detects and delegates, leaving the runtime primitive the single
+definition of numeric semantics for the overflow case exactly as it already is for the
+non-fixnum case. Detection SHALL be exact — every overflowing operation and no in-range
+operation reaches the runtime by this route — and SHALL add no arithmetic to the fast path beyond
+the overflow test itself. The comparisons `=` and `<` cannot overflow and SHALL be unchanged.
+
+This delegation is what allows a later change to the representation of exact integers (for
+example, promoting an out-of-range result to an arbitrary-precision integer instead of trapping)
+to be made **entirely within the `rt_*` runtime primitives**, with no emitter change and no change
+to the emitted IR shape.
+
 The emitter SHALL ALSO provide a **flonum inline fast path** for the same primitives (`+`, `-`,
 `*`, `=`, `<`, and the reduced `>`, `>=`, `<=`). When both operands are known or guarded to be
 flonums, the emitter SHALL emit the native floating-point instruction (`fadd`, `fsub`, `fmul`,
@@ -233,7 +247,9 @@ identical to the corresponding runtime primitive, so that the `rt_*` runtime pri
 the single definition of numeric semantics for both fixnum and flonum operands. Any operand that
 is proven or guarded to be neither a fixnum nor a flonum (and any mixed fixnum/flonum case that
 is not specialized inline) SHALL flow to the `rt_*` runtime primitive, which performs the
-inexact (contagious) tower arithmetic or comparison.
+inexact (contagious) tower arithmetic or comparison. Flonum arithmetic overflows to an infinity
+under IEEE 754 rather than leaving a representable range, so the flonum fast path requires no
+overflow detection.
 
 The flonum fast path SHALL keep intermediate flonum values **unboxed** in native `f64` machine
 registers within a single expression tree. A flonum result that feeds another flonum operation
@@ -258,10 +274,10 @@ The division and flooring-remainder primitives `/` and `modulo` have NO inline p
 emitter SHALL declare as externs and map in the prim→runtime table.
 
 The observable behavior of every numeric primitive SHALL be unchanged relative to the previous
-lowering — identical results for all fixnum inputs, and results matching the runtime's tower
-behavior for flonum and mixed operands. Because the unboxing decisions are made in the shared
-emitter, the JIT and AOT backends SHALL emit byte-identical code, and the
-`byte-identical-backends` demo check MUST continue to pass.
+lowering for every input whose result is representable — identical results for all in-range
+fixnum inputs, and results matching the runtime's tower behavior for flonum and mixed operands.
+Because the unboxing decisions are made in the shared emitter, the JIT and AOT backends SHALL
+emit byte-identical code, and the `byte-identical-backends` demo check MUST continue to pass.
 
 #### Scenario: Inline fast path emitted for fixnum arithmetic
 
@@ -270,6 +286,14 @@ emitter, the JIT and AOT backends SHALL emit byte-identical code, and the
 - **THEN** the emitted IR contains a native arithmetic/compare instruction
   (`add`/`sub`/`icmp`) reached under a fixnum-tag guard, with a call to the corresponding
   `rt_*` primitive on the non-fixnum path
+
+#### Scenario: The arithmetic fast path detects overflow and delegates
+
+- **WHEN** a program containing `(+ a b)`, `(- a b)`, or `(* a b)` is compiled to LLVM IR
+- **THEN** the emitted fast path tests whether the operation overflowed and, when it did,
+  branches to the same `rt_*` call the fixnum-tag test branches to — so an overflowing
+  both-fixnum operation reaches the runtime primitive rather than producing a wrapped value
+  inline
 
 #### Scenario: Results are identical to the runtime primitive
 
@@ -286,9 +310,10 @@ emitter, the JIT and AOT backends SHALL emit byte-identical code, and the
 
 #### Scenario: Runtime remains the single definition of semantics
 
-- **WHEN** an operand is not a fixnum or flonum at run time
+- **WHEN** an operand is not a fixnum or flonum at run time, or a both-fixnum operation
+  overflows
 - **THEN** the emitted code calls the runtime primitive, so the runtime alone determines the
-  outcome for those operands
+  outcome in both cases
 
 #### Scenario: Flonum fast path emitted for flonum arithmetic
 
