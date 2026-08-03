@@ -67,9 +67,11 @@ compile_val () {  # name  source  expected  [extra emit build args...]
   local name="$1" src="$2" want="$3"; shift 3
   printf '%s\n' "$src" > "$TMP/$name.scm"
   # a minimal manifest with a program entry for this source (emit build is
-  # manifest-entry-driven; the source path is repo-root-relative under $TMP).
-  printf '((library (scheme base) (source "lib/scheme/base.sld"))\n (program %s (source "%s")))\n' \
-    "$name" "$TMP/$name.scm" > "$TMP/$name.man.scm"
+  # manifest-entry-driven).  The manifest lives in $TMP and a manifest's relative paths
+  # resolve against its own directory (change: manifest-search-path), so name the
+  # repo's library absolutely.
+  printf '((library (scheme base) (source "%s/lib/scheme/base.sld"))\n (program %s (source "%s")))\n' \
+    "$PWD" "$name" "$TMP/$name.scm" > "$TMP/$name.man.scm"
   if ! EMIT_VERBOSITY=quiet build/emit build "$name" --manifest "$TMP/$name.man.scm" -o "$TMP/$name" "$@" >"$TMP/$name.build" 2>&1; then
     echo "  [FAIL] $name  (build error)"; sed 's/^/         /' "$TMP/$name.build"; fail=$((fail+1)); return
   fi

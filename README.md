@@ -76,6 +76,21 @@ cat src/prelude.scm demos/fact.scm | build/schemec > /tmp/fact.ll   # source tex
 ./run-all-tests.sh
 ```
 
+**Installing.** `make install` puts `emit` on a prefix together with the library sources it
+needs beside it — `(scheme base)` is baked into the binary, but every other library (today
+`(scheme inexact)`) is found through a manifest, so the manifest and `lib/**.sld` are installed
+into `<prefix>/share/emit/` where the binary's own lookup finds them:
+
+```sh
+make install                      # -> /usr/local/bin/emit + /usr/local/share/emit/
+make install PREFIX=$HOME/.local  # a different prefix (also baked in as the fallback)
+make install PREFIX=/usr/local DESTDIR=/tmp/stage   # stage for a packager
+```
+
+An installed `emit run` / `emit repl` then works from any directory. Note `emit build` /
+`emit lib` do **not** yet work from an install — they still look for `tools/llvm-env.sh` and
+`src/runtime/runtime.c` relative to a source checkout ([#36](https://github.com/bwbensonjr/emit/issues/36)).
+
 **Changing the compiler.** Edit the source, then regenerate the committed IR and relink —
 the compiled compiler recompiles itself. See
 [Regenerating the compiler](#regenerating-the-compiler-bootstrap) for how it works and the

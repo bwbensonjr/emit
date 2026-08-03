@@ -66,15 +66,17 @@ check "run door: a top-level set! in a library body takes effect" \
       "$MOD/prog-tlsetlib.scm" '(101 1001)'
 
 # --- 4. the AOT door, where the tree-shake runs ------------------------------
+# Absolute source paths: this manifest lives in $TMP, and a manifest's relative paths
+# resolve against its own directory (change: manifest-search-path).
 BMAN="$TMP/build.scm"
 cat > "$BMAN" <<EOF
-((library (scheme base) (source "lib/scheme/base.sld"))
- (library (cmdlib)   (source "test/modules/cmdlib.sld"))
- (library (reclib)   (source "test/modules/reclib.sld"))
- (library (tlsetlib) (source "test/modules/tlsetlib.sld"))
- (program cmd-app  (source "test/modules/prog-cmdlib.scm")   (output "$TMP/cmd-app"))
- (program rec-app  (source "test/modules/prog-reclib.scm")   (output "$TMP/rec-app"))
- (program tls-app  (source "test/modules/prog-tlsetlib.scm") (output "$TMP/tls-app")))
+((library (scheme base) (source "$PWD/lib/scheme/base.sld"))
+ (library (cmdlib)   (source "$PWD/test/modules/cmdlib.sld"))
+ (library (reclib)   (source "$PWD/test/modules/reclib.sld"))
+ (library (tlsetlib) (source "$PWD/test/modules/tlsetlib.sld"))
+ (program cmd-app  (source "$PWD/test/modules/prog-cmdlib.scm")   (output "$TMP/cmd-app"))
+ (program rec-app  (source "$PWD/test/modules/prog-reclib.scm")   (output "$TMP/rec-app"))
+ (program tls-app  (source "$PWD/test/modules/prog-tlsetlib.scm") (output "$TMP/tls-app")))
 EOF
 aot () {  # <name> <program-entry> <exe> <expected>
   if EMIT_VERBOSITY=quiet build/emit build "$2" --manifest "$BMAN" >"$TMP/b.log" 2>&1; then
@@ -137,9 +139,11 @@ cat > "$TMP/narrow.scm" <<'EOF'
 (import (reclib))
 (pt-x (make-pt 1 2))
 EOF
+# Absolute source paths: this manifest lives in $TMP, and a manifest's relative paths
+# resolve against its own directory (change: manifest-search-path).
 cat > "$TMP/nman.scm" <<EOF
-((library (scheme base) (source "lib/scheme/base.sld"))
- (library (reclib) (source "test/modules/reclib.sld"))
+((library (scheme base) (source "$PWD/lib/scheme/base.sld"))
+ (library (reclib) (source "$PWD/test/modules/reclib.sld"))
  (program narrow-app (source "$TMP/narrow.scm") (output "$TMP/narrow-app")))
 EOF
 if EMIT_VERBOSITY=quiet build/emit build narrow-app --manifest "$TMP/nman.scm" >"$TMP/n.log" 2>&1; then

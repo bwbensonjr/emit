@@ -25,41 +25,42 @@ ok ()  { echo "  [OK  ] $1"; pass=$((pass+1)); }
 bad () { echo "  [FAIL] $1"; fail=$((fail+1)); }
 
 # A manifest with TWO program entries (one with an (output ...), one without) plus the
-# libraries prog-mylib.scm imports.  Sources are repo-relative (emit build resolves
-# them relative to the repo root).
+# libraries prog-mylib.scm imports.  This manifest lives in $TMP while its sources live
+# in the repo, so it names them ABSOLUTELY: a manifest's relative paths resolve against
+# the manifest's own directory (change: manifest-search-path), and absolute paths are
+# exempt from that rule.  $PWD is the repo root -- the runner cd's there.
 MAN="$TMP/emit-libs.scm"
-cat > "$MAN" <<'EOF'
-((library (scheme base) (source "lib/scheme/base.sld"))
- (library (mylib)      (source "test/modules/mylib.sld"))
- (program mylib-app    (source "test/modules/prog-mylib.scm") (output "OUTDIR/mylib-app"))
- (program greet-app    (source "test/modules/prog-mylib.scm")))
+cat > "$MAN" <<EOF
+((library (scheme base) (source "$PWD/lib/scheme/base.sld"))
+ (library (mylib)      (source "$PWD/test/modules/mylib.sld"))
+ (program mylib-app    (source "$PWD/test/modules/prog-mylib.scm") (output "$TMP/mylib-app"))
+ (program greet-app    (source "$PWD/test/modules/prog-mylib.scm")))
 EOF
-# Point the (output ...) at the temp dir so the suite writes nothing under build/.
-sed -i.bak "s#OUTDIR#$TMP#" "$MAN" && rm -f "$MAN.bak"
 
 # A single-program manifest (for the omitted-name case).
 ONE="$TMP/one.scm"
-cat > "$ONE" <<'EOF'
-((library (scheme base) (source "lib/scheme/base.sld"))
- (library (mylib) (source "test/modules/mylib.sld"))
- (program only-app (source "test/modules/prog-mylib.scm")))
+cat > "$ONE" <<EOF
+((library (scheme base) (source "$PWD/lib/scheme/base.sld"))
+ (library (mylib) (source "$PWD/test/modules/mylib.sld"))
+ (program only-app (source "$PWD/test/modules/prog-mylib.scm")))
 EOF
 
 echo "resolver (emit run --resolve-program, Chez-free)"
 
 # 1. resolve a named entry WITH an (output ...): prints source then output.
+PROG_SRC="$PWD/test/modules/prog-mylib.scm"
 got="$($RUN --resolve-program mylib-app --manifest "$MAN" < /dev/null 2>/dev/null)"
-[ "$got" = "$(printf 'test/modules/prog-mylib.scm\n%s/mylib-app' "$TMP")" ] \
+[ "$got" = "$(printf '%s\n%s/mylib-app' "$PROG_SRC" "$TMP")" ] \
   && ok "resolve mylib-app (source + output)" || bad "resolve mylib-app => [$got]"
 
 # 2. resolve a named entry WITHOUT an (output ...): source then an empty line.
 got="$($RUN --resolve-program greet-app --manifest "$MAN" < /dev/null 2>/dev/null)"
-[ "$got" = "test/modules/prog-mylib.scm" ] \
+[ "$got" = "$PROG_SRC" ] \
   && ok "resolve greet-app (source, empty output)" || bad "resolve greet-app => [$got]"
 
 # 3. omitted name with a SOLE program entry selects it.
 got="$($RUN --resolve-program --manifest "$ONE" < /dev/null 2>/dev/null)"
-[ "$got" = "test/modules/prog-mylib.scm" ] \
+[ "$got" = "$PROG_SRC" ] \
   && ok "resolve sole program (omitted name)" || bad "resolve sole => [$got]"
 
 # 4. unknown program name errors, non-zero exit.

@@ -65,7 +65,10 @@ if command -v chez >/dev/null 2>&1; then
   echo "dev->ship fidelity: run door matches the AOT door"
   # a minimal manifest so both doors build exactly the program's closure (base + mylib)
   min="$TMP/min-libs.scm"
-  printf '((library (scheme base) (source "lib/scheme/base.sld"))\n (library (mylib) (source "%s/mylib.sld")))\n' "$MOD" > "$min"
+  # absolute paths: the manifest lives in $TMP, and a manifest's relative paths resolve
+  # against its own directory (change: manifest-search-path)
+  printf '((library (scheme base) (source "%s/lib/scheme/base.sld"))\n (library (mylib) (source "%s/%s/mylib.sld")))\n' \
+    "$PWD" "$PWD" "$MOD" > "$min"
 
   # value parity
   chez --libdirs src --script src/compile.ss "$MOD/prog-mylib.scm" --manifest "$min" -o "$TMP/aot" >/dev/null 2>&1

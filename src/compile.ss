@@ -359,7 +359,32 @@
 ;; tables, and linking runtime + every unit .ll + the program into one exe.
 ;; Reading the manifest/sources and writing/linking artifacts are driver effects;
 ;; the pure core provides compile-library / compile-program-with-imports.
+;; Manifest location (change: manifest-search-path).  This bootstrap-only driver
+;; implements candidates 1-3 -- EMIT_MANIFEST, then ./emit-libs.scm -- and NOT the
+;; host's executable-relative / install-prefix candidates (design D4): it runs from a
+;; checkout under `chez --script` and is never installed, so "beside the executable"
+;; has no meaning here.  What parity requires is that both sides resolve the SAME
+;; manifest to the SAME source bytes, which is the relative-path rule below.
 (define *manifest-path* (or (getenv "EMIT_MANIFEST") "emit-libs.scm"))
+
+;; The directory part of a path ("" when it has none, i.e. the current directory).
+(define (dir-of path)
+  (let loop ([i (- (string-length path) 1)])
+    (cond [(< i 0) ""]
+          [(char=? (string-ref path i) #\/) (substring path 0 i)]
+          [else (loop (- i 1))])))
+
+;; A path written INSIDE a manifest is relative to that manifest, not to the CWD, so
+;; a manifest carries its library sources with it and resolves identically from any
+;; working directory (spec: module-system "Paths inside a manifest").  Absolute paths
+;; are used as given.  Mirrors manifest_relative() in src/emit.cpp.
+(define (manifest-relative manifest p)
+  (let ([d (dir-of manifest)])
+    (if (or (string=? p "")
+            (char=? (string-ref p 0) #\/)
+            (string=? d ""))
+        p
+        (string-append d "/" p))))
 
 ;; manifest file (one s-expression) -> list of (name source-path artifact-dir).
 ;; Only `(library ...)` entries are libraries; `(program ...)` entries (emit build
@@ -371,9 +396,15 @@
   (map (lambda (entry)                     ; (library NAME (source S) [(artifacts A)])
          (let ([name (cadr entry)] [clauses (cddr entry)])
            (list name
-                 (cond [(assq 'source clauses) => cadr]
-                       [else (error 'build "manifest entry missing (source ...)" name)])
-                 (cond [(assq 'artifacts clauses) => cadr] [else "build/lib"]))))
+                 (manifest-relative
+                  path
+                  (cond [(assq 'source clauses) => cadr]
+                        [else (error 'build "manifest entry missing (source ...)" name)]))
+                 ;; An explicit (artifacts A) is written in the manifest, so it follows
+                 ;; the same rule; the "build/lib" DEFAULT is the driver's own and stays
+                 ;; relative to the invocation.
+                 (cond [(assq 'artifacts clauses) => (lambda (c) (manifest-relative path (cadr c)))]
+                       [else "build/lib"]))))
        (filter (lambda (entry) (and (pair? entry) (eq? (car entry) 'library)))
                (car (read-program path)))))
 
