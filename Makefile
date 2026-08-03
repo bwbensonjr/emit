@@ -41,6 +41,12 @@ build/llvm.mk: tools/llvm-env.sh tools/log.sh | build
 EMIT        := build/emit
 SCHEMEC     := build/schemec
 
+# Install location (change: manifest-search-path).  PREFIX is compiled into the
+# binary as its last-resort manifest candidate AND is where `make install` writes;
+# DESTDIR stages that tree elsewhere without changing what the binary looks for.
+PREFIX      ?= /usr/local
+DESTDIR     ?=
+
 # Committed, host-agnostic stage-0 compiler IR (checked-in INPUTS; design D3/D4).
 SCHEMEC_LL     := bootstrap/schemec.ll
 EMBED_LL       := bootstrap/embed.ll
@@ -93,9 +99,12 @@ $(SCHEMEC): $(SCHEMEC_LL) $(SCHEME_BASE_LL) src/runtime/runtime.c Makefile | bui
 build/runtime-host.o: src/runtime/runtime.c Makefile | build
 	$(CC) -std=c11 -O2 -I$(GC_INC) -DRT_NO_MAIN -c $< -o $@
 
-# Unified emit front-end, compiled as C++ against the LLVM headers.
+# Unified emit front-end, compiled as C++ against the LLVM headers.  EMIT_PREFIX is
+# the LAST manifest candidate (change: manifest-search-path): the prefix this binary
+# was built for, consulted only when neither ./emit-libs.scm nor a manifest beside the
+# executable exists.  A plain in-repo `make` bakes /usr/local and never uses it.
 build/emit.o: src/emit.cpp Makefile | build
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -DEMIT_PREFIX='"$(PREFIX)"' -c $< -o $@
 
 # Batch bootstrap runner object (change: run-door-user-libraries, decision X):
 # tools/regen.sh links this with the batch embed.ll into build/emit-boot to
@@ -130,6 +139,40 @@ regen:
 .PHONY: catalogue
 catalogue:
 	tools/complexity.sh --write
+
+# ===========================================================================
+# install: the binary PLUS the libraries it needs beside it (change:
+# manifest-search-path, issue #35).
+# ===========================================================================
+# A library that is not baked into the compiler is reachable only through a manifest,
+# so installing the binary alone ships an `emit` whose standard library disappears the
+# moment the user leaves this directory.  The layout below is exactly what the
+# binary's own manifest lookup searches for: <prefix>/bin/emit finds
+# <prefix>/share/emit/emit-libs.scm via its executable-relative candidate (symlinks
+# resolved), and that manifest's relative (source ...) paths resolve beside it.
+#
+# LIBRARY SOURCE is what ships -- an installed door compiles a needed library on
+# demand exactly as an in-repo door does.  Compiled artifacts (.ll/.exports) are
+# deliberately NOT part of the install contract; that would put artifact staleness on
+# the install surface.
+#
+# Depends only on $(EMIT): no regen, no Chez, so a release tarball installs with just
+# LLVM + libgc + make.  Idempotent -- install over the same prefix twice and the tree
+# is the same.
+BINDIR   := $(DESTDIR)$(PREFIX)/bin
+SHAREDIR := $(DESTDIR)$(PREFIX)/share/emit
+SLDS     := $(wildcard lib/scheme/*.sld)
+
+.PHONY: install
+install: $(EMIT)
+	@. tools/log.sh; say "install emit -> $(DESTDIR)$(PREFIX)  [prefix $(PREFIX)]"
+	@install -d "$(BINDIR)" "$(SHAREDIR)/lib/scheme"
+	@install -m 755 $(EMIT) "$(BINDIR)/emit"
+	@install -m 644 emit-libs.scm "$(SHAREDIR)/emit-libs.scm"
+	@install -m 644 $(SLDS) "$(SHAREDIR)/lib/scheme/"
+	@. tools/log.sh; \
+	  say "install $(EMIT) -> $(BINDIR)/emit  [$$(bytes $(BINDIR)/emit) bytes]"; \
+	  say "install emit-libs.scm + $(words $(SLDS)) library source(s) -> $(SHAREDIR)"
 
 # build/ is a real directory (order-only prerequisite), not a phony target.
 build:

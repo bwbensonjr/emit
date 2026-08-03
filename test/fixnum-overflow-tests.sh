@@ -135,8 +135,10 @@ check "a literal AT the bound still reads"    "(list $MAX $MIN)" "($MAX $MIN)"
 # --- a standalone executable exits non-zero ------------------------------------
 # `emit build` delivers a named program from a manifest, so the case needs one.
 printf '(begin (display "before") (newline) (+ %s 1))\n' "$MAX" > "$TMP/exe.scm"
+# Absolute source paths: this manifest lives in $TMP, and a manifest's relative paths
+# resolve against its own directory (change: manifest-search-path).
 cat > "$TMP/emit-libs.scm" <<EOF
-((library (scheme base) (source "lib/scheme/base.sld"))
+((library (scheme base) (source "$PWD/lib/scheme/base.sld"))
  (program ovf-app (source "$TMP/exe.scm") (output "$TMP/exe")))
 EOF
 if EMIT_VERBOSITY=quiet build/emit build ovf-app --manifest "$TMP/emit-libs.scm" \

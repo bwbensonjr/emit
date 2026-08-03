@@ -63,23 +63,60 @@ shadowing**).
 ## The manifest
 
 Library *names* are mapped to *source files* by a manifest — an s-expression file (default
-`emit-libs.scm`, overridable with `--manifest FILE` or the `EMIT_MANIFEST` env var):
+`emit-libs.scm`; see **Where the manifest is found** below):
 
 ```scheme
 ;; each entry: (library NAME (source PATH) [(artifacts DIR)])
 ((library (scheme base) (source "lib/scheme/base.sld"))
- (library (mylib)       (source "test/modules/mylib.sld"))
- (library (chain-a)     (source "test/modules/chain-a.sld"))
- (library (chain-b)     (source "test/modules/chain-b.sld")))
+ (library (mylib)       (source "mylib.sld"))
+ (library (chain-a)     (source "chain-a.sld"))
+ (library (chain-b)     (source "chain-b.sld")))
 ```
 
 - `source` is the `.sld` path. `artifacts` is where the compiled `.ll`/`.exports` land (default
   `build/lib`). **Entry order is irrelevant** — the build computes the topological order itself.
+- **A relative path in a manifest is relative to that manifest**, not to the directory you ran
+  from (change: `manifest-search-path`). Absolute paths are used as given. So a manifest carries
+  its library sources with it and resolves identically from anywhere — which is exactly what lets
+  an installed `<prefix>/share/emit/emit-libs.scm` say `lib/scheme/base.sld` and mean the file
+  beside itself. The rule covers a library's `source`, an explicit `artifacts`, and a program
+  entry's `source`/`output`; the *default* artifact dir (`build/lib`) is the driver's own and
+  stays relative to the invocation.
 - The default `emit-libs.scm` at the repo root lists the two standard libraries — `(scheme base)`
   and `(scheme inexact)`; point `--manifest` at your own for additional libraries (as the test
   suites do with `test/modules/emit-libs.scm`). Listing a library costs a program nothing unless
   it imports it: the run door preloads lazily (see below) and `emit build` links only the
   program's import closure.
+
+### Where the manifest is found
+
+Every door looks for the manifest the same way, taking the first candidate that exists (change:
+`manifest-search-path`, issue #35):
+
+| # | candidate | for |
+|---|---|---|
+| 1 | `--manifest FILE` | an explicit request |
+| 2 | `$EMIT_MANIFEST` | an explicit request |
+| 3 | `./emit-libs.scm` | the in-repo / in-project case |
+| 4 | `<dir of the real path of the running exe>/../share/emit/emit-libs.scm` | a relocatable install |
+| 5 | `<build-time PREFIX>/share/emit/emit-libs.scm` | the prefix the binary was built for |
+
+- **1–2 name a specific file.** If it is missing that is an error — falling through would silently
+  run against different libraries than you asked for.
+- **3–5 are a search.** A missing candidate is ordinary, and finding no manifest at all is *not*
+  an error: `(scheme base)` is baked into the binary, so a program that imports only baked-in
+  libraries needs no manifest anywhere. Anything else is reported by name at import resolution.
+- Candidate 4 resolves the executable through symbolic links, so a Homebrew-style symlink in
+  `<prefix>/bin` finds what was installed beside the *real* binary. Candidate 5 covers the case
+  where the install is not where it was built for.
+- Because candidate 3 is searched first, **installation is additive**: inside the repo you always
+  get the repo's own `emit-libs.scm`, even with an `emit` installed system-wide.
+- Each door narrates the manifest it resolved on stderr (`resolve manifest -> …`), silenced by
+  `EMIT_VERBOSITY=quiet`. `make install` produces the layout candidates 4–5 look for; see
+  `test/install-layout-tests.sh`.
+
+The Chez driver (`src/compile.ss`) implements candidates 1–3 and the same relative-path rule, but
+not 4–5: it is a bootstrap-only path that runs from a checkout and is never installed.
 
 A manifest may also carry **program entries** — the deliverables `emit build` produces (change:
 `emit-build-bin-entry`):
@@ -87,8 +124,8 @@ A manifest may also carry **program entries** — the deliverables `emit build` 
 ```scheme
 ;; a program entry: (program NAME (source PATH) [(output EXE-PATH)])
 ((library (scheme base) (source "lib/scheme/base.sld"))
- (library (mylib)       (source "test/modules/mylib.sld"))
- (program mylib-app     (source "test/modules/prog-mylib.scm") (output "build/mylib-app")))
+ (library (mylib)       (source "mylib.sld"))
+ (program mylib-app     (source "prog-mylib.scm") (output "build/mylib-app")))
 ```
 
 - `NAME` is a bare symbol (distinct from a library name, which is a list), `source` is the
@@ -135,8 +172,9 @@ build/emit repl --manifest test/modules/emit-libs.scm
 `emit run` compiles and runs a whole program with **no Chez**, and resolves user-library
 `import`s through the manifest — the *run door*, at parity with the AOT and REPL doors (change:
 `run-door-user-libraries`). `(scheme base)` is baked in, so a plain program needs no manifest at
-all; user libraries are read from the manifest (default `emit-libs.scm`, override `--manifest FILE`
-or `EMIT_MANIFEST`). The program source is read from a `FILE` argument when given, otherwise stdin:
+all — it runs from any directory, installed or not; user libraries are read from the manifest
+(found by the order under **Where the manifest is found**). The program source is read from a
+`FILE` argument when given, otherwise stdin:
 
 ```sh
 echo '(map (lambda (x) (* x x)) (list 1 2 3))' | build/emit run   # => (1 4 9)   no manifest needed
@@ -167,9 +205,10 @@ build/emit build --manifest my-project.scm
 ```
 
 - **Resolution is Chez-free.** `emit build` resolves the `(program NAME …)` entry through the
-  embedded compiler, exposed as `emit run --resolve-program NAME` (manifest resolution order:
-  `--manifest` > `EMIT_MANIFEST` > default `emit-libs.scm`). It prints the resolved source and
-  output and runs nothing:
+  embedded compiler, exposed as `emit run --resolve-program NAME` (manifest lookup order:
+  `--manifest` > `EMIT_MANIFEST` > `./emit-libs.scm` > exe-relative > built-in prefix — see
+  **Where the manifest is found**). It prints the resolved source and output — each already
+  resolved against the manifest's own directory — and runs nothing:
 
   ```bash
   build/emit run --resolve-program mylib-app --manifest test/modules/emit-libs.scm

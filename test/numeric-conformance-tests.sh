@@ -50,7 +50,7 @@ check () {  # <name> <expression-text> <expected stdout>
 check_built () {  # <name> <program-text> <expected stdout>
   printf '%s\n' "$2" > "$TMP/b.scm"
   cat > "$TMP/b-libs.scm" <<EOF
-((library (scheme base) (source "lib/scheme/base.sld"))
+((library (scheme base) (source "$PWD/lib/scheme/base.sld"))
  (program floprog (source "$TMP/b.scm") (output "$TMP/floprog")))
 EOF
   if ! EMIT_VERBOSITY=quiet build/emit build floprog --manifest "$TMP/b-libs.scm" \

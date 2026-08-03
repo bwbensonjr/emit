@@ -173,20 +173,120 @@ static bool add_ir(const std::string &ir, const char *name, std::string &err) {
   return true;
 }
 
+// The running executable's real path: argv[0] with symlinks resolved, and -- when
+// argv[0] carries no '/' because the shell found us on PATH -- looked up on PATH
+// first.  Returns "" when it cannot be determined.  Both repo_root() and the
+// executable-relative manifest candidate need this: a Homebrew install is reached
+// through a symlink in <prefix>/bin, and what sits beside the REAL binary is what
+// was installed with it.
+static std::string exe_path() {
+  char buf[PATH_MAX];
+  if (g_argv0.find('/') != std::string::npos)
+    return realpath(g_argv0.c_str(), buf) ? std::string(buf) : g_argv0;
+  const char *path = std::getenv("PATH");        // bare name: the shell used PATH
+  if (!path) return "";
+  std::istringstream dirs(path);
+  std::string d;
+  while (std::getline(dirs, d, ':')) {
+    if (d.empty()) d = ".";
+    std::string cand = d + "/" + g_argv0;
+    if (access(cand.c_str(), X_OK) == 0)
+      return realpath(cand.c_str(), buf) ? std::string(buf) : cand;
+  }
+  return "";
+}
+
+// The directory part of `path` ("" when it has none, i.e. the current directory).
+static std::string dir_of(const std::string &path) {
+  auto s = path.find_last_of('/');
+  return s == std::string::npos ? std::string() : path.substr(0, s);
+}
+
 // Repo root, derived from this binary's path (build/emit -> repo root): strip the
 // trailing "/emit" and "/build".  Used only to locate tools/llvm-env.sh and the
-// runtime source for the build/lib doors (user/manifest paths stay relative to the
-// caller's CWD).  Falls back to "." when the path has no directory components.
+// runtime source for the build/lib doors.  Falls back to "." when the path has no
+// directory components.
 static std::string repo_root() {
-  char buf[PATH_MAX];
-  std::string p = g_argv0;
-  if (realpath(g_argv0.c_str(), buf)) p = buf;
-  auto s1 = p.find_last_of('/');
-  if (s1 == std::string::npos) return ".";
-  std::string dir = p.substr(0, s1);              // .../build
-  auto s2 = dir.find_last_of('/');
-  if (s2 == std::string::npos) return ".";
-  return dir.substr(0, s2);                       // repo root
+  std::string p = exe_path();
+  if (p.empty()) p = g_argv0;
+  std::string dir = dir_of(p);                    // .../build
+  if (dir.empty()) return ".";
+  std::string up = dir_of(dir);
+  return up.empty() ? "." : up;                   // repo root
+}
+
+// --- manifest location (change: manifest-search-path; issue #35) ---------------
+// A library that is not baked into the binary is reachable only through a manifest,
+// so WHERE the manifest is looked for decides whether an installed `emit` has a
+// standard library at all.  The ordered candidates (spec: module-system "Library
+// manifest"):
+//
+//   1. --manifest FILE          explicit
+//   2. $EMIT_MANIFEST           explicit
+//   3. ./emit-libs.scm          the in-repo/in-project case
+//   4. <exe>/../share/emit/…    a relocatable install (symlinks resolved)
+//   5. <EMIT_PREFIX>/share/…    the prefix this binary was built for
+//
+// 1-2 name a specific file: if it is absent that is a user error, and falling
+// through would silently run against DIFFERENT libraries than were asked for.  3-5
+// are a search, so a missing candidate is ordinary and finding nothing at all stays
+// non-fatal -- a program importing only baked-in libraries needs no manifest, and
+// import resolution reports anything else by name.
+#ifndef EMIT_PREFIX
+#define EMIT_PREFIX "/usr/local"
+#endif
+static const char *kManifestName = "emit-libs.scm";
+
+static bool file_readable(const std::string &p) {
+  std::ifstream f(p);
+  return f.good();
+}
+
+// Resolve a manifest for a door.  `flag` is the door's --manifest argument (empty if
+// not given).  Returns the resolved path, or "" when no searched candidate exists.
+// Sets `bad` when an EXPLICIT request names a missing file (message already printed);
+// the door must then exit non-zero rather than proceed.
+static std::string resolve_manifest(const std::string &flag, bool &bad) {
+  bad = false;
+  const char *env = std::getenv("EMIT_MANIFEST");
+  std::string explicit_req = !flag.empty() ? flag : (env ? std::string(env) : std::string());
+  if (!explicit_req.empty()) {                   // candidates 1-2
+    if (!file_readable(explicit_req)) {
+      std::cerr << "emit: manifest not found: " << explicit_req << "\n";
+      bad = true;
+      return "";
+    }
+    return explicit_req;
+  }
+  if (file_readable(kManifestName)) return kManifestName;          // candidate 3
+  std::string exe = exe_path();                                    // candidate 4
+  if (!exe.empty()) {
+    std::string share = dir_of(dir_of(exe)) + "/share/emit/" + kManifestName;
+    if (file_readable(share)) return share;
+  }
+  std::string prefixed =                                           // candidate 5
+      std::string(EMIT_PREFIX) + "/share/emit/" + kManifestName;
+  if (file_readable(prefixed)) return prefixed;
+  return "";
+}
+
+// Resolve a path that appeared INSIDE a manifest -- a library's (source ...), a
+// program entry's (source ...)/(output ...) -- against that manifest's own
+// directory.  One rule: a relative path in a manifest is relative to that manifest,
+// so a manifest carries its library sources with it and resolves identically from
+// any working directory.  Absolute paths are used as given.
+static std::string manifest_relative(const std::string &manifest, const std::string &p) {
+  if (p.empty() || p[0] == '/') return p;
+  std::string d = dir_of(manifest);
+  return d.empty() ? p : d + "/" + p;
+}
+
+// Narrate which manifest a door resolved (docs/OUTPUT.md form), so "which
+// emit-libs.scm am I getting?" is a one-line answer rather than an strace session.
+// stderr only: no door's stdout changes by a byte.
+static void say_manifest(const std::string &manifest) {
+  if (manifest.empty()) vsay("resolve manifest -> none found (baked-in libraries only)");
+  else                  say("resolve manifest -> " + manifest);
 }
 
 // ===========================================================================
@@ -229,8 +329,7 @@ static std::vector<std::string> source_imports(const std::string &text) {
 // already be loaded.  Only this door, compiling one known program, can be lazy.
 static bool preload_user_libraries(const std::string &manifest, std::vector<std::string> &modules,
                                    const std::string &program_src) {
-  std::ifstream probe(manifest);
-  if (!probe.good()) return true;            // no manifest: no user libraries
+  if (manifest.empty()) return true;         // no manifest: no user libraries
 
   std::string mtext = read_file(manifest);
   rt_repl_set(9, mtext.data(), (intptr_t)mtext.size());  // "KEY\tPATH" sans (scheme base)
@@ -243,7 +342,8 @@ static bool preload_user_libraries(const std::string &manifest, std::vector<std:
     while (std::getline(lines, line)) {
       std::string::size_type tab = line.find('\t');
       if (tab == std::string::npos) continue;
-      path_of[line.substr(0, tab)] = line.substr(tab + 1);
+      // Manifest paths are relative to the manifest, not to the CWD.
+      path_of[line.substr(0, tab)] = manifest_relative(manifest, line.substr(tab + 1));
     }
   }
   if (path_of.empty()) return true;
@@ -306,8 +406,7 @@ static bool preload_user_libraries(const std::string &manifest, std::vector<std:
 // on error (message already printed).  Requires an initialized session (mode 0).
 static int resolve_program(const std::string &manifest, const std::string &name,
                            std::string &src, std::string &out) {
-  std::ifstream probe(manifest);
-  std::string mtext = probe.good() ? read_file(manifest) : std::string();
+  std::string mtext = manifest.empty() ? std::string() : read_file(manifest);
   rt_repl_set(10, mtext.data(), (intptr_t)mtext.size());
   std::string triples = scm_str(scheme_entry());
   std::vector<std::vector<std::string>> progs;
@@ -335,8 +434,9 @@ static int resolve_program(const std::string &manifest, const std::string &name,
     std::cerr << "\n";
     return 1;
   }
-  src = (*pick)[1];
-  out = (*pick)[2];
+  // A program entry's paths, like a library's, are relative to the manifest.
+  src = manifest_relative(manifest, (*pick)[1]);
+  out = manifest_relative(manifest, (*pick)[2]);
   return 0;
 }
 
@@ -403,11 +503,11 @@ static int emit_run(int argc, char **argv) {
     else if (!a.empty() && a[0] != '-') prog_file = a;   // program source FILE
     else { std::cerr << "emit run: unknown option " << a << "\n"; return 2; }
   }
-  // Manifest resolution: --manifest flag wins, then EMIT_MANIFEST, then the default.
-  if (manifest.empty()) {
-    const char *mp = std::getenv("EMIT_MANIFEST");
-    manifest = mp ? std::string(mp) : std::string("emit-libs.scm");
-  }
+  // Manifest resolution: the shared ordered lookup (change: manifest-search-path).
+  bool bad_manifest = false;
+  manifest = resolve_manifest(manifest, bad_manifest);
+  if (bad_manifest) return 1;
+  say_manifest(manifest);
 
   // --resolve-program NAME: resolve a manifest program entry and print its source +
   // output (source line, then output line).  Chez-free; never reads stdin or runs.
@@ -574,11 +674,8 @@ static bool run_init(const std::string &name) {
 // module-artifacts-vertical-slice; transitive imports: module-generalize).  Mode 5
 // turns the manifest text into source paths; mode 4 compiles each unit and returns
 // (ok . (ir . init-symbol)).  Iterated to a fixpoint (topological load order).
-static void preload_libraries() {
-  const char *mp = std::getenv("EMIT_MANIFEST");
-  std::string manifest = mp ? std::string(mp) : std::string("emit-libs.scm");
-  std::ifstream probe(manifest);
-  if (!probe.good()) return;                 // no manifest: no libraries this session
+static void preload_libraries(const std::string &manifest) {
+  if (manifest.empty()) return;              // no manifest: no libraries this session
   std::string mtext = read_file(manifest);
 
   rt_repl_set(5, mtext.data(), (intptr_t)mtext.size());
@@ -588,7 +685,7 @@ static void preload_libraries() {
   std::istringstream lines(paths);
   std::string path;
   while (std::getline(lines, path))
-    if (!path.empty()) pending.push_back(path);
+    if (!path.empty()) pending.push_back(manifest_relative(manifest, path));
 
   while (!pending.empty()) {
     std::vector<std::string> deferred;
@@ -654,9 +751,9 @@ static int emit_repl(int argc, char **argv) {
     else if (is_dump_flag(a, dump, dump_all)) { }
     else if (a == "--manifest" && i + 1 < argc) manifest = argv[++i];
   }
-  // A --manifest flag feeds preload_libraries (which reads EMIT_MANIFEST); set it so
-  // the flag and the env agree (parity with `emit run --manifest`).
-  if (!manifest.empty()) setenv("EMIT_MANIFEST", manifest.c_str(), 1);
+  bool bad_manifest = false;
+  manifest = resolve_manifest(manifest, bad_manifest);
+  if (bad_manifest) return 1;
   // Per-form stage dumps for the whole session (change: emit-dump-stages).
   forward_dump_level(dump, dump_all);
 
@@ -710,7 +807,8 @@ static int emit_repl(int argc, char **argv) {
   }
 
   // Preload manifest libraries so interactive (import (L)) forms can resolve them.
-  preload_libraries();
+  say_manifest(manifest);
+  preload_libraries(manifest);
 
   // The prelude's procedures live in the now-preloaded (scheme base) library;
   // auto-import it into the session scope (mode 6) so later forms resolve prelude
@@ -862,10 +960,10 @@ static int emit_build(int argc, char **argv) {
     else if (!a.empty() && a[0] == '-') { std::cerr << "emit build: unknown option " << a << "\n"; return 2; }
     else name = a;
   }
-  if (manifest.empty()) {
-    const char *mp = std::getenv("EMIT_MANIFEST");
-    manifest = mp ? std::string(mp) : std::string("emit-libs.scm");
-  }
+  bool bad_manifest = false;
+  manifest = resolve_manifest(manifest, bad_manifest);
+  if (bad_manifest) return 1;
+  say_manifest(manifest);
   std::string root = repo_root();
 
   GC_INIT();
@@ -951,10 +1049,10 @@ static int emit_lib(int argc, char **argv) {
     std::cerr << "usage: emit lib SRC [-o DIR] [--manifest F] [--dump|--dump-all]\n";
     return 1;
   }
-  if (manifest.empty()) {
-    const char *mp = std::getenv("EMIT_MANIFEST");
-    manifest = mp ? std::string(mp) : std::string("emit-libs.scm");
-  }
+  bool bad_manifest = false;
+  manifest = resolve_manifest(manifest, bad_manifest);
+  if (bad_manifest) return 1;
+  say_manifest(manifest);
 
   GC_INIT();
   forward_dump_level(dump, dump_all);

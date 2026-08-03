@@ -37,11 +37,13 @@ TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 
 # The AOT door builds a manifest PROGRAM ENTRY, so it needs its own manifest with the
 # (output ...) pointed at the temp dir -- the suite writes nothing under build/.
+# Absolute source paths: this manifest lives in $TMP, and a manifest's relative paths
+# resolve against its own directory (change: manifest-search-path).
 BMAN="$TMP/emit-libs-build.scm"
 cat > "$BMAN" <<EOF
-((library (scheme base) (source "lib/scheme/base.sld"))
- (library (mutlib)      (source "test/modules/mutlib.sld"))
- (program mutlib-app    (source "test/modules/prog-mutlib.scm") (output "$TMP/mutlib-app")))
+((library (scheme base) (source "$PWD/lib/scheme/base.sld"))
+ (library (mutlib)      (source "$PWD/test/modules/mutlib.sld"))
+ (program mutlib-app    (source "$PWD/test/modules/prog-mutlib.scm") (output "$TMP/mutlib-app")))
 EOF
 pass=0; fail=0
 ok ()  { echo "  [OK  ] $1"; pass=$((pass+1)); }
@@ -145,8 +147,8 @@ want   "unit: the assigned lambda got an ordinary counter label" "$LL" \
 fails_with () {  # <name> <lib-name> <lib-source> <program> <regex>
   local man="$TMP/man-$2.scm"
   cat > "$man" <<EOF
-((library (scheme base) (source "lib/scheme/base.sld"))
- (library ($2) (source "$3")))
+((library (scheme base) (source "$PWD/lib/scheme/base.sld"))
+ (library ($2) (source "$PWD/$3")))
 EOF
   if $RUN --manifest "$man" < "$4" >/dev/null 2>"$TMP/f.err"; then
     bad "$1 (expected non-zero exit, but it succeeded)"; return

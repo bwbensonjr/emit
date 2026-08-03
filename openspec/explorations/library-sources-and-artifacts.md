@@ -79,11 +79,27 @@ is unreachable" to "part of R7RS-small is unreachable."
 | Way out | Cost | Note |
 |---|---|---|
 | Bake the relocated libraries too | Compiler grows; `scheme-base-library-form` generalizes to N libraries | Preserves standalone behaviour; contradicts the deliberate "(scheme inexact) is ordinary" stance |
-| Give the manifest a search path (exe-relative, then `$PREFIX/share/emit`, then CWD) | Host-side, small | The honest fix, and it unblocks brew whether or not #33 happens |
+| **Give the manifest a search path (exe-relative, then `$PREFIX/share/emit`, then CWD)** | Host-side, small | **CHOSEN — landed as `manifest-search-path` (#35)** |
 | `(scheme base)` re-exports relocated names for a window | Cheap, temporary | Needs import sets, which do not exist (`docs/MODULES.md`: whole-library imports only) |
 
 **This decision must precede #33**, and it is a product question — *should an installed `emit` have
 the full standard surface with no files beside it?* — not a compiler one.
+
+> **RESOLVED (2026-08-03).** The **search path** was taken, not bake-more: an installed library is
+> found on disk beside the binary rather than compiled into it, so #33 may relocate names out of
+> `(scheme base)` without making them unreachable. Open question 1 below is thereby answered *no* —
+> an installed `emit` is not expected to carry the full standard surface in its binary; it is
+> expected to carry it in `<prefix>/share/emit/`. Two things landed with it that the note did not
+> anticipate:
+>
+> - **The defect was worse than measured here.** The `emit repl` door resolves even `(scheme base)`
+>   through the manifest (eager preload, mode 5), so from outside the repo an installed REPL had
+>   *no standard library at all* — `map` unbound, primitives only. Finding 1's "baked libraries are
+>   CWD-independent" holds for the run door; it never held for the REPL.
+> - **A second, independent instance of the same family**, now #36: `emit build`/`emit lib` locate
+>   `tools/llvm-env.sh` and `src/runtime/runtime.c` through `repo_root()`, which assumes a checkout,
+>   so they still do not work from an install. That is toolchain/runtime, not library resolution,
+>   and it overlaps `homebrew-tap-distribution` task group 3.
 
 ## Finding 3 — #18's `include` has exactly one shape that keeps the Chez driver
 
@@ -146,7 +162,7 @@ carries no comments), removing ~33 KB from each of `embed.ll` and `embed-repl.ll
 ## Sequence that falls out
 
 ```
-  ① manifest search path (host-side, small)          ← unblocks brew; independent of all three
+  ① manifest search path  ✅ LANDED (#35, manifest-search-path)   ← unblocked brew
         │
         ├──▶ ② #18 cond-expand            (self-contained, no I/O)
         │         │
@@ -159,8 +175,8 @@ carries no comments), removing ~33 KB from each of `embed.ll` and `embed-repl.ll
                   #33(b) §6 absence audit       ← additive; floats anywhere
 ```
 
-Step ① did not come from any of the three issues. It is the cheapest item with the widest reach,
-and it is currently nobody's.
+Step ① did not come from any of the three issues. It was the cheapest item with the widest reach,
+and it landed first (#35); ②–⑤ are unchanged and still open.
 
 Each step keeps the property the repo's guards depend on: one IR-shaping change at a time, so each
 `test/module-scaffold-baseline.sha256` re-record can be explained as a specific delta the way the
@@ -168,8 +184,9 @@ protocol in that script's header requires.
 
 ## Open questions
 
-1. **Should an installed `emit` have the full standard surface standalone?** Decides bake-more vs
-   search-path, and therefore #33's shape. A product question.
+1. ~~**Should an installed `emit` have the full standard surface standalone?**~~ **ANSWERED** by
+   #35: no — search-path, not bake-more. An installed `emit` carries its libraries in
+   `<prefix>/share/emit/`, so #33 may relocate names freely. See the RESOLVED note in Finding 2.
 2. Does `(scheme base)` re-export relocated names during a deprecation window — and does that
    require import sets (`only`/`except`/`prefix`) to exist first?
 3. Is the manifest the right long-term resolution mechanism, or should there be a library *path*

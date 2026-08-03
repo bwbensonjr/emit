@@ -113,8 +113,10 @@ else bad "emit lib: --dump perturbed an artifact"; fi
 # 11. emit build: compare the emitted IR and the delivered exe's BEHAVIOR, not the
 #     exe bytes -- two identical `emit build` runs already differ (Mach-O LC_UUID,
 #     and even in size), so exe byte-identity is not a property the linker provides.
-printf '((library (scheme base) (source "lib/scheme/base.sld"))\n (program dumpprog (source "%s")))\n' \
-  "$TMP/prog.scm" > "$TMP/man.scm"
+# Absolute source path: a manifest's relative paths resolve against its own directory
+# (change: manifest-search-path), and this manifest lives in $TMP.
+printf '((library (scheme base) (source "%s/lib/scheme/base.sld"))\n (program dumpprog (source "%s")))\n' \
+  "$PWD" "$TMP/prog.scm" > "$TMP/man.scm"
 EMIT_VERBOSITY=quiet build/emit build dumpprog --manifest "$TMP/man.scm" -o "$TMP/exe" \
   >/dev/null 2>&1
 EMIT_VERBOSITY=quiet build/emit build dumpprog --manifest "$TMP/man.scm" -o "$TMP/exe-dump" \
