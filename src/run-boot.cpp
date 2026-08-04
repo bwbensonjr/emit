@@ -156,15 +156,21 @@ int main(int argc, char **argv) {
     return true;
   };
 
+  // Split on EVERY boundary, not just the first: the baked standard library is a
+  // PARTITION, so the stream is one module per baked member in dependency order and then
+  // the program (change: scheme-base-partition).  Add order is irrelevant -- the
+  // program's @scheme_entry drives the __init calls in topological order -- but each
+  // module must be parsed separately, since each emits a fixed @__apply0 and string
+  // globals from a reset counter that would collide in one module.
   const std::string marker = "; ==EMIT-UNIT-BOUNDARY==\n";
-  size_t bpos = ir.find(marker);
-  if (bpos == std::string::npos) {
-    if (!addModule(ir, "<program>")) return 1;
-  } else {
-    // (scheme base) module first, then the program that imports it.
-    if (!addModule(ir.substr(0, bpos), "<scheme.base>")) return 1;
-    if (!addModule(ir.substr(bpos + marker.size()), "<program>")) return 1;
+  size_t start = 0;
+  for (;;) {
+    size_t bpos = ir.find(marker, start);
+    if (bpos == std::string::npos) break;
+    if (!addModule(ir.substr(start, bpos - start), "<unit>")) return 1;
+    start = bpos + marker.size();
   }
+  if (!addModule(ir.substr(start), "<program>")) return 1;
 
   Expected<ExecutorAddr> sym = JIT->lookup("scheme_entry");
   if (!sym) {

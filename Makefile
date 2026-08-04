@@ -51,10 +51,15 @@ DESTDIR     ?=
 SCHEMEC_LL     := bootstrap/schemec.ll
 EMBED_LL       := bootstrap/embed.ll
 EMBED_REPL_LL  := bootstrap/embed-repl.ll
-# The prelude re-homed as (scheme base) (change: compiler-bootstrap-rehome): the
-# compiler binaries no longer inline the prelude -- they link this one committed
-# library IR, which their own re-homed IR references as scheme.base:* externals.
-SCHEME_BASE_LL := bootstrap/scheme.base.ll
+# The prelude re-homed as a library SET (change: compiler-bootstrap-rehome, partitioned by
+# scheme-base-partition): the compiler binaries no longer inline the prelude -- they link
+# these committed library modules, which their own re-homed IR references as
+# scheme.base:* / emit.internal:* externals, each initialized once via its __init guard.
+#
+# In DEPENDENCY ORDER, matching *prelude-libraries* in src/prelude-surface.scm: the
+# substrate before (scheme base), which imports it.  tools/regen.sh has the same list (it
+# splits its --emit stream by it) and fails loudly if the two disagree with the partition.
+BAKED_LL := bootstrap/emit.internal.ll bootstrap/scheme.base.ll
 
 # ===========================================================================
 # Default build: link binaries from the committed IR with LLVM only (no Chez).
@@ -77,22 +82,23 @@ schemec:    $(SCHEMEC)
 # Unified `emit` front-end (change: emit-cli-unification): ONE binary dispatching the
 # run/repl/build/lib verbs -- the sole user-facing entry point.  A-links the
 # MODE-DISPATCHED embedded compiler (embed-repl.ll) and exports rt_* / scheme_entry
-# (-rdynamic) so JIT'd code resolves them here.  It links $(SCHEME_BASE_LL) too: the
-# compiler is re-homed on (scheme base) (change: compiler-bootstrap-rehome), so its IR
-# references scheme.base:* externals resolved against this one committed library,
-# initialized once via its __init guard.  The run/repl doors were formerly the separate
-# build/scheme-run and build/repl-host binaries, merged here; build/lib forks clang.
-$(EMIT): build/emit.o build/runtime-host.o $(EMBED_REPL_LL) $(SCHEME_BASE_LL) Makefile
-	$(CXX) build/emit.o build/runtime-host.o $(EMBED_REPL_LL) $(SCHEME_BASE_LL) \
+# (-rdynamic) so JIT'd code resolves them here.  It links $(BAKED_LL) too: the compiler is
+# re-homed on the baked library set (change: compiler-bootstrap-rehome), so its IR
+# references scheme.base:* / emit.internal:* externals resolved against those committed
+# libraries, each initialized once via its __init guard.  The run/repl doors were formerly
+# the separate build/scheme-run and build/repl-host binaries, merged here; build/lib forks
+# clang.
+$(EMIT): build/emit.o build/runtime-host.o $(EMBED_REPL_LL) $(BAKED_LL) Makefile
+	$(CXX) build/emit.o build/runtime-host.o $(EMBED_REPL_LL) $(BAKED_LL) \
 	  -rdynamic $(LDFLAGS) -L$(GC_LIB) -lgc -o $@
-	@. tools/log.sh; say "link $(EMBED_REPL_LL) + $(SCHEME_BASE_LL) -> $@  [$$(bytes $@) bytes]"
+	@. tools/log.sh; say "link $(EMBED_REPL_LL) + $(words $(BAKED_LL)) baked librar$(if $(word 2,$(BAKED_LL)),ies,y) -> $@  [$$(bytes $@) bytes]"
 
-# Batch text->IR filter compiler: links the committed schemec IR + (scheme base)
+# Batch text->IR filter compiler: links the committed schemec IR + the baked library set
 # with the runtime's RT_FILTER_MAIN (so the program's output is exactly the emitted IR).
-$(SCHEMEC): $(SCHEMEC_LL) $(SCHEME_BASE_LL) src/runtime/runtime.c Makefile | build
+$(SCHEMEC): $(SCHEMEC_LL) $(BAKED_LL) src/runtime/runtime.c Makefile | build
 	$(CC) -O2 -Wno-override-module -DRT_FILTER_MAIN -I$(GC_INC) -L$(GC_LIB) \
-	  src/runtime/runtime.c $(SCHEMEC_LL) $(SCHEME_BASE_LL) -lgc -o $@
-	@. tools/log.sh; say "link $(SCHEMEC_LL) + $(SCHEME_BASE_LL) -> $@  [$$(bytes $@) bytes]"
+	  src/runtime/runtime.c $(SCHEMEC_LL) $(BAKED_LL) -lgc -o $@
+	@. tools/log.sh; say "link $(SCHEMEC_LL) + $(words $(BAKED_LL)) baked librar$(if $(word 2,$(BAKED_LL)),ies,y) -> $@  [$$(bytes $@) bytes]"
 
 # --- objects ---------------------------------------------------------------
 # Runtime compiled as C without its standalone main (the host supplies one).
@@ -159,17 +165,23 @@ catalogue:
 # Depends only on $(EMIT): no regen, no Chez, so a release tarball installs with just
 # LLVM + libgc + make.  Idempotent -- install over the same prefix twice and the tree
 # is the same.
+# The manifest's (source ...) paths are manifest-relative, so the installed tree has to
+# mirror the repo's lib/ layout rather than flatten it -- and that layout now has two
+# directories: lib/scheme for the standard libraries and lib/emit for the internal
+# substrate (change: scheme-base-partition).  A glob per directory, and the directories are
+# created from the same lists, so adding a library to either needs no edit here.
 BINDIR   := $(DESTDIR)$(PREFIX)/bin
 SHAREDIR := $(DESTDIR)$(PREFIX)/share/emit
-SLDS     := $(wildcard lib/scheme/*.sld)
+LIBDIRS  := lib/scheme lib/emit
+SLDS     := $(foreach d,$(LIBDIRS),$(wildcard $(d)/*.sld))
 
 .PHONY: install
 install: $(EMIT)
 	@. tools/log.sh; say "install emit -> $(DESTDIR)$(PREFIX)  [prefix $(PREFIX)]"
-	@install -d "$(BINDIR)" "$(SHAREDIR)/lib/scheme"
+	@install -d "$(BINDIR)" $(foreach d,$(LIBDIRS),"$(SHAREDIR)/$(d)")
 	@install -m 755 $(EMIT) "$(BINDIR)/emit"
 	@install -m 644 emit-libs.scm "$(SHAREDIR)/emit-libs.scm"
-	@install -m 644 $(SLDS) "$(SHAREDIR)/lib/scheme/"
+	@$(foreach d,$(LIBDIRS),install -m 644 $(wildcard $(d)/*.sld) "$(SHAREDIR)/$(d)/";)
 	@. tools/log.sh; \
 	  say "install $(EMIT) -> $(BINDIR)/emit  [$$(bytes $(BINDIR)/emit) bytes]"; \
 	  say "install emit-libs.scm + $(words $(SLDS)) library source(s) -> $(SHAREDIR)"

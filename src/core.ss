@@ -27,6 +27,7 @@
   (and (pair? f) (eq? (car f) 'define)
        (let ([sig (cadr f)]) (if (pair? sig) (car sig) sig))))
 
+
 ;; prepend prelude forms to the user's, dropping any prelude define whose name
 ;; the user also defines (user-wins shadowing, so the prelude never clobbers).
 (define (with-prelude prelude-forms user-forms)
@@ -132,34 +133,81 @@
 ;; so the host splits the two modules unambiguously.
 (define *emit-unit-boundary* "; ==EMIT-UNIT-BOUNDARY==\n")
 
-;; The (scheme base) export list: the prelude's top-level (define NAME ...) names in
-;; SOURCE ORDER, minus the declared private set (src/prelude-surface.scm -- the surface
-;; is DECLARED, not derived; change: scheme-base-declared-surface, issue #29).  Order
-;; comes from the prelude, so this and tools/gen-scheme-base.ss produce the same list in
-;; the same order from the same two files -- which is what keeps the run door's program
-;; module byte-identical to the driver's prog.ll.
-(define (scheme-base-export-names prelude-forms)
-  (filter (lambda (n) (and n (not (memq n *scheme-base-private*))))
+;; The names LIB exports: the prelude's top-level defines in SOURCE ORDER, kept when the
+;; partition assigns them to LIB (src/prelude-surface.scm -- the surface is DECLARED, not
+;; derived; change: scheme-base-declared-surface, issue #29, partitioned by
+;; scheme-base-partition).  Order comes from the prelude, so this and
+;; tools/gen-scheme-base.ss produce the same list in the same order from the same two
+;; files -- which is what keeps the run door's program module byte-identical to the
+;; driver's prog.ll -- and the declaration's own arrangement cannot move emitted IR.
+(define (library-export-names lib prelude-forms)
+  (filter (lambda (n) (and n (prelude-exports? lib n)))
           (map define-name prelude-forms)))
 
-;; Build the (scheme base) define-library form from the prelude's forms: the declared
-;; surface is exported; ALL prelude forms (procedures + the derived-form macros) stay in
-;; the body, so the private helpers still exist for the exported procedures that call
-;; them, the library self-compiles, and its macros are lifted into the unit's
-;; compile-time macro-env.  Mirrors tools/gen-scheme-base.ss exactly, but in the portable
-;; core -- the baked-in prelude source is the single source of truth, so no
-;; lib/scheme/base.sld read.  Built with cons/list (not quasiquote) to stay in the
-;; plainest self-hostable subset.
-(define (scheme-base-library-form prelude-forms)
-  (cons 'define-library
-        (cons '(scheme base)
-              (cons (cons 'export (scheme-base-export-names prelude-forms))
-                    (list (cons 'begin prelude-forms))))))
+;; The forms LIB's body holds: the prelude definitions the partition homes in LIB, plus
+;; EVERY derived-form macro (change: scheme-base-partition).  The macros are the
+;; prelude's compile-time half -- collect-define-syntax lifts them out before anything is
+;; lowered, so carrying them in each member's body costs no emitted code, and a member
+;; whose procedures use `cond`/`case` internally (the reader does) can compile at all.
+(define (library-body-forms lib prelude-forms)
+  (filter (lambda (f)
+            (let ((n (define-name f)))
+              (if n (prelude-defines? lib n) (define-syntax-form? f))))
+          prelude-forms))
+
+;; One partition member as a define-library form: its declared exports, the body forms
+;; homed in it, and an import of each member it depends on.  Built with cons/list (not
+;; quasiquote) to stay in the plainest self-hostable subset.  Mirrors
+;; tools/gen-scheme-base.ss, but in the portable core -- the baked-in prelude source is
+;; the single source of truth, so no lib/scheme/*.sld read.
+(define (partition-library-form entry prelude-forms)
+  (let ((lib     (car entry))
+        (imports (caddr entry)))
+    (cons 'define-library
+          (cons lib
+                (cons (cons 'export (library-export-names lib prelude-forms))
+                      (if (null? imports)
+                          (list (cons 'begin (library-body-forms lib prelude-forms)))
+                          (cons (cons 'import imports)
+                                (list (cons 'begin
+                                            (library-body-forms lib prelude-forms))))))))))
+
+;; The baked members, in dependency order: the libraries compiled into the compiler
+;; binaries from the baked-in prelude source, which therefore need no manifest.
+(define (baked-library-entries)
+  (filter (lambda (e) (cadr e)) *prelude-libraries*))
+
+;; The libraries LIB imports, as declared by the partition ('() for an unknown name).
+(define (baked-entry-imports lib)
+  (let ([e (assoc lib *prelude-libraries*)])
+    (if e (caddr e) '())))
+
+;; Every baked member's name in dependency order -- the init order a program's
+;; @scheme_entry drives.  Each __init is one-shot guarded and every baked module is
+;; linked regardless, so naming them all is correct rather than merely safe: a member the
+;; program does not reach initializes to no observable effect (change:
+;; scheme-base-partition).
+(define (baked-init-order)
+  (map car (baked-library-entries)))
+
+;; A program's OWN imports that name a baked member, other than the auto-imported
+;; (scheme base).  This is how the compiler's flat source reaches (emit internal): the
+;; substrate holds the compositional accessors its passes call and the lexeme helpers the
+;; REPL's input-completeness probe reuses, and one `import` beats editing 48 call sites
+;; under the self-hosting fixed point (design D6).
+;; A named library that is NOT a baked member cannot be resolved on this door -- it has no
+;; manifest and no filesystem -- so it is dropped here and its names fail as unbound
+;; variables, which is what this door did with every import before.
+(define (baked-imports-of user-forms)
+  (filter (lambda (l)
+            (let ([e (assoc l *prelude-libraries*)])
+              (and e (cadr e) (not (equal? l '(scheme base))))))
+          (car (collect-imports user-forms))))
 
 ;; the prelude's derived-form macros (its compile-time half), merged into a user
 ;; program's macro-env at expand time -- the same set the Chez driver merges.
 (define (prelude-macro-forms prelude-forms)
-  (filter (lambda (f) (and (pair? f) (eq? (car f) 'define-syntax))) prelude-forms))
+  (filter define-syntax-form? prelude-forms))
 
 ;; source text + prelude text -> two IR modules (no header) joined by the boundary
 ;; marker: the (scheme base) library IR, the marker, then the program IR (which
@@ -182,15 +230,50 @@
       [(single-define-library user-forms) => (lambda (lib) (compile-library-form lib dump))]
       [else
        (let* ([prelude-forms (read-forms-from-string prelude-str)]
-              [dl         (parse-define-library (scheme-base-library-form prelude-forms))]
-              [base-res   (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl) '() base-dump)]
-              [base-ir    (car base-res)]
-              [base-table (cadr base-res)]
+              ;; Compile the baked set in dependency order, threading each member's
+              ;; export table forward so a later member can import an earlier one
+              ;; (change: scheme-base-partition).
+              [baked      (compile-baked-set prelude-forms base-dump)]
+              ;; What is in SCOPE for the program: the auto-imported (scheme base), plus
+              ;; whichever other baked members the program names itself.
+              [direct     (cons '(scheme base) (baked-imports-of user-forms))]
               [prog-ir    (compile-program-with-imports
                             (prelude-macro-forms prelude-forms)
-                            user-forms (list base-table)
-                            (list '(scheme base)) dump)])
-         (string-append base-ir *emit-unit-boundary* prog-ir))])))
+                            user-forms
+                            (map (lambda (l) (baked-table l baked)) direct)
+                            (baked-init-order) dump)])
+         (string-append (car baked) *emit-unit-boundary* prog-ir))])))
+
+;; Compile every baked partition member in dependency order.  Returns
+;; (IR-TEXT (LIBRARY-NAME . EXPORT-TABLE) ...), where IR-TEXT is the members' modules
+;; joined by the unit boundary -- the program's own module is appended by the caller.
+;; A member is compiled against the export tables of the members it imports, which are
+;; already built because *prelude-libraries* is in dependency order.
+(define (compile-baked-set prelude-forms base-dump)
+  (let loop ([entries (baked-library-entries)] [ir ""] [tables '()] [first? #t])
+    (if (null? entries)
+        (cons ir (reverse tables))
+        (let* ([entry   (car entries)]
+               [dl      (parse-define-library (partition-library-form entry prelude-forms))]
+               [imports (map (lambda (l) (table-of l tables)) (cadr dl))]
+               [res     (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl)
+                                         imports base-dump)])
+          (loop (cdr entries)
+                (if first?
+                    (car res)
+                    (string-append ir *emit-unit-boundary* (car res)))
+                (cons (cons (car entry) (cadr res)) tables)
+                #f)))))
+
+;; The export table a member published, looked up in an alist of (NAME . TABLE).  A
+;; miss means *prelude-libraries* is not in dependency order -- a member was compiled
+;; before something it imports.
+(define (table-of lib tables)
+  (let ([e (assoc lib tables)])
+    (if e (cdr e) (error 'compile "baked library not compiled before use" lib))))
+
+;; The export table a compiled baked member published, by library name.
+(define (baked-table lib baked) (table-of lib (cdr baked)))
 
 ;; shared back half of the pipeline for one core-IL expression.  The REPL feeds
 ;; forms through this incrementally (against a persistent env); batch compilation

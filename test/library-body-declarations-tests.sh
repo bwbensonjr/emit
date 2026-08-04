@@ -70,7 +70,8 @@ check "run door: a top-level set! in a library body takes effect" \
 # resolve against its own directory (change: manifest-search-path).
 BMAN="$TMP/build.scm"
 cat > "$BMAN" <<EOF
-((library (scheme base) (source "$PWD/lib/scheme/base.sld"))
+((library (emit internal) (source "$PWD/lib/emit/internal.sld"))
+ (library (scheme base) (source "$PWD/lib/scheme/base.sld"))
  (library (cmdlib)   (source "$PWD/test/modules/cmdlib.sld"))
  (library (reclib)   (source "$PWD/test/modules/reclib.sld"))
  (library (tlsetlib) (source "$PWD/test/modules/tlsetlib.sld"))
@@ -142,7 +143,8 @@ EOF
 # Absolute source paths: this manifest lives in $TMP, and a manifest's relative paths
 # resolve against its own directory (change: manifest-search-path).
 cat > "$TMP/nman.scm" <<EOF
-((library (scheme base) (source "$PWD/lib/scheme/base.sld"))
+((library (emit internal) (source "$PWD/lib/emit/internal.sld"))
+ (library (scheme base) (source "$PWD/lib/scheme/base.sld"))
  (library (reclib) (source "$PWD/test/modules/reclib.sld"))
  (program narrow-app (source "$TMP/narrow.scm") (output "$TMP/narrow-app")))
 EOF

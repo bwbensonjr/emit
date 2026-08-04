@@ -647,7 +647,18 @@
                           (map
                             (lambda (nm)
                               (let ([dl (cdr (assoc nm dl-cache))])
-                                (if (and (memq nm direct-imports) (not (memq nm imported-by-unit)))
+                                ;; `member`, not `memq`: a library name is a LIST of symbols, and
+                                ;; these lists come from different reads -- `order`/`direct-imports`
+                                ;; from the toposort and the program's own source, `imported-by-unit`
+                                ;; from each .sld's parsed import clause -- so they are equal? but
+                                ;; never eq?.  With `memq` the "some other unit imports it" guard
+                                ;; silently never fired, which was unreachable only while no shipped
+                                ;; library imported another; (scheme base) importing the substrate
+                                ;; made it reachable, and the substrate got pruned of the reader
+                                ;; bindings (scheme base) calls -> undefined symbols at link time
+                                ;; (change: scheme-base-partition).
+                                (if (and (member nm direct-imports)
+                                         (not (member nm imported-by-unit)))
                                     ;; prunable: recompile with the keep-set
                                     (let* ([exps  (caddr dl)]
                                            [roots (program-root-internals prog-text nm exps)]

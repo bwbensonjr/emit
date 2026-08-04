@@ -5,5 +5,6 @@
 ;;; would break unrelated suites.  Those two get their own throwaway manifests in the
 ;;; suite, next to the diagnostic each one is expected to produce.  Paths are
 ;;; relative to THIS FILE (change: manifest-search-path).
-((library (scheme base) (source "../../lib/scheme/base.sld"))
+((library (emit internal) (source "../../lib/emit/internal.sld"))
+ (library (scheme base)   (source "../../lib/scheme/base.sld"))
  (library (mutlib)      (source "mutlib.sld")))

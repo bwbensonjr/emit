@@ -10,6 +10,13 @@
 ;;; NOTE the `let`: a top-level (define x (read-line ...)) would be hoisted with
 ;;; the other define inits and run BEFORE the commands that write the file.
 
+; The file procedures are (scheme file) and `read` is (scheme read) -- R7RS-small puts
+; them there, and so does Emit now (change: scheme-base-partition, issue #33).  Everything
+; else this demo uses (write-string, newline, read-line, open-input-string,
+; open-output-string, get-output-string, close-port, port?) is (scheme base), auto-imported.
+(import (scheme file))
+(import (scheme read))
+
 (define path "/tmp/emit-demo-ports.txt")
 
 ;; write two lines, then close -- closing flushes, so the file is complete

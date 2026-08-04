@@ -41,7 +41,8 @@ TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 # resolve against its own directory (change: manifest-search-path).
 BMAN="$TMP/emit-libs-build.scm"
 cat > "$BMAN" <<EOF
-((library (scheme base) (source "$PWD/lib/scheme/base.sld"))
+((library (emit internal) (source "$PWD/lib/emit/internal.sld"))
+ (library (scheme base) (source "$PWD/lib/scheme/base.sld"))
  (library (mutlib)      (source "$PWD/test/modules/mutlib.sld"))
  (program mutlib-app    (source "$PWD/test/modules/prog-mutlib.scm") (output "$TMP/mutlib-app")))
 EOF
@@ -117,7 +118,10 @@ fi
 # This is the silent-misdispatch assertion.  `emit run --emit` writes the units, a
 # boundary marker, then the program; only the importing side matters here.
 $RUN --manifest "$MAN" --emit < "$MOD/prog-mutlib.scm" > "$TMP/all.ll" 2>/dev/null
-sed -n '/==EMIT-UNIT-BOUNDARY==/,$p' "$TMP/all.ll" > "$TMP/prog.ll"
+# the program is the LAST part (one marker per baked member; change:
+# scheme-base-partition).
+awk '/^; ==EMIT-UNIT-BOUNDARY==$/ { n = 0; delete L; next } { L[++n] = $0 }
+       END { for (i = 1; i <= n; i++) print L[i] }' "$TMP/all.ll" > "$TMP/prog.ll"
 reject "program: no direct call to the withheld label f" "$TMP/prog.ll" \
        'call fastcc i64 @"mutlib:code:f"'
 reject "program: no direct call to the withheld label h" "$TMP/prog.ll" \
@@ -147,7 +151,8 @@ want   "unit: the assigned lambda got an ordinary counter label" "$LL" \
 fails_with () {  # <name> <lib-name> <lib-source> <program> <regex>
   local man="$TMP/man-$2.scm"
   cat > "$man" <<EOF
-((library (scheme base) (source "$PWD/lib/scheme/base.sld"))
+((library (emit internal) (source "$PWD/lib/emit/internal.sld"))
+ (library (scheme base) (source "$PWD/lib/scheme/base.sld"))
  (library ($2) (source "$PWD/$3")))
 EOF
   if $RUN --manifest "$man" < "$4" >/dev/null 2>"$TMP/f.err"; then

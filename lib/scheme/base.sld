@@ -1,28 +1,21 @@
-;;; base.sld -- the (scheme base) standard library (change:
-;;; module-prelude-scheme-base, Stage 3).  GENERATED from src/prelude.scm by
-;;; tools/gen-scheme-base.ss -- DO NOT EDIT BY HAND.  Edit src/prelude.scm and
-;;; regenerate (guarded by test/scheme-base-gen-check.sh).
+;;; base.sld -- GENERATED from src/prelude.scm by tools/gen-scheme-base.ss
+;;; -- DO NOT EDIT BY HAND.  Edit src/prelude.scm (or the partition in
+;;; src/prelude-surface.scm) and regenerate; guarded by
+;;; test/scheme-base-gen-check.sh.
 ;;;
-;;; The runtime half of the prelude: the DECLARED public surface is exported
-;;; (src/prelude-surface.scm -- every top-level define minus the private set);
-;;; the private helpers and the derived-form macros stay in the body, where the
-;;; exported procedures still call them.  One export per line, so a change to
-;;; the public surface is a reviewable one-line diff.
+;;; One member of the prelude's partition: the definitions the declaration
+;;; homes here, exporting the declared public ones.  Private helpers and the
+;;; derived-form macros stay in the body, where the exported procedures still
+;;; call them.  One export per line, so a surface change is a reviewable
+;;; one-line diff.
 (define-library (scheme base)
+  (import (emit internal))
   (export
     list
     caar
     cadr
     cdar
     cddr
-    caaar
-    caadr
-    cadar
-    caddr
-    cdaar
-    cdadr
-    cddar
-    cdddr
     length
     reverse
     append
@@ -38,7 +31,6 @@
     for-each
     andmap
     memp
-    cadddr
     list?
     zero?
     list-tail
@@ -113,8 +105,6 @@
     hash-table->alist
     hash-table-keys
     hash-table-values
-    rd-skip-ws
-    rd-token-end
     read-from-string
     read-all-from-string
     port?
@@ -125,13 +115,10 @@
     input-port-open?
     output-port-open?
     open-input-string
-    open-input-file
     read-char
     peek-char
     read-line
     read-string
-    read
-    open-output-file
     open-output-string
     get-output-string
     flush-output-port
@@ -142,10 +129,6 @@
     current-error-port
     current-input-port
     call-with-port
-    with-output-to-file
-    with-input-from-file
-    call-with-output-file
-    call-with-input-file
     )
   (begin
     (define-syntax and (syntax-rules () ((_) #t) ((_ e) e) ((_ e1 e2 ...) (if e1 (and e2 ...) #f))))
@@ -162,14 +145,6 @@
     (define (cadr x) (car (cdr x)))
     (define (cdar x) (cdr (car x)))
     (define (cddr x) (cdr (cdr x)))
-    (define (caaar x) (car (caar x)))
-    (define (caadr x) (car (cadr x)))
-    (define (cadar x) (car (cdar x)))
-    (define (caddr x) (car (cddr x)))
-    (define (cdaar x) (cdr (caar x)))
-    (define (cdadr x) (cdr (cadr x)))
-    (define (cddar x) (cdr (cdar x)))
-    (define (cdddr x) (cdr (cddr x)))
     (define (length xs) (let loop ((xs xs) (n 0)) (if (null? xs) n (loop (cdr xs) (+ n 1)))))
     (define (reverse xs) (let loop ((xs xs) (acc (quote ()))) (if (null? xs) acc (loop (cdr xs) (cons (car xs) acc)))))
     (define (%append2 a b) (if (null? a) b (cons (car a) (%append2 (cdr a) b))))
@@ -191,7 +166,6 @@
     (define (for-each f xs . more) (if (null? more) (%for-each1 f xs) (%for-eachn f (cons xs more))))
     (define (andmap p xs) (if (null? xs) #t (if (p (car xs)) (andmap p (cdr xs)) #f)))
     (define (memp p xs) (if (null? xs) #f (if (p (car xs)) xs (memp p (cdr xs)))))
-    (define (cadddr x) (car (cdddr x)))
     (define (list? x) (if (null? x) #t (if (pair? x) (list? (cdr x)) #f)))
     (define (zero? n) (= n 0))
     (define (list-tail xs n) (if (zero? n) xs (list-tail (cdr xs) (- n 1))))
@@ -300,43 +274,8 @@
     (define (hash-table->alist ht) (let ((bs (%ht-buckets ht))) (let loop ((i 0) (acc (quote ()))) (if (< i (vector-length bs)) (loop (+ i 1) (%ht-fold-buckets (vector-ref bs i) acc)) acc))))
     (define (hash-table-keys ht) (map car (hash-table->alist ht)))
     (define (hash-table-values ht) (map cdr (hash-table->alist ht)))
-    (define (rd-ws? c) (let ((k (char->integer c))) (or (= k 32) (or (= k 9) (or (= k 10) (= k 13))))))
-    (define (rd-digit? c) (let ((k (char->integer c))) (and (< 47 k) (< k 58))))
-    (define (rd-delim? c) (let ((k (char->integer c))) (or (rd-ws? c) (or (= k 40) (or (= k 41) (or (= k 91) (or (= k 93) (or (= k 34) (= k 59)))))))))
-    (define (rd-skip-line s n i) (if (< i n) (if (= (char->integer (string-ref s i)) 10) (+ i 1) (rd-skip-line s n (+ i 1))) i))
-    (define (rd-skip-ws s n i) (if (< i n) (let ((c (string-ref s i))) (cond ((rd-ws? c) (rd-skip-ws s n (+ i 1))) ((= (char->integer c) 59) (rd-skip-ws s n (rd-skip-line s n (+ i 1)))) (else i))) i))
-    (define (rd-token-end s n i) (if (< i n) (if (rd-delim? (string-ref s i)) i (rd-token-end s n (+ i 1))) i))
-    (define (rd-all-digits? tok a m) (if (< a m) (if (rd-digit? (string-ref tok a)) (rd-all-digits? tok (+ a 1) m) #f) #t))
-    (define (rd-numeric? tok) (let ((m (string-length tok))) (and (< 0 m) (let ((c0 (char->integer (string-ref tok 0)))) (cond ((rd-digit? (string-ref tok 0)) (rd-all-digits? tok 0 m)) ((or (= c0 45) (= c0 43)) (and (< 1 m) (rd-all-digits? tok 1 m))) (else #f))))))
-    (define (rd-digits tok a m acc) (if (< a m) (rd-digits tok (+ a 1) m (+ (* acc 10) (- (char->integer (string-ref tok a)) 48))) acc))
-    (define (rd-digits-neg tok a m acc) (if (< a m) (rd-digits-neg tok (+ a 1) m (- (* acc 10) (- (char->integer (string-ref tok a)) 48))) acc))
-    (define (rd-parse-int tok) (let ((m (string-length tok)) (c0 (char->integer (string-ref tok 0)))) (cond ((= c0 45) (rd-digits-neg tok 1 m 0)) ((= c0 43) (rd-digits tok 1 m 0)) (else (rd-digits tok 0 m 0)))))
-    (define (rd-dotchar? c) (= (char->integer c) 46))
-    (define (rd-exp-char? c) (let ((k (char->integer c))) (or (= k 101) (= k 69))))
-    (define (rd-sign-char? c) (let ((k (char->integer c))) (or (= k 43) (= k 45))))
-    (define (rd-scan-digits tok a m) (if (and (< a m) (rd-digit? (string-ref tok a))) (rd-scan-digits tok (+ a 1) m) a))
-    (define (rd-flonum? tok) (let ((m (string-length tok))) (and (< 0 m) (let ((i0 (if (rd-sign-char? (string-ref tok 0)) 1 0))) (let ((i1 (rd-scan-digits tok i0 m))) (let ((i2 (if (and (< i1 m) (rd-dotchar? (string-ref tok i1))) (+ i1 1) i1))) (let ((had-dot (< i1 i2))) (let ((i3 (rd-scan-digits tok i2 m))) (and (or (< i0 i1) (< i2 i3)) (let ((i4 (if (and (< i3 m) (rd-exp-char? (string-ref tok i3))) (let ((i5 (if (and (< (+ i3 1) m) (rd-sign-char? (string-ref tok (+ i3 1)))) (+ i3 2) (+ i3 1)))) (let ((i6 (rd-scan-digits tok i5 m))) (if (< i5 i6) i6 -1))) i3))) (and (< -1 i4) (= i4 m) (or had-dot (< i3 i4)))))))))))))
-    (define (rd-nonfinite tok) (cond ((string=? tok "+inf.0") (%string->flonum "inf")) ((string=? tok "-inf.0") (%string->flonum "-inf")) ((string=? tok "+nan.0") (%string->flonum "nan")) (else #f)))
-    (define (rd-atom s n i) (let ((j (rd-token-end s n i))) (let ((tok (substring s i j))) (cons (cond ((rd-numeric? tok) (rd-parse-int tok)) ((rd-nonfinite tok)) ((rd-flonum? tok) (%string->flonum tok)) (else (string->symbol tok))) j))))
-    (define (rd-hex-digit c) (let ((k (char->integer c))) (cond ((and (< 47 k) (< k 58)) (- k 48)) ((and (< 96 k) (< k 103)) (- k 87)) ((and (< 64 k) (< k 71)) (- k 55)) (else 0))))
-    (define (rd-hex s n i acc) (if (< i n) (if (= (char->integer (string-ref s i)) 59) (cons acc (+ i 1)) (rd-hex s n (+ i 1) (+ (* acc 16) (rd-hex-digit (string-ref s i))))) (cons acc i)))
-    (define (rd-str-esc c) (let ((k (char->integer c))) (cond ((= k 110) (integer->char 10)) ((= k 116) (integer->char 9)) ((= k 114) (integer->char 13)) (else c))))
-    (define (rd-string s n i) (let loop ((i i) (acc (quote ()))) (if (< i n) (let* ((c (string-ref s i)) (k (char->integer c))) (cond ((= k 34) (cons (list->string (reverse acc)) (+ i 1))) ((= k 92) (let ((e (string-ref s (+ i 1)))) (if (= (char->integer e) 120) (let ((hx (rd-hex s n (+ i 2) 0))) (loop (cdr hx) (cons (integer->char (car hx)) acc))) (loop (+ i 2) (cons (rd-str-esc e) acc))))) (else (loop (+ i 1) (cons c acc))))) (cons (list->string (reverse acc)) i))))
-    (define (rd-hash s n i) (let ((k (char->integer (string-ref s i)))) (cond ((= k 116) (cons #t (+ i 1))) ((= k 102) (cons #f (+ i 1))) ((= k 92) (rd-char s n i)) ((= k 40) (let ((r (rd-list s n (+ i 1) (quote ())))) (cons (list->vector (car r)) (cdr r)))) ((and (= k 117) (< (+ i 2) n) (= (char->integer (string-ref s (+ i 1))) 56) (= (char->integer (string-ref s (+ i 2))) 40)) (let ((r (rd-list s n (+ i 3) (quote ())))) (cons (list->bytevector (car r)) (cdr r)))) (else (let ((j (rd-token-end s n i))) (cons (string->symbol (substring s i j)) j))))))
-    (define (rd-char-name tok) (cond ((string=? tok "space") (integer->char 32)) ((string=? tok "newline") (integer->char 10)) ((string=? tok "tab") (integer->char 9)) ((string=? tok "return") (integer->char 13)) ((string=? tok "nul") (integer->char 0)) ((string=? tok "null") (integer->char 0)) ((string=? tok "delete") (integer->char 127)) ((string=? tok "altmode") (integer->char 27)) ((string=? tok "esc") (integer->char 27)) (else (string-ref tok 0))))
-    (define (rd-char s n i) (let* ((cs (+ i 1)) (end (rd-token-end s n (+ cs 1))) (tok (substring s cs end))) (if (= (string-length tok) 1) (cons (string-ref s cs) end) (cons (rd-char-name tok) end))))
-    (define (rd-quote s n i) (let ((j (rd-skip-ws s n i))) (let ((r (rd-datum s n j))) (cons (list (quote quote) (car r)) (cdr r)))))
-    (define (rd-quasi s n i) (let ((j (rd-skip-ws s n i))) (let ((r (rd-datum s n j))) (cons (list (quote quasiquote) (car r)) (cdr r)))))
-    (define (rd-unquote s n i) (if (and (< i n) (= (char->integer (string-ref s i)) 64)) (let ((j (rd-skip-ws s n (+ i 1)))) (let ((r (rd-datum s n j))) (cons (list (quote unquote-splicing) (car r)) (cdr r)))) (let ((j (rd-skip-ws s n i))) (let ((r (rd-datum s n j))) (cons (list (quote unquote) (car r)) (cdr r))))))
-    (define (rd-dot? s n j) (and (= (char->integer (string-ref s j)) 46) (= (rd-token-end s n (+ j 1)) (+ j 1))))
-    (define (rd-append-reverse acc tail) (if (null? acc) tail (rd-append-reverse (cdr acc) (cons (car acc) tail))))
-    (define (rd-list s n i acc) (let ((j (rd-skip-ws s n i))) (if (< j n) (cond ((let ((c (char->integer (string-ref s j)))) (or (= c 41) (= c 93))) (cons (reverse acc) (+ j 1))) ((rd-dot? s n j) (let* ((r (rd-datum s n (rd-skip-ws s n (+ j 1)))) (j2 (rd-skip-ws s n (cdr r)))) (cons (rd-append-reverse acc (car r)) (+ j2 1)))) (else (let ((r (rd-datum s n j))) (rd-list s n (cdr r) (cons (car r) acc))))) (cons (reverse acc) j))))
-    (define (rd-datum s n i) (let ((k (char->integer (string-ref s i)))) (cond ((= k 40) (rd-list s n (+ i 1) (quote ()))) ((= k 91) (rd-list s n (+ i 1) (quote ()))) ((= k 39) (rd-quote s n (+ i 1))) ((= k 96) (rd-quasi s n (+ i 1))) ((= k 44) (rd-unquote s n (+ i 1))) ((= k 34) (rd-string s n (+ i 1))) ((= k 35) (rd-hash s n (+ i 1))) (else (rd-atom s n i)))))
     (define (read-from-string s) (let ((n (string-length s))) (car (rd-datum s n (rd-skip-ws s n 0)))))
     (define (read-all-from-string s) (let ((n (string-length s))) (let loop ((i (rd-skip-ws s n 0)) (acc (quote ()))) (if (< i n) (let ((r (rd-datum s n i))) (loop (rd-skip-ws s n (cdr r)) (cons (car r) acc))) (reverse acc)))))
-    (define %port-rtd-cell #f)
-    (define (%port-rtd) (if %port-rtd-cell %port-rtd-cell (begin (set! %port-rtd-cell (%make-record-type "port")) %port-rtd-cell)))
-    (define (%make-port handle input? buf pos string? closed?) (%make-record (%port-rtd) (list handle input? buf pos string? closed?)))
     (define (port? p) (%record-of-type? p (%port-rtd)))
     (define (input-port? p) (and (port? p) (%record-ref p 1)))
     (define (output-port? p) (and (port? p) (not (%record-ref p 1))))
@@ -346,16 +285,12 @@
     (define (output-port-open? p) (and (output-port? p) (not (%record-ref p 5))))
     (define (%check-input-port p who) (if (not (input-port? p)) (error who "not an input port" p) (if (%record-ref p 5) (error who "port is closed" p) p)))
     (define (%check-output-port p who) (if (not (output-port? p)) (error who "not an output port" p) (if (%record-ref p 5) (error who "port is closed" p) p)))
-    (define (%port-buf p) (let ((b (%record-ref p 2))) (if b b (let ((s (%read-all-stdin))) (%record-set! p 2 s) s))))
     (define (open-input-string s) (%make-port #f #t s 0 #t #f))
-    (define (open-input-file path) (let ((s (%read-file path))) (if s (%make-port #f #t s 0 #f #f) (error (quote open-input-file) "cannot open file for input" path))))
     (define (%port-at-eof? p) (>= (%record-ref p 3) (string-length (%port-buf p))))
     (define (read-char p) (%check-input-port p (quote read-char)) (if (%port-at-eof? p) (eof-object) (let ((i (%record-ref p 3))) (%record-set! p 3 (+ i 1)) (string-ref (%port-buf p) i))))
     (define (peek-char p) (%check-input-port p (quote peek-char)) (if (%port-at-eof? p) (eof-object) (string-ref (%port-buf p) (%record-ref p 3))))
     (define (read-line p) (%check-input-port p (quote read-line)) (if (%port-at-eof? p) (eof-object) (let* ((s (%port-buf p)) (n (string-length s))) (let loop ((i (%record-ref p 3))) (if (>= i n) (let ((start (%record-ref p 3))) (%record-set! p 3 n) (substring s start n)) (if (char=? (string-ref s i) #\newline) (let ((start (%record-ref p 3))) (%record-set! p 3 (+ i 1)) (substring s start i)) (loop (+ i 1))))))))
     (define (read-string k p) (%check-input-port p (quote read-string)) (if (%port-at-eof? p) (eof-object) (let* ((s (%port-buf p)) (n (string-length s)) (start (%record-ref p 3)) (end (if (> (+ start k) n) n (+ start k)))) (%record-set! p 3 end) (substring s start end))))
-    (define (read p) (%check-input-port p (quote read)) (let* ((s (%port-buf p)) (n (string-length s)) (i (rd-skip-ws s n (%record-ref p 3)))) (if (>= i n) (begin (%record-set! p 3 n) (eof-object)) (let ((r (rd-datum s n i))) (%record-set! p 3 (cdr r)) (car r)))))
-    (define (open-output-file path) (let ((h (%port-open-output-file path))) (if h (%make-port h #f #f 0 #f #f) (error (quote open-output-file) "cannot open file for output" path))))
     (define (open-output-string) (let ((h (%port-open-output-string))) (if h (%make-port h #f #f 0 #t #f) (error (quote open-output-string) "cannot open an output string port"))))
     (define (get-output-string p) (if (not (output-port? p)) (error (quote get-output-string) "not an output port" p) (if (not (%record-ref p 4)) (error (quote get-output-string) "not a string port" p) (%port-get-output-string (%record-ref p 0)))))
     (define (flush-output-port p) (%check-output-port p (quote flush-output-port)) (%port-flush (%record-ref p 0)))
@@ -369,8 +304,4 @@
     (define (current-error-port . args) (if (null? args) (begin (if (not %stderr-port) (set! %stderr-port (%make-port 1 #f #f 0 #f #f))) %stderr-port) (begin (set! %stderr-port (car args)) (if #f #f))))
     (define (current-input-port . args) (if (null? args) (begin (if (not %stdin-port) (set! %stdin-port (%make-port #f #t #f 0 #f #f))) %stdin-port) (begin (set! %stdin-port (car args)) (if #f #f))))
     (define (call-with-port p proc) (dynamic-wind (lambda () (if #f #f)) (lambda () (proc p)) (lambda () (close-port p))))
-    (define (with-output-to-file path thunk) (let ((p (open-output-file path)) (saved (current-output-port))) (dynamic-wind (lambda () (current-output-port p)) thunk (lambda () (current-output-port saved #f) (close-port p)))))
-    (define (with-input-from-file path thunk) (let ((p (open-input-file path)) (saved (current-input-port))) (dynamic-wind (lambda () (current-input-port p)) thunk (lambda () (current-input-port saved #f) (close-port p)))))
-    (define (call-with-output-file path proc) (call-with-port (open-output-file path) proc))
-    (define (call-with-input-file path proc) (call-with-port (open-input-file path) proc))
     ))

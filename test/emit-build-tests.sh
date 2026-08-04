@@ -31,7 +31,8 @@ bad () { echo "  [FAIL] $1"; fail=$((fail+1)); }
 # exempt from that rule.  $PWD is the repo root -- the runner cd's there.
 MAN="$TMP/emit-libs.scm"
 cat > "$MAN" <<EOF
-((library (scheme base) (source "$PWD/lib/scheme/base.sld"))
+((library (emit internal) (source "$PWD/lib/emit/internal.sld"))
+ (library (scheme base) (source "$PWD/lib/scheme/base.sld"))
  (library (mylib)      (source "$PWD/test/modules/mylib.sld"))
  (program mylib-app    (source "$PWD/test/modules/prog-mylib.scm") (output "$TMP/mylib-app"))
  (program greet-app    (source "$PWD/test/modules/prog-mylib.scm")))
@@ -40,7 +41,8 @@ EOF
 # A single-program manifest (for the omitted-name case).
 ONE="$TMP/one.scm"
 cat > "$ONE" <<EOF
-((library (scheme base) (source "$PWD/lib/scheme/base.sld"))
+((library (emit internal) (source "$PWD/lib/emit/internal.sld"))
+ (library (scheme base) (source "$PWD/lib/scheme/base.sld"))
  (library (mylib) (source "$PWD/test/modules/mylib.sld"))
  (program only-app (source "$PWD/test/modules/prog-mylib.scm")))
 EOF

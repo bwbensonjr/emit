@@ -45,8 +45,23 @@ pass=0; fail=0
 ok ()  { echo "  [OK  ] $1"; pass=$((pass+1)); }
 bad () { echo "  [FAIL] $1"; fail=$((fail+1)); }
 
+# Every program here gets the two libraries that own the names this suite is ABOUT:
+# (scheme file) has open-input-file / open-output-file / with-*-file / call-with-*-file and
+# (scheme read) has `read`.  R7RS-small puts them outside (scheme base) and so does Emit
+# (change: scheme-base-partition, issue #33), so they are no longer auto-imported.
+#
+# Prepended in the runner rather than written into each of the ~20 programs: the suite's
+# subject IS these libraries, so every program either uses them or is a control that costs
+# nothing by linking them, and one place to look beats twenty identical preambles.  The
+# string-port and eof-object cases stay honest -- open-input-string, read-line, peek-char,
+# read-string, write-string and the eof object are all still (scheme base), and the
+# `unbound without its library` direction is asserted in
+# test/prelude-base-run-tests.sh, not here.
+IMPORTS='(import (scheme file))
+(import (scheme read))'
+
 check () {  # <name> <program-text> <expected stdout>
-  printf '%s\n' "$2" > "$TMP/p.scm"
+  printf '%s\n%s\n' "$IMPORTS" "$2" > "$TMP/p.scm"
   local got; got="$($RUN < "$TMP/p.scm" 2>"$TMP/e")"
   if [ "$got" = "$3" ]; then ok "$1"
   else bad "$1 => [$got] (expected [$3])"; sed 's/^/         /' "$TMP/e"; fi

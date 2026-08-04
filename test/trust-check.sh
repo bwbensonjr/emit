@@ -8,10 +8,15 @@
 # and assert it is byte-identical to what is committed.  A compiler-source change
 # that forgot `make regen` -> the committed IR no longer matches source -> FAIL.
 #
-# Since the compiler is re-homed on (scheme base) (change: compiler-bootstrap-rehome),
-# `make regen` re-derives bootstrap/scheme.base.ll from lib/scheme/base.sld and the
-# three compiler IRs (auto-importing it) and this check diffs ALL of bootstrap/, so
-# the library is re-derived and compared too -- it is not trusted blindly.
+# Since the compiler is re-homed on the baked library set (change:
+# compiler-bootstrap-rehome, partitioned by scheme-base-partition), `make regen`
+# re-derives every baked library module AND the three compiler IRs (which auto-import
+# (scheme base)) from ONE --emit of the flat source, and this check diffs ALL of
+# bootstrap/ -- so the libraries are re-derived and compared too, not trusted blindly.
+#
+# Note a partition CHANGE needs two `make regen` passes, because the first is driven by a
+# seed compiler carrying the old declaration (see tools/regen.sh).  This check runs a
+# single pass, which is right: it asserts the committed IR is already the fixed point.
 #
 # Requires a clean working tree for bootstrap/ (as in a CI checkout).  Run from
 # the repo root: test/trust-check.sh
