@@ -1,13 +1,13 @@
-;;; base.sld -- the (scheme base) standard library (change:
-;;; module-prelude-scheme-base, Stage 3).  GENERATED from src/prelude.scm by
-;;; tools/gen-scheme-base.ss -- DO NOT EDIT BY HAND.  Edit src/prelude.scm and
-;;; regenerate (guarded by test/scheme-base-gen-check.sh).
+;;; base.sld -- GENERATED from src/prelude.scm by tools/gen-scheme-base.ss
+;;; -- DO NOT EDIT BY HAND.  Edit src/prelude.scm (or the partition in
+;;; src/prelude-surface.scm) and regenerate; guarded by
+;;; test/scheme-base-gen-check.sh.
 ;;;
-;;; The runtime half of the prelude: the DECLARED public surface is exported
-;;; (src/prelude-surface.scm -- every top-level define minus the private set);
-;;; the private helpers and the derived-form macros stay in the body, where the
-;;; exported procedures still call them.  One export per line, so a change to
-;;; the public surface is a reviewable one-line diff.
+;;; One member of the prelude's partition: the definitions the declaration
+;;; homes here, exporting the declared public ones.  Private helpers and the
+;;; derived-form macros stay in the body, where the exported procedures still
+;;; call them.  One export per line, so a surface change is a reviewable
+;;; one-line diff.
 (define-library (scheme base)
   (export
     list

@@ -51,10 +51,12 @@
 (define define-names (filter (lambda (x) x) (map proc-name forms)))
 (define syntax-names (filter (lambda (x) x) (map syntax-name forms)))
 
-;; the export list: defines in SOURCE ORDER minus the declared private set.  Order
-;; comes from the prelude, so the arrangement of the declaration cannot move IR.
+;; the export list: defines in SOURCE ORDER kept when the partition assigns them to
+;; this library (change: scheme-base-partition).  Order comes from the prelude, so the
+;; arrangement of the declaration cannot move IR.  Mirrors library-export-names in
+;; src/core.ss, which reads the same declaration.
 (define export-names
-  (filter (lambda (n) (not (memq n *scheme-base-private*))) define-names))
+  (filter (lambda (n) (prelude-exports? '(scheme base) n)) define-names))
 
 ;; The declaration must describe THIS prelude.  A rotted declaration would silently
 ;; emit a different surface, so fail loudly instead (issue #29).
@@ -71,6 +73,23 @@
 (let ([bad (filter (lambda (n) (not (memq n export-names))) *scheme-base-unstable*)])
   (unless (null? bad)
     (die "unstable name is not exported (it is private, or not defined)" bad)))
+;; partition rot (change: scheme-base-partition): an assignment naming a definition the
+;; prelude does not have, a name assigned twice, or an assignment to a library that is
+;; not a partition member would each silently emit a different surface.
+(let ([stale (filter (lambda (e) (not (memq (car e) define-names))) *prelude-assignments*)])
+  (unless (null? stale)
+    (die "assignment for a name the prelude does not define" (map car stale))))
+(let ([dups (let loop ([es *prelude-assignments*] [seen '()] [d '()])
+              (cond
+                [(null? es) (reverse d)]
+                [(memq (caar es) seen) (loop (cdr es) seen (cons (caar es) d))]
+                [else (loop (cdr es) (cons (caar es) seen) d)]))])
+  (unless (null? dups) (die "name assigned more than once" dups)))
+(let* ([known (map car *prelude-libraries*)]
+       [bad   (filter (lambda (l) (not (member l known)))
+                      (apply append (map cdr *prelude-assignments*)))])
+  (unless (null? bad) (die "assignment to a library that is not a partition member" bad)))
+
 (let ([dups (let loop ([ns export-names] [seen '()] [d '()])
               (cond
                 [(null? ns) (reverse d)]
@@ -80,32 +99,63 @@
   ;; every importing program module, which LLVM rejects.
   (unless (null? dups) (die "duplicate export" dups)))
 
-(define o (open-output-file out-path 'replace))
-(fprintf o ";;; base.sld -- the (scheme base) standard library (change:~n")
-(fprintf o ";;; module-prelude-scheme-base, Stage 3).  GENERATED from src/prelude.scm by~n")
-(fprintf o ";;; tools/gen-scheme-base.ss -- DO NOT EDIT BY HAND.  Edit src/prelude.scm and~n")
-(fprintf o ";;; regenerate (guarded by test/scheme-base-gen-check.sh).~n")
-(fprintf o ";;;~n")
-(fprintf o ";;; The runtime half of the prelude: the DECLARED public surface is exported~n")
-(fprintf o ";;; (src/prelude-surface.scm -- every top-level define minus the private set);~n")
-(fprintf o ";;; the private helpers and the derived-form macros stay in the body, where the~n")
-(fprintf o ";;; exported procedures still call them.  One export per line, so a change to~n")
-(fprintf o ";;; the public surface is a reviewable one-line diff.~n")
-(fprintf o "(define-library (scheme base)~n")
-(fprintf o "  (export~n")
-(for-each (lambda (n) (fprintf o "    ~a~n" n)) export-names)
-(fprintf o "    )~n")
-(fprintf o "  (begin~n")
-(for-each
-  (lambda (f)
-    (parameterize ([print-graph #f] [print-gensym #f])
-      (fprintf o "    ")
-      (write f o)
-      (newline o)))
-  forms)
-(fprintf o "    ))~n")
-(close-port o)
+;; Emit ONE partition member's .sld (change: scheme-base-partition).  Mirrors
+;; partition-library-form in src/core.ss: the same declaration decides the same export
+;; list and the same body, so the committed files and the baked derivation cannot
+;; disagree.  Macros go into EVERY member's body -- they are the prelude's compile-time
+;; half, lifted out before anything is lowered, so they cost no emitted code and a
+;; member whose procedures use `cond`/`case` internally can compile at all.
+(define (write-library entry path)
+  (let* ([lib      (car entry)]
+         [imports  (caddr entry)]
+         [exports  (filter (lambda (n) (prelude-exports? lib n)) define-names)]
+         [body     (filter (lambda (f)
+                             (let ([n (proc-name f)])
+                               (if n (member lib (prelude-homes-of n)) (syntax-name f))))
+                           forms)]
+         [o        (open-output-file path 'replace)])
+    (fprintf o ";;; ~a -- GENERATED from src/prelude.scm by tools/gen-scheme-base.ss~n"
+             (let loop ([i (- (string-length path) 1)])
+               (cond [(< i 0) path]
+                     [(char=? (string-ref path i) #\/) (substring path (+ i 1) (string-length path))]
+                     [else (loop (- i 1))])))
+    (fprintf o ";;; -- DO NOT EDIT BY HAND.  Edit src/prelude.scm (or the partition in~n")
+    (fprintf o ";;; src/prelude-surface.scm) and regenerate; guarded by~n")
+    (fprintf o ";;; test/scheme-base-gen-check.sh.~n")
+    (fprintf o ";;;~n")
+    (fprintf o ";;; One member of the prelude's partition: the definitions the declaration~n")
+    (fprintf o ";;; homes here, exporting the declared public ones.  Private helpers and the~n")
+    (fprintf o ";;; derived-form macros stay in the body, where the exported procedures still~n")
+    (fprintf o ";;; call them.  One export per line, so a surface change is a reviewable~n")
+    (fprintf o ";;; one-line diff.~n")
+    (fprintf o "(define-library ~a~n" lib)
+    (unless (null? imports)
+      (for-each (lambda (l) (fprintf o "  (import ~a)~n" l)) imports))
+    (fprintf o "  (export~n")
+    (for-each (lambda (n) (fprintf o "    ~a~n" n)) exports)
+    (fprintf o "    )~n")
+    (fprintf o "  (begin~n")
+    (for-each
+      (lambda (f)
+        (parameterize ([print-graph #f] [print-gensym #f])
+          (fprintf o "    ")
+          (write f o)
+          (newline o)))
+      body)
+    (fprintf o "    ))~n")
+    (close-port o)
+    (fprintf (current-error-port) "wrote ~a  (~a exports, ~a body forms)~n"
+             path (length exports) (length body))))
+
+;; With one member the OUT argument still names it, so the historical
+;; `gen-scheme-base.ss [OUT]` invocation keeps working; with several, each member goes
+;; to the path its partition entry declares.
+(if (null? (cdr *prelude-libraries*))
+    (write-library (car *prelude-libraries*) out-path)
+    (for-each (lambda (e) (write-library e (cadddr e))) *prelude-libraries*))
 (fprintf (current-error-port)
-         "wrote ~a  (~a exports of ~a defines, ~a private, ~a unstable, ~a body forms)~n"
-         out-path (length export-names) (length define-names)
+         "partition: ~a librar~a, ~a exports of ~a defines, ~a private, ~a unstable, ~a forms~n"
+         (length *prelude-libraries*)
+         (if (null? (cdr *prelude-libraries*)) "y" "ies")
+         (length export-names) (length define-names)
          (length *scheme-base-private*) (length *scheme-base-unstable*) (length forms))

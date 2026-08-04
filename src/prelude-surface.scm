@@ -46,6 +46,32 @@
 ;;; Adding a prelude definition forces a visibility decision: one that is neither
 ;;; listed private here nor present in the committed export list fails
 ;;; test/scheme-base-surface-check.sh (Chez-free, in run-all-tests.sh).
+;;;
+;;; --- the PARTITION (change: scheme-base-partition, issue #33) ------------------
+;;;
+;;; This file no longer declares only what is HIDDEN; it declares WHERE EACH NAME
+;;; GOES.  The prelude is one source compiled into a SET of libraries, and the map
+;;; below says which of them exports each definition.
+;;;
+;;; The partition is TOTAL, written as a default plus exceptions so that adding an
+;;; ordinary prelude procedure still requires no edit here:
+;;;
+;;;   in *prelude-assignments*  -> exported by exactly the libraries listed
+;;;   else in *scheme-base-private* -> exported by nothing (body-only, as before)
+;;;   else                      -> exported by (scheme base)
+;;;
+;;; A name MAY be assigned to two libraries, which emits an independent definition
+;;; into each.  That is not duplication for its own sake: it is how a definition can
+;;; serve an internal consumer and a standard library at once, given that a library
+;;; can only export a name it DEFINES (compile-library*, src/core.ss) -- there is no
+;;; re-export.
+;;;
+;;; ORDERING: the arrangement of the lists below is still free, because order comes
+;;; from the prelude's own definition order, not from here.  But the OLD reason for
+;;; that freedom ("it holds because this is a set to SUBTRACT") no longer applies --
+;;; *prelude-assignments* is a set to LOOK UP, and a name listed twice in it would be
+;;; a rotted declaration, caught by the generator's checks rather than silently
+;;; winning.  Do not rely on the subtraction argument when editing.
 
 ;;; Exported, but NOT API.  Every entry needs its reason on this list.
 ;;;   rd-skip-ws   -- the REPL's input-completeness probe (src/repl-core.ss:528-600)
@@ -99,3 +125,45 @@
     ;; port representation
     %port-rtd-cell %port-rtd %make-port %check-input-port %check-output-port %port-buf
     %port-at-eof? %stdout-port %stderr-port %stdin-port))
+
+;;; The libraries this prelude is partitioned into, in DEPENDENCY ORDER -- a member is
+;;; emitted, linked and initialized after everything it imports.  Each entry:
+;;;
+;;;   (LIBRARY-NAME BAKED? (IMPORTED-LIBRARY ...) OUTPUT-PATH)
+;;;
+;;; BAKED? #t means the member is compiled into the compiler binaries from the baked-in
+;;; prelude source and needs NO manifest, which is what lets a program that imports only
+;;; (scheme base) -- or nothing -- run in a directory with no emit-libs.scm.  Anything
+;;; (scheme base) imports inherits that requirement and must also be baked.
+;;; OUTPUT-PATH is where tools/gen-scheme-base.ss writes the member's .sld.
+(define *prelude-libraries*
+  '(((scheme base) #t () "lib/scheme/base.sld")))
+
+;;; Assignment EXCEPTIONS to the default of (scheme base); see the partition notes in
+;;; the header.  Each entry is (NAME LIBRARY ...): the libraries whose BODY defines the
+;;; name.  Two libraries means the definition is emitted independently into both.
+;;; Empty while the partition has a single member.
+(define *prelude-assignments* '())
+
+;;; The libraries whose body DEFINES name -- its home(s).  Every prelude definition has
+;;; at least one home, including a private one: a private helper still has to live in
+;;; the body of the library whose exported procedures call it.  Home and visibility are
+;;; separate axes, which is what lets a name move to another library (a new home) while
+;;; staying hidden, or stay home while being hidden.
+(define (prelude-homes-of name)
+  (let ((e (assq name *prelude-assignments*)))
+    (if e (cdr e) '((scheme base)))))
+
+;;; Does LIB export NAME?  It must be one of the name's homes -- a library can only
+;;; export what it defines (compile-library*, src/core.ss) -- and the name must not be
+;;; declared private.  Used by BOTH derivations, the portable one in src/core.ss and
+;;; the Chez generator, so they cannot disagree about where a name lives.
+(define (prelude-exports? lib name)
+  (if (and (member lib (prelude-homes-of name))
+           (not (memq name *scheme-base-private*)))
+      #t
+      #f))
+
+;;; Does LIB's body define NAME?
+(define (prelude-defines? lib name)
+  (if (member lib (prelude-homes-of name)) #t #f))
