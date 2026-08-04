@@ -115,8 +115,8 @@ else bad "emit lib: --dump perturbed an artifact"; fi
 #     and even in size), so exe byte-identity is not a property the linker provides.
 # Absolute source path: a manifest's relative paths resolve against its own directory
 # (change: manifest-search-path), and this manifest lives in $TMP.
-printf '((library (scheme base) (source "%s/lib/scheme/base.sld"))\n (program dumpprog (source "%s")))\n' \
-  "$PWD" "$TMP/prog.scm" > "$TMP/man.scm"
+printf '((library (emit internal) (source "%s/lib/emit/internal.sld"))\n (library (scheme base) (source "%s/lib/scheme/base.sld"))\n (program dumpprog (source "%s")))\n' \
+  "$PWD" "$PWD" "$TMP/prog.scm" > "$TMP/man.scm"
 EMIT_VERBOSITY=quiet build/emit build dumpprog --manifest "$TMP/man.scm" -o "$TMP/exe" \
   >/dev/null 2>&1
 EMIT_VERBOSITY=quiet build/emit build dumpprog --manifest "$TMP/man.scm" -o "$TMP/exe-dump" \

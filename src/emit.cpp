@@ -456,13 +456,26 @@ static bool compile_program(const std::string &prog_src, const std::string &mani
   modules.clear();
 
   if (!no_prelude) {
-    rt_repl_set(8, "", 0);                    // register baked (scheme base)
+    rt_repl_set(8, "", 0);                    // register the baked library set
     intptr_t r = scheme_entry();
     if (status_of(r) != "ok") {
       std::cerr << "emit: (scheme base): " << scm_str(rt_cdr(r)) << "\n";
       return false;
     }
-    modules.push_back(scm_str(rt_car(rt_cdr(r))));
+    // The baked set is a PARTITION, so mode 8 returns one module per member in dependency
+    // order, joined by the boundary marker -- they cannot share an LLVM module (change:
+    // scheme-base-partition).  Split them into separate entries: every consumer of
+    // `modules` (the JIT's addIRModule, --emit's stdout, `emit build`'s clang inputs)
+    // needs one module per element.
+    std::string baked = scm_str(rt_car(rt_cdr(r)));
+    size_t start = 0;
+    for (;;) {
+      size_t bpos = baked.find(kBoundary, start);
+      if (bpos == std::string::npos) break;
+      modules.push_back(baked.substr(start, bpos - start));
+      start = bpos + kBoundary.size();
+    }
+    modules.push_back(baked.substr(start));
   }
 
   if (!preload_user_libraries(manifest, modules, prog_src)) return false;

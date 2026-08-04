@@ -24,15 +24,34 @@
 ;;; (Chez, whole-file) and test/scheme-base-surface-check.sh (Chez-free, the export
 ;;; list and the surface invariants).
 ;;;
-;;; Usage:  chez --script tools/gen-scheme-base.ss [OUT]   (default lib/scheme/base.sld)
+;;; Usage:  chez --script tools/gen-scheme-base.ss [OUT-ROOT]
+;;;
+;;; Every partition member goes to the path its entry in *prelude-libraries* declares,
+;;; resolved against OUT-ROOT (default "."), so the whole set can be regenerated into a
+;;; temp tree and diffed against the committed one -- which is what
+;;; test/scheme-base-gen-check.sh does.  It is a ROOT rather than a file because the
+;;; partition writes N files and only the declaration knows their names.
 
 (import (chezscheme))
 
 (define prelude-path "src/prelude.scm")
-(define out-path
-  (let ([a (command-line-arguments)]) (if (null? a) "lib/scheme/base.sld" (car a))))
+(define out-root
+  (let ([a (command-line-arguments)]) (if (null? a) "." (car a))))
 
-;; the declared surface: *scheme-base-private* / *scheme-base-unstable*
+;; OUT-ROOT/REL, creating REL's directories.  Chez's mkdir is one level at a time, so walk
+;; the prefixes -- "lib/emit/internal.sld" needs both lib and lib/emit to exist.
+(define (out-file rel)
+  (let loop ([i 0] [dir out-root])
+    (cond
+      [(= i (string-length rel)) (string-append dir "/" rel)]
+      [(char=? (string-ref rel i) #\/)
+       (let ([d (string-append out-root "/" (substring rel 0 i))])
+         (unless (file-directory? d) (mkdir d))
+         (loop (+ i 1) dir))]
+      [else (loop (+ i 1) dir)])))
+
+;; the declared surface: *scheme-base-private* and the partition (*prelude-libraries* /
+;; *prelude-assignments*, with prelude-exports? / prelude-homes-of over them)
 (load "src/prelude-surface.scm")
 
 (define (read-all p)
@@ -70,9 +89,9 @@
 (let ([macros (filter (lambda (n) (memq n syntax-names)) *scheme-base-private*)])
   (unless (null? macros)
     (die "define-syntax name listed as private (macros are never exported)" macros)))
-(let ([bad (filter (lambda (n) (not (memq n export-names))) *scheme-base-unstable*)])
-  (unless (null? bad)
-    (die "unstable name is not exported (it is private, or not defined)" bad)))
+;; every assignment must name a definition the prelude actually has, and every home must
+;; name a real partition member -- see below.  (The `unstable` export tier's check used to
+;; live here; the tier is retired, change: scheme-base-partition / issue #32.)
 ;; partition rot (change: scheme-base-partition): an assignment naming a definition the
 ;; prelude does not have, a name assigned twice, or an assignment to a library that is
 ;; not a partition member would each silently emit a different surface.
@@ -87,8 +106,20 @@
   (unless (null? dups) (die "name assigned more than once" dups)))
 (let* ([known (map car *prelude-libraries*)]
        [bad   (filter (lambda (l) (not (member l known)))
-                      (apply append (map cdr *prelude-assignments*)))])
+                      ;; each home is a LIBRARY or a (LIBRARY private); compare libraries
+                      (map home-library (apply append (map cdr *prelude-assignments*))))])
   (unless (null? bad) (die "assignment to a library that is not a partition member" bad)))
+;; One library named twice in a name's home list would emit two definitions of it into
+;; ONE unit -- a duplicate top-level define, whose cost is silent (issue #38).
+(let ([twice (map car
+               (filter (lambda (e)
+                         (let ([ls (map home-library (cdr e))])
+                           (let loop ([ls ls])
+                             (cond [(null? ls) #f]
+                                   [(member (car ls) (cdr ls)) #t]
+                                   [else (loop (cdr ls))]))))
+                       *prelude-assignments*))])
+  (unless (null? twice) (die "name assigned to the same library twice" twice)))
 
 (let ([dups (let loop ([ns export-names] [seen '()] [d '()])
               (cond
@@ -147,15 +178,11 @@
     (fprintf (current-error-port) "wrote ~a  (~a exports, ~a body forms)~n"
              path (length exports) (length body))))
 
-;; With one member the OUT argument still names it, so the historical
-;; `gen-scheme-base.ss [OUT]` invocation keeps working; with several, each member goes
-;; to the path its partition entry declares.
-(if (null? (cdr *prelude-libraries*))
-    (write-library (car *prelude-libraries*) out-path)
-    (for-each (lambda (e) (write-library e (cadddr e))) *prelude-libraries*))
+;; Each member to the path its partition entry declares, under OUT-ROOT.
+(for-each (lambda (e) (write-library e (out-file (cadddr e)))) *prelude-libraries*)
 (fprintf (current-error-port)
-         "partition: ~a librar~a, ~a exports of ~a defines, ~a private, ~a unstable, ~a forms~n"
+         "partition: ~a librar~a, ~a (scheme base) exports of ~a defines, ~a private, ~a assigned, ~a forms~n"
          (length *prelude-libraries*)
          (if (null? (cdr *prelude-libraries*)) "y" "ies")
          (length export-names) (length define-names)
-         (length *scheme-base-private*) (length *scheme-base-unstable*) (length forms))
+         (length *scheme-base-private*) (length *prelude-assignments*) (length forms))

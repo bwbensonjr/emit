@@ -1,0 +1,126 @@
+;;; internal.sld -- GENERATED from src/prelude.scm by tools/gen-scheme-base.ss
+;;; -- DO NOT EDIT BY HAND.  Edit src/prelude.scm (or the partition in
+;;; src/prelude-surface.scm) and regenerate; guarded by
+;;; test/scheme-base-gen-check.sh.
+;;;
+;;; One member of the prelude's partition: the definitions the declaration
+;;; homes here, exporting the declared public ones.  Private helpers and the
+;;; derived-form macros stay in the body, where the exported procedures still
+;;; call them.  One export per line, so a surface change is a reviewable
+;;; one-line diff.
+(define-library (emit internal)
+  (export
+    caaar
+    caadr
+    cadar
+    caddr
+    cdaar
+    cdadr
+    cddar
+    cdddr
+    cadddr
+    rd-ws?
+    rd-digit?
+    rd-delim?
+    rd-skip-line
+    rd-skip-ws
+    rd-token-end
+    rd-all-digits?
+    rd-numeric?
+    rd-digits
+    rd-digits-neg
+    rd-parse-int
+    rd-dotchar?
+    rd-exp-char?
+    rd-sign-char?
+    rd-scan-digits
+    rd-flonum?
+    rd-nonfinite
+    rd-atom
+    rd-hex-digit
+    rd-hex
+    rd-str-esc
+    rd-string
+    rd-hash
+    rd-char-name
+    rd-char
+    rd-quote
+    rd-quasi
+    rd-unquote
+    rd-dot?
+    rd-append-reverse
+    rd-list
+    rd-datum
+    %port-rtd-cell
+    %port-rtd
+    %make-port
+    %port-buf
+    )
+  (begin
+    (define-syntax and (syntax-rules () ((_) #t) ((_ e) e) ((_ e1 e2 ...) (if e1 (and e2 ...) #f))))
+    (define-syntax or (syntax-rules () ((_) #f) ((_ e) e) ((_ e1 e2 ...) (let ((t e1)) (if t t (or e2 ...))))))
+    (define-syntax when (syntax-rules () ((_ test e ...) (if test (begin e ...)))))
+    (define-syntax unless (syntax-rules () ((_ test e ...) (if test (if #f #f) (begin e ...)))))
+    (define-syntax let* (syntax-rules () ((_ () body ...) (begin body ...)) ((_ ((x v) rest ...) body ...) (let ((x v)) (let* (rest ...) body ...)))))
+    (define-syntax cond (syntax-rules (else =>) ((_) (if #f #f)) ((_ (else e ...)) (begin e ...)) ((_ (test => proc) rest ...) (let ((t test)) (if t (proc t) (cond rest ...)))) ((_ (test) rest ...) (let ((t test)) (if t t (cond rest ...)))) ((_ (test e ...) rest ...) (if test (begin e ...) (cond rest ...)))))
+    (define-syntax case (syntax-rules (else) ((_ (key ...) clause ...) (let ((k (key ...))) (case k clause ...))) ((_ k) (if #f #f)) ((_ k (else e ...)) (begin e ...)) ((_ k ((d ...) e ...) clause ...) (if (memv k (quote (d ...))) (begin e ...) (case k clause ...)))))
+    (define-syntax %do-step (syntax-rules () ((_ x) x) ((_ x s) s)))
+    (define-syntax do (syntax-rules () ((_ ((var init step ...) ...) (test result ...) command ...) (letrec ((loop (lambda (var ...) (if test (begin (if #f #f) result ...) (begin command ... (loop (%do-step var step ...) ...)))))) (loop init ...)))))
+    (define (list . xs) xs)
+    (define (caar x) (car (car x)))
+    (define (cadr x) (car (cdr x)))
+    (define (cdar x) (cdr (car x)))
+    (define (cddr x) (cdr (cdr x)))
+    (define (caaar x) (car (caar x)))
+    (define (caadr x) (car (cadr x)))
+    (define (cadar x) (car (cdar x)))
+    (define (caddr x) (car (cddr x)))
+    (define (cdaar x) (cdr (caar x)))
+    (define (cdadr x) (cdr (cadr x)))
+    (define (cddar x) (cdr (cdar x)))
+    (define (cdddr x) (cdr (cddr x)))
+    (define (length xs) (let loop ((xs xs) (n 0)) (if (null? xs) n (loop (cdr xs) (+ n 1)))))
+    (define (reverse xs) (let loop ((xs xs) (acc (quote ()))) (if (null? xs) acc (loop (cdr xs) (cons (car xs) acc)))))
+    (define (cadddr x) (car (cdddr x)))
+    (define-syntax guard (syntax-rules () ((_ (var clause ...) body ...) (let ((%gres (call-with-current-continuation (lambda (%gk) (with-exception-handler (lambda (%gobj) (%gk (cons #t %gobj))) (lambda () (cons #f (begin body ...)))))))) (if (car %gres) (let ((var (cdr %gres))) (%guard-clauses var clause ...)) (cdr %gres))))))
+    (define-syntax %guard-clauses (syntax-rules (else =>) ((_ v) (raise v)) ((_ v (else e ...)) (begin e ...)) ((_ v (test => proc) rest ...) (let ((gt test)) (if gt (proc gt) (%guard-clauses v rest ...)))) ((_ v (test) rest ...) (let ((gt test)) (if gt gt (%guard-clauses v rest ...)))) ((_ v (test e ...) rest ...) (if test (begin e ...) (%guard-clauses v rest ...)))))
+    (define-syntax parameterize (syntax-rules () ((_ ((p v) ...) body ...) (with-parameters (list p ...) (list v ...) (lambda () body ...)))))
+    (define (list->vector xs) (let ((v (make-vector (length xs) 0))) (let loop ((xs xs) (i 0)) (if (null? xs) v (begin (vector-set! v i (car xs)) (loop (cdr xs) (+ i 1)))))))
+    (define (list->bytevector bs) (let ((bv (make-bytevector (length bs) 0))) (let loop ((bs bs) (i 0)) (if (null? bs) bv (begin (bytevector-u8-set! bv i (car bs)) (loop (cdr bs) (+ i 1)))))))
+    (define (rd-ws? c) (let ((k (char->integer c))) (or (= k 32) (or (= k 9) (or (= k 10) (= k 13))))))
+    (define (rd-digit? c) (let ((k (char->integer c))) (and (< 47 k) (< k 58))))
+    (define (rd-delim? c) (let ((k (char->integer c))) (or (rd-ws? c) (or (= k 40) (or (= k 41) (or (= k 91) (or (= k 93) (or (= k 34) (= k 59)))))))))
+    (define (rd-skip-line s n i) (if (< i n) (if (= (char->integer (string-ref s i)) 10) (+ i 1) (rd-skip-line s n (+ i 1))) i))
+    (define (rd-skip-ws s n i) (if (< i n) (let ((c (string-ref s i))) (cond ((rd-ws? c) (rd-skip-ws s n (+ i 1))) ((= (char->integer c) 59) (rd-skip-ws s n (rd-skip-line s n (+ i 1)))) (else i))) i))
+    (define (rd-token-end s n i) (if (< i n) (if (rd-delim? (string-ref s i)) i (rd-token-end s n (+ i 1))) i))
+    (define (rd-all-digits? tok a m) (if (< a m) (if (rd-digit? (string-ref tok a)) (rd-all-digits? tok (+ a 1) m) #f) #t))
+    (define (rd-numeric? tok) (let ((m (string-length tok))) (and (< 0 m) (let ((c0 (char->integer (string-ref tok 0)))) (cond ((rd-digit? (string-ref tok 0)) (rd-all-digits? tok 0 m)) ((or (= c0 45) (= c0 43)) (and (< 1 m) (rd-all-digits? tok 1 m))) (else #f))))))
+    (define (rd-digits tok a m acc) (if (< a m) (rd-digits tok (+ a 1) m (+ (* acc 10) (- (char->integer (string-ref tok a)) 48))) acc))
+    (define (rd-digits-neg tok a m acc) (if (< a m) (rd-digits-neg tok (+ a 1) m (- (* acc 10) (- (char->integer (string-ref tok a)) 48))) acc))
+    (define (rd-parse-int tok) (let ((m (string-length tok)) (c0 (char->integer (string-ref tok 0)))) (cond ((= c0 45) (rd-digits-neg tok 1 m 0)) ((= c0 43) (rd-digits tok 1 m 0)) (else (rd-digits tok 0 m 0)))))
+    (define (rd-dotchar? c) (= (char->integer c) 46))
+    (define (rd-exp-char? c) (let ((k (char->integer c))) (or (= k 101) (= k 69))))
+    (define (rd-sign-char? c) (let ((k (char->integer c))) (or (= k 43) (= k 45))))
+    (define (rd-scan-digits tok a m) (if (and (< a m) (rd-digit? (string-ref tok a))) (rd-scan-digits tok (+ a 1) m) a))
+    (define (rd-flonum? tok) (let ((m (string-length tok))) (and (< 0 m) (let ((i0 (if (rd-sign-char? (string-ref tok 0)) 1 0))) (let ((i1 (rd-scan-digits tok i0 m))) (let ((i2 (if (and (< i1 m) (rd-dotchar? (string-ref tok i1))) (+ i1 1) i1))) (let ((had-dot (< i1 i2))) (let ((i3 (rd-scan-digits tok i2 m))) (and (or (< i0 i1) (< i2 i3)) (let ((i4 (if (and (< i3 m) (rd-exp-char? (string-ref tok i3))) (let ((i5 (if (and (< (+ i3 1) m) (rd-sign-char? (string-ref tok (+ i3 1)))) (+ i3 2) (+ i3 1)))) (let ((i6 (rd-scan-digits tok i5 m))) (if (< i5 i6) i6 -1))) i3))) (and (< -1 i4) (= i4 m) (or had-dot (< i3 i4)))))))))))))
+    (define (rd-nonfinite tok) (cond ((string=? tok "+inf.0") (%string->flonum "inf")) ((string=? tok "-inf.0") (%string->flonum "-inf")) ((string=? tok "+nan.0") (%string->flonum "nan")) (else #f)))
+    (define (rd-atom s n i) (let ((j (rd-token-end s n i))) (let ((tok (substring s i j))) (cons (cond ((rd-numeric? tok) (rd-parse-int tok)) ((rd-nonfinite tok)) ((rd-flonum? tok) (%string->flonum tok)) (else (string->symbol tok))) j))))
+    (define (rd-hex-digit c) (let ((k (char->integer c))) (cond ((and (< 47 k) (< k 58)) (- k 48)) ((and (< 96 k) (< k 103)) (- k 87)) ((and (< 64 k) (< k 71)) (- k 55)) (else 0))))
+    (define (rd-hex s n i acc) (if (< i n) (if (= (char->integer (string-ref s i)) 59) (cons acc (+ i 1)) (rd-hex s n (+ i 1) (+ (* acc 16) (rd-hex-digit (string-ref s i))))) (cons acc i)))
+    (define (rd-str-esc c) (let ((k (char->integer c))) (cond ((= k 110) (integer->char 10)) ((= k 116) (integer->char 9)) ((= k 114) (integer->char 13)) (else c))))
+    (define (rd-string s n i) (let loop ((i i) (acc (quote ()))) (if (< i n) (let* ((c (string-ref s i)) (k (char->integer c))) (cond ((= k 34) (cons (list->string (reverse acc)) (+ i 1))) ((= k 92) (let ((e (string-ref s (+ i 1)))) (if (= (char->integer e) 120) (let ((hx (rd-hex s n (+ i 2) 0))) (loop (cdr hx) (cons (integer->char (car hx)) acc))) (loop (+ i 2) (cons (rd-str-esc e) acc))))) (else (loop (+ i 1) (cons c acc))))) (cons (list->string (reverse acc)) i))))
+    (define (rd-hash s n i) (let ((k (char->integer (string-ref s i)))) (cond ((= k 116) (cons #t (+ i 1))) ((= k 102) (cons #f (+ i 1))) ((= k 92) (rd-char s n i)) ((= k 40) (let ((r (rd-list s n (+ i 1) (quote ())))) (cons (list->vector (car r)) (cdr r)))) ((and (= k 117) (< (+ i 2) n) (= (char->integer (string-ref s (+ i 1))) 56) (= (char->integer (string-ref s (+ i 2))) 40)) (let ((r (rd-list s n (+ i 3) (quote ())))) (cons (list->bytevector (car r)) (cdr r)))) (else (let ((j (rd-token-end s n i))) (cons (string->symbol (substring s i j)) j))))))
+    (define (rd-char-name tok) (cond ((string=? tok "space") (integer->char 32)) ((string=? tok "newline") (integer->char 10)) ((string=? tok "tab") (integer->char 9)) ((string=? tok "return") (integer->char 13)) ((string=? tok "nul") (integer->char 0)) ((string=? tok "null") (integer->char 0)) ((string=? tok "delete") (integer->char 127)) ((string=? tok "altmode") (integer->char 27)) ((string=? tok "esc") (integer->char 27)) (else (string-ref tok 0))))
+    (define (rd-char s n i) (let* ((cs (+ i 1)) (end (rd-token-end s n (+ cs 1))) (tok (substring s cs end))) (if (= (string-length tok) 1) (cons (string-ref s cs) end) (cons (rd-char-name tok) end))))
+    (define (rd-quote s n i) (let ((j (rd-skip-ws s n i))) (let ((r (rd-datum s n j))) (cons (list (quote quote) (car r)) (cdr r)))))
+    (define (rd-quasi s n i) (let ((j (rd-skip-ws s n i))) (let ((r (rd-datum s n j))) (cons (list (quote quasiquote) (car r)) (cdr r)))))
+    (define (rd-unquote s n i) (if (and (< i n) (= (char->integer (string-ref s i)) 64)) (let ((j (rd-skip-ws s n (+ i 1)))) (let ((r (rd-datum s n j))) (cons (list (quote unquote-splicing) (car r)) (cdr r)))) (let ((j (rd-skip-ws s n i))) (let ((r (rd-datum s n j))) (cons (list (quote unquote) (car r)) (cdr r))))))
+    (define (rd-dot? s n j) (and (= (char->integer (string-ref s j)) 46) (= (rd-token-end s n (+ j 1)) (+ j 1))))
+    (define (rd-append-reverse acc tail) (if (null? acc) tail (rd-append-reverse (cdr acc) (cons (car acc) tail))))
+    (define (rd-list s n i acc) (let ((j (rd-skip-ws s n i))) (if (< j n) (cond ((let ((c (char->integer (string-ref s j)))) (or (= c 41) (= c 93))) (cons (reverse acc) (+ j 1))) ((rd-dot? s n j) (let* ((r (rd-datum s n (rd-skip-ws s n (+ j 1)))) (j2 (rd-skip-ws s n (cdr r)))) (cons (rd-append-reverse acc (car r)) (+ j2 1)))) (else (let ((r (rd-datum s n j))) (rd-list s n (cdr r) (cons (car r) acc))))) (cons (reverse acc) j))))
+    (define (rd-datum s n i) (let ((k (char->integer (string-ref s i)))) (cond ((= k 40) (rd-list s n (+ i 1) (quote ()))) ((= k 91) (rd-list s n (+ i 1) (quote ()))) ((= k 39) (rd-quote s n (+ i 1))) ((= k 96) (rd-quasi s n (+ i 1))) ((= k 44) (rd-unquote s n (+ i 1))) ((= k 34) (rd-string s n (+ i 1))) ((= k 35) (rd-hash s n (+ i 1))) (else (rd-atom s n i)))))
+    (define %port-rtd-cell #f)
+    (define (%port-rtd) (if %port-rtd-cell %port-rtd-cell (begin (set! %port-rtd-cell (%make-record-type "port")) %port-rtd-cell)))
+    (define (%make-port handle input? buf pos string? closed?) (%make-record (%port-rtd) (list handle input? buf pos string? closed?)))
+    (define (%port-buf p) (let ((b (%record-ref p 2))) (if b b (let ((s (%read-all-stdin))) (%record-set! p 2 s) s))))
+    ))

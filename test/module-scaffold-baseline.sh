@@ -377,6 +377,30 @@
 #     needed 2 iterations rather than 1, which is expected when the prelude source itself
 #     changes: the baked *prelude-source* string feeds the next generation's output.
 #     All 80 demos' stdout byte-identical.  No new entries.
+#   scheme-base-partition -- the baked standard library became a PARTITION: (emit internal),
+#     the internal substrate holding the port representation and the in-language reader,
+#     plus (scheme base), which now IMPORTS it.  Every demo's snapshot therefore holds TWO
+#     unit modules ahead of the program instead of one, which is most of the byte delta and
+#     is not itself drift -- the units were checked separately and every one of the 80
+#     demos' unit modules is byte-identical to the committed bootstrap/emit.internal.ll and
+#     bootstrap/scheme.base.ll.
+#     The PROGRAM modules are where drift would hide, and there it is exactly +2/-2 lines
+#     per demo -- 160 added, 160 removed across the 80 -- of exactly two kinds and nothing
+#     else, verified against an 80-demo before/after capture (a detached HEAD worktree):
+#       (1) -2 `@"scheme.base:rd-skip-ws"` / `@"scheme.base:rd-token-end" = external global
+#           i64`.  Those two left (scheme base)'s export list with the retired `unstable`
+#           tier (issue #32), and an importing program declares one `external global` per
+#           export -- the exact mechanism src/prelude-surface.scm's header describes.
+#       (2) +2 `declare i64 @"emit.internal:__init"()` and its `call` from @scheme_entry:
+#           the new baked member's initializer, declared and invoked in dependency order
+#           before (scheme base)'s.
+#     ZERO other lines moved in any of the 80 program modules -- no codegen, no label, no
+#     constant.  Cross-unit calls into the substrate cost nothing here because the reader
+#     is private: no demo calls it directly.  The library itself did move, as expected when
+#     definitions are re-homed: scheme.base.ll 512,594 -> 367,451 B (the reader and port
+#     representation left) and the new emit.internal.ll is 170,716 B, +25,573 B net for the
+#     18 definitions the substrate must define for itself (design D10).  All 80 demos'
+#     stdout byte-identical.  No new entries.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

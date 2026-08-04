@@ -10,7 +10,8 @@
 ;;; manifest-search-path): the sibling .sld files are bare names, and the repo's own
 ;;; lib/ is reached with ../../.  That rule is what lets an INSTALLED manifest name
 ;;; lib/scheme/base.sld and find it beside itself; these fixtures exercise it.
-((library (scheme base) (source "../../lib/scheme/base.sld"))
+((library (emit internal) (source "../../lib/emit/internal.sld"))
+ (library (scheme base)   (source "../../lib/scheme/base.sld"))
  (library (mylib)      (source "mylib.sld"))
  (library (liba)       (source "liba.sld"))
  (library (libb)       (source "libb.sld"))

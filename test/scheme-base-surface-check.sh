@@ -14,10 +14,11 @@
 #
 # Also asserted:
 #   - every declared-private name is actually defined by the prelude (no rot)
-#   - every declared-unstable name is exported (it is the escape hatch, not a wish)
-#   - no EXPORTED name is spelled like an internal (%..., *...*, rd-...) unless it is
-#     declared unstable -- the naming convention as a checked consequence of the
-#     declaration rather than as the mechanism
+#   - NO exported name is spelled like an internal (%..., *...*, rd-...) -- the naming
+#     convention as a checked consequence of the declaration rather than as the mechanism.
+#     There used to be an `unstable` tier exempting two reader helpers from this; the
+#     substrate retired it (change: scheme-base-partition, issue #32), so the rule is now
+#     absolute and the exemption list is gone.
 #
 # Run from the repo root: test/scheme-base-surface-check.sh
 set -u
@@ -60,7 +61,6 @@ decl_names () {  # $1 = declaration variable name
     }' src/prelude-surface.scm
 }
 decl_names '*scheme-base-private*'  > "$TMP/private"
-decl_names '*scheme-base-unstable*' > "$TMP/unstable"
 
 # the committed export list, in file order
 awk 'f && /^    \)$/ { f = 0 } f { print $1 } /^  \(export$/ { f = 1 }' \
@@ -95,30 +95,21 @@ else
   bad "declared private but not defined by the prelude: $(echo $rot)"
 fi
 
-miss="$(grep -v -x -F -f "$TMP/exports" "$TMP/unstable" || true)"
-if [ -z "$miss" ]; then
-  ok "every declared-unstable name is exported"
-else
-  bad "declared unstable but not exported: $(echo $miss)"
-fi
-
-# --- 3. no exported name LOOKS internal unless it is declared unstable ------
+# --- 3. no exported name LOOKS internal ------------------------------------
 # The naming convention as a CHECKED CONSEQUENCE of the declaration, not as the
 # mechanism: spelling does not decide visibility, but a published name that reads
-# like an internal is either a leak or an undeclared escape hatch.
+# like an internal is a leak.  No exemptions -- the `unstable` tier that used to hold
+# two of them is retired, its members re-homed in the substrate the compiler imports
+# (change: scheme-base-partition, issue #32).
 
-grep -E '^(%|rd-)|^\*.*\*$' "$TMP/exports" > "$TMP/internal-looking" || true
-if [ -s "$TMP/unstable" ]; then
-  leak="$(grep -v -x -F -f "$TMP/unstable" "$TMP/internal-looking" || true)"
-else
-  leak="$(cat "$TMP/internal-looking")"
-fi
+leak="$(grep -E '^(%|rd-)|^\*.*\*$' "$TMP/exports" || true)"
 if [ -z "$leak" ]; then
-  ok "no exported name is spelled like an internal except the $(wc -l < "$TMP/unstable" | tr -d ' ') declared unstable"
+  ok "no exported name is spelled like an internal"
 else
-  bad "internal-looking names are exported without being declared unstable: $(echo $leak)"
-  echo "         either declare them private, or record them in *scheme-base-unstable*"
-  echo "         with the reason something outside the library must resolve them."
+  bad "internal-looking names are exported: $(echo $leak)"
+  echo "         declare them private in src/prelude-surface.scm, or -- if something"
+  echo "         outside (scheme base) must resolve them -- assign them to the substrate"
+  echo "         and have that consumer import (emit internal)."
 fi
 
 echo

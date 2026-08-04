@@ -47,7 +47,11 @@ prog_ir () {  # <src-text> [manifest] -> path to the program half
   printf '%s\n' "$text" > "$TMP/p.scm"
   if [ -n "$man" ]; then $RUN --manifest "$man" --emit < "$TMP/p.scm" > "$TMP/all.ll" 2>/dev/null
   else                  $RUN --emit < "$TMP/p.scm" > "$TMP/all.ll" 2>/dev/null; fi
-  sed -n '/==EMIT-UNIT-BOUNDARY==/,$p' "$TMP/all.ll" > "$TMP/prog.ll"
+  # the program is the LAST part: the baked standard library is a partition, so there is
+  # one boundary marker per baked member and "from the first marker on" would include a
+  # library (change: scheme-base-partition).
+  awk '/^; ==EMIT-UNIT-BOUNDARY==$/ { n = 0; delete L; next } { L[++n] = $0 }
+       END { for (i = 1; i <= n; i++) print L[i] }' "$TMP/all.ll" > "$TMP/prog.ll"
   echo "$TMP/prog.ll"
 }
 

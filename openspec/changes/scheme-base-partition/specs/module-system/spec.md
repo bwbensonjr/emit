@@ -90,6 +90,52 @@ auto-imported, so its exports are in scope only for a library or program that na
 an ordinary program SHALL therefore still see none of these names. It is not API and carries no
 stability guarantee.
 
+Because `(scheme base)` imports it, the substrate SHALL NOT depend on `(scheme base)`: every name its
+body reaches SHALL be defined within it. A name that `(scheme base)` also exports and that the
+substrate needs only internally SHALL be defined in the substrate without being exported by it.
+
+**No mutable binding SHALL be shared between the substrate and `(scheme base)` by duplication.** A
+top-level binding that is assigned after initialization, or that holds an object whose identity is
+observable (a record type descriptor), SHALL be assigned to exactly one library, and every procedure
+that assigns it SHALL live in that same library — a unit's top-level bindings are written only by its
+own initializer, so assigning an imported binding is not available and duplicating a stateful one
+would split the state. Consequently the substrate SHALL NOT contain the exception-handler chain, and
+machinery that raises errors SHALL be assigned to the libraries that consume it rather than to the
+substrate.
+
+Its resolution SHALL be identical on every door: the doors that build the baked set from the
+compiler's baked-in prelude source SHALL resolve it baked, and the doors that resolve `(scheme base)`
+through the manifest SHALL find the substrate through the manifest too, so `(scheme base)`'s import of
+it resolves on either path. It SHALL be installed alongside the other shipped library sources.
+
+#### Scenario: The substrate does not depend on the library that imports it
+
+- **WHEN** the substrate's unit is compiled
+- **THEN** it resolves every name its body references without importing `(scheme base)`, and a name
+  `(scheme base)` also exports but the substrate needs only internally is absent from the substrate's
+  export list
+
+#### Scenario: A port made through a relocated library is a port everywhere
+
+- **WHEN** a program imports `(scheme file)`, opens a file, and passes the resulting port to a
+  `(scheme base)` procedure such as `read-char`, `port?`, or `close-port`
+- **THEN** the port is recognized and the operation behaves as it did when both procedures lived in
+  `(scheme base)`, because the port's type descriptor is created in exactly one library
+
+#### Scenario: An error from relocated machinery is still catchable
+
+- **WHEN** a program guards an expression that calls a relocated procedure which signals an error —
+  for example reading from a non-port or a closed port
+- **THEN** the guard catches it, exactly as it did before the relocation, because the exception-handler
+  chain is a single binding rather than one copy per library
+
+#### Scenario: The substrate resolves on the manifest-driven doors too
+
+- **WHEN** a door that resolves `(scheme base)` from the manifest starts up, and `(scheme base)`'s
+  source imports the substrate
+- **THEN** the substrate resolves through the same manifest and `(scheme base)` loads, rather than
+  failing because an internal library was reachable only when baked
+
 #### Scenario: Substrate names are not in scope in an ordinary program
 
 - **WHEN** a program with no explicit import references a substrate name such as `rd-atom`,
@@ -117,6 +163,13 @@ nor part of the published surface.
 The partition MAY assign one definition to **more than one** library, which SHALL emit an
 independent definition into each. This is the mechanism by which a name can serve both an internal
 consumer and a standard library without either re-exporting the other's binding.
+
+Which library's **body defines** a name and which library's **export list publishes** it SHALL be
+separate questions, decidable independently **per library**: the declaration SHALL be able to assign a
+definition to a library that defines it without exporting it. This is required because a library or
+program may import two members of the set at once, and one name offered by two imports resolves
+silently to whichever is found first rather than being reported — so a member that needs a name only
+for its own body SHALL be able to keep it out of its export list.
 
 Every derivation of an export list SHALL read that one declaration, so the Chez-hosted driver (which
 resolves the committed `.sld` files) and the Chez-free portable derivation (which builds the baked

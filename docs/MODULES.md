@@ -278,13 +278,19 @@ portable derivation used by `emit run`/`emit build`/the run door, from the baked
 so the two doors cannot disagree. Order comes from the prelude, not from the declaration, so
 regrouping the declaration cannot move emitted IR.
 
-The exported surface has three tiers:
+The exported surface has two tiers:
 
 | Tier | What it means |
 |---|---|
 | **R7RS** | names R7RS-small defines. A few R7RS puts in another library — the depth-3+ `cxr` forms are `(scheme cxr)`, `read` is `(scheme read)`, the file procedures are `(scheme file)`. Recorded conformance debt. |
 | **extension** | Emit additions with no R7RS home: `filter`, `fold-left`, `fold-right`, `andmap`, `memp`, `iota`, `list-head`, `void`, `list->bytevector`, `port-closed?`, `read-from-string`, `read-all-from-string`, `with-parameters`, and the `hash-table-*` family. Published deliberately, spelled R6RS/SRFI. |
-| **unstable** | exported *only* because something outside the library must resolve the name — `rd-skip-ws` and `rd-token-end`, which the REPL's input-completeness probe shares with the reader so the two cannot drift. No stability guarantee; each entry records its reason in the declaration. |
+
+There used to be a third, **unstable**: names exported *only* because something outside the library
+had to resolve them. It held exactly two, `rd-skip-ws` and `rd-token-end`, and that something was the
+*compiler* — the REPL's input-completeness probe shares the reader's lexeme helpers so the two cannot
+drift. The tier is **retired** (change: `scheme-base-partition`, issue #32): those two moved into the
+internal substrate, which the compiler imports directly, so nothing reaches a public export list by
+being needed internally any more.
 
 Two mechanics follow from how macros expand, and are worth knowing before curating further:
 

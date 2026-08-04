@@ -138,7 +138,8 @@ printf '(begin (display "before") (newline) (+ %s 1))\n' "$MAX" > "$TMP/exe.scm"
 # Absolute source paths: this manifest lives in $TMP, and a manifest's relative paths
 # resolve against its own directory (change: manifest-search-path).
 cat > "$TMP/emit-libs.scm" <<EOF
-((library (scheme base) (source "$PWD/lib/scheme/base.sld"))
+((library (emit internal) (source "$PWD/lib/emit/internal.sld"))
+ (library (scheme base) (source "$PWD/lib/scheme/base.sld"))
  (program ovf-app (source "$TMP/exe.scm") (output "$TMP/exe")))
 EOF
 if EMIT_VERBOSITY=quiet build/emit build ovf-app --manifest "$TMP/emit-libs.scm" \

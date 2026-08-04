@@ -5,10 +5,10 @@
 ;;; file is the source of truth for what it EXPORTS.  Both derivations of the export
 ;;; list read THIS file, so they cannot disagree:
 ;;;
-;;;   tools/gen-scheme-base.ss   (Chez) writes the committed lib/scheme/base.sld,
-;;;                              which the Chez driver resolves via the manifest
-;;;   scheme-base-library-form   (src/core.ss) the portable derivation used by
-;;;                              `emit run` / `emit build` / the run door, from the
+;;;   tools/gen-scheme-base.ss   (Chez) writes the committed lib/**/*.sld, which the Chez
+;;;                              driver and the REPL door resolve via the manifest
+;;;   partition-library-form     (src/core.ss) the portable derivation used by
+;;;   + compile-baked-set        `emit run` / `emit build` / the run door, from the
 ;;;                              baked-in prelude source with no filesystem
 ;;;
 ;;; The export list is the prelude's top-level defines in SOURCE ORDER minus
@@ -56,15 +56,25 @@
 ;;; The partition is TOTAL, written as a default plus exceptions so that adding an
 ;;; ordinary prelude procedure still requires no edit here:
 ;;;
-;;;   in *prelude-assignments*  -> exported by exactly the libraries listed
-;;;   else in *scheme-base-private* -> exported by nothing (body-only, as before)
-;;;   else                      -> exported by (scheme base)
+;;;   in *prelude-assignments*      -> the homes listed there
+;;;   else in *scheme-base-private* -> defined by (scheme base), exported by nothing
+;;;   else                          -> defined AND exported by (scheme base)
+;;;
+;;; So *scheme-base-private* is not a second mechanism: it is shorthand for the single
+;;; home `((scheme base) private)`, which is why one lookup answers both questions.
 ;;;
 ;;; A name MAY be assigned to two libraries, which emits an independent definition
 ;;; into each.  That is not duplication for its own sake: it is how a definition can
 ;;; serve an internal consumer and a standard library at once, given that a library
 ;;; can only export a name it DEFINES (compile-library*, src/core.ss) -- there is no
 ;;; re-export.
+;;;
+;;; HOME and VISIBILITY are separate axes, decided per library: `(LIBRARY private)`
+;;; puts the definition in that library's body while leaving it out of that library's
+;;; export list.  *scheme-base-private* is the "hidden everywhere" default; the marker
+;;; is the per-library exception to it, and exists because a member sometimes needs a
+;;; name that another member is the one to publish.  See home-library / home-exports?
+;;; below for the full rule.
 ;;;
 ;;; ORDERING: the arrangement of the lists below is still free, because order comes
 ;;; from the prelude's own definition order, not from here.  But the OLD reason for
@@ -73,25 +83,33 @@
 ;;; a rotted declaration, caught by the generator's checks rather than silently
 ;;; winning.  Do not rely on the subtraction argument when editing.
 
-;;; Exported, but NOT API.  Every entry needs its reason on this list.
-;;;   rd-skip-ws   -- the REPL's input-completeness probe (src/repl-core.ss:528-600)
-;;;   rd-token-end    deliberately reuses the reader's own lexeme helpers so the two
-;;;                   cannot drift, and it is compiler source compiled as a program that
-;;;                   auto-imports (scheme base).  Duplicating the lexeme rules there is
-;;;                   exactly what that code's comment forbids, and hoisting the ~70-line
-;;;                   probe into the prelude would grow scheme.base.ll -- linked into
-;;;                   EVERY user binary -- to save two names.
+;;; --- the `unstable` export tier is GONE (change: scheme-base-partition, closes #32) --
 ;;;
-;;; The other two names that used to live here were the helpers `guard` and
-;;; `parameterize` expand to.  A macro template is instantiated in the IMPORTER's scope,
-;;; so every name it mentions must be exported under exactly that spelling -- `rename`
-;;; cannot hide one, since it keys the import table by the EXTERNAL name and leaves the
-;;; template's spelling unresolvable.  Since they are published either way, they were
-;;; renamed to honest public spellings: `%with-handler` -> `with-exception-handler` (R7RS
-;;; 6.11, a conformance gain) and `%with-parameters` -> `with-parameters` (an extension).
-;;; The principled way to shrink this list further is to resolve prelude macro-template
-;;; names hygienically against the library's INTERNAL bindings; until then, two names.
-(define *scheme-base-unstable* '(rd-skip-ws rd-token-end))
+;;; It held exactly two names, `rd-skip-ws` and `rd-token-end`, exported from
+;;; (scheme base) "ONLY because something outside the library must resolve the name".
+;;; That something was never a macro template -- it is src/repl-core.ss, the REPL's
+;;; input-completeness probe, which reuses the reader's own lexeme helpers so the two
+;;; cannot drift, and which is COMPILER source compiled as a program.  So the two were
+;;; the same category as the compiler's `caddr` calls: names on a public export list
+;;; only because the compiler had no other way to reach them.
+;;;
+;;; It has one now.  The compiler imports (emit internal) directly, so both names moved
+;;; into the substrate with the rest of the reader and left (scheme base)'s export list
+;;; -- which empties the tier rather than shrinking it.  The rule the tier existed to
+;;; encode survives as a plain fact about the partition: a name reaches a public export
+;;; list because R7RS puts it there or because Emit publishes it deliberately, never
+;;; because an internal consumer needs it.
+;;;
+;;; (The other two names that once lived here were the helpers `guard` and `parameterize`
+;;; expand to.  A macro template is instantiated in the IMPORTER's scope, so every name it
+;;; mentions must be exported under exactly that spelling -- `rename` cannot hide one,
+;;; since it keys the import table by the EXTERNAL name and leaves the template's spelling
+;;; unresolvable.  Since they are published either way, they were renamed to honest public
+;;; spellings: `%with-handler` -> `with-exception-handler` (R7RS 6.11, a conformance gain)
+;;; and `%with-parameters` -> `with-parameters` (an extension).  A prelude macro template
+;;; that mentions a name still forces that name public; that is unchanged, and the
+;;; principled fix -- resolving template names hygienically against the library's INTERNAL
+;;; bindings -- is still the way to shrink it.)
 
 ;;; NOT exported.  In the library body -- the exported procedures call them -- but out
 ;;; of the export list, so they are not in scope in every user program and are not an
@@ -116,8 +134,15 @@
     %ht-initial-buckets %ht-load-factor %ht-count %ht-buckets %ht-set-count!
     %ht-set-buckets! %ht-index %ht-assoc %ht-remove %ht-grow! %ht-fold-buckets
     ;; the in-language reader (issue #25 will change these; they are not API).
-    ;; rd-skip-ws / rd-token-end are the two exceptions, declared unstable above.
-    rd-ws? rd-digit? rd-delim? rd-skip-line rd-all-digits? rd-numeric? rd-digits
+    ;; ALL of them now, including rd-skip-ws / rd-token-end, which used to be the two
+    ;; `unstable` exceptions and are ordinary internals again -- their one outside
+    ;; consumer, the REPL's input-completeness probe, imports (emit internal) instead.
+    ;; Note what this list means once the reader is re-homed by *prelude-assignments*
+    ;; below: it says "(scheme base) does not export these", which is still exactly
+    ;; right, and is what keeps them out of test/scheme-base-surface-check.sh's expected
+    ;; surface.  Where they are DEFINED is the assignment's business, not this list's.
+    rd-ws? rd-digit? rd-delim? rd-skip-line rd-skip-ws rd-token-end
+    rd-all-digits? rd-numeric? rd-digits
     rd-digits-neg rd-parse-int rd-dotchar? rd-exp-char? rd-sign-char? rd-scan-digits
     rd-flonum? rd-nonfinite rd-atom rd-hex-digit rd-hex rd-str-esc rd-string rd-hash
     rd-char-name rd-char rd-quote rd-quasi rd-unquote rd-dot? rd-append-reverse
@@ -136,33 +161,141 @@
 ;;; (scheme base) -- or nothing -- run in a directory with no emit-libs.scm.  Anything
 ;;; (scheme base) imports inherits that requirement and must also be baked.
 ;;; OUTPUT-PATH is where tools/gen-scheme-base.ss writes the member's .sld.
+;;;
+;;; (emit internal) is the SUBSTRATE (design D1/D2): the shared private machinery that
+;;; (scheme base) and the relocated standard libraries both stand on.  It is named
+;;; outside the (scheme ...) namespace R7RS reserves for the standard, is NOT
+;;; auto-imported -- which is what keeps it out of scope in an ordinary program, and so
+;;; what preserves issue #29's privacy guarantee -- and carries no stability guarantee.
+;;; It is baked because (scheme base) imports it and (scheme base) must resolve with no
+;;; manifest; it is ALSO written to disk and listed in emit-libs.scm because the REPL door
+;;; resolves (scheme base) from the manifest (src/emit.cpp, mode 5 -> mode 4), so
+;;; base.sld's import of it has to resolve there too.
 (define *prelude-libraries*
-  '(((scheme base) #t () "lib/scheme/base.sld")))
+  '(((emit internal) #t ()                "lib/emit/internal.sld")
+    ((scheme base)   #t ((emit internal)) "lib/scheme/base.sld")))
 
 ;;; Assignment EXCEPTIONS to the default of (scheme base); see the partition notes in
-;;; the header.  Each entry is (NAME LIBRARY ...): the libraries whose BODY defines the
-;;; name.  Two libraries means the definition is emitted independently into both.
-;;; Empty while the partition has a single member.
-(define *prelude-assignments* '())
+;;; the header.  Each entry is (NAME HOME ...), one HOME per library whose BODY defines
+;;; the name; two homes means the definition is emitted independently into both.
+;;;
+;;; A HOME is one of:
+;;;
+;;;   LIBRARY            the library defines it AND exports it
+;;;   (LIBRARY private)  the library's body defines it, its export list omits it
+;;;
+;;; The two are told apart by shape: a library name is a list of SYMBOLS, so its car is
+;;; a symbol, while a (LIBRARY private) home's car is the library name -- a pair.
+;;;
+;;; The per-home `private` marker exists because a member may need a name that ANOTHER
+;;; member exports.  (emit internal) defines `length` and `reverse` for its own body,
+;;; but (scheme base) exports them, and (scheme read) / (scheme file) / the compiler's
+;;; own source import BOTH libraries -- one name offered by two imports resolves to
+;;; whichever import-tables->env-alist happens to list first (src/core.ss), silently,
+;;; rather than being reported.  So the borrower defines without exporting.
+;;;
+;;; An assignment OVERRIDES *scheme-base-private*, so a name may appear in both: the
+;;; reader helpers stay on that list, which is what keeps them out of (scheme base)'s
+;;; export list and out of test/scheme-base-surface-check.sh's expected surface, while
+;;; their assignment re-homes them in the substrate, which does export them.  The
+;;; substrate is kept non-API by NOT being auto-imported (design D1), not by hiding
+;;; names from itself -- a name it holds but does not export would be unreachable.
 
-;;; The libraries whose body DEFINES name -- its home(s).  Every prelude definition has
-;;; at least one home, including a private one: a private helper still has to live in
-;;; the body of the library whose exported procedures call it.  Home and visibility are
-;;; separate axes, which is what lets a name move to another library (a new home) while
-;;; staying hidden, or stay home while being hidden.
-(define (prelude-homes-of name)
+;;; Give every NAME the same HOMES.  The three groups below differ only in their homes,
+;;; and the reason for each group is the interesting part, so they are written as three
+;;; declarations rather than as fifty-four hand-repeated entries.
+(define (prelude-assign* names homes)
+  (map (lambda (n) (cons n homes)) names))
+
+;;; The SUBSTRATE's own contents, in three groups.
+;;;
+;;; 1. Re-homed in (emit internal) and exported by it; (scheme base) imports what it used
+;;;    to define.  This is the reader and the port REPRESENTATION -- the machinery
+;;;    (scheme read) and (scheme file) will need once they exist, which is the whole
+;;;    reason the substrate exists.
+;;;
+;;;    %port-rtd-cell and %port-rtd must stay TOGETHER and in exactly ONE library.  A
+;;;    record type descriptor is compared by object identity (rt_make_record_type,
+;;;    src/runtime/runtime.c), so a second cell would mint a second, DISJOINT port type
+;;;    and a port from (scheme file) would fail (scheme base)'s `port?`.  And the cell is
+;;;    written only by %port-rtd, which therefore has to sit beside it: a unit's globals
+;;;    are written only by its own __init, so assigning an imported binding is refused
+;;;    (assign-global, src/parse.ss).
+;;;
+;;;    NOT here, deliberately (design D10): %check-input-port / %check-output-port.  They
+;;;    are the only names in this group that RAISE, and `error` reaches `raise` reaches
+;;;    *handlers* -- which can neither come down here (base's `with-exception-handler`
+;;;    assigns it, and see above) nor be duplicated (that would split the handler chain,
+;;;    so a `guard` around a port error would stop catching it).  They are stateless, so
+;;;    the library that needs one defines its own: (scheme base) today, (scheme read) too
+;;;    once `read` moves.  %port-at-eof? and the three std-port cells stay for the simpler
+;;;    reason that nothing down here needs them.
+(define *substrate-rehomed*
+  '(;; the in-language reader, entry point last
+    rd-ws? rd-digit? rd-delim? rd-skip-line rd-skip-ws rd-token-end
+    rd-all-digits? rd-numeric? rd-digits rd-digits-neg rd-parse-int
+    rd-dotchar? rd-exp-char? rd-sign-char? rd-scan-digits rd-flonum? rd-nonfinite
+    rd-atom rd-hex-digit rd-hex rd-str-esc rd-string rd-hash rd-char-name rd-char
+    rd-quote rd-quasi rd-unquote rd-dot? rd-append-reverse rd-list rd-datum
+    ;; the port representation
+    %port-rtd-cell %port-rtd %make-port %port-buf))
+
+;;; 2. Defined in BOTH libraries and exported by both -- the compositional accessors R7RS
+;;;    puts in (scheme cxr).  The substrate carries them for the COMPILER, whose passes
+;;;    call caddr/cadddr/cdddr at 48 sites across nine CORE_FLAT files and which would
+;;;    otherwise need 48 edits under the self-hosting fixed point (design D6).  Nine
+;;;    one-line wrappers over car/cdr, and the on-disk (scheme cxr) will define its own.
+;;;    (scheme base) still exports them at this step; step 5 is where it stops.
+(define *substrate-cxr*
+  '(caaar caadr cadar caddr cdaar cdadr cddar cdddr cadddr))
+
+;;; 3. Defined in the substrate but NOT exported by it, and exported by (scheme base) as
+;;;    always -- the base-exported names the substrate's own body reaches.  The substrate
+;;;    is the LOWER layer, so it cannot import (scheme base) back; anything its body calls
+;;;    has to be defined in it.  This is that debt, in full: %make-port needs `list`,
+;;;    rd-string/rd-list need `reverse`, rd-hash needs `list->vector`/`list->bytevector`,
+;;;    those need `length`, and group 2's wrappers are built on the depth-2 four.
+;;;    Nine definitions, every one a short loop or a one-liner -- categorically unlike
+;;;    duplicating the reader, which is what design D1 refused.
+;;;    They are `private` HERE and only here: (scheme base) is the library that publishes
+;;;    these names, and anything importing both members must not be offered two.
+(define *substrate-borrowed*
+  '(caar cadr cdar cddr length list reverse list->vector list->bytevector))
+
+(define *prelude-assignments*
+  (append
+    (prelude-assign* *substrate-rehomed*  '((emit internal)))
+    (prelude-assign* *substrate-cxr*      '((emit internal) (scheme base)))
+    (prelude-assign* *substrate-borrowed* '(((emit internal) private) (scheme base)))))
+
+;;; The library a HOME names, and whether that home publishes the name.
+(define (home-library h) (if (pair? (car h)) (car h) h))
+(define (home-exports? h) (if (pair? (car h)) #f #t))
+
+;;; NAME's homes, as HOME specs -- the one lookup the whole partition rests on.  Every
+;;; prelude definition has at least one home, including a private one: a private helper
+;;; still has to live in the body of the library whose exported procedures call it.
+(define (prelude-home-specs name)
   (let ((e (assq name *prelude-assignments*)))
-    (if e (cdr e) '((scheme base)))))
+    (cond (e (cdr e))
+          ((memq name *scheme-base-private*) '(((scheme base) private)))
+          (else '((scheme base))))))
 
-;;; Does LIB export NAME?  It must be one of the name's homes -- a library can only
-;;; export what it defines (compile-library*, src/core.ss) -- and the name must not be
-;;; declared private.  Used by BOTH derivations, the portable one in src/core.ss and
-;;; the Chez generator, so they cannot disagree about where a name lives.
+;;; The libraries whose body DEFINES name.  Home and visibility are separate axes, which
+;;; is what lets a name move to another library (a new home) while staying hidden, or be
+;;; defined in two libraries and exported by only one of them.
+(define (prelude-homes-of name)
+  (map home-library (prelude-home-specs name)))
+
+;;; Does LIB export NAME?  LIB must be one of the name's homes -- a library can only
+;;; export what it defines (compile-library*, src/core.ss) -- and that home must not
+;;; carry the `private` marker.  Used by BOTH derivations, the portable one in
+;;; src/core.ss and the Chez generator, so they cannot disagree about where a name lives.
 (define (prelude-exports? lib name)
-  (if (and (member lib (prelude-homes-of name))
-           (not (memq name *scheme-base-private*)))
-      #t
-      #f))
+  (let loop ((hs (prelude-home-specs name)))
+    (cond ((null? hs) #f)
+          ((equal? (home-library (car hs)) lib) (home-exports? (car hs)))
+          (else (loop (cdr hs))))))
 
 ;;; Does LIB's body define NAME?
 (define (prelude-defines? lib name)

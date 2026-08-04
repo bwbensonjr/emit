@@ -67,8 +67,8 @@ if command -v chez >/dev/null 2>&1; then
   min="$TMP/min-libs.scm"
   # absolute paths: the manifest lives in $TMP, and a manifest's relative paths resolve
   # against its own directory (change: manifest-search-path)
-  printf '((library (scheme base) (source "%s/lib/scheme/base.sld"))\n (library (mylib) (source "%s/%s/mylib.sld")))\n' \
-    "$PWD" "$PWD" "$MOD" > "$min"
+  printf '((library (emit internal) (source "%s/lib/emit/internal.sld"))\n (library (scheme base) (source "%s/lib/scheme/base.sld"))\n (library (mylib) (source "%s/%s/mylib.sld")))\n' \
+    "$PWD" "$PWD" "$PWD" "$MOD" > "$min"
 
   # value parity
   chez --libdirs src --script src/compile.ss "$MOD/prog-mylib.scm" --manifest "$min" -o "$TMP/aot" >/dev/null 2>&1

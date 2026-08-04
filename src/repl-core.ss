@@ -413,22 +413,34 @@
 (define (run-closure-order roots)
   (reverse (run-visit-libs roots (quote ()) (quote ()))))
 
-;; Mode 8: build (scheme base) from the baked-in prelude source and register it as a
-;; loaded unit (its export table + imports), returning (ok . (ir . init-symbol)) so the
-;; host JIT-adds the module WITHOUT running __init -- the program's @scheme_entry inits it
-;; in topo order, exactly as a fresh AOT executable does.  (scheme base) is baked in, not
-;; read from the manifest (design D6), so a plain program needs no manifest and no files.
-(define (run-register-scheme-base)
+;; Mode 8: build the BAKED SET from the baked-in prelude source and register every member
+;; as a loaded unit (its export table + its declared imports), returning
+;; (ok . (ir . init-symbol)) so the host JIT-adds the modules WITHOUT running any __init --
+;; the program's @scheme_entry inits them in topo order, exactly as a fresh AOT executable
+;; does.  The set is baked in, not read from the manifest (design D6), so a plain program
+;; needs no manifest and no files.
+;;
+;; `ir` is the members' modules joined by *emit-unit-boundary*, because a partition emits
+;; more than one and they cannot share an LLVM module -- each emits a fixed @__apply0 and
+;; string globals from a reset counter (change: scheme-base-partition).  The host splits on
+;; the same marker it already uses for the library/program split.  The returned init symbol
+;; is (scheme base)'s, kept for protocol compatibility; the host does not use it, since the
+;; program's entry drives every __init.
+(define (run-register-baked-set)
   (guard (e (#t (cons (quote error) (repl-error->string e))))
     (let* ([prelude-forms (read-forms-from-string *prelude-source*)]
-           [dl   (parse-define-library (scheme-base-library-form prelude-forms))]
-           [name (car dl)]
-           ;; the auto-imported (scheme base): incidental to the program, so level 3 only.
-           [res  (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl) (quote ())
-                                 (make-dumper name))])
-      (set! *repl-libs* (cons (cadr res) *repl-libs*))         ; the export table itself
-      (set! *repl-lib-imports* (cons (cons name (cadr dl)) *repl-lib-imports*))
-      (cons (quote ok) (cons (car res) (mangle name "__init"))))))
+           ;; the auto-imported standard library: incidental to the program, level 3 only.
+           [baked (compile-baked-set prelude-forms (make-dumper (quote (scheme base))))])
+      (for-each
+        (lambda (p)                                  ; p = (LIBRARY-NAME . EXPORT-TABLE)
+          (set! *repl-libs* (cons (cdr p) *repl-libs*))          ; the export table itself
+          ;; the run door's init-closure topological sort reads these (run-closure-order),
+          ;; so a baked member that imports another must declare it here too.
+          (set! *repl-lib-imports*
+                (cons (cons (car p) (baked-entry-imports (car p))) *repl-lib-imports*)))
+        (cdr baked))
+      (cons (quote ok)
+            (cons (car baked) (mangle (quote (scheme base)) "__init"))))))
 
 ;; Mode 7: compile a whole program that may import user libraries.  direct imports are
 ;; the program's explicit imports plus (scheme base) (run-with-scheme-base); their export
@@ -647,7 +659,7 @@
              [(= mode 5) (repl-manifest-paths (repl-input))]     ; manifest text -> paths
              [(= mode 6) (repl-autoimport-scheme-base)]          ; auto-import (scheme base)
              [(= mode 7) (compile-program-text (repl-input))]    ; run door: whole program
-             [(= mode 8) (run-register-scheme-base)]             ; run door: baked (scheme base)
+             [(= mode 8) (run-register-baked-set)]               ; run door: the baked set
              [(= mode 9) (repl-manifest-user-paths (repl-input))] ; run door: manifest paths sans (scheme base)
              [(= mode 10) (repl-manifest-programs (repl-input))]  ; emit build door: program entries
              [(= mode 11) (repl-library-exports-text (repl-input))] ; emit lib door: export table

@@ -14,13 +14,16 @@ being derived by subtraction. Both facts are load-bearing for this change: reloc
 the surface declaration must say *where each name goes* rather than merely *whether it is hidden*,
 and the relocated procedures' dependencies mean `(scheme base)` stops being import-free.
 
-The three targets are not alike, which is the crux:
+The three targets are not alike, which is the crux. Each relocated library can
+`(import (scheme base))`, so only the names `*scheme-base-private*` hides are out of reach; walking
+`src/prelude.scm`'s reference graph from each library's exports and stopping at base-exported names
+gives the exact debt:
 
-| library | body | private dependencies |
+| library | body | private names it needs |
 |---|---|---|
-| `(scheme cxr)` | `(define (caaar x) (car (caar x)))` | **none** — pure `car`/`cdr` |
-| `(scheme file)` | `open-input-file` → `%make-port`, `%read-file` | the port group |
-| `(scheme read)` | `read` → `%check-input-port`, `%port-buf`, `rd-datum` | the port group **+ ~30 `rd-*`** |
+| `(scheme cxr)` | `(define (caaar x) (car (caar x)))` | **0** — pure `car`/`cdr` |
+| `(scheme file)` | `open-input-file` → `%make-port`, `%read-file` | **3** — `%make-port`, `%port-rtd`, `%port-rtd-cell` |
+| `(scheme read)` | `read` → `%check-input-port`, `%port-buf`, `rd-datum` | **33** — `%port-buf`, `%check-input-port`, and 31 `rd-*` |
 
 Those `%port-*` and `rd-*` names are in `*scheme-base-private*` deliberately, from #29. A relocated
 `(scheme read)` cannot reach them, and that single fact drives every decision below.
@@ -75,6 +78,13 @@ Chosen: the third. Note it does *not* widen `(scheme base)`'s surface — the su
 library that is **not auto-imported**, so its exports are reachable only by something that names it.
 #29's guarantee ("internals are not in scope in every user program") therefore holds unchanged, and
 the change avoids growing the `unstable` tier that #32 exists to retire.
+
+*Amended by D10.* "No duplicated machinery" holds for the **reader and the port representation**,
+which is what this decision was weighing. It does not hold absolutely: because `(scheme base)`
+imports the substrate (D2), the substrate is the **lower** layer and cannot import `(scheme base)`
+back, so a base-exported name the substrate's own body reaches has to be defined in it. That is 18
+definitions, thirteen of them `cxr` one-liners the substrate already carries for D6. D10 sizes it and
+records why the set stops there.
 
 ### D2 — The substrate is baked; the baked form becomes a partition (N=2)
 
@@ -140,9 +150,19 @@ source of truth; hand-writing `read.sld` would fork them. So the generator route
 its target `.sld` according to the partition map.
 
 The map therefore assigns each prelude definition to a partition, and **permits a name to be
-assigned to two** — used only for the nine `cxr` forms, which go to both `(emit internal)` (for the
-compiler) and `(scheme cxr)` (for users). That dual assignment *is* D6's mechanism, expressed as
-data rather than as a special case in the generator.
+assigned to two** — the nine `cxr` forms go to both `(emit internal)` (for the compiler) and
+`(scheme cxr)` (for users); D10 adds three more uses. That dual assignment *is* D6's mechanism,
+expressed as data rather than as a special case in the generator.
+
+**Home and visibility are separate axes, per assignment.** A library's body defining a name and a
+library's export list publishing it are different questions, and the answer differs *per library* for
+the same name: the substrate defines `length` and `reverse` (D10) but must not export them, because
+`(scheme read)`, `(scheme file)` and the compiler's own source import both `(scheme base)` and the
+substrate, and two imports offering one name is a silent shadowing in
+`import-tables->env-alist` (`src/core.ss:420` appends and `assq` takes the first) rather than an
+error. So an assignment records, for each library, whether that library *exports* the name or merely
+*defines* it. The global `*scheme-base-private*` list stays as it is — it is the "hidden everywhere"
+default — and the per-assignment marker is the exception to it.
 
 This keeps one declaration, one generator, and no hand-maintained copies —
 `test/scheme-base-gen-check.sh` then guards all four generated `.sld` files instead of one.
@@ -191,6 +211,63 @@ This is a deliberate, bounded exception to the "no §6 absence audit" scope line
 library *this change creates* is part of creating it properly, whereas auditing `(scheme base)` for
 absences is the open-ended survey that stays out.
 
+### D10 — The substrate never raises: the port guards are dual-assigned to their consumers
+
+D2 makes the substrate the layer *below* `(scheme base)`, so it cannot import it back. Everything the
+substrate's body reaches must therefore be inside the substrate — and the naive reading of D1 ("move
+the port group and the reader down") does not close: walking the reference graph shows that body
+reaching **22** base-exported names, and two of them are `error` and `raise`, which reach
+`*handlers*`.
+
+`*handlers*` cannot come along, and it cannot be duplicated either:
+
+- **Duplicating it splits the handler chain.** `(scheme base)`'s `guard` would push onto base's chain
+  while the substrate's `raise` consulted its own empty one, so `(guard (e (#t 'caught)) (read-char 5))`
+  would abort instead of being caught — a behavioural regression in a change whose whole claim is that
+  behaviour is unchanged.
+- **Single-homing it in the substrate does not work either.** `with-exception-handler` and `raise`
+  (`src/prelude.scm:578,589`) `set!` it, and they are `(scheme base)` exports, so `(scheme base)` must
+  define them — which would mean assigning an *imported* binding. `assign-global`
+  (`src/parse.ss:754`) rejects that on purpose: "a unit's globals are written only by its own
+  `__init`, which is what cross-unit direct calls rest on", with a test at
+  `test/repl-interactive-tests.sh:109`. Not an accident to work around.
+
+The exception machinery is reached from exactly two places: `%check-input-port` and
+`%check-output-port` (`src/prelude.scm:1124-1136`), the wrong-type/closed-port guards. Those are
+**stateless** — the only reason they were headed for the substrate is that `read` calls one. So they
+do not go there. They are **dual-assigned to the library that needs them**: `(scheme base)` (which
+already defines them today) and `(scheme read)`, whose copy resolves `error` and `input-port?` through
+its own `(import (scheme base))`. Duplicating a four-line type check is the cheap side of this trade.
+
+With that one move the substrate closes, and closes small:
+
+| | count |
+|---|---|
+| substrate body | **54** definitions |
+| — hidden in `(scheme base)` today (31 `rd-*`, `%port-buf`, `%make-port`, `%port-rtd`, `%port-rtd-cell`, …) | 36 |
+| — defined-not-exported base exports: the 13 `cxr` forms, `length`, `list`, `reverse`, `list->vector`, `list->bytevector` | 18 |
+| mutable state in it | **1** — `%port-rtd-cell` |
+| references to `error` / `raise` / `*handlers*` / `*winds*` | **0** |
+
+The single mutable cell is the one that *must* be single-homed for a different reason:
+`rt_make_record_type` (`src/runtime/runtime.c:1299`) mints a fresh descriptor per call and record
+types are compared by object identity, so two `%port-rtd-cell`s would be two disjoint port types and a
+port from `(scheme file)`'s `open-input-file` would fail `(scheme base)`'s `port?`. It is written only
+by `%port-rtd`, which sits in the same unit — so nothing crosses the boundary and the `assign-global`
+rule above is respected rather than dodged.
+
+Of the 18 duplicated definitions, nine (`length`, `list`, `reverse`, `list->vector`,
+`list->bytevector`, and the depth-2 `caar`/`cadr`/`cdar`/`cddr`) are **defined but not exported** by
+the substrate — D7's visibility axis — because `(scheme base)` exports those names and something
+importing both must not see two.
+
+*Alternative rejected: a process-global port record type.* A runtime primitive returning one interned
+port RTD would let the substrate import `(scheme base)` instead of the reverse — no cycle, no
+duplicated utilities, `scheme.base.ll` untouched. It costs a new primitive (hence the two-step
+`make regen` a prelude-visible primitive needs) and, because the substrate would then hold its own
+copy of the reader, duplicates the reader into every compiler binary — which is the binary-size cost
+D1 rejected, arriving by the other road.
+
 ## Risks / Trade-offs
 
 - **R1 — The bootstrap changes the surface the compiler is compiled against.** A half-applied
@@ -221,9 +298,11 @@ Ordered so a working compiler exists at every step (R1):
 2. **N-library baked form** — `scheme-base-library-form` generalizes to emit a partition in
    dependency order, still with a one-entry partition. Fixed point + trust-check green before
    anything moves.
-3. **Substrate** — move the port/reader privates and *copy* the nine `cxr` forms into
-   `(emit internal)`; `(scheme base)` imports it; the compiler's flat source imports it. The
-   compiler still sees every name it did. Re-record the baseline here.
+3. **Substrate** — move the port/reader privates and *copy* the nine `cxr` forms plus D10's nine
+   defined-not-exported helpers into `(emit internal)`; `(scheme base)` imports it; the compiler's
+   flat source imports it. The port guards stay dual-assigned to their consumers (D10), so nothing
+   mutable crosses the boundary. The compiler still sees every name it did. Re-record the baseline
+   here.
 4. **Relocate** — the sixteen names move out of `(scheme base)`'s exports into generated
    `cxr.sld` / `read.sld` / `file.sld`; manifest entries added; guards updated. This is the
    breaking step.
@@ -234,11 +313,14 @@ changes the surface.
 
 ## Open Questions
 
-1. Does `(emit internal)` belong in the default `emit-libs.scm` at all? It resolves baked in the
-   Chez-free doors, but the Chez driver resolves `(scheme base)` through the manifest and will need
-   the substrate the same way. Listing it exposes an internal library in the user-visible manifest;
-   not listing it means the two drivers resolve it differently. Decide during step 3.
-2. Should `(scheme cxr)` export the depth-2 forms too? R7RS-small puts `caar`/`cadr`/`cdar`/`cddr` in
-   `(scheme base)` and everything deeper in `(scheme cxr)`; whether `(scheme cxr)` *also* re-offers
-   the depth-2 four is a reading of the standard worth confirming against `docs/r7rs/` during
-   step 4.
+1. **Answered: yes, it is listed** — and not as a preference. The REPL door does not use the baked
+   registration at all: it preloads the manifest (`src/emit.cpp:811` → mode 5, then mode 4 per
+   library) and resolves `(scheme base)` from `lib/scheme/base.sld`, so once that file carries
+   `(import (emit internal))` the import has to resolve *through the manifest* or the REPL has no
+   standard library. The Chez driver needs it the same way. So `(emit internal)` gets a manifest entry
+   and a generated on-disk `lib/emit/internal.sld` beside its baked twin, exactly as `(scheme base)`
+   has both. Consequence for the installer: `make install` globs `lib/scheme/*.sld`
+   (`Makefile:164`), which does **not** reach `lib/emit/`, so the install rule grows a second glob.
+2. **Answered** (task 1.3, `docs/r7rs/09-standard-libraries.md:190-215`): `(scheme cxr)` exports the
+   twenty-four depth-3-and-4 compositions only; the depth-2 four stay in `(scheme base)` and are not
+   re-offered. This also surfaced D9.
