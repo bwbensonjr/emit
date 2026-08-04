@@ -97,6 +97,19 @@ rval="$(printf '(map (lambda (x) (* x x)) (list 1 2 3))\n' \
   && ok "REPL auto-imports (scheme base) when installed => $rval" \
   || bad "REPL (scheme base) when installed => [$rval] (expected (1 4 9))"
 
+# An installed session does not depend on the INSTALLED MANIFEST naming the standard
+# library either: point EMIT_MANIFEST at a manifest that names no baked member (what a
+# user's own project manifest looks like) and the session must still have (scheme base),
+# because every door registers the baked set before it reads the manifest
+# (change: baked-set-on-every-door).
+echo '((library (irrelevant) (source "nowhere.sld")))' > "$TMP/user-libs.scm"
+uval="$(printf '(map (lambda (x) (* x x)) (list 1 2 3))\n' \
+         | EMIT_VERBOSITY=quiet EMIT_MANIFEST="$TMP/user-libs.scm" "$EMIT" repl 2>/dev/null \
+         | awk 'NF{v=$0}END{print v}')"
+[ "$uval" = "(1 4 9)" ] \
+  && ok "installed REPL has (scheme base) with a manifest that omits it => $uval" \
+  || bad "installed REPL with a baked-free manifest => [$uval] (expected (1 4 9))"
+
 # A baked-only program needs no manifest at all -- unchanged by this work.  (The run
 # door prints the program's final value, so this is the value itself, not a display.)
 bval="$(echo '(+ 1 2)' | EMIT_VERBOSITY=quiet "$EMIT" run 2>/dev/null)"

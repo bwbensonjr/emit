@@ -81,13 +81,24 @@
 (define (single-define-library forms)
   (and (pair? forms) (null? (cdr forms)) (define-library-form? (car forms))
        (car forms)))
-;; The lone-define-library filter path (emit run --emit / compile-source-string)
-;; has no manifest, so it resolves no imports: import-free libraries only (a library
-;; with imports is built through build-modular-program / the REPL preload, which
-;; supply its dependencies' export tables).  import-tables is '() here.
-(define (compile-library-form form dump)
-  (let ([dl (parse-define-library form)])
-    (car (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl) '() dump))))
+;; Compile a lone define-library to its unit.  `tables` is optional and holds the export
+;; tables of the libraries this one imports; it defaults to '() so that a caller with
+;; nothing resolved is unchanged.
+;;
+;; It did NOT used to be a parameter, and hardcoding '() was the bug: EVERY lone-library
+;; path resolved no imports, so a library declaring `(import (scheme base))` failed with
+;; `unbound variable map` on `emit lib` AND on `emit run --emit < lib.sld` -- while the
+;; same library compiled fine as a dependency of a program, which is the path that
+;; supplies tables (change: baked-set-on-every-door).  Who can resolve what differs by
+;; caller, which is why this takes them rather than resolving them itself:
+;;   compile-source-rehomed  the baked set, compiled in-core (no I/O available)
+;;   modes 7 and 11          the session -- baked members plus the manifest's preloaded
+;;                           libraries -- which is the only path that can resolve an
+;;                           import of another MANIFEST library, since the core reads no files
+(define (compile-library-form form dump . opt)
+  (let ([dl     (parse-define-library form)]
+        [tables (if (pair? opt) (car opt) '())])
+    (car (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl) tables dump))))
 
 ;; convenience: source text -> IR text (no prelude, no header).  This is the
 ;; core's self-hosting-facing contract; the driver adds prelude/header/toolchain.
@@ -177,6 +188,11 @@
 (define (baked-library-entries)
   (filter (lambda (e) (cadr e)) *prelude-libraries*))
 
+;; Is LIB a member of the baked set -- reachable with no manifest and no files?
+(define (baked-member? lib)
+  (let ([e (assoc lib *prelude-libraries*)])
+    (if (and e (cadr e)) #t #f)))
+
 ;; The libraries LIB imports, as declared by the partition ('() for an unknown name).
 (define (baked-entry-imports lib)
   (let ([e (assoc lib *prelude-libraries*)])
@@ -227,7 +243,29 @@
         [dump       (if (pair? opt) (car opt) no-dump)]
         [base-dump  (if (and (pair? opt) (pair? (cdr opt))) (cadr opt) no-dump)])
     (cond
-      [(single-define-library user-forms) => (lambda (lib) (compile-library-form lib dump))]
+      ;; A lone define-library: emit ONLY its own module, but resolve its imports against
+      ;; the baked set first, so a library declaring `(import (scheme base))` compiles here
+      ;; the way it does as a program's dependency (change: baked-set-on-every-door).  The
+      ;; unit RESOLVES against (scheme base) without EMITTING it -- that is what "a lone
+      ;; define-library compiles to a single unit with no baked base" has always meant.
+      ;; An import this door cannot resolve (a manifest library) is filtered out below and
+      ;; its names then fail as unbound, exactly as they do for a program on this door.  The
+      ;; host-driven modes 7/11 resolve against the session instead and REPORT such an
+      ;; import, which is the path `emit lib` and `emit run` actually take.
+      [(single-define-library user-forms)
+       => (lambda (lib)
+            ;; Its DECLARED imports, from the parsed define-library -- not collect-imports,
+            ;; which scans top-level forms and would not see a declaration nested inside
+            ;; define-library; and not baked-imports-of, which drops (scheme base) because a
+            ;; PROGRAM auto-imports it while a library must name it.
+            (let ([imports (filter baked-member? (cadr (parse-define-library lib)))])
+              (if (null? imports)
+                  (compile-library-form lib dump)      ; nothing to resolve: as before
+                  (let ([baked (compile-baked-set (read-forms-from-string prelude-str)
+                                                  base-dump)])
+                    (compile-library-form
+                      lib dump
+                      (map (lambda (l) (baked-table l baked)) imports))))))]
       [else
        (let* ([prelude-forms (read-forms-from-string prelude-str)]
               ;; Compile the baked set in dependency order, threading each member's
