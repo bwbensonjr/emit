@@ -1,5 +1,12 @@
 ; `case` (matching clause + else fall-through) and the cxr combinators
 ; (caar/cadr/caddr/cadar plus a cdar), summed to one deterministic result.
+;
+; The depth-3 forms live in (scheme cxr), which R7RS-small is where they belong and
+; where Emit now puts them too (change: scheme-base-partition, issue #33); the depth-2
+; forms caar/cadr/cdar/cddr stay in the auto-imported (scheme base), so this demo needs
+; the import for `caddr` and `cadar` but not for the others.
+(import (scheme cxr))
+
 (define (classify n)
   (case n
     ((0) 100)

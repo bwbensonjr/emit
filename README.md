@@ -77,7 +77,8 @@ cat src/prelude.scm demos/fact.scm | build/schemec > /tmp/fact.ll   # source tex
 ```
 
 **Installing.** `make install` puts `emit` on a prefix together with the library sources it
-needs beside it — `(scheme base)` is baked into the binary, but every other library (today
+needs beside it — `(scheme base)` and the internal substrate `(emit internal)` are baked into the
+binary, but every other library (`(scheme cxr)`, `(scheme read)`, `(scheme file)`,
 `(scheme inexact)`) is found through a manifest, so the manifest and `lib/**.sld` are installed
 into `<prefix>/share/emit/` where the binary's own lookup finds them:
 
@@ -130,9 +131,10 @@ stage-0 artifacts that are the **favored, authoritative form**:
 - `bootstrap/schemec.ll` — the batch text→IR filter compiler
 - `bootstrap/embed.ll` — the in-process runner's embedded compiler
 - `bootstrap/embed-repl.ll` — the interactive REPL's embedded compiler
-- `bootstrap/scheme.base.ll` — the prelude re-homed as the `(scheme base)` library, which all
-  three binaries link (the compiler is re-homed on it too, so its IR references `scheme.base:*`
-  externals instead of inlining the prelude — see "Changing the compiler")
+- `bootstrap/scheme.base.ll` and `bootstrap/emit.internal.ll` — the prelude re-homed as a
+  **baked library set**: the standard library plus the internal substrate it imports, which all
+  three binaries link (the compiler is re-homed on them too, so its IR references `scheme.base:*`
+  and `emit.internal:*` externals instead of inlining the prelude — see "Changing the compiler")
 
 These are produced by the **compiled compiler itself** (the self-hosting fixed point), so they
 regenerate. The default `make` treats them as **checked-in inputs**: it links
@@ -179,15 +181,15 @@ library-structured source are frozen under `historical/genesis/`.
   `--emit` to write IR and `--resolve-program`), `repl` (persistent LLVM ORC/LLJIT interactive
   host), `build` (deliver a native exe from a manifest `(program …)` entry — emits IR in-process
   and forks `clang`), and `lib` (compile one `define-library` to its `.ll` + `.exports` artifact).
-  All four A-link the committed embedded compiler (`bootstrap/embed-repl.ll` + `scheme.base.ll`);
-  `make emit` (re)builds it. With the prelude re-homed as `(scheme base)` the run/AOT paths emit
-  two modules (the `(scheme base)` library and the program) separated by a boundary marker.
+  All four A-link the committed embedded compiler (`bootstrap/embed-repl.ll` + the baked library
+  set); `make emit` (re)builds it. With the prelude re-homed as a baked set the run/AOT paths emit
+  one module per baked library and then the program, separated by boundary markers.
 - `src/run-boot.cpp` — a minimal **batch bootstrap runner** (`build/emit-boot`) used only by
   `tools/regen.sh` to drive the self-hosting fixed point; not a shipped door.
 - `bootstrap/` — committed host-agnostic stage-0 IR (the authoritative form): `schemec.ll`
   (batch filter), `embed.ll` (batch runner), `embed-repl.ll` (the mode-dispatched compiler `emit`
-  links), and `scheme.base.ll` (the prelude re-homed as `(scheme base)`, linked into all);
-  regenerate with `make regen`.
+  links), and the baked library set `scheme.base.ll` + `emit.internal.ll` (the prelude re-homed as
+  `(scheme base)` and the substrate it imports, linked into all); regenerate with `make regen`.
 - `tools/regen.sh` — the regenerator (ordered-`cat` assembly + self-hosted compile).
 - `historical/genesis/` — the frozen pre-flattening genesis: the Chez Scheme assembler
   (`assemble-core.ss`) and library-structured `match.sls`/`util.ss` (provenance; not maintained).
@@ -222,8 +224,10 @@ read source → collect-toplevel → expand → parse+rename+imports → inline-
             → lambda-lift+lower → emit .ll → clang (+ units, + runtime, + libgc)
 ```
 
-The standard library is not prepended: it is the auto-imported module `(scheme base)`,
-compiled to its own unit and linked (or JIT-loaded) alongside the program — see
+The standard library is not prepended: it is the auto-imported module `(scheme base)`, compiled to
+its own unit and linked (or JIT-loaded) alongside the program, together with the internal substrate
+`(emit internal)` it imports. The sixteen names R7RS-small places elsewhere live in
+`(scheme cxr)`, `(scheme read)` and `(scheme file)`, which are **not** auto-imported — see
 [`docs/MODULES.md`](docs/MODULES.md).
 
 Values are tagged 64-bit words. All 8 tags are assigned: fixnum, boolean, nil, pair,
@@ -288,8 +292,15 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
   `list length reverse append map memq assq member assoc filter fold-left fold-right`,
   the n-ary character comparisons `char=? char<? char>? char<=? char>=?`, and `string->list`.
   `(scheme base)` is now **library zero** for the compiler's own build too: the compiler
-  binaries link `bootstrap/scheme.base.ll` and reference its exports rather than inlining the
+  binaries link the baked library set and reference its exports rather than inlining the
   prelude (change: `compiler-bootstrap-rehome`).
+- The R7RS-small **library partition** (change: `scheme-base-partition`, issue #33): the sixteen
+  names the standard places outside `(scheme base)` are exported by `(scheme cxr)` (complete, all
+  twenty-four `car`/`cdr` compositions), `(scheme read)` and `(scheme file)`, each an ordinary
+  manifest-resolved library. **Breaking** — a program using `caddr`, `read` or the file procedures
+  must now import the library that owns it. `caar`/`cadr`/`cdar`/`cddr` stay in `(scheme base)`.
+  The private port and reader machinery they share lives in `(emit internal)`, which is baked but
+  not auto-imported, so it is out of scope in an ordinary program.
 - `read-from-string` — a recursive-descent Scheme reader (integers, symbols, lists,
   dotted/improper lists, `#t`/`#f`, characters incl. named `#\newline`/`#\space`/…,
   `"strings"` with `\n`/`\t`/`\r`/`\\`/`\"`/`\xHH;` escapes, `#(...)` vectors, `'`-quote

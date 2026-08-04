@@ -67,6 +67,13 @@ sits on.
 
 ## Finding 2 — #33 moves nine names across the line, and it collides with packaging
 
+> **LANDED** (`scheme-base-partition`). Sixteen names, not nine — the nine `cxr` forms were #33's
+> count for that group alone. The packaging collision below is real and was resolved exactly as this
+> finding's RESOLVED note says: #35 first, then relocate. See open questions 2 and 6, both now
+> answered, and note what this finding did not foresee — the relocated procedures need private
+> port/reader machinery, so the change also introduced a baked internal substrate that `(scheme base)`
+> itself imports.
+
 Relocating `read` (→ `(scheme read)`), the depth-3+ `cxr` forms (→ `(scheme cxr)`), and the six
 file procedures (→ `(scheme file)`) moves them from *in the binary* to *on disk*. A program calling
 `read` would stop working outside a directory that can see `emit-libs.scm` and `lib/`.
@@ -167,16 +174,22 @@ carries no comments), removing ~33 KB from each of `embed.ll` and `embed-repl.ll
         ├──▶ ② #18 cond-expand            (self-contained, no I/O)
         │         │
         │         └──▶ ③ #18 include family    (injected path->forms side-channel)
-        │                      │
-        ├──▶ ④ #33(a) partition ────────────┘   ← uses include to split without duplicating source
-        │       (BREAKING; wants to precede the 0.1.0 tag)
+        │
+        ├──▶ ④ #33(a) partition  ✅ LANDED (scheme-base-partition)  ← did NOT need ②/③
+        │       (BREAKING; landed before the 0.1.0 tag, as intended)
         │
         └──▶ ⑤ #31 bake the spliced .sld        ← after include exists, after the partition settles
                   #33(b) §6 absence audit       ← additive; floats anywhere
 ```
 
 Step ① did not come from any of the three issues. It was the cheapest item with the widest reach,
-and it landed first (#35); ②–⑤ are unchanged and still open.
+and it landed first (#35).
+
+**④ landed without ② or ③, which the diagram above had as prerequisites.** The dependency was on
+the assumption that splitting the prelude across libraries needs `include` to avoid duplicating
+source. It does not: ONE generator emits N `.sld` files from one partition map — which answers open
+question 6 in favour of its first branch, and removes #18 from #33's critical path entirely. ②/③ stay
+open on their own merits, and ⑤ still wants them.
 
 Each step keeps the property the repo's guards depend on: one IR-shaping change at a time, so each
 `test/module-scaffold-baseline.sha256` re-record can be explained as a specific delta the way the
@@ -187,14 +200,24 @@ protocol in that script's header requires.
 1. ~~**Should an installed `emit` have the full standard surface standalone?**~~ **ANSWERED** by
    #35: no — search-path, not bake-more. An installed `emit` carries its libraries in
    `<prefix>/share/emit/`, so #33 may relocate names freely. See the RESOLVED note in Finding 2.
-2. Does `(scheme base)` re-export relocated names during a deprecation window — and does that
-   require import sets (`only`/`except`/`prefix`) to exist first?
+2. ~~**Does `(scheme base)` re-export relocated names during a deprecation window?**~~
+   **ANSWERED** by `scheme-base-partition`: there is no window, and it was never a preference.
+   `compile-library*` (`src/core.ss`) rejects "export of a name the library does not define", and a
+   unit's export table maps each external name to a symbol mangled *to that unit* — so
+   `(scheme base)` cannot re-export what it imports without new re-export machinery (and plausibly
+   import sets, which do not exist). Clean break, which is what pre-`0.1.0` is for.
 3. Is the manifest the right long-term resolution mechanism, or should there be a library *path*
    with the manifest as one entry?
 4. `cond-expand` at bake time or at the importer's compile time — and does the answer differ for a
    baked library versus a manifest one?
 5. If #31 makes `lib/scheme/base.sld` the baked artifact, is "`base.sld` stays committed" written
    down as an invariant (with the bootstrap cycle named), or left implicit?
-6. Does the partition change what "generated from the prelude" means — one tool emitting N `.sld`
-   files, or N `.sld` files each `include`-ing a prelude fragment? The second needs #18; the first
-   does not, and is available sooner.
+6. ~~**One tool emitting N `.sld` files, or N `.sld` files each `include`-ing a fragment?**~~
+   **ANSWERED** by `scheme-base-partition`: the first. `tools/gen-scheme-base.ss` writes one `.sld`
+   per partition member from one declaration, and the portable core builds the baked members from the
+   same declaration — so #18 was not a prerequisite after all. What the partition *did* need, and
+   what Finding 2 did not anticipate, was an internal substrate library: the relocated procedures
+   stand on private port/reader machinery, and giving it to them without publishing it meant a baked
+   library that another baked library imports (`(emit internal)`; design D1/D2/D10 of that change).
+   Finding 2's "the compiler grows; generalizes to N libraries" cost was therefore paid — bounded at
+   N=2 baked — but reached by relocation rather than by the bake-more option it was attributed to.

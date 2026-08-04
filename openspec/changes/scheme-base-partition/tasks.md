@@ -220,54 +220,137 @@ order), so it does not belong here.
 
 ## 5. Relocate (the breaking step)
 
-- [ ] 5.1 Reassign the nine `cxr` forms so `(scheme base)` no longer exports them: the dual
+- [x] 5.1 Reassign the nine `cxr` forms so `(scheme base)` no longer exports them: the dual
       assignment becomes `(emit internal)` + `(scheme cxr)`, and `(scheme cxr)` is emitted as a
       generated on-disk `.sld`.
-- [ ] 5.1b Add the fifteen missing four-level accessors (`caaaar` `caaadr` `caadar` `caaddr`
+- [x] 5.1b Add the fifteen missing four-level accessors (`caaaar` `caaadr` `caadar` `caaddr`
       `cadaar` `cadadr` `caddar` `cdaaar` `cdaadr` `cdadar` `cdaddr` `cddaar` `cddadr` `cdddar`
       `cddddr`) to the prelude, assigned to `(scheme cxr)` ONLY (design D9 — the compiler does not
       use them, so they do not go to the substrate). `(scheme cxr)` then exports all twenty-four.
-- [ ] 5.2 Reassign `read` to `(scheme read)` and the six file procedures to `(scheme file)`, each
+- [x] 5.2 Reassign `read` to `(scheme read)` and the six file procedures to `(scheme file)`, each
       importing **both** `(scheme base)` and `(emit internal)`. Generated on-disk `.sld` files.
       `(scheme read)` also needs a second home for `%check-input-port` (design D10): `read` calls it,
       it is stateless, and its copy resolves `error`/`input-port?` through `(scheme base)`. The six
       file procedures need no such copy — they reach `%make-port` in the substrate and everything else
       (`error`, `current-*-port`, `dynamic-wind`, `close-port`, `call-with-port`) in `(scheme base)`.
-- [ ] 5.3 Add the three libraries to `emit-libs.scm` with manifest-relative `(source …)` paths.
+- [x] 5.3 Add the three libraries to `emit-libs.scm` with manifest-relative `(source …)` paths.
       `make install` already globs `lib/scheme/*.sld`, so confirm rather than edit.
-- [ ] 5.4 Update `test/scheme-base-surface-check.sh` for the partition, and confirm the sixteen
+- [x] 5.4 Update `test/scheme-base-surface-check.sh` for the partition, and confirm the sixteen
       names are gone from `lib/scheme/base.sld`.
-- [ ] 5.5 Sweep the in-tree users found in 1.2 — `demos/`, `test/`, any `.sld` — adding imports
+- [x] 5.5 Sweep the in-tree users found in 1.2 — `demos/`, `test/`, any `.sld` — adding imports
       where a relocated name is used.
-- [ ] 5.6 Both suites green.
+- [x] 5.6 Both suites green. `./run-all-tests.sh` **21** suites / 0 failed / 354s (the new
+      "R7RS library partition" suite included); `./run-dev-tests.sh` 20 suites / 0 failed / 1202s,
+      including the self-hosting fixed point (278s) and the anti-stale trust-check (535s).
+      One guard bug found and fixed along the way: `test/scheme-base-gen-check.sh` read the
+      partition's member paths by scanning for `))` as the end of the form, which an entry that
+      names its imports contains mid-list -- so it stopped after two members and reported the other
+      three as orphans, having never staleness-checked them. Now depth-counted, and all five are
+      checked.
+
+### Step 5 notes
+
+- **`(scheme cxr)` / `(scheme read)` / `(scheme file)` import `(scheme base)`** -- a new shape (a
+  manifest-resolved library importing a BAKED one), and not avoidable: `(scheme file)`'s procedures
+  need `error`, which reaches `raise` reaches `*handlers*`, and D10 is exactly the argument that
+  those cannot be duplicated into a library. `(scheme read)` and `(scheme file)` also import
+  `(emit internal)` for `%make-port` / the reader. `(scheme cxr)` needs only `(scheme base)`, for the
+  depth-2 accessors its own bodies are built on.
+- **`%check-input-port` is dual-assigned into `(scheme read)`** (design D10) as a second *private*
+  copy, resolving `error`/`input-port?` through that library's `(scheme base)` import.
+  `(scheme file)` needs no such copy.
+- **The Chez-free surface guard needed a list it can read.** It cannot parse home specs, so
+  `src/prelude-surface.scm` gained `*scheme-base-elsewhere*` -- the prelude defines `(scheme base)`
+  does not export because another member does (the 16 relocated + the 15 new depth-4 forms).
+  `tools/gen-scheme-base.ss` recomputes that exact set from the authoritative assignments and fails
+  on any disagreement, so it is a checked derivation rather than a second source of truth. Writing it
+  caught its own naming error: the first version omitted the 15 additions, and the cross-check said so.
+- **The guard gained direct assertions** rather than only the subtraction: each relocated name is
+  absent from `base.sld` AND present in its new library; `(scheme cxr)` exports exactly 24; the
+  depth-2 four are still in `(scheme base)`. Two of those had a name-form bug (`$TMP/exports` holds
+  bare names, the `.sld`s indented ones) that made the "still exported" test pass vacuously -- worth
+  noting because a guard that passes for the wrong reason is worse than no guard.
+- **5.3 needed no Makefile change**, as the task predicted: the three new libraries are in
+  `lib/scheme/`, which `install` already globs. `make install` now ships 6 library sources, and an
+  installed `emit` resolves each new library from an unrelated directory with no manifest of its own
+  -- which is most of 6.4 already demonstrated.
+- **5.5's sweep matched task 1.2's inventory exactly**: `demos/case-cxr.scm`, `demos/ports.scm`,
+  `test/io-ports-tests.sh`. For the last, the import preamble goes in the `check` runner rather than
+  into each of ~20 programs -- the suite's subject IS those libraries.
+- **Regen converged in 2 iterations** (532s). `scheme.base.ll` 367451 -> 338670 B;
+  `emit.internal.ll` byte-identical at 170716, since the cxr nine only traded their `(scheme base)`
+  home for a `(scheme cxr)` one and the substrate's own copy did not move.
 
 ## 6. Tests
 
-- [ ] 6.1 New suite (or extend `test/prelude-base-run-tests.sh`): each of the sixteen names is
+- [x] 6.1 New suite (or extend `test/prelude-base-run-tests.sh`): each of the sixteen names is
       **unbound** in a bare program and **bound and correct** after importing its library, on the
       run door, the AOT door, and the REPL door.
-- [ ] 6.2 Assert `(cadr '(1 2 3))` still works with no import (the depth-2 four stay in
+- [x] 6.2 Assert `(cadr '(1 2 3))` still works with no import (the depth-2 four stay in
       `(scheme base)`), so the partition is not over-applied.
-- [ ] 6.3 Assert substrate names (`rd-atom`, `rd-skip-ws`, `%make-port`) are unbound in a bare
+- [x] 6.3 Assert substrate names (`rd-atom`, `rd-skip-ws`, `%make-port`) are unbound in a bare
       program — #29's privacy guarantee, preserved through the move.
-- [ ] 6.4 Extend `test/install-layout-tests.sh`: an installed `emit` imports each of the three new
+- [x] 6.4 Extend `test/install-layout-tests.sh`: an installed `emit` imports each of the three new
       libraries from an unrelated directory.
-- [ ] 6.5 Assert a program importing nothing still runs with **no manifest present** — the
+- [x] 6.5 Assert a program importing nothing still runs with **no manifest present** — the
       guarantee the baked substrate exists to protect.
+
+**How step 6 landed.** 6.1–6.3 and 6.5 are a new suite, `test/library-partition-tests.sh`
+(78 checks, registered in `run-all-tests.sh` as "R7RS library partition"); 6.4 extended
+`test/install-layout-tests.sh` (now 21 checks). Each of the sixteen names is checked in *both*
+directions — unbound bare, then correct with its import on the run, AOT and REPL doors — because a
+name that is merely still reachable proves nothing and a name unbound everywhere is a regression.
+Beyond the task list it also pins the three things D10 argued about: one port type across libraries,
+one handler chain (`guard` catching an error raised by relocated machinery), and `(scheme cxr)`
+completeness *by value* — all 24 compared against the `car`/`cdr` composition spelled out by hand,
+so a depth-4 accessor wired to the wrong composition cannot pass.
+
+Writing it caught four bugs, all in the tests rather than the implementation, and two are worth
+recording because they are the kind that make a suite pass for the wrong reason:
+- the sibling REPL suites' `tr -d ' >'` prompt-strip **deletes the spaces inside a value**; the
+  prompts are on stderr, so stdout needs no stripping at all;
+- the completeness data was a proper list, and `(caddar T)` walks off the end of one and traps — a
+  fully nested pair tree of depth 4 is required for all 24 paths to be valid;
+- `with-input-from-file` calls its thunk with no arguments while Emit's `read-line` requires an
+  explicit port, so the thunk has to name `(current-input-port)`;
+- a `for` loop in `install-layout-tests.sh` shadowed the outer `want`, making the later
+  symlinked-launcher check compare against the wrong expectation.
 
 ## 7. Docs
 
-- [ ] 7.1 `docs/MODULES.md`: the shipped-library inventory, the baked-vs-manifest table (now two
+- [x] 7.1 `docs/MODULES.md`: the shipped-library inventory, the baked-vs-manifest table (now two
       baked members), the substrate and why it is not API, and the partition map's role.
-- [ ] 7.2 `README.md`: note the three new libraries and the breaking relocation.
-- [ ] 7.3 Update `openspec/explorations/library-sources-and-artifacts.md` — mark step ④ landed,
+- [x] 7.2 `README.md`: note the three new libraries and the breaking relocation.
+- [x] 7.3 Update `openspec/explorations/library-sources-and-artifacts.md` — mark step ④ landed,
       record that open question 2 is answered (no deprecation window, mechanically) and that
       question 6 was resolved by generating N `.sld` files from one partition map without `include`.
 
 ## 8. Close out
 
-- [ ] 8.1 Verify every scenario in the two delta specs has a corresponding check.
-- [ ] 8.2 Reference the issues in the commit: `Fixes #33` (relocation half) and `Fixes #32` (the
-      unstable tier is retired by 4.3). Note in the PR that #33's §6 absence audit remains open —
-      consider re-filing it as its own issue so `Fixes #33` does not close unfinished work.
+- [x] 8.1 Verify every scenario in the two delta specs has a corresponding check.
+      **27 scenarios; 26 covered.** Walking them found three with no direct check, all now added:
+      - *The baked set initializes in dependency order* -> `test/prelude-base-run-tests.sh` reads the
+        `__init` call order out of the emitted program module and asserts `emit.internal` precedes
+        `scheme.base`. Worth having: getting it backwards leaves `(scheme base)` calling into an
+        uninitialized unit, which fails at run time and nowhere earlier.
+      - *The substrate does not depend on the library that imports it* -> `scheme-base-surface-check.sh`
+        asserts `lib/emit/internal.sld` has no `import` clause at all.
+      - *A definition assigned to two libraries is emitted into both* -> the same guard asserts each of
+        the nine dual-assigned accessors is both DEFINED and exported by the substrate **and** by
+        `(scheme cxr)`.
+      **One gap left open, and it predates this change:** *A rotted declaration is an error, not a
+      silent surface change* has no automated check. `tools/gen-scheme-base.ss` does `die` on each rot
+      condition — and this change added three more (a home naming an unknown library, a library named
+      twice for one name, `*scheme-base-elsewhere*` disagreeing with the assignments) — but nothing
+      exercises those paths, so a broken guard would be invisible. It came in with #29's spec and is
+      not made worse here. Filed as **issue #40** rather than smuggling a negative-path harness into
+      this change.
+- [x] 8.2 Reference the issues in the commit: `Fixes #32` (the unstable tier is retired by 4.3) and
+      the relocation half of #33. **#33 is NOT auto-closed**: its §6 absence audit ("what is
+      `(scheme base)` *missing*") is explicitly out of this change's scope, so `Fixes #33` would
+      close unfinished work. The commit says `Refs #33` and the audit stays on that issue.
+      Two issues filed along the way, both pre-existing gaps this change surfaced rather than caused:
+      **#39** (a hand-written manifest must name `(emit internal)`, because the REPL door resolves
+      `(scheme base)` from the manifest while run/build bake it) and **#40** (the surface
+      declaration's seven rot checks are never exercised).
 - [ ] 8.3 `openspec validate scheme-base-partition`; sync specs and archive.

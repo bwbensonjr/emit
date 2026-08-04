@@ -32,11 +32,16 @@ fi
 # The declared member paths, from the declaration itself -- so adding a member to the
 # partition extends this guard with no edit here.  Each is a repo-relative path in the
 # fourth position of a *prelude-libraries* entry, i.e. the quoted string on its line.
+# Paren DEPTH decides where the form ends, not a `))` match: an entry that names the
+# libraries it imports contains `))` in the middle of the list, which would cut the scan
+# short and silently leave later members unchecked (and then reported as orphans).
 paths="$(awk '
-  !grab && /\(define \*prelude-libraries\*/ { grab = 1; next }
+  !grab && /\(define \*prelude-libraries\*/ { grab = 1; depth = 0 }
   grab {
-    if (match($0, /"[^"]+"/)) print substr($0, RSTART + 1, RLENGTH - 2)
-    if (index($0, "))")) grab = 0
+    line = $0; sub(/;.*/, "", line)                    # a comment carries no path
+    if (match(line, /"[^"]+"/)) print substr(line, RSTART + 1, RLENGTH - 2)
+    depth += gsub(/\(/, "(", line) - gsub(/\)/, ")", line)
+    if (depth <= 0) grab = 0
   }' src/prelude-surface.scm)"
 
 if [ -z "$paths" ]; then

@@ -16,14 +16,6 @@
     cadr
     cdar
     cddr
-    caaar
-    caadr
-    cadar
-    caddr
-    cdaar
-    cdadr
-    cddar
-    cdddr
     length
     reverse
     append
@@ -39,7 +31,6 @@
     for-each
     andmap
     memp
-    cadddr
     list?
     zero?
     list-tail
@@ -124,13 +115,10 @@
     input-port-open?
     output-port-open?
     open-input-string
-    open-input-file
     read-char
     peek-char
     read-line
     read-string
-    read
-    open-output-file
     open-output-string
     get-output-string
     flush-output-port
@@ -141,10 +129,6 @@
     current-error-port
     current-input-port
     call-with-port
-    with-output-to-file
-    with-input-from-file
-    call-with-output-file
-    call-with-input-file
     )
   (begin
     (define-syntax and (syntax-rules () ((_) #t) ((_ e) e) ((_ e1 e2 ...) (if e1 (and e2 ...) #f))))
@@ -161,14 +145,6 @@
     (define (cadr x) (car (cdr x)))
     (define (cdar x) (cdr (car x)))
     (define (cddr x) (cdr (cdr x)))
-    (define (caaar x) (car (caar x)))
-    (define (caadr x) (car (cadr x)))
-    (define (cadar x) (car (cdar x)))
-    (define (caddr x) (car (cddr x)))
-    (define (cdaar x) (cdr (caar x)))
-    (define (cdadr x) (cdr (cadr x)))
-    (define (cddar x) (cdr (cdar x)))
-    (define (cdddr x) (cdr (cddr x)))
     (define (length xs) (let loop ((xs xs) (n 0)) (if (null? xs) n (loop (cdr xs) (+ n 1)))))
     (define (reverse xs) (let loop ((xs xs) (acc (quote ()))) (if (null? xs) acc (loop (cdr xs) (cons (car xs) acc)))))
     (define (%append2 a b) (if (null? a) b (cons (car a) (%append2 (cdr a) b))))
@@ -190,7 +166,6 @@
     (define (for-each f xs . more) (if (null? more) (%for-each1 f xs) (%for-eachn f (cons xs more))))
     (define (andmap p xs) (if (null? xs) #t (if (p (car xs)) (andmap p (cdr xs)) #f)))
     (define (memp p xs) (if (null? xs) #f (if (p (car xs)) xs (memp p (cdr xs)))))
-    (define (cadddr x) (car (cdddr x)))
     (define (list? x) (if (null? x) #t (if (pair? x) (list? (cdr x)) #f)))
     (define (zero? n) (= n 0))
     (define (list-tail xs n) (if (zero? n) xs (list-tail (cdr xs) (- n 1))))
@@ -311,14 +286,11 @@
     (define (%check-input-port p who) (if (not (input-port? p)) (error who "not an input port" p) (if (%record-ref p 5) (error who "port is closed" p) p)))
     (define (%check-output-port p who) (if (not (output-port? p)) (error who "not an output port" p) (if (%record-ref p 5) (error who "port is closed" p) p)))
     (define (open-input-string s) (%make-port #f #t s 0 #t #f))
-    (define (open-input-file path) (let ((s (%read-file path))) (if s (%make-port #f #t s 0 #f #f) (error (quote open-input-file) "cannot open file for input" path))))
     (define (%port-at-eof? p) (>= (%record-ref p 3) (string-length (%port-buf p))))
     (define (read-char p) (%check-input-port p (quote read-char)) (if (%port-at-eof? p) (eof-object) (let ((i (%record-ref p 3))) (%record-set! p 3 (+ i 1)) (string-ref (%port-buf p) i))))
     (define (peek-char p) (%check-input-port p (quote peek-char)) (if (%port-at-eof? p) (eof-object) (string-ref (%port-buf p) (%record-ref p 3))))
     (define (read-line p) (%check-input-port p (quote read-line)) (if (%port-at-eof? p) (eof-object) (let* ((s (%port-buf p)) (n (string-length s))) (let loop ((i (%record-ref p 3))) (if (>= i n) (let ((start (%record-ref p 3))) (%record-set! p 3 n) (substring s start n)) (if (char=? (string-ref s i) #\newline) (let ((start (%record-ref p 3))) (%record-set! p 3 (+ i 1)) (substring s start i)) (loop (+ i 1))))))))
     (define (read-string k p) (%check-input-port p (quote read-string)) (if (%port-at-eof? p) (eof-object) (let* ((s (%port-buf p)) (n (string-length s)) (start (%record-ref p 3)) (end (if (> (+ start k) n) n (+ start k)))) (%record-set! p 3 end) (substring s start end))))
-    (define (read p) (%check-input-port p (quote read)) (let* ((s (%port-buf p)) (n (string-length s)) (i (rd-skip-ws s n (%record-ref p 3)))) (if (>= i n) (begin (%record-set! p 3 n) (eof-object)) (let ((r (rd-datum s n i))) (%record-set! p 3 (cdr r)) (car r)))))
-    (define (open-output-file path) (let ((h (%port-open-output-file path))) (if h (%make-port h #f #f 0 #f #f) (error (quote open-output-file) "cannot open file for output" path))))
     (define (open-output-string) (let ((h (%port-open-output-string))) (if h (%make-port h #f #f 0 #t #f) (error (quote open-output-string) "cannot open an output string port"))))
     (define (get-output-string p) (if (not (output-port? p)) (error (quote get-output-string) "not an output port" p) (if (not (%record-ref p 4)) (error (quote get-output-string) "not a string port" p) (%port-get-output-string (%record-ref p 0)))))
     (define (flush-output-port p) (%check-output-port p (quote flush-output-port)) (%port-flush (%record-ref p 0)))
@@ -332,8 +304,4 @@
     (define (current-error-port . args) (if (null? args) (begin (if (not %stderr-port) (set! %stderr-port (%make-port 1 #f #f 0 #f #f))) %stderr-port) (begin (set! %stderr-port (car args)) (if #f #f))))
     (define (current-input-port . args) (if (null? args) (begin (if (not %stdin-port) (set! %stdin-port (%make-port #f #t #f 0 #f #f))) %stdin-port) (begin (set! %stdin-port (car args)) (if #f #f))))
     (define (call-with-port p proc) (dynamic-wind (lambda () (if #f #f)) (lambda () (proc p)) (lambda () (close-port p))))
-    (define (with-output-to-file path thunk) (let ((p (open-output-file path)) (saved (current-output-port))) (dynamic-wind (lambda () (current-output-port p)) thunk (lambda () (current-output-port saved #f) (close-port p)))))
-    (define (with-input-from-file path thunk) (let ((p (open-input-file path)) (saved (current-input-port))) (dynamic-wind (lambda () (current-input-port p)) thunk (lambda () (current-input-port saved #f) (close-port p)))))
-    (define (call-with-output-file path proc) (call-with-port (open-output-file path) proc))
-    (define (call-with-input-file path proc) (call-with-port (open-input-file path) proc))
     ))

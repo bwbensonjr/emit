@@ -82,8 +82,9 @@ Library *names* are mapped to *source files* by a manifest — an s-expression f
   beside itself. The rule covers a library's `source`, an explicit `artifacts`, and a program
   entry's `source`/`output`; the *default* artifact dir (`build/lib`) is the driver's own and
   stays relative to the invocation.
-- The default `emit-libs.scm` at the repo root lists the two standard libraries — `(scheme base)`
-  and `(scheme inexact)`; point `--manifest` at your own for additional libraries (as the test
+- The default `emit-libs.scm` at the repo root lists the shipped libraries — `(emit internal)`,
+  `(scheme base)`, `(scheme cxr)`, `(scheme read)`, `(scheme file)` and `(scheme inexact)`; point
+  `--manifest` at your own for additional libraries (as the test
   suites do with `test/modules/emit-libs.scm`). Listing a library costs a program nothing unless
   it imports it: the run door preloads lazily (see below) and `emit build` links only the
   program's import closure.
@@ -282,7 +283,7 @@ The exported surface has two tiers:
 
 | Tier | What it means |
 |---|---|
-| **R7RS** | names R7RS-small defines. A few R7RS puts in another library — the depth-3+ `cxr` forms are `(scheme cxr)`, `read` is `(scheme read)`, the file procedures are `(scheme file)`. Recorded conformance debt. |
+| **R7RS** | names R7RS-small defines, and that it places in `(scheme base)`. The sixteen it places elsewhere are no longer here — see *The relocated sixteen* below. |
 | **extension** | Emit additions with no R7RS home: `filter`, `fold-left`, `fold-right`, `andmap`, `memp`, `iota`, `list-head`, `void`, `list->bytevector`, `port-closed?`, `read-from-string`, `read-all-from-string`, `with-parameters`, and the `hash-table-*` family. Published deliberately, spelled R6RS/SRFI. |
 
 There used to be a third, **unstable**: names exported *only* because something outside the library
@@ -305,12 +306,82 @@ a reviewable one-line diff. `test/scheme-base-surface-check.sh` (Chez-free, in `
 recomputes it from the two sources: a prelude definition that is neither declared private nor
 published fails the default suite, so adding a helper forces a visibility decision.
 
-## `(scheme inexact)` — the second standard library
+## The shipped libraries
+
+| library | source | reached by | resolved |
+|---|---|---|---|
+| `(emit internal)` | generated from `src/prelude.scm` | explicit import; **not API** | **baked** + manifest |
+| `(scheme base)` | generated from `src/prelude.scm` | auto-imported everywhere | **baked** + manifest |
+| `(scheme cxr)` | generated from `src/prelude.scm` | `(import (scheme cxr))` | manifest |
+| `(scheme read)` | generated from `src/prelude.scm` | `(import (scheme read))` | manifest |
+| `(scheme file)` | generated from `src/prelude.scm` | `(import (scheme file))` | manifest |
+| `(scheme inexact)` | hand-written | `(import (scheme inexact))` | manifest |
+
+Everything but `(scheme inexact)` is generated, because `src/prelude.scm` is the single source of
+truth for what those procedures *are* — relocating a name must not fork its definition. The
+partition in `src/prelude-surface.scm` says which library gets which definition;
+`tools/gen-scheme-base.ss` writes one `.sld` per member and `test/scheme-base-gen-check.sh` diffs
+every one of them.
+
+**Baked vs manifest.** `(scheme base)` and `(emit internal)` are compiled into the compiler binaries
+from the baked-in prelude source, so a program that imports nothing — or only `(scheme base)` — runs
+with **no manifest present at all**. That guarantee is why the substrate had to be baked too:
+`(scheme base)` imports it, and anything `(scheme base)` depends on inherits the requirement. The
+three relocated libraries are ordinary: a program reaches them only through the manifest, exactly as
+it reaches `(scheme inexact)`.
+
+They also appear in the manifest, because the REPL door and the Chez driver resolve `(scheme base)`
+*from* the manifest rather than baked — so `base.sld`'s `(import (emit internal))` has to resolve
+there. A consequence worth knowing when you hand-write a manifest: listing `(scheme base)` means also
+listing `(emit internal)`. See issue #39, which proposes removing that requirement by having the REPL
+door bake the set the way the run door does.
+
+### `(emit internal)` — the substrate, and why it is not `(scheme …)`
+
+`(emit internal)` holds the private machinery more than one shipped library needs: the port
+representation (`%make-port`, `%port-rtd`, `%port-buf`) and the ~32-name `rd-*` reader. `(scheme read)`
+and `(scheme file)` stand on it, and so does `(scheme base)`.
+
+It is named outside the `(scheme …)` namespace because R7RS reserves that for the standard, and it is
+**not auto-imported** — which is the whole mechanism by which it can hold these names without
+publishing them. A program that does not name it sees nothing new: `rd-atom`, `rd-skip-ws` and
+`%make-port` are all unbound, exactly as when they were private to `(scheme base)`. It is not API and
+carries no stability guarantee.
+
+The compiler imports it directly, which is why no name reaches a public export list merely because
+the compiler needs it — the reason the `unstable` tier could be retired (issue #32).
+
+### The relocated sixteen
+
+`(scheme base)` used to export sixteen names R7RS-small places elsewhere. As of
+change `scheme-base-partition` (issue #33) it does not:
+
+| library | names | count |
+|---|---|---|
+| `(scheme cxr)` | `caaar` `caadr` `cadar` `caddr` `cdaar` `cdadr` `cddar` `cdddr` `cadddr` … and the fifteen depth-4 forms | 24 exported, 9 relocated |
+| `(scheme read)` | `read` | 1 |
+| `(scheme file)` | `open-input-file` `open-output-file` `with-input-from-file` `with-output-to-file` `call-with-input-file` `call-with-output-file` | 6 |
+
+**Breaking**, with no deprecation window — not a preference: `compile-library*` rejects "export of a
+name the library does not define", and a unit's export table maps each external name to a symbol
+mangled *to that unit*, so `(scheme base)` cannot re-export what it imports without new re-export
+machinery. A clean break is what pre-`0.1.0` is for.
+
+`(scheme cxr)` ships **complete**: all twenty-four compositions of three to four `car`/`cdr`
+operations, which is what R7RS specifies. Emit previously defined nine of them, so fifteen depth-4
+forms (`caaaar` … `cddddr`) were added — shipping a library named after the standard in which
+`(caddar x)` is unbound would be a worse conformance state than not having the library.
+
+The **depth-2** forms `caar`, `cadr`, `cdar`, `cddr` stay in `(scheme base)`, which is where
+R7RS-small puts them, so `(cadr xs)` still needs no import.
+
+## `(scheme inexact)` — the first ordinary library
 
 `(scheme inexact)` (change: `numeric-conformance`) is R7RS's inexact-only surface: `finite?`,
-`infinite?`, `nan?`, `exp`, `log`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `sqrt`. It is
-the first library besides `(scheme base)` in the default manifest, and it is deliberately
-**ordinary** where `(scheme base)` is special:
+`infinite?`, `nan?`, `exp`, `log`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `sqrt`. It was the
+first library besides `(scheme base)` in the default manifest, and it is deliberately **ordinary**
+where `(scheme base)` is special — the shape the three relocated libraries above now share, and it
+is hand-written where they are generated:
 
 | | `(scheme base)` | `(scheme inexact)` |
 |---|---|---|

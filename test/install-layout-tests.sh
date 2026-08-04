@@ -103,6 +103,36 @@ bval="$(echo '(+ 1 2)' | EMIT_VERBOSITY=quiet "$EMIT" run 2>/dev/null)"
 [ "$bval" = "3" ] && ok "a baked-only program still needs no manifest => $bval" \
                   || bad "baked-only program => [$bval]"
 
+# The three RELOCATED standard libraries (change: scheme-base-partition, issue #33) are on
+# disk, so they are reachable from an installed `emit` only if the install ships them and
+# the manifest lookup finds them.  Before that change these names were baked into the
+# binary, so this is new install surface, not a restatement of the (scheme inexact) case:
+# a bad install would now cost part of R7RS-small rather than one optional library.
+for probe in \
+  "(scheme cxr)|(import (scheme cxr)) (caddr (quote (1 2 3)))|3" \
+  "(scheme read)|(import (scheme read)) (read (open-input-string \"(a b)\"))|(a b)" \
+  "(scheme file)|(import (scheme file)) (port? (open-input-file \"$TMP/probe.txt\"))|#t"
+do
+  # pwant/pgot, not want/got: the (scheme inexact) `want` above is reused by the
+  # symlinked-launcher check further down, and shadowing it here made that check compare
+  # against this loop's last value instead.
+  lib="${probe%%|*}"; rest="${probe#*|}"; prog="${rest%%|*}"; pwant="${rest##*|}"
+  printf 'probe\n' > "$TMP/probe.txt"
+  pgot="$(printf '%s\n' "$prog" | EMIT_VERBOSITY=quiet "$EMIT" run 2>"$TMP/eprobe")"
+  [ "$pgot" = "$pwant" ] \
+    && ok "$lib resolves from an unrelated cwd => $pgot" \
+    || { bad "$lib from an unrelated cwd => [$pgot] (expected [$pwant])"
+         sed 's/^/         /' "$TMP/eprobe"; }
+done
+
+# The substrate installs too -- not for a user to import, but because base.sld imports it
+# and the REPL door resolves (scheme base) through the manifest (see issue #39).  The REPL
+# check above already proves it resolves; this asserts the file is actually shipped, since
+# a missing one fails only on the REPL door and only at startup.
+[ -f "$PREFIX/share/emit/lib/emit/internal.sld" ] \
+  && ok "the internal substrate is installed beside the standard libraries" \
+  || bad "$PREFIX/share/emit/lib/emit/internal.sld is missing from the install"
+
 # --- candidate 4: the executable's REAL path, not the symlink's ----------------
 # Homebrew reaches the keg through a symlink in <prefix>/bin, so what sits beside the
 # REAL binary is what was installed with it.  A link in a bin/ with no ../share/emit

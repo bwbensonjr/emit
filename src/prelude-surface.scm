@@ -171,9 +171,24 @@
 ;;; manifest; it is ALSO written to disk and listed in emit-libs.scm because the REPL door
 ;;; resolves (scheme base) from the manifest (src/emit.cpp, mode 5 -> mode 4), so
 ;;; base.sld's import of it has to resolve there too.
+;;;
+;;; The last three are NOT baked: they are ordinary manifest-resolved libraries, like
+;;; (scheme inexact), reached only through an explicit import (change:
+;;; scheme-base-partition, issue #33).  They hold the sixteen names R7RS-small places
+;;; outside (scheme base), and they IMPORT the baked members -- (scheme base) for the
+;;; ordinary procedures they stand on (`error`, `dynamic-wind`, `current-output-port`,
+;;; the depth-2 accessors) and (emit internal) for the private machinery.
+;;;
+;;; Importing (scheme base) is not avoidable and not incidental: `error` reaches `raise`
+;;; reaches *handlers*, which cannot be duplicated into a library without splitting the
+;;; handler chain (design D10).  So these three get it the honest way, by importing the
+;;; library that owns it.
 (define *prelude-libraries*
-  '(((emit internal) #t ()                "lib/emit/internal.sld")
-    ((scheme base)   #t ((emit internal)) "lib/scheme/base.sld")))
+  '(((emit internal) #t ()                              "lib/emit/internal.sld")
+    ((scheme base)   #t ((emit internal))               "lib/scheme/base.sld")
+    ((scheme cxr)    #f ((scheme base))                 "lib/scheme/cxr.sld")
+    ((scheme read)   #f ((scheme base) (emit internal)) "lib/scheme/read.sld")
+    ((scheme file)   #f ((scheme base) (emit internal)) "lib/scheme/file.sld")))
 
 ;;; Assignment EXCEPTIONS to the default of (scheme base); see the partition notes in
 ;;; the header.  Each entry is (NAME HOME ...), one HOME per library whose BODY defines
@@ -240,14 +255,20 @@
     ;; the port representation
     %port-rtd-cell %port-rtd %make-port %port-buf))
 
-;;; 2. Defined in BOTH libraries and exported by both -- the compositional accessors R7RS
-;;;    puts in (scheme cxr).  The substrate carries them for the COMPILER, whose passes
-;;;    call caddr/cadddr/cdddr at 48 sites across nine CORE_FLAT files and which would
-;;;    otherwise need 48 edits under the self-hosting fixed point (design D6).  Nine
-;;;    one-line wrappers over car/cdr, and the on-disk (scheme cxr) will define its own.
-;;;    (scheme base) still exports them at this step; step 5 is where it stops.
+;;; 2. Defined in BOTH the substrate and (scheme cxr), exported by both, and NOT by
+;;;    (scheme base) -- the depth-3 compositional accessors plus `cadddr`.  R7RS-small puts
+;;;    them in (scheme cxr); the substrate carries a second copy for the COMPILER, whose
+;;;    passes call caddr/cadddr/cdddr at 48 sites across nine CORE_FLAT files and which
+;;;    would otherwise need 48 edits under the self-hosting fixed point (design D6).  Nine
+;;;    one-line wrappers over car/cdr, in a library most programs never link.
 (define *substrate-cxr*
   '(caaar caadr cadar caddr cdaar cdadr cddar cdddr cadddr))
+
+;;; The other fifteen of R7RS's twenty-four: the depth-4 forms.  (scheme cxr) ONLY -- the
+;;; compiler uses none of them, so they do not go to the substrate (design D9).
+(define *cxr-depth4*
+  '(caaaar caaadr caadar caaddr cadaar cadadr caddar
+    cdaaar cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr))
 
 ;;; 3. Defined in the substrate but NOT exported by it, and exported by (scheme base) as
 ;;;    always -- the base-exported names the substrate's own body reaches.  The substrate
@@ -262,11 +283,63 @@
 (define *substrate-borrowed*
   '(caar cadr cdar cddr length list reverse list->vector list->bytevector))
 
+;;; --- the RELOCATED sixteen (change: scheme-base-partition, issue #33) --------------
+;;;
+;;; `read` and the six file procedures leave (scheme base) for the libraries R7RS-small
+;;; assigns them to.  Unlike the cxr nine they are NOT dual-assigned: nothing inside the
+;;; compiler calls them, so there is no consumer to keep them in scope for.
+(define *scheme-read-procs* '(read))
+(define *scheme-file-procs*
+  '(open-input-file open-output-file with-input-from-file with-output-to-file
+    call-with-input-file call-with-output-file))
+
+;;; `read` calls %check-input-port, the wrong-type/closed-port guard, which is PRIVATE.
+;;; It does not live in the substrate and must not (design D10): it is the only reader/port
+;;; name that raises, and `error` reaches `raise` reaches *handlers*, which cannot go below
+;;; (scheme base).  It is stateless, so the library that needs one defines its own -- here,
+;;; a second private copy in (scheme read), resolving `error` and `input-port?` through its
+;;; (scheme base) import.  (scheme file) needs no copy: it reaches %make-port in the
+;;; substrate and everything else in (scheme base).
+(define *port-guards-shared-with-read* '(%check-input-port))
+
 (define *prelude-assignments*
   (append
     (prelude-assign* *substrate-rehomed*  '((emit internal)))
-    (prelude-assign* *substrate-cxr*      '((emit internal) (scheme base)))
-    (prelude-assign* *substrate-borrowed* '(((emit internal) private) (scheme base)))))
+    (prelude-assign* *substrate-cxr*      '((emit internal) (scheme cxr)))
+    (prelude-assign* *cxr-depth4*         '((scheme cxr)))
+    (prelude-assign* *substrate-borrowed* '(((emit internal) private) (scheme base)))
+    (prelude-assign* *scheme-read-procs*  '((scheme read)))
+    (prelude-assign* *scheme-file-procs*  '((scheme file)))
+    (prelude-assign* *port-guards-shared-with-read*
+                     '(((scheme base) private) ((scheme read) private)))))
+
+;;; Prelude definitions that (scheme base) does NOT export because ANOTHER member of the
+;;; partition does -- as opposed to *scheme-base-private*, which is "exported by nothing".
+;;; Written flat so it is greppable, and so the CHEZ-FREE surface guard
+;;; (test/scheme-base-surface-check.sh) can subtract it with text tools instead of parsing
+;;; home specs.
+;;;
+;;; DERIVED, not authoritative: *prelude-assignments* above decides.  tools/gen-scheme-base.ss
+;;; recomputes this exact set from the assignments and fails on any disagreement, so it
+;;; cannot rot into a second source of truth.
+;;;
+;;; Two groups, and the distinction matters for the release notes: the first sixteen are a
+;;; BREAKING relocation -- (scheme base) exported them before this change and no longer
+;;; does.  The fifteen depth-4 accessors are additions, new names that were never in
+;;; (scheme base) to lose.
+(define *scheme-base-elsewhere*
+  '(;; RELOCATED -> (scheme cxr): the depth-3 forms and cadddr.  The depth-2 four
+    ;; (caar cadr cdar cddr) STAY, which is where R7RS-small puts them.
+    caaar caadr cadar caddr cdaar cdadr cddar cdddr cadddr
+    ;; RELOCATED -> (scheme read)
+    read
+    ;; RELOCATED -> (scheme file)
+    open-input-file open-output-file with-input-from-file with-output-to-file
+    call-with-input-file call-with-output-file
+    ;; NEW in (scheme cxr) (design D9): the depth-4 forms, added so the library ships
+    ;; complete.  Never exported by (scheme base), so not a break.
+    caaaar caaadr caadar caaddr cadaar cadadr caddar
+    cdaaar cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr))
 
 ;;; The library a HOME names, and whether that home publishes the name.
 (define (home-library h) (if (pair? (car h)) (car h) h))

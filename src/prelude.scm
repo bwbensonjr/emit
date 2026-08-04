@@ -96,8 +96,11 @@
 (define (list . xs) xs)
 
 ;;; --- compositional car/cdr accessors (cxr combinators) --------------------
-;;; caar..cddr and the depth-3 forms caaar..cdddr, each the named composition of
-;;; the primitive car/cdr (letters read right-to-left = innermost-first).
+;;; All twenty-eight: the four depth-2 forms, which R7RS-small puts in (scheme base),
+;;; and the twenty-four depth-3 and depth-4 compositions, which it puts in
+;;; (scheme cxr) -- see the partition in src/prelude-surface.scm for which library
+;;; exports which.  Each is the named composition of the primitive car/cdr, the
+;;; letters read right-to-left = innermost-first, so cXYZ = (cX (cYZ x)).
 (define (caar x) (car (car x)))
 (define (cadr x) (car (cdr x)))
 (define (cdar x) (cdr (car x)))
@@ -110,6 +113,28 @@
 (define (cdadr x) (cdr (cadr x)))
 (define (cddar x) (cdr (cdar x)))
 (define (cdddr x) (cdr (cddr x)))
+;;; The depth-4 forms.  Fifteen of the sixteen are new (change:
+;;; scheme-base-partition, design D9): (scheme cxr) is specified to export
+;;; twenty-four procedures, and shipping a library named after the standard in which
+;;; (caddar x) is an unbound variable would be a worse conformance state than not
+;;; having the library at all.  `cadddr` is the sixteenth and predates them -- the
+;;; prelude grew as self-hosting needed names, which is why only it was here.  The
+;;; compiler uses none of these, so they are homed in (scheme cxr) alone.
+(define (caaaar x) (car (caaar x)))
+(define (caaadr x) (car (caadr x)))
+(define (caadar x) (car (cadar x)))
+(define (caaddr x) (car (caddr x)))
+(define (cadaar x) (car (cdaar x)))
+(define (cadadr x) (car (cdadr x)))
+(define (caddar x) (car (cddar x)))
+(define (cdaaar x) (cdr (caaar x)))
+(define (cdaadr x) (cdr (caadr x)))
+(define (cdadar x) (cdr (cadar x)))
+(define (cdaddr x) (cdr (caddr x)))
+(define (cddaar x) (cdr (cdaar x)))
+(define (cddadr x) (cdr (cdadr x)))
+(define (cdddar x) (cdr (cddar x)))
+(define (cddddr x) (cdr (cdddr x)))
 
 (define (length xs)
   (let loop ([xs xs] [n 0])

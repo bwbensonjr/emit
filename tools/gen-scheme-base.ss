@@ -121,6 +121,21 @@
                        *prelude-assignments*))])
   (unless (null? twice) (die "name assigned to the same library twice" twice)))
 
+;; *scheme-base-elsewhere* is a derived convenience for the Chez-free surface guard, which
+;; cannot parse home specs.  Recompute it here from the authoritative assignments -- a
+;; prelude define that is neither private nor exported by (scheme base) -- and fail on any
+;; disagreement, so it cannot drift into a second source of truth.
+(let* ([actual (filter (lambda (n) (and (not (memq n *scheme-base-private*))
+                                        (not (prelude-exports? '(scheme base) n))))
+                       define-names)]
+       [missing (filter (lambda (n) (not (memq n *scheme-base-elsewhere*))) actual)]
+       [extra   (filter (lambda (n) (not (memq n actual))) *scheme-base-elsewhere*)])
+  (unless (null? missing)
+    (die "not exported by (scheme base) but missing from *scheme-base-elsewhere*" missing))
+  (unless (null? extra)
+    (die "in *scheme-base-elsewhere* but (scheme base) still exports it (or the prelude does not define it)"
+         extra)))
+
 (let ([dups (let loop ([ns export-names] [seen '()] [d '()])
               (cond
                 [(null? ns) (reverse d)]

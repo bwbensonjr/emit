@@ -401,6 +401,33 @@
 #     representation left) and the new emit.internal.ll is 170,716 B, +25,573 B net for the
 #     18 definitions the substrate must define for itself (design D10).  All 80 demos'
 #     stdout byte-identical.  No new entries.
+#   scheme-base-partition, step 5 (the BREAKING half) -- the sixteen names R7RS-small places
+#     outside (scheme base) left its export list for (scheme cxr) / (scheme read) /
+#     (scheme file).  An importing program declares one `external global` per export it can
+#     see, so dropping sixteen exports drops sixteen declarations from EVERY program module.
+#     Verified against an 80-demo before/after capture (a detached worktree at the step-4
+#     commit), and the split is exactly two groups with nothing else in either:
+#       (1) 78 of the 80 demos differ by EXACTLY -16 lines and +0, and all sixteen are
+#           `@"scheme.base:<name>" = external global i64` for precisely the relocated
+#           names: caaar caadr cadar caddr cdaar cdadr cddar cdddr cadddr, open-input-file,
+#           read, open-output-file, with-output-to-file, with-input-from-file,
+#           call-with-output-file, call-with-input-file.  No codegen, label or constant
+#           moved in any of them -- a demo that never used a relocated name is otherwise
+#           byte-identical.
+#       (2) the two demos SWEPT in step 5.5 differ further, and only as their new imports
+#           require: demos/case-cxr.scm (-22/+32) gained (scheme cxr) and demos/ports.scm
+#           (-29/+24) gained (scheme read) and (scheme file).  Each gains that library's
+#           __init declare + call, `external global` rows for the names it uses, and
+#           re-pointed direct-call declares -- the same call sites, now resolved against the
+#           owning unit instead of scheme.base.  BOTH demos' stdout is byte-identical to
+#           before the sweep, which is the point: the procedures did not change, only the
+#           library that exports them.
+#     Snapshots now hold more units for those two demos (3 and 4 rather than 2), since a
+#     relocated library is linked only by a program that imports it -- visible in the byte
+#     totals and not itself drift.  scheme.base.ll 367451 -> 338670 B (the sixteen
+#     definitions left); emit.internal.ll unchanged at 170716 B, byte-identical, since the
+#     cxr nine simply traded their (scheme base) home for a (scheme cxr) one and the
+#     substrate's own copy did not move.  No new entries.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

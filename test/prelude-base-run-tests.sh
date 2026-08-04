@@ -100,6 +100,10 @@ compile_val aot-no-prelude '(+ 40 2)' '42' --no-prelude
 # `@"<unit>:__init"`; a program emits @scheme_entry and has none), rather than by parsing
 # *prelude-libraries* here.  That keeps the assertion on the artifact instead of on a second
 # transcription of the declaration, and it extends to a new member with no edit.
+# the LAST part of an --emit stream: the program module (one marker per baked member).
+prog_last () { awk '/^; ==EMIT-UNIT-BOUNDARY==$/ { n = 0; delete L; next } { L[++n] = $0 }
+                    END { for (i = 1; i <= n; i++) print L[i] }' "$1"; }
+
 echo "each baked library is emitted exactly once"
 emit="$TMP/emit.ll"
 printf '%s' '(map (lambda (x) (+ x 1)) (list 1 2 3))' | build/emit run --emit > "$emit"
@@ -113,6 +117,20 @@ if [ "$ninit" = "$nuniq" ] && [ "$nmark" = "$nuniq" ] && [ "$nuniq" -ge 1 ]; the
 else
   echo "  [FAIL] markers=$nmark, __inits=$ninit over $nuniq librar$([ "$nuniq" = 1 ] && echo y || echo ies) ($(echo $inits)) -- want markers == libraries and one __init each"
   fail=$((fail+1))
+fi
+
+# The baked set initializes in DEPENDENCY order: a member's __init runs after everything it
+# imports.  The program's @scheme_entry drives the calls, so their order in the program
+# module IS the init order -- and (emit internal) must be called before (scheme base),
+# which imports it.  Asserted directly because getting it backwards would leave
+# (scheme base)'s body calling into an uninitialized unit, which fails at run time and
+# nowhere earlier (change: scheme-base-partition).
+order="$(prog_last "$emit" | grep -o 'call i64 @"[a-z.]*:__init"' \
+          | sed 's/.*@"//; s/:__init"//' | tr '\n' ' ')"
+if [ "$order" = "emit.internal scheme.base " ]; then
+  echo "  [OK  ] baked __init calls are in dependency order: $order"; pass=$((pass+1))
+else
+  echo "  [FAIL] baked __init order is [$order] (want 'emit.internal scheme.base ')"; fail=$((fail+1))
 fi
 
 # --no-prelude emits a single self-contained module (no marker, no scheme.base).

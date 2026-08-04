@@ -22,6 +22,16 @@
 ;;; (scheme base) from THIS manifest, and base.sld imports the substrate, so without an
 ;;; entry those doors would have no standard library.  It is ordered first for readability;
 ;;; the loader is fixpoint-driven and does not depend on manifest order.
+;;; (scheme cxr) / (scheme read) / (scheme file) hold the sixteen names R7RS-small places
+;;; outside (scheme base) (change: scheme-base-partition, issue #33).  Like
+;;; (scheme inexact) they are ordinary libraries reached only by an explicit import -- but
+;;; unlike it they are GENERATED from src/prelude.scm by tools/gen-scheme-base.ss, because
+;;; the prelude stays the single source of truth for what those procedures ARE.  They import
+;;; the baked members: (scheme base) for the ordinary procedures they stand on, and
+;;; (emit internal) for the private port/reader machinery.
 ((library (emit internal)  (source "lib/emit/internal.sld"))
  (library (scheme base)    (source "lib/scheme/base.sld"))
- (library (scheme inexact) (source "lib/scheme/inexact.sld")))
+ (library (scheme inexact) (source "lib/scheme/inexact.sld"))
+ (library (scheme cxr)     (source "lib/scheme/cxr.sld"))
+ (library (scheme read)    (source "lib/scheme/read.sld"))
+ (library (scheme file)    (source "lib/scheme/file.sld")))
