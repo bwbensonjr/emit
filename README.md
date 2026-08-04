@@ -23,6 +23,10 @@ REPL-based development and debugging.
 
 ## Quick start
 
+**Writing your own project?** [`docs/PROJECTS.md`](docs/PROJECTS.md) is the guide: project layout,
+libraries and the manifest, the `emit repl` development loop, and `emit build` for a delivered
+executable. The quick start below is the compiler's own build.
+
 **Install a recent LLVM + libgc.** The toolchain is discovered via `llvm-config` and
 `pkg-config bdw-gc` (see `tools/llvm-env.sh`), so any reasonably recent install works:
 

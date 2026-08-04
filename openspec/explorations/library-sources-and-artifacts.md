@@ -65,6 +65,24 @@ That is the design showing through rather than a defect: a **baked** library is 
 **manifest** library is not. Every question below is really about which side of that line a library
 sits on.
 
+> **AMENDED** (`baked-set-on-every-door`). The axis is right, but the claim that a baked library is
+> CWD-independent held only on the **run** door when this was written. The REPL and `emit lib`
+> resolved `(scheme base)` from the manifest, so on those two doors even a *baked* library was
+> CWD-dependent — measured from a user project directory, `emit repl` had no standard library at all
+> and `emit lib` could not compile a library that imports one. The RESOLVED note in Finding 2 spotted
+> the REPL half (as #39); the `emit lib` half was never filed. Both are fixed: **every door now
+> registers the baked set before it consults the manifest**, so Finding 1's sentence is true as
+> written for the first time.
+>
+> Two things that change the map above. A manifest entry naming a baked member is now a no-op on the
+> Chez-free doors (the baked member wins), which is what lets this repository keep the entries the
+> Chez driver needs. And the deeper cause was not door wiring at all: `compile-library-form`
+> hardcoded empty import tables, so *every* lone-`define-library` compile resolved no imports on any
+> door — the tables are now threaded in. Open question 3 below (manifest as a single file vs. a
+> library *path*) gained a concrete symptom in the process: a project's own `emit-libs.scm` shadows
+> an installed one entirely, so a project that imports `(scheme inexact)` must name it even on a
+> system where Emit is installed.
+
 ## Finding 2 — #33 moves nine names across the line, and it collides with packaging
 
 > **LANDED** (`scheme-base-partition`). Sixteen names, not nine — the nine `cxr` forms were #33's
