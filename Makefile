@@ -90,20 +90,22 @@ schemec:    $(SCHEMEC)
 # clang.
 $(EMIT): build/emit.o build/runtime-host.o $(EMBED_REPL_LL) $(BAKED_LL) Makefile
 	$(CXX) build/emit.o build/runtime-host.o $(EMBED_REPL_LL) $(BAKED_LL) \
-	  -rdynamic $(LDFLAGS) -L$(GC_LIB) -lgc -o $@
+	  -rdynamic $(LDFLAGS) -L$(GC_LIB) -lgc -lm -o $@
 	@. tools/log.sh; say "link $(EMBED_REPL_LL) + $(words $(BAKED_LL)) baked librar$(if $(word 2,$(BAKED_LL)),ies,y) -> $@  [$$(bytes $@) bytes]"
 
 # Batch text->IR filter compiler: links the committed schemec IR + the baked library set
 # with the runtime's RT_FILTER_MAIN (so the program's output is exactly the emitted IR).
 $(SCHEMEC): $(SCHEMEC_LL) $(BAKED_LL) src/runtime/runtime.c Makefile | build
 	$(CC) -O2 -Wno-override-module -DRT_FILTER_MAIN -I$(GC_INC) -L$(GC_LIB) \
-	  src/runtime/runtime.c $(SCHEMEC_LL) $(BAKED_LL) -lgc -o $@
+	  src/runtime/runtime.c $(SCHEMEC_LL) $(BAKED_LL) -lgc -lm -o $@
 	@. tools/log.sh; say "link $(SCHEMEC_LL) + $(words $(BAKED_LL)) baked librar$(if $(word 2,$(BAKED_LL)),ies,y) -> $@  [$$(bytes $@) bytes]"
 
 # --- objects ---------------------------------------------------------------
 # Runtime compiled as C without its standalone main (the host supplies one).
+# gnu11, not c11: the string ports use open_memstream, a POSIX-2008/GNU function that
+# strict ISO mode hides.  The other runtime.c recipes take clang's gnu default already.
 build/runtime-host.o: src/runtime/runtime.c Makefile | build
-	$(CC) -std=c11 -O2 -I$(GC_INC) -DRT_NO_MAIN -c $< -o $@
+	$(CC) -std=gnu11 -O2 -I$(GC_INC) -DRT_NO_MAIN -c $< -o $@
 
 # Unified emit front-end, compiled as C++ against the LLVM headers.  EMIT_PREFIX is
 # the LAST manifest candidate (change: manifest-search-path): the prefix this binary

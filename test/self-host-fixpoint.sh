@@ -73,7 +73,7 @@ split_units () {  # <stream> <prefix>  -> writes <prefix>1.ll.., echoes N
 link_run () {  # <embed.ll> <out> <baked.ll>...
   local embed="$1" out="$2"; shift 2
   "$CXX" build/run-boot.o build/runtime-host.o "$embed" "$@" \
-    -Wno-override-module -rdynamic $LDFLAGS -L"$GC_LIB" -lgc -o "$out" 2>/dev/null
+    -Wno-override-module -rdynamic $LDFLAGS -L"$GC_LIB" -lgc -lm -o "$out" 2>/dev/null
 }
 # The baked set's modules, as the shipped `emit` emits them: the units in front of ANY
 # program's stream.  A baked member may import another, so it cannot be compiled on its own

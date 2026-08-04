@@ -1032,6 +1032,9 @@ static bool link_clang(const Toolchain &tc, const std::string &runtime_c,
   args.push_back(runtime_c);
   for (const std::string &u : unit_files) args.push_back(u);
   args.push_back("-lgc");
+  // The runtime's numeric prims (rt_sqrt, rt_atan2, ...) call libm, which is a separate
+  // library on glibc; every link line that includes runtime.c needs this.
+  args.push_back("-lm");
   args.push_back("-o");
   args.push_back(out);
 

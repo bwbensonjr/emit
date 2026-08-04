@@ -102,7 +102,7 @@ split_units () { # <stream> <prefix>
 link_emit_boot () { # <embed.ll> <out> <baked.ll>...
   local embed="$1" out="$2"; shift 2
   "$CXX" build/run-boot.o build/runtime-host.o "$embed" "$@" \
-    -Wno-override-module -rdynamic $LDFLAGS -L"$GC_LIB" -lgc -o "$out" 2>/dev/null
+    -Wno-override-module -rdynamic $LDFLAGS -L"$GC_LIB" -lgc -lm -o "$out" 2>/dev/null
 }
 
 t0=$(date +%s)

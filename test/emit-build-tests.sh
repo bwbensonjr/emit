@@ -116,7 +116,7 @@ if . tools/llvm-env.sh >/dev/null 2>&1; then
     /^; ==EMIT-UNIT-BOUNDARY==$/ { n++; f = dir "/d." n ".ll"; next }
     { print > f }' "$TMP/direct.combined.ll"
   # shellcheck disable=SC2086
-  "$CC" -Wno-override-module -O2 -I"$GC_INC" -L"$GC_LIB" src/runtime/runtime.c "$TMP"/d.*.ll -lgc -o "$TMP/via-direct" 2>/dev/null
+  "$CC" -Wno-override-module -O2 -I"$GC_INC" -L"$GC_LIB" src/runtime/runtime.c "$TMP"/d.*.ll -lgc -lm -o "$TMP/via-direct" 2>/dev/null
   ve="$("$TMP/via-emit" 2>/dev/null)"; vd="$("$TMP/via-direct" 2>/dev/null)"
   [ -n "$ve" ] && [ "$ve" = "$vd" ] && ok "value-parity (emit=$ve direct=$vd)" || bad "value-parity (emit=$ve direct=$vd)"
 else
