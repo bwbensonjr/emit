@@ -76,6 +76,31 @@
       Fix: delete the duplicate and use the existing one. The flat source then emits 679
       functions, identical to baseline.
 
+## RESUME HERE (session handoff, 2026-08-04)
+
+**State:** 8/34 tasks. Branch `feat/scheme-base-partition`, commits `d545a12` (steps 1-3) and
+`e7096a4` (the duplicate-define fix). Working tree clean; `bootstrap/*.ll` regenerated and
+committed.
+
+**Do this first, before task 4.1:** run `./run-dev-tests.sh`. It has NOT been run since the
+`define-syntax-form?` fix and the regen that followed it. The Chez-free suite is green (20/20) and
+the trust-check passed on an earlier revision of this branch, but the Chez-gated self-hosting fixed
+point and `--dump` parity have not been re-confirmed against the current `bootstrap/*.ll`. Everything
+in step 4 builds on those artifacts.
+
+**Two corrections to this plan, learned by implementing it:**
+- Task 3.3's "`git diff bootstrap/` empty" is unsatisfiable and should be read as: `scheme.base.ll`,
+  `base.sld` content, and `module-scaffold-baseline.sha256` unmoved, both suites green.
+- Step 4's body partitioning needs the model already built in step 2: home (`prelude-homes-of`) and
+  visibility (`prelude-exports?`) are separate axes, and each member's body carries **every** macro
+  (they are lifted before lowering, so they cost no emitted code, and the reader's procedures use
+  `cond` internally).
+
+**Watch for:** a duplicate top-level name in `CORE_FLAT` costs ~18% compiler IR with no diagnostic
+(issue #38). Before adding a helper to `src/core.ss` or `src/prelude-surface.scm`, grep the other
+`CORE_FLAT` files for the name — `expand.ss`, `parse.ss`, and `util.scm` already carry many small
+predicates.
+
 ## 4. The substrate (behaviour-preserving for user programs)
 
 - [ ] 4.1 Add `(emit internal)` as a partition member: the port representation group and the
