@@ -353,4 +353,13 @@ recording because they are the kind that make a suite pass for the wrong reason:
       **#39** (a hand-written manifest must name `(emit internal)`, because the REPL door resolves
       `(scheme base)` from the manifest while run/build bake it) and **#40** (the surface
       declaration's seven rot checks are never exercised).
-- [ ] 8.3 `openspec validate scheme-base-partition`; sync specs and archive.
+- [x] 8.3 `openspec validate scheme-base-partition`; sync specs and archive.
+      Specs synced by hand (the delta's intent, not a wholesale copy), then archived with
+      `--skip-specs` so archive would not re-apply them. `openspec validate --all`: 21/21.
+      All 27 delta scenarios landed — 22 in `module-system` (3 new requirements: the baked
+      partition, the relocated names, the substrate; 2 modified: the declared surface and library
+      zero) and 5 in `core-language` (the accessors, now partitioned). One snag worth noting: my
+      first pass copied the delta's `## MODIFIED Requirements` header into the main spec, which
+      **truncates** the parsed `## Requirements` section and made every requirement after it
+      invisible to validate/list/archive. `openspec validate` caught it; the main specs now carry no
+      delta headers at all.
