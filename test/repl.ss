@@ -102,7 +102,7 @@
       (call-with-output-file ll-path (lambda (o) (display text o)) 'replace)
       (if (zero? (system (string-append
                            aot-cc " -I" gc-inc " -L" gc-lib " " runtime-c " "
-                           ll-path " -lgc -o " exe-path " 2> " cc-path)))
+                           ll-path " -lgc -lm -o " exe-path " 2> " cc-path)))
           (begin (system (string-append exe-path " > " out-path))
                  (values 'ok (read-file out-path)))
           (values 'error (read-file cc-path))))))

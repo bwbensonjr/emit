@@ -20,7 +20,7 @@ check () {  # name  expected  <<forms
     echo "  [FAIL] $name (emit error)"; sed 's/^/         /' "$TMP/$name.err"; fail=$((fail+1)); return
   fi
   if ! "$CC" -I"$GC_INC" -L"$GC_LIB" src/runtime/runtime.c \
-        "$TMP/$name.ll" -lgc -o "$TMP/$name" 2>"$TMP/$name.cc"; then
+        "$TMP/$name.ll" -lgc -lm -o "$TMP/$name" 2>"$TMP/$name.cc"; then
     echo "  [FAIL] $name (clang error)"; sed 's/^/         /' "$TMP/$name.cc"; fail=$((fail+1)); return
   fi
   local got; got="$(timeout 30 "$TMP/$name")"

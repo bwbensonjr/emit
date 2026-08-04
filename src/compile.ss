@@ -282,7 +282,7 @@
 
 ;; AOT (default): textual IR -> native exe via the system clang.  Unchanged.
 (define (link ll exe)
-  (sh "clang" (string-append aot-cc " " ship-opt " " ship-lto " -I" gc-inc " -L" gc-lib " " runtime-c " " ll " -lgc -o " exe)))
+  (sh "clang" (string-append aot-cc " " ship-opt " " ship-lto " -I" gc-inc " -L" gc-lib " " runtime-c " " ll " -lgc -lm -o " exe)))
 
 ;; Bitcode: assemble OUT.ll -> OUT.bc (the inspectable/opt-able artifact),
 ;; then codegen the .bc + runtime to a native exe (LLVM 22 clang).
@@ -290,7 +290,7 @@
   (sh "llvm-as" (string-append (tool "llvm-as") " " ll " -o " bc)))
 (define (build-bitcode-exe bc exe)
   (sh "clang(bc)"
-      (string-append (tool "clang") " " ship-opt " -I" gc-inc " -L" gc-lib " " runtime-c " " bc " -lgc -o " exe)))
+      (string-append (tool "clang") " " ship-opt " -I" gc-inc " -L" gc-lib " " runtime-c " " bc " -lgc -lm -o " exe)))
 
 ;; JIT: assemble the program, compile the runtime to bitcode, llvm-link them
 ;; (so the C main + rt_* join the module), and run in-process via lli with
@@ -716,7 +716,7 @@
 (define (link-modular-aot unit-lls prog-ll exe)
   (sh "clang"
       (string-append aot-cc " " ship-opt " " ship-lto " -Wno-override-module -I" gc-inc " -L" gc-lib " " runtime-c " "
-                     (lls->string unit-lls) prog-ll " -lgc -o " exe))
+                     (lls->string unit-lls) prog-ll " -lgc -lm -o " exe))
   (note "link ~a + ~a unit(s) -> ~a  [aot ~a ~a, modules]\n" prog-ll (length unit-lls) exe ship-opt ship-lto))
 
 ;; assemble each .ll in the set to a sibling .bc; return the .bc paths in order.
@@ -746,7 +746,7 @@
     (sh "llvm-link" (string-append (tool "llvm-link") " " (lls->string bcs) "-o " bc))
     (sh "clang(bc)"
         (string-append (tool "clang") " " ship-opt " -Wno-override-module -I" gc-inc " -L" gc-lib " "
-                       runtime-c " " bc " -lgc -o " exe))
+                       runtime-c " " bc " -lgc -lm -o " exe))
     (note "link ~a + ~a unit(s) -> ~a -> ~a  [bitcode, modules]\n" prog-ll (length unit-lls) bc exe)))
 
 ;; --- argument handling ---
