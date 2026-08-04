@@ -24,6 +24,7 @@ speed items in this list.
 | [P7](#p7-boxing-driven-by-desugaring-rather-than-by-mutation) | Boxing driven by desugaring rather than by mutation | speed + size | med | low–med | — | ☑ |
 | [P8](#p8-the-emit-build-door-does-not-tree-shake) | The `emit build` door does not tree-shake | size | med–high | med | — | ☐ |
 | [P9](#p9--an-optional-argument-costs-every-call-site-its-cross-unit-direct-call) | An optional argument costs every call site its cross-unit direct call | speed | med | med | — | ☐ |
+| [P10](#p10--a-library-another-unit-imports-is-never-tree-shaken-the-substrate-ships-whole) | A library another unit imports is never tree-shaken (the substrate ships whole) | size | high | med | — | ☐ |
 
 Legend — **Value**: benefit if fixed. **Cost**: rough implementation effort/risk. These are
 estimates to aid sequencing, not commitments.
@@ -1011,6 +1012,61 @@ lowering decision plus rest-list construction at the call site.
 **OpenSpec change:** none yet. Deliberately NOT bundled into `numeric-conformance`: that change
 is about the accepted language, and this is a codegen improvement whose correct scope is every
 variadic callee, not the three procedures that happened to expose it.
+
+---
+
+## P10 — A library another unit imports is never tree-shaken (the substrate ships whole)
+
+P1's dead-code elimination prunes a library unit to the bindings the program actually reaches, and
+it works: a program whose whole body is `(display (car (list 1 2)))` links a `(scheme base)` pruned
+from **338,670 B / ~200 defines down to 6,847 B / 4 defines**.
+
+But it prunes only a unit that **no other unit imports**. `build-modular-artifacts*`
+(`src/compile.ss`) says so in its own comment — *"A unit is prunable only if NO OTHER unit in the
+closure imports it (else that importer — kept full — could reference a dropped binding); this keeps
+the first cut sound without full backward DAG propagation."* Sound, and until `scheme-base-partition`
+it cost nothing, because no shipped library imported another.
+
+Now one does. `(scheme base)` imports `(emit internal)`, so the substrate is unprunable **by
+construction** and ships whole:
+
+```
+                        committed        linked into `(display (car (list 1 2)))`
+scheme.base.ll           338,670 B   ->    6,847 B   pruned to 4 defines
+emit.internal.ll         170,716 B   ->  170,716 B   NOT pruned, all 114 defines
+```
+
+That same 57,480-byte executable links **32 `emit.internal:rd-*` reader symbols** against **3
+`scheme.base:*` symbols** — it carries the entire in-language reader and the port representation to
+call `car`. Binary size is a stated design goal (`CLAUDE.md`: "small, clean, self-contained native
+executables"), and this is now the single largest unreachable payload in a minimal binary.
+
+**Cause.** The root set is computed from the **program** text only (`program-root-internals`). A
+library's exports reached solely by *another library* are invisible to it, so the conservative answer
+is to keep any imported-by-a-unit library whole. Note the guard was also latently broken until this
+change — it compared library names, which are lists, with `memq` — so the substrate was briefly
+pruned and the fixed point failed to link; the fix made the guard fire, which is what surfaces the
+size cost.
+
+**Fix sketch.** Propagate roots backward through the import DAG instead of giving up: shake in
+reverse topological order, and seed each unit's root set with the program's roots **plus** every one
+of its exports that a kept binding in an already-shaken importer still references. `(scheme base)`
+pruned to 4 defines references almost nothing in the substrate, so a program calling only `car`
+should keep ~0 reader bindings. The machinery all exists — `compile-library*` already takes
+`keep-roots`, and the export tables already record what each unit references; what is missing is the
+ordering and the per-unit root union.
+
+**Value:** high — it is the difference between ~170 KB of dead IR in every AOT binary and near zero,
+on the axis the project treats as a defining goal. **Cost:** med — one pass ordering change plus a
+root-union step; no new representation, and the closed-world assumption is unchanged.
+
+**Interaction with P8.** P8 notes the Chez-free `emit build` door does not tree-shake at all. Fixing
+P8 without P10 would give that door the same blind spot; fixing P10 first means both doors inherit
+the better root computation.
+
+**OpenSpec change:** none yet. Surfaced by `scheme-base-partition` (archived
+`2026-08-04-scheme-base-partition`), which introduced the first library-importing-a-library in the
+shipped set and so made a dormant limitation load-bearing.
 
 ---
 
