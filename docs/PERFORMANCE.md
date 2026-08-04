@@ -171,6 +171,22 @@ bitcode/object at link time; there is no committed precompiled `.bc`/`.o` for th
 **Possible fix.** Precompile stable library units to `.bc`/`.o` and link the object rather
 than re-assembling the `.ll`.
 
+**Measured, and now paid by every door** (change: `baked-set-on-every-door`). A JIT door does not
+even reach the cached-`.ll` path: it compiles the baked set from the baked-in `*prelude-source*` at
+every start. That is the whole of `emit repl`'s startup latency —
+
+```
+emit repl, one trivial form, best of five:   0.84s   prelude enabled
+                                             0.72s   --no-prelude
+```
+
+— so ~0.12s is the session and the rest is the standard library being recompiled from source, every
+time. Before this change the REPL paid it in a different form (compiling `base.sld` + `internal.sld`
+read from the manifest, measured at 0.83s — a wash), *except* in a directory whose manifest did not
+name them, where it paid nothing because it silently had no standard library at all. Fixing that made
+the cost universal and therefore worth caching: a precompiled baked set would cut a REPL start to
+roughly its `--no-prelude` floor, which is the most visible latency in the primary development loop.
+
 **Interaction with P1 (`aot-release-profile`).** P1 landed via Scheme-level tree-shaking, which
 recompiles a *program-specific pruned* unit on the AOT ship path (it does **not** reuse the cached
 full `.ll` there). So a precompiled/cached `.bc` for the full `(scheme base)` still helps the

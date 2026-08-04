@@ -87,7 +87,8 @@ Library *names* are mapped to *source files* by a manifest — an s-expression f
   `--manifest` at your own for additional libraries (as the test
   suites do with `test/modules/emit-libs.scm`). Listing a library costs a program nothing unless
   it imports it: the run door preloads lazily (see below) and `emit build` links only the
-  program's import closure.
+  program's import closure. Your own manifest need not name `(scheme base)` or `(emit internal)`:
+  every door registers the baked set before reading the manifest (see *The shipped libraries*).
 
 ### Where the manifest is found
 
@@ -330,11 +331,21 @@ with **no manifest present at all**. That guarantee is why the substrate had to 
 three relocated libraries are ordinary: a program reaches them only through the manifest, exactly as
 it reaches `(scheme inexact)`.
 
-They also appear in the manifest, because the REPL door and the Chez driver resolve `(scheme base)`
-*from* the manifest rather than baked — so `base.sld`'s `(import (emit internal))` has to resolve
-there. A consequence worth knowing when you hand-write a manifest: listing `(scheme base)` means also
-listing `(emit internal)`. See issue #39, which proposes removing that requirement by having the REPL
-door bake the set the way the run door does.
+**Every door registers the baked set** before it consults the manifest — the AOT door, the run door,
+the REPL door, and the compile-unit (`emit lib`) door alike (change: `baked-set-on-every-door`). So a
+hand-written manifest never needs to name `(scheme base)` or `(emit internal)`, and the directory a
+door is invoked from cannot determine whether the standard library is available. That was not always
+so: the REPL and `emit lib` used to resolve `(scheme base)` *from* the manifest, so in a user project
+directory a session had no standard library at all and `emit lib` could not compile a library that
+imported one (issue #39, and its unfiled `emit lib` half).
+
+They do still *appear* in this repository's own manifest, because the Chez driver resolves them from
+there and `tools/regen.sh` derives `bootstrap/scheme.base.ll` from `lib/scheme/base.sld`. A manifest
+entry naming a baked member is a no-op on the Chez-free doors: the already-loaded guard in
+`repl-load-library-text` matches it by library name, so the baked member wins and no second module is
+loaded. One consequence to know: the baked `(scheme base)` therefore wins over the `.sld`, so editing
+`lib/scheme/base.sld` does not change what any door sees until `make regen` — the same rule the run
+and AOT doors always had, now true of the REPL too.
 
 ### `(emit internal)` — the substrate, and why it is not `(scheme …)`
 

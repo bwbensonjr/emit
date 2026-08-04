@@ -147,6 +147,16 @@ static std::string read_file(const std::string &path) {
   ss << f.rdbuf();
   return ss.str();
 }
+// A diagnostic the embedded compiler raised, as a door should print it.  The core raises
+// with `(error 'repl ...)`, so error-object-message carries a "repl: " prefix that is
+// accurate inside `emit repl` and noise everywhere else -- `emit lib: repl: unbound
+// variable map` names the wrong tool.  Strip it here, host-side, rather than at the raise
+// sites: those are in CORE_FLAT (editing them is IR-shaping) and they feed the REPL's own
+// output too, which stays as it is (change: baked-set-on-every-door).
+static std::string door_msg(const std::string &m) {
+  const std::string p = "repl: ";
+  return m.compare(0, p.size(), p) == 0 ? m.substr(p.size()) : m;
+}
 static bool write_file(const std::string &path, const std::string &data) {
   std::ofstream f(path, std::ios::binary | std::ios::trunc);
   if (!f) return false;
@@ -376,13 +386,25 @@ static bool preload_user_libraries(const std::string &manifest, std::vector<std:
     bool progress = false;
     for (const std::string &p : pending) {
       std::string src = read_file(p);
+      // An unreadable or empty source must be reported HERE.  Handing "" to mode 4 makes it
+      // take `(car '())` on the empty form list, and a primitive trap is not catchable by the
+      // in-language `guard` that wraps that mode -- so a manifest entry naming a file that
+      // does not exist used to abort the process instead of naming the file
+      // (change: baked-set-on-every-door).
+      if (src.empty()) {
+        // "emit: ", not "emit run: ": this preload is shared by the run, build and lib
+        // doors, so naming one of them would be wrong for the other two.
+        std::cerr << "emit: cannot read library source " << p
+                  << " (named in the manifest)\n";
+        return false;
+      }
       rt_repl_set(4, src.data(), (intptr_t)src.size());
       intptr_t r = scheme_entry();
       std::string st = status_of(r);
       if (st == "deferred") { deferred.push_back(p); continue; }
       if (st == "already") { progress = true; continue; }  // e.g. baked (scheme base): no module
       if (st != "ok") {
-        std::cerr << "emit run: loading library " << p << ": " << scm_str(rt_cdr(r)) << "\n";
+        std::cerr << "emit: loading library " << p << ": " << door_msg(scm_str(rt_cdr(r))) << "\n";
         return false;
       }
       modules.push_back(scm_str(rt_car(rt_cdr(r))));   // collect IR; do NOT run __init
@@ -440,51 +462,70 @@ static int resolve_program(const std::string &manifest, const std::string &name,
   return 0;
 }
 
-// Compile a whole program (or a lone define-library) to its unit modules + program
-// IR, in-process -- the shared front half of `emit run`, `emit run --emit`, and
-// `emit build` (spec: no second compilation path).  Seeds the session, registers the
-// baked (scheme base), preloads the manifest's user libraries, then compiles the
-// program (mode 7).  On success fills `modules` (in emit order) and `prog_ir` and
-// returns true; `is_library` is set when the source was a lone define-library (then
-// `modules` is empty and `prog_ir` is that single unit).  GC must be initialized and
-// EMIT_NO_PRELUDE set by the caller before this runs.
-static bool compile_program(const std::string &prog_src, const std::string &manifest,
-                            bool no_prelude, std::vector<std::string> &modules,
-                            std::string &prog_ir, bool &is_library) {
+// Register the baked library set (mode 8) into the current session and return its modules
+// and their initializer symbols, positionally paired.
+//
+// The baked set is a PARTITION, so mode 8 returns one module per member in dependency
+// order, joined by the boundary marker -- they cannot share an LLVM module (change:
+// scheme-base-partition).  Split them into separate entries: every consumer of `modules`
+// (the JIT's addIRModule, --emit's stdout, `emit build`'s clang inputs) needs one module
+// per element.  `inits` gets one __init symbol per module, in the same order, for a door
+// with no program entry to drive them -- the REPL (change: baked-set-on-every-door).
+static bool register_baked_set(std::vector<std::string> &modules,
+                               std::vector<std::string> &inits) {
+  rt_repl_set(8, "", 0);
+  intptr_t r = scheme_entry();
+  if (status_of(r) != "ok") {
+    std::cerr << "emit: (scheme base): " << door_msg(scm_str(rt_cdr(r))) << "\n";
+    return false;
+  }
+  std::string baked = scm_str(rt_car(rt_cdr(r)));
+  size_t start = 0;
+  for (;;) {
+    size_t bpos = baked.find(kBoundary, start);
+    if (bpos == std::string::npos) break;
+    modules.push_back(baked.substr(start, bpos - start));
+    start = bpos + kBoundary.size();
+  }
+  modules.push_back(baked.substr(start));
+
+  std::istringstream isyms(scm_str(rt_cdr(rt_cdr(r))));
+  std::string sym;
+  while (std::getline(isyms, sym))
+    if (!sym.empty()) inits.push_back(sym);
+  return true;
+}
+
+// Seed a compile session: init-session, register the baked library set, and preload the
+// libraries the source imports.  The front half of every door that compiles from a
+// manifest -- `emit run`, `emit build`, and `emit lib` -- so that all of them resolve
+// imports against the same environment (change: baked-set-on-every-door; `emit lib` used
+// to run its export-table mode against an unseeded session, which is why a library
+// importing `(scheme base)` failed there).  GC must be initialized and EMIT_NO_PRELUDE set
+// by the caller before this runs.
+static bool seed_session(const std::string &prog_src, const std::string &manifest,
+                         bool no_prelude, std::vector<std::string> &modules) {
   rt_repl_set(no_prelude ? 0 : 1, "", 0);    // init-session
   scheme_entry();
   modules.clear();
 
   if (!no_prelude) {
-    rt_repl_set(8, "", 0);                    // register the baked library set
-    intptr_t r = scheme_entry();
-    if (status_of(r) != "ok") {
-      std::cerr << "emit: (scheme base): " << scm_str(rt_cdr(r)) << "\n";
-      return false;
-    }
-    // The baked set is a PARTITION, so mode 8 returns one module per member in dependency
-    // order, joined by the boundary marker -- they cannot share an LLVM module (change:
-    // scheme-base-partition).  Split them into separate entries: every consumer of
-    // `modules` (the JIT's addIRModule, --emit's stdout, `emit build`'s clang inputs)
-    // needs one module per element.
-    std::string baked = scm_str(rt_car(rt_cdr(r)));
-    size_t start = 0;
-    for (;;) {
-      size_t bpos = baked.find(kBoundary, start);
-      if (bpos == std::string::npos) break;
-      modules.push_back(baked.substr(start, bpos - start));
-      start = bpos + kBoundary.size();
-    }
-    modules.push_back(baked.substr(start));
+    std::vector<std::string> inits;           // unused here: the program's entry inits
+    if (!register_baked_set(modules, inits)) return false;
   }
+  return preload_user_libraries(manifest, modules, prog_src);
+}
 
-  if (!preload_user_libraries(manifest, modules, prog_src)) return false;
-
+// Compile a whole program (or a lone define-library) against the seeded session (mode 7).
+// On success fills `prog_ir` and returns true; `is_library` is set when the source was a
+// lone define-library (then `modules` is cleared and `prog_ir` is that single unit).
+static bool compile_unit(const std::string &prog_src, std::vector<std::string> &modules,
+                         std::string &prog_ir, bool &is_library) {
   rt_repl_set(7, prog_src.data(), (intptr_t)prog_src.size());   // compile program
   intptr_t pr = scheme_entry();
   std::string pst = status_of(pr);
   if (pst != "ok" && pst != "library") {
-    std::cerr << "emit: " << scm_str(rt_cdr(pr)) << "\n";
+    std::cerr << "emit: " << door_msg(scm_str(rt_cdr(pr))) << "\n";
     return false;
   }
   prog_ir = scm_str(rt_car(rt_cdr(pr)));
@@ -493,6 +534,17 @@ static bool compile_program(const std::string &prog_src, const std::string &mani
   // no program entry: drop the base/units set up for the program case.
   if (is_library) modules.clear();
   return true;
+}
+
+// Compile a whole program (or a lone define-library) to its unit modules + program
+// IR, in-process -- the shared front half of `emit run`, `emit run --emit`, and
+// `emit build` (spec: no second compilation path).  Seed, then compile: the same mode
+// sequence in the same order as before it was split, so the emitted IR does not move.
+static bool compile_program(const std::string &prog_src, const std::string &manifest,
+                            bool no_prelude, std::vector<std::string> &modules,
+                            std::string &prog_ir, bool &is_library) {
+  if (!seed_session(prog_src, manifest, no_prelude, modules)) return false;
+  return compile_unit(prog_src, modules, prog_ir, is_library);
 }
 
 static int emit_run(int argc, char **argv) {
@@ -705,12 +757,28 @@ static void preload_libraries(const std::string &manifest) {
     bool progress = false;
     for (const std::string &p : pending) {
       std::string src = read_file(p);
+      // Unreadable or empty: report and keep the session (see the run door's note above --
+      // handing "" to mode 4 traps uncatchably).  The REPL preloads EAGERLY, so a manifest
+      // entry the session never imports still reaches this, which is why a typo'd path used
+      // to abort `emit repl` at startup rather than at the import.
+      if (src.empty()) {
+        std::cerr << "error: cannot read library source " << p << " (named in the manifest)\n";
+        progress = true;                     // drop it; do not retry an unreadable file
+        continue;
+      }
       rt_repl_set(4, src.data(), (intptr_t)src.size());
       intptr_t r = scheme_entry();
       std::string st = status_of(r);
       if (st == "deferred") { deferred.push_back(p); continue; }
+      // Already registered -- a manifest entry naming a member of the baked set, which this
+      // repository's own emit-libs.scm has (the Chez driver resolves them from there).  The
+      // baked member wins and this contributes no second module; adding one would collide in
+      // the JIT.  The REPL only began seeing this status once it registered the baked set
+      // before preloading (change: baked-set-on-every-door); the run door's own preload has
+      // handled it since run-door-user-libraries.
+      if (st == "already") { progress = true; continue; }
       if (st != "ok") {
-        std::cerr << "error: loading library " << p << ": " << scm_str(rt_cdr(r)) << "\n";
+        std::cerr << "error: loading library " << p << ": " << door_msg(scm_str(rt_cdr(r))) << "\n";
         progress = true;                     // drop it; do not retry a hard error
         continue;
       }
@@ -819,11 +887,46 @@ static int emit_repl(int argc, char **argv) {
     rt_trap = nullptr;
   }
 
+  // Register the BAKED library set, exactly as the run and build doors do (mode 8), so a
+  // session's standard library does not depend on the manifest -- or on the directory the
+  // session was started in.  Before this, the REPL resolved (scheme base) from the manifest
+  // (eager preload, mode 5), so `emit repl` in a user project directory had NO standard
+  // library at all and could not even load a project library that imports (scheme base)
+  // (change: baked-set-on-every-door, issue #39).
+  //
+  // Registration comes BEFORE the manifest preload, so a manifest that names a baked member
+  // -- as this repository's own emit-libs.scm does, for the Chez driver -- hits the
+  // already-loaded guard in repl-load-library-text and contributes no second module.
+  //
+  // A session has no program @scheme_entry to drive the __inits, so the host runs them
+  // itself: every module is added first (a member's initializer reads globals defined by the
+  // members it imports), then each __init once, in the dependency order mode 8 returned.
+  if (prelude) {
+    std::vector<std::string> baked_modules, baked_inits;
+    if (!register_baked_set(baked_modules, baked_inits)) return 1;
+    for (const std::string &m : baked_modules) {
+      std::string err;
+      if (!add_ir(m, "<baked>", err)) {
+        std::cerr << "fatal: baked library add: " << err << "\n";
+        return 1;
+      }
+    }
+    for (const std::string &sym : baked_inits) {
+      // "scheme.base:__init" -> "scheme.base", the canonical unit prefix, for narration.
+      std::string who = sym.substr(0, sym.find(':'));
+      if (!run_init(sym)) {
+        std::cerr << "fatal: baked library init: " << who << "\n";
+        return 1;
+      }
+      vsay("register baked library " + who);
+    }
+  }
+
   // Preload manifest libraries so interactive (import (L)) forms can resolve them.
   say_manifest(manifest);
   preload_libraries(manifest);
 
-  // The prelude's procedures live in the now-preloaded (scheme base) library;
+  // The prelude's procedures live in the now-registered (scheme base) library;
   // auto-import it into the session scope (mode 6) so later forms resolve prelude
   // names to it -- unless --no-prelude.
   if (prelude) {
@@ -1069,8 +1172,6 @@ static int emit_lib(int argc, char **argv) {
 
   GC_INIT();
   forward_dump_level(dump, dump_all);
-  rt_repl_set(0, "", 0);                     // init-session
-  scheme_entry();
 
   std::string lib_src = read_file(src);
   if (lib_src.empty()) {
@@ -1078,11 +1179,20 @@ static int emit_lib(int argc, char **argv) {
     return 1;
   }
 
+  // Seed ONCE, then run both modes against that one session.  Both artifacts must come
+  // from the same import environment or the export table could describe a different
+  // resolution than the unit IR does -- and the export-table mode needs the environment at
+  // all: seeded only afterwards (by compile_program), it saw no imports, so any library
+  // declaring `(import (scheme base))` failed with `unbound variable map`
+  // (change: baked-set-on-every-door).
+  std::vector<std::string> modules;
+  if (!seed_session(lib_src, manifest, /*no_prelude=*/false, modules)) return 1;
+
   // .exports table + the library's basename (mode 11: (ok . "<basename>\n<datum>")).
   rt_repl_set(11, lib_src.data(), (intptr_t)lib_src.size());
   intptr_t er = scheme_entry();
   if (status_of(er) != "ok") {
-    std::cerr << "emit lib: " << scm_str(rt_cdr(er)) << "\n";
+    std::cerr << "emit lib: " << door_msg(scm_str(rt_cdr(er))) << "\n";
     return 1;
   }
   std::string exp_payload = scm_str(rt_cdr(er));
@@ -1095,12 +1205,12 @@ static int emit_lib(int argc, char **argv) {
   std::string exports_datum = exp_payload.substr(nl + 1);
 
   // Unit .ll via the emit path (same bytes the run/AOT doors produce for the source):
-  // a lone define-library compiles to one unit with no baked (scheme base).
-  std::vector<std::string> modules;
+  // a lone define-library compiles to one unit with no baked (scheme base).  This reuses
+  // the session seeded above rather than re-seeding, which is the point: re-seeding is what
+  // used to discard the registration mode 11 needed.
   std::string prog_ir;
   bool is_library = false;
-  if (!compile_program(lib_src, manifest, /*no_prelude=*/false, modules, prog_ir, is_library))
-    return 1;
+  if (!compile_unit(lib_src, modules, prog_ir, is_library)) return 1;
   if (!is_library) {
     std::cerr << "emit lib: source is not a single define-library\n";
     return 1;

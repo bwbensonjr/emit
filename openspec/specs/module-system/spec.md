@@ -420,11 +420,22 @@ is not in the program's transitive import closure SHALL NOT be linked.
 
 ### Requirement: REPL door — import a library interactively
 
-The interactive REPL SHALL, on evaluating `(import (<lib>))`, resolve the library and its
+The interactive REPL SHALL obtain the standard library by registering the **baked set** at session
+startup — not from the manifest — and SHALL run each registered member's initializer once, in
+dependency order, before evaluating any user form. The manifest SHALL be consulted only for libraries
+outside the baked set. A session started in a directory whose manifest names no member of the baked
+set SHALL therefore have the standard library and the derived-form macros, and SHALL be able to load
+a library that imports `(scheme base)`.
+
+The REPL SHALL, on evaluating `(import (<lib>))`, resolve the library and its
 transitive dependencies through the manifest, load each unit module into the running session
 in dependency order, invoke each unit's `@"L:__init"` exactly once, and merge the imported
 library's export table into the session scope so subsequent forms may reference the imported
-names.
+names. A dependency that is a member of the baked set SHALL be satisfied by the registered member
+rather than requiring a manifest entry.
+
+The REPL door SHALL remain **eager** over the manifest's remaining libraries: a session is an open
+world in which any prompt may import anything, so the laziness of the run door does not apply.
 
 #### Scenario: Imported procedure is callable in the REPL
 
@@ -437,6 +448,26 @@ names.
 - **WHEN** the user evaluates `(import (a))` where `(a)` imports `(b)`
 - **THEN** the REPL loads both `b` and `a` in dependency order, initializes each once, and a
   later form calling an export of `(a)` that relies on `(b)` returns the expected value
+
+#### Scenario: A session in a project directory has the standard library
+
+- **WHEN** `emit repl` starts in a directory whose manifest names only that project's own libraries
+- **THEN** a form calling a `(scheme base)` procedure such as `map` returns its value, and a
+  derived form such as `cond` expands, with no warning that the standard library is unloaded
+
+#### Scenario: A project library importing (scheme base) loads in the REPL
+
+- **WHEN** a manifest names one project library whose source declares `(import (scheme base))`, and
+  the user evaluates `(import (thatlib))`
+- **THEN** the library's import of `(scheme base)` resolves against the registered baked member, the
+  unit loads and initializes, and calling its export returns the expected value
+
+#### Scenario: A substrate name stays out of scope in a session
+
+- **WHEN** a REPL session starts with the prelude enabled and the user references an internal
+  substrate name such as `rd-atom` without importing the substrate
+- **THEN** the form reports an unbound variable, because registering a baked member does not
+  auto-import one that nothing auto-imports
 
 ### Requirement: Run door — run an importing program in-process (Chez-free)
 
@@ -538,9 +569,12 @@ Two libraries compiled independently, each with an internal helper and lifted co
 Library discovery SHALL be driven by a readable s-expression manifest mapping each library name
 to its source file and an optional artifact directory; compiled artifacts SHALL default under a
 build directory rather than the source tree. The manifest MAY list any number of libraries.
-Resolving an imported library that has no manifest entry SHALL be a compile-time error naming the
-missing library. The standard library `(scheme base)` SHALL be resolvable through the manifest like
-any other library, so both doors build/load it through the same machinery.
+Resolving an imported library that has no manifest entry and that is not a member of the baked set
+SHALL be a compile-time error naming the missing library. The standard library `(scheme base)` SHALL
+remain **listable** in a manifest, so the Chez-hosted driver can resolve it from the committed
+`.sld` like any other library — but a door that has registered the baked set SHALL treat such an
+entry as already satisfied (see "The baked library set is a partition emitted in dependency order"),
+so no door depends on the entry's presence and no door loads a second copy because of it.
 
 **Locating the manifest.** Every door SHALL locate the manifest by the same ordered procedure,
 taking the first candidate that exists and is readable:
@@ -592,12 +626,21 @@ program entries in any order.
 - **WHEN** a program (or library) imports `(nope)` and the manifest has no entry for `(nope)`
 - **THEN** the build path reports a compile-time error naming the missing library
 
-#### Scenario: (scheme base) resolves through the manifest
+#### Scenario: (scheme base) needs no manifest entry on any door
 
 - **WHEN** the auto-import of `(scheme base)` (or an explicit `(import (scheme base))`) is
-  resolved
-- **THEN** `(scheme base)` is located through the manifest and compiled/loaded like any other
-  library unit
+  resolved on any door against a manifest that does not name it
+- **THEN** it resolves against the registered baked member and the compile proceeds, with no
+  error naming `(scheme base)` as missing from the manifest
+
+#### Scenario: (scheme base) resolves through the manifest
+
+- **WHEN** the repository's own manifest names `(scheme base)` and the internal substrate, and the
+  Chez-hosted driver resolves them from it
+- **THEN** the driver locates them through the manifest and builds them from the committed `.sld`
+  sources, compiled and loaded like any other library unit, as before
+- **AND** a Chez-free door reading the same manifest resolves those two entries to the baked members
+  it already registered, so neither is loaded a second time
 
 #### Scenario: A program entry is parsed and does not affect library resolution
 
@@ -731,6 +774,24 @@ is: the guarantee that a program importing only `(scheme base)` (or importing no
 manifest present SHALL extend to whatever `(scheme base)` itself imports. A library the baked set
 depends on SHALL NOT be resolved through the manifest.
 
+**Every door SHALL register the baked set before it consults the manifest.** This holds for the AOT
+door, the run door, the REPL door, and the compile-unit (`emit lib`) door alike: a door SHALL NOT
+require a manifest entry to obtain the standard library, and the directory a door is invoked from
+SHALL NOT determine whether the standard library is available. Registration makes each member's
+export table and declared imports known to the compile session, so a program or library that imports
+a baked member resolves it with no file access.
+
+A door with no program entry to drive initialization — the REPL — SHALL additionally run each
+registered member's initializer exactly once, in the dependency order the members were emitted in,
+before it evaluates any user form. A door that emits a program SHALL continue to leave initialization
+to the program's entry, which calls each `__init` in topological order as an AOT executable does.
+
+**A manifest entry naming a member of the baked set SHALL resolve to the baked member** rather than
+loading a second copy of that library. The determination SHALL be by library name, so it covers every
+member of the set rather than an enumerated subset. A manifest that names a baked member SHALL
+therefore remain valid on every door and SHALL contribute no additional module, and a manifest that
+names none SHALL work equally well.
+
 A baked library MAY import another baked library. All doors — the AOT door, the REPL door's eager
 preload, the run door's lazy import closure, and the auto-import — SHALL handle a baked library that
 has imports, and SHALL continue to emit byte-identical modules across doors for the same program.
@@ -754,6 +815,28 @@ has imports, and SHALL continue to emit byte-identical modules across doors for 
   driver against the same partition
 - **THEN** the emitted program module is byte-identical across all three, as it was before the
   prelude was partitioned
+
+#### Scenario: Every door has the standard library without a manifest entry for it
+
+- **WHEN** each of the four doors is exercised in a directory whose manifest names only a project's
+  own libraries and no member of the baked set
+- **THEN** every door resolves `(scheme base)`, so a program referencing a standard-library name
+  compiles and runs, a REPL session resolves that name, and a library importing `(scheme base)`
+  compiles to its artifact
+
+#### Scenario: A manifest entry for a baked member loads no second copy
+
+- **WHEN** a door starts against a manifest that names `(scheme base)` and the internal substrate,
+  after the baked set has been registered
+- **THEN** each baked member contributes exactly one module to the session, the manifest entry
+  resolves to the baked member, and no duplicate-symbol failure occurs
+
+#### Scenario: The REPL initializes the baked set before the first form
+
+- **WHEN** a REPL session starts with the prelude enabled and the user's first form calls a
+  standard-library procedure
+- **THEN** each baked member's initializer has already run, in dependency order, and the call
+  observes populated globals
 
 ### Requirement: Relocated names live in their R7RS-small libraries
 
@@ -1104,3 +1187,4 @@ compiler.
   `caddr` or a reader lexeme helper
 - **THEN** it resolves that name by importing the substrate, and the name is absent from
   `(scheme base)`'s export list
+

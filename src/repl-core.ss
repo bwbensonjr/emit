@@ -262,6 +262,43 @@
                ;; is handed to the core as-is (change: cross-unit-direct-calls).
                (loop (cdr imps) (cons entry acc)))))))
 
+;; --- a lone define-library's import environment (modes 7 and 11) ---------------
+;; (change: baked-set-on-every-door).  Both the unit-emitting mode and the
+;; export-table mode compile ONE library that is not part of a program's closure, and
+;; both must resolve its declared imports the same way or the table would describe a
+;; different resolution than the emitted unit does.  Returns the export tables for the
+;; library's declared imports, or #f when one of them is not loaded in this session --
+;; which for `emit lib` means "neither baked nor named in the manifest".
+;;
+;; Before this, both passed '() and an import resolved to nothing: a library declaring
+;; `(import (scheme base))` failed with `unbound variable map`, and -- the quieter half
+;; -- a library importing a library that does not exist compiled SILENTLY, while a
+;; program importing one was correctly rejected.
+(define (lone-library-tables lib)
+  (repl-import-tables (cadr (parse-define-library lib))))
+
+;; Name the unresolved imports, so the diagnostic says which library is missing rather
+;; than that something is.  Each name is rendered on its own -- `(nope)`, not the `((nope))`
+;; a rendered LIST of names would give, which reads like one nested library name.
+(define (lone-library-unresolved-msg lib)
+  (let loop ([imps (cadr (parse-define-library lib))] [missing (quote ())])
+    (if (null? imps)
+        (string-append "unresolved import (not baked, not in the manifest): "
+                       (join-rendered (reverse missing)))
+        (loop (cdr imps)
+              (if (assoc (car imps) *repl-libs*)
+                  missing
+                  (cons (car imps) missing))))))
+
+;; Render each datum and join with ", ".
+(define (join-rendered ds)
+  (let loop ([ds ds] [acc ""] [first? #t])
+    (if (null? ds)
+        acc
+        (loop (cdr ds)
+              (string-append acc (if first? "" ", ") (render-datum (car ds)))
+              #f))))
+
 ;; Compile a library from its source text (host read the file): parse the
 ;; define-library, resolve its imports against already-loaded units, compile the
 ;; unit, remember its exports, and return (ok . (ir . init-symbol)) so the host
@@ -278,11 +315,17 @@
            [name  (car dl)]
            [tables (repl-import-tables (cadr dl))])   ; #f if a dep is not loaded yet
       (cond
-       ;; Already loaded -> skip (no module).  The run door registers (scheme base)
-       ;; baked-in (mode 8) before preloading the manifest, which also lists it; this
-       ;; guard makes the manifest's (scheme base) a no-op rather than a duplicate
-       ;; module (change: run-door-user-libraries).  The REPL never double-loads, so
-       ;; it never sees this status.
+       ;; Already loaded -> skip (no module).  EVERY door registers the baked set (mode 8)
+       ;; before preloading the manifest, and a manifest may name a baked member -- the
+       ;; repository's own emit-libs.scm names both, because the Chez driver resolves them
+       ;; from there.  This guard is what makes such an entry a no-op rather than a
+       ;; duplicate module (changes: run-door-user-libraries, baked-set-on-every-door).
+       ;;
+       ;; The test is by library NAME, so it covers whatever the partition holds rather
+       ;; than an enumerated subset -- which is why the REPL keeps using mode 5 (every
+       ;; manifest library) instead of mode 9, whose omission is the single hard-coded
+       ;; name `(scheme base)` and would miss the substrate.  The REPL DOES reach this
+       ;; status now; it did not before it registered the baked set.
        [(assoc name *repl-libs*) (cons (quote already) name)]
        [(not tables) (cons (quote deferred) name)]    ; retry after dependencies load
        [else
@@ -423,9 +466,15 @@
 ;; `ir` is the members' modules joined by *emit-unit-boundary*, because a partition emits
 ;; more than one and they cannot share an LLVM module -- each emits a fixed @__apply0 and
 ;; string globals from a reset counter (change: scheme-base-partition).  The host splits on
-;; the same marker it already uses for the library/program split.  The returned init symbol
-;; is (scheme base)'s, kept for protocol compatibility; the host does not use it, since the
-;; program's entry drives every __init.
+;; the same marker it already uses for the library/program split.
+;;
+;; The init field is every member's __init symbol, newline-joined in the SAME dependency
+;; order as the modules (compile-baked-set returns its tables in that order).  A door that
+;; emits a program ignores this and lets the program's @scheme_entry drive the __inits; the
+;; REPL door has no program entry, so its host runs them itself, in this order, once
+;; (change: baked-set-on-every-door).  It used to be (scheme base)'s symbol alone, "kept
+;; for protocol compatibility" -- the run door reads only the car of this pair, so widening
+;; the cdr leaves it untouched.
 (define (run-register-baked-set)
   (guard (e (#t (cons (quote error) (repl-error->string e))))
     (let* ([prelude-forms (read-forms-from-string *prelude-source*)]
@@ -440,7 +489,18 @@
                 (cons (cons (car p) (baked-entry-imports (car p))) *repl-lib-imports*)))
         (cdr baked))
       (cons (quote ok)
-            (cons (car baked) (mangle (quote (scheme base)) "__init"))))))
+            (cons (car baked)
+                  (baked-init-symbols (map car (cdr baked))))))))
+
+;; Every baked member's __init symbol, newline-joined in the order given -- one line per
+;; module the host is about to add, so the host can pair them positionally.
+(define (baked-init-symbols names)
+  (let loop ([ns names] [acc ""] [first? #t])
+    (if (null? ns)
+        acc
+        (loop (cdr ns)
+              (string-append acc (if first? "" "\n") (mangle (car ns) "__init"))
+              #f))))
 
 ;; Mode 7: compile a whole program that may import user libraries.  direct imports are
 ;; the program's explicit imports plus (scheme base) (run-with-scheme-base); their export
@@ -458,10 +518,19 @@
        ;; units it set up for the program case.  (Used by `emit run --emit < lib.sld`.)
        ;; A lone define-library IS the unit under inspection here (this is `emit lib`'s
        ;; and `emit run --emit < lib.sld`'s path), so it dumps at the ordinary level.
+       ;;
+       ;; Its imports resolve against the SESSION (mode 8's baked members plus the
+       ;; manifest units the host preloaded), which is what lets a library importing
+       ;; (scheme base) or another manifest library compile here at all
+       ;; (change: baked-set-on-every-door).
        [(single-define-library user-forms)
         => (lambda (lib)
-             (cons (quote library)
-                   (cons (compile-library-form lib (make-dumper #f)) "scheme_entry")))]
+             (let ([tables (lone-library-tables lib)])
+               (if (not tables)
+                   (cons (quote error) (lone-library-unresolved-msg lib))
+                   (cons (quote library)
+                         (cons (compile-library-form lib (make-dumper #f) tables)
+                               "scheme_entry")))))]
        [else
         (let ([direct (run-with-scheme-base (car (collect-imports user-forms)))])
           (let ([tables (repl-import-tables direct)])
@@ -525,17 +594,25 @@
     (let* ([forms (read-all-from-string text)]
            [lib   (single-define-library forms)])
       (if (not lib)
-          (cons (quote error) "emit lib: source is not a single define-library")
-          ;; no-dump deliberately: this mode recompiles the SAME library mode 7 just
-          ;; compiled, purely to recover its export table, so narrating here would print
-          ;; every stage of `emit lib --dump` a second time.
-          (let* ([dl   (parse-define-library lib)]
-                 [res  (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl) (quote ()) no-dump)]
-                 [nt   (cadr res)]            ; (name export-table)
-                 [name (car nt)])
-            (cons (quote ok)
-                  (string-append (lib-name->basename name) "\n"
-                                 (render-datum nt))))))))
+          (cons (quote error) "source is not a single define-library")
+          ;; The SAME import tables mode 7 resolves for this library (lone-library-tables),
+          ;; not '(): the export table must describe the resolution the emitted unit has,
+          ;; and a library importing (scheme base) could not be compiled here at all while
+          ;; this passed '() (change: baked-set-on-every-door).
+          (let ([tables (lone-library-tables lib)])
+            (if (not tables)
+                (cons (quote error) (lone-library-unresolved-msg lib))
+                ;; no-dump deliberately: this mode recompiles the SAME library mode 7 just
+                ;; compiled, purely to recover its export table, so narrating here would
+                ;; print every stage of `emit lib --dump` a second time.
+                (let* ([dl   (parse-define-library lib)]
+                       [res  (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl)
+                                              tables no-dump)]
+                       [nt   (cadr res)]      ; (name export-table)
+                       [name (car nt)])
+                  (cons (quote ok)
+                        (string-append (lib-name->basename name) "\n"
+                                       (render-datum nt))))))))))
 
 ;; --- the input-completeness probe (design D4(b); archived OpenSpec change
 ;;     repl-embedded-incremental) ---------------------------------------------
