@@ -53,27 +53,28 @@
       `./run-dev-tests.sh` green, `git diff bootstrap/ lib/scheme/base.sld` empty, no baseline
       re-record. **Do not proceed until this holds** — it is what proves the generalization is
       behaviour-preserving before anything relocates.
-      **BLOCKED — the gate did not hold, and the task's own wording was wrong.**
-      (a) *Wording:* `git diff bootstrap/` can never be empty, because `src/prelude-surface.scm`
-      and `src/core.ss` are compiler source in `CORE_FLAT` — adding a function to the compiler
-      necessarily changes the compiler's IR. The correct gate is: `scheme.base.ll`,
-      `lib/scheme/base.sld` (content), and `module-scaffold-baseline.sha256` unmoved, and both
+      **Gate now holds; the anomaly is resolved.**
+      (a) *The task's own wording was wrong:* `git diff bootstrap/` can never be empty, because
+      `src/prelude-surface.scm` and `src/core.ss` are compiler source in `CORE_FLAT` — adding a
+      function to the compiler necessarily changes the compiler's IR. The real gate is:
+      `scheme.base.ll`, `base.sld` (content) and `module-scaffold-baseline.sha256` unmoved, both
       suites green.
-      (b) *What holds:* after step 2, `run-all-tests.sh` 20/20 green;
-      `bootstrap/scheme.base.ll` byte-identical (512594 both); `base.sld` exports+body
-      byte-identical (only the regenerated header comment differs);
-      `module-scaffold-baseline.sha256` unmoved.
-      (c) *What does NOT hold — unexplained IR growth.* The three compiler IR files each grew
-      ~18% (`schemec.ll` 2738890 -> 3230202) and gained **186 LLVM function definitions**
-      (679 -> 865). Isolated by controlled experiment: the SAME compiler binary on the old flat
-      source emits 679 program functions, on the new flat source 865 — so it is caused by the
-      source change, not by a regen or fixed-point artifact. Bisected to `src/core.ss`: a hybrid
-      of the new `prelude-surface.scm` with the OLD `core.ss` emits 679, i.e. the declaration
-      helpers cost nothing. ~11 new defines and ~5 lambdas in `core.ss` should cost roughly 20
-      functions, not 186; the flat source grew only 7157 bytes (2.8%) while IR grew 491312 bytes
-      (18%), against a repo-wide source->IR ratio of ~10.6x.
-      **Must be understood before steps 4-8 build on it** — binary size is an explicit
-      `CLAUDE.md` design concern, and the substrate step multiplies whatever this is.
+      (b) *The +186-function anomaly was my own bug, found by bisection.* I had added
+      `(define (define-syntax-form? f) (and (pair? f) (eq? (car f) 'define-syntax)))` to
+      `src/core.ss` — but that function **already exists**, byte-identical, at
+      `src/passes/expand.ss:34`, and `expand.ss` precedes `core.ss` in `CORE_FLAT`. It was a
+      redefinition of a compiler-internal function.
+      Emit supports top-level redefinition, so a redefined name loses its direct-call
+      optimization: every call site goes indirect through a mutable global and materializes
+      closures that were previously direct calls. `define-syntax-form?` is called from the
+      expander, so the de-optimization fanned out across the whole compiler — **+186 LLVM
+      functions (679 -> 865), +18% IR, from one duplicated four-line definition.**
+      Bisected with seven variant compiles of the flat source against one fixed compiler:
+      A (export derivation) 679, E (+partition-library-form/assoc) 679, F (+library-body-forms)
+      679, G (+`define-syntax-form?`, *uncalled*) **857**, H (same body renamed `macro-form?`)
+      **679**. Same body, different name, 178-function difference — which located it exactly.
+      Fix: delete the duplicate and use the existing one. The flat source then emits 679
+      functions, identical to baseline.
 
 ## 4. The substrate (behaviour-preserving for user programs)
 

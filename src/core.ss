@@ -27,9 +27,6 @@
   (and (pair? f) (eq? (car f) 'define)
        (let ([sig (cadr f)]) (if (pair? sig) (car sig) sig))))
 
-;; is this form a macro definition?  (the prelude's compile-time half)
-(define (define-syntax-form? f)
-  (and (pair? f) (eq? (car f) 'define-syntax)))
 
 ;; prepend prelude forms to the user's, dropping any prelude define whose name
 ;; the user also defines (user-wins shadowing, so the prelude never clobbers).
