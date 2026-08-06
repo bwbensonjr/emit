@@ -111,8 +111,20 @@ build/runtime-host.o: src/runtime/runtime.c Makefile | build
 # the LAST manifest candidate (change: manifest-search-path): the prefix this binary
 # was built for, consulted only when neither ./emit-libs.scm nor a manifest beside the
 # executable exists.  A plain in-repo `make` bakes /usr/local and never uses it.
+#
+# EMIT_DEFAULT_CC/_GC_INC/_GC_LIB record the toolchain THIS build resolved -- the same
+# llvm-env.sh values every other recipe here uses -- as the LOWEST-precedence source
+# for `emit build`'s link (change: installed-emit-completeness, issue #36).  They are
+# reached only when neither an explicit CC/GC_* nor a run-time llvm-env.sh discovery
+# produced an answer, which is the keg-only-LLVM case: nothing on PATH to find.  They
+# describe the BUILD MACHINE's toolchain, so they follow $(CC)/$(GC_*) and not
+# PREFIX/DESTDIR -- staging into a temporary root must not change them.
 build/emit.o: src/emit.cpp Makefile | build
-	$(CXX) $(CXXFLAGS) -DEMIT_PREFIX='"$(PREFIX)"' -c $< -o $@
+	$(CXX) $(CXXFLAGS) -DEMIT_PREFIX='"$(PREFIX)"' \
+	  -DEMIT_DEFAULT_CC='"$(CC)"' \
+	  -DEMIT_DEFAULT_GC_INC='"$(GC_INC)"' \
+	  -DEMIT_DEFAULT_GC_LIB='"$(GC_LIB)"' \
+	  -c $< -o $@
 
 # Batch bootstrap runner object (change: run-door-user-libraries, decision X):
 # tools/regen.sh links this with the batch embed.ll into build/emit-boot to
@@ -149,8 +161,9 @@ catalogue:
 	tools/complexity.sh --write
 
 # ===========================================================================
-# install: the binary PLUS the libraries it needs beside it (change:
-# manifest-search-path, issue #35).
+# install: the binary PLUS everything the doors need beside it -- the libraries
+# (change: manifest-search-path, issue #35) and the support files (change:
+# installed-emit-completeness, issue #36).
 # ===========================================================================
 # A library that is not baked into the compiler is reachable only through a manifest,
 # so installing the binary alone ships an `emit` whose standard library disappears the
@@ -172,21 +185,42 @@ catalogue:
 # directories: lib/scheme for the standard libraries and lib/emit for the internal
 # substrate (change: scheme-base-partition).  A glob per directory, and the directories are
 # created from the same lists, so adding a library to either needs no edit here.
+#
+# THE SUPPORT FILES ship too (change: installed-emit-completeness, issue #36).  The
+# build door needs two files that are neither the binary nor a library --
+# tools/llvm-env.sh, which discovers the C toolchain, and src/runtime/runtime.c, which
+# is compiled into every delivered executable -- and without them `emit build` was the
+# one door that did not work from an install.  tools/log.sh is here because
+# llvm-env.sh SOURCES it for its narration: shipping the script alone would install
+# one that fails on its first line.
+#
+# Each lands at its REPO-RELATIVE SUBPATH under $(SHAREDIR), the same mirroring rule
+# the lib/ sources follow, so the binary's support-file lookup is one function with no
+# per-file path rewriting and a support file added later needs no edit to it.
+# Executable bit for the script, 644 for the sources it does not run.
 BINDIR   := $(DESTDIR)$(PREFIX)/bin
 SHAREDIR := $(DESTDIR)$(PREFIX)/share/emit
 LIBDIRS  := lib/scheme lib/emit
 SLDS     := $(foreach d,$(LIBDIRS),$(wildcard $(d)/*.sld))
+SUPPORT_EXEC := tools/llvm-env.sh tools/log.sh
+SUPPORT_DATA := src/runtime/runtime.c
+SUPPORT      := $(SUPPORT_EXEC) $(SUPPORT_DATA)
+SUPPORTDIRS  := $(sort $(foreach f,$(SUPPORT),$(dir $(f))))
 
 .PHONY: install
 install: $(EMIT)
 	@. tools/log.sh; say "install emit -> $(DESTDIR)$(PREFIX)  [prefix $(PREFIX)]"
-	@install -d "$(BINDIR)" $(foreach d,$(LIBDIRS),"$(SHAREDIR)/$(d)")
+	@install -d "$(BINDIR)" $(foreach d,$(LIBDIRS),"$(SHAREDIR)/$(d)") \
+	  $(foreach d,$(SUPPORTDIRS),"$(SHAREDIR)/$(d)")
 	@install -m 755 $(EMIT) "$(BINDIR)/emit"
 	@install -m 644 emit-libs.scm "$(SHAREDIR)/emit-libs.scm"
 	@$(foreach d,$(LIBDIRS),install -m 644 $(wildcard $(d)/*.sld) "$(SHAREDIR)/$(d)/";)
+	@$(foreach f,$(SUPPORT_EXEC),install -m 755 $(f) "$(SHAREDIR)/$(f)";)
+	@$(foreach f,$(SUPPORT_DATA),install -m 644 $(f) "$(SHAREDIR)/$(f)";)
 	@. tools/log.sh; \
 	  say "install $(EMIT) -> $(BINDIR)/emit  [$$(bytes $(BINDIR)/emit) bytes]"; \
-	  say "install emit-libs.scm + $(words $(SLDS)) library source(s) -> $(SHAREDIR)"
+	  say "install emit-libs.scm + $(words $(SLDS)) library source(s) -> $(SHAREDIR)"; \
+	  say "install $(words $(SUPPORT)) support file(s) -> $(SHAREDIR)  [$(SUPPORT)]"
 
 # build/ is a real directory (order-only prerequisite), not a phony target.
 build:

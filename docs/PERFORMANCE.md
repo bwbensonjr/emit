@@ -25,6 +25,7 @@ speed items in this list.
 | [P8](#p8-the-emit-build-door-does-not-tree-shake) | The `emit build` door does not tree-shake | size | med–high | med | — | ☐ |
 | [P9](#p9--an-optional-argument-costs-every-call-site-its-cross-unit-direct-call) | An optional argument costs every call site its cross-unit direct call | speed | med | med | — | ☐ |
 | [P10](#p10--a-library-another-unit-imports-is-never-tree-shaken-the-substrate-ships-whole) | A library another unit imports is never tree-shaken (the substrate ships whole) | size | high | med | — | ☐ |
+| [P11](#p11--every-emit-build-recompiles-the-c-runtime-from-source) | Every `emit build` recompiles the C runtime from source | build speed | low–med | low | — | ☐ |
 
 Legend — **Value**: benefit if fixed. **Cost**: rough implementation effort/risk. These are
 estimates to aid sequencing, not commitments.
@@ -1083,6 +1084,45 @@ the better root computation.
 **OpenSpec change:** none yet. Surfaced by `scheme-base-partition` (archived
 `2026-08-04-scheme-base-partition`), which introduced the first library-importing-a-library in the
 shipped set and so made a dormant limitation load-bearing.
+
+---
+
+## P11 — Every `emit build` recompiles the C runtime from source
+
+**Status:** ☐ not started (deliberately deferred; see "Why it is not scheduled")
+
+**Symptom.** `emit build` hands `src/runtime/runtime.c` — a ~91 KB C file — to clang on the link
+line of *every* delivered executable, alongside the unit `.ll` files. Nothing about it varies with
+the program being built, so the same translation unit is compiled again for every build, on every
+machine, forever. With `-flto` and `-O2` the compile is not free.
+
+**Cause.** The link line is assembled in `link_clang` (`src/emit.cpp`) from `tc.cc`, the unit `.ll`
+files, and the runtime **source**. Shipping source rather than an object is a deliberate property of
+the install contract, not an oversight — see below.
+
+**Possible fix.** Ship a prebuilt `runtime.o` (or a `libemitrt.a`) beside the binary and link that
+instead, falling back to the source when the object is absent or does not match the target. This
+would drop one C compile from every delivered build.
+
+**Why it is not scheduled.** The install contract deliberately excludes compiled artifacts. The
+`install` target's own note explains it for the library sources — shipping compiled artifacts
+"would put artifact staleness on the install surface" — and the same argument holds harder for the
+runtime: an installed `runtime.o` is stale relative to a `runtime.c` edit, is target- and
+ABI-specific in a way source is not, and would have to be validated against the linking clang's
+target before it could be trusted. `installed-emit-completeness` made `emit build` work from an
+install by shipping `src/runtime/runtime.c` at its repo-relative subpath under
+`<prefix>/share/emit/`, and recorded this speed idea here rather than taking it, because the
+correctness question (does the door work at all when installed?) and the speed question (how fast
+does it work?) have different answers and different risks.
+
+Worth revisiting once there is a measurement: how much of `emit build`'s wall clock is the runtime
+compile, as against the LTO link of the units? If it is a small fraction, the staleness surface buys
+nothing.
+
+**Value:** low–med — it shortens the inner loop of the project's flagship deliverable, but only by a
+constant. **Cost:** low to implement, med in contract risk (see above).
+
+**OpenSpec change:** none. Recorded by `installed-emit-completeness` as an explicit non-goal.
 
 ---
 

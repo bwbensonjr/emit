@@ -23,11 +23,19 @@
 
 - [ ] 3.1 Reproduce the failure: with Homebrew `llvm` keg-only (no `llvm-config`/keg `clang` on
       `PATH`, only Apple `/usr/bin/clang`), confirm `emit build` cannot resolve an LLVM backend.
-- [ ] 3.2 Implement the lowest-priority "installed default" fallback in toolchain discovery
-      (`tools/llvm-env.sh`, and `src/compile.ss`'s self-probe if needed) that consults a
-      recorded keg LLVM location when no override is set and nothing suitable is on `PATH`.
+- [ ] 3.2 **Depends on `installed-emit-completeness`; do not design this again.** That change
+      already built the lowest-priority installed default: `make install` ships
+      `tools/llvm-env.sh` (plus the `tools/log.sh` it sources) under `<prefix>/share/emit/`, and
+      the build resolved at compile time is recorded in the binary as
+      `EMIT_DEFAULT_CC` / `_GC_INC` / `_GC_LIB`, consulted only after explicit env and after
+      `llvm-env.sh` discovery (`toolchain-discovery` spec, "An installed binary carries its
+      build-time toolchain as a last-resort default"). What remains HERE is formula-side only:
+      confirm the bottle records a keg LLVM the formula can rely on, and that a keg upgrade is
+      followed by the live-discovery layer rather than stranded on the recorded path.
 - [ ] 3.3 Ensure `EMIT_LLVM_BIN` / `LLVM_CONFIG` overrides and normal `PATH`/keg discovery keep
-      strictly higher precedence than the new fallback, so the from-source workflow is unchanged.
+      strictly higher precedence than the recorded fallback, so the from-source workflow is
+      unchanged (the ladder is already ordered that way; this is a verification against the
+      installed bottle, not a second implementation).
 
 ## 4. Homebrew tap and formula
 

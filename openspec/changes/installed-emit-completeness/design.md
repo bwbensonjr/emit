@@ -143,6 +143,15 @@ The cost is REPL startup compiling the installed manifest's non-baked libraries.
 task; if it is material, the fallback is to preload the first manifest eagerly and later ones on
 demand, which is a strictly internal change to `preload_libraries`.
 
+**Measured (task 3.6): ~78 ms, and the union stands.** From a project directory holding a manifest
+that names only its own program, driving an installed `emit repl` (macOS/arm64, 8 runs each,
+interleaved): **591 ms** with the chain suppressed (`--manifest ./emit-libs.scm`, so the project's
+own manifest and nothing else) against **667 ms** chained, where the installed manifest contributes
+five libraries — `(emit internal)`, `(scheme inexact)`, `(scheme cxr)`, `(scheme read)`,
+`(scheme file)`. That is ~13% on top of a startup already dominated by the prelude and the baked
+set, for the full standard surface at the prompt. Not material; the eager-first-plus-on-demand
+fallback is not taken.
+
 ### D8 — Narration reports the chain
 
 `say_manifest()` currently prints one line. With a chain it reports what was actually resolved, in
