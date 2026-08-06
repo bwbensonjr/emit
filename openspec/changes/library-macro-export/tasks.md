@@ -259,13 +259,18 @@
       never exported its derived forms). A macro library's artifact grows to 141–153 bytes; no
       emitted `.ll` and no binary changes size. An entry asserting "no measurable cost" would be
       noise in a design backlog.
-- [ ] 9.5 Reference `Fixes #48` from the implementing commit and comment the outcome on the issue
-      → **not done: awaiting the user's go-ahead to commit.** `test/trust-check.sh` also waits on
-      this — it `[SKIP]`s while `bootstrap/` has uncommitted changes, by design (it compares
-      *regenerated* IR against *committed* IR, so it is a post-commit check on a clean tree). Its
-      claim is largely already established for three of the five committed IR files by
-      `self-host-fixpoint`'s independent-host re-derivation (8.5); what it adds is `schemec.ll` and
-      `embed-repl.ll`. Run it right after committing.
+- [x] 9.5 Reference `Fixes #48` from the implementing commit and comment the outcome on the issue
+      → `af82293` (`Fixes #48`) and issue comment #issuecomment-5207337093.
+      → `test/trust-check.sh` had to wait on the commit: it `[SKIP]`s while `bootstrap/` is dirty, by
+      design, since it compares *regenerated* IR against *committed* IR. Run after committing:
+      **`[OK] committed IR is exactly what the current source regenerates`** — a full independent
+      regen returned `bootstrap/` byte-identical, closing R6/R8.
+- [x] 9.7 **Unplanned:** record the regen barrier in `CLAUDE.md` (`544cc5e`). Editing core source
+      after a regen, or during a suite, cost ~25 minutes twice here — once as a guaranteed
+      trust-check failure, once as a mixed-source `bootstrap/` from a killed regen. Verified the
+      documented input set against `tools/regen.sh:115-117` rather than from memory, which turned up
+      that `CORE_FLAT` alone under-describes it (`src/repl-core.ss`, `src/prelude.scm`,
+      `src/entry-*.scm` also force a regen) and that `src/emit.cpp` does **not**.
 - [x] 9.6 File the unplanned finding from 3.2 as an issue: a library body cannot use a derived-form
       macro at all, which is what bounds D5 for a library importer
       → **#55**, with the cause traced to `prelude-macro-forms` being program-path-only and
