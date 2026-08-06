@@ -339,6 +339,33 @@ byte-identical to the one it produced before this change.
 - **THEN** its export table records that external name `map` maps to symbol
   `mylib:%fast-map`
 
+#### Scenario: A procedure export records its code label and arity
+
+- **WHEN** `(mylib)` exports `greet`, defined as a two-argument lambda
+- **THEN** its export table additionally records `greet`'s code label and the arity 2
+- **AND** a program that imports `(mylib)` can emit a call to that label without reading the
+  library's source or its unit module
+
+#### Scenario: A non-procedure export records no label
+
+- **WHEN** `(mylib)` exports a value binding, or a procedure of variable arity
+- **THEN** the table records no code label for it, and calls to it are lowered indirectly
+
+#### Scenario: An export the unit assigns records no label
+
+- **WHEN** `(mylib)` exports `f`, defined as a fixed-arity lambda, and some procedure in `(mylib)`
+  assigns `f`
+- **THEN** the export table records `f`'s mangled symbol but no code label for it
+- **AND** an importing program lowers every call to `f` indirectly, reading the slot on each call
+
+#### Scenario: The stable label is not claimed twice within a unit
+
+- **WHEN** a library defines `f` as a top-level lambda and also assigns a lambda to `f` from inside
+  another procedure's body
+- **THEN** only the top-level initializer takes the stable, name-derived label `mylib:code:f`; the
+  assigned lambda is hoisted under an ordinary counter-derived label
+- **AND** the emitted unit defines each code label exactly once and links
+
 #### Scenario: The export table carries an exported macro's transformer
 
 - **WHEN** `(mymac)` exporting the macro `swap!` is compiled
