@@ -146,7 +146,8 @@ compiler could tell a `set!` the program wrote from one the desugaring invented
 
 **Macros (`expand`).** `expand` is a fixpoint `syntax-rules` macro expander. Before
 `collect-toplevel`, the driver lifts every top-level `(define-syntax name (syntax-rules …))`
-out of the form sequence into a macro environment (from both the prelude and the program);
+out of the form sequence into a macro environment (from the prelude and the program, plus the
+transformers an imported library exports — change: `library-macro-export`, `docs/MODULES.md`);
 `expand` then rewrites each macro use by its first matching rule and re-expands the result
 until only core forms and known primitive heads remain. Expansion is **hygienic for
 macro-introduced identifiers** — a template identifier that is not a pattern variable and

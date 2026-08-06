@@ -619,9 +619,10 @@ The message body is the same whichever door compiled the form — `emit run`, `e
 
 This is Modules v0:
 
-- **A library body cannot use a derived-form macro** (issue #55). `(when …)`, `cond`, `case`, `let*`
-  in a `.sld` body report `unbound variable when` even with `(import (scheme base))`: the baked macro
-  set is merged into the *program* path only, and `(scheme base)` does not export its compile-time
+- **A library body cannot use a derived-form macro** (issue #55). `(when …)`, `cond`, `case`, `let*`,
+  `and`, `or` in a `.sld` body report `unbound variable when` even with `(import (scheme base))`;
+  named `let` is the exception, hand-written in the expander rather than a prelude macro. The baked
+  macro set is merged into the *program* path only, and `(scheme base)` does not export its compile-time
   half. `(scheme base)`'s own members dodge this by carrying every transformer in each member's body,
   which user libraries cannot do. Exporting macros *from* a library works (above); importing one
   *into* a library works too, unless its template mentions a derived form.

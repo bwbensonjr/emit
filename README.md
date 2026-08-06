@@ -252,7 +252,10 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
 - Derived forms: `cond` (with `else`/`=>`/bare-test clauses), `and`, `or`, `when`, `unless`,
   `let*` — realized as `syntax-rules` macros in the prelude; named `let` (hand-written).
 - **Macros**: `define-syntax` + `syntax-rules` (literals, `_`, ellipsis), a fixpoint
-  `expand` stage, hygienic for macro-introduced identifiers.
+  `expand` stage, hygienic for macro-introduced identifiers. A library may **export** a macro
+  (change: `library-macro-export`, issue #48) — the `.exports` artifact carries a compile-time half,
+  and a template's free identifiers are resolved in the *defining* library, so an exported macro may
+  reach the library's private procedures and private macros without widening its public surface.
 - **Exceptions (R7RS-small subset)**: `guard`, `raise`, and `error` with catchable error
   objects (`error-object?`/`-message`/`-irritants`). `guard` is a one-shot upward escape
   over a runtime `setjmp` frame stack (no `call/cc` needed); an uncaught raise aborts as

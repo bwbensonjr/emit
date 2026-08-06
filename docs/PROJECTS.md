@@ -339,8 +339,20 @@ afterwards.
 Emit is a real compiler with a deliberately small surface. The ones most likely to affect a
 project:
 
-- **A library cannot export macros.** `define-syntax` works inside a library, but exporting a macro
-  through the artifact is not supported; the derived forms reach your code through `(scheme base)`.
+- **A library body cannot use a derived-form macro**
+  ([#55](https://github.com/bwbensonjr/emit/issues/55)). `when`, `cond`, `case`, `let*` in a `.sld`
+  body report `unbound variable when` even with `(import (scheme base))` — the baked macro set is
+  merged into the *program* path only, and this catches `and` and `or` too. Write the library body
+  in core forms (`if`, `let`, `letrec`, `lambda`, `begin`, `set!` — and named `let`, which is
+  hand-written in the expander rather than a prelude macro), or `define-syntax` what you need in the
+  library itself. Exporting a macro *from* a library works (below); so does importing one, unless
+  its template mentions a derived form.
+- **An exported macro is `syntax-rules` only, at the body's top level.** `(export twice)` over a
+  `define-syntax` is supported, bare or renamed, and its template may reach the library's private
+  names — see [`MODULES.md`](MODULES.md#how-an-exported-macro-travels). But `let-syntax`,
+  `letrec-syntax`, `define-syntax` at an inner scope, `syntax-case`, and procedural transformers are
+  not. A typo inside an exported template is reported in the importing program rather than at the
+  library ([#56](https://github.com/bwbensonjr/emit/issues/56)).
 - **Imports are whole-library.** No `only`, `except`, `prefix`, or `rename` on the import side.
 - **No `include`, `include-ci`, `include-library-declarations`, or `cond-expand`** in a library
   ([#18](https://github.com/bwbensonjr/emit/issues/18)). A library's body is what is written in its
