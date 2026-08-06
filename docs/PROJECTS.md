@@ -59,8 +59,9 @@ emit run main.scm
 ```
 
 Note what got printed: **the program's final value**. `emit run` prints it, and so does a delivered
-executable — you do not need `display` to see a result. If your program ends in a form with no
-useful value, you will see that:
+executable — you do not need `display` to see a result. The one exception is the *unspecified*
+value, which prints nothing at all, so a program that ends in output delivers exactly its own
+bytes:
 
 ```sh
 printf '(display "hi")\n(newline)\n' > hello.scm
@@ -68,12 +69,10 @@ emit run hello.scm
 ```
 ```
 hi
-#<unspecified>
 ```
 
-That trailing `#<unspecified>` is the value of `(newline)`. To avoid it, end the program with the
-expression you care about rather than with output. `emit run` also reads stdin, so
-`emit run < main.scm` works.
+That is the same rule the REPL follows, and a delivered executable follows it too — so a program's
+output is identical however you run it. `emit run` also reads stdin, so `emit run < main.scm` works.
 
 ## A library of your own
 

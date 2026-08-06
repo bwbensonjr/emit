@@ -1829,10 +1829,11 @@ void rt_write(val v) { print_val(stdout, v, /*display=*/0); }
  * runtime with -DRT_NO_MAIN to omit this (and the scheme_entry it expects).
  *
  * -DRT_FILTER_MAIN builds a *filter* main that runs the program purely for its
- * effects and suppresses the final-value print.  A text filter (e.g. the
- * self-hosted `schemec`, whose entry is `(display (compile-source-string
- * (read-all-stdin)))`) does its own output via `display`; printing the entry's
- * value afterward would append `()\n` and corrupt the output stream. */
+ * effects and suppresses the final-value print -- EVERY final value, not just the
+ * unspecified one, which is what still distinguishes it from the default main below.
+ * A text filter (e.g. the self-hosted `schemec`, whose entry is `(display
+ * (compile-source-string (read-all-stdin)))`) does its own output via `display`;
+ * printing the entry's value afterward would corrupt the output stream. */
 #ifndef RT_NO_MAIN
 extern val scheme_entry(void);
 
@@ -1842,8 +1843,18 @@ int main(void) {
   scheme_entry();          /* run for effect; the program handles its own I/O */
 #else
   val result = scheme_entry();
-  rt_write(result);
-  printf("\n");
+  /* Suppress THE unspecified value -- no written form, no newline -- so a program
+   * ending in output delivers exactly its own bytes (change: emit-cli-front-door,
+   * design D4).  This is the REPL's echo-suppression rule stated for programs, and
+   * `emit run`'s in-process path carries the identical guard, so a delivered
+   * executable and the development door stay byte-identical on stdout (design D5).
+   * A reporting policy, not a property of the value: an explicit (write (if #f #f))
+   * goes through print_val and still renders #<unspecified>.  #f and () are
+   * legitimate final values and still print. */
+  if (!is_unspec(result)) {
+    rt_write(result);
+    printf("\n");
+  }
 #endif
   return 0;
 }

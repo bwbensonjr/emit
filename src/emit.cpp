@@ -129,6 +129,83 @@ static bool is_dump_flag(const std::string &a, bool &dump, bool &dump_all) {
   if (a == "--dump-all") { dump_all = true; return true; }
   return false;
 }
+
+// --- usage text (change: emit-cli-front-door) -----------------------------------
+// Asking a tool what it does is a REQUEST, not an error: every door accepts
+// --help/-h, prints its own usage, and exits 0.
+static bool is_help_flag(const std::string &a) { return a == "--help" || a == "-h"; }
+
+// Every usage writer takes a DESTINATION, because the same text has two of them
+// (design D1): usage printed because the user asked for it is the output they asked
+// for and goes to stdout, so `emit --help | head` works without redirection; usage
+// printed as part of a diagnostic is narration and stays on stderr, per
+// docs/OUTPUT.md.  Exit status follows the same split -- 0 when requested, non-zero
+// when it accompanies an error.
+//
+// The top-level block stays the map it has always been -- a user running `emit` bare
+// wants the verbs, not the detail -- and each verb owns its own (design D2).  `emit
+// lib`'s arity-error line was the first of these; it is now one of four rather than a
+// special case.  The shared-flag section is written once, in usage_shared, and called
+// by all five, so the repetition cannot drift.
+static void usage_shared(std::ostream &os) {
+  os << "\n"
+        "options every verb accepts:\n"
+        "  --dump       print the IL after each compiler pass to stderr (stdout unchanged)\n"
+        "  --dump-all   --dump, plus the stages of (scheme base) and imported libraries\n"
+        "  --help, -h   print this usage on stdout and exit\n";
+}
+
+static void usage(std::ostream &os) {
+  os << "usage: emit <verb> [args]\n"
+        "  emit run  [FILE] [--manifest F] [--no-prelude]     compile and run a program\n"
+        "  emit repl [--manifest F] [--no-prelude]            interactive REPL\n"
+        "  emit build [NAME] [--manifest F] [-o OUT] [--no-prelude]   deliver a native exe\n"
+        "  emit lib  SRC [-o DIR] [--manifest F]              compile one library -> artifact\n"
+        "  emit help [VERB]                                   this summary, or a verb's usage\n";
+  usage_shared(os);
+  os << "\n"
+        "ask a verb what it takes: emit <verb> --help\n";
+}
+
+static void usage_run(std::ostream &os) {
+  os << "usage: emit run [FILE] [options]     compile and run a program\n"
+        "\n"
+        "  FILE                      program source; stdin when FILE is omitted\n"
+        "  --manifest F              manifest to resolve libraries and programs against\n"
+        "  --no-prelude              do not bake or imply (scheme base)\n"
+        "  --emit                    write the program's LLVM IR to stdout; do not run\n"
+        "  --resolve-program [NAME]  print a manifest program entry's source and output\n"
+        "                            path, one per line; do not run\n";
+  usage_shared(os);
+}
+
+static void usage_repl(std::ostream &os) {
+  os << "usage: emit repl [options]           interactive REPL (^D to exit)\n"
+        "\n"
+        "  --manifest F              manifest whose libraries are preloaded into the session\n"
+        "  --no-prelude              do not bake or auto-import (scheme base)\n";
+  usage_shared(os);
+}
+
+static void usage_build(std::ostream &os) {
+  os << "usage: emit build [NAME] [options]   deliver a native executable\n"
+        "\n"
+        "  NAME                      manifest (program NAME) entry; the sole entry when omitted\n"
+        "  --manifest F              manifest to resolve the program and its libraries against\n"
+        "  -o OUT                    output path, overriding the entry's own\n"
+        "  --no-prelude              do not bake or imply (scheme base)\n";
+  usage_shared(os);
+}
+
+static void usage_lib(std::ostream &os) {
+  os << "usage: emit lib SRC [options]        compile one library -> artifact\n"
+        "\n"
+        "  SRC                       the library source (.sld) to compile\n"
+        "  -o DIR                    artifact directory (default build/lib)\n"
+        "  --manifest F              manifest to resolve the library's imports against\n";
+  usage_shared(os);
+}
+
 static long file_bytes(const std::string &p) {
   struct stat st;
   return stat(p.c_str(), &st) == 0 ? (long)st.st_size : -1;
@@ -666,7 +743,8 @@ static int emit_run(int argc, char **argv) {
   std::string prog_file;                       // positional FILE (else stdin)
   for (int i = 1; i < argc; i++) {
     std::string a(argv[i]);
-    if (a == "--emit") emit = true;
+    if (is_help_flag(a)) { usage_run(std::cout); return 0; }
+    else if (a == "--emit") emit = true;
     else if (is_dump_flag(a, dump, dump_all)) { }
     else if (a == "--no-prelude") no_prelude = true;
     else if (a == "--manifest" && i + 1 < argc) manifest = argv[++i];
@@ -772,8 +850,21 @@ static int emit_run(int argc, char **argv) {
   rt_trap = &jb;
   if (setjmp(jb) == 0) {
     intptr_t r = fn();
-    rt_write(r);
-    std::printf("\n");
+    // Report the program's final value -- the observation channel much of the
+    // core-language spec is written against -- EXCEPT when it is the unspecified
+    // value, which prints nothing at all: no written form, no newline (change:
+    // emit-cli-front-door, design D4).  That is the REPL's rule (run_thunk below)
+    // stated for programs, so a form that is quiet at the prompt is quiet as a
+    // program's last form.  The guard lives here and NOT in rt_write, so an explicit
+    // (write (if #f #f)) still renders #<unspecified>; #f and () are legitimate final
+    // values and still print, which is why the unspecified value must stay distinct
+    // from both.  The identical guard is in the runtime's own main
+    // (src/runtime/runtime.c), so this door and a delivered executable remain
+    // byte-identical on stdout (design D5).
+    if (!rt_is_unspec(r)) {
+      rt_write(r);
+      std::printf("\n");
+    }
     std::fflush(stdout);
   } else {
     rt_guard_reset();   // a trap may have bypassed rt_run_guarded's frame pop
@@ -812,9 +903,10 @@ static void run_thunk(const std::string &name) {
     // here and NOT in print_val, so an explicit (write (if #f #f)) still prints
     // #<unspecified>.  Only the unspecified value is suppressed -- #f and () are
     // legitimate results and still echo, which is why the value must be distinct from
-    // both.  Note the deliberate asymmetry with emit_run above, which prints a whole
-    // PROGRAM's value unsuppressed: that is a batch report, matching what the AOT
-    // executable prints, so dev->ship fidelity is preserved.
+    // both.  emit_run above and the runtime's main apply the SAME rule to a whole
+    // program's final value (change: emit-cli-front-door): the two doors agree, which
+    // is the dev->ship fidelity the batch report existed to protect -- what changed is
+    // only what they agree on.
     if (!rt_is_unspec(r)) {
       rt_write(r);
       std::printf("\n");
@@ -974,9 +1066,16 @@ static int emit_repl(int argc, char **argv) {
   std::string manifest;
   for (int i = 1; i < argc; i++) {
     std::string a(argv[i]);
-    if (a == "--no-prelude") prelude = false;
+    if (is_help_flag(a)) { usage_repl(std::cout); return 0; }
+    else if (a == "--no-prelude") prelude = false;
     else if (is_dump_flag(a, dump, dump_all)) { }
     else if (a == "--manifest" && i + 1 < argc) manifest = argv[++i];
+    // The rejection arm the other three doors already had (design D3).  Without it
+    // `emit repl --bogus-flag` started a session and exited 0, so a typo'd flag was
+    // indistinguishable from one that worked.  `repl` takes no positional argument,
+    // so anything unrecognized -- dashed or not -- is an error here.
+    else { std::cerr << "emit repl: unknown option " << a
+                     << " (emit repl takes no positional argument)\n"; return 2; }
   }
   bool bad_manifest = false;
   std::vector<std::string> manifests = resolve_manifests(manifest, bad_manifest);
@@ -1266,7 +1365,8 @@ static int emit_build(int argc, char **argv) {
   bool dump = false, dump_all = false;
   for (int i = 1; i < argc; i++) {
     std::string a(argv[i]);
-    if (a == "--manifest" && i + 1 < argc) manifest = argv[++i];
+    if (is_help_flag(a)) { usage_build(std::cout); return 0; }
+    else if (a == "--manifest" && i + 1 < argc) manifest = argv[++i];
     else if (a == "-o" && i + 1 < argc) out = argv[++i];
     else if (is_dump_flag(a, dump, dump_all)) { }
     else if (a == "--no-prelude") no_prelude = true;
@@ -1369,14 +1469,17 @@ static int emit_lib(int argc, char **argv) {
   bool dump = false, dump_all = false;
   for (int i = 1; i < argc; i++) {
     std::string a(argv[i]);
-    if (a == "-o" && i + 1 < argc) dir = argv[++i];
+    if (is_help_flag(a)) { usage_lib(std::cout); return 0; }
+    else if (a == "-o" && i + 1 < argc) dir = argv[++i];
     else if (a == "--manifest" && i + 1 < argc) manifest = argv[++i];
     else if (is_dump_flag(a, dump, dump_all)) { }
     else if (!a.empty() && a[0] == '-') { std::cerr << "emit lib: unknown option " << a << "\n"; return 2; }
     else src = a;
   }
   if (src.empty()) {
-    std::cerr << "usage: emit lib SRC [-o DIR] [--manifest F] [--dump|--dump-all]\n";
+    // Usage as part of a diagnostic: stderr, non-zero (design D1).
+    std::cerr << "emit lib: missing SRC\n";
+    usage_lib(std::cerr);
     return 1;
   }
   bool bad_manifest = false;
@@ -1447,17 +1550,14 @@ static int emit_lib(int argc, char **argv) {
 // verb dispatch.
 // ===========================================================================
 
-static void usage() {
-  std::cerr <<
-    "usage: emit <verb> [args]\n"
-    "  emit run  [FILE] [--manifest F] [--no-prelude]     compile and run a program\n"
-    "  emit repl [--manifest F] [--no-prelude]            interactive REPL\n"
-    "  emit build [NAME] [--manifest F] [-o OUT] [--no-prelude]   deliver a native exe\n"
-    "  emit lib  SRC [-o DIR] [--manifest F]              compile one library -> artifact\n"
-    "\n"
-    "every verb also accepts:\n"
-    "  --dump       print the IL after each compiler pass to stderr (stdout unchanged)\n"
-    "  --dump-all   --dump, plus the stages of (scheme base) and imported libraries\n";
+// Print VERB's own usage to OS; false when VERB is not a door.
+static bool usage_for_verb(const std::string &verb, std::ostream &os) {
+  if      (verb == "run")   usage_run(os);
+  else if (verb == "repl")  usage_repl(os);
+  else if (verb == "build") usage_build(os);
+  else if (verb == "lib")   usage_lib(os);
+  else return false;
+  return true;
 }
 
 int main(int argc, char **argv) {
@@ -1465,10 +1565,22 @@ int main(int argc, char **argv) {
   init_verbosity();
   if (argc < 2) {
     std::cerr << "emit: missing verb (known verbs: lib, build, run, repl)\n";
-    usage();
+    usage(std::cerr);
     return 1;
   }
   std::string verb(argv[1]);
+  // Help before dispatch, so `--help` is never reported as an unknown verb.  It is a
+  // request, so the answer goes to stdout and the exit is 0 (design D1).  `emit help
+  // [VERB]` is the same answer spelled as a word, for the user who types what they
+  // want before reading about flags (design open question 1, resolved yes).
+  if (is_help_flag(verb) || verb == "help") {
+    std::string topic = (verb == "help" && argc > 2) ? std::string(argv[2]) : std::string();
+    if (topic.empty()) { usage(std::cout); return 0; }
+    if (usage_for_verb(topic, std::cout)) return 0;
+    std::cerr << "emit help: unknown verb '" << topic << "' (known verbs: lib, build, run, repl)\n";
+    usage(std::cerr);
+    return 2;
+  }
   // Hand the verb its own argv slice (argv[0] == verb, options follow), matching the
   // per-door argument loops.
   if (verb == "run")   return emit_run(argc - 1, argv + 1);
@@ -1476,6 +1588,6 @@ int main(int argc, char **argv) {
   if (verb == "build") return emit_build(argc - 1, argv + 1);
   if (verb == "lib")   return emit_lib(argc - 1, argv + 1);
   std::cerr << "emit: unknown verb '" << verb << "' (known verbs: lib, build, run, repl)\n";
-  usage();
+  usage(std::cerr);
   return 2;
 }

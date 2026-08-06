@@ -4,16 +4,17 @@
 # `read-all-stdin` returns all of stdin as a string.  Run from the repo root:
 # test/io-primitives-tests.sh
 #
-# Every standalone program's `main` prints the program's final value after the
-# program runs; `(display X)` returns the unspecified value, which prints as
-# `#<unspecified>` (it printed as `()` before change: unspecified-value gave the
-# unspecified value its own distinguished immediate).  So a `(display "hi")` program's
-# stdout is the raw display bytes followed by `#<unspecified>` -- the trailing text is
-# the final-value print, not part of `display`'s output, and each expectation below
-# accounts for it.  The batch/AOT final-value print is deliberately NOT suppressed; only
-# the interactive REPL's echo is (see src/emit.cpp run_thunk).  (The standalone `schemec`
-# will need a filter-style main that suppresses this value print -- a
-# self-hosting-bootstrap task 2.1 concern, tracked in that change's handoff.)
+# Every standalone program's `main` prints the program's final value after the program
+# runs -- EXCEPT when that value is the unspecified value, which prints nothing at all,
+# not even a newline (change: emit-cli-front-door, design D4).  `(display X)` returns
+# the unspecified value, so a `(display "hi")` program's stdout is exactly the raw
+# display bytes: these expectations are the display output alone, with no trailing
+# token.  That makes them a direct test of what `display` writes.  The rule is the
+# interactive REPL's echo suppression (src/emit.cpp run_thunk) stated for programs, and
+# `emit run` carries the identical guard, so this door and the in-process one agree.
+# It remains a REPORTING policy: an explicit `(write (if #f #f))` still renders
+# `#<unspecified>`.  RT_FILTER_MAIN is the separate, stronger mode that suppresses
+# EVERY final value; the self-hosted `schemec` is built with it (Makefile:99).
 set -u
 cd "$(dirname "$0")/.."
 
@@ -43,14 +44,15 @@ check () {
 echo "process-I/O primitives (display / read-all-stdin)"
 
 # display writes raw bytes: no surrounding quotes and no added newline.  If it
-# quoted, stdout would be "hi"#<unspecified> ; if it added a newline, hi<LF>#<unspecified>.
-check display-raw     '(display "hi")'                ''            'hi#<unspecified>'
+# quoted, stdout would be "hi" ; if it added a newline, hi<LF>.
+check display-raw     '(display "hi")'                ''            'hi'
 
 # read-all-stdin captures every byte, incl. the embedded newline and parens.
-check roundtrip       '(display (read-all-stdin))'    "$(printf 'abc\n(x y)')" "$(printf 'abc\n(x y)#<unspecified>')"
+check roundtrip       '(display (read-all-stdin))'    "$(printf 'abc\n(x y)')" "$(printf 'abc\n(x y)')"
 
-# empty stdin -> empty string -> display writes nothing; only the value prints.
-check roundtrip-empty '(display (read-all-stdin))'    ''            '#<unspecified>'
+# empty stdin -> empty string -> display writes nothing, and the unspecified final
+# value is suppressed, so the program's stdout is empty.
+check roundtrip-empty '(display (read-all-stdin))'    ''            ''
 
 echo
 echo "  $pass passed, $fail failed"

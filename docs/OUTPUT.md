@@ -45,6 +45,19 @@ regen: assemble flat source (ordered cat; no Chez)  [0s]
   Adding or changing narration MUST NOT alter one byte of stdout.
 - A tool whose primary product is itself a human report (the test runners) may print that
   report to stdout; it produces no machine-data stream to protect.
+- **Usage text goes where its reason sends it.** The same block has two destinations,
+  chosen by *why* it was printed (change: emit-cli-front-door):
+  - **Requested** — `emit --help`, `emit <verb> --help`/`-h`, `emit help [VERB]`. The text
+    is the output the user asked for, so it goes to **stdout** and the exit is **0**. This
+    is what makes `emit --help | head` and `emit run --help | less` work without
+    redirection; a `--help` that writes to stderr is a `--help` that cannot be piped.
+  - **Diagnostic** — usage shown because the command was malformed (no verb, unknown verb,
+    unknown option, missing required argument). It is narration accompanying an error, so
+    it stays on **stderr** with a **non-zero** exit, and stdout stays empty.
+
+  This is not an inconsistency; it is the rule above applied correctly. Relatedly, every
+  door MUST reject an option it does not recognize, naming the door and the option, and
+  exit non-zero — a flag that is silently ignored reports success for work not done.
 
 ## Verbosity
 
@@ -120,4 +133,7 @@ their header with that form: `;; ==== after convert-closures [define fact] ====`
 - [ ] Transforms use the `input -> output` arrow.
 - [ ] Produced binaries/IR report their byte size; non-trivial steps report duration.
 - [ ] All narration is on stderr; no tool's stdout data changed.
+- [ ] `--help` is accepted, prints on stdout, and exits 0; usage shown after an error
+      stays on stderr and exits non-zero.
+- [ ] Unrecognized options are rejected by name, never ignored.
 - [ ] The tool is quiet under `EMIT_VERBOSITY=quiet` and detailed under `verbose`.
