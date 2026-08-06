@@ -156,6 +156,92 @@ else
   bad "shake: narrow record program failed to build"; sed 's/^/         /' "$TMP/n.log"
 fi
 
+# --- 10. what a DECLARATION position rejects, by name -------------------------
+# (change: module-frontend-diagnostics; issues #18 item 3, #48.)  #16 settled the BODY
+# half of parse-define-library and left the declaration half absorbing anything it did
+# not recognize, so an unsupported declaration surfaced as somebody else's error.  Each
+# case below asserts on the MESSAGE, not the exit status: every one of them exited 1
+# before this change too, reporting the wrong thing.
+reject_lib () {  # <name> <sld-path> <regex>
+  local name="$1" src="$2" re="$3"
+  if build/emit lib "$src" >"$TMP/$name.out" 2>"$TMP/$name.err"; then
+    bad "$name (expected emit lib to fail, but it succeeded)"; return
+  fi
+  if grep -Eq "$re" "$TMP/$name.err"; then ok "$name"
+  else bad "$name (diagnostic does not match /$re/)"; sed 's/^/         /' "$TMP/$name.err"; fi
+}
+
+echo
+echo "declarations the front end rejects by name (module-frontend-diagnostics)"
+
+# The four remaining R7RS library declarations: RECOGNIZED, not implemented (#18).  Each
+# is named as such, and the message promises no schedule -- #18 owns when they land.
+for d in 'include "body.scm"' 'include-ci "body.scm"' \
+         'include-library-declarations "decls.scm"' 'cond-expand (else (begin))'; do
+  kw="${d%% *}"
+  cat > "$TMP/$kw.sld" <<EOF
+(define-library ($kw-lib)
+  (export g)
+  ($d))
+EOF
+  reject_lib "unsupported-$kw" "$TMP/$kw.sld" \
+    "$kw is an R7RS library declaration this stage does not support"
+done
+
+# The pair that motivated splitting the diagnostic (design D2): `include` PROVIDING an
+# exported name used to report `export of a name the library does not define g`, and an
+# unrecognized declaration used to report `unbound variable frobnicate`.  One is a
+# feature Emit has not implemented; the other is a mistake in the source.
+reject_lib "unsupported-include-not-undefined-export" "$TMP/include.sld" \
+  'include is an R7RS library declaration'
+if grep -Eq 'does not define g' "$TMP/unsupported-include-not-undefined-export.err"; then
+  bad "include is no longer blamed on its exported name"
+else
+  ok "include is no longer blamed on its exported name"
+fi
+
+cat > "$TMP/frob.sld" <<'EOF'
+(define-library (frob-lib)
+  (export f)
+  (frobnicate 1 2 3)
+  (begin (define (f x) x)))
+EOF
+reject_lib "unrecognized-declaration" "$TMP/frob.sld" \
+  'frobnicate is not a library declaration'
+if grep -Eq 'unbound variable' "$TMP/unrecognized-declaration.err"; then
+  bad "an unrecognized declaration is no longer lowered as a body form"
+else
+  ok "an unrecognized declaration is no longer lowered as a body form"
+fi
+
+# A macro export is reported as a macro export (#48 first half): collect-define-syntax
+# lifts a define-syntax out of the runtime body BEFORE the export check computes the
+# defined names, so "a name the library does not define" described that lifting.
+cat > "$TMP/macx.sld" <<'EOF'
+(define-library (macx)
+  (export swap!)
+  (begin
+    (define-syntax swap!
+      (syntax-rules ()
+        ((_ a b) (let ((t a)) (set! a b) (set! b t)))))))
+EOF
+reject_lib "macro-export" "$TMP/macx.sld" 'cannot export a macro.*swap!'
+if grep -Eq 'does not define swap!' "$TMP/macro-export.err"; then
+  bad "a macro export is no longer reported as an undefined name"
+else
+  ok "a macro export is no longer reported as an undefined name"
+fi
+
+# ...and the ORDINARY undefined-export error is untouched for a name that is neither a
+# definition nor a macro (the spec scenario that pins it).
+cat > "$TMP/undef.sld" <<'EOF'
+(define-library (undef-lib)
+  (export missing)
+  (begin (define (f x) x)))
+EOF
+reject_lib "undefined-export-unchanged" "$TMP/undef.sld" \
+  'export of a name the library does not define missing'
+
 echo
 echo "  $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

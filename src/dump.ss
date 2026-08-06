@@ -26,9 +26,9 @@
 (define (pp-indent n) (if (> n 0) (pp-emit (make-string n #\space)) #f))
 
 ;; --- printed width, without building the string ---------------------------
-;; (Not shareable with repl-core.ss's `render-datum`: that one is specialized for
-;; export tables -- symbols/strings/lists only, everything else renders "?" -- and it
-;; lives in the embed-repl target, while this file rides every target incl. schemec.)
+;; (Not shareable with core.ss's `render-datum`: that one is specialized for export
+;; tables and front-end diagnostics -- symbols/strings/numbers/lists only, everything
+;; else renders "?" -- and it BUILDS a string, which the layout rule below must not do.)
 ;; The layout rule below needs to know how wide a datum WOULD print; measuring it
 ;; directly keeps the runtime as the only actual printer (design D2) and allocates
 ;; nothing -- which is also why dumping cannot perturb the gensym counter.
