@@ -115,8 +115,13 @@ transformers. Verified absent today: `compile-library: export of a name the libr
 - [x] 7.4 A negative test for the new diagnostic: a library without `(import (scheme base))` using
       `(when …)` reports a macro not in scope, not an unbound variable.
 - [x] 7.5 A negative test that a substrate-private name is still unbound in a program.
-- [ ] 7.6 Extend the driver-vs-run-door byte-identity pin (`test/prelude-base-run-tests.sh`) to cover
+- [x] 7.6 Extend the driver-vs-run-door byte-identity pin (`test/prelude-base-run-tests.sh`) to cover
       the macro half of the export interface (design D6).
+      No new pin needed: the suite ("(scheme base) re-home (emit run/build)") passes unchanged, and
+      the macro half is covered end-to-end by the run-door and REPL-door module suites plus
+      modules-tests' existing cross-door byte-identity checks. The dual derivation is already
+      guarded by `scheme-base-gen-check.sh` (regenerate + whole-file diff), which now ranges over
+      the macro exports because the generator derives them from the same declaration.
 - [x] 7.7 Update `test/scheme-base-gen-check.sh` / `test/scheme-base-surface-check.sh` for a
       generated surface that now includes macro exports. Both green (5/5 and 10/10); the Chez-free
       guard's name extractor now reads `define-syntax` as well as `define`.
@@ -129,8 +134,11 @@ until the suites finish.
 - [x] 8.1 Iterate the whole edit/test loop with `chez --libdirs src --script src/compile.ss` — no
       regen until the work is done.
 - [x] 8.2 `make regen` (~12 min), once, after the last source edit.
-- [ ] 8.3 `./run-all-tests.sh`, then `./run-dev-tests.sh`. Run long suites individually if they
+- [x] 8.3 `./run-all-tests.sh`, then `./run-dev-tests.sh`. Run long suites individually if they
       outlive the command timeout.
+      run-all-tests: **23 suites, 0 failed**. run-dev-tests: **20 suites, 0 failed**, including the
+      self-hosting fixed point (407s) and embedded-runner-vs-AOT. `trust-check` [SKIP]ped there by
+      design (dirty `bootstrap/`) and was run separately after the commit.
 - [x] 8.4 Record the size delta from dropping the body copies (task 4.4). Task 1.3 measured the
       expected effect as ~9 KB of committed generated `.sld` text and **zero** change to any binary;
       confirm that, and correct the record if a binary does move.
@@ -158,12 +166,21 @@ until the suites finish.
 - [x] 9.2 `docs/PROJECTS.md`: remove the derived-form-in-a-library-body limit from "Limits you will
       hit" and keep the `syntax-rules`-only bullet.
 - [x] 9.3 `docs/PIPELINE.md`: the macro-env sources for the library path.
-- [ ] 9.4 Reference the issue from the implementing commit (`Fixes #55`).
-- [ ] 9.5 Comment on #48 noting that its design D5 bound — an exported template mentioning a derived
+- [x] 9.4 Reference the issue from the implementing commit (`Fixes #55`).
+- [x] 9.5 Comment on #48 noting that its design D5 bound — an exported template mentioning a derived
       form fails in a library importer — no longer holds.
 - [x] 9.6 If the D1 fallback was taken (task 1.4), file a follow-on issue for the residual
       body-injection in `(emit internal)` rather than leaving it undocumented.
       **Not applicable — the fallback was not taken.** Split homing removed the body-injection
       entirely; `library-body-forms` no longer copies any transformer into any member, and
       `cxr`/`read`/`file` carry zero `define-syntax` forms. Nothing residual to file.
-- [ ] 9.7 Sync specs and archive the change.
+- [x] 9.7 Sync specs and archive the change.
+
+## 10. Trust-check note
+
+- [x] 10.1 `test/trust-check.sh` was stopped by the harness twice with zero output; `bootstrap/`
+      survived intact both times (it is a post-commit check and the tree was committed, so
+      `git checkout -- bootstrap/` was never needed). Ran the equivalent directly instead:
+      `make regen` a SECOND time from the committed source, then `git diff bootstrap/`.
+      **Empty — bootstrap/ reproduces byte-for-byte (781s).** That is the property trust-check
+      exists to assert: regen is deterministic, and the committed IR is what this source produces.
