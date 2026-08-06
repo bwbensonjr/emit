@@ -576,8 +576,7 @@ remain **listable** in a manifest, so the Chez-hosted driver can resolve it from
 entry as already satisfied (see "The baked library set is a partition emitted in dependency order"),
 so no door depends on the entry's presence and no door loads a second copy because of it.
 
-**Locating the manifest.** Every door SHALL locate the manifest by the same ordered procedure,
-taking the first candidate that exists and is readable:
+**Locating the manifest.** Every door SHALL locate manifests by the same ordered procedure:
 
 1. the `--manifest FILE` argument, when the door accepts one and it is given;
 2. the `EMIT_MANIFEST` environment variable, when set;
@@ -587,23 +586,33 @@ taking the first candidate that exists and is readable:
    launcher locates the manifest installed beside the real binary;
 5. a compiled-in installation default, `<install prefix>/share/emit/emit-libs.scm`.
 
-Candidates 1 and 2 are explicit requests: when either is given but names a file that does not
-exist, the door SHALL report that named file as missing rather than silently falling through to a
-later candidate. Candidates 3–5 are searched, so a missing candidate is not an error. Finding no
-manifest at all SHALL remain non-fatal — a program that imports only baked-in libraries runs
-unaffected — and the resulting failure SHALL be reported by import resolution, naming the
-unresolved library.
+Candidates 1 and 2 are **explicit requests**: exactly one manifest is used, and when either is
+given but names a file that does not exist, the door SHALL report that named file as missing rather
+than silently falling through to a later candidate. An explicit request SHALL NOT be extended by
+any other candidate, so a build that must resolve against one known set of libraries is expressible
+by naming it.
+
+Candidates 3–5 are **searched, and they chain**: every candidate that exists and is readable is
+used, in order. A library name SHALL be resolved by consulting them in that order and taking the
+first entry that names it, so an earlier manifest *extends* rather than replaces a later one — a
+project's own `./emit-libs.scm` keeps the libraries an installed Emit ships without naming them, and
+a project MAY override a shipped library by defining that name itself. A missing candidate is not an
+error. Finding no manifest at all SHALL remain non-fatal — a program that imports only baked-in
+libraries runs unaffected — and the resulting failure SHALL be reported by import resolution, naming
+the unresolved library.
 
 **Paths inside a manifest.** A relative path appearing in a manifest entry — a library's
 `(source …)`, a program entry's `(source …)`, and a program entry's `(output …)` — SHALL be
 resolved against the directory containing the manifest in which it appears, not against the
 current working directory. An absolute path SHALL be used as given. A manifest therefore carries
 its own library sources with it and resolves identically no matter which directory the door is
-invoked from.
+invoked from. When candidates chain, each entry SHALL be resolved against **its own** manifest's
+directory, so entries inherited from a later candidate continue to name that candidate's sources.
 
-**Narration.** Each door SHALL narrate which manifest it resolved, on standard error, in the
-project's tool-output format, suppressed at `EMIT_VERBOSITY=quiet` and never altering standard
-output.
+**Narration.** Each door SHALL narrate which manifest or manifests it resolved, on standard error,
+in the project's tool-output format, suppressed at `EMIT_VERBOSITY=quiet` and never altering
+standard output. When more than one searched candidate is in use, the narration SHALL name each in
+resolution order, so which libraries are in scope is answerable without tracing the lookup.
 
 The manifest MAY additionally contain **program entries** of the form
 `(program NAME (source S) [(output O)])`, where `NAME` is a bare symbol naming a
@@ -612,7 +621,9 @@ deliverable program, `source` names its top-level source file, and the optional
 not a library: it is never a target of `import`, and reading the manifest to resolve
 library imports SHALL ignore program entries (library resolution is unchanged by
 their presence). Manifest reading SHALL accept a manifest that mixes library and
-program entries in any order.
+program entries in any order. **Program-entry lookup SHALL NOT chain**: a program name is resolved
+against the first resolved manifest only, so a name that manifest does not define is reported
+against that file rather than searched for in an installed one.
 
 #### Scenario: Manifest resolves a library name to its source
 
@@ -623,8 +634,36 @@ program entries in any order.
 
 #### Scenario: An unresolved import is reported
 
-- **WHEN** a program (or library) imports `(nope)` and the manifest has no entry for `(nope)`
+- **WHEN** a program (or library) imports `(nope)` and no manifest in the resolved chain has an
+  entry for `(nope)`
 - **THEN** the build path reports a compile-time error naming the missing library
+
+#### Scenario: A project manifest keeps the installed standard libraries
+
+- **WHEN** Emit is installed under a prefix, and a program importing `(scheme inexact)` is run from
+  a project directory whose own `./emit-libs.scm` names only that project's own entries
+- **THEN** `(scheme inexact)` resolves through the installed manifest reached by a later searched
+  candidate, and the project's manifest needs no entry and no absolute path for it
+
+#### Scenario: A project entry overrides a shipped library of the same name
+
+- **WHEN** a project's `./emit-libs.scm` names a library that the installed manifest also names
+- **THEN** the project's entry is the one used, and its relative `(source …)` resolves against the
+  project's manifest directory
+
+#### Scenario: An explicitly named manifest is not extended
+
+- **WHEN** `--manifest FILE` (or `EMIT_MANIFEST`) names a readable manifest and a program imports a
+  library that manifest does not name, while an installed manifest naming it exists
+- **THEN** the import is reported as unresolved rather than resolved from the installed manifest,
+  because an explicit request names exactly one manifest
+
+#### Scenario: A program name is resolved against the first manifest only
+
+- **WHEN** `emit build NAME` is run in a project whose `./emit-libs.scm` has no `(program NAME …)`
+  entry, while an installed manifest is also present
+- **THEN** the door reports no program entry, naming the project's own manifest, and does not search
+  the installed manifest for the program name
 
 #### Scenario: (scheme base) needs no manifest entry on any door
 
@@ -685,9 +724,9 @@ program entries in any order.
 
 #### Scenario: The resolved manifest is narrated
 
-- **WHEN** a door resolves a manifest at default verbosity
-- **THEN** it names the resolved manifest path on standard error, and at
-  `EMIT_VERBOSITY=quiet` that line is absent while standard output is byte-identical either way
+- **WHEN** a door resolves one or more manifests at default verbosity
+- **THEN** it names each resolved manifest path in resolution order on standard error, and at
+  `EMIT_VERBOSITY=quiet` those lines are absent while standard output is byte-identical either way
 
 ### Requirement: Transitive library imports
 
