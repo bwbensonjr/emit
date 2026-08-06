@@ -124,13 +124,12 @@ Emit resolves a library **name** to a **file** through a manifest, `emit-libs.sc
 s-expression list of entries. Create one at your project root:
 
 ```scheme
-((library (scheme inexact) (source "/path/to/emit/lib/scheme/inexact.sld"))
- (library (stats)  (source "lib/stats.sld"))
+((library (stats)  (source "lib/stats.sld"))
  (library (report) (source "lib/report.sld"))
  (program myproj (source "main.scm") (output "build/myproj")))
 ```
 
-Three things to know:
+Four things to know:
 
 - **Relative paths resolve against the manifest's own directory**, not your current directory. So
   the manifest travels with the project and works from anywhere. Absolute paths are used as given.
@@ -139,28 +138,39 @@ Three things to know:
 - **You do not list `(scheme base)`.** It is baked into the binary, along with the internal
   substrate it stands on, so a program that imports nothing — or only `(scheme base)` — needs no
   manifest at all. Every door registers the baked set before it reads the manifest.
+- **You list only your own entries.** The manifest above names no standard library and no path into
+  the Emit installation, yet `main.scm` may import `(scheme inexact)` freely — see below.
 
-Non-baked standard libraries are a different story: `(scheme inexact)`, `(scheme cxr)`,
-`(scheme read)`, and `(scheme file)` ship as **source files** and are reached through the manifest,
-which is why the entry above points into the checkout's `lib/`. Be aware that the manifest is a
-single file, not a search path — the first one found wins, so a project's own `emit-libs.scm`
-**shadows** an installed one entirely. If your project has its own manifest and imports
-`(scheme inexact)`, that manifest must name it, even on a system where Emit is installed. (Whether
-this should become a library *path* is an open question, recorded in
-`openspec/explorations/library-sources-and-artifacts.md`.)
+Non-baked standard libraries — `(scheme inexact)`, `(scheme cxr)`, `(scheme read)`, and
+`(scheme file)` — ship as **source files** and are reached through the manifest. Your project's
+manifest does not have to name them, because **the searched manifests chain** (change:
+`installed-emit-completeness`, issue #44): your `./emit-libs.scm` is consulted first, and any
+library name it does not resolve falls through to the manifest installed beside `emit`. So a
+project manifest *extends* the installed one rather than shadowing it, and needs no absolute path
+into the installation prefix — which matters because that prefix is a Cellar directory that moves
+on every Homebrew upgrade.
 
-Emit reports which manifest it used, on stderr:
+If you *want* a name to mean something of your own, define it: your entry is consulted first and
+wins. And if you want no ambient state at all — a hermetic build, resolved against exactly one set
+of libraries — pass `--manifest FILE`. An explicit request names one manifest and is never
+extended.
+
+Emit reports which manifests it used, on stderr:
 
 ```sh
 emit run main.scm
 ```
 ```
 resolve manifest -> emit-libs.scm
+resolve manifest -> /usr/local/share/emit/emit-libs.scm  [chained]
+chain /usr/local/share/emit/emit-libs.scm -> scheme.inexact  [1 library]
 (n 3 mean 2.0 rms 2.160246899469287)
 ```
 
-To use a different one: `--manifest FILE`, or the `EMIT_MANIFEST` environment variable. Naming one
-that does not exist is an error rather than a silent fallback.
+The `chain` line names the manifest a library actually came from, so a resolution reaching outside
+your project is visible rather than silent. To use a different manifest: `--manifest FILE`, or the
+`EMIT_MANIFEST` environment variable. Naming one that does not exist is an error rather than a
+silent fallback.
 
 ## The development loop
 
@@ -306,14 +316,24 @@ make install                        # /usr/local/bin/emit + /usr/local/share/emi
 make install PREFIX=$HOME/.local
 ```
 
-This installs the binary together with the library sources it needs, at
-`<prefix>/share/emit/`, where the binary's own manifest lookup finds them — so an installed
-`emit run` and `emit repl` work from any directory.
+This installs the binary together with everything the doors need beside it, under
+`<prefix>/share/emit/`, where the binary's own lookups find it:
 
-Two current caveats: `emit build` and `emit lib` do **not** yet work from an install (they look for
-`tools/llvm-env.sh` and `src/runtime/runtime.c` relative to a checkout —
-[#36](https://github.com/bwbensonjr/emit/issues/36)), and as noted above a project's own manifest
-shadows the installed one.
+- the default manifest and the library sources it names — so `emit run` and `emit repl` resolve the
+  shipped libraries from any directory, and (because the searched manifests chain) from a project
+  with its own manifest too;
+- the support files `emit build` needs to link — `tools/llvm-env.sh` for toolchain discovery, the
+  `tools/log.sh` it sources, and `src/runtime/runtime.c`, each at the same subpath it has in the
+  source tree.
+
+So `emit build` works from an install with nothing beside it and nothing in the environment. If no
+C toolchain is discoverable at all — a keg-only Homebrew LLVM, say, where neither `clang` nor
+`llvm-config` is on `PATH` — `emit` falls back to the toolchain it was *built* against, recorded in
+the binary. `CC` / `GC_INC` / `GC_LIB` override everything; live discovery beats the recorded
+values, which are the last resort.
+
+Nothing installed refers back into the tree it was built from, so the checkout can be deleted
+afterwards.
 
 ## Limits you will hit
 

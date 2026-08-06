@@ -92,8 +92,7 @@ Library *names* are mapped to *source files* by a manifest — an s-expression f
 
 ### Where the manifest is found
 
-Every door looks for the manifest the same way, taking the first candidate that exists (change:
-`manifest-search-path`, issue #35):
+Every door looks for the manifest the same way (change: `manifest-search-path`, issue #35):
 
 | # | candidate | for |
 |---|---|---|
@@ -103,18 +102,33 @@ Every door looks for the manifest the same way, taking the first candidate that 
 | 4 | `<dir of the real path of the running exe>/../share/emit/emit-libs.scm` | a relocatable install |
 | 5 | `<build-time PREFIX>/share/emit/emit-libs.scm` | the prefix the binary was built for |
 
-- **1–2 name a specific file.** If it is missing that is an error — falling through would silently
-  run against different libraries than you asked for.
-- **3–5 are a search.** A missing candidate is ordinary, and finding no manifest at all is *not*
-  an error: `(scheme base)` is baked into the binary, so a program that imports only baked-in
-  libraries needs no manifest anywhere. Anything else is reported by name at import resolution.
+- **1–2 name a specific file, and are never extended.** If it is missing that is an error —
+  falling through would silently run against different libraries than you asked for. This is also
+  what makes a *hermetic* build expressible: one flag, one manifest, nothing ambient.
+- **3–5 are a search, and they chain** (change: `installed-emit-completeness`, issue #44). *Every*
+  candidate that exists is used, in order, and a **library name** is resolved by taking the first
+  manifest that names it. So a project's own `./emit-libs.scm` **extends** the installed one rather
+  than replacing it: your project keeps every shipped library without naming it and without an
+  absolute path into the install prefix. Define a name yourself and yours wins.
+- A missing candidate is ordinary, and finding no manifest at all is *not* an error: `(scheme base)`
+  is baked into the binary, so a program that imports only baked-in libraries needs no manifest
+  anywhere. Anything else is reported by name at import resolution.
+- **Each entry's relative `(source …)` still resolves against its own manifest's directory.** The
+  rule has not changed; it simply now applies to more than one manifest, so a library inherited
+  from a later candidate reads the sources that shipped beside *it*.
+- **Program lookup does not chain.** `emit build NAME` resolves a `(program …)` entry against the
+  **first** manifest only. A program is project-specific by nature, so an unknown name is reported
+  against your own manifest — the file you can fix — rather than searched for in an installed one.
 - Candidate 4 resolves the executable through symbolic links, so a Homebrew-style symlink in
   `<prefix>/bin` finds what was installed beside the *real* binary. Candidate 5 covers the case
   where the install is not where it was built for.
 - Because candidate 3 is searched first, **installation is additive**: inside the repo you always
-  get the repo's own `emit-libs.scm`, even with an `emit` installed system-wide.
-- Each door narrates the manifest it resolved on stderr (`resolve manifest -> …`), silenced by
-  `EMIT_VERBOSITY=quiet`. `make install` produces the layout candidates 4–5 look for; see
+  get the repo's own `emit-libs.scm`, even with an `emit` installed system-wide. Chaining does not
+  weaken that — a later candidate is consulted only for a name the earlier one does not resolve.
+- Each door narrates every manifest it resolved on stderr (`resolve manifest -> …`, the later ones
+  tagged `[chained]`), and names the manifest that supplied a library when it was not the first
+  (`chain <manifest> -> <libraries>`). All of it is silenced by `EMIT_VERBOSITY=quiet` and none of
+  it touches stdout. `make install` produces the layout candidates 4–5 look for; see
   `test/install-layout-tests.sh`.
 
 The Chez driver (`src/compile.ss`) implements candidates 1–3 and the same relative-path rule, but

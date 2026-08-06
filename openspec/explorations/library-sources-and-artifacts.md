@@ -82,6 +82,13 @@ sits on.
 > library *path*) gained a concrete symptom in the process: a project's own `emit-libs.scm` shadows
 > an installed one entirely, so a project that imports `(scheme inexact)` must name it even on a
 > system where Emit is installed.
+>
+> **That closing symptom is gone** (`installed-emit-completeness`, issue #44). The searched
+> candidates 3–5 now **chain**: every one that exists is consulted, in order, and a library *name*
+> resolves to the first manifest that names it — so a project manifest *extends* the installed one
+> instead of replacing it, and needs no absolute path into the prefix. An explicit `--manifest` /
+> `EMIT_MANIFEST` still names exactly one file and is never extended, which is what keeps a hermetic
+> build expressible. Open question 3 is thereby **narrowed, not settled** — see its note below.
 
 ## Finding 2 — #33 moves nine names across the line, and it collides with packaging
 
@@ -226,6 +233,15 @@ protocol in that script's header requires.
    import sets, which do not exist). Clean break, which is what pre-`0.1.0` is for.
 3. Is the manifest the right long-term resolution mechanism, or should there be a library *path*
    with the manifest as one entry?
+   **NARROWED** by `installed-emit-completeness` (issue #44), not answered. The symptom that made
+   this urgent — a project's own `emit-libs.scm` hiding the installed one, so the project lost every
+   shipped library it did not name — is fixed by chaining the searched candidates the spec already
+   listed: resolution walks them in order and takes the first manifest that names the library, so an
+   earlier manifest extends a later one. That is strictly smaller than a library path: it adds no new
+   manifest form, no `(include-manifest …)`, and no new configuration surface, and it deliberately
+   does not decide whether libraries should be discoverable by *location* rather than by name-to-file
+   mapping. The question stands for whatever motivates it next — third-party packages, versioned
+   dependencies, artifact reuse across projects — with the pressure taken off.
 4. `cond-expand` at bake time or at the importer's compile time — and does the answer differ for a
    baked library versus a manifest one?
 5. If #31 makes `lib/scheme/base.sld` the baked artifact, is "`base.sld` stays committed" written

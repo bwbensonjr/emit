@@ -20,7 +20,9 @@
 // `clang` to link a native executable (`build`) or just write the unit artifact
 // (`lib`).  The C toolchain (CC / GC_INC / GC_LIB) is read from the environment; if
 // absent, it is discovered by consulting tools/llvm-env.sh --print-env (found
-// relative to this binary), so discovery stays single-sourced (design D2, task 2.2).
+// relative to this binary), so discovery stays single-sourced (design D2, task 2.2);
+// failing that, it falls back to the values recorded when this binary was built
+// (change: installed-emit-completeness -- see discover_toolchain).
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
@@ -212,17 +214,52 @@ static std::string dir_of(const std::string &path) {
   return s == std::string::npos ? std::string() : path.substr(0, s);
 }
 
-// Repo root, derived from this binary's path (build/emit -> repo root): strip the
-// trailing "/emit" and "/build".  Used only to locate tools/llvm-env.sh and the
-// runtime source for the build/lib doors.  Falls back to "." when the path has no
-// directory components.
-static std::string repo_root() {
+// The prefix this binary was built for -- the last-resort candidate of BOTH lookups
+// below (the manifest and the support files).  A plain in-repo `make` bakes
+// /usr/local and never reaches it.
+#ifndef EMIT_PREFIX
+#define EMIT_PREFIX "/usr/local"
+#endif
+
+static bool file_readable(const std::string &p) {
+  std::ifstream f(p);
+  return f.good();
+}
+
+// --- support-file location (change: installed-emit-completeness; issue #36) -----
+// The build door needs two files that are not the binary and not a library:
+// tools/llvm-env.sh (toolchain discovery, which in turn sources tools/log.sh) and
+// src/runtime/runtime.c (compiled into every delivered executable).  They used to be
+// found through a repo_root() that stripped "/emit" and "/build" off this binary's
+// path -- an assumption that it sits in a checkout, which an INSTALLED emit does not,
+// so `emit build` was the one door that did not work when installed.
+//
+// This is the manifest lookup's shape applied to a file (design D5).  Given the path
+// the file has RELATIVE TO THE REPO ROOT, try in order:
+//
+//   1. <checkout>/<relpath>              build/emit -> the repo root above it
+//   2. <exe>/../share/emit/<relpath>     a relocatable install (symlinks resolved)
+//   3. <EMIT_PREFIX>/share/emit/<relpath>   the prefix this binary was built for
+//
+// Checkout first, install second: the same ordering #35 established, so the
+// from-source developer workflow resolves exactly as it did before.  `make install`
+// places each support file at the SAME repo-relative subpath under
+// <prefix>/share/emit/, so one function serves both layouts and a support file added
+// later needs no new rule here.  Returns "" when no candidate is readable; the caller
+// reports the missing file by name rather than handing a nonexistent path to clang.
+static std::string support_file(const std::string &relpath) {
   std::string p = exe_path();
   if (p.empty()) p = g_argv0;
-  std::string dir = dir_of(p);                    // .../build
-  if (dir.empty()) return ".";
-  std::string up = dir_of(dir);
-  return up.empty() ? "." : up;                   // repo root
+  std::string bindir = dir_of(p);                 // .../build, or <prefix>/bin
+  std::string root = dir_of(bindir);              // the checkout root, or <prefix>
+  if (root.empty()) root = ".";
+  std::string cand = root + "/" + relpath;                          // candidate 1
+  if (file_readable(cand)) return cand;
+  cand = root + "/share/emit/" + relpath;                           // candidate 2
+  if (file_readable(cand)) return cand;
+  cand = std::string(EMIT_PREFIX) + "/share/emit/" + relpath;       // candidate 3
+  if (file_readable(cand)) return cand;
+  return "";
 }
 
 // --- manifest location (change: manifest-search-path; issue #35) ---------------
@@ -242,42 +279,61 @@ static std::string repo_root() {
 // are a search, so a missing candidate is ordinary and finding nothing at all stays
 // non-fatal -- a program importing only baked-in libraries needs no manifest, and
 // import resolution reports anything else by name.
-#ifndef EMIT_PREFIX
-#define EMIT_PREFIX "/usr/local"
-#endif
+//
+// THE SEARCHED CANDIDATES CHAIN (change: installed-emit-completeness; issue #44).
+// Stopping at the first candidate that EXISTS was right while the only question was
+// "is there a manifest at all", but it means a project's own ./emit-libs.scm -- which
+// a project must have to declare its own program -- hides the installed one, and the
+// project silently loses every standard library that is not baked in.  So 3-5 yield
+// EVERY candidate that exists, in order, and a LIBRARY NAME is resolved by taking the
+// first manifest in that list which names it: an earlier manifest EXTENDS a later one,
+// and may override a shipped library by defining the same name (design D1, D3).
+//
+// An explicit request still names exactly one manifest and is never extended (design
+// D2) -- that is what keeps a hermetic build expressible.  Program-entry lookup does
+// not chain either (design D4): see resolve_program.
 static const char *kManifestName = "emit-libs.scm";
 
-static bool file_readable(const std::string &p) {
-  std::ifstream f(p);
-  return f.good();
-}
-
-// Resolve a manifest for a door.  `flag` is the door's --manifest argument (empty if
-// not given).  Returns the resolved path, or "" when no searched candidate exists.
-// Sets `bad` when an EXPLICIT request names a missing file (message already printed);
-// the door must then exit non-zero rather than proceed.
-static std::string resolve_manifest(const std::string &flag, bool &bad) {
+// Resolve the manifest chain for a door.  `flag` is the door's --manifest argument
+// (empty if not given).  Returns the manifests to consult, in resolution order --
+// exactly one for an explicit request, every searched candidate that exists
+// otherwise, and empty when none does.  Sets `bad` when an EXPLICIT request names a
+// missing file (message already printed); the door must then exit non-zero.
+static std::vector<std::string> resolve_manifests(const std::string &flag, bool &bad) {
   bad = false;
+  std::vector<std::string> found;
   const char *env = std::getenv("EMIT_MANIFEST");
   std::string explicit_req = !flag.empty() ? flag : (env ? std::string(env) : std::string());
-  if (!explicit_req.empty()) {                   // candidates 1-2
+  if (!explicit_req.empty()) {                   // candidates 1-2: exactly one file
     if (!file_readable(explicit_req)) {
       std::cerr << "emit: manifest not found: " << explicit_req << "\n";
       bad = true;
-      return "";
+      return found;
     }
-    return explicit_req;
+    found.push_back(explicit_req);
+    return found;
   }
-  if (file_readable(kManifestName)) return kManifestName;          // candidate 3
-  std::string exe = exe_path();                                    // candidate 4
+  if (file_readable(kManifestName)) found.push_back(kManifestName); // candidate 3
+  std::string exe = exe_path();                                     // candidate 4
+  std::string share;
   if (!exe.empty()) {
-    std::string share = dir_of(dir_of(exe)) + "/share/emit/" + kManifestName;
-    if (file_readable(share)) return share;
+    share = dir_of(dir_of(exe)) + "/share/emit/" + kManifestName;
+    if (file_readable(share)) found.push_back(share);
   }
-  std::string prefixed =                                           // candidate 5
+  std::string prefixed =                                            // candidate 5
       std::string(EMIT_PREFIX) + "/share/emit/" + kManifestName;
-  if (file_readable(prefixed)) return prefixed;
-  return "";
+  // Candidates 4 and 5 name the same file whenever emit runs from the prefix it was
+  // built for, which is the ordinary installed case; listing it twice would preload
+  // every installed library a second time.
+  if (prefixed != share && file_readable(prefixed)) found.push_back(prefixed);
+  return found;
+}
+
+// The chain's first manifest ("" when none resolved) -- the one the non-chaining
+// lookups use: program entries (design D4) and the "no program entry in manifest X"
+// diagnostic, which must name the file the user can fix.
+static std::string first_manifest(const std::vector<std::string> &manifests) {
+  return manifests.empty() ? std::string() : manifests[0];
 }
 
 // Resolve a path that appeared INSIDE a manifest -- a library's (source ...), a
@@ -291,12 +347,41 @@ static std::string manifest_relative(const std::string &manifest, const std::str
   return d.empty() ? p : d + "/" + p;
 }
 
-// Narrate which manifest a door resolved (docs/OUTPUT.md form), so "which
-// emit-libs.scm am I getting?" is a one-line answer rather than an strace session.
+// A manifest index key is the canonical unit prefix ("scheme.inexact:"); drop the
+// trailing separator when the key is for a human to read rather than to compare.
+static std::string library_label(const std::string &key) {
+  return (!key.empty() && key[key.size() - 1] == ':') ? key.substr(0, key.size() - 1) : key;
+}
+
+// Narrate which manifest(s) a door resolved (docs/OUTPUT.md form), so "which
+// emit-libs.scm am I getting?" stays a short answer rather than an strace session --
+// which matters more now that the answer can be plural (design D8): a door that
+// silently consults two manifests is worse than one that consults the wrong one.
 // stderr only: no door's stdout changes by a byte.
-static void say_manifest(const std::string &manifest) {
-  if (manifest.empty()) vsay("resolve manifest -> none found (baked-in libraries only)");
-  else                  say("resolve manifest -> " + manifest);
+static void say_manifest(const std::vector<std::string> &manifests) {
+  if (manifests.empty()) {
+    vsay("resolve manifest -> none found (baked-in libraries only)");
+    return;
+  }
+  say("resolve manifest -> " + manifests[0]);
+  for (size_t i = 1; i < manifests.size(); i++)
+    say("resolve manifest -> " + manifests[i] + "  [chained]");
+}
+
+// Narrate what a LATER manifest in the chain actually supplied -- one line per
+// manifest, naming the libraries that came from it (design D8).  A resolution
+// reaching outside the first manifest is real ambient state and must be visible
+// rather than silent; aggregating per manifest is what keeps the REPL's EAGER
+// preload from printing a line per shipped library at every startup.
+static void say_chained(const std::string &manifest, const std::vector<std::string> &keys) {
+  if (keys.empty()) return;
+  std::string names;
+  for (size_t i = 0; i < keys.size(); i++) {
+    if (i) names += " ";
+    names += library_label(keys[i]);
+  }
+  say("chain " + manifest + " -> " + names + "  [" + std::to_string(keys.size()) +
+      (keys.size() == 1 ? " library]" : " libraries]"));
 }
 
 // ===========================================================================
@@ -337,23 +422,34 @@ static std::vector<std::string> source_imports(const std::string &text) {
 // The REPL host deliberately stays EAGER (mode 5): a session is an open world where
 // the user may import anything at any prompt, so everything on the manifest must
 // already be loaded.  Only this door, compiling one known program, can be lazy.
-static bool preload_user_libraries(const std::string &manifest, std::vector<std::string> &modules,
+static bool preload_user_libraries(const std::vector<std::string> &manifests,
+                                   std::vector<std::string> &modules,
                                    const std::string &program_src) {
-  if (manifest.empty()) return true;         // no manifest: no user libraries
+  if (manifests.empty()) return true;        // no manifest: no user libraries
 
-  std::string mtext = read_file(manifest);
-  rt_repl_set(9, mtext.data(), (intptr_t)mtext.size());  // "KEY\tPATH" sans (scheme base)
-  std::string index = scm_str(scheme_entry());
-
+  // Index the whole chain, FIRST MANIFEST WINS per library name (design D3): a
+  // project's ./emit-libs.scm extends the installed one rather than replacing it, and
+  // may override a shipped library by naming it.  Each entry's relative (source ...)
+  // is resolved against ITS OWN manifest's directory -- the rule has not changed, it
+  // simply now has more than one manifest to apply to -- so an inherited entry still
+  // names the sources that shipped beside it.
   std::map<std::string, std::string> path_of;      // library key -> source path
-  {
+  std::map<std::string, std::string> from_of;      // key -> manifest, when not the first
+  for (size_t mi = 0; mi < manifests.size(); mi++) {
+    const std::string &manifest = manifests[mi];
+    std::string mtext = read_file(manifest);
+    rt_repl_set(9, mtext.data(), (intptr_t)mtext.size());  // "KEY\tPATH" sans (scheme base)
+    std::string index = scm_str(scheme_entry());
     std::istringstream lines(index);
     std::string line;
     while (std::getline(lines, line)) {
       std::string::size_type tab = line.find('\t');
       if (tab == std::string::npos) continue;
+      std::string key = line.substr(0, tab);
+      if (path_of.count(key)) continue;      // an earlier manifest already resolves it
       // Manifest paths are relative to the manifest, not to the CWD.
-      path_of[line.substr(0, tab)] = manifest_relative(manifest, line.substr(tab + 1));
+      path_of[key] = manifest_relative(manifest, line.substr(tab + 1));
+      if (mi > 0) from_of[key] = manifest;
     }
   }
   if (path_of.empty()) return true;
@@ -362,6 +458,7 @@ static bool preload_user_libraries(const std::string &manifest, std::vector<std:
   // own imports.  Reading those files is why this loop lives here and not in the
   // core, which performs no I/O by design.
   std::set<std::string> needed;
+  std::map<std::string, std::vector<std::string>> supplied;   // manifest -> keys, for narration
   std::vector<std::string> work = source_imports(program_src);
   while (!work.empty()) {
     std::string key = work.back();
@@ -373,9 +470,16 @@ static bool preload_user_libraries(const std::string &manifest, std::vector<std:
     // guessing here would only produce a worse diagnostic.
     if (it == path_of.end()) continue;
     needed.insert(key);
+    // A name supplied by a LATER manifest is a resolution reaching outside the first
+    // one -- ambient state, so it is named rather than silent (design D8).
+    std::map<std::string, std::string>::const_iterator f = from_of.find(key);
+    if (f != from_of.end()) supplied[f->second].push_back(key);
     std::vector<std::string> deps = source_imports(read_file(it->second));
     for (size_t i = 0; i < deps.size(); i++) work.push_back(deps[i]);
   }
+
+  for (size_t mi = 1; mi < manifests.size(); mi++)
+    say_chained(manifests[mi], supplied[manifests[mi]]);
 
   std::vector<std::string> pending;
   for (std::set<std::string>::const_iterator k = needed.begin(); k != needed.end(); ++k)
@@ -426,6 +530,11 @@ static bool preload_user_libraries(const std::string &manifest, std::vector<std:
 // this selects one program by name (empty NAME => the sole entry).  Returns 0 on
 // success (filling src/out; out empty when the entry has no (output ...)), non-zero
 // on error (message already printed).  Requires an initialized session (mode 0).
+//
+// Takes ONE manifest -- the FIRST of the chain -- because program lookup does not
+// chain (design D4).  A program is project-specific by nature, so a typo'd name must
+// be reported against the project's own manifest, the file the user can actually fix,
+// rather than searched for in an installed one.  Only LIBRARY resolution chains.
 static int resolve_program(const std::string &manifest, const std::string &name,
                            std::string &src, std::string &out) {
   std::string mtext = manifest.empty() ? std::string() : read_file(manifest);
@@ -503,7 +612,7 @@ static bool register_baked_set(std::vector<std::string> &modules,
 // to run its export-table mode against an unseeded session, which is why a library
 // importing `(scheme base)` failed there).  GC must be initialized and EMIT_NO_PRELUDE set
 // by the caller before this runs.
-static bool seed_session(const std::string &prog_src, const std::string &manifest,
+static bool seed_session(const std::string &prog_src, const std::vector<std::string> &manifests,
                          bool no_prelude, std::vector<std::string> &modules) {
   rt_repl_set(no_prelude ? 0 : 1, "", 0);    // init-session
   scheme_entry();
@@ -513,7 +622,7 @@ static bool seed_session(const std::string &prog_src, const std::string &manifes
     std::vector<std::string> inits;           // unused here: the program's entry inits
     if (!register_baked_set(modules, inits)) return false;
   }
-  return preload_user_libraries(manifest, modules, prog_src);
+  return preload_user_libraries(manifests, modules, prog_src);
 }
 
 // Compile a whole program (or a lone define-library) against the seeded session (mode 7).
@@ -540,10 +649,10 @@ static bool compile_unit(const std::string &prog_src, std::vector<std::string> &
 // IR, in-process -- the shared front half of `emit run`, `emit run --emit`, and
 // `emit build` (spec: no second compilation path).  Seed, then compile: the same mode
 // sequence in the same order as before it was split, so the emitted IR does not move.
-static bool compile_program(const std::string &prog_src, const std::string &manifest,
+static bool compile_program(const std::string &prog_src, const std::vector<std::string> &manifests,
                             bool no_prelude, std::vector<std::string> &modules,
                             std::string &prog_ir, bool &is_library) {
-  if (!seed_session(prog_src, manifest, no_prelude, modules)) return false;
+  if (!seed_session(prog_src, manifests, no_prelude, modules)) return false;
   return compile_unit(prog_src, modules, prog_ir, is_library);
 }
 
@@ -568,11 +677,12 @@ static int emit_run(int argc, char **argv) {
     else if (!a.empty() && a[0] != '-') prog_file = a;   // program source FILE
     else { std::cerr << "emit run: unknown option " << a << "\n"; return 2; }
   }
-  // Manifest resolution: the shared ordered lookup (change: manifest-search-path).
+  // Manifest resolution: the shared ordered lookup (change: manifest-search-path),
+  // now a chain over the searched candidates (change: installed-emit-completeness).
   bool bad_manifest = false;
-  manifest = resolve_manifest(manifest, bad_manifest);
+  std::vector<std::string> manifests = resolve_manifests(manifest, bad_manifest);
   if (bad_manifest) return 1;
-  say_manifest(manifest);
+  say_manifest(manifests);
 
   // --resolve-program NAME: resolve a manifest program entry and print its source +
   // output (source line, then output line).  Chez-free; never reads stdin or runs.
@@ -581,7 +691,7 @@ static int emit_run(int argc, char **argv) {
     rt_repl_set(0, "", 0);                     // init-session (no prelude needed)
     scheme_entry();
     std::string src, out;
-    if (resolve_program(manifest, resolve_name, src, out)) return 1;
+    if (resolve_program(first_manifest(manifests), resolve_name, src, out)) return 1;
     std::cout << src << "\n" << out << "\n";
     return 0;
   }
@@ -606,7 +716,7 @@ static int emit_run(int argc, char **argv) {
   std::vector<std::string> modules;
   std::string prog_ir;
   bool is_library = false;
-  if (!compile_program(prog_src, manifest, no_prelude, modules, prog_ir, is_library))
+  if (!compile_program(prog_src, manifests, no_prelude, modules, prog_ir, is_library))
     return 1;
 
   // --emit: write every module (units then program), joined by the boundary marker,
@@ -735,22 +845,58 @@ static bool run_init(const std::string &name) {
   return ok;
 }
 
-// Preload every library named in the manifest into the shared JITDylib (change:
+// Preload every library named in the manifest CHAIN into the shared JITDylib (change:
 // module-artifacts-vertical-slice; transitive imports: module-generalize).  Mode 5
 // turns the manifest text into source paths; mode 4 compiles each unit and returns
 // (ok . (ir . init-symbol)).  Iterated to a fixpoint (topological load order).
-static void preload_libraries(const std::string &manifest) {
-  if (manifest.empty()) return;              // no manifest: no libraries this session
-  std::string mtext = read_file(manifest);
-
-  rt_repl_set(5, mtext.data(), (intptr_t)mtext.size());
-  std::string paths = scm_str(scheme_entry());
+//
+// The UNION of the chain, not just the first manifest (design D7).  A session is an
+// open world where the user may import anything at any prompt, so an installed REPL
+// must have the full standard surface even when the project's own manifest names none
+// of it -- otherwise `(import (scheme file))` failing at the prompt would reintroduce
+// issue #44 one layer up.  The lazy doors need no such decision: an unresolved name
+// simply walks to the next manifest there.
+static void preload_libraries(const std::vector<std::string> &manifests) {
+  if (manifests.empty()) return;             // no manifest: no libraries this session
 
   std::vector<std::string> pending;
-  std::istringstream lines(paths);
-  std::string path;
-  while (std::getline(lines, path))
-    if (!path.empty()) pending.push_back(manifest_relative(manifest, path));
+  std::set<std::string> seen;                // library keys an earlier manifest claimed
+  for (size_t mi = 0; mi < manifests.size(); mi++) {
+    const std::string &manifest = manifests[mi];
+    std::vector<std::string> supplied;       // this manifest's contribution, for narration
+    std::string mtext = read_file(manifest);
+    if (mi == 0) {
+      // The first manifest, exactly as before: mode 5 lists every library entry,
+      // INCLUDING a baked member like (scheme base), which this repository's own
+      // manifest names for the Chez driver and which the already-registered guard
+      // absorbs below.
+      rt_repl_set(5, mtext.data(), (intptr_t)mtext.size());
+      std::string paths = scm_str(scheme_entry());
+      std::istringstream lines(paths);
+      std::string path;
+      while (std::getline(lines, path))
+        if (!path.empty()) pending.push_back(manifest_relative(manifest, path));
+      if (manifests.size() == 1) break;      // nothing to dedup against: skip the index
+    }
+    // Mode 5 yields paths; a CHAIN needs NAMES, so that a library an earlier manifest
+    // already supplies is not loaded a second time from a later one.  Mode 9's
+    // "KEY<TAB>PATH" is that index (it omits only (scheme base), which is baked and
+    // would land on the already-registered guard either way).
+    rt_repl_set(9, mtext.data(), (intptr_t)mtext.size());
+    std::string index = scm_str(scheme_entry());
+    std::istringstream ilines(index);
+    std::string line;
+    while (std::getline(ilines, line)) {
+      std::string::size_type tab = line.find('\t');
+      if (tab == std::string::npos) continue;
+      std::string key = line.substr(0, tab);
+      if (!seen.insert(key).second) continue;   // an earlier manifest wins this name
+      if (mi == 0) continue;                    // its paths came from mode 5 above
+      pending.push_back(manifest_relative(manifest, line.substr(tab + 1)));
+      supplied.push_back(key);
+    }
+    say_chained(manifest, supplied);
+  }
 
   while (!pending.empty()) {
     std::vector<std::string> deferred;
@@ -833,7 +979,7 @@ static int emit_repl(int argc, char **argv) {
     else if (a == "--manifest" && i + 1 < argc) manifest = argv[++i];
   }
   bool bad_manifest = false;
-  manifest = resolve_manifest(manifest, bad_manifest);
+  std::vector<std::string> manifests = resolve_manifests(manifest, bad_manifest);
   if (bad_manifest) return 1;
   // Per-form stage dumps for the whole session (change: emit-dump-stages).
   forward_dump_level(dump, dump_all);
@@ -923,8 +1069,8 @@ static int emit_repl(int argc, char **argv) {
   }
 
   // Preload manifest libraries so interactive (import (L)) forms can resolve them.
-  say_manifest(manifest);
-  preload_libraries(manifest);
+  say_manifest(manifests);
+  preload_libraries(manifests);
 
   // The prelude's procedures live in the now-registered (scheme base) library;
   // auto-import it into the session scope (mode 6) so later forms resolve prelude
@@ -971,19 +1117,48 @@ static int emit_repl(int argc, char **argv) {
 // bin/emit).
 // ===========================================================================
 
-struct Toolchain { std::string cc, gc_inc, gc_lib; };
+// The toolchain THIS BINARY WAS BUILT AGAINST, recorded by the Makefile the way
+// EMIT_PREFIX already is (change: installed-emit-completeness; issue #36).  Empty
+// when the build did not resolve one, which makes the layer simply not apply.
+#ifndef EMIT_DEFAULT_CC
+#define EMIT_DEFAULT_CC ""
+#endif
+#ifndef EMIT_DEFAULT_GC_INC
+#define EMIT_DEFAULT_GC_INC ""
+#endif
+#ifndef EMIT_DEFAULT_GC_LIB
+#define EMIT_DEFAULT_GC_LIB ""
+#endif
 
-// Discover the C toolchain for the AOT link.  Explicit env (CC / GC_INC / GC_LIB,
-// with the EMIT_GC_* mirrors as fallbacks) wins; otherwise consult tools/llvm-env.sh
-// --print-env (found under the repo root), so discovery stays single-sourced with
-// the Makefile and the Chez driver (design D2, task 2.2).
-static bool discover_toolchain(const std::string &root, Toolchain &tc) {
+struct Toolchain {
+  std::string cc, gc_inc, gc_lib;
+  // The values that came from the compiled-in build-time defaults, as "K=V" pairs, so
+  // a link failure can say WHERE a stale path came from rather than leaving the user
+  // with clang's own error (spec: "a stale compiled-in default fails legibly").
+  std::string baked;
+};
+
+// Discover the C toolchain for the AOT link.  Three layers, highest first (design D6):
+//
+//   1. explicit env    CC / GC_INC / GC_LIB (+ the EMIT_GC_* mirrors)
+//   2. discovery       tools/llvm-env.sh --print-env, located by support_file()
+//   3. compiled-in     EMIT_DEFAULT_CC / _GC_INC / _GC_LIB, recorded at build time
+//
+// Layer 2 keeps discovery single-sourced with the Makefile and the Chez driver
+// (design D2), and re-discovers at RUN time, so a user who upgrades LLVM after
+// installing Emit is followed rather than stranded.  Layer 3 is the floor for the
+// case where discovery finds nothing at all -- notably a keg-only Homebrew LLVM,
+// where neither clang nor llvm-config is on PATH.  It is deliberately LAST: a
+// recorded path is the stalest information in the system and must never beat a live
+// answer.
+static bool discover_toolchain(Toolchain &tc) {
   const char *cc = std::getenv("CC");
   const char *gi = std::getenv("GC_INC"); if (!gi) gi = std::getenv("EMIT_GC_INC");
   const char *gl = std::getenv("GC_LIB"); if (!gl) gl = std::getenv("EMIT_GC_LIB");
   std::string ecc, egi, egl;
-  if (!cc || !gi || !gl) {
-    std::string cmd = "'" + root + "/tools/llvm-env.sh' --print-env 2>/dev/null";
+  std::string script = (cc && gi && gl) ? std::string() : support_file("tools/llvm-env.sh");
+  if (!script.empty()) {
+    std::string cmd = "'" + script + "' --print-env 2>/dev/null";
     FILE *p = popen(cmd.c_str(), "r");
     if (p) {
       char buf[4096];
@@ -1003,9 +1178,28 @@ static bool discover_toolchain(const std::string &root, Toolchain &tc) {
   tc.cc = cc ? std::string(cc) : ecc;
   tc.gc_inc = gi ? std::string(gi) : egi;
   tc.gc_lib = gl ? std::string(gl) : egl;
+
+  // Layer 3, per value: whatever the first two layers left empty.
+  struct { std::string *slot; const char *name, *baked; } fallbacks[] = {
+    { &tc.cc,     "CC",     EMIT_DEFAULT_CC },
+    { &tc.gc_inc, "GC_INC", EMIT_DEFAULT_GC_INC },
+    { &tc.gc_lib, "GC_LIB", EMIT_DEFAULT_GC_LIB },
+  };
+  for (size_t i = 0; i < sizeof fallbacks / sizeof *fallbacks; i++) {
+    if (!fallbacks[i].slot->empty() || !*fallbacks[i].baked) continue;
+    *fallbacks[i].slot = fallbacks[i].baked;
+    if (!tc.baked.empty()) tc.baked += " ";
+    tc.baked += std::string(fallbacks[i].name) + "=" + fallbacks[i].baked;
+  }
+  if (!tc.baked.empty())
+    vsay("toolchain " + tc.baked + "  [this binary's build-time default]");
+
   if (tc.cc.empty() || tc.gc_inc.empty() || tc.gc_lib.empty()) {
     std::cerr << "emit: toolchain discovery failed (need CC / GC_INC / GC_LIB, or a "
                  "working tools/llvm-env.sh)\n";
+    if (script.empty())
+      std::cerr << "emit: tools/llvm-env.sh not found beside this binary or under "
+                << EMIT_PREFIX << "/share/emit\n";
     return false;
   }
   return true;
@@ -1080,20 +1274,20 @@ static int emit_build(int argc, char **argv) {
     else name = a;
   }
   bool bad_manifest = false;
-  manifest = resolve_manifest(manifest, bad_manifest);
+  std::vector<std::string> manifests = resolve_manifests(manifest, bad_manifest);
   if (bad_manifest) return 1;
-  say_manifest(manifest);
-  std::string root = repo_root();
+  say_manifest(manifests);
 
   GC_INIT();
   if (no_prelude) setenv("EMIT_NO_PRELUDE", "1", 1);
   forward_dump_level(dump, dump_all);
 
   // Resolve the (program NAME) entry to its source + delivered path (Chez-free).
+  // The FIRST manifest only: program lookup does not chain (design D4).
   rt_repl_set(0, "", 0);
   scheme_entry();
   std::string src, entry_out;
-  if (resolve_program(manifest, name, src, entry_out)) return 1;
+  if (resolve_program(first_manifest(manifests), name, src, entry_out)) return 1;
 
   // Output precedence: -o flag > entry (output ...) > build/<NAME> > build/<src base>.
   if (out.empty()) {
@@ -1115,7 +1309,7 @@ static int emit_build(int argc, char **argv) {
   std::vector<std::string> modules;
   std::string prog_ir;
   bool is_library = false;
-  if (!compile_program(prog_src, manifest, no_prelude, modules, prog_ir, is_library))
+  if (!compile_program(prog_src, manifests, no_prelude, modules, prog_ir, is_library))
     return 1;
 
   // Write each unit + the program to temp .ll files (clang infers IR from .ll).  The
@@ -1136,12 +1330,29 @@ static int emit_build(int argc, char **argv) {
   vsay("emit " + src + " -> " + std::to_string(unit_files.size()) + " unit(s) IR");
 
   Toolchain tc;
-  if (!discover_toolchain(root, tc)) return 1;
+  if (!discover_toolchain(tc)) return 1;
+
+  // The C runtime is linked into every delivered executable, so it must be findable
+  // from an install as well as from the checkout (design D5).  Report a miss BY NAME:
+  // handing clang a path assembled from a wrong root produced its error, not ours.
+  std::string runtime_c = support_file("src/runtime/runtime.c");
+  if (runtime_c.empty()) {
+    std::cerr << "emit build: cannot find src/runtime/runtime.c beside this binary or "
+                 "under " << EMIT_PREFIX << "/share/emit\n";
+    return 1;
+  }
 
   ensure_parent_dir(out);
-  std::string runtime_c = root + "/src/runtime/runtime.c";
   if (!link_clang(tc, runtime_c, unit_files, out)) {
     std::cerr << "emit build: link failed\n";
+    // A toolchain value that came from the compiled-in build-time defaults is the
+    // stalest thing in the link line: say so, rather than leaving the user with
+    // clang's error and no idea the path was recorded when emit was built.
+    if (!tc.baked.empty())
+      std::cerr << "emit build: " << tc.baked
+                << " came from this binary's build-time defaults (discovery found "
+                   "none); that toolchain may have moved -- set CC / GC_INC / GC_LIB "
+                   "to override\n";
     return 1;
   }
   long b = file_bytes(out);
@@ -1169,9 +1380,9 @@ static int emit_lib(int argc, char **argv) {
     return 1;
   }
   bool bad_manifest = false;
-  manifest = resolve_manifest(manifest, bad_manifest);
+  std::vector<std::string> manifests = resolve_manifests(manifest, bad_manifest);
   if (bad_manifest) return 1;
-  say_manifest(manifest);
+  say_manifest(manifests);
 
   GC_INIT();
   forward_dump_level(dump, dump_all);
@@ -1189,7 +1400,7 @@ static int emit_lib(int argc, char **argv) {
   // declaring `(import (scheme base))` failed with `unbound variable map`
   // (change: baked-set-on-every-door).
   std::vector<std::string> modules;
-  if (!seed_session(lib_src, manifest, /*no_prelude=*/false, modules)) return 1;
+  if (!seed_session(lib_src, manifests, /*no_prelude=*/false, modules)) return 1;
 
   // .exports table + the library's basename (mode 11: (ok . "<basename>\n<datum>")).
   rt_repl_set(11, lib_src.data(), (intptr_t)lib_src.size());

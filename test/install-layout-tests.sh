@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# install-layout-tests.sh -- guard that an INSTALLED emit resolves its libraries
-# (change: manifest-search-path, GitHub issue #35).
+# install-layout-tests.sh -- guard that an INSTALLED emit is a complete product:
+# it resolves its libraries (change: manifest-search-path, GitHub issue #35) AND its
+# support files, so every door works from an install (change:
+# installed-emit-completeness, issues #36 and #44).
 #
 # A library that is not baked into the compiler is reachable only through a manifest,
 # and the manifest used to be looked up as the bare relative string "emit-libs.scm" --
@@ -9,12 +11,25 @@
 # (import (scheme inexact)), and `emit repl` lost (scheme base) itself, leaving a
 # session with primitives only.
 #
+# Two doors stayed outside that guarantee, and both are reachable from one ordinary
+# PROJECT directory -- a directory with its own emit-libs.scm, which a project must
+# have to declare its own program:
+#
+#   #36  `emit build` found tools/llvm-env.sh and src/runtime/runtime.c by stripping
+#        "/emit" and "/build" off its own path, an assumption that it sits in a
+#        checkout, so the one door that produces the project's first-class deliverable
+#        was the one door that did not work when installed.
+#   #44  the manifest lookup stopped at the first candidate that EXISTS, so a project's
+#        own ./emit-libs.scm HID the installed one and the project silently lost every
+#        shipped library it did not name itself.
+#
 # This suite installs into a temp prefix and drives the installed binary from an
 # UNRELATED working directory, which is the only way to exercise the lookup's
 # executable-relative and install-prefix candidates at all.  It also pins the two
 # properties that make the lookup safe rather than merely working: a symlinked
 # launcher resolves to the real binary's prefix, and an in-repo invocation still
-# prefers the repo's own ./emit-libs.scm over anything installed.
+# prefers the repo's own ./emit-libs.scm and its own support files over anything
+# installed.
 #
 # CHEZ-FREE: builds nothing but the default `make` target.
 # Run from the repo root: test/install-layout-tests.sh
@@ -38,11 +53,25 @@ if ! make install PREFIX="$PREFIX" >"$TMP/install.log" 2>&1; then
   echo "  [FAIL] make install"; sed 's/^/         /' "$TMP/install.log"; exit 1
 fi
 
+# The binary narrates paths it derived from its OWN resolved real path, so on a
+# platform where the temp dir is a symlink (/var -> /private/var on macOS) those lines
+# carry the resolved prefix, not $PREFIX.  Match against this one.
+RPREFIX="$(cd "$PREFIX" && pwd -P)"
+
 echo "installed layout"
+# The support files land at their REPO-RELATIVE SUBPATHS under share/emit, the same
+# mirroring rule the lib/ sources follow, so one lookup in the binary serves both the
+# checkout and the installed layout.  log.sh is here because llvm-env.sh SOURCES it:
+# shipping the script alone installs one that fails on its first line.
 for f in bin/emit share/emit/emit-libs.scm share/emit/lib/scheme/base.sld \
-         share/emit/lib/scheme/inexact.sld; do
+         share/emit/lib/scheme/inexact.sld \
+         share/emit/tools/llvm-env.sh share/emit/tools/log.sh \
+         share/emit/src/runtime/runtime.c; do
   [ -f "$PREFIX/$f" ] && ok "installed $f" || bad "missing $f"
 done
+[ -x "$PREFIX/share/emit/tools/llvm-env.sh" ] \
+  && ok "the installed llvm-env.sh is executable" \
+  || bad "$PREFIX/share/emit/tools/llvm-env.sh is not executable"
 
 # A second install over the same prefix must succeed and leave the same tree.
 before="$(find "$PREFIX" -type f | sort)"
@@ -63,6 +92,8 @@ STAGE="$TMP/stage"
 if make install PREFIX=/usr/local DESTDIR="$STAGE" >"$TMP/install3.log" 2>&1; then
   [ -f "$STAGE/usr/local/bin/emit" ] && [ -f "$STAGE/usr/local/share/emit/emit-libs.scm" ] \
     && [ -f "$STAGE/usr/local/share/emit/lib/scheme/base.sld" ] \
+    && [ -f "$STAGE/usr/local/share/emit/tools/llvm-env.sh" ] \
+    && [ -f "$STAGE/usr/local/share/emit/src/runtime/runtime.c" ] \
     && ok "DESTDIR stages <destdir><prefix>/{bin,share/emit}" \
     || { bad "DESTDIR layout wrong"; find "$STAGE" -type f | sed 's/^/         /'; }
 else bad "make install with DESTDIR failed"; fi
@@ -71,6 +102,9 @@ else bad "make install with DESTDIR failed"; fi
 grep -q 'install .*-> .*bin/emit' "$TMP/install.log" \
   && ok "install narrates its actions" \
   || { bad "install narration missing"; sed 's/^/         /' "$TMP/install.log"; }
+grep -q 'install .* support file(s) ->' "$TMP/install.log" \
+  && ok "install narrates the support files it ships" \
+  || { bad "support-file narration missing"; sed 's/^/         /' "$TMP/install.log"; }
 qout="$(EMIT_VERBOSITY=quiet make install PREFIX="$PREFIX" 2>&1)"
 [ -z "$qout" ] && ok "install is silent at EMIT_VERBOSITY=quiet" \
                || { bad "install printed at quiet"; printf '%s\n' "$qout" | sed 's/^/         /'; }
@@ -146,12 +180,130 @@ done
   && ok "the internal substrate is installed beside the standard libraries" \
   || bad "$PREFIX/share/emit/lib/emit/internal.sld is missing from the install"
 
+# --- a PROJECT directory: the shape both #36 and #44 are reachable from ---------
+# Everything above runs from a directory with no emit-libs.scm at all.  A real project
+# has one -- it must, to declare its own program -- and that is exactly what used to
+# hide the installed manifest (#44) and what makes `emit build` the door a project
+# reaches for (#36).  So: one directory, one program, one manifest naming only that
+# program, and NOTHING in the environment.
+echo
+echo "a project directory with its own manifest"
+PROJ="$TMP/proj"
+mkdir -p "$PROJ"
+cd "$PROJ"
+cat > emit-libs.scm <<'EOF'
+((program hello (source "hello.scm") (output "hello")))
+EOF
+cat > hello.scm <<'EOF'
+(import (scheme inexact))
+(display (sqrt 2.0))
+EOF
+
+# #36: `emit build` needs tools/llvm-env.sh + src/runtime/runtime.c, neither of which
+# is a library.  `env -u` strips the toolchain so discovery has to work on its own --
+# through the INSTALLED llvm-env.sh, or failing that this binary's build-time defaults.
+if env -u CC -u GC_INC -u GC_LIB -u EMIT_GC_INC -u EMIT_GC_LIB \
+     "$EMIT" build hello >"$TMP/build.log" 2>&1; then
+  if [ -x "$PROJ/hello" ]; then
+    bgot="$("$PROJ/hello" 2>/dev/null)"
+    case "$bgot" in
+      1.4142135623730951*) ok "emit build from an install delivers a runnable exe => $bgot" ;;
+      *)                   bad "the delivered exe printed [$bgot]" ;;
+    esac
+  else bad "emit build reported success but wrote no executable"; fi
+else
+  bad "emit build from an install failed"; sed 's/^/         /' "$TMP/build.log"
+fi
+
+# #44: the same program's (import (scheme inexact)) must resolve THROUGH THE CHAIN --
+# the project manifest names no library at all, so this only works if the searched
+# candidates extend rather than replace one another.
+cgot="$(EMIT_VERBOSITY=quiet "$EMIT" run hello.scm 2>"$TMP/e4")"
+[ "$cgot" = "$want" ] \
+  && ok "a project manifest keeps the shipped libraries => $cgot" \
+  || { bad "chained (scheme inexact) => [$cgot] (expected [$want])"
+       sed 's/^/         /' "$TMP/e4"; }
+
+# The project's manifest names no path into the prefix -- that is the whole point:
+# a Cellar directory moves on every upgrade.
+grep -q "$PREFIX" emit-libs.scm \
+  && bad "the project manifest names the install prefix" \
+  || ok "the project manifest needs no path into the install prefix"
+
+# The chain is NARRATED: both manifests in order, and the one that supplied the
+# library.  A door that silently consults two manifests is worse than one that
+# consults the wrong one.
+"$EMIT" run hello.scm >/dev/null 2>"$TMP/e5"
+if grep -q 'resolve manifest -> emit-libs.scm' "$TMP/e5" \
+   && grep -q "resolve manifest -> $RPREFIX/share/emit/emit-libs.scm  \[chained\]" "$TMP/e5" \
+   && grep -q "^chain $RPREFIX/share/emit/emit-libs.scm -> scheme.inexact" "$TMP/e5"; then
+  ok "the chain and the supplying manifest are narrated"
+else
+  bad "chain narration"; sed 's/^/         /' "$TMP/e5"
+fi
+qout="$(EMIT_VERBOSITY=quiet "$EMIT" run hello.scm 2>&1 >/dev/null)"
+[ -z "$qout" ] && ok "chain narration is absent at EMIT_VERBOSITY=quiet" \
+               || { bad "chain narration at quiet"; printf '%s\n' "$qout" | sed 's/^/         /'; }
+
+# --- chaining: precedence, non-extension, and what does NOT chain ---------------
+echo
+echo "manifest chaining"
+
+# A project entry of the same name as a shipped library WINS -- the one part of the old
+# first-match-wins behaviour worth keeping, and the way a project overrides a library.
+# Its relative (source ...) resolves against the PROJECT's manifest directory, which is
+# what makes "each entry against its own manifest" observable.
+mkdir -p "$PROJ/mylib"
+cat > "$PROJ/mylib/cxr.sld" <<'EOF'
+(define-library (scheme cxr)
+  (import (scheme base))
+  (export caddr)
+  (begin (define (caddr x) (quote overridden))))
+EOF
+cat > "$PROJ/cxr.scm" <<'EOF'
+(import (scheme cxr))
+(display (caddr (list 1 2 3)))
+EOF
+cat > "$PROJ/emit-libs.scm" <<'EOF'
+((library (scheme cxr) (source "mylib/cxr.sld"))
+ (program hello (source "hello.scm") (output "hello")))
+EOF
+ogot="$(EMIT_VERBOSITY=quiet "$EMIT" run cxr.scm 2>"$TMP/e6")"
+case "$ogot" in
+  overridden*) ok "a project entry overrides a shipped library of the same name => $ogot" ;;
+  *) bad "override => [$ogot] (expected overridden...)"; sed 's/^/         /' "$TMP/e6" ;;
+esac
+cat > "$PROJ/emit-libs.scm" <<'EOF'
+((program hello (source "hello.scm") (output "hello")))
+EOF
+
+# An EXPLICIT request names exactly one manifest and is NOT extended: that is what
+# keeps a hermetic build expressible.  The same program that resolves through the
+# chain must fail when the chain is replaced by one file that does not name it.
+if EMIT_VERBOSITY=quiet "$EMIT" run --manifest "$PROJ/emit-libs.scm" hello.scm \
+     >/dev/null 2>"$TMP/e7"; then
+  bad "--manifest chained: (scheme inexact) resolved from the installed manifest"
+else
+  ok "--manifest names exactly one manifest and does not chain"
+fi
+
+# Program lookup does NOT chain either: a name the project's manifest does not define
+# is reported against the PROJECT'S file -- the one the user can fix -- and is not
+# searched for in the installed manifest.
+"$EMIT" build nosuchprog >/dev/null 2>"$TMP/e8" && bad "emit build nosuchprog succeeded"
+if grep -q 'no program entry named nosuchprog in emit-libs.scm' "$TMP/e8"; then
+  ok "an unknown program names the project's own manifest"
+else
+  bad "unknown program diagnostic"; sed 's/^/         /' "$TMP/e8"
+fi
+
 # --- candidate 4: the executable's REAL path, not the symlink's ----------------
 # Homebrew reaches the keg through a symlink in <prefix>/bin, so what sits beside the
 # REAL binary is what was installed with it.  A link in a bin/ with no ../share/emit
 # beside it must still find the installed manifest.
 echo
 echo "symlinked launcher"
+cd "$TMP"                                  # back out of the project directory
 mkdir -p "$TMP/otherbin"
 ln -sf "$EMIT" "$TMP/otherbin/emit"
 sgot="$(echo '(import (scheme inexact)) (display (sqrt 2.0))' \
@@ -172,6 +324,30 @@ case "$line" in
   *"resolve manifest -> emit-libs.scm") ok "in-repo invocation prefers ./emit-libs.scm" ;;
   *) bad "in-repo invocation resolved [$line] (expected ./emit-libs.scm)" ;;
 esac
+
+# Chaining must not weaken that.  The repository's own manifest names EVERY library it
+# ships, so nothing may be supplied by the installed one -- a `chain ... ->` line from
+# an in-repo door would mean a resolution silently reached outside the checkout.
+"$REPO/build/emit" run demos/fact.scm >/dev/null 2>"$TMP/e9" || true
+grep -q '^chain ' "$TMP/e9" \
+  && { bad "an in-repo door resolved a library from outside the checkout"
+       sed 's/^/         /' "$TMP/e9"; } \
+  || ok "an in-repo door supplies every library from the repository's own manifest"
+
+# Support files follow the same rule: the checkout's llvm-env.sh and runtime.c are the
+# ones an in-repo `emit build` uses, even with a different emit installed.  The proof
+# is that the delivered exe still builds and runs from the repo (the installed prefix
+# here carries its own copies, so a lookup that preferred them would still work -- what
+# would break is a from-source developer editing runtime.c and not seeing the edit).
+cat > "$TMP/inrepo-libs.scm" <<EOF
+((program fact (source "$REPO/demos/fact.scm") (output "$TMP/fact-inrepo")))
+EOF
+if "$REPO/build/emit" build --manifest "$TMP/inrepo-libs.scm" fact >"$TMP/e10" 2>&1 \
+   && [ -x "$TMP/fact-inrepo" ] && [ "$("$TMP/fact-inrepo")" = "120" ]; then
+  ok "an in-repo emit build finds the checkout's own support files"
+else
+  bad "in-repo emit build"; sed 's/^/         /' "$TMP/e10"
+fi
 
 # --- narration is suppressible -------------------------------------------------
 # The resolved manifest is named at default verbosity and absent at quiet, and stdout
