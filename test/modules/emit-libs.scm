@@ -22,7 +22,20 @@
  (library (dia-c)      (source "dia-c.sld"))
  (library (rename-lib) (source "rename-lib.sld"))
  (library (varlib)     (source "varlib.sld"))
+ ;; macro-exporting libraries (change: library-macro-export)
+ (library (macrolib)          (source "macrolib.sld"))
+ (library (macro-helper-lib)  (source "macro-helper-lib.sld"))
+ (library (macro-rename-lib)  (source "macro-rename-lib.sld"))
+ (library (macro-dup-a)       (source "macro-dup-a.sld"))
+ (library (macro-dup-b)       (source "macro-dup-b.sld"))
+ (library (macro-user-lib)    (source "macro-user-lib.sld"))
+ (library (macro-rec-lib)     (source "macro-rec-lib.sld"))
+ ;; macro-dupname-lib is deliberately invalid and lives in emit-libs-macdup.scm,
+ ;; not here: the REPL preloads every manifest library eagerly.
  ;; program (emit build) entries: name -> source + delivered executable
  ;; (change: emit-build-bin-entry).  Ignored by library import resolution.
  (program mylib-app    (source "prog-mylib.scm") (output "../../build/mylib-app"))
- (program greet-app    (source "prog-mylib.scm")))
+ (program greet-app    (source "prog-mylib.scm"))
+ ;; a program using an imported MACRO, for the emit build door (change:
+ ;; library-macro-export)
+ (program macro-app    (source "prog-macro-helper.scm")))

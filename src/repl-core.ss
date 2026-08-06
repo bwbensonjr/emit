@@ -257,6 +257,26 @@
            ;; direct-calling the library slot they captured.
            (set! *repl-calls*
                  (append (import-tables->call-alist (list entry)) *repl-calls*))
+           ;; ...and its compile-time interface (change: library-macro-export, design D7):
+           ;; the exported transformers join the session's macro environment so a LATER
+           ;; form may use an imported macro, and the mangled bindings their templates
+           ;; reference join the environment (mapping to themselves, so they lower as
+           ;; external globals) and the known set.  All three are session state, so an
+           ;; imported macro persists across forms exactly as an imported procedure does,
+           ;; and is restored with the rest of the state when a form's compile fails.
+           (let ([refs (import-tables->macro-refs (list entry))])
+             ;; appended, not consed: a `define-syntax` entered at the prompt goes on the
+             ;; FRONT (repl-note-syntax!), so the session's own macro shadows an imported
+             ;; keyword of the same spelling.
+             (set! *repl-macro-env*
+                   (append *repl-macro-env* (import-tables->macro-env (list entry))))
+             (for-each (lambda (k) (set! *repl-known* (cons k *repl-known*)))
+                       (import-tables->macro-keywords (list entry)))
+             (for-each
+               (lambda (s)
+                 (vector-set! *repl-env* 0 (cons (cons s s) (vector-ref *repl-env* 0)))
+                 (set! *repl-known* (cons s *repl-known*)))
+               refs))
            #t))))
 
 ;; Assemble the import tables (list (name export-alist call-rows) ...) for a library's
@@ -619,7 +639,13 @@
                 (let* ([dl   (parse-define-library lib)]
                        [res  (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl)
                                               tables no-dump)]
-                       [nt   (cadr res)]      ; (name export-table)
+                       ;; (name export-table call-rows [compile-time-interface]) -- the
+                       ;; fourth field appears only for a library that exports a macro
+                       ;; (change: library-macro-export).  `render-datum` renders whatever
+                       ;; compile-library returns, and the Chez driver writes its artifact
+                       ;; through the SAME renderer, so the two doors' bytes agree by
+                       ;; construction rather than by two implementations agreeing.
+                       [nt   (cadr res)]
                        [name (car nt)])
                   (cons (quote ok)
                         (string-append (lib-name->basename name) "\n"

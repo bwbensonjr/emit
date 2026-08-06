@@ -44,8 +44,27 @@ A library source is one `(define-library …)` form, conventionally in a `.sld` 
     (begin (define (a-plus) (+ (base-val) 5))))   ; base-val comes from chain-b => 15
   ```
 
-- **`(begin form …)`** — the library body: a mutually-recursive group of top-level `define`s (and
-  `define-syntax` used internally).
+- **`(begin form …)`** — the library body: a mutually-recursive group of top-level `define`s and
+  `define-syntax` forms.
+
+- **A macro is exportable** (change: `library-macro-export`, issue #48). A name bound by
+  `define-syntax` at the body's top level goes in the export list like any other, bare or renamed,
+  and importers use it as a macro:
+
+  ```scheme
+  ;; test/modules/macro-helper-lib.sld
+  (define-library (macro-helper-lib)
+    (export twice)                          ; `helper` and `%inc` stay PRIVATE
+    (begin
+      (define (helper x) (* x 3))
+      (define-syntax %inc (syntax-rules () ((_ e) (+ e 1))))
+      (define-syntax twice (syntax-rules () ((_ e) (helper (%inc e)))))))
+  ```
+
+  A template may reference names the library does not export — a private procedure, a private
+  macro — because each is resolved in the *exporting* library before the transformer leaves it (see
+  [How an exported macro travels](#how-an-exported-macro-travels)). One name may not be bound both
+  by `define` and by `define-syntax`; that is rejected by name.
 
 `export`, `import`, and `begin` are the three declarations Emit recognizes. Anything else in
 declaration position is **rejected by name** rather than absorbed into the body — see
@@ -320,6 +339,12 @@ Two mechanics follow from how macros expand, and are worth knowing before curati
 - `(rename internal external)` cannot be used to hide such a name: it keys the importer's table by
   the *external* name, leaving the template's spelling unresolvable.
 
+Both apply to **this** library and not to a user library's exported macros: the baked set is merged
+as source and so really is resolved in the importer, whereas an exported macro's template is resolved
+in the library that defines it (see [How an exported macro
+travels](#how-an-exported-macro-travels)). Curating `(scheme base)`'s surface still has to obey the
+two rules above; a user library does not.
+
 `lib/scheme/base.sld`'s export list is a committed golden, one name per line, so a surface change is
 a reviewable one-line diff. `test/scheme-base-surface-check.sh` (Chez-free, in `run-all-tests.sh`)
 recomputes it from the two sources: a prelude definition that is neither declared private nor
@@ -505,8 +530,8 @@ other — the same gap as `docs/PERFORMANCE.md` P8.
     `cond-expand` library declarations — now **rejected by name** rather than absorbed into the
     body (see [When you break a rule](#when-you-break-a-rule)).
 - **Artifacts** — each library compiles to `<artifacts>/<name>.ll` plus a readable
-  `<name>.exports` table (`(NAME ((external . "mangled") …) ((external "label" arity) …))`) and a
-  `<name>.stamp` sidecar
+  `<name>.exports` table (`(NAME ((external . "mangled") …) ((external "label" arity) …)
+  [<compile-time-interface>])`) and a `<name>.stamp` sidecar
   recording the compiler that produced them. Artifacts are reused only when fresh — the source
   is no newer than the artifact **and** the recorded compiler-identity stamp matches the current
   compiler — and rebuilt otherwise. The stamp is a version marker plus a content hash over the
@@ -514,6 +539,52 @@ other — the same gap as `docs/PERFORMANCE.md` P8.
   target header), so a compiler/emitter change invalidates cached units even when their source
   is untouched — the toolchain is part of the cache key, as in Rust (`.rlib` SVH), GHC (`.hi`
   version), Go, and Bazel (change: `artifact-compiler-stamp`).
+
+### How an exported macro travels
+
+A transformer cannot ride in the emitted IR — it is consumed at compile time, not run — so it rides
+in a fourth field of the `.exports` table, the library's **compile-time interface** (change:
+`library-macro-export`, issue #48):
+
+```scheme
+;; build/lib/macro-helper-lib.exports  (line-broken here; the file is one line)
+((macro-helper-lib) () ()
+ (((twice () ((_ e) macro-helper-lib:helper (macro-helper-lib:%inc e)))
+   (macro-helper-lib:%inc () ((_ e) + e 1)))     ; the PRIVATE macro, carried hidden
+  (helper)                                       ; own bindings the templates reach
+  ()))                                           ; other units' bindings they reach
+```
+
+Three things to read out of that:
+
+- **The runtime rows are empty.** A macro export has no global, so it contributes no symbol row and
+  no call row. `(macro-helper-lib)` exports one name and emits no public binding at all.
+- **`helper` became `macro-helper-lib:helper`.** Each template's free identifiers are resolved *in
+  the exporting library* before the transformer leaves it. A library's private top-level bindings are
+  already externally linkable mangled globals, so the importer reaches one the same way it reaches
+  any imported name — an `external global i64` the linker resolves. This is why a template may use a
+  private helper without the library exporting it, and why `(rename …)` is safe on a macro export:
+  the template no longer depends on the importer resolving any spelling.
+- **`%inc` travels hidden**, under the unit-qualified keyword `macro-helper-lib:%inc`, so a library
+  can layer macros on its own private ones. It is not usable in the importer: no user writes that
+  spelling.
+
+An identifier the pass cannot resolve is **left exactly as written** and hygienically renamed per
+expansion, as before. Emit's hygiene is a name-set test with no syntax objects, so a
+template-introduced temporary (`tmp`) and a reference to a name nothing defines are indistinguishable
+here; leaving both means a macro that expands correctly cannot be broken by resolution. It is also
+why the baked derived forms need no special case: `when` falls through this arm and expands in the
+importer against the baked set every door registers.
+
+Two consequences worth knowing:
+
+- The AOT tree-shake nominates root candidates from a unit's exports **plus** the own bindings its
+  templates reach, so `helper` survives when the program uses `twice` — and is still pruned when the
+  program imports the library without using it.
+- A **library** importing a macro whose template uses a derived form (`when`, `cond`) hits a
+  pre-existing gap: a library body does not get the baked macro set at all, so `when` is unbound
+  there whether it came from a template or was typed directly (issue #55). Program importers are
+  unaffected.
 
 ## When you break a rule
 
@@ -527,7 +598,7 @@ second is what got reported — so the message sent you somewhere the mistake wa
 | `(import (only (scheme base) car))`, or `except` / `prefix` / `rename` | `import: import sets are not supported: (only (scheme base) car) -- imports are whole-library, as (import (library name))` |
 | `(include …)`, `(include-ci …)`, `(include-library-declarations …)`, `(cond-expand …)` | `define-library: include is an R7RS library declaration this stage does not support` |
 | any other declaration, e.g. `(frobnicate 1 2 3)` | `define-library: frobnicate is not a library declaration -- a declaration is (export ...), (import ...) or (begin ...)` |
-| `(export swap!)` where `swap!` is a `define-syntax` | `compile-library: a library cannot export a macro (exports are procedures in this stage) swap!` |
+| one name bound by both `define` and `define-syntax` | `compile-library: a library binds one name with both define and define-syntax f` |
 | a `define-library` that is not its source's only form | `define-library: a define-library must be the only form in its source: (two)` |
 | a `define-library` typed at the REPL prompt | `define-library: libraries are not defined at the prompt: (r) -- a library is imported, named in the manifest` |
 
@@ -548,9 +619,16 @@ The message body is the same whichever door compiled the form — `emit run`, `e
 
 This is Modules v0:
 
-- **Exports are procedures (values), not macros.** A library may use `define-syntax` internally, but
-  exporting macros through `.exports` is not yet supported; derived-form macros reach programs via
-  the `(scheme base)` merge, not per-library export.
+- **A library body cannot use a derived-form macro** (issue #55). `(when …)`, `cond`, `case`, `let*`
+  in a `.sld` body report `unbound variable when` even with `(import (scheme base))`: the baked macro
+  set is merged into the *program* path only, and `(scheme base)` does not export its compile-time
+  half. `(scheme base)`'s own members dodge this by carrying every transformer in each member's body,
+  which user libraries cannot do. Exporting macros *from* a library works (above); importing one
+  *into* a library works too, unless its template mentions a derived form.
+- **Exported macros are `syntax-rules` only, at a body's top level.** `let-syntax`,
+  `letrec-syntax`, inner `define-syntax`, `syntax-case`, and procedural/identifier transformers are
+  all out of scope. A typo inside an exported template is reported in the importer rather than at the
+  library (issue #56) — a consequence of hygiene being a name-set test with no syntax objects.
 - **No tree-shaking on the Chez-free door.** `emit build` (the in-binary AOT door) links
   full library units; the closed-world reachability strip is only on the Chez driver's AOT ship
   path (change: `aot-release-profile`). Porting it to the Chez-free door is future work.

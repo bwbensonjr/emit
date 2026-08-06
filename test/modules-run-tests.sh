@@ -49,6 +49,15 @@ check run-chain    "$MOD/prog-chain.scm"    15   # (chain-a) -> (chain-b), trans
 check run-diamond  "$MOD/prog-diamond.scm"  35   # (dia-a)+(dia-b) both import (dia-c), once each
 check run-rename   "$MOD/prog-rename.scm"   77   # (rename-lib): importer sees fmap
 
+echo "run door: exported macros (change: library-macro-export, issue #48)"
+check run-macro        "$MOD/prog-macrolib.scm"      32
+check run-macro-helper "$MOD/prog-macro-helper.scm"  18   # template reaches a PRIVATE helper/macro
+check run-macro-rename "$MOD/prog-macro-rename.scm"  21
+check run-macro-dup    "$MOD/prog-macro-dup.scm"    103   # two libraries, same-spelling privates
+check run-macro-unused "$MOD/prog-macro-unused.scm"  22
+check run-macro-user   "$MOD/prog-macro-user.scm"     10   # a LIBRARY imports another's macro
+check run-macro-rec    "$MOD/prog-macro-rec.scm"      17   # recursive variadic macro
+
 echo "run door: a plain program needs no manifest ((scheme base) is baked in)"
 RUNABS="$PWD/build/emit"
 plain="$TMP/plain.scm"; printf '(map (lambda (x) (* x x)) (list 1 2 3))\n' > "$plain"
@@ -59,6 +68,11 @@ else echo "  [FAIL] run-no-manifest => $got  (expected (1 4 9))"; fail=$((fail+1
 echo "run door: import errors are reported and exit non-zero"
 check_fail run-cycle   "$MOD/prog-cycle.scm"   "$MOD/emit-libs-cycle.scm" "cyclic|unresolved"
 check_fail run-missing "$MOD/prog-missing.scm" "$MAN"                     "not found in the manifest"
+# a name bound both by define and define-syntax (change: library-macro-export, design D3)
+check_fail run-macro-dupname "$MOD/prog-macro-dupname.scm" "$MOD/emit-libs-macdup.scm" \
+  "both define and define-syntax"
+# the INTERNAL keyword of a renamed macro export stays invisible to the importer
+check_fail run-macro-hidden  "$MOD/prog-macro-rename-bad.scm" "$MAN" "unbound variable.*%swap"
 
 # --- an import SET is rejected by name, identically on every path -------------
 # (change: module-frontend-diagnostics, issue #45.)  These cases live HERE rather than in

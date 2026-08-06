@@ -593,12 +593,19 @@
       (cond [(> (+ i nl) hl) #f]
             [(string=? (substring hay i (+ i nl)) needle) #t]
             [else (loop (+ i 1))]))))
-(define (program-root-internals prog-text unit-name exports)  ; exports: (external . internal)
+;; Candidates are the unit's exports PLUS the own bindings its exported macros' templates
+;; reach (change: library-macro-export, design D6).  A binding reached only through a
+;; template is not an export, so nominating from the export list alone would prune it and
+;; leave the expansion's reference as a link-time undefined symbol.  The reachability GATE
+;; does not move: a candidate is kept only when the program's emitted IR actually mentions
+;; it, so a program that imports the library without using the macro still loses it.
+(define (program-root-internals prog-text unit-name candidates)  ; candidates: internal names
   (fold-left
-    (lambda (acc e)
-      (if (str-contains? prog-text (string-append "ptr @\"" (mangle unit-name (cdr e)) "\""))
-          (cons (cdr e) acc) acc))
-    '() exports))
+    (lambda (acc n)
+      (if (and (not (memq n acc))
+               (str-contains? prog-text (string-append "ptr @\"" (mangle unit-name n) "\"")))
+          (cons n acc) acc))
+    '() candidates))
 
 ;; `shake?` (AOT ship path) prunes each prunable unit to the bindings the program
 ;; actually reaches.  A unit is prunable only if NO OTHER unit in the closure
@@ -661,7 +668,14 @@
                                          (not (member nm imported-by-unit)))
                                     ;; prunable: recompile with the keep-set
                                     (let* ([exps  (caddr dl)]
-                                           [roots (program-root-internals prog-text nm exps)]
+                                           ;; the unit's exports plus what its exported
+                                           ;; macros' templates reach (design D6)
+                                           [cands (append
+                                                    (map cdr exps)
+                                                    (ct-own-refs
+                                                      (table-ct-half
+                                                        (cdr (assoc nm tables)))))]
+                                           [roots (program-root-internals prog-text nm cands)]
                                            [imp-t (map (lambda (n) (cdr (assoc n tables))) (cadr dl))]
                                            [res   (compile-library (car dl) (cadr dl) (caddr dl)
                                                                    (cadddr dl) imp-t no-dump roots)]
@@ -697,15 +711,28 @@
                          [ll-text (string-append header (car res))])
                     (sh "mkdir" (string-append "mkdir -p " art-dir))
                     (write-text ll ll-text)
+                    ;; `render-datum`, not `write`: the export datum now carries a
+                    ;; library's compile-time interface, whose templates may hold
+                    ;; characters that Chez's `write` and Emit's own reader spell
+                    ;; differently.  One renderer on every door is what makes `emit lib`'s
+                    ;; artifact byte-identical to the driver's (change:
+                    ;; library-macro-export) -- and it is byte-identical to `write` for
+                    ;; every table that exists today, which is measured, not assumed.
                     (let ([o (open-output-file expf 'replace)])
-                      (write (cadr res) o) (newline o) (close-port o))
+                      (display (render-datum (cadr res)) o) (newline o) (close-port o))
                     ;; write the .stamp LAST so a torn write fails safe toward
                     ;; rebuild (D3); `write` (not display) so the digest string
                     ;; round-trips as a string, not a symbol.
                     (let ([o (open-output-file stampf 'replace)])
                       (write stamp o) (newline o) (close-port o))
-                    (note "compile ~s -> ~a  [~a bytes, recompile: ~a]\n"
-                          name ll (string-length ll-text) reason)
+                    ;; The macro count rides the existing metrics clause and only when
+                    ;; there is one, so a library that exports no macro narrates exactly
+                    ;; what it always did (change: library-macro-export; docs/OUTPUT.md).
+                    (note "compile ~s -> ~a  [~a bytes~a, recompile: ~a]\n"
+                          name ll (string-length ll-text)
+                          (let ([n (length (ct-macros (table-ct-half (cadr res))))])
+                            (if (= n 0) "" (string-append ", " (number->string n) " macros")))
+                          reason)
                     (loop (cdr libs) (cons (cons name (cadr res)) tables) (cons ll lls))))))))))
 
 ;; --- modular-set backend consumers (change: driver-backend-rehome) ---------
