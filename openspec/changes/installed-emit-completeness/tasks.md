@@ -93,5 +93,5 @@
 - [x] 5.6 Comment on #36 recording the correction this change is built on: `emit lib` is **not**
       affected (`repo_root()` has one caller, the build door; `emit lib` emits `.ll` and never
       links), verified from an install prefix
-- [ ] 5.7 Reference both issues from the implementing commits (`Fixes #36`, `Fixes #44`); keep the
+- [x] 5.7 Reference both issues from the implementing commits (`Fixes #36`, `Fixes #44`); keep the
       negated-keyword trap in mind for the PR body if any part is left open
