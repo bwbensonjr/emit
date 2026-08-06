@@ -49,8 +49,12 @@ slice and the concrete mechanisms.
   free of filesystem/subprocess I/O.
 
 **Non-Goals (deferred, explicit):**
-- Macro export / phase separation (the `.exports` compile-time macro half). v0 exports
-  **procedures only**; the prelude's derived-form macros stay compile-time.
+- ~~Macro export / phase separation (the `.exports` compile-time macro half). v0 exports
+  **procedures only**; the prelude's derived-form macros stay compile-time.~~ **Closed** by change
+  `library-macro-export` (issue #48): `.exports` grew the compile-time half, and an exported
+  template's free identifiers are resolved in the exporting library rather than the importer, so a
+  template may reach a private binding. The prelude's derived-form macros do keep their separate
+  merge path — which is why a *library* still cannot use one (issue #55).
 - Import-set transforms `only` / `except` / `prefix` (rename *is* in v0, on `export`).
 - Fine-grained prelude partitioning into `(scheme write)` / `(scheme char)` / `(scheme cxr)`.
 - Dead-code elimination beyond "an unused library unit simply isn't linked".

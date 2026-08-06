@@ -361,7 +361,28 @@
     [(pair? x) (string-append "(" (render-list-body x) ")")]
     ;; the call rows carry an arity (change: cross-unit-direct-calls)
     [(number? x) (number->string x)]
+    ;; A macro template may hold a boolean or a character (change: library-macro-export).
+    ;; This renderer WRITES the export artifact on every door now, not just diagnostics,
+    ;; so a datum it renders as "?" would corrupt a table rather than merely read poorly
+    ;; in a message -- hence render-char errors instead of guessing a spelling.
+    [(boolean? x) (if x "#t" "#f")]
+    [(char? x) (render-char x)]
     [else "?"]))
+;; A character as BOTH readers accept it: Chez's `read` (the driver's artifact-reuse
+;; path) and Emit's in-language reader (`rd-char`, lib/emit/internal.sld).  Printable
+;; ASCII goes literally; the five names both spell identically are named; anything else
+;; is an error rather than a rendering the other door cannot read back.
+(define (render-char c)
+  (let ([k (char->integer c)])
+    (cond
+      [(= k 32) "#\\space"]
+      [(= k 10) "#\\newline"]
+      [(= k 9) "#\\tab"]
+      [(= k 13) "#\\return"]
+      [(= k 127) "#\\delete"]
+      [(and (> k 32) (< k 127)) (string-append "#\\" (list->string (list c)))]
+      [else (error 'render-datum
+                   "character has no portable external representation for an artifact" k)])))
 (define (render-list-body p)
   (let ([a (render-datum (car p))] [d (cdr p)])
     (cond
@@ -606,8 +627,70 @@
 ;; global.  Shared by compile-library (transitive lib->lib imports) and
 ;; compile-program-with-imports (change: module-generalize).
 (define (import-tables->env-alist import-tables)
-  (map (lambda (p) (cons (car p) (string->symbol (cdr p))))
-       (apply append (map cadr import-tables))))
+  (append
+    (map (lambda (p) (cons (car p) (string->symbol (cdr p))))
+         (apply append (map cadr import-tables)))
+    ;; ...plus the bindings an imported macro's template reaches (change:
+    ;; library-macro-export, design D7).  These are keyed by the ALREADY-MANGLED symbol
+    ;; the exporting library resolved the template to, mapping to itself, so a template's
+    ;; reference lowers as (global-ref mylib:helper) and -- being unit-qualified -- emits
+    ;; as an `external global`, exactly as an ordinary imported name does.  They are not
+    ;; public API: the key is a spelling no user writes, so nothing new is in scope under
+    ;; a name the importer could have meant.
+    (map (lambda (s) (cons s s)) (import-tables->macro-refs import-tables))))
+
+;; --- a library's compile-time interface (change: library-macro-export, design D1) ---
+;; An export table is `(NAME <runtime-rows> <call-rows> [<compile-time-half>])` and the
+;; fourth field, when present, is
+;;
+;;     ((<entry> ...) (<own-internal-name> ...) ("<foreign-mangled>" ...))
+;;
+;; where <entry> is exactly `parse-define-syntax`'s shape, `(keyword literals (pat . tmpl)
+;; ...)`, so neither side converts anything.  <own-refs> are THIS unit's internal names the
+;; templates reach (the tree-shake wants internal names, design D6); <foreign-refs> are
+;; other units' mangled symbols, as strings, matching the runtime rows' convention.
+;;
+;; The field is OPTIONAL in both directions.  A table written before this change has three
+;; fields and must be READ, not crashed on -- a stale `.exports` in an existing build/lib
+;; is ordinary (risk R1).  And a library that exports no macro writes no fourth field at
+;; all, so every artifact that exists today is byte-identical after this change.
+(define (make-ct-half macros own-refs foreign-refs) (list macros own-refs foreign-refs))
+(define (ct-half-empty? h) (and (null? (car h)) (null? (cadr h)) (null? (caddr h))))
+
+;; An export table, with the compile-time interface appended only when there is one.  A
+;; library that exports no macro therefore writes the three-field datum it always wrote,
+;; so every `.exports` in an existing build tree is byte-identical after this change and
+;; the format's two shapes are the same tolerance the stale-artifact case needs anyway.
+(define (export-table-datum name rows calls ct-half)
+  (if (ct-half-empty? ct-half)
+      (list name rows calls)
+      (list name rows calls ct-half)))
+(define (table-ct-half t)
+  (if (null? (cdddr t)) (make-ct-half '() '() '()) (cadddr t)))
+(define (ct-macros h) (car h))
+(define (ct-own-refs h) (cadr h))
+(define (ct-foreign-refs h) (caddr h))
+
+;; Every imported library's exported transformers, ready to cons onto a macro-env.
+(define (import-tables->macro-env import-tables)
+  (apply append (map (lambda (t) (ct-macros (table-ct-half t))) import-tables)))
+
+;; Every mangled symbol those transformers' templates reference -- the unit's own
+;; bindings mangled here, the foreign ones already mangled by their exporter.  These seed
+;; both the import environment (above) and the `known` set: `collect-renames` also refuses
+;; to rename a unit-qualified identifier structurally, so this is belt to that braces.
+(define (import-tables->macro-refs import-tables)
+  (apply append
+    (map (lambda (t)
+           (let ([h (table-ct-half t)])
+             (append (map (lambda (n) (string->symbol (mangle (car t) n))) (ct-own-refs h))
+                     (map string->symbol (ct-foreign-refs h)))))
+         import-tables)))
+
+;; The macro KEYWORDS an import brings into scope -- external names for the library's
+;; exported macros, unit-qualified spellings for the private ones carried alongside them.
+(define (import-tables->macro-keywords import-tables)
+  (map car (import-tables->macro-env import-tables)))
 
 ;; The direct-call view of the same tables (change: cross-unit-direct-calls): an
 ;; alist mangled-symbol -> (label . arity), keyed the way `lower` sees an imported
@@ -693,7 +776,13 @@
   (reset-unit-assigned!)             ; ...minus what it assigns (library-toplevel-set)
   (set-import-calls! (import-tables->call-alist import-tables))   ; calls INTO its dependencies
   (let* ([me+rf (collect-define-syntax body-forms)]
-         [macro-env (car me+rf)]
+         ;; the library's OWN transformers, plus every macro its imports export
+         ;; (change: library-macro-export, design D7).  Its own come FIRST, and
+         ;; `macro-lookup` is an `assq`, so a local `define-syntax` shadows an imported
+         ;; keyword of the same spelling -- the user-wins shadowing the runtime
+         ;; environment already gives a define.
+         [own-macro-env (car me+rf)]
+         [macro-env (append own-macro-env (import-tables->macro-env import-tables))]
          [runtime (cadr me+rf)]
          [import-env-alist (import-tables->env-alist import-tables)]
          ;; imported external names are "known" too (see compile-program-with-imports),
@@ -708,22 +797,36 @@
          [known (union (compute-known macro-env body) (map car import-env-alist))]
          [defined-names (map (lambda (p) (car (normalize-define p)))
                              (filter define-form? body))]
+         ;; Exports split by what they name (change: library-macro-export).  A macro export
+         ;; has no global, so it contributes no symbol row and no call row -- it travels
+         ;; entirely in the compile-time interface below.  Everything downstream of here
+         ;; that builds the runtime table reads `runtime-exports`, never `exports`.
+         [runtime-exports (filter (lambda (e) (memq (cdr e) defined-names)) exports)]
          [env   (make-repl-env)])
-    ;; validate each export's INTERNAL name is defined at the library's top level.
-    ;; A name bound by a `define-syntax` is NOT undefined -- collect-define-syntax lifted
-    ;; it into `macro-env` above, out of the runtime body this check computes
-    ;; `defined-names` from.  Reporting it as undefined described that lifting rather than
-    ;; the user's error, so consult the macro-env we are already holding and say what is
-    ;; actually wrong (change: module-frontend-diagnostics, issue #48, design D3).
+    ;; A name bound at the library's top level by EITHER `define` or `define-syntax` is a
+    ;; name the library defines, and either may be exported (change: library-macro-export,
+    ;; issue #48).  `collect-define-syntax` lifted the transformers out before
+    ;; `defined-names` was computed from the runtime body, so the macro half has to be
+    ;; consulted separately -- which is what the previous change already did in order to
+    ;; report the rejection accurately, and is now what accepts the export.
+    ;;
+    ;; Binding one name BOTH ways is rejected (design D3).  It was silent before: the
+    ;; export took whichever half was looked for first (in practice the procedure) and the
+    ;; transformer was discarded without a word.  It cannot be tolerated now, because a
+    ;; private macro's keyword and a top-level binding both mangle to `unit:name` and the
+    ;; compile-time interface could not tell them apart.
+    (for-each
+      (lambda (m)
+        (when (memq (car m) defined-names)
+          (error 'compile-library
+                 "a library binds one name with both define and define-syntax"
+                 (car m))))
+      own-macro-env)
     (for-each
       (lambda (e)
-        (unless (memq (cdr e) defined-names)
-          (if (assq (cdr e) macro-env)
-              (error 'compile-library
-                     "a library cannot export a macro (exports are procedures in this stage)"
-                     (cdr e))
-              (error 'compile-library
-                     "export of a name the library does not define" (cdr e)))))
+        (unless (or (memq (cdr e) defined-names) (assq (cdr e) own-macro-env))
+          (error 'compile-library
+                 "export of a name the library does not define" (cdr e))))
       exports)
     ;; seed the import environment FIRST, so the unit's own defines (registered
     ;; next, consed on top) shadow an imported name of the same spelling.
@@ -751,9 +854,13 @@
                            (list 1 (quote ())) body)))]
               ;; export table keys on the EXTERNAL name; the symbol is the INTERNAL name
               ;; mangled to this unit (rename is pure indirection).
-              [export-table (map (lambda (e) (cons (car e) (mangle name (cdr e)))) exports)])
+              [export-table (map (lambda (e) (cons (car e) (mangle name (cdr e))))
+                                 runtime-exports)])
           (list (emit-library-batch progs name)
-                (list name export-table (export-call-rows exports (unit-procs)))))
+                (export-table-datum name export-table
+                                    (export-call-rows runtime-exports (unit-procs))
+                                    (resolve-exported-macros name exports own-macro-env
+                                                             defined-names import-env-alist))))
         ;; PRUNED PATH (closed-world AOT tree-shake): expand each body form ONCE,
         ;; compute the define->define reference graph, keep only what's reachable from
         ;; the roots, and lower/emit just those (in original order, so __init order is
@@ -798,11 +905,19 @@
                ;; from this one list, so the pruned table is exactly the full table
                ;; restricted to what survived -- same names, same mangled symbols, and
                ;; (because the labels are name-derived) the same labels.
-               [kept-exports (filter (lambda (e) (memq (cdr e) reachable)) exports)]
+               [kept-exports (filter (lambda (e) (memq (cdr e) reachable)) runtime-exports)]
                [export-table (map (lambda (e) (cons (car e) (mangle name (cdr e))))
                                   kept-exports)])
+          ;; The compile-time interface is NOT pruned: a transformer is not a binding the
+          ;; reachability graph models, and an importer that reached the macro is exactly
+          ;; what put its referenced bindings in `keep-roots` (design D6).  So the pruned
+          ;; table carries the same interface the whole table does.
           (list (emit-library-batch progs name)
-                (list name export-table (export-call-rows kept-exports (unit-procs))))))))
+                (export-table-datum name export-table
+                                    (export-call-rows kept-exports (unit-procs))
+                                    (resolve-exported-macros name exports own-macro-env
+                                                             defined-names
+                                                             import-env-alist)))))))
 
 ;; Compile a program that imports libraries.  import-tables is a list of the
 ;; program's DIRECT imports' export tables (as returned by compile-library); the
@@ -824,7 +939,13 @@
     ;; to its code label (change: cross-unit-direct-calls).
     (set-import-calls! (import-tables->call-alist import-tables))
     (let* ([me+rf (collect-define-syntax forms)]
-           [macro-env (car me+rf)] [runtime (cadr me+rf)]
+           ;; the program's own transformers (and the baked prelude's, prepended into
+           ;; `forms`), plus every macro its imports export -- the program half of the
+           ;; same merge compile-library* does (change: library-macro-export, design D7).
+           ;; The program's own come first, so a `define-syntax` at top level shadows an
+           ;; imported keyword of the same spelling.
+           [macro-env (append (car me+rf) (import-tables->macro-env import-tables))]
+           [runtime (cadr me+rf)]
            ;; Imported external names are "known" bindings too, so a derived-form
            ;; macro (e.g. `case`) may introduce a reference to one (e.g. `memv`)
            ;; without hygiene renaming it away (change: module-prelude-scheme-base).

@@ -225,12 +225,40 @@ cat > "$TMP/macx.sld" <<'EOF'
       (syntax-rules ()
         ((_ a b) (let ((t a)) (set! a b) (set! b t)))))))
 EOF
-reject_lib "macro-export" "$TMP/macx.sld" 'cannot export a macro.*swap!'
-if grep -Eq 'does not define swap!' "$TMP/macro-export.err"; then
-  bad "a macro export is no longer reported as an undefined name"
+# A macro export now COMPILES (change: library-macro-export, issue #48).  The previous
+# change made the refusal accurate; this one removes the refusal.  Both of the old
+# diagnostics must be gone -- the accurate one AND the misdescription it replaced -- and
+# the transformer must appear in the artifact's compile-time interface, since that is the
+# whole mechanism by which an importer can use the macro.
+if build/emit lib "$TMP/macx.sld" -o "$TMP/macxout" >"$TMP/macx.out" 2>"$TMP/macx.err"; then
+  if grep -Eq 'swap!' "$TMP/macxout/macx.exports"; then
+    ok "macro-export (a library exports a macro; the transformer is in .exports)"
+  else
+    bad "macro-export (compiled, but .exports carries no transformer)"
+    sed 's/^/         /' "$TMP/macxout/macx.exports"
+  fi
 else
-  ok "a macro export is no longer reported as an undefined name"
+  bad "macro-export (expected emit lib to succeed)"; sed 's/^/         /' "$TMP/macx.err"
 fi
+if grep -Eq 'cannot export a macro|does not define swap!' "$TMP/macx.err"; then
+  bad "neither macro-export diagnostic survives"
+else
+  ok "neither macro-export diagnostic survives"
+fi
+
+# One name bound BOTH ways is rejected by name (design D3).  Before this change it was
+# silent: the export took the procedure and the transformer was discarded without a word.
+cat > "$TMP/macdup.sld" <<'EOF'
+(define-library (macdup-lib)
+  (export f)
+  (begin
+    (define (f x) (+ x 1))
+    (define-syntax f
+      (syntax-rules ()
+        ((_ e) (+ e 2))))))
+EOF
+reject_lib "macro-double-binding" "$TMP/macdup.sld" \
+  'both define and define-syntax.*f'
 
 # ...and the ORDINARY undefined-export error is untouched for a name that is neither a
 # definition nor a macro (the spec scenario that pins it).

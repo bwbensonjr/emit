@@ -130,7 +130,50 @@ else
   echo "  [FAIL] diamond artifacts  ($DIA missing)"; fail=$((fail+1))
 fi
 
+echo "exported macros (change: library-macro-export, issue #48)"
+check aot-macro        "$MOD/prog-macrolib.scm"      32   # exported macro + procedure; own `tmp` uncaptured
+check aot-macro-helper "$MOD/prog-macro-helper.scm"  18   # template reaches a PRIVATE helper and macro
+check aot-macro-rename "$MOD/prog-macro-rename.scm"  21   # (rename %swap swap!) over a define-syntax
+check aot-macro-dup    "$MOD/prog-macro-dup.scm"    103   # two libraries, same-spelling privates
+check aot-macro-unused "$MOD/prog-macro-unused.scm"  22   # macro imported but never used
+check aot-macro-user   "$MOD/prog-macro-user.scm"     10   # a LIBRARY imports another's macro
+check aot-macro-rec    "$MOD/prog-macro-rec.scm"      17   # recursive variadic macro; importer shadows `pick`
+
+# The library exports ONE name and it is a macro, so the runtime rows are empty and the
+# transformer -- with its private references resolved, and the private macro it uses
+# carried alongside -- is the whole of the artifact's fourth field.
+MHE="build/lib/macro-helper-lib.exports"
+if [ -f "$MHE" ] && grep -q 'macro-helper-lib:helper' "$MHE" \
+                 && grep -q 'macro-helper-lib:%inc' "$MHE"; then
+  echo "  [OK  ] macro interface (template resolved to the exporter's symbols)"; pass=$((pass+1))
+else
+  echo "  [FAIL] macro interface  ($MHE missing or unresolved)"; fail=$((fail+1))
+  [ -f "$MHE" ] && sed 's/^/         /' "$MHE"
+fi
+# A private name a template reaches must NOT become a public export row.
+if [ -f "$MHE" ] && grep -qE '\(\(helper \.|\(helper \.' "$MHE"; then
+  echo "  [FAIL] macro interface leaked 'helper' into the runtime export rows"; fail=$((fail+1))
+else
+  echo "  [OK  ] a template's private helper stays out of the export rows"; pass=$((pass+1))
+fi
+
+# The shake nominates candidates from exports PLUS what the templates reach, but keeps the
+# "does the program's IR mention it" gate: used => kept, imported-but-unused => pruned.
+build shake-macro-used   "$MOD/prog-macro-helper.scm" >/dev/null 2>&1
+build shake-macro-unused "$MOD/prog-macro-unused.scm" >/dev/null 2>&1
+used="$TMP/shake-macro-used.macro-helper-lib.pruned.ll"
+unused="$TMP/shake-macro-unused.macro-helper-lib.pruned.ll"
+if grep -q 'macro.helper.lib:helper" = global' "$used" 2>/dev/null \
+   && ! grep -q 'macro.helper.lib:helper" = global' "$unused" 2>/dev/null; then
+  echo "  [OK  ] shake keeps a macro-reached helper, prunes it when unused"; pass=$((pass+1))
+else
+  echo "  [FAIL] shake mishandled a binding reached only through a template"; fail=$((fail+1))
+fi
+
 echo "generalize: errors (cycle, missing library, hidden internal name)"
+check_fail macro-dupname "$MOD/prog-macro-dupname.scm" "$MOD/emit-libs-macdup.scm" \
+  "both define and define-syntax"
+check_fail macro-hidden  "$MOD/prog-macro-rename-bad.scm" "$MAN" "unbound variable.*%swap"
 check_fail cycle   "$MOD/prog-cycle.scm"      "$MOD/emit-libs-cycle.scm" "import cycle"
 check_fail missing "$MOD/prog-missing.scm"    "$MAN"                      "not found in manifest"
 check_fail hidden  "$MOD/prog-rename-bad.scm" "$MAN"                      "unbound variable.*%fast-map"
