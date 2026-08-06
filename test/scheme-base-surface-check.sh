@@ -33,12 +33,23 @@ bad  () { echo "  [FAIL] $1"; fail=$((fail+1)); }
 
 # --- the three name lists, extracted with text tools only -------------------
 
-# every top-level (define NAME ...) / (define (NAME . _) ...), in source order.
-# `(define-syntax` does not match: after `(define` comes `-`, not a space or `(`.
+# Every top-level binding the prelude introduces, in source order: both
+# (define NAME ...) / (define (NAME . _) ...) and (define-syntax NAME ...).
+#
+# The transformers used to be excluded here on purpose -- they could not be exported, so
+# a macro name appearing in an export list was a bug.  Since `library-body-macro-scope`
+# (issue #55) a transformer is a homed, exportable binding like any other, and
+# (scheme base) publishes ten of them, so leaving them out would make this guard demand
+# that the committed surface DROP the derived forms.
 awk '/^\(define[ (]/ {
        s = $0
        sub(/^\(define[ \t]+/, "", s)
        sub(/^\(/, "", s)
+       if (match(s, /^[^ \t)]+/)) print substr(s, RSTART, RLENGTH)
+     }
+     /^\(define-syntax[ \t]/ {
+       s = $0
+       sub(/^\(define-syntax[ \t]+/, "", s)
        if (match(s, /^[^ \t)]+/)) print substr(s, RSTART, RLENGTH)
      }' src/prelude.scm > "$TMP/defines"
 

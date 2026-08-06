@@ -26,10 +26,14 @@ compile-time interface and `compile-library*` already merges `import-tables->mac
   gets `cond`, `case`, `when`, `unless`, `let*`, `and`, `or`, `guard`, and `parameterize` in its
   body, exactly as a program does. This holds on all three doors — the Chez batch driver, the REPL,
   and the Chez-free embedded run door — per dev→ship fidelity.
-- **The derived-form macros are homed in `(emit internal)` and re-exported by `(scheme base)`.**
-  `(emit internal)` is the bottom of the partition's dependency graph: it imports nothing, so it
-  cannot receive macros from `(scheme base)` and must own them. Every other member imports it
-  directly or transitively, so one home reaches all five.
+- **The derived-form macros get declared homes, split across two members.** `and`, `or`, `let*`,
+  `cond`, `when` and `unless` are homed in `(emit internal)`; `case`, `guard`, `parameterize` and
+  `do` in `(scheme base)`, with `(scheme base)` re-exporting the substrate's six so one import brings
+  all ten. The split is forced, not chosen: `(emit internal)` imports nothing, so only a template
+  that calls no procedure can live there — and `case`→`memv`, `guard`→`call/cc`, `parameterize`→
+  `with-parameters` all do. Measured, the forms the partition's own members actually use (`cond`,
+  `and`, `or`, `let*`) are exactly the forms that need nothing from `(scheme base)`, which is what
+  makes the split land cleanly. See design D1.
 - **A library can re-export a macro it imports.** This does not work today and is a hard
   prerequisite, not an incidental nicety: `(export twice)` in a library whose `twice` arrives by
   import is rejected with `compile-library: export of a name the library does not define: twice`.
@@ -43,8 +47,11 @@ compile-time interface and `compile-library*` already merges `import-tables->mac
   binary-size win — measured during task 1.3, the copies live only in the generated `.sld` files
   (2290 bytes × 5 members, ~9 KB of duplication) and never reach a binary, because the baked constant
   is `src/prelude.scm` with one copy of each and `collect-define-syntax` lifts every transformer out
-  before lowering (emitted member IR contains zero `syntax-rules` references). The case for this
-  change is removing the privileged channel; the size effect is ~9 KB of committed generated text.
+  before lowering (emitted member IR contains zero `syntax-rules` references). Measured after the
+  fact (task 8.4) the change is a net size **cost**: generated `.sld` text drops 9011 bytes and no
+  delivered user executable changes at all, while each compiler binary's IR grows ~37-42 KB for the
+  code this adds. The case for this change is removing the privileged channel and fixing #55, not
+  size.
 - **The diagnostic stops saying a *variable* is unbound.** A derived form used where its macro is not
   in scope should report a macro that is not in scope, and name the import that would bring it in.
   Today's message sends the author looking for an import they already wrote.
@@ -66,6 +73,7 @@ compile-time interface and `compile-library*` already merges `import-tables->mac
   extends to the baked `(scheme base)`; the export surface gains re-export of an imported macro;
   and the partition's derived-form distribution changes from body-injection to an ordinary import,
   which is a requirement about how `(scheme base)` is *assembled*, not only about what it exports.
+
 **Not** `macro-system`. The derived forms arriving in a library pre-resolved is exactly the case its
 "Hygiene for macro-introduced identifiers" requirement already covers — "a transformer that arrives
 from an **imported library** carries template identifiers already resolved in the library that

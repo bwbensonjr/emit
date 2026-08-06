@@ -66,6 +66,34 @@ A library source is one `(define-library …)` form, conventionally in a `.sld` 
   [How an exported macro travels](#how-an-exported-macro-travels)). One name may not be bound both
   by `define` and by `define-syntax`; that is rejected by name.
 
+- **A library body may use the macros it imports** (change: `library-body-macro-scope`, issue #55).
+  A library that imports `(scheme base)` gets `cond`, `case`, `when`, `unless`, `let*`, `and`, `or`,
+  `guard` and `parameterize` in its own body, exactly as a program does:
+
+  ```scheme
+  (define-library (derived-form-lib)
+    (import (scheme base))                  ; without this, `when` is not in scope
+    (export dfc)
+    (begin
+      (define (dfc x) (cond ((> x 5) 'big) ((> x 2) 'mid) (else 'small)))))
+  ```
+
+  Use one without the import and the diagnostic says so by name —
+  `macro not in scope -- add (import (scheme base))` — rather than reporting an unbound variable.
+
+- **A macro export may be a macro the library imported** (same change). Re-exporting is ordinary
+  R7RS, and it is how `(scheme base)` publishes the derived forms that are homed in the substrate:
+
+  ```scheme
+  (define-library (reexport-lib)
+    (import (macro-helper-lib))
+    (export twice (rename twice thrice))    ; `twice` is not defined here
+    (begin (define (rl-marker) 1)))
+  ```
+
+  A re-exported transformer travels with the resolution its **defining** library performed, so an
+  importer two hops away still reaches that library's private bindings.
+
 `export`, `import`, and `begin` are the three declarations Emit recognizes. Anything else in
 declaration position is **rejected by name** rather than absorbed into the body — see
 [When you break a rule](#when-you-break-a-rule).
@@ -339,10 +367,13 @@ Two mechanics follow from how macros expand, and are worth knowing before curati
 - `(rename internal external)` cannot be used to hide such a name: it keys the importer's table by
   the *external* name, leaving the template's spelling unresolvable.
 
-Both apply to **this** library and not to a user library's exported macros: the baked set is merged
-as source and so really is resolved in the importer, whereas an exported macro's template is resolved
-in the library that defines it (see [How an exported macro
-travels](#how-an-exported-macro-travels)). Curating `(scheme base)`'s surface still has to obey the
+Both apply to a **program** importing this library and not to a user library's exported macros: on
+the program path the baked set is merged as source and so really is resolved in the importer, whereas
+an exported macro's template is resolved in the library that defines it (see [How an exported macro
+travels](#how-an-exported-macro-travels)). A **library** importer takes the second path even for the
+derived forms — since `library-body-macro-scope` they arrive through `(scheme base)`'s compile-time
+export interface like any other imported transformer, already resolved. Curating `(scheme base)`'s
+surface still has to obey the
 two rules above; a user library does not.
 
 `lib/scheme/base.sld`'s export list is a committed golden, one name per line, so a surface change is
@@ -619,13 +650,6 @@ The message body is the same whichever door compiled the form — `emit run`, `e
 
 This is Modules v0:
 
-- **A library body cannot use a derived-form macro** (issue #55). `(when …)`, `cond`, `case`, `let*`,
-  `and`, `or` in a `.sld` body report `unbound variable when` even with `(import (scheme base))`;
-  named `let` is the exception, hand-written in the expander rather than a prelude macro. The baked
-  macro set is merged into the *program* path only, and `(scheme base)` does not export its compile-time
-  half. `(scheme base)`'s own members dodge this by carrying every transformer in each member's body,
-  which user libraries cannot do. Exporting macros *from* a library works (above); importing one
-  *into* a library works too, unless its template mentions a derived form.
 - **Exported macros are `syntax-rules` only, at a body's top level.** `let-syntax`,
   `letrec-syntax`, inner `define-syntax`, `syntax-case`, and procedural/identifier transformers are
   all out of scope. A typo inside an exported template is reported in the importer rather than at the

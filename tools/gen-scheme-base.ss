@@ -70,12 +70,20 @@
 (define define-names (filter (lambda (x) x) (map proc-name forms)))
 (define syntax-names (filter (lambda (x) x) (map syntax-name forms)))
 
+;; Every name the prelude binds at top level, by EITHER form of definition, in source
+;; order (change: library-body-macro-scope).  A transformer is a homed, exportable
+;; binding now, so the partition, the export lists and the rot checks all range over this
+;; list rather than over `define-names` alone.  Source order is preserved across both
+;; kinds, which is what keeps the declaration's own arrangement from moving emitted IR.
+(define (binding-name f) (or (proc-name f) (syntax-name f)))
+(define binding-names (filter (lambda (x) x) (map binding-name forms)))
+
 ;; the export list: defines in SOURCE ORDER kept when the partition assigns them to
 ;; this library (change: scheme-base-partition).  Order comes from the prelude, so the
 ;; arrangement of the declaration cannot move IR.  Mirrors library-export-names in
 ;; src/core.ss, which reads the same declaration.
 (define export-names
-  (filter (lambda (n) (prelude-exports? '(scheme base) n)) define-names))
+  (filter (lambda (n) (prelude-exports? '(scheme base) n)) binding-names))
 
 ;; The declaration must describe THIS prelude.  A rotted declaration would silently
 ;; emit a different surface, so fail loudly instead (issue #29).
@@ -83,19 +91,23 @@
   (fprintf (current-error-port) "gen-scheme-base: ~a: ~s~n" msg names)
   (exit 1))
 
-(let ([stale (filter (lambda (n) (not (memq n define-names))) *scheme-base-private*)])
+(let ([stale (filter (lambda (n) (not (memq n binding-names))) *scheme-base-private*)])
   (unless (null? stale)
     (die "private name not defined by the prelude (stale declaration)" stale)))
-(let ([macros (filter (lambda (n) (memq n syntax-names)) *scheme-base-private*)])
-  (unless (null? macros)
-    (die "define-syntax name listed as private (macros are never exported)" macros)))
+;; The check that used to sit here -- "define-syntax name listed as private (macros are
+;; never exported)" -- is GONE (change: library-body-macro-scope).  Its premise was that a
+;; transformer could never be exported, so naming one here had to be a mistake.  A macro is
+;; an ordinary exportable binding now, and *scheme-base-private* is exactly where a
+;; transformer (scheme base) does not publish belongs: the Chez-free surface guard
+;; subtracts this list with text tools and cannot parse home specs, so privacy has to be
+;; declared here rather than as a `((scheme base) private)` home.
 ;; every assignment must name a definition the prelude actually has, and every home must
 ;; name a real partition member -- see below.  (The `unstable` export tier's check used to
 ;; live here; the tier is retired, change: scheme-base-partition / issue #32.)
 ;; partition rot (change: scheme-base-partition): an assignment naming a definition the
 ;; prelude does not have, a name assigned twice, or an assignment to a library that is
 ;; not a partition member would each silently emit a different surface.
-(let ([stale (filter (lambda (e) (not (memq (car e) define-names))) *prelude-assignments*)])
+(let ([stale (filter (lambda (e) (not (memq (car e) binding-names))) *prelude-assignments*)])
   (unless (null? stale)
     (die "assignment for a name the prelude does not define" (map car stale))))
 (let ([dups (let loop ([es *prelude-assignments*] [seen '()] [d '()])
@@ -154,10 +166,10 @@
 (define (write-library entry path)
   (let* ([lib      (car entry)]
          [imports  (caddr entry)]
-         [exports  (filter (lambda (n) (prelude-exports? lib n)) define-names)]
+         [exports  (filter (lambda (n) (prelude-exports? lib n)) binding-names)]
          [body     (filter (lambda (f)
-                             (let ([n (proc-name f)])
-                               (if n (member lib (prelude-homes-of n)) (syntax-name f))))
+                             (let ([n (binding-name f)])
+                               (and n (member lib (prelude-homes-of n)))))
                            forms)]
          [o        (open-output-file path 'replace)])
     (fprintf o ";;; ~a -- GENERATED from src/prelude.scm by tools/gen-scheme-base.ss~n"

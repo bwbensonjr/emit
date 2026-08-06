@@ -154,11 +154,16 @@ applied — name the form the user wrote, at the point they wrote it.
 - **Program IR moves under pre-resolution (D4)** → Measure before committing to the shape: compile a
   representative program on both paths and diff. If IR moves, decide deliberately between accepting
   the regen churn and constraining which forms pre-resolve. Do this first; it can invalidate the plan.
-- **Re-export interacts with the AOT tree-shake** → `program-root-internals` folds over the export
-  list, and `library-macro-export` already had to add the compile-time half's referenced symbols to
-  the root set. A *re-exported* transformer's references belong to a third unit, so the root set must
-  follow the chain transitively or a private binding two units away is pruned into a link-time
-  undefined symbol. Cover with a fixture, as `macro-helper-lib` covers the one-hop case.
+- ~~**Re-export interacts with the AOT tree-shake**~~ → **Disproved during task 2.4; no mitigation
+  needed.** The premise was that a re-exported transformer's references belong to a third unit, so
+  the root set would have to follow the export chain transitively. It does not.
+  `program-root-internals` (`src/compile.ss:602`) derives roots by scanning the **program's own
+  emitted IR** for `ptr @"unit:name"`, and a macro's expansion is inlined into the program — so a
+  reference reaches the program's IR no matter how many re-export hops the transformer travelled.
+  Verified: with `(relib)` re-exporting `(macro-helper-lib)`'s `twice`, the program IR contains
+  `ptr @"macro-helper-lib:helper"` directly. The chain length is invisible to the root computation.
+  (Separately, P10 means the exporting unit is unprunable in this topology anyway, so the case is
+  doubly safe today.)
 - **`(emit internal)`'s macro keywords leaking into program scope** → The substrate is not
   auto-imported and must stay out of scope (#29's privacy guarantee). Re-export must expose the
   derived forms under their ordinary spellings via `(scheme base)` without making the rest of

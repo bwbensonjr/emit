@@ -780,6 +780,14 @@
               x                                    ; a lexical local
               (let ([b (scope-resolve env x)])
                 (cond
+                  ;; A derived form that reached the resolver was never expanded, which
+                  ;; means its transformer was not in this unit's macro-env -- not that
+                  ;; nothing defines the name (change: library-body-macro-scope, issue
+                  ;; #55).  Saying "unbound variable when" sent library authors looking
+                  ;; for an import they had already written, because (scheme base)'s
+                  ;; PROCEDURES did resolve and only its compile-time half was missing.
+                  [(and (not b) (memq x *derived-form-macros*))
+                   (error 'repl "macro not in scope -- add (import (scheme base))" x)]
                   [(not b) (error 'repl "unbound variable" x)]
                   ;; local and imported both target a global slot; imported's slot
                   ;; is defined by another unit and resolves via external global.

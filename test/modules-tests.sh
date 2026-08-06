@@ -139,6 +139,10 @@ check aot-macro-unused "$MOD/prog-macro-unused.scm"  22   # macro imported but n
 check aot-macro-user   "$MOD/prog-macro-user.scm"     10   # a LIBRARY imports another's macro
 check aot-macro-rec    "$MOD/prog-macro-rec.scm"      17   # recursive variadic macro; importer shadows `pick`
 
+echo "derived forms in a library body, and macro re-export (change: library-body-macro-scope, issue #55)"
+check aot-derived-form "$MOD/prog-derived-form.scm"  84   # when/and/or/cond/let* in a .sld BODY
+check aot-reexport     "$MOD/prog-reexport.scm"      36   # a library re-exports an imported macro, bare and renamed
+
 # The library exports ONE name and it is a macro, so the runtime rows are empty and the
 # transformer -- with its private references resolved, and the private macro it uses
 # carried alongside -- is the whole of the artifact's fourth field.
