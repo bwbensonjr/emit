@@ -130,8 +130,15 @@
       recoverability properties. Also corrected "Bare forms outside a `begin` are also accepted",
       which this change makes false, and cross-linked from `Writing a library`, `Semantics`, and
       `Scope & limits`.
-- [ ] 7.2 Reference the issues from the implementing commits: `Fixes #45`; #48, #18, and #49 each
+- [x] 7.2 Reference the issues from the implementing commits: `Fixes #45`; #48, #18, and #49 each
       keep their remaining halves open, so use `Refs #48` / `Refs #18` / `Refs #49` and phrase the
       PR body without a closing keyword near those numbers
-- [ ] 7.3 Comment on #18 that item 3 is done and items 1-2 (`cond-expand`, then the `include`
+      → commit `11f255c` and PR #53. Verified rather than assumed: GitHub's own
+      `closingIssuesReferences` for the PR lists **only #45**, so no closing keyword landed within
+      parsing range of 18/48/49 — the trap where "does not close #N" closes it anyway.
+- [x] 7.3 Comment on #18 that item 3 is done and items 1-2 (`cond-expand`, then the `include`
       family) remain; comment on #48 and #49 that the diagnostic half is done and what remains
+      → posted on #18 (item 3 done; `cond-expand`-then-`include` order unchanged), #48 (diagnostic
+      half done; the feature needs the phase-separated compile-time interface), #49 (diagnostic half
+      done; whether the prompt should accept a `define-library` is still open, and library
+      redefinition is the part that wants its own design). All three confirmed still open.
