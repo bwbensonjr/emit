@@ -65,7 +65,7 @@
       document only carries because the behaviour needed explaining
 - [x] 6.2 `docs/OUTPUT.md`: record the requested-vs-error destination rule for usage text, since it
       is a new instance of the stdout/stderr split
-- [ ] 6.3 Reference the issues from the implementing commits (`Fixes #42`, `Fixes #43`)
+- [x] 6.3 Reference the issues from the implementing commits (`Fixes #42`, `Fixes #43`)
 - [x] 6.4 Note on #42 that the "delivered executable prints no final value at all" half was
       considered and deliberately not taken, with the reason (the `core-language` observation
       channel, and door agreement) and the landing site if it is ever wanted (`RT_FILTER_MAIN`,
