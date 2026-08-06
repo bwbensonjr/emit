@@ -149,7 +149,15 @@
     rd-list rd-datum
     ;; port representation
     %port-rtd-cell %port-rtd %make-port %check-input-port %check-output-port %port-buf
-    %port-at-eof? %stdout-port %stderr-port %stdin-port))
+    %port-at-eof? %stdout-port %stderr-port %stdin-port
+    ;; The two private TRANSFORMERS `guard` and `do` are written on top of (change:
+    ;; library-body-macro-scope).  Macros can be exported now, so a transformer's
+    ;; visibility is an ordinary question and this is where the answer goes -- the same
+    ;; list, for the same reason, as any other name (scheme base) does not publish.
+    ;; Neither needs exporting to be usable: a template that mentions one carries it
+    ;; along in the compile-time interface under a unit-qualified keyword (change:
+    ;; library-macro-export, design D3).
+    %guard-clauses %do-step))
 
 ;;; The libraries this prelude is partitioned into, in DEPENDENCY ORDER -- a member is
 ;;; emitted, linked and initialized after everything it imports.  Each entry:
@@ -302,8 +310,51 @@
 ;;; substrate and everything else in (scheme base).
 (define *port-guards-shared-with-read* '(%check-input-port))
 
+;;; --- the DERIVED-FORM MACROS (change: library-body-macro-scope, issue #55) ---------
+;;;
+;;; Until this change the prelude's transformers had no home at all: `define-name`
+;;; returns #f for a `define-syntax`, so the partition could not name one, and
+;;; `library-body-forms` copied EVERY transformer into EVERY member's body to compensate.
+;;; That copy was the compiler's private workaround for the gap this change closes -- a
+;;; user library, which cannot inject anything into anyone, had no equivalent and so could
+;;; not use `cond` in its own body.
+;;;
+;;; The homing is SPLIT, and the split is forced rather than chosen.  A template's free
+;;; identifiers are resolved in the library that defines it, and an identifier that
+;;; library cannot resolve is left as written and then hygiene-renamed per expansion.  So
+;;; a transformer may only be homed where every procedure its template calls is in scope:
+;;;
+;;;   - (emit internal) imports NOTHING, so only a template that calls no procedure at
+;;;     all can live there.  Exactly six qualify -- their templates mention core keywords
+;;;     and their own keyword and nothing else.
+;;;   - the rest call prelude procedures (`case`->memv, `guard`->call/cc +
+;;;     with-exception-handler, `%guard-clauses`->raise, `parameterize`->with-parameters)
+;;;     and so must live in (scheme base), where those are defined.
+;;;
+;;; The two sets do not overlap with what the partition NEEDS, which is what makes the
+;;; split work: measured across all five members, the only derived forms any member's body
+;;; uses are `cond`, `and`, `or` and `let*` -- all four in the substrate group.  No member
+;;; uses `case`, `guard`, `parameterize`, `do`, `when` or `unless`.
+;;;
+;;; (scheme base) re-exports the substrate's six, so an importer sees all twelve under one
+;;; import and cannot tell where each is homed.
+(define *substrate-macros* '(and or let* cond when unless))
+
+;;; Homed in (scheme base) because their templates call its procedures.  Exported.
+(define *base-macros* '(case guard parameterize do))
+
+;;; Every derived form (scheme base) publishes, wherever it is homed.  Used by the
+;;; resolver to tell "you used a macro you did not import" from "you used a name nothing
+;;; defines" -- the two are indistinguishable to a name-set resolver, and reporting the
+;;; second for the first is what sent library authors hunting for an import they had
+;;; already written (issue #55).
+(define *derived-form-macros* (append *substrate-macros* *base-macros*))
+
 (define *prelude-assignments*
   (append
+    (prelude-assign* *substrate-macros*
+                     '((emit internal) ((scheme base) reexport)))
+    (prelude-assign* *base-macros*        '((scheme base)))
     (prelude-assign* *substrate-rehomed*  '((emit internal)))
     (prelude-assign* *substrate-cxr*      '((emit internal) (scheme cxr)))
     (prelude-assign* *cxr-depth4*         '((scheme cxr)))
@@ -341,9 +392,21 @@
     caaaar caaadr caadar caaddr cadaar cadadr caddar
     cdaaar cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr))
 
-;;; The library a HOME names, and whether that home publishes the name.
+;;; The library a HOME names, its marker (if any), and the two independent questions a
+;;; home answers: does that library's BODY define the name, and does its EXPORT list
+;;; publish it.  A bare library name answers yes to both.
+;;;
+;;; `reexport` is the third marker (change: library-body-macro-scope): the library
+;;; publishes a name it does NOT define, having imported it from a library that does.
+;;; It is what lets the derived-form macros be homed in the substrate -- which is the only
+;;; member that imports nothing, and so the only one whose body can hold a transformer
+;;; every other member needs -- while user code still reaches them the ordinary way, by
+;;; importing (scheme base).  Before this change a home could only ever narrow visibility
+;;; (`private`); `reexport` is the first that widens it past the defining library.
 (define (home-library h) (if (pair? (car h)) (car h) h))
-(define (home-exports? h) (if (pair? (car h)) #f #t))
+(define (home-marker  h) (if (pair? (car h)) (cadr h) #f))
+(define (home-exports? h) (not (eq? (home-marker h) 'private)))
+(define (home-defines? h) (not (eq? (home-marker h) 'reexport)))
 
 ;;; NAME's homes, as HOME specs -- the one lookup the whole partition rests on.  Every
 ;;; prelude definition has at least one home, including a private one: a private helper
@@ -356,9 +419,10 @@
 
 ;;; The libraries whose body DEFINES name.  Home and visibility are separate axes, which
 ;;; is what lets a name move to another library (a new home) while staying hidden, or be
-;;; defined in two libraries and exported by only one of them.
+;;; defined in two libraries and exported by only one of them -- and, since `reexport`,
+;;; be exported by a library whose body does not define it at all.
 (define (prelude-homes-of name)
-  (map home-library (prelude-home-specs name)))
+  (map home-library (filter home-defines? (prelude-home-specs name))))
 
 ;;; Does LIB export NAME?  LIB must be one of the name's homes -- a library can only
 ;;; export what it defines (compile-library*, src/core.ss) -- and that home must not

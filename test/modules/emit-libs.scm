@@ -30,6 +30,10 @@
  (library (macro-dup-b)       (source "macro-dup-b.sld"))
  (library (macro-user-lib)    (source "macro-user-lib.sld"))
  (library (macro-rec-lib)     (source "macro-rec-lib.sld"))
+ ;; a library body USING derived forms, and a library RE-EXPORTING an imported macro
+ ;; (change: library-body-macro-scope, issue #55)
+ (library (derived-form-lib)  (source "derived-form-lib.sld"))
+ (library (reexport-lib)      (source "reexport-lib.sld"))
  ;; macro-dupname-lib is deliberately invalid and lives in emit-libs-macdup.scm,
  ;; not here: the REPL preloads every manifest library eagerly.
  ;; program (emit build) entries: name -> source + delivered executable

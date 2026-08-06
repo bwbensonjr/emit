@@ -98,8 +98,7 @@ containing `(export …)` declarations and body definitions. Each `export` decla
 either a bare name `<name>` or a rename pair `(rename <internal> <external>)`. The
 **internal** name (the bare name, or `<internal>` in a rename) MUST be a name the library
 defines at its top level **or a macro bound in its compile-time environment, including one that
-arrived from an import**; exporting a name that is neither SHALL be a compile-time error. The
-**external** name (the bare name, or `<external>` in a rename) is the
+arrived from an import**; exporting a name that is neither SHALL be a compile-time error. The **external** name (the bare name, or `<external>` in a rename) is the
 spelling under which importers see the binding. `only`/`except`/`prefix` import-set transforms
 remain out of scope.
 
@@ -107,8 +106,8 @@ remain out of scope.
 library body counts as a name the library defines, and MAY appear in an `export` declaration — as a
 bare name or as the `<internal>` of a rename. Its transformer travels in the library's compile-time
 export interface rather than in the emitted unit, and an exported name that is neither a top-level
-definition, nor a `define-syntax` binding, nor a macro the library imports SHALL still be reported as
-a name the library does not define.
+definition, nor a `define-syntax` binding, nor a macro the library imports SHALL still be reported
+as a name the library does not define.
 
 **A declaration the compiler does not recognize SHALL be rejected, not absorbed into the body.**
 The recognized declarations are `export`, `import`, and `begin`. Any other declaration SHALL be a
@@ -138,15 +137,51 @@ unit, so that sibling body forms MAY reference them and the `export` declaration
 
 #### Scenario: A library exports a procedure it defines
 
-- **WHEN** a `define-library` declares `(export greet)` and its body defines `greet`
-- **THEN** the library compiles and importers see `greet`
+- **WHEN** a `define-library (mylib)` defines a top-level procedure `greet` and declares
+  `(export greet)`
+- **THEN** the library compiles without error and `greet` is available to importers under
+  the external name `greet`
+
+#### Scenario: A library exports a procedure under a renamed external name
+
+- **WHEN** a `define-library (mylib)` defines a top-level procedure `%fast-map` and declares
+  `(export (rename %fast-map map))`
+- **THEN** the library compiles without error, importers see the binding under the external
+  name `map`, and the internal name `%fast-map` is not visible to importers
+
+#### Scenario: Exporting an undefined name is an error
+
+- **WHEN** a `define-library` declares `(export missing)` (or `(export (rename missing m))`)
+  but defines no top-level `missing`
+- **THEN** compilation reports a compile-time error naming the undefined export
 
 #### Scenario: A library exports a macro it defines
 
-- **WHEN** a `define-library` declares `(export twice)` and its body binds `twice` with
-  `define-syntax`
+- **WHEN** a `define-library` body binds `swap!` with `define-syntax` and declares `(export swap!)`
 - **THEN** the library compiles without error, and it is not reported either as exporting a macro or
-  as exporting a name it does not define
+  as exporting a name the library does not define
+
+#### Scenario: An unsupported R7RS declaration is named
+
+- **WHEN** a `define-library` contains `(include "body.scm")`, `(include-ci …)`,
+  `(include-library-declarations …)`, or `(cond-expand …)`
+- **THEN** compilation reports that declaration as a recognized R7RS library declaration this stage
+  does not support, naming it — whether or not the library also exports a name the declaration
+  would have provided
+
+#### Scenario: An unrecognized declaration is named as not a declaration
+
+- **WHEN** a `define-library` contains `(frobnicate 1 2 3)` in declaration position
+- **THEN** compilation reports that it is not a library declaration, naming it, rather than
+  lowering it as a body form and reporting an unbound variable
+
+#### Scenario: A library declares and exports a record type
+
+- **WHEN** a `define-library (reclib)` body contains
+  `(define-record-type point (make-pt x y) point? (x pt-x) (y pt-y))`, a sibling procedure that
+  calls `pt-x`, and `(export make-pt pt-x)`
+- **THEN** the library compiles without error, the sibling procedure resolves `pt-x` to the
+  library's own binding, and an importing program can construct a `point` and read its field
 
 #### Scenario: A library exports a macro it imports
 
@@ -170,10 +205,11 @@ resolves to in the exporting library:
   library's own bindings, so a template's `(+ a b)` still reaches inline arithmetic in the importer
   instead of becoming a call to a global named `+`;
 - a macro of the baked `(scheme base)` set **when the importing unit is a program**, which needs no
-  rule of its own: it falls under the leave-as-written case below and expands in the importer against
-  the baked set the program path merges. When the importing unit is a **library**, the derived forms
-  arrive instead through the compile-time interface of the library it imported them from, already
-  resolved, and are governed by the ordinary imported-transformer rule rather than by this exception.
+  rule of its own: it falls under the leave-as-written case below and expands in the importer
+  against the baked set the program path merges. When the importing unit is a **library**, the
+  derived forms arrive instead through the compile-time interface of the library it imported them
+  from, already resolved, and are governed by the ordinary imported-transformer rule rather than by
+  this exception — so a template mentioning a derived form now works in a library importer too.
 
 The rewritten spelling SHALL be the exporting unit's mangled symbol for one of its own top-level
 bindings, or the already-mangled symbol for a name the exporting library imports. A template MAY
@@ -190,17 +226,65 @@ transformer carried in the compile-time interface, transitively, whether or not 
 exported publicly. A library MAY therefore export a macro whose template uses one of its **private**
 macros.
 
-#### Scenario: An exported template's reference to a private helper is resolved
+Because a macro keyword and a top-level binding would then share the unit-qualified spelling, a
+library that binds the same name with both `define` and `define-syntax` SHALL be a compile-time error
+naming that name.
 
-- **WHEN** a library exports a macro whose template calls a procedure the library does not export
-- **THEN** the template travels with that reference spelled as the exporting unit's mangled symbol,
-  and an importer's expansion links against it
+Resolution SHALL be a pure structural rewrite with no fresh-name generation, so a library's
+compile-time interface is byte-identical however and wherever it is compiled.
+
+#### Scenario: An exported template calls a private helper
+
+- **WHEN** `(mymac)` defines a private `helper`, exports only the macro `twice!` whose template calls
+  `helper`, and a program imports `(mymac)` and uses `twice!`
+- **THEN** the program compiles, links, and produces the value `helper` computes — and `helper` is not
+  visible to the program under any spelling
+
+#### Scenario: An exported template uses a private macro
+
+- **WHEN** `(mymac)` binds a private macro `%inner` with `define-syntax`, exports a macro `outer`
+  whose template uses `%inner`, and a program imports `(mymac)` and uses `outer`
+- **THEN** the program compiles and produces the expected value, and `%inner` is not usable in the
+  program
+
+#### Scenario: An exported template using a derived form needs no copy of it
+
+- **WHEN** a **program** imports a library whose exported macro's template uses `when` or `cond`
+- **THEN** the identifier is left unresolved in the compile-time interface and expands against the
+  baked `(scheme base)` macro set, with no copy of that transformer in the interface
+
+#### Scenario: A recursive exported macro's self-reference is not captured by the importer
+
+- **WHEN** a library exports a recursive variadic macro whose template refers to itself, and a
+  program imports it and shadows both the macro's keyword's helper and uses it at a width requiring
+  several levels of recursion
+- **THEN** the expansion recurses through the library's own transformer and calls the library's own
+  helper, not the program's
+
+#### Scenario: A literal survives a same-named binding in the exporting library
+
+- **WHEN** an exported macro's `syntax-rules` literal list names `else`, its template mentions
+  `else`, and the library also defines a top-level `else`
+- **THEN** the template's `else` is unchanged in the compile-time interface, so a use of the macro
+  matching on `else` still matches in the importer
+
+#### Scenario: A template's introduced temporary is still hygienic
+
+- **WHEN** an exported macro's template introduces a temporary (e.g. `tmp` in a `let`) and an importer
+  uses the macro with an argument mentioning an identifier of the same spelling
+- **THEN** the two remain distinct, exactly as for a macro defined in the importing unit
+
+#### Scenario: A name bound as both a definition and a macro is rejected
+
+- **WHEN** a library body contains both `(define f …)` and `(define-syntax f …)`
+- **THEN** compilation reports a compile-time error naming `f`
 
 #### Scenario: A library importer receives a derived form through its import
 
-- **WHEN** a library imports a library that exports a macro whose template uses `cond`
-- **THEN** the `cond` resolves through the compile-time interface chain rather than failing, because
-  a library importer now receives the derived forms from the library it imported them from
+- **WHEN** a **library** imports a library whose exported macro's template uses `when` or `cond`
+- **THEN** the derived form resolves through `(scheme base)`'s compile-time export interface rather
+  than failing, because a library body now receives the derived forms from the library it imports
+  them from
 
 ### Requirement: Prelude split into (scheme base) runtime and macro halves
 
@@ -218,15 +302,17 @@ call it. The two halves SHALL stay consistent with the
 single prelude source (no divergent hand-maintained copies).
 
 **The derived-form macros SHALL be declared with a home in the partition, like any other prelude
-definition, and SHALL reach the other members by import rather than by body-injection.** Their home
-SHALL be a member that every other member imports directly or transitively; because the partition's
-dependency order makes `(emit internal)` the only member importing nothing, the macros are homed
-there and `(scheme base)` re-exports them, so a unit importing `(scheme base)` — including any user
-library — receives them without importing the substrate. A member's body SHALL NOT receive a copy of
-a transformer it does not define.
+definition, and SHALL reach the other members by import rather than by body-injection.** A
+transformer SHALL be homed only in a library where every procedure its template calls is in scope,
+because a template's free identifiers are resolved in its defining library and an unresolvable one
+is left as written. `(emit internal)` imports nothing, so it SHALL hold only transformers whose
+templates call no procedure; the rest SHALL be homed in `(scheme base)`. `(scheme base)` SHALL
+re-export the substrate's transformers, so a unit importing `(scheme base)` — including any user
+library — receives every derived form without importing the substrate. A member's body SHALL NOT
+receive a copy of a transformer it does not define.
 
-The surface declaration SHALL be able to name a macro, so a `define-syntax` binding can be assigned a
-home and a re-export the same way a `define` binding is.
+The surface declaration SHALL be able to name a macro, so a `define-syntax` binding can be assigned
+a home and a re-export the same way a `define` binding is.
 
 #### Scenario: The runtime half is a linkable/loadable library exporting the prelude procedures
 
@@ -242,17 +328,6 @@ home and a re-export the same way a `define` binding is.
 - **THEN** the derived-form macros are in scope for that compilation and the unit compiles
   without an unbound-macro error
 
-#### Scenario: A partition member receives the derived forms by import
-
-- **WHEN** `(scheme read)`, whose reader procedures use `cond` and `case`, is compiled
-- **THEN** it compiles without error, and its body contains no copy of any transformer it does not
-  itself define
-
-#### Scenario: The substrate's compile-time half does not widen program scope
-
-- **WHEN** a program imports nothing beyond the auto-imported `(scheme base)`
-- **THEN** the derived forms are usable, and names private to `(emit internal)` remain out of scope
-
 #### Scenario: Curating the surface does not change the library's emitted code
 
 - **WHEN** names are removed from `(scheme base)`'s export list with no change to the prelude's
@@ -260,3 +335,14 @@ home and a re-export the same way a `define` binding is.
 - **THEN** the emitted library IR is byte-identical (library emission and code labels are derived
   from binding names, not export status), and only importing **program** modules change — each loses
   one external-global declaration per removed export
+
+#### Scenario: A partition member receives the derived forms by import
+
+- **WHEN** `(scheme read)`, whose reader procedures use `cond` and `let*`, is compiled
+- **THEN** it compiles without error, and its body contains no copy of any transformer it does not
+  itself define
+
+#### Scenario: The substrate's compile-time half does not widen program scope
+
+- **WHEN** a program imports nothing beyond the auto-imported `(scheme base)`
+- **THEN** the derived forms are usable, and names private to `(emit internal)` remain out of scope

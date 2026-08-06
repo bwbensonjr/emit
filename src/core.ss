@@ -27,6 +27,16 @@
   (and (pair? f) (eq? (car f) 'define)
        (let ([sig (cadr f)]) (if (pair? sig) (car sig) sig))))
 
+;; keyword bound by a top-level (define-syntax NAME ...), or #f.  The partition needs
+;; this because a transformer is a homed, exportable prelude binding like any other since
+;; `library-body-macro-scope` -- `define-name` answering #f for one is exactly why the
+;; surface declaration could not name a macro before.
+(define (define-syntax-name f)
+  (and (pair? f) (eq? (car f) 'define-syntax) (cadr f)))
+
+;; the name a top-level prelude form binds, by either form of definition
+(define (toplevel-binding-name f) (or (define-name f) (define-syntax-name f)))
+
 
 ;; prepend prelude forms to the user's, dropping any prelude define whose name
 ;; the user also defines (user-wins shadowing, so the prelude never clobbers).
@@ -155,19 +165,28 @@
 ;; tools/gen-scheme-base.ss produce the same list in the same order from the same two
 ;; files -- which is what keeps the run door's program module byte-identical to the
 ;; driver's prog.ll -- and the declaration's own arrangement cannot move emitted IR.
+;; Macros included (change: library-body-macro-scope): a transformer the partition homes
+;; here is exported like any other binding, and a name carrying a `reexport` home appears
+;; in this list without appearing in the body below -- which is the whole point of the
+;; marker, and why the two functions now ask two different questions of the same
+;; declaration rather than sharing one.
 (define (library-export-names lib prelude-forms)
   (filter (lambda (n) (and n (prelude-exports? lib n)))
-          (map define-name prelude-forms)))
+          (map toplevel-binding-name prelude-forms)))
 
-;; The forms LIB's body holds: the prelude definitions the partition homes in LIB, plus
-;; EVERY derived-form macro (change: scheme-base-partition).  The macros are the
-;; prelude's compile-time half -- collect-define-syntax lifts them out before anything is
-;; lowered, so carrying them in each member's body costs no emitted code, and a member
-;; whose procedures use `cond`/`case` internally (the reader does) can compile at all.
+;; The forms LIB's body holds: exactly the prelude definitions -- procedures AND
+;; transformers alike -- the partition homes in LIB.
+;;
+;; Until `library-body-macro-scope` this filter ended with `(define-syntax-form? f)`,
+;; copying EVERY transformer into EVERY member's body so that "a member whose procedures
+;; use cond/case internally (the reader does) can compile at all".  That was the
+;; compiler's private workaround for issue #55, available to no user library, and it is
+;; gone: a member now receives the derived forms the same way user code does, by importing
+;; the library that exports them.
 (define (library-body-forms lib prelude-forms)
   (filter (lambda (f)
-            (let ((n (define-name f)))
-              (if n (prelude-defines? lib n) (define-syntax-form? f))))
+            (let ((n (toplevel-binding-name f)))
+              (and n (prelude-defines? lib n))))
           prelude-forms))
 
 ;; One partition member as a define-library form: its declared exports, the body forms
@@ -692,6 +711,57 @@
 (define (import-tables->macro-keywords import-tables)
   (map car (import-tables->macro-env import-tables)))
 
+;; --- re-export of an imported macro (change: library-body-macro-scope) -------------
+;; An exported name this unit does not define, but that one of its imports exports as a
+;; macro, travels on WITHOUT re-resolution.  Its template was already resolved by the
+;; library that defined it, so running `resolve-exported-macros` over it again would
+;; re-mangle an already unit-qualified private keyword into a `here:there:name` spelling
+;; no entry defines.  The entry is therefore copied verbatim under the EXTERNAL keyword
+;; -- which is what makes `(rename <internal> <external>)` work over a re-export for
+;; free -- together with every entry it transitively mentions, so a private macro carried
+;; alongside the original reaches the second-hop importer too.
+;;
+;; The source table's referenced symbols become THIS unit's foreign refs: its own-refs
+;; mangled by the unit that owns them, its foreign-refs already mangled by whoever owned
+;; them first.  That is conservative -- a re-export carries the source's whole reference
+;; set rather than only what the copied entries reach -- because these seed the `known`
+;; set and the shake roots, where a superset costs an unused name and a subset costs a
+;; link-time undefined symbol.
+(define (ct-half-union a b)
+  (make-ct-half (append (ct-macros a) (ct-macros b))
+                (append (ct-own-refs a) (ct-own-refs b))
+                (append (ct-foreign-refs a) (ct-foreign-refs b))))
+
+(define (reexported-macros exports own-macro-env import-tables)
+  (let ([entries (quote ())] [foreign (quote ())] [seen (quote ())])
+    (define (note-foreign! str)
+      (unless (member str foreign) (set! foreign (cons str foreign))))
+    ;; copy KEY out of TBL's compile-time half under output keyword OUT, then follow the
+    ;; keywords its templates mention that the same table also defines
+    (define (copy! tbl out key)
+      (unless (memq out seen)
+        (set! seen (cons out seen))
+        (let* ([h (table-ct-half tbl)]
+               [e (assq key (ct-macros h))])
+          (when e
+            (set! entries (cons (cons out (cdr e)) entries))
+            (for-each (lambda (s) (when (assq s (ct-macros h)) (copy! tbl s s)))
+                      (all-symbols (cddr e)))))))
+    (for-each
+      (lambda (e)
+        (unless (assq (cdr e) own-macro-env)
+          (for-each
+            (lambda (tbl)
+              (let ([h (table-ct-half tbl)])
+                (when (assq (cdr e) (ct-macros h))
+                  (copy! tbl (car e) (cdr e))
+                  (for-each (lambda (n) (note-foreign! (mangle (car tbl) n)))
+                            (ct-own-refs h))
+                  (for-each note-foreign! (ct-foreign-refs h)))))
+            import-tables)))
+      exports)
+    (make-ct-half (reverse entries) (quote ()) (reverse foreign))))
+
 ;; The direct-call view of the same tables (change: cross-unit-direct-calls): an
 ;; alist mangled-symbol -> (label . arity), keyed the way `lower` sees an imported
 ;; reference -- as the `(global-ref sym)` the resolver produced -- so a call through
@@ -822,9 +892,14 @@
                  "a library binds one name with both define and define-syntax"
                  (car m))))
       own-macro-env)
+    ;; A name bound as a macro in the MERGED environment counts, so a library may
+    ;; re-export a macro it imports (change: library-body-macro-scope).  `macro-env` is
+    ;; own-first plus every import's exported transformers, which is exactly the set of
+    ;; keywords this body could use -- and re-exporting is the ordinary R7RS act of
+    ;; passing one on.  A name in neither half is still the same error it always was.
     (for-each
       (lambda (e)
-        (unless (or (memq (cdr e) defined-names) (assq (cdr e) own-macro-env))
+        (unless (or (memq (cdr e) defined-names) (assq (cdr e) macro-env))
           (error 'compile-library
                  "export of a name the library does not define" (cdr e))))
       exports)
@@ -859,8 +934,11 @@
           (list (emit-library-batch progs name)
                 (export-table-datum name export-table
                                     (export-call-rows runtime-exports (unit-procs))
-                                    (resolve-exported-macros name exports own-macro-env
-                                                             defined-names import-env-alist))))
+                                    (ct-half-union
+                                      (resolve-exported-macros name exports own-macro-env
+                                                               defined-names import-env-alist)
+                                      (reexported-macros exports own-macro-env
+                                                         import-tables)))))
         ;; PRUNED PATH (closed-world AOT tree-shake): expand each body form ONCE,
         ;; compute the define->define reference graph, keep only what's reachable from
         ;; the roots, and lower/emit just those (in original order, so __init order is
@@ -915,9 +993,12 @@
           (list (emit-library-batch progs name)
                 (export-table-datum name export-table
                                     (export-call-rows kept-exports (unit-procs))
-                                    (resolve-exported-macros name exports own-macro-env
-                                                             defined-names
-                                                             import-env-alist)))))))
+                                    (ct-half-union
+                                      (resolve-exported-macros name exports own-macro-env
+                                                               defined-names
+                                                               import-env-alist)
+                                      (reexported-macros exports own-macro-env
+                                                         import-tables))))))))
 
 ;; Compile a program that imports libraries.  import-tables is a list of the
 ;; program's DIRECT imports' export tables (as returned by compile-library); the
@@ -970,4 +1051,12 @@
       (dump "parse+rename+imports" core) (dump "recognize-let" a)
       (dump "convert-assignments" b) (dump "simplify" s)
       (dump "convert-closures" c) (dump "lower" d)
-      (emit-program-with-imports d (or init-libs imported-libs) (map cdr import-env-alist)))))
+      ;; DEDUPED by symbol (change: library-body-macro-scope).  One mangled symbol can
+      ;; now reach the alist under two different keys: its external name, because the
+      ;; library exports it, and its own already-resolved spelling, because an imported
+      ;; template mentions it.  `memv` is the first real case -- (scheme base) exports it
+      ;; AND `case`'s template calls it -- and emitting the declaration twice is a hard
+      ;; clang error, `redefinition of global '@scheme.base:memv'`.  `union` preserves
+      ;; first-occurrence order, so a program with no such overlap emits the same bytes.
+      (emit-program-with-imports d (or init-libs imported-libs)
+                                 (union (quote ()) (map cdr import-env-alist))))))
