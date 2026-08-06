@@ -44,13 +44,41 @@ compiler generates, which is precisely the two-tier privilege this change remove
 
 ## Decisions
 
-### D1 — Home the derived forms in `(emit internal)`, not `(scheme base)`
+### D1 — Split homing: the core-only forms in `(emit internal)`, the procedure-dependent ones in `(scheme base)`
 
-Forced by the partition's dependency order. `(emit internal)` imports nothing, so if the macros lived
-in `(scheme base)` the substrate could only get them by the body-injection this change removes, or by
-an import that would invert the graph and cycle. Homing them at the bottom lets all five members
-reach them: `(scheme base)` imports `(emit internal)` directly; `(scheme cxr)`/`(scheme read)`/
-`(scheme file)` reach them through `(scheme base)`'s re-export (D2).
+**Revised after the task 1.1/1.2 measurement below; the original single-home version does not work.**
+
+Homing *every* derived form in `(emit internal)` is impossible. The substrate imports nothing, so a
+template that references a prelude **procedure** has nothing to resolve against there — `case` needs
+`memv`, `guard` needs `call-with-current-continuation` and `with-exception-handler`,
+`%guard-clauses` needs `raise`, `parameterize` needs `with-parameters`. None of those is a primitive
+or an integrable, none is defined in `(emit internal)`, and `(emit internal)` cannot import
+`(scheme base)` without inverting the dependency graph. Under the resolution rule an unresolvable
+template identifier is *left as written* and then hygiene-renamed per expansion, so `case` would
+break in every importer with `unbound variable memv.0` — the #56 failure mode, inflicted on the
+standard library.
+
+The measurement makes the split obvious, because the two sets do not overlap:
+
+| Derived form | Template references beyond core keywords | Used by any partition member? |
+|---|---|---|
+| `and`, `or`, `let*`, `cond` | none — only core keywords and their own keyword (self-recursion) | **yes** — `cond` 12, `and` 16, `or` 16, `let*` 3 in `(emit internal)`; `cond` 3, `and` 8, `or` 1, `let*` 8 in `(scheme base)` |
+| `case` | `memv` | no |
+| `guard` | `call-with-current-continuation`, `with-exception-handler` | no |
+| `%guard-clauses` | `raise` | no |
+| `parameterize` | `with-parameters`, `list` | no |
+| `do`, `%do-step` | `%do-step` (a private macro keyword) | no |
+| `when`, `unless` | none | no |
+
+**The four forms the partition actually needs are exactly the four that need nothing from
+`(scheme base)`.** So: home `and`, `or`, `let*`, `cond`, `when`, `unless` in `(emit internal)`, where
+their templates resolve against core keywords alone; home `case`, `guard`, `%guard-clauses`,
+`parameterize`, `do`, `%do-step` in `(scheme base)`, where the procedures they call are defined.
+`(scheme base)` re-exports the substrate's six (D2), so an importer of `(scheme base)` — user library
+or partition member — sees all twelve under one import and cannot tell where each is homed.
+
+`(scheme cxr)`/`(scheme read)`/`(scheme file)` reach everything through `(scheme base)`'s re-export;
+each of them uses only `or` and `let*` anyway.
 
 *Alternative considered — define them in `(scheme base)` and keep body-injection for `(emit internal)`
 alone.* This avoids needing re-export at all and is a materially smaller change: the injection hack
@@ -145,6 +173,75 @@ applied — name the form the user wrote, at the point they wrote it.
 - **Scope creep into #31** → D3 draws the line at the program path. If unifying both paths starts
   looking necessary to make the change coherent, that is a signal to stop and sequence #31 first, not
   to absorb it.
+
+## Measured findings (tasks 1.1 / 1.2)
+
+Recorded as measured facts against the tree at `eeacac7`, not predictions.
+
+**1.1 — The rewritable set.** The prelude has twelve `define-syntax` forms
+(`src/prelude.scm:17-95, 639-694`). Classifying every template identifier against the resolution
+rule — pattern variable, ellipsis, wildcard, `quote`d, `syntax-rules` literal, core keyword,
+primitive, integrable — leaves only these as candidates for rewriting:
+
+- **Prelude procedures** (would be rewritten to a mangled symbol): `memv` (`case`), `raise`
+  (`%guard-clauses`), `call-with-current-continuation` and `with-exception-handler` (`guard`),
+  `with-parameters` and `list` (`parameterize`). Verified none is in `*prims*` (all primitives are
+  `%`-sigiled) and none is in `*integrable*`; each is an ordinary prelude `define`.
+- **Macro keywords** (rewritten to a unit-qualified spelling): the self-recursive `and`, `or`,
+  `let*`, `cond`, `case`, `%guard-clauses`, plus `do`'s reference to the private `%do-step`.
+- `cons`, `car`, `cdr` appear in `guard`'s template but are **integrables**, so they are classified
+  before the library's bindings and are never rewritten.
+- `when` and `unless` have no rewritable identifier at all — `if` and `begin` are core keywords.
+
+**1.2 — Where each resolves.** For a **program** importer nothing changes: D3 keeps
+`prelude-macro-forms`' source merge, so every one of these still resolves in the importer against
+the auto-imported `(scheme base)`. For a **library** importer the identifier arrives pre-resolved;
+for each of the six procedures the pre-resolved spelling is `(scheme base)`'s mangled symbol, which
+is what the importer's own resolution would have produced anyway for a library that imports
+`(scheme base)`. No disagreement was found. This is the input to D1's split and the reason task 1.3
+is expected to come out byte-identical — which is still to be demonstrated, not assumed.
+
+**Usage across the partition.** Counting uses in member bodies with the injected `define-syntax`
+lines stripped:
+
+| member | `cond` | `and` | `or` | `let*` | others |
+|---|---|---|---|---|---|
+| `(emit internal)` | 12 | 16 | 16 | 3 | none |
+| `(scheme base)` | 3 | 8 | 1 | 8 | none |
+| `(scheme cxr)` | 0 | 0 | 1 | 0 | none |
+| `(scheme read)` | 0 | 0 | 1 | 1 | none |
+| `(scheme file)` | 0 | 0 | 1 | 0 | none |
+
+No member uses `case`, `guard`, `parameterize`, `do`, `when`, or `unless`. All twelve transformers
+are nevertheless copied into all five bodies today, so the copy is not only a privilege — it is
+mostly dead weight.
+
+**1.3 — The IR diff, and why it is partly unanswerable as written.** Two of the three cases resolve
+without a diff, and the third has no baseline:
+
+- **Program IR cannot move.** D3 keeps `prelude-macro-forms`' source merge for the program path, so
+  no code path a program takes is touched. This is true by construction, not by measurement.
+- **Emitted member IR cannot move either, and the copies cost nothing in code.**
+  `grep -c 'syntax.rules'` over `build/lib/emit.internal.ll` and `build/lib/scheme.base.ll` is **0**
+  in both: `collect-define-syntax` lifts every transformer out before anything is lowered, exactly as
+  `library-body-forms`' comment claims. Dropping the copies therefore changes no emitted instruction.
+- **The library path has no baseline to diff against**, because it currently fails outright — that is
+  the bug. Byte-identity can only be asserted for what compiles today, and what compiles today is
+  unaffected.
+
+So the honest form of D4's risk is much narrower than the design first stated: the pre-resolution
+hazard is confined to the *library* importer, which has no prior behaviour to regress. Task 8.5's
+contingency (baseline + `trust-check` churn) is expected to be a no-op, and 1.3 is recorded closed on
+that basis rather than on a diff that has no two sides.
+
+**Correction to a claimed benefit.** The proposal said removing the body copies is "a binary-size
+win". **It is not.** Measured: the transformer text is 2290 bytes and is copied into all five members
+(11450 bytes total, ~9160 of it duplication), but it lives only in the *generated* `lib/**/*.sld`
+files on disk. The baked constant is `src/prelude.scm`, which holds exactly one copy of each
+transformer; the per-member duplication is materialized transiently by `library-body-forms` at
+compile time and never reaches a binary. Removing it shrinks committed generated files by ~9 KB and
+saves a little compile-time work. **The case for this change rests on removing the privileged
+channel, not on size**, and the proposal has been corrected to say so.
 
 ## Open Questions
 

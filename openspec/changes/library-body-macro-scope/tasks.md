@@ -3,17 +3,29 @@
 Everything downstream is contingent on this. Do it before touching the partition, on a throwaway
 branch — a bad result sends the change to the D1 fallback (design Open Question 2), not into surgery.
 
-- [ ] 1.1 Enumerate the derived forms and, for each, list the template identifiers that are not
+- [x] 1.1 Enumerate the derived forms and, for each, list the template identifiers that are not
       pattern variables, core keywords, primitives, or integrables — the ones pre-resolution would
       rewrite. Expect `case`→`memv`, `guard`→the handler machinery, `parameterize`→its procedures.
-- [ ] 1.2 For each such identifier, record what it resolves to on the **program** path today and
+- [x] 1.2 For each such identifier, record what it resolves to on the **program** path today and
       what it would resolve to pre-resolved in `(emit internal)`/`(scheme base)`. Flag every
       disagreement.
-- [ ] 1.3 Build a representative program both ways and diff the emitted program IR byte-for-byte.
+- [x] 1.3 Build a representative program both ways and diff the emitted program IR byte-for-byte.
       Record the result in `design.md` under D4 as a measured fact, not a prediction.
-- [ ] 1.4 Decide and record: proceed with the export-interface shape, or retreat to the D1 fallback
+      **Closed without a diff, because two of three cases resolve by construction and the third has
+      no baseline** — see design "Measured findings 1.3". Program IR cannot move (D3 keeps the source
+      merge); emitted member IR contains zero `syntax-rules` references so the copies cost no code;
+      the library path currently fails, so there is nothing to regress. Also corrected a proposal
+      claim: dropping the copies is **not** a binary-size win.
+- [x] 1.4 Decide and record: proceed with the export-interface shape, or retreat to the D1 fallback
       (define the macros in `(scheme base)`, keep body-injection for `(emit internal)` alone). If
       retreating, revise `proposal.md` and the delta spec before continuing.
+      **Decision: proceed, with D1 revised to SPLIT homing.** Single-home-in-`(emit internal)` is
+      impossible — `case`/`guard`/`%guard-clauses`/`parameterize` reference prelude procedures the
+      substrate cannot resolve, and an unresolvable template identifier is left as written and
+      hygiene-renamed, which would break `case` in every importer. The measurement showed the four
+      forms the partition actually uses (`cond`, `and`, `or`, `let*`) are exactly the four whose
+      templates need nothing from `(scheme base)`, so the split is clean. The Open-Question-2
+      fallback is **not** taken; re-export is still required.
 
 ## 2. Re-export of an imported macro (spec: "A library may re-export a macro it imports")
 
@@ -44,14 +56,19 @@ transformers. Verified absent today: `compile-library: export of a name the libr
 
 ## 4. Home the derived forms and distribute them by import (design D1/D2)
 
-- [ ] 4.1 Declare the derived-form macros homed in `(emit internal)`.
-- [ ] 4.2 Declare `(scheme base)` as re-exporting them, so a unit importing `(scheme base)` gets them
-      without importing the substrate.
-- [ ] 4.3 Delete the body copy in `library-body-forms` (`src/core.ss:167-172`) and the comment that
+- [ ] 4.1 Declare `and`, `or`, `let*`, `cond`, `when`, `unless` homed in `(emit internal)` — the six
+      whose templates reference only core keywords and their own keyword (task 1.1).
+- [ ] 4.2 Declare `case`, `guard`, `%guard-clauses`, `parameterize`, `do`, `%do-step` homed in
+      `(scheme base)`, where the procedures their templates call (`memv`, `raise`,
+      `call-with-current-continuation`, `with-exception-handler`, `with-parameters`) are defined.
+      Homing these in the substrate is **not possible** — see design D1.
+- [ ] 4.3 Declare `(scheme base)` as re-exporting the substrate's six, so a unit importing
+      `(scheme base)` sees all twelve and cannot tell where each is homed.
+- [ ] 4.4 Delete the body copy in `library-body-forms` (`src/core.ss:167-172`) and the comment that
       documents it as a workaround.
-- [ ] 4.4 Confirm `(scheme cxr)` / `(scheme read)` / `(scheme file)` still compile — their bodies use
-      `cond`/`case` and now get it through `(scheme base)`'s re-export rather than a copy.
-- [ ] 4.5 Assert the negative: a program must still fail on a name private to `(emit internal)`, so
+- [ ] 4.5 Confirm `(scheme cxr)` / `(scheme read)` / `(scheme file)` still compile — measured usage is
+      only `or` and `let*`, both substrate-homed and reached through `(scheme base)`'s re-export.
+- [ ] 4.6 Assert the negative: a program must still fail on a name private to `(emit internal)`, so
       the re-export does not widen program scope past #29's privacy guarantee (design R4).
 
 ## 5. The library path picks the macros up
@@ -96,10 +113,12 @@ until the suites finish.
 - [ ] 8.2 `make regen` (~12 min), once, after the last source edit.
 - [ ] 8.3 `./run-all-tests.sh`, then `./run-dev-tests.sh`. Run long suites individually if they
       outlive the command timeout.
-- [ ] 8.4 Record the binary-size delta from dropping the body copies (task 4.3) — it is a stated
-      benefit of the change and should be a number, not a claim.
-- [ ] 8.5 If program IR moved (task 1.3), update `test/module-scaffold-baseline.sha256` and confirm
-      `test/trust-check.sh` is clean **after** committing.
+- [ ] 8.4 Record the size delta from dropping the body copies (task 4.4). Task 1.3 measured the
+      expected effect as ~9 KB of committed generated `.sld` text and **zero** change to any binary;
+      confirm that, and correct the record if a binary does move.
+- [ ] 8.5 Task 1.3 expects program IR not to move, so this should be a no-op. If it does move,
+      update `test/module-scaffold-baseline.sha256` and confirm `test/trust-check.sh` is clean
+      **after** committing — and treat the surprise as a signal to re-read D3.
 
 ## 9. Documentation and close-out
 

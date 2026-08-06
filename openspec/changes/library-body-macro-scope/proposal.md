@@ -39,8 +39,12 @@ compile-time interface and `compile-library*` already merges `import-tables->mac
 - **`library-body-forms` stops copying every transformer into every partition member.** That copy is
   a workaround the comment at `src/core.ss:163-166` names as such ("a member whose procedures use
   `cond`/`case` internally (the reader does) can compile at all"), available only to libraries the
-  compiler generates. Once the macros arrive by import it is dead, and its removal is a binary-size
-  win against a stated design goal.
+  compiler generates. Once the macros arrive by import it is dead. Its removal is **not** a
+  binary-size win — measured during task 1.3, the copies live only in the generated `.sld` files
+  (2290 bytes × 5 members, ~9 KB of duplication) and never reach a binary, because the baked constant
+  is `src/prelude.scm` with one copy of each and `collect-define-syntax` lifts every transformer out
+  before lowering (emitted member IR contains zero `syntax-rules` references). The case for this
+  change is removing the privileged channel; the size effect is ~9 KB of committed generated text.
 - **The diagnostic stops saying a *variable* is unbound.** A derived form used where its macro is not
   in scope should report a macro that is not in scope, and name the import that would bring it in.
   Today's message sends the author looking for an import they already wrote.
