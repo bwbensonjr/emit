@@ -124,9 +124,16 @@ does not move either, since it tests the REPL rule being generalized.
   `--help` as the manifest path. → Existing behaviour for every flag that takes an argument; not
   worth special-casing, but the help text should make the arity obvious.
 
-## Open Questions
+## Resolved Questions
 
-1. Should `emit help <verb>` exist as an alias for `emit <verb> --help`? Cheap, and it is what a
-   user who has not read anything tries first. Leaning yes if it costs one dispatch line.
-2. Does the per-verb help list the shared `--dump` / `--dump-all` flags each time, or point at the
-   top-level block? Repetition is friendlier; the top-level block already explains them once.
+1. **Should `emit help <verb>` exist as an alias for `emit <verb> --help`? — Yes.** It cost the one
+   dispatch arm the question anticipated: `main` handles `--help`/`-h`/`help` together, before verb
+   dispatch, and `emit help VERB` routes to the same per-verb writer `emit VERB --help` uses. There
+   is one usage text per door and two ways to ask for it, which is the point — a user who has read
+   nothing types the word before the flag. `emit help <not-a-verb>` is an error like any other
+   unknown verb: diagnostic and summary on stderr, exit 2.
+2. **Does the per-verb help repeat the shared flags, or point at the top-level block? — Repeat
+   them.** Every per-verb block ends with the same `options every verb accepts` section, written
+   once in `usage_shared` and called by all five writers (the four verbs and the top-level
+   summary). `emit run --help` should be a complete answer without a second lookup, and single-
+   sourcing the text means the repetition cannot drift.

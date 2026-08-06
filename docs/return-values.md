@@ -574,6 +574,13 @@ applied to `emit run`, which prints a whole *program's* value — that is a batc
 what the AOT executable prints, so dev→ship fidelity is preserved. (This resolves the open question the
 design doc left on that point.)
 
+> **Superseded on the second half** (change: `emit-cli-front-door`). The program path *now* suppresses
+> the unspecified value too, in both `main`s — `src/runtime/runtime.c` and `emit run`'s in-process
+> path — so the REPL rule and the program rule are one rule stated twice. The fidelity argument above
+> survives intact: it was about `emit run` and the AOT executable **agreeing**, and they still do;
+> what changed is *what* they agree on. The first half is unchanged and load-bearing: the guard is
+> still in the report and not in `print_val`, so an explicit `(write (if #f #f))` still renders.
+
 **7. Write down the per-category policy.** The five categories at the top of this document need
 separate answers, and only category 1 is settled by the above. Category 2 in particular is already
 live: the JIT and AOT paths disagree on argument evaluation order
