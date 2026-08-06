@@ -45,7 +45,11 @@ A library source is one `(define-library …)` form, conventionally in a `.sld` 
   ```
 
 - **`(begin form …)`** — the library body: a mutually-recursive group of top-level `define`s (and
-  `define-syntax` used internally). Bare forms outside a `begin` are also accepted.
+  `define-syntax` used internally).
+
+`export`, `import`, and `begin` are the three declarations Emit recognizes. Anything else in
+declaration position is **rejected by name** rather than absorbed into the body — see
+[When you break a rule](#when-you-break-a-rule).
 
 ## Importing in a program
 
@@ -498,7 +502,8 @@ other — the same gap as `docs/PERFORMANCE.md` P8.
     bindings prune independently of one another — reaching one accessor keeps the type's
     descriptor, not the whole declaration.
   - Still out of scope: the `include`, `include-ci`, `include-library-declarations`, and
-    `cond-expand` library declarations.
+    `cond-expand` library declarations — now **rejected by name** rather than absorbed into the
+    body (see [When you break a rule](#when-you-break-a-rule)).
 - **Artifacts** — each library compiles to `<artifacts>/<name>.ll` plus a readable
   `<name>.exports` table (`(NAME ((external . "mangled") …) ((external "label" arity) …))`) and a
   `<name>.stamp` sidecar
@@ -510,6 +515,35 @@ other — the same gap as `docs/PERFORMANCE.md` P8.
   is untouched — the toolchain is part of the cache key, as in Rust (`.rlib` SVH), GHC (`.hi`
   version), Go, and Bazel (change: `artifact-compiler-stamp`).
 
+## When you break a rule
+
+The limits below are *enforced at the front end*, and each diagnostic names the form you wrote
+(change: `module-frontend-diagnostics`). Before this, none of them did: a form the module front end
+did not implement was not rejected but **reclassified**, and whatever the reclassification broke
+second is what got reported — so the message sent you somewhere the mistake was not.
+
+| what you write | what Emit reports |
+|---|---|
+| `(import (only (scheme base) car))`, or `except` / `prefix` / `rename` | `import: import sets are not supported: (only (scheme base) car) -- imports are whole-library, as (import (library name))` |
+| `(include …)`, `(include-ci …)`, `(include-library-declarations …)`, `(cond-expand …)` | `define-library: include is an R7RS library declaration this stage does not support` |
+| any other declaration, e.g. `(frobnicate 1 2 3)` | `define-library: frobnicate is not a library declaration -- a declaration is (export ...), (import ...) or (begin ...)` |
+| `(export swap!)` where `swap!` is a `define-syntax` | `compile-library: a library cannot export a macro (exports are procedures in this stage) swap!` |
+| a `define-library` that is not its source's only form | `define-library: a define-library must be the only form in its source: (two)` |
+| a `define-library` typed at the REPL prompt | `define-library: libraries are not defined at the prompt: (r) -- a library is imported, named in the manifest` |
+
+Two distinctions are deliberate:
+
+- **Recognized-but-unsupported is not the same as not-a-declaration.** The four R7RS declarations
+  Emit has not implemented say so; anything else is reported as not being a declaration at all. One
+  is a feature you are waiting on, the other is a mistake in your source, and your next move
+  differs. Neither message promises a schedule.
+- **`rename` is rejected only in `import` position.** `(export (rename internal external))` stays
+  valid; the rejection keys on the declaration the form appears in, not on the keyword.
+
+The message body is the same whichever door compiled the form — `emit run`, `emit build`,
+`emit lib`, or the REPL — so only the door's own prefix differs. Every one of these is a
+*recoverable* compile-time error: at the prompt the session reports it and stays alive.
+
 ## Scope & limits
 
 This is Modules v0:
@@ -520,7 +554,8 @@ This is Modules v0:
 - **No tree-shaking on the Chez-free door.** `emit build` (the in-binary AOT door) links
   full library units; the closed-world reachability strip is only on the Chez driver's AOT ship
   path (change: `aot-release-profile`). Porting it to the Chez-free door is future work.
-- Import specifiers are whole-library only — no `only`/`except`/`prefix` import sets yet.
+- Import specifiers are whole-library only — no `only`/`except`/`prefix`/`rename` import sets yet.
+  An import set is rejected by name; see [When you break a rule](#when-you-break-a-rule).
 
 For the authoritative requirements and scenarios, see `openspec/specs/module-system/spec.md`; for
 the design rationale, `openspec/explorations/modules-v0-design.md`.

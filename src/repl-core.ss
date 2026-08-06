@@ -97,6 +97,18 @@
                   (set! *repl-n* sn)
                   (cons (quote error) (repl-error->string e))))
       (cond
+        ;; A define-library at the prompt is not an expression: ordinary parsing reads it
+        ;; as an application over internal defines and reports a malformed body, a message
+        ;; about the misparse rather than the limit (issue #49, change:
+        ;; module-frontend-diagnostics).  Raised, not returned, so it takes the same
+        ;; recoverable path as every other compile-time error -- the guard above restores
+        ;; the session snapshot and the host returns to the prompt (design D6).  Whether
+        ;; the prompt SHOULD accept one is #49's own question; this states what it does.
+        [(define-library-form? form)
+         (error 'define-library
+                (string-append "libraries are not defined at the prompt: "
+                               (render-datum (cadr form))
+                               " -- a library is imported, named in the manifest"))]
         [(define-syntax-form? form)
          (repl-note-syntax! form)
          (cons (quote syntax) (symbol->string (cadr form)))]
@@ -389,17 +401,27 @@
 ;; reaches -- without the core doing any I/O.  Keys match repl-manifest-user-paths.
 ;;
 ;; This is a pure query: it reads and parses, and registers nothing.
+;;
+;; It also DIAGNOSES nothing.  The two parsers it borrows now reject what the module
+;; front end does not implement -- an import set, an unrecognized declaration (change:
+;; module-frontend-diagnostics) -- and this mode's contract is a plain string, so a raise
+;; here would escape uncaught and abort the door before the compile that owns the
+;; diagnostic ever ran: the user would see the message with no door prefix and a dead
+;; process, which is exactly the abort design D6 rules out.  A source whose imports
+;; cannot be read simply has none to preload; the guarded compile that follows reports
+;; it, once, through its door.
 (define (repl-source-imports text)
-  (let* ([forms (read-all-from-string text)]
-         [lib?  (and (pair? forms) (pair? (car forms))
-                     (eq? (car (car forms)) (quote define-library)))]
-         [names (if lib?
-                    (cadr (parse-define-library (car forms)))
-                    (car (collect-imports forms)))])
-    (let loop ([ns names] [acc ""])
-      (if (null? ns)
-          acc
-          (loop (cdr ns) (string-append acc (mangle (car ns) "") "\n"))))))
+  (guard (e (#t ""))
+    (let* ([forms (read-all-from-string text)]
+           [lib?  (and (pair? forms) (pair? (car forms))
+                       (eq? (car (car forms)) (quote define-library)))]
+           [names (if lib?
+                      (cadr (parse-define-library (car forms)))
+                      (car (collect-imports forms)))])
+      (let loop ([ns names] [acc ""])
+        (if (null? ns)
+            acc
+            (loop (cdr ns) (string-append acc (mangle (car ns) "") "\n")))))))
 
 ;; List the manifest's PROGRAM entries for the emit build door (Chez-free; change:
 ;; emit-build-bin-entry).  Each `(program NAME (source S) [(output O)])` entry yields
@@ -562,26 +584,11 @@
         acc
         (loop (cdr parts) (string-append acc "." (symbol->string (car parts)))))))
 
-;; Render the export-table datum subset to a readable string, matching what the Chez
-;; driver's `write` produces for (NAME export-table): symbols by name, strings quoted
-;; (mangled targets are plain identifiers, so no escaping is needed), proper lists as
-;; (a b c), and dotted pairs as (a . b).  Enough for the export table; avoids needing
-;; a full `write` in the compiled prelude.
-(define (render-datum x)
-  (cond
-    [(string? x) (string-append "\"" x "\"")]
-    [(symbol? x) (symbol->string x)]
-    [(null? x) "()"]
-    [(pair? x) (string-append "(" (render-list-body x) ")")]
-    ;; the call rows carry an arity (change: cross-unit-direct-calls)
-    [(number? x) (number->string x)]
-    [else "?"]))
-(define (render-list-body p)
-  (let ([a (render-datum (car p))] [d (cdr p)])
-    (cond
-      [(null? d) a]
-      [(pair? d) (string-append a " " (render-list-body d))]
-      [else (string-append a " . " (render-datum d))])))
+;; `render-datum` -- which renders the export-table datum, matching what the Chez
+;; driver's `write` produces for (NAME export-table) -- lives in core.ss: the module
+;; front end's diagnostics name the form the user wrote, and a form has to be rendered
+;; INTO the message to survive every door (change: module-frontend-diagnostics).  One
+;; renderer, two consumers.
 
 ;; Mode 11: compile a lone define-library source and return (ok . payload) where
 ;; payload is "<basename>\n<export-datum>" -- the host writes <basename>.exports from
@@ -593,6 +600,10 @@
   (guard (e (#t (cons (quote error) (repl-error->string e))))
     (let* ([forms (read-all-from-string text)]
            [lib   (single-define-library forms)])
+      ;; A define-library that is not alone gets the SAME diagnostic mode 7 gives it,
+      ;; rather than this mode's blunter "not a single define-library"
+      ;; (change: module-frontend-diagnostics).
+      (check-library-position forms)
       (if (not lib)
           (cons (quote error) "source is not a single define-library")
           ;; The SAME import tables mode 7 resolves for this library (lone-library-tables),

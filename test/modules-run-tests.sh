@@ -60,6 +60,83 @@ echo "run door: import errors are reported and exit non-zero"
 check_fail run-cycle   "$MOD/prog-cycle.scm"   "$MOD/emit-libs-cycle.scm" "cyclic|unresolved"
 check_fail run-missing "$MOD/prog-missing.scm" "$MAN"                     "not found in the manifest"
 
+# --- an import SET is rejected by name, identically on every path -------------
+# (change: module-frontend-diagnostics, issue #45.)  These cases live HERE rather than in
+# test/modules-tests.sh, which the tasks named: that suite is Chez-GATED and exits 0
+# without chez, so the assertions would not run on the Chez-free path these doors take.
+#
+# The property under test is not just "it fails" -- it is that ONE form gets ONE message.
+# Before this change an import set was read as a library NAME, so the program path
+# reported a missing manifest entry and the library path reported an unresolved or cyclic
+# import: two unrelated stories, neither naming the form.
+echo "run door: an import set is rejected by name, on both the program and library paths"
+
+# the message body, with each door's own prefix stripped -- the prefix is per-door by
+# design (a door's diagnostics name that door), the message must not be.
+is_msg () { sed -n 's/^.*\(import sets are not supported.*\)$/\1/p' "$1" | head -1; }
+
+for spec in 'only (scheme base) car' 'except (scheme base) car' \
+            'prefix (scheme base) b:' 'rename (scheme base) (car hd)'; do
+  kw="${spec%% *}"
+  printf '(import (%s))\n(display 1)\n' "$spec" > "$TMP/is-$kw.scm"
+  check_fail "import-set-$kw" "$TMP/is-$kw.scm" "$MAN" \
+    "import sets are not supported: \($kw "
+done
+
+# the SAME form inside a define-library, through `emit lib`, and the two messages must
+# match -- the property today's code does not have.
+printf '(define-library (isl)\n  (export f)\n  (import (only (scheme base) car))\n  (begin (define (f x) x)))\n' \
+  > "$TMP/isl.sld"
+printf '(import (only (scheme base) car))\n(display 1)\n' > "$TMP/isp.scm"
+$RUN --manifest "$MAN" < "$TMP/isp.scm" >/dev/null 2>"$TMP/isp.err"
+build/emit lib "$TMP/isl.sld" >/dev/null 2>"$TMP/isl.err"
+prog_msg="$(is_msg "$TMP/isp.err")"; lib_msg="$(is_msg "$TMP/isl.err")"
+if [ -n "$prog_msg" ] && [ "$prog_msg" = "$lib_msg" ]; then
+  echo "  [OK  ] import-set-same-message  ($prog_msg)"; pass=$((pass+1))
+else
+  echo "  [FAIL] import-set-same-message  (program: ${prog_msg:-<none>} / library: ${lib_msg:-<none>})"
+  fail=$((fail+1))
+fi
+# and neither one still tells the old story about the manifest or a cycle.
+if grep -Eq 'not found in the manifest|cyclic' "$TMP/isp.err" "$TMP/isl.err"; then
+  echo "  [FAIL] import-set-no-stale-story  (still blaming the manifest or a cycle)"; fail=$((fail+1))
+else
+  echo "  [OK  ] import-set-no-stale-story"; pass=$((pass+1))
+fi
+
+# --- a MISPLACED define-library is reported as one ----------------------------
+# (change: module-frontend-diagnostics, issue #49 first half.)  Expression parsing knows
+# no `define-library`, so it read one as an application over internal defines and
+# reported `internal defines with no following body expression ?` -- a message about the
+# misparse, with a trailing `?` that is an artifact of it.
+echo "run door: a define-library that is not its source's only form is named as one"
+printf '(define-library (two)\n  (export f)\n  (begin (define (f x) x)))\n(display 1)\n' \
+  > "$TMP/two.scm"
+check_fail misplaced-library "$TMP/two.scm" "$MAN" \
+  'a define-library must be the only form in its source: \(two\)'
+if grep -Eq 'internal defines with no following body' "$TMP/misplaced-library.err"; then
+  echo "  [FAIL] misplaced-library-not-misparsed  (still the malformed-body message)"; fail=$((fail+1))
+else
+  echo "  [OK  ] misplaced-library-not-misparsed"; pass=$((pass+1))
+fi
+
+# At the PROMPT: named as unsupported there, and -- design D6 -- the session survives it,
+# which the following form's value proves.  A mistyped declaration taking down a session
+# would trade one defect for a worse one.
+echo "REPL door: a define-library at the prompt is named, and the session survives"
+repl_in=$'(define-library (r) (export f) (begin (define (f x) x)))\n(+ 1 2)\n'
+printf '%s' "$repl_in" | build/emit repl --manifest "$MAN" >"$TMP/repl.out" 2>"$TMP/repl.err"
+if grep -Eq 'libraries are not defined at the prompt: \(r\)' "$TMP/repl.out" "$TMP/repl.err"; then
+  echo "  [OK  ] repl-library-named"; pass=$((pass+1))
+else
+  echo "  [FAIL] repl-library-named"; sed 's/^/         /' "$TMP/repl.out" "$TMP/repl.err"; fail=$((fail+1))
+fi
+if [ "$(awk 'NF{v=$NF} END{print v}' "$TMP/repl.out")" = "3" ]; then
+  echo "  [OK  ] repl-session-survives  (the next form still evaluates)"; pass=$((pass+1))
+else
+  echo "  [FAIL] repl-session-survives"; sed 's/^/         /' "$TMP/repl.out"; fail=$((fail+1))
+fi
+
 # --- dev->ship fidelity vs the AOT door (Chez-gated) -----------------------
 if command -v chez >/dev/null 2>&1; then
   echo "dev->ship fidelity: run door matches the AOT door"

@@ -55,6 +55,10 @@
 (define (no-dump stage form) (if #f #f))
 
 (define (compile-forms forms dump)
+  ;; This and compile-program-with-imports are the TWO pipelines a program reaches, on
+  ;; every door, so a misplaced define-library is caught for all of them in exactly two
+  ;; places rather than at each entry point (change: module-frontend-diagnostics).
+  (check-library-position forms)
   (reset-counter!)
   (set-import-calls! '())            ; no imports on this path (change: cross-unit-direct-calls)
   (let* ([me+rf (collect-define-syntax forms)]
@@ -339,6 +343,121 @@
 (define (define-library-form? f) (and (pair? f) (eq? (car f) 'define-library)))
 (define (import-form? f) (and (pair? f) (eq? (car f) 'import)))
 
+;; --- naming the offending form in a diagnostic (change: module-frontend-diagnostics) ---
+;; Render a datum to a readable string: symbols by name, strings quoted (nothing here
+;; needs escaping -- mangled targets are plain identifiers and a source path carries no
+;; quotes), proper lists as (a b c), dotted pairs as (a . b).  Enough for an export
+;; table and for naming a form the front end rejects; anything else renders "?".
+;;
+;; It lives HERE, ahead of both consumers, because a diagnostic must name the form on
+;; EVERY door: an error's irritants reach the Chez-free doors through
+;; repl-error->string, which renders a LIST irritant as "?", so a form the user wrote
+;; has to be rendered INTO the message rather than passed beside it.
+(define (render-datum x)
+  (cond
+    [(string? x) (string-append "\"" x "\"")]
+    [(symbol? x) (symbol->string x)]
+    [(null? x) "()"]
+    [(pair? x) (string-append "(" (render-list-body x) ")")]
+    ;; the call rows carry an arity (change: cross-unit-direct-calls)
+    [(number? x) (number->string x)]
+    [else "?"]))
+(define (render-list-body p)
+  (let ([a (render-datum (car p))] [d (cdr p)])
+    (cond
+      [(null? d) a]
+      [(pair? d) (string-append a " " (render-list-body d))]
+      [else (string-append a " . " (render-datum d))])))
+
+;; A short, BOUNDED name for a form in a diagnostic: its head keyword when it has one,
+;; else the whole form rendered.  Bounded on purpose -- a rejected declaration may carry
+;; the library's entire body (a `cond-expand` wrapping everything), and a diagnostic
+;; that reprints it is unreadable.  Import specs are named in full instead (see
+;; check-import-spec): they are small by construction and the transform is the point.
+(define (form-label f)
+  (if (and (pair? f) (symbol? (car f)))
+      (symbol->string (car f))
+      (render-datum f)))
+
+;; --- rejecting what the module front end does not implement ------------------
+;; (change: module-frontend-diagnostics; issues #45, #18 item 3, #48, #49.)
+;; Modules v0 drew its boundaries in the spec but built nothing that says no, so an
+;; unsupported form was not rejected -- it was reclassified, and whatever the
+;; reclassification broke second is what got reported: an import set became a library
+;; NAME (reported as a missing manifest entry, or as an unresolved/cyclic import), an
+;; unrecognized declaration became a body form (reported as an unbound variable), and a
+;; misplaced define-library became an application over internal defines (reported as a
+;; malformed body).  Each guard below sits exactly where the wrong assumption is made
+;; (design D1) and raises the ordinary recoverable compile-time error the REPL already
+;; catches, reports, and returns to the prompt from (design D6).
+
+;; The import-set transforms R7RS defines.  None is supported in this stage; `rename` is
+;; rejected only HERE, in import position, because `(rename internal external)` is legal
+;; in an `export` declaration (design D4).
+(define *import-set-keywords* (quote (only except prefix rename)))
+
+(define (import-set-spec? spec)
+  (and (pair? spec) (symbol? (car spec))
+       (memq (car spec) *import-set-keywords*) #t))
+
+;; ONE validator, called by BOTH paths that turn an import spec into a library name --
+;; the program path (collect-imports) and the library path (parse-define-library) -- so
+;; the message for a given form cannot depend on where it was written (design D5).  The
+;; whole spec is named: it is what the user typed and it is short.
+(define (check-import-spec spec)
+  (when (import-set-spec? spec)
+    (error 'import
+           (string-append "import sets are not supported: " (render-datum spec)
+                          " -- imports are whole-library, as (import (library name))"))))
+
+;; The remaining R7RS library declarations: recognized, and not implemented in this
+;; stage (issue #18).  Kept distinct from an unrecognized declaration because the user's
+;; next move differs -- one is waiting on Emit, the other is a mistake (design D2).
+(define *unsupported-library-declarations*
+  (quote (include include-ci include-library-declarations cond-expand)))
+
+;; The `[else]` arm of parse-define-library's declaration `cond`.  It used to cons the
+;; declaration onto the body, which is how `(cond-expand (else (begin (define (f x) x))))`
+;; came to report "export of a name the library does not define f".  No schedule is
+;; promised here (design D7): #18 owns when these land.
+(define (reject-library-declaration d)
+  (if (and (pair? d) (symbol? (car d))
+           (memq (car d) *unsupported-library-declarations*))
+      (error 'define-library
+             (string-append (form-label d)
+                            " is an R7RS library declaration this stage does not support"))
+      (error 'define-library
+             (string-append (form-label d)
+                            " is not a library declaration -- a declaration is"
+                            " (export ...), (import ...) or (begin ...)"))))
+
+;; Does any of FORMS declare a library?  Used only to tell a MISPLACED define-library
+;; from a source that has none.
+(define (any-define-library-form? forms)
+  (cond
+    [(null? forms) #f]
+    [(define-library-form? (car forms)) #t]
+    [else (any-define-library-form? (cdr forms))]))
+
+;; A define-library is compiled as a library unit only where a library unit is what the
+;; door produces: as the sole top-level form of a source (single-define-library).  Where
+;; that does not hold, say so -- ordinary expression parsing knows no `define-library`
+;; form, so it reads one as an application whose operands are internal defines and
+;; reports `internal defines with no following body expression ?`, a message about an
+;; artifact of the misparse (issue #49).
+(define (check-library-position forms)
+  (when (and (not (single-define-library forms)) (any-define-library-form? forms))
+    (error 'define-library
+           (string-append "a define-library must be the only form in its source: "
+                          (render-datum (library-form-name forms))))))
+
+;; The name of the first define-library among FORMS (for the diagnostic above).
+(define (library-form-name forms)
+  (cond
+    [(null? forms) (quote ())]
+    [(define-library-form? (car forms)) (cadr (car forms))]
+    [else (library-form-name (cdr forms))]))
+
 ;; An export spec is either a bare name `n` or a rename `(rename internal external)`
 ;; (change: module-generalize).  Normalize each to a pair (external . internal): the
 ;; external name is what importers see (the export-table key); the internal name is
@@ -351,8 +470,13 @@
       (cons spec spec)))                    ; bare: external == internal
 
 ;; (define-library (name ...) decl ...) -> (list name imports exports body-forms).
-;; decls: (export spec ...) | (import (L) ...) | (begin form ...) | a bare form.
+;; decls: (export spec ...) | (import (L) ...) | (begin form ...).  Anything else is
+;; REJECTED by name (reject-library-declaration) rather than absorbed into the body --
+;; the `[else]` arm used to cons it on, which is what made an unsupported declaration
+;; surface as somebody else's error (change: module-frontend-diagnostics, #18 item 3).
 ;; Each export is normalized to an (external . internal) pair (see normalize-export).
+;; Each import spec is checked here, so EVERY caller of this parser -- the batch doors,
+;; the REPL's library loader, the driver -- rejects an import set identically (design D5).
 (define (parse-define-library form)
   (let ([name (cadr form)])
     (let loop ([ds (cddr form)] [imps '()] [exps '()] [body '()])
@@ -363,18 +487,23 @@
               [(and (pair? d) (eq? (car d) 'export))
                (loop (cdr ds) imps (append (reverse (map normalize-export (cdr d))) exps) body)]
               [(and (pair? d) (eq? (car d) 'import))
+               (for-each check-import-spec (cdr d))
                (loop (cdr ds) (append (reverse (cdr d)) imps) exps body)]
               [(and (pair? d) (eq? (car d) 'begin))
                (loop (cdr ds) imps exps (append (reverse (cdr d)) body))]
-              [else (loop (cdr ds) imps exps (cons d body))]))))))
+              [else (reject-library-declaration d)]))))))
 
 ;; Split a program's top-level forms into (list imported-libs runtime-forms);
-;; each imported-lib is a library name like (mylib).
+;; each imported-lib is a library name like (mylib).  An import SET is rejected here,
+;; before the spec is read as a library name -- by the same validator the library path
+;; calls, so one form gets one message on both (design D5).
 (define (collect-imports forms)
   (let loop ([fs forms] [imps '()] [rt '()])
     (cond
       [(null? fs) (list (reverse imps) (reverse rt))]
-      [(import-form? (car fs)) (loop (cdr fs) (append (reverse (cdr (car fs))) imps) rt)]
+      [(import-form? (car fs))
+       (for-each check-import-spec (cdr (car fs)))
+       (loop (cdr fs) (append (reverse (cdr (car fs))) imps) rt)]
       [else (loop (cdr fs) imps (cons (car fs) rt))])))
 
 ;; Normalize a library body: replace each `(define-record-type ...)` with the
@@ -581,10 +710,20 @@
                              (filter define-form? body))]
          [env   (make-repl-env)])
     ;; validate each export's INTERNAL name is defined at the library's top level.
+    ;; A name bound by a `define-syntax` is NOT undefined -- collect-define-syntax lifted
+    ;; it into `macro-env` above, out of the runtime body this check computes
+    ;; `defined-names` from.  Reporting it as undefined described that lifting rather than
+    ;; the user's error, so consult the macro-env we are already holding and say what is
+    ;; actually wrong (change: module-frontend-diagnostics, issue #48, design D3).
     (for-each
       (lambda (e)
         (unless (memq (cdr e) defined-names)
-          (error 'compile-library "export of a name the library does not define" (cdr e))))
+          (if (assq (cdr e) macro-env)
+              (error 'compile-library
+                     "a library cannot export a macro (exports are procedures in this stage)"
+                     (cdr e))
+              (error 'compile-library
+                     "export of a name the library does not define" (cdr e)))))
       exports)
     ;; seed the import environment FIRST, so the unit's own defines (registered
     ;; next, consed on top) shadow an imported name of the same spelling.
@@ -674,6 +813,7 @@
 ;; init-libs is #f the program's direct imports are used (single-stage callers).
 ;; Returns IR text.
 (define (compile-program-with-imports prelude-forms user-forms import-tables init-libs dump)
+  (check-library-position user-forms)   ; the importing half of compile-forms' guard
   (let* ([imp+rt (collect-imports user-forms)]
          [imported-libs (car imp+rt)]
          [runtime-user (cadr imp+rt)]
