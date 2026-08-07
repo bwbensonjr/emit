@@ -94,6 +94,22 @@ None. This closes gaps in a capability that exists.
   begins, which now includes both comment forms and `|…|` — an unterminated one is *incomplete*, not
   *malformed*.
 
+## For the first tag's release notes
+
+Two user-visible behavior changes belong in the notes, because a program can tell:
+
+- **`1/2` used to read as a symbol and now reports.** A program that relied on rational
+  literal syntax naming an identifier — vanishingly unlikely, and the one reading R7RS
+  §6.2.3 does not sanction — stops compiling. The message names the literal and the two
+  alternatives (`0.5`, `(/ 1 2)`). Every `n/m` is refused, including `4/2` and `#i1/2`.
+- **`write` now bar-quotes a symbol whose name would not read back**, so
+  `(write (string->symbol "a b"))` prints `|a b|` where it printed `a b`. Output that a
+  reader could not read back is the defect being fixed; a symbol needing no bars is
+  unaffected, and `display` is unchanged in every case.
+
+Also worth a line, as additions rather than changes: nested `#| … |#`, `#;`, the R7RS
+§6.2.5 number prefixes, and `|bar quoted identifiers|` all read now, on both hosts.
+
 ## Impact
 
 - `src/prelude.scm` — `rd-skip-ws` (block comments + the unterminated sentinel), `rd-datum` /

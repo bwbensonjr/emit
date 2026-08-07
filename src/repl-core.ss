@@ -64,6 +64,11 @@
   (cond
     [(symbol? x) (symbol->string x)]
     [(string? x) x]
+    ;; A NUMBER renders too (change: reader-lexical-conformance): the reader's reports
+    ;; name a source position, and rendering that as "?" told the user nothing about
+    ;; where the unterminated comment opened.  Every other numeric irritant gains from
+    ;; the same arm.
+    [(number? x) (number->string x)]
     [else "?"]))
 (define (repl-irritants->string xs)
   (if (null? xs)
@@ -690,33 +695,90 @@
 (define (fc-char s n i)                        ; scan #\<char|name>; force 1 char in
   (if (< i n) (rd-token-end s n (+ i 1)) fc-incomplete))
 
+;; The shared `rd-skip-ws` reports an unterminated block comment with a NEGATIVE index
+;; carrying the position it opened at (change: reader-lexical-conformance, design D2).
+;; Here that means INCOMPLETE -- "keep typing" -- not malformed, which is what lets a
+;; block comment be typed across lines at the prompt.  Every place the probe skips
+;; whitespace goes through this so the mapping happens exactly once.
+(define (fc-skip-ws s n i)
+  (let ([j (rd-skip-ws s n i)]) (if (< j 0) fc-incomplete j)))
+
+;; |bar quoted identifier| -- a datum EXTENT like a string, with the same two escapes,
+;; and unterminated the same way (design D7).
+(define (fc-bar s n i)
+  (if (< i n)
+      (let ([k (char->integer (string-ref s i))])
+        (cond
+          [(= k 124) (+ i 1)]                                 ; closing |
+          [(= k 92) (if (< (+ i 1) n) (fc-bar s n (+ i 2)) fc-incomplete)]
+          [else (fc-bar s n (+ i 1))]))
+      fc-incomplete))
+
+;; #; -- the datum this position yields is the one AFTER the discarded datum, so the
+;; probe reads two and reports the second's extent.
+(define (fc-discard s n i)
+  (let ([j (fc-skip-ws s n i)])
+    (if (fc-bad? j)
+        j
+        (if (< j n)
+            (let ([r (fc-datum s n j)])
+              (if (fc-bad? r)
+                  r
+                  (let ([j2 (fc-skip-ws s n r)])
+                    (if (fc-bad? j2)
+                        j2
+                        (if (< j2 n) (fc-datum s n j2) fc-incomplete)))))
+            fc-incomplete))))
+
 (define (fc-hash s n i)                         ; scan after '#'
   (if (< i n)
       (let ([k (char->integer (string-ref s i))])
         (cond
           [(= k 40) (fc-list s n (+ i 1))]                    ; #( vector
           [(= k 92) (fc-char s n (+ i 1))]                    ; #\ char literal
+          ;; Both comment forms must be mirrored HERE, not only in rd-skip-ws (design
+          ;; D5): the shared skipper covers a comment in LEADING position, but the probe
+          ;; walks the rest of the form itself.  Without this, `(list 1 #;2` would be
+          ;; reported malformed where the reader calls it incomplete -- the two
+          ;; disagreeing about the same text, which is the failure the sharing prevents.
+          [(= k 59) (fc-discard s n (+ i 1))]                 ; #; datum comment
+          [(= k 124)                                          ; #| block comment
+           (let ([j (fc-skip-ws s n (- i 1))])
+             (if (fc-bad? j) j (if (< j n) (fc-datum s n j) fc-incomplete)))]
           [else (rd-token-end s n i)]))                       ; #t #f #xNN ...
       fc-incomplete))
 
 (define (fc-prefix s n i)                       ; scan after ' or ` : a datum follows
-  (let ([j (rd-skip-ws s n i)])
-    (if (< j n) (fc-datum s n j) fc-incomplete)))
+  (let ([j (fc-skip-ws s n i)])
+    (if (fc-bad? j) j (if (< j n) (fc-datum s n j) fc-incomplete))))
 
 (define (fc-unquote s n i)                       ; scan after , or ,@ : a datum follows
   (let ([i2 (if (and (< i n) (= (char->integer (string-ref s i)) 64)) (+ i 1) i)])
-    (let ([j (rd-skip-ws s n i2)])
-      (if (< j n) (fc-datum s n j) fc-incomplete))))
+    (let ([j (fc-skip-ws s n i2)])
+      (if (fc-bad? j) j (if (< j n) (fc-datum s n j) fc-incomplete)))))
 
 (define (fc-list s n i)                          ; scan (...) past the open paren
-  (let ([j (rd-skip-ws s n i)])
-    (if (< j n)
-        (let ([k (char->integer (string-ref s j))])
-          (cond
-            [(or (= k 41) (= k 93)) (+ j 1)]                  ; ) or ] closes
-            [else (let ([r (fc-datum s n j)])
-                    (if (fc-bad? r) r (fc-list s n r)))]))
-        fc-incomplete)))
+  (let ([j (fc-skip-ws s n i)])
+    (if (fc-bad? j)
+        j
+        (if (< j n)
+            (let ([k (char->integer (string-ref s j))])
+              (cond
+                [(or (= k 41) (= k 93)) (+ j 1)]              ; ) or ] closes
+                ;; #; between elements, including right before the close, where there
+                ;; is no following element for fc-hash's arm to scan.
+                [(and (= k 35) (< (+ j 1) n)
+                      (= (char->integer (string-ref s (+ j 1))) 59))
+                 (let ([j2 (fc-skip-ws s n (+ j 2))])
+                   (if (fc-bad? j2)
+                       j2
+                       (if (< j2 n)
+                           (let ([r (fc-datum s n j2)])
+                             (if (fc-bad? r) r (fc-list s n r)))
+                           fc-incomplete)))]
+                [else (let ([r (fc-datum s n j)])
+                        (if (fc-bad? r) r (fc-list s n r)))]))
+            fc-incomplete))))
 
 (define (fc-datum s n i)                         ; scan one datum at i (i < n, past ws)
   (let ([k (char->integer (string-ref s i))])
@@ -727,6 +789,7 @@
       [(or (= k 39) (= k 96)) (fc-prefix s n (+ i 1))]        ; ' or `
       [(= k 44) (fc-unquote s n (+ i 1))]                     ; ,
       [(= k 35) (fc-hash s n (+ i 1))]                        ; #
+      [(= k 124) (fc-bar s n (+ i 1))]                        ; |bar quoted identifier|
       [else (rd-token-end s n i)])))                          ; atom -> to delimiter
 
 ;; Host-facing result is a plain integer the host decodes via rt_fixnum_value:
@@ -736,8 +799,8 @@
 ;; branches on one fixnum's sign with no pair/symbol destructuring.)
 (define (form-complete-code s)
   (let ([n (string-length s)])
-    (let ([i (rd-skip-ws s n 0)])
-      (if (< i n) (fc-datum s n i) fc-incomplete))))
+    (let ([i (fc-skip-ws s n 0)])
+      (if (fc-bad? i) i (if (< i n) (fc-datum s n i) fc-incomplete)))))
 
 ;; --- cross-call state persistence -------------------------------------------
 ;; The assembled program is one @scheme_entry, so *repl-env* etc. are locals

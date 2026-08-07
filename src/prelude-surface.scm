@@ -125,7 +125,10 @@
     %str-concat
     ;; character comparison kernel (unsigiled by history, not by intent)
     chr-cmp
-    ;; number->string / string->number internals (ns-digits* likewise unsigiled)
+    ;; number->string / string->number internals (ns-digits* likewise unsigiled).
+    ;; The last three are now the READER's too and are re-homed in the substrate with
+    ;; it (change: reader-lexical-conformance) -- they stay here because this list says
+    ;; "(scheme base) does not export these", which is still exactly right.
     ns-digits ns-digits-radix %ns-digit-char %radix-ok?
     %digit-in-radix %radix-digits %string->int
     ;; dynamic-extent state and unwinding
@@ -147,6 +150,14 @@
     rd-flonum? rd-nonfinite rd-atom rd-hex-digit rd-hex rd-str-esc rd-string rd-hash
     rd-char-name rd-char rd-quote rd-quasi rd-unquote rd-dot? rd-append-reverse
     rd-list rd-datum
+    ;; ... and the lexical conformance additions (change: reader-lexical-conformance):
+    ;; the sentinel convention, nested block comments, datum comments, the prefixed
+    ;; number grammar, and bar-quoted identifiers.  `rd-report` is the one that RAISES,
+    ;; so it is homed differently -- see *reader-report-shared-with-read* below.
+    rd-fail-code rd-fail? rd-fail-pos rd-fail rd-block-open? rd-skip-block
+    rd-radix-letter rd-exactness-letter rd-scan-prefixes rd-radix-scan
+    rd-rational-body? rd-exactness-apply rd-body-number rd-number rd-number-reason?
+    rd-token-at rd-bar rd-datum-comment? rd-report
     ;; port representation
     %port-rtd-cell %port-rtd %make-port %check-input-port %check-output-port %port-buf
     %port-at-eof? %stdout-port %stderr-port %stdin-port
@@ -260,6 +271,16 @@
     rd-dotchar? rd-exp-char? rd-sign-char? rd-scan-digits rd-flonum? rd-nonfinite
     rd-atom rd-hex-digit rd-hex rd-str-esc rd-string rd-hash rd-char-name rd-char
     rd-quote rd-quasi rd-unquote rd-dot? rd-append-reverse rd-list rd-datum
+    ;; the lexical conformance additions (change: reader-lexical-conformance).  NOT
+    ;; rd-report: it is the reader's only name that raises, so it cannot come down here
+    ;; (design D10) -- it is homed like %check-input-port, below.
+    rd-fail-code rd-fail? rd-fail-pos rd-fail rd-block-open? rd-skip-block
+    rd-radix-letter rd-exactness-letter rd-scan-prefixes rd-radix-scan
+    rd-rational-body? rd-exactness-apply rd-body-number rd-number rd-number-reason?
+    rd-token-at rd-bar rd-datum-comment?
+    ;; the numeric kernels the reader now shares with string->number, which is what
+    ;; keeps ONE numeric grammar across the two entry points (design D3)
+    %digit-in-radix %radix-digits %string->int
     ;; the port representation
     %port-rtd-cell %port-rtd %make-port %port-buf))
 
@@ -309,6 +330,15 @@
 ;;; (scheme base) import.  (scheme file) needs no copy: it reaches %make-port in the
 ;;; substrate and everything else in (scheme base).
 (define *port-guards-shared-with-read* '(%check-input-port))
+
+;;; `rd-report` is the same story one layer up (change: reader-lexical-conformance).
+;;; The reader's lexeme layer answers a sentinel because it cannot raise; rd-report is
+;;; where that sentinel BECOMES an error, so it is the one reader name that calls
+;;; `error` and therefore the one that cannot live in the substrate.  Both entry-point
+;;; libraries need it -- (scheme base) for read-from-string/read-all-from-string,
+;;; (scheme read) for `read` -- so both define a private copy, exactly as they already
+;;; do for %check-input-port.  It is stateless, so two copies cannot disagree.
+(define *reader-report-shared-with-read* '(rd-report))
 
 ;;; --- the DERIVED-FORM MACROS (change: library-body-macro-scope, issue #55) ---------
 ;;;
@@ -362,6 +392,8 @@
     (prelude-assign* *scheme-read-procs*  '((scheme read)))
     (prelude-assign* *scheme-file-procs*  '((scheme file)))
     (prelude-assign* *port-guards-shared-with-read*
+                     '(((scheme base) private) ((scheme read) private)))
+    (prelude-assign* *reader-report-shared-with-read*
                      '(((scheme base) private) ((scheme read) private)))))
 
 ;;; Prelude definitions that (scheme base) does NOT export because ANOTHER member of the

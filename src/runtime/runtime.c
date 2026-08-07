@@ -1680,6 +1680,38 @@ val rt_error(val message, val irritants) {
  * emit-dump-stages).  It is a parameter rather than a hardwired stdout so that
  * narration and data share ONE printer -- the alternative was a second
  * stderr-only printer to keep in sync with this one. */
+/* Would NAME read back as this same symbol without |bars| (change:
+ * reader-lexical-conformance, design D7)?  Write style has to produce readable output,
+ * and `(write (string->symbol "a b"))` used to print `a b` -- two symbols when read
+ * back -- because the printer emitted no bars and the reader accepted none.  Both
+ * halves land together; this is the printer's half.
+ *
+ * The test deliberately UNDER-fires rather than over-fires, and mirrors what
+ * src/prelude.scm's reader actually does with a token: a name needs bars when it is
+ * empty, holds a delimiter or a character the reader would dispatch on, or begins the
+ * way a number begins.  Every symbol the compiler itself prints -- mangled names
+ * (`lib.name:x`), gensyms, IL keywords -- fails all of those, so no existing dump or
+ * REPL echo changes shape.  `display` never consults this: it writes the raw name. */
+static int sym_needs_bars(const char *s) {
+  size_t n = strlen(s);
+  if (n == 0) return 1;                                  /* the empty symbol */
+  for (size_t i = 0; i < n; i++) {
+    unsigned char c = (unsigned char)s[i];
+    if (c <= ' ' || c == 0x7f) return 1;                 /* whitespace and controls */
+    if (strchr("()[]{}\"'`,;|\\", (char)c)) return 1;     /* delimiters and datum starts */
+  }
+  if (s[0] == '#') return 1;                             /* the reader dispatches on # */
+  if (s[0] >= '0' && s[0] <= '9') return 1;              /* would begin a number */
+  if (s[0] == '.' && (n == 1 || (s[1] >= '0' && s[1] <= '9')))
+    return 1;                        /* the dotted-pair marker, and .5 -- but NOT `...` */
+  if ((s[0] == '+' || s[0] == '-') && n > 1) {
+    if (s[1] >= '0' && s[1] <= '9') return 1;                        /* -1 */
+    if (s[1] == '.' && n > 2 && s[2] >= '0' && s[2] <= '9') return 1; /* +.5 */
+    if (!strcmp(s, "+inf.0") || !strcmp(s, "-inf.0") || !strcmp(s, "+nan.0")) return 1;
+  }
+  return 0;
+}
+
 static void print_val(FILE *out, val v, int display) {
   switch (tag_of(v)) {
     case TAG_FIXNUM: fprintf(out, "%ld", (long)UNFIX(v)); break;
@@ -1725,7 +1757,17 @@ static void print_val(FILE *out, val v, int display) {
     }
     case TAG_CLOSURE: fprintf(out, "#<procedure>"); break;
     case TAG_BOX:     fprintf(out, "#<box>"); break;
-    case TAG_SYMBOL:  fprintf(out, "%s", sym_name(v)); break;
+    case TAG_SYMBOL: {
+      const char *nm = sym_name(v);
+      if (display || !sym_needs_bars(nm)) { fprintf(out, "%s", nm); break; }
+      fputc('|', out);
+      for (const char *p = nm; *p; p++) {
+        if (*p == '|' || *p == '\\') fputc('\\', out);   /* the two the reader unescapes */
+        fputc(*p, out);
+      }
+      fputc('|', out);
+      break;
+    }
     case TAG_EXT:
       switch (ext_hdr(v)) {
         case HDR_STRING:

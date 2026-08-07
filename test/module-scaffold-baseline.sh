@@ -428,6 +428,29 @@
 #     definitions left); emit.internal.ll unchanged at 170716 B, byte-identical, since the
 #     cxr nine simply traded their (scheme base) home for a (scheme cxr) one and the
 #     substrate's own copy did not move.  No new entries.
+#   reader-lexical-conformance (issues #59, #25) -- the READER is part of the baked set, so
+#     this change moves EVERY demo's snapshot: all 80 hashes differ.  That was stated in
+#     advance (the change's design D6) and is the one re-record in this log where the
+#     manifest changes wholesale, so the verification is correspondingly specific.
+#     Verified against an 80-demo before/after capture (a detached-HEAD worktree at the
+#     pre-change commit vs the regenerated tree), splitting each snapshot at
+#     `; ==EMIT-UNIT-BOUNDARY==`:
+#       PROGRAM module: byte-IDENTICAL for all 80 demos.  Not one program's code changed;
+#         the whole delta is inside the baked libraries the snapshot carries with it.
+#       UNIT COUNT: unchanged for all 80 (still 2, or 3/4 for the two demos that import a
+#         relocated library) -- no library was added, removed, or re-linked.
+#       (emit internal): 170716 -> 289754 B.  The reader is homed here, and it gained
+#         nested block comments, datum comments, the prefixed-number grammar, bar-quoted
+#         identifiers, and the report sentinel -- plus %digit-in-radix / %radix-digits /
+#         %string->int, re-homed down from (scheme base) so the reader and string->number
+#         share ONE numeric grammar (design D3).
+#       (scheme base): 338670 -> 330361 B -- SMALLER, which is those three re-homed
+#         definitions leaving plus string->number collapsing to one call into the shared
+#         grammar.  The two moves account for each other.
+#     All 80 demos' stdout is byte-identical before and after (the `demo values` suite
+#     passes 80/80), and the cross-host suites that compare Emit's emitted IR against the
+#     Chez-hosted compiler's -- self-emit-equiv, dump-parity, prelude-base-run -- still
+#     pass, which is what says the two readers still agree.  No new entries.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

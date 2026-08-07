@@ -565,8 +565,14 @@ other — the same gap as `docs/PERFORMANCE.md` P8.
   either way.
   - `(include "f.scm" ...)` splices each file's top-level forms into the **body**, in the order the
     filenames appear, as if written in a `begin` declaration there. `(include-ci ...)` is the same
-    with the read forms case-folded — ASCII only, and a bar-quoted `|MixedCase|` folds too, because
-    after reading it is indistinguishable from a bare symbol.
+    with the read forms case-folded — ASCII only, and a bar-quoted `|MixedCase|` folds too, which
+    R7RS §7.1.1 says it should not. The reader accepts `|…|` now (change:
+    `reader-lexical-conformance`, design D7), but that did not fix this and was not meant to: the
+    fold runs over the forms the reader **already returned**, where `|MixedCase|` and `MixedCase`
+    are the same interned symbol. Telling them apart needs a *fold-aware read* — folding during
+    tokenization, while the bars are still visible — which is a second reader entry threading a
+    fold flag through the `rd-*` layer, tracked as
+    [#61](https://github.com/bwbensonjr/emit/issues/61).
   - `(include-library-declarations "d.scm" ...)` splices a file's forms as **declarations**, so a
     shared `export` list or import block can live in its own file. It is the one that recurses: an
     included declarations file may include further. An `include` inside an included *body* file is

@@ -63,9 +63,22 @@ containing parens wrong.
 
 ### D2 — Unterminated is a sentinel, not a raise (constraint 1)
 
-`rd-skip-ws` returns `-1` for an unterminated block comment — an index no valid position takes.
+`rd-skip-ws` returns a **negative index** for an unterminated block comment — no valid position is
+negative, so the `(< i n)` test that already guards every scan rejects it without a new branch.
 `rd-datum` and `rd-list` propagate it; the **entry points** raise, because they live where `error`
 does: `read-from-string`, `read-all-from-string`, and `(scheme read)`'s `read`.
+
+The sentinel **carries the position** the construct opened at, encoded as `-3 - p`, rather than
+being a bare `-1` (which is what this design first said). The spec requires the report to name the
+position and, for a rational literal or invalid number syntax, the literal itself — and the
+position is what lets the entry point re-read the offending token out of the source text to name
+it. `-1` and `-2` stay unused by the reader, so the probe keeps its own `fc-incomplete` /
+`fc-malformed` codes in the same integer channel. A failing `rd-*` result is
+`(REASON . sentinel)`: the pair shape every `rd-*` already returns, with a symbol
+(`rd-block-comment`, `rd-bar`, `rd-eof`, `rd-rational`, `rd-bad-number`, `rd-unexpected`) where
+the datum would be. One `rd-report` maps that pair to a message; it is the reader's only name that
+raises, so it is the only one that cannot live in the substrate, and it is homed exactly the way
+`%check-input-port` already is — a private copy in `(scheme base)` and one in `(scheme read)`.
 
 This is what makes the prompt behave correctly for free: the probe treats a negative index as
 `fc-incomplete`, which is exactly "keep typing". Today an unterminated comment would skip to
@@ -183,8 +196,9 @@ shareable.
 - **IR moves everywhere** (D6), so this change should not ride alongside another IR-shaping one; the
   baseline re-record must be attributable to exactly one cause.
 - **A sentinel index is a new convention in the `rd-*` layer** → it is the same convention the probe
-  already uses (`fc-incomplete` = `-1`), which is why `-1` and not `#f`: the arithmetic call sites
-  keep working on a fixnum.
+  already uses (`fc-incomplete` = `-1`), which is why a negative fixnum and not `#f`: the arithmetic
+  call sites keep working on a fixnum, and the probe's existing "negative means bad" test needs no
+  change beyond mapping the reader's codes onto its own.
 - **The printer change is visible to anything that writes a symbol**, including the stage dump and
   the REPL's value echo → the predicate fires only for names that would not read back, so every
   symbol any current test prints is unaffected; the dump-parity suite compares Emit's dump against
