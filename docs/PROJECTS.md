@@ -346,9 +346,12 @@ project:
   not. A typo inside an exported template is reported in the importing program rather than at the
   library ([#56](https://github.com/bwbensonjr/emit/issues/56)).
 - **Imports are whole-library.** No `only`, `except`, `prefix`, or `rename` on the import side.
-- **No `include`, `include-ci`, `include-library-declarations`, or `cond-expand`** in a library
-  ([#18](https://github.com/bwbensonjr/emit/issues/18)). A library's body is what is written in its
-  own file, so split code into more libraries rather than more files per library.
+- **A library may be assembled from several files.** `(include "f.scm" ...)` splices a file's forms
+  into the body, `(include-ci ...)` does the same case-folded, `(include-library-declarations
+  "d.scm")` splices *declarations* (a shared `export` list, an `import` block), and `(cond-expand
+  ...)` selects declarations by feature. A filename resolves **beside the file that named it**, so a
+  library directory carries its own pieces. `include` in *program* position is not implemented — the
+  four are library declarations only.
 - **A library using `define-record-type` must import `(scheme base)`** — the constructor it lowers
   to builds its field vector with `list`.
 - **Numbers**: fixnums and flonums. Exact integers span `[-2^60, 2^60)` and an out-of-range result

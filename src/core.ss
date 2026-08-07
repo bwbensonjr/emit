@@ -450,26 +450,219 @@
            (string-append "import sets are not supported: " (render-datum spec)
                           " -- imports are whole-library, as (import (library name))"))))
 
-;; The remaining R7RS library declarations: recognized, and not implemented in this
-;; stage (issue #18).  Kept distinct from an unrecognized declaration because the user's
-;; next move differs -- one is waiting on Emit, the other is a mistake (design D2).
-(define *unsupported-library-declarations*
-  (quote (include include-ci include-library-declarations cond-expand)))
-
 ;; The `[else]` arm of parse-define-library's declaration `cond`.  It used to cons the
 ;; declaration onto the body, which is how `(cond-expand (else (begin (define (f x) x))))`
-;; came to report "export of a name the library does not define f".  No schedule is
-;; promised here (design D7): #18 owns when these land.
+;; came to report "export of a name the library does not define f".
+;;
+;; There is no longer a second arm for "recognized but unsupported" (change:
+;; library-include-declarations, issue #18): all seven R7RS declarations are implemented,
+;; so anything else is a mistake in the source rather than a feature being waited on.  The
+;; wording that arm carried moved to the one R7RS form still refused by name -- a
+;; `(library ...)` feature requirement (design D8).
 (define (reject-library-declaration d)
-  (if (and (pair? d) (symbol? (car d))
-           (memq (car d) *unsupported-library-declarations*))
-      (error 'define-library
-             (string-append (form-label d)
-                            " is an R7RS library declaration this stage does not support"))
-      (error 'define-library
-             (string-append (form-label d)
-                            " is not a library declaration -- a declaration is"
-                            " (export ...), (import ...) or (begin ...)"))))
+  (error 'define-library
+         (string-append (form-label d)
+                        " is not a library declaration -- a declaration is"
+                        " (export ...), (import ...), (begin ...), (include ...),"
+                        " (include-ci ...), (include-library-declarations ...)"
+                        " or (cond-expand ...)")))
+
+;; --- the four SPLICING library declarations (change: library-include-declarations,
+;; issue #18) -----------------------------------------------------------------
+;; `include`, `include-ci`, `include-library-declarations`, and `cond-expand` each produce
+;; MORE declarations or MORE body forms before any other machinery runs, so they are
+;; expanded away in one recursive pre-pass (design D1) and the parse loop below still sees
+;; exactly three declaration kinds.  Running before that loop is what makes an `import`
+;; arriving through a `cond-expand` clause reach the same `check-import-spec` as one
+;; written in place.
+
+;; The feature identifiers this implementation advertises (design D7).  R7RS forbids
+;; advertising a feature that is not provided, so this list is short and each absence is
+;; deliberate:
+;;   exact-closed   -- NO: fixnum overflow TRAPS rather than promoting to a bignum
+;;                    (change: fixnum-overflow-trap), so `*` on exact inputs may produce no
+;;                    value at all, which is not what the identifier promises.
+;;   full-unicode   -- NO: strings are codepoint-indexed, but the character predicates are
+;;                    ASCII-only.
+;;   ratios, exact-complex -- NO: no such numbers.
+;;   posix/darwin/x86-64/lp64/little-endian... -- NOT YET: these describe the TARGET, and
+;;                    resolving them against the host would be a lie the moment cross
+;;                    compilation exists.  They want deriving from the target header.
+;;   emit-<version> -- NOT YET: there is no version to name until the first tag.
+;; One declaration, consulted by every door, so a feature requirement cannot answer
+;; differently depending on who is compiling.
+(define *advertised-features* (quote (r7rs emit ieee-float)))
+
+;; Is a cond-expand feature requirement satisfied?  Identifiers, `and`, `or`, `not` --
+;; and `(library ...)`, which is REFUSED rather than answered (design D8): answering it
+;; means asking whether a library is available, which is manifest resolution this parser
+;; does not have, and a wrong answer would silently select the other clause and report
+;; nothing.
+(define (feature-requirement-met? req)
+  (cond
+    [(symbol? req) (mem? req *advertised-features*)]
+    [(and (pair? req) (eq? (car req) 'and)) (features-all-met? (cdr req))]
+    [(and (pair? req) (eq? (car req) 'or))  (features-any-met? (cdr req))]
+    [(and (pair? req) (eq? (car req) 'not))
+     (if (and (pair? (cdr req)) (null? (cddr req)))
+         (not (feature-requirement-met? (cadr req)))
+         (error 'cond-expand
+                (string-append "(not ...) takes exactly one feature requirement: "
+                               (render-datum req))))]
+    [(and (pair? req) (eq? (car req) 'library))
+     (error 'cond-expand
+            (string-append (render-datum req)
+                           " is an R7RS feature requirement this stage does not support"
+                           " -- library availability is not resolved here"))]
+    [else
+     (error 'cond-expand
+            (string-append "not a feature requirement: " (render-datum req)))]))
+
+(define (features-all-met? reqs)
+  (or (null? reqs)
+      (and (feature-requirement-met? (car reqs)) (features-all-met? (cdr reqs)))))
+
+(define (features-any-met? reqs)
+  (and (pair? reqs)
+       (or (feature-requirement-met? (car reqs)) (features-any-met? (cdr reqs)))))
+
+;; The declarations a `cond-expand` contributes: those of the FIRST clause whose
+;; requirement holds, or of a trailing `else`.  No clause and no `else` contributes
+;; nothing, which is R7RS's answer and not an error.
+(define (cond-expand-declarations clauses)
+  (cond
+    [(null? clauses) (quote ())]
+    [(not (pair? (car clauses)))
+     (error 'cond-expand
+            (string-append "not a clause: " (render-datum (car clauses))
+                           " -- a clause is (<feature requirement> <declaration> ...)"))]
+    [(eq? (car (car clauses)) 'else)
+     (if (null? (cdr clauses))
+         (cdr (car clauses))
+         (error 'cond-expand "an else clause must be the last clause"))]
+    [(feature-requirement-met? (car (car clauses))) (cdr (car clauses))]
+    [else (cond-expand-declarations (cdr clauses))]))
+
+;; --- the injected source reader (design D2, D3) ------------------------------
+;; The core performs NO I/O.  A door installs a reader and the core splices what it is
+;; handed -- the same shape the `dump` side-channel uses, and the only shape that keeps
+;; the Chez driver, which cannot EVALUATE the `%`-ops a file read needs (see src/dump.ss
+;; for the same argument about the stage dumper).
+;;
+;; The protocol is  (reader WHO FILENAME BASE) -> (TOKEN . FORMS):
+;;   WHO       the declaration that named the file, for the door's diagnostic
+;;   FILENAME  the string as written in the source; the core never joins, splits, or
+;;             normalizes it -- resolution belongs to the door (design D3)
+;;   BASE      the TOKEN of the file the declaration appeared in, or #f for the source the
+;;             door itself submitted; this is what makes a nested include resolve beside
+;;             ITS OWN file (design D5)
+;;   TOKEN     the door's opaque identity for the file it read (its resolved path).  The
+;;             core only passes it back as a BASE and compares it for the cycle check
+;;             below -- it is never interpreted here.
+(define (no-include-reader who filename base)
+  (error who
+         (string-append "this door installed no source reader, so " (render-datum filename)
+                        " cannot be included")))
+
+(define *include-reader* no-include-reader)
+(define (set-include-reader! r) (set! *include-reader* r))
+
+;; Read one file named by an include-family declaration.  STACK is the tokens of the files
+;; currently being expanded: meeting one again is a cycle, which is named rather than
+;; followed (design D9).  It is the STACK, not every file ever read, so including the same
+;; file from two different places stays legal.
+(define (read-included who filename base stack)
+  (if (string? filename)
+      (let ([res (*include-reader* who filename base)])
+        (if (mem-token? (car res) stack)
+            (error who
+                   (string-append "include cycle: " (render-datum (car res))
+                                  " includes itself, through "
+                                  (render-token-chain stack)))
+            res))
+      (error who
+             (string-append "a filename must be a string: " (render-datum filename)))))
+
+(define (mem-token? tok stack)
+  (and (pair? stack)
+       (or (string=? tok (car stack)) (mem-token? tok (cdr stack)))))
+
+(define (render-token-chain stack)
+  (if (null? stack)
+      "the library source"
+      (if (null? (cdr stack))
+          (render-datum (car stack))
+          (string-append (render-datum (car stack)) " <- " (render-token-chain (cdr stack))))))
+
+;; --- include-ci: case folding, in the CORE (design D6) -----------------------
+;; The fold runs over the forms the reader returned rather than being asked of each host's
+;; reader, so Chez's `read` and Emit's reader cannot fold differently -- a divergence there
+;; would surface as an unexplained IR difference in test/self-emit-equiv.sh.
+;;
+;; ASCII only, and a bar-quoted `|MixedCase|` folds too: after reading, a bar-quoted symbol
+;; and a bare one are the same object, so the distinction R7RS draws is not observable
+;; here.  `include-ci` is a compatibility form for old case-folding source; a reader-level
+;; fold is the fix if that limit ever bites.
+(define (fold-datum-case x)
+  (cond
+    [(symbol? x) (string->symbol (fold-string-case (symbol->string x)))]
+    [(pair? x) (cons (fold-datum-case (car x)) (fold-datum-case (cdr x)))]
+    [else x]))
+
+(define (fold-string-case s)
+  (let loop ([i 0] [acc (quote ())])
+    (if (= i (string-length s))
+        (list->string (reverse acc))
+        (loop (+ i 1) (cons (fold-char-case (string-ref s i)) acc)))))
+
+(define (fold-char-case c)
+  (let ([k (char->integer c)])
+    (if (and (> k 64) (< k 91)) (integer->char (+ k 32)) c)))
+
+;; --- the pre-pass itself (design D1) -----------------------------------------
+;; DS -> a list of declarations that are only (export ...), (import ...), (begin ...).
+;; BASE is the token of the file DS was read from (#f for the door's own source), STACK the
+;; tokens of the files currently being expanded.
+(define (expand-library-declarations ds base stack)
+  (if (null? ds)
+      (quote ())
+      (append (expand-library-declaration (car ds) base stack)
+              (expand-library-declarations (cdr ds) base stack))))
+
+(define (expand-library-declaration d base stack)
+  (cond
+    [(not (and (pair? d) (symbol? (car d)))) (reject-library-declaration d)]
+    [(memq (car d) (quote (export import begin))) (list d)]
+    [(eq? (car d) 'cond-expand)
+     (expand-library-declarations (cond-expand-declarations (cdr d)) base stack)]
+    ;; Declarations, so the splice is re-expanded -- an included file may itself include,
+    ;; cond-expand, export, or import.  This is the only arm that recurses through a file,
+    ;; and so the only one that can build a cycle.
+    [(eq? (car d) 'include-library-declarations)
+     (expand-included-declarations (cdr d) base stack)]
+    ;; Body forms, spliced as if written in a `begin` here.  An `include` INSIDE an
+    ;; included body file is program-position `include` (R7RS 4.1.7), which this stage does
+    ;; not implement, so nothing recurses.
+    [(eq? (car d) 'include)
+     (list (cons 'begin (included-body-forms 'include (cdr d) base stack #f)))]
+    [(eq? (car d) 'include-ci)
+     (list (cons 'begin (included-body-forms 'include-ci (cdr d) base stack #t)))]
+    [else (reject-library-declaration d)]))
+
+(define (expand-included-declarations filenames base stack)
+  (if (null? filenames)
+      (quote ())
+      (let ([res (read-included 'include-library-declarations (car filenames) base stack)])
+        (append (expand-library-declarations (cdr res) (car res) (cons (car res) stack))
+                (expand-included-declarations (cdr filenames) base stack)))))
+
+;; The forms of each named file, in the order the filenames appear, folded for include-ci.
+(define (included-body-forms who filenames base stack fold?)
+  (if (null? filenames)
+      (quote ())
+      (let ([res (read-included who (car filenames) base stack)])
+        (append (if fold? (map fold-datum-case (cdr res)) (cdr res))
+                (included-body-forms who (cdr filenames) base stack fold?)))))
 
 ;; Does any of FORMS declare a library?  Used only to tell a MISPLACED define-library
 ;; from a source that has none.
@@ -517,9 +710,15 @@
 ;; Each export is normalized to an (external . internal) pair (see normalize-export).
 ;; Each import spec is checked here, so EVERY caller of this parser -- the batch doors,
 ;; the REPL's library loader, the driver -- rejects an import set identically (design D5).
+;;
+;; The four SPLICING declarations are expanded away first (change:
+;; library-include-declarations, design D1), so the loop below still handles exactly three
+;; kinds and an import that arrived through an `include-library-declarations` file or a
+;; `cond-expand` clause is validated by the same check as one written in place.
 (define (parse-define-library form)
   (let ([name (cadr form)])
-    (let loop ([ds (cddr form)] [imps '()] [exps '()] [body '()])
+    (let loop ([ds (expand-library-declarations (cddr form) #f (quote ()))]
+               [imps '()] [exps '()] [body '()])
       (if (null? ds)
           (list name (reverse imps) (reverse exps) (reverse body))
           (let ([d (car ds)])

@@ -135,6 +135,17 @@ the full standard surface with no files beside it?* — not a compiler one.
 
 ## Finding 3 — #18's `include` has exactly one shape that keeps the Chez driver
 
+> **LANDED** (`library-include-declarations`, 2026-08-07). Shape (a) is what was built, and the
+> prediction held exactly: `src/include-reader.ss` rides `CORE_FLAT` and is excluded from the
+> driver's include block (the `src/dump.ss` arrangement), the driver installs its own reader over
+> Chez ports, and `src/core.ss` still performs no I/O. Two things this finding did not foresee.
+> The reader protocol needs a **token**, not just forms: a nested include is expanded *after* the
+> reader returned, so a door-side "current file" would already be stale — the core threads the
+> token back as the next call's base. And `cond-expand` landed **with** the include family rather
+> than before it (step ② and ③ together): both `include-library-declarations` and `cond-expand`
+> splice at the *declaration* level, so one recursive walker serves both and doing them separately
+> would have meant writing that loop twice.
+
 `src/core.ss` performs no I/O by design, and the tree already contains two different ways around
 that. They are not equivalent:
 
@@ -168,6 +179,12 @@ post-splice form**. Bake first and the splicer forces the question open again.
 
 ## Finding 5 — baking freezes `cond-expand`
 
+> **DECIDED** (`library-include-declarations`, design D12). Stated rather than discovered later: a
+> baked library resolves its feature requirements at bake time, which for the baked set is the
+> correct reading because those libraries *are* the implementation; a manifest library is compiled
+> when it is imported, so nothing is frozen there. No shipped library uses `cond-expand`, so the
+> commitment costs nothing today. This answers open question 4.
+
 A baked library resolves feature requirements at *bake* time, against the compiler that baked it,
 not at the importer's compile time. For `(scheme base)` — part of the compiler — that is arguably
 correct, and for a user library resolved through the manifest it is clearly wrong. Either way it is
@@ -196,9 +213,8 @@ carries no comments), removing ~33 KB from each of `embed.ll` and `embed-repl.ll
 ```
   ① manifest search path  ✅ LANDED (#35, manifest-search-path)   ← unblocked brew
         │
-        ├──▶ ② #18 cond-expand            (self-contained, no I/O)
-        │         │
-        │         └──▶ ③ #18 include family    (injected path->forms side-channel)
+        ├──▶ ②③ #18 cond-expand + include family  ✅ LANDED (library-include-declarations)
+        │         (one declaration-level splicer; injected reader, tokens threaded back)
         │
         ├──▶ ④ #33(a) partition  ✅ LANDED (scheme-base-partition)  ← did NOT need ②/③
         │       (BREAKING; landed before the 0.1.0 tag, as intended)
@@ -213,8 +229,8 @@ and it landed first (#35).
 **④ landed without ② or ③, which the diagram above had as prerequisites.** The dependency was on
 the assumption that splitting the prelude across libraries needs `include` to avoid duplicating
 source. It does not: ONE generator emits N `.sld` files from one partition map — which answers open
-question 6 in favour of its first branch, and removes #18 from #33's critical path entirely. ②/③ stay
-open on their own merits, and ⑤ still wants them.
+question 6 in favour of its first branch, and removes #18 from #33's critical path entirely. ②/③ have since landed
+together, and ⑤ — which Finding 4 says must wait for the splicer — is now unblocked.
 
 Each step keeps the property the repo's guards depend on: one IR-shaping change at a time, so each
 `test/module-scaffold-baseline.sha256` re-record can be explained as a specific delta the way the
@@ -242,8 +258,10 @@ protocol in that script's header requires.
    does not decide whether libraries should be discoverable by *location* rather than by name-to-file
    mapping. The question stands for whatever motivates it next — third-party packages, versioned
    dependencies, artifact reuse across projects — with the pressure taken off.
-4. `cond-expand` at bake time or at the importer's compile time — and does the answer differ for a
-   baked library versus a manifest one?
+4. ~~`cond-expand` at bake time or at the importer's compile time — and does the answer differ for a
+   baked library versus a manifest one?~~ **ANSWERED** by `library-include-declarations` (design
+   D12): bake time for a baked library, importer's compile time for a manifest one, and yes the
+   answer differs — see the note on Finding 5.
 5. If #31 makes `lib/scheme/base.sld` the baked artifact, is "`base.sld` stays committed" written
    down as an invariant (with the bootstrap cycle named), or left implicit?
 6. ~~**One tool emitting N `.sld` files, or N `.sld` files each `include`-ing a fragment?**~~

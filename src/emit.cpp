@@ -465,11 +465,25 @@ static void say_chained(const std::string &manifest, const std::vector<std::stri
 // run door -- in-process compile-and-run (was src/run.cpp).
 // ===========================================================================
 
+// Tell the compiler where the source it is about to receive came from (mode 13; change:
+// library-include-declarations, design D4).  The core is handed source TEXT and never a
+// path, so without this an `include` inside that source would have nothing to resolve
+// against but the working directory -- and a door that resolves against the CWD works
+// from the repo root and nowhere else, the failure `manifest-search-path` and
+// `baked-set-on-every-door` each had to fix once.  "" means the source has no path (it
+// came from stdin); every other submission names its file.
+static void set_source_home(const std::string &path) {
+  rt_repl_set(13, path.data(), (intptr_t)path.size());
+  scheme_entry();
+}
+
 // Ask the compiler which libraries a source text imports (mode 12), as canonical
 // keys matching the manifest index.  A pure query: it reads and parses, registering
-// nothing.
-static std::vector<std::string> source_imports(const std::string &text) {
+// nothing.  `home` is the source's own path: the answer depends on it, because an
+// `import` may arrive through an included declarations file (design D11).
+static std::vector<std::string> source_imports(const std::string &text, const std::string &home) {
   std::vector<std::string> out;
+  set_source_home(home);
   rt_repl_set(12, text.data(), (intptr_t)text.size());
   std::string s = scm_str(scheme_entry());
   std::istringstream lines(s);
@@ -501,7 +515,8 @@ static std::vector<std::string> source_imports(const std::string &text) {
 // already be loaded.  Only this door, compiling one known program, can be lazy.
 static bool preload_user_libraries(const std::vector<std::string> &manifests,
                                    std::vector<std::string> &modules,
-                                   const std::string &program_src) {
+                                   const std::string &program_src,
+                                   const std::string &program_home) {
   if (manifests.empty()) return true;        // no manifest: no user libraries
 
   // Index the whole chain, FIRST MANIFEST WINS per library name (design D3): a
@@ -536,7 +551,7 @@ static bool preload_user_libraries(const std::vector<std::string> &manifests,
   // core, which performs no I/O by design.
   std::set<std::string> needed;
   std::map<std::string, std::vector<std::string>> supplied;   // manifest -> keys, for narration
-  std::vector<std::string> work = source_imports(program_src);
+  std::vector<std::string> work = source_imports(program_src, program_home);
   while (!work.empty()) {
     std::string key = work.back();
     work.pop_back();
@@ -551,7 +566,9 @@ static bool preload_user_libraries(const std::vector<std::string> &manifests,
     // one -- ambient state, so it is named rather than silent (design D8).
     std::map<std::string, std::string>::const_iterator f = from_of.find(key);
     if (f != from_of.end()) supplied[f->second].push_back(key);
-    std::vector<std::string> deps = source_imports(read_file(it->second));
+    // The .sld's own path is its home, so an import behind an included declarations
+    // file is reached here rather than surfacing later as a missing dependency (D11).
+    std::vector<std::string> deps = source_imports(read_file(it->second), it->second);
     for (size_t i = 0; i < deps.size(); i++) work.push_back(deps[i]);
   }
 
@@ -579,6 +596,7 @@ static bool preload_user_libraries(const std::vector<std::string> &manifests,
                   << " (named in the manifest)\n";
         return false;
       }
+      set_source_home(p);                    // includes resolve beside the .sld
       rt_repl_set(4, src.data(), (intptr_t)src.size());
       intptr_t r = scheme_entry();
       std::string st = status_of(r);
@@ -690,7 +708,8 @@ static bool register_baked_set(std::vector<std::string> &modules,
 // importing `(scheme base)` failed there).  GC must be initialized and EMIT_NO_PRELUDE set
 // by the caller before this runs.
 static bool seed_session(const std::string &prog_src, const std::vector<std::string> &manifests,
-                         bool no_prelude, std::vector<std::string> &modules) {
+                         bool no_prelude, std::vector<std::string> &modules,
+                         const std::string &source_home) {
   rt_repl_set(no_prelude ? 0 : 1, "", 0);    // init-session
   scheme_entry();
   modules.clear();
@@ -699,14 +718,16 @@ static bool seed_session(const std::string &prog_src, const std::vector<std::str
     std::vector<std::string> inits;           // unused here: the program's entry inits
     if (!register_baked_set(modules, inits)) return false;
   }
-  return preload_user_libraries(manifests, modules, prog_src);
+  return preload_user_libraries(manifests, modules, prog_src, source_home);
 }
 
 // Compile a whole program (or a lone define-library) against the seeded session (mode 7).
 // On success fills `prog_ir` and returns true; `is_library` is set when the source was a
 // lone define-library (then `modules` is cleared and `prog_ir` is that single unit).
 static bool compile_unit(const std::string &prog_src, std::vector<std::string> &modules,
-                         std::string &prog_ir, bool &is_library) {
+                         std::string &prog_ir, bool &is_library,
+                         const std::string &source_home) {
+  set_source_home(source_home);
   rt_repl_set(7, prog_src.data(), (intptr_t)prog_src.size());   // compile program
   intptr_t pr = scheme_entry();
   std::string pst = status_of(pr);
@@ -728,9 +749,10 @@ static bool compile_unit(const std::string &prog_src, std::vector<std::string> &
 // sequence in the same order as before it was split, so the emitted IR does not move.
 static bool compile_program(const std::string &prog_src, const std::vector<std::string> &manifests,
                             bool no_prelude, std::vector<std::string> &modules,
-                            std::string &prog_ir, bool &is_library) {
-  if (!seed_session(prog_src, manifests, no_prelude, modules)) return false;
-  return compile_unit(prog_src, modules, prog_ir, is_library);
+                            std::string &prog_ir, bool &is_library,
+                            const std::string &source_home) {
+  if (!seed_session(prog_src, manifests, no_prelude, modules, source_home)) return false;
+  return compile_unit(prog_src, modules, prog_ir, is_library, source_home);
 }
 
 static int emit_run(int argc, char **argv) {
@@ -794,7 +816,7 @@ static int emit_run(int argc, char **argv) {
   std::vector<std::string> modules;
   std::string prog_ir;
   bool is_library = false;
-  if (!compile_program(prog_src, manifests, no_prelude, modules, prog_ir, is_library))
+  if (!compile_program(prog_src, manifests, no_prelude, modules, prog_ir, is_library, prog_file))
     return 1;
 
   // --emit: write every module (units then program), joined by the boundary marker,
@@ -1004,6 +1026,7 @@ static void preload_libraries(const std::vector<std::string> &manifests) {
         progress = true;                     // drop it; do not retry an unreadable file
         continue;
       }
+      set_source_home(p);                    // includes resolve beside the .sld
       rt_repl_set(4, src.data(), (intptr_t)src.size());
       intptr_t r = scheme_entry();
       std::string st = status_of(r);
@@ -1409,7 +1432,7 @@ static int emit_build(int argc, char **argv) {
   std::vector<std::string> modules;
   std::string prog_ir;
   bool is_library = false;
-  if (!compile_program(prog_src, manifests, no_prelude, modules, prog_ir, is_library))
+  if (!compile_program(prog_src, manifests, no_prelude, modules, prog_ir, is_library, src))
     return 1;
 
   // Write each unit + the program to temp .ll files (clang infers IR from .ll).  The
@@ -1503,9 +1526,11 @@ static int emit_lib(int argc, char **argv) {
   // declaring `(import (scheme base))` failed with `unbound variable map`
   // (change: baked-set-on-every-door).
   std::vector<std::string> modules;
-  if (!seed_session(lib_src, manifests, /*no_prelude=*/false, modules)) return 1;
+  if (!seed_session(lib_src, manifests, /*no_prelude=*/false, modules, src)) return 1;
 
   // .exports table + the library's basename (mode 11: (ok . "<basename>\n<datum>")).
+  // The home is re-set because seeding submitted other sources in between.
+  set_source_home(src);
   rt_repl_set(11, lib_src.data(), (intptr_t)lib_src.size());
   intptr_t er = scheme_entry();
   if (status_of(er) != "ok") {
@@ -1527,7 +1552,7 @@ static int emit_lib(int argc, char **argv) {
   // used to discard the registration mode 11 needed.
   std::string prog_ir;
   bool is_library = false;
-  if (!compile_unit(lib_src, modules, prog_ir, is_library)) return 1;
+  if (!compile_unit(lib_src, modules, prog_ir, is_library, src)) return 1;
   if (!is_library) {
     std::cerr << "emit lib: source is not a single define-library\n";
     return 1;

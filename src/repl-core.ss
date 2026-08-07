@@ -443,6 +443,21 @@
             acc
             (loop (cdr ns) (string-append acc (mangle (car ns) "") "\n")))))))
 
+;; Where the source the host is ABOUT to submit came from (change:
+;; library-include-declarations, design D4).  The core is handed source TEXT and never a
+;; path, so an `include` in that text would otherwise have nothing to resolve against but
+;; the working directory -- the door-parity failure `manifest-search-path` and
+;; `baked-set-on-every-door` each had to fix once.  The host calls this before modes 4, 7,
+;; 11, and 12; "" means the source has no path (it came from standard input) and its
+;; relative includes resolve against the current directory.
+;;
+;; It is a MODE rather than an environment variable because it is per-source state in a
+;; persistent session, not a process-wide flag like EMIT_DUMP_LEVEL: a home left in the
+;; environment would silently outlive the compile that set it.
+(define (repl-set-source-home path)
+  (set-source-home! path)
+  (cons (quote ok) ""))
+
 ;; List the manifest's PROGRAM entries for the emit build door (Chez-free; change:
 ;; emit-build-bin-entry).  Each `(program NAME (source S) [(output O)])` entry yields
 ;; THREE newline-separated lines -- NAME, S, and O (O empty when there is no
@@ -742,10 +757,15 @@
       (set! counter (vector-ref s 4))
       (set! *repl-libs* (vector-ref s 5))
       (set! *repl-lib-imports* (vector-ref s 6))
-      (set! *repl-calls* (vector-ref s 7)))))
+      (set! *repl-calls* (vector-ref s 7))
+      ;; The door's source home (change: library-include-declarations, design D4).  It
+      ;; rides the state vector for the same reason the rest of this does: the assembled
+      ;; program's globals are re-created on every host call, so a home set by mode 13
+      ;; would be gone by the time mode 4/7/11/12 needed it.
+      (set-source-home! (vector-ref s 8)))))
 (define (repl-save-state!)
   (repl-state-set! (vector *repl-env* *repl-macro-env* *repl-known* *repl-n* counter
-                           *repl-libs* *repl-lib-imports* *repl-calls*)))
+                           *repl-libs* *repl-lib-imports* *repl-calls* (source-home))))
 
 ;; --- the dispatched embedded entry (design D2) -------------------------------
 ;; The host sets (repl-mode)/(repl-input) via rt_repl_set, then calls this ccc
@@ -760,6 +780,7 @@
 ;;  10 emit build door: manifest text -> program entries (NAME/source/output triples)
 ;;  11 emit lib door: library source -> "<basename>\n<export-table datum>"
 ;;  12 run door: a source text -> the library keys it imports (for the lazy preload)
+;;  13 where the NEXT source submitted came from, so its includes resolve beside it
 ;; State is restored before and saved after each op (init modes seed it fresh).
 (define (repl-dispatch)
   (repl-restore-state!)
@@ -778,6 +799,7 @@
              [(= mode 10) (repl-manifest-programs (repl-input))]  ; emit build door: program entries
              [(= mode 11) (repl-library-exports-text (repl-input))] ; emit lib door: export table
              [(= mode 12) (repl-source-imports (repl-input))]     ; run door: a source's imports
+             [(= mode 13) (repl-set-source-home (repl-input))]    ; every door: the next source's path
              [else       (compile-one-form-text (repl-input))])])
       (repl-save-state!)
       result)))

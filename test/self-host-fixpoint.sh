@@ -43,7 +43,7 @@ CORE_FLAT="src/match.scm src/util.scm src/parse.ss \
            src/passes/convert-assignments.ss src/passes/simplify.ss \
            src/passes/convert-closures.ss \
            src/passes/lower.ss src/emit.ss src/prelude-surface.scm src/core.ss \
-           src/dump.ss src/import-substrate.scm"
+           src/dump.ss src/include-reader.ss src/import-substrate.scm"
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT

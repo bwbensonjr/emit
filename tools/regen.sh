@@ -40,16 +40,18 @@ cd "$(dirname "$0")/.."
 . tools/llvm-env.sh || exit 1
 
 # Flat core, in concatenation order (this list == the Chez driver's include order,
-# PLUS src/dump.ss: the stage dumper calls the %-ops `%dump-level`/`%stderr-write`,
-# which are primcall heads when COMPILED here but unbound identifiers when Chez
-# EVALUATES its include block -- so it rides the Chez-free assembly only, and the
-# driver keeps its own independent pretty-print dumper (emit-dump-stages, D5/D10).
+# PLUS src/dump.ss and src/include-reader.ss: the stage dumper calls the %-ops
+# `%dump-level`/`%stderr-write` and the include reader calls `%read-file`, which are
+# primcall heads when COMPILED here but unbound identifiers when Chez EVALUATES its
+# include block -- so both ride the Chez-free assembly only, and the driver keeps its own
+# independent implementation of each (emit-dump-stages D5/D10;
+# library-include-declarations D2).
 CORE_FLAT="src/match.scm src/util.scm src/parse.ss \
            src/passes/expand.ss src/passes/recognize-let.ss \
            src/passes/convert-assignments.ss src/passes/simplify.ss \
            src/passes/convert-closures.ss \
            src/passes/lower.ss src/emit.ss src/prelude-surface.scm src/core.ss \
-           src/dump.ss src/import-substrate.scm"
+           src/dump.ss src/include-reader.ss src/import-substrate.scm"
 
 mkdir -p build bootstrap
 

@@ -557,15 +557,46 @@ other — the same gap as `docs/PERFORMANCE.md` P8.
     roots, since a command's effects are invisible to reachability analysis. A record type's
     bindings prune independently of one another — reaching one accessor keeps the type's
     descriptor, not the whole declaration.
-  - Still out of scope: the `include`, `include-ci`, `include-library-declarations`, and
-    `cond-expand` library declarations — now **rejected by name** rather than absorbed into the
-    body (see [When you break a rule](#when-you-break-a-rule)).
+- **A library may be assembled from other files** (change: `library-include-declarations`,
+  issue #18). All seven R7RS §5.6.1 declarations are now recognized: `export`, `import`, `begin`,
+  `include`, `include-ci`, `include-library-declarations`, and `cond-expand`. The last four are
+  **splicers**, expanded before anything else runs, so what they contribute is indistinguishable
+  from having been written in place — including an `import`, which is validated by the same check
+  either way.
+  - `(include "f.scm" ...)` splices each file's top-level forms into the **body**, in the order the
+    filenames appear, as if written in a `begin` declaration there. `(include-ci ...)` is the same
+    with the read forms case-folded — ASCII only, and a bar-quoted `|MixedCase|` folds too, because
+    after reading it is indistinguishable from a bare symbol.
+  - `(include-library-declarations "d.scm" ...)` splices a file's forms as **declarations**, so a
+    shared `export` list or import block can live in its own file. It is the one that recurses: an
+    included declarations file may include further. An `include` inside an included *body* file is
+    program-position `include` (R7RS §4.1.7), which is not implemented.
+  - `(cond-expand ⟨clause⟩ ...)` splices the declarations of the first clause whose feature
+    requirement holds, or of a trailing `else`; nothing matching and no `else` contributes nothing.
+    Requirements are feature identifiers, `and`, `or`, `not`. Emit advertises **`r7rs`, `emit`, and
+    `ieee-float`** — and deliberately not `exact-closed` (fixnum overflow traps rather than
+    promoting), `full-unicode`, `ratios`, or any OS/CPU flag (those describe the target). A
+    `(library ⟨name⟩)` requirement is refused by name: answering it is library availability, which
+    this stage's parser does not resolve, and a wrong answer would silently pick the other clause.
+  - **A filename resolves relative to the file that named it** — for a nested inclusion, beside the
+    *including* file, not the `.sld` — which is the rule the manifest already applies to a library's
+    `(source ...)`. Absolute filenames are used as written; source read from standard input resolves
+    against the current directory. A file that cannot be read names the declaration, the filename as
+    written, and the path it resolved to; an include cycle names the cycle.
+  - The compiler core still performs **no I/O**: each door installs the reader (the Chez driver over
+    Chez ports, the binary over `%read-file`), and the core splices what it is handed. A unit's
+    `.stamp` records the files it included, so editing one rebuilds the library that included it
+    (`recompile: included source changed`).
+  - A **baked** library resolves `cond-expand` at bake time, against the compiler that baked it,
+    rather than at the importer's compile — for the baked set that is the correct reading, since
+    those libraries *are* the implementation. Nothing shipped uses it today; issue #31 (baking
+    `lib/scheme/base.sld`) inherits the commitment.
 - **Artifacts** — each library compiles to `<artifacts>/<name>.ll` plus a readable
   `<name>.exports` table (`(NAME ((external . "mangled") …) ((external "label" arity) …)
   [<compile-time-interface>])`) and a `<name>.stamp` sidecar
-  recording the compiler that produced them. Artifacts are reused only when fresh — the source
-  is no newer than the artifact **and** the recorded compiler-identity stamp matches the current
-  compiler — and rebuilt otherwise. The stamp is a version marker plus a content hash over the
+  recording the compiler that produced them. Artifacts are reused only when fresh — neither the
+  source nor anything it **included** is newer than the artifact, **and** the recorded
+  compiler-identity stamp matches the current compiler — and rebuilt otherwise. The stamp is a version marker plus a content hash over the
   compiler sources that determine emitted IR (the `compile.ss` `(include …)` set plus the host
   target header), so a compiler/emitter change invalidates cached units even when their source
   is untouched — the toolchain is part of the cache key, as in Rust (`.rlib` SVH), GHC (`.hi`
@@ -627,18 +658,21 @@ second is what got reported — so the message sent you somewhere the mistake wa
 | what you write | what Emit reports |
 |---|---|
 | `(import (only (scheme base) car))`, or `except` / `prefix` / `rename` | `import: import sets are not supported: (only (scheme base) car) -- imports are whole-library, as (import (library name))` |
-| `(include …)`, `(include-ci …)`, `(include-library-declarations …)`, `(cond-expand …)` | `define-library: include is an R7RS library declaration this stage does not support` |
-| any other declaration, e.g. `(frobnicate 1 2 3)` | `define-library: frobnicate is not a library declaration -- a declaration is (export ...), (import ...) or (begin ...)` |
+| `(cond-expand ((library (scheme base)) …) …)` | `cond-expand: (library (scheme base)) is an R7RS feature requirement this stage does not support -- library availability is not resolved here` |
+| `(include "nope.scm")` naming a file that is not there | `include: cannot read "nope.scm" (resolved to lib/nope.scm)` |
+| a file that includes itself | `include-library-declarations: include cycle: "lib/a.scm" includes itself, through "lib/b.scm" <- "lib/a.scm"` |
+| any other declaration, e.g. `(frobnicate 1 2 3)` | `define-library: frobnicate is not a library declaration -- a declaration is (export ...), (import ...), (begin ...), (include ...), (include-ci ...), (include-library-declarations ...) or (cond-expand ...)` |
 | one name bound by both `define` and `define-syntax` | `compile-library: a library binds one name with both define and define-syntax f` |
 | a `define-library` that is not its source's only form | `define-library: a define-library must be the only form in its source: (two)` |
 | a `define-library` typed at the REPL prompt | `define-library: libraries are not defined at the prompt: (r) -- a library is imported, named in the manifest` |
 
 Two distinctions are deliberate:
 
-- **Recognized-but-unsupported is not the same as not-a-declaration.** The four R7RS declarations
-  Emit has not implemented say so; anything else is reported as not being a declaration at all. One
-  is a feature you are waiting on, the other is a mistake in your source, and your next move
-  differs. Neither message promises a schedule.
+- **Recognized-but-unsupported is not the same as not-a-declaration.** All seven R7RS declarations
+  are implemented, so that class is now empty at the declaration level and only one R7RS form still
+  reports it: a `(library …)` feature requirement. Anything else in declaration position is reported
+  as not being a declaration at all. One is a feature you are waiting on, the other is a mistake in
+  your source, and your next move differs. Neither message promises a schedule.
 - **`rename` is rejected only in `import` position.** `(export (rename internal external))` stays
   valid; the rejection keys on the declaration the form appears in, not on the keyword.
 
@@ -659,6 +693,8 @@ This is Modules v0:
   path (change: `aot-release-profile`). Porting it to the Chez-free door is future work.
 - Import specifiers are whole-library only — no `only`/`except`/`prefix`/`rename` import sets yet.
   An import set is rejected by name; see [When you break a rule](#when-you-break-a-rule).
+- `include` and `cond-expand` are **library declarations only**. In program or body position
+  (R7RS §4.1.7, §4.2.1) they are not implemented, and neither is the `features` procedure.
 
 For the authoritative requirements and scenarios, see `openspec/specs/module-system/spec.md`; for
 the design rationale, `openspec/explorations/modules-v0-design.md`.
