@@ -174,31 +174,15 @@ reject_lib () {  # <name> <sld-path> <regex>
 echo
 echo "declarations the front end rejects by name (module-frontend-diagnostics)"
 
-# The four remaining R7RS library declarations: RECOGNIZED, not implemented (#18).  Each
-# is named as such, and the message promises no schedule -- #18 owns when they land.
-for d in 'include "body.scm"' 'include-ci "body.scm"' \
-         'include-library-declarations "decls.scm"' 'cond-expand (else (begin))'; do
-  kw="${d%% *}"
-  cat > "$TMP/$kw.sld" <<EOF
-(define-library ($kw-lib)
-  (export g)
-  ($d))
-EOF
-  reject_lib "unsupported-$kw" "$TMP/$kw.sld" \
-    "$kw is an R7RS library declaration this stage does not support"
-done
-
-# The pair that motivated splitting the diagnostic (design D2): `include` PROVIDING an
-# exported name used to report `export of a name the library does not define g`, and an
-# unrecognized declaration used to report `unbound variable frobnicate`.  One is a
-# feature Emit has not implemented; the other is a mistake in the source.
-reject_lib "unsupported-include-not-undefined-export" "$TMP/include.sld" \
-  'include is an R7RS library declaration'
-if grep -Eq 'does not define g' "$TMP/unsupported-include-not-undefined-export.err"; then
-  bad "include is no longer blamed on its exported name"
-else
-  ok "include is no longer blamed on its exported name"
-fi
+# The four R7RS declarations this suite used to pin as RECOGNIZED-BUT-UNSUPPORTED are
+# implemented (change: library-include-declarations, #18), so that class is gone and its
+# assertions moved to test/library-include-tests.sh, which pins what they now DO.  What
+# stays here is the half that has not changed: a declaration that is not R7RS at all is
+# still named as not being a declaration, and is still not lowered as a body form.
+#
+# The one recognized-R7RS-but-unsupported message left in the front end is the
+# `(library ...)` feature requirement (design D8); it is pinned by the include suite
+# beside the rest of cond-expand.
 
 cat > "$TMP/frob.sld" <<'EOF'
 (define-library (frob-lib)

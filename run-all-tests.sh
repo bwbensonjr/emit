@@ -58,6 +58,7 @@ run_suite "R7RS numeric conformance" test/numeric-conformance-tests.sh
 run_suite "cross-unit direct calls"   test/cross-unit-direct-call-tests.sh
 run_suite "library top-level set!"    test/library-toplevel-set-tests.sh
 run_suite "library body declarations" test/library-body-declarations-tests.sh
+run_suite "library include declarations" test/library-include-tests.sh
 run_suite "dynamic extent (call/cc)"  test/dynamic-extent-tests.sh
 run_suite "io ports + eof object"     test/io-ports-tests.sh
 run_suite "module vertical-slice (REPL)" test/modules-repl-tests.sh

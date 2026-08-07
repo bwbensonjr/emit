@@ -158,6 +158,50 @@
     (close-port p)
     forms))
 
+;; --- the include reader this door installs (change: library-include-declarations,
+;; design D2/D3/D5) ---------------------------------------------------------
+;; The core performs no I/O and knows nothing about paths: it hands this procedure the
+;; filename as WRITTEN plus the token of the file that named it, and receives
+;; (TOKEN . FORMS) back.  Resolution is therefore entirely the driver's, and this
+;; implementation is INDEPENDENT of the Chez-free one in src/include-reader.ss -- the same
+;; arrangement the stage dumper has, and the reason the two can be diffed against each
+;; other by the cross-host equivalence suites.
+;;
+;; A relative filename resolves against the directory of the file that named it (the
+;; original source when the declaration is in the .sld itself), which is the rule the
+;; manifest already applies to a library's (source ...).  Source read from stdin has no
+;; path, so its home is "" -- the current directory.
+(define *source-home* "")
+(define (set-source-home! path) (set! *source-home* path))
+
+;; Resolution is `manifest-relative` (defined below with the manifest machinery): a path
+;; written inside a file is relative to THAT file, absolute paths are used as given.  One
+;; rule, one implementation -- an included file and a manifest's (source ...) resolve the
+;; same way, which is what a reader of either can then predict.
+(define (resolve-include filename base)
+  (manifest-relative (or base *source-home*) filename))
+
+;; `who` is the declaration that named the file, so a missing file names the form the user
+;; wrote as well as the path it resolved to.
+;;
+;; Every path served is also RECORDED: a library's source is no longer one file, so the
+;; artifact cache has to know the others or an edit to an included file leaves a stale
+;; unit in place under a `reuse ... [fresh]` line (design D10).  The reader is the only
+;; place that sees them, so it is the only place that can collect them.
+(define (driver-include-reader who filename base)
+  (let ([path (resolve-include filename base)])
+    (unless (file-exists? path)
+      (error who (string-append "cannot read " (render-datum filename)
+                                " (resolved to " path ")")))
+    (set! *includes-read* (cons path *includes-read*))
+    (cons path (read-program path))))
+
+(define *includes-read* '())            ; resolved paths served since the last reset
+(define (reset-includes-read!) (set! *includes-read* '()))
+(define (includes-read) (reverse *includes-read*))
+
+(set-include-reader! driver-include-reader)
+
 (define (dump stage form)
   (fprintf (current-error-port) ";; ==== after ~a ====\n" stage)
   (pretty-print form (current-error-port))
@@ -199,6 +243,7 @@
 
 ;; Read source (+ prelude) and assemble the ordered form list the core compiles.
 (define (program-forms src prelude?)
+  (set-source-home! src)                ; includes resolve beside the source, not the CWD
   (let ([user-forms (read-program src)])
     (if prelude?
         (with-prelude (read-program prelude-path) user-forms)
@@ -445,8 +490,28 @@
 ;; sees one unit's forms plus its dependencies' export tables as data.
 
 ;; Parse a library name's source (via the manifest) into (name imports exports body).
+;; The home is set to the .sld before it is parsed, so an `include` in it resolves beside
+;; the library source rather than beside whatever the driver read last (design D5).  The
+;; files the parse pulled in are recorded under the library's name, for the artifact cache
+;; (design D10) -- every library in the closure is parsed here, fresh or not, so the list
+;; is available whether the unit is rebuilt or reused.
 (define (read-define-library manifest name)
-  (parse-define-library (car (read-program (cadr (manifest-lookup manifest name))))))
+  (let ([path (cadr (manifest-lookup manifest name))])
+    (set-source-home! path)
+    (reset-includes-read!)
+    (let ([dl (parse-define-library (car (read-program path)))])
+      (set! *library-includes* (cons (cons name (includes-read)) *library-includes*))
+      ;; "The source" is no longer one file, so say which files a unit was assembled from
+      ;; -- at verbose only, since it is detail about an input rather than an outcome
+      ;; (docs/OUTPUT.md).
+      (when (and (>= driver-verbosity 2) (pair? (includes-read)))
+        (for-each (lambda (p) (fprintf (current-error-port) "  include ~a -> ~a\n" path p))
+                  (includes-read)))
+      dl)))
+
+(define *library-includes* '())         ; (library-name . (included-path ...))
+(define (library-includes name)
+  (cond [(assoc name *library-includes*) => cdr] [else '()]))
 
 ;; Topologically sort the transitive closure of `roots` (a list of library names).
 ;; Returns (values order dl-cache): `order` lists every library in the closure with
@@ -483,7 +548,7 @@
 
 ;; Version marker for the stamp FORMAT (D1): bump by hand to force a global
 ;; invalidation deliberately (e.g. if the stamp scheme itself changes).
-(define compiler-stamp-version 1)
+(define compiler-stamp-version 2)      ; 2: the sidecar gained the include list (D10)
 
 ;; Exactly the (include ...) block at the top of this file PLUS this file itself,
 ;; in a fixed order -- the sources that turn library source -> IR in this path.
@@ -545,20 +610,43 @@
        (let ([forms (read-program stampf)])
          (and (pair? forms) (car forms)))))
 
+;; The sidecar carries the compiler identity AND the files the source INCLUDED (change:
+;; library-include-declarations, design D10): (emit-artifact-stamp V HEX (path ...)).
+;; The identity is compared for equality; the include list is a set of extra
+;; prerequisites.  A sidecar written before this change has no fourth element, which reads
+;; as "no includes" -- and the version bump invalidates those anyway.
+(define (stamp-datum stamp includes) (append stamp (list includes)))
+(define (stamp-identity d) (if (and (pair? d) (= (length d) 4)) (list-head d 3) d))
+(define (stamp-includes d) (if (and (pair? d) (= (length d) 4)) (cadddr d) '()))
+
+;; Is every recorded include no newer than the artifacts?  A missing one is NOT fresh:
+;; the file the unit was built from is gone, so the unit cannot be trusted to describe it.
+(define (includes-fresh? paths ll expf)
+  (or (null? paths)
+      (and (file-exists? (car paths))
+           (let ([it (file-modification-time (car paths))])
+             (and (time<=? it (file-modification-time ll))
+                  (time<=? it (file-modification-time expf))))
+           (includes-fresh? (cdr paths) ll expf))))
+
 ;; A library's artifacts are FRESH when both exist, neither is older than the
-;; source, AND the recorded compiler stamp equals the current one (change:
-;; module-generalize + artifact-compiler-stamp).  file-modification-time returns
-;; a time-utc object; compare with time<=? (src not newer than the artifact).
+;; source OR anything the source included, AND the recorded compiler stamp equals
+;; the current one (change: module-generalize + artifact-compiler-stamp +
+;; library-include-declarations).  file-modification-time returns a time-utc object;
+;; compare with time<=? (src not newer than the artifact).
 (define (artifacts-fresh? src ll expf stampf stamp)
   (and (file-exists? ll) (file-exists? expf)
        (let ([st (file-modification-time src)])
          (and (time<=? st (file-modification-time ll))
               (time<=? st (file-modification-time expf))))
-       (equal? (read-stamp stampf) stamp)))
+       (let ([d (read-stamp stampf)])
+         (and (equal? (stamp-identity d) stamp)
+              (includes-fresh? (stamp-includes d) ll expf)))))
 
 ;; Why an artifact is being rebuilt, for narration (docs/OUTPUT.md): absent,
-;; its source changed, or the compiler that produced it differs (stamp mismatch).
-;; Compute this BEFORE the rebuild rewrites the artifacts.
+;; its source changed, a file its source included changed, or the compiler that
+;; produced it differs (stamp mismatch).  Compute this BEFORE the rebuild rewrites
+;; the artifacts.
 (define (rebuild-reason src ll expf stampf stamp)
   (cond
     [(not (and (file-exists? ll) (file-exists? expf))) "missing"]
@@ -566,7 +654,9 @@
        (not (and (time<=? st (file-modification-time ll))
                  (time<=? st (file-modification-time expf)))))
      "source changed"]
-    [(not (equal? (read-stamp stampf) stamp)) "compiler changed"]
+    [(not (equal? (stamp-identity (read-stamp stampf)) stamp)) "compiler changed"]
+    [(not (includes-fresh? (stamp-includes (read-stamp stampf)) ll expf))
+     "included source changed"]
     [else "stale"]))
 
 ;; Compile+link a program that imports libraries.  `exe` is the output path.
@@ -613,6 +703,7 @@
 ;; binding); this keeps the first cut sound without full backward DAG propagation.
 (define (build-modular-artifacts src out prelude?) (build-modular-artifacts* src out prelude? #f))
 (define (build-modular-artifacts* src out prelude? shake?)
+  (set-source-home! src)
   (let* ([user-forms     (read-program src)]
          ;; Stage 3: the prelude's procedures come from the auto-imported (scheme
          ;; base) library, not a prepend; only its derived-form macros are merged
@@ -724,7 +815,8 @@
                     ;; rebuild (D3); `write` (not display) so the digest string
                     ;; round-trips as a string, not a symbol.
                     (let ([o (open-output-file stampf 'replace)])
-                      (write stamp o) (newline o) (close-port o))
+                      (write (stamp-datum stamp (library-includes name)) o)
+                      (newline o) (close-port o))
                     ;; The macro count rides the existing metrics clause and only when
                     ;; there is one, so a library that exports no macro narrates exactly
                     ;; what it always did (change: library-macro-export; docs/OUTPUT.md).
