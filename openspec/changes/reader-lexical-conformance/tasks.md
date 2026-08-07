@@ -161,9 +161,15 @@
       the micro-fix (ordering the rational scan after the classifiers) is worth ~10% under Chez and
       nothing on the self-hosted door, which is what says the cost is structural. P12 names the
       three fixes that would remove work rather than move it.
-- [ ] 9.5 Commit, then `test/trust-check.sh` (it `[SKIP]`s while `bootstrap/` is dirty).
+- [x] 9.5 Commit, then `test/trust-check.sh` (it `[SKIP]`s while `bootstrap/` is dirty). — Passed:
+      "committed IR is exactly what the current source regenerates". Worth recording the trap it
+      caught first: a **comment-only** edit to `src/prelude.scm` invalidates `bootstrap/`, because
+      the prelude is baked in as the `*prelude-source*` string constant *verbatim* — comments
+      included. Unlike `src/core.ss` and the passes, which are compiled and whose comments vanish.
+      That is what failed `self-host-fixpoint` ("4 diff lines") on the first dev-tests run, together
+      with `.sld` files not regenerated after the last two prelude edits.
 - [x] 9.6 `openspec validate --all`, including the main specs. — 21 items, 0 failed.
-- [ ] 9.7 Reference both issues from the commit (`Fixes #59`, `Fixes #25`) and comment on #27 that
+- [x] 9.7 Reference both issues from the commit (`Fixes #59`, `Fixes #25`) and comment on #27 that
       its §2 reader-grammar overlap with #25 is closed, leaving it the representation question.
       Note in #25's close that the non-finite half was already done by `numeric-conformance` — its
       body still describes it as open.
