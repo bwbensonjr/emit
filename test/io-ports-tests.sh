@@ -151,6 +151,23 @@ check "read accepts the external representations the reader accepts" \
   '(let ((p (open-input-string "#(1 2) \"s\" #\\a 1.5 (a . b)")))
      (list (read p) (read p) (read p) (read p) (read p)))' \
   '(#(1 2) "s" #\a 1.5 (a . b))'
+# The port cursor is a discipline over the SAME rd-datum the compiler front end uses, so
+# every lexeme that reader gains, `read` gains (change: reader-lexical-conformance).  Both
+# comment forms, over a FILE port -- the cursor has to land past the comment, not merely
+# skip it, which a string-port-only case would not distinguish.
+check "read over a file port skips both comment forms" \
+  "(begin
+     (let ((out (open-output-file \"$TMP/comments.scm\")))
+       (write-string \"#| a #| nested |# block |# (a b) #;(skip me) 42\" out)
+       (close-port out))
+     (let ((p (open-input-file \"$TMP/comments.scm\")))
+       (let* ((x (read p)) (y (read p)) (z (eof-object? (read p))))
+         (close-port p) (list x y z))))" \
+  '((a b) 42 #t)'
+check "read over a port takes the prefixed numbers and bar-quoted identifiers" \
+  '(let ((p (open-input-string "#x1f |a b| #i2")))
+     (list (read p) (symbol->string (read p)) (read p)))' \
+  '(31 "a b" 2.0)'
 
 # --- port predicates and first-classness -------------------------------------
 check "an input port is recognized by its predicates" \

@@ -356,7 +356,20 @@ project:
   to builds its field vector with `list`.
 - **Numbers**: fixnums and flonums. Exact integers span `[-2^60, 2^60)` and an out-of-range result
   is a reported error, not a wrapped value; there are no bignums or exact rationals yet, and
-  `(sqrt 4)` is `2.0` (use `exact-integer-sqrt` for the exact answer).
+  `(sqrt 4)` is `2.0` (use `exact-integer-sqrt` for the exact answer). Because there are no exact
+  rationals, **`1/2` is a reported error, not a value and not a symbol** — R7RS allows an
+  implementation either to report an unrepresentable exact literal or to represent it inexactly, and
+  Emit reports, so the missing feature says so instead of quietly changing your number. Every `n/m`
+  is refused, including `4/2` and `#i1/2`, whose values Emit could represent: partial support would
+  advertise a notation that is not there. Write `0.5`, or `(/ 1 2)`.
+- **Lexical syntax**: line comments `;`, **nested** block comments `#| … |#`, and datum comments
+  `#;` (which discards the next datum) all work everywhere they should. Number literals take the
+  R7RS radix and exactness prefixes — `#x1f`, `#b1010`, `#o17`, `#d99`, `#i42`, `#e1.0`, and the
+  two-prefix combinations `#x#e1f` / `#e#x1f` — in either case; a decimal point or exponent stays
+  radix-10 only. `|bar quoted identifiers|` read (with `\|` and `\xHH;` escapes) and are ordinary
+  symbols, so `(eq? '|foo| 'foo)` is `#t`, and `write` emits the bars for a symbol whose name would
+  not read back without them. Not implemented: `#!fold-case` / `#!no-fold-case`, and the `#0=` /
+  `#0#` datum labels for circular structure.
 - **Control**: `call/cc` and `dynamic-wind` work. The exception surface you should use is `guard`,
   `raise`, and `error` — `with-exception-handler` is bound, because it is the installer `guard`
   expands to, but it does not give R7RS's resumable behavior (a `raise` inside it still aborts) and

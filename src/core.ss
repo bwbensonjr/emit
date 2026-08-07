@@ -372,6 +372,13 @@
 ;; EVERY door: an error's irritants reach the Chez-free doors through
 ;; repl-error->string, which renders a LIST irritant as "?", so a form the user wrote
 ;; has to be rendered INTO the message rather than passed beside it.
+;; A SYMBOL renders as its bare name, deliberately, even though `write` now bar-quotes a
+;; name that would not read back (change: reader-lexical-conformance, design D7).  Every
+;; name this renderer writes is a mangled identifier or an IL keyword, none of which needs
+;; bars -- but the coupling is real: a symbol that DID need them would produce an artifact
+;; neither host's reader reads back, so the printer's "needs bars?" predicate
+;; (sym_needs_bars, src/runtime/runtime.c) is the natural thing for this to grow if that
+;; ever becomes possible.
 (define (render-datum x)
   (cond
     [(string? x) (string-append "\"" x "\"")]
@@ -600,9 +607,11 @@
 ;; would surface as an unexplained IR difference in test/self-emit-equiv.sh.
 ;;
 ;; ASCII only, and a bar-quoted `|MixedCase|` folds too: after reading, a bar-quoted symbol
-;; and a bare one are the same object, so the distinction R7RS draws is not observable
-;; here.  `include-ci` is a compatibility form for old case-folding source; a reader-level
-;; fold is the fix if that limit ever bites.
+;; and a bare one are the same object, so the distinction R7RS 7.1.1 draws is not observable
+;; here.  Emit's reader accepts `|...|` now (change: reader-lexical-conformance, design D7)
+;; and that did NOT fix this, deliberately: the fix is a fold-aware READ -- folding during
+;; tokenization, while the bars are still visible -- which is a second reader entry
+;; threading a fold flag through the rd-* layer.  Tracked as GitHub issue #61.
 (define (fold-datum-case x)
   (cond
     [(symbol? x) (string->symbol (fold-string-case (symbol->string x)))]

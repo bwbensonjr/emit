@@ -365,11 +365,11 @@ check "as source literals too" '(list +inf.0 -inf.0)' '(+inf.0 -inf.0)'
 check "near-miss tokens remain symbols" \
   '(list (symbol? (read-from-string "+inf")) (symbol? (read-from-string "inf.0")) (symbol? (read-from-string "+inf.00")) (symbol? (read-from-string "+nan.1")))' \
   '(#t #t #t #t)'
-# The rest of #25 is deliberately deferred (radix/exactness prefixes, rationals);
-# pinned so the deferral is visible rather than assumed.
-check "the deferred reader syntax is unchanged" \
-  '(list (symbol? (read-from-string "1/2")) (symbol? (read-from-string "#e1.0")) (string->number "1/2"))' \
-  '(#t #t #f)'
+# The rest of #25 -- the radix/exactness prefixes and rational literals -- was deferred
+# when the non-finite tokens landed and is deferred no longer: change
+# reader-lexical-conformance closes it.  This case used to pin the DEFERRAL
+# (`(symbol? (read-from-string "1/2"))` was #t); what replaces it is the three sections
+# at the end of this file, which pin the behaviour that took its place.
 
 echo
 echo "(scheme inexact): Emit's second standard library"
@@ -406,6 +406,91 @@ check "user-wins shadowing still applies with the import" \
   '(import (scheme inexact)) (define (sqrt x) (quote mine)) (list (sqrt 4) (exp 0))' \
   '(mine 1.0)'
 trap_msg "without the import the names are unbound" '(sqrt 4)' "unbound variable sqrt"
+
+echo
+echo "the reader accepts the R7RS 6.2.5 prefixes (change: reader-lexical-conformance)"
+
+# Radix and exactness are orthogonal, as R7RS has them, and the prefix letters and hex
+# digits are case-insensitive.  Every one of these used to read as a SYMBOL, so the
+# diagnostic blamed an identifier the author never wrote (`unbound variable x1f`).
+check "the four radix prefixes" '(list #x1f #b1010 #o17 #d99)' '(31 10 15 99)'
+check "prefix letters and hex digits are case-insensitive" '(list #X1F #x1F #B1010)' \
+  '(31 31 10)'
+check "a sign follows the prefix" '(list #x-1f #b-1010 #x+1f)' '(-31 -10 31)'
+check "the radix prefixes yield EXACT integers" \
+  '(list (exact? #x1f) (integer? #x1f))' '(#t #t)'
+check "the exactness prefixes" '(list #i42 #e1.0 #i1.5)' '(42.0 1 1.5)'
+check "both prefixes, in either order" '(list #x#e1f #e#x1f #x#i1f #i#x1f)' \
+  '(31 31 31.0 31.0)'
+check "the #x round trip through number->string" \
+  '(read-from-string (string-append "#x" (number->string 255 16)))' '255'
+# A decimal point or an exponent is radix-10 syntax; combined with another radix the
+# token is invalid, and saying so is the point -- interning it was the old bug.
+trap_msg "a decimal point outside radix 10" '(display #x1.8)' 'unrecognized syntax'
+trap_msg "an unrecognized # token" '(display #q1)' 'unrecognized syntax'
+
+echo
+echo "rational literal syntax is REPORTED, not read (R7RS 6.2.3, design D4)"
+
+# Emit has no exact rationals.  R7RS sanctions two answers for an unrepresentable exact
+# literal -- report an implementation restriction, or represent it inexactly -- and
+# reading it as an identifier is a third.  Emit reports, matching the answer it already
+# gives for the other unrepresentable exact literal (an out-of-range integer traps).
+trap_msg "a rational literal names itself" "(display '1/2)" 'rational literal syntax'
+trap_msg "the message names the alternatives" "(display '1/2)" '(/ 1 2)'
+# The refusal is of the SYNTAX: 4/2 and #i1/2 denote numbers Emit represents perfectly
+# well, and are refused anyway, so the rule stays "Emit has no rationals" rather than
+# "rationals work sometimes".
+trap_msg "a representable rational is refused too" "(display '4/2)" 'rational literal syntax'
+trap_msg "so is one behind an inexactness prefix" "(display '#i1/2)" 'rational literal syntax'
+trap_msg "and #e on a non-integral decimal" '(display #e0.5)' 'rational literal syntax'
+# ... while the division it points at is unchanged, and a symbol that merely contains a
+# slash is not rational syntax at all.
+check "the division is still available" '(/ 1 2)' '0.5'
+check "a symbol containing a slash still reads" "(symbol? 'call/cc)" '#t'
+
+echo
+echo "string->number shares that grammar, answering #f where the reader reports"
+
+check "a prefix in the text parses with no radix argument" \
+  '(list (string->number "#x1f") (string->number "#b1010") (string->number "#i42"))' \
+  '(31 10 42.0)'
+check "a prefix beats the radix argument" \
+  '(list (string->number "#x10" 10) (string->number "#d10" 16))' '(16 10)'
+# R7RS 6.2.6: #f, not an error, for a number that cannot be represented.  This is the
+# ONE place the shared grammar's two entry points differ, and only because it says so.
+check "what the reader reports, this answers #f" \
+  '(list (string->number "1/2") (string->number "4/2") (string->number "#x1.8") (string->number "#q1"))' \
+  '(#f #f #f #f)'
+check "string->number still agrees with the reader on the prefixes" \
+  '(list (equal? (string->number "#x1f") (read-from-string "#x1f")) (equal? (string->number "#i42") (read-from-string "#i42")))' \
+  '(#t #t)'
+
+echo
+echo "write bar-quotes a symbol that would not read back (design D7)"
+
+# The other half of the same round trip: the reader accepts |foo bar| and the printer
+# now produces it, so `(write (string->symbol "a b"))` stops printing `a b` -- two
+# symbols when read back.  These render through a string port so the runner prints the
+# TEXT rather than the value.
+W='(define (wrt x) (let ((p (open-output-string))) (write x p) (let ((s (get-output-string p))) (close-port p) s)))
+(define (dsp x) (let ((p (open-output-string))) (display x p) (let ((s (get-output-string p))) (close-port p) s)))'
+check "a name needing bars gets them, and display does not" \
+  "$W (list (wrt (string->symbol \"a b\")) (dsp (string->symbol \"a b\")))" \
+  '("|a b|" "a b")'
+# The predicate must fire ONLY for names that genuinely need bars, or every dump and
+# REPL echo in the suites moves.  This is the case that says it is not over-firing.
+check "an ordinary symbol is still written bare" \
+  "$W (list (wrt 'hello) (wrt 'set!) (wrt '<=) (wrt '...) (wrt 'a->b) (wrt 'string->number))" \
+  '("hello" "set!" "<=" "..." "a->b" "string->number")'
+check "the write/read round trip closes" \
+  "$W (let ((s (string->symbol \"a b\"))) (list (wrt s) (eq? (read-from-string (wrt s)) s)))" \
+  '("|a b|" #t)'
+check "bars are not a distinct type" \
+  "(list (eq? '|foo| 'foo) (eq? '|foo bar| (string->symbol \"foo bar\")))" '(#t #t)'
+check "the escapes inside bars" \
+  '(list (symbol->string (read-from-string "|a\\|b|")) (symbol->string (read-from-string "|a\\x41;b|")))' \
+  '("a|b" "aAb")'
 
 echo
 echo "  $pass passed, $fail failed"

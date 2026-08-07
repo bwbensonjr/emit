@@ -81,14 +81,17 @@ cat > "$PROJ/lib/geom-body.scm" <<'EOF'
 EOF
 
 # Reader corners, read by Chez under the driver and by Emit's own reader in the binary.
-# A block comment belongs here and is NOT here: Emit's reader accepts neither `#| |#` nor
-# `#;` (issue #59), which this fixture is what found -- a plain `emit run` hits it too, so
-# it is a reader gap rather than anything to do with `include`.  Restore the block comment
-# when #59 lands; it is the sharpest case this file can carry.
+# This fixture is what FOUND issue #59: an included file is read by two different readers,
+# so any grammar Emit lacked was a source file that compiled one way and failed the other.
+# The block comment and the datum comment were removed with a pointer to the issue and are
+# back now that reader-lexical-conformance has landed -- they are the sharpest cross-host
+# cases this file can carry.
 cat > "$PROJ/lib/geom-corners.scm" <<'EOF'
+#| a block comment, which #| nests |# and spans
+   more than one line |#
 (define (corners)
   (let ([n 2])                       ; brackets, and a line comment
-    `(q ,(+ n 1) #\z)))              ; quasiquote + a character
+    `(q ,(+ n 1) #;(discarded) #\z)))  ; quasiquote, a datum comment, a character
 EOF
 
 cat > "$PROJ/lib/GEOM-OLD.scm" <<'EOF'

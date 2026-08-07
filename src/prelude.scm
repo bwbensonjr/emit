@@ -503,18 +503,18 @@
                     (let ([neg (%radix-digits s start m r 0)])
                       (if neg (- 0 neg) #f))
                     #f)))))))
+;;; `rd-number` IS the reader's number grammar, prefixes and all (change:
+;;; reader-lexical-conformance, design D3), so this shares one grammar with the reader
+;;; instead of restating it: `#x1f` parses here because it parses there, and a prefix in
+;;; the text beats the `radix` argument for the same reason it does in a source file.
+;;; The ONE difference is the one R7RS 6.2.6 requires -- where the reader REPORTS a
+;;; number it cannot represent (`1/2`, `#x1.8`), string->number answers #f.  rd-number
+;;; says so with a symbol, and a number is never a symbol, so that is the whole test.
 (define (string->number s . rest)
   (let ([r (if (null? rest) 10 (car rest))])
     (if (%radix-ok? r)
-        (if (= r 10)
-            ;; radix 10 goes through the reader's own classifiers, so anything the
-            ;; reader calls a number is a number here, with the same value.
-            (cond
-              [(rd-numeric? s) (rd-parse-int s)]
-              [(rd-nonfinite s)]              ; +inf.0 / -inf.0 / +nan.0, as the reader does
-              [(rd-flonum? s) (%string->flonum s)]
-              [else #f])
-            (%string->int s r))
+        (let ([v (rd-number s r)])
+          (if (symbol? v) #f v))
         (error "string->number: unsupported radix" r))))
 
 ;;; --- exceptions: error objects, raise, guard (r7rs-exceptions-subset) ------
@@ -848,16 +848,66 @@
         (or (= k 40) (or (= k 41) (or (= k 91) (or (= k 93)
         (or (= k 34) (= k 59)))))))))
 
+;;; --- how the reader reports (change: reader-lexical-conformance, design D2) --
+;;; An rd-* procedure cannot RAISE.  The whole reader is homed in (emit internal),
+;;; and design D10 of scheme-base-partition keeps `error`/`raise`/`*handlers*` out of
+;;; the substrate -- duplicating the handler chain would split it, so a `guard` around
+;;; a reader error would stop catching it.  Every rd-* procedure is therefore total:
+;;; it returns an index or a (datum . index) pair, never a condition.
+;;;
+;;; A construct that cannot be completed or read travels outward as a NEGATIVE index.
+;;; No valid position is negative, so the `(< i n)` test that already guards every scan
+;;; rejects it, and the ENTRY POINTS -- read-from-string, read-all-from-string, and
+;;; (scheme read)'s `read`, which live where `error` does -- turn it into an error.  A
+;;; consumer that needs a different answer from the same signal gives one: the REPL's
+;;; input-completeness probe maps it to "incomplete -- keep typing".
+;;;
+;;; The sentinel CARRIES the position the construct opened at, so the message can name
+;;; it (and can re-extract the offending token from the source text): position p encodes
+;;; as -3 - p.  -1 and -2 stay unused here, which is what lets the probe keep its own
+;;; fc-incomplete/fc-malformed codes in the same integer channel (src/repl-core.ss).
+;;; A failing rd-* result is (REASON . sentinel) -- the pair shape every rd-* returns,
+;;; with a symbol in place of the datum saying what went wrong.
+(define (rd-fail-code p) (- -3 p))       ; opened at p -> the sentinel index
+(define (rd-fail? i) (< i 0))
+(define (rd-fail-pos i) (- (- 0 i) 3))   ; the sentinel index -> the position
+(define (rd-fail why p) (cons why (rd-fail-code p)))
+
 (define (rd-skip-line s n i)             ; index just past the next newline (or n)
   (if (< i n)
       (if (= (char->integer (string-ref s i)) 10) (+ i 1) (rd-skip-line s n (+ i 1)))
       i))
+;;; #| ... |# NESTS (R7RS 7.1.2): the first |# closes only the innermost open block, so
+;;; this counts depth rather than scanning for the first close.  p is where the OUTERMOST
+;;; #| opened, and is what an unterminated comment reports.
+(define (rd-block-open? s n i)           ; "#|" begins at i
+  (and (= (char->integer (string-ref s i)) 35)
+       (< (+ i 1) n)
+       (= (char->integer (string-ref s (+ i 1))) 124)))
+(define (rd-skip-block s n i d p)        ; inside a block comment at depth d
+  (if (< (+ i 1) n)
+      (let ([a (char->integer (string-ref s i))]
+            [b (char->integer (string-ref s (+ i 1)))])
+        (cond
+          [(and (= a 124) (= b 35))                         ; |#  closes one level
+           (if (= d 1) (+ i 2) (rd-skip-block s n (+ i 2) (- d 1) p))]
+          [(and (= a 35) (= b 124))                         ; #|  opens another
+           (rd-skip-block s n (+ i 2) (+ d 1) p)]
+          [else (rd-skip-block s n (+ i 1) d p)]))
+      (rd-fail-code p)))
+;;; A block comment is WHITESPACE (design D1), so it is skipped here rather than
+;;; dispatched as a datum -- which makes it work everywhere whitespace already works
+;;; and gives the REPL probe the same answer for free, since the probe shares this
+;;; helper.  (`#;` cannot live here: discarding a datum needs a full recursive read.)
 (define (rd-skip-ws s n i)               ; next index that is not ws or a comment
-  (if (< i n)
+  (if (and (<= 0 i) (< i n))
       (let ([c (string-ref s i)])
         (cond
           [(rd-ws? c) (rd-skip-ws s n (+ i 1))]
           [(= (char->integer c) 59) (rd-skip-ws s n (rd-skip-line s n (+ i 1)))]
+          [(rd-block-open? s n i)
+           (let ([j (rd-skip-block s n (+ i 2) 1 i)])
+             (if (rd-fail? j) j (rd-skip-ws s n j)))]
           [else i]))
       i))
 
@@ -946,14 +996,146 @@
         [(string=? tok "+nan.0") (%string->flonum "nan")]
         [else #f]))
 
-(define (rd-atom s n i)                  ; token -> integer, flonum, or interned symbol
+;;; --- one numeric grammar, entered from two places (design D3) --------------
+;;; R7RS 6.2.5 lets a number literal carry at most one RADIX prefix (#b #o #d #x) and
+;;; at most one EXACTNESS prefix (#e #i), in either order and either case.  The scanner
+;;; below peels them off and hands the body to the classifiers that already exist --
+;;; rd-numeric?/rd-parse-int, rd-nonfinite, rd-flonum?/%string->flonum, %string->int --
+;;; so no second numeric grammar appears.  Both entry points feed it: rd-atom/rd-hash
+;;; for the reader and `string->number` for the procedure, which is what makes "any
+;;; token the reader accepts as a number is accepted there identically" true by
+;;; construction rather than by review.
+;;;
+;;; rd-number answers the VALUE or one of three reason symbols, because the substrate
+;;; cannot raise (see rd-fail above) and `string->number` must not raise at all -- R7RS
+;;; 6.2.6 has it answer #f exactly where the reader reports:
+;;;
+;;;   rd-not-a-number  not numeric syntax -- the reader interns it as a symbol
+;;;   rd-rational      n/m rational literal syntax, which Emit does not represent (D4)
+;;;   rd-bad-number    prefixed, but the body does not fit the prefix (#x1.8, #b2, #foo)
+(define (rd-radix-letter c)              ; #b #o #d #x -> the radix, else #f
+  (let ([k (char->integer c)])
+    (cond
+      [(or (= k 98) (= k 66)) 2]         ; b B
+      [(or (= k 111) (= k 79)) 8]        ; o O
+      [(or (= k 100) (= k 68)) 10]       ; d D
+      [(or (= k 120) (= k 88)) 16]       ; x X
+      [else #f])))
+(define (rd-exactness-letter c)          ; #e -> 1 (exact), #i -> 2 (inexact), else #f
+  (let ([k (char->integer c)])
+    (cond
+      [(or (= k 101) (= k 69)) 1]        ; e E
+      [(or (= k 105) (= k 73)) 2]        ; i I
+      [else #f])))
+;;; -> (RADIX EXACTNESS . BODY-INDEX), with #f for an absent prefix; or #f overall when
+;;; a prefix is malformed or repeated (#x#x1, #q1, a token that is only "#").
+(define (rd-scan-prefixes t m i r x)
+  (if (and (< i m) (= (char->integer (string-ref t i)) 35))
+      (if (< (+ i 1) m)
+          (let ([nr (rd-radix-letter (string-ref t (+ i 1)))])
+            (if nr
+                (if r #f (rd-scan-prefixes t m (+ i 2) nr x))
+                (let ([nx (rd-exactness-letter (string-ref t (+ i 1)))])
+                  (if nx
+                      (if x #f (rd-scan-prefixes t m (+ i 2) r nx))
+                      #f))))
+          #f)
+      (cons r (cons x i))))
+(define (rd-radix-scan t m i r)          ; index past a run of >=0 radix-r digits
+  (if (and (< i m) (%digit-in-radix (string-ref t i) r))
+      (rd-radix-scan t m (+ i 1) r)
+      i))
+;;; Rational literal SYNTAX: [sign] digits / digits, spanning the WHOLE body.  Spanning
+;;; the whole body -- and requiring a digit before the slash -- is what leaves ordinary
+;;; symbols with slashes in them alone: `call/cc` has no radix-10 digit where it would
+;;; need one.  Whether the VALUE is representable is deliberately not asked (design D4).
+(define (rd-rational-body? t m i r)
+  (let ([i0 (if (and (< i m) (rd-sign-char? (string-ref t i))) (+ i 1) i)])
+    (let ([i1 (rd-radix-scan t m i0 r)])
+      (and (< i0 i1)
+           (< i1 m)
+           (= (char->integer (string-ref t i1)) 47)                    ; /
+           (let ([i2 (rd-radix-scan t m (+ i1 1) r)])
+             (and (< (+ i1 1) i2) (= i2 m)))))))
+;;; #i is total -- every value this reader produces has an inexact image.  #e is not: it
+;;; is exact only where the value is integral, so `#e0.5` names an exact number Emit does
+;;; not represent and is reported on the same grounds as `1/2` (design D4).
+(define (rd-exactness-apply v x)         ; x: #f none, 1 exact, 2 inexact
+  (cond
+    [(not x) v]
+    [(= x 2) (exact->inexact v)]
+    [(exact? v) v]
+    [(= v (%flo-truncate v)) (inexact->exact v)]
+    [else (quote rd-rational)]))
+(define (rd-body-number body r x)
+  (if (= r 10)
+      ;; radix 10 is the reader's own classifier chain.  The two cheap classifiers run
+      ;; first and rd-nonfinite's three string comparisons last, so an ordinary integer
+      ;; or decimal pays nothing for them; a non-finite token matches neither classifier
+      ;; (rd-flonum? needs a digit), so the order is safe as well as cheaper.
+      (cond
+        [(rd-numeric? body) (rd-exactness-apply (rd-parse-int body) x)]
+        [(rd-flonum? body) (rd-exactness-apply (%string->flonum body) x)]
+        [else
+         (let ([nf (rd-nonfinite body)])
+           (cond
+             [(not nf) (quote rd-not-a-number)]
+             ;; #e+inf.0 names no exact number; #i+inf.0 and a bare +inf.0 are fine.
+             [(and x (= x 1)) (quote rd-bad-number)]
+             [else (rd-exactness-apply nf x)]))])
+      ;; every other radix is integers only: a decimal point or an exponent is radix-10
+      ;; syntax, so `#x1.8` is invalid number syntax rather than an identifier.
+      (let ([v (%string->int body r)])
+        (if v (rd-exactness-apply v x) (quote rd-not-a-number)))))
+;;; The CLASSIFIERS run first and the rational-syntax scan only on their failure.  A token
+;;; any classifier accepts holds no slash, so asking about rational syntax first cannot
+;;; change the answer -- it only puts a redundant digit scan in front of every integer the
+;;; compiler reads of its own source.  (Measured: the ordering is worth ~10% of reader
+;;; time under the Chez-hosted host and is inside the noise on the self-hosted one, where
+;;; per-call overhead dominates a short scan -- PERFORMANCE.md P5.  It is kept for the
+;;; argument above rather than for the measurement.)
+(define (rd-number t r0)                 ; token text (prefixes included) -> value/reason
+  (let ([m (string-length t)])
+    (if (and (< 0 m) (= (char->integer (string-ref t 0)) 35))
+        ;; PREFIXED.  Only this path scans and allocates, and the token dispatch already
+        ;; separated it out, so the ordinary token below pays nothing for it.
+        (let ([p (rd-scan-prefixes t m 0 #f #f)])
+          (if (not p)
+              (quote rd-bad-number)
+              (let ([r (if (car p) (car p) r0)] [x (cadr p)] [b (cddr p)])
+                (let ([v (rd-body-number (substring t b m) r x)])
+                  (if (eq? v (quote rd-not-a-number))
+                      ;; a token that CARRIED a prefix and no classifier took is either
+                      ;; rational syntax or simply broken; either way it is reported,
+                      ;; never interned.
+                      (if (rd-rational-body? t m b r)
+                          (quote rd-rational)
+                          (quote rd-bad-number))
+                      v)))))
+        (let ([v (rd-body-number t r0 #f)])
+          (if (eq? v (quote rd-not-a-number))
+              (if (rd-rational-body? t m 0 r0) (quote rd-rational) v)
+              v)))))
+(define (rd-number-reason? v)
+  (or (eq? v (quote rd-rational)) (eq? v (quote rd-bad-number))))
+
+(define (rd-atom s n i)                  ; token -> number, interned symbol, or a report
   (let ([j (rd-token-end s n i)])
-    (let ([tok (substring s i j)])
-      (cons (cond [(rd-numeric? tok) (rd-parse-int tok)]
-                  [(rd-nonfinite tok)]              ; cond's test-only form: the value
-                  [(rd-flonum? tok) (%string->flonum tok)]
-                  [else (string->symbol tok)])
-            j))))
+    (if (= i j)
+        ;; An EMPTY token: the character here is a delimiter no datum arm claimed.  It
+        ;; used to intern the empty symbol and return i unchanged, which spun rd-list
+        ;; forever; reporting it is what makes `#;` before a closing paren terminate.
+        (rd-fail (quote rd-unexpected) i)
+        (let ([tok (substring s i j)])
+          (let ([v (rd-number tok 10)])
+            (cond
+              [(eq? v (quote rd-not-a-number)) (cons (string->symbol tok) j)]
+              [(rd-number-reason? v) (rd-fail v i)]
+              [else (cons v j)]))))))
+
+;;; The token a sentinel position points at, so a report can name what it read.
+(define (rd-token-at s n p)
+  (if (and (<= 0 p) (< p n)) (substring s p (rd-token-end s n (+ p 1))) ""))
 
 (define (rd-hex-digit c)                 ; hex char -> value (0 for non-hex)
   (let ([k (char->integer c)])
@@ -991,21 +1173,36 @@
         (cons (list->string (reverse acc)) i))))
 
 (define (rd-hash s n i)                  ; i just past #
-  (let ([k (char->integer (string-ref s i))])
-    (cond
-      [(= k 116) (cons #t (+ i 1))]                        ; #t
-      [(= k 102) (cons #f (+ i 1))]                        ; #f
-      [(= k 92) (rd-char s n i)]                           ; #\<char> or #\<name>
-      [(= k 40) (let ([r (rd-list s n (+ i 1) (quote ()))])  ; #( ... ) -> vector
-                  (cons (list->vector (car r)) (cdr r)))]
-      [(and (= k 117)                                        ; #u8( ... ) -> bytevector
-            (< (+ i 2) n)
-            (= (char->integer (string-ref s (+ i 1))) 56)    ; 8
-            (= (char->integer (string-ref s (+ i 2))) 40))   ; (
-       (let ([r (rd-list s n (+ i 3) (quote ()))])
-         (cons (list->bytevector (car r)) (cdr r)))]
-      [else (let ([j (rd-token-end s n i)])
-              (cons (string->symbol (substring s i j)) j))])))
+  (if (<= n i)
+      (rd-fail (quote rd-eof) (- i 1))                     ; a lone trailing #
+      (let ([k (char->integer (string-ref s i))])
+        (cond
+          [(= k 116) (cons #t (+ i 1))]                        ; #t
+          [(= k 102) (cons #f (+ i 1))]                        ; #f
+          [(= k 92) (rd-char s n i)]                           ; #\<char> or #\<name>
+          [(= k 40) (let ([r (rd-list s n (+ i 1) (quote ()))])  ; #( ... ) -> vector
+                      (if (rd-fail? (cdr r)) r (cons (list->vector (car r)) (cdr r))))]
+          ;; #; -- DISCARD the next datum and read the one after it (design D1).  It
+          ;; cannot be skipped as whitespace: throwing a datum away needs a full
+          ;; recursive read, which rd-skip-ws neither does nor is allowed to fail at.
+          ;; Stacking (#;#;a b c -> c) falls out of the recursion.
+          [(= k 59)
+           (let ([r (rd-datum s n (rd-skip-ws s n (+ i 1)))])
+             (if (rd-fail? (cdr r)) r (rd-datum s n (rd-skip-ws s n (cdr r)))))]
+          [(and (= k 117)                                        ; #u8( ... ) -> bytevector
+                (< (+ i 2) n)
+                (= (char->integer (string-ref s (+ i 1))) 56)    ; 8
+                (= (char->integer (string-ref s (+ i 2))) 40))   ; (
+           (let ([r (rd-list s n (+ i 3) (quote ()))])
+             (if (rd-fail? (cdr r)) r (cons (list->bytevector (car r)) (cdr r))))]
+          ;; Everything else that begins with # is a PREFIXED NUMBER or nothing at all.
+          ;; This arm used to fall through to string->symbol, which is what produced
+          ;; `unbound variable x1f` for #x1f and `unbound variable |` for a block
+          ;; comment (issues #25, #59); a # token that is not a recognized datum is now
+          ;; reported, naming itself.
+          [else (let ([j (rd-token-end s n i)])
+                  (let ([v (rd-number (substring s (- i 1) j) 10)])
+                    (if (rd-number-reason? v) (rd-fail v (- i 1)) (cons v j))))]))))
 
 (define (rd-char-name tok)               ; multi-char #\ name -> character
   (cond
@@ -1027,59 +1224,126 @@
         (cons (string-ref s cs) end)         ; single-character literal
         (cons (rd-char-name tok) end))))     ; named character
 
+;;; R7RS 7.1.1 bar-quoted identifier: | opens a name that runs to the matching |, with
+;;; the \| and \xHH; escapes the standard gives it.  The result is an ORDINARY interned
+;;; symbol -- R7RS says there is no distinct type, so (eq? '|foo| 'foo) is #t -- which
+;;; makes this a new LEXEME, not a new value.  ( `|` is deliberately NOT added to
+;;; rd-delim?: only a LEADING bar opens one, so a symbol like `a|b` still reads whole.)
+(define (rd-bar s n i p)                 ; i just past the opening |, which was at p
+  (let loop ([i i] [acc (quote ())])
+    (if (< i n)
+        (let ([c (string-ref s i)])
+          (let ([k (char->integer c)])
+            (cond
+              [(= k 124) (cons (string->symbol (list->string (reverse acc))) (+ i 1))]
+              [(and (= k 92) (< (+ i 1) n))                       ; backslash escape
+               (let ([e (string-ref s (+ i 1))])
+                 (if (= (char->integer e) 120)                    ; \xHH;
+                     (let ([hx (rd-hex s n (+ i 2) 0)])
+                       (loop (cdr hx) (cons (integer->char (car hx)) acc)))
+                     (loop (+ i 2) (cons (rd-str-esc e) acc))))]  ; \| \\ and the rest
+              [else (loop (+ i 1) (cons c acc))])))
+        (rd-fail (quote rd-bar) p))))
+
 (define (rd-quote s n i)                 ; 'x -> (quote x)
-  (let ([j (rd-skip-ws s n i)])
-    (let ([r (rd-datum s n j)])
-      (cons (list (quote quote) (car r)) (cdr r)))))
+  (let ([r (rd-datum s n (rd-skip-ws s n i))])
+    (if (rd-fail? (cdr r)) r (cons (list (quote quote) (car r)) (cdr r)))))
 
 (define (rd-quasi s n i)                 ; `x -> (quasiquote x)
-  (let ([j (rd-skip-ws s n i)])
-    (let ([r (rd-datum s n j)])
-      (cons (list (quote quasiquote) (car r)) (cdr r)))))
+  (let ([r (rd-datum s n (rd-skip-ws s n i))])
+    (if (rd-fail? (cdr r)) r (cons (list (quote quasiquote) (car r)) (cdr r)))))
 
 (define (rd-unquote s n i)               ; ,x -> (unquote x); ,@x -> (unquote-splicing x)
   (if (and (< i n) (= (char->integer (string-ref s i)) 64))     ; @  -> splicing
-      (let ([j (rd-skip-ws s n (+ i 1))])
-        (let ([r (rd-datum s n j)])
-          (cons (list (quote unquote-splicing) (car r)) (cdr r))))
-      (let ([j (rd-skip-ws s n i)])
-        (let ([r (rd-datum s n j)])
-          (cons (list (quote unquote) (car r)) (cdr r))))))
+      (let ([r (rd-datum s n (rd-skip-ws s n (+ i 1)))])
+        (if (rd-fail? (cdr r))
+            r
+            (cons (list (quote unquote-splicing) (car r)) (cdr r))))
+      (let ([r (rd-datum s n (rd-skip-ws s n i))])
+        (if (rd-fail? (cdr r)) r (cons (list (quote unquote) (car r)) (cdr r))))))
 
 (define (rd-dot? s n j)                  ; a standalone `.` token at j (dotted-pair marker)
   (and (= (char->integer (string-ref s j)) 46)      ; .
        (= (rd-token-end s n (+ j 1)) (+ j 1))))      ; next char is a delimiter -> lone .
 (define (rd-append-reverse acc tail)     ; (reverse acc) terminated by tail (improper list)
   (if (null? acc) tail (rd-append-reverse (cdr acc) (cons (car acc) tail))))
+(define (rd-datum-comment? s n i)        ; "#;" begins at i
+  (and (= (char->integer (string-ref s i)) 35)
+       (< (+ i 1) n)
+       (= (char->integer (string-ref s (+ i 1))) 59)))
 (define (rd-list s n i acc)              ; i after (; read until ) (supports . tail)
   (let ([j (rd-skip-ws s n i)])
-    (if (< j n)
-        (cond
-          [(let ([c (char->integer (string-ref s j))]) (or (= c 41) (= c 93)))
-           (cons (reverse acc) (+ j 1))]                                           ; ) or ]
-          [(rd-dot? s n j)                                                          ; . tail
-           (let* ([r (rd-datum s n (rd-skip-ws s n (+ j 1)))]
-                  [j2 (rd-skip-ws s n (cdr r))])
-             (cons (rd-append-reverse acc (car r)) (+ j2 1)))]                      ; past )
-          [else (let ([r (rd-datum s n j)])
-                  (rd-list s n (cdr r) (cons (car r) acc)))])
-        (cons (reverse acc) j))))
+    (cond
+      [(rd-fail? j) (cons (quote rd-block-comment) j)]
+      [(< j n)
+       (cond
+         [(let ([c (char->integer (string-ref s j))]) (or (= c 41) (= c 93)))
+          (cons (reverse acc) (+ j 1))]                                            ; ) or ]
+         ;; #; between elements -- including immediately before the closing paren,
+         ;; where there is no following element for rd-datum's arm to return.
+         [(rd-datum-comment? s n j)
+          (let ([r (rd-datum s n (rd-skip-ws s n (+ j 2)))])
+            (if (rd-fail? (cdr r)) r (rd-list s n (cdr r) acc)))]
+         [(rd-dot? s n j)                                                          ; . tail
+          (let ([r (rd-datum s n (rd-skip-ws s n (+ j 1)))])
+            (if (rd-fail? (cdr r))
+                r
+                (let ([j2 (rd-skip-ws s n (cdr r))])
+                  (if (rd-fail? j2)
+                      (cons (quote rd-block-comment) j2)
+                      (cons (rd-append-reverse acc (car r)) (+ j2 1))))))]          ; past )
+         [else (let ([r (rd-datum s n j)])
+                 (if (rd-fail? (cdr r)) r (rd-list s n (cdr r) (cons (car r) acc))))])]
+      [else (cons (reverse acc) j)])))
 
 (define (rd-datum s n i)                 ; i at a non-ws char -> (datum . next)
-  (let ([k (char->integer (string-ref s i))])
+  (if (and (<= 0 i) (< i n))
+      (let ([k (char->integer (string-ref s i))])
+        (cond
+          [(= k 40) (rd-list s n (+ i 1) (quote ()))]          ; (
+          [(= k 91) (rd-list s n (+ i 1) (quote ()))]          ; [ (brackets = parens)
+          [(= k 39) (rd-quote s n (+ i 1))]                    ; '
+          [(= k 96) (rd-quasi s n (+ i 1))]                    ; `
+          [(= k 44) (rd-unquote s n (+ i 1))]                  ; ,
+          [(= k 34) (rd-string s n (+ i 1))]                   ; "
+          [(= k 35) (rd-hash s n (+ i 1))]                     ; #
+          [(= k 124) (rd-bar s n (+ i 1) i)]                   ; |bar quoted identifier|
+          [(or (= k 41) (= k 93)) (rd-fail (quote rd-unexpected) i)]   ; a close with no open
+          [else (rd-atom s n i)]))
+      ;; A sentinel travelling outward (an unterminated block comment upstream), or a
+      ;; datum the input ended before -- `#;` with nothing after it, say.  Neither is
+      ;; raised here (design D2); the entry point reports.
+      (if (< i 0) (cons (quote rd-block-comment) i) (rd-fail (quote rd-eof) i))))
+
+;;; --- where the reader's reports become errors (design D2) -------------------
+;;; The lexeme layer answers a sentinel because it cannot raise; here `error` is in
+;;; scope, so here is where the sentinel is turned into a diagnostic.  The position it
+;;; carries is what lets the message name both WHERE and, by re-reading the token at
+;;; that position, WHAT.  (`read` in (scheme read) needs this too and cannot import a
+;;; private name, so it keeps its own copy -- the arrangement %check-input-port already
+;;; has, for the same reason: this is the reader code that raises.)
+(define (rd-report s n r)
+  (let ([why (car r)] [p (rd-fail-pos (cdr r))])
     (cond
-      [(= k 40) (rd-list s n (+ i 1) (quote ()))]          ; (
-      [(= k 91) (rd-list s n (+ i 1) (quote ()))]          ; [ (brackets = parens)
-      [(= k 39) (rd-quote s n (+ i 1))]                    ; '
-      [(= k 96) (rd-quasi s n (+ i 1))]                    ; `
-      [(= k 44) (rd-unquote s n (+ i 1))]                  ; ,
-      [(= k 34) (rd-string s n (+ i 1))]                   ; "
-      [(= k 35) (rd-hash s n (+ i 1))]                     ; #
-      [else (rd-atom s n i)])))
+      [(eq? why (quote rd-block-comment))
+       (error (quote read) "unterminated block comment #| opened at index" p)]
+      [(eq? why (quote rd-bar))
+       (error (quote read) "unterminated |identifier| opened at index" p)]
+      [(eq? why (quote rd-eof))
+       (error (quote read) "end of input where a datum was expected, at index" p)]
+      [(eq? why (quote rd-unexpected))
+       (error (quote read) "no datum here, at index" p)]
+      [(eq? why (quote rd-rational))
+       (error (quote read)
+              (string-append "rational literal syntax is not supported -- Emit has no "
+                             "exact rationals; write 0.5, or (/ 1 2)")
+              (rd-token-at s n p))]
+      [else (error (quote read) "unrecognized syntax" (rd-token-at s n p))])))
 
 (define (read-from-string s)
   (let ([n (string-length s)])
-    (car (rd-datum s n (rd-skip-ws s n 0)))))
+    (let ([r (rd-datum s n (rd-skip-ws s n 0))])
+      (if (rd-fail? (cdr r)) (rd-report s n r) (car r)))))
 
 ;;; --- whole-program read (stdin-source-reader) -----------------------------
 ;;; Loop the single-datum reader across the whole source: skip inter-form
@@ -1090,10 +1354,16 @@
 (define (read-all-from-string s)
   (let ([n (string-length s)])
     (let loop ([i (rd-skip-ws s n 0)] [acc (quote ())])
-      (if (< i n)
-          (let ([r (rd-datum s n i)])
-            (loop (rd-skip-ws s n (cdr r)) (cons (car r) acc)))
-          (reverse acc)))))
+      (cond
+        ;; NOT end of input: an unterminated block comment here used to make every form
+        ;; after the opening delimiter vanish with no diagnostic (issue #59).
+        [(rd-fail? i) (rd-report s n (cons (quote rd-block-comment) i))]
+        [(< i n)
+         (let ([r (rd-datum s n i)])
+           (if (rd-fail? (cdr r))
+               (rd-report s n r)
+               (loop (rd-skip-ws s n (cdr r)) (cons (car r) acc))))]
+        [else (reverse acc)]))))
 
 ;;; --- ports (change: scheme-io-library, design D1/D2) -----------------------
 ;;; A port is a RECORD over the existing record layer, so `port?` is
@@ -1240,11 +1510,13 @@
   (let* ((s (%port-buf p))
          (n (string-length s))
          (i (rd-skip-ws s n (%record-ref p 3))))
-    (if (>= i n)
-        (begin (%record-set! p 3 n) (eof-object))
-        (let ((r (rd-datum s n i)))
-          (%record-set! p 3 (cdr r))
-          (car r)))))
+    (cond
+      ((rd-fail? i) (rd-report s n (cons 'rd-block-comment i)))
+      ((>= i n) (%record-set! p 3 n) (eof-object))
+      (else (let ((r (rd-datum s n i)))
+              (if (rd-fail? (cdr r))
+                  (rd-report s n r)
+                  (begin (%record-set! p 3 (cdr r)) (car r))))))))
 
 ;;; --- output ports ---------------------------------------------------------
 ;;; An output port streams through to its runtime handle on every operation (D2);

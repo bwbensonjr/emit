@@ -173,6 +173,50 @@ check unspec-suppression-is-narrow "" "$(printf '#f\n()\n#<unspecified>')" <<'EO
 (write (if #f #f))
 EOF
 
+# --- the input-completeness probe and the two comment forms -------------------
+# (change: reader-lexical-conformance, design D5.)  The probe shares `rd-skip-ws` with
+# the reader, so a comment in LEADING position comes free; what needs fc-hash/fc-list to
+# mirror the forms themselves is a comment INSIDE a form and a `#;` whose datum is on the
+# next line.  Get those wrong and the probe reports "malformed" where the reader would say
+# "incomplete" -- the two disagreeing about the same text, which is the failure the shared
+# helper exists to prevent.  Each of these is typed across lines, so it only produces a
+# value if every intermediate prefix was answered "keep typing".
+check block-comment-across-lines --no-prelude "3" <<'EOF'
+#| a block comment
+   spanning several
+   lines, with a #| nested |# one inside |#
+(+ 1 2)
+EOF
+
+check block-comment-inside-a-form --no-prelude "3" <<'EOF'
+(+ 1 #| inline
+      and continued on the next line |# 2)
+EOF
+
+check datum-comment-across-lines --no-prelude "4" <<'EOF'
+(+ 1
+   #;
+   99
+   3)
+EOF
+
+check datum-comment-before-close --no-prelude "1" <<'EOF'
+(+ 1 #;99)
+EOF
+
+# ... and a session RECOVERS: the forms after a comment are evaluated normally, which is
+# what says the comment was consumed rather than swallowing the rest of the input.
+check comments-then-more-forms --no-prelude "$(printf '3\n7')" <<'EOF'
+#| one |#
+(+ 1 2)
+#| two |# (+ 3 4)
+EOF
+
+# a bar-quoted identifier is a datum extent like a string, at the prompt too
+check bar-quoted-identifier "" '"a b"' <<'EOF'
+(symbol->string (quote |a b|))
+EOF
+
 # spec: end-of-input ends the session cleanly (exit code 0)
 printf '(+ 1 2)\n' | chez --libdirs src --script src/compile.ss --repl --no-prelude >/dev/null 2>&1
 if [ "$?" -eq 0 ]; then
