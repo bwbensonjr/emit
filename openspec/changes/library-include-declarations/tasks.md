@@ -152,7 +152,11 @@
       → Unchanged: `module-scaffold byte-identity` passes untouched, and the whole Chez-free
       suite is green (24 suites, 0 failed, 406s). Nothing was re-recorded.
 
-- [ ] 8.4 Commit, then run `test/trust-check.sh` (it `[SKIP]`s on a dirty `bootstrap/` by design).
+- [x] 8.4 Commit, then run `test/trust-check.sh` (it `[SKIP]`s on a dirty `bootstrap/` by design).
+      → Committed on `feat/library-include-declarations` (not `main`); trust-check then ran for
+      real: `committed IR is exactly what the current source regenerates`. Pushing and the PR
+      are left to the user.
+
 - [x] 8.5 `openspec validate --all`, including the **main** specs, and grep them for stray delta
       headers after syncing.
       → `openspec validate --all`: 21 passed, 0 failed; no stray delta headers in the main specs.
