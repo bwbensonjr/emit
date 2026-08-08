@@ -53,11 +53,21 @@
 ;; distinction deliberately), so a missing file is reported as one, naming the declaration
 ;; that asked for it, the filename as written, and the path it resolved to.  An EMPTY file
 ;; is legal and contributes no forms.
+;; WHO is `include-ci` exactly when the forms are to be read case-insensitively, so the
+;; door already has everything it needs to fold at READ time (change: reader-token-path,
+;; issue #61) -- the protocol did not have to change to carry a fold flag.  Folding here
+;; rather than over the returned forms is what leaves a bar-quoted `|MixedCase|` alone:
+;; after reading it is the same interned symbol as `MixedCase`, and no walk can tell them
+;; apart.  The Chez driver's own door (src/compile.ss) reads under `case-sensitive`, which
+;; draws the same distinction; the two agree on ASCII and diverge above it, a limit
+;; recorded in docs/MODULES.md rather than closed with Unicode case tables.
 (define (emit-include-reader who filename base)
   (let* ([path (ir-resolve (if base base (source-home)) filename)]
          [text (%read-file path)])
     (if text
-        (cons path (read-forms-from-string text))
+        (cons path (if (eq? who 'include-ci)
+                       (read-all-from-string-ci text)
+                       (read-forms-from-string text)))
         (error who
                (string-append "cannot read " (render-datum filename)
                               " (resolved to " path ")")))))

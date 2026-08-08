@@ -1119,7 +1119,34 @@
 (define (rd-number-reason? v)
   (or (eq? v (quote rd-rational)) (eq? v (quote rd-bad-number))))
 
-(define (rd-atom s n i)                  ; token -> number, interned symbol, or a report
+;;; --- case folding, during tokenization (change: reader-token-path, design D1) ---
+;;; `include-ci` folds symbol case.  It used to do that by walking the forms the reader
+;;; had already RETURNED (library-include-declarations design D6), which cannot be right:
+;;; by then `|MixedCase|` and `MixedCase` are the same interned symbol, so the fold hit
+;;; both and R7RS 7.1.1 -- the characters between the bars are the name, literally -- was
+;;; violated on every bar-quoted identifier (GitHub issue #61).
+;;;
+;;; So the fold moved HERE, where the bars are still visible.  The mechanism is entirely
+;;; negative space: the CI flag is threaded down the descent to rd-atom and is not passed
+;;; to `rd-bar`, so a bar-quoted name has nothing to fold it.  It is applied on rd-atom's
+;;; SYMBOL arm only, after the token has been classified, so a fold can never reach the
+;;; text a number is parsed from.
+;;;
+;;; ASCII only: the substrate carries no Unicode case tables (there is no char-downcase
+;;; in this file).  The Chez driver's door folds with Chez's own `case-sensitive`, which
+;;; DOES fold Unicode, so the two hosts agree on ASCII and diverge above it -- a recorded
+;;; limit (design D4), pinned by an ASCII fixture rather than by construction.
+(define (rd-fold-char c)                 ; ASCII A-Z -> a-z, everything else unchanged
+  (let ([k (char->integer c)])
+    (if (and (< 64 k) (< k 91)) (integer->char (+ k 32)) c)))
+(define (rd-fold-token tok)
+  (let ([m (string-length tok)])
+    (let loop ([i 0] [acc (quote ())])
+      (if (= i m)
+          (list->string (reverse acc))
+          (loop (+ i 1) (cons (rd-fold-char (string-ref tok i)) acc))))))
+
+(define (rd-atom s n i ci)               ; token -> number, interned symbol, or a report
   (let ([j (rd-token-end s n i)])
     (if (= i j)
         ;; An EMPTY token: the character here is a delimiter no datum arm claimed.  It
@@ -1129,7 +1156,8 @@
         (let ([tok (substring s i j)])
           (let ([v (rd-number tok 10)])
             (cond
-              [(eq? v (quote rd-not-a-number)) (cons (string->symbol tok) j)]
+              [(eq? v (quote rd-not-a-number))
+               (cons (string->symbol (if ci (rd-fold-token tok) tok)) j)]
               [(rd-number-reason? v) (rd-fail v i)]
               [else (cons v j)]))))))
 
@@ -1172,7 +1200,7 @@
             [else (loop (+ i 1) (cons c acc))]))
         (cons (list->string (reverse acc)) i))))
 
-(define (rd-hash s n i)                  ; i just past #
+(define (rd-hash s n i ci)               ; i just past #
   (if (<= n i)
       (rd-fail (quote rd-eof) (- i 1))                     ; a lone trailing #
       (let ([k (char->integer (string-ref s i))])
@@ -1180,20 +1208,22 @@
           [(= k 116) (cons #t (+ i 1))]                        ; #t
           [(= k 102) (cons #f (+ i 1))]                        ; #f
           [(= k 92) (rd-char s n i)]                           ; #\<char> or #\<name>
-          [(= k 40) (let ([r (rd-list s n (+ i 1) (quote ()))])  ; #( ... ) -> vector
+          ;; ci travels INTO a vector literal: a symbol inside #( ... ) is a symbol the
+          ;; read produces, and the old shape-walking fold missed it (design D3).
+          [(= k 40) (let ([r (rd-list s n (+ i 1) (quote ()) ci)])  ; #( ... ) -> vector
                       (if (rd-fail? (cdr r)) r (cons (list->vector (car r)) (cdr r))))]
           ;; #; -- DISCARD the next datum and read the one after it (design D1).  It
           ;; cannot be skipped as whitespace: throwing a datum away needs a full
           ;; recursive read, which rd-skip-ws neither does nor is allowed to fail at.
           ;; Stacking (#;#;a b c -> c) falls out of the recursion.
           [(= k 59)
-           (let ([r (rd-datum s n (rd-skip-ws s n (+ i 1)))])
-             (if (rd-fail? (cdr r)) r (rd-datum s n (rd-skip-ws s n (cdr r)))))]
+           (let ([r (rd-datum s n (rd-skip-ws s n (+ i 1)) ci)])
+             (if (rd-fail? (cdr r)) r (rd-datum s n (rd-skip-ws s n (cdr r)) ci)))]
           [(and (= k 117)                                        ; #u8( ... ) -> bytevector
                 (< (+ i 2) n)
                 (= (char->integer (string-ref s (+ i 1))) 56)    ; 8
                 (= (char->integer (string-ref s (+ i 2))) 40))   ; (
-           (let ([r (rd-list s n (+ i 3) (quote ()))])
+           (let ([r (rd-list s n (+ i 3) (quote ()) ci)])
              (if (rd-fail? (cdr r)) r (cons (list->bytevector (car r)) (cdr r))))]
           ;; Everything else that begins with # is a PREFIXED NUMBER or nothing at all.
           ;; This arm used to fall through to string->symbol, which is what produced
@@ -1245,21 +1275,21 @@
               [else (loop (+ i 1) (cons c acc))])))
         (rd-fail (quote rd-bar) p))))
 
-(define (rd-quote s n i)                 ; 'x -> (quote x)
-  (let ([r (rd-datum s n (rd-skip-ws s n i))])
+(define (rd-quote s n i ci)              ; 'x -> (quote x)
+  (let ([r (rd-datum s n (rd-skip-ws s n i) ci)])
     (if (rd-fail? (cdr r)) r (cons (list (quote quote) (car r)) (cdr r)))))
 
-(define (rd-quasi s n i)                 ; `x -> (quasiquote x)
-  (let ([r (rd-datum s n (rd-skip-ws s n i))])
+(define (rd-quasi s n i ci)              ; `x -> (quasiquote x)
+  (let ([r (rd-datum s n (rd-skip-ws s n i) ci)])
     (if (rd-fail? (cdr r)) r (cons (list (quote quasiquote) (car r)) (cdr r)))))
 
-(define (rd-unquote s n i)               ; ,x -> (unquote x); ,@x -> (unquote-splicing x)
+(define (rd-unquote s n i ci)            ; ,x -> (unquote x); ,@x -> (unquote-splicing x)
   (if (and (< i n) (= (char->integer (string-ref s i)) 64))     ; @  -> splicing
-      (let ([r (rd-datum s n (rd-skip-ws s n (+ i 1)))])
+      (let ([r (rd-datum s n (rd-skip-ws s n (+ i 1)) ci)])
         (if (rd-fail? (cdr r))
             r
             (cons (list (quote unquote-splicing) (car r)) (cdr r))))
-      (let ([r (rd-datum s n (rd-skip-ws s n i))])
+      (let ([r (rd-datum s n (rd-skip-ws s n i) ci)])
         (if (rd-fail? (cdr r)) r (cons (list (quote unquote) (car r)) (cdr r))))))
 
 (define (rd-dot? s n j)                  ; a standalone `.` token at j (dotted-pair marker)
@@ -1271,7 +1301,7 @@
   (and (= (char->integer (string-ref s i)) 35)
        (< (+ i 1) n)
        (= (char->integer (string-ref s (+ i 1))) 59)))
-(define (rd-list s n i acc)              ; i after (; read until ) (supports . tail)
+(define (rd-list s n i acc ci)           ; i after (; read until ) (supports . tail)
   (let ([j (rd-skip-ws s n i)])
     (cond
       [(rd-fail? j) (cons (quote rd-block-comment) j)]
@@ -1282,34 +1312,36 @@
          ;; #; between elements -- including immediately before the closing paren,
          ;; where there is no following element for rd-datum's arm to return.
          [(rd-datum-comment? s n j)
-          (let ([r (rd-datum s n (rd-skip-ws s n (+ j 2)))])
-            (if (rd-fail? (cdr r)) r (rd-list s n (cdr r) acc)))]
+          (let ([r (rd-datum s n (rd-skip-ws s n (+ j 2)) ci)])
+            (if (rd-fail? (cdr r)) r (rd-list s n (cdr r) acc ci)))]
          [(rd-dot? s n j)                                                          ; . tail
-          (let ([r (rd-datum s n (rd-skip-ws s n (+ j 1)))])
+          (let ([r (rd-datum s n (rd-skip-ws s n (+ j 1)) ci)])
             (if (rd-fail? (cdr r))
                 r
                 (let ([j2 (rd-skip-ws s n (cdr r))])
                   (if (rd-fail? j2)
                       (cons (quote rd-block-comment) j2)
                       (cons (rd-append-reverse acc (car r)) (+ j2 1))))))]          ; past )
-         [else (let ([r (rd-datum s n j)])
-                 (if (rd-fail? (cdr r)) r (rd-list s n (cdr r) (cons (car r) acc))))])]
+         [else (let ([r (rd-datum s n j ci)])
+                 (if (rd-fail? (cdr r)) r (rd-list s n (cdr r) (cons (car r) acc) ci)))])]
       [else (cons (reverse acc) j)])))
 
-(define (rd-datum s n i)                 ; i at a non-ws char -> (datum . next)
+(define (rd-datum s n i ci)              ; i at a non-ws char -> (datum . next)
   (if (and (<= 0 i) (< i n))
       (let ([k (char->integer (string-ref s i))])
         (cond
-          [(= k 40) (rd-list s n (+ i 1) (quote ()))]          ; (
-          [(= k 91) (rd-list s n (+ i 1) (quote ()))]          ; [ (brackets = parens)
-          [(= k 39) (rd-quote s n (+ i 1))]                    ; '
-          [(= k 96) (rd-quasi s n (+ i 1))]                    ; `
-          [(= k 44) (rd-unquote s n (+ i 1))]                  ; ,
+          [(= k 40) (rd-list s n (+ i 1) (quote ()) ci)]       ; (
+          [(= k 91) (rd-list s n (+ i 1) (quote ()) ci)]       ; [ (brackets = parens)
+          [(= k 39) (rd-quote s n (+ i 1) ci)]                 ; '
+          [(= k 96) (rd-quasi s n (+ i 1) ci)]                 ; `
+          [(= k 44) (rd-unquote s n (+ i 1) ci)]               ; ,
           [(= k 34) (rd-string s n (+ i 1))]                   ; "
-          [(= k 35) (rd-hash s n (+ i 1))]                     ; #
+          [(= k 35) (rd-hash s n (+ i 1) ci)]                  ; #
+          ;; NOT given ci: R7RS 7.1.1 makes the characters between the bars the symbol's
+          ;; name literally, so a bar-quoted identifier is never folded (issue #61).
           [(= k 124) (rd-bar s n (+ i 1) i)]                   ; |bar quoted identifier|
           [(or (= k 41) (= k 93)) (rd-fail (quote rd-unexpected) i)]   ; a close with no open
-          [else (rd-atom s n i)]))
+          [else (rd-atom s n i ci)]))
       ;; A sentinel travelling outward (an unterminated block comment upstream), or a
       ;; datum the input ended before -- `#;` with nothing after it, say.  Neither is
       ;; raised here (design D2); the entry point reports.
@@ -1342,7 +1374,7 @@
 
 (define (read-from-string s)
   (let ([n (string-length s)])
-    (let ([r (rd-datum s n (rd-skip-ws s n 0))])
+    (let ([r (rd-datum s n (rd-skip-ws s n 0) #f)])
       (if (rd-fail? (cdr r)) (rd-report s n r) (car r)))))
 
 ;;; --- whole-program read (stdin-source-reader) -----------------------------
@@ -1351,7 +1383,16 @@
 ;;; stop at end of input.  Returns the top-level forms in source order (the empty
 ;;; list for empty or whitespace/comment-only input).  This is what a self-hosted
 ;;; core uses to turn its input text into the form list it compiles.
-(define (read-all-from-string s)
+;;; TWO entry points over ONE worker, rather than one entry point with an optional
+;;; argument (change: reader-token-path, design D1/D2).  An optional argument would cost
+;;; every call site its cross-unit direct call (PERFORMANCE.md P9), and the ordinary read
+;;; is the compiler's own hot path -- making every read pay for the rare folding one is
+;;; backwards.  `-ci` is R7RS's spelling for case-insensitivity (string-ci=?, char-ci=?,
+;;; and `include-ci`, which is what this exists for).
+(define (read-all-from-string s) (rd-all s #f))
+(define (read-all-from-string-ci s) (rd-all s #t))
+
+(define (rd-all s ci)
   (let ([n (string-length s)])
     (let loop ([i (rd-skip-ws s n 0)] [acc (quote ())])
       (cond
@@ -1359,7 +1400,7 @@
         ;; after the opening delimiter vanish with no diagnostic (issue #59).
         [(rd-fail? i) (rd-report s n (cons (quote rd-block-comment) i))]
         [(< i n)
-         (let ([r (rd-datum s n i)])
+         (let ([r (rd-datum s n i ci)])
            (if (rd-fail? (cdr r))
                (rd-report s n r)
                (loop (rd-skip-ws s n (cdr r)) (cons (car r) acc))))]
@@ -1513,7 +1554,9 @@
     (cond
       ((rd-fail? i) (rd-report s n (cons 'rd-block-comment i)))
       ((>= i n) (%record-set! p 3 n) (eof-object))
-      (else (let ((r (rd-datum s n i)))
+      ;; No folding over a port: `include-ci` is the only folding consumer and it reads
+      ;; whole source text, not a port (design D3).
+      (else (let ((r (rd-datum s n i #f)))
               (if (rd-fail? (cdr r))
                   (rd-report s n r)
                   (begin (%record-set! p 3 (cdr r)) (car r))))))))

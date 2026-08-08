@@ -451,6 +451,29 @@
 #     passes 80/80), and the cross-host suites that compare Emit's emitted IR against the
 #     Chez-hosted compiler's -- self-emit-equiv, dump-parity, prelude-base-run -- still
 #     pass, which is what says the two readers still agree.  No new entries.
+#   reader-token-path (issue #61) -- again the whole manifest, and again because the reader
+#     is baked; but the PROGRAM-module delta this time is NOT zero, and the exact shape is
+#     the point.  Verified against an 80-demo before/after capture (a detached-HEAD worktree
+#     at 9a84ca2 vs the regenerated tree), split at `; ==EMIT-UNIT-BOUNDARY==`:
+#       PROGRAM module: exactly ONE added line per demo, the same line in all 80 --
+#         `@"scheme.base:read-all-from-string-ci" = external global i64`.  80 additions,
+#         ZERO deletions, and no other line moved in any of the 80.  (scheme base) gained
+#         one export, so every program declares it in the header whether or not it calls
+#         it -- the same mechanism as the `@rt_dump_level` and `@rt_make_flonum` entries
+#         above, one declare line rather than two.
+#       UNIT COUNT: unchanged for all 80 -- no library added, removed, or re-linked.
+#       (emit internal): 289754 -> 297072 B (+7318).  The fold helpers rd-fold-char /
+#         rd-fold-token, plus the CI argument threaded through rd-datum / rd-list /
+#         rd-hash / rd-atom and the quote sugar arms -- an extra parameter changes every
+#         one of those procedures' arity check and call sites.
+#       (scheme base): 330361 -> 332807 B (+2446).  read-all-from-string-ci, and
+#         read-all-from-string re-expressed as a wrapper over the shared `rd-all` worker.
+#         The entry points live here rather than in the substrate because they REPORT, and
+#         scheme-base-partition D10 keeps rd-report out of (emit internal).
+#     All 80 demos' stdout is byte-identical before and after, and the cross-host suites
+#     still pass -- including library-include-tests.sh, whose driver section now compares
+#     an include-ci fixture's geom.ll across the two doors byte for byte, which is what
+#     replaces the single shared fold this change deleted.  No new entries.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

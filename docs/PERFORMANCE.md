@@ -26,7 +26,8 @@ speed items in this list.
 | [P9](#p9--an-optional-argument-costs-every-call-site-its-cross-unit-direct-call) | An optional argument costs every call site its cross-unit direct call | speed | med | med | — | ☐ |
 | [P10](#p10--a-library-another-unit-imports-is-never-tree-shaken-the-substrate-ships-whole) | A library another unit imports is never tree-shaken (the substrate ships whole) | size | high | med | — | ☐ |
 | [P11](#p11--every-emit-build-recompiles-the-c-runtime-from-source) | Every `emit build` recompiles the C runtime from source | build speed | low–med | low | — | ☐ |
-| [P12](#p12--the-reader-is-a-procedure-call-per-token-per-classifier) | The reader is a procedure call per token, per classifier | speed | low–med | med | — | ☐ |
+| [P12](#p12--the-reader-classifier-chain-costs-20-on-the-door-that-does-not-optimize) | The reader classifier chain costs 20%, on the door that does not optimize | speed | low | med | — | ☐ |
+| [P13](#p13--the-jitrepl-door-runs-no-ir-optimization-pipeline) | The JIT/REPL door runs no IR optimization pipeline | speed | med–high | med | — | ☐ |
 
 Legend — **Value**: benefit if fixed. **Cost**: rough implementation effort/risk. These are
 estimates to aid sequencing, not commitments.
@@ -1127,63 +1128,152 @@ constant. **Cost:** low to implement, med in contract risk (see above).
 
 ---
 
-## P12 — The reader is a procedure call per token, per classifier
+## P12 — The reader classifier chain costs 20%, on the door that does not optimize
 
-**Status:** ☐ not started (measured, deliberately not fixed by the change that surfaced it)
+**Status:** ☐ not started (**re-measured and re-scoped** by `reader-token-path`; the fix it once
+proposed is no longer the right one — see "What the re-measurement changed")
 
-**Symptom.** Reading is ~20% slower than it was before `reader-lexical-conformance`, on a
-token-dense source. Measured with `read-all-from-string` over a generated 1.6 MB / ~200k-token
-file (50k symbols, 50k integers, 50k decimals, 50k strings), five interleaved runs of each
-binary, the pre-change tree in a detached-HEAD worktree against the post-change one:
+**Symptom.** On `emit run`, reading a token-dense source is **~17% slower** than before
+`reader-lexical-conformance` (+20% of wall clock, but part of that is a bigger substrate to JIT —
+see the table). On the delivered `emit build` binary, it is **not slower at all**.
+Measured with `read-all-from-string` over `tools/gen-reader-bench.ss`'s output (200k tokens in 25k
+forms, 1,939,560 B: 50k symbols, 50k integers, 50k decimals, 50k strings), five interleaved runs per
+binary on an otherwise idle machine, the pre-change tree in a detached-HEAD worktree (b102070)
+against the post-change one (9a84ca2):
 
-| | before | after |
-|---|---|---|
-| `emit run` reading 1.6 MB / ~200k tokens | 3.65 s | 4.37 s |
+| door | before | after | delta |
+|---|---|---|---|
+| `emit run`, total wall clock | 3.72 s | 4.47 s | +20.2% |
+| — of which fixed compile + JIT | 0.61 s | 0.83 s | +0.22 s |
+| — **the read itself** | 3.11 s | 3.64 s | **+17%** |
+| `emit build` binary (AOT, `-O2 -flto`) | 2.84 s | 2.84 s | **none** |
+| Chez-hosted (min of 20) | 33.0 ms | 36.5 ms | +10.6% |
 
-The same benchmark under the Chez-hosted host, which shares the source, moves 28 ms → 30 ms —
-the *relative* grammar cost is the same on both, but the absolute figures differ by two orders
-of magnitude, which is the more interesting number and is what points at the cause.
+The fixed row matters and is easy to miss: `emit run` JIT-compiles the baked set before it runs
+anything, and `reader-lexical-conformance` grew `(emit internal)` from 170,716 to 289,754 B, so
+**0.22 s of the 0.75 s total delta is not reading at all** — it is compiling a larger substrate.
+Measured as the wall clock of `emit run` over a one-line program on each binary. Subtracting it is
+what turns a headline +20% into the +17% that is actually attributable to the token path.
 
 **Cause.** `rd-atom` used to be one `cond` over three classifiers. It is now a call into
 `rd-number`, which calls `rd-body-number`, which calls the same three classifiers plus
-`rd-exactness-apply`, and on failure `rd-rational-body?`. The grammar genuinely grew — R7RS
-6.2.5 prefixes and 6.2.3 rational syntax have to be *asked about* somewhere — but what the
-measurement actually shows is the per-call overhead that P5 names, multiplied by the number of
-tokens: each of those procedures is a real call with a real frame, and the classifiers
-themselves are character loops written in Scheme.
+`rd-exactness-apply`, and on failure `rd-rational-body?`. The grammar genuinely grew — R7RS 6.2.5
+prefixes and 6.2.3 rational syntax have to be *asked about* somewhere — but what the measurement
+shows is the per-call overhead that P5 names, multiplied by the number of tokens: each of those
+procedures is a real call with a real frame, and the classifiers themselves are character loops
+written in Scheme.
 
-The obvious micro-fix is not it. Ordering the rational scan after the classifiers rather than
-before is provably redundant work removed (a token a classifier accepts holds no slash) and is
-worth ~10% under Chez — and is inside the noise on the self-hosted door, because the scan it
-removes is shorter than the call it goes through. The ordering was kept for the argument, not
-the measurement. That is the evidence that the cost is structural.
+**What the re-measurement changed** (`reader-token-path`, which set out to fix this and did not).
+The original entry recorded the `emit run` number alone and read it as a property of the reader. It
+is a property of the reader *and the door*. `emit run` builds a plain `LLJITBuilder().create()` with
+no IR optimization pipeline (`src/emit.cpp:839`); the AOT link passes `-O2 -flto`
+(`src/emit.cpp:1337`, `ship-opt`/`ship-lto` at `src/compile.ss:299`). Where an optimizer runs, the
+extra calls cost nothing measurable. (That `-O2 -flto` removes it is measured; *which* inlining
+decision removes it is inference, and is not claimed as more.)
 
-**Possible fixes**, in increasing order of ambition:
+Three consequences, and they are why this is still ☐ rather than in progress:
 
-- Fold the classifier chain into one pass over the token, deciding integer / decimal /
-  non-finite / rational / symbol in a single traversal instead of up to four. Fewer calls and
-  fewer character loops, at the cost of one denser procedure.
+1. **The old justification inverted.** This entry used to argue urgency from "the reader is on the
+   compiler's own hot path — it reads its own source". But the compiler *is* an AOT `-O2 -flto`
+   binary, so its own reads are on the **unaffected** path. The cost lands on `emit run` and the
+   REPL: a dev-loop cost, not a ship cost, and not a self-hosting cost.
+2. **The fix below would hand-fold what `-O2` already folds** — and would cost
+   `reader-lexical-conformance` design D3 its by-construction guarantee that `rd-atom` and
+   `string->number` accept the same tokens (they hold it today by being the same call), replacing it
+   with a corpus test. Real complexity, for a benefit confined to the door that does not optimize.
+3. **P13 is the entry these numbers actually justify.** No IR optimization on the dev door is a cost
+   every JITted program pays on every call, not just the reader's. Fixing P13 would recover most of
+   this item for free; fixing this item recovers only the reader.
+
+**Possible fixes**, in increasing order of ambition — still the right sketches *if* P13 is never
+taken, since they are what a door with no optimizer needs:
+
 - Classify from the token's FIRST character before calling anything: a token starting with a
-  character that is not a digit, sign, or dot cannot be any kind of number, which is most
-  tokens in real source. One comparison in place of the whole chain.
-- Have `rd-token-end` return what it already learned. It walks every character of the token
-  looking for a delimiter; it could report "saw only digits" / "saw a dot" / "saw a slash" for
-  free, and the classifiers would become tests on that answer rather than re-traversals.
+  character that is not a digit, sign, or dot cannot be any kind of number, which is most tokens in
+  real source. One comparison in place of the whole chain.
+- Fold the classifier chain into one pass over the token, deciding integer / decimal / non-finite /
+  rational / symbol in a single traversal instead of up to four.
+- Have `rd-token-end` return what it already learned. It walks every character of the token looking
+  for a delimiter; it could report "saw only digits" / "saw a dot" / "saw a slash" for free, and the
+  classifiers would become tests on that answer rather than re-traversals.
 
-**Why it is not scheduled.** The reader is on the compiler's own hot path — it reads its own
-source — so this is real, but it is a constant factor on a phase that is a small share of a
-real compile: `emit run` over an ordinary source spends far more time in the passes and the
-emitter than in `rd-datum`, and the 20% above is measured on a file that is *nothing but*
-tokens, deliberately, to isolate the reader. It is recorded here so the next person to look at
-reader speed starts from a measurement rather than from a guess, and so the third fix above —
-which is the one that removes work rather than moving it — is not re-derived.
+Note also what is *not* the cause, measured: ordering the rational scan after the classifiers rather
+than before is provably redundant work removed, and is worth ~10% under Chez while sitting inside
+the noise on the self-hosted door. That null result is the original evidence that the cost is
+structural rather than in any one scan.
 
-**Value:** low–med — a constant factor on every compile, with no effect on emitted code or
-binary size. **Cost:** med — the fixes touch the classifiers `string->number` shares with the
-reader, so the shared-grammar property (`reader-lexical-conformance` design D3) has to survive
-whatever is done, and every one of them forces a `make regen`.
+**Reproducing it.** `tools/gen-reader-bench.ss` writes the input (fixed-seed, byte-identical across
+runs and machines); build a program that calls `read-all-from-string` over stdin and time it both
+ways. The generator exists because this entry's first numbers cited a "1.6 MB" file that no longer
+existed — a described benchmark is not a reproducible one, and re-deriving it from the description
+produced the same token count in a different number of bytes, which is why the figures above are not
+comparable to the ones this entry carried before.
 
-**OpenSpec change:** none. Measured and recorded by `reader-lexical-conformance` (task 9.4).
+**Value:** low — a constant factor on the dev door only, with no effect on the delivered binary, on
+emitted code, or on binary size. (Was "low–med", on the belief that it touched every compile.)
+**Cost:** med — the fixes touch the classifiers `string->number` shares with the reader, so the
+shared-grammar property (`reader-lexical-conformance` design D3) has to survive whatever is done,
+and every one of them forces a `make regen`.
+
+**OpenSpec change:** none. Measured and recorded by `reader-lexical-conformance` (task 9.4);
+re-measured, re-scoped, and given a generator by `reader-token-path`, which dropped it from its own
+scope on the strength of the numbers above.
+
+---
+
+## P13 — The JIT/REPL door runs no IR optimization pipeline
+
+**Status:** ☐ not started (found by `reader-token-path`'s baseline measurement)
+
+**Symptom.** `emit run` and `emit repl` compile a program to LLVM IR and hand it straight to ORC
+with no optimization passes, so every JITted program pays full per-call, per-allocation overhead.
+The same program built with `emit build` is materially faster. On the reader benchmark above, the
+identical source runs in **2.84 s** as a delivered binary and **3.64 s** under `emit run` — the dev
+door is **~28% slower** on the same work, and that is *after* setting aside the 0.83 s it spends
+compiling and JITting the baked set first (4.47 s of wall clock in total).
+
+That gap is why P12 above looked like a 20% reader regression: the reader's added calls are free
+once something inlines them, and nothing does on this door.
+
+**Cause.** `src/emit.cpp:839` (the run door) and `:1114` (the REPL host) each build the JIT with a
+bare
+
+```cpp
+auto jitOr = LLJITBuilder().create();
+```
+
+and never construct a pass pipeline over the module. The AOT path, by contrast, hands clang `-O2`
+and `-flto` (`src/emit.cpp:1337`; mirrored as `ship-opt`/`ship-lto` in `src/compile.ss:299`). This
+is not an oversight so much as an unexamined default: `aot-release-profile` fixed the *ship* side
+when it found the delivered binary was linked at clang's `-O0` — "so it was both slower and larger
+than the JIT (dev beat ship)" — and explicitly noted that the JIT/REPL door "is not gated by this".
+Ship overtook dev, and dev was never revisited.
+
+**Possible fix.** Run a standard optimization pipeline over the merged module before handing it to
+ORC — `LLJITBuilder` supports a transform layer, and the module is already fully linked at that
+point on both doors. The dial worth having is a `-O` level on the dev door, defaulting to something
+above zero: JIT compile time is itself part of the dev loop, so the goal is the knee of the
+curve, not `-O2` unconditionally.
+
+**Why it is not scheduled here.** `reader-token-path` found it while measuring something else and
+recorded it rather than taking it: the change in flight was a correctness fix for `include-ci`, and
+an optimizer on the dev door is a different change with a different risk surface — it can alter
+timing-dependent behaviour, it interacts with the REPL's incremental compilation of one form at a
+time, and it needs its own before/after across more than one benchmark.
+
+**Sequencing.** This partly **subsumes P12**: recovering the dev door's inlining would recover most
+of P12's 20% without touching the reader's shared numeric grammar at all, which is the property P12's
+own fixes put at risk. Do this first, then re-measure P12 and decide whether anything is left. It
+also interacts with P5 (arithmetic and call overhead) and P6 (known-call inlining) from the other
+side: those add optimizations to the *compiler*, while this one turns on the optimizations LLVM
+already has.
+
+**Value:** med–high — every `emit run` and every REPL evaluation, on every program, with no change to
+the delivered artifact. **Cost:** med — a pipeline over an already-merged module is mechanical, but
+picking the level needs measurement across both doors, and the REPL's per-form path needs checking
+separately from the run door's whole-program one.
+
+**OpenSpec change:** none.
 
 ---
 

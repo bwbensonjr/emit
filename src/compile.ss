@@ -194,7 +194,27 @@
       (error who (string-append "cannot read " (render-datum filename)
                                 " (resolved to " path ")")))
     (set! *includes-read* (cons path *includes-read*))
-    (cons path (read-program path))))
+    ;; `include-ci` folds symbol case, and folds it AT READ TIME (change:
+    ;; reader-token-path, issue #61) so that R7RS 7.1.1 survives it: the characters
+    ;; between vertical bars are the symbol's name literally, and a fold applied to the
+    ;; forms afterwards cannot honor that -- by then `|MixedCase|` and `MixedCase` are one
+    ;; interned symbol.  Chez's reader already draws the distinction under
+    ;; `case-sensitive`: it folds `MixedCase` to `mixedcase` and leaves `|MixedCase|`
+    ;; alone.  This is the parameter's whole purpose, so the driver does not implement
+    ;; folding at all -- it asks for it.
+    ;;
+    ;; This DOES restore two independent implementations of one rule, which
+    ;; library-include-declarations design D6 avoided on purpose.  The reason to accept
+    ;; that: D6's single implementation was guaranteeing the WRONG answer on both doors,
+    ;; and a post-read fold cannot be made right.  Path resolution and cycle detection in
+    ;; this same procedure already live under that regime, pinned by the cross-host
+    ;; equivalence suites rather than by construction.  One known divergence: Chez folds
+    ;; Unicode (`ÉCOLE` -> `école`) and Emit's substrate fold is ASCII, so the two agree on
+    ;; ASCII source and nowhere else.  `include-ci` exists for old case-folding Scheme,
+    ;; which is ASCII; the limit is recorded in docs/MODULES.md.
+    (cons path (if (eq? who 'include-ci)
+                   (parameterize ([case-sensitive #f]) (read-program path))
+                   (read-program path)))))
 
 (define *includes-read* '())            ; resolved paths served since the last reset
 (define (reset-includes-read!) (set! *includes-read* '()))
