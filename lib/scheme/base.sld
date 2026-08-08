@@ -117,6 +117,7 @@
     hash-table-values
     read-from-string
     read-all-from-string
+    read-all-from-string-ci
     port?
     input-port?
     output-port?
@@ -276,8 +277,10 @@
     (define (hash-table-keys ht) (map car (hash-table->alist ht)))
     (define (hash-table-values ht) (map cdr (hash-table->alist ht)))
     (define (rd-report s n r) (let ((why (car r)) (p (rd-fail-pos (cdr r)))) (cond ((eq? why (quote rd-block-comment)) (error (quote read) "unterminated block comment #| opened at index" p)) ((eq? why (quote rd-bar)) (error (quote read) "unterminated |identifier| opened at index" p)) ((eq? why (quote rd-eof)) (error (quote read) "end of input where a datum was expected, at index" p)) ((eq? why (quote rd-unexpected)) (error (quote read) "no datum here, at index" p)) ((eq? why (quote rd-rational)) (error (quote read) (string-append "rational literal syntax is not supported -- Emit has no " "exact rationals; write 0.5, or (/ 1 2)") (rd-token-at s n p))) (else (error (quote read) "unrecognized syntax" (rd-token-at s n p))))))
-    (define (read-from-string s) (let ((n (string-length s))) (let ((r (rd-datum s n (rd-skip-ws s n 0)))) (if (rd-fail? (cdr r)) (rd-report s n r) (car r)))))
-    (define (read-all-from-string s) (let ((n (string-length s))) (let loop ((i (rd-skip-ws s n 0)) (acc (quote ()))) (cond ((rd-fail? i) (rd-report s n (cons (quote rd-block-comment) i))) ((< i n) (let ((r (rd-datum s n i))) (if (rd-fail? (cdr r)) (rd-report s n r) (loop (rd-skip-ws s n (cdr r)) (cons (car r) acc))))) (else (reverse acc))))))
+    (define (read-from-string s) (let ((n (string-length s))) (let ((r (rd-datum s n (rd-skip-ws s n 0) #f))) (if (rd-fail? (cdr r)) (rd-report s n r) (car r)))))
+    (define (read-all-from-string s) (rd-all s #f))
+    (define (read-all-from-string-ci s) (rd-all s #t))
+    (define (rd-all s ci) (let ((n (string-length s))) (let loop ((i (rd-skip-ws s n 0)) (acc (quote ()))) (cond ((rd-fail? i) (rd-report s n (cons (quote rd-block-comment) i))) ((< i n) (let ((r (rd-datum s n i ci))) (if (rd-fail? (cdr r)) (rd-report s n r) (loop (rd-skip-ws s n (cdr r)) (cons (car r) acc))))) (else (reverse acc))))))
     (define (port? p) (%record-of-type? p (%port-rtd)))
     (define (input-port? p) (and (port? p) (%record-ref p 1)))
     (define (output-port? p) (and (port? p) (not (%record-ref p 1))))

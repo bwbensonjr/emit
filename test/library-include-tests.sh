@@ -57,11 +57,12 @@ cat > "$PROJ/lib/geom.sld" <<'EOF'
     ((and r7rs emit) (begin (define (impl) 'emit)))
     (else (begin (define (impl) 'other))))
   (begin
-    (define (describe w h) (list (area w h) (perim w h) (impl) (legacy) (corners)))))
+    (define (describe w h)
+      (list (area w h) (perim w h) (impl) (legacy) (corners) (|KeepCase|)))))
 EOF
 
 cat > "$PROJ/lib/geom-decls.scm" <<'EOF'
-(export describe area perim impl legacy corners)
+(export describe area perim impl legacy corners |KeepCase|)
 (import (scheme base))
 (include-library-declarations "sub/geom-more.scm")
 EOF
@@ -94,8 +95,34 @@ cat > "$PROJ/lib/geom-corners.scm" <<'EOF'
     `(q ,(+ n 1) #;(discarded) #\z)))  ; quasiquote, a datum comment, a character
 EOF
 
+# include-ci folds symbol case, and folds it AT READ TIME (change: reader-token-path,
+# issue #61) so that R7RS 7.1.1 survives it: the characters between vertical bars are the
+# name literally.  Both halves are here, because a fold that wrongly reached the bars would
+# still pass a test that only checks that folding happens:
+#
+#   LEGACY       -> legacy      an unquoted name folds
+#   |KeepCase|   -> KeepCase    a bar-quoted name does NOT, though its BODY still folds
+#
+# This is the cross-host pin.  The fold used to live in the core (one implementation,
+# library-include-declarations design D6) and now lives in each door's reader -- Emit's
+# read-all-from-string-ci and Chez's `case-sensitive` -- so the two CAN drift, and only a
+# fixture read by both can catch it.  Cases 1-4 read it with Emit's reader; the driver
+# section at the end reads it with Chez's and then `cmp`s the two doors' geom.ll BYTE FOR
+# BYTE, which is what turns a folding disagreement into a test failure rather than into
+# two libraries that each look fine alone.
+#
+# ASCII ONLY, deliberately: Chez's `case-sensitive` folds Unicode (ÉCOLE -> école) and
+# Emit's substrate fold does not (there are no Unicode case tables below (scheme base)).
+# The two agree on ASCII and nowhere else; the limit is recorded in docs/MODULES.md rather
+# than tested here, since a non-ASCII case would assert a divergence, not a rule.
+#
+# NOT here: a symbol inside a #(...) vector literal, which read-time folding reaches and
+# the old shape-walking fold missed.  A quoted vector cannot be lowered as a constant at
+# all (issue #64, `bad const ?`), so it cannot travel through a door; that case is pinned
+# at the reader in test/read-all-tests.ss instead.
 cat > "$PROJ/lib/GEOM-OLD.scm" <<'EOF'
 (DEFINE (LEGACY) (QUOTE OLD))
+(DEFINE (|KeepCase|) (QUOTE KEPT))
 EOF
 
 cat > "$PROJ/main.scm" <<'EOF'
@@ -109,7 +136,7 @@ cat > "$PROJ/emit-libs.scm" <<'EOF'
  (program geom-app (source "main.scm") (output "build/geom-app")))
 EOF
 
-VALUE='(12 14 emit old (q 3 z))'
+VALUE='(12 14 emit old (q 3 z) kept)'
 
 echo "a library assembled from included files, on every door"
 
@@ -156,7 +183,7 @@ cmp -s "$TMP/via-run.ll" "$PROJ/build/lib/geom.ll" \
 
 # 7. The REPL's library loader takes the same source.  A session WRITES its values, so the
 #    character prints as #\z where the program's `display` printed z -- same value.
-WVALUE='(12 14 emit old (q 3 #\z))'
+WVALUE='(12 14 emit old (q 3 #\z) kept)'
 printf '(import (geom))\n(describe 3 4)\n' > "$TMP/r.in"
 out="$(cd "$PROJ" && "$EMITABS" repl < "$TMP/r.in" 2>"$TMP/r.err")"
 echo "$out" | grep -qF "$WVALUE" && ok "emit repl imports the assembled library" \

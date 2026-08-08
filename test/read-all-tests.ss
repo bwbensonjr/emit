@@ -193,5 +193,44 @@
   (caught (lambda () (read-from-string "|nope")))
   '(read-report read "unterminated |identifier| opened at index" 0))
 
+;;; --- read-time case folding (change: reader-token-path, issue #61) -----------
+;;; `include-ci` used to fold the forms the reader had already returned, which folded
+;;; bar-quoted identifiers too -- by then `|MixedCase|` and `MixedCase` are one interned
+;;; symbol.  The fold now runs during tokenization, and the mechanism is negative space:
+;;; the CI flag reaches rd-atom and not rd-bar.  These check both halves, since a fold
+;;; that reached the bars would pass every "does it fold?" test on its own.
+
+(printf "\nread-time case folding (read-all-from-string-ci)\n")
+
+(check 'ci-folds-unquoted
+  (read-all-from-string-ci "(DEFINE (Greet) 1)")
+  '((define (greet) 1)))
+;; the whole point: bars survive the fold
+(check 'ci-bar-is-literal
+  (car (cdr (car (read-all-from-string-ci "(define (|MixedCase|) 1)"))))
+  (list (string->symbol "MixedCase")))
+(check 'ci-bar-not-folded
+  (eq? (car (car (cdr (car (read-all-from-string-ci "(define (|MixedCase|) 1)")))))
+       'mixedcase)
+  #f)
+;; ... and a folded name and a barred one stay two different symbols in one form
+(check 'ci-bar-and-bare-differ
+  (car (read-all-from-string-ci "(A |A|)"))
+  (list 'a (string->symbol "A")))
+;; the fold reaches every symbol the READ produces, including inside a vector literal --
+;; which the old shape-walking fold-datum-case missed (it had no vector arm at all)
+(check 'ci-reaches-quote-and-vector
+  (car (read-all-from-string-ci "(quote (Alpha #(Beta |Gamma|)))"))
+  (list 'quote (list 'alpha (vector 'beta (string->symbol "Gamma")))))
+;; strings, characters and numbers are untouched: the fold is on rd-atom's SYMBOL arm,
+;; after classification, so it can never reach the text a number is parsed from
+(check 'ci-leaves-non-symbols
+  (car (read-all-from-string-ci "(\"ABC\" #\\A 1E3 X)"))
+  (list "ABC" #\A 1000.0 'x))
+;; and the plain entry point still does not fold
+(check 'plain-does-not-fold
+  (read-all-from-string "(DEFINE (Greet) 1)")
+  '((DEFINE (Greet) 1)))
+
 (printf "\n  ~a passed, ~a failed\n" pass fail)
 (exit (if (= fail 0) 0 1))

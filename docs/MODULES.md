@@ -565,14 +565,33 @@ other — the same gap as `docs/PERFORMANCE.md` P8.
   either way.
   - `(include "f.scm" ...)` splices each file's top-level forms into the **body**, in the order the
     filenames appear, as if written in a `begin` declaration there. `(include-ci ...)` is the same
-    with the read forms case-folded — ASCII only, and a bar-quoted `|MixedCase|` folds too, which
-    R7RS §7.1.1 says it should not. The reader accepts `|…|` now (change:
-    `reader-lexical-conformance`, design D7), but that did not fix this and was not meant to: the
-    fold runs over the forms the reader **already returned**, where `|MixedCase|` and `MixedCase`
-    are the same interned symbol. Telling them apart needs a *fold-aware read* — folding during
-    tokenization, while the bars are still visible — which is a second reader entry threading a
-    fold flag through the `rd-*` layer, tracked as
-    [#61](https://github.com/bwbensonjr/emit/issues/61).
+    with the read forms case-folded, and the fold happens **while the file is being read** (change:
+    `reader-token-path`, issue #61) — which is what makes R7RS §7.1.1 survive it. An identifier
+    written between vertical bars is **not** folded: the characters between the bars are the
+    symbol's name, literally. So an `include-ci` file containing
+
+    ```scheme
+    (DEFINE (LEGACY) (QUOTE OLD))
+    (DEFINE (|KeepCase|) (QUOTE KEPT))
+    ```
+
+    defines `legacy` and `KeepCase` — the second name survives, though its *body* still folds.
+    Folding also reaches every symbol the read produces, including inside a vector literal; the
+    fold this replaced walked pairs and symbols only, so it missed those.
+
+    Each door implements the rule with what it already has: the compiler's own reader has a
+    case-folding entry point, and the Chez bootstrap driver reads under Chez's `case-sensitive`
+    parameter, which draws the same distinction. That is deliberately **two implementations** where
+    there used to be one shared fold in the core — the shared one could not be made right, because
+    it ran after reading, where `|MixedCase|` and `MixedCase` are already the same interned symbol.
+    They are pinned against each other by an `include-ci` fixture whose two doors' emitted IR is
+    compared byte for byte (`test/library-include-tests.sh`).
+
+    **Known limit:** the fold is **ASCII** on the compiler's own reader, while Chez's
+    `case-sensitive` folds Unicode (`ÉCOLE` → `école`). The two doors therefore agree on ASCII
+    source and may disagree on a non-ASCII uppercase identifier inside an `include-ci` file. The
+    substrate carries no Unicode case tables, and `include-ci` exists for old case-folding Scheme,
+    which is ASCII; closing this would mean shipping case tables for one caller.
   - `(include-library-declarations "d.scm" ...)` splices a file's forms as **declarations**, so a
     shared `export` list or import block can live in its own file. It is the one that recurses: an
     included declarations file may include further. An `include` inside an included *body* file is

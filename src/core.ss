@@ -601,33 +601,26 @@
           (render-datum (car stack))
           (string-append (render-datum (car stack)) " <- " (render-token-chain (cdr stack))))))
 
-;; --- include-ci: case folding, in the CORE (design D6) -----------------------
-;; The fold runs over the forms the reader returned rather than being asked of each host's
-;; reader, so Chez's `read` and Emit's reader cannot fold differently -- a divergence there
-;; would surface as an unexplained IR difference in test/self-emit-equiv.sh.
+;; --- include-ci: case folding is the READER's, not the core's -----------------
+;; It used to be here: `fold-datum-case` walked the forms the reader had returned, so that
+;; Chez's `read` and Emit's reader could not fold differently (library-include-declarations
+;; design D6).  That single implementation was guaranteeing the WRONG answer.  R7RS 7.1.1
+;; makes the characters between vertical bars the symbol's name literally, and after
+;; reading, `|MixedCase|` and `MixedCase` are one interned symbol -- so a fold placed here
+;; hit both, and no walk over returned forms can be made right (GitHub issue #61).
 ;;
-;; ASCII only, and a bar-quoted `|MixedCase|` folds too: after reading, a bar-quoted symbol
-;; and a bare one are the same object, so the distinction R7RS 7.1.1 draws is not observable
-;; here.  Emit's reader accepts `|...|` now (change: reader-lexical-conformance, design D7)
-;; and that did NOT fix this, deliberately: the fix is a fold-aware READ -- folding during
-;; tokenization, while the bars are still visible -- which is a second reader entry
-;; threading a fold flag through the rd-* layer.  Tracked as GitHub issue #61.
-(define (fold-datum-case x)
-  (cond
-    [(symbol? x) (string->symbol (fold-string-case (symbol->string x)))]
-    [(pair? x) (cons (fold-datum-case (car x)) (fold-datum-case (cdr x)))]
-    [else x]))
-
-(define (fold-string-case s)
-  (let loop ([i 0] [acc (quote ())])
-    (if (= i (string-length s))
-        (list->string (reverse acc))
-        (loop (+ i 1) (cons (fold-char-case (string-ref s i)) acc)))))
-
-(define (fold-char-case c)
-  (let ([k (char->integer c)])
-    (if (and (> k 64) (< k 91)) (integer->char (+ k 32)) c)))
-
+;; Folding therefore moved into tokenization, where the bars are still visible, and each
+;; door asks for it with what it already has (change: reader-token-path, design D3): the
+;; core hands the include reader the declaration that asked, so `include-ci` is
+;; distinguishable at the door with no protocol change.  src/include-reader.ss calls
+;; `read-all-from-string-ci`; src/compile.ss reads under Chez's `case-sensitive`.
+;;
+;; What replaces D6's by-construction guarantee is a fixture, which is the regime path
+;; resolution and cycle detection in this same file already live under.  The fold also
+;; reaches further than it used to: `fold-datum-case` had arms for symbols and pairs and
+;; returned everything else unchanged, so a symbol inside a `#(...)` vector literal was
+;; never folded at all.
+;;
 ;; --- the pre-pass itself (design D1) -----------------------------------------
 ;; DS -> a list of declarations that are only (export ...), (import ...), (begin ...).
 ;; BASE is the token of the file DS was read from (#f for the door's own source), STACK the
@@ -653,9 +646,10 @@
     ;; included body file is program-position `include` (R7RS 4.1.7), which this stage does
     ;; not implement, so nothing recurses.
     [(eq? (car d) 'include)
-     (list (cons 'begin (included-body-forms 'include (cdr d) base stack #f)))]
+     (list (cons 'begin (included-body-forms 'include (cdr d) base stack)))]
+    ;; No fold flag: `who` travels to the door, which reads case-insensitively itself.
     [(eq? (car d) 'include-ci)
-     (list (cons 'begin (included-body-forms 'include-ci (cdr d) base stack #t)))]
+     (list (cons 'begin (included-body-forms 'include-ci (cdr d) base stack)))]
     [else (reject-library-declaration d)]))
 
 (define (expand-included-declarations filenames base stack)
@@ -665,13 +659,14 @@
         (append (expand-library-declarations (cdr res) (car res) (cons (car res) stack))
                 (expand-included-declarations (cdr filenames) base stack)))))
 
-;; The forms of each named file, in the order the filenames appear, folded for include-ci.
-(define (included-body-forms who filenames base stack fold?)
+;; The forms of each named file, in the order the filenames appear.  WHO reaches the door
+;; through read-included, and the door is what folds for include-ci.
+(define (included-body-forms who filenames base stack)
   (if (null? filenames)
       (quote ())
       (let ([res (read-included who (car filenames) base stack)])
-        (append (if fold? (map fold-datum-case (cdr res)) (cdr res))
-                (included-body-forms who (cdr filenames) base stack fold?)))))
+        (append (cdr res)
+                (included-body-forms who (cdr filenames) base stack)))))
 
 ;; Does any of FORMS declare a library?  Used only to tell a MISPLACED define-library
 ;; from a source that has none.

@@ -158,6 +158,10 @@
     rd-radix-letter rd-exactness-letter rd-scan-prefixes rd-radix-scan
     rd-rational-body? rd-exactness-apply rd-body-number rd-number rd-number-reason?
     rd-token-at rd-bar rd-datum-comment? rd-report
+    ;; ... and the read-time case folding (change: reader-token-path).  rd-all is the
+    ;; worker both whole-source entry points wrap; the CI one is homed in the substrate
+    ;; (see *substrate-rehomed*), the plain one stays a published (scheme base) name.
+    rd-fold-char rd-fold-token rd-all
     ;; port representation
     %port-rtd-cell %port-rtd %make-port %check-input-port %check-output-port %port-buf
     %port-at-eof? %stdout-port %stderr-port %stdin-port
@@ -281,6 +285,15 @@
     ;; the numeric kernels the reader now shares with string->number, which is what
     ;; keeps ONE numeric grammar across the two entry points (design D3)
     %digit-in-radix %radix-digits %string->int
+    ;; --- read-time case folding (change: reader-token-path, issue #61) ----------
+    ;; The fold itself is down here because rd-atom is: it applies on rd-atom's SYMBOL
+    ;; arm, so a fold can never reach the text a number is parsed from.  Neither helper
+    ;; raises, which is what lets them live in the substrate at all.
+    ;;
+    ;; The whole-source ENTRY POINTS are not here, and cannot be -- see the note on
+    ;; *reader-report-shared-with-read* below.  They report, and reporting is what D10
+    ;; keeps out of the substrate.
+    rd-fold-char rd-fold-token
     ;; the port representation
     %port-rtd-cell %port-rtd %make-port %port-buf))
 
@@ -338,6 +351,15 @@
 ;;; libraries need it -- (scheme base) for read-from-string/read-all-from-string,
 ;;; (scheme read) for `read` -- so both define a private copy, exactly as they already
 ;;; do for %check-input-port.  It is stateless, so two copies cannot disagree.
+;;; rd-report is also what decides where the WHOLE-SOURCE entry points can live (change:
+;;; reader-token-path).  `read-all-from-string-ci` was first homed in the substrate beside
+;;; the rd-* layer, on the reasoning that nothing outside the compiler wants it -- and the
+;;; regen refused it: its worker `rd-all` calls rd-report, and rd-report is not in (emit
+;;; internal) and cannot be.  Anything that REPORTS lives where `error` does.  So `rd-all`
+;;; is an ordinary (scheme base) private (see *scheme-base-private*) and
+;;; `read-all-from-string-ci` is an ordinary (scheme base) export, beside the
+;;; `read-all-from-string` it wraps.  Publishing it is the cost of the D10 line, and a
+;;; small one: (scheme base) already publishes the non-folding twin as an extension.
 (define *reader-report-shared-with-read* '(rd-report))
 
 ;;; --- the DERIVED-FORM MACROS (change: library-body-macro-scope, issue #55) ---------
