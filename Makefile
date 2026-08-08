@@ -90,7 +90,7 @@ schemec:    $(SCHEMEC)
 # clang.
 $(EMIT): build/emit.o build/runtime-host.o $(EMBED_REPL_LL) $(BAKED_LL) Makefile
 	$(CXX) build/emit.o build/runtime-host.o $(EMBED_REPL_LL) $(BAKED_LL) \
-	  -rdynamic $(LDFLAGS) -L$(GC_LIB) -lgc -lm -o $@
+	  -Wno-override-module -rdynamic $(LDFLAGS) -L$(GC_LIB) -lgc -lm -o $@
 	@. tools/log.sh; say "link $(EMBED_REPL_LL) + $(words $(BAKED_LL)) baked librar$(if $(word 2,$(BAKED_LL)),ies,y) -> $@  [$$(bytes $@) bytes]"
 
 # Batch text->IR filter compiler: links the committed schemec IR + the baked library set
