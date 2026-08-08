@@ -71,16 +71,16 @@
       truncated manifest is accepted as complete (see 6.4)
 - [x] 5.4 Finish every source edit, then run `make regen` to convergence (barrier: no further
       compiler-source edits until the suites finish)
-- [ ] 5.5 Run `./run-all-tests.sh`, then `./run-dev-tests.sh`; run suites individually if the batch
+- [x] 5.5 Run `./run-all-tests.sh`, then `./run-dev-tests.sh`; run suites individually if the batch
       outlives the command timeout
-- [ ] 5.6 Commit, then run `test/trust-check.sh` (it `[SKIP]`s on a dirty `bootstrap/`)
+- [x] 5.6 Commit, then run `test/trust-check.sh` (it `[SKIP]`s on a dirty `bootstrap/`)
 
 ## 6. Close out
 
-- [ ] 6.1 Reference the issue from the fixing commit as `Fixes #63`
+- [x] 6.1 Reference the issue from the fixing commit as `Fixes #63`
 - [x] 6.2 Filed #67: a manifest's second top-level form is silently ignored (design "Risks", noted
       while consolidating the three parsers)
-- [ ] 6.3 Sync delta specs into `openspec/specs/module-system` and `openspec/specs/project-build`,
+- [x] 6.3 Sync delta specs into `openspec/specs/module-system` and `openspec/specs/project-build`,
       then `openspec validate --all` and grep the main specs for stray delta headers
 - [x] 6.4 Filed #66: an unterminated list or string is closed silently at end of input in any source,
       so a truncated file compiles as though complete. `reader-lexical-conformance` closed the
