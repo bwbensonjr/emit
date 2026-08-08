@@ -632,9 +632,26 @@ static bool preload_user_libraries(const std::vector<std::string> &manifests,
 // rather than searched for in an installed one.  Only LIBRARY resolution chains.
 static int resolve_program(const std::string &manifest, const std::string &name,
                            std::string &src, std::string &out) {
-  std::string mtext = manifest.empty() ? std::string() : read_file(manifest);
+  // THREE distinguishable reasons no program entry resolves, and they call for different
+  // user actions (change: manifest-empty-guards; issue #63).  All three used to reach mode
+  // 10 and SEGFAULT: the parser took (car '()) of a datum-free read, so `emit build` in a
+  // fresh directory -- the first thing an installed Emit is asked to do -- died on a signal
+  // with no diagnostic.  A byte-length guard here would have caught only two of them;
+  // whether a manifest holds a DATUM is the reader's question, so mode 10 answers it.
+  if (manifest.empty()) {
+    std::cerr << "emit: no manifest found (looked for " << kManifestName
+              << "); `emit build` builds a program named in a manifest\n";
+    return 1;
+  }
+  std::string mtext = read_file(manifest);
   rt_repl_set(10, mtext.data(), (intptr_t)mtext.size());
-  std::string triples = scm_str(scheme_entry());
+  intptr_t r = scheme_entry();
+  if (status_of(r) != "ok") {          // (2) found, but holds no datum at all
+    std::cerr << "emit: manifest " << manifest << " " << door_msg(scm_str(rt_cdr(r)))
+              << "\n";
+    return 1;
+  }
+  std::string triples = scm_str(rt_cdr(r));
   std::vector<std::vector<std::string>> progs;
   std::istringstream ls(triples);
   std::string n, s, o;

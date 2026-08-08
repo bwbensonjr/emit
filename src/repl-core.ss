@@ -317,8 +317,18 @@
 ;; Name the unresolved imports, so the diagnostic says which library is missing rather
 ;; than that something is.  Each name is rendered on its own -- `(nope)`, not the `((nope))`
 ;; a rendered LIST of names would give, which reads like one nested library name.
-(define (lone-library-unresolved-msg lib)
-  (let loop ([imps (cadr (parse-define-library lib))] [missing (quote ())])
+;;
+;; Takes the import NAMES, not a library form, because both callers need it and only one
+;; has a form: the lone-library path (mode 7 / `emit lib`) parses them out of the
+;; define-library, and the PROGRAM path already holds them as `direct` (change:
+;; manifest-empty-guards; issue #63).  The program path used to report the constant
+;; "program imports a library not found in the manifest", naming nothing -- while the
+;; library path two hundred lines away named the library correctly, so the same failure
+;; read differently depending on which door found it.  module-system already required the
+;; name ("the resulting failure SHALL be reported by import resolution, naming the
+;; unresolved library"); only the library half implemented it.
+(define (unresolved-imports-msg imps0)
+  (let loop ([imps imps0] [missing (quote ())])
     (if (null? imps)
         (string-append "unresolved import (not baked, not in the manifest): "
                        (join-rendered (reverse missing)))
@@ -326,6 +336,8 @@
               (if (assoc (car imps) *repl-libs*)
                   missing
                   (cons (car imps) missing))))))
+(define (lone-library-unresolved-msg lib)
+  (unresolved-imports-msg (cadr (parse-define-library lib))))
 
 ;; Render each datum and join with ", ".
 (define (join-rendered ds)
@@ -348,7 +360,17 @@
 (define (repl-load-library-text text)
   (guard (e (#t (cons (quote error) (repl-error->string e))))
     (let* ([forms (read-all-from-string text)]
-           [dl    (parse-define-library (car forms))]
+           ;; A source that holds NO DATUM cannot yield the define-library this needs, and
+           ;; (car '()) is unchecked -- it faulted the door instead of reporting (change:
+           ;; manifest-empty-guards; issue #63).  Raise into the guard above rather than
+           ;; return early, so the path prefix the host adds is the same one every other
+           ;; library error gets.  Byte-empty sources never arrive here (the host folds an
+           ;; empty read into "cannot read library source"), but a comment-only one does.
+           ;; Unlike an entryless MANIFEST, which is benign, this is an error: see
+           ;; manifest-entries.
+           [dl    (if (null? forms)
+                      (error 'library "source holds no define-library form")
+                      (parse-define-library (car forms)))]
            [name  (car dl)]
            [tables (repl-import-tables (cadr dl))])   ; #f if a dep is not loaded yet
       (cond
@@ -378,14 +400,40 @@
             (set! *repl-lib-imports* (cons (cons name (cadr dl)) *repl-lib-imports*))
             (cons (quote ok) (cons (car res) (mangle name "__init")))))]))))
 
+;; The manifest's ENTRY LIST: its single top-level form, or () when the text holds no
+;; datum -- a zero-byte file, whitespace only, or comments only (change:
+;; manifest-empty-guards; issue #63).  The pair test is the whole point: `car` of a
+;; non-pair is unchecked by design (core-language, "the runtime applies the SAME
+;; unchecked semantics ... e.g. `(car x)` for a non-pair `x`"), so the three parsers
+;; below used to SEGFAULT the door on a datum-free manifest rather than diagnose it.
+;;
+;; It has to be decided HERE and not in the host, because "empty" means "no datum" and
+;; whitespace and comments are the READER's grammar: a byte-length test in C++ passes a
+;; comment-only manifest straight through, and re-implementing the comment grammar there
+;; would be a second reader.
+;;
+;; An entryless manifest is BENIGN -- module-system requires that finding no manifest at
+;; all stay non-fatal, and a manifest that declares nothing resolves the same set.  That
+;; is the opposite of a datum-free library SOURCE, which cannot yield the define-library
+;; its caller needs and is an error (see repl-load-library-text).
+;;
+;; The form is returned AS READ, without checking it is a list: the three parsers below
+;; walk it with `(pair? es)` rather than `(null? es)`, which terminates on a proper list's
+;; (), on an IMPROPER one's non-pair tail, and immediately on a manifest that is a bare
+;; symbol or number.  Those shapes segfaulted too -- `hello`, `42`, `(a . b)` all reached
+;; a (car NON-PAIR) -- and one predicate makes the walk total instead of enumerating them.
+(define (manifest-entries text)
+  (let ([forms (read-all-from-string text)])
+    (if (pair? forms) (car forms) (quote ()))))
+
 ;; Parse a manifest's text and return its LIBRARY source paths, newline-joined, so
 ;; the host (which owns file I/O) can read each library source and load it (mode 4).
 ;; Only `(library ...)` entries are libraries; `(program ...)` entries (emit build
 ;; targets, change: emit-build-bin-entry) are ignored here -- resolving library
 ;; imports is unchanged by their presence.
 (define (repl-manifest-paths text)
-  (let loop ([es (car (read-all-from-string text))] [acc ""])
-    (if (null? es)
+  (let loop ([es (manifest-entries text)] [acc ""])
+    (if (not (pair? es))                    ; total: (), an improper tail, or a non-list manifest
         acc
         (let* ([e   (car es)]
                [src (and (pair? e) (eq? (car e) (quote library))
@@ -404,8 +452,8 @@
 ;; index because the run door now preloads LAZILY: only the libraries in the
 ;; program's transitive import closure, rather than every entry in the manifest.
 (define (repl-manifest-user-paths text)
-  (let loop ([es (car (read-all-from-string text))] [acc ""])
-    (if (null? es)
+  (let loop ([es (manifest-entries text)] [acc ""])
+    (if (not (pair? es))                    ; total: (), an improper tail, or a non-list manifest
         acc
         (let* ([entry  (car es)]
                [is-lib (and (pair? entry) (eq? (car entry) (quote library)))]  ; skip (program ...)
@@ -470,18 +518,29 @@
 ;; one by name and hand its source to `emit build`.  Library entries are
 ;; ignored (this lists programs, not libraries); uses only \n, mirroring
 ;; repl-manifest-paths.
+;;
+;; Returns (status . payload) -- the convention modes 4 and 8 already use, for which the
+;; host has status_of/door_msg -- rather than a bare string (change:
+;; manifest-empty-guards; issue #63).  `emit build` needs an entryless manifest to be
+;; DISTINGUISHABLE from one declaring libraries but no program: both yield zero triples,
+;; but the first means "you have not written your manifest yet" and the second means
+;; "you wrote libraries but no program", and only the reader can tell them apart.  A
+;; sentinel line was the alternative and shares a namespace with program names.
 (define (repl-manifest-programs text)
-  (let loop ([es (car (read-all-from-string text))] [acc ""])
-    (if (null? es)
-        acc
-        (let ([e (car es)])
-          (if (and (pair? e) (eq? (car e) (quote program)))
-              (let* ([name    (symbol->string (cadr e))]
-                     [clauses (cddr e)]
-                     [src     (cond [(assq (quote source) clauses) => cadr] [else ""])]
-                     [out     (cond [(assq (quote output) clauses) => cadr] [else ""])])
-                (loop (cdr es) (string-append acc name "\n" src "\n" out "\n")))
-              (loop (cdr es) acc))))))
+  (let ([forms (read-all-from-string text)])
+    (if (null? forms)
+        (cons (quote error) "declares no entries")
+        (let loop ([es (car forms)] [acc ""])
+          (if (not (pair? es))              ; total: (), an improper tail, or a non-list manifest
+              (cons (quote ok) acc)
+              (let ([e (car es)])
+                (if (and (pair? e) (eq? (car e) (quote program)))
+                    (let* ([name    (symbol->string (cadr e))]
+                           [clauses (cddr e)]
+                           [src     (cond [(assq (quote source) clauses) => cadr] [else ""])]
+                           [out     (cond [(assq (quote output) clauses) => cadr] [else ""])])
+                      (loop (cdr es) (string-append acc name "\n" src "\n" out "\n")))
+                    (loop (cdr es) acc))))))))
 
 ;; --- run door: run an importing program in-process (change: run-door-user-libraries) ---
 ;; The run host preloads user libraries (mode 4, WITHOUT running __init) and registers
@@ -597,7 +656,9 @@
         (let ([direct (run-with-scheme-base (car (collect-imports user-forms)))])
           (let ([tables (repl-import-tables direct)])
             (if (not tables)
-                (cons (quote error) "program imports a library not found in the manifest")
+                ;; `direct` already holds the import names -- name them, as the lone-library
+                ;; path does (change: manifest-empty-guards; issue #63).
+                (cons (quote error) (unresolved-imports-msg direct))
                 (cons (quote ok)
                       (cons (compile-program-with-imports
                               (prelude-macro-forms (read-forms-from-string *prelude-source*))
