@@ -71,6 +71,7 @@ run_suite "(scheme base) re-home (emit run/build)" test/prelude-base-run-tests.s
 run_suite "R7RS library partition"      test/library-partition-tests.sh
 run_suite "--dump stages (all doors)"   test/dump-stages-tests.sh
 run_suite "installed layout (libraries + support files)" test/install-layout-tests.sh
+run_suite "reader datum parity (vector consts + rendering)" test/reader-datum-parity-tests.sh
 run_suite "every door in a user project"      test/project-door-tests.sh
 
 echo

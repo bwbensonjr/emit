@@ -379,12 +379,30 @@
 ;; neither host's reader reads back, so the printer's "needs bars?" predicate
 ;; (sym_needs_bars, src/runtime/runtime.c) is the natural thing for this to grow if that
 ;; ever becomes possible.
-(define (render-datum x)
+;; TWO ENTRY POINTS OVER ONE WORKER (change: reader-datum-parity, design D4), the
+;; arrangement `read-all-from-string` / `-ci` uses over `rd-all` and for the same reason:
+;; an optional argument would cost every call site its cross-unit direct call
+;; (PERFORMANCE.md P9), and the export-table writer is on the compile path.
+;;
+;; They differ in ONE place, and the difference is which failure is worse:
+;;
+;;   render-datum        STRICT -- the artifact path.  A datum with no external
+;;                       representation RAISES, because a table that misrepresents a
+;;                       macro template is a miscompile (see render-char).
+;;   render-datum-loose  TOTAL -- the diagnostic path.  It must never raise: raising
+;;                       while formatting an error message replaces the diagnostic with
+;;                       a secondary failure.  Its output is only ever read by a human,
+;;                       never re-read by either reader, so it carries no round-trip
+;;                       obligation and may spell what strict mode refuses.
+(define (render-datum x)       (render-datum* x #f))
+(define (render-datum-loose x) (render-datum* x #t))
+
+(define (render-datum* x loose)
   (cond
     [(string? x) (string-append "\"" x "\"")]
     [(symbol? x) (symbol->string x)]
     [(null? x) "()"]
-    [(pair? x) (string-append "(" (render-list-body x) ")")]
+    [(pair? x) (string-append "(" (render-list-body* x loose) ")")]
     ;; the call rows carry an arity (change: cross-unit-direct-calls)
     [(number? x) (number->string x)]
     ;; A macro template may hold a boolean or a character (change: library-macro-export).
@@ -392,13 +410,56 @@
     ;; so a datum it renders as "?" would corrupt a table rather than merely read poorly
     ;; in a message -- hence render-char errors instead of guessing a spelling.
     [(boolean? x) (if x "#t" "#f")]
-    [(char? x) (render-char x)]
+    [(char? x) (render-char* x loose)]
+    ;; The reader READS #(...) and #u8(...) and core-language requires that it SHALL, so
+    ;; every datum it can produce has to render here too (change: reader-datum-parity;
+    ;; issue #64).  Without these arms a vector in a macro template became `?` in the
+    ;; export table and `emit lib` still exited 0 -- a silent miscompile, masked only
+    ;; because encode-const refused the same literal first.  The spellings are the ones
+    ;; core-language already requires BOTH readers to accept, so a table holding one
+    ;; still round-trips through Chez's `read` and Emit's own reader.
+    [(vector? x) (string-append "#(" (render-seq* x 0 (vector-length x) vector-ref loose) ")")]
+    ;; A BYTEVECTOR renders only in loose mode.  R7RS spells it `#u8(...)` and Emit's
+    ;; reader reads that, but CHEZ's `read` rejects `#u8(` -- it spells bytevectors
+    ;; `#vu8(` -- and the Chez driver reads export tables back with `read` on its
+    ;; artifact-reuse path (src/compile.ss, `read-program expf`).  So `#u8(...)` in a
+    ;; TABLE is exactly what render-char's rule forbids: "a rendering the other door
+    ;; cannot read back".  Writing `#vu8(` instead only moves the failure to Emit's own
+    ;; reader, so strict mode refuses and says why.
+    ;;
+    ;; This costs nothing for a bytevector CONSTANT -- `'#u8(1 2)` in a program or a
+    ;; library body compiles and runs (that is encode-const, not this) -- only for one
+    ;; inside an EXPORTED MACRO TEMPLATE, which is where the table is the artifact.
+    ;; A loud error there beats the silent `?` it used to write.
+    [(bytevector? x)
+     (if loose
+         (string-append "#u8(" (render-seq* x 0 (bytevector-length x) bytevector-u8-ref loose) ")")
+         (error 'render-datum
+                (string-append
+                  "bytevector literal has no external representation both readers accept"
+                  " -- R7RS #u8(...) is rejected by Chez's read, which the driver uses to"
+                  " reuse an export table; move it out of the macro template")))]
     [else "?"]))
+
+;; Elements of a vector/bytevector, space separated.  One walker over an accessor rather
+;; than one per type: the two differ only in their ref and length procedures.
+(define (render-seq* v i n ref loose)
+  (if (>= i n)
+      ""
+      (string-append (render-datum* (ref v i) loose)
+                     (if (< (+ i 1) n) " " "")
+                     (render-seq* v (+ i 1) n ref loose))))
 ;; A character as BOTH readers accept it: Chez's `read` (the driver's artifact-reuse
 ;; path) and Emit's in-language reader (`rd-char`, lib/emit/internal.sld).  Printable
 ;; ASCII goes literally; the five names both spell identically are named; anything else
 ;; is an error rather than a rendering the other door cannot read back.
-(define (render-char c)
+(define (render-char c) (render-char* c #f))
+
+;; The ONE place the two modes diverge (design D4).  Strict mode raises, as it always
+;; has, so an unrepresentable character cannot reach an artifact.  Loose mode spells it
+;; `#\xHH` -- R7RS's own hex notation, chosen because a human reading a diagnostic will
+;; recognize it, NOT because anything reads it back.
+(define (render-char* c loose)
   (let ([k (char->integer c)])
     (cond
       [(= k 32) "#\\space"]
@@ -407,14 +468,16 @@
       [(= k 13) "#\\return"]
       [(= k 127) "#\\delete"]
       [(and (> k 32) (< k 127)) (string-append "#\\" (list->string (list c)))]
+      [loose (string-append "#\\x" (number->string k 16))]
       [else (error 'render-datum
                    "character has no portable external representation for an artifact" k)])))
-(define (render-list-body p)
-  (let ([a (render-datum (car p))] [d (cdr p)])
+(define (render-list-body p) (render-list-body* p #f))
+(define (render-list-body* p loose)
+  (let ([a (render-datum* (car p) loose)] [d (cdr p)])
     (cond
       [(null? d) a]
-      [(pair? d) (string-append a " " (render-list-body d))]
-      [else (string-append a " . " (render-datum d))])))
+      [(pair? d) (string-append a " " (render-list-body* d loose))]
+      [else (string-append a " . " (render-datum* d loose))])))
 
 ;; A short, BOUNDED name for a form in a diagnostic: its head keyword when it has one,
 ;; else the whole form rendered.  Bounded on purpose -- a rejected declaration may carry
