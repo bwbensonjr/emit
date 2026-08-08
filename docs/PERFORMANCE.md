@@ -28,6 +28,7 @@ speed items in this list.
 | [P11](#p11--every-emit-build-recompiles-the-c-runtime-from-source) | Every `emit build` recompiles the C runtime from source | build speed | low–med | low | — | ☐ |
 | [P12](#p12--the-reader-classifier-chain-costs-20-on-the-door-that-does-not-optimize) | The reader classifier chain costs 20%, on the door that does not optimize | speed | low | med | — | ☐ |
 | [P13](#p13--the-jitrepl-door-runs-no-ir-optimization-pipeline) | The JIT/REPL door runs no IR optimization pipeline | speed | med–high | med | — | ☐ |
+| [P14](#p14--an-aggregate-constant-is-rebuilt-at-every-evaluation) | An aggregate constant is rebuilt at every evaluation | speed + size | low–med | med | — | ☐ |
 
 Legend — **Value**: benefit if fixed. **Cost**: rough implementation effort/risk. These are
 estimates to aid sequencing, not commitments.
@@ -1274,6 +1275,50 @@ picking the level needs measurement across both doors, and the REPL's per-form p
 separately from the run door's whole-program one.
 
 **OpenSpec change:** none.
+
+---
+
+## P14 — An aggregate constant is rebuilt at every evaluation
+
+**Kind:** speed + size · **Value:** low–med · **Cost:** med · **OpenSpec change:** none · ☐
+
+A quoted **pair, vector, or bytevector** is not a constant in the emitted code — it is a
+*constructor call sequence* that runs every time control reaches it. `encode-const`
+(`src/emit.ss`) materializes each one at run time: a pair via `rt_cons`, and, since change
+`reader-datum-parity`, a vector via `rt_make_vector` plus one `rt_vector_set` per element (a
+bytevector likewise). So
+
+```scheme
+(define (f) '#(1 2 3))
+```
+
+allocates a fresh 3-element vector and stores three elements on **every call**, and the same
+literal inside a loop allocates once per iteration. The pair case has always behaved this way;
+the vector case simply makes it more visible, because an n-element vector costs n+1 calls
+rather than the one `rt_cons` a small list needs.
+
+Two independent halves, worth separating:
+
+**A. Hoist to a one-time initializer.** A quoted constant is immutable in R7RS, so it may be
+built once into a module-level slot and referenced thereafter. That converts n+1 calls per
+evaluation into n+1 calls per *program*, and turns the constant into a single load. The
+question it raises is where the slot lives and how it interacts with the per-unit `__init`
+ordering the module system already has.
+
+**B. Emit an all-immediate aggregate as a static global.** When every element is an immediate
+(fixnum, character, boolean, `()`), the whole vector or bytevector can be a `@.vec.lit.N`
+global with a static initializer and no run-time construction at all — the treatment strings
+already get through `emit-cstring-global`. This does **not** generalize: a symbol element needs
+`rt_intern`, and a nested pair needs `rt_cons`, so the clause would carry two paths, which is
+why `reader-datum-parity` (design D1) deliberately took the uniform one first. A bytevector is
+the case that gains most, since its elements are *always* immediates.
+
+B is the cheaper and more contained of the two, and it subsumes A for the literals most likely
+to be hot (`'#u8(...)` tables, small numeric vectors). A is the general answer and should
+follow P6's constant-folding work rather than precede it.
+
+Found while implementing `reader-datum-parity` (issue #64): the vector clause was written to
+mirror the existing pair clause, and mirroring it inherited this cost.
 
 ---
 

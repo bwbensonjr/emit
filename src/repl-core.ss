@@ -58,8 +58,22 @@
 
 ;; --- error rendering (for the host to report a compile error on stderr) -----
 ;; A raised object is normally an R7RS error object ("who: message" + irritants);
-;; render it to a plain string.  This text is diagnostic only (the harnesses read
-;; it off stderr and discard it), so a best-effort irritant rendering is fine.
+;; render it to a plain string.
+;;
+;; The "best-effort irritant rendering is fine" rationale this carried is what aged
+;; (change: reader-datum-parity; issue #52).  The harnesses do discard the text, but
+;; USERS do not, and the `?` this fell through to swallowed the one part of the message
+;; the user typed -- `(import (bad))` reported "imported library not loaded ?", dropping
+;; the library name.  It falls through to render-datum-loose instead, which fixes every
+;; LIST irritant on every door at once rather than one call site: render-datum moved to
+;; src/core.ss during module-frontend-diagnostics for exactly this reason.
+;;
+;; The LOOSE renderer, not the strict one: strict raises for a character with no portable
+;; external representation, and raising while formatting an error message would replace a
+;; diagnostic with a secondary failure (design D4).
+;;
+;; The symbol/string/number arms stay ahead of it: they are the common irritants and the
+;; hot path, and a bare symbol must render as its name rather than acquire quoting.
 (define (repl-irritant->string x)
   (cond
     [(symbol? x) (symbol->string x)]
@@ -69,7 +83,7 @@
     ;; where the unterminated comment opened.  Every other numeric irritant gains from
     ;; the same arm.
     [(number? x) (number->string x)]
-    [else "?"]))
+    [else (render-datum-loose x)]))
 (define (repl-irritants->string xs)
   (if (null? xs)
       ""

@@ -55,6 +55,7 @@ run_suite "AOT tree-shaking"             test/aot-tree-shaking-tests.sh
 run_suite "backend equivalence"         demos/run-backends.sh
 run_suite "expander units"              chez --libdirs src --script test/expander-tests.ss
 run_suite "read-all reader"             chez --libdirs src --script test/read-all-tests.ss
+run_suite "render-datum units"          chez --libdirs src --script test/render-datum-tests.ss
 run_suite "mangle (symbol naming)"      chez --libdirs src --script test/mangle-tests.ss
 run_suite "simplify pass units"         chez --libdirs src --script test/simplify-tests.ss
 run_suite "module vertical-slice (AOT)" test/modules-tests.sh

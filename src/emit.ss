@@ -314,6 +314,41 @@
             [t  (fresh-temp)])
        (emit! (string-append t " = call i64 @rt_cons(i64 " a ", i64 " dd ")"))
        t)]
+    ;; Vector and bytevector constants materialize at runtime like a pair does, but
+    ;; ALLOCATE-THEN-FILL rather than build bottom-up: rt_make_vector once, then one
+    ;; rt_vector_set per element, each element operand from a recursive encode-const
+    ;; (change: reader-datum-parity; issue #64).  The reader reads #(...) and #u8(...)
+    ;; and core-language requires that it SHALL, so refusing them here was a datum the
+    ;; compiler could read and not compile -- `emit: bad const ?`, naming nothing because
+    ;; the renderer had no vector arm either.
+    ;;
+    ;; The fill is the unspecified value; every slot is assigned immediately after, so it
+    ;; is never observable.  A static LLVM global (what strings do) would only work for an
+    ;; all-immediate vector -- a symbol element needs rt_intern at run time -- so it would
+    ;; mean two paths for one clause; noted in PERFORMANCE.md instead.
+    [(vector? d)
+     (let ([t (fresh-temp)] [n (vector-length d)])
+       (emit! (string-append t " = call i64 @rt_make_vector(i64 " (fixnum-word n)
+                             ", i64 " (encode-const-unspec) ")"))
+       (let loop ([i 0])
+         (if (>= i n)
+             t
+             (let ([e (encode-const (vector-ref d i))] [s (fresh-temp)])
+               (emit! (string-append s " = call i64 @rt_vector_set(i64 " t ", i64 "
+                                     (fixnum-word i) ", i64 " e ")"))
+               (loop (+ i 1))))))]
+    [(bytevector? d)
+     (let ([t (fresh-temp)] [n (bytevector-length d)])
+       (emit! (string-append t " = call i64 @rt_make_bytevector(i64 " (fixnum-word n)
+                             ", i64 " (fixnum-word 0) ")"))
+       (let loop ([i 0])
+         (if (>= i n)
+             t
+             (let ([s (fresh-temp)])
+               (emit! (string-append s " = call i64 @rt_bytevector_u8_set(i64 " t ", i64 "
+                                     (fixnum-word i) ", i64 "
+                                     (fixnum-word (bytevector-u8-ref d i)) ")"))
+               (loop (+ i 1))))))]
     ;; inexact real (flonum) literal (change: inexact-numbers): emit its canonical
     ;; decimal as a C string constant and rebuild the flonum at runtime with
     ;; rt_flonum_lit (strtod, correctly rounded -> the same double).  The text comes
