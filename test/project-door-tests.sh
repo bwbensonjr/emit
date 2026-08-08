@@ -268,5 +268,170 @@ else
 fi
 
 echo
+echo "a manifest that declares nothing (issue #63)"
+
+# A manifest with no ENTRIES is not the same as a manifest with no BYTES: whitespace and
+# comments are the reader's grammar, so "empty" is decided by whether the text holds a
+# DATUM.  All four shapes below used to SEGFAULT (exit 139, no diagnostic) -- the manifest
+# parsers opened with (car (read-all-from-string text)) and read-all-from-string returns
+# () for datum-free text, so `car` faulted on a non-pair (unchecked by design, see
+# core-language).  A byte-length guard in the host would have caught only the first two.
+BARE="$TMP/bare-proj"
+mkdir -p "$BARE"
+printf '(display (+ 1 2))\n(newline)\n' > "$BARE/hello.scm"
+
+# 22. `emit build` with NO manifest at all names the file it looked for and exits cleanly.
+(cd "$BARE" && rm -f emit-libs.scm && "$EMITABS" build) >"$TMP/e0.log" 2>&1
+rc=$?
+if [ "$rc" -ne 0 ] && [ "$rc" -lt 128 ] && grep -q 'no manifest found' "$TMP/e0.log" \
+   && grep -q 'emit-libs.scm' "$TMP/e0.log"; then
+  ok "emit build with no manifest reports and exits $rc"
+else
+  bad "emit build no-manifest (exit $rc)"; sed 's/^/         /' "$TMP/e0.log"
+fi
+
+# 23-25. A manifest that EXISTS but declares no entries, in all three datum-free shapes.
+n=23
+for shape in empty whitespace comment; do
+  case "$shape" in
+    empty)      : > "$BARE/emit-libs.scm" ;;
+    whitespace) printf '   \n\n\t\n' > "$BARE/emit-libs.scm" ;;
+    comment)    printf '; nothing here yet\n#| nor here |#\n' > "$BARE/emit-libs.scm" ;;
+  esac
+  (cd "$BARE" && "$EMITABS" build) >"$TMP/e$n.log" 2>&1
+  rc=$?
+  if [ "$rc" -ne 0 ] && [ "$rc" -lt 128 ] \
+     && grep -q 'no entries' "$TMP/e$n.log" && grep -q 'emit-libs.scm' "$TMP/e$n.log"; then
+    ok "emit build on a $shape manifest reports no entries (exit $rc)"
+  else
+    bad "emit build $shape manifest (exit $rc)"; sed 's/^/         /' "$TMP/e$n.log"
+  fi
+  n=$((n+1))
+done
+
+# 26. A source path given where an ENTRY NAME belongs is the easy way to hit this by
+#     mistake -- `emit build` takes a manifest entry name, not a path.
+: > "$BARE/emit-libs.scm"
+(cd "$BARE" && "$EMITABS" build hello.scm) >"$TMP/e26.log" 2>&1
+rc=$?
+if [ "$rc" -ne 0 ] && [ "$rc" -lt 128 ]; then
+  ok "emit build NAME against an entryless manifest exits $rc, not a signal"
+else
+  bad "emit build hello.scm (exit $rc)"; sed 's/^/         /' "$TMP/e26.log"
+fi
+
+# 27. A manifest declaring LIBRARIES but no program keeps its existing message -- this is
+#     a different cause from 23-25 and must stay distinguishable from it.
+echo '((library (nope) (source "nope.sld")))' > "$BARE/emit-libs.scm"
+(cd "$BARE" && "$EMITABS" build) >"$TMP/e27.log" 2>&1
+rc=$?
+if [ "$rc" -ne 0 ] && grep -q 'no program entry in manifest' "$TMP/e27.log" \
+   && ! grep -q 'no entries' "$TMP/e27.log"; then
+  ok "emit build on a library-only manifest still reports no program entry"
+else
+  bad "emit build library-only manifest (exit $rc)"; sed 's/^/         /' "$TMP/e27.log"
+fi
+
+# 28-30. The run door: an entryless manifest resolves like NO manifest, which module-system
+#        requires to stay non-fatal for a program importing only baked-in libraries.
+n=28
+for shape in empty whitespace comment; do
+  case "$shape" in
+    empty)      : > "$BARE/emit-libs.scm" ;;
+    whitespace) printf '  \n\n' > "$BARE/emit-libs.scm" ;;
+    comment)    printf '; still nothing\n' > "$BARE/emit-libs.scm" ;;
+  esac
+  got="$(cd "$BARE" && "$EMITABS" run hello.scm 2>"$TMP/r$n.err")"
+  rc=$?
+  if [ "$rc" -eq 0 ] && [ "$got" = "3" ]; then
+    ok "emit run under a $shape manifest => $got"
+  else
+    bad "emit run $shape manifest (exit $rc) => [$got]"; sed 's/^/         /' "$TMP/r$n.err"
+  fi
+  n=$((n+1))
+done
+
+# 31. An UNRESOLVED import is reported by import resolution and NAMES the library, in all
+#     three manifest states.  The program path used to report the constant "program imports a
+#     library not found in the manifest" -- naming nothing -- while `emit lib` named the
+#     library correctly, so the same failure read differently depending on the door.
+#     module-system requires the name ("reported by import resolution, naming the unresolved
+#     library"); only the library half implemented it.
+printf '(import (absent))\n(display 1)\n' > "$BARE/needs.scm"
+n=31
+for state in none entryless lacking; do
+  case "$state" in
+    none)      rm -f "$BARE/emit-libs.scm" ;;
+    entryless) : > "$BARE/emit-libs.scm" ;;
+    lacking)   echo '((library (other) (source "other.sld")))' > "$BARE/emit-libs.scm" ;;
+  esac
+  (cd "$BARE" && "$EMITABS" run needs.scm) >"$TMP/u$n.log" 2>&1
+  rc=$?
+  if [ "$rc" -ne 0 ] && [ "$rc" -lt 128 ] && grep -q '(absent)' "$TMP/u$n.log"; then
+    ok "emit run names the unresolved import (manifest: $state)"
+  else
+    bad "emit run unresolved import, manifest $state (exit $rc)"
+    sed 's/^/         /' "$TMP/u$n.log"
+  fi
+  n=$((n+1))
+done
+
+# 31d. `emit lib`'s message, which was already correct, must not have changed.
+printf '(define-library (x)\n  (import (absent))\n  (export f)\n  (begin (define (f) 1)))\n' \
+  > "$BARE/x.sld"
+: > "$BARE/emit-libs.scm"
+(cd "$BARE" && "$EMITABS" lib x.sld -o build/lib) >"$TMP/e31d.log" 2>&1
+if grep -q 'unresolved import (not baked, not in the manifest): (absent)' "$TMP/e31d.log"; then
+  ok "emit lib's unresolved-import message is unchanged"
+else
+  bad "emit lib unresolved-import message"; sed 's/^/         /' "$TMP/e31d.log"
+fi
+
+# 32. A library SOURCE that holds no datum is a different case from an entryless manifest:
+#     the caller needs a define-library and there is none, so it is an ERROR naming the
+#     source.  Found while auditing the manifest parsers; the byte-empty case is masked
+#     because the host folds an empty read into "cannot read library source", but a
+#     comment-only source reaches mode 4 and used to segfault (exit 139).
+printf '; a library source with no define-library\n' > "$BARE/hollow.sld"
+echo '((library (hollow) (source "hollow.sld")))' > "$BARE/emit-libs.scm"
+printf '(import (hollow))\n(display 1)\n' > "$BARE/uses-hollow.scm"
+(cd "$BARE" && "$EMITABS" run uses-hollow.scm) >"$TMP/e32.log" 2>&1
+rc=$?
+if [ "$rc" -ne 0 ] && [ "$rc" -lt 128 ] && grep -q 'hollow' "$TMP/e32.log"; then
+  ok "emit run names a library source holding no define-library (exit $rc)"
+else
+  bad "emit run datum-free library source (exit $rc)"; sed 's/^/         /' "$TMP/e32.log"
+fi
+
+# 33. A MALFORMED manifest is not an empty one, and must not be MISreported as one.  What it
+#     IS reported as is out of scope here: the reader closes an unterminated list silently at
+#     end of input, in any source and not only a manifest, so this truncated manifest is
+#     currently accepted as though complete.  That reader gap is tracked separately; what
+#     this pins is that the empty-manifest path does not swallow it.
+printf '((library (x) (source "y.sld")\n' > "$BARE/emit-libs.scm"   # unclosed
+(cd "$BARE" && "$EMITABS" run hello.scm) >"$TMP/e33.log" 2>&1
+rc=$?
+if [ "$rc" -lt 128 ] && ! grep -q 'no entries' "$TMP/e33.log"; then
+  ok "emit run does not misreport a malformed manifest as entryless (exit $rc)"
+else
+  bad "emit run malformed manifest (exit $rc)"; sed 's/^/         /' "$TMP/e33.log"
+fi
+
+# 34. A manifest that is not a LIST OF ENTRIES at all.  These crashed for a second reason:
+#     the entry walks stopped at (), which a bare atom and an improper list never reach, so
+#     the loop took (car NON-PAIR) one step in.  The walks test `pair?` instead, which is
+#     total over every shape rather than over an enumeration of them.
+for m in 'hello' '42' '"str"' '(a . b)'; do
+  printf '%s\n' "$m" > "$BARE/emit-libs.scm"
+  got="$(cd "$BARE" && "$EMITABS" run hello.scm 2>/dev/null)"
+  rc=$?
+  if [ "$rc" -lt 128 ]; then
+    ok "emit run survives a non-list manifest [$m] (exit $rc)"
+  else
+    bad "emit run on a non-list manifest [$m] died on a signal (exit $rc)"
+  fi
+done
+
+echo
 echo "  $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

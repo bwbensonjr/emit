@@ -67,7 +67,12 @@ else echo "  [FAIL] run-no-manifest => $got  (expected (1 4 9))"; fail=$((fail+1
 
 echo "run door: import errors are reported and exit non-zero"
 check_fail run-cycle   "$MOD/prog-cycle.scm"   "$MOD/emit-libs-cycle.scm" "cyclic|unresolved"
-check_fail run-missing "$MOD/prog-missing.scm" "$MAN"                     "not found in the manifest"
+# The run door NAMES the unresolved library now, as `emit lib` always did -- it used to
+# report the constant "program imports a library not found in the manifest", naming nothing
+# (change: manifest-empty-guards; issue #63).  Asserting the NAME, not just the phrase, is
+# the point of the change: module-system requires the failure be reported "naming the
+# unresolved library", and a pattern that ignores the name would pass either way.
+check_fail run-missing "$MOD/prog-missing.scm" "$MAN"       "not in the manifest.*\(nope\)"
 # a name bound both by define and define-syntax (change: library-macro-export, design D3)
 check_fail run-macro-dupname "$MOD/prog-macro-dupname.scm" "$MOD/emit-libs-macdup.scm" \
   "both define and define-syntax"
