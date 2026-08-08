@@ -23,11 +23,13 @@ worktree) on one reproducible 200k-token input:
 
 | door | pre-regression | HEAD | delta |
 |---|---|---|---|
-| `emit run` (JIT) | 4.36 s | 5.04 s | **+15.6%** |
-| `emit build` binary (AOT `-O2 -flto`) | 3.20 s | 3.08 s | **none** |
-| Chez-hosted | 39.4 ms | 44.4 ms | +13% |
+| `emit run`, total wall clock | 3.72 s | 4.47 s | +20.2% |
+| — of which fixed compile + JIT | 0.61 s | 0.83 s | +0.22 s |
+| — **the read itself** | 3.11 s | 3.64 s | **+17%** |
+| `emit build` binary (AOT `-O2 -flto`) | 2.84 s | 2.84 s | **none** |
+| Chez-hosted (min of 20) | 33.0 ms | 36.5 ms | +10.6% |
 
-Medians of five interleaved runs. The regression is real on the **unoptimized dev door** and absent
+Medians of five interleaved runs on an idle machine. The fixed row is easy to miss and matters: `emit run` JIT-compiles the baked set first, and `reader-lexical-conformance` grew `(emit internal)` 170,716 → 289,754 B, so 0.22 s of the 0.75 s delta is compiling a larger substrate rather than reading. The regression is real on the **unoptimized dev door** and absent
 from the shipped artifact: `emit run` builds a plain `LLJITBuilder().create()` with no IR
 optimization pipeline (`src/emit.cpp:839`), while the AOT link passes `-O2 -flto`
 (`src/emit.cpp:1337`; `ship-opt`/`ship-lto` at `src/compile.ss:299`). P12 measured `emit run` and

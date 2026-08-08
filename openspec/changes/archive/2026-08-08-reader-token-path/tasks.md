@@ -16,9 +16,13 @@ Everything here runs without a regen. Sections 1.1–1.2 are done and are what r
 
       | door | pre-regression | HEAD | delta |
       |---|---|---|---|
-      | `emit run` (JIT, no opt pipeline) | 4.36 s | 5.04 s | **+15.6%** |
-      | `emit build` binary (AOT, `-O2 -flto`) | 3.20 s | 3.08 s | **none** |
+      | `emit run` (JIT, no opt pipeline) | 4.36 s | 5.04 s | +15.6% |
+      | `emit build` binary (AOT, `-O2 -flto`) | 3.20 s | 3.08 s | none |
       | Chez-hosted | 39.4 ms | 44.4 ms | +13% |
+
+      **These numbers are superseded by 6.1** — they were taken with background builds running. The
+      *direction* held on re-measurement; the magnitudes did not. Kept here because they are what
+      re-scoped the change.
 
       Medians of five interleaved runs. The regression P12 records is **real on the unoptimized
       dev door and absent from the shipped artifact**. `emit run` builds a plain
@@ -179,7 +183,15 @@ guarantees a `test/trust-check.sh` failure ~25 min into the dev run, and a kille
 
 ## 7. Close
 
-- [ ] 7.1 Commit with `Fixes #61`, then run `test/trust-check.sh` — it `[SKIP]`s while `bootstrap/`
-      is dirty, so it is a post-commit check.
-- [ ] 7.2 Remove the pre-regression worktree (`git worktree remove`) used for the baseline.
-- [ ] 7.3 Sync the two delta specs into `openspec/specs/` and archive the change.
+- [x] 7.1 Commit with `Fixes #61`, then run `test/trust-check.sh` — it `[SKIP]`s while `bootstrap/`
+      is dirty, so it is a post-commit check. — Committed as `fa06994` on `feat/reader-token-path`;
+      trust-check then passed: "committed IR is exactly what the current source regenerates".
+- [x] 7.2 Remove the pre-regression worktree (`git worktree remove`) used for the baseline. — Two of
+      them: `pre-tree` (b102070, pre-regression) and `base-tree` (9a84ca2, this change's before).
+      Both removed; `git worktree list` is back to the repo alone.
+- [x] 7.3 Sync the two delta specs into `openspec/specs/` and archive the change. — Synced by hand,
+      then archived with `--skip-specs` so archive does not apply them a second time. Counts checked
+      before and after: core-language 305 → 311 scenarios and 83 → 84 requirements (+6/+1, exactly
+      the ADDED requirement); module-system 168 → 171 scenarios, 43 requirements unchanged (the
+      include requirement was modified in place, +3 scenarios). No stray delta headers in the main
+      specs, and `openspec validate --all` is 21/21.
