@@ -65,14 +65,14 @@
       fix rather than a format drift
 - [x] 5.6 Run `./run-all-tests.sh`, then `./run-dev-tests.sh`; run suites individually if the batch
       outlives the command timeout
-- [ ] 5.7 Commit, then run `test/trust-check.sh` (it `[SKIP]`s on a dirty `bootstrap/`)
+- [x] 5.7 Commit, then run `test/trust-check.sh` (it `[SKIP]`s on a dirty `bootstrap/`)
 
 ## 6. Close out
 
-- [ ] 6.1 Reference both issues from the fixing commit as `Fixes #64` and `Fixes #52`; do not write a
+- [x] 6.1 Reference both issues from the fixing commit as `Fixes #64` and `Fixes #52`; do not write a
       negated closing keyword anywhere in the PR body
 - [x] 6.2 Added `docs/PERFORMANCE.md` **P14** covering both deferred optimizations as halves A
       (hoist to a one-time initializer) and B (static global for an all-immediate aggregate)
-- [ ] 6.3 Sync delta specs into `openspec/specs/core-language`, `openspec/specs/module-system`, and
+- [x] 6.3 Sync delta specs into `openspec/specs/core-language`, `openspec/specs/module-system`, and
       `openspec/specs/emit-cli`, then `openspec validate --all` and grep the main specs for stray
       delta headers
