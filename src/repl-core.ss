@@ -19,27 +19,34 @@
 ;;; The form/gensym counter (*repl-n*) is initialized once by init-session and
 ;;; only ever incremented, never reset per form (run-repl's @__repl_N discipline).
 
-(define *repl-env* (make-repl-env))          ; #(name->mangled-sym alist, generation)
-(define *repl-macro-env* (quote ()))         ; ((name . transformer) ...)
-(define *repl-known* (quote ()))             ; hygiene "known bindings" set
-(define *repl-n* 0)                          ; per-form thunk counter (@__repl_N)
-(define *repl-libs* (quote ()))              ; loaded units, each the export-table datum
-                                             ; (lib-name exports-alist call-rows) compile-library
-                                             ; returns -- so a loaded unit's session record IS
-                                             ; the import table its dependents need (changes:
-                                             ; module-artifacts-vertical-slice,
-                                             ; cross-unit-direct-calls)
-(define *repl-calls* (quote ()))             ; the session's direct-call table: mangled symbol ->
-                                             ; (label . arity), merged from each imported unit's
-                                             ; call rows, so an interactive form direct-calls a
-                                             ; library procedure exactly as a batch program does
-                                             ; (change: cross-unit-direct-calls)
-(define *repl-lib-imports* (quote ()))       ; ((lib-name . (import-name ...)) ...) each loaded
-                                             ; unit's DIRECT imports -- the run door computes a
-                                             ; program's transitive init closure in topological
-                                             ; order over this in-memory graph, since the driver's
-                                             ; toposort-libs reads files and is Chez-only (change:
-                                             ; run-door-user-libraries).
+;; #(name->mangled-sym alist, generation)
+(define *repl-env* (make-repl-env))
+
+;; ((name . transformer) ...)
+(define *repl-macro-env* (quote ()))
+
+;; hygiene "known bindings" set
+(define *repl-known* (quote ()))
+
+;; per-form thunk counter (@__repl_N)
+(define *repl-n* 0)
+
+;; Loaded units, each the export-table datum (lib-name exports-alist call-rows)
+;; compile-library returns -- so a loaded unit's session record IS the import table
+;; its dependents need (changes: module-artifacts-vertical-slice,
+;; cross-unit-direct-calls).
+(define *repl-libs* (quote ()))
+
+;; The session's direct-call table: mangled symbol -> (label . arity), merged from
+;; each imported unit's call rows, so an interactive form direct-calls a library
+;; procedure exactly as a batch program does (change: cross-unit-direct-calls).
+(define *repl-calls* (quote ()))
+
+;; ((lib-name . (import-name ...)) ...) each loaded unit's DIRECT imports -- the run
+;; door computes a program's transitive init closure in topological order over this
+;; in-memory graph, since the driver's toposort-libs reads files and is Chez-only
+;; (change: run-door-user-libraries).
+(define *repl-lib-imports* (quote ()))
 
 ;; register a define-syntax in the session (mirrors run-repl's note-syntax!)
 (define (repl-note-syntax! form)

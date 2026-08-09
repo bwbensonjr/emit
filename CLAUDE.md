@@ -44,6 +44,11 @@
   stdout. Follow the convention in `docs/OUTPUT.md` when adding or editing a
   tool.
 
+## Scheme code formatting 
+
+- Most comments should occur before the code they are describing,
+  rather than on the same line except for exceptionally brief notes.
+
 ## Build Workflow
 
 **`make regen` is a barrier.** Finish every compiler-source edit before starting

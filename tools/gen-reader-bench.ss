@@ -19,8 +19,11 @@
   (let ([args (command-line-arguments)])
     (if (null? args) "reader-bench.scm" (car args))))
 
-(define per-kind 50000)                  ; tokens of each of the four kinds
-(define per-form 8)                      ; tokens per top-level form
+;; tokens of each of the four kinds
+(define per-kind 50000)
+
+;; tokens per top-level form
+(define per-form 8)
 
 ;;; A fixed-seed LCG (Numerical Recipes constants), so the interleaving of the four token
 ;;; kinds is arbitrary but reproducible.  Only used to pick a kind, never a value.

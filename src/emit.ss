@@ -34,8 +34,12 @@
 ;; their UTF-8 bytes; a symbol adds a per-use rt_intern call, a string a per-use
 ;; rt_make_string.  Globals are accumulated here and prepended to the module by
 ;; emit-program.
-(define sym-globals '())          ; list of "@.str.*.N = ..." definition lines
-(define sym-table '())            ; alist: symbol name-string -> "@.str.sym.N"
+;; list of "@.str.*.N = ..." definition lines
+(define sym-globals '())
+
+;; alist: symbol name-string -> "@.str.sym.N"
+(define sym-table '())
+
 (define sym-n 0)
 (define (reset-symbols!) (set! sym-globals '()) (set! sym-table '()) (set! sym-n 0))
 (define (symbol-globals) (apply string-append (reverse sym-globals)))
@@ -1119,7 +1123,8 @@
           (list (string-append "ptr " ov))))
       tail? tc?)))
 
-(define *arity* 0)  ; K = max fixed arity, set per program
+;; K = max fixed arity, set per program
+(define *arity* 0)
 
 ;; --- top-level assembly ---
 (define (max-arity defs)  ; K = max fixed-param count across all code defs

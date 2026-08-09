@@ -65,7 +65,8 @@
 ;; `mangle` returns the internal name UNCHANGED, so a library-free program's
 ;; emitted symbols are byte-identical to before this scaffolding.  Stage 1 passes
 ;; a real library name to get "scheme.base:map" and the like.
-(define program-unit '())                 ; the empty-prefix (non-library) unit
+;; the empty-prefix (non-library) unit
+(define program-unit '())
 
 ;; Does this symbol name a binding in ANOTHER unit -- i.e. has `mangle` already
 ;; qualified it?  The separator is ":", and a unit's own names never contain one

@@ -216,7 +216,8 @@
                    (parameterize ([case-sensitive #f]) (read-program path))
                    (read-program path)))))
 
-(define *includes-read* '())            ; resolved paths served since the last reset
+;; resolved paths served since the last reset
+(define *includes-read* '())
 (define (reset-includes-read!) (set! *includes-read* '()))
 (define (includes-read) (reverse *includes-read*))
 
@@ -529,7 +530,8 @@
                   (includes-read)))
       dl)))
 
-(define *library-includes* '())         ; (library-name . (included-path ...))
+;; (library-name . (included-path ...))
+(define *library-includes* '())
 (define (library-includes name)
   (cond [(assoc name *library-includes*) => cdr] [else '()]))
 
@@ -568,7 +570,8 @@
 
 ;; Version marker for the stamp FORMAT (D1): bump by hand to force a global
 ;; invalidation deliberately (e.g. if the stamp scheme itself changes).
-(define compiler-stamp-version 2)      ; 2: the sidecar gained the include list (D10)
+;; Version 2: the sidecar gained the include list (D10).
+(define compiler-stamp-version 2)
 
 ;; Exactly the (include ...) block at the top of this file PLUS this file itself,
 ;; in a fixed order -- the sources that turn library source -> IR in this path.

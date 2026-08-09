@@ -131,9 +131,14 @@
 
 (printf "\nfoldable window\n")
 
-(define lim 1073741823)                 ; 2^30 - 1, the pass's window
-(define fx-max 1152921504606846975)     ; 2^60 - 1, the fixnum ceiling
-(define enc-max fx-max)                 ; encode-const now reaches it too (issue #7 fixed)
+;; 2^30 - 1, the pass's window
+(define lim 1073741823)
+
+;; 2^60 - 1, the fixnum ceiling
+(define fx-max 1152921504606846975)
+
+;; encode-const now reaches it too (issue #7 fixed)
+(define enc-max fx-max)
 
 (check "the largest product in the window folds, and stays a fixnum"
   (let ([r (simplify `(primcall %* (const ,lim) (const ,lim)))])
