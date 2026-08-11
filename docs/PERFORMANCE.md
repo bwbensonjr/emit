@@ -29,6 +29,7 @@ speed items in this list.
 | [P12](#p12--the-reader-classifier-chain-costs-20-on-the-door-that-does-not-optimize) | The reader classifier chain costs 20%, on the door that does not optimize | speed | low | med | — | ☐ |
 | [P13](#p13--the-jitrepl-door-runs-no-ir-optimization-pipeline) | The JIT/REPL door runs no IR optimization pipeline | speed | med–high | med | — | ☐ |
 | [P14](#p14--an-aggregate-constant-is-rebuilt-at-every-evaluation) | An aggregate constant is rebuilt at every evaluation | speed + size | low–med | med | — | ☐ |
+| [P15](#p15--indexed-access-bounds-checks-measured-and-free) | Indexed-access bounds checks: measured, and free | speed | n/a | n/a | `checked-indexed-access` | ☑ |
 
 Legend — **Value**: benefit if fixed. **Cost**: rough implementation effort/risk. These are
 estimates to aid sequencing, not commitments.
@@ -1319,6 +1320,56 @@ follow P6's constant-folding work rather than precede it.
 
 Found while implementing `reader-datum-parity` (issue #64): the vector clause was written to
 mirror the existing pair clause, and mirroring it inherited this cost.
+
+---
+
+## P15 — Indexed-access bounds checks: measured, and free
+
+**Status:** ☑ measured, no action needed (change: `checked-indexed-access`)
+
+This entry exists to record a **measurement, not a debt**. Change `checked-indexed-access` made every
+indexed accessor bounds-checked (`vector-ref`/`vector-set!`, `bytevector-u8-ref`/`-set!`,
+`string-ref`/`string-set!`, `substring`, the internal record accessors, plus a non-negative size test
+in `make-vector`/`make-bytevector`/`make-string`). Those accessors are on the compiler's hottest
+paths — `src/parse.ss` keeps its environments in vectors and the reader runs on `string-ref` — so
+design D7 required the cost to be measured rather than assumed, and required the result to be
+recorded *whether or not it showed a cost*. A recorded "no measurable cost" is what stops the
+question being re-litigated at every review.
+
+**Result: no measurable cost.** The median difference is **+0.01%** on a 162-second workload, which
+is roughly two orders of magnitude smaller than the run-to-run noise.
+
+**Method.** The workload is `emit-boot --emit < build/embed.scm`: the compiler compiling **itself**
+(434 KB of Scheme), which is the inner step `make regen` iterates to a fixed point. Two `emit-boot`
+binaries were linked from the *same* committed IR, differing only in `runtime-host.o` (guarded vs
+unguarded), so nothing but the C runtime varied — and both were confirmed to emit **byte-identical
+IR** (3,836,487 bytes), without which the two arms would not be the same compiler. Runs were
+interleaved A/B/A/B so thermal drift and background load hit both arms equally.
+
+| arm | n | min | median | mean | max | stdev |
+|-----|---|-----|--------|------|-----|-------|
+| checks OFF | 5 | 159.083s | 161.926s | 163.648s | 168.700s | 4.151 |
+| checks ON  | 5 | 159.317s | 161.945s | 162.520s | 167.448s | 3.072 |
+
+Median delta **+0.020s (+0.01%)**. Paired deltas: −1.252, −2.608, +3.913, −5.389, −0.304 — they
+straddle zero, and the mean paired delta is *negative* (−1.128s), which is noise rather than a
+speedup. Within-arm spread is 9.617s (OFF) and 8.131s (ON): the noise floor is ~5%, so this method
+could not have resolved an effect smaller than that, and the effect is well inside it.
+
+**Why it is free.** Each check is a compare against a word the accessor already loads to find its
+data (`vec_len`, `bv_len`, `str_cplen` all live in the object header), and a correctly-predicted
+branch that never fires. Preferring the paired inner-loop measurement over two whole-`regen`
+wall-clocks was deliberate: regen buries the compile in clang/LLVM link time and yields one sample
+per arm, where this yields five paired samples of the code actually affected.
+
+**Consequence for the deferred work.** Design D7 named the remedy order if a cost appeared — elide
+where the emitter can prove the index in range, records first (design D6), then constant indices.
+None of it was filed, because there is no cost to recover. The record accessors are the one place a
+future optimizer *could* elide provably (the frontend derives every field index as a compile-time
+constant from the record definition, `src/parse.ss:529`), but at +0.01% it would be optimizing
+nothing. Note that records gained a field-count header word in this change — they had no length to
+check against — so the record path costs one word per instance, not per access; that is a size note,
+not a speed one.
 
 ---
 
