@@ -474,6 +474,27 @@
 #     still pass -- including library-include-tests.sh, whose driver section now compares
 #     an include-ci fixture's geom.ll across the two doors byte for byte, which is what
 #     replaces the single shared fold this change deleted.  No new entries.
+#   reader-input-termination -- `rd-report` gained two arms (rd-unterminated-list,
+#     rd-unterminated-string) and rd-list/rd-string each gained an `open` parameter, so the
+#     reader's constant pool gained NINE constants and everything after them renumbered.
+#     Verified against an 80-demo pre-change capture (a detached HEAD worktree at cddaf18,
+#     `make emit` from committed IR) vs the post-regen tree.  Two kinds of drift, nothing
+#     else:
+#       (1) 79 demos: +332 lines each, EXACTLY the same delta.  The nine new constants are
+#           " opened at index", "unterminated ", "list (", "list [", "vector #(",
+#           "bytevector #u8(", "unterminated string \" opened at index", and the two reason
+#           symbols; the rest is @.str.* renumbering behind them.  A set-diff of every
+#           string CONTENT in a demo before vs after shows those nine added and nothing
+#           removed, so no constant changed value.
+#       (2) ports.ll ONLY: +515 lines, and it references the new constants 8 times where
+#           every other demo references them 4 times -- exactly double, because it is the
+#           one demo reaching the port `read`, which carries (scheme read)'s DUPLICATED
+#           copy of rd-report (design D2; the same arrangement %check-input-port has).
+#           The outlier is therefore the duplication showing up in the IR, not extra
+#           codegen.
+#     All 80 demos' stdout is byte-identical before and after (the demo-values suite passes
+#     unchanged), and the reader's own behaviour change is what the new tests assert rather
+#     than anything the demos exercise.  No new entries.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

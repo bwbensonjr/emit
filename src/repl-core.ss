@@ -443,9 +443,39 @@
 ;; (), on an IMPROPER one's non-pair tail, and immediately on a manifest that is a bare
 ;; symbol or number.  Those shapes segfaulted too -- `hello`, `42`, `(a . b)` all reached
 ;; a (car NON-PAIR) -- and one predicate makes the walk total instead of enumerating them.
+;;
+;; MORE THAN ONE FORM IS AN ERROR (change: reader-input-termination; issue #67).  A manifest
+;; is exactly one form -- the list of entries -- and `(cdr forms)` used to be dropped in
+;; silence, so the natural mistake of writing one parenthesized group per entry (which LOOKS
+;; like a list of entries and READS as several) left the later entries unresolvable.  It then
+;; surfaced as an unresolved import naming the importer, blaming the program for a mistake in
+;; the manifest.
+;;
+;; Rejecting rather than CONCATENATING the forms is a grammar decision, not just a guard
+;; (design D5): concatenation would make the mistake work, but it widens the documented
+;; grammar and is the direction that cannot be taken back.  Admitting it later is additive.
+;;
+;; The count is named here and the PATH is named by the host: modes 5/9/10 receive only the
+;; text, because the host owns file I/O -- and it holds the path at each call site, which
+;; matters when a chain has listed three candidates in the narration.
+;; More than one top-level form?  -> how many, else #f.  The RULE lives here once; the
+;; WORDING differs by channel below, because each prepends its own context -- mode 10's host
+;; prints "emit: manifest PATH ..." while a raise prints "manifest: ...".
+(define (manifest-extra-forms forms)
+  (if (and (pair? forms) (pair? (cdr forms))) (length forms) #f))
+
 (define (manifest-entries text)
   (let ([forms (read-all-from-string text)])
-    (if (pair? forms) (car forms) (quote ()))))
+    (if (pair? forms)
+        (let ([k (manifest-extra-forms forms)])
+          ;; Modes 5 and 9 return a bare string and have nowhere to put a status, so this
+          ;; RAISES; mode 10 carries an (ok . _) / (error . MSG) pair and reports through it.
+          (if k
+              (error (quote manifest)
+                     "a manifest is one top-level form (the list of entries); this one holds"
+                     k)
+              (car forms)))
+        (quote ()))))                             ; no datum: an empty manifest, as above
 
 ;; Parse a manifest's text and return its LIBRARY source paths, newline-joined, so
 ;; the host (which owns file I/O) can read each library source and load it (mode 4).
@@ -547,10 +577,25 @@
 ;; but the first means "you have not written your manifest yet" and the second means
 ;; "you wrote libraries but no program", and only the reader can tell them apart.  A
 ;; sentinel line was the alternative and shares a namespace with program names.
+;; NOTE this does NOT route through `manifest-entries`: it needs the (ok . _) / (error . MSG)
+;; pair, and manifest-entries raises.  That difference is why the form-count RULE is factored
+;; into `manifest-extra-forms` and applied here separately -- consolidating only two of the
+;; three parsers is what let a two-form manifest through this door after the other two
+;; rejected it, so mode 10 narrated a build it then abandoned (change: reader-input-termination).
+;;
+;; The guard is what lets the HOST name the manifest: it prints "emit: manifest PATH <msg>",
+;; and the core is handed only text.  Without it a truncated manifest reported the reader's
+;; raise with no file attached, and every door's narration had already listed the candidates.
 (define (repl-manifest-programs text)
-  (let ([forms (read-all-from-string text)])
+  (guard (e (#t (cons (quote error) (repl-error->string e))))
+   (let ([forms (read-all-from-string text)])
     (if (null? forms)
         (cons (quote error) "declares no entries")
+      (let ([k (manifest-extra-forms forms)])
+       (if k
+        (cons (quote error)
+              (string-append "holds " (number->string k)
+                             " top-level forms; a manifest is one form (the list of entries)"))
         (let loop ([es (car forms)] [acc ""])
           (if (not (pair? es))              ; total: (), an improper tail, or a non-list manifest
               (cons (quote ok) acc)
@@ -561,7 +606,7 @@
                            [src     (cond [(assq (quote source) clauses) => cadr] [else ""])]
                            [out     (cond [(assq (quote output) clauses) => cadr] [else ""])])
                       (loop (cdr es) (string-append acc name "\n" src "\n" out "\n")))
-                    (loop (cdr es) acc))))))))
+                    (loop (cdr es) acc)))))))))))
 
 ;; --- run door: run an importing program in-process (change: run-door-user-libraries) ---
 ;; The run host preloads user libraries (mode 4, WITHOUT running __init) and registers
@@ -839,6 +884,12 @@
     (let ([j (fc-skip-ws s n i2)])
       (if (fc-bad? j) j (if (< j n) (fc-datum s n j) fc-incomplete)))))
 
+;; DELIBERATELY DIVERGENT from `rd-list` (src/prelude.scm), which REPORTS an unterminated
+;; list where this answers `fc-incomplete` (change: reader-input-termination, design D4).
+;; The two are not a duplication to be unified: a host reading a stream can supply another
+;; line, so "keep typing" is the useful answer; a source file cannot, so a diagnostic naming
+;; what was left open is.  Unify them and multi-line entry at the prompt stops working --
+;; test/repl-interactive-tests.sh `list-across-lines` is the case that catches it.
 (define (fc-list s n i)                          ; scan (...) past the open paren
   (let ([j (fc-skip-ws s n i)])
     (if (fc-bad? j)

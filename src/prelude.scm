@@ -1185,20 +1185,30 @@
       [(= k 116) (integer->char 9)]      ; \t
       [(= k 114) (integer->char 13)]     ; \r
       [else c])))                        ; \\ \" and any other: the char itself
-(define (rd-string s n i)                ; i just past opening "; decodes escapes
+;; `open` is the index of the opening " -- carried so the report can name where the string
+;; STARTED, which is where the missing delimiter belongs (change: reader-input-termination).
+(define (rd-string s n i open)           ; i just past opening "; decodes escapes
   (let loop ([i i] [acc (quote ())])
     (if (< i n)
         (let* ([c (string-ref s i)] [k (char->integer c)])
           (cond
             [(= k 34) (cons (list->string (reverse acc)) (+ i 1))]        ; closing "
             [(= k 92)                                                     ; backslash escape
-             (let ([e (string-ref s (+ i 1))])
-               (if (= (char->integer e) 120)                             ; \xHH;
-                   (let ([hx (rd-hex s n (+ i 2) 0)])
-                     (loop (cdr hx) (cons (integer->char (car hx)) acc)))
-                   (loop (+ i 2) (cons (rd-str-esc e) acc))))]            ; \n \t \r \\ \"
+             ;; The escaped character must EXIST.  A source ending in a dangling backslash
+             ;; used to read s[n] -- past the end of the input, and silently, because
+             ;; indexed access is unchecked (issue #70).  A dangling \xHH needs no arm of
+             ;; its own: rd-hex stops at n, so the loop re-enters and ends below.
+             (if (<= n (+ i 1))
+                 (rd-fail (quote rd-unterminated-string) open)
+                 (let ([e (string-ref s (+ i 1))])
+                   (if (= (char->integer e) 120)                         ; \xHH;
+                       (let ([hx (rd-hex s n (+ i 2) 0)])
+                         (loop (cdr hx) (cons (integer->char (car hx)) acc)))
+                       (loop (+ i 2) (cons (rd-str-esc e) acc)))))]       ; \n \t \r \\ \"
             [else (loop (+ i 1) (cons c acc))]))
-        (cons (list->string (reverse acc)) i))))
+        ;; NOT end of input: closing the string here fabricates a datum the source does not
+        ;; contain, so a truncated file compiled as though complete (issue #66).
+        (rd-fail (quote rd-unterminated-string) open))))
 
 (define (rd-hash s n i ci)               ; i just past #
   (if (<= n i)
@@ -1210,7 +1220,9 @@
           [(= k 92) (rd-char s n i)]                           ; #\<char> or #\<name>
           ;; ci travels INTO a vector literal: a symbol inside #( ... ) is a symbol the
           ;; read produces, and the old shape-walking fold missed it (design D3).
-          [(= k 40) (let ([r (rd-list s n (+ i 1) (quote ()) ci)])  ; #( ... ) -> vector
+          ;; `(- i 1)` is the `#`, not the `(`: the construct the author opened is `#(`, so
+          ;; that is what the unterminated report has to name.
+          [(= k 40) (let ([r (rd-list s n (+ i 1) (quote ()) ci (- i 1))])  ; #( -> vector
                       (if (rd-fail? (cdr r)) r (cons (list->vector (car r)) (cdr r))))]
           ;; #; -- DISCARD the next datum and read the one after it (design D1).  It
           ;; cannot be skipped as whitespace: throwing a datum away needs a full
@@ -1223,7 +1235,7 @@
                 (< (+ i 2) n)
                 (= (char->integer (string-ref s (+ i 1))) 56)    ; 8
                 (= (char->integer (string-ref s (+ i 2))) 40))   ; (
-           (let ([r (rd-list s n (+ i 3) (quote ()) ci)])
+           (let ([r (rd-list s n (+ i 3) (quote ()) ci (- i 1))])   ; open at the #, as above
              (if (rd-fail? (cdr r)) r (cons (list->bytevector (car r)) (cdr r))))]
           ;; Everything else that begins with # is a PREFIXED NUMBER or nothing at all.
           ;; This arm used to fall through to string->symbol, which is what produced
@@ -1301,7 +1313,19 @@
   (and (= (char->integer (string-ref s i)) 35)
        (< (+ i 1) n)
        (= (char->integer (string-ref s (+ i 1))) 59)))
-(define (rd-list s n i acc ci)           ; i after (; read until ) (supports . tail)
+;; `open` is the index of the construct's FIRST character -- the `(` or `[`, and for a vector
+;; or bytevector the `#`, so the report can name `#(` / `#u8(` rather than a bare paren.
+;;
+;; It travels DOWN rather than being attached by the caller on the way out, because rd-list
+;; recurses per element: the INNER unterminated construct is the one whose delimiter is
+;; missing, and a position attached on the way out would be overwritten by every enclosing
+;; list (change: reader-input-termination, design D1).
+;;
+;; NOTE the divergence from `fc-list` (src/repl-core.ss), which answers `fc-incomplete` for
+;; the same text.  That is deliberate and directional, not a duplication to be unified: a
+;; host reading a stream can supply another line, a source file cannot.  Unifying the two
+;; would destroy multi-line entry at the prompt.
+(define (rd-list s n i acc ci open)      ; i after (; read until ) (supports . tail)
   (let ([j (rd-skip-ws s n i)])
     (cond
       [(rd-fail? j) (cons (quote rd-block-comment) j)]
@@ -1313,29 +1337,35 @@
          ;; where there is no following element for rd-datum's arm to return.
          [(rd-datum-comment? s n j)
           (let ([r (rd-datum s n (rd-skip-ws s n (+ j 2)) ci)])
-            (if (rd-fail? (cdr r)) r (rd-list s n (cdr r) acc ci)))]
+            (if (rd-fail? (cdr r)) r (rd-list s n (cdr r) acc ci open)))]
          [(rd-dot? s n j)                                                          ; . tail
           (let ([r (rd-datum s n (rd-skip-ws s n (+ j 1)) ci)])
             (if (rd-fail? (cdr r))
                 r
                 (let ([j2 (rd-skip-ws s n (cdr r))])
-                  (if (rd-fail? j2)
-                      (cons (quote rd-block-comment) j2)
-                      (cons (rd-append-reverse acc (car r)) (+ j2 1))))))]          ; past )
+                  (cond
+                    [(rd-fail? j2) (cons (quote rd-block-comment) j2)]
+                    ;; the close paren this arm steps past must actually BE there
+                    [(<= n j2) (rd-fail (quote rd-unterminated-list) open)]
+                    [else (cons (rd-append-reverse acc (car r)) (+ j2 1))]))))]     ; past )
          [else (let ([r (rd-datum s n j ci)])
-                 (if (rd-fail? (cdr r)) r (rd-list s n (cdr r) (cons (car r) acc) ci)))])]
-      [else (cons (reverse acc) j)])))
+                 (if (rd-fail? (cdr r))
+                     r
+                     (rd-list s n (cdr r) (cons (car r) acc) ci open)))])]
+      ;; NOT end of input: closing the list here fabricates a datum the source does not
+      ;; contain, so a truncated file compiled as though complete (issue #66).
+      [else (rd-fail (quote rd-unterminated-list) open)])))
 
 (define (rd-datum s n i ci)              ; i at a non-ws char -> (datum . next)
   (if (and (<= 0 i) (< i n))
       (let ([k (char->integer (string-ref s i))])
         (cond
-          [(= k 40) (rd-list s n (+ i 1) (quote ()) ci)]       ; (
-          [(= k 91) (rd-list s n (+ i 1) (quote ()) ci)]       ; [ (brackets = parens)
+          [(= k 40) (rd-list s n (+ i 1) (quote ()) ci i)]     ; (
+          [(= k 91) (rd-list s n (+ i 1) (quote ()) ci i)]     ; [ (brackets = parens)
           [(= k 39) (rd-quote s n (+ i 1) ci)]                 ; '
           [(= k 96) (rd-quasi s n (+ i 1) ci)]                 ; `
           [(= k 44) (rd-unquote s n (+ i 1) ci)]               ; ,
-          [(= k 34) (rd-string s n (+ i 1))]                   ; "
+          [(= k 34) (rd-string s n (+ i 1) i)]                 ; "
           [(= k 35) (rd-hash s n (+ i 1) ci)]                  ; #
           ;; NOT given ci: R7RS 7.1.1 makes the characters between the bars the symbol's
           ;; name literally, so a bar-quoted identifier is never folded (issue #61).
@@ -1361,6 +1391,27 @@
        (error (quote read) "unterminated block comment #| opened at index" p)]
       [(eq? why (quote rd-bar))
        (error (quote read) "unterminated |identifier| opened at index" p)]
+      ;; ONE reason covers (, [, #( and #u8(: the source at p still says which delimiter it
+      ;; was, so the message names the construct the author actually opened without four
+      ;; reasons carrying identical handling.  Decoded INLINE rather than through a helper
+      ;; because rd-report is duplicated into (scheme read) -- a helper would have to join
+      ;; *reader-report-shared-with-read* (src/prelude-surface.scm) to travel with it.
+      [(eq? why (quote rd-unterminated-list))
+       (error (quote read)
+              (string-append
+               "unterminated "
+               (let ([k (char->integer (string-ref s p))])
+                 (cond
+                   [(= k 91) "list ["]
+                   [(and (= k 35) (< (+ p 1) n)
+                         (= (char->integer (string-ref s (+ p 1))) 117))   ; #u8(
+                    "bytevector #u8("]
+                   [(= k 35) "vector #("]
+                   [else "list ("]))
+               " opened at index")
+              p)]
+      [(eq? why (quote rd-unterminated-string))
+       (error (quote read) "unterminated string \" opened at index" p)]
       [(eq? why (quote rd-eof))
        (error (quote read) "end of input where a datum was expected, at index" p)]
       [(eq? why (quote rd-unexpected))

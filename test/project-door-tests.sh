@@ -403,18 +403,18 @@ else
   bad "emit run datum-free library source (exit $rc)"; sed 's/^/         /' "$TMP/e32.log"
 fi
 
-# 33. A MALFORMED manifest is not an empty one, and must not be MISreported as one.  What it
-#     IS reported as is out of scope here: the reader closes an unterminated list silently at
-#     end of input, in any source and not only a manifest, so this truncated manifest is
-#     currently accepted as though complete.  That reader gap is tracked separately; what
-#     this pins is that the empty-manifest path does not swallow it.
+# 33. A TRUNCATED manifest is reported, not accepted as complete (issue #66).  The reader used
+#     to close an unterminated list silently at end of input -- in any source, not only a
+#     manifest -- so this resolved as though the missing text were never written.  It is still
+#     not the same case as an EMPTY manifest and must not be reported as one.
 printf '((library (x) (source "y.sld")\n' > "$BARE/emit-libs.scm"   # unclosed
 (cd "$BARE" && "$EMITABS" run hello.scm) >"$TMP/e33.log" 2>&1
 rc=$?
-if [ "$rc" -lt 128 ] && ! grep -q 'no entries' "$TMP/e33.log"; then
-  ok "emit run does not misreport a malformed manifest as entryless (exit $rc)"
+if [ "$rc" -ne 0 ] && [ "$rc" -lt 128 ] && grep -q 'unterminated list' "$TMP/e33.log" \
+   && ! grep -q 'no entries' "$TMP/e33.log"; then
+  ok "emit run reports a truncated manifest (exit $rc)"
 else
-  bad "emit run malformed manifest (exit $rc)"; sed 's/^/         /' "$TMP/e33.log"
+  bad "emit run truncated manifest (exit $rc)"; sed 's/^/         /' "$TMP/e33.log"
 fi
 
 # 34. A manifest that is not a LIST OF ENTRIES at all.  These crashed for a second reason:
@@ -431,6 +431,67 @@ for m in 'hello' '42' '"str"' '(a . b)'; do
     bad "emit run on a non-list manifest [$m] died on a signal (exit $rc)"
   fi
 done
+
+echo
+echo "a truncated or multi-form manifest (issues #66, #67)"
+
+# 35. `emit build` on a truncated manifest used to WRITE AN EXECUTABLE and exit 0 -- the worst
+#     shape of this defect, because the manifest is data the compiler acts on rather than text
+#     it merely reads.  The entry below is one closing paren short.
+BUILDP="$TMP/buildp"
+mkdir -p "$BUILDP"
+printf '(display 7)\n(newline)\n' > "$BUILDP/hello.scm"
+printf '((program p (source "hello.scm") (output "h")\n' > "$BUILDP/emit-libs.scm"
+(cd "$BUILDP" && "$EMITABS" build) >"$TMP/e35.log" 2>&1
+rc=$?
+if [ "$rc" -ne 0 ] && [ "$rc" -lt 128 ] && grep -q 'unterminated list' "$TMP/e35.log" \
+   && [ ! -e "$BUILDP/h" ]; then
+  ok "emit build reports a truncated manifest and writes nothing (exit $rc)"
+else
+  bad "emit build truncated manifest (exit $rc, h exists: $([ -e "$BUILDP/h" ] && echo yes || echo no))"
+  sed 's/^/         /' "$TMP/e35.log"
+fi
+
+# 36. A manifest's SECOND top-level form used to be discarded silently (issue #67).  The natural
+#     mistake is one parenthesized group per entry, which LOOKS like a list of entries and READS
+#     as several.  A manifest is exactly one form, and a second one is reported by count.
+printf '((library (a) (source "a.sld")))\n((library (b) (source "b.sld")))\n' \
+  > "$BARE/emit-libs.scm"
+(cd "$BARE" && "$EMITABS" run hello.scm) >"$TMP/e36.log" 2>&1
+rc=$?
+if [ "$rc" -ne 0 ] && [ "$rc" -lt 128 ] && grep -qi 'top-level form' "$TMP/e36.log"; then
+  ok "emit run reports a two-form manifest (exit $rc)"
+else
+  bad "emit run two-form manifest (exit $rc)"; sed 's/^/         /' "$TMP/e36.log"
+fi
+
+# 37. ...and the diagnostic points at the MANIFEST, not at the import.  Before this change the
+#     dropped entry surfaced as an unresolved import naming (b) -- blaming the program for a
+#     mistake in the manifest, which is the part that made this expensive to diagnose.
+printf '(import (b))\n(display 1)\n' > "$BARE/needs-b.scm"
+printf '(define-library (b) (export g) (begin (define (g) 1)))\n' > "$BARE/b.sld"
+printf '((library (a) (source "a.sld")))\n((library (b) (source "b.sld")))\n' \
+  > "$BARE/emit-libs.scm"
+(cd "$BARE" && "$EMITABS" run needs-b.scm) >"$TMP/e37.log" 2>&1
+rc=$?
+if [ "$rc" -ne 0 ] && grep -qi 'top-level form' "$TMP/e37.log" \
+   && ! grep -q 'unresolved' "$TMP/e37.log"; then
+  ok "a two-form manifest is blamed, not the import it dropped"
+else
+  bad "two-form manifest blames the import (exit $rc)"; sed 's/^/         /' "$TMP/e37.log"
+fi
+
+# 38. A well-formed manifest with any amount of surrounding whitespace and comments is still
+#     ONE form and must keep working -- the form count is of DATA, not of lines.
+printf '; leading comment\n\n((program p (source "hello.scm") (output "h")))\n\n; trailing\n' \
+  > "$BUILDP/emit-libs.scm"
+(cd "$BUILDP" && EMIT_VERBOSITY=quiet "$EMITABS" build) >"$TMP/e39.log" 2>&1
+rc=$?
+if [ "$rc" -eq 0 ] && [ -x "$BUILDP/h" ] && [ "$("$BUILDP/h")" = "7" ]; then
+  ok "a commented single-form manifest still builds"
+else
+  bad "commented single-form manifest (exit $rc)"; sed 's/^/         /' "$TMP/e39.log"
+fi
 
 echo
 echo "  $pass passed, $fail failed"

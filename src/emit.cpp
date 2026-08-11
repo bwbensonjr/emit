@@ -236,6 +236,29 @@ static std::string door_msg(const std::string &m) {
   const std::string p = "repl: ";
   return m.compare(0, p.size(), p) == 0 ? m.substr(p.size()) : m;
 }
+// Byte offset of the CPS'th codepoint in a UTF-8 buffer.
+//
+// The input-completeness probe answers in CODEPOINTS -- the core's strings are
+// codepoint-indexed over UTF-8 storage -- while the REPL's accumulation buffer is BYTES.
+// Slicing the buffer by a codepoint count therefore truncates the form by (bytes -
+// codepoints) whenever anything before the boundary is multi-byte, and there is no
+// diagnostic because the two units agree on every ASCII-only input.
+//
+// It was invisible until the reader stopped closing an unterminated list at end of input
+// (change: reader-input-termination): the truncation dropped the form's trailing
+// delimiters, the reader silently supplied them again, and the value came out right. The
+// leftover text then reported "malformed input" on stderr, which is the symptom that was
+// visible all along. demos/prelude.scm is the case in the tree -- one em-dash in a comment,
+// two bytes, exactly the two closing parens of the form below it.
+static size_t byte_offset_of_codepoint(const std::string &s, size_t cps) {
+  size_t i = 0;
+  for (size_t n = 0; n < cps && i < s.size(); n++) {
+    unsigned char c = (unsigned char)s[i];
+    i += (c < 0x80) ? 1 : (c < 0xC0) ? 1 : (c < 0xE0) ? 2 : (c < 0xF0) ? 3 : 4;
+  }
+  return i > s.size() ? s.size() : i;
+}
+
 static bool write_file(const std::string &path, const std::string &data) {
   std::ofstream f(path, std::ios::binary | std::ios::trunc);
   if (!f) return false;
@@ -510,6 +533,37 @@ static std::vector<std::string> source_imports(const std::string &text, const st
 // program's imports over the manifest index instead, which is what the Chez driver's
 // toposort-libs already does on its side.
 //
+// Run a manifest-parsing mode call (5 or 9) and ATTRIBUTE a failure to the file it came
+// from.  The core is handed only text -- the host owns paths -- so a manifest the reader
+// rejects (a truncated list) or the form-count check rejects (a second top-level form)
+// otherwise reports with no file named, and the narration has already listed every chained
+// candidate above it, leaving the user to guess which one (change: reader-input-termination,
+// design D5; issues #66, #67).
+//
+// `rt_raise` prints the diagnostic and, with no trap installed, exit(1)s.  Installing one
+// here adds the attribution line and exits the same way, so the control flow a malformed
+// manifest produces is UNCHANGED -- only better labelled.  Nothing non-trivial is live
+// across the setjmp.
+//
+// Mode 10 needs none of this: it carries an (ok . _) / (error . MSG) pair and
+// resolve_program prints "manifest PATH ..." itself.
+static std::string manifest_mode_text(int mode, const std::string &mtext,
+                                      const std::string &manifest) {
+  jmp_buf jb;
+  jmp_buf *saved = rt_trap;
+  rt_trap = &jb;
+  if (setjmp(jb) != 0) {
+    rt_guard_reset();          // a trap may have bypassed rt_run_guarded's frame pop
+    rt_trap = saved;
+    std::cerr << "emit: in manifest " << manifest << "\n";
+    exit(1);
+  }
+  rt_repl_set(mode, mtext.data(), (intptr_t)mtext.size());
+  std::string out = scm_str(scheme_entry());
+  rt_trap = saved;
+  return out;
+}
+
 // The REPL host deliberately stays EAGER (mode 5): a session is an open world where
 // the user may import anything at any prompt, so everything on the manifest must
 // already be loaded.  Only this door, compiling one known program, can be lazy.
@@ -530,8 +584,8 @@ static bool preload_user_libraries(const std::vector<std::string> &manifests,
   for (size_t mi = 0; mi < manifests.size(); mi++) {
     const std::string &manifest = manifests[mi];
     std::string mtext = read_file(manifest);
-    rt_repl_set(9, mtext.data(), (intptr_t)mtext.size());  // "KEY\tPATH" sans (scheme base)
-    std::string index = scm_str(scheme_entry());
+    // "KEY\tPATH" sans (scheme base)
+    std::string index = manifest_mode_text(9, mtext, manifest);
     std::istringstream lines(index);
     std::string line;
     while (std::getline(lines, line)) {
@@ -1001,8 +1055,7 @@ static void preload_libraries(const std::vector<std::string> &manifests) {
       // INCLUDING a baked member like (scheme base), which this repository's own
       // manifest names for the Chez driver and which the already-registered guard
       // absorbs below.
-      rt_repl_set(5, mtext.data(), (intptr_t)mtext.size());
-      std::string paths = scm_str(scheme_entry());
+      std::string paths = manifest_mode_text(5, mtext, manifest);
       std::istringstream lines(paths);
       std::string path;
       while (std::getline(lines, path))
@@ -1013,8 +1066,7 @@ static void preload_libraries(const std::vector<std::string> &manifests) {
     // already supplies is not loaded a second time from a later one.  Mode 9's
     // "KEY<TAB>PATH" is that index (it omits only (scheme base), which is baked and
     // would land on the already-registered guard either way).
-    rt_repl_set(9, mtext.data(), (intptr_t)mtext.size());
-    std::string index = scm_str(scheme_entry());
+    std::string index = manifest_mode_text(9, mtext, manifest);
     std::istringstream ilines(index);
     std::string line;
     while (std::getline(ilines, line)) {
@@ -1240,8 +1292,10 @@ static int emit_repl(int argc, char **argv) {
         buf.clear();
         break;
       }
-      std::string form = buf.substr(0, (size_t)code);
-      buf.erase(0, (size_t)code);
+      // `code` is a CODEPOINT count; this buffer is bytes (see byte_offset_of_codepoint).
+      size_t cut = byte_offset_of_codepoint(buf, (size_t)code);
+      std::string form = buf.substr(0, cut);
+      buf.erase(0, cut);
       process_form(form);
       if (buf.find_first_not_of(" \t\r\n") == std::string::npos) { buf.clear(); break; }
     }

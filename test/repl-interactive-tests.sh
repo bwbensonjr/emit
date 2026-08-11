@@ -217,6 +217,59 @@ check bar-quoted-identifier "" '"a b"' <<'EOF'
 (symbol->string (quote |a b|))
 EOF
 
+# --- a list and a string typed across lines (change: reader-input-termination) -------
+# The reader now REPORTS an unterminated list or string instead of closing it at end of
+# input (issue #66), while the probe still answers "incomplete" for that same text.  That
+# divergence is DIRECTIONAL and intended (design D4): a host reading a stream can supply
+# more input, a source file cannot.  These are the cases that break if the two
+# implementations are ever "unified" on the grounds that they look redundant -- each form
+# below only produces a value if every intermediate prefix was answered "keep typing".
+check list-across-lines --no-prelude "(1 2)" <<'EOF'
+(display (cons 1
+               (cons 2 (quote ()))))
+EOF
+
+check nested-list-across-lines --no-prelude "6" <<'EOF'
+(+ 1
+   (+ 2
+      3))
+EOF
+
+check string-across-lines --no-prelude "$(printf 'a\nb')" <<'EOF'
+(display "a
+b")
+EOF
+
+# ...and a truncated form at the prompt does not take the session down: end of input with a
+# list still open ends the session, and a COMPLETE form typed after an error still runs.
+check error-then-more-forms --no-prelude "$(printf '3\n7')" <<'EOF'
+(+ 1 2)
+(+ 3 4)
+EOF
+
+# A MULTI-BYTE character before a form boundary must not shorten the form.  The probe
+# answers in CODEPOINTS and the host's accumulation buffer is BYTES, so slicing one by the
+# other truncated every form preceded by non-ASCII text -- by exactly (bytes - codepoints).
+# It was invisible while the reader closed an unterminated list at end of input: the dropped
+# trailing parens were silently supplied and the value came out right, leaving only a
+# stray-text "malformed input" on stderr.  demos/prelude.scm is the case in the tree (one
+# em-dash, two bytes, exactly the two closing parens below it), which is why
+# repl-equiv-tests.sh caught this and no prompt test did.
+check multibyte-comment-before-form --no-prelude "3" <<'EOF'
+; an em dash — two bytes, one codepoint
+(+ 1
+   2)
+EOF
+
+# Two of them, and inside a string rather than a comment, so the count is what matters and
+# not where the bytes came from.
+# (display emits no newline, so the two forms' output runs together as "αβ3".)
+check multibyte-string-before-form "" "αβ3" <<'EOF'
+(display "αβ")
+(+ 1
+   2)
+EOF
+
 # spec: end-of-input ends the session cleanly (exit code 0)
 printf '(+ 1 2)\n' | chez --libdirs src --script src/compile.ss --repl --no-prelude >/dev/null 2>&1
 if [ "$?" -eq 0 ]; then
