@@ -112,7 +112,7 @@ truth for this table (`#define HDR_*`):
 
 | header code | kind      | layout |
 |-------------|-----------|--------|
-| 0 (`HDR_STRING`) | string    | `{hdr, byte-length, char *bytes}` — UTF-8, explicit length |
+| 0 (`HDR_STRING`) | string    | `{hdr, byte-length, cp-length, char *bytes, cpidx *index}` — UTF-8, explicit byte length (so embedded NULs are fine). Codepoint-indexed: `cp-length` makes `string-length` O(1) and equals `byte-length` exactly on the ASCII fast path; `index` is a nullable, lazily-built codepoint→byte breadcrumb table (change: codepoint-string-indexing) |
 | 1 (`HDR_BYTEVECTOR`) | bytevector | `{hdr, byte-length, uchar *bytes}` — mutable, packed bytes (reclaims the retired `HDR_CHAR` slot) |
 | 2 (`HDR_VECTOR`) | vector    | `{hdr, length, elem0, …}` — mutable, fixed-length |
 | 3 (`HDR_ERROR`) | error object | `{hdr, message-string, irritants-list}` — R7RS error object |
