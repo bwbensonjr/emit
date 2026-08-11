@@ -159,6 +159,29 @@ If it does show, the order of remedies is: elide where the emitter can prove the
 (records first, then constant indices), and only then consider anything that weakens the guarantee.
 The guarantee is not traded for speed in this change.
 
+### D8 — Sweep result: the twelve are the complete set (task 2, open question 2)
+
+All 132 `^val rt_` in `src/runtime/runtime.c` were enumerated and classified. Exactly twelve take an
+index, a range, or a size from Scheme, and they are the twelve the proposal names — there is no
+`vector-fill!`/`vector-copy!`/`bytevector-copy!` in this runtime at all, so no range operation was
+missed. Cross-checked against the prim table (`src/parse.ss:100-130`), every Scheme-reachable
+accessor routes to one of them.
+
+Four near-misses, each excluded for a stated reason rather than by omission:
+
+- `rt_make_string(const char *, intptr_t len)` — C-internal, called only with a length the runtime
+  itself computed. Scheme's `make-string` is `%make-string` → `rt_make_string_fill`, which is guarded.
+- `rt_build_rest(argc, fixed, K, slots, overflow)` — the rest-argument calling convention, with
+  counts the emitter generates; not an index from a program.
+- `rt_escape_to` / `rt_escape_live_p` — the argument is a monotonic frame *id* resolved by a linear
+  scan over live frames, not an index into storage; a stale id already returns `#f` by design.
+- `list-ref` / `list-tail` (`src/prelude.scm:241-242`) — walk pairs, so an over-long index ends in
+  `(car '())`. That is type confusion, which D1 leaves out of scope; noted here so its absence is a
+  decision rather than an oversight.
+
+Also settled by the reproduction pass: `make-string` is fixed-arity 2 in Emit, so the negative-size
+case is `(make-string -1 #\a)` (`(make-string -1)` is an arity error, a different diagnostic).
+
 ## Risks / Trade-offs
 
 - **Working code starts trapping.** Any program relying on an out-of-range access is by definition
@@ -195,9 +218,13 @@ reader failure mid-suite.
   (`rt_vector_ref`)? The overflow messages use the Scheme spelling (`+: fixnum overflow`), so follow
   that — noted only because `record-ref` has no user-facing Scheme spelling and will have to name
   something honest about being internal.
-- Is there any range-taking primitive beyond the twelve listed in the proposal? A sweep of
-  `^val rt_` (132 functions) is a task rather than an assumption; `vector-fill!`-style range
-  operations would join the list if they exist.
-- Does `string-set!` have a separate UTF-8 width problem — replacing a character with one of a
-  different byte width — independent of bounds? Out of scope here if so, but it should be filed rather
-  than discovered later.
+- ~~Is there any range-taking primitive beyond the twelve listed in the proposal?~~ **Resolved by the
+  task 2 sweep — see D8.** The twelve are the complete set; no `vector-fill!`-style range operation
+  exists in this runtime.
+- ~~Does `string-set!` have a separate UTF-8 width problem — replacing a character with one of a
+  different byte width — independent of bounds?~~ **Resolved: no, nothing to file.** `rt_string_set`
+  already splices (rebuilding the byte buffer and rewriting the byte-length word), so all three
+  directions are correct — narrow→wide `(string-set! (make-string 3 #\a) 1 #\á)` → `"aáa"` length 3,
+  wide→narrow `"há"` → `"hb"` length 2, and wide→wide with a tail `"hállo"` → `"üállo"` with index 4
+  still `#\o`. The codepoint count is invariant under a one-for-one replacement, which is why the
+  count word needs no adjustment.

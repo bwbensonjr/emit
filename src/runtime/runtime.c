@@ -69,8 +69,12 @@ char rt_trap_msg[128] = "";
 #define HDR_ERROR      3   /* { HDR_ERROR, message-string, irritants-list } (R7RS error obj) */
 #define HDR_HASHTABLE  4   /* { HDR_HASHTABLE, spine-vector } -- opaque wrapper around a
                             * mutable spine #(count buckets _); ops live in the prelude */
-#define HDR_RECORD     5   /* { HDR_RECORD, type-descriptor, field0, ... } -- user record;
-                            * the descriptor (itself an ext obj) is the per-type identity token */
+#define HDR_RECORD     5   /* { HDR_RECORD, type-descriptor, field-count, field0, ... } -- user
+                            * record; the descriptor (itself an ext obj) is the per-type identity
+                            * token.  The field count exists solely so the record accessors can be
+                            * bounds-checked like every other indexed accessor (change:
+                            * checked-indexed-access, design D6): nothing else needs it -- the
+                            * printer prints only the type name and equal? on records is identity. */
 #define HDR_RECORD_TYPE 6  /* { HDR_RECORD_TYPE, name-string } -- a record type descriptor;
                             * object identity (eq?) distinguishes types, name is for printing */
 #define HDR_MV          7  /* { HDR_MV, values-list } -- a multiple-values bundle (change:
@@ -218,6 +222,39 @@ static void rt_fatalf(const char *fmt, ...) {
   fprintf(stderr, "%s\n", rt_trap_msg);
   if (rt_trap) longjmp(*rt_trap, 1);
   exit(1);
+}
+
+/* --- indexed-access bounds (change: checked-indexed-access, design D2) ----
+ * Every indexed accessor compares its index against the length in the object's own
+ * header -- the same word it already loads to find the data -- so an out-of-range
+ * index is a diagnostic rather than a read or a store at the computed address
+ * (GitHub issue #70).  The check lives here, in the runtime primitive, and not at
+ * the emitter's call sites: primitives are first-class (`primitive-layer`), so
+ * `(apply vector-ref ...)` reaches this function and an emitter-side check would
+ * leave that path open.
+ *
+ * These constrain BOUNDS, not TYPES.  The index is assumed to be a fixnum and the
+ * object to be of the accessor's type; supplying either of the wrong type stays
+ * unchecked under the standing type-confusion decision recorded in `core-language`
+ * (design D1).  The message shape follows the overflow diagnostics
+ * (`+: fixnum overflow: %ld + %ld`): the Scheme procedure's name, then the values
+ * that made it fail. */
+static void rt_range_error(const char *who, intptr_t i, intptr_t n) {
+  rt_fatalf("%s: index out of range: %ld (length %ld)", who, (long)i, (long)n);
+}
+/* An ELEMENT index: valid over [0, n).  Range bounds (substring) are inclusive of
+ * n and are checked in place, since they also carry an ordering condition. */
+#define CHECK_INDEX(who, i, n)                                   \
+  do {                                                           \
+    intptr_t chk_i_ = (i), chk_n_ = (intptr_t)(n);               \
+    if (chk_i_ < 0 || chk_i_ >= chk_n_)                          \
+      rt_range_error((who), chk_i_, chk_n_);                     \
+  } while (0)
+/* A negative allocation size is the same defect one step earlier: it used to
+ * produce an object whose recorded length was negative, or to reach a size_t
+ * parameter as a huge value and die on a signal (design D5). */
+static void rt_size_error(const char *who, intptr_t n) {
+  rt_fatalf("%s: negative size: %ld", who, (long)n);
 }
 
 /* --- the exact-integer range ---------------------------------------------
@@ -648,16 +685,34 @@ val rt_integer_to_char(val n) {
 
 /* --- string operations (codepoint-indexed over UTF-8 storage, design D1) --- */
 val rt_string_length(val s) { return FIX(str_cplen(s)); }   /* O(1): stored count */
+/* A string index is a CODEPOINT index, so the bound is str_cplen and never
+ * str_len (design D4).  A str_len guard would look correct on the ASCII strings
+ * the suites mostly use -- where the two are equal -- while accepting an index
+ * past the end of any multi-byte string. */
 val rt_string_ref(val s, val idx) {
   const unsigned char *b = (const unsigned char *)str_bytes(s);
   intptr_t i = UNFIX(idx);
+  CHECK_INDEX("string-ref", i, str_cplen(s));
   /* ASCII fast path: byte length == codepoint count => index is the byte offset. */
   intptr_t off = (str_len(s) == str_cplen(s)) ? i : cpidx_offset(s, i);
   return rt_make_char(utf8_decode_at(b, off));
 }
 val rt_substring(val s, val start, val end) {
   const unsigned char *b = (const unsigned char *)str_bytes(s);
-  intptr_t si = UNFIX(start), ei = UNFIX(end), so, eo;
+  intptr_t si = UNFIX(start), ei = UNFIX(end), n = str_cplen(s), so, eo;
+  /* Both bounds are INCLUSIVE of the length -- unlike an element index, a
+   * substring may begin or end at the end of the string: `(substring "abc" 3 3)`
+   * is "".  Hence the explicit tests rather than CHECK_INDEX. */
+  if (si < 0 || si > n)
+    rt_fatalf("substring: start out of range: %ld (length %ld)", (long)si, (long)n);
+  if (ei < 0 || ei > n)
+    rt_fatalf("substring: end out of range: %ld (length %ld)", (long)ei, (long)n);
+  /* A DISTINCT condition (design D5): both bounds can be individually in range and
+   * still be reversed, and `eo - so` is then negative -- which reaches
+   * rt_make_string's size_t parameter as ~2^64, the 18-exabyte allocation that
+   * terminated the process on a signal from pure Scheme. */
+  if (si > ei)
+    rt_fatalf("substring: start greater than end: %ld > %ld", (long)si, (long)ei);
   if (str_len(s) == str_cplen(s)) { so = si; eo = ei; }   /* ASCII fast path */
   else { so = cpidx_offset(s, si); eo = cpidx_offset(s, ei); }
   return rt_make_string((const char *)(b + so), eo - so);
@@ -698,6 +753,7 @@ val rt_list_to_string(val lst) {
 /* a string of k copies of character ch. */
 val rt_make_string_fill(val k, val ch) {
   intptr_t n = UNFIX(k);
+  if (n < 0) rt_size_error("make-string", n);
   unsigned char one[4];
   int len1 = utf8_encode(CHAR_CP(ch), one);
   char *buf = (char *)GC_MALLOC_ATOMIC((size_t)(len1 * n + 1));
@@ -718,6 +774,10 @@ val rt_make_string_fill(val k, val ch) {
 val rt_string_set(val s, val idx, val ch) {
   const unsigned char *b = (const unsigned char *)str_bytes(s);
   intptr_t blen = str_len(s);
+  /* Codepoint bound, as for string-ref (design D4).  Unguarded, utf8_offset
+   * clamped at blen and the seq_len of the trailing NUL then made `blen - eo`
+   * negative -- a memcpy size of ~2^64, which died on SIGBUS. */
+  CHECK_INDEX("string-set!", UNFIX(idx), str_cplen(s));
   intptr_t so = utf8_offset(b, blen, UNFIX(idx));
   intptr_t eo = so + utf8_seq_len(b[so]);          /* byte range of the old codepoint */
   unsigned char enc[4];
@@ -1056,7 +1116,8 @@ static FILE *port_stream(intptr_t h) {
  *
  *     a port record's FIELD 0 holds its handle, a fixnum.
  *
- * (A record is { HDR_RECORD, type-descriptor, field0, ... }, so field 0 is slot 2.)
+ * (A record is { HDR_RECORD, type-descriptor, field-count, field0, ... }, so field 0
+ * is slot 3 -- it was slot 2 before the field count was added for bounds checking.)
  * Keeping the decode here means the four port-directed output primitives stay bare
  * primcalls -- no Scheme-side wrapper on the fast path -- at the cost of this one
  * documented coupling.  The check is structural (a record whose field 0 is a
@@ -1064,9 +1125,11 @@ static FILE *port_stream(intptr_t h) {
  * prove the record is a port, and a non-port record whose field 0 happens to be a
  * live handle would write there.  That is a wrong-type bug, never a fault.
  * Returns NULL when the argument is not a usable port, and the caller traps. */
+static intptr_t rec_len(val r);                 /* fwd (defined with the records) */
 static FILE *port_arg_stream(val p) {
   if (tag_of(p) != TAG_EXT || ext_hdr(p) != HDR_RECORD) return NULL;
-  val h = as_ptr(p)[2];
+  if (rec_len(p) < 1) return NULL;              /* no field 0 to read */
+  val h = as_ptr(p)[3];
   if (tag_of(h) != TAG_FIXNUM) return NULL;
   return port_stream(UNFIX(h));
 }
@@ -1187,13 +1250,23 @@ val rt_port_write_string(val s, val p) {
 static intptr_t vec_len(val v) { return (intptr_t)as_ptr(v)[1]; }
 val rt_make_vector(val k, val fill) {
   intptr_t n = UNFIX(k);
+  if (n < 0) rt_size_error("make-vector", n);
   val *p = (val *)GC_MALLOC((size_t)(n + 2) * sizeof(val));
   p[0] = (val)HDR_VECTOR; p[1] = (val)n;
   for (intptr_t i = 0; i < n; i++) p[i + 2] = fill;
   return tag_ptr(p, TAG_EXT);
 }
-val rt_vector_ref(val v, val i)        { return as_ptr(v)[2 + UNFIX(i)]; }
-val rt_vector_set(val v, val i, val x) { as_ptr(v)[2 + UNFIX(i)] = x; return UNSPEC_V; }
+val rt_vector_ref(val v, val i) {
+  intptr_t k = UNFIX(i);
+  CHECK_INDEX("vector-ref", k, vec_len(v));
+  return as_ptr(v)[2 + k];
+}
+val rt_vector_set(val v, val i, val x) {
+  intptr_t k = UNFIX(i);
+  CHECK_INDEX("vector-set!", k, vec_len(v));
+  as_ptr(v)[2 + k] = x;
+  return UNSPEC_V;
+}
 val rt_vector_length(val v)            { return FIX(vec_len(v)); }
 val rt_vector_p(val v) {
   return truthy(tag_of(v) == TAG_EXT && ext_hdr(v) == HDR_VECTOR);
@@ -1207,14 +1280,24 @@ static intptr_t       bv_len(val v)   { return (intptr_t)as_ptr(v)[1]; }
 static unsigned char *bv_bytes(val v) { return (unsigned char *)as_ptr(v)[2]; }
 val rt_make_bytevector(val k, val fill) {
   intptr_t n = UNFIX(k);
+  if (n < 0) rt_size_error("make-bytevector", n);
   unsigned char *bytes = (unsigned char *)GC_MALLOC_ATOMIC((size_t)(n > 0 ? n : 1));
   memset(bytes, (int)(UNFIX(fill) & 0xFF), (size_t)n);
   val *p = (val *)GC_MALLOC(3 * sizeof(val));
   p[0] = (val)HDR_BYTEVECTOR; p[1] = (val)n; p[2] = (val)bytes;
   return tag_ptr(p, TAG_EXT);
 }
-val rt_bytevector_u8_ref(val v, val i)       { return FIX(bv_bytes(v)[UNFIX(i)]); }
-val rt_bytevector_u8_set(val v, val i, val b) { bv_bytes(v)[UNFIX(i)] = (unsigned char)(UNFIX(b) & 0xFF); return UNSPEC_V; }
+val rt_bytevector_u8_ref(val v, val i) {
+  intptr_t k = UNFIX(i);
+  CHECK_INDEX("bytevector-u8-ref", k, bv_len(v));
+  return FIX(bv_bytes(v)[k]);
+}
+val rt_bytevector_u8_set(val v, val i, val b) {
+  intptr_t k = UNFIX(i);
+  CHECK_INDEX("bytevector-u8-set!", k, bv_len(v));
+  bv_bytes(v)[k] = (unsigned char)(UNFIX(b) & 0xFF);
+  return UNSPEC_V;
+}
 val rt_bytevector_length(val v)              { return FIX(bv_len(v)); }
 val rt_bytevector_p(val v) {
   return truthy(tag_of(v) == TAG_EXT && ext_hdr(v) == HDR_BYTEVECTOR);
@@ -1301,19 +1384,39 @@ val rt_make_record_type(val name) {          /* name: a string value (for printi
   p[0] = (val)HDR_RECORD_TYPE; p[1] = name;
   return tag_ptr(p, TAG_EXT);
 }
-/* rt_make_record(td, fields): allocate { HDR_RECORD, td, field... } by walking
- * the field list (a proper list of tagged values) into the slots in order. */
+/* rt_make_record(td, fields): allocate { HDR_RECORD, td, count, field... } by
+ * walking the field list (a proper list of tagged values) into the slots in order.
+ * The list is walked twice: once for the count, which is recorded in slot 2 so the
+ * accessors below have a length to check against. */
+static intptr_t rec_len(val r) { return (intptr_t)as_ptr(r)[2]; }   /* fwd-declared above */
 val rt_make_record(val td, val fields) {
   intptr_t n = 0;
   for (val c = fields; tag_of(c) == TAG_PAIR; c = as_ptr(c)[1]) n++;
-  val *p = (val *)GC_MALLOC((size_t)(n + 2) * sizeof(val));
-  p[0] = (val)HDR_RECORD; p[1] = td;
+  val *p = (val *)GC_MALLOC((size_t)(n + 3) * sizeof(val));
+  p[0] = (val)HDR_RECORD; p[1] = td; p[2] = (val)n;
   intptr_t i = 0;
-  for (val c = fields; tag_of(c) == TAG_PAIR; c = as_ptr(c)[1]) p[i++ + 2] = as_ptr(c)[0];
+  for (val c = fields; tag_of(c) == TAG_PAIR; c = as_ptr(c)[1]) p[i++ + 3] = as_ptr(c)[0];
   return tag_ptr(p, TAG_EXT);
 }
-val rt_record_ref(val r, val i)        { return as_ptr(r)[2 + UNFIX(i)]; }
-val rt_record_set(val r, val i, val x) { as_ptr(r)[2 + UNFIX(i)] = x; return UNSPEC_V; }
+/* Checked though the check is provably redundant (design D6): the frontend
+ * generates every field accessor with a compile-time constant index derived from
+ * the record definition (`src/parse.ss:529`), so a well-formed compiler cannot emit
+ * an out-of-range record access.  The value is in catching a COMPILER bug -- a
+ * field-index miscalculation is exactly the mistake that would otherwise corrupt a
+ * neighbouring object -- which is why the message says `internal`: these have no
+ * user-facing Scheme spelling to name, and a user seeing one has found a bug in the
+ * compiler rather than in their program. */
+val rt_record_ref(val r, val i) {
+  intptr_t k = UNFIX(i);
+  CHECK_INDEX("record-ref (internal)", k, rec_len(r));
+  return as_ptr(r)[3 + k];
+}
+val rt_record_set(val r, val i, val x) {
+  intptr_t k = UNFIX(i);
+  CHECK_INDEX("record-set! (internal)", k, rec_len(r));
+  as_ptr(r)[3 + k] = x;
+  return UNSPEC_V;
+}
 val rt_record_of_type_p(val r, val td) {
   return truthy(tag_of(r) == TAG_EXT && ext_hdr(r) == HDR_RECORD && as_ptr(r)[1] == td);
 }
