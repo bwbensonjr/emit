@@ -92,15 +92,20 @@
       `test/scheme-base-surface-check.sh` fails
 - [x] 6.5 Re-record `test/module-scaffold-baseline.sha256`, stating the delta's cause in the commit
       per the baseline protocol: two reader procedures gained a parameter, `rd-report` gained two arms
-- [ ] 6.6 `./run-all-tests.sh`, then `./run-dev-tests.sh` (run suites individually if the batch
+- [x] 6.6 `./run-all-tests.sh`, then `./run-dev-tests.sh` (run suites individually if the batch
       outlives the command timeout)
-- [ ] 6.7 Commit, then `test/trust-check.sh` — it `[SKIP]`s while `bootstrap/` is dirty by design
+- [x] 6.7 Commit, then `test/trust-check.sh` — it `[SKIP]`s while `bootstrap/` is dirty by design
 
 ## 7. Close out
 
-- [ ] 7.1 Measure regen wall-clock before/after for the extra `rd-list` parameter; record in
-      `docs/PERFORMANCE.md` only if it shows above noise (design D1 risk)
-- [ ] 7.2 Confirm the four #66 reproductions and both #67 reproductions from the issues now report,
+- [x] 7.1 Measured with a reader microbenchmark rather than regen wall-clock: 160,000 forms read
+      through `read-all-from-string` (400 iterations over a 400-form source), pre-change binary at
+      `cddaf18` vs post-change, 4 runs each. Old mean 10.118s, new mean 10.165s — **+0.46%**, with
+      ~0.10s spread inside each set, so the extra parameter is indistinguishable from noise. Chose
+      the microbenchmark because regen wall-clock (1000s / 1006s across two post-change runs) is
+      dominated by compilation and no pre-change baseline was captured before the barrier. **No
+      `docs/PERFORMANCE.md` entry**, per this task's "only if it shows above noise"
+- [x] 7.2 Confirm the four #66 reproductions and both #67 reproductions from the issues now report,
       and paste the actual messages into the issue comments
-- [ ] 7.3 Note in #70 that the reader's dangling-escape instance is fixed here, and that the general
+- [x] 7.3 Note in #70 that the reader's dangling-escape instance is fixed here, and that the general
       indexed-access question remains open on that issue
