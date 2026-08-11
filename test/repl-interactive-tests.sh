@@ -247,6 +247,29 @@ check error-then-more-forms --no-prelude "$(printf '3\n7')" <<'EOF'
 (+ 3 4)
 EOF
 
+# A MULTI-BYTE character before a form boundary must not shorten the form.  The probe
+# answers in CODEPOINTS and the host's accumulation buffer is BYTES, so slicing one by the
+# other truncated every form preceded by non-ASCII text -- by exactly (bytes - codepoints).
+# It was invisible while the reader closed an unterminated list at end of input: the dropped
+# trailing parens were silently supplied and the value came out right, leaving only a
+# stray-text "malformed input" on stderr.  demos/prelude.scm is the case in the tree (one
+# em-dash, two bytes, exactly the two closing parens below it), which is why
+# repl-equiv-tests.sh caught this and no prompt test did.
+check multibyte-comment-before-form --no-prelude "3" <<'EOF'
+; an em dash — two bytes, one codepoint
+(+ 1
+   2)
+EOF
+
+# Two of them, and inside a string rather than a comment, so the count is what matters and
+# not where the bytes came from.
+# (display emits no newline, so the two forms' output runs together as "αβ3".)
+check multibyte-string-before-form "" "αβ3" <<'EOF'
+(display "αβ")
+(+ 1
+   2)
+EOF
+
 # spec: end-of-input ends the session cleanly (exit code 0)
 printf '(+ 1 2)\n' | chez --libdirs src --script src/compile.ss --repl --no-prelude >/dev/null 2>&1
 if [ "$?" -eq 0 ]; then

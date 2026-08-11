@@ -236,6 +236,29 @@ static std::string door_msg(const std::string &m) {
   const std::string p = "repl: ";
   return m.compare(0, p.size(), p) == 0 ? m.substr(p.size()) : m;
 }
+// Byte offset of the CPS'th codepoint in a UTF-8 buffer.
+//
+// The input-completeness probe answers in CODEPOINTS -- the core's strings are
+// codepoint-indexed over UTF-8 storage -- while the REPL's accumulation buffer is BYTES.
+// Slicing the buffer by a codepoint count therefore truncates the form by (bytes -
+// codepoints) whenever anything before the boundary is multi-byte, and there is no
+// diagnostic because the two units agree on every ASCII-only input.
+//
+// It was invisible until the reader stopped closing an unterminated list at end of input
+// (change: reader-input-termination): the truncation dropped the form's trailing
+// delimiters, the reader silently supplied them again, and the value came out right. The
+// leftover text then reported "malformed input" on stderr, which is the symptom that was
+// visible all along. demos/prelude.scm is the case in the tree -- one em-dash in a comment,
+// two bytes, exactly the two closing parens of the form below it.
+static size_t byte_offset_of_codepoint(const std::string &s, size_t cps) {
+  size_t i = 0;
+  for (size_t n = 0; n < cps && i < s.size(); n++) {
+    unsigned char c = (unsigned char)s[i];
+    i += (c < 0x80) ? 1 : (c < 0xC0) ? 1 : (c < 0xE0) ? 2 : (c < 0xF0) ? 3 : 4;
+  }
+  return i > s.size() ? s.size() : i;
+}
+
 static bool write_file(const std::string &path, const std::string &data) {
   std::ofstream f(path, std::ios::binary | std::ios::trunc);
   if (!f) return false;
@@ -1269,8 +1292,10 @@ static int emit_repl(int argc, char **argv) {
         buf.clear();
         break;
       }
-      std::string form = buf.substr(0, (size_t)code);
-      buf.erase(0, (size_t)code);
+      // `code` is a CODEPOINT count; this buffer is bytes (see byte_offset_of_codepoint).
+      size_t cut = byte_offset_of_codepoint(buf, (size_t)code);
+      std::string form = buf.substr(0, cut);
+      buf.erase(0, cut);
       process_form(form);
       if (buf.find_first_not_of(" \t\r\n") == std::string::npos) { buf.clear(); break; }
     }
