@@ -1,6 +1,11 @@
+## RENAMED Requirements
+
+- FROM: `### Requirement: An unterminated block comment is reported, not read as end of input`
+- TO: `### Requirement: An unterminated construct is reported, not read as end of input`
+
 ## MODIFIED Requirements
 
-### Requirement: An unterminated block comment is reported, not read as end of input
+### Requirement: An unterminated construct is reported, not read as end of input
 
 An unterminated construct SHALL be reported by every reader entry point — `read-from-string`,
 `read-all-from-string`, and `read` over a port — as an error naming the position where the construct

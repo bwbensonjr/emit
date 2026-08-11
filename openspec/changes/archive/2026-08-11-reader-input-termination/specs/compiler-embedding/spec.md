@@ -28,6 +28,11 @@ The two SHALL NOT be unified into a single answer. Making the probe report an er
 multi-line entry at the prompt; making a batch read return a closed datum is the silent-truncation
 defect the reader requirement exists to prevent.
 
+A position the probe reports SHALL be interpreted in the units it is expressed in. The probe measures
+the core's strings, which are codepoint-indexed over UTF-8 storage, so a host holding a byte buffer
+SHALL convert before slicing it — otherwise every form preceded by multi-byte text is truncated by
+the difference, with no diagnostic, because the two units agree on all ASCII input.
+
 #### Scenario: An unterminated block comment is incomplete, not malformed
 
 - **WHEN** the probe is given `"#| a comment that continues"`
@@ -64,6 +69,13 @@ defect the reader requirement exists to prevent.
 - **WHEN** a session is given `"(display (list 1\n"` followed by `"2))\n"`
 - **THEN** the form is assembled across the two lines and evaluated, printing `(1 2)` — the reader's
   unterminated-construct error does not reach a host that is still collecting input
+
+#### Scenario: A form preceded by multi-byte text is not truncated
+
+- **WHEN** a session is given a comment containing a multi-byte character, then a form typed across
+  two lines
+- **THEN** the whole form is evaluated — the host converts the probe's codepoint answer to a byte
+  offset before slicing, rather than dropping the trailing bytes of the form
 
 #### Scenario: The probe and the reader answer for the same text
 
