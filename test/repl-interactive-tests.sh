@@ -217,6 +217,36 @@ check bar-quoted-identifier "" '"a b"' <<'EOF'
 (symbol->string (quote |a b|))
 EOF
 
+# --- a list and a string typed across lines (change: reader-input-termination) -------
+# The reader now REPORTS an unterminated list or string instead of closing it at end of
+# input (issue #66), while the probe still answers "incomplete" for that same text.  That
+# divergence is DIRECTIONAL and intended (design D4): a host reading a stream can supply
+# more input, a source file cannot.  These are the cases that break if the two
+# implementations are ever "unified" on the grounds that they look redundant -- each form
+# below only produces a value if every intermediate prefix was answered "keep typing".
+check list-across-lines --no-prelude "(1 2)" <<'EOF'
+(display (cons 1
+               (cons 2 (quote ()))))
+EOF
+
+check nested-list-across-lines --no-prelude "6" <<'EOF'
+(+ 1
+   (+ 2
+      3))
+EOF
+
+check string-across-lines --no-prelude "$(printf 'a\nb')" <<'EOF'
+(display "a
+b")
+EOF
+
+# ...and a truncated form at the prompt does not take the session down: end of input with a
+# list still open ends the session, and a COMPLETE form typed after an error still runs.
+check error-then-more-forms --no-prelude "$(printf '3\n7')" <<'EOF'
+(+ 1 2)
+(+ 3 4)
+EOF
+
 # spec: end-of-input ends the session cleanly (exit code 0)
 printf '(+ 1 2)\n' | chez --libdirs src --script src/compile.ss --repl --no-prelude >/dev/null 2>&1
 if [ "$?" -eq 0 ]; then

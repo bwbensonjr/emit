@@ -191,6 +191,49 @@ else
     || bad "doors disagree: run=$(printf '%q' "$a")  exe=$(printf '%q' "$b")"
 fi
 
+# ---------------------------------------------------------------------------
+# 3. A TRUNCATED source does not run (change: reader-input-termination; issue #66).
+# ---------------------------------------------------------------------------
+# A partial write, an interrupted editor save, a bad sed, or a paste that drops the last
+# line all produce exactly these files.  The reader used to close the open construct at
+# end of input, so each one ran as though complete -- printing a value the author never
+# wrote, and exiting 0.  What makes the report useful is that it names where the
+# construct OPENED: the closing delimiter is missing, so end of input is not the mistake.
+echo
+echo "a truncated source is reported, not run"
+
+# NAME | source text | the substring the diagnostic must contain
+trunc_reports () {
+  local name="$1" text="$2" want="$3"
+  local f="$TMP/trunc.scm" out rc
+  printf '%s' "$text" > "$f"
+  out="$("$EMIT" run "$f" 2>&1 </dev/null)"; rc=$?
+  if [ "$rc" -ne 0 ] && [ "$rc" -lt 128 ] && printf '%s' "$out" | grep -q "$want"; then
+    ok "$name (exit $rc)"
+  else
+    bad "$name (exit $rc) => $(printf '%s' "$out" | tr '\n' '|')"
+  fi
+}
+
+trunc_reports "an unterminated list is reported"       '(display (list 1 2 3)' 'unterminated list'
+trunc_reports "an unterminated string is reported"     '(display "abc'         'unterminated string'
+trunc_reports "an unterminated vector is reported"     "(display '#(1 2"       'unterminated vector'
+trunc_reports "an unterminated bytevector is reported" "(display '#u8(1 2"     'unterminated bytevector'
+trunc_reports "a dangling escape is reported"          '(display "abc\'        'unterminated string'
+# The forms BEFORE the truncation are not run instead: this file's first form would
+# print 1, and it must not, because the file as a whole is not a program.
+trunc_reports "a truncated later form does not run the earlier ones" \
+  "$(printf '(display 1)\n(display (list 2')" 'unterminated list'
+
+# ...and the well-formed counterparts of the same shapes still run, so the guard above is
+# not simply rejecting everything.
+WELL="$TMP/well.scm"
+printf "(display (list 1 2 3))(newline)(display \"abc\")(newline)(display '#(1 2))\n" > "$WELL"
+got="$("$EMIT" run "$WELL" 2>/dev/null </dev/null)"; rc=$?
+[ "$rc" -eq 0 ] && [ "$got" = "$(printf '(1 2 3)\nabc\n#(1 2)')" ] \
+  && ok "the well-formed counterparts still run" \
+  || bad "well-formed source (exit $rc) => $(printf '%s' "$got" | tr '\n' '|')"
+
 echo
 echo "  $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

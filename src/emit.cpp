@@ -510,6 +510,37 @@ static std::vector<std::string> source_imports(const std::string &text, const st
 // program's imports over the manifest index instead, which is what the Chez driver's
 // toposort-libs already does on its side.
 //
+// Run a manifest-parsing mode call (5 or 9) and ATTRIBUTE a failure to the file it came
+// from.  The core is handed only text -- the host owns paths -- so a manifest the reader
+// rejects (a truncated list) or the form-count check rejects (a second top-level form)
+// otherwise reports with no file named, and the narration has already listed every chained
+// candidate above it, leaving the user to guess which one (change: reader-input-termination,
+// design D5; issues #66, #67).
+//
+// `rt_raise` prints the diagnostic and, with no trap installed, exit(1)s.  Installing one
+// here adds the attribution line and exits the same way, so the control flow a malformed
+// manifest produces is UNCHANGED -- only better labelled.  Nothing non-trivial is live
+// across the setjmp.
+//
+// Mode 10 needs none of this: it carries an (ok . _) / (error . MSG) pair and
+// resolve_program prints "manifest PATH ..." itself.
+static std::string manifest_mode_text(int mode, const std::string &mtext,
+                                      const std::string &manifest) {
+  jmp_buf jb;
+  jmp_buf *saved = rt_trap;
+  rt_trap = &jb;
+  if (setjmp(jb) != 0) {
+    rt_guard_reset();          // a trap may have bypassed rt_run_guarded's frame pop
+    rt_trap = saved;
+    std::cerr << "emit: in manifest " << manifest << "\n";
+    exit(1);
+  }
+  rt_repl_set(mode, mtext.data(), (intptr_t)mtext.size());
+  std::string out = scm_str(scheme_entry());
+  rt_trap = saved;
+  return out;
+}
+
 // The REPL host deliberately stays EAGER (mode 5): a session is an open world where
 // the user may import anything at any prompt, so everything on the manifest must
 // already be loaded.  Only this door, compiling one known program, can be lazy.
@@ -530,8 +561,8 @@ static bool preload_user_libraries(const std::vector<std::string> &manifests,
   for (size_t mi = 0; mi < manifests.size(); mi++) {
     const std::string &manifest = manifests[mi];
     std::string mtext = read_file(manifest);
-    rt_repl_set(9, mtext.data(), (intptr_t)mtext.size());  // "KEY\tPATH" sans (scheme base)
-    std::string index = scm_str(scheme_entry());
+    // "KEY\tPATH" sans (scheme base)
+    std::string index = manifest_mode_text(9, mtext, manifest);
     std::istringstream lines(index);
     std::string line;
     while (std::getline(lines, line)) {
@@ -1001,8 +1032,7 @@ static void preload_libraries(const std::vector<std::string> &manifests) {
       // INCLUDING a baked member like (scheme base), which this repository's own
       // manifest names for the Chez driver and which the already-registered guard
       // absorbs below.
-      rt_repl_set(5, mtext.data(), (intptr_t)mtext.size());
-      std::string paths = scm_str(scheme_entry());
+      std::string paths = manifest_mode_text(5, mtext, manifest);
       std::istringstream lines(paths);
       std::string path;
       while (std::getline(lines, path))
@@ -1013,8 +1043,7 @@ static void preload_libraries(const std::vector<std::string> &manifests) {
     // already supplies is not loaded a second time from a later one.  Mode 9's
     // "KEY<TAB>PATH" is that index (it omits only (scheme base), which is baked and
     // would land on the already-registered guard either way).
-    rt_repl_set(9, mtext.data(), (intptr_t)mtext.size());
-    std::string index = scm_str(scheme_entry());
+    std::string index = manifest_mode_text(9, mtext, manifest);
     std::istringstream ilines(index);
     std::string line;
     while (std::getline(ilines, line)) {

@@ -122,6 +122,58 @@
   (caught (lambda () (read-all-from-string "(display 1)\n#| oops\n(display 2)")))
   '(read-report read "unterminated block comment #| opened at index" 12))
 
+;;; --- unterminated list, vector, bytevector and string (issue #66) ------------
+;;; The same treatment, generalized to every construct with a closing delimiter.
+;;; Closing one silently at end of input FABRICATES a datum the source does not
+;;; contain, so a truncated file compiles as though complete.  The position named is
+;;; where the construct OPENED, because that is where the mistake is -- end of input
+;;; is merely where it was noticed.
+(check 'list-unterminated
+  (caught (lambda () (read-from-string "(a b")))
+  '(read-report read "unterminated list ( opened at index" 0))
+(check 'bracket-unterminated
+  (caught (lambda () (read-from-string "[a b")))
+  '(read-report read "unterminated list [ opened at index" 0))
+(check 'vector-unterminated
+  (caught (lambda () (read-from-string "#(1 2")))
+  '(read-report read "unterminated vector #( opened at index" 0))
+(check 'bytevector-unterminated
+  (caught (lambda () (read-from-string "#u8(1 2")))
+  '(read-report read "unterminated bytevector #u8( opened at index" 0))
+(check 'string-unterminated
+  (caught (lambda () (read-from-string "\"abc")))
+  '(read-report read "unterminated string \" opened at index" 0))
+;; The INNER construct is the one whose delimiter is missing, so it is the one named.
+;; This is why the opening index travels DOWN into rd-list rather than being attached
+;; by the caller on the way out (design D1).
+(check 'nested-unterminated-names-inner
+  (caught (lambda () (read-from-string "(a (b c")))
+  '(read-report read "unterminated list ( opened at index" 3))
+;; A whole-source read must not return the forms before the truncation instead
+(check 'list-unterminated-drops-nothing
+  (caught (lambda () (read-all-from-string "(display 1)\n(display (list 1 2 3)")))
+  '(read-report read "unterminated list ( opened at index" 12))
+(check 'read-all-truncated-list
+  (caught (lambda () (read-all-from-string "(a b")))
+  '(read-report read "unterminated list ( opened at index" 0))
+;; A dangling escape must be reported rather than reading s[n] -- past the end of the
+;; input (design D3).  Unchecked string-ref makes this invisible today (issue #70).
+(check 'string-dangling-escape
+  (caught (lambda () (read-from-string "\"abc\\")))
+  '(read-report read "unterminated string \" opened at index" 0))
+(check 'string-dangling-hex-escape
+  (caught (lambda () (read-from-string "\"abc\\x41")))
+  '(read-report read "unterminated string \" opened at index" 0))
+;; ...and a COMPLETE escape at the very end of the string still reads
+(check 'string-escape-at-end (read-from-string "\"a\\n\"") "a\n")
+(check 'string-hex-escape-at-end (read-from-string "\"a\\x41;\"") "aA")
+;; A `#;` with no datum after it was ALREADY reported (rd-datum's own eof arm), so this
+;; pins behaviour rather than changing it -- the point is that coverage is uniform across
+;; every construct that can be left unfinished, not that this one moved.
+(check 'datum-comment-unterminated
+  (caught (lambda () (read-all-from-string "(display 1)\n#;")))
+  '(read-report read "end of input where a datum was expected, at index" 14))
+
 ;;; --- R7RS 6.2.5 prefixes and 6.2.3 rational literals (issue #25) ------------
 
 (printf "\nnumber prefixes and rational literals\n")

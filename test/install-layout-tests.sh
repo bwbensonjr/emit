@@ -297,6 +297,32 @@ else
   bad "unknown program diagnostic"; sed 's/^/         /' "$TMP/e8"
 fi
 
+# A malformed manifest IN A CHAIN has to name WHICH file (issue #66, design D5).  Two
+# manifests are narrated here, so a report that says only "unterminated list" leaves the
+# user choosing between the file they wrote and one inside the install prefix.  The
+# project's own manifest is the truncated one; the installed manifest is well-formed and
+# must not be blamed for it.
+cat > "$PROJ/emit-libs.scm" <<'EOF'
+((program hello (source "hello.scm") (output "hello")
+EOF
+"$EMIT" run hello.scm >/dev/null 2>"$TMP/e8b"
+rc=$?
+# The attribution line must be asserted SPECIFICALLY.  `grep emit-libs.scm` would pass on
+# the narration alone -- "resolve manifest -> emit-libs.scm" is printed for every candidate
+# before any parsing -- so this greps the diagnostic's own line, and checks the CHAINED
+# manifest is not the one blamed.
+if [ "$rc" -ne 0 ] && [ "$rc" -lt 128 ] && grep -q 'unterminated list' "$TMP/e8b" \
+   && grep -q '^emit: in manifest emit-libs.scm$' "$TMP/e8b" \
+   && ! grep -q "^emit: in manifest $RPREFIX/share/emit/emit-libs.scm\$" "$TMP/e8b"; then
+  ok "a truncated manifest in a chain is reported against its own file (exit $rc)"
+else
+  bad "chained truncated manifest (exit $rc)"; sed 's/^/         /' "$TMP/e8b"
+fi
+# ...and the chain still works once it is well-formed again.
+cat > "$PROJ/emit-libs.scm" <<'EOF'
+((program hello (source "hello.scm") (output "hello")))
+EOF
+
 # --- candidate 4: the executable's REAL path, not the symlink's ----------------
 # Homebrew reaches the keg through a symlink in <prefix>/bin, so what sits beside the
 # REAL binary is what was installed with it.  A link in a bin/ with no ../share/emit
