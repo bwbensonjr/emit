@@ -378,3 +378,12 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
   units, immediate (non-heap) characters, precompiled library objects, and O(n) codepoint
   string indexing — each with cause, fix sketch, its OpenSpec change (once one exists), and a
   remediation check-off.
+
+## License
+
+Emit is released under the [MIT License](LICENSE).
+
+Third-party code vendored into this repository keeps its own license, recorded beside it rather
+than in a source header (a vendored file is kept byte-identical to upstream, so no header can be
+added to it). Nothing is vendored yet; when something is, its license text is committed next to it
+and named here.
