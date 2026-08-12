@@ -102,6 +102,31 @@
     vector
     list->bytevector
     bytevector
+    assv
+    list-copy
+    boolean=?
+    symbol=?
+    string<?
+    string>?
+    string<=?
+    string>=?
+    vector->list
+    vector-copy
+    vector-append
+    vector-fill!
+    vector-copy!
+    vector-map
+    vector-for-each
+    string->vector
+    vector->string
+    string-map
+    string-for-each
+    string-fill!
+    string-copy!
+    bytevector-copy
+    bytevector-copy!
+    bytevector-append
+    rationalize
     values
     call-with-values
     make-hash-table
@@ -161,8 +186,10 @@
     (define (memq x xs) (if (null? xs) #f (if (eq? x (car xs)) xs (memq x (cdr xs)))))
     (define (memv x xs) (if (null? xs) #f (if (eqv? x (car xs)) xs (memv x (cdr xs)))))
     (define (assq k xs) (if (null? xs) #f (if (eq? k (car (car xs))) (car xs) (assq k (cdr xs)))))
-    (define (member x xs) (if (null? xs) #f (if (equal? x (car xs)) xs (member x (cdr xs)))))
-    (define (assoc k xs) (if (null? xs) #f (if (equal? k (car (car xs))) (car xs) (assoc k (cdr xs)))))
+    (define (member x xs . rest) (if (null? rest) (if (null? xs) #f (if (equal? x (car xs)) xs (member x (cdr xs)))) (member-by x xs (car rest))))
+    (define (member-by x xs same?) (if (null? xs) #f (if (same? x (car xs)) xs (member-by x (cdr xs) same?))))
+    (define (assoc k xs . rest) (if (null? rest) (if (null? xs) #f (if (equal? k (car (car xs))) (car xs) (assoc k (cdr xs)))) (assoc-by k xs (car rest))))
+    (define (assoc-by k xs same?) (if (null? xs) #f (if (same? k (car (car xs))) (car xs) (assoc-by k (cdr xs) same?))))
     (define (filter p xs) (if (null? xs) (quote ()) (if (p (car xs)) (cons (car xs) (filter p (cdr xs))) (filter p (cdr xs)))))
     (define (fold-left f acc xs) (if (null? xs) acc (fold-left f (f acc (car xs)) (cdr xs))))
     (define (fold-right f acc xs) (if (null? xs) acc (f (car xs) (fold-right f acc (cdr xs)))))
@@ -224,7 +251,7 @@
     (define (char>? a b . rest) (chr-cmp (lambda (x y) (> x y)) a b rest))
     (define (char<=? a b . rest) (chr-cmp (lambda (x y) (<= x y)) a b rest))
     (define (char>=? a b . rest) (chr-cmp (lambda (x y) (>= x y)) a b rest))
-    (define (string->list s) (let loop ((i (- (string-length s) 1)) (acc (quote ()))) (if (< i 0) acc (loop (- i 1) (cons (string-ref s i) acc)))))
+    (define (string->list s . rest) (let* ((len (string-length s)) (a (rng-start rest)) (e (rng-end rest len))) (rng-check (quote string->list) a e len) (let loop ((i (- e 1)) (acc (quote ()))) (if (< i a) acc (loop (- i 1) (cons (string-ref s i) acc))))))
     (define (ns-digits m acc) (ns-digits-radix m 10 acc))
     (define (%ns-digit-char d) (if (< d 10) (integer->char (+ 48 d)) (integer->char (+ 87 d))))
     (define (ns-digits-radix m r acc) (let ((ch (%ns-digit-char (- 0 (remainder m r)))) (rest (quotient m r))) (if (= rest 0) (cons ch acc) (ns-digits-radix rest r (cons ch acc)))))
@@ -252,6 +279,52 @@
     (define (vector . xs) (list->vector xs))
     (define (list->bytevector bs) (let ((bv (make-bytevector (length bs) 0))) (let loop ((bs bs) (i 0)) (if (null? bs) bv (begin (bytevector-u8-set! bv i (car bs)) (loop (cdr bs) (+ i 1)))))))
     (define (bytevector . bs) (list->bytevector bs))
+    (define (rng-start rest) (if (pair? rest) (car rest) 0))
+    (define (rng-end rest len) (if (and (pair? rest) (pair? (cdr rest))) (car (cdr rest)) len))
+    (define (rng-check who s e len) (if (and (<= 0 s) (<= s e) (<= e len)) #t (error "range out of bounds" who s e len)))
+    (define (assv key al) (if (null? al) #f (if (eqv? key (car (car al))) (car al) (assv key (cdr al)))))
+    (define (list-copy obj) (if (pair? obj) (cons (car obj) (list-copy (cdr obj))) obj))
+    (define (boolean=? a b . rest) (eqv-chain? a (cons b rest)))
+    (define (symbol=? a b . rest) (eqv-chain? a (cons b rest)))
+    (define (eqv-chain? a rest) (if (null? rest) #t (if (eqv? a (car rest)) (eqv-chain? (car rest) (cdr rest)) #f)))
+    (define (str-cmp a b) (let ((la (string-length a)) (lb (string-length b))) (let loop ((i 0)) (cond ((and (= i la) (= i lb)) 0) ((= i la) -1) ((= i lb) 1) (else (let ((ca (char->integer (string-ref a i))) (cb (char->integer (string-ref b i)))) (cond ((< ca cb) -1) ((< cb ca) 1) (else (loop (+ i 1))))))))))
+    (define (str-chain? ok? a rest) (if (null? rest) #t (if (ok? a (car rest)) (str-chain? ok? (car rest) (cdr rest)) #f)))
+    (define (string<? a b . rest) (str-chain? (lambda (x y) (< (str-cmp x y) 0)) a (cons b rest)))
+    (define (string>? a b . rest) (str-chain? (lambda (x y) (< 0 (str-cmp x y))) a (cons b rest)))
+    (define (string<=? a b . rest) (str-chain? (lambda (x y) (not (< 0 (str-cmp x y)))) a (cons b rest)))
+    (define (string>=? a b . rest) (str-chain? (lambda (x y) (not (< (str-cmp x y) 0))) a (cons b rest)))
+    (define (vector->list v . rest) (let* ((len (vector-length v)) (s (rng-start rest)) (e (rng-end rest len))) (rng-check (quote vector->list) s e len) (let loop ((i (- e 1)) (acc (quote ()))) (if (< i s) acc (loop (- i 1) (cons (vector-ref v i) acc))))))
+    (define (vector-copy v . rest) (let* ((len (vector-length v)) (s (rng-start rest)) (e (rng-end rest len))) (rng-check (quote vector-copy) s e len) (let ((out (make-vector (- e s) 0))) (let loop ((i s)) (if (= i e) out (begin (vector-set! out (- i s) (vector-ref v i)) (loop (+ i 1))))))))
+    (define (vector-append . vs) (let ((out (make-vector (vec-total vs) 0))) (let loop ((vs vs) (at 0)) (if (null? vs) out (let* ((v (car vs)) (n (vector-length v))) (let inner ((i 0)) (if (= i n) (loop (cdr vs) (+ at n)) (begin (vector-set! out (+ at i) (vector-ref v i)) (inner (+ i 1))))))))))
+    (define (vec-total vs) (if (null? vs) 0 (+ (vector-length (car vs)) (vec-total (cdr vs)))))
+    (define (vector-fill! v fill . rest) (let* ((len (vector-length v)) (s (rng-start rest)) (e (rng-end rest len))) (rng-check (quote vector-fill!) s e len) (let loop ((i s)) (if (= i e) (void) (begin (vector-set! v i fill) (loop (+ i 1)))))))
+    (define (vector-copy! to at from . rest) (let* ((len (vector-length from)) (s (rng-start rest)) (e (rng-end rest len))) (rng-check (quote vector-copy!) s e len) (rng-check (quote vector-copy!) at (+ at (- e s)) (vector-length to)) (if (< s at) (let loop ((k (- (- e s) 1))) (if (< k 0) (void) (begin (vector-set! to (+ at k) (vector-ref from (+ s k))) (loop (- k 1))))) (let loop ((k 0)) (if (= k (- e s)) (void) (begin (vector-set! to (+ at k) (vector-ref from (+ s k))) (loop (+ k 1))))))))
+    (define (vector-map f v . vs) (if (null? vs) (let* ((n (vector-length v)) (out (make-vector n 0))) (let loop ((i 0)) (if (= i n) out (begin (vector-set! out i (f (vector-ref v i))) (loop (+ i 1)))))) (let* ((all (cons v vs)) (n (vec-min-len all)) (out (make-vector n 0))) (let loop ((i 0)) (if (= i n) out (begin (vector-set! out i (apply f (vec-nth all i))) (loop (+ i 1))))))))
+    (define (vector-for-each f v . vs) (if (null? vs) (let ((n (vector-length v))) (let loop ((i 0)) (if (= i n) (void) (begin (f (vector-ref v i)) (loop (+ i 1)))))) (let* ((all (cons v vs)) (n (vec-min-len all))) (let loop ((i 0)) (if (= i n) (void) (begin (apply f (vec-nth all i)) (loop (+ i 1))))))))
+    (define (vec-min-len vs) (if (null? (cdr vs)) (vector-length (car vs)) (let ((a (vector-length (car vs))) (b (vec-min-len (cdr vs)))) (if (< a b) a b))))
+    (define (vec-nth vs i) (if (null? vs) (quote ()) (cons (vector-ref (car vs) i) (vec-nth (cdr vs) i))))
+    (define (string->vector s . rest) (let* ((len (string-length s)) (a (rng-start rest)) (e (rng-end rest len))) (rng-check (quote string->vector) a e len) (let ((out (make-vector (- e a) 0))) (let loop ((i a)) (if (= i e) out (begin (vector-set! out (- i a) (string-ref s i)) (loop (+ i 1))))))))
+    (define (vector->string v . rest) (let* ((len (vector-length v)) (a (rng-start rest)) (e (rng-end rest len))) (rng-check (quote vector->string) a e len) (list->string (vector->list v a e))))
+    (define (string-map f s . ss) (if (null? ss) (list->string (str-map1 f (string->list s))) (list->string (str-mapn f (cons s ss)))))
+    (define (str-map1 f cs) (if (null? cs) (quote ()) (cons (f (car cs)) (str-map1 f (cdr cs)))))
+    (define (str-mapn f ss) (let ((n (str-min-len ss))) (let loop ((i 0)) (if (= i n) (quote ()) (cons (apply f (str-nth ss i)) (loop (+ i 1)))))))
+    (define (string-for-each f s . ss) (if (null? ss) (let ((n (string-length s))) (let loop ((i 0)) (if (= i n) (void) (begin (f (string-ref s i)) (loop (+ i 1)))))) (let* ((all (cons s ss)) (n (str-min-len all))) (let loop ((i 0)) (if (= i n) (void) (begin (apply f (str-nth all i)) (loop (+ i 1))))))))
+    (define (str-min-len ss) (if (null? (cdr ss)) (string-length (car ss)) (let ((a (string-length (car ss))) (b (str-min-len (cdr ss)))) (if (< a b) a b))))
+    (define (str-nth ss i) (if (null? ss) (quote ()) (cons (string-ref (car ss) i) (str-nth (cdr ss) i))))
+    (define (string-fill! s fill . rest) (let* ((len (string-length s)) (a (rng-start rest)) (e (rng-end rest len))) (rng-check (quote string-fill!) a e len) (let loop ((i a)) (if (= i e) (void) (begin (string-set! s i fill) (loop (+ i 1)))))))
+    (define (string-copy! to at from . rest) (let* ((len (string-length from)) (s (rng-start rest)) (e (rng-end rest len))) (rng-check (quote string-copy!) s e len) (rng-check (quote string-copy!) at (+ at (- e s)) (string-length to)) (if (< s at) (let loop ((k (- (- e s) 1))) (if (< k 0) (void) (begin (string-set! to (+ at k) (string-ref from (+ s k))) (loop (- k 1))))) (let loop ((k 0)) (if (= k (- e s)) (void) (begin (string-set! to (+ at k) (string-ref from (+ s k))) (loop (+ k 1))))))))
+    (define (bytevector-copy bv . rest) (let* ((len (bytevector-length bv)) (s (rng-start rest)) (e (rng-end rest len))) (rng-check (quote bytevector-copy) s e len) (let ((out (make-bytevector (- e s) 0))) (let loop ((i s)) (if (= i e) out (begin (bytevector-u8-set! out (- i s) (bytevector-u8-ref bv i)) (loop (+ i 1))))))))
+    (define (bytevector-copy! to at from . rest) (let* ((len (bytevector-length from)) (s (rng-start rest)) (e (rng-end rest len))) (rng-check (quote bytevector-copy!) s e len) (rng-check (quote bytevector-copy!) at (+ at (- e s)) (bytevector-length to)) (if (< s at) (let loop ((k (- (- e s) 1))) (if (< k 0) (void) (begin (bytevector-u8-set! to (+ at k) (bytevector-u8-ref from (+ s k))) (loop (- k 1))))) (let loop ((k 0)) (if (= k (- e s)) (void) (begin (bytevector-u8-set! to (+ at k) (bytevector-u8-ref from (+ s k))) (loop (+ k 1))))))))
+    (define (bytevector-append . bvs) (let ((out (make-bytevector (bv-total bvs) 0))) (let loop ((bvs bvs) (at 0)) (if (null? bvs) out (let* ((bv (car bvs)) (n (bytevector-length bv))) (let inner ((i 0)) (if (= i n) (loop (cdr bvs) (+ at n)) (begin (bytevector-u8-set! out (+ at i) (bytevector-u8-ref bv i)) (inner (+ i 1))))))))))
+    (define (bv-total bvs) (if (null? bvs) 0 (+ (bytevector-length (car bvs)) (bv-total (cdr bvs)))))
+    (define rat-max-denom 1000000)
+    (define (rationalize x y) (let ((lo (- x (abs y))) (hi (+ x (abs y)))) (if (and (exact? x) (exact? y)) (rat-exact lo hi) (rat-inexact (exact->inexact lo) (exact->inexact hi)))))
+    (define (rat-exact lo hi) (cond ((and (<= lo 0) (<= 0 hi)) 0) ((< 0 lo) (if (<= (rat-ceil lo) hi) (rat-ceil lo) (error "rationalize: no exact rational in range (Emit has no exact rationals)" lo hi))) (else (if (<= lo (rat-floor hi)) (rat-floor hi) (error "rationalize: no exact rational in range (Emit has no exact rationals)" lo hi)))))
+    (define (rat-ceil x) x)
+    (define (rat-floor x) x)
+    (define (rat-inexact lo hi) (if (and (<= lo 0.0) (<= 0.0 hi)) 0.0 (let loop ((d 1)) (if (< rat-max-denom d) (error "rationalize: no rational found within the denominator limit" lo hi) (let ((n (rat-num-in (* lo d) (* hi d)))) (if n (/ (exact->inexact n) (exact->inexact d)) (loop (+ d 1))))))))
+    (define (rat-num-in a b) (let ((c (rat-ceil-flo a))) (if (<= (exact->inexact c) b) c #f)))
+    (define (rat-ceil-flo x) (let ((f (inexact->exact (floor x)))) (if (< (exact->inexact f) x) (+ f 1) f)))
     (define (values . vs) (if (and (pair? vs) (null? (cdr vs))) (car vs) (%list->mv vs)))
     (define (call-with-values producer consumer) (let ((r (producer))) (if (%mv? r) (apply consumer (%mv->list r)) (consumer r))))
     (define %ht-initial-buckets 8)

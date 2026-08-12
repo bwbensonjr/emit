@@ -185,11 +185,22 @@
 
 ;;; --- structural list library (equality-and-list-library) ------------------
 ;;; member/assoc mirror memq/assq but compare with equal? (structural).
-(define (member x xs)
-  (if (null? xs) #f (if (equal? x (car xs)) xs (member x (cdr xs)))))
+;; R7RS 6.4 gives both an optional `compare`, called as (compare key element) -- the key
+;; first, which is fixed by the standard and observable.  The two-argument case keeps its
+;; own tight loop so the common call does not pay for a procedure indirection.
+(define (member x xs . rest)
+  (if (null? rest)
+      (if (null? xs) #f (if (equal? x (car xs)) xs (member x (cdr xs))))
+      (member-by x xs (car rest))))
+(define (member-by x xs same?)
+  (if (null? xs) #f (if (same? x (car xs)) xs (member-by x (cdr xs) same?))))
 
-(define (assoc k xs)
-  (if (null? xs) #f (if (equal? k (car (car xs))) (car xs) (assoc k (cdr xs)))))
+(define (assoc k xs . rest)
+  (if (null? rest)
+      (if (null? xs) #f (if (equal? k (car (car xs))) (car xs) (assoc k (cdr xs))))
+      (assoc-by k xs (car rest))))
+(define (assoc-by k xs same?)
+  (if (null? xs) #f (if (same? k (car (car xs))) (car xs) (assoc-by k (cdr xs) same?))))
 
 (define (filter p xs)
   (if (null? xs)
@@ -424,9 +435,11 @@
 (define (char>=? a b . rest) (chr-cmp (lambda (x y) (>= x y)) a b rest))
 
 ;; string->list: codepoint-indexed, built from the end so the list is in order.
-(define (string->list s)
-  (let loop ([i (- (string-length s) 1)] [acc (quote ())])
-    (if (< i 0) acc (loop (- i 1) (cons (string-ref s i) acc)))))
+(define (string->list s . rest)
+  (let* ([len (string-length s)] [a (rng-start rest)] [e (rng-end rest len)])
+    (rng-check 'string->list a e len)
+    (let loop ([i (- e 1)] [acc (quote ())])
+      (if (< i a) acc (loop (- i 1) (cons (string-ref s i) acc))))))
 
 ;;; --- number->string (base-10 signed integers) -----------------------------
 ;;; Inverse of the reader's integer parsing (rd-parse-int), so it round-trips.
@@ -710,6 +723,314 @@
           bv
           (begin (bytevector-u8-set! bv i (car bs)) (loop (cdr bs) (+ i 1)))))))
 (define (bytevector . bs) (list->bytevector bs))
+
+;;; --- R7RS-small surface completed (change: r7rs-conformance-suite) ------------
+;;; The names below were absent from (scheme base) and are ordinary Scheme over the
+;;; existing primitives.  Measured against chibi-scheme's R7RS suite; see
+;;; openspec/explorations/r7rs-conformance-suite.md.
+;;;
+;;; Two conventions run through the whole batch:
+;;;
+;;;   * OPTIONAL RANGES.  R7RS gives most of these an optional [start [end]].  The
+;;;     defaults come from rng-start/rng-end and every range is checked by rng-check
+;;;     BEFORE any element is touched, so a bad range is a diagnostic rather than a
+;;;     partially-mutated object.  That matches the indexed-access rule already in
+;;;     force: out of range is a diagnostic, never an unchecked access.
+;;;   * NO PRELUDE WRAPPER OVER AN INTEGRABLE.  A top-level define of an integrable
+;;;     name SHADOWS the primitive completely -- for every arity, not just the one it
+;;;     adds -- so wrapping `make-vector` here to give it an optional fill would cost
+;;;     every existing two-argument call site its bare-primcall codegen.  Widening an
+;;;     integrable's arity therefore belongs in *integrable* (src/parse.ss), not here.
+
+;; Optional-range plumbing.  `rest` is the tail after the required arguments.
+(define (rng-start rest) (if (pair? rest) (car rest) 0))
+(define (rng-end rest len) (if (and (pair? rest) (pair? (cdr rest))) (car (cdr rest)) len))
+(define (rng-check who s e len)
+  (if (and (<= 0 s) (<= s e) (<= e len))
+      #t
+      (error "range out of bounds" who s e len)))
+
+;;; --- lists -------------------------------------------------------------------
+;; assv completes the assq/assv/assoc family: eqv? rather than eq? or equal?.
+(define (assv key al)
+  (if (null? al)
+      #f
+      (if (eqv? key (car (car al))) (car al) (assv key (cdr al)))))
+
+;; R7RS 6.4: a non-pair is returned as itself, and an improper tail is preserved --
+;; list-copy is defined on "obj", not only on proper lists.
+(define (list-copy obj)
+  (if (pair? obj) (cons (car obj) (list-copy (cdr obj))) obj))
+
+;; list-set! is NOT here: it mutates a pair, and Emit has no set-car!/set-cdr!
+;; (GitHub issue #82).  It arrives with them, not before -- there is no way to write it
+;; over the current primitives.
+
+;;; --- type and equivalence predicates -----------------------------------------
+;; procedure? is a primitive (a closure tag test); boolean=?/symbol=? are n-ary over
+;; the existing binary equivalences.
+(define (boolean=? a b . rest) (eqv-chain? a (cons b rest)))
+(define (symbol=? a b . rest) (eqv-chain? a (cons b rest)))
+(define (eqv-chain? a rest)
+  (if (null? rest)
+      #t
+      (if (eqv? a (car rest)) (eqv-chain? (car rest) (cdr rest)) #f)))
+
+;;; --- string ordering (R7RS 6.7), n-ary and chained ----------------------------
+;; Codepoint order, position by position; a proper prefix precedes what extends it.
+;; str-cmp returns -1/0/1 so the four relations are one comparison each.
+(define (str-cmp a b)
+  (let ([la (string-length a)] [lb (string-length b)])
+    (let loop ([i 0])
+      (cond
+        [(and (= i la) (= i lb)) 0]
+        [(= i la) -1]
+        [(= i lb) 1]
+        [else
+         (let ([ca (char->integer (string-ref a i))]
+               [cb (char->integer (string-ref b i))])
+           (cond [(< ca cb) -1] [(< cb ca) 1] [else (loop (+ i 1))]))]))))
+(define (str-chain? ok? a rest)
+  (if (null? rest)
+      #t
+      (if (ok? a (car rest)) (str-chain? ok? (car rest) (cdr rest)) #f)))
+(define (string<? a b . rest)
+  (str-chain? (lambda (x y) (< (str-cmp x y) 0)) a (cons b rest)))
+(define (string>? a b . rest)
+  (str-chain? (lambda (x y) (< 0 (str-cmp x y))) a (cons b rest)))
+(define (string<=? a b . rest)
+  (str-chain? (lambda (x y) (not (< 0 (str-cmp x y)))) a (cons b rest)))
+(define (string>=? a b . rest)
+  (str-chain? (lambda (x y) (not (< (str-cmp x y) 0))) a (cons b rest)))
+
+;;; --- vectors -----------------------------------------------------------------
+(define (vector->list v . rest)
+  (let* ([len (vector-length v)] [s (rng-start rest)] [e (rng-end rest len)])
+    (rng-check 'vector->list s e len)
+    (let loop ([i (- e 1)] [acc (quote ())])
+      (if (< i s) acc (loop (- i 1) (cons (vector-ref v i) acc))))))
+
+(define (vector-copy v . rest)
+  (let* ([len (vector-length v)] [s (rng-start rest)] [e (rng-end rest len)])
+    (rng-check 'vector-copy s e len)
+    (let ([out (make-vector (- e s) 0)])
+      (let loop ([i s])
+        (if (= i e) out (begin (vector-set! out (- i s) (vector-ref v i)) (loop (+ i 1))))))))
+
+(define (vector-append . vs)
+  (let ([out (make-vector (vec-total vs) 0)])
+    (let loop ([vs vs] [at 0])
+      (if (null? vs)
+          out
+          (let* ([v (car vs)] [n (vector-length v)])
+            (let inner ([i 0])
+              (if (= i n)
+                  (loop (cdr vs) (+ at n))
+                  (begin (vector-set! out (+ at i) (vector-ref v i)) (inner (+ i 1))))))))))
+(define (vec-total vs)
+  (if (null? vs) 0 (+ (vector-length (car vs)) (vec-total (cdr vs)))))
+
+(define (vector-fill! v fill . rest)
+  (let* ([len (vector-length v)] [s (rng-start rest)] [e (rng-end rest len)])
+    (rng-check 'vector-fill! s e len)
+    (let loop ([i s])
+      (if (= i e) (void) (begin (vector-set! v i fill) (loop (+ i 1)))))))
+
+;; The copy direction is chosen so an OVERLAPPING move within one vector still behaves
+;; as if the source range had been read in full before any element was written -- copy
+;; downward when the destination starts after the source, upward otherwise.
+(define (vector-copy! to at from . rest)
+  (let* ([len (vector-length from)] [s (rng-start rest)] [e (rng-end rest len)])
+    (rng-check 'vector-copy! s e len)
+    (rng-check 'vector-copy! at (+ at (- e s)) (vector-length to))
+    (if (< s at)
+        (let loop ([k (- (- e s) 1)])
+          (if (< k 0)
+              (void)
+              (begin (vector-set! to (+ at k) (vector-ref from (+ s k))) (loop (- k 1)))))
+        (let loop ([k 0])
+          (if (= k (- e s))
+              (void)
+              (begin (vector-set! to (+ at k) (vector-ref from (+ s k))) (loop (+ k 1))))))))
+
+;; map/for-each over one or more vectors, stopping at the shortest (R7RS 6.8).
+(define (vector-map f v . vs)
+  (if (null? vs)
+      (let* ([n (vector-length v)] [out (make-vector n 0)])
+        (let loop ([i 0])
+          (if (= i n) out (begin (vector-set! out i (f (vector-ref v i))) (loop (+ i 1))))))
+      (let* ([all (cons v vs)] [n (vec-min-len all)] [out (make-vector n 0)])
+        (let loop ([i 0])
+          (if (= i n)
+              out
+              (begin (vector-set! out i (apply f (vec-nth all i))) (loop (+ i 1))))))))
+
+(define (vector-for-each f v . vs)
+  (if (null? vs)
+      (let ([n (vector-length v)])
+        (let loop ([i 0])
+          (if (= i n) (void) (begin (f (vector-ref v i)) (loop (+ i 1))))))
+      (let* ([all (cons v vs)] [n (vec-min-len all)])
+        (let loop ([i 0])
+          (if (= i n) (void) (begin (apply f (vec-nth all i)) (loop (+ i 1))))))))
+
+(define (vec-min-len vs)
+  (if (null? (cdr vs))
+      (vector-length (car vs))
+      (let ([a (vector-length (car vs))] [b (vec-min-len (cdr vs))])
+        (if (< a b) a b))))
+(define (vec-nth vs i)
+  (if (null? vs) (quote ()) (cons (vector-ref (car vs) i) (vec-nth (cdr vs) i))))
+
+;;; --- strings and vectors of characters ---------------------------------------
+(define (string->vector s . rest)
+  (let* ([len (string-length s)] [a (rng-start rest)] [e (rng-end rest len)])
+    (rng-check 'string->vector a e len)
+    (let ([out (make-vector (- e a) 0)])
+      (let loop ([i a])
+        (if (= i e) out (begin (vector-set! out (- i a) (string-ref s i)) (loop (+ i 1))))))))
+
+(define (vector->string v . rest)
+  (let* ([len (vector-length v)] [a (rng-start rest)] [e (rng-end rest len)])
+    (rng-check 'vector->string a e len)
+    (list->string (vector->list v a e))))
+
+(define (string-map f s . ss)
+  (if (null? ss)
+      (list->string (str-map1 f (string->list s)))
+      (list->string (str-mapn f (cons s ss)))))
+(define (str-map1 f cs)
+  (if (null? cs) (quote ()) (cons (f (car cs)) (str-map1 f (cdr cs)))))
+(define (str-mapn f ss)
+  (let ([n (str-min-len ss)])
+    (let loop ([i 0])
+      (if (= i n) (quote ()) (cons (apply f (str-nth ss i)) (loop (+ i 1)))))))
+
+(define (string-for-each f s . ss)
+  (if (null? ss)
+      (let ([n (string-length s)])
+        (let loop ([i 0])
+          (if (= i n) (void) (begin (f (string-ref s i)) (loop (+ i 1))))))
+      (let* ([all (cons s ss)] [n (str-min-len all)])
+        (let loop ([i 0])
+          (if (= i n) (void) (begin (apply f (str-nth all i)) (loop (+ i 1))))))))
+
+(define (str-min-len ss)
+  (if (null? (cdr ss))
+      (string-length (car ss))
+      (let ([a (string-length (car ss))] [b (str-min-len (cdr ss))])
+        (if (< a b) a b))))
+(define (str-nth ss i)
+  (if (null? ss) (quote ()) (cons (string-ref (car ss) i) (str-nth (cdr ss) i))))
+
+(define (string-fill! s fill . rest)
+  (let* ([len (string-length s)] [a (rng-start rest)] [e (rng-end rest len)])
+    (rng-check 'string-fill! a e len)
+    (let loop ([i a])
+      (if (= i e) (void) (begin (string-set! s i fill) (loop (+ i 1)))))))
+
+(define (string-copy! to at from . rest)
+  (let* ([len (string-length from)] [s (rng-start rest)] [e (rng-end rest len)])
+    (rng-check 'string-copy! s e len)
+    (rng-check 'string-copy! at (+ at (- e s)) (string-length to))
+    (if (< s at)
+        (let loop ([k (- (- e s) 1)])
+          (if (< k 0)
+              (void)
+              (begin (string-set! to (+ at k) (string-ref from (+ s k))) (loop (- k 1)))))
+        (let loop ([k 0])
+          (if (= k (- e s))
+              (void)
+              (begin (string-set! to (+ at k) (string-ref from (+ s k))) (loop (+ k 1))))))))
+
+;;; --- bytevectors -------------------------------------------------------------
+(define (bytevector-copy bv . rest)
+  (let* ([len (bytevector-length bv)] [s (rng-start rest)] [e (rng-end rest len)])
+    (rng-check 'bytevector-copy s e len)
+    (let ([out (make-bytevector (- e s) 0)])
+      (let loop ([i s])
+        (if (= i e)
+            out
+            (begin (bytevector-u8-set! out (- i s) (bytevector-u8-ref bv i)) (loop (+ i 1))))))))
+
+(define (bytevector-copy! to at from . rest)
+  (let* ([len (bytevector-length from)] [s (rng-start rest)] [e (rng-end rest len)])
+    (rng-check 'bytevector-copy! s e len)
+    (rng-check 'bytevector-copy! at (+ at (- e s)) (bytevector-length to))
+    (if (< s at)
+        (let loop ([k (- (- e s) 1)])
+          (if (< k 0)
+              (void)
+              (begin (bytevector-u8-set! to (+ at k) (bytevector-u8-ref from (+ s k)))
+                     (loop (- k 1)))))
+        (let loop ([k 0])
+          (if (= k (- e s))
+              (void)
+              (begin (bytevector-u8-set! to (+ at k) (bytevector-u8-ref from (+ s k)))
+                     (loop (+ k 1))))))))
+
+(define (bytevector-append . bvs)
+  (let ([out (make-bytevector (bv-total bvs) 0)])
+    (let loop ([bvs bvs] [at 0])
+      (if (null? bvs)
+          out
+          (let* ([bv (car bvs)] [n (bytevector-length bv)])
+            (let inner ([i 0])
+              (if (= i n)
+                  (loop (cdr bvs) (+ at n))
+                  (begin (bytevector-u8-set! out (+ at i) (bytevector-u8-ref bv i))
+                         (inner (+ i 1))))))))))
+(define (bv-total bvs)
+  (if (null? bvs) 0 (+ (bytevector-length (car bvs)) (bv-total (cdr bvs)))))
+
+;;; --- rationalize (R7RS 6.2.6) ------------------------------------------------
+;;; The simplest number within `y` of `x`: smallest denominator, and among those the
+;;; smallest numerator.  Emit has no exact rationals (issue #27), which splits this in
+;;; two:
+;;;
+;;;   * INEXACT arguments -- the result is a flonum, so the simplest rational is found
+;;;     by searching denominators upward (that IS the definition of simplest) and then
+;;;     dividing.  `(rationalize .3 1/10)` -> 1/3 -> 0.3333333333333333, which is the
+;;;     standard's own example and what Chez answers.
+;;;   * EXACT arguments -- an exact result must be an integer here.  If the interval
+;;;     holds one, the one nearest zero is the simplest and is returned exactly:
+;;;     `(rationalize 7 3)` is 4, the smallest integer in [4, 10].  If the interval
+;;;     holds no integer the true answer is a rational Emit cannot represent, so it
+;;;     raises rather than rounding silently to a wrong value.
+(define rat-max-denom 1000000)
+(define (rationalize x y)
+  (let ([lo (- x (abs y))] [hi (+ x (abs y))])
+    (if (and (exact? x) (exact? y))
+        (rat-exact lo hi)
+        (rat-inexact (exact->inexact lo) (exact->inexact hi)))))
+(define (rat-exact lo hi)
+  (cond
+    [(and (<= lo 0) (<= 0 hi)) 0]                  ; 0 is simplest whenever it is in range
+    [(< 0 lo) (if (<= (rat-ceil lo) hi)
+                  (rat-ceil lo)
+                  (error "rationalize: no exact rational in range (Emit has no exact rationals)" lo hi))]
+    [else (if (<= lo (rat-floor hi))
+              (rat-floor hi)
+              (error "rationalize: no exact rational in range (Emit has no exact rationals)" lo hi))]))
+;; lo/hi are exact integers here (an exact non-integer cannot exist), so ceiling and
+;; floor are the identity -- kept named so the intent survives if rationals ever land.
+(define (rat-ceil x) x)
+(define (rat-floor x) x)
+(define (rat-inexact lo hi)
+  (if (and (<= lo 0.0) (<= 0.0 hi))
+      0.0
+      (let loop ([d 1])
+        (if (< rat-max-denom d)
+            (error "rationalize: no rational found within the denominator limit" lo hi)
+            (let ([n (rat-num-in (* lo d) (* hi d))])
+              (if n (/ (exact->inexact n) (exact->inexact d)) (loop (+ d 1))))))))
+;; the integer of smallest magnitude in [a, b], or #f when the interval holds none
+(define (rat-num-in a b)
+  (let ([c (rat-ceil-flo a)])
+    (if (<= (exact->inexact c) b) c #f)))
+(define (rat-ceil-flo x)
+  (let ([f (inexact->exact (floor x))])
+    (if (< (exact->inexact f) x) (+ f 1) f)))
 
 ;; --- multiple values (openspec multiple-values): values / call-with-values ---
 ;; A distinguished bundle carries 0 or >=2 values; exactly one value is returned
