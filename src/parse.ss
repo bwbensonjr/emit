@@ -26,11 +26,12 @@
                   %char->integer %integer->char
                   %string-length %string-ref %string->symbol %symbol->string %list->string
                   %string-set! %substring %string=? %make-string %string-copy
+                  %make-string-1 %make-vector-1 %string-copy-from
                   %string-append
                   %vector-ref %vector-set! %vector-length %vector? %make-vector
                   %bytevector-u8-ref %bytevector-u8-set! %bytevector-length %bytevector?
                   %make-bytevector
-                  %symbol? %string? %char? %boolean? %integer? %exact?
+                  %symbol? %string? %char? %boolean? %integer? %exact? %procedure?
                   %flonum? %number? %real? %inexact? %exact->inexact %inexact->exact
                   %string->flonum %flonum->string
                   ;; change: numeric-conformance -- classification, the flonum arm of
@@ -120,6 +121,7 @@
     (bytevector-u8-ref %bytevector-u8-ref 2) (bytevector-u8-set! %bytevector-u8-set! 3)
     (bytevector-length %bytevector-length 1) (bytevector? %bytevector? 1)
     (symbol? %symbol? 1) (string? %string? 1) (char? %char? 1)
+    (procedure? %procedure? 1)
     (boolean? %boolean? 1) (integer? %integer? 1) (exact? %exact? 1)
     ;; Batch B increment 2: remaining string/vector/bytevector construction+access
     ;; and I/O prims.  All fixed-arity in Emit (the runtime rt_* have fixed C
@@ -127,6 +129,20 @@
     (substring %substring 3) (string=? %string=? 2)
     (make-string %make-string 2) (string-copy %string-copy 1)
     (make-vector %make-vector 2) (make-bytevector %make-bytevector 2)
+    ;; The OPTIONAL-argument forms R7RS gives these three (6.7, 6.8).  They come AFTER
+    ;; the base entries deliberately: value position etas the FIRST entry for a name, so
+    ;; listing an added arity first would silently change what `(map make-string ks)`
+    ;; means.  A 3-argument string-copy IS substring, so it reuses that primitive rather
+    ;; than adding another.
+    ;;
+    ;; LIMIT worth knowing: the value-position eta covers ONE arity per name, so the
+    ;; optional form is available to a direct call but not through a value reference --
+    ;; `(make-string 3)` works, `(map make-string ks)` still passes 2 arguments and
+    ;; reports an arity error.  Base-arity-first is what keeps that from being a silent
+    ;; behaviour CHANGE for code that already passes these as values.
+    (make-string %make-string-1 1)
+    (make-vector %make-vector-1 1)
+    (string-copy %string-copy-from 2) (string-copy %substring 3)
     (read-all-stdin %read-all-stdin 0)
     ;; The four output procedures plus write-string carry an OPTIONAL port (change:
     ;; scheme-io-library).  An integrable may have MORE THAN ONE entry, one per
@@ -361,6 +377,18 @@
     [(boolean? e) `(const ,e)]
     [(string? e) `(const ,e)]              ; string literals are self-evaluating
     [(char? e) `(const ,e)]                ; char literals are self-evaluating
+    ;; Vector and bytevector literals are self-evaluating too (R7RS 4.1.2: "vector
+    ;; constants are self-evaluating, so they do not need to be quoted"; 4.1.1 says the
+    ;; same for bytevectors).  GitHub issue #76: requiring the quote rejected 44 forms of
+    ;; the R7RS suite and left its Vectors and Bytevectors sections barely able to run.
+    ;;
+    ;; The payload is the datum itself, exactly as the `(quote ,d)` arm below produces, so
+    ;; `#(1 2 3)` and `'#(1 2 3)` are the same constant and encode-const already handles
+    ;; both -- which is why this is an arm here and no emitter change.  The contents stay
+    ;; DATA, not subexpressions: `#(a b c)` is a vector of three symbols, never three
+    ;; variable references.
+    [(vector? e) `(const ,e)]
+    [(bytevector? e) `(const ,e)]
     [(null? e) `(const ())]
     ;; a bare symbol is a variable ref; an integrable's value-use eta is synthesized
     ;; post-rename by inline-primitives (self-contained, so even variadic ops like
