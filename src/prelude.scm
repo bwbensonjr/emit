@@ -251,6 +251,11 @@
 ;; the sublist after n elements, the nth element, and the first n elements.
 (define (list-tail xs n) (if (zero? n) xs (list-tail (cdr xs) (- n 1))))
 (define (list-ref xs n) (car (list-tail xs n)))
+;; R7RS 6.4.  Held back until pairs were mutable (change:
+;; checked-primitive-arguments / GitHub issue #82) -- it is list-ref's store, and
+;; there was nothing to store with.  `list-tail` does the walking, so a short list
+;; reports through `cdr` and a non-pair through `set-car!`.
+(define (list-set! xs n obj) (set-car! (list-tail xs n) obj))
 (define (list-head xs n)
   (if (zero? n) (quote ()) (cons (car xs) (list-head (cdr xs) (- n 1)))))
 

@@ -124,6 +124,99 @@ char rt_trap_msg[128] = "";
 
 static inline val truthy(int b) { return b ? TRUE_V : FALSE_V; }
 
+/* --- argument types (change: checked-primitive-arguments, design D3) -------
+ * Every primitive that DEREFERENCES an argument verifies the argument's tag
+ * first.  `as_ptr` masks the tag bits off and casts, so without this a wrong-typed
+ * argument is an unchecked memory access: `(car '())` dereferenced address 0 and
+ * `(car 7)` reinterpreted the payload as an address (GitHub issue #84).
+ *
+ * ORDERING IS THE POINT for the indexed accessors.  `CHECK_INDEX` above reads its
+ * bound out of the object's own header -- itself an unchecked load -- so a bounds
+ * check on an unverified object takes its bound from garbage.  The type check runs
+ * BEFORE the length load, or the bounds guarantee `checked-indexed-access` states
+ * holds only for arguments that were already the right type.
+ *
+ * These `is_*` predicates are THE definition of each type test: the Scheme-level
+ * predicates below (rt_pair_p, rt_vector_p, ...) delegate to them, so a guard here
+ * and the predicate a program can call cannot disagree about what a vector is. */
+static void rt_fatalf(const char *fmt, ...);       /* defined with the trap machinery below */
+
+static int is_pair(val v)     { return tag_of(v) == TAG_PAIR; }
+static int is_box(val v)      { return tag_of(v) == TAG_BOX; }
+static int is_symbol(val v)   { return tag_of(v) == TAG_SYMBOL; }
+static int is_closure(val v)  { return tag_of(v) == TAG_CLOSURE; }
+static int is_fixnum(val v)   { return tag_of(v) == TAG_FIXNUM; }
+/* tags 0-6 are exhausted, so every other heap type lives under tag 7 and is
+ * discriminated by its header word.  A bare tag test would accept any of them --
+ * which is exactly how `(vector-ref "abc" 0)` would read a string's byte pointer
+ * as an element -- so the header is part of the test, never optional. */
+static int is_ext(val v, intptr_t hdr) {
+  return tag_of(v) == TAG_EXT && (intptr_t)as_ptr(v)[0] == hdr;
+}
+static int is_string(val v)     { return is_ext(v, HDR_STRING); }
+static int is_vector(val v)     { return is_ext(v, HDR_VECTOR); }
+static int is_bytevector(val v) { return is_ext(v, HDR_BYTEVECTOR); }
+static int is_record(val v)     { return is_ext(v, HDR_RECORD); }
+static int is_hashtable(val v)  { return is_ext(v, HDR_HASHTABLE); }
+static int is_mv(val v)         { return is_ext(v, HDR_MV); }
+static int is_error_obj(val v)  { return is_ext(v, HDR_ERROR); }
+
+/* The type a value HAS, for the diagnostic.  A fixed string per tag/header rather
+ * than a rendering of the value itself (design D4): the value that reached a type
+ * check is the one most likely to be malformed, the printer walks it structurally,
+ * and an arbitrarily deep or circular structure would fill rt_trap_msg with noise
+ * where the useful information is the type.  `+: not a number` set that precedent. */
+static const char *rt_type_name(val v) {
+  switch (tag_of(v)) {
+    case TAG_FIXNUM:  return "a fixnum";
+    case TAG_NIL:     return "the empty list";
+    case TAG_PAIR:    return "a pair";
+    case TAG_CLOSURE: return "a procedure";
+    case TAG_BOX:     return "a box";
+    case TAG_SYMBOL:  return "a symbol";
+    case TAG_BOOL:
+      switch (imm_subtype(v)) {
+        case SUB_BOOL:   return "a boolean";
+        case SUB_CHAR:   return "a character";
+        case SUB_UNSPEC: return "the unspecified value";
+        case SUB_EOF:    return "the end-of-file object";
+      }
+      return "an immediate";
+    default:                                    /* TAG_EXT: dispatch on the header */
+      switch ((intptr_t)as_ptr(v)[0]) {
+        case HDR_STRING:      return "a string";
+        case HDR_BYTEVECTOR:  return "a bytevector";
+        case HDR_VECTOR:      return "a vector";
+        case HDR_ERROR:       return "an error object";
+        case HDR_HASHTABLE:   return "a hash table";
+        case HDR_RECORD:      return "a record";
+        case HDR_RECORD_TYPE: return "a record type";
+        case HDR_MV:          return "a values bundle";
+        case HDR_FLONUM:      return "a flonum";
+      }
+      return "a heap object";
+  }
+}
+static void rt_type_error(const char *who, const char *want, val got) {
+  rt_fatalf("%s: not %s: got %s", who, want, rt_type_name(got));
+}
+/* The index of an indexed accessor (design D10).  Not a safety fix -- UNFIX of a
+ * tagged pointer yields a huge index that CHECK_INDEX already rejects -- but the
+ * message it produced named the wrong defect: `index out of range: 544356370`. */
+static void rt_index_type_error(const char *who, val got) {
+  rt_fatalf("%s: index is not an exact integer: got %s", who, rt_type_name(got));
+}
+#define CHECK_TAG(who, v, pred, want)                            \
+  do {                                                           \
+    val chk_t_ = (v);                                            \
+    if (!pred(chk_t_)) rt_type_error((who), (want), chk_t_);      \
+  } while (0)
+#define CHECK_FIXNUM(who, i)                                     \
+  do {                                                           \
+    val chk_f_ = (i);                                            \
+    if (!is_fixnum(chk_f_)) rt_index_type_error((who), chk_f_);  \
+  } while (0)
+
 /* --- allocation -------------------------------------------------------- */
 /* raw n-word allocation; the emitter tags the result and fills the slots
  * (used for closures, whose size/content is per-lambda).
@@ -144,13 +237,51 @@ val rt_cons(val a, val b) {
   p[0] = a; p[1] = b;
   return tag_ptr(p, TAG_PAIR);
 }
-val rt_car(val v) { return as_ptr(v)[0]; }
-val rt_cdr(val v) { return as_ptr(v)[1]; }
+val rt_car(val v) { CHECK_TAG("car", v, is_pair, "a pair"); return as_ptr(v)[0]; }
+val rt_cdr(val v) { CHECK_TAG("cdr", v, is_pair, "a pair"); return as_ptr(v)[1]; }
+/* R7RS 6.4.  Pairs were the one aggregate Emit left immutable (GitHub issue #82) --
+ * vectors, strings, bytevectors and records all had mutators -- so this was an
+ * accident of what self-hosting happened to need, not a design.
+ *
+ * No write barrier: the collector here is Boehm, non-generational, so a plain store
+ * into a heap object is safe.  Stated because it is precisely the assumption a
+ * later collector change would break silently (design D7).
+ *
+ * Mutating a pair that came from a QUOTED constant is undefined per R7RS 4.1.2 and
+ * is deliberately not checked -- the same answer Emit already gives for string and
+ * vector literals.  It is memory-safe either way: a quoted pair is an ordinary heap
+ * pair, so the store is well-defined at the representation level. */
+val rt_set_car(val p, val v) {
+  CHECK_TAG("set-car!", p, is_pair, "a pair");
+  as_ptr(p)[0] = v;
+  return UNSPEC_V;
+}
+val rt_set_cdr(val p, val v) {
+  CHECK_TAG("set-cdr!", p, is_pair, "a pair");
+  as_ptr(p)[1] = v;
+  return UNSPEC_V;
+}
+/* The operator of a call, checked where the code pointer would be loaded out of it
+ * (design D6).  This is the one guard in this change that cannot live in a runtime
+ * primitive -- there is no primitive to guard, the emitter loads word 0 of the
+ * closure and jumps to it -- so the emitter calls this immediately before the mask.
+ * Only the INDIRECT call paths reach it: a call to a statically-known closure
+ * (self-app / known-app) cannot fail this test and does not pay for it. */
+void rt_check_callable(val f) {
+  if (!is_closure(f)) rt_type_error("call", "a procedure", f);
+}
 
 /* --- boxes (assignment-converted variables) ---------------------------- */
 val rt_box(val v)          { val *p = (val *)GC_MALLOC(sizeof(val)); p[0] = v; return tag_ptr(p, TAG_BOX); }
-val rt_unbox(val b)        { return as_ptr(b)[0]; }
-val rt_set_box(val b, val v) { as_ptr(b)[0] = v; return UNSPEC_V; }
+/* Boxes are compiler-generated (assignment conversion), so a user value cannot
+ * reach these with the wrong type -- checked anyway, for the reason
+ * checked-indexed-access checked the record accessors: the only defect it can
+ * report is a bug in the compiler, which is exactly the bug worth reporting. */
+val rt_unbox(val b)        { CHECK_TAG("unbox", b, is_box, "a box"); return as_ptr(b)[0]; }
+val rt_set_box(val b, val v) {
+  CHECK_TAG("set-box!", b, is_box, "a box");
+  as_ptr(b)[0] = v; return UNSPEC_V;
+}
 
 /* --- flonums (tag-7 HDR_FLONUM: { HDR_FLONUM, double }) ------------------
  * memcpy is used for the double<->word type-punning (well-defined, no strict-
@@ -256,6 +387,7 @@ static void rt_range_error(const char *who, intptr_t i, intptr_t n) {
 static void rt_size_error(const char *who, intptr_t n) {
   rt_fatalf("%s: negative size: %ld", who, (long)n);
 }
+
 
 /* --- the exact-integer range ---------------------------------------------
  * Fixnums carry a 61-bit signed payload (the tag takes the low 3 bits), so the
@@ -416,12 +548,12 @@ val rt_lt(val a, val b) {
   rt_fatal("<: not a number"); return NIL_V;
 }
 val rt_null_p(val v)       { return truthy(v == NIL_V); }
-val rt_pair_p(val v)       { return truthy(tag_of(v) == TAG_PAIR); }
+val rt_pair_p(val v)       { return truthy(is_pair(v)); }
 /* procedure?: a closure is TAG_CLOSURE, and EVERY callable value in Emit is one --
  * including a primitive used in value position, which inline-primitives eta-expands
  * into an ordinary closure (src/parse.ss).  So this one tag test answers the whole
  * predicate; there is no separate primitive-object case to consider. */
-val rt_procedure_p(val v)  { return truthy(tag_of(v) == TAG_CLOSURE); }
+val rt_procedure_p(val v)  { return truthy(is_closure(v)); }
 val rt_eq_p(val a, val b)  { return truthy(a == b); }
 /* eqv?: same-object identity, plus flonum value comparison (change:
  * inexact-numbers).  == covers every immediate (fixnums, booleans, characters)
@@ -467,6 +599,17 @@ val *rt_apply_argv(intptr_t n, val *pre, val lst, intptr_t K) {
   val *v = (val *)GC_MALLOC((size_t)(cap ? cap : 1) * sizeof(val));
   for (intptr_t i = 0; i < n; i++) v[i] = pre[i];
   for (intptr_t i = 0; i < m; i++) { v[n + i] = as_ptr(lst)[0]; lst = as_ptr(lst)[1]; }
+  /* R7RS 6.10: apply's final argument is a LIST.  rt_list_length returns 0 for a
+   * non-pair, so without this the argument vector was built from the leading
+   * arguments alone and the rest was dropped silently -- `(apply + 3)` returned 0
+   * and `(apply + '(2 3 . 4))` returned 5 (GitHub issue #78).  The cursor has
+   * already been walked to the end by the copy loop above, so the check is one
+   * comparison on a value in a register: for a proper list it is NIL_V, and for
+   * `(apply + 3)` the loop never ran and it is still the original argument
+   * (design D9).  No second traversal, and none of the loop's dereferences is
+   * unguarded -- rt_list_length bounded them. */
+  if (lst != NIL_V)
+    rt_fatalf("apply: last argument is not a proper list: got %s", rt_type_name(lst));
   return v;
 }
 
@@ -563,11 +706,15 @@ const char *rt_string_bytes(val v) { return str_bytes(v); }
  * flonum_format is shortest-round-trippable, so string->flonum->string and
  * flonum->string->flonum both round-trip. */
 val rt_flonum_to_string(val fv) {
+  CHECK_TAG("number->string", fv, is_flonum, "a flonum");
   char buf[40];
   int n = flonum_format(flo_val(fv), buf);
   return rt_make_string(buf, n);
 }
-val rt_string_to_flonum(val s) { return rt_make_flonum(strtod(str_bytes(s), NULL)); }
+val rt_string_to_flonum(val s) {
+  CHECK_TAG("string->number", s, is_string, "a string");
+  return rt_make_flonum(strtod(str_bytes(s), NULL));
+}
 
 /* char: an immediate in the misc-immediate family (subtype SUB_CHAR), the full
  * Unicode scalar value carried in bits 8+.  No heap allocation and no interning
@@ -689,12 +836,17 @@ val rt_integer_to_char(val n) {
 }
 
 /* --- string operations (codepoint-indexed over UTF-8 storage, design D1) --- */
-val rt_string_length(val s) { return FIX(str_cplen(s)); }   /* O(1): stored count */
+val rt_string_length(val s) {                               /* O(1): stored count */
+  CHECK_TAG("string-length", s, is_string, "a string");
+  return FIX(str_cplen(s));
+}
 /* A string index is a CODEPOINT index, so the bound is str_cplen and never
  * str_len (design D4).  A str_len guard would look correct on the ASCII strings
  * the suites mostly use -- where the two are equal -- while accepting an index
  * past the end of any multi-byte string. */
 val rt_string_ref(val s, val idx) {
+  CHECK_TAG("string-ref", s, is_string, "a string");   /* before str_bytes/str_cplen */
+  CHECK_FIXNUM("string-ref", idx);
   const unsigned char *b = (const unsigned char *)str_bytes(s);
   intptr_t i = UNFIX(idx);
   CHECK_INDEX("string-ref", i, str_cplen(s));
@@ -703,6 +855,9 @@ val rt_string_ref(val s, val idx) {
   return rt_make_char(utf8_decode_at(b, off));
 }
 val rt_substring(val s, val start, val end) {
+  CHECK_TAG("substring", s, is_string, "a string");
+  CHECK_FIXNUM("substring", start);
+  CHECK_FIXNUM("substring", end);
   const unsigned char *b = (const unsigned char *)str_bytes(s);
   intptr_t si = UNFIX(start), ei = UNFIX(end), n = str_cplen(s), so, eo;
   /* Both bounds are INCLUSIVE of the length -- unlike an element index, a
@@ -723,18 +878,25 @@ val rt_substring(val s, val start, val end) {
   return rt_make_string((const char *)(b + so), eo - so);
 }
 /* intern the string's bytes (NUL-terminated; safe for source identifiers) */
-val rt_string_to_symbol(val s) { return rt_intern(str_bytes(s)); }
+val rt_string_to_symbol(val s) {
+  CHECK_TAG("string->symbol", s, is_string, "a string");
+  return rt_intern(str_bytes(s));
+}
 
 /* --- string construction/comparison (string-char-library) --------------- */
 /* content equality: equal byte length + equal bytes (UTF-8 => byte equality
  * is codepoint equality). */
 val rt_string_eq(val a, val b) {
+  CHECK_TAG("string=?", a, is_string, "a string");
+  CHECK_TAG("string=?", b, is_string, "a string");
   intptr_t la = str_len(a);
   if (la != str_len(b)) return FALSE_V;
   return truthy(memcmp(str_bytes(a), str_bytes(b), (size_t)la) == 0);
 }
 /* new string = a's bytes followed by b's bytes. */
 val rt_string_append(val a, val b) {
+  CHECK_TAG("string-append", a, is_string, "a string");
+  CHECK_TAG("string-append", b, is_string, "a string");
   intptr_t la = str_len(a), lb = str_len(b);
   char *buf = (char *)GC_MALLOC_ATOMIC((size_t)(la + lb + 1));
   memcpy(buf, str_bytes(a), (size_t)la);
@@ -743,6 +905,9 @@ val rt_string_append(val a, val b) {
 }
 /* a symbol's name as a fresh string. */
 val rt_symbol_to_string(val s) {
+  /* sym_name reads word 0 as a `char *` and hands it to strlen, so a wrong-typed
+   * argument here dereferences twice: the worst shape in the set. */
+  CHECK_TAG("symbol->string", s, is_symbol, "a symbol");
   const char *name = sym_name(s);
   return rt_make_string(name, (intptr_t)strlen(name));
 }
@@ -779,6 +944,11 @@ val rt_make_string_fill(val k, val ch) {
  * as-is; the lazily-built breadcrumb index (word 4) is byte-offset-based and now
  * stale, so it is dropped back to NULL to be rebuilt on demand. */
 val rt_string_set(val s, val idx, val ch) {
+  /* Two length reads happen before CHECK_INDEX here (str_len, then str_cplen
+   * inside it), so the tag check has to come ahead of both -- design open
+   * question 3, answered: placement at the top covers them. */
+  CHECK_TAG("string-set!", s, is_string, "a string");
+  CHECK_FIXNUM("string-set!", idx);
   const unsigned char *b = (const unsigned char *)str_bytes(s);
   intptr_t blen = str_len(s);
   /* Codepoint bound, as for string-ref (design D4).  Unguarded, utf8_offset
@@ -801,13 +971,21 @@ val rt_string_set(val s, val idx, val ch) {
   return UNSPEC_V;
 }
 /* string-copy: a fresh string object over a fresh copy of the bytes. */
-val rt_string_copy(val s) { return rt_make_string(str_bytes(s), str_len(s)); }
+val rt_string_copy(val s) {
+  CHECK_TAG("string-copy", s, is_string, "a string");
+  return rt_make_string(str_bytes(s), str_len(s));
+}
 /* The optional-argument forms R7RS gives these three (change: r7rs-conformance-suite).
  * Each is its own entry point with its own fixed C signature, selected by argument
  * count through *integrable* -- the pattern the port-directed output procedures set.
  * Widening them in the PRELUDE instead would shadow the primitive for every arity and
  * cost the existing call sites their bare-primcall codegen. */
-val rt_string_copy_from(val s, val start) { return rt_substring(s, start, FIX(str_len(s))); }
+val rt_string_copy_from(val s, val start) {
+  /* str_len(s) is evaluated BEFORE rt_substring's own check, so this needs its
+   * own -- the same before-the-length-load rule one call frame up. */
+  CHECK_TAG("string-copy", s, is_string, "a string");
+  return rt_substring(s, start, FIX(str_len(s)));
+}
 
 /* --- process I/O for a standalone text filter (self-host-io-strategy G3) ---
  * The two edge primitives a native `schemec` needs: pull all of stdin into a
@@ -1250,10 +1428,12 @@ val rt_port_write_char(val c, val p) {
 /* write-string: the string's bytes, literally -- no quotes, no escapes.  This is
  * `display` narrowed to strings, NOT `write`; the one-argument form targets stdout. */
 val rt_write_string(val s) {
+  CHECK_TAG("write-string", s, is_string, "a string");
   fwrite(str_bytes(s), 1, (size_t)str_len(s), cur_out());
   return UNSPEC_V;
 }
 val rt_port_write_string(val s, val p) {
+  CHECK_TAG("write-string", s, is_string, "a string");
   FILE *f = port_arg_or_die(p, "write-string: not an open output port");
   fwrite(str_bytes(s), 1, (size_t)str_len(s), f);
   return UNSPEC_V;
@@ -1275,20 +1455,25 @@ val rt_make_vector(val k, val fill) {
   return tag_ptr(p, TAG_EXT);
 }
 val rt_vector_ref(val v, val i) {
+  CHECK_TAG("vector-ref", v, is_vector, "a vector");   /* before vec_len: design D1 */
+  CHECK_FIXNUM("vector-ref", i);
   intptr_t k = UNFIX(i);
   CHECK_INDEX("vector-ref", k, vec_len(v));
   return as_ptr(v)[2 + k];
 }
 val rt_vector_set(val v, val i, val x) {
+  CHECK_TAG("vector-set!", v, is_vector, "a vector");
+  CHECK_FIXNUM("vector-set!", i);
   intptr_t k = UNFIX(i);
   CHECK_INDEX("vector-set!", k, vec_len(v));
   as_ptr(v)[2 + k] = x;
   return UNSPEC_V;
 }
-val rt_vector_length(val v)            { return FIX(vec_len(v)); }
-val rt_vector_p(val v) {
-  return truthy(tag_of(v) == TAG_EXT && ext_hdr(v) == HDR_VECTOR);
+val rt_vector_length(val v) {
+  CHECK_TAG("vector-length", v, is_vector, "a vector");
+  return FIX(vec_len(v));
 }
+val rt_vector_p(val v) { return truthy(is_vector(v)); }
 
 /* --- bytevectors (tag-7 HDR_BYTEVECTOR: { HDR_BYTEVECTOR, length, uchar *bytes })
  * The bytes live in a separate GC_MALLOC_ATOMIC buffer (no interior pointers, so
@@ -1306,20 +1491,25 @@ val rt_make_bytevector(val k, val fill) {
   return tag_ptr(p, TAG_EXT);
 }
 val rt_bytevector_u8_ref(val v, val i) {
+  CHECK_TAG("bytevector-u8-ref", v, is_bytevector, "a bytevector");
+  CHECK_FIXNUM("bytevector-u8-ref", i);
   intptr_t k = UNFIX(i);
   CHECK_INDEX("bytevector-u8-ref", k, bv_len(v));
   return FIX(bv_bytes(v)[k]);
 }
 val rt_bytevector_u8_set(val v, val i, val b) {
+  CHECK_TAG("bytevector-u8-set!", v, is_bytevector, "a bytevector");
+  CHECK_FIXNUM("bytevector-u8-set!", i);
   intptr_t k = UNFIX(i);
   CHECK_INDEX("bytevector-u8-set!", k, bv_len(v));
   bv_bytes(v)[k] = (unsigned char)(UNFIX(b) & 0xFF);
   return UNSPEC_V;
 }
-val rt_bytevector_length(val v)              { return FIX(bv_len(v)); }
-val rt_bytevector_p(val v) {
-  return truthy(tag_of(v) == TAG_EXT && ext_hdr(v) == HDR_BYTEVECTOR);
+val rt_bytevector_length(val v) {
+  CHECK_TAG("bytevector-length", v, is_bytevector, "a bytevector");
+  return FIX(bv_len(v));
 }
+val rt_bytevector_p(val v) { return truthy(is_bytevector(v)); }
 
 /* --- hashing (backs the prelude hash tables) ----------------------------
  * rt_hash maps any value to a NON-NEGATIVE tagged fixnum such that `equal?`
@@ -1386,10 +1576,11 @@ val rt_make_hash_table(val spine) {
   p[0] = (val)HDR_HASHTABLE; p[1] = spine;
   return tag_ptr(p, TAG_EXT);
 }
-val rt_hash_table_spine(val ht) { return as_ptr(ht)[1]; }
-val rt_hash_table_p(val ht) {
-  return truthy(tag_of(ht) == TAG_EXT && ext_hdr(ht) == HDR_HASHTABLE);
+val rt_hash_table_spine(val ht) {
+  CHECK_TAG("hash-table (internal)", ht, is_hashtable, "a hash table");
+  return as_ptr(ht)[1];
 }
+val rt_hash_table_p(val ht) { return truthy(is_hashtable(ht)); }
 
 /* --- records (tag-7 HDR_RECORD: { HDR_RECORD, type-descriptor, field... }) ---
  * define-record-type lowers (in the frontend) to calls on these primitives.  A
@@ -1425,22 +1616,24 @@ val rt_make_record(val td, val fields) {
  * user-facing Scheme spelling to name, and a user seeing one has found a bug in the
  * compiler rather than in their program. */
 val rt_record_ref(val r, val i) {
+  CHECK_TAG("record-ref (internal)", r, is_record, "a record");
+  CHECK_FIXNUM("record-ref (internal)", i);
   intptr_t k = UNFIX(i);
   CHECK_INDEX("record-ref (internal)", k, rec_len(r));
   return as_ptr(r)[3 + k];
 }
 val rt_record_set(val r, val i, val x) {
+  CHECK_TAG("record-set! (internal)", r, is_record, "a record");
+  CHECK_FIXNUM("record-set! (internal)", i);
   intptr_t k = UNFIX(i);
   CHECK_INDEX("record-set! (internal)", k, rec_len(r));
   as_ptr(r)[3 + k] = x;
   return UNSPEC_V;
 }
 val rt_record_of_type_p(val r, val td) {
-  return truthy(tag_of(r) == TAG_EXT && ext_hdr(r) == HDR_RECORD && as_ptr(r)[1] == td);
+  return truthy(is_record(r) && as_ptr(r)[1] == td);
 }
-val rt_record_p(val r) {
-  return truthy(tag_of(r) == TAG_EXT && ext_hdr(r) == HDR_RECORD);
-}
+val rt_record_p(val r) { return truthy(is_record(r)); }
 
 /* --- multiple values (tag-7 HDR_MV: { HDR_MV, values-list }) --------------
  * A disjoint wrapper carrying the list of values produced by `values` when it
@@ -1453,10 +1646,11 @@ val rt_list_to_mv(val list) {
   p[0] = (val)HDR_MV; p[1] = list;
   return tag_ptr(p, TAG_EXT);
 }
-val rt_mv_p(val v) {
-  return truthy(tag_of(v) == TAG_EXT && ext_hdr(v) == HDR_MV);
+val rt_mv_p(val v) { return truthy(is_mv(v)); }
+val rt_mv_to_list(val v) {
+  CHECK_TAG("call-with-values (internal)", v, is_mv, "a values bundle");
+  return as_ptr(v)[1];
 }
-val rt_mv_to_list(val v) { return as_ptr(v)[1]; }
 
 /* --- type predicates (self-hosting gap G9) -------------------------------- */
 /* Each returns #t/#f by inspecting the tag (and, for tag-7 heap objects, the
@@ -1565,7 +1759,7 @@ val rt_inexact_to_exact(val v) {
   }
   rt_fatal("inexact->exact: not a number"); return NIL_V;
 }
-val rt_string_p(val v)  { return truthy(tag_of(v) == TAG_EXT && ext_hdr(v) == HDR_STRING); }
+val rt_string_p(val v)  { return truthy(is_string(v)); }
 val rt_char_p(val v)    { return truthy(is_char(v)); }
 
 /* structural equality: eqv? fast path (immediates, interned symbols/chars, same
@@ -1739,9 +1933,18 @@ val rt_make_error_object(val message, val irritants) {
   p[0] = HDR_ERROR; p[1] = message; p[2] = irritants;
   return tag_ptr(p, TAG_EXT);
 }
-val rt_error_object_p(val v) { return truthy(tag_of(v) == TAG_EXT && ext_hdr(v) == HDR_ERROR); }
-val rt_error_object_message(val v)   { return as_ptr(v)[1]; }
-val rt_error_object_irritants(val v) { return as_ptr(v)[2]; }
+val rt_error_object_p(val v) { return truthy(is_error_obj(v)); }
+/* User-facing, and reached from inside a `guard` clause -- the one construct a
+ * program uses to recover from a failure, so an unchecked read here crashed the
+ * recovery path itself. */
+val rt_error_object_message(val v) {
+  CHECK_TAG("error-object-message", v, is_error_obj, "an error object");
+  return as_ptr(v)[1];
+}
+val rt_error_object_irritants(val v) {
+  CHECK_TAG("error-object-irritants", v, is_error_obj, "an error object");
+  return as_ptr(v)[2];
+}
 
 /* An UNHANDLED raise: render and trap.  Under design D4 (change: dynamic-extent)
  * `raise` is Scheme-level -- it calls the current handler off the Scheme handler

@@ -2,6 +2,8 @@ declare align 8 ptr @rt_alloc_words(i64)
 declare i64 @rt_cons(i64, i64)
 declare i64 @rt_car(i64)
 declare i64 @rt_cdr(i64)
+declare i64 @rt_set_car(i64, i64)
+declare i64 @rt_set_cdr(i64, i64)
 declare i64 @rt_box(i64)
 declare i64 @rt_unbox(i64)
 declare i64 @rt_set_box(i64, i64)
@@ -127,6 +129,7 @@ declare i64 @rt_list_length(i64)
 declare i64 @rt_build_rest(i64, i64, i64, ptr, ptr)
 declare ptr @rt_apply_argv(i64, ptr, i64, i64)
 declare void @rt_arity_error(i64, i64)
+declare void @rt_check_callable(i64)
 declare i64 @rt_error(i64, i64)
 declare i64 @rt_raise(i64)
 declare i64 @rt_make_error_object(i64, i64)
@@ -339,6 +342,7 @@ arityerr11:
   unreachable
 argok12:
   %t45 = load i64, ptr @"emit.internal:caar"
+  call void @rt_check_callable(i64 %t45)
   %t46 = and i64 %t45, -8
   %t47 = inttoptr i64 %t46 to ptr
   %t48 = load i64, ptr %t47
@@ -357,6 +361,7 @@ arityerr13:
   unreachable
 argok14:
   %t57 = load i64, ptr @"emit.internal:cadr"
+  call void @rt_check_callable(i64 %t57)
   %t58 = and i64 %t57, -8
   %t59 = inttoptr i64 %t58 to ptr
   %t60 = load i64, ptr %t59
@@ -375,6 +380,7 @@ arityerr15:
   unreachable
 argok16:
   %t69 = load i64, ptr @"emit.internal:cdar"
+  call void @rt_check_callable(i64 %t69)
   %t70 = and i64 %t69, -8
   %t71 = inttoptr i64 %t70 to ptr
   %t72 = load i64, ptr %t71
@@ -393,6 +399,7 @@ arityerr17:
   unreachable
 argok18:
   %t81 = load i64, ptr @"emit.internal:cddr"
+  call void @rt_check_callable(i64 %t81)
   %t82 = and i64 %t81, -8
   %t83 = inttoptr i64 %t82 to ptr
   %t84 = load i64, ptr %t83
@@ -411,6 +418,7 @@ arityerr19:
   unreachable
 argok20:
   %t93 = load i64, ptr @"emit.internal:caar"
+  call void @rt_check_callable(i64 %t93)
   %t94 = and i64 %t93, -8
   %t95 = inttoptr i64 %t94 to ptr
   %t96 = load i64, ptr %t95
@@ -429,6 +437,7 @@ arityerr21:
   unreachable
 argok22:
   %t105 = load i64, ptr @"emit.internal:cadr"
+  call void @rt_check_callable(i64 %t105)
   %t106 = and i64 %t105, -8
   %t107 = inttoptr i64 %t106 to ptr
   %t108 = load i64, ptr %t107
@@ -447,6 +456,7 @@ arityerr23:
   unreachable
 argok24:
   %t117 = load i64, ptr @"emit.internal:cdar"
+  call void @rt_check_callable(i64 %t117)
   %t118 = and i64 %t117, -8
   %t119 = inttoptr i64 %t118 to ptr
   %t120 = load i64, ptr %t119
@@ -465,6 +475,7 @@ arityerr25:
   unreachable
 argok26:
   %t129 = load i64, ptr @"emit.internal:cddr"
+  call void @rt_check_callable(i64 %t129)
   %t130 = and i64 %t129, -8
   %t131 = inttoptr i64 %t130 to ptr
   %t132 = load i64, ptr %t131
@@ -573,6 +584,7 @@ arityerr42:
   unreachable
 argok43:
   %t181 = load i64, ptr @"emit.internal:cdddr"
+  call void @rt_check_callable(i64 %t181)
   %t182 = and i64 %t181, -8
   %t183 = inttoptr i64 %t182 to ptr
   %t184 = load i64, ptr %t183
@@ -806,6 +818,7 @@ fixmerge100:
 then101:
   %t293 = call i64 @rt_string_ref(i64 %a0, i64 %a1)
   %t294 = load i64, ptr @"emit.internal:%digit-in-radix"
+  call void @rt_check_callable(i64 %t294)
   %t295 = and i64 %t294, -8
   %t296 = inttoptr i64 %t295 to ptr
   %t297 = load i64, ptr %t296
@@ -858,6 +871,7 @@ fixslow112:
 fixmerge113:
   %t325 = phi i64 [ %t322, %fixfast111 ], [ %t324, %fixslow112 ]
   %t326 = load i64, ptr @"emit.internal:%radix-digits"
+  call void @rt_check_callable(i64 %t326)
   %t327 = and i64 %t326, -8
   %t328 = inttoptr i64 %t327 to ptr
   %t329 = load i64, ptr %t328
@@ -932,6 +946,7 @@ fixmerge128:
   br i1 %t363, label %then129, label %else130
 then129:
   %t364 = load i64, ptr @"emit.internal:%radix-digits"
+  call void @rt_check_callable(i64 %t364)
   %t365 = and i64 %t364, -8
   %t366 = inttoptr i64 %t365 to ptr
   %t367 = load i64, ptr %t366
@@ -979,6 +994,7 @@ fixmerge139:
   br i1 %t386, label %then140, label %else141
 then140:
   %t387 = load i64, ptr @"emit.internal:%radix-digits"
+  call void @rt_check_callable(i64 %t387)
   %t388 = and i64 %t387, -8
   %t389 = inttoptr i64 %t388 to ptr
   %t390 = load i64, ptr %t389
@@ -1060,6 +1076,7 @@ arityerr154:
   unreachable
 argok155:
   %t430 = load i64, ptr @"emit.internal:length"
+  call void @rt_check_callable(i64 %t430)
   %t431 = and i64 %t430, -8
   %t432 = inttoptr i64 %t431 to ptr
   %t433 = load i64, ptr %t432
@@ -1130,6 +1147,7 @@ arityerr163:
   unreachable
 argok164:
   %t471 = load i64, ptr @"emit.internal:length"
+  call void @rt_check_callable(i64 %t471)
   %t472 = and i64 %t471, -8
   %t473 = inttoptr i64 %t472 to ptr
   %t474 = load i64, ptr %t473
@@ -1280,6 +1298,7 @@ arityerr195:
 argok196:
   %t547 = call i64 @rt_char_to_integer(i64 %a0)
   %t548 = load i64, ptr @"emit.internal:rd-ws?"
+  call void @rt_check_callable(i64 %t548)
   %t549 = and i64 %t548, -8
   %t550 = inttoptr i64 %t549 to ptr
   %t551 = load i64, ptr %t550
@@ -1493,6 +1512,7 @@ arityerr245:
   unreachable
 argok246:
   %t653 = load i64, ptr @"emit.internal:rd-fail-code"
+  call void @rt_check_callable(i64 %t653)
   %t654 = and i64 %t653, -8
   %t655 = inttoptr i64 %t654 to ptr
   %t656 = load i64, ptr %t655
@@ -1575,6 +1595,7 @@ fixslow263:
 fixmerge264:
   %t698 = phi i64 [ %t695, %fixfast262 ], [ %t697, %fixslow263 ]
   %t699 = load i64, ptr @"emit.internal:rd-skip-line"
+  call void @rt_check_callable(i64 %t699)
   %t700 = and i64 %t699, -8
   %t701 = inttoptr i64 %t700 to ptr
   %t702 = load i64, ptr %t701
@@ -1831,6 +1852,7 @@ fixslow322:
 fixmerge323:
   %t834 = phi i64 [ %t831, %fixfast321 ], [ %t833, %fixslow322 ]
   %t835 = load i64, ptr @"emit.internal:rd-skip-block"
+  call void @rt_check_callable(i64 %t835)
   %t836 = and i64 %t835, -8
   %t837 = inttoptr i64 %t836 to ptr
   %t838 = load i64, ptr %t837
@@ -1904,6 +1926,7 @@ fixslow339:
 fixmerge340:
   %t873 = phi i64 [ %t870, %fixfast338 ], [ %t872, %fixslow339 ]
   %t874 = load i64, ptr @"emit.internal:rd-skip-block"
+  call void @rt_check_callable(i64 %t874)
   %t875 = and i64 %t874, -8
   %t876 = inttoptr i64 %t875 to ptr
   %t877 = load i64, ptr %t876
@@ -1926,6 +1949,7 @@ fixslow342:
 fixmerge343:
   %t887 = phi i64 [ %t884, %fixfast341 ], [ %t886, %fixslow342 ]
   %t888 = load i64, ptr @"emit.internal:rd-skip-block"
+  call void @rt_check_callable(i64 %t888)
   %t889 = and i64 %t888, -8
   %t890 = inttoptr i64 %t889 to ptr
   %t891 = load i64, ptr %t890
@@ -1934,6 +1958,7 @@ fixmerge343:
   ret i64 %t893
 else295:
   %t894 = load i64, ptr @"emit.internal:rd-fail-code"
+  call void @rt_check_callable(i64 %t894)
   %t895 = and i64 %t894, -8
   %t896 = inttoptr i64 %t895 to ptr
   %t897 = load i64, ptr %t896
@@ -2010,6 +2035,7 @@ merge357:
 then361:
   %t931 = call i64 @rt_string_ref(i64 %a0, i64 %a2)
   %t932 = load i64, ptr @"emit.internal:rd-ws?"
+  call void @rt_check_callable(i64 %t932)
   %t933 = and i64 %t932, -8
   %t934 = inttoptr i64 %t933 to ptr
   %t935 = load i64, ptr %t934
@@ -2033,6 +2059,7 @@ fixslow366:
 fixmerge367:
   %t946 = phi i64 [ %t943, %fixfast365 ], [ %t945, %fixslow366 ]
   %t947 = load i64, ptr @"emit.internal:rd-skip-ws"
+  call void @rt_check_callable(i64 %t947)
   %t948 = and i64 %t947, -8
   %t949 = inttoptr i64 %t948 to ptr
   %t950 = load i64, ptr %t949
@@ -2072,12 +2099,14 @@ fixslow374:
 fixmerge375:
   %t969 = phi i64 [ %t966, %fixfast373 ], [ %t968, %fixslow374 ]
   %t970 = load i64, ptr @"emit.internal:rd-skip-line"
+  call void @rt_check_callable(i64 %t970)
   %t971 = and i64 %t970, -8
   %t972 = inttoptr i64 %t971 to ptr
   %t973 = load i64, ptr %t972
   %t974 = inttoptr i64 %t973 to ptr
   %t975 = call fastcc i64%t974(i64 %t970, i64 3, i64 %a0, i64 %a1, i64 %t969, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t976 = load i64, ptr @"emit.internal:rd-skip-ws"
+  call void @rt_check_callable(i64 %t976)
   %t977 = and i64 %t976, -8
   %t978 = inttoptr i64 %t977 to ptr
   %t979 = load i64, ptr %t978
@@ -2086,6 +2115,7 @@ fixmerge375:
   ret i64 %t981
 else372:
   %t982 = load i64, ptr @"emit.internal:rd-block-open?"
+  call void @rt_check_callable(i64 %t982)
   %t983 = and i64 %t982, -8
   %t984 = inttoptr i64 %t983 to ptr
   %t985 = load i64, ptr %t984
@@ -2109,12 +2139,14 @@ fixslow379:
 fixmerge380:
   %t996 = phi i64 [ %t993, %fixfast378 ], [ %t995, %fixslow379 ]
   %t997 = load i64, ptr @"emit.internal:rd-skip-block"
+  call void @rt_check_callable(i64 %t997)
   %t998 = and i64 %t997, -8
   %t999 = inttoptr i64 %t998 to ptr
   %t1000 = load i64, ptr %t999
   %t1001 = inttoptr i64 %t1000 to ptr
   %t1002 = call fastcc i64%t1001(i64 %t997, i64 5, i64 %a0, i64 %a1, i64 %t996, i64 8, i64 %a2, i64 0, i64 0, i64 0, ptr null)
   %t1003 = load i64, ptr @"emit.internal:rd-fail?"
+  call void @rt_check_callable(i64 %t1003)
   %t1004 = and i64 %t1003, -8
   %t1005 = inttoptr i64 %t1004 to ptr
   %t1006 = load i64, ptr %t1005
@@ -2126,6 +2158,7 @@ then381:
   ret i64 %t1002
 else382:
   %t1010 = load i64, ptr @"emit.internal:rd-skip-ws"
+  call void @rt_check_callable(i64 %t1010)
   %t1011 = and i64 %t1010, -8
   %t1012 = inttoptr i64 %t1011 to ptr
   %t1013 = load i64, ptr %t1012
@@ -2164,6 +2197,7 @@ fixmerge387:
 then388:
   %t1029 = call i64 @rt_string_ref(i64 %a0, i64 %a2)
   %t1030 = load i64, ptr @"emit.internal:rd-delim?"
+  call void @rt_check_callable(i64 %t1030)
   %t1031 = and i64 %t1030, -8
   %t1032 = inttoptr i64 %t1031 to ptr
   %t1033 = load i64, ptr %t1032
@@ -2189,6 +2223,7 @@ fixslow393:
 fixmerge394:
   %t1044 = phi i64 [ %t1041, %fixfast392 ], [ %t1043, %fixslow393 ]
   %t1045 = load i64, ptr @"emit.internal:rd-token-end"
+  call void @rt_check_callable(i64 %t1045)
   %t1046 = and i64 %t1045, -8
   %t1047 = inttoptr i64 %t1046 to ptr
   %t1048 = load i64, ptr %t1047
@@ -2225,6 +2260,7 @@ fixmerge399:
 then400:
   %t1064 = call i64 @rt_string_ref(i64 %a0, i64 %a1)
   %t1065 = load i64, ptr @"emit.internal:rd-digit?"
+  call void @rt_check_callable(i64 %t1065)
   %t1066 = and i64 %t1065, -8
   %t1067 = inttoptr i64 %t1066 to ptr
   %t1068 = load i64, ptr %t1067
@@ -2248,6 +2284,7 @@ fixslow405:
 fixmerge406:
   %t1079 = phi i64 [ %t1076, %fixfast404 ], [ %t1078, %fixslow405 ]
   %t1080 = load i64, ptr @"emit.internal:rd-all-digits?"
+  call void @rt_check_callable(i64 %t1080)
   %t1081 = and i64 %t1080, -8
   %t1082 = inttoptr i64 %t1081 to ptr
   %t1083 = load i64, ptr %t1082
@@ -2289,6 +2326,7 @@ then412:
   %t1101 = call i64 @rt_char_to_integer(i64 %t1100)
   %t1102 = call i64 @rt_string_ref(i64 %a0, i64 0)
   %t1103 = load i64, ptr @"emit.internal:rd-digit?"
+  call void @rt_check_callable(i64 %t1103)
   %t1104 = and i64 %t1103, -8
   %t1105 = inttoptr i64 %t1104 to ptr
   %t1106 = load i64, ptr %t1105
@@ -2298,6 +2336,7 @@ then412:
   br i1 %t1109, label %then414, label %else415
 then414:
   %t1110 = load i64, ptr @"emit.internal:rd-all-digits?"
+  call void @rt_check_callable(i64 %t1110)
   %t1111 = and i64 %t1110, -8
   %t1112 = inttoptr i64 %t1111 to ptr
   %t1113 = load i64, ptr %t1112
@@ -2359,6 +2398,7 @@ fixmerge429:
   br i1 %t1140, label %then430, label %else431
 then430:
   %t1141 = load i64, ptr @"emit.internal:rd-all-digits?"
+  call void @rt_check_callable(i64 %t1141)
   %t1142 = and i64 %t1141, -8
   %t1143 = inttoptr i64 %t1142 to ptr
   %t1144 = load i64, ptr %t1143
@@ -2457,6 +2497,7 @@ fixslow449:
 fixmerge450:
   %t1194 = phi i64 [ %t1191, %fixfast448 ], [ %t1193, %fixslow449 ]
   %t1195 = load i64, ptr @"emit.internal:rd-digits"
+  call void @rt_check_callable(i64 %t1195)
   %t1196 = and i64 %t1195, -8
   %t1197 = inttoptr i64 %t1196 to ptr
   %t1198 = load i64, ptr %t1197
@@ -2551,6 +2592,7 @@ fixslow468:
 fixmerge469:
   %t1248 = phi i64 [ %t1245, %fixfast467 ], [ %t1247, %fixslow468 ]
   %t1249 = load i64, ptr @"emit.internal:rd-digits-neg"
+  call void @rt_check_callable(i64 %t1249)
   %t1250 = and i64 %t1249, -8
   %t1251 = inttoptr i64 %t1250 to ptr
   %t1252 = load i64, ptr %t1251
@@ -2589,6 +2631,7 @@ fixmerge474:
   br i1 %t1270, label %then475, label %else476
 then475:
   %t1271 = load i64, ptr @"emit.internal:rd-digits-neg"
+  call void @rt_check_callable(i64 %t1271)
   %t1272 = and i64 %t1271, -8
   %t1273 = inttoptr i64 %t1272 to ptr
   %t1274 = load i64, ptr %t1273
@@ -2613,6 +2656,7 @@ fixmerge479:
   br i1 %t1284, label %then480, label %else481
 then480:
   %t1285 = load i64, ptr @"emit.internal:rd-digits"
+  call void @rt_check_callable(i64 %t1285)
   %t1286 = and i64 %t1285, -8
   %t1287 = inttoptr i64 %t1286 to ptr
   %t1288 = load i64, ptr %t1287
@@ -2621,6 +2665,7 @@ then480:
   ret i64 %t1290
 else481:
   %t1291 = load i64, ptr @"emit.internal:rd-digits"
+  call void @rt_check_callable(i64 %t1291)
   %t1292 = and i64 %t1291, -8
   %t1293 = inttoptr i64 %t1292 to ptr
   %t1294 = load i64, ptr %t1293
@@ -2766,6 +2811,7 @@ fixmerge511:
 then512:
   %t1365 = call i64 @rt_string_ref(i64 %a0, i64 %a1)
   %t1366 = load i64, ptr @"emit.internal:rd-digit?"
+  call void @rt_check_callable(i64 %t1366)
   %t1367 = and i64 %t1366, -8
   %t1368 = inttoptr i64 %t1367 to ptr
   %t1369 = load i64, ptr %t1368
@@ -2794,6 +2840,7 @@ fixslow518:
 fixmerge519:
   %t1381 = phi i64 [ %t1378, %fixfast517 ], [ %t1380, %fixslow518 ]
   %t1382 = load i64, ptr @"emit.internal:rd-scan-digits"
+  call void @rt_check_callable(i64 %t1382)
   %t1383 = and i64 %t1382, -8
   %t1384 = inttoptr i64 %t1383 to ptr
   %t1385 = load i64, ptr %t1384
@@ -2831,6 +2878,7 @@ fixmerge524:
 then525:
   %t1402 = call i64 @rt_string_ref(i64 %a0, i64 0)
   %t1403 = load i64, ptr @"emit.internal:rd-sign-char?"
+  call void @rt_check_callable(i64 %t1403)
   %t1404 = and i64 %t1403, -8
   %t1405 = inttoptr i64 %t1404 to ptr
   %t1406 = load i64, ptr %t1405
@@ -2845,6 +2893,7 @@ else528:
 merge529:
   %t1410 = phi i64 [ 8, %then527 ], [ 0, %else528 ]
   %t1411 = load i64, ptr @"emit.internal:rd-scan-digits"
+  call void @rt_check_callable(i64 %t1411)
   %t1412 = and i64 %t1411, -8
   %t1413 = inttoptr i64 %t1412 to ptr
   %t1414 = load i64, ptr %t1413
@@ -2868,6 +2917,7 @@ fixmerge532:
 then533:
   %t1425 = call i64 @rt_string_ref(i64 %a0, i64 %t1416)
   %t1426 = load i64, ptr @"emit.internal:rd-dotchar?"
+  call void @rt_check_callable(i64 %t1426)
   %t1427 = and i64 %t1426, -8
   %t1428 = inttoptr i64 %t1427 to ptr
   %t1429 = load i64, ptr %t1428
@@ -2914,6 +2964,7 @@ fixslow543:
 fixmerge544:
   %t1449 = phi i64 [ %t1447, %fixfast542 ], [ %t1448, %fixslow543 ]
   %t1450 = load i64, ptr @"emit.internal:rd-scan-digits"
+  call void @rt_check_callable(i64 %t1450)
   %t1451 = and i64 %t1450, -8
   %t1452 = inttoptr i64 %t1451 to ptr
   %t1453 = load i64, ptr %t1452
@@ -2974,6 +3025,7 @@ fixmerge558:
 then559:
   %t1481 = call i64 @rt_string_ref(i64 %a0, i64 %t1455)
   %t1482 = load i64, ptr @"emit.internal:rd-exp-char?"
+  call void @rt_check_callable(i64 %t1482)
   %t1483 = and i64 %t1482, -8
   %t1484 = inttoptr i64 %t1483 to ptr
   %t1485 = load i64, ptr %t1484
@@ -3033,6 +3085,7 @@ fixmerge576:
   %t1513 = phi i64 [ %t1510, %fixfast574 ], [ %t1512, %fixslow575 ]
   %t1514 = call i64 @rt_string_ref(i64 %a0, i64 %t1513)
   %t1515 = load i64, ptr @"emit.internal:rd-sign-char?"
+  call void @rt_check_callable(i64 %t1515)
   %t1516 = and i64 %t1515, -8
   %t1517 = inttoptr i64 %t1516 to ptr
   %t1518 = load i64, ptr %t1517
@@ -3080,6 +3133,7 @@ fixmerge585:
 merge579:
   %t1539 = phi i64 [ %t1530, %fixmerge582 ], [ %t1538, %fixmerge585 ]
   %t1540 = load i64, ptr @"emit.internal:rd-scan-digits"
+  call void @rt_check_callable(i64 %t1540)
   %t1541 = and i64 %t1540, -8
   %t1542 = inttoptr i64 %t1541 to ptr
   %t1543 = load i64, ptr %t1542
@@ -3561,6 +3615,7 @@ fixmerge708:
   %t1761 = phi i64 [ %t1758, %fixfast706 ], [ %t1760, %fixslow707 ]
   %t1762 = call i64 @rt_string_ref(i64 %a0, i64 %t1761)
   %t1763 = load i64, ptr @"emit.internal:rd-radix-letter"
+  call void @rt_check_callable(i64 %t1763)
   %t1764 = and i64 %t1763, -8
   %t1765 = inttoptr i64 %t1764 to ptr
   %t1766 = load i64, ptr %t1765
@@ -3589,6 +3644,7 @@ fixslow714:
 fixmerge715:
   %t1778 = phi i64 [ %t1775, %fixfast713 ], [ %t1777, %fixslow714 ]
   %t1779 = load i64, ptr @"emit.internal:rd-scan-prefixes"
+  call void @rt_check_callable(i64 %t1779)
   %t1780 = and i64 %t1779, -8
   %t1781 = inttoptr i64 %t1780 to ptr
   %t1782 = load i64, ptr %t1781
@@ -3612,6 +3668,7 @@ fixmerge718:
   %t1792 = phi i64 [ %t1789, %fixfast716 ], [ %t1791, %fixslow717 ]
   %t1793 = call i64 @rt_string_ref(i64 %a0, i64 %t1792)
   %t1794 = load i64, ptr @"emit.internal:rd-exactness-letter"
+  call void @rt_check_callable(i64 %t1794)
   %t1795 = and i64 %t1794, -8
   %t1796 = inttoptr i64 %t1795 to ptr
   %t1797 = load i64, ptr %t1796
@@ -3640,6 +3697,7 @@ fixslow724:
 fixmerge725:
   %t1809 = phi i64 [ %t1806, %fixfast723 ], [ %t1808, %fixslow724 ]
   %t1810 = load i64, ptr @"emit.internal:rd-scan-prefixes"
+  call void @rt_check_callable(i64 %t1810)
   %t1811 = and i64 %t1810, -8
   %t1812 = inttoptr i64 %t1811 to ptr
   %t1813 = load i64, ptr %t1812
@@ -3682,6 +3740,7 @@ fixmerge730:
 then731:
   %t1831 = call i64 @rt_string_ref(i64 %a0, i64 %a2)
   %t1832 = load i64, ptr @"emit.internal:%digit-in-radix"
+  call void @rt_check_callable(i64 %t1832)
   %t1833 = and i64 %t1832, -8
   %t1834 = inttoptr i64 %t1833 to ptr
   %t1835 = load i64, ptr %t1834
@@ -3710,6 +3769,7 @@ fixslow737:
 fixmerge738:
   %t1847 = phi i64 [ %t1844, %fixfast736 ], [ %t1846, %fixslow737 ]
   %t1848 = load i64, ptr @"emit.internal:rd-radix-scan"
+  call void @rt_check_callable(i64 %t1848)
   %t1849 = and i64 %t1848, -8
   %t1850 = inttoptr i64 %t1849 to ptr
   %t1851 = load i64, ptr %t1850
@@ -3746,6 +3806,7 @@ fixmerge743:
 then744:
   %t1867 = call i64 @rt_string_ref(i64 %a0, i64 %a2)
   %t1868 = load i64, ptr @"emit.internal:rd-sign-char?"
+  call void @rt_check_callable(i64 %t1868)
   %t1869 = and i64 %t1868, -8
   %t1870 = inttoptr i64 %t1869 to ptr
   %t1871 = load i64, ptr %t1870
@@ -3779,6 +3840,7 @@ else748:
 merge749:
   %t1884 = phi i64 [ %t1883, %fixmerge752 ], [ %a2, %else748 ]
   %t1885 = load i64, ptr @"emit.internal:rd-radix-scan"
+  call void @rt_check_callable(i64 %t1885)
   %t1886 = and i64 %t1885, -8
   %t1887 = inttoptr i64 %t1886 to ptr
   %t1888 = load i64, ptr %t1887
@@ -3849,6 +3911,7 @@ fixslow769:
 fixmerge770:
   %t1924 = phi i64 [ %t1921, %fixfast768 ], [ %t1923, %fixslow769 ]
   %t1925 = load i64, ptr @"emit.internal:rd-radix-scan"
+  call void @rt_check_callable(i64 %t1925)
   %t1926 = and i64 %t1925, -8
   %t1927 = inttoptr i64 %t1926 to ptr
   %t1928 = load i64, ptr %t1927
@@ -3996,6 +4059,7 @@ fixmerge802:
   br i1 %t1995, label %then803, label %else804
 then803:
   %t1996 = load i64, ptr @"emit.internal:rd-numeric?"
+  call void @rt_check_callable(i64 %t1996)
   %t1997 = and i64 %t1996, -8
   %t1998 = inttoptr i64 %t1997 to ptr
   %t1999 = load i64, ptr %t1998
@@ -4005,12 +4069,14 @@ then803:
   br i1 %t2002, label %then805, label %else806
 then805:
   %t2003 = load i64, ptr @"emit.internal:rd-parse-int"
+  call void @rt_check_callable(i64 %t2003)
   %t2004 = and i64 %t2003, -8
   %t2005 = inttoptr i64 %t2004 to ptr
   %t2006 = load i64, ptr %t2005
   %t2007 = inttoptr i64 %t2006 to ptr
   %t2008 = call fastcc i64%t2007(i64 %t2003, i64 1, i64 %a0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t2009 = load i64, ptr @"emit.internal:rd-exactness-apply"
+  call void @rt_check_callable(i64 %t2009)
   %t2010 = and i64 %t2009, -8
   %t2011 = inttoptr i64 %t2010 to ptr
   %t2012 = load i64, ptr %t2011
@@ -4019,6 +4085,7 @@ then805:
   ret i64 %t2014
 else806:
   %t2015 = load i64, ptr @"emit.internal:rd-flonum?"
+  call void @rt_check_callable(i64 %t2015)
   %t2016 = and i64 %t2015, -8
   %t2017 = inttoptr i64 %t2016 to ptr
   %t2018 = load i64, ptr %t2017
@@ -4029,6 +4096,7 @@ else806:
 then807:
   %t2022 = call i64 @rt_string_to_flonum(i64 %a0)
   %t2023 = load i64, ptr @"emit.internal:rd-exactness-apply"
+  call void @rt_check_callable(i64 %t2023)
   %t2024 = and i64 %t2023, -8
   %t2025 = inttoptr i64 %t2024 to ptr
   %t2026 = load i64, ptr %t2025
@@ -4037,6 +4105,7 @@ then807:
   ret i64 %t2028
 else808:
   %t2029 = load i64, ptr @"emit.internal:rd-nonfinite"
+  call void @rt_check_callable(i64 %t2029)
   %t2030 = and i64 %t2029, -8
   %t2031 = inttoptr i64 %t2030 to ptr
   %t2032 = load i64, ptr %t2031
@@ -4077,6 +4146,7 @@ then817:
   ret i64 %t2048
 else818:
   %t2049 = load i64, ptr @"emit.internal:rd-exactness-apply"
+  call void @rt_check_callable(i64 %t2049)
   %t2050 = and i64 %t2049, -8
   %t2051 = inttoptr i64 %t2050 to ptr
   %t2052 = load i64, ptr %t2051
@@ -4085,6 +4155,7 @@ else818:
   ret i64 %t2054
 else804:
   %t2055 = load i64, ptr @"emit.internal:%string->int"
+  call void @rt_check_callable(i64 %t2055)
   %t2056 = and i64 %t2055, -8
   %t2057 = inttoptr i64 %t2056 to ptr
   %t2058 = load i64, ptr %t2057
@@ -4094,6 +4165,7 @@ else804:
   br i1 %t2061, label %then819, label %else820
 then819:
   %t2062 = load i64, ptr @"emit.internal:rd-exactness-apply"
+  call void @rt_check_callable(i64 %t2062)
   %t2063 = and i64 %t2062, -8
   %t2064 = inttoptr i64 %t2063 to ptr
   %t2065 = load i64, ptr %t2064
@@ -4154,6 +4226,7 @@ merge828:
   br i1 %t2093, label %then832, label %else833
 then832:
   %t2094 = load i64, ptr @"emit.internal:rd-scan-prefixes"
+  call void @rt_check_callable(i64 %t2094)
   %t2095 = and i64 %t2094, -8
   %t2096 = inttoptr i64 %t2095 to ptr
   %t2097 = load i64, ptr %t2096
@@ -4177,12 +4250,14 @@ else837:
 merge838:
   %t2106 = phi i64 [ %t2105, %then836 ], [ %a1, %else837 ]
   %t2107 = load i64, ptr @"emit.internal:cadr"
+  call void @rt_check_callable(i64 %t2107)
   %t2108 = and i64 %t2107, -8
   %t2109 = inttoptr i64 %t2108 to ptr
   %t2110 = load i64, ptr %t2109
   %t2111 = inttoptr i64 %t2110 to ptr
   %t2112 = call fastcc i64%t2111(i64 %t2107, i64 1, i64 %t2099, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t2113 = load i64, ptr @"emit.internal:cddr"
+  call void @rt_check_callable(i64 %t2113)
   %t2114 = and i64 %t2113, -8
   %t2115 = inttoptr i64 %t2114 to ptr
   %t2116 = load i64, ptr %t2115
@@ -4190,6 +4265,7 @@ merge838:
   %t2118 = call fastcc i64%t2117(i64 %t2113, i64 1, i64 %t2099, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t2119 = call i64 @rt_substring(i64 %a0, i64 %t2118, i64 %t2074)
   %t2120 = load i64, ptr @"emit.internal:rd-body-number"
+  call void @rt_check_callable(i64 %t2120)
   %t2121 = and i64 %t2120, -8
   %t2122 = inttoptr i64 %t2121 to ptr
   %t2123 = load i64, ptr %t2122
@@ -4201,6 +4277,7 @@ merge838:
   br i1 %t2128, label %then839, label %else840
 then839:
   %t2129 = load i64, ptr @"emit.internal:rd-rational-body?"
+  call void @rt_check_callable(i64 %t2129)
   %t2130 = and i64 %t2129, -8
   %t2131 = inttoptr i64 %t2130 to ptr
   %t2132 = load i64, ptr %t2131
@@ -4218,6 +4295,7 @@ else840:
   ret i64 %t2125
 else833:
   %t2138 = load i64, ptr @"emit.internal:rd-body-number"
+  call void @rt_check_callable(i64 %t2138)
   %t2139 = and i64 %t2138, -8
   %t2140 = inttoptr i64 %t2139 to ptr
   %t2141 = load i64, ptr %t2140
@@ -4229,6 +4307,7 @@ else833:
   br i1 %t2146, label %then843, label %else844
 then843:
   %t2147 = load i64, ptr @"emit.internal:rd-rational-body?"
+  call void @rt_check_callable(i64 %t2147)
   %t2148 = and i64 %t2147, -8
   %t2149 = inttoptr i64 %t2148 to ptr
   %t2150 = load i64, ptr %t2149
@@ -4360,6 +4439,7 @@ fixmerge871:
   br i1 %t2213, label %then872, label %else873
 then872:
   %t2214 = load i64, ptr @"emit.internal:reverse"
+  call void @rt_check_callable(i64 %t2214)
   %t2215 = and i64 %t2214, -8
   %t2216 = inttoptr i64 %t2215 to ptr
   %t2217 = load i64, ptr %t2216
@@ -4388,6 +4468,7 @@ fixmerge876:
   %t2232 = load i64, ptr %t2231
   %t2233 = call i64 @rt_string_ref(i64 %t2232, i64 %a0)
   %t2234 = load i64, ptr @"emit.internal:rd-fold-char"
+  call void @rt_check_callable(i64 %t2234)
   %t2235 = and i64 %t2234, -8
   %t2236 = inttoptr i64 %t2235 to ptr
   %t2237 = load i64, ptr %t2236
@@ -4430,6 +4511,7 @@ arityerr879:
   unreachable
 argok880:
   %t2256 = load i64, ptr @"emit.internal:rd-token-end"
+  call void @rt_check_callable(i64 %t2256)
   %t2257 = and i64 %t2256, -8
   %t2258 = inttoptr i64 %t2257 to ptr
   %t2259 = load i64, ptr %t2258
@@ -4453,6 +4535,7 @@ fixmerge883:
 then884:
   %t2270 = call i64 @rt_intern(ptr @.str.sym.9)
   %t2271 = load i64, ptr @"emit.internal:rd-fail"
+  call void @rt_check_callable(i64 %t2271)
   %t2272 = and i64 %t2271, -8
   %t2273 = inttoptr i64 %t2272 to ptr
   %t2274 = load i64, ptr %t2273
@@ -4462,6 +4545,7 @@ then884:
 else885:
   %t2277 = call i64 @rt_substring(i64 %a0, i64 %a2, i64 %t2261)
   %t2278 = load i64, ptr @"emit.internal:rd-number"
+  call void @rt_check_callable(i64 %t2278)
   %t2279 = and i64 %t2278, -8
   %t2280 = inttoptr i64 %t2279 to ptr
   %t2281 = load i64, ptr %t2280
@@ -4476,6 +4560,7 @@ then886:
   br i1 %t2287, label %then888, label %else889
 then888:
   %t2288 = load i64, ptr @"emit.internal:rd-fold-token"
+  call void @rt_check_callable(i64 %t2288)
   %t2289 = and i64 %t2288, -8
   %t2290 = inttoptr i64 %t2289 to ptr
   %t2291 = load i64, ptr %t2290
@@ -4491,6 +4576,7 @@ merge890:
   ret i64 %t2296
 else887:
   %t2297 = load i64, ptr @"emit.internal:rd-number-reason?"
+  call void @rt_check_callable(i64 %t2297)
   %t2298 = and i64 %t2297, -8
   %t2299 = inttoptr i64 %t2298 to ptr
   %t2300 = load i64, ptr %t2299
@@ -4500,6 +4586,7 @@ else887:
   br i1 %t2303, label %then891, label %else892
 then891:
   %t2304 = load i64, ptr @"emit.internal:rd-fail"
+  call void @rt_check_callable(i64 %t2304)
   %t2305 = and i64 %t2304, -8
   %t2306 = inttoptr i64 %t2305 to ptr
   %t2307 = load i64, ptr %t2306
@@ -4592,6 +4679,7 @@ fixslow913:
 fixmerge914:
   %t2349 = phi i64 [ %t2346, %fixfast912 ], [ %t2348, %fixslow913 ]
   %t2350 = load i64, ptr @"emit.internal:rd-token-end"
+  call void @rt_check_callable(i64 %t2350)
   %t2351 = and i64 %t2350, -8
   %t2352 = inttoptr i64 %t2351 to ptr
   %t2353 = load i64, ptr %t2352
@@ -4865,6 +4953,7 @@ fixmerge979:
   %t2487 = phi i64 [ %t2484, %fixfast977 ], [ %t2486, %fixslow978 ]
   %t2488 = call i64 @rt_string_ref(i64 %a0, i64 %a2)
   %t2489 = load i64, ptr @"emit.internal:rd-hex-digit"
+  call void @rt_check_callable(i64 %t2489)
   %t2490 = and i64 %t2489, -8
   %t2491 = inttoptr i64 %t2490 to ptr
   %t2492 = load i64, ptr %t2491
@@ -4885,6 +4974,7 @@ fixslow981:
 fixmerge982:
   %t2502 = phi i64 [ %t2499, %fixfast980 ], [ %t2501, %fixslow981 ]
   %t2503 = load i64, ptr @"emit.internal:rd-hex"
+  call void @rt_check_callable(i64 %t2503)
   %t2504 = and i64 %t2503, -8
   %t2505 = inttoptr i64 %t2504 to ptr
   %t2506 = load i64, ptr %t2505
@@ -5016,6 +5106,7 @@ fixmerge1009:
   br i1 %t2573, label %then1010, label %else1011
 then1010:
   %t2574 = load i64, ptr @"emit.internal:reverse"
+  call void @rt_check_callable(i64 %t2574)
   %t2575 = and i64 %t2574, -8
   %t2576 = inttoptr i64 %t2575 to ptr
   %t2577 = load i64, ptr %t2576
@@ -5116,6 +5207,7 @@ then1032:
   %t2630 = getelementptr i64, ptr %t2629, i64 3
   %t2631 = load i64, ptr %t2630
   %t2632 = load i64, ptr @"emit.internal:rd-fail"
+  call void @rt_check_callable(i64 %t2632)
   %t2633 = and i64 %t2632, -8
   %t2634 = inttoptr i64 %t2633 to ptr
   %t2635 = load i64, ptr %t2634
@@ -5182,6 +5274,7 @@ fixslow1043:
 fixmerge1044:
   %t2675 = phi i64 [ %t2672, %fixfast1042 ], [ %t2674, %fixslow1043 ]
   %t2676 = load i64, ptr @"emit.internal:rd-hex"
+  call void @rt_check_callable(i64 %t2676)
   %t2677 = and i64 %t2676, -8
   %t2678 = inttoptr i64 %t2677 to ptr
   %t2679 = load i64, ptr %t2678
@@ -5209,6 +5302,7 @@ fixslow1046:
 fixmerge1047:
   %t2694 = phi i64 [ %t2691, %fixfast1045 ], [ %t2693, %fixslow1046 ]
   %t2695 = load i64, ptr @"emit.internal:rd-str-esc"
+  call void @rt_check_callable(i64 %t2695)
   %t2696 = and i64 %t2695, -8
   %t2697 = inttoptr i64 %t2696 to ptr
   %t2698 = load i64, ptr %t2697
@@ -5242,6 +5336,7 @@ else1006:
   %t2716 = getelementptr i64, ptr %t2715, i64 3
   %t2717 = load i64, ptr %t2716
   %t2718 = load i64, ptr @"emit.internal:rd-fail"
+  call void @rt_check_callable(i64 %t2718)
   %t2719 = and i64 %t2718, -8
   %t2720 = inttoptr i64 %t2719 to ptr
   %t2721 = load i64, ptr %t2720
@@ -5335,6 +5430,7 @@ fixslow1067:
 fixmerge1068:
   %t2763 = phi i64 [ %t2760, %fixfast1066 ], [ %t2762, %fixslow1067 ]
   %t2764 = load i64, ptr @"emit.internal:rd-fail"
+  call void @rt_check_callable(i64 %t2764)
   %t2765 = and i64 %t2764, -8
   %t2766 = inttoptr i64 %t2765 to ptr
   %t2767 = load i64, ptr %t2766
@@ -5427,6 +5523,7 @@ fixmerge1087:
   br i1 %t2813, label %then1088, label %else1089
 then1088:
   %t2814 = load i64, ptr @"emit.internal:rd-char"
+  call void @rt_check_callable(i64 %t2814)
   %t2815 = and i64 %t2814, -8
   %t2816 = inttoptr i64 %t2815 to ptr
   %t2817 = load i64, ptr %t2816
@@ -5479,6 +5576,7 @@ fixslow1099:
 fixmerge1100:
   %t2843 = phi i64 [ %t2840, %fixfast1098 ], [ %t2842, %fixslow1099 ]
   %t2844 = load i64, ptr @"emit.internal:rd-list"
+  call void @rt_check_callable(i64 %t2844)
   %t2845 = and i64 %t2844, -8
   %t2846 = inttoptr i64 %t2845 to ptr
   %t2847 = load i64, ptr %t2846
@@ -5486,6 +5584,7 @@ fixmerge1100:
   %t2849 = call fastcc i64%t2848(i64 %t2844, i64 6, i64 %a0, i64 %a1, i64 %t2835, i64 2, i64 %a3, i64 %t2843, i64 0, i64 0, ptr null)
   %t2850 = call i64 @rt_cdr(i64 %t2849)
   %t2851 = load i64, ptr @"emit.internal:rd-fail?"
+  call void @rt_check_callable(i64 %t2851)
   %t2852 = and i64 %t2851, -8
   %t2853 = inttoptr i64 %t2852 to ptr
   %t2854 = load i64, ptr %t2853
@@ -5498,6 +5597,7 @@ then1101:
 else1102:
   %t2858 = call i64 @rt_car(i64 %t2849)
   %t2859 = load i64, ptr @"emit.internal:list->vector"
+  call void @rt_check_callable(i64 %t2859)
   %t2860 = and i64 %t2859, -8
   %t2861 = inttoptr i64 %t2860 to ptr
   %t2862 = load i64, ptr %t2861
@@ -5538,12 +5638,14 @@ fixslow1109:
 fixmerge1110:
   %t2882 = phi i64 [ %t2879, %fixfast1108 ], [ %t2881, %fixslow1109 ]
   %t2883 = load i64, ptr @"emit.internal:rd-skip-ws"
+  call void @rt_check_callable(i64 %t2883)
   %t2884 = and i64 %t2883, -8
   %t2885 = inttoptr i64 %t2884 to ptr
   %t2886 = load i64, ptr %t2885
   %t2887 = inttoptr i64 %t2886 to ptr
   %t2888 = call fastcc i64%t2887(i64 %t2883, i64 3, i64 %a0, i64 %a1, i64 %t2882, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t2889 = load i64, ptr @"emit.internal:rd-datum"
+  call void @rt_check_callable(i64 %t2889)
   %t2890 = and i64 %t2889, -8
   %t2891 = inttoptr i64 %t2890 to ptr
   %t2892 = load i64, ptr %t2891
@@ -5551,6 +5653,7 @@ fixmerge1110:
   %t2894 = call fastcc i64%t2893(i64 %t2889, i64 4, i64 %a0, i64 %a1, i64 %t2888, i64 %a3, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t2895 = call i64 @rt_cdr(i64 %t2894)
   %t2896 = load i64, ptr @"emit.internal:rd-fail?"
+  call void @rt_check_callable(i64 %t2896)
   %t2897 = and i64 %t2896, -8
   %t2898 = inttoptr i64 %t2897 to ptr
   %t2899 = load i64, ptr %t2898
@@ -5563,12 +5666,14 @@ then1111:
 else1112:
   %t2903 = call i64 @rt_cdr(i64 %t2894)
   %t2904 = load i64, ptr @"emit.internal:rd-skip-ws"
+  call void @rt_check_callable(i64 %t2904)
   %t2905 = and i64 %t2904, -8
   %t2906 = inttoptr i64 %t2905 to ptr
   %t2907 = load i64, ptr %t2906
   %t2908 = inttoptr i64 %t2907 to ptr
   %t2909 = call fastcc i64%t2908(i64 %t2904, i64 3, i64 %a0, i64 %a1, i64 %t2903, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t2910 = load i64, ptr @"emit.internal:rd-datum"
+  call void @rt_check_callable(i64 %t2910)
   %t2911 = and i64 %t2910, -8
   %t2912 = inttoptr i64 %t2911 to ptr
   %t2913 = load i64, ptr %t2912
@@ -5730,6 +5835,7 @@ fixslow1149:
 fixmerge1150:
   %t2994 = phi i64 [ %t2991, %fixfast1148 ], [ %t2993, %fixslow1149 ]
   %t2995 = load i64, ptr @"emit.internal:rd-list"
+  call void @rt_check_callable(i64 %t2995)
   %t2996 = and i64 %t2995, -8
   %t2997 = inttoptr i64 %t2996 to ptr
   %t2998 = load i64, ptr %t2997
@@ -5737,6 +5843,7 @@ fixmerge1150:
   %t3000 = call fastcc i64%t2999(i64 %t2995, i64 6, i64 %a0, i64 %a1, i64 %t2986, i64 2, i64 %a3, i64 %t2994, i64 0, i64 0, ptr null)
   %t3001 = call i64 @rt_cdr(i64 %t3000)
   %t3002 = load i64, ptr @"emit.internal:rd-fail?"
+  call void @rt_check_callable(i64 %t3002)
   %t3003 = and i64 %t3002, -8
   %t3004 = inttoptr i64 %t3003 to ptr
   %t3005 = load i64, ptr %t3004
@@ -5749,6 +5856,7 @@ then1151:
 else1152:
   %t3009 = call i64 @rt_car(i64 %t3000)
   %t3010 = load i64, ptr @"emit.internal:list->bytevector"
+  call void @rt_check_callable(i64 %t3010)
   %t3011 = and i64 %t3010, -8
   %t3012 = inttoptr i64 %t3011 to ptr
   %t3013 = load i64, ptr %t3012
@@ -5759,6 +5867,7 @@ else1152:
   ret i64 %t3017
 else1144:
   %t3018 = load i64, ptr @"emit.internal:rd-token-end"
+  call void @rt_check_callable(i64 %t3018)
   %t3019 = and i64 %t3018, -8
   %t3020 = inttoptr i64 %t3019 to ptr
   %t3021 = load i64, ptr %t3020
@@ -5780,12 +5889,14 @@ fixmerge1155:
   %t3031 = phi i64 [ %t3028, %fixfast1153 ], [ %t3030, %fixslow1154 ]
   %t3032 = call i64 @rt_substring(i64 %a0, i64 %t3031, i64 %t3023)
   %t3033 = load i64, ptr @"emit.internal:rd-number"
+  call void @rt_check_callable(i64 %t3033)
   %t3034 = and i64 %t3033, -8
   %t3035 = inttoptr i64 %t3034 to ptr
   %t3036 = load i64, ptr %t3035
   %t3037 = inttoptr i64 %t3036 to ptr
   %t3038 = call fastcc i64%t3037(i64 %t3033, i64 2, i64 %t3032, i64 80, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t3039 = load i64, ptr @"emit.internal:rd-number-reason?"
+  call void @rt_check_callable(i64 %t3039)
   %t3040 = and i64 %t3039, -8
   %t3041 = inttoptr i64 %t3040 to ptr
   %t3042 = load i64, ptr %t3041
@@ -5809,6 +5920,7 @@ fixslow1159:
 fixmerge1160:
   %t3053 = phi i64 [ %t3050, %fixfast1158 ], [ %t3052, %fixslow1159 ]
   %t3054 = load i64, ptr @"emit.internal:rd-fail"
+  call void @rt_check_callable(i64 %t3054)
   %t3055 = and i64 %t3054, -8
   %t3056 = inttoptr i64 %t3055 to ptr
   %t3057 = load i64, ptr %t3056
@@ -5941,6 +6053,7 @@ fixslow1187:
 fixmerge1188:
   %t3123 = phi i64 [ %t3120, %fixfast1186 ], [ %t3122, %fixslow1187 ]
   %t3124 = load i64, ptr @"emit.internal:rd-token-end"
+  call void @rt_check_callable(i64 %t3124)
   %t3125 = and i64 %t3124, -8
   %t3126 = inttoptr i64 %t3125 to ptr
   %t3127 = load i64, ptr %t3126
@@ -5969,6 +6082,7 @@ then1192:
   ret i64 %t3141
 else1193:
   %t3142 = load i64, ptr @"emit.internal:rd-char-name"
+  call void @rt_check_callable(i64 %t3142)
   %t3143 = and i64 %t3142, -8
   %t3144 = inttoptr i64 %t3143 to ptr
   %t3145 = load i64, ptr %t3144
@@ -6029,6 +6143,7 @@ fixmerge1203:
   br i1 %t3179, label %then1204, label %else1205
 then1204:
   %t3180 = load i64, ptr @"emit.internal:reverse"
+  call void @rt_check_callable(i64 %t3180)
   %t3181 = and i64 %t3180, -8
   %t3182 = inttoptr i64 %t3181 to ptr
   %t3183 = load i64, ptr %t3182
@@ -6167,6 +6282,7 @@ fixslow1232:
 fixmerge1233:
   %t3263 = phi i64 [ %t3260, %fixfast1231 ], [ %t3262, %fixslow1232 ]
   %t3264 = load i64, ptr @"emit.internal:rd-hex"
+  call void @rt_check_callable(i64 %t3264)
   %t3265 = and i64 %t3264, -8
   %t3266 = inttoptr i64 %t3265 to ptr
   %t3267 = load i64, ptr %t3266
@@ -6194,6 +6310,7 @@ fixslow1235:
 fixmerge1236:
   %t3282 = phi i64 [ %t3279, %fixfast1234 ], [ %t3281, %fixslow1235 ]
   %t3283 = load i64, ptr @"emit.internal:rd-str-esc"
+  call void @rt_check_callable(i64 %t3283)
   %t3284 = and i64 %t3283, -8
   %t3285 = inttoptr i64 %t3284 to ptr
   %t3286 = load i64, ptr %t3285
@@ -6227,6 +6344,7 @@ else1200:
   %t3304 = getelementptr i64, ptr %t3303, i64 4
   %t3305 = load i64, ptr %t3304
   %t3306 = load i64, ptr @"emit.internal:rd-fail"
+  call void @rt_check_callable(i64 %t3306)
   %t3307 = and i64 %t3306, -8
   %t3308 = inttoptr i64 %t3307 to ptr
   %t3309 = load i64, ptr %t3308
@@ -6268,12 +6386,14 @@ arityerr1242:
   unreachable
 argok1243:
   %t3326 = load i64, ptr @"emit.internal:rd-skip-ws"
+  call void @rt_check_callable(i64 %t3326)
   %t3327 = and i64 %t3326, -8
   %t3328 = inttoptr i64 %t3327 to ptr
   %t3329 = load i64, ptr %t3328
   %t3330 = inttoptr i64 %t3329 to ptr
   %t3331 = call fastcc i64%t3330(i64 %t3326, i64 3, i64 %a0, i64 %a1, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t3332 = load i64, ptr @"emit.internal:rd-datum"
+  call void @rt_check_callable(i64 %t3332)
   %t3333 = and i64 %t3332, -8
   %t3334 = inttoptr i64 %t3333 to ptr
   %t3335 = load i64, ptr %t3334
@@ -6281,6 +6401,7 @@ argok1243:
   %t3337 = call fastcc i64%t3336(i64 %t3332, i64 4, i64 %a0, i64 %a1, i64 %t3331, i64 %a3, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t3338 = call i64 @rt_cdr(i64 %t3337)
   %t3339 = load i64, ptr @"emit.internal:rd-fail?"
+  call void @rt_check_callable(i64 %t3339)
   %t3340 = and i64 %t3339, -8
   %t3341 = inttoptr i64 %t3340 to ptr
   %t3342 = load i64, ptr %t3341
@@ -6294,6 +6415,7 @@ else1245:
   %t3346 = call i64 @rt_intern(ptr @.str.sym.23)
   %t3347 = call i64 @rt_car(i64 %t3337)
   %t3348 = load i64, ptr @"emit.internal:list"
+  call void @rt_check_callable(i64 %t3348)
   %t3349 = and i64 %t3348, -8
   %t3350 = inttoptr i64 %t3349 to ptr
   %t3351 = load i64, ptr %t3350
@@ -6313,12 +6435,14 @@ arityerr1246:
   unreachable
 argok1247:
   %t3361 = load i64, ptr @"emit.internal:rd-skip-ws"
+  call void @rt_check_callable(i64 %t3361)
   %t3362 = and i64 %t3361, -8
   %t3363 = inttoptr i64 %t3362 to ptr
   %t3364 = load i64, ptr %t3363
   %t3365 = inttoptr i64 %t3364 to ptr
   %t3366 = call fastcc i64%t3365(i64 %t3361, i64 3, i64 %a0, i64 %a1, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t3367 = load i64, ptr @"emit.internal:rd-datum"
+  call void @rt_check_callable(i64 %t3367)
   %t3368 = and i64 %t3367, -8
   %t3369 = inttoptr i64 %t3368 to ptr
   %t3370 = load i64, ptr %t3369
@@ -6326,6 +6450,7 @@ argok1247:
   %t3372 = call fastcc i64%t3371(i64 %t3367, i64 4, i64 %a0, i64 %a1, i64 %t3366, i64 %a3, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t3373 = call i64 @rt_cdr(i64 %t3372)
   %t3374 = load i64, ptr @"emit.internal:rd-fail?"
+  call void @rt_check_callable(i64 %t3374)
   %t3375 = and i64 %t3374, -8
   %t3376 = inttoptr i64 %t3375 to ptr
   %t3377 = load i64, ptr %t3376
@@ -6339,6 +6464,7 @@ else1249:
   %t3381 = call i64 @rt_intern(ptr @.str.sym.24)
   %t3382 = call i64 @rt_car(i64 %t3372)
   %t3383 = load i64, ptr @"emit.internal:list"
+  call void @rt_check_callable(i64 %t3383)
   %t3384 = and i64 %t3383, -8
   %t3385 = inttoptr i64 %t3384 to ptr
   %t3386 = load i64, ptr %t3385
@@ -6411,12 +6537,14 @@ fixslow1264:
 fixmerge1265:
   %t3422 = phi i64 [ %t3419, %fixfast1263 ], [ %t3421, %fixslow1264 ]
   %t3423 = load i64, ptr @"emit.internal:rd-skip-ws"
+  call void @rt_check_callable(i64 %t3423)
   %t3424 = and i64 %t3423, -8
   %t3425 = inttoptr i64 %t3424 to ptr
   %t3426 = load i64, ptr %t3425
   %t3427 = inttoptr i64 %t3426 to ptr
   %t3428 = call fastcc i64%t3427(i64 %t3423, i64 3, i64 %a0, i64 %a1, i64 %t3422, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t3429 = load i64, ptr @"emit.internal:rd-datum"
+  call void @rt_check_callable(i64 %t3429)
   %t3430 = and i64 %t3429, -8
   %t3431 = inttoptr i64 %t3430 to ptr
   %t3432 = load i64, ptr %t3431
@@ -6424,6 +6552,7 @@ fixmerge1265:
   %t3434 = call fastcc i64%t3433(i64 %t3429, i64 4, i64 %a0, i64 %a1, i64 %t3428, i64 %a3, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t3435 = call i64 @rt_cdr(i64 %t3434)
   %t3436 = load i64, ptr @"emit.internal:rd-fail?"
+  call void @rt_check_callable(i64 %t3436)
   %t3437 = and i64 %t3436, -8
   %t3438 = inttoptr i64 %t3437 to ptr
   %t3439 = load i64, ptr %t3438
@@ -6437,6 +6566,7 @@ else1267:
   %t3443 = call i64 @rt_intern(ptr @.str.sym.25)
   %t3444 = call i64 @rt_car(i64 %t3434)
   %t3445 = load i64, ptr @"emit.internal:list"
+  call void @rt_check_callable(i64 %t3445)
   %t3446 = and i64 %t3445, -8
   %t3447 = inttoptr i64 %t3446 to ptr
   %t3448 = load i64, ptr %t3447
@@ -6447,12 +6577,14 @@ else1267:
   ret i64 %t3452
 else1262:
   %t3453 = load i64, ptr @"emit.internal:rd-skip-ws"
+  call void @rt_check_callable(i64 %t3453)
   %t3454 = and i64 %t3453, -8
   %t3455 = inttoptr i64 %t3454 to ptr
   %t3456 = load i64, ptr %t3455
   %t3457 = inttoptr i64 %t3456 to ptr
   %t3458 = call fastcc i64%t3457(i64 %t3453, i64 3, i64 %a0, i64 %a1, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t3459 = load i64, ptr @"emit.internal:rd-datum"
+  call void @rt_check_callable(i64 %t3459)
   %t3460 = and i64 %t3459, -8
   %t3461 = inttoptr i64 %t3460 to ptr
   %t3462 = load i64, ptr %t3461
@@ -6460,6 +6592,7 @@ else1262:
   %t3464 = call fastcc i64%t3463(i64 %t3459, i64 4, i64 %a0, i64 %a1, i64 %t3458, i64 %a3, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t3465 = call i64 @rt_cdr(i64 %t3464)
   %t3466 = load i64, ptr @"emit.internal:rd-fail?"
+  call void @rt_check_callable(i64 %t3466)
   %t3467 = and i64 %t3466, -8
   %t3468 = inttoptr i64 %t3467 to ptr
   %t3469 = load i64, ptr %t3468
@@ -6473,6 +6606,7 @@ else1269:
   %t3473 = call i64 @rt_intern(ptr @.str.sym.26)
   %t3474 = call i64 @rt_car(i64 %t3464)
   %t3475 = load i64, ptr @"emit.internal:list"
+  call void @rt_check_callable(i64 %t3475)
   %t3476 = and i64 %t3475, -8
   %t3477 = inttoptr i64 %t3476 to ptr
   %t3478 = load i64, ptr %t3477
@@ -6524,6 +6658,7 @@ fixslow1278:
 fixmerge1279:
   %t3505 = phi i64 [ %t3502, %fixfast1277 ], [ %t3504, %fixslow1278 ]
   %t3506 = load i64, ptr @"emit.internal:rd-token-end"
+  call void @rt_check_callable(i64 %t3506)
   %t3507 = and i64 %t3506, -8
   %t3508 = inttoptr i64 %t3507 to ptr
   %t3509 = load i64, ptr %t3508
@@ -6579,6 +6714,7 @@ else1289:
   %t3535 = call i64 @rt_car(i64 %a0)
   %t3536 = call i64 @rt_cons(i64 %t3535, i64 %a1)
   %t3537 = load i64, ptr @"emit.internal:rd-append-reverse"
+  call void @rt_check_callable(i64 %t3537)
   %t3538 = and i64 %t3537, -8
   %t3539 = inttoptr i64 %t3538 to ptr
   %t3540 = load i64, ptr %t3539
@@ -6688,12 +6824,14 @@ arityerr1311:
   unreachable
 argok1312:
   %t3596 = load i64, ptr @"emit.internal:rd-skip-ws"
+  call void @rt_check_callable(i64 %t3596)
   %t3597 = and i64 %t3596, -8
   %t3598 = inttoptr i64 %t3597 to ptr
   %t3599 = load i64, ptr %t3598
   %t3600 = inttoptr i64 %t3599 to ptr
   %t3601 = call fastcc i64%t3600(i64 %t3596, i64 3, i64 %a0, i64 %a1, i64 %a2, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t3602 = load i64, ptr @"emit.internal:rd-fail?"
+  call void @rt_check_callable(i64 %t3602)
   %t3603 = and i64 %t3602, -8
   %t3604 = inttoptr i64 %t3603 to ptr
   %t3605 = load i64, ptr %t3604
@@ -6762,6 +6900,7 @@ merge1325:
   br i1 %t3637, label %then1329, label %else1330
 then1329:
   %t3638 = load i64, ptr @"emit.internal:reverse"
+  call void @rt_check_callable(i64 %t3638)
   %t3639 = and i64 %t3638, -8
   %t3640 = inttoptr i64 %t3639 to ptr
   %t3641 = load i64, ptr %t3640
@@ -6785,6 +6924,7 @@ fixmerge1333:
   ret i64 %t3652
 else1330:
   %t3653 = load i64, ptr @"emit.internal:rd-datum-comment?"
+  call void @rt_check_callable(i64 %t3653)
   %t3654 = and i64 %t3653, -8
   %t3655 = inttoptr i64 %t3654 to ptr
   %t3656 = load i64, ptr %t3655
@@ -6808,12 +6948,14 @@ fixslow1337:
 fixmerge1338:
   %t3667 = phi i64 [ %t3664, %fixfast1336 ], [ %t3666, %fixslow1337 ]
   %t3668 = load i64, ptr @"emit.internal:rd-skip-ws"
+  call void @rt_check_callable(i64 %t3668)
   %t3669 = and i64 %t3668, -8
   %t3670 = inttoptr i64 %t3669 to ptr
   %t3671 = load i64, ptr %t3670
   %t3672 = inttoptr i64 %t3671 to ptr
   %t3673 = call fastcc i64%t3672(i64 %t3668, i64 3, i64 %a0, i64 %a1, i64 %t3667, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t3674 = load i64, ptr @"emit.internal:rd-datum"
+  call void @rt_check_callable(i64 %t3674)
   %t3675 = and i64 %t3674, -8
   %t3676 = inttoptr i64 %t3675 to ptr
   %t3677 = load i64, ptr %t3676
@@ -6821,6 +6963,7 @@ fixmerge1338:
   %t3679 = call fastcc i64%t3678(i64 %t3674, i64 4, i64 %a0, i64 %a1, i64 %t3673, i64 %a4, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t3680 = call i64 @rt_cdr(i64 %t3679)
   %t3681 = load i64, ptr @"emit.internal:rd-fail?"
+  call void @rt_check_callable(i64 %t3681)
   %t3682 = and i64 %t3681, -8
   %t3683 = inttoptr i64 %t3682 to ptr
   %t3684 = load i64, ptr %t3683
@@ -6833,6 +6976,7 @@ then1339:
 else1340:
   %t3688 = call i64 @rt_cdr(i64 %t3679)
   %t3689 = load i64, ptr @"emit.internal:rd-list"
+  call void @rt_check_callable(i64 %t3689)
   %t3690 = and i64 %t3689, -8
   %t3691 = inttoptr i64 %t3690 to ptr
   %t3692 = load i64, ptr %t3691
@@ -6841,6 +6985,7 @@ else1340:
   ret i64 %t3694
 else1335:
   %t3695 = load i64, ptr @"emit.internal:rd-dot?"
+  call void @rt_check_callable(i64 %t3695)
   %t3696 = and i64 %t3695, -8
   %t3697 = inttoptr i64 %t3696 to ptr
   %t3698 = load i64, ptr %t3697
@@ -6864,12 +7009,14 @@ fixslow1344:
 fixmerge1345:
   %t3709 = phi i64 [ %t3706, %fixfast1343 ], [ %t3708, %fixslow1344 ]
   %t3710 = load i64, ptr @"emit.internal:rd-skip-ws"
+  call void @rt_check_callable(i64 %t3710)
   %t3711 = and i64 %t3710, -8
   %t3712 = inttoptr i64 %t3711 to ptr
   %t3713 = load i64, ptr %t3712
   %t3714 = inttoptr i64 %t3713 to ptr
   %t3715 = call fastcc i64%t3714(i64 %t3710, i64 3, i64 %a0, i64 %a1, i64 %t3709, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t3716 = load i64, ptr @"emit.internal:rd-datum"
+  call void @rt_check_callable(i64 %t3716)
   %t3717 = and i64 %t3716, -8
   %t3718 = inttoptr i64 %t3717 to ptr
   %t3719 = load i64, ptr %t3718
@@ -6877,6 +7024,7 @@ fixmerge1345:
   %t3721 = call fastcc i64%t3720(i64 %t3716, i64 4, i64 %a0, i64 %a1, i64 %t3715, i64 %a4, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t3722 = call i64 @rt_cdr(i64 %t3721)
   %t3723 = load i64, ptr @"emit.internal:rd-fail?"
+  call void @rt_check_callable(i64 %t3723)
   %t3724 = and i64 %t3723, -8
   %t3725 = inttoptr i64 %t3724 to ptr
   %t3726 = load i64, ptr %t3725
@@ -6889,12 +7037,14 @@ then1346:
 else1347:
   %t3730 = call i64 @rt_cdr(i64 %t3721)
   %t3731 = load i64, ptr @"emit.internal:rd-skip-ws"
+  call void @rt_check_callable(i64 %t3731)
   %t3732 = and i64 %t3731, -8
   %t3733 = inttoptr i64 %t3732 to ptr
   %t3734 = load i64, ptr %t3733
   %t3735 = inttoptr i64 %t3734 to ptr
   %t3736 = call fastcc i64%t3735(i64 %t3731, i64 3, i64 %a0, i64 %a1, i64 %t3730, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t3737 = load i64, ptr @"emit.internal:rd-fail?"
+  call void @rt_check_callable(i64 %t3737)
   %t3738 = and i64 %t3737, -8
   %t3739 = inttoptr i64 %t3738 to ptr
   %t3740 = load i64, ptr %t3739
@@ -6946,6 +7096,7 @@ merge1355:
 then1359:
   %t3763 = call i64 @rt_intern(ptr @.str.sym.28)
   %t3764 = load i64, ptr @"emit.internal:rd-fail"
+  call void @rt_check_callable(i64 %t3764)
   %t3765 = and i64 %t3764, -8
   %t3766 = inttoptr i64 %t3765 to ptr
   %t3767 = load i64, ptr %t3766
@@ -6955,6 +7106,7 @@ then1359:
 else1360:
   %t3770 = call i64 @rt_car(i64 %t3721)
   %t3771 = load i64, ptr @"emit.internal:rd-append-reverse"
+  call void @rt_check_callable(i64 %t3771)
   %t3772 = and i64 %t3771, -8
   %t3773 = inttoptr i64 %t3772 to ptr
   %t3774 = load i64, ptr %t3773
@@ -6978,6 +7130,7 @@ fixmerge1363:
   ret i64 %t3785
 else1342:
   %t3786 = load i64, ptr @"emit.internal:rd-datum"
+  call void @rt_check_callable(i64 %t3786)
   %t3787 = and i64 %t3786, -8
   %t3788 = inttoptr i64 %t3787 to ptr
   %t3789 = load i64, ptr %t3788
@@ -6985,6 +7138,7 @@ else1342:
   %t3791 = call fastcc i64%t3790(i64 %t3786, i64 4, i64 %a0, i64 %a1, i64 %t3601, i64 %a4, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t3792 = call i64 @rt_cdr(i64 %t3791)
   %t3793 = load i64, ptr @"emit.internal:rd-fail?"
+  call void @rt_check_callable(i64 %t3793)
   %t3794 = and i64 %t3793, -8
   %t3795 = inttoptr i64 %t3794 to ptr
   %t3796 = load i64, ptr %t3795
@@ -6999,6 +7153,7 @@ else1365:
   %t3801 = call i64 @rt_car(i64 %t3791)
   %t3802 = call i64 @rt_cons(i64 %t3801, i64 %a3)
   %t3803 = load i64, ptr @"emit.internal:rd-list"
+  call void @rt_check_callable(i64 %t3803)
   %t3804 = and i64 %t3803, -8
   %t3805 = inttoptr i64 %t3804 to ptr
   %t3806 = load i64, ptr %t3805
@@ -7008,6 +7163,7 @@ else1365:
 else1319:
   %t3809 = call i64 @rt_intern(ptr @.str.sym.28)
   %t3810 = load i64, ptr @"emit.internal:rd-fail"
+  call void @rt_check_callable(i64 %t3810)
   %t3811 = and i64 %t3810, -8
   %t3812 = inttoptr i64 %t3811 to ptr
   %t3813 = load i64, ptr %t3812
@@ -7115,6 +7271,7 @@ fixslow1391:
 fixmerge1392:
   %t3864 = phi i64 [ %t3861, %fixfast1390 ], [ %t3863, %fixslow1391 ]
   %t3865 = load i64, ptr @"emit.internal:rd-list"
+  call void @rt_check_callable(i64 %t3865)
   %t3866 = and i64 %t3865, -8
   %t3867 = inttoptr i64 %t3866 to ptr
   %t3868 = load i64, ptr %t3867
@@ -7153,6 +7310,7 @@ fixslow1399:
 fixmerge1400:
   %t3886 = phi i64 [ %t3883, %fixfast1398 ], [ %t3885, %fixslow1399 ]
   %t3887 = load i64, ptr @"emit.internal:rd-list"
+  call void @rt_check_callable(i64 %t3887)
   %t3888 = and i64 %t3887, -8
   %t3889 = inttoptr i64 %t3888 to ptr
   %t3890 = load i64, ptr %t3889
@@ -7191,6 +7349,7 @@ fixslow1407:
 fixmerge1408:
   %t3908 = phi i64 [ %t3905, %fixfast1406 ], [ %t3907, %fixslow1407 ]
   %t3909 = load i64, ptr @"emit.internal:rd-quote"
+  call void @rt_check_callable(i64 %t3909)
   %t3910 = and i64 %t3909, -8
   %t3911 = inttoptr i64 %t3910 to ptr
   %t3912 = load i64, ptr %t3911
@@ -7229,6 +7388,7 @@ fixslow1415:
 fixmerge1416:
   %t3930 = phi i64 [ %t3927, %fixfast1414 ], [ %t3929, %fixslow1415 ]
   %t3931 = load i64, ptr @"emit.internal:rd-quasi"
+  call void @rt_check_callable(i64 %t3931)
   %t3932 = and i64 %t3931, -8
   %t3933 = inttoptr i64 %t3932 to ptr
   %t3934 = load i64, ptr %t3933
@@ -7267,6 +7427,7 @@ fixslow1423:
 fixmerge1424:
   %t3952 = phi i64 [ %t3949, %fixfast1422 ], [ %t3951, %fixslow1423 ]
   %t3953 = load i64, ptr @"emit.internal:rd-unquote"
+  call void @rt_check_callable(i64 %t3953)
   %t3954 = and i64 %t3953, -8
   %t3955 = inttoptr i64 %t3954 to ptr
   %t3956 = load i64, ptr %t3955
@@ -7305,6 +7466,7 @@ fixslow1431:
 fixmerge1432:
   %t3974 = phi i64 [ %t3971, %fixfast1430 ], [ %t3973, %fixslow1431 ]
   %t3975 = load i64, ptr @"emit.internal:rd-string"
+  call void @rt_check_callable(i64 %t3975)
   %t3976 = and i64 %t3975, -8
   %t3977 = inttoptr i64 %t3976 to ptr
   %t3978 = load i64, ptr %t3977
@@ -7343,6 +7505,7 @@ fixslow1439:
 fixmerge1440:
   %t3996 = phi i64 [ %t3993, %fixfast1438 ], [ %t3995, %fixslow1439 ]
   %t3997 = load i64, ptr @"emit.internal:rd-hash"
+  call void @rt_check_callable(i64 %t3997)
   %t3998 = and i64 %t3997, -8
   %t3999 = inttoptr i64 %t3998 to ptr
   %t4000 = load i64, ptr %t3999
@@ -7381,6 +7544,7 @@ fixslow1447:
 fixmerge1448:
   %t4018 = phi i64 [ %t4015, %fixfast1446 ], [ %t4017, %fixslow1447 ]
   %t4019 = load i64, ptr @"emit.internal:rd-bar"
+  call void @rt_check_callable(i64 %t4019)
   %t4020 = and i64 %t4019, -8
   %t4021 = inttoptr i64 %t4020 to ptr
   %t4022 = load i64, ptr %t4021
@@ -7427,6 +7591,7 @@ merge1454:
 then1458:
   %t4042 = call i64 @rt_intern(ptr @.str.sym.9)
   %t4043 = load i64, ptr @"emit.internal:rd-fail"
+  call void @rt_check_callable(i64 %t4043)
   %t4044 = and i64 %t4043, -8
   %t4045 = inttoptr i64 %t4044 to ptr
   %t4046 = load i64, ptr %t4045
@@ -7435,6 +7600,7 @@ then1458:
   ret i64 %t4048
 else1459:
   %t4049 = load i64, ptr @"emit.internal:rd-atom"
+  call void @rt_check_callable(i64 %t4049)
   %t4050 = and i64 %t4049, -8
   %t4051 = inttoptr i64 %t4050 to ptr
   %t4052 = load i64, ptr %t4051
@@ -7464,6 +7630,7 @@ then1463:
 else1464:
   %t4065 = call i64 @rt_intern(ptr @.str.sym.12)
   %t4066 = load i64, ptr @"emit.internal:rd-fail"
+  call void @rt_check_callable(i64 %t4066)
   %t4067 = and i64 %t4066, -8
   %t4068 = inttoptr i64 %t4067 to ptr
   %t4069 = load i64, ptr %t4068
@@ -7504,12 +7671,14 @@ arityerr1469:
   unreachable
 argok1470:
   %t4090 = load i64, ptr @"emit.internal:%port-rtd"
+  call void @rt_check_callable(i64 %t4090)
   %t4091 = and i64 %t4090, -8
   %t4092 = inttoptr i64 %t4091 to ptr
   %t4093 = load i64, ptr %t4092
   %t4094 = inttoptr i64 %t4093 to ptr
   %t4095 = call fastcc i64%t4094(i64 %t4090, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t4096 = load i64, ptr @"emit.internal:list"
+  call void @rt_check_callable(i64 %t4096)
   %t4097 = and i64 %t4096, -8
   %t4098 = inttoptr i64 %t4097 to ptr
   %t4099 = load i64, ptr %t4098

@@ -22,7 +22,8 @@
 ;; REPL state ops (`repl-mode`/`repl-input`/`repl-state-ref`/`repl-state-set!`) --
 ;; never used as values, and the raw %-ops staying internal is a Non-Goal to relax.
 (define *prims* '(%+ %- %* %/ %= %< %eq? %eqv?
-                  %cons %quotient %remainder %modulo %car %cdr %null? %pair? %equal? %not
+                  %cons %quotient %remainder %modulo %car %cdr %set-car! %set-cdr!
+                  %null? %pair? %equal? %not
                   %char->integer %integer->char
                   %string-length %string-ref %string->symbol %symbol->string %list->string
                   %string-set! %substring %string=? %make-string %string-copy
@@ -105,6 +106,10 @@
     (eq? %eq? 2) (eqv? %eqv? 2)
     (quotient %quotient 2) (remainder %remainder 2) (modulo %modulo 2)
     (car %car 1) (cdr %cdr 1) (null? %null? 1) (pair? %pair? 1)
+    ;; R7RS 6.4 pair mutation (change: checked-primitive-arguments / issue #82).
+    ;; Integrable like every other accessor, so a direct call inlines to a bare
+    ;; primcall and a value reference (`(apply set-car! ...)`) etas.
+    (set-car! %set-car! 2) (set-cdr! %set-cdr! 2)
     (equal? %equal? 2) (not %not 1)
     ;; inexact numbers (change: inexact-numbers): flonum predicates/conversions and
     ;; write-char.  integer?/exact? are unchanged here (only their runtime semantics
