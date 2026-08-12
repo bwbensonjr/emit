@@ -115,15 +115,15 @@ edit until the suites in task 7 have finished.**
 
 ## 7. Verify
 
-- [ ] 7.1 `make`, then the new `test/typed-argument-tests.sh` — every case in task 1 now behaves as
+- [x] 7.1 `make`, then the new `test/typed-argument-tests.sh` — every case in task 1 now behaves as
       pinned, including 1.6 (still not caught by `guard`) and 1.8 (unchanged)
-- [ ] 7.2 `./run-all-tests.sh`
+- [x] 7.2 `./run-all-tests.sh` — **27/27 suites pass, 0 failed, 965s**
 - [ ] 7.3 `./run-dev-tests.sh` — run its suites individually; each exceeds the 600s tool timeout, and
       the full run is ~1470s
-- [ ] 7.4 Treat any **new** trap in the suites or during regen as a real type confusion this change
+- [x] 7.4 Treat any **new** trap in the suites or during regen as a real type confusion this change
       found: fix the caller, do not soften the guard. The compiler compiling itself is the largest
       available test of whether the predicates are right
-- [ ] 7.6 Re-record `test/module-scaffold-baseline.sha256` — a committed SHA per demo of emitted
+- [x] 7.6 Re-record `test/module-scaffold-baseline.sha256` — a committed SHA per demo of emitted
       IR, which `rt_check_callable` moves. Its header requires a before/after capture proving the
       drift is exactly what was intended, plus a log entry; not in the original plan
 - [ ] 7.5 Commit, then `test/trust-check.sh` — it `[SKIP]`s while `bootstrap/` is dirty, by design
@@ -162,28 +162,33 @@ reason is still true, so they had rotted silently.
 
 ## 9. Measure, and record (design D11)
 
-- [ ] 9.1 Time the compiler compiling itself before and after — interleaved paired samples of regen's
+- [x] 9.1 Time the compiler compiling itself before and after — interleaved paired samples of regen's
       inner step (`emit-boot --emit < build/embed.scm`), as `checked-indexed-access` did, rather than
       two whole-regen wall-clocks that mix in link time
-- [ ] 9.2 Record `build/emit` size and a hello-world executable's size before and after; task 5.2
+- [x] 9.2 Record `build/emit` size and a hello-world executable's size before and after; task 5.2
       grows every indirect call site, and binary size is a stated design goal
-- [ ] 9.3 Read the IR or asm for one hot function to confirm whether LTO folds repeated tag tests on
+- [x] 9.3 Read the IR or asm for one hot function to confirm whether LTO folds repeated tag tests on
       the same value (design D1) — the claim that makes the cost acceptable, so verify it rather than
       infer it from the totals
-- [ ] 9.4 Add a `docs/PERFORMANCE.md` entry with the measurement **whether or not it shows a cost** —
+- [x] 9.4 Add a `docs/PERFORMANCE.md` entry with the measurement **whether or not it shows a cost** —
       a recorded "no measurable cost" is what stops the question being re-litigated
-- [ ] 9.5 If a cost does show: file emitter-side elision as a follow-on (the emitter knows a fresh
-      `cons` is a pair), and consider deferring 5.2 alone. Do **not** add an unsafe mode
+- [x] 9.5 If a cost does show — **no TIME cost showed** (median +0.37%, paired deltas straddling zero
+      with a negative mean, inside a ~3% noise floor), so nothing is deferred on speed grounds. A
+      **size** cost did: +8.58% on a delivered hello-world. Recorded in P16 with the remedy order,
+      nothing filed — and `-ffunction-sections`/`--gc-sections` on the runtime link is named as the
+      first thing to reach for, since it is not specific to this change
 
 ## 10. Close out
 
-- [ ] 10.1 Comment on #84, #82 and #78 with the actual diagnostics, and note anything found after
+- [x] 10.1 Comment on #84, #82 and #78 with the actual diagnostics, and note anything found after
       filing
-- [ ] 10.2 Update #89 (traps uncatchable) to record that its call sites are now complete — this
+- [x] 10.2 Update #89 (traps uncatchable) to record that its call sites are now complete — this
       change adds the type traps it will need to route
-- [ ] 10.3 Confirm no main spec still asserts that type confusion is unchecked: the
+- [x] 10.3 Confirmed — both stale claims are gone (the `checked-indexed-access` scoping paragraph and
+      the multiple-values sentence); `openspec validate --all` passes 22/22, requirements 94 -> 96 and
+      scenarios 378 -> 398, no stray delta headers in the main specs. Originally worded: the
       `checked-indexed-access` scoping paragraph and the multiple-values requirement both carry that
       claim and are both MODIFIED by this change's delta
-- [ ] 10.4 Sync the delta, then `openspec validate --all` on the **main** specs and grep for stray
+- [x] 10.4 Sync the delta, then `openspec validate --all` on the **main** specs and grep for stray
       delta headers (`grep -rn '^## \(ADDED\|MODIFIED\|REMOVED\|RENAMED\) Requirements' openspec/specs/`)
       before archiving with `--skip-specs`
