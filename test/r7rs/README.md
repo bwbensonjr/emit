@@ -64,6 +64,39 @@ the fixing commit deletes their entries. An exclusion is a claim, and the suite 
 `blocked-by` is separated out on purpose: a reference to a helper whose `define` was excluded is
 not an independent gap, and counting it as one overstates the inventory.
 
+## Current baseline
+
+Measured on 2026-08-11, after the change that introduced this suite:
+
+```
+assertions: 779 passed, 0 failed;  forms: 791 run, 389 excluded
+22 section/check groups passed, 0 failed          (about 2 minutes)
+```
+
+The 389 exclusions, by reason class:
+
+| Reason | Forms | What it is |
+|---|---|---|
+| `unimplemented` | 231 | `(scheme char)`, `(scheme lazy)`, binary ports, derived syntax, `(scheme eval)`, ... |
+| `deliberate:#27` | 87 | exact rationals, bignums, complex numbers -- permanently absent |
+| `issue-74` | 16 | reader: named characters, hex escapes, string escapes, inf/nan case |
+| `blocked-by:*` | 15 | a helper's defining form is excluded -- not independent gaps |
+| `deliberate:not-R7RS-small` | 8 | `1s2`/`1f2`-style exponent markers, which R7RS-small does not have |
+| `issue-82` | 7 | mutable pairs |
+| `issue-85` | 6 | `read-error?`/`file-error?` need an error-object kind |
+| `issue-84` | 5 | crashes with a signal (no tag check on accessors) |
+| `issue-75` | 4 | datum labels, `#!fold-case` |
+| `issue-78`, `issue-86` | 3 each | `apply` on a non-list; flonum print convention |
+| `issue-81` | 2 | `case` with `=>` |
+| `issue-77`, `issue-80` | 1 each | exact/inexact comparison; `_` as a syntax-rules literal |
+
+For contrast, the same suite against the compiler immediately before the change ran 651 forms with
+529 excluded, for 635 passing assertions. Sections 6.8 Vectors and 6.9 Bytevectors moved most, from
+3 of 43 and 6 of 39 forms running to 43 of 43 and 28 of 39.
+
+(An earlier, throwaway measurement is often quoted as 506 passing. That one covered only 999 forms
+-- its form splitter dropped the file's tail -- so it is not comparable to these numbers.)
+
 ## Background
 
 `openspec/explorations/r7rs-conformance-suite.md` records the first measurement, the cost tiers,

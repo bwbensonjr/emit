@@ -48,12 +48,13 @@ which a missing `(scheme base)` name is a surface change rather than a gap being
   constants self-evaluating; Emit requires the quote. One `parse-expr` arm, and the highest-leverage
   fix available: 44 excluded forms, and the reason 6.8 Vectors runs 3 of 43 forms and 6.9
   Bytevectors 6 of 39.
-- **~30 ordinary missing `(scheme base)` procedures**, all writable over existing primitives:
-  `assv` `boolean=?` `symbol=?` `procedure?` `list-copy` `list-set!` `vector->list`
+- **~27 ordinary missing `(scheme base)` procedures**, writable over existing primitives:
+  `assv` `boolean=?` `symbol=?` `procedure?` `list-copy` `vector->list`
   `vector->string` `string->vector` `vector-map` `vector-for-each` `vector-copy` `vector-copy!`
   `vector-fill!` `vector-append` `string-map` `string-for-each` `string-copy!` `string-fill!`
   `string<?` `string<=?` `string>?` `string>=?` `bytevector-copy` `bytevector-copy!`
-  `bytevector-append` `rationalize` `read-error?` `file-error?`.
+  `bytevector-append` `rationalize`. Plus `procedure?`, which needs one new primitive (a closure
+  tag test) because nothing existing can answer it -- the only runtime edit in this change.
 - **Arity gaps** where Emit binds the name but not the standard's signature: the optional fill of
   `make-string`/`make-vector`, the optional range of `string-copy`/`string->list`, n-ary
   `string=?` and the string comparisons, and the optional `compare` argument of `assoc`/`member`.
@@ -64,6 +65,8 @@ which a missing `(scheme base)` name is a surface change rather than a gap being
 - Bignums, exact rationals, `(scheme complex)` — permanently absent per #27; these get
   `deliberate` exclusions, not fixes.
 - Binary ports and bytevector I/O (~12 names) — a coherent chunk that wants its own change.
+- `read-error?` and `file-error?` — found during implementation to need a *kind* on the error
+  object, which is a representation change rather than a library addition; filed as #85.
 - `(scheme char)` — 22 names, and the Unicode-table question the repo has already recorded.
 - `(scheme lazy)`, `let-values`, `let*-values`, `(scheme case-lambda)` — all become prelude macros
   once #79 is fixed, so they sequence behind it rather than into this change.

@@ -107,6 +107,28 @@ Two honest caveats on those numbers:
   Emit's reader handles bar-quoted symbols fine — this is a limitation of the throwaway Python
   splitter, and it is the first thing the real one must get right.
 
+## After the change (2026-08-11)
+
+`r7rs-conformance-suite` landed the suite and the cheap tier. It is now a gate in
+`run-all-tests.sh` rather than a number in a document, and it reports **779 assertions passing, 0
+failing, 791 of 1180 forms running, 389 excluded**.
+
+Three sets of numbers get confused easily, so: the measurement recorded further down this document
+covered **999** forms and found 506 passing, because the throwaway splitter dropped the file's tail.
+The real gate, over all **1180** forms, read 635 passing / 529 excluded immediately before the
+change and 779 / 389 immediately after. Compare the last two; the 506 is not comparable to
+either.
+
+What moved: self-evaluating literals (#76) freed 96 forms and took 6.8 Vectors from 3 of 43 forms
+to all 43; the 27 added `(scheme base)` procedures and the optional/n-ary arities freed the rest of
+the 140 the suite reported as stale exclusions the moment the fixes landed. Three names in the
+"cheap tier" turned out not to be cheap: `procedure?` needed a primitive (added), while
+`read-error?`/`file-error?` need a kind on the error object (#85) and `list-set!` needs mutable
+pairs (#82).
+
+Two defects the suite found only once it was running as a gate: accessors segfault on a
+wrong-typed argument (#84) and the flonum print convention (#86).
+
 ## What the exclusions are made of
 
 438 excluded forms, by cause:

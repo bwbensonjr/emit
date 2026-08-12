@@ -49,6 +49,10 @@ too.
 A form's key SHALL be stable against unrelated edits elsewhere in the suite: a raw line number
 SHALL NOT be the key, so that refreshing the vendored suite does not invalidate every exclusion.
 
+Keys SHALL be unique. Since the suite repeats some text verbatim — `(test-end)` markers, and
+assertion pairs written twice on purpose — a content-derived key SHALL disambiguate repeated text
+by its occurrence order, while text that appears once SHALL keep a key derived from content alone.
+
 #### Scenario: Every form is accounted for
 
 - **WHEN** the generator runs over the vendored suite
@@ -70,6 +74,11 @@ SHALL NOT be the key, so that refreshing the vendored suite does not invalidate 
 
 - **WHEN** a form is added to or removed from one section of the suite and the manifest is regenerated
 - **THEN** the keys of forms in other sections are unchanged
+
+#### Scenario: Repeated text still yields distinct keys
+
+- **WHEN** the suite contains the same form text more than once, as it does for `(test-end)`
+- **THEN** each occurrence has its own key, and generation does not fail on the repetition
 
 ### Requirement: A checksum guard ties the manifests to the vendored suite
 

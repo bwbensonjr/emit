@@ -106,6 +106,15 @@ loses its exclusion — the exclusion was a claim about that text.
 and a text excerpt as commentary — informative but not authoritative. The alternative, keying by
 `(section, ordinal)`, is readable but shifts whenever a form is inserted mid-section.
 
+**Amended during implementation: text is not unique.** The suite repeats itself on purpose. Five
+distinct texts occur more than once across 24 forms — sixteen `(test-end)` markers, and four
+assertion pairs including the two `(test "12" (f 12))` on either side of a `parameterize`, which
+exist precisely to show the parameter did not stick. A bare content hash therefore cannot be a key,
+and asserting uniqueness fails on the real file. Repeated text gets an occurrence suffix
+(`<hash>.1`, `<hash>.2`, in file order); the 1016 texts that appear once keep a bare hash. That
+confines positional instability to forms that are character-identical to another — where an
+exclusion would be making the same claim either way — and leaves the stability that matters intact.
+
 ### D4: The manifest is a ratchet, checked in both directions
 
 **Decision.** Not-excluded-but-broken fails (regression). Excluded-but-now-passing fails too (stale
