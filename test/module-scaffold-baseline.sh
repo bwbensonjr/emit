@@ -205,6 +205,17 @@
 #     against the 4 instructions removed per site.  That is a pre-optimizer number, and
 #     what the change exists for is what `-O2 -flto` then does with it: the delivered
 #     binary gets both faster and smaller (docs/PERFORMANCE.md P5).  No new entries.
+#   r7rs-conformance-suite -- +4 lines in every module's runtime declare header
+#     (@rt_procedure_p, @rt_make_string_1, @rt_make_vector_1, @rt_string_copy_from), the
+#     primitives behind `procedure?` and the optional-argument forms of make-string,
+#     make-vector and string-copy.  Every one of the 80 demos moved, and the header is
+#     why: `emit run --emit` writes the declare block into each module it emits, so a new
+#     declare touches all of them without changing a single instruction.  Verified: the
+#     new IR carries exactly those four declares per module and nothing else new, and
+#     every demo's stdout is byte-identical (the demo suite passes on both doors).  One
+#     demo additionally gains expander temps, since n-ary `string=?` now routes through
+#     the comparison chain -- the only demo that uses it in operator position.  No new
+#     entries and none removed.
 #   call-cc demo -- +1 new entry (call-cc), the demo added alongside the existing
 #     test/dynamic-extent-tests.sh coverage.  NO existing hash changed: the manifest
 #     diff was exactly one added line, since a new demo file cannot affect any other
