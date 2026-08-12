@@ -40,6 +40,32 @@ HARNESS=test/r7rs/harness.scm
 RUN="build/emit run"
 JOBS="${EMIT_JOBS:-$(sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 4)}"
 
+# The staleness pass runs forms that are excluded PRECISELY BECAUSE they misbehave, so
+# one of them not terminating is an ordinary outcome, not a surprise -- and an unbounded
+# `emit run` there wedges the whole pass.  That is how a circular-structure form behaved
+# the moment `set-cdr!` existed (GitHub issue #90: the printer has no cycle detection).
+#
+# TWO THINGS ABOUT THIS BOUND, both learned the hard way:
+#
+#   * It must be GENEROUS.  Each probe is a full compile+link (clang + LTO), which takes
+#     ~2s alone and many times that with JOBS of them competing for the machine.  A tight
+#     bound turns contention into a false "not stale" -- the silent direction, and exactly
+#     the blindness the ratchet exists to prevent.  20s produced 389 false negatives here.
+#   * A timeout is REPORTED, not swallowed.  A hang is legitimately not a pass, so the
+#     exclusion stands -- but "we could not classify this form" is different from "we
+#     classified it as still-broken", and the difference has to be visible or the manifest
+#     rots exactly where nobody is looking.
+#
+# `timeout` is absent on a stock macOS, hence the probe -- without it the guard would
+# silently do nothing, which is worse than not having it.
+TIMEOUT_S="${EMIT_FORM_TIMEOUT:-120}"
+if command -v timeout >/dev/null 2>&1;  then RUN_T="timeout $TIMEOUT_S $RUN"
+elif command -v gtimeout >/dev/null 2>&1; then RUN_T="gtimeout $TIMEOUT_S $RUN"
+else
+  RUN_T="$RUN"
+  say "r7rs-suite: no timeout(1) -- staleness pass runs unbounded (see issue #90)"
+fi
+
 mode=default
 case "${1:-}" in
   --help|-h)
@@ -52,7 +78,10 @@ Run the vendored R7RS-small suite against `emit run`, one program per section.
   --sections-only  run the sections only -- catches regressions, not stale exclusions
   --discover       probe every form and rewrite test/r7rs/exclusions.tsv (slow)
 
-Environment: EMIT_JOBS (parallelism, default = CPU count), EMIT_VERBOSITY.
+Environment: EMIT_JOBS (parallelism, default = CPU count), EMIT_VERBOSITY,
+             EMIT_FORM_TIMEOUT (seconds per form in the staleness pass, default 120).
+
+run-all-tests.sh runs --sections-only; set EMIT_R7RS=1 there for the full pass.
 USAGE
     exit 0 ;;
   --sections-only) mode=sections ;;
@@ -233,15 +262,20 @@ stale=0
 if [ "$mode" = default ] && [ "$nexcl" -gt 0 ]; then
   say "r7rs-suite: checking $nexcl exclusions for staleness ($JOBS jobs)"
   : > "$TMP/stale"
+  : > "$TMP/timedout"
   awk -F'\t' 'NR==FNR{e[$1]=1;next} ($1 in e) {print $1"\t"$2}' \
       "$TMP/excl-keys-only" "$TMP/forms" > "$TMP/excl-forms"
   while IFS=$'\t' read -r key section; do
     ( p="$TMP/st-$key"
       emit_program "$p" "$section" "$key"
-      if ( $RUN "$p" > "$p.out" 2>"$p.err" ) 2>/dev/null; then
+      ( $RUN_T "$p" > "$p.out" 2>"$p.err" ) 2>/dev/null; rc=$?
+      if [ "$rc" = 0 ]; then
         if grep -q '^SUMMARY' "$p.out" && ! grep -q '^FAIL' "$p.out"; then
           printf '%s\t%s\n' "$key" "$section" >> "$TMP/stale"
         fi
+      elif [ "$rc" = 124 ] || [ "$rc" = 137 ]; then
+        # timeout(1) exits 124; 137 is a SIGKILL escalation.  UNCLASSIFIED, not "fine".
+        printf '%s\t%s\n' "$key" "$section" >> "$TMP/timedout"
       fi
       rm -f "$p" "$p.out" "$p.err" "$p.ranges" ) &
     while [ "$(jobs -rp | wc -l)" -ge "$JOBS" ]; do wait -n 2>/dev/null || break; done
@@ -258,6 +292,17 @@ if [ "$mode" = default ] && [ "$nexcl" -gt 0 ]; then
     echo "           delete their entries from $EXCL"
   else
     ok "no stale exclusions ($nexcl checked)"
+  fi
+  # Unclassified forms are reported whether or not anything was stale: a probe that did
+  # not finish tells us nothing about its exclusion, and that has to be said out loud.
+  ntimeout=$(wc -l < "$TMP/timedout" 2>/dev/null | tr -d ' ')
+  if [ "${ntimeout:-0}" -gt 0 ]; then
+    echo "  [NOTE] $ntimeout form(s) did not finish within ${TIMEOUT_S}s -- exclusion kept, but"
+    echo "         UNVERIFIED (a hang is not a pass).  Raise EMIT_FORM_TIMEOUT if the machine"
+    echo "         was merely busy; a genuine non-terminating form belongs in the manifest note."
+    while IFS=$'\t' read -r key section; do
+      echo "           $key  $section"
+    done < "$TMP/timedout" | head -10
   fi
 fi
 
