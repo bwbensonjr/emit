@@ -387,6 +387,7 @@
     (%pow "rt_pow")
     (%write-char "rt_write_char")
     (%cons "rt_cons") (%car "rt_car") (%cdr "rt_cdr")
+    (%set-car! "rt_set_car") (%set-cdr! "rt_set_cdr")
     (%null? "rt_null_p") (%pair? "rt_pair_p") (%eq? "rt_eq_p")
     (%procedure? "rt_procedure_p")
     (%eqv? "rt_eqv_p") (%equal? "rt_equal") (%not "rt_not")
@@ -999,8 +1000,18 @@
     env2))
 
 ;; load the code pointer out of a (tagged) closure value; returns the fn operand
+;; The operator must BE a procedure before its code pointer is loaded (change:
+;; checked-primitive-arguments, design D6).  Without this, `((quote not-a-proc) 1)`
+;; masked a symbol, read its name pointer as a code address, and jumped there --
+;; SIGBUS (GitHub issue #84).  Emitted as a call rather than an inline
+;; compare-and-branch: one line of IR per indirect call instead of two blocks and a
+;; trap call, which matters because binary size is a design goal here, and `-flto`
+;; inlines the test back into the caller so the runtime cost is the same either way.
+;; Only this function's two callers -- emit-app and emit-apply, the INDIRECT paths --
+;; pay it; self-app and known-app call a statically-known closure and do not.
 (define (emit-load-code fop)
   (let* ([b (fresh-temp)] [bp (fresh-temp)] [code (fresh-temp)] [fp (fresh-temp)])
+    (emit! (string-append "call void @rt_check_callable(i64 " fop ")"))
     (emit! (string-append b " = and i64 " fop ", -8"))
     (emit! (string-append bp " = inttoptr i64 " b " to ptr"))
     (emit! (string-append code " = load i64, ptr " bp))
@@ -1139,6 +1150,8 @@
    "declare i64 @rt_cons(i64, i64)\n"
    "declare i64 @rt_car(i64)\n"
    "declare i64 @rt_cdr(i64)\n"
+   "declare i64 @rt_set_car(i64, i64)\n"
+   "declare i64 @rt_set_cdr(i64, i64)\n"
    "declare i64 @rt_box(i64)\n"
    "declare i64 @rt_unbox(i64)\n"
    "declare i64 @rt_set_box(i64, i64)\n"
@@ -1265,6 +1278,8 @@
    "declare i64 @rt_build_rest(i64, i64, i64, ptr, ptr)\n"
    "declare ptr @rt_apply_argv(i64, ptr, i64, i64)\n"
    "declare void @rt_arity_error(i64, i64)\n"
+   ;; the operator tag test, called before every INDIRECT call (design D6)
+   "declare void @rt_check_callable(i64)\n"
    "declare i64 @rt_error(i64, i64)\n"
    "declare i64 @rt_raise(i64)\n"
    "declare i64 @rt_make_error_object(i64, i64)\n"

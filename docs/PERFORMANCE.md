@@ -30,6 +30,7 @@ speed items in this list.
 | [P13](#p13--the-jitrepl-door-runs-no-ir-optimization-pipeline) | The JIT/REPL door runs no IR optimization pipeline | speed | med–high | med | — | ☐ |
 | [P14](#p14--an-aggregate-constant-is-rebuilt-at-every-evaluation) | An aggregate constant is rebuilt at every evaluation | speed + size | low–med | med | — | ☐ |
 | [P15](#p15--indexed-access-bounds-checks-measured-and-free) | Indexed-access bounds checks: measured, and free | speed | n/a | n/a | `checked-indexed-access` | ☑ |
+| [P16](#p16--argument-type-checks-free-in-time-25-in-size-and-the-size-is-where-the-choice-is) | Argument type checks: free in time, +2.5% in size | speed + size | n/a | n/a | `checked-primitive-arguments` | ☑ |
 
 Legend — **Value**: benefit if fixed. **Cost**: rough implementation effort/risk. These are
 estimates to aid sequencing, not commitments.
@@ -1370,6 +1371,83 @@ constant from the record definition, `src/parse.ss:529`), but at +0.01% it would
 nothing. Note that records gained a field-count header word in this change — they had no length to
 check against — so the record path costs one word per instance, not per access; that is a size note,
 not a speed one.
+
+---
+
+## P16 — Argument type checks: free in time, +2.5% in size, and the size is where the choice is
+
+**Status:** ☑ measured (change: `checked-primitive-arguments`)
+
+A **measurement, not a debt**, in the shape P15 set. Change `checked-primitive-arguments` made every
+primitive that dereferences an argument tag-check it first (`car`/`cdr`, the vector/string/bytevector
+accessors, the string family, the box/record/hash-table/mv/error-object accessors, and the new
+`set-car!`/`set-cdr!`), and made the **operator of an indirect call** tag-checked where its code
+pointer is loaded. `car` is the hottest primitive in the compiler's own sources, so design D11
+required the cost to be measured rather than assumed, and required it recorded either way.
+
+**Result: no measurable time cost, and a real size cost that is not evenly distributed.**
+
+### Time — no measurable cost
+
+Workload: `emit-boot --emit < build/embed.scm`, the compiler compiling **itself** (454 KB of Scheme),
+the inner step `make regen` iterates. Both arms were given the **same input** so only the compiler
+differs, and runs were interleaved before/after so drift hit both equally.
+
+| arm | n | min | median | mean | max | stdev |
+|-----|---|-----|--------|------|-----|-------|
+| checks OFF | 5 | 171.858s | 174.241s | 174.198s | 175.743s | 1.450 |
+| checks ON  | 5 | 169.734s | 174.887s | 172.977s | 175.398s | 2.946 |
+
+Median delta **+0.646s (+0.37%)**. Paired deltas: −0.655, −4.507, −2.081, +0.458, +0.677 — they
+straddle zero and the mean paired delta is **negative** (−1.222s), which is noise, not a speedup.
+Within-arm spread is 2.2% and 3.2%, so this method could not resolve an effect below ~3%, and the
+effect is well inside it.
+
+**Why it is free.** Each check is a compare on a value already in a register, followed by a
+correctly-predicted branch that never fires, and the link is `-flto` (`src/emit.cpp`) so `rt_car` and
+friends inline into their callers and repeated tests on the same value fold. The one guard that is
+*not* free by that argument is the indirect-call check, which is a real call site per indirect call —
+and it too disappears into the noise here.
+
+### Size — +2.5%, concentrated where it is least welcome
+
+| artifact | before | after | delta |
+|---|---|---|---|
+| `bootstrap/embed.ll` | 3,222,332 | 3,307,527 | +2.64% |
+| `bootstrap/scheme.base.ll` | 568,023 | 583,077 | +2.65% |
+| `bootstrap/schemec.ll` | 2,974,902 | 3,057,825 | +2.79% |
+| IR the compiler emits for itself | 4,096,699 | 4,200,563 | +2.54% |
+| `build/emit` | 1,630,104 | 1,663,480 | +2.05% |
+| **a delivered hello-world executable** | **194,272** | **210,936** | **+8.58%** |
+
+The last row is the one that matters. Standalone executables are a stated design goal, and a shaken
+hello-world is small enough that a fixed overhead weighs disproportionately: +16,664 bytes on a
+194 KB binary. Two contributions, and they separate cleanly:
+
+- **the indirect-call guard** — 39,351 `call void @rt_check_callable` across the 80 demos, one per
+  indirect call site (measured in the `module-scaffold-baseline` re-record). This is emitted code,
+  so it scales with the program;
+- **the runtime's own growth** — `rt_type_name`'s dispatch plus one guard per accessor, compiled into
+  every executable whether or not a program can reach them, since `runtime.c` is linked whole with no
+  `-ffunction-sections`/`--gc-sections` (the same effect P8 and the numeric-conformance group-4 note
+  record for the `rt_*` declare header).
+
+**The remedy order, if this is ever worth paying down**, is the one design D11 named, and it is *not*
+an unsafe mode — a guarantee that depends on how the program was built is not one:
+
+1. **Emitter-side elision of the indirect-call guard.** `emit-app`/`emit-apply` already know when the
+   operator is a statically-known closure (`self-app`/`known-app` skip the guard entirely today). The
+   remaining sites are genuinely dynamic, but a simple type/flow pass would prove many of them —
+   a variable bound to a `lambda` and never assigned, for instance.
+2. **Emitter-side elision of accessor guards** where the argument is provably of the right type: a
+   freshly allocated `cons` reaching `car`, the compiler's own `%record-ref` call sites.
+3. **`-ffunction-sections`/`--gc-sections` on the runtime link**, which would shrink every delivered
+   executable and is independent of this change — it also reclaims the numeric-conformance group-4
+   cost. Probably the cheapest of the three and the widest in effect.
+
+Nothing is filed as a follow-on: +8.58% on a hello-world is worth recording and watching, not worth
+contorting a memory-safety guarantee for. Item 3 is the one to reach for first if binary size becomes
+pressing, since it is not specific to this change at all.
 
 ---
 

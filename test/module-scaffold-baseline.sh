@@ -7,6 +7,30 @@
 # preserves emitted IR").  This harness compiles every demos/*.scm through the
 # shipped Chez-free front half (`emit run --emit`) and checks the emitted
 # IR against a recorded reference.
+#   checked-primitive-arguments (GitHub issues #84, #82, #78) -- every primitive that
+#     dereferences an argument now tag-checks it first, pairs became mutable, and the
+#     operator of an INDIRECT call is tag-checked where its code pointer is loaded.  Only
+#     the last of those three touches emitted IR, and it touches a lot of it.  Verified
+#     against an 80-demo before/after capture (build/emit built in a detached-HEAD
+#     worktree at 523c244 vs the regenerated tree), classified mechanically after
+#     normalizing every identifier/label numeric suffix:
+#       NET REMOVALS: ZERO.  Every deletion in the raw diff is renumbering -- inserting a
+#         line shifts every %tN, code_N, __init_N and fixmergeN after it.
+#       NET ADDITIONS: 42,640 lines across 80 demos, of exactly three kinds --
+#         (1) 39,351 `call void @rt_check_callable(i64 ...)`, one per indirect call site
+#             (emit-app and emit-apply, the only two callers of emit-load-code); a call to
+#             a statically-known closure (self-app/known-app) correctly has none;
+#         (2) 729 declares = 3 new runtime symbols (rt_check_callable, rt_set_car,
+#             rt_set_cdr) x 80 demos x the ~3 headers per demo IR;
+#         (3) 2,560 lines = 32 x 80, EXACTLY ONE new function body per demo --
+#             scheme.base:code:list-set!, the one prelude definition this change adds.
+#       NAMED FUNCTION SET: +58/-57, of which the only non-code_N entry is the addition
+#         `scheme.base:code:list-set!`; the 57/57 code_N churn is anonymous-lambda
+#         renumbering, balanced in both directions.
+#     All 80 demos' stdout is BYTE-IDENTICAL (RUNNER=emit-run demos/run-tests.sh diffed
+#     between the two trees).  Size: build/emit 1,630,104 -> 1,663,480 bytes (+2.0%),
+#     the cost of the indirect-call guard; recorded in docs/PERFORMANCE.md P16.  No new
+#     entries -- the regression coverage is test/typed-argument-tests.sh (59 cases).
 #
 # Modes:
 #   capture DIR   compile every demo to DIR/<name>.ll (a raw IR snapshot)

@@ -43,6 +43,7 @@
     zero?
     list-tail
     list-ref
+    list-set!
     list-head
     make-list
     iota
@@ -202,6 +203,7 @@
     (define (zero? n) (= n 0))
     (define (list-tail xs n) (if (zero? n) xs (list-tail (cdr xs) (- n 1))))
     (define (list-ref xs n) (car (list-tail xs n)))
+    (define (list-set! xs n obj) (set-car! (list-tail xs n) obj))
     (define (list-head xs n) (if (zero? n) (quote ()) (cons (car xs) (list-head (cdr xs) (- n 1)))))
     (define (make-list n x) (if (zero? n) (quote ()) (cons x (make-list (- n 1) x))))
     (define (iota n) (let loop ((i 0) (acc (quote ()))) (if (= i n) (reverse acc) (loop (+ i 1) (cons i acc)))))
