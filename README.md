@@ -385,5 +385,8 @@ Emit is released under the [MIT License](LICENSE).
 
 Third-party code vendored into this repository keeps its own license, recorded beside it rather
 than in a source header (a vendored file is kept byte-identical to upstream, so no header can be
-added to it). Nothing is vendored yet; when something is, its license text is committed next to it
-and named here.
+added to it). Vendored today:
+
+- `test/r7rs/r7rs-tests.scm` — the R7RS-small conformance suite, from
+  [chibi-scheme](https://github.com/ashinn/chibi-scheme); BSD 3-clause, see
+  [`test/r7rs/LICENSE.chibi-scheme`](test/r7rs/LICENSE.chibi-scheme).
