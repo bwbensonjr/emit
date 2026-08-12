@@ -173,11 +173,13 @@ if [ "$mode" = discover ]; then
             # nfail deliberately NOT advanced: the form is rejected, so it does not join
             # the prefix and its failure will not recur.  Advancing the baseline here
             # would hide the NEXT failing form.
-            reason="$(grep '^FAIL' "$sfile.out" | tail -1 | cut -c1-160)"
+            # tabs flattened: the note is the third COLUMN of a tab-separated file,
+            # and a FAIL line is itself tab-separated
+            reason="$(grep '^FAIL' "$sfile.out" | tail -1 | tr '\t' ' ' | cut -c1-160)"
             printf '%s\twrong-answer\t%s\n' "$key" "$reason" >> "$sfile.rejects"
           fi
         else
-          reason="$(grep -v 'resolve manifest' "$sfile.err" | tail -1 | cut -c1-100)"
+          reason="$(grep -v 'resolve manifest' "$sfile.err" | tail -1 | tr '\t' ' ' | cut -c1-100)"
           printf '%s\tunimplemented\t%s\n' "$key" "$reason" >> "$sfile.rejects"
         fi
       done < "$sfile.all" ) &
@@ -236,7 +238,7 @@ if [ "$mode" = default ] && [ "$nexcl" -gt 0 ]; then
   while IFS=$'\t' read -r key section; do
     ( p="$TMP/st-$key"
       emit_program "$p" "$section" "$key"
-      if $RUN "$p" > "$p.out" 2>"$p.err"; then
+      if ( $RUN "$p" > "$p.out" 2>"$p.err" ) 2>/dev/null; then
         if grep -q '^SUMMARY' "$p.out" && ! grep -q '^FAIL' "$p.out"; then
           printf '%s\t%s\n' "$key" "$section" >> "$TMP/stale"
         fi
