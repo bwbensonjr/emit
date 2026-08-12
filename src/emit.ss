@@ -388,6 +388,7 @@
     (%write-char "rt_write_char")
     (%cons "rt_cons") (%car "rt_car") (%cdr "rt_cdr")
     (%null? "rt_null_p") (%pair? "rt_pair_p") (%eq? "rt_eq_p")
+    (%procedure? "rt_procedure_p")
     (%eqv? "rt_eqv_p") (%equal? "rt_equal") (%not "rt_not")
     (box "rt_box") (unbox "rt_unbox") (set-box! "rt_set_box")
     (%char->integer "rt_char_to_integer") (%integer->char "rt_integer_to_char")
@@ -396,6 +397,8 @@
     (%string=? "rt_string_eq") (%string-append "rt_string_append")
     (%symbol->string "rt_symbol_to_string") (%list->string "rt_list_to_string")
     (%make-string "rt_make_string_fill")
+    (%make-string-1 "rt_make_string_1") (%make-vector-1 "rt_make_vector_1")
+    (%string-copy-from "rt_string_copy_from")
     (%string-set! "rt_string_set") (%string-copy "rt_string_copy")
     (%make-vector "rt_make_vector") (%vector-ref "rt_vector_ref")
     (%vector-set! "rt_vector_set") (%vector-length "rt_vector_length")
@@ -1179,6 +1182,10 @@
    "declare i64 @rt_write_char(i64)\n"
    "declare i64 @rt_null_p(i64)\n"
    "declare i64 @rt_pair_p(i64)\n"
+   "declare i64 @rt_procedure_p(i64)\n"
+   "declare i64 @rt_make_string_1(i64)\n"
+   "declare i64 @rt_make_vector_1(i64)\n"
+   "declare i64 @rt_string_copy_from(i64, i64)\n"
    "declare i64 @rt_eq_p(i64, i64)\n"
    "declare i64 @rt_eqv_p(i64, i64)\n"
    "declare i64 @rt_equal(i64, i64)\n"

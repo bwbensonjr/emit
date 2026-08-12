@@ -1,5 +1,17 @@
-## ADDED Requirements
+# r7rs-conformance Specification
 
+## Purpose
+
+Defines how an external R7RS-small conformance suite is vendored, measured and enforced: the
+verbatim-vendoring rule and its attribution, the generated manifest that locates every top-level
+form, the hand-maintained manifest of forms the implementation cannot yet use and the reasons they
+carry, and the runner that turns the pair into a gate. Because the compiler compiles whole programs,
+one unsupported form would otherwise cost every test in the file, so the manifests are load-bearing
+rather than bookkeeping. The exclusion set is checked in both directions -- a regression fails, and
+so does an exclusion that has started passing -- which is what keeps it a ratchet rather than a
+snapshot of one afternoon's measurement.
+
+## Requirements
 ### Requirement: An external R7RS-small suite is vendored verbatim and attributed
 
 The repository SHALL vendor chibi-scheme's `tests/r7rs-tests.scm` under `test/r7rs/` **byte-for-byte
@@ -49,6 +61,10 @@ too.
 A form's key SHALL be stable against unrelated edits elsewhere in the suite: a raw line number
 SHALL NOT be the key, so that refreshing the vendored suite does not invalidate every exclusion.
 
+Keys SHALL be unique. Since the suite repeats some text verbatim — `(test-end)` markers, and
+assertion pairs written twice on purpose — a content-derived key SHALL disambiguate repeated text
+by its occurrence order, while text that appears once SHALL keep a key derived from content alone.
+
 #### Scenario: Every form is accounted for
 
 - **WHEN** the generator runs over the vendored suite
@@ -70,6 +86,11 @@ SHALL NOT be the key, so that refreshing the vendored suite does not invalidate 
 
 - **WHEN** a form is added to or removed from one section of the suite and the manifest is regenerated
 - **THEN** the keys of forms in other sections are unchanged
+
+#### Scenario: Repeated text still yields distinct keys
+
+- **WHEN** the suite contains the same form text more than once, as it does for `(test-end)`
+- **THEN** each occurrence has its own key, and generation does not fail on the repetition
 
 ### Requirement: A checksum guard ties the manifests to the vendored suite
 

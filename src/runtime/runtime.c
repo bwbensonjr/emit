@@ -417,6 +417,11 @@ val rt_lt(val a, val b) {
 }
 val rt_null_p(val v)       { return truthy(v == NIL_V); }
 val rt_pair_p(val v)       { return truthy(tag_of(v) == TAG_PAIR); }
+/* procedure?: a closure is TAG_CLOSURE, and EVERY callable value in Emit is one --
+ * including a primitive used in value position, which inline-primitives eta-expands
+ * into an ordinary closure (src/parse.ss).  So this one tag test answers the whole
+ * predicate; there is no separate primitive-object case to consider. */
+val rt_procedure_p(val v)  { return truthy(tag_of(v) == TAG_CLOSURE); }
 val rt_eq_p(val a, val b)  { return truthy(a == b); }
 /* eqv?: same-object identity, plus flonum value comparison (change:
  * inexact-numbers).  == covers every immediate (fixnums, booleans, characters)
@@ -751,6 +756,8 @@ val rt_list_to_string(val lst) {
   return rt_make_string(buf, off);
 }
 /* a string of k copies of character ch. */
+val rt_make_string_fill(val k, val ch);
+val rt_make_string_1(val k) { return rt_make_string_fill(k, MK_CHAR(' ')); }
 val rt_make_string_fill(val k, val ch) {
   intptr_t n = UNFIX(k);
   if (n < 0) rt_size_error("make-string", n);
@@ -795,6 +802,12 @@ val rt_string_set(val s, val idx, val ch) {
 }
 /* string-copy: a fresh string object over a fresh copy of the bytes. */
 val rt_string_copy(val s) { return rt_make_string(str_bytes(s), str_len(s)); }
+/* The optional-argument forms R7RS gives these three (change: r7rs-conformance-suite).
+ * Each is its own entry point with its own fixed C signature, selected by argument
+ * count through *integrable* -- the pattern the port-directed output procedures set.
+ * Widening them in the PRELUDE instead would shadow the primitive for every arity and
+ * cost the existing call sites their bare-primcall codegen. */
+val rt_string_copy_from(val s, val start) { return rt_substring(s, start, FIX(str_len(s))); }
 
 /* --- process I/O for a standalone text filter (self-host-io-strategy G3) ---
  * The two edge primitives a native `schemec` needs: pull all of stdin into a
@@ -1248,6 +1261,11 @@ val rt_port_write_string(val s, val p) {
 
 /* --- vectors (tag-7 HDR_VECTOR: { HDR_VECTOR, length, elem... }) --------- */
 static intptr_t vec_len(val v) { return (intptr_t)as_ptr(v)[1]; }
+/* make-vector / make-string with the fill omitted: R7RS leaves the contents
+ * unspecified, so any definite value serves.  0 and space are chosen over leaving the
+ * memory as GC_MALLOC found it, so the result is reproducible and safe to print. */
+val rt_make_vector(val k, val fill);
+val rt_make_vector_1(val k) { return rt_make_vector(k, FIX(0)); }
 val rt_make_vector(val k, val fill) {
   intptr_t n = UNFIX(k);
   if (n < 0) rt_size_error("make-vector", n);

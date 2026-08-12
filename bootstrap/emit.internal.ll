@@ -44,6 +44,10 @@ declare i64 @rt_pow(i64, i64)
 declare i64 @rt_write_char(i64)
 declare i64 @rt_null_p(i64)
 declare i64 @rt_pair_p(i64)
+declare i64 @rt_procedure_p(i64)
+declare i64 @rt_make_string_1(i64)
+declare i64 @rt_make_vector_1(i64)
+declare i64 @rt_string_copy_from(i64, i64)
 declare i64 @rt_eq_p(i64, i64)
 declare i64 @rt_eqv_p(i64, i64)
 declare i64 @rt_equal(i64, i64)
@@ -4327,7 +4331,7 @@ else863:
   ret i64 %a0
 }
 
-define fastcc i64 @"emit.internal:code_675"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"emit.internal:code_687"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2201 = icmp eq i64 %argc, 2
   br i1 %t2201, label %argok868, label %arityerr867
@@ -4390,7 +4394,7 @@ fixmerge876:
   %t2238 = inttoptr i64 %t2237 to ptr
   %t2239 = call fastcc i64%t2238(i64 %t2234, i64 1, i64 %t2233, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t2240 = call i64 @rt_cons(i64 %t2239, i64 %a1)
-  %t2241 = musttail call fastcc i64 @"emit.internal:code_675"(i64 %self, i64 2, i64 %t2228, i64 %t2240, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t2241 = musttail call fastcc i64 @"emit.internal:code_687"(i64 %self, i64 2, i64 %t2228, i64 %t2240, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t2241
 }
 
@@ -4405,7 +4409,7 @@ argok878:
   %t2243 = call i64 @rt_string_length(i64 %a0)
   %t2244 = call ptr @rt_alloc_words(i64 4)
   %t2245 = ptrtoint ptr %t2244 to i64
-  store i64 ptrtoint (ptr @"emit.internal:code_675" to i64), ptr %t2244
+  store i64 ptrtoint (ptr @"emit.internal:code_687" to i64), ptr %t2244
   %t2246 = or i64 %t2245, 4
   %t2247 = getelementptr i64, ptr %t2244, i64 1
   store i64 %t2243, ptr %t2247
@@ -4413,7 +4417,7 @@ argok878:
   store i64 %t2246, ptr %t2248
   %t2249 = getelementptr i64, ptr %t2244, i64 3
   store i64 %a0, ptr %t2249
-  %t2250 = musttail call fastcc i64 @"emit.internal:code_675"(i64 %t2246, i64 2, i64 0, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t2250 = musttail call fastcc i64 @"emit.internal:code_687"(i64 %t2246, i64 2, i64 0, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t2250
 }
 
@@ -4961,7 +4965,7 @@ else999:
   ret i64 %a0
 }
 
-define fastcc i64 @"emit.internal:code_792"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"emit.internal:code_804"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t2547 = icmp eq i64 %argc, 2
   br i1 %t2547, label %argok1001, label %arityerr1000
@@ -5187,7 +5191,7 @@ fixmerge1044:
   %t2683 = call i64 @rt_car(i64 %t2681)
   %t2684 = call i64 @rt_integer_to_char(i64 %t2683)
   %t2685 = call i64 @rt_cons(i64 %t2684, i64 %a1)
-  %t2686 = musttail call fastcc i64 @"emit.internal:code_792"(i64 %self, i64 2, i64 %t2682, i64 %t2685, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t2686 = musttail call fastcc i64 @"emit.internal:code_804"(i64 %self, i64 2, i64 %t2682, i64 %t2685, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t2686
 else1041:
   %t2687 = or i64 %a0, 16
@@ -5211,7 +5215,7 @@ fixmerge1047:
   %t2699 = inttoptr i64 %t2698 to ptr
   %t2700 = call fastcc i64%t2699(i64 %t2695, i64 1, i64 %t2650, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t2701 = call i64 @rt_cons(i64 %t2700, i64 %a1)
-  %t2702 = musttail call fastcc i64 @"emit.internal:code_792"(i64 %self, i64 2, i64 %t2694, i64 %t2701, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t2702 = musttail call fastcc i64 @"emit.internal:code_804"(i64 %self, i64 2, i64 %t2694, i64 %t2701, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t2702
 else1019:
   %t2703 = or i64 %a0, 8
@@ -5229,7 +5233,7 @@ fixslow1049:
 fixmerge1050:
   %t2710 = phi i64 [ %t2707, %fixfast1048 ], [ %t2709, %fixslow1049 ]
   %t2711 = call i64 @rt_cons(i64 %t2564, i64 %a1)
-  %t2712 = musttail call fastcc i64 @"emit.internal:code_792"(i64 %self, i64 2, i64 %t2710, i64 %t2711, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t2712 = musttail call fastcc i64 @"emit.internal:code_804"(i64 %self, i64 2, i64 %t2710, i64 %t2711, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t2712
 else1006:
   %t2713 = call i64 @rt_intern(ptr @.str.sym.11)
@@ -5256,7 +5260,7 @@ arityerr1051:
 argok1052:
   %t2725 = call ptr @rt_alloc_words(i64 5)
   %t2726 = ptrtoint ptr %t2725 to i64
-  store i64 ptrtoint (ptr @"emit.internal:code_792" to i64), ptr %t2725
+  store i64 ptrtoint (ptr @"emit.internal:code_804" to i64), ptr %t2725
   %t2727 = or i64 %t2726, 4
   %t2728 = getelementptr i64, ptr %t2725, i64 1
   store i64 %a1, ptr %t2728
@@ -5266,7 +5270,7 @@ argok1052:
   store i64 %a3, ptr %t2730
   %t2731 = getelementptr i64, ptr %t2725, i64 4
   store i64 %t2727, ptr %t2731
-  %t2732 = musttail call fastcc i64 @"emit.internal:code_792"(i64 %t2727, i64 2, i64 %a2, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t2732 = musttail call fastcc i64 @"emit.internal:code_804"(i64 %t2727, i64 2, i64 %a2, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t2732
 }
 
@@ -5974,7 +5978,7 @@ else1193:
   ret i64 %t3148
 }
 
-define fastcc i64 @"emit.internal:code_890"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+define fastcc i64 @"emit.internal:code_938"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t3153 = icmp eq i64 %argc, 2
   br i1 %t3153, label %argok1195, label %arityerr1194
@@ -6172,7 +6176,7 @@ fixmerge1233:
   %t3271 = call i64 @rt_car(i64 %t3269)
   %t3272 = call i64 @rt_integer_to_char(i64 %t3271)
   %t3273 = call i64 @rt_cons(i64 %t3272, i64 %a1)
-  %t3274 = musttail call fastcc i64 @"emit.internal:code_890"(i64 %self, i64 2, i64 %t3270, i64 %t3273, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3274 = musttail call fastcc i64 @"emit.internal:code_938"(i64 %self, i64 2, i64 %t3270, i64 %t3273, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t3274
 else1230:
   %t3275 = or i64 %a0, 16
@@ -6196,7 +6200,7 @@ fixmerge1236:
   %t3287 = inttoptr i64 %t3286 to ptr
   %t3288 = call fastcc i64%t3287(i64 %t3283, i64 1, i64 %t3238, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   %t3289 = call i64 @rt_cons(i64 %t3288, i64 %a1)
-  %t3290 = musttail call fastcc i64 @"emit.internal:code_890"(i64 %self, i64 2, i64 %t3282, i64 %t3289, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3290 = musttail call fastcc i64 @"emit.internal:code_938"(i64 %self, i64 2, i64 %t3282, i64 %t3289, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t3290
 else1222:
   %t3291 = or i64 %a0, 8
@@ -6214,7 +6218,7 @@ fixslow1238:
 fixmerge1239:
   %t3298 = phi i64 [ %t3295, %fixfast1237 ], [ %t3297, %fixslow1238 ]
   %t3299 = call i64 @rt_cons(i64 %t3170, i64 %a1)
-  %t3300 = musttail call fastcc i64 @"emit.internal:code_890"(i64 %self, i64 2, i64 %t3298, i64 %t3299, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3300 = musttail call fastcc i64 @"emit.internal:code_938"(i64 %self, i64 2, i64 %t3298, i64 %t3299, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t3300
 else1200:
   %t3301 = call i64 @rt_intern(ptr @.str.sym.22)
@@ -6241,7 +6245,7 @@ arityerr1240:
 argok1241:
   %t3313 = call ptr @rt_alloc_words(i64 5)
   %t3314 = ptrtoint ptr %t3313 to i64
-  store i64 ptrtoint (ptr @"emit.internal:code_890" to i64), ptr %t3313
+  store i64 ptrtoint (ptr @"emit.internal:code_938" to i64), ptr %t3313
   %t3315 = or i64 %t3314, 4
   %t3316 = getelementptr i64, ptr %t3313, i64 1
   store i64 %a1, ptr %t3316
@@ -6251,7 +6255,7 @@ argok1241:
   store i64 %t3315, ptr %t3318
   %t3319 = getelementptr i64, ptr %t3313, i64 4
   store i64 %a3, ptr %t3319
-  %t3320 = musttail call fastcc i64 @"emit.internal:code_890"(i64 %t3315, i64 2, i64 %a2, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
+  %t3320 = musttail call fastcc i64 @"emit.internal:code_938"(i64 %t3315, i64 2, i64 %a2, i64 2, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, ptr null)
   ret i64 %t3320
 }
 

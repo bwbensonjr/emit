@@ -145,14 +145,16 @@ Indices SHALL be measured in codepoints, consistent with `string-ref`, and SHALL
 - **WHEN** a program evaluates `(vector->string (string->vector "héllo"))`
 - **THEN** the result is the string `"héllo"` (codepoint content preserved)
 
-### Requirement: List operations assv, list-copy, and list-set!
+### Requirement: List operations assv and list-copy
 
-The compiler SHALL provide `assv`, `list-copy`, and `list-set!`. `assv` SHALL return the first pair
+The compiler SHALL provide `assv` and `list-copy`. `assv` SHALL return the first pair
 of an association list whose car is `eqv?` to the key, or `#f`, completing the
 `assq`/`assv`/`assoc` family. `(list-copy obj)` SHALL return a copy of `obj` with freshly allocated
 pairs and the same elements; a non-pair argument SHALL be returned unchanged, and an improper list
-SHALL be copied with its tail preserved. `(list-set! list k obj)` SHALL store `obj` as the `k`-th
-element in place.
+SHALL be copied with its tail preserved.
+
+`list-set!` is deliberately NOT included: it mutates a pair, and mutable pairs do not exist yet
+(`set-car!`/`set-cdr!` are absent). It SHALL arrive with them.
 
 #### Scenario: assv finds by eqv?
 
@@ -169,16 +171,12 @@ element in place.
 - **WHEN** a program evaluates `(list-copy 7)`
 - **THEN** the result is `7`
 
-#### Scenario: list-set!
-
-- **WHEN** a program evaluates `(let ((xs (list 1 2 3))) (list-set! xs 1 9) xs)`
-- **THEN** the result is `(1 9 3)`
-
 ### Requirement: Type and equivalence predicates procedure?, boolean=?, symbol=?
 
 The compiler SHALL provide `procedure?`, `boolean=?`, and `symbol=?`. `(procedure? x)` SHALL return
 `#t` iff `x` can be called as a procedure, which SHALL include a primitive used as a first-class
-value. `(boolean=? b1 b2 b3 …)` and `(symbol=? s1 s2 s3 …)` SHALL each accept two or more arguments
+value. `procedure?` SHALL be answered by a primitive tag test rather than derived, since no
+existing primitive distinguishes a closure from another heap object. `(boolean=? b1 b2 b3 …)` and `(symbol=? s1 s2 s3 …)` SHALL each accept two or more arguments
 of their type and return `#t` iff all are the same boolean, respectively the same symbol.
 
 #### Scenario: procedure? on a lambda and a primitive value
@@ -214,28 +212,6 @@ concatenating its arguments in order. Ranges SHALL be bounds-checked.
 - **WHEN** a program copies a range of a bytevector onto an overlapping range of itself
 - **THEN** the result is as if the source range had been read in full before any byte was written
 
-### Requirement: Error-object classification predicates
-
-The compiler SHALL provide `read-error?` and `file-error?`. Each SHALL return `#t` iff its argument
-is an error object raised by, respectively, a read failure or a file-operation failure, and `#f`
-for any other object — including an error object of the other kind and an error object raised by
-`error`. This SHALL let a `guard` clause distinguish the three sources.
-
-#### Scenario: An error from error is neither
-
-- **WHEN** a program evaluates `(guard (e (#t (list (read-error? e) (file-error? e)))) (error "boom"))`
-- **THEN** the result is `(#f #f)`
-
-#### Scenario: A read failure is a read error
-
-- **WHEN** a program reads from a port whose contents are not a well-formed datum, inside a `guard`
-- **THEN** `read-error?` of the raised object is `#t` and `file-error?` is `#f`
-
-#### Scenario: A missing file is a file error
-
-- **WHEN** a program opens a file that does not exist, inside a `guard`
-- **THEN** `file-error?` of the raised object is `#t` and `read-error?` is `#f`
-
 ### Requirement: rationalize
 
 The compiler SHALL provide `rationalize`. `(rationalize x y)` SHALL return the simplest number
@@ -253,7 +229,7 @@ non-integral exact result, rather than returning a wrong answer.
 #### Scenario: Exact rationalize with an integral answer
 
 - **WHEN** a program evaluates `(rationalize 7 3)`
-- **THEN** the result is the exact integer `6`
+- **THEN** the result is the exact integer `4` (the simplest value in `[4, 10]`, verified against Chez)
 
 #### Scenario: Exact rationalize with no integral answer is a diagnostic
 

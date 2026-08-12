@@ -125,6 +125,16 @@
     %str-concat
     ;; character comparison kernel (unsigiled by history, not by intent)
     chr-cmp
+    ;; range plumbing and kernels for the R7RS surface completed by change
+    ;; r7rs-conformance-suite.  Unsigiled deliberately: a %-name is a RESERVED raw
+    ;; primitive (src/parse.ss *prims*), so a helper must not carry that prefix.
+    rng-start rng-end rng-check
+    eqv-chain? str-cmp str-chain?
+    vec-total vec-min-len vec-nth
+    str-map1 str-mapn str-min-len str-nth
+    bv-total
+    member-by assoc-by
+    rat-max-denom rat-exact rat-inexact rat-ceil rat-floor rat-num-in rat-ceil-flo
     ;; number->string / string->number internals (ns-digits* likewise unsigiled).
     ;; The last three are now the READER's too and are re-homed in the substrate with
     ;; it (change: reader-lexical-conformance) -- they stay here because this list says

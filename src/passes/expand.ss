@@ -378,7 +378,12 @@
              `(,h ,(map bind-exp (cadr e)) ,@(map exp1 (cddr e)))]
             [(memq h '(+ - * /)) (expand-arith exp1 h (cdr e))]
             [(eq? h 'string-append) (expand-string-append exp1 (cdr e))]
-            [(memq h '(= < > <= >= eq? eqv?)) (expand-compare exp1 h (cdr e))]
+            ;; `string=?` is n-ary in R7RS 6.7.  It joins the chain here rather than
+            ;; becoming a variadic prelude procedure (the route char=? took), because a
+            ;; prelude define of an integrable name shadows the primitive for EVERY
+            ;; arity -- the two-argument call would lose its bare primcall, and the
+            ;; compiler's own reader leans on it.
+            [(memq h '(= < > <= >= eq? eqv? string=?)) (expand-compare exp1 h (cdr e))]
             [else (map exp1 e)]))))               ; if/begin/set!/apply/primcall/application
 
   (define (bind-exp b) (list (car b) (exp1 (cadr b))))
@@ -495,4 +500,5 @@
     [(<=)   `(if (< ,x ,y) #t (= ,x ,y))]
     [(>=)   `(if (< ,y ,x) #t (= ,x ,y))]
     [(eq?)  `(eq? ,x ,y)]
-    [(eqv?) `(eqv? ,x ,y)]))
+    [(eqv?) `(eqv? ,x ,y)]
+    [(string=?) `(string=? ,x ,y)]))
