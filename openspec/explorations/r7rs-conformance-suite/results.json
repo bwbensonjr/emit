@@ -1,0 +1,2864 @@
+[
+ {
+  "section": "4.1 Primitive expression types",
+  "forms": 29,
+  "accepted": 27,
+  "rejected": [
+   {
+    "line": 50,
+    "text": "(test #(a b c) (quote #(a b c)))",
+    "err": "emit: parse: bad expression #(a b c)",
+    "kind": "compile"
+   },
+   {
+    "line": 54,
+    "text": "(test #(a b c) '#(a b c))",
+    "err": "emit: parse: bad expression #(a b c)",
+    "kind": "compile"
+   }
+  ],
+  "pass": 25,
+  "fail": 0,
+  "failures": [],
+  "compiles": 17
+ },
+ {
+  "section": "4.2 Derived expression types",
+  "forms": 80,
+  "accepted": 32,
+  "rejected": [
+   {
+    "line": 105,
+    "text": "(test 2\n    (cond ((assv 'b '((a 1) (b 2))) => cadr)\n          (else #f)))",
+    "err": "emit: unbound variable assv",
+    "kind": "compile"
+   },
+   {
+    "line": 114,
+    "text": "(test 'c\n    (case (car '(c d))\n      ((a e i o u) 'vowel)\n      ((w y) 'semivowel)\n      (else => (lambda (x) x))))",
+    "err": "emit: unbound variable =>",
+    "kind": "compile"
+   },
+   {
+    "line": 120,
+    "text": "(test '((other . z) (semivowel . y) (other . x)\n        (semivowel . w) (vowel . u))\n    (map (lambda (x)\n           (case x\n             ((a e i o u) => (lambda (w) (cons 'vowel w)))\n             ((w y) (cons 'semivowel x))\n             (else => (lambda (w) (cons 'other w)))))\n         '(z y x w u)",
+    "err": "emit: unbound variable =>",
+    "kind": "compile"
+   },
+   {
+    "line": 199,
+    "text": "(let*-values (((a b c) (means '(8 5 99 1 22))))\n  (test 27 a)\n  (test 9.728 b)\n  (test 1800/497 c))",
+    "err": "emit: read: rational literal syntax is not supported -- Emit has no exact rationals; write 0.5, or (/ 1 2) 1800/497",
+    "kind": "compile"
+   },
+   {
+    "line": 204,
+    "text": "(let*-values (((root rem) (exact-integer-sqrt 32)))\n  (test 35 (* root rem)))",
+    "err": "emit: unbound variable let*-values",
+    "kind": "compile"
+   },
+   {
+    "line": 207,
+    "text": "(test '(1073741824 0)\n    (let*-values (((root rem) (exact-integer-sqrt (expt 2 60))))\n      (list root rem)))",
+    "err": "emit: unbound variable let*-values",
+    "kind": "compile"
+   },
+   {
+    "line": 211,
+    "text": "(test '(1518500249 3000631951)\n    (let*-values (((root rem) (exact-integer-sqrt (expt 2 61))))\n      (list root rem)))",
+    "err": "emit: unbound variable let*-values",
+    "kind": "compile"
+   },
+   {
+    "line": 215,
+    "text": "(test '(815238614083298888 443242361398135744)\n    (let*-values (((root rem) (exact-integer-sqrt (expt 2 119))))\n      (list root rem)))",
+    "err": "emit: unbound variable let*-values",
+    "kind": "compile"
+   },
+   {
+    "line": 219,
+    "text": "(test '(1152921504606846976 0)\n    (let*-values (((root rem) (exact-integer-sqrt (expt 2 120))))\n      (list root rem)))",
+    "err": "+: fixnum overflow: 1152921504606846970 + 6",
+    "kind": "runtime"
+   },
+   {
+    "line": 223,
+    "text": "(test '(1630477228166597776 1772969445592542976)\n    (let*-values (((root rem) (exact-integer-sqrt (expt 2 121))))\n      (list root rem)))",
+    "err": "*: fixnum overflow: 163047722816659777 * 10",
+    "kind": "runtime"
+   },
+   {
+    "line": 227,
+    "text": "(test '(31622776601683793319 62545769258890964239)\n    (let*-values (((root rem) (exact-integer-sqrt (expt 10 39))))\n      (list root rem)))",
+    "err": "*: fixnum overflow: 316227766016837933 * 10",
+    "kind": "runtime"
+   },
+   {
+    "line": 231,
+    "text": "(let*-values (((root rem) (exact-integer-sqrt (expt 2 140))))\n  (test 0 rem)\n  (test (expt 2 140) (square root)))",
+    "err": "emit: unbound variable let*-values",
+    "kind": "compile"
+   },
+   {
+    "line": 235,
+    "text": "(test '(x y x y) (let ((a 'a) (b 'b) (x 'x) (y 'y))\n  (let*-values (((a b) (values x y))\n                ((x y) (values a b)))\n    (list a b x y))))",
+    "err": "emit: unbound variable let*-values",
+    "kind": "compile"
+   },
+   {
+    "line": 240,
+    "text": "(test 'ok (let-values () 'ok))",
+    "err": "emit: unbound variable let-values",
+    "kind": "compile"
+   },
+   {
+    "line": 242,
+    "text": "(test 1 (let ((x 1))\n\t  (let*-values ()\n\t    (define x 2)\n\t    #f)\n\t  x))",
+    "err": "emit: parse: 'define' is only allowed at the top level (define x 2)",
+    "kind": "compile"
+   },
+   {
+    "line": 253,
+    "text": "(test #(0 1 2 3 4) (do ((vec (make-vector 5))\n     (i 0 (+ i 1)))\n    ((= i 5) vec)\n  (vector-set! vec i i)))",
+    "err": "emit: parse: bad expression #(0 1 2 3 4)",
+    "kind": "compile"
+   },
+   {
+    "line": 277,
+    "text": "(test 3 (force (delay (+ 1 2))))",
+    "err": "emit: unbound variable force",
+    "kind": "compile"
+   },
+   {
+    "line": 279,
+    "text": "(test '(3 3)  \n    (let ((p (delay (+ 1 2))))\n      (list (force p) (force p))))",
+    "err": "emit: unbound variable delay",
+    "kind": "compile"
+   },
+   {
+    "line": 283,
+    "text": "(define integers\n  (letrec ((next\n            (lambda (n)\n              (delay (cons n (next (+ n 1)))))))\n    (next 0)))",
+    "err": "emit: unbound variable delay",
+    "kind": "compile"
+   },
+   {
+    "line": 288,
+    "text": "(define head\n  (lambda (stream) (car (force stream))))",
+    "err": "emit: unbound variable force",
+    "kind": "compile"
+   },
+   {
+    "line": 290,
+    "text": "(define tail\n  (lambda (stream) (cdr (force stream))))",
+    "err": "emit: unbound variable force",
+    "kind": "compile"
+   },
+   {
+    "line": 293,
+    "text": "(test 2 (head (tail (tail integers))))",
+    "err": "emit: unbound variable head",
+    "kind": "compile"
+   },
+   {
+    "line": 295,
+    "text": "(define (stream-filter p? s)\n  (delay-force\n   (if (null? (force s)) \n       (delay '())\n       (let ((h (car (force s)))\n             (t (cdr (force s))))\n         (if (p? h)\n             (delay (cons h (stream-filter p? t)))\n             (stream-filter p? t))))))",
+    "err": "emit: unbound variable delay-force",
+    "kind": "compile"
+   },
+   {
+    "line": 305,
+    "text": "(test 5 (head (tail (tail (stream-filter odd? integers)))))",
+    "err": "emit: unbound variable head",
+    "kind": "compile"
+   },
+   {
+    "line": 307,
+    "text": "(let ()\n  (define x 5)\n  (define count 0)\n  (define p\n    (delay (begin (set! count (+ count 1))\n                  (if (> count x)\n                      count\n                      (force p)))))\n  (test 6 (force p))\n  (test 6 (begin (set! x 10) (force p))))",
+    "err": "emit: unbound variable delay",
+    "kind": "compile"
+   },
+   {
+    "line": 318,
+    "text": "(test #t (promise? (delay (+ 2 2))))",
+    "err": "emit: unbound variable promise?",
+    "kind": "compile"
+   },
+   {
+    "line": 319,
+    "text": "(test #t (promise? (make-promise (+ 2 2))))",
+    "err": "emit: unbound variable promise?",
+    "kind": "compile"
+   },
+   {
+    "line": 320,
+    "text": "(test #t\n    (let ((x (delay (+ 2 2))))\n      (force x)\n      (promise? x)))",
+    "err": "emit: unbound variable delay",
+    "kind": "compile"
+   },
+   {
+    "line": 324,
+    "text": "(test #t\n    (let ((x (make-promise (+ 2 2))))\n      (force x)\n      (promise? x)))",
+    "err": "emit: unbound variable make-promise",
+    "kind": "compile"
+   },
+   {
+    "line": 328,
+    "text": "(test 4 (force (make-promise (+ 2 2))))",
+    "err": "emit: unbound variable force",
+    "kind": "compile"
+   },
+   {
+    "line": 329,
+    "text": "(test 4 (force (make-promise (make-promise (+ 2 2)))))",
+    "err": "emit: unbound variable force",
+    "kind": "compile"
+   },
+   {
+    "line": 347,
+    "text": "(test #(10 5 4 16 9 8)\n    `#(10 5 ,(square 2) ,@(map square '(4 3)) 8))",
+    "err": "emit: parse: bad expression #(10 5 4 16 9 8)",
+    "kind": "compile"
+   },
+   {
+    "line": 357,
+    "text": "(define any-arity\n  (case-lambda \n    (() 'zero)\n    ((x) x)\n    ((x y) (cons x y))\n    ((x y z) (list x y z))\n    (args (cons 'many args))))",
+    "err": "emit: unbound variable case-lambda",
+    "kind": "compile"
+   },
+   {
+    "line": 365,
+    "text": "(test 'zero (any-arity))",
+    "err": "emit: unbound variable any-arity",
+    "kind": "compile"
+   },
+   {
+    "line": 366,
+    "text": "(test 1 (any-arity 1))",
+    "err": "emit: unbound variable any-arity",
+    "kind": "compile"
+   },
+   {
+    "line": 367,
+    "text": "(test '(1 . 2) (any-arity 1 2))",
+    "err": "emit: unbound variable any-arity",
+    "kind": "compile"
+   },
+   {
+    "line": 368,
+    "text": "(test '(1 2 3) (any-arity 1 2 3))",
+    "err": "emit: unbound variable any-arity",
+    "kind": "compile"
+   },
+   {
+    "line": 369,
+    "text": "(test '(many 1 2 3 4) (any-arity 1 2 3 4))",
+    "err": "emit: unbound variable any-arity",
+    "kind": "compile"
+   },
+   {
+    "line": 371,
+    "text": "(define rest-arity\n  (case-lambda \n    (() '(zero))\n    ((x) (list 'one x))\n    ((x y) (list 'two x y))\n    ((x y . z) (list 'more x y z))))",
+    "err": "<no output>",
+    "kind": "runtime"
+   },
+   {
+    "line": 378,
+    "text": "(test '(zero) (rest-arity))",
+    "err": "emit: unbound variable rest-arity",
+    "kind": "compile"
+   },
+   {
+    "line": 379,
+    "text": "(test '(one 1) (rest-arity 1))",
+    "err": "emit: unbound variable rest-arity",
+    "kind": "compile"
+   },
+   {
+    "line": 380,
+    "text": "(test '(two 1 2) (rest-arity 1 2))",
+    "err": "emit: unbound variable rest-arity",
+    "kind": "compile"
+   },
+   {
+    "line": 381,
+    "text": "(test '(more 1 2 (3)) (rest-arity 1 2 3))",
+    "err": "emit: unbound variable rest-arity",
+    "kind": "compile"
+   },
+   {
+    "line": 383,
+    "text": "(define dead-clause\n  (case-lambda\n    ((x . y) 'many)\n    (() 'none)\n    (foo 'unreachable)))",
+    "err": "<no output>",
+    "kind": "runtime"
+   },
+   {
+    "line": 389,
+    "text": "(test 'none (dead-clause))",
+    "err": "emit: unbound variable dead-clause",
+    "kind": "compile"
+   },
+   {
+    "line": 390,
+    "text": "(test 'many (dead-clause 1))",
+    "err": "emit: unbound variable dead-clause",
+    "kind": "compile"
+   },
+   {
+    "line": 391,
+    "text": "(test 'many (dead-clause 1 2))",
+    "err": "emit: unbound variable dead-clause",
+    "kind": "compile"
+   },
+   {
+    "line": 392,
+    "text": "(test 'many (dead-clause 1 2 3))",
+    "err": "emit: unbound variable dead-clause",
+    "kind": "compile"
+   }
+  ],
+  "pass": 29,
+  "fail": 0,
+  "failures": [],
+  "compiles": 88
+ },
+ {
+  "section": "4.3 Macros",
+  "forms": 39,
+  "accepted": 19,
+  "rejected": [
+   {
+    "line": 398,
+    "text": "(test 'now (let-syntax\n               ((when (syntax-rules ()\n                        ((when test stmt1 stmt2 ...)\n                         (if test\n                             (begin stmt1\n                                    stmt2 ...))))))\n             (let ((if #t))\n               (when if (set!",
+    "err": "emit: unbound variable let-syntax",
+    "kind": "compile"
+   },
+   {
+    "line": 408,
+    "text": "(test 'outer (let ((x 'outer))\n  (let-syntax ((m (syntax-rules () ((m) x))))\n    (let ((x 'inner))\n      (m)))))",
+    "err": "emit: unbound variable let-syntax",
+    "kind": "compile"
+   },
+   {
+    "line": 413,
+    "text": "(test 7 (letrec-syntax\n  ((my-or (syntax-rules ()\n            ((my-or) #f)\n            ((my-or e) e)\n            ((my-or e1 e2 ...)\n             (let ((temp e1))\n               (if temp\n                   temp\n                   (my-or e2 ...)))))))\n  (let ((x #f)\n        (y 7)\n        (temp 8)\n    ",
+    "err": "<no output>",
+    "kind": "runtime"
+   },
+   {
+    "line": 439,
+    "text": "(be-like-begin1 sequence1)",
+    "err": "emit: unbound variable define-syntax",
+    "kind": "compile"
+   },
+   {
+    "line": 440,
+    "text": "(test 3 (sequence1 0 1 2 3))",
+    "err": "emit: unbound variable sequence1",
+    "kind": "compile"
+   },
+   {
+    "line": 449,
+    "text": "(be-like-begin2 sequence2)",
+    "err": "emit: unbound variable define-syntax",
+    "kind": "compile"
+   },
+   {
+    "line": 450,
+    "text": "(test 4 (sequence2 1 2 3 4))",
+    "err": "emit: unbound variable sequence2",
+    "kind": "compile"
+   },
+   {
+    "line": 459,
+    "text": "(be-like-begin3 sequence3)",
+    "err": "emit: unbound variable define-syntax",
+    "kind": "compile"
+   },
+   {
+    "line": 460,
+    "text": "(test 5 (sequence3 2 3 4 5))",
+    "err": "emit: unbound variable sequence3",
+    "kind": "compile"
+   },
+   {
+    "line": 502,
+    "text": "(let ()\n  (define-syntax underscore2\n    (syntax-rules ()\n      ((underscore2 (a _) ...) 42)))\n  (test 42 (underscore2 (1 2))))",
+    "err": "emit: unbound variable define-syntax",
+    "kind": "compile"
+   },
+   {
+    "line": 535,
+    "text": "(jabberwocky mad-hatter)",
+    "err": "emit: unbound variable define-syntax",
+    "kind": "compile"
+   },
+   {
+    "line": 536,
+    "text": "(test 42 (mad-hatter))",
+    "err": "emit: unbound variable mad-hatter",
+    "kind": "compile"
+   },
+   {
+    "line": 538,
+    "text": "(test 'ok (let ((=> #f)) (cond (#t => 'ok))))",
+    "err": "<no output>",
+    "kind": "runtime"
+   },
+   {
+    "line": 540,
+    "text": "(let ()\n  (define x 1)\n  (let-syntax ()\n    (define x 2)\n    #f)\n  (test 1 x))",
+    "err": "emit: parse: 'define' is only allowed at the top level (define x 2)",
+    "kind": "compile"
+   },
+   {
+    "line": 547,
+    "text": "(let ()\n (define-syntax foo\n   (syntax-rules ()\n     ((foo bar y)\n      (define-syntax bar\n        (syntax-rules ()\n          ((bar x) 'y))))))\n (foo bar x)\n (test 'x (bar 1)))",
+    "err": "emit: unbound variable define-syntax",
+    "kind": "compile"
+   },
+   {
+    "line": 557,
+    "text": "(begin\n  (define-syntax ffoo\n    (syntax-rules ()\n      ((ffoo ff)\n       (begin\n         (define (ff x)\n           (gg x))\n         (define (gg x)\n           (* x x))))))\n  (ffoo ff)\n  (test 100 (ff 10)))",
+    "err": "emit: parse: internal defines with no following body expression ((define (ff x) (gg x)) (define (gg x) (* x x)))",
+    "kind": "compile"
+   },
+   {
+    "line": 569,
+    "text": "(let-syntax ((vector-lit\n               (syntax-rules ()\n                 ((vector-lit)\n                  '#(b)))))\n  (test '#(b) (vector-lit)))",
+    "err": "emit: unbound variable let-syntax",
+    "kind": "compile"
+   },
+   {
+    "line": 575,
+    "text": "(let ()\n  ;; forward hygienic refs\n  (define-syntax foo399\n    (syntax-rules () ((foo399) (bar399))))\n  (define (quux399)\n    (foo399))\n  (define (bar399)\n    42)\n  (test 42 (quux399)))",
+    "err": "emit: parse: 'define' is only allowed at the top level (define (quux399) (foo399))",
+    "kind": "compile"
+   },
+   {
+    "line": 585,
+    "text": "(let-syntax\n    ((m (syntax-rules ()\n          ((m x) (let-syntax\n                     ((n (syntax-rules (k)\n                           ((n x) 'bound-identifier=?)\n                           ((n y) 'free-identifier=?))))\n                   (n z))))))\n  (test 'bound-identifier=? (m k)))",
+    "err": "emit: unbound variable let-syntax",
+    "kind": "compile"
+   },
+   {
+    "line": 595,
+    "text": "(let ()\n  (define-syntax elli-lit-1\n    (syntax-rules ... (...)\n      ((_ x)\n       '(x ...))))\n  (test '(100 ...) (elli-lit-1 100)))",
+    "err": "emit: unbound variable define-syntax",
+    "kind": "compile"
+   }
+  ],
+  "pass": 8,
+  "fail": 1,
+  "failures": [
+   "FAIL [] (list (count-to-2_ _ _) (count-to-2_) (count-to-2_ a b) (count-to-2_ a b c d)): expected (2 0 fail fail) but got (2 0 2 fail)"
+  ],
+  "compiles": 44
+ },
+ {
+  "section": "5 Program structure",
+  "forms": 18,
+  "accepted": 11,
+  "rejected": [
+   {
+    "line": 638,
+    "text": "(test 'ok\n    (let ()\n      (define-values () (values))\n      'ok))",
+    "err": "emit: unbound variable define-values",
+    "kind": "compile"
+   },
+   {
+    "line": 642,
+    "text": "(test 1\n    (let ()\n      (define-values (x) (values 1))\n      x))",
+    "err": "emit: unbound variable define-values",
+    "kind": "compile"
+   },
+   {
+    "line": 646,
+    "text": "(test 3\n    (let ()\n      (define-values x (values 1 2))\n      (apply + x)))",
+    "err": "emit: unbound variable define-values",
+    "kind": "compile"
+   },
+   {
+    "line": 650,
+    "text": "(test 3\n    (let ()\n      (define-values (x y) (values 1 2))\n      (+ x y)))",
+    "err": "emit: unbound variable define-values",
+    "kind": "compile"
+   },
+   {
+    "line": 654,
+    "text": "(test 6\n    (let ()\n      (define-values (x y z) (values 1 2 3))\n      (+ x y z)))",
+    "err": "emit: unbound variable define-values",
+    "kind": "compile"
+   },
+   {
+    "line": 658,
+    "text": "(test 10\n    (let ()\n      (define-values (x y . z) (values 1 2 3 4))\n      (+ x y (car z) (cadr z))))",
+    "err": "<no output>",
+    "kind": "runtime"
+   },
+   {
+    "line": 663,
+    "text": "(test '(2 1) (let ((x 1) (y 2))\n  (define-syntax swap!\n    (syntax-rules ()\n      ((swap! a b)\n       (let ((tmp a))\n         (set! a b)\n         (set! b tmp)))))\n  (swap! x y)\n  (list x y)))",
+    "err": "emit: unbound variable define-syntax",
+    "kind": "compile"
+   }
+  ],
+  "pass": 8,
+  "fail": 0,
+  "failures": [],
+  "compiles": 18
+ },
+ {
+  "section": "6.1 Equivalence Predicates",
+  "forms": 27,
+  "accepted": 27,
+  "rejected": [],
+  "pass": 25,
+  "fail": 0,
+  "failures": [],
+  "compiles": 2
+ },
+ {
+  "section": "6.2 Numbers",
+  "forms": 212,
+  "accepted": 170,
+  "rejected": [
+   {
+    "line": 756,
+    "text": "(test #t (complex? 3+4i))",
+    "err": "emit: unbound variable 3+4i",
+    "kind": "compile"
+   },
+   {
+    "line": 759,
+    "text": "(test #t (real? -2.5+0i))",
+    "err": "emit: unbound variable -2.5+0i",
+    "kind": "compile"
+   },
+   {
+    "line": 760,
+    "text": "(test #f (real? -2.5+0.0i))",
+    "err": "emit: unbound variable -2.5+0.0i",
+    "kind": "compile"
+   },
+   {
+    "line": 768,
+    "text": "(test #t (rational? 6/10))",
+    "err": "emit: read: rational literal syntax is not supported -- Emit has no exact rationals; write 0.5, or (/ 1 2) 6/10",
+    "kind": "compile"
+   },
+   {
+    "line": 769,
+    "text": "(test #t (rational? 6/3))",
+    "err": "emit: read: rational literal syntax is not supported -- Emit has no exact rationals; write 0.5, or (/ 1 2) 6/3",
+    "kind": "compile"
+   },
+   {
+    "line": 770,
+    "text": "(test #t (integer? 3+0i))",
+    "err": "emit: unbound variable 3+0i",
+    "kind": "compile"
+   },
+   {
+    "line": 772,
+    "text": "(test #t (integer? 8/4))",
+    "err": "emit: read: rational literal syntax is not supported -- Emit has no exact rationals; write 0.5, or (/ 1 2) 8/4",
+    "kind": "compile"
+   },
+   {
+    "line": 780,
+    "text": "(test #f (exact-integer? 32/5))",
+    "err": "emit: read: rational literal syntax is not supported -- Emit has no exact rationals; write 0.5, or (/ 1 2) 32/5",
+    "kind": "compile"
+   },
+   {
+    "line": 784,
+    "text": "(test #f (finite? 3.0+inf.0i))",
+    "err": "emit: unbound variable 3.0+inf.0i",
+    "kind": "compile"
+   },
+   {
+    "line": 789,
+    "text": "(test #t (infinite? 3.0+inf.0i))",
+    "err": "emit: unbound variable 3.0+inf.0i",
+    "kind": "compile"
+   },
+   {
+    "line": 794,
+    "text": "(test #f (nan? 1+2i))",
+    "err": "emit: unbound variable 1+2i",
+    "kind": "compile"
+   },
+   {
+    "line": 796,
+    "text": "(test #t (= 1 1.0 1.0+0.0i))",
+    "err": "emit: unbound variable 1.0+0.0i",
+    "kind": "compile"
+   },
+   {
+    "line": 797,
+    "text": "(test #f (= 1.0 1.0+1.0i))",
+    "err": "emit: unbound variable 1.0+1.0i",
+    "kind": "compile"
+   },
+   {
+    "line": 822,
+    "text": "(let ((a (- (expt 2 1000) 1))\n      (b (inexact (expt 2 1000))) ; assuming > single-float-epsilon\n      (c (+ (expt 2 1000) 1)))\n  (test #t (if (and (= a b) (= b c))\n               (= a c)\n               #t)))",
+    "err": "emit run: trap: *: fixnum overflow: 4294967296 * 4294967296",
+    "kind": "runtime"
+   },
+   {
+    "line": 841,
+    "text": "(let* ((a (/ 10.0 single-float-epsilon))\n       (j (exact a)))\n  (test #t (if (and (<= a j) (< j (+ j 1)))\n               (not (<= (+ j 1) a))\n               #t)))",
+    "err": "emit run: trap: inexact->exact: not an integer",
+    "kind": "runtime"
+   },
+   {
+    "line": 849,
+    "text": "(test #t (zero? 0.0+0.0i))",
+    "err": "emit: unbound variable 0.0+0.0i",
+    "kind": "compile"
+   },
+   {
+    "line": 902,
+    "text": "(test -3/2 (- 3/2))",
+    "err": "emit: read: rational literal syntax is not supported -- Emit has no exact rationals; write 0.5, or (/ 1 2) -3/2",
+    "kind": "compile"
+   },
+   {
+    "line": 903,
+    "text": "(test -3/2-i (- 3/2+i))",
+    "err": "emit: unbound variable -3/2-i",
+    "kind": "compile"
+   },
+   {
+    "line": 904,
+    "text": "(test 3/20 (/ 3 4 5))",
+    "err": "emit: read: rational literal syntax is not supported -- Emit has no exact rationals; write 0.5, or (/ 1 2) 3/20",
+    "kind": "compile"
+   },
+   {
+    "line": 905,
+    "text": "(test 1/3 (/ 3))",
+    "err": "emit: read: rational literal syntax is not supported -- Emit has no exact rationals; write 0.5, or (/ 1 2) 1/3",
+    "kind": "compile"
+   },
+   {
+    "line": 910,
+    "text": "(test 4611686018427387904 (/ -4611686018427387904 -1))",
+    "err": "*: fixnum overflow: 461168601842738790 * 10",
+    "kind": "runtime"
+   },
+   {
+    "line": 911,
+    "text": "(test 4611686018427387904 (quotient -4611686018427387904 -1))",
+    "err": "*: fixnum overflow: 461168601842738790 * 10",
+    "kind": "runtime"
+   },
+   {
+    "line": 912,
+    "text": "(test 0 (remainder -4611686018427387904 -1))",
+    "err": "*: fixnum overflow: -461168601842738790 * 10",
+    "kind": "runtime"
+   },
+   {
+    "line": 947,
+    "text": "(test 3 (numerator (/ 6 4)))",
+    "err": "emit run: trap: numerator: not an integer 1.5",
+    "kind": "runtime"
+   },
+   {
+    "line": 948,
+    "text": "(test 2 (denominator (/ 6 4)))",
+    "err": "emit run: trap: denominator: not an integer 1.5",
+    "kind": "runtime"
+   },
+   {
+    "line": 949,
+    "text": "(test 2.0 (denominator (inexact (/ 6 4))))",
+    "err": "emit run: trap: denominator: not an integer 1.5",
+    "kind": "runtime"
+   },
+   {
+    "line": 950,
+    "text": "(test 11.0 (numerator 5.5))",
+    "err": "emit run: trap: numerator: not an integer 5.5",
+    "kind": "runtime"
+   },
+   {
+    "line": 951,
+    "text": "(test 2.0 (denominator 5.5))",
+    "err": "emit run: trap: denominator: not an integer 5.5",
+    "kind": "runtime"
+   },
+   {
+    "line": 965,
+    "text": "(test 4 (round 7/2))",
+    "err": "emit: read: rational literal syntax is not supported -- Emit has no exact rationals; write 0.5, or (/ 1 2) 7/2",
+    "kind": "compile"
+   },
+   {
+    "line": 967,
+    "text": "(test 1 (round 7/10))",
+    "err": "emit: read: rational literal syntax is not supported -- Emit has no exact rationals; write 0.5, or (/ 1 2) 7/10",
+    "kind": "compile"
+   },
+   {
+    "line": 968,
+    "text": "(test -4 (round -7/2))",
+    "err": "emit: read: rational literal syntax is not supported -- Emit has no exact rationals; write 0.5, or (/ 1 2) -7/2",
+    "kind": "compile"
+   },
+   {
+    "line": 970,
+    "text": "(test -1 (round -7/10))",
+    "err": "emit: read: rational literal syntax is not supported -- Emit has no exact rationals; write 0.5, or (/ 1 2) -7/10",
+    "kind": "compile"
+   },
+   {
+    "line": 972,
+    "text": "(test 1/3 (rationalize (exact .3) 1/10))",
+    "err": "emit: read: rational literal syntax is not supported -- Emit has no exact rationals; write 0.5, or (/ 1 2) 1/3",
+    "kind": "compile"
+   },
+   {
+    "line": 973,
+    "text": "(test #i1/3 (rationalize .3 1/10))",
+    "err": "emit: read: rational literal syntax is not supported -- Emit has no exact rationals; write 0.5, or (/ 1 2) #i1/3",
+    "kind": "compile"
+   },
+   {
+    "line": 1016,
+    "text": "(test 0.0+1.0i (inexact (sqrt -1)))",
+    "err": "emit: unbound variable 0.0+1.0i",
+    "kind": "compile"
+   },
+   {
+    "line": 1017,
+    "text": "(test 0.0+1.0i (sqrt -1.0-0.0i))",
+    "err": "emit: unbound variable 0.0+1.0i",
+    "kind": "compile"
+   },
+   {
+    "line": 1028,
+    "text": "(test 1+2i (make-rectangular 1 2))",
+    "err": "emit: unbound variable 1+2i",
+    "kind": "compile"
+   },
+   {
+    "line": 1030,
+    "text": "(test 0.54030230586814+0.841470984807897i (make-polar 1 1))",
+    "err": "emit: unbound variable 0.54030230586814+0.841470984807897i",
+    "kind": "compile"
+   },
+   {
+    "line": 1032,
+    "text": "(test 1 (real-part 1+2i))",
+    "err": "emit: unbound variable real-part",
+    "kind": "compile"
+   },
+   {
+    "line": 1034,
+    "text": "(test 2 (imag-part 1+2i))",
+    "err": "emit: unbound variable imag-part",
+    "kind": "compile"
+   },
+   {
+    "line": 1036,
+    "text": "(test 2.23606797749979 (magnitude 1+2i))",
+    "err": "emit: unbound variable magnitude",
+    "kind": "compile"
+   },
+   {
+    "line": 1038,
+    "text": "(test 1.10714871779409 (angle 1+2i))",
+    "err": "emit: unbound variable angle",
+    "kind": "compile"
+   }
+  ],
+  "pass": 155,
+  "fail": 14,
+  "failures": [
+   "FAIL [] (= 9007199254740992.0 9007199254740993): expected #f but got #t",
+   "FAIL [] (exp 3): expected 20.0855369231877 but got 20.085536923187668",
+   "FAIL [] (tan 1): expected 1.5574077246549 but got 1.557407724654902",
+   "FAIL [] (asin 1): expected 1.5707963267949 but got 1.5707963267948966",
+   "FAIL [] (acos -1): expected 3.14159265358979 but got 3.141592653589793",
+   "FAIL [] (atan 1.0 1.0): expected 0.785398163397448 but got 0.7853981633974483",
+   "FAIL [] (atan 1.0 0.0): expected 1.5707963267949 but got 1.5707963267948966",
+   "FAIL [] (atan 1.0 -1.0): expected 2.35619449019234 but got 2.356194490192345",
+   "FAIL [] (atan 0.0 -1.0): expected 3.14159265358979 but got 3.141592653589793",
+   "FAIL [] (atan -0.0 -1.0): expected -3.14159265358979 but got -3.141592653589793",
+   "FAIL [] (atan -1.0 -1.0): expected -2.35619449019234 but got -2.356194490192345",
+   "FAIL [] (atan -1.0 0.0): expected -1.5707963267949 but got -1.5707963267948966",
+   "FAIL [] (atan -1.0 1.0): expected -0.785398163397448 but got -0.7853981633974483",
+   "FAIL [] (sqrt 2): expected 1.4142135623731 but got 1.4142135623730951"
+  ],
+  "compiles": 159
+ },
+ {
+  "section": "6.3 Booleans",
+  "forms": 18,
+  "accepted": 13,
+  "rejected": [
+   {
+    "line": 1070,
+    "text": "(test #t (boolean=? #t #t))",
+    "err": "emit: unbound variable boolean=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1071,
+    "text": "(test #t (boolean=? #f #f))",
+    "err": "emit: unbound variable boolean=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1072,
+    "text": "(test #f (boolean=? #t #f))",
+    "err": "emit: unbound variable boolean=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1073,
+    "text": "(test #t (boolean=? #f #f #f))",
+    "err": "emit: unbound variable boolean=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1074,
+    "text": "(test #f (boolean=? #t #t #f))",
+    "err": "emit: unbound variable boolean=?",
+    "kind": "compile"
+   }
+  ],
+  "pass": 13,
+  "fail": 0,
+  "failures": [],
+  "compiles": 11
+ },
+ {
+  "section": "6.4 Lists",
+  "forms": 55,
+  "accepted": 43,
+  "rejected": [
+   {
+    "line": 1080,
+    "text": "(let* ((x (list 'a 'b 'c))\n       (y x))\n  (test '(a b c) (values y))\n  (test #t (list? y))\n  (set-cdr! x 4)\n  (test '(a . 4) (values x))\n  (test #t (eqv? x y))\n  (test #f (list? y))\n  (set-cdr! x x)\n  (test #f (list? x)))",
+    "err": "emit: unbound variable set-cdr!",
+    "kind": "compile"
+   },
+   {
+    "line": 1113,
+    "text": "(test #f (let ((x (list 'a))) (set-cdr! x x) (list? x)))",
+    "err": "emit: unbound variable set-cdr!",
+    "kind": "compile"
+   },
+   {
+    "line": 1140,
+    "text": "(test '(0 (\"Sue\" \"Sue\") \"Anna\")\n    (let ((lst (list 0 '(2 2 2 2) \"Anna\")))\n      (list-set! lst 1 '(\"Sue\" \"Sue\"))\n      lst))",
+    "err": "emit: unbound variable list-set!",
+    "kind": "compile"
+   },
+   {
+    "line": 1150,
+    "text": "(test '(\"b\" \"c\") (member \"B\" '(\"a\" \"b\" \"c\") string-ci=?))",
+    "err": "emit: unbound variable string-ci=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1161,
+    "text": "(test '(2 4) (assoc 2.0 '((1 1) (2 4) (3 9)) =))",
+    "err": "emit run: trap: arity error: expected 2 argument(s), got 3",
+    "kind": "runtime"
+   },
+   {
+    "line": 1162,
+    "text": "(test '(5 7) (assv 5 '((2 3) (5 7) (11 13))))",
+    "err": "emit: unbound variable assv",
+    "kind": "compile"
+   },
+   {
+    "line": 1164,
+    "text": "(test '(1 2 3) (list-copy '(1 2 3)))",
+    "err": "emit: unbound variable list-copy",
+    "kind": "compile"
+   },
+   {
+    "line": 1165,
+    "text": "(test \"foo\" (list-copy \"foo\"))",
+    "err": "emit: unbound variable list-copy",
+    "kind": "compile"
+   },
+   {
+    "line": 1166,
+    "text": "(test '() (list-copy '()))",
+    "err": "emit: unbound variable list-copy",
+    "kind": "compile"
+   },
+   {
+    "line": 1167,
+    "text": "(test '(3 . 4) (list-copy '(3 . 4)))",
+    "err": "emit: unbound variable list-copy",
+    "kind": "compile"
+   },
+   {
+    "line": 1168,
+    "text": "(test '(6 7 8 . 9) (list-copy '(6 7 8 . 9)))",
+    "err": "emit: unbound variable list-copy",
+    "kind": "compile"
+   },
+   {
+    "line": 1169,
+    "text": "(let* ((l1 '((a b) (c d) e))\n       (l2 (list-copy l1)))\n  (test l2 '((a b) (c d) e))\n  (test #t (eq? (car l1) (car l2)))\n  (test #t (eq? (cadr l1) (cadr l2)))\n  (test #f (eq? (cdr l1) (cdr l2)))\n  (test #f (eq? (cddr l1) (cddr l2))))",
+    "err": "emit: unbound variable list-copy",
+    "kind": "compile"
+   }
+  ],
+  "pass": 44,
+  "fail": 0,
+  "failures": [],
+  "compiles": 50
+ },
+ {
+  "section": "6.5 Symbols",
+  "forms": 17,
+  "accepted": 13,
+  "rejected": [
+   {
+    "line": 1188,
+    "text": "(test #t (symbol=? 'a 'a))",
+    "err": "emit: unbound variable symbol=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1189,
+    "text": "(test #f (symbol=? 'a 'A))",
+    "err": "emit: unbound variable symbol=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1190,
+    "text": "(test #t (symbol=? 'a 'a 'a))",
+    "err": "emit: unbound variable symbol=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1191,
+    "text": "(test #f (symbol=? 'a 'a 'A))",
+    "err": "emit: unbound variable symbol=?",
+    "kind": "compile"
+   }
+  ],
+  "pass": 13,
+  "fail": 0,
+  "failures": [],
+  "compiles": 15
+ },
+ {
+  "section": "6.6 Characters",
+  "forms": 79,
+  "accepted": 20,
+  "rejected": [
+   {
+    "line": 1228,
+    "text": "(test #t (char-ci=? #\\a #\\a))",
+    "err": "emit: unbound variable char-ci=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1229,
+    "text": "(test #t (char-ci=? #\\a #\\A #\\a))",
+    "err": "emit: unbound variable char-ci=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1230,
+    "text": "(test #f (char-ci=? #\\a #\\b))",
+    "err": "emit: unbound variable char-ci=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1231,
+    "text": "(test #t (char-ci<? #\\a #\\B #\\c))",
+    "err": "emit: unbound variable char-ci<?",
+    "kind": "compile"
+   },
+   {
+    "line": 1232,
+    "text": "(test #f (char-ci<? #\\A #\\a))",
+    "err": "emit: unbound variable char-ci<?",
+    "kind": "compile"
+   },
+   {
+    "line": 1233,
+    "text": "(test #f (char-ci<? #\\b #\\A))",
+    "err": "emit: unbound variable char-ci<?",
+    "kind": "compile"
+   },
+   {
+    "line": 1234,
+    "text": "(test #f (char-ci>? #\\A #\\b))",
+    "err": "emit: unbound variable char-ci>?",
+    "kind": "compile"
+   },
+   {
+    "line": 1235,
+    "text": "(test #f (char-ci>? #\\a #\\A))",
+    "err": "emit: unbound variable char-ci>?",
+    "kind": "compile"
+   },
+   {
+    "line": 1236,
+    "text": "(test #t (char-ci>? #\\c #\\B #\\a))",
+    "err": "emit: unbound variable char-ci>?",
+    "kind": "compile"
+   },
+   {
+    "line": 1237,
+    "text": "(test #t (char-ci<=? #\\a #\\B #\\b))",
+    "err": "emit: unbound variable char-ci<=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1238,
+    "text": "(test #t (char-ci<=? #\\A #\\a))",
+    "err": "emit: unbound variable char-ci<=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1239,
+    "text": "(test #f (char-ci<=? #\\b #\\A))",
+    "err": "emit: unbound variable char-ci<=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1240,
+    "text": "(test #f (char-ci>=? #\\A #\\b))",
+    "err": "emit: unbound variable char-ci>=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1241,
+    "text": "(test #t (char-ci>=? #\\a #\\A))",
+    "err": "emit: unbound variable char-ci>=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1242,
+    "text": "(test #t (char-ci>=? #\\b #\\B #\\a))",
+    "err": "emit: unbound variable char-ci>=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1244,
+    "text": "(test #t (char-alphabetic? #\\a))",
+    "err": "emit: unbound variable char-alphabetic?",
+    "kind": "compile"
+   },
+   {
+    "line": 1245,
+    "text": "(test #f (char-alphabetic? #\\space))",
+    "err": "emit: unbound variable char-alphabetic?",
+    "kind": "compile"
+   },
+   {
+    "line": 1246,
+    "text": "(test #t (char-numeric? #\\0))",
+    "err": "emit: unbound variable char-numeric?",
+    "kind": "compile"
+   },
+   {
+    "line": 1247,
+    "text": "(test #f (char-numeric? #\\.))",
+    "err": "emit: unbound variable char-numeric?",
+    "kind": "compile"
+   },
+   {
+    "line": 1248,
+    "text": "(test #f (char-numeric? #\\a))",
+    "err": "emit: unbound variable char-numeric?",
+    "kind": "compile"
+   },
+   {
+    "line": 1249,
+    "text": "(test #t (char-whitespace? #\\space))",
+    "err": "emit: unbound variable char-whitespace?",
+    "kind": "compile"
+   },
+   {
+    "line": 1250,
+    "text": "(test #t (char-whitespace? #\\tab))",
+    "err": "emit: unbound variable char-whitespace?",
+    "kind": "compile"
+   },
+   {
+    "line": 1251,
+    "text": "(test #t (char-whitespace? #\\newline))",
+    "err": "emit: unbound variable char-whitespace?",
+    "kind": "compile"
+   },
+   {
+    "line": 1252,
+    "text": "(test #f (char-whitespace? #\\_))",
+    "err": "emit: unbound variable char-whitespace?",
+    "kind": "compile"
+   },
+   {
+    "line": 1253,
+    "text": "(test #f (char-whitespace? #\\a))",
+    "err": "emit: unbound variable char-whitespace?",
+    "kind": "compile"
+   },
+   {
+    "line": 1254,
+    "text": "(test #t (char-upper-case? #\\A))",
+    "err": "emit: unbound variable char-upper-case?",
+    "kind": "compile"
+   },
+   {
+    "line": 1255,
+    "text": "(test #f (char-upper-case? #\\a))",
+    "err": "emit: unbound variable char-upper-case?",
+    "kind": "compile"
+   },
+   {
+    "line": 1256,
+    "text": "(test #f (char-upper-case? #\\3))",
+    "err": "emit: unbound variable char-upper-case?",
+    "kind": "compile"
+   },
+   {
+    "line": 1257,
+    "text": "(test #t (char-lower-case? #\\a))",
+    "err": "emit: unbound variable char-lower-case?",
+    "kind": "compile"
+   },
+   {
+    "line": 1258,
+    "text": "(test #f (char-lower-case? #\\A))",
+    "err": "emit: unbound variable char-lower-case?",
+    "kind": "compile"
+   },
+   {
+    "line": 1259,
+    "text": "(test #f (char-lower-case? #\\3))",
+    "err": "emit: unbound variable char-lower-case?",
+    "kind": "compile"
+   },
+   {
+    "line": 1261,
+    "text": "(test #t (char-alphabetic? #\\\u039b))",
+    "err": "emit: unbound variable char-alphabetic?",
+    "kind": "compile"
+   },
+   {
+    "line": 1262,
+    "text": "(test #f (char-alphabetic? #\\x0E50))",
+    "err": "emit: unbound variable char-alphabetic?",
+    "kind": "compile"
+   },
+   {
+    "line": 1263,
+    "text": "(test #t (char-upper-case? #\\\u039b))",
+    "err": "emit: unbound variable char-upper-case?",
+    "kind": "compile"
+   },
+   {
+    "line": 1264,
+    "text": "(test #f (char-upper-case? #\\\u03bb))",
+    "err": "emit: unbound variable char-upper-case?",
+    "kind": "compile"
+   },
+   {
+    "line": 1265,
+    "text": "(test #f (char-lower-case? #\\\u039b))",
+    "err": "emit: unbound variable char-lower-case?",
+    "kind": "compile"
+   },
+   {
+    "line": 1266,
+    "text": "(test #t (char-lower-case? #\\\u03bb))",
+    "err": "emit: unbound variable char-lower-case?",
+    "kind": "compile"
+   },
+   {
+    "line": 1267,
+    "text": "(test #f (char-numeric? #\\\u039b))",
+    "err": "emit: unbound variable char-numeric?",
+    "kind": "compile"
+   },
+   {
+    "line": 1268,
+    "text": "(test #t (char-numeric? #\\x0E50))",
+    "err": "emit: unbound variable char-numeric?",
+    "kind": "compile"
+   },
+   {
+    "line": 1269,
+    "text": "(test #t (char-whitespace? #\\x1680))",
+    "err": "emit: unbound variable char-whitespace?",
+    "kind": "compile"
+   },
+   {
+    "line": 1271,
+    "text": "(test 0 (digit-value #\\0))",
+    "err": "emit: unbound variable digit-value",
+    "kind": "compile"
+   },
+   {
+    "line": 1272,
+    "text": "(test 3 (digit-value #\\3))",
+    "err": "emit: unbound variable digit-value",
+    "kind": "compile"
+   },
+   {
+    "line": 1273,
+    "text": "(test 9 (digit-value #\\9))",
+    "err": "emit: unbound variable digit-value",
+    "kind": "compile"
+   },
+   {
+    "line": 1274,
+    "text": "(test 4 (digit-value #\\x0664))",
+    "err": "emit: unbound variable digit-value",
+    "kind": "compile"
+   },
+   {
+    "line": 1275,
+    "text": "(test 0 (digit-value #\\x0AE6))",
+    "err": "emit: unbound variable digit-value",
+    "kind": "compile"
+   },
+   {
+    "line": 1276,
+    "text": "(test #f (digit-value #\\.))",
+    "err": "emit: unbound variable digit-value",
+    "kind": "compile"
+   },
+   {
+    "line": 1277,
+    "text": "(test #f (digit-value #\\-))",
+    "err": "emit: unbound variable digit-value",
+    "kind": "compile"
+   },
+   {
+    "line": 1282,
+    "text": "(test #\\A (char-upcase #\\a))",
+    "err": "emit: unbound variable char-upcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1283,
+    "text": "(test #\\A (char-upcase #\\A))",
+    "err": "emit: unbound variable char-upcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1284,
+    "text": "(test #\\a (char-downcase #\\a))",
+    "err": "emit: unbound variable char-downcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1285,
+    "text": "(test #\\a (char-downcase #\\A))",
+    "err": "emit: unbound variable char-downcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1286,
+    "text": "(test #\\a (char-foldcase #\\a))",
+    "err": "emit: unbound variable char-foldcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1287,
+    "text": "(test #\\a (char-foldcase #\\A))",
+    "err": "emit: unbound variable char-foldcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1289,
+    "text": "(test #\\\u039b (char-upcase #\\\u03bb))",
+    "err": "emit: unbound variable char-upcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1290,
+    "text": "(test #\\\u039b (char-upcase #\\\u039b))",
+    "err": "emit: unbound variable char-upcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1291,
+    "text": "(test #\\\u03bb (char-downcase #\\\u03bb))",
+    "err": "emit: unbound variable char-downcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1292,
+    "text": "(test #\\\u03bb (char-downcase #\\\u039b))",
+    "err": "emit: unbound variable char-downcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1293,
+    "text": "(test #\\\u03bb (char-foldcase #\\\u03bb))",
+    "err": "emit: unbound variable char-foldcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1294,
+    "text": "(test #\\\u03bb (char-foldcase #\\\u039b))",
+    "err": "emit: unbound variable char-foldcase",
+    "kind": "compile"
+   }
+  ],
+  "pass": 20,
+  "fail": 0,
+  "failures": [],
+  "compiles": 71
+ },
+ {
+  "section": "6.7 Strings",
+  "forms": 130,
+  "accepted": 37,
+  "rejected": [
+   {
+    "line": 1305,
+    "text": "(test 3 (string-length (make-string 3)))",
+    "err": "emit run: trap: arity error: expected 2 argument(s), got 1",
+    "kind": "runtime"
+   },
+   {
+    "line": 1328,
+    "text": "(test #t (string=? \"abc\" \"abc\" \"abc\"))",
+    "err": "emit run: trap: arity error: expected 2 argument(s), got 3",
+    "kind": "runtime"
+   },
+   {
+    "line": 1332,
+    "text": "(test #f (string<? \"\" \"\"))",
+    "err": "emit: unbound variable string<?",
+    "kind": "compile"
+   },
+   {
+    "line": 1333,
+    "text": "(test #f (string<? \"abc\" \"abc\"))",
+    "err": "emit: unbound variable string<?",
+    "kind": "compile"
+   },
+   {
+    "line": 1334,
+    "text": "(test #t (string<? \"abc\" \"abcd\" \"acd\"))",
+    "err": "emit: unbound variable string<?",
+    "kind": "compile"
+   },
+   {
+    "line": 1335,
+    "text": "(test #f (string<? \"abcd\" \"abc\"))",
+    "err": "emit: unbound variable string<?",
+    "kind": "compile"
+   },
+   {
+    "line": 1336,
+    "text": "(test #t (string<? \"abc\" \"bbc\"))",
+    "err": "emit: unbound variable string<?",
+    "kind": "compile"
+   },
+   {
+    "line": 1338,
+    "text": "(test #f (string>? \"\" \"\"))",
+    "err": "emit: unbound variable string>?",
+    "kind": "compile"
+   },
+   {
+    "line": 1339,
+    "text": "(test #f (string>? \"abc\" \"abc\"))",
+    "err": "emit: unbound variable string>?",
+    "kind": "compile"
+   },
+   {
+    "line": 1340,
+    "text": "(test #f (string>? \"abc\" \"abcd\"))",
+    "err": "emit: unbound variable string>?",
+    "kind": "compile"
+   },
+   {
+    "line": 1341,
+    "text": "(test #t (string>? \"acd\" \"abcd\" \"abc\"))",
+    "err": "emit: unbound variable string>?",
+    "kind": "compile"
+   },
+   {
+    "line": 1342,
+    "text": "(test #f (string>? \"abc\" \"bbc\"))",
+    "err": "emit: unbound variable string>?",
+    "kind": "compile"
+   },
+   {
+    "line": 1344,
+    "text": "(test #t (string<=? \"\" \"\"))",
+    "err": "emit: unbound variable string<=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1345,
+    "text": "(test #t (string<=? \"abc\" \"abc\"))",
+    "err": "emit: unbound variable string<=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1346,
+    "text": "(test #t (string<=? \"abc\" \"abcd\" \"abcd\"))",
+    "err": "emit: unbound variable string<=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1347,
+    "text": "(test #f (string<=? \"abcd\" \"abc\"))",
+    "err": "emit: unbound variable string<=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1348,
+    "text": "(test #t (string<=? \"abc\" \"bbc\"))",
+    "err": "emit: unbound variable string<=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1350,
+    "text": "(test #t (string>=? \"\" \"\"))",
+    "err": "emit: unbound variable string>=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1351,
+    "text": "(test #t (string>=? \"abc\" \"abc\"))",
+    "err": "emit: unbound variable string>=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1352,
+    "text": "(test #f (string>=? \"abc\" \"abcd\"))",
+    "err": "emit: unbound variable string>=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1353,
+    "text": "(test #t (string>=? \"abcd\" \"abcd\" \"abc\"))",
+    "err": "emit: unbound variable string>=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1354,
+    "text": "(test #f (string>=? \"abc\" \"bbc\"))",
+    "err": "emit: unbound variable string>=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1356,
+    "text": "(test #t (string-ci=? \"\" \"\"))",
+    "err": "emit: unbound variable string-ci=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1357,
+    "text": "(test #t (string-ci=? \"abc\" \"abc\"))",
+    "err": "emit: unbound variable string-ci=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1358,
+    "text": "(test #f (string-ci=? \"\" \"abc\"))",
+    "err": "emit: unbound variable string-ci=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1359,
+    "text": "(test #t (string-ci=? \"abc\" \"aBc\"))",
+    "err": "emit: unbound variable string-ci=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1360,
+    "text": "(test #f (string-ci=? \"abc\" \"aBcD\"))",
+    "err": "emit: unbound variable string-ci=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1362,
+    "text": "(test #f (string-ci<? \"abc\" \"aBc\"))",
+    "err": "emit: unbound variable string-ci<?",
+    "kind": "compile"
+   },
+   {
+    "line": 1363,
+    "text": "(test #t (string-ci<? \"abc\" \"aBcD\"))",
+    "err": "emit: unbound variable string-ci<?",
+    "kind": "compile"
+   },
+   {
+    "line": 1364,
+    "text": "(test #f (string-ci<? \"ABCd\" \"aBc\"))",
+    "err": "emit: unbound variable string-ci<?",
+    "kind": "compile"
+   },
+   {
+    "line": 1366,
+    "text": "(test #f (string-ci>? \"abc\" \"aBc\"))",
+    "err": "emit: unbound variable string-ci>?",
+    "kind": "compile"
+   },
+   {
+    "line": 1367,
+    "text": "(test #f (string-ci>? \"abc\" \"aBcD\"))",
+    "err": "emit: unbound variable string-ci>?",
+    "kind": "compile"
+   },
+   {
+    "line": 1368,
+    "text": "(test #t (string-ci>? \"ABCd\" \"aBc\"))",
+    "err": "emit: unbound variable string-ci>?",
+    "kind": "compile"
+   },
+   {
+    "line": 1370,
+    "text": "(test #t (string-ci<=? \"abc\" \"aBc\"))",
+    "err": "emit: unbound variable string-ci<=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1371,
+    "text": "(test #t (string-ci<=? \"abc\" \"aBcD\"))",
+    "err": "emit: unbound variable string-ci<=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1372,
+    "text": "(test #f (string-ci<=? \"ABCd\" \"aBc\"))",
+    "err": "emit: unbound variable string-ci<=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1374,
+    "text": "(test #t (string-ci>=? \"abc\" \"aBc\"))",
+    "err": "emit: unbound variable string-ci>=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1375,
+    "text": "(test #f (string-ci>=? \"abc\" \"aBcD\"))",
+    "err": "emit: unbound variable string-ci>=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1376,
+    "text": "(test #t (string-ci>=? \"ABCd\" \"aBc\"))",
+    "err": "emit: unbound variable string-ci>=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1378,
+    "text": "(test #t (string-ci=? \"\u0391\u0392\u0393\" \"\u03b1\u03b2\u03b3\" \"\u03b1\u03b2\u03b3\"))",
+    "err": "emit: unbound variable string-ci=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1379,
+    "text": "(test #f (string-ci<? \"\u0391\u0392\u0393\" \"\u03b1\u03b2\u03b3\"))",
+    "err": "emit: unbound variable string-ci<?",
+    "kind": "compile"
+   },
+   {
+    "line": 1380,
+    "text": "(test #f (string-ci>? \"\u0391\u0392\u0393\" \"\u03b1\u03b2\u03b3\"))",
+    "err": "emit: unbound variable string-ci>?",
+    "kind": "compile"
+   },
+   {
+    "line": 1381,
+    "text": "(test #t (string-ci<=? \"\u0391\u0392\u0393\" \"\u03b1\u03b2\u03b3\"))",
+    "err": "emit: unbound variable string-ci<=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1382,
+    "text": "(test #t (string-ci>=? \"\u0391\u0392\u0393\" \"\u03b1\u03b2\u03b3\"))",
+    "err": "emit: unbound variable string-ci>=?",
+    "kind": "compile"
+   },
+   {
+    "line": 1385,
+    "text": "(test \"ABC\" (string-upcase \"abc\"))",
+    "err": "emit: unbound variable string-upcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1386,
+    "text": "(test \"ABC\" (string-upcase \"ABC\"))",
+    "err": "emit: unbound variable string-upcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1387,
+    "text": "(test \"abc\" (string-downcase \"abc\"))",
+    "err": "emit: unbound variable string-downcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1388,
+    "text": "(test \"abc\" (string-downcase \"ABC\"))",
+    "err": "emit: unbound variable string-downcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1389,
+    "text": "(test \"abc\" (string-foldcase \"abc\"))",
+    "err": "emit: unbound variable string-foldcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1390,
+    "text": "(test \"abc\" (string-foldcase \"ABC\"))",
+    "err": "emit: unbound variable string-foldcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1393,
+    "text": "(test \"\u0391\u0392\u0393\" (string-upcase \"\u03b1\u03b2\u03b3\"))",
+    "err": "emit: unbound variable string-upcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1394,
+    "text": "(test \"\u0391\u0392\u0393\" (string-upcase \"\u0391\u0392\u0393\"))",
+    "err": "emit: unbound variable string-upcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1395,
+    "text": "(test \"\u03b1\u03b2\u03b3\" (string-downcase \"\u03b1\u03b2\u03b3\"))",
+    "err": "emit: unbound variable string-downcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1396,
+    "text": "(test \"\u03b1\u03b2\u03b3\" (string-downcase \"\u0391\u0392\u0393\"))",
+    "err": "emit: unbound variable string-downcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1397,
+    "text": "(test \"\u03b1\u03b2\u03b3\" (string-foldcase \"\u03b1\u03b2\u03b3\"))",
+    "err": "emit: unbound variable string-foldcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1398,
+    "text": "(test \"\u03b1\u03b2\u03b3\" (string-foldcase \"\u0391\u0392\u0393\"))",
+    "err": "emit: unbound variable string-foldcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1401,
+    "text": "(test \"SSA\" (string-upcase \"\u00dfa\"))",
+    "err": "emit: unbound variable string-upcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1402,
+    "text": "(test \"\u00dfa\" (string-downcase \"\u00dfa\"))",
+    "err": "emit: unbound variable string-downcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1403,
+    "text": "(test \"ssa\" (string-downcase \"SSA\"))",
+    "err": "emit: unbound variable string-downcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1404,
+    "text": "(test \"ma\u00df\" (string-downcase \"Ma\u00df\"))",
+    "err": "emit: unbound variable string-downcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1405,
+    "text": "(test \"mass\" (string-foldcase \"Ma\u00df\"))",
+    "err": "emit: unbound variable string-foldcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1406,
+    "text": "(test \"\u0130\" (string-upcase \"\u0130\"))",
+    "err": "emit: unbound variable string-upcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1407,
+    "text": "(test \"i\\x0307;\" (string-downcase \"\u0130\"))",
+    "err": "emit: unbound variable string-downcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1408,
+    "text": "(test \"i\\x0307;\" (string-foldcase \"\u0130\"))",
+    "err": "emit: unbound variable string-foldcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1409,
+    "text": "(test \"J\u030c\" (string-upcase \"\u01f0\"))",
+    "err": "emit: unbound variable string-upcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1410,
+    "text": "(test \"\u017f\" (string-downcase \"\u017f\"))",
+    "err": "emit: unbound variable string-downcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1411,
+    "text": "(test \"s\" (string-foldcase \"\u017f\"))",
+    "err": "emit: unbound variable string-foldcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1414,
+    "text": "(test \"\u0393\u039b\u038f\u03a3\u03a3\u0391\" (string-upcase \"\u03b3\u03bb\u03ce\u03c3\u03c3\u03b1\"))",
+    "err": "emit: unbound variable string-upcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1415,
+    "text": "(test \"\u03b3\u03bb\u03ce\u03c3\u03c3\u03b1\" (string-downcase \"\u0393\u039b\u038f\u03a3\u03a3\u0391\"))",
+    "err": "emit: unbound variable string-downcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1416,
+    "text": "(test \"\u03b3\u03bb\u03ce\u03c3\u03c3\u03b1\" (string-foldcase \"\u0393\u039b\u038f\u03a3\u03a3\u0391\"))",
+    "err": "emit: unbound variable string-foldcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1417,
+    "text": "(test \"\u039c\u0388\u039b\u039f\u03a3\" (string-upcase \"\u03bc\u03ad\u03bb\u03bf\u03c2\"))",
+    "err": "emit: unbound variable string-upcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1418,
+    "text": "(test #t (and (member (string-downcase \"\u039c\u0388\u039b\u039f\u03a3\") '(\"\u03bc\u03ad\u03bb\u03bf\u03c2\" \"\u03bc\u03ad\u03bb\u03bf\u03c3\")) #t))",
+    "err": "emit: unbound variable string-downcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1419,
+    "text": "(test \"\u03bc\u03ad\u03bb\u03bf\u03c3\" (string-foldcase \"\u039c\u0388\u039b\u039f\u03a3\"))",
+    "err": "emit: unbound variable string-foldcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1420,
+    "text": "(test #t (and (member (string-downcase \"\u039c\u0388\u039b\u039f\u03a3 \u0395\u039d\u038c\u03a3\")\n                      '(\"\u03bc\u03ad\u03bb\u03bf\u03c2 \u03b5\u03bd\u03cc\u03c2\" \"\u03bc\u03ad\u03bb\u03bf\u03c3 \u03b5\u03bd\u03cc\u03c3\"))\n              #t))",
+    "err": "emit: unbound variable string-downcase",
+    "kind": "compile"
+   },
+   {
+    "line": 1440,
+    "text": "(test '(#\\a #\\b #\\c) (string->list \"abc\" 0))",
+    "err": "emit run: trap: arity error: expected 1 argument(s), got 2",
+    "kind": "runtime"
+   },
+   {
+    "line": 1441,
+    "text": "(test '(#\\b #\\c) (string->list \"abc\" 1))",
+    "err": "emit run: trap: arity error: expected 1 argument(s), got 2",
+    "kind": "runtime"
+   },
+   {
+    "line": 1442,
+    "text": "(test '(#\\b #\\c) (string->list \"abc\" 1 3))",
+    "err": "emit run: trap: arity error: expected 1 argument(s), got 3",
+    "kind": "runtime"
+   },
+   {
+    "line": 1448,
+    "text": "(test \"\" (string-copy \"\" 0))",
+    "err": "emit run: trap: arity error: expected 1 argument(s), got 2",
+    "kind": "runtime"
+   },
+   {
+    "line": 1449,
+    "text": "(test \"\" (string-copy \"\" 0 0))",
+    "err": "emit run: trap: arity error: expected 1 argument(s), got 3",
+    "kind": "runtime"
+   },
+   {
+    "line": 1451,
+    "text": "(test \"abc\" (string-copy \"abc\" 0))",
+    "err": "emit run: trap: arity error: expected 1 argument(s), got 2",
+    "kind": "runtime"
+   },
+   {
+    "line": 1452,
+    "text": "(test \"bc\" (string-copy \"abc\" 1))",
+    "err": "emit run: trap: arity error: expected 1 argument(s), got 2",
+    "kind": "runtime"
+   },
+   {
+    "line": 1453,
+    "text": "(test \"b\" (string-copy \"abc\" 1 2))",
+    "err": "emit run: trap: arity error: expected 1 argument(s), got 3",
+    "kind": "runtime"
+   },
+   {
+    "line": 1454,
+    "text": "(test \"bc\" (string-copy \"abc\" 1 3))",
+    "err": "emit run: trap: arity error: expected 1 argument(s), got 3",
+    "kind": "runtime"
+   },
+   {
+    "line": 1456,
+    "text": "(test \"-----\"\n    (let ((str (make-string 5 #\\x))) (string-fill! str #\\-) str))",
+    "err": "emit: unbound variable string-fill!",
+    "kind": "compile"
+   },
+   {
+    "line": 1458,
+    "text": "(test \"xx---\"\n    (let ((str (make-string 5 #\\x))) (string-fill! str #\\- 2) str))",
+    "err": "emit: unbound variable string-fill!",
+    "kind": "compile"
+   },
+   {
+    "line": 1460,
+    "text": "(test \"xx-xx\"\n    (let ((str (make-string 5 #\\x))) (string-fill! str #\\- 2 3) str))",
+    "err": "emit: unbound variable string-fill!",
+    "kind": "compile"
+   },
+   {
+    "line": 1463,
+    "text": "(test \"a12de\"\n    (let ((str (string-copy \"abcde\"))) (string-copy! str 1 \"12345\" 0 2) str))",
+    "err": "emit: unbound variable string-copy!",
+    "kind": "compile"
+   },
+   {
+    "line": 1465,
+    "text": "(test \"-----\"\n    (let ((str (make-string 5 #\\x))) (string-copy! str 0 \"-----\") str))",
+    "err": "emit: unbound variable string-copy!",
+    "kind": "compile"
+   },
+   {
+    "line": 1467,
+    "text": "(test \"---xx\"\n    (let ((str (make-string 5 #\\x))) (string-copy! str 0 \"-----\" 2) str))",
+    "err": "emit: unbound variable string-copy!",
+    "kind": "compile"
+   },
+   {
+    "line": 1469,
+    "text": "(test \"xx---\"\n    (let ((str (make-string 5 #\\x))) (string-copy! str 2 \"-----\" 0 3) str))",
+    "err": "emit: unbound variable string-copy!",
+    "kind": "compile"
+   },
+   {
+    "line": 1471,
+    "text": "(test \"xx-xx\"\n    (let ((str (make-string 5 #\\x))) (string-copy! str 2 \"-----\" 2 3) str))",
+    "err": "emit: unbound variable string-copy!",
+    "kind": "compile"
+   },
+   {
+    "line": 1475,
+    "text": "(test \"aabde\"\n    (let ((str (string-copy \"abcde\"))) (string-copy! str 1 str 0 2) str))",
+    "err": "emit: unbound variable string-copy!",
+    "kind": "compile"
+   },
+   {
+    "line": 1477,
+    "text": "(test \"abcab\"\n    (let ((str (string-copy \"abcde\"))) (string-copy! str 3 str 0 2) str))",
+    "err": "emit: unbound variable string-copy!",
+    "kind": "compile"
+   }
+  ],
+  "pass": 37,
+  "fail": 0,
+  "failures": [],
+  "compiles": 131
+ },
+ {
+  "section": "6.8 Vectors",
+  "forms": 43,
+  "accepted": 3,
+  "rejected": [
+   {
+    "line": 1484,
+    "text": "(test #t (vector? #()))",
+    "err": "emit: parse: bad expression #()",
+    "kind": "compile"
+   },
+   {
+    "line": 1485,
+    "text": "(test #t (vector? #(1 2 3)))",
+    "err": "emit: parse: bad expression #(1 2 3)",
+    "kind": "compile"
+   },
+   {
+    "line": 1488,
+    "text": "(test 0 (vector-length (make-vector 0)))",
+    "err": "emit run: trap: arity error: expected 2 argument(s), got 1",
+    "kind": "runtime"
+   },
+   {
+    "line": 1489,
+    "text": "(test 1000 (vector-length (make-vector 1000)))",
+    "err": "emit run: trap: arity error: expected 2 argument(s), got 1",
+    "kind": "runtime"
+   },
+   {
+    "line": 1491,
+    "text": "(test #(0 (2 2 2 2) \"Anna\") '#(0 (2 2 2 2) \"Anna\"))",
+    "err": "emit: parse: bad expression #(0 (2 2 2 2) \"Anna\")",
+    "kind": "compile"
+   },
+   {
+    "line": 1493,
+    "text": "(test #(a b c) (vector 'a 'b 'c))",
+    "err": "emit: parse: bad expression #(a b c)",
+    "kind": "compile"
+   },
+   {
+    "line": 1502,
+    "text": "(test #(0 (\"Sue\" \"Sue\") \"Anna\") (let ((vec (vector 0 '(2 2 2 2) \"Anna\")))\n  (vector-set! vec 1 '(\"Sue\" \"Sue\"))\n  vec))",
+    "err": "emit: parse: bad expression #(0 (\"Sue\" \"Sue\") \"Anna\")",
+    "kind": "compile"
+   },
+   {
+    "line": 1506,
+    "text": "(test '(dah dah didah) (vector->list '#(dah dah didah)))",
+    "err": "emit: unbound variable vector->list",
+    "kind": "compile"
+   },
+   {
+    "line": 1507,
+    "text": "(test '(dah didah) (vector->list '#(dah dah didah) 1))",
+    "err": "emit: unbound variable vector->list",
+    "kind": "compile"
+   },
+   {
+    "line": 1508,
+    "text": "(test '(dah) (vector->list '#(dah dah didah) 1 2))",
+    "err": "emit: unbound variable vector->list",
+    "kind": "compile"
+   },
+   {
+    "line": 1509,
+    "text": "(test #(dididit dah) (list->vector '(dididit dah)))",
+    "err": "emit: parse: bad expression #(dididit dah)",
+    "kind": "compile"
+   },
+   {
+    "line": 1511,
+    "text": "(test #() (string->vector \"\"))",
+    "err": "emit: parse: bad expression #()",
+    "kind": "compile"
+   },
+   {
+    "line": 1512,
+    "text": "(test #(#\\A #\\B #\\C) (string->vector \"ABC\"))",
+    "err": "emit: parse: bad expression #(#\\A #\\B #\\C)",
+    "kind": "compile"
+   },
+   {
+    "line": 1513,
+    "text": "(test #(#\\B #\\C) (string->vector \"ABC\" 1))",
+    "err": "emit: parse: bad expression #(#\\B #\\C)",
+    "kind": "compile"
+   },
+   {
+    "line": 1514,
+    "text": "(test #(#\\B) (string->vector \"ABC\" 1 2))",
+    "err": "emit: parse: bad expression #(#\\B)",
+    "kind": "compile"
+   },
+   {
+    "line": 1516,
+    "text": "(test \"\" (vector->string #()))",
+    "err": "emit: parse: bad expression #()",
+    "kind": "compile"
+   },
+   {
+    "line": 1517,
+    "text": "(test \"123\" (vector->string #(#\\1 #\\2 #\\3)))",
+    "err": "emit: parse: bad expression #(#\\1 #\\2 #\\3)",
+    "kind": "compile"
+   },
+   {
+    "line": 1518,
+    "text": "(test \"23\" (vector->string #(#\\1 #\\2 #\\3) 1))",
+    "err": "emit: parse: bad expression #(#\\1 #\\2 #\\3)",
+    "kind": "compile"
+   },
+   {
+    "line": 1519,
+    "text": "(test \"2\" (vector->string #(#\\1 #\\2 #\\3) 1 2))",
+    "err": "emit: parse: bad expression #(#\\1 #\\2 #\\3)",
+    "kind": "compile"
+   },
+   {
+    "line": 1521,
+    "text": "(test #() (vector-copy #()))",
+    "err": "emit: parse: bad expression #()",
+    "kind": "compile"
+   },
+   {
+    "line": 1522,
+    "text": "(test #(a b c) (vector-copy #(a b c)))",
+    "err": "emit: parse: bad expression #(a b c)",
+    "kind": "compile"
+   },
+   {
+    "line": 1523,
+    "text": "(test #(b c) (vector-copy #(a b c) 1))",
+    "err": "emit: parse: bad expression #(b c)",
+    "kind": "compile"
+   },
+   {
+    "line": 1524,
+    "text": "(test #(b) (vector-copy #(a b c) 1 2))",
+    "err": "emit: parse: bad expression #(b)",
+    "kind": "compile"
+   },
+   {
+    "line": 1526,
+    "text": "(test #() (vector-append #()))",
+    "err": "emit: parse: bad expression #()",
+    "kind": "compile"
+   },
+   {
+    "line": 1527,
+    "text": "(test #() (vector-append #() #()))",
+    "err": "emit: parse: bad expression #()",
+    "kind": "compile"
+   },
+   {
+    "line": 1528,
+    "text": "(test #(a b c) (vector-append #() #(a b c)))",
+    "err": "emit: parse: bad expression #(a b c)",
+    "kind": "compile"
+   },
+   {
+    "line": 1529,
+    "text": "(test #(a b c) (vector-append #(a b c) #()))",
+    "err": "emit: parse: bad expression #(a b c)",
+    "kind": "compile"
+   },
+   {
+    "line": 1530,
+    "text": "(test #(a b c d e) (vector-append #(a b c) #(d e)))",
+    "err": "emit: parse: bad expression #(a b c d e)",
+    "kind": "compile"
+   },
+   {
+    "line": 1531,
+    "text": "(test #(a b c d e f) (vector-append #(a b c) #(d e) #(f)))",
+    "err": "emit: parse: bad expression #(a b c d e f)",
+    "kind": "compile"
+   },
+   {
+    "line": 1533,
+    "text": "(test #(1 2 smash smash 5)\n    (let ((vec (vector 1 2 3 4 5))) (vector-fill! vec 'smash 2 4) vec))",
+    "err": "emit: parse: bad expression #(1 2 smash smash 5)",
+    "kind": "compile"
+   },
+   {
+    "line": 1535,
+    "text": "(test #(x x x x x)\n    (let ((vec (vector 1 2 3 4 5))) (vector-fill! vec 'x) vec))",
+    "err": "emit: parse: bad expression #(x x x x x)",
+    "kind": "compile"
+   },
+   {
+    "line": 1537,
+    "text": "(test #(1 2 x x x)\n    (let ((vec (vector 1 2 3 4 5))) (vector-fill! vec 'x 2) vec))",
+    "err": "emit: parse: bad expression #(1 2 x x x)",
+    "kind": "compile"
+   },
+   {
+    "line": 1539,
+    "text": "(test #(1 2 x 4 5)\n    (let ((vec (vector 1 2 3 4 5))) (vector-fill! vec 'x 2 3) vec))",
+    "err": "emit: parse: bad expression #(1 2 x 4 5)",
+    "kind": "compile"
+   },
+   {
+    "line": 1542,
+    "text": "(test #(1 a b 4 5)\n    (let ((vec (vector 1 2 3 4 5))) (vector-copy! vec 1 #(a b c d e) 0 2) vec))",
+    "err": "emit: parse: bad expression #(1 a b 4 5)",
+    "kind": "compile"
+   },
+   {
+    "line": 1544,
+    "text": "(test #(a b c d e)\n    (let ((vec (vector 1 2 3 4 5))) (vector-copy! vec 0 #(a b c d e)) vec))",
+    "err": "emit: parse: bad expression #(a b c d e)",
+    "kind": "compile"
+   },
+   {
+    "line": 1546,
+    "text": "(test #(c d e 4 5)\n    (let ((vec (vector 1 2 3 4 5))) (vector-copy! vec 0 #(a b c d e) 2) vec))",
+    "err": "emit: parse: bad expression #(c d e 4 5)",
+    "kind": "compile"
+   },
+   {
+    "line": 1548,
+    "text": "(test #(1 2 a b c)\n    (let ((vec (vector 1 2 3 4 5))) (vector-copy! vec 2 #(a b c d e) 0 3) vec))",
+    "err": "emit: parse: bad expression #(1 2 a b c)",
+    "kind": "compile"
+   },
+   {
+    "line": 1550,
+    "text": "(test #(1 2 c 4 5)\n    (let ((vec (vector 1 2 3 4 5))) (vector-copy! vec 2 #(a b c d e) 2 3) vec))",
+    "err": "emit: parse: bad expression #(1 2 c 4 5)",
+    "kind": "compile"
+   },
+   {
+    "line": 1554,
+    "text": "(test #(1 1 2 4 5)\n    (let ((vec (vector 1 2 3 4 5))) (vector-copy! vec 1 vec 0 2) vec))",
+    "err": "emit: parse: bad expression #(1 1 2 4 5)",
+    "kind": "compile"
+   },
+   {
+    "line": 1556,
+    "text": "(test #(1 2 3 1 2)\n    (let ((vec (vector 1 2 3 4 5))) (vector-copy! vec 3 vec 0 2) vec))",
+    "err": "emit: parse: bad expression #(1 2 3 1 2)",
+    "kind": "compile"
+   }
+  ],
+  "pass": 3,
+  "fail": 0,
+  "failures": [],
+  "compiles": 50
+ },
+ {
+  "section": "6.9 Bytevectors",
+  "forms": 39,
+  "accepted": 6,
+  "rejected": [
+   {
+    "line": 1563,
+    "text": "(test #t (bytevector? #u8()))",
+    "err": "emit: parse: bad expression #u8()",
+    "kind": "compile"
+   },
+   {
+    "line": 1564,
+    "text": "(test #t (bytevector? #u8(0 1 2)))",
+    "err": "emit: parse: bad expression #u8(0 1 2)",
+    "kind": "compile"
+   },
+   {
+    "line": 1565,
+    "text": "(test #f (bytevector? #()))",
+    "err": "emit: parse: bad expression #()",
+    "kind": "compile"
+   },
+   {
+    "line": 1566,
+    "text": "(test #f (bytevector? #(0 1 2)))",
+    "err": "emit: parse: bad expression #(0 1 2)",
+    "kind": "compile"
+   },
+   {
+    "line": 1568,
+    "text": "(test #t (bytevector? (make-bytevector 0)))",
+    "err": "emit run: trap: arity error: expected 2 argument(s), got 1",
+    "kind": "runtime"
+   },
+   {
+    "line": 1570,
+    "text": "(test 0 (bytevector-length (make-bytevector 0)))",
+    "err": "emit run: trap: arity error: expected 2 argument(s), got 1",
+    "kind": "runtime"
+   },
+   {
+    "line": 1571,
+    "text": "(test 1024 (bytevector-length (make-bytevector 1024)))",
+    "err": "emit run: trap: arity error: expected 2 argument(s), got 1",
+    "kind": "runtime"
+   },
+   {
+    "line": 1580,
+    "text": "(test #u8(0 255 2)\n    (let ((bv (bytevector 0 1 2))) (bytevector-u8-set! bv 1 255) bv))",
+    "err": "emit: parse: bad expression #u8(0 255 2)",
+    "kind": "compile"
+   },
+   {
+    "line": 1583,
+    "text": "(test #u8() (bytevector-copy #u8()))",
+    "err": "emit: parse: bad expression #u8()",
+    "kind": "compile"
+   },
+   {
+    "line": 1584,
+    "text": "(test #u8(0 1 2) (bytevector-copy #u8(0 1 2)))",
+    "err": "emit: parse: bad expression #u8(0 1 2)",
+    "kind": "compile"
+   },
+   {
+    "line": 1585,
+    "text": "(test #u8(1 2) (bytevector-copy #u8(0 1 2) 1))",
+    "err": "emit: parse: bad expression #u8(1 2)",
+    "kind": "compile"
+   },
+   {
+    "line": 1586,
+    "text": "(test #u8(1) (bytevector-copy #u8(0 1 2) 1 2))",
+    "err": "emit: parse: bad expression #u8(1)",
+    "kind": "compile"
+   },
+   {
+    "line": 1588,
+    "text": "(test #u8(1 6 7 4 5)\n    (let ((bv (bytevector 1 2 3 4 5)))\n      (bytevector-copy! bv 1 #u8(6 7 8 9 10) 0 2)\n      bv))",
+    "err": "emit: parse: bad expression #u8(1 6 7 4 5)",
+    "kind": "compile"
+   },
+   {
+    "line": 1592,
+    "text": "(test #u8(6 7 8 9 10)\n    (let ((bv (bytevector 1 2 3 4 5)))\n      (bytevector-copy! bv 0 #u8(6 7 8 9 10))\n      bv))",
+    "err": "emit: parse: bad expression #u8(6 7 8 9 10)",
+    "kind": "compile"
+   },
+   {
+    "line": 1596,
+    "text": "(test #u8(8 9 10 4 5)\n    (let ((bv (bytevector 1 2 3 4 5)))\n      (bytevector-copy! bv 0 #u8(6 7 8 9 10) 2)\n      bv))",
+    "err": "emit: parse: bad expression #u8(8 9 10 4 5)",
+    "kind": "compile"
+   },
+   {
+    "line": 1600,
+    "text": "(test #u8(1 2 6 7 8)\n    (let ((bv (bytevector 1 2 3 4 5)))\n      (bytevector-copy! bv 2 #u8(6 7 8 9 10) 0 3)\n      bv))",
+    "err": "emit: parse: bad expression #u8(1 2 6 7 8)",
+    "kind": "compile"
+   },
+   {
+    "line": 1604,
+    "text": "(test #u8(1 2 8 4 5)\n    (let ((bv (bytevector 1 2 3 4 5)))\n      (bytevector-copy! bv 2 #u8(6 7 8 9 10) 2 3)\n      bv))",
+    "err": "emit: parse: bad expression #u8(1 2 8 4 5)",
+    "kind": "compile"
+   },
+   {
+    "line": 1610,
+    "text": "(test #u8(1 1 2 4 5)\n    (let ((bv (bytevector 1 2 3 4 5)))\n      (bytevector-copy! bv 1 bv 0 2)\n      bv))",
+    "err": "emit: parse: bad expression #u8(1 1 2 4 5)",
+    "kind": "compile"
+   },
+   {
+    "line": 1614,
+    "text": "(test #u8(1 2 3 1 2)\n    (let ((bv (bytevector 1 2 3 4 5)))\n      (bytevector-copy! bv 3 bv 0 2)\n      bv))",
+    "err": "emit: parse: bad expression #u8(1 2 3 1 2)",
+    "kind": "compile"
+   },
+   {
+    "line": 1619,
+    "text": "(test #u8() (bytevector-append #u8()))",
+    "err": "emit: parse: bad expression #u8()",
+    "kind": "compile"
+   },
+   {
+    "line": 1620,
+    "text": "(test #u8() (bytevector-append #u8() #u8()))",
+    "err": "emit: parse: bad expression #u8()",
+    "kind": "compile"
+   },
+   {
+    "line": 1621,
+    "text": "(test #u8(0 1 2) (bytevector-append #u8() #u8(0 1 2)))",
+    "err": "emit: parse: bad expression #u8(0 1 2)",
+    "kind": "compile"
+   },
+   {
+    "line": 1622,
+    "text": "(test #u8(0 1 2) (bytevector-append #u8(0 1 2) #u8()))",
+    "err": "emit: parse: bad expression #u8(0 1 2)",
+    "kind": "compile"
+   },
+   {
+    "line": 1623,
+    "text": "(test #u8(0 1 2 3 4) (bytevector-append #u8(0 1 2) #u8(3 4)))",
+    "err": "emit: parse: bad expression #u8(0 1 2 3 4)",
+    "kind": "compile"
+   },
+   {
+    "line": 1624,
+    "text": "(test #u8(0 1 2 3 4 5) (bytevector-append #u8(0 1 2) #u8(3 4) #u8(5)))",
+    "err": "emit: parse: bad expression #u8(0 1 2 3 4 5)",
+    "kind": "compile"
+   },
+   {
+    "line": 1626,
+    "text": "(test \"ABC\" (utf8->string #u8(#x41 #x42 #x43)))",
+    "err": "emit: parse: bad expression #u8(65 66 67)",
+    "kind": "compile"
+   },
+   {
+    "line": 1627,
+    "text": "(test \"ABC\" (utf8->string #u8(0 #x41 #x42 #x43) 1))",
+    "err": "emit: parse: bad expression #u8(0 65 66 67)",
+    "kind": "compile"
+   },
+   {
+    "line": 1628,
+    "text": "(test \"ABC\" (utf8->string #u8(0 #x41  #x42 #x43 0) 1 4))",
+    "err": "emit: parse: bad expression #u8(0 65 66 67 0)",
+    "kind": "compile"
+   },
+   {
+    "line": 1629,
+    "text": "(test \"\u03bb\" (utf8->string #u8(0 #xCE #xBB 0) 1 3))",
+    "err": "emit: parse: bad expression #u8(0 206 187 0)",
+    "kind": "compile"
+   },
+   {
+    "line": 1630,
+    "text": "(test #u8(#x41 #x42 #x43) (string->utf8 \"ABC\"))",
+    "err": "emit: parse: bad expression #u8(65 66 67)",
+    "kind": "compile"
+   },
+   {
+    "line": 1631,
+    "text": "(test #u8(#x42 #x43) (string->utf8 \"ABC\" 1))",
+    "err": "emit: parse: bad expression #u8(66 67)",
+    "kind": "compile"
+   },
+   {
+    "line": 1632,
+    "text": "(test #u8(#x42) (string->utf8 \"ABC\" 1 2))",
+    "err": "emit: parse: bad expression #u8(66)",
+    "kind": "compile"
+   },
+   {
+    "line": 1633,
+    "text": "(test #u8(#xCE #xBB) (string->utf8 \"\u03bb\"))",
+    "err": "emit: parse: bad expression #u8(206 187)",
+    "kind": "compile"
+   }
+  ],
+  "pass": 6,
+  "fail": 0,
+  "failures": [],
+  "compiles": 45
+ },
+ {
+  "section": "6.10 Control Features",
+  "forms": 36,
+  "accepted": 17,
+  "rejected": [
+   {
+    "line": 1639,
+    "text": "(test #t (procedure? car))",
+    "err": "emit: unbound variable procedure?",
+    "kind": "compile"
+   },
+   {
+    "line": 1640,
+    "text": "(test #f (procedure? 'car))",
+    "err": "emit: unbound variable procedure?",
+    "kind": "compile"
+   },
+   {
+    "line": 1641,
+    "text": "(test #t (procedure? (lambda (x) (* x x))))",
+    "err": "emit: unbound variable procedure?",
+    "kind": "compile"
+   },
+   {
+    "line": 1642,
+    "text": "(test #f (procedure? '(lambda (x) (* x x))))",
+    "err": "emit: unbound variable procedure?",
+    "kind": "compile"
+   },
+   {
+    "line": 1643,
+    "text": "(test #t (call-with-current-continuation procedure?))",
+    "err": "emit: unbound variable procedure?",
+    "kind": "compile"
+   },
+   {
+    "line": 1647,
+    "text": "(test-error (apply +))",
+    "err": "emit: unbound variable apply",
+    "kind": "compile"
+   },
+   {
+    "line": 1676,
+    "text": "(test '(10 200 3000 40 500 6000)\n    (let ((ls1 (list 10 100 1000))\n          (ls2 (list 1 2 3 4 5 6)))\n      (set-cdr! (cddr ls1) ls1)\n      (map * ls1 ls2)))",
+    "err": "emit: unbound variable set-cdr!",
+    "kind": "compile"
+   },
+   {
+    "line": 1682,
+    "text": "(test \"abdegh\" (string-map char-foldcase \"AbdEgH\"))",
+    "err": "emit: unbound variable string-map",
+    "kind": "compile"
+   },
+   {
+    "line": 1684,
+    "text": "(test \"IBM\" (string-map\n (lambda (c)\n   (integer->char (+ 1 (char->integer c))))\n \"HAL\"))",
+    "err": "emit: unbound variable string-map",
+    "kind": "compile"
+   },
+   {
+    "line": 1689,
+    "text": "(test \"StUdLyCaPs\"\n    (string-map\n     (lambda (c k) (if (eqv? k #\\u) (char-upcase c) (char-downcase c)))\n     \"studlycaps xxx\"\n     \"ululululul\"))",
+    "err": "emit: unbound variable string-map",
+    "kind": "compile"
+   },
+   {
+    "line": 1695,
+    "text": "(test #(b e h) (vector-map cadr '#((a b) (d e) (g h))))",
+    "err": "emit: parse: bad expression #(b e h)",
+    "kind": "compile"
+   },
+   {
+    "line": 1697,
+    "text": "(test #(1 4 27 256 3125)\n    (vector-map (lambda (n) (expt n n))\n                '#(1 2 3 4 5)))",
+    "err": "emit: parse: bad expression #(1 4 27 256 3125)",
+    "kind": "compile"
+   },
+   {
+    "line": 1701,
+    "text": "(test #(5 7 9) (vector-map + '#(1 2 3) '#(4 5 6 7)))",
+    "err": "emit: parse: bad expression #(5 7 9)",
+    "kind": "compile"
+   },
+   {
+    "line": 1703,
+    "text": "(test #t\n    (let ((res (let ((count 0))\n                 (vector-map\n                  (lambda (ignored)\n                    (set! count (+ count 1))\n                    count)\n                  '#(a b)))))\n      (or (equal? res #(1 2))\n          (equal? res #(2 1)))))",
+    "err": "emit: parse: bad expression #(1 2)",
+    "kind": "compile"
+   },
+   {
+    "line": 1713,
+    "text": "(test #(0 1 4 9 16)\n    (let ((v (make-vector 5)))\n      (for-each (lambda (i)\n                  (vector-set! v i (* i i)))\n                '(0 1 2 3 4))\n      v))",
+    "err": "emit: parse: bad expression #(0 1 4 9 16)",
+    "kind": "compile"
+   },
+   {
+    "line": 1720,
+    "text": "(test 9750\n    (let ((ls1 (list 10 100 1000))\n          (ls2 (list 1 2 3 4 5 6))\n          (count 0))\n      (set-cdr! (cddr ls1) ls1)\n      (for-each (lambda (x y) (set! count (+ count (* x y)))) ls2 ls1)\n      count))",
+    "err": "emit: unbound variable set-cdr!",
+    "kind": "compile"
+   },
+   {
+    "line": 1728,
+    "text": "(test '(101 100 99 98 97)\n    (let ((v '()))\n      (string-for-each\n       (lambda (c) (set! v (cons (char->integer c) v)))\n       \"abcde\")\n      v))",
+    "err": "emit: unbound variable string-for-each",
+    "kind": "compile"
+   },
+   {
+    "line": 1735,
+    "text": "(test '(0 1 4 9 16) (let ((v (make-list 5)))\n  (vector-for-each\n   (lambda (i) (list-set! v i (* i i)))\n   '#(0 1 2 3 4))\n  v))",
+    "err": "emit: unbound variable vector-for-each",
+    "kind": "compile"
+   },
+   {
+    "line": 1770,
+    "text": "(test '(connect talk1 disconnect\n        connect talk2 disconnect)\n    (let ((path '())\n          (c #f))\n      (let ((add (lambda (s)\n                   (set! path (cons s path)))))\n        (dynamic-wind\n          (lambda () (add 'connect))\n          (lambda ()\n            (add (call-with-current-c",
+    "err": "emit run: trap: call/cc: continuation invoked outside its extent",
+    "kind": "runtime"
+   }
+  ],
+  "pass": 12,
+  "fail": 3,
+  "failures": [
+   "FAIL [] (apply + 3): expected #t but got #f",
+   "FAIL [] (apply + 3 4): expected #t but got #f",
+   "FAIL [] (apply + (quote (2 3 . 4))): expected #t but got #f"
+  ],
+  "compiles": 41
+ },
+ {
+  "section": "6.11 Exceptions",
+  "forms": 31,
+  "accepted": 23,
+  "rejected": [
+   {
+    "line": 1792,
+    "text": "(test 65\n    (with-exception-handler\n     (lambda (con) 42)\n     (lambda ()\n       (+ (raise-continuable \"should be a number\")\n          23))))",
+    "err": "emit: unbound variable raise-continuable",
+    "kind": "compile"
+   },
+   {
+    "line": 1806,
+    "text": "(test #f\n    (file-error? (guard (exn (else exn)) (error \"BOOM!\"))))",
+    "err": "emit: unbound variable file-error?",
+    "kind": "compile"
+   },
+   {
+    "line": 1808,
+    "text": "(test #t\n    (file-error? (guard (exn (else exn)) (open-input-file \" no such file \"))))",
+    "err": "emit: unbound variable file-error?",
+    "kind": "compile"
+   },
+   {
+    "line": 1811,
+    "text": "(test #f\n    (read-error? (guard (exn (else exn)) (error \"BOOM!\"))))",
+    "err": "emit: unbound variable read-error?",
+    "kind": "compile"
+   },
+   {
+    "line": 1813,
+    "text": "(test #t\n    (read-error? (guard (exn (else exn)) (read (open-input-string \")\")))))",
+    "err": "emit: unbound variable read-error?",
+    "kind": "compile"
+   },
+   {
+    "line": 1815,
+    "text": "(test #t\n    (read-error? (guard (exn (else exn)) (read (open-input-string \"\\\"\")))))",
+    "err": "emit: unbound variable read-error?",
+    "kind": "compile"
+   },
+   {
+    "line": 1844,
+    "text": "(test 'caught-another-exception (test-exception-handler-2 -1))",
+    "err": "emit run: trap: an-error",
+    "kind": "runtime"
+   },
+   {
+    "line": 1849,
+    "text": "(let* ((out (open-output-string))\n       (value (with-exception-handler\n               (lambda (con)\n                 (cond\n                  ((not (list? con))\n                   (raise con))\n                  ((list? con)\n                   (display (car con) out))\n                  (else\n        ",
+    "err": "emit: unbound variable raise-continuable",
+    "kind": "compile"
+   }
+  ],
+  "pass": 20,
+  "fail": 1,
+  "failures": [
+   "FAIL [] something-went-wrong: expected #t but got #f"
+  ],
+  "compiles": 32
+ },
+ {
+  "section": "6.12 Environments and evaluation",
+  "forms": 4,
+  "accepted": 0,
+  "rejected": [
+   {
+    "line": 1944,
+    "text": "(test 20\n    (let ((f (eval '(lambda (f x) (f x x)) (null-environment 5))))\n      (f + 10)))",
+    "err": "emit: unbound variable eval",
+    "kind": "compile"
+   },
+   {
+    "line": 1948,
+    "text": "(test 1024 (eval '(expt 2 10) (environment '(scheme base))))",
+    "err": "emit: unbound variable eval",
+    "kind": "compile"
+   },
+   {
+    "line": 1950,
+    "text": "(test 0.0 (inexact (eval '(sin 0) (environment '(scheme inexact)))))",
+    "err": "emit: unbound variable eval",
+    "kind": "compile"
+   },
+   {
+    "line": 1952,
+    "text": "(test 1024.0 (eval '(+ (expt 2 10) (inexact (sin 0)))\n                   (environment '(scheme base) '(scheme inexact))))",
+    "err": "emit: unbound variable eval",
+    "kind": "compile"
+   }
+  ],
+  "pass": 0,
+  "fail": 0,
+  "failures": [],
+  "compiles": 6
+ },
+ {
+  "section": "6.13 Input and output",
+  "forms": 60,
+  "accepted": 34,
+  "rejected": [
+   {
+    "line": 1968,
+    "text": "(test #t (binary-port? (open-input-bytevector #u8(0 1 2))))",
+    "err": "emit: parse: bad expression #u8(0 1 2)",
+    "kind": "compile"
+   },
+   {
+    "line": 1969,
+    "text": "(test #t (binary-port? (open-output-bytevector)))",
+    "err": "emit: unbound variable binary-port?",
+    "kind": "compile"
+   },
+   {
+    "line": 1994,
+    "text": "(test 'error\n    (let ((out (open-output-string)))\n      (close-output-port out)\n      (guard (exn (else 'error)) (write-char #\\c out))))",
+    "err": "emit run: trap: write-char: not an open output port",
+    "kind": "runtime"
+   },
+   {
+    "line": 2001,
+    "text": "(test #t (char-ready? (open-input-string \"42\")))",
+    "err": "emit: unbound variable char-ready?",
+    "kind": "compile"
+   },
+   {
+    "line": 2057,
+    "text": "(test \"def\"\n    (let ((out (open-output-string)))\n      (write-string \"abc def\" out 4)\n      (get-output-string out)))",
+    "err": "emit run: trap: arity error: expected 1 argument(s), got 3",
+    "kind": "runtime"
+   },
+   {
+    "line": 2062,
+    "text": "(test \"c d\"\n    (let ((out (open-output-string)))\n      (write-string \"abc def\" out 2 5)\n      (get-output-string out)))",
+    "err": "emit run: trap: arity error: expected 1 argument(s), got 4",
+    "kind": "runtime"
+   },
+   {
+    "line": 2072,
+    "text": "(test #t (eof-object? (read-u8 (open-input-bytevector #u8()))))",
+    "err": "emit: parse: bad expression #u8()",
+    "kind": "compile"
+   },
+   {
+    "line": 2073,
+    "text": "(test 1 (read-u8 (open-input-bytevector #u8(1 2 3))))",
+    "err": "emit: parse: bad expression #u8(1 2 3)",
+    "kind": "compile"
+   },
+   {
+    "line": 2075,
+    "text": "(test #t (eof-object? (read-bytevector 3 (open-input-bytevector #u8()))))",
+    "err": "emit: parse: bad expression #u8()",
+    "kind": "compile"
+   },
+   {
+    "line": 2076,
+    "text": "(test #t (u8-ready? (open-input-bytevector #u8(1))))",
+    "err": "emit: parse: bad expression #u8(1)",
+    "kind": "compile"
+   },
+   {
+    "line": 2077,
+    "text": "(test #u8(1) (read-bytevector 3 (open-input-bytevector #u8(1))))",
+    "err": "emit: parse: bad expression #u8(1)",
+    "kind": "compile"
+   },
+   {
+    "line": 2078,
+    "text": "(test #u8(1 2) (read-bytevector 3 (open-input-bytevector #u8(1 2))))",
+    "err": "emit: parse: bad expression #u8(1 2)",
+    "kind": "compile"
+   },
+   {
+    "line": 2079,
+    "text": "(test #u8(1 2 3) (read-bytevector 3 (open-input-bytevector #u8(1 2 3))))",
+    "err": "emit: parse: bad expression #u8(1 2 3)",
+    "kind": "compile"
+   },
+   {
+    "line": 2080,
+    "text": "(test #u8(1 2 3) (read-bytevector 3 (open-input-bytevector #u8(1 2 3 4))))",
+    "err": "emit: parse: bad expression #u8(1 2 3)",
+    "kind": "compile"
+   },
+   {
+    "line": 2082,
+    "text": "(test #t\n    (let ((bv (bytevector 1 2 3 4 5)))\n      (eof-object? (read-bytevector! bv (open-input-bytevector #u8())))))",
+    "err": "emit: parse: bad expression #u8()",
+    "kind": "compile"
+   },
+   {
+    "line": 2086,
+    "text": "(test #u8(6 7 8 9 10)\n  (let ((bv (bytevector 1 2 3 4 5)))\n    (read-bytevector! bv (open-input-bytevector #u8(6 7 8 9 10)) 0 5)\n    bv))",
+    "err": "emit: parse: bad expression #u8(6 7 8 9 10)",
+    "kind": "compile"
+   },
+   {
+    "line": 2091,
+    "text": "(test #u8(6 7 8 4 5)\n  (let ((bv (bytevector 1 2 3 4 5)))\n    (read-bytevector! bv (open-input-bytevector #u8(6 7 8 9 10)) 0 3)\n    bv))",
+    "err": "emit: parse: bad expression #u8(6 7 8 4 5)",
+    "kind": "compile"
+   },
+   {
+    "line": 2096,
+    "text": "(test #u8(1 2 3 6 5)\n  (let ((bv (bytevector 1 2 3 4 5)))\n    (read-bytevector! bv (open-input-bytevector #u8(6 7 8 9 10)) 3 4)\n    bv))",
+    "err": "emit: parse: bad expression #u8(1 2 3 6 5)",
+    "kind": "compile"
+   },
+   {
+    "line": 2101,
+    "text": "(test #u8(1 2 3)\n  (let ((out (open-output-bytevector)))\n    (write-u8 1 out)\n    (write-u8 2 out)\n    (write-u8 3 out)\n    (get-output-bytevector out)))",
+    "err": "emit: parse: bad expression #u8(1 2 3)",
+    "kind": "compile"
+   },
+   {
+    "line": 2108,
+    "text": "(test #u8(1 2 3 4 5)\n  (let ((out (open-output-bytevector)))\n    (write-bytevector #u8(1 2 3 4 5) out)\n    (get-output-bytevector out)))",
+    "err": "emit: parse: bad expression #u8(1 2 3 4 5)",
+    "kind": "compile"
+   },
+   {
+    "line": 2113,
+    "text": "(test #u8(3 4 5)\n  (let ((out (open-output-bytevector)))\n    (write-bytevector #u8(1 2 3 4 5) out 2)\n    (get-output-bytevector out)))",
+    "err": "emit: parse: bad expression #u8(3 4 5)",
+    "kind": "compile"
+   },
+   {
+    "line": 2118,
+    "text": "(test #u8(3 4)\n  (let ((out (open-output-bytevector)))\n    (write-bytevector #u8(1 2 3 4 5) out 2 4)\n    (get-output-bytevector out)))",
+    "err": "emit: parse: bad expression #u8(3 4)",
+    "kind": "compile"
+   },
+   {
+    "line": 2123,
+    "text": "(test #u8()\n  (let ((out (open-output-bytevector)))\n    (flush-output-port out)\n    (get-output-bytevector out)))",
+    "err": "emit: parse: bad expression #u8()",
+    "kind": "compile"
+   },
+   {
+    "line": 2128,
+    "text": "(test #t\n    (and (member\n          (let ((out (open-output-string))\n                (x (list 1)))\n            (set-cdr! x x)\n            (write x out)\n            (get-output-string out))\n          ;; labels not guaranteed to be 0 indexed, spacing may differ\n          '(\"#0=(1 . #0#)\" \"#1=(1 . #1#)",
+    "err": "emit: unbound variable set-cdr!",
+    "kind": "compile"
+   },
+   {
+    "line": 2145,
+    "text": "(test \"((1 2 3) (1 2 3))\"\n    (let ((out (open-output-string))\n          (x (list 1 2 3)))\n      (write-simple (list x x) out)\n      (get-output-string out)))",
+    "err": "emit: unbound variable write-simple",
+    "kind": "compile"
+   },
+   {
+    "line": 2151,
+    "text": "(test #t\n    (and (member (let ((out (open-output-string))\n                       (x (list 1 2 3)))\n                   (write-shared (list x x) out)\n                   (get-output-string out))\n                 '(\"(#0=(1 2 3) #0#)\" \"(#1=(1 2 3) #1#)\"))\n         #t))",
+    "err": "emit: unbound variable write-shared",
+    "kind": "compile"
+   }
+  ],
+  "pass": 37,
+  "fail": 0,
+  "failures": [],
+  "compiles": 58
+ },
+ {
+  "section": "Read syntax",
+  "forms": 82,
+  "accepted": 66,
+  "rejected": [
+   {
+    "line": 2180,
+    "text": "(test '1 (cadr (read (open-input-string \"#0=(1 . #0#)\"))))",
+    "err": "emit run: trap: read: unrecognized syntax #0=",
+    "kind": "runtime"
+   },
+   {
+    "line": 2181,
+    "text": "(test '(1 2 3) (cadr (read (open-input-string \"(#0=(1 2 3) #0#)\"))))",
+    "err": "emit run: trap: read: unrecognized syntax #0=",
+    "kind": "runtime"
+   },
+   {
+    "line": 2188,
+    "text": "(test #() (read (open-input-string \"#()\")))",
+    "err": "emit: parse: bad expression #()",
+    "kind": "compile"
+   },
+   {
+    "line": 2189,
+    "text": "(test #(a b) (read (open-input-string \"#(a b)\")))",
+    "err": "emit: parse: bad expression #(a b)",
+    "kind": "compile"
+   },
+   {
+    "line": 2191,
+    "text": "(test #u8() (read (open-input-string \"#u8()\")))",
+    "err": "emit: parse: bad expression #u8()",
+    "kind": "compile"
+   },
+   {
+    "line": 2192,
+    "text": "(test #u8(0 1) (read (open-input-string \"#u8(0 1)\")))",
+    "err": "emit: parse: bad expression #u8(0 1)",
+    "kind": "compile"
+   },
+   {
+    "line": 2199,
+    "text": "(test 'abc (read (open-input-string \"#!fold-case ABC\")))",
+    "err": "emit run: trap: read: unrecognized syntax #!fold-case",
+    "kind": "runtime"
+   },
+   {
+    "line": 2200,
+    "text": "(test 'ABC (read (open-input-string \"#!fold-case #!no-fold-case ABC\")))",
+    "err": "emit run: trap: read: unrecognized syntax #!fold-case",
+    "kind": "runtime"
+   },
+   {
+    "line": 2213,
+    "text": "(define (test-read-error str)\n  (test-assert str\n      (guard (exn (else #t))\n        (read (open-input-string str))\n        #f)))",
+    "err": "emit: expand: no matching syntax-rules pattern for macro use (test-assert str (guard (exn (else #t)) (read (open-input-string str)) #f))",
+    "kind": "compile"
+   },
+   {
+    "line": 2219,
+    "text": "(test-read-error \"(#;a . b)\")",
+    "err": "emit: unbound variable test-read-error",
+    "kind": "compile"
+   },
+   {
+    "line": 2220,
+    "text": "(test-read-error \"(a . #;b)\")",
+    "err": "emit: unbound variable test-read-error",
+    "kind": "compile"
+   },
+   {
+    "line": 2221,
+    "text": "(test-read-error \"(a #;. b)\")",
+    "err": "emit: unbound variable test-read-error",
+    "kind": "compile"
+   },
+   {
+    "line": 2222,
+    "text": "(test-read-error \"(#;x #;y . z)\")",
+    "err": "emit: unbound variable test-read-error",
+    "kind": "compile"
+   },
+   {
+    "line": 2223,
+    "text": "(test-read-error \"(#; #;x #;y . z)\")",
+    "err": "emit: unbound variable test-read-error",
+    "kind": "compile"
+   },
+   {
+    "line": 2224,
+    "text": "(test-read-error \"(#; #;x . z)\")",
+    "err": "emit: unbound variable test-read-error",
+    "kind": "compile"
+   },
+   {
+    "line": 2268,
+    "text": "(test-write-syntax \"|\\\"|\" '|\\\"|)\n(test-write-syntax \"|\\\\||\" '|\\||)\n(test-write-syntax \"||\" '||)\n(test-write-syntax \"|\\\\\\\\123|\" '|\\\\123|)\n(test-write-syntax \"a\" '|a|)\n;; (test-write-syntax \"a.b\" '|a.b|)\n(test-write-syntax \"|2|\" '|2|)\n(test-write-syntax \"|+3|\" '|+3|)\n(test-write-syntax \"|-.4|\" '|-.4|)",
+    "err": "emit: expand: no matching syntax-rules pattern for macro use (test-assert (string-append \"(member? \" str2.316 \" \" (let ((out.319 (open-output-string))) (write accepted.317 out.319) (get-output-string out.319)) \")\") (pair? ls.318))",
+    "kind": "compile"
+   }
+  ],
+  "pass": 51,
+  "fail": 13,
+  "failures": [
+   "FAIL [] (read2 (open-input-string \"#true 6 \")): expected (#t . 6) but got (#t . rue)",
+   "FAIL [] (read2 (open-input-string \"#false\\\"8\\\"\")): expected (#f . \"8\") but got (#f . alse)",
+   "FAIL [] (char->integer (read (open-input-string \"#\\\\alarm\"))): expected 7 but got 97",
+   "FAIL [] (char->integer (read (open-input-string \"#\\\\backspace\"))): expected 8 but got 98",
+   "FAIL [] (char->integer (read (open-input-string \"#\\\\escape\"))): expected 27 but got 101",
+   "FAIL [] (char->integer (read (open-input-string \"#\\\\x03BB\"))): expected 955 but got 120",
+   "FAIL [] (char->integer (string-ref (read (open-input-string \"\\\"\\\\a\\\"\")) 0)): expected 7 but got 97",
+   "FAIL [] (char->integer (string-ref (read (open-input-string \"\\\"\\\\b\\\"\")) 0)): expected 8 but got 98",
+   "FAIL [] (read (open-input-string \"\\\"line 1\\\\\\ncontinued\\n\\\"\")): expected \"line 1continued\\n\" but got \"line 1\\ncontinued\\n\"",
+   "FAIL [] (read (open-input-string \"\\\"line 1\\\\ \\ncontinued\\n\\\"\")): expected \"line 1continued\\n\" but got \"line 1 \\ncontinued\\n\"",
+   "FAIL [] (read (open-input-string \"\\\"line 1\\\\\\n continued\\n\\\"\")): expected \"line 1continued\\n\" but got \"line 1\\n continued\\n\"",
+   "FAIL [] (read (open-input-string \"\\\"line 1\\\\ \\t \\n \\t continued\\n\\\"\")): expected \"line 1continued\\n\" but got \"line 1 \\t \\n \\t continued\\n\"",
+   "FAIL [] (read (open-input-string \"\\\"line 1\\\\ \\t \\n \\t \\n\\nline 3\\n\\\"\")): expected \"line 1\\n\\nline 3\\n\" but got \"line 1 \\t \\n \\t \\n\\nline 3\\n\""
+  ],
+  "compiles": 57
+ }
+]

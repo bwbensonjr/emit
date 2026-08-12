@@ -1,0 +1,32 @@
+sld export counts: {'inexact.sld': 12, 'file.sld': 6, 'cxr.sld': 24, 'base.sld': 129, 'read.sld': 1, 'internal.sld': 74}
+
+=== Base Library: 182/238 present, missing 56
+   assv binary-port? boolean=? bytevector-append bytevector-copy bytevector-copy! char-ready? cond-expand define-values features file-error? get-output-bytevector include include-ci let*-values let-syntax let-values letrec-syntax list-copy list-set! open-input-bytevector open-output-bytevector peek-u8 procedure? raise-continuable rationalize read-bytevector read-bytevector! read-error? read-u8 set-car! set-cdr! string->utf8 string->vector string-copy! string-fill! string-for-each string-map string<=? string<? string>=? string>? symbol=? syntax-error u8-ready? utf8->string vector->list vector->string vector-append vector-copy vector-copy! vector-fill! vector-for-each vector-map write-bytevector write-u8
+
+=== Char Library: 0/22 present, missing 22
+   char-alphabetic? char-ci<=? char-ci<? char-ci=? char-ci>=? char-ci>? char-downcase char-foldcase char-lower-case? char-numeric? char-upcase char-upper-case? char-whitespace? digit-value string-ci<=? string-ci<? string-ci=? string-ci>=? string-ci>? string-downcase string-foldcase string-upcase
+
+=== Lazy Library: 0/5 present, missing 5
+   delay delay-force force make-promise promise?
+
+=== Case-Lambda Library: 0/1 present, missing 1
+   case-lambda
+
+=== Inexact Library: 12/12 present, missing 0
+
+=== Time Library: 0/3 present, missing 3
+   current-jiffy current-second jiffies-per-second
+
+=== Process-Context Library: 0/5 present, missing 5
+   command-line emergency-exit exit get-environment-variable get-environment-variables
+
+=== Eval Library: 0/2 present, missing 2
+   environment eval
+
+=== Write Library: 2/4 present, missing 2
+   write-shared write-simple
+
+=== File Library: 6/10 present, missing 4
+   delete-file file-exists? open-binary-input-file open-binary-output-file
+
+=== Read Library: 1/1 present, missing 0

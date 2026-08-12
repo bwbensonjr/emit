@@ -1,0 +1,23 @@
+18 sections, 999 forms
+
+section                                forms   ok  rej  pass  fail
+4.1 Primitive expression types            29   27    2    25     0
+4.2 Derived expression types              80   32   48    29     0
+4.3 Macros                                39   19   20     8     1
+5 Program structure                       18   11    7     8     0
+6.1 Equivalence Predicates                27   27    0    25     0
+6.2 Numbers                              212  170   42   155    14
+6.3 Booleans                              18   13    5    13     0
+6.4 Lists                                 55   43   12    44     0
+6.5 Symbols                               17   13    4    13     0
+6.6 Characters                            79   20   59    20     0
+6.7 Strings                              130   37   93    37     0
+6.8 Vectors                               43    3   40     3     0
+6.9 Bytevectors                           39    6   33     6     0
+6.10 Control Features                     36   17   19    12     3
+6.11 Exceptions                           31   23    8    20     1
+6.12 Environments and evaluation           4    0    4     0     0
+6.13 Input and output                     60   34   26    37     0
+Read syntax                               82   66   16    51    13
+
+TOTALS: pass=506 fail=32 rejected-forms=438 compiles=895
