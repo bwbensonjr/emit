@@ -13,3 +13,9 @@ CLAUDE.local.md
 *.o
 /build/
 
+
+# `test/r7rs-suite-tests.sh --discover` writes a DRAFT exclusion manifest beside the real
+# one. It is generated scratch: it duplicates exclusions.tsv's keys but carries the raw
+# untagged errors instead of the curated reasons, so the two disagree by design, and every
+# discovery run rewrites it.
+test/r7rs/exclusions.tsv.draft
