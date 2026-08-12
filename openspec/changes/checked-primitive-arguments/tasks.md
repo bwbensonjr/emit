@@ -118,15 +118,18 @@ edit until the suites in task 7 have finished.**
 - [x] 7.1 `make`, then the new `test/typed-argument-tests.sh` — every case in task 1 now behaves as
       pinned, including 1.6 (still not caught by `guard`) and 1.8 (unchanged)
 - [x] 7.2 `./run-all-tests.sh` — **27/27 suites pass, 0 failed, 965s**
-- [ ] 7.3 `./run-dev-tests.sh` — run its suites individually; each exceeds the 600s tool timeout, and
-      the full run is ~1470s
+- [x] 7.3 `./run-dev-tests.sh` — **21/21 pass, 0 failed, 1604s**, run as a single background job
+      rather than individually (the tool's 600s ceiling only applies to a foreground call)
 - [x] 7.4 Treat any **new** trap in the suites or during regen as a real type confusion this change
       found: fix the caller, do not soften the guard. The compiler compiling itself is the largest
       available test of whether the predicates are right
 - [x] 7.6 Re-record `test/module-scaffold-baseline.sha256` — a committed SHA per demo of emitted
       IR, which `rt_check_callable` moves. Its header requires a before/after capture proving the
       drift is exactly what was intended, plus a log entry; not in the original plan
-- [ ] 7.5 Commit, then `test/trust-check.sh` — it `[SKIP]`s while `bootstrap/` is dirty, by design
+- [x] 7.5 Commit, then `test/trust-check.sh` — **[OK] committed IR is exactly what the current source
+      regenerates** (723s). The real gate on this change: a full `make regen` with every guard active
+      reproduced the committed IR byte-for-byte, which also means the compiler compiled its own
+      434 KB of source repeatedly with every accessor type-checked and no guard ever fired
 
 ## 8. Close the conformance-suite exclusions
 
