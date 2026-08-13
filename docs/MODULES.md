@@ -445,7 +445,7 @@ change `scheme-base-partition` (issue #33) it does not:
 |---|---|---|
 | `(scheme cxr)` | `caaar` `caadr` `cadar` `caddr` `cdaar` `cdadr` `cddar` `cdddr` `cadddr` … and the fifteen depth-4 forms | 24 exported, 9 relocated |
 | `(scheme read)` | `read` | 1 |
-| `(scheme file)` | `open-input-file` `open-output-file` `with-input-from-file` `with-output-to-file` `call-with-input-file` `call-with-output-file` | 6 |
+| `(scheme file)` | `open-input-file` `open-output-file` `with-input-from-file` `with-output-to-file` `call-with-input-file` `call-with-output-file` … plus `file-exists?` and `delete-file` | 8 exported, 6 relocated |
 
 **Breaking**, with no deprecation window — not a preference: `compile-library*` rejects "export of a
 name the library does not define", and a unit's export table maps each external name to a symbol
@@ -459,6 +459,13 @@ forms (`caaaar` … `cddddr`) were added — shipping a library named after the 
 
 The **depth-2** forms `caar`, `cadr`, `cdar`, `cddr` stay in `(scheme base)`, which is where
 R7RS-small puts them, so `(cadr xs)` still needs no import.
+
+`(scheme file)` has since gained `file-exists?` and `delete-file` (change:
+`catchable-errors-with-kinds`). Those two are **additions**, not relocations: `(scheme base)` never
+exported them, so they widen the library rather than breaking anything. The count above therefore
+separates the two — eight exports, of which six moved out of `(scheme base)`. Still absent are
+`open-binary-input-file` / `open-binary-output-file`, which need a binary-port representation Emit
+does not have.
 
 ## `(scheme inexact)` — the first ordinary library
 

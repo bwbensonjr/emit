@@ -29,6 +29,14 @@
 ;;; equal?, because +nan.0 is not equal? to itself.  The prelude's own number->string
 ;;; would shadow it and routes flonums to %flonum->string, an Emit primitive absent here.
 (define host-number->string number->string)
+;;; The prelude's ONE load-time effect (change: catchable-errors-with-kinds): `*handlers*`
+;;; arms the runtime's trap raiser in its own initializer, so `load`ing the prelude here
+;;; CALLS an Emit primitive rather than merely mentioning one inside a body -- which is why
+;;; this stand-in has to exist before the load, unlike %flo-truncate / %string->flonum
+;;; below.  Nothing under Chez traps into a Scheme raiser, so discarding the thunk is the
+;;; whole of the emulation.  A future prelude edit that adds another top-level effect will
+;;; land here the same way.
+(define (%set-trap-raiser! thunk) #f)
 (define (caught thunk)                   ; -> the report as a list, or the value
   (guard (e (#t (if (and (pair? e) (eq? (car e) 'read-report)) e (list 'host-error e))))
     (thunk)))
@@ -44,6 +52,12 @@
         [else (host-string->number s)]))
 ;;; and the prelude's `error`, redirected as described above.
 (define (error who . rest) (host-raise (cons 'read-report (cons who rest))))
+;;; rd-report no longer reports through `error`: it reports through `%read-error`, so that
+;;; the object it raises answers `read-error?` (change: catchable-errors-with-kinds).  The
+;;; redirect has to follow it, or every `caught` case below would run the prelude's real
+;;; raiser and reach %make-error-object/kind, which does not exist here.  Same shape as the
+;;; `error` stand-in above, so the expectations are unchanged.
+(define (%read-error who . rest) (host-raise (cons 'read-report (cons who rest))))
 
 (define pass 0)
 (define fail 0)

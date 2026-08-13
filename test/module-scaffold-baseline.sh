@@ -562,6 +562,46 @@
 #     All 80 demos' stdout is byte-identical before and after (the demo-values suite passes
 #     unchanged), and the reader's own behaviour change is what the new tests assert rather
 #     than anything the demos exercise.  No new entries.
+#   catchable-errors-with-kinds (issues #85, #89) -- the whole manifest again, since the
+#     prelude is baked; and unlike r7rs-lexical-conformance the PROGRAM modules ARE expected
+#     to move, because (scheme base) gains two exports and the runtime gains six symbols.
+#     The check is therefore that the delta is ONLY what the new names account for.
+#     Verified against an 80-demo before/after capture (a detached-HEAD worktree at a7b46a2,
+#     `make emit` from committed IR, vs the regenerated tree), split at
+#     `; ==EMIT-UNIT-BOUNDARY==`:
+#       PROGRAM module: ZERO removals in all 80, and +8 lines each -- the six new runtime
+#         declares (@rt_make_error_object_kind, @rt_error_object_kind, @rt_set_trap_raiser,
+#         @rt_trap_object, @rt_file_exists_p, @rt_delete_file) plus
+#         `@"scheme.base:read-error?"` and `@"scheme.base:file-error?" = external global`.
+#         ports.ll alone gets +2 more (`scheme.file:file-exists?` / `:delete-file`), being
+#         the one demo that imports (scheme file).  642 added lines total, 0 removed, and
+#         no codegen, label or constant moved in any program.  NO trap site was edited --
+#         the ~44 of them funnel through rt_fatal/rt_fatalf, which is exactly why the
+#         program modules hold still while traps become catchable.
+#       UNIT COUNT: unchanged for all 80 -- no library added, removed, or re-linked.
+#       NAMED FUNCTION SET: +10, ZERO removals, and every one is a new definition the
+#         partition homes: (scheme base) %raise-kinded / %read-error / read-error? /
+#         file-error?; (scheme file) %raise-kinded / %file-error / file-exists? /
+#         delete-file; (scheme read) %raise-kinded / %read-error.  The three copies of
+#         %raise-kinded are design D10 again -- anything that RAISES lives where `error`
+#         does, so it cannot come from the substrate and each reporting member defines its
+#         own.  `error` and `rd-report` keep their names; only their bodies changed.
+#       (emit internal): 348166 -> 348399 B (+233), and the diff is EXACTLY the six declare
+#         lines -- not one other byte.  The substrate raises nothing, so it gains nothing
+#         but the header.
+#       (scheme base): 585239 -> 592049 B (+6810).  Four new definitions, `error` delegating
+#         to the shared fold, rd-report's ten arms re-pointed at %read-error, and the
+#         raiser closure in *handlers*' initializer.
+#       (scheme file): 20904 -> 27441 B (+6537) and (scheme read): 28545 -> 32692 B (+4147),
+#         in the demos that import them -- their own private copies of the fold, plus
+#         (scheme file)'s two new procedures.
+#     The one genuinely new call site in the whole capture is `@rt_set_trap_raiser(ptr
+#     @__apply0, ...)`, appearing EXACTLY ONCE per demo (80 total) -- (scheme base) arming
+#     the trap raiser as it creates the handler chain.  All 80 demos' stdout is
+#     byte-identical before and after (`RUNNER=emit-run demos/run-tests.sh` passes 80/80 on
+#     both trees, and the two transcripts are byte-identical), and the R7RS suite goes from
+#     363 to 351 exclusions with no stale entries.  build/emit 1681192 -> 1698264 B (+1.0%).
+#     No new entries.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

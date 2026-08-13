@@ -270,7 +270,7 @@ import:
 |---|---|
 | `(scheme cxr)` | the 24 depth-3 and depth-4 accessors: `caddr`, `cdadr`, `caddar`, … |
 | `(scheme read)` | `read` |
-| `(scheme file)` | `open-input-file`, `open-output-file`, `call-with-input-file`, … |
+| `(scheme file)` | `open-input-file`, `open-output-file`, `call-with-input-file`, `file-exists?`, `delete-file`, … |
 | `(scheme inexact)` | `sqrt`, `exp`, `log`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `finite?`, `infinite?`, `nan?` |
 
 ```scheme
@@ -382,6 +382,19 @@ project:
   `raise`, and `error` — `with-exception-handler` is bound, because it is the installer `guard`
   expands to, but it does not give R7RS's resumable behavior (a `raise` inside it still aborts) and
   `raise-continuable` is absent.
+- **A runtime-detected error is a condition you can catch.** A wrong-typed argument, an
+  out-of-range index, a negative size, an exact-integer overflow, a division by zero, and `apply`
+  with an improper last argument all raise into the same handler chain `raise` uses, so a `guard`
+  around them works and the diagnostic arrives as the error object's message with no irritants.
+  Uncaught, they report and abort exactly as they did before. What stays **fatal**, and is not
+  delivered to any handler, is a violation of the runtime's own invariants: an arity mismatch,
+  exhausting the escape/guard frame stack, escaping to a frame that is no longer live, and
+  allocation failure. The line is that a condition about *data* leaves the machinery intact for a
+  handler to run on, and these say the machinery itself is unsound.
+- **`read-error?` and `file-error?` answer for their own sources.** A malformed `read` raises a read
+  error, an unopenable file or a failed `delete-file` raises a file error, `error` raises neither,
+  and a caught runtime trap is an `error-object?` of neither kind. There is no `error-object-kind`
+  — R7RS-small has none, and these two predicates are the whole of the surface.
 - **An unsupported import set fails confusingly.** `(import (only (scheme inexact) sqrt))` reports
   `program imports a library not found in the manifest`, because `(only …)` is read as a library
   name. Use whole-library imports.
