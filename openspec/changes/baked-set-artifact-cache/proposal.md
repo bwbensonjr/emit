@@ -32,8 +32,6 @@ already built: an export table is a readable datum, and `emit lib` already *writ
   contract the module system already specifies.
 - **The baked standard library becomes a cache client.** Today `register_baked_set` (mode 8) drives
   `compile-baked-set` on every process start; it will reuse a cached set when one is valid.
-- **User library units become cache clients too.** `preload_user_libraries` recompiles every `.sld`
-  in a program's import closure at every invocation; it will reuse cached units on the same terms.
 - **The cache is transparent, never load-bearing for correctness.** A miss, a stale entry, an
   unreadable entry, or an unwritable cache directory SHALL fall back to compiling from source and
   succeed. No door acquires a new failure mode, and no program's emitted IR depends on whether the
@@ -41,18 +39,26 @@ already built: an export table is a readable datum, and `emit lib` already *writ
 - **The cache works from an install, not only a checkout** — it needs a user-writable location,
   since `<prefix>/share/emit/` is not writable and the existing `build/lib` is checkout-only.
 
-Explicitly **not** in scope: P8 (tree-shaking on the `emit build` door) and P11 (the `runtime.c`
+**Scoped to the baked standard library.** Caching *user* library units is deferred to a follow-up,
+decided during implementation: it needs the include closure of each `.sld` to key on, and the
+Chez-free include reader (`src/include-reader.ss`) has no tracker for that — only the Chez driver
+does (`*includes-read*`, `src/compile.ss:196-222`). That is a new core subsystem for roughly a tenth
+of the win: the baked set is 1.72 s of the 1.80 s, while user libraries add ~0.4–0.9 s only on the
+minority of processes that import any. The baked set needs no such tracking at all, because its
+source is compiled into the binary and the executable's own identity keys it.
+
+Also explicitly **not** in scope: P8 (tree-shaking on the `emit build` door) and P11 (the `runtime.c`
 recompile, measured at 0.16 s / 5% and deliberately not scheduled). Precompiling units to `.bc`/`.o`
-is also out — it attacks the 0.30 s JIT half and can follow independently once the 1.43 s is gone.
+is out too — it attacks the 0.30 s JIT half and can follow independently once the 1.43 s is gone.
 
 ## Capabilities
 
 ### New Capabilities
 
-- `artifact-cache`: A keyed, self-populating, transparent cache of compiled library artifacts for
-  the Chez-free doors. Covers what identifies a cache entry (compiler identity + source identity),
-  where entries live for both a checkout and an install, when an entry may be reused, and the
-  requirement that every failure path degrades to compiling from source rather than to an error.
+- `artifact-cache`: A keyed, self-populating, transparent cache of the compiled baked standard
+  library for the Chez-free doors. Covers what identifies a cache entry, where entries live for both
+  a checkout and an install, when an entry may be reused, and the requirement that every failure path
+  degrades to compiling from source rather than to an error.
 
 ### Modified Capabilities
 
@@ -60,19 +66,21 @@ is also out — it attacks the 0.30 s JIT half and can follow independently once
   prebuilt unit module + export table with no compilation, alongside the existing per-form and
   whole-program entries. The dev→ship fidelity requirement is extended to state that a session
   seeded from cached units is indistinguishable from one seeded by compiling them.
-- `module-system`: the Chez-free doors' library resolution gains artifact reuse, and the existing
-  freshness rule ("An artifact is stale when a file it included changes") is extended to cover the
-  baked set and the Chez-free doors, which it currently does not reach.
+
+*(No `module-system` delta. An earlier draft extended its freshness rule to the Chez-free doors; with
+user-library caching deferred, that requirement is untouched and stays available for the follow-up
+change to extend.)*
 
 ## Impact
 
-- `src/repl-core.ss` — a new mode for register-from-prebuilt; `run-register-baked-set` becomes
-  cache-aware. In `CORE_FLAT`'s regen set, so this change requires `make regen`.
-- `src/core.ss` — `compile-baked-set` grows a reuse path; the export table gains a read
-  counterpart to the writer it already has.
-- `src/emit.cpp` — host-side cache I/O (locate, read, write, invalidate) for `seed_session`,
-  `register_baked_set`, and `preload_user_libraries`. Host C++, so it reaches the binaries through
-  plain `make`, not regen.
+- `src/repl-core.ss` — two new modes: register-from-prebuilt (14) and serialize-what-was-registered
+  (15). `run-register-baked-set` itself is untouched, so mode 8's protocol does not move. In
+  `CORE_FLAT`'s regen set, so this change requires `make regen`.
+- `src/core.ss` — untouched, as it turned out: the reuse path is a sibling of the compile path
+  rather than a branch inside `compile-baked-set` (design D9).
+- `src/emit.cpp` — host-side cache I/O (locate, key, read, write) around `register_baked_set`, which
+  all four doors reach through `seed_session`. Host C++, so it reaches the binaries through plain
+  `make`, not regen.
 - Cache location and key interact with `artifact-compiler-stamp` (the existing stamp) and with the
   `installed-emit-completeness` install contract, which deliberately ships no compiled artifacts —
   a *derived, local, regenerable* cache is consistent with that, but the reasoning must be recorded.

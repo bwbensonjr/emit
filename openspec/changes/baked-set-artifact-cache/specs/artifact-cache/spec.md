@@ -1,18 +1,21 @@
 ## Purpose
 
-Lets the Chez-free doors reuse a library unit that has already been compiled, instead of
-recompiling the standard library and every imported library from source at every process start.
-The cache is a pure accelerator: it is keyed so a stale entry cannot be used, and every failure
-path falls back to compiling from source.
+Lets the Chez-free doors reuse the already-compiled standard library instead of recompiling it from
+source at every process start. The cache is a pure accelerator: it is keyed so a stale entry cannot
+be used, and every failure path falls back to compiling from source.
 
 ## ADDED Requirements
 
-### Requirement: A compiled library unit is reused across processes
+### Requirement: The baked standard library is compiled once and reused across processes
 
-The Chez-free doors (`emit run`, `emit build`, `emit lib`, `emit repl`) SHALL reuse a previously
-compiled library unit rather than recompiling it, for both the baked standard library and each user
-library reached through a program's import closure. Reuse SHALL require no access to the library's
-source, resting on the unit module plus its export table as the module system already specifies.
+The Chez-free doors (`emit run`, `emit build`, `emit lib`, `emit repl`) SHALL reuse an
+already-compiled baked standard library rather than recompiling it from the binary's baked-in source
+at every process start. Reuse SHALL require no access to any library source, resting on the compiled
+unit modules plus the compile-time interface each publishes.
+
+The baked set SHALL be cached and invalidated **as a whole**, in the dependency order its partition
+declares, because a member may import another and a set that is individually fresh but mutually
+inconsistent would be unusable.
 
 #### Scenario: A second invocation does not recompile the standard library
 
@@ -20,47 +23,39 @@ source, resting on the unit module plus its export table as the module system al
 - **THEN** the second invocation reuses the cached standard library, and its wall clock approaches
   the `--no-prelude` floor rather than paying the from-source compile again
 
-#### Scenario: A user library in the import closure is reused
-
-- **WHEN** a program importing a user library is compiled twice, with no source changed
-- **THEN** the second compile reuses the cached unit for that library instead of recompiling its
-  `.sld`
-
 #### Scenario: The first invocation populates the cache
 
 - **WHEN** a door runs with an empty cache
-- **THEN** it compiles from source, succeeds, and leaves a cache entry that a later process reuses
+- **THEN** it compiles from source, succeeds, and leaves an entry that a later process reuses
 
-### Requirement: A cache entry is valid only for the compiler and sources that produced it
+#### Scenario: Every door benefits
 
-A cache entry SHALL record the identity of the compiler that produced it and the identity of every
-source that contributed to it, and SHALL be reused only when both still match. A change to the
-compiler, to a library's source, or to any file that library reached through `include`,
-`include-ci`, or `include-library-declarations` SHALL invalidate the entry. For the baked standard
-library — whose source is compiled into the binary rather than read from disk — the binary's own
-identity SHALL serve as the source identity.
+- **WHEN** each of `emit run`, `emit build`, `emit lib`, and `emit repl` is invoked twice
+- **THEN** each one's second invocation reuses the cached set
 
-#### Scenario: A rebuilt compiler invalidates every entry
+### Requirement: A cache entry is valid only for the compiler that produced it
 
-- **WHEN** the compiler is rebuilt and a door is run again
-- **THEN** no entry from the previous compiler is reused, and the units are recompiled
+A cache entry SHALL record the identity of the compiler that produced it and SHALL be reused only
+when that identity still matches. Because the baked standard library's source is compiled **into**
+the binary rather than read from disk, the running executable's identity SHALL serve as the identity
+of both the compiler and the source. A format version SHALL be recorded alongside it so the entry
+layout can be invalidated deliberately.
 
-#### Scenario: Editing a library source invalidates its entry
+#### Scenario: A rebuilt compiler is not served a stale entry
 
-- **WHEN** a user library's source is edited and a program importing it is compiled again
-- **THEN** that library's unit is recompiled and the stale entry is not used
+- **WHEN** the compiler binary is rebuilt and a door is run again
+- **THEN** no entry written by the previous binary is reused, and the baked set is recompiled
 
-#### Scenario: Editing an included file invalidates the entry that included it
+#### Scenario: A different binary does not share an entry
 
-- **WHEN** a file reached through `include` is edited and the including library is compiled again
-- **THEN** that library's unit is recompiled
+- **WHEN** two different `emit` binaries run against the same cache location
+- **THEN** neither reuses the other's entry
 
 ### Requirement: The cache never changes what a door produces
 
 A door's observable result SHALL NOT depend on whether the cache was warm, cold, or absent. For the
-same inputs, the emitted IR, the delivered executable's behavior, the session environment a REPL or
-run door resolves imports against, and every diagnostic SHALL be identical in all three states. The
-cache SHALL therefore be verifiable by comparing a cold-cache run against a warm-cache run.
+same inputs, the emitted IR, the delivered executable's behavior, the session environment imports
+resolve against, and every diagnostic SHALL be identical in all three states.
 
 #### Scenario: Emitted IR is identical cold and warm
 
@@ -69,8 +64,9 @@ cache SHALL therefore be verifiable by comparing a cold-cache run against a warm
 
 #### Scenario: A cached session resolves the same names
 
-- **WHEN** a REPL session is seeded from cached units and another from freshly compiled ones
-- **THEN** both resolve the same set of standard-library names to the same bindings
+- **WHEN** one session is seeded from a cached baked set and another by compiling it
+- **THEN** both resolve the same standard-library names to the same bindings, and initialize the
+  set's members in the same order
 
 #### Scenario: Diagnostics do not move
 
@@ -84,9 +80,13 @@ location that cannot be created or written SHALL cause the door to compile from 
 normally. No door SHALL acquire a failure mode it did not have before the cache existed, and the
 cache SHALL NOT be required for correctness on any path.
 
+A metadata entry that cannot be read, or that is inconsistent with the units stored beside it, SHALL
+be refused whole rather than partially applied, so that falling back to a from-source compile always
+begins from an unmodified session.
+
 #### Scenario: An unwritable cache location still permits every door to work
 
-- **WHEN** the cache location cannot be written
+- **WHEN** the cache location cannot be created or written
 - **THEN** each door compiles from source and completes normally, reporting no error
 
 #### Scenario: A corrupt entry is not trusted
@@ -94,18 +94,23 @@ cache SHALL NOT be required for correctness on any path.
 - **WHEN** a cache entry is truncated or otherwise unreadable
 - **THEN** the door ignores it, recompiles from source, and completes normally
 
+#### Scenario: A partially applicable entry leaves the session unchanged
+
+- **WHEN** an entry's metadata is readable but inconsistent with the units stored beside it
+- **THEN** nothing from that entry is registered, and the door compiles from source
+
 #### Scenario: A read-only installation works
 
-- **WHEN** `emit` is run from an installation whose files are read-only and no writable cache
-  location is available
+- **WHEN** `emit` runs from a read-only installation with no writable cache location available
 - **THEN** every door behaves exactly as it does today
 
 ### Requirement: The cache is available from an installed emit, not only a checkout
 
-The cache SHALL work when `emit` is run from an installation rather than a repository checkout,
-using a location that does not require the install tree to be writable. The install contract SHALL
-remain unchanged: no compiled artifact is shipped or installed, and every cache entry is derived
-locally, on demand, and regenerable from source.
+The cache SHALL work when `emit` is run from an installation rather than a repository checkout, using
+a location that does not require the install tree to be writable, and resolved identically in both
+cases so that no code path exists only for installed users. The install contract SHALL remain
+unchanged: no compiled artifact is shipped or installed, and every entry is derived locally, on
+demand, and regenerable from source.
 
 #### Scenario: An installed emit caches on first use
 
@@ -115,20 +120,20 @@ locally, on demand, and regenerable from source.
 #### Scenario: Installation ships no compiled artifact
 
 - **WHEN** `emit` is installed
-- **THEN** the installed tree contains no compiled library unit, and the cache is created only by
-  running a door
+- **THEN** the installed tree contains no compiled library unit, and a cache entry exists only after
+  a door has run
 
 ### Requirement: Cache reuse is narrated
 
-Each door SHALL report whether a unit was reused or recompiled, and name the reason when it
+Each door SHALL report whether the baked set was reused or recompiled, and name the reason when it
 recompiles, following the project's narration convention: narration on stderr, controllable through
 verbosity, concise by default.
 
 #### Scenario: Reuse and rebuild are distinguishable
 
-- **WHEN** a door runs with a warm cache and again after invalidating one entry
-- **THEN** the narration reports the reused units as reused, and reports the invalidated one as
-  recompiled together with the reason it was recompiled
+- **WHEN** a door runs with a warm cache, and again after the entry is invalidated
+- **THEN** the narration reports the reused set as reused, and the invalidated one as recompiled
+  together with the reason
 
 #### Scenario: Narration stays on stderr
 

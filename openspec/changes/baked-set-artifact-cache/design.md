@@ -144,6 +144,58 @@ therefore written to a temporary file and atomically renamed into place, with th
 loser of the race overwrites with identical bytes, and a reader either sees a complete entry or
 falls back per D7. No locking.
 
+### D9 — Two modes, general over N members, added during implementation
+
+The plan assumed a reuse path inside `compile-baked-set` plus a widened mode 8 return. Reading the
+code made a simpler shape available, and it is what shipped:
+
+- **Mode 14** registers every library in a cache entry's metadata, with no compilation. Because
+  registration is only "publish a table and its imports", it needs no IR at all — the module text
+  stays entirely the host's business. One member or twenty is the same code, so the baked set and a
+  user library share one mode, and for a single member its newline-joined `__init` result *is*
+  mode 4's single symbol. Neither host path needs a return shape of its own.
+- **Mode 15** serializes the metadata for libraries already registered in the session — a pure
+  query. This is what avoids a second compile *and* avoids widening mode 8's `(ok IR . INITS)`
+  return, which the host reads positionally.
+
+`compile-baked-set` and mode 8 are therefore untouched, and the reuse path is a sibling of the
+compile path rather than a branch inside it.
+
+**One correction to D1.** D1 said the cached artifacts "are exactly what `emit lib` already writes."
+The export table is; the library's **direct imports** are not, because a table is keyed on what a
+library exports, not on what it depends on — and `run-closure-order` needs the dependencies to
+toposort initialization. So a cache entry carries a metadata datum of its own — `(NAME IMPORTS TABLE
+INIT)` per member — rather than an `.exports` file verbatim. The `.exports` format is untouched and
+stays byte-compatible with the Chez driver's, which is the reason not to overload it.
+
+Mode 14 validates every row before registering any, so a malformed entry leaves the session
+untouched and the caller can still fall back to compiling (spec: "refused rather than
+half-registered"). It also checks that each row's table is filed under its own name, since a table
+paired with the wrong name is the one corruption that would otherwise resolve silently to another
+library's symbols.
+
+### D10 — A request to observe the compile bypasses the cache
+
+`--dump-all` (dump level 3) prints the standard library's per-define stage headers, and those
+exist only *while* it is being compiled. With a warm cache the set is never compiled, so the flag
+printed **none** of them — `test/dump-stages-tests.sh` asserts >100 tagged `(scheme base)` headers
+and saw zero.
+
+The fix is to bypass the cache when level 3 is requested: the flag's whole purpose is that the work
+happens where it can be watched, so serving it from cache answers a different question than the one
+asked. Levels 1 and 2 are unaffected, because they deliberately do not dump library units
+(`emit-dump-stages` design D7) — for them a reused entry changes nothing that is printed, and the
+suite asserts that direction too.
+
+This is the one place where cache state legitimately changes what appears on a door's *stderr*. It
+does not weaken the transparency requirement, which is about what a door produces: emitted IR, values,
+and diagnostics stay byte-identical, and `dump-stages-tests` separately asserts that dumping changes
+no output byte. `--dump-all` becomes slow again, which is correct for a debugging flag.
+
+Worth generalizing from: the transparency property to test is not "the answer is the same" but "every
+observable is the same", and a cache is exactly the kind of change that preserves the first while
+quietly breaking the second. This one was caught by an existing suite rather than by a new one.
+
 ## Risks / Trade-offs
 
 - **A stale entry is used and silently yields a wrong compile** → the worst outcome, and the reason
@@ -157,6 +209,10 @@ falls back per D7. No locking.
   can delete; a prune policy is an open question, not a blocker.
 - **`src/repl-core.ss` is in `CORE_FLAT`** → this change requires `make regen`, must reconverge, and
   must reproduce `bootstrap/` byte-identically. The `make regen` barrier in `CLAUDE.md` applies.
+- **An observability flag can be silently defeated by the cache** → D10 records the one found
+  (`--dump-all`); the general hazard is that a cache preserves *answers* while changing what can be
+  *watched*. Any future flag that reports on the standard library's compilation must ask whether a
+  warm cache would empty it.
 - **The win is easy to mis-measure** → the acceptance figures must be taken on a comparatively idle
   machine, and reported as cold-vs-warm on the same machine in the same session. The load caveat now
   recorded in P3 applies to any re-measurement.
