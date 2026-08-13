@@ -269,17 +269,34 @@ lands on it — with the clock as the axis instead of bytes. `scheme-io-library`
 `reader-lexical-conformance` and `catchable-errors-with-kinds` have each added to it since the 0.12 s
 figure was taken.
 
-**An anomaly worth its own investigation, not folded into the above.** The REPL door's
-`--no-prelude` floor is 1.65 s, where the run door's is 0.08 s — so on that door the prelude is only
-~0.30 s of the 1.95 s and something else costs 1.65 s. It appears to be the manifest-driven load of
-`lib/scheme/base.sld` (mode 5), which the REPL uses where the run door bakes: with no manifest
-resolvable (`EMIT_MANIFEST=/dev/null`) `emit repl` starts in **0.01 s** and still evaluates
-`(map (lambda (x) (* x 2)) (list 1 2 3))` correctly. That 0.01 s is *not* a floor to design toward
-until it is understood — a door that answers correctly for a `(scheme base)` procedure without
-having compiled `(scheme base)` is presumably resolving against the linked-in unit the binary
-already carries, which is either the cheap win this item wants or a dev→ship fidelity hazard, and
-which of the two it is has not been established. Establish it before building the cache, because the
-answer decides whether the REPL needs the cache at all.
+**The REPL door, measured across all four combinations.** An earlier revision of this entry reported
+an anomaly here — a 0.01 s start that still resolved a `(scheme base)` procedure — and asked whether
+the linked-in unit was reusable or whether that path was a dev→ship fidelity gap. **That was a
+conflation of two different invocations**: the 0.01 s came from a `--no-prelude` run and the working
+`map` from a separate run without it. Measured properly, in one pass:
+
+| case | time | `map` bound? |
+|---|---|---|
+| `emit repl`, manifest, prelude | 2.05 s | yes |
+| `emit repl`, manifest, `--no-prelude` | 1.69 s | **no** |
+| `emit repl`, no manifest, prelude | 1.87 s | yes |
+| `emit repl`, no manifest, `--no-prelude` | 0.05 s | no |
+
+No case both starts instantly and has a standard library, so there is **no** anomaly, **no** cheap
+reuse-the-linked-unit win, and **no** fidelity hazard: the REPL bakes from `*prelude-source*` like
+the run door (~1.9 s), which is consistent and correct. The `--no-prelude` floor being 1.65–1.69 s
+rather than 0.05 s is not the prelude at all, which is what misled the first reading.
+
+It is instead **a separate defect, worth fixing on its own**: `emit repl --no-prelude` with a
+manifest present spends ~1.69 s compiling `(scheme base)` from the manifest and then does not bind
+it — ~1.6 s of pure waste against the 0.05 s floor, and arguably contrary to `compiler-embedding`'s
+existing `--no-prelude` parity requirement ("the entry SHALL … emit no `(scheme base)` IR"). Filed as
+GitHub issue #101 and not folded into this item, since it is a flag-semantics bug rather than a
+caching one.
+
+The lesson is worth keeping, because it is cheap to repeat: two measurements taken under different
+flags are not two measurements of the same thing, and a surprising number is more often a mismatched
+pair than a real discovery.
 
 **Value:** high — ~74% of the default test suite, ~1.4 s off every `emit run`/`build`/`lib`, and the
 most visible latency in the REPL, which `CLAUDE.md` names the primary development loop. **Cost:**
@@ -327,8 +344,9 @@ roughly its `--no-prelude` floor, which is the most visible latency in the prima
 **Correction (2026-08-13).** Two things above do not survive re-measurement. First, "~0.12s is the
 session and the rest is the standard library" reads the 0.84/0.72 pair backwards: 0.12 s is the
 *prelude delta*, and 0.72 s — now 1.65 s — is the `--no-prelude` floor, i.e. whatever the REPL door
-does regardless. So on the REPL door the baked set was never "the whole of startup latency"; see the
-anomaly note in the re-measurement above, which is the entry that chases where the floor comes from.
+does regardless. So on the REPL door the baked set was never "the whole of startup latency"; the
+four-case table in the re-measurement above shows where that floor actually comes from (the
+manifest-driven `(scheme base)` load, which `--no-prelude` does not skip).
 Second, "a precompiled baked set would cut a REPL start to roughly its `--no-prelude` floor" is true
 and no longer interesting, because that floor is itself ~1.65 s. The measurement that *does* hold,
 and that this item now turns on, is the **run** door's: 1.80 s against a 0.08 s `--no-prelude` floor.
