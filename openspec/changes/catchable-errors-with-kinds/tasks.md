@@ -85,7 +85,9 @@ The C half validates on its own with plain `make`, before the barrier closes.
 
 ## 7. Retire the exclusions and verify
 
-- [x] 7.1 Remove the 9 rows tagged `issue-85` (6) and `issue-89` (3) from `test/r7rs/exclusions.tsv`.
+- [x] 7.1 Removed the 9 rows tagged `issue-85` (6) and `issue-89` (3) — and then 3 more the
+      staleness half found, exactly as 7.2 warned: two `unimplemented` `file-exists?` rows and
+      `write-char` to a closed port, an `rt_fatal` trap this change makes catchable. 12 total.
 - [x] 7.2 `test/r7rs-suite-tests.sh` — checks in both directions, so this is the definition of done.
       Watch for rows tagged `unimplemented` that this change also fixes: the stale-exclusion half
       found two such rows last time that a tag-based sweep could not see.
@@ -104,5 +106,10 @@ The C half validates on its own with plain `make`, before the barrier closes.
 - [x] 8.1 Update the exceptions and `(scheme file)` paragraphs in `docs/PROJECTS.md`.
 - [x] 8.2 Note the user-visible change for the first tag's release notes: a runtime trap is now a
       condition a `guard` can catch, where it previously ended the program.
-- [ ] 8.3 Commit, then run `test/trust-check.sh` — it `[SKIP]`s on a dirty tree by design.
-- [ ] 8.4 Close #85 and #89 from the commit.
+- [x] 8.3 Committed as ff6113a on `feat/catchable-errors-with-kinds`; `test/trust-check.sh`
+      then passed — the committed IR is exactly what the current source regenerates.
+- [x] 8.4 The commit carries `Fixes #85` / `Fixes #89`, so both close when the branch merges.
+      Two follow-ups worth filing, neither blocking: the raiser cell is global while a host
+      has TWO prelude instances (design Risks — costs nothing observable today), and
+      `rt_arity_error` is excluded from the catchable set by scope rather than by principle
+      (design D2, and the Open Question the mechanism now unblocks).
