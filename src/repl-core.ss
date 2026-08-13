@@ -689,6 +689,101 @@
               (string-append acc (if first? "" "\n") (mangle (car ns) "__init"))
               #f))))
 
+;; --- artifact cache: registering a library without compiling it --------------------
+;; (change: baked-set-artifact-cache.)  A cached library needs four things to enter a
+;; session: its NAME, its DIRECT IMPORTS, its EXPORT TABLE, and its `__init` symbol.  Only
+;; the table is what `emit lib` already writes -- the imports are not in it, because a
+;; table is keyed on what a library *exports*, not on what it depends on, and the run
+;; door's init-closure toposort needs the dependencies (run-closure-order).  So a cache
+;; entry carries a metadata datum of its own alongside the unit IR.
+;;
+;; The IR is deliberately absent from both modes below.  Registration does not read it --
+;; it only publishes tables and imports -- so the module text stays entirely the host's
+;; business, which keeps the core free of the entry's file layout as well as of its I/O.
+
+;; Mode 14: register every library in a cache entry's metadata, in the order given, with
+;; no compilation.  This leaves exactly what mode 8 (baked set) or mode 4 (one library)
+;; leaves behind, which is what makes a cache-seeded session indistinguishable from a
+;; compiled one (spec: artifact-cache, "The cache never changes what a door produces").
+;;
+;; Returns the `__init` symbols newline-joined in order -- for a single-member entry that
+;; is the one symbol mode 4 returns, so ONE mode serves the baked set and a user library
+;; alike and neither host path needs a shape of its own.
+;;
+;; Every row is validated BEFORE anything is registered.  A malformed entry must leave the
+;; session untouched so the caller can fall back to compiling from source (spec: "refused
+;; rather than half-registered"); validating as we go would leave a half-seeded session
+;; that no fallback could repair.
+(define (repl-register-cached-libs meta-text)
+  (guard (e (#t (cons (quote error) (repl-error->string e))))
+    (let ([data (read-all-from-string meta-text)])
+      (if (null? data)
+          (error 'cache "cache metadata holds no datum")
+          (let ([rows (car data)])
+            (check-cached-rows rows)
+            (register-cached-rows rows)
+            (cons (quote ok) (baked-init-symbols (map car rows))))))))
+
+;; Every row is (NAME IMPORTS TABLE INIT), and the table's own car must be the name it is
+;; filed under -- a table paired with the wrong name would resolve imports to another
+;; library's symbols, which is the one corruption that would not announce itself.
+(define (check-cached-rows rows)
+  (if (null? rows)
+      #t
+      (let ([row (car rows)])
+        (if (not (and (pair? row) (pair? (cdr row))
+                      (pair? (cddr row)) (pair? (cdddr row))))
+            (error 'cache "malformed cache metadata row" row)
+            (let ([name (car row)] [table (caddr row)])
+              (if (not (and (pair? table) (equal? (car table) name)))
+                  (error 'cache "cache metadata row's table does not match its name" name)
+                  (check-cached-rows (cdr rows))))))))
+
+;; Publish each row.  An already-registered library is left alone rather than duplicated,
+;; the same tolerance mode 4's `already` status provides: every door registers the baked
+;; set before preloading a manifest, and a manifest may name a baked member.  Its `__init`
+;; is still reported, because every baked module is linked regardless and each `__init` is
+;; one-shot guarded -- the same reason `run-register-baked-set` names them all.
+(define (register-cached-rows rows)
+  (if (null? rows)
+      #t
+      (let* ([row  (car rows)]
+             [name (car row)])
+        (if (not (assoc name *repl-libs*))
+            (begin
+              (set! *repl-libs* (cons (caddr row) *repl-libs*))
+              (set! *repl-lib-imports*
+                    (cons (cons name (cadr row)) *repl-lib-imports*))))
+        (register-cached-rows (cdr rows)))))
+
+;; Mode 15: the metadata datum for libraries already registered in THIS session, ready for
+;; the host to persist beside their IR.  NAMES-TEXT is "" for the whole baked set, in the
+;; dependency order the partition declares; otherwise it is a rendered list of library
+;; names.
+;;
+;; This is a pure query over state mode 8 or mode 4 has already established, which is the
+;; point: it runs *after* the compile and so costs no second compilation to produce what
+;; the cache needs.
+(define (repl-cached-libs-text names-text)
+  (guard (e (#t (cons (quote error) (repl-error->string e))))
+    (let ([names (if (string=? names-text "")
+                     (map car (baked-library-entries))
+                     (let ([d (read-all-from-string names-text)])
+                       (if (null? d) (quote ()) (car d))))])
+      (cons (quote ok) (render-datum (map cached-lib-row names))))))
+
+(define (cached-lib-row name)
+  (let ([table (assoc name *repl-libs*)])
+    (if (not table)
+        (error 'cache "library is not registered in this session" name)
+        (list name (cached-lib-imports name) table (mangle name "__init")))))
+
+;; A registered library's direct imports, read from the session rather than from the
+;; partition declaration, so this serves a user library and a baked member identically.
+(define (cached-lib-imports name)
+  (cond [(assoc name *repl-lib-imports*) => cdr]
+        [else (quote ())]))
+
 ;; Mode 7: compile a whole program that may import user libraries.  direct imports are
 ;; the program's explicit imports plus (scheme base) (run-with-scheme-base); their export
 ;; tables come from the preloaded units (repl-import-tables), and init-libs is the
@@ -977,6 +1072,8 @@
 ;;  11 emit lib door: library source -> "<basename>\n<export-table datum>"
 ;;  12 run door: a source text -> the library keys it imports (for the lazy preload)
 ;;  13 where the NEXT source submitted came from, so its includes resolve beside it
+;;  14 artifact cache: metadata datum -> register those libraries, no compilation
+;;  15 artifact cache: "" (baked set) or names -> the metadata datum to persist
 ;; State is restored before and saved after each op (init modes seed it fresh).
 (define (repl-dispatch)
   (repl-restore-state!)
@@ -996,6 +1093,8 @@
              [(= mode 11) (repl-library-exports-text (repl-input))] ; emit lib door: export table
              [(= mode 12) (repl-source-imports (repl-input))]     ; run door: a source's imports
              [(= mode 13) (repl-set-source-home (repl-input))]    ; every door: the next source's path
+             [(= mode 14) (repl-register-cached-libs (repl-input))] ; cache: register prebuilt units
+             [(= mode 15) (repl-cached-libs-text (repl-input))]   ; cache: metadata to persist
              [else       (compile-one-form-text (repl-input))])])
       (repl-save-state!)
       result)))

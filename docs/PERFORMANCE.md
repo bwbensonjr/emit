@@ -17,7 +17,7 @@ speed items in this list.
 |----|------|------|-------|------|-----------------|------|
 | [P1](#p1-dead-code-elimination-for-library-units) | Dead-code elimination for library units | size | high | med | `aot-release-profile` | ☑ |
 | [P2](#p2-immediate-non-heap-characters) | Immediate (non-heap) characters | speed + cleanup | med | med | `immediate-characters` | ☑ |
-| [P3](#p3--the-chez-free-doors-recompile-the-standard-library-at-every-invocation) | The Chez-free doors recompile the standard library at every invocation | build speed | **high** | med | — | ☐ |
+| [P3](#p3--the-chez-free-doors-recompile-the-standard-library-at-every-invocation) | The Chez-free doors recompile the standard library at every invocation | build speed | **high** | med | `baked-set-artifact-cache` | ☑ |
 | [P4](#p4-on-codepoint-string-indexing) | O(n) codepoint string indexing | speed | low–med | med–high | `codepoint-string-indexing` | ☑ |
 | [P5](#p5-arithmetic-and-call-overhead-ackermann-benchmark) | Arithmetic & call overhead (Ackermann benchmark) | speed | high | med–high | `inline-fixnum-arith-and-self-calls` (A + B-self) | ☑ |
 | [P6](#p6-no-optimizer-pass-known-call-inlining-and-constant-folding) | No optimizer pass: known-call inlining & constant folding | speed + size | med–high | med | `simplify-known-calls` (A) | ☑ |
@@ -181,10 +181,68 @@ literals now emit an inline immediate constant instead of an `rt_make_char` call
 
 ## P3 — The Chez-free doors recompile the standard library at every invocation
 
-**Status:** ☐ not started (**re-measured and re-scoped 2026-08-13**: the remaining scope is not
-narrow, and this is the largest open lever on compile/test cycle time — see "Re-measured" below.
-The original entry, whose framing was "mostly done", is kept below with a correction appended to
-the two claims of its that the re-measurement overturns.)
+**Status:** ☑ done for the baked standard library (change: `baked-set-artifact-cache`); the
+user-library half and the `.bc`/`.o` half remain open — see "Outcome" immediately below. The
+re-measurement that re-rated this item low → high is kept after it, and the original entry, whose
+framing was "mostly done", after that.
+
+### Outcome (change: `baked-set-artifact-cache`)
+
+The baked standard library is now compiled once and reused by every later process. The measured
+result, same machine and session, best of five on a trivial `(display 1)`:
+
+| | before | warm cache | delta |
+|---|---|---|---|
+| `emit run` | 1.70 s | **0.44 s** | **−74%** |
+| `emit run --emit` (compile only, no JIT) | 1.45 s | **0.14 s** | **−90%** |
+| `emit run --no-prelude` (the floor) | 0.06 s | 0.07 s | unchanged |
+
+And on the loop the item was really about — `./run-all-tests.sh`, **1605 s → 459 s (−71%)**, 29
+suites passing:
+
+| suite | before | after |
+|---|---|---|
+| R7RS numeric conformance | 277 s | 65 s |
+| R7RS library partition | 169 s | 52 s |
+| demo values (`emit run`) | 160 s | 40 s |
+| module-scaffold byte-identity | 125 s | 14 s |
+| io ports + eof object | 83 s | 23 s |
+| indexed access bounds | 79 s | 20 s |
+| **comparable subtotal** | **1605 s** | **420 s (−74%)** |
+
+That −74% subtotal is worth pausing on: it is the *same* 74% this entry predicted as the fixed
+cost's share of the suite, arrived at independently. The prediction and the outcome agree, which is
+the strongest evidence available that the cost was diagnosed correctly rather than merely correlated
+with something.
+
+**What was taken, and what was not.** Caching the **IR text** was enough, as predicted — the
+`--emit` row shows the Scheme-level compile essentially eliminated. The `.bc`/`.o` precompilation the
+original entry proposed was *not* taken and remains open: the residue at 0.44 s against a 0.07 s
+floor is the ~0.30 s LLVM parse + JIT of 953 KB of IR, which is the half a bitcode layer would
+attack. **User-library caching was also deferred**, deliberately: it needs each `.sld`'s include
+closure to key on, and the Chez-free include reader has no tracker for it (only `src/compile.ss`
+does), which is a new subsystem for roughly a tenth of the win. So this item is ticked for the baked
+set and its residue is two named, measured pieces rather than an implied remainder.
+
+**The design decisions worth carrying forward** (full text in the archived change):
+
+- The key is a digest of **the running executable**, not of the compiler sources. The Chez driver
+  hashes sources and says why — "the compiler runs as interpreted source, so hashing them IS the
+  running compiler's identity" — and that reasoning *inverts* for a compiled binary whose sources may
+  not exist in an install.
+- One cache location for a checkout and an install alike, so no code path exists only for installed
+  users; `installed-emit-completeness`'s no-shipped-artifacts contract is untouched, because a
+  locally derived, keyed, regenerable cache puts nothing on the install surface.
+- Every failure path — no location, stale, corrupt, unwritable, raced — compiles from source and
+  succeeds, so no door gained a failure mode.
+
+**The one regression it caused, and the lesson.** `--dump-all` prints `(scheme base)`'s per-define
+stage headers, and those exist only *while* the set is compiling: with a warm cache it printed **0**
+instead of 1776. Values, emitted IR and diagnostics were all byte-identical, so every purpose-built
+cache test passed and only the pre-existing `test/dump-stages-tests.sh` caught it. A request to
+observe the compile now bypasses the cache. The generalizable lesson is that the property to test is
+not "the answer is the same" but "**every observable** is the same" — a cache preserves the first
+while quietly breaking the second, and an observability flag is exactly what it breaks.
 
 ### Re-measured (2026-08-13) — the recorded 0.12s is stale by ~14x
 
@@ -269,17 +327,34 @@ lands on it — with the clock as the axis instead of bytes. `scheme-io-library`
 `reader-lexical-conformance` and `catchable-errors-with-kinds` have each added to it since the 0.12 s
 figure was taken.
 
-**An anomaly worth its own investigation, not folded into the above.** The REPL door's
-`--no-prelude` floor is 1.65 s, where the run door's is 0.08 s — so on that door the prelude is only
-~0.30 s of the 1.95 s and something else costs 1.65 s. It appears to be the manifest-driven load of
-`lib/scheme/base.sld` (mode 5), which the REPL uses where the run door bakes: with no manifest
-resolvable (`EMIT_MANIFEST=/dev/null`) `emit repl` starts in **0.01 s** and still evaluates
-`(map (lambda (x) (* x 2)) (list 1 2 3))` correctly. That 0.01 s is *not* a floor to design toward
-until it is understood — a door that answers correctly for a `(scheme base)` procedure without
-having compiled `(scheme base)` is presumably resolving against the linked-in unit the binary
-already carries, which is either the cheap win this item wants or a dev→ship fidelity hazard, and
-which of the two it is has not been established. Establish it before building the cache, because the
-answer decides whether the REPL needs the cache at all.
+**The REPL door, measured across all four combinations.** An earlier revision of this entry reported
+an anomaly here — a 0.01 s start that still resolved a `(scheme base)` procedure — and asked whether
+the linked-in unit was reusable or whether that path was a dev→ship fidelity gap. **That was a
+conflation of two different invocations**: the 0.01 s came from a `--no-prelude` run and the working
+`map` from a separate run without it. Measured properly, in one pass:
+
+| case | time | `map` bound? |
+|---|---|---|
+| `emit repl`, manifest, prelude | 2.05 s | yes |
+| `emit repl`, manifest, `--no-prelude` | 1.69 s | **no** |
+| `emit repl`, no manifest, prelude | 1.87 s | yes |
+| `emit repl`, no manifest, `--no-prelude` | 0.05 s | no |
+
+No case both starts instantly and has a standard library, so there is **no** anomaly, **no** cheap
+reuse-the-linked-unit win, and **no** fidelity hazard: the REPL bakes from `*prelude-source*` like
+the run door (~1.9 s), which is consistent and correct. The `--no-prelude` floor being 1.65–1.69 s
+rather than 0.05 s is not the prelude at all, which is what misled the first reading.
+
+It is instead **a separate defect, worth fixing on its own**: `emit repl --no-prelude` with a
+manifest present spends ~1.69 s compiling `(scheme base)` from the manifest and then does not bind
+it — ~1.6 s of pure waste against the 0.05 s floor, and arguably contrary to `compiler-embedding`'s
+existing `--no-prelude` parity requirement ("the entry SHALL … emit no `(scheme base)` IR"). Filed as
+GitHub issue #101 and not folded into this item, since it is a flag-semantics bug rather than a
+caching one.
+
+The lesson is worth keeping, because it is cheap to repeat: two measurements taken under different
+flags are not two measurements of the same thing, and a surprising number is more often a mismatched
+pair than a real discovery.
 
 **Value:** high — ~74% of the default test suite, ~1.4 s off every `emit run`/`build`/`lib`, and the
 most visible latency in the REPL, which `CLAUDE.md` names the primary development loop. **Cost:**
@@ -327,8 +402,9 @@ roughly its `--no-prelude` floor, which is the most visible latency in the prima
 **Correction (2026-08-13).** Two things above do not survive re-measurement. First, "~0.12s is the
 session and the rest is the standard library" reads the 0.84/0.72 pair backwards: 0.12 s is the
 *prelude delta*, and 0.72 s — now 1.65 s — is the `--no-prelude` floor, i.e. whatever the REPL door
-does regardless. So on the REPL door the baked set was never "the whole of startup latency"; see the
-anomaly note in the re-measurement above, which is the entry that chases where the floor comes from.
+does regardless. So on the REPL door the baked set was never "the whole of startup latency"; the
+four-case table in the re-measurement above shows where that floor actually comes from (the
+manifest-driven `(scheme base)` load, which `--no-prelude` does not skip).
 Second, "a precompiled baked set would cut a REPL start to roughly its `--no-prelude` floor" is true
 and no longer interesting, because that floor is itself ~1.65 s. The measurement that *does* hold,
 and that this item now turns on, is the **run** door's: 1.80 s against a 0.08 s `--no-prelude` floor.

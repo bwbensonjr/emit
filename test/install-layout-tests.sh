@@ -418,6 +418,43 @@ else
     || { bad "--manifest NOPE: wrong diagnostic"; sed 's/^/         /' "$TMP/e3"; }
 fi
 
+# --- the artifact cache works from an install (change: baked-set-artifact-cache) ------
+# The cache must not be a checkout-only feature: an installed emit has no writable install
+# tree and no build/lib, so it needs a user-writable location, and the install must still
+# ship no compiled artifact of its own.  EMIT_CACHE points at a scratch directory so this
+# neither reads nor writes the developer's real cache.
+echo
+echo "installed emit, artifact cache"
+ICACHE="$TMP/icache"
+printf '(display (+ 40 2))\n' > "$TMP/one.scm"
+
+ione="$(EMIT_VERBOSITY=quiet EMIT_CACHE="$ICACHE" "$EMIT" run "$TMP/one.scm" 2>"$TMP/ec1")"
+[ "$ione" = "42" ] && ok "installed emit runs with a cold cache => $ione" \
+  || { bad "installed emit, cold cache => [$ione]"; sed 's/^/         /' "$TMP/ec1"; }
+n=$(ls "$ICACHE" 2>/dev/null | grep -c '^baked-' || true)
+[ "$n" -ge 3 ] && ok "installed emit populates a user-writable cache ($n files)" \
+  || bad "installed emit left $n cache file(s)"
+itwo="$(EMIT_VERBOSITY=quiet EMIT_CACHE="$ICACHE" "$EMIT" run "$TMP/one.scm" 2>/dev/null)"
+[ "$itwo" = "42" ] && ok "installed emit reuses its cache => $itwo" \
+  || bad "installed emit, warm cache => [$itwo]"
+
+# The install contract is unchanged: a cache entry exists only because a door ran, never
+# because something was installed.
+if find "$PREFIX" -type f \( -name '*.ll' -o -name '*.bc' -o -name '*.o' -o -name 'baked-*' \) \
+     | grep -q .; then
+  bad "the installed tree ships a compiled artifact"
+  find "$PREFIX" -type f \( -name '*.ll' -o -name '*.bc' -o -name '*.o' -o -name 'baked-*' \) \
+    | sed 's/^/         /'
+else
+  ok "the installed tree ships no compiled library unit"
+fi
+
+# And with no writable cache location at all, an installed emit still works.
+iro="$(EMIT_VERBOSITY=quiet EMIT_CACHE=/nonexistent/cannot/create "$EMIT" run "$TMP/one.scm" \
+        2>/dev/null)"
+[ "$iro" = "42" ] && ok "installed emit works with no usable cache location => $iro" \
+  || bad "installed emit, unusable cache location => [$iro]"
+
 echo
 echo "  $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
