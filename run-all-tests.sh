@@ -50,6 +50,7 @@ fi
 
 run_suite "demo values (emit run)"    env RUNNER=emit-run demos/run-tests.sh
 run_suite "module-scaffold byte-identity" test/module-scaffold-baseline.sh check
+run_suite "artifact cache (baked set)"  test/artifact-cache-tests.sh
 run_suite "REPL persistent host"      test/repl-host-tests.sh
 run_suite "define-record-type syntax" test/record-type-syntax-tests.sh
 run_suite "inline arith + self-call IR" test/inline-arith-self-call-tests.sh

@@ -737,6 +737,245 @@ static int resolve_program(const std::string &manifest, const std::string &name,
   return 0;
 }
 
+// --- artifact cache for the baked standard library (change: baked-set-artifact-cache) ---
+//
+// The baked set is recompiled from this binary's own `*prelude-source*` at every process
+// start: 1.72s of a 1.80s trivial `emit run`, and ~74% of the default suite's wall clock
+// (docs/PERFORMANCE.md P3).  Nothing about it varies with the program being compiled, so
+// it is compiled once and reused by every later process.
+//
+// The cache is a PURE ACCELERATOR.  No location, no entry, a stale entry, a torn entry, an
+// unwritable directory -- every one of them falls through to the from-source compile and
+// succeeds, so no door gains a failure mode it did not have before (spec: artifact-cache,
+// "Every cache failure degrades to compiling from source").  That is what lets every
+// helper below simply return false or "" on any problem, with no error path of its own.
+
+// Entry-layout version.  Bump by hand to invalidate every entry deliberately -- the same
+// lever `compiler-stamp-version` gives the Chez driver's sidecars.
+static const int kCacheVersion = 1;
+
+// FNV-1a, the hash the Chez driver's stamp already uses.  Non-cryptographic by intent: it
+// guards against accidental staleness, not adversarial collision, and adds no dependency.
+static std::string fnv1a_hex(const std::string &bytes) {
+  uint64_t h = 14695981039346656037ULL;
+  for (unsigned char c : bytes) { h ^= (uint64_t)c; h *= 1099511628211ULL; }
+  char buf[32];
+  std::snprintf(buf, sizeof buf, "%016llx", (unsigned long long)h);
+  return std::string(buf);
+}
+
+// The compiler's identity -- which for the baked set is ALSO the source's identity, since
+// the prelude is compiled into this binary, so a different binary is a different standard
+// library (design D2).
+//
+// This deliberately inverts the Chez driver's reasoning.  It hashes the compiler SOURCES
+// because there the compiler runs as interpreted source, so "hashing them IS the running
+// compiler's identity".  Here the compiler is compiled in: those files are not what is
+// running, and in an install they need not exist at all.
+//
+// Memoized -- one ~1.7 MB pass per process, ~1-2 ms against the ~1.43 s it saves.  Returns
+// "" if we cannot identify ourselves, which disables caching rather than risking a wrong
+// key.
+static std::string compiler_digest() {
+  static std::string memo;
+  static bool done = false;
+  if (done) return memo;
+  done = true;
+  std::string exe = exe_path();
+  if (exe.empty()) return memo;
+  std::string bytes = read_file(exe);
+  if (bytes.empty()) return memo;
+  memo = fnv1a_hex(bytes);
+  return memo;
+}
+
+// `mkdir -p`.  Every component already existing is success, not failure.
+static bool mkdirs(const std::string &path) {
+  struct stat st;
+  if (stat(path.c_str(), &st) == 0) return S_ISDIR(st.st_mode);
+  std::string parent = dir_of(path);
+  if (!parent.empty() && parent != path && !mkdirs(parent)) return false;
+  if (mkdir(path.c_str(), 0700) == 0) return true;
+  return stat(path.c_str(), &st) == 0 && S_ISDIR(st.st_mode);   // lost a create race
+}
+
+// Where entries live (design D4): $EMIT_CACHE, else the platform user cache directory,
+// else "" for no caching at all.
+//
+// ONE resolution for a checkout and an install alike -- deliberately NOT `build/lib`, so
+// that no code path exists only for installed users.  The directory is created on demand;
+// if it cannot be, the answer is "" and every door simply compiles from source.
+static std::string cache_dir() {
+  static std::string memo;
+  static bool done = false;
+  if (done) return memo;
+  done = true;
+  const char *env = std::getenv("EMIT_CACHE");
+  std::string base = (env && *env) ? std::string(env) : std::string();
+  if (base.empty()) {
+    const char *xdg = std::getenv("XDG_CACHE_HOME");
+    const char *home = std::getenv("HOME");
+    if (xdg && *xdg)        base = std::string(xdg) + "/emit";
+#ifdef __APPLE__
+    else if (home && *home) base = std::string(home) + "/Library/Caches/emit";
+#else
+    else if (home && *home) base = std::string(home) + "/.cache/emit";
+#endif
+  }
+  if (base.empty() || !mkdirs(base)) return memo;   // memo is still ""
+  memo = base;
+  return memo;
+}
+
+// An entry's path stem, or "" when caching is unavailable for any reason.  The version and
+// the digest are both IN THE NAME, so a bumped format or a rebuilt binary cannot collide
+// with an existing entry -- it simply misses and writes its own.
+static std::string cache_stem() {
+  std::string dir = cache_dir();
+  std::string dig = compiler_digest();
+  if (dir.empty() || dig.empty()) return std::string();
+  std::ostringstream s;
+  s << dir << "/baked-v" << kCacheVersion << "-" << dig;
+  return s.str();
+}
+
+// The stamp file is written LAST and is the entry's completeness witness: a torn or
+// interrupted write leaves no stamp, so the entry reads as absent rather than as corrupt
+// (the same fail-safe-toward-rebuild property `artifacts-fresh?` gets by writing its
+// sidecar last).
+static std::string cache_stamp_text() {
+  std::ostringstream s;
+  s << "(emit-artifact-stamp " << kCacheVersion << " " << compiler_digest() << ")\n";
+  return s.str();
+}
+
+// Write `text` to `path` through a temporary file and an atomic rename (design D8).  The
+// default suite runs many `emit` processes concurrently under EMIT_JOBS, so several race
+// to populate a cold cache; rename means a reader sees a whole file or none, and a loser
+// of the race overwrites with identical bytes.  No locking.
+static bool cache_write_atomic(const std::string &path, const std::string &text) {
+  std::ostringstream tmp;
+  tmp << path << ".tmp" << (long)getpid();
+  {
+    std::ofstream f(tmp.str(), std::ios::binary | std::ios::trunc);
+    if (!f) return false;
+    f.write(text.data(), (std::streamsize)text.size());
+    if (!f.good()) { f.close(); ::remove(tmp.str().c_str()); return false; }
+  }
+  if (::rename(tmp.str().c_str(), path.c_str()) != 0) {
+    ::remove(tmp.str().c_str());
+    return false;
+  }
+  return true;
+}
+
+// Split a boundary-joined module stream into one entry per module, exactly as the
+// from-source path below does -- shared so the cached and compiled paths cannot disagree
+// about what a module is.
+static void split_modules(const std::string &joined, std::vector<std::string> &modules) {
+  size_t start = 0;
+  for (;;) {
+    size_t bpos = joined.find(kBoundary, start);
+    if (bpos == std::string::npos) break;
+    modules.push_back(joined.substr(start, bpos - start));
+    start = bpos + kBoundary.size();
+  }
+  modules.push_back(joined.substr(start));
+}
+
+// Try to seed the session from a cached baked set.  Returns false -- having changed
+// nothing -- on any miss, so the caller falls through to compiling.
+//
+// Mode 14 does the registering and refuses a malformed entry WHOLE, before touching the
+// session, so a rejected entry cannot leave a half-seeded session that the from-source
+// fallback would then compile on top of.
+static bool cache_load_baked_set(std::vector<std::string> &modules,
+                                 std::vector<std::string> &inits) {
+  // `--dump-all` (level 3) asks to SEE the standard library's per-define stages, and those
+  // stages exist only while it is being compiled -- a reused entry would print none of
+  // them.  So a request to observe the compile bypasses the cache: the flag's whole purpose
+  // is that the work happens where you can watch it.  Levels 1 and 2 are unaffected,
+  // because they deliberately do not dump library units (emit-dump-stages, design D7), so
+  // for them a reused entry changes nothing that is printed.
+  //
+  // Found by test/dump-stages-tests.sh, which asserts >100 tagged `(scheme base)` headers
+  // under --dump-all and saw zero once the cache started serving them.
+  const char *dl = std::getenv("EMIT_DUMP_LEVEL");
+  if (dl && std::atoi(dl) >= 3) {
+    vsay("cache: bypassed (--dump-all asks to observe the compile)");
+    return false;
+  }
+  std::string stem = cache_stem();
+  if (stem.empty()) {
+    vsay("cache: unavailable (no writable location, or cannot identify this binary)");
+    return false;
+  }
+  // The stamp is the completeness witness, so all three of "no entry yet", "written by a
+  // different binary", and "a torn write" arrive here as one condition.  They are narrated
+  // apart because "recompiled, and here is why" is a spec requirement, and a stale entry is
+  // the interesting case: it means the compiler moved.
+  std::string stamp = read_file(stem + ".stamp");
+  if (stamp.empty()) {
+    vsay("cache: no entry for this compiler, compiling the baked set");
+    return false;
+  }
+  if (stamp != cache_stamp_text()) {
+    vsay("cache: entry is stale (changed compiler or entry format), recompiling");
+    return false;
+  }
+  std::string joined = read_file(stem + ".ll");
+  std::string meta   = read_file(stem + ".meta");
+  if (joined.empty() || meta.empty()) {
+    vsay("cache: entry incomplete, recompiling");
+    return false;
+  }
+
+  rt_repl_set(14, meta.data(), (intptr_t)meta.size());
+  intptr_t r = scheme_entry();
+  if (status_of(r) != "ok") {
+    vsay("cache: entry refused (" + door_msg(scm_str(rt_cdr(r))) + "), recompiling");
+    return false;
+  }
+  std::istringstream isyms(scm_str(rt_cdr(r)));
+  std::string sym;
+  std::vector<std::string> got;
+  while (std::getline(isyms, sym)) if (!sym.empty()) got.push_back(sym);
+
+  std::vector<std::string> mods;
+  split_modules(joined, mods);
+  // The metadata and the modules are stored together and must describe each other; if they
+  // do not, the entry is inconsistent and is refused rather than half-applied.
+  if (mods.size() != got.size()) {
+    vsay("cache: entry inconsistent (modules/inits disagree), recompiling");
+    return false;
+  }
+  modules = mods;
+  inits = got;
+  vsay("cache: baked set reused from " + stem + ".ll");
+  return true;
+}
+
+// Persist the baked set just compiled into this session.  Best-effort throughout: a
+// failure anywhere leaves the process correct and merely uncached.
+static void cache_store_baked_set(const std::vector<std::string> &modules) {
+  std::string stem = cache_stem();
+  if (stem.empty()) return;
+  rt_repl_set(15, "", 0);                       // "" = the whole baked set, in dep order
+  intptr_t r = scheme_entry();
+  if (status_of(r) != "ok") return;
+  std::string meta = scm_str(rt_cdr(r));
+  std::string joined;
+  for (size_t i = 0; i < modules.size(); i++) {
+    if (i) joined += kBoundary;
+    joined += modules[i];
+  }
+  // Stamp LAST: it is the completeness witness the reader checks first.
+  if (!cache_write_atomic(stem + ".ll", joined)) return;
+  if (!cache_write_atomic(stem + ".meta", meta)) return;
+  if (!cache_write_atomic(stem + ".stamp", cache_stamp_text())) return;
+  vsay("cache: baked set stored -> " + stem + ".ll");
+}
+
 // Register the baked library set (mode 8) into the current session and return its modules
 // and their initializer symbols, positionally paired.
 //
@@ -746,8 +985,14 @@ static int resolve_program(const std::string &manifest, const std::string &name,
 // (the JIT's addIRModule, --emit's stdout, `emit build`'s clang inputs) needs one module
 // per element.  `inits` gets one __init symbol per module, in the same order, for a door
 // with no program entry to drive them -- the REPL (change: baked-set-on-every-door).
+//
+// A valid cache entry short-circuits the whole thing (change: baked-set-artifact-cache):
+// the session is seeded by mode 14 instead of mode 8, which is the same registration by a
+// different route, so nothing downstream can tell which one ran.  On any miss this falls
+// through to compiling and then stores the result for the next process.
 static bool register_baked_set(std::vector<std::string> &modules,
                                std::vector<std::string> &inits) {
+  if (cache_load_baked_set(modules, inits)) return true;
   rt_repl_set(8, "", 0);
   intptr_t r = scheme_entry();
   if (status_of(r) != "ok") {
@@ -755,19 +1000,13 @@ static bool register_baked_set(std::vector<std::string> &modules,
     return false;
   }
   std::string baked = scm_str(rt_car(rt_cdr(r)));
-  size_t start = 0;
-  for (;;) {
-    size_t bpos = baked.find(kBoundary, start);
-    if (bpos == std::string::npos) break;
-    modules.push_back(baked.substr(start, bpos - start));
-    start = bpos + kBoundary.size();
-  }
-  modules.push_back(baked.substr(start));
+  split_modules(baked, modules);
 
   std::istringstream isyms(scm_str(rt_cdr(rt_cdr(r))));
   std::string sym;
   while (std::getline(isyms, sym))
     if (!sym.empty()) inits.push_back(sym);
+  cache_store_baked_set(modules);
   return true;
 }
 

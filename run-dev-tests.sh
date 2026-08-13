@@ -58,6 +58,7 @@ run_suite "read-all reader"             chez --libdirs src --script test/read-al
 run_suite "render-datum units"          chez --libdirs src --script test/render-datum-tests.ss
 run_suite "mangle (symbol naming)"      chez --libdirs src --script test/mangle-tests.ss
 run_suite "simplify pass units"         chez --libdirs src --script test/simplify-tests.ss
+run_suite "artifact cache core"         chez --libdirs src --script test/artifact-cache-core-tests.ss
 run_suite "module vertical-slice (AOT)" test/modules-tests.sh
 run_suite "(scheme base) gen guard"     test/scheme-base-gen-check.sh
 run_suite "(scheme base) auto-import (AOT)" test/prelude-base-tests.sh
