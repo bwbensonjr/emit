@@ -830,10 +830,15 @@ static std::string cache_dir() {
 // An entry's path stem, or "" when caching is unavailable for any reason.  The version and
 // the digest are both IN THE NAME, so a bumped format or a rebuilt binary cannot collide
 // with an existing entry -- it simply misses and writes its own.
+// The location is resolved FIRST and short-circuits: with nowhere to put an entry, hashing
+// the executable is 1.7 MB of reading and 2.6 ms of arithmetic spent on an answer nobody can
+// use, on every single invocation.  Cheap to get wrong the other way round, since both
+// helpers memoize and neither looks like it costs anything at the call site.
 static std::string cache_stem() {
   std::string dir = cache_dir();
+  if (dir.empty()) return std::string();
   std::string dig = compiler_digest();
-  if (dir.empty() || dig.empty()) return std::string();
+  if (dig.empty()) return std::string();
   std::ostringstream s;
   s << dir << "/baked-v" << kCacheVersion << "-" << dig;
   return s.str();

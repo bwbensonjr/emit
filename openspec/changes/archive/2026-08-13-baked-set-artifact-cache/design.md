@@ -82,8 +82,26 @@ so the sources on disk are not what is running, and in an install they may not b
 Hashing them would be both wrong and impossible.
 
 So the Chez-free key hashes the executable located by `exe_path()`. It is self-evidently correct — a
-different compiler is a different binary — and costs one ~1.7 MB FNV-1a pass, roughly 1–2 ms against
-the 1.43 s being saved.
+different compiler is a different binary — and costs one ~1.7 MB FNV-1a pass against the 1.43 s being
+saved.
+
+**Measured, after this was first written as an estimate: 2.64 ms** (1,707,048 bytes, mean of 20, `-O2`),
+not the "roughly 1–2 ms" originally claimed here. The conclusion is unchanged — it is three orders of
+magnitude below what it saves — but the number was asserted rather than measured, and the corrected
+one is the one to quote.
+
+Two follow-ups came out of measuring it:
+
+- **The digest is now computed only after a cache location is found.** `cache_stem()` originally
+  resolved both unconditionally, so a user with no writable cache directory paid the read and the hash
+  on every invocation for an answer nothing could use. Both helpers memoize and neither looks
+  expensive at the call site, which is what made the ordering easy to get wrong.
+- **The target header is *not* part of the key, and does not need to be.** The Chez driver's stamp
+  hashes the compiler sources *plus* the host target header, because it prepends that header to every
+  `.ll`. The obvious worry is that the Chez-free key omits it. Checked: the Chez-free door emits **no**
+  `target datalayout` / `target triple` lines at all (0 in emitted IR, and none in a cached unit) — the
+  JIT infers the host and the AOT link passes `-Wno-override-module`. So there is no header in the
+  cached artifact that could go stale, and the executable digest alone is a complete key for this door.
 
 *Alternatives:* a stamp constant baked in at build time (zero I/O, but needs build plumbing and can
 silently go stale if a build path forgets to regenerate it — a possible later optimization once the
