@@ -137,7 +137,9 @@ written and validated on its own before the regen barrier closes.
       release notes" section, which is where this repo collects them (there is no central notes
       file): an unknown character name now reports instead of yielding its first letter, and a round
       flonum prints `100.0` where it printed `1e+02`.
-- [ ] 8.3 Commit, then run `test/trust-check.sh` — it `[SKIP]`s while `bootstrap/` is dirty by design,
+- [x] 8.3 Commit, then run `test/trust-check.sh` — it `[SKIP]`s while `bootstrap/` is dirty by design,
       so it is a post-commit check.
-- [ ] 8.4 Close #74, #80, #81, #86 from the commit. Leave #75 and #92 open, and file the follow-up
-      issue for write style emitting character names (design D9).
+- [x] 8.4 The commit carries `Fixes #74 / #80 / #81 / #86`, so they close when the branch merges.
+      #75 and #92 stay open. Filed the write-style follow-up from design D9 as **#94** (write emits
+      a raw control byte where the reader now accepts a name). Not pushed — the branch
+      `feat/r7rs-lexical-conformance` is local, awaiting review.
