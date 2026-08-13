@@ -100,7 +100,7 @@ and mode 8's protocol are both left untouched. See design D9.
 - [x] 7.7 Confirm a program importing a user library still works and still recompiles that library
       per invocation (the deferred half), so the deferral is recorded as tested behaviour rather than
       assumed.
-- [ ] 7.6 Run `./run-all-tests.sh` and `./run-dev-tests.sh` and confirm both pass.
+- [x] 7.6 Run `./run-all-tests.sh` and `./run-dev-tests.sh` and confirm both pass.
 
 ## 8. Evidence and bookkeeping
 
