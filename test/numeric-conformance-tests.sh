@@ -89,7 +89,12 @@ echo "flonum literals reach IR through a canonical formatter (issue #24)"
 # Each of these lands a literal in an UNBOXED flonum region, which is the path that
 # emitted a bare `1e+02` operand.  `(* 2.5 2.0)` was already fine (2.5 prints with a
 # '.'), and is here so a formatter that breaks the working case is caught too.
-check "exponent-framed literal in a region" '(* 100.0 2.0)' '2e+02'
+# The EXPECTED TEXT of the first and third moved with change: r7rs-lexical-conformance
+# (issue #86): the printer now prefers positional notation inside [-3, 9], so these read
+# `200.0` and `100.0`.  What they pin is unchanged -- the literal still reaches IR through
+# ir-double's canonical re-framing, which decomposes whatever the printer produced into
+# digits + point and never passes its framing through.
+check "exponent-framed literal in a region" '(* 100.0 2.0)' '200.0'
 check "large literal in a region"           '(+ 1e15 1.0)'  '1000000000000001.0'
 check "overflow to infinity in a region"    '(* 1e308 10.0)' '+inf.0'
 check "literal at the precision boundary"   '(+ 1e16 1.0)'  '1e+16'
@@ -99,7 +104,7 @@ check "the case that already worked"        '(* 2.5 2.0)'   '5.0'
 # A bare literal is rebuilt at runtime by strtod, which reads `inf`/`nan` but NOT
 # LLVM's 0x bit-pattern form -- so the two sites share the decimal core and diverge
 # only on the non-finite spelling.
-check "bare integral literal"    '100.0'   '1e+02'
+check "bare integral literal"    '100.0'   '100.0'
 check "bare subnormal literal"   '5e-324'  '5e-324'
 check "bare infinity literal"    '1e400'   '+inf.0'
 check "bare negative infinity"   '-1e400'  '-inf.0'
@@ -119,9 +124,9 @@ check "negative zero keeps its sign" '-0.0' '-0.0'
 # --- the other doors ----------------------------------------------------------
 # The whole point of #24 was that the doors disagreed, so the symptom case is
 # re-run as a standalone executable and in the REPL.
-check_built "exponent-framed literal" '(* 100.0 2.0)' '2e+02'
+check_built "exponent-framed literal" '(* 100.0 2.0)' '200.0'
 check_built "17 significant digits"   '1.4142135623730951' '1.4142135623730951'
-check_repl  "exponent-framed literal" '(* 100.0 2.0)' '2e+02'
+check_repl  "exponent-framed literal" '(* 100.0 2.0)' '200.0'
 check_repl  "17 significant digits"   '1.4142135623730951' '1.4142135623730951'
 
 echo
@@ -491,6 +496,52 @@ check "bars are not a distinct type" \
 check "the escapes inside bars" \
   '(list (symbol->string (read-from-string "|a\\|b|")) (symbol->string (read-from-string "|a\\x41;b|")))' \
   '("a|b" "aAb")'
+
+# --- positional flonum notation (change: r7rs-lexical-conformance, issue #86) ---
+# The printer picked the shortest ROUND-TRIPPING decimal and stopped there, which for
+# 100.0 is "1e+02": correct digits, wrong notation.  Note the file header above already
+# names this divergence from the other direction -- Chez prints 100.0, so a program
+# could print one thing on one door and another on the other.  The range is Chez's,
+# measured: positional for a decimal exponent in [-3, 9], exponent form outside it.
+check "a round flonum prints positionally, not in exponent form" \
+  "(list (number->string 100.0) (number->string 1000.0) (number->string 0.001))" \
+  '("100.0" "1000.0" "0.001")'
+check "the whole positional range prints without an exponent" \
+  "(map number->string (list 1.0 10.0 1e5 1e9 1.5e9))" \
+  '("1.0" "10.0" "100000.0" "1000000000.0" "1500000000.0")'
+# Outside the range the exponent form stands -- positional 1e300 needs 300 characters
+# and the formatter writes through a 32-byte buffer.
+check "a magnitude outside the range keeps exponent form" \
+  "(list (number->string 1e10) (number->string 1e300))" '("1e+10" "1e+300")'
+# The property the notation change must not cost: whichever form is chosen reads back.
+check "both notations round-trip through the reader" \
+  "(map (lambda (x) (= x (read-from-string (number->string x))))
+        (list 100.0 1000.0 0.001 1e9 1e10 1e300 2.5 -1.25))" \
+  '(#t #t #t #t #t #t #t #t)'
+# write, number->string and the final-value printer share one formatter, so a value
+# must not print one way through one and another way through the next.
+check "write and number->string agree on the new notation" \
+  "$W (list (wrt 100.0) (number->string 100.0))" '("100.0" "100.0")'
+check_built "a round flonum prints positionally in a built executable" \
+  "(number->string 100.0)" '"100.0"'
+
+# --- the non-finite tokens are case-insensitive (issue #74) ---
+# R7RS 7.1.1 makes the numeric syntax case-insensitive (#X1F and 1E2 already read).
+# Reading only the lowercase spelling turned an ordinary capitalization into an
+# identifier -- the same round-trip break the three tokens were added to close.
+check "the non-finite tokens read in any case" \
+  '(map number? (list (read-from-string "+INF.0") (read-from-string "-Inf.0")
+                      (read-from-string "+NaN.0")))' \
+  '(#t #t #t)'
+check "an upper-case non-finite token is the same number" \
+  '(list (= (read-from-string "+INF.0") +inf.0) (= (read-from-string "-INF.0") -inf.0))' \
+  '(#t #t)'
+# ... and the printer still emits the lowercase spellings, so no output moves
+check "the printer still writes the lowercase spellings" \
+  '(map number->string (list (/ 1.0 0.0) (/ -1.0 0.0)))' '("+inf.0" "-inf.0")'
+# a token that merely looks like one is still a symbol
+check "a near-miss non-finite token is still a symbol" \
+  '(symbol? (read-from-string "+inf.1"))' '#t'
 
 echo
 echo "  $pass passed, $fail failed"

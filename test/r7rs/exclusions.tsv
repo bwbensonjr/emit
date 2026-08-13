@@ -56,7 +56,6 @@
 12b0451f5073052a	unimplemented	arity: optional or n-ary form
 12da3a51c74995d3	deliberate:#27	(scheme complex) stays absent
 12e5cf81ec05cf03	deliberate:#27	(scheme complex) stays absent
-130680b731471e7b	issue-81	case with => receiver
 132848e1c2962230	unimplemented	(scheme char)
 14dc3d5924fd4a26	issue-77	= and < coerce an exact integer to double
 1510c875abc9c14b	blocked-by:4767069ee08aecb9	needs any-arity
@@ -67,17 +66,14 @@
 187c6166cd972014	unimplemented	(scheme time)
 195612e525684b47	deliberate:#27	complex or rational literal read as a variable
 196269930ee59e67	unimplemented	(scheme char)
-19c77c10fff2f267	issue-74	reader: inf/nan are case-sensitive
 1acb5302ba636e8b	unimplemented	(scheme char)
 1b8d6ca7263ccbce	unimplemented	binary ports and bytevector I/O
 1b9376c26b439988	unimplemented	binary ports and bytevector I/O
 1c60800d6649e2f0	unimplemented	binary ports and bytevector I/O
 1e2592c5322b7759	deliberate:#27	(scheme complex) stays absent
-1f556c9d053afb94	issue-74	reader: named characters, hex escapes, string escapes
 1f56e5384d37da78	deliberate:#27	no exact rationals / bignums
 1fd09b2074980cc8	unimplemented	(scheme char)
 22d2d8f4d780cfd6	unimplemented	(scheme lazy) -- prelude macros once #79 is fixed
-234605f8f1dbb4eb	issue-74	reader: named characters, hex escapes, string escapes
 2364e56a4f19bee9	unimplemented	(scheme char)
 236f842d94beb212	issue-91	case-lambda dead clause: frontend reports car: not a pair
 24c7d868598348d7	deliberate:#27	no exact rationals / bignums
@@ -89,7 +85,6 @@
 270cafeb4e4ccc5e	unimplemented	unbound sequence2
 2767d6348524de8f	deliberate:#27	(scheme complex) stays absent
 277e68e25edd9a10	unimplemented	(scheme char)
-27dbbbf1537fd474	issue-74	reader: named characters, hex escapes, string escapes
 2874199613df0087	unimplemented	(scheme time)
 28a197f848bc37b1	unimplemented	(scheme char)
 2954f7f922a8ea3a	deliberate:#27	(scheme complex) stays absent
@@ -103,10 +98,8 @@
 303765c44c1599c2	unimplemented	(scheme char)
 31f5be86831c1f93	unimplemented	(scheme write) cycle-aware printers
 33c8ccd239f209df	unimplemented	derived syntax / non-top-level define-syntax
-340778a2bc32585e	unimplemented	wrong answer: FAIL (values z.70) -inf.0 -iNF.0
 344549e3c5f60b42	unimplemented	(scheme char)
 3565a4a68ef76f5b	unimplemented	(scheme char)
-357bdf7440b38f21	issue-74	reader: inf/nan are case-sensitive
 35fa323833e5dabf	deliberate:#27	no exact rationals / bignums
 369e60cc4f1b4c6a	unimplemented	(scheme char)
 37ae3aaf3fb15429	unimplemented	(scheme char)
@@ -121,7 +114,6 @@
 3d61f0e5f4d1631d	unimplemented	(scheme char)
 3dae7c39e365e147	unimplemented	(scheme char)
 3f551ec76a77902b	unimplemented	(scheme lazy) -- prelude macros once #79 is fixed
-41923dc6e76c208b	issue-74	reader: named characters, hex escapes, string escapes
 41f2c4dee17795df	unimplemented	(scheme char)
 41f521b91af79d68	issue-75	#!fold-case
 426dc7aed3a511b2	unimplemented	wrong answer: FAIL something-went-wrong #t #f
@@ -140,12 +132,10 @@
 4ddb72d7af13667c	unimplemented	(scheme char)
 4dea3fc446ec34ba	issue-90	write of a circular structure does not terminate
 4df3e3dd01ca3535	deliberate:#27	(scheme complex) stays absent
-4e16d2220ed4acc5	issue-74	reader: named characters, hex escapes, string escapes
 4f5fc971bcf993fb	unimplemented	(scheme char)
 4f70e6cd2216bc8b	unimplemented	binary ports and bytevector I/O
 521c9032545a3079	deliberate:#27	(scheme complex) stays absent
 52dce5de8ca09bdf	deliberate:#27	no exact rationals / bignums
-53ac99dc32647db9	issue-74	reader: named characters, hex escapes, string escapes
 545e5e663874b618	unimplemented	(scheme lazy) -- prelude macros once #79 is fixed
 553429e3d8f637f9	unimplemented	wrong answer: FAIL (guard (exn (else #t)) (read (open-input-string str)) #f) #t #f
 5543dd34ee58bc96	unimplemented	(scheme char)
@@ -160,13 +150,11 @@
 57b623b3e0c3de3f	unimplemented	arity: optional or n-ary form
 5845e5188d15cb94	unimplemented	(scheme char)
 58b36321f35ac7e5	unimplemented	(scheme char)
-58e31fdb3326dbaf	issue-74	reader: named characters, hex escapes, string escapes
 59535760144b75f2	deliberate:#27	no exact rationals / bignums
 5bbbdeeeb475ed71	deliberate:#27	no exact rationals / bignums
 5c56b5148f6e64e6	unimplemented	(scheme char)
 5d192a304950ea70	unimplemented	derived syntax / non-top-level define-syntax
 5d671f24d82bbc9f	unimplemented	wrong answer: FAIL (pair? ls.155) #t #f
-5edbd760a338401b	issue-74	reader: named characters, hex escapes, string escapes
 5f0e732fc4834fa5	unimplemented	(scheme char)
 6183624f7792b157	unimplemented	(scheme char)
 623067338b090c60	unimplemented	derived syntax / non-top-level define-syntax
@@ -176,7 +164,6 @@
 63a659d6ac855ca1	unimplemented	non-top-level define
 63f5d9d3a1fa70ef	unimplemented	non-top-level define
 6447d5efaabfe787	unimplemented	(scheme char)
-6465b906fed4e5b2	issue-80	_ in a syntax-rules literals list
 667654762b0a5390	unimplemented	(scheme char)
 66913ef67d1d6351	deliberate:#27	no exact rationals / bignums
 66c7a72e01506c60	unimplemented	arity: optional or n-ary form
@@ -193,7 +180,6 @@
 7259c7327b8b72e4	unimplemented	(scheme char)
 73751b4c80b523a8	unimplemented	(scheme char)
 76553638502f51b1	unimplemented	(scheme char)
-7754d4677ee9818d	issue-74	reader: named characters, hex escapes, string escapes
 7801bb74921536b4	unimplemented	binary ports and bytevector I/O
 78225a304c5f3a86	deliberate:not-R7RS-small	exponent markers s/f/d/l are not in R7RS-small
 78d1405688c18d6a	unimplemented	(scheme char)
@@ -215,7 +201,6 @@
 855ed90993f75554	unimplemented	missing (scheme base) name
 86a87464fe38bd9a	unimplemented	(scheme eval)
 878a9edcc2e76bdc	deliberate:#27	needs exact rationals
-87f8e05c3b5ebac7	issue-74	reader: named characters, hex escapes, string escapes
 88ad836fd43473de	deliberate:#27	no exact rationals / bignums
 8a0179a9260950a4	unimplemented	(scheme lazy) -- prelude macros once #79 is fixed
 8b30aedf92c1827d	unimplemented	binary ports and bytevector I/O
@@ -243,7 +228,6 @@
 95d3c1229e5c38e4	unimplemented	(scheme char)
 9609e8ee87c78987	unimplemented	(scheme char)
 9720baf0e97f8e0e	unimplemented	(scheme char)
-97600980f0196abb	issue-74	reader: named characters, hex escapes, string escapes
 97f2013d0d1015d7	unimplemented	(scheme char)
 992ffe7eeed212d1	unimplemented	(scheme char)
 99954059b39670ce	unimplemented	(scheme char)
@@ -301,7 +285,6 @@ b7ce01d4ad066540	deliberate:#27	(scheme complex) stays absent
 b8033b52fc6d64ce	unimplemented	(scheme char)
 b8de984aa1ed8117	unimplemented	(scheme char)
 b9f7be68b35e44a9	unimplemented	(scheme char)
-ba06722bb928bcdd	issue-86	flonum print convention (1e+02 vs 100.0)
 bae6f23791da773f	unimplemented	(scheme lazy) -- prelude macros once #79 is fixed
 bbd0d1c938af2a24	unimplemented	binary ports and bytevector I/O
 bc550775c0975c84	deliberate:#27	no exact rationals / bignums
@@ -318,7 +301,6 @@ c192106a835b6042	unimplemented	arity: optional or n-ary form
 c1ce722a6e5aa158	unimplemented	binary ports and bytevector I/O
 c362f6c4b16c642a	unimplemented	(scheme char)
 c62917732e79a2a7	unimplemented	(scheme char)
-c656f591b1492eb5	issue-74	reader: named characters, hex escapes, string escapes
 c6a57bfb99972ea3	deliberate:#27	complex or rational literal read as a variable
 c72dc7be53709d67	unimplemented	(scheme char)
 c7ec5caf20ab6eb8	blocked-by:4767069ee08aecb9	needs any-arity
@@ -337,13 +319,11 @@ ceec5386af3e981c	unimplemented	derived syntax / non-top-level define-syntax
 cfecf7be76bed67d	unimplemented	(scheme char)
 d04ae0f8d1f4a2e0	unimplemented	(scheme char)
 d0bc7a810c918c1d	unimplemented	arity: optional or n-ary form
-d128df45db8865e6	issue-74	reader: inf/nan are case-sensitive
 d35640868f9f0991	unimplemented	wrong answer: FAIL (pair? ls.155) #t #f
 d374c47fef965ceb	deliberate:#27	(scheme complex) stays absent
 d3bdc51943326054	unimplemented	binary ports and bytevector I/O
 d4281adf50229c8b	deliberate:not-R7RS-small	exponent markers s/f/d/l are not in R7RS-small
 d50d294773c5e0ed	deliberate:#27	(scheme complex) stays absent
-d5a664401053e7c1	issue-74	reader: named characters, hex escapes, string escapes
 d78394cea494af83	unimplemented	wrong answer: FAIL (get-output-string out.27) "|-i|" "-i"
 d7974aaf3cba3d60	unimplemented	binary ports and bytevector I/O
 d7a103cf90848deb	deliberate:not-R7RS-small	exponent markers s/f/d/l are not in R7RS-small
@@ -366,10 +346,8 @@ e164235e6841b372	unimplemented	(scheme char)
 e1af4ceaa145d2ef	unimplemented	(scheme char)
 e1c2612da6b06d1d	unimplemented	binary ports and bytevector I/O
 e3186ed243c9d0e9	unimplemented	derived syntax / non-top-level define-syntax
-e3a3e800a38c4abd	issue-86	flonum print convention (1e+02 vs 100.0)
 e46c7cf8502ee0b1	deliberate:#27	needs exact rationals
 e482e04168fcc00f	deliberate:#27	(scheme complex) stays absent
-e5f251b51ea6a0fc	issue-81	case with => receiver
 e6ba3f196ec5fb0e	unimplemented	(scheme char)
 e7e574fade0ec7b7	unimplemented	(scheme char)
 e97059c9d04aa3b3	unimplemented	binary ports and bytevector I/O
@@ -377,7 +355,6 @@ e976191094696a1f	unimplemented	binary ports and bytevector I/O
 ec60a9208318818a	deliberate:#27	(scheme complex) stays absent
 ecb9eedd8d71d821	deliberate:#27	needs exact rationals
 ee86f62ed0c7db17	unimplemented	(scheme char)
-ee8cf254ce6c9c52	issue-86	flonum print convention (1e+02 vs 100.0)
 ef4d898493198167	unimplemented	binary ports and bytevector I/O
 ef85b641eb15f825	deliberate:#27	complex or rational literal read as a variable
 ef9cc902869ec520	unimplemented	(scheme char)
@@ -403,4 +380,4 @@ fbcd30634dd83124	unimplemented	(scheme char)
 fc47f0917a89ba66	deliberate:not-R7RS-small	exponent markers s/f/d/l are not in R7RS-small
 fc71028eb74e4a0d	deliberate:#27	complex or rational literal read as a variable
 fd7159f95292d163	unimplemented	(scheme char)
-ffeffe3559c2e2ee	unimplemented	wrong answer: FAIL (values z.64) +nan.0 +NAN.0
+357bdf7440b38f21	deliberate:r7rs-lexical-conformance	write spells |+NaN.0abc| bare; R7RS 7.1.1 makes it a peculiar identifier (+ . N . aN.0abc) so the bare form is legal AND round-trips -- chibi is stricter than the report

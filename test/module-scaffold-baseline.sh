@@ -509,6 +509,38 @@
 #     still pass -- including library-include-tests.sh, whose driver section now compares
 #     an include-ci fixture's geom.ll across the two doors byte for byte, which is what
 #     replaces the single shared fold this change deleted.  No new entries.
+#   r7rs-lexical-conformance (issues #74, #80, #81, #86) -- the whole manifest again, and
+#     again because the reader is baked; but the PROGRAM-module delta is EXACTLY ZERO,
+#     which is the interesting half.  Verified against an 80-demo before/after capture (a
+#     detached-HEAD worktree at ae08eff, `make emit` from committed IR, vs the regenerated
+#     tree), split at `; ==EMIT-UNIT-BOUNDARY==`:
+#       PROGRAM module: byte-identical in all 80.  Not one line moved, and no declare was
+#         added -- unlike reader-token-path above, this change exports no new (scheme base)
+#         name, so no program's header grew.  This is also the evidence that the
+#         syntax-rules literals-precedence fix (#80) is INERT: every literals list in the
+#         compiler's own sources is `()`, `(else =>)`, `(unquote)`, or `(else guard)`, none
+#         naming `_` or `...`, so the reordered tests cannot fire.  And it is the evidence
+#         that widening `case`'s literals list to `(else =>)` (#81) did not disturb the
+#         expansion of any EXISTING `case` -- demos/casecxr.scm uses `case` and its program
+#         module is unchanged.
+#       UNIT COUNT: unchanged for all 80 -- no library added, removed, or re-linked.
+#       (emit internal): 309909 -> 348166 B (+38257).  The reader lives here, and this is
+#         where all of #74 landed: the #true/#false token arm, three R7RS character names
+#         plus `page`, the #\xHH decoder (rd-char-hex + rd-hex-digit?), the \a/\b escapes,
+#         the `\`-newline continuation (rd-intraline + rd-line-continuation), and the
+#         allocation-free rd-ci=? the non-finite tokens now compare through.  Six new
+#         procedures, each with its arity check and call sites, plus the constants for the
+#         new name table -- so everything after them renumbers.
+#       (scheme base): 583077 -> 585238 B (+2161).  `case` gained two receiver rules, and
+#         rd-report gained two arms (rd-char-name, rd-hash-token).  rd-report is here and
+#         not in the substrate because it REPORTS, which scheme-base-partition D10 keeps
+#         out of (emit internal).
+#       (scheme read): 26469 -> 28544 B (+2075), in the 21 demos that import it.  It
+#         carries its own copy of rd-report for exactly the D10 reason above, so the two
+#         new arms land twice by design.
+#     All 80 demos' stdout is byte-identical before and after (`RUNNER=emit-run
+#     demos/run-tests.sh` passes 80/80), and the R7RS suite goes from 386 to 363
+#     exclusions with no stale entries.  No new entries.
 #   reader-input-termination -- `rd-report` gained two arms (rd-unterminated-list,
 #     rd-unterminated-string) and rd-list/rd-string each gained an `open` parameter, so the
 #     reader's constant pool gained NINE constants and everything after them renumbered.

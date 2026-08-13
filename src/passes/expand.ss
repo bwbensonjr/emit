@@ -66,28 +66,44 @@
   (let loop ([x x] [n 0]) (if (pair? x) (loop (cdr x) (+ n 1)) n)))
 (define (take-n xs n) (if (= n 0) '() (cons (car xs) (take-n (cdr xs) (- n 1)))))
 
+;; THE LITERALS LIST OUTRANKS `_` AND `...` (R7RS 4.3.2, issue #80).  An identifier named
+;; in a rule's literals list matches only itself, even when it is spelled `_` or `...` --
+;; so the literals test has to come BEFORE the two special-identifier readings, in every
+;; place the distinction is made.  Testing `_` first is what let a pattern match input the
+;; rule was written to reject, silently: with `_` a literal, `(_ _ _)` requires two literal
+;; `_` arguments, and matching `a b` against it answers 2 where R7RS says fall through.
+;; Four sites decide this -- these two functions, each in its symbol arm and its ellipsis
+;; arm -- and they move together because they are one question; a matcher and a
+;; variable-collector that disagree about what `...` means would be worse than either bug.
+;; Inert for every rule whose literals list is empty or names neither identifier, which is
+;; every macro in the compiler's own sources.
+(define (ellipsis-at? pat literals)      ; is (cadr pat) a repetition marker, not a literal?
+  (and (pair? (cdr pat))
+       (eq? (cadr pat) *ellipsis*)
+       (not (memq *ellipsis* literals))))
+
 ;; pattern variables of a pattern (excluding literals / _ / ...), as (var . depth)
 (define (pattern-vars pat literals)
   (let walk ([pat pat] [depth 0] [acc '()])
     (cond
+      [(and (symbol? pat) (memq pat literals)) acc]
       [(or (eq? pat *wildcard*) (eq? pat *ellipsis*)) acc]
-      [(symbol? pat) (if (memq pat literals) acc (cons (cons pat depth) acc))]
+      [(symbol? pat) (cons (cons pat depth) acc)]
       [(pair? pat)
-       (if (and (pair? (cdr pat)) (eq? (cadr pat) *ellipsis*))
+       (if (ellipsis-at? pat literals)
            (walk (cddr pat) depth (walk (car pat) (+ depth 1) acc))
            (walk (cdr pat) depth (walk (car pat) depth acc)))]
       [else acc])))
 
 (define (match-pat pat form literals)
   (cond
+    [(and (symbol? pat) (memq pat literals))
+     (if (eq? pat form) '() no-match)]            ; literal: identical identifier
     [(eq? pat *wildcard*) '()]
-    [(symbol? pat)
-     (if (memq pat literals)
-         (if (eq? pat form) '() no-match)         ; literal: identical identifier
-         (list (cons pat form)))]                 ; pattern variable
+    [(symbol? pat) (list (cons pat form))]        ; pattern variable
     [(null? pat) (if (null? form) '() no-match)]
     [(pair? pat)
-     (if (and (pair? (cdr pat)) (eq? (cadr pat) *ellipsis*))
+     (if (ellipsis-at? pat literals)
          (match-ellipsis (car pat) (cddr pat) form literals)
          (if (pair? form)
              (let ([m1 (match-pat (car pat) (car form) literals)])

@@ -63,11 +63,26 @@
 ;; temp `k` first (so it is not re-evaluated per clause); the recursive calls pass
 ;; the bound identifier, which no longer matches the compound-KEY rule.  Expands
 ;; to `cond` over `(memv k '(d ...))`.
+;; The `=>` RECEIVER clause form (R7RS 4.2.1) is supported in both an ordinary clause and
+;; the `else` clause: the selected clause's expression is applied to THE KEY, so
+;; `(case (car '(c d)) ((a) 1) (else => (lambda (x) x)))` answers `c`.  Each receiver rule
+;; must come BEFORE the clause form it would otherwise be shadowed by -- rules are tried in
+;; order, so `(else e ...)` placed first would swallow `(else => f)` and expand `=>` as an
+;; ordinary expression, which is the `unbound variable =>` this fixes (issue #81).
+;; `k` is already the hygienic temp the compound-KEY rule bound, so the receiver gets the
+;; key without re-evaluating the key expression.
+;; NOTE: widening the literals list to `(else =>)` extends issue #92 from `cond` to `case`
+;; -- this expander matches a literal by SPELLING, so a shadowed `=>` is still misread here
+;; as it is there.  Inherited from how every literal is matched, not introduced here; #92
+;; fixes both at once (design D4).
 (define-syntax case
-  (syntax-rules (else)
+  (syntax-rules (else =>)
     ((_ (key ...) clause ...) (let ((k (key ...))) (case k clause ...)))
     ((_ k) (if #f #f))
+    ((_ k (else => f)) (f k))
     ((_ k (else e ...)) (begin e ...))
+    ((_ k ((d ...) => f) clause ...)
+     (if (memv k (quote (d ...))) (f k) (case k clause ...)))
     ((_ k ((d ...) e ...) clause ...)
      (if (memv k (quote (d ...))) (begin e ...) (case k clause ...)))))
 
@@ -1316,10 +1331,37 @@
 ;;; is strtod, which reads "inf"/"nan" (and stops before the ".0"), so the VALUES
 ;;; come from the same converter as every other inexact literal rather than from
 ;;; arithmetic like (/ 1.0 0.0) that would depend on the host's division.
+;;; Case-insensitive ASCII compare against a LOWERCASE literal, allocating nothing.
+;;; rd-nonfinite is the last classifier in the radix-10 chain, so every SYMBOL the reader
+;;; produces reaches it -- folding the token into a fresh string there would put an
+;;; allocation on the compiler's own hot read path, and `define` and `lambda` are both six
+;;; characters, so a length pre-check would not save it.  The length test short-circuits
+;;; every other token before a character is looked at.
+;;; Compares CODEPOINTS rather than characters: char=? is not a substrate name (the reader
+;;; is written in terms of char->integer and = throughout), and this runs below the layer
+;;; where the character procedures are in scope.
+(define (rd-ci=? tok lower)
+  (let ([len (string-length tok)])
+    (if (= len (string-length lower))
+        (let loop ([i 0])
+          (if (< i len)
+              (if (= (char->integer (rd-fold-char (string-ref tok i)))
+                     (char->integer (string-ref lower i)))
+                  (loop (+ i 1))
+                  #f)
+              #t))
+        #f)))
+
+;;; Matched CASE-INSENSITIVELY (change: r7rs-lexical-conformance).  R7RS 7.1.1 makes the
+;;; whole numeric syntax case-insensitive -- `#X1F` and `1E2` already read here -- and a
+;;; reader that took only the lowercase spelling turned an ordinary capitalization into an
+;;; identifier, which is the same round-trip break these three tokens were added to close.
+;;; The fold is on the COMPARISON, not the table: the three lowercase literals stay what is
+;;; compared against, and the printer keeps emitting them, so no existing output moves.
 (define (rd-nonfinite tok)               ; the value, or #f if not one of the three
-  (cond [(string=? tok "+inf.0") (%string->flonum "inf")]
-        [(string=? tok "-inf.0") (%string->flonum "-inf")]
-        [(string=? tok "+nan.0") (%string->flonum "nan")]
+  (cond [(rd-ci=? tok "+inf.0") (%string->flonum "inf")]
+        [(rd-ci=? tok "-inf.0") (%string->flonum "-inf")]
+        [(rd-ci=? tok "+nan.0") (%string->flonum "nan")]
         [else #f]))
 
 ;;; --- one numeric grammar, entered from two places (design D3) --------------
@@ -1498,6 +1540,17 @@
       [(and (< 96 k) (< k 103)) (- k 87)]     ; a-f
       [(and (< 64 k) (< k 71)) (- k 55)]      ; A-F
       [else 0])))
+;;; Whether C is a hex digit at all.  rd-hex-digit answers 0 for a non-digit, which the
+;;; string escape can live with (it stops at the `;`) but #\xHH cannot: there the digits
+;;; run to a DELIMITER, so `#\xyz` must be told apart from a codepoint rather than folded
+;;; into one silently (change: r7rs-lexical-conformance).
+(define (rd-hex-digit? c)
+  (let ([k (char->integer c)])
+    (cond
+      [(and (< 47 k) (< k 58)) #t]            ; 0-9
+      [(and (< 96 k) (< k 103)) #t]           ; a-f
+      [(and (< 64 k) (< k 71)) #t]            ; A-F
+      [else #f])))
 (define (rd-hex s n i acc)               ; \xHH...; -> (codepoint . index-past-;)
   (if (< i n)
       (if (= (char->integer (string-ref s i)) 59)     ; ;
@@ -1507,10 +1560,44 @@
 (define (rd-str-esc c)                   ; escape letter -> the character it denotes
   (let ([k (char->integer c)])
     (cond
+      [(= k 97)  (integer->char 7)]      ; \a  alarm     (change: r7rs-lexical-conformance)
+      [(= k 98)  (integer->char 8)]      ; \b  backspace (change: r7rs-lexical-conformance)
       [(= k 110) (integer->char 10)]     ; \n
       [(= k 116) (integer->char 9)]      ; \t
       [(= k 114) (integer->char 13)]     ; \r
       [else c])))                        ; \\ \" and any other: the char itself
+;;; R7RS 6.7 <intraline whitespace>: space or tab, and nothing else -- a newline ENDS a
+;;; run of it rather than belonging to one, which is what makes the line continuation
+;;; below decomposable into "whitespace, ending, whitespace".
+(define (rd-intraline s n i)             ; index just past a run of spaces/tabs
+  (if (< i n)
+      (let ([k (char->integer (string-ref s i))])
+        (if (if (= k 32) #t (= k 9)) (rd-intraline s n (+ i 1)) i))
+      i))
+
+;;; A `\` LINE CONTINUATION (R7RS 6.7): backslash, optional intraline whitespace, a line
+;;; ending, optional intraline whitespace -- the whole run contributing NO characters, so a
+;;; long literal can be broken across source lines without the break and the next line's
+;;; indentation landing in its value.  `j` is the index just past the backslash; the answer
+;;; is the index to resume at, or #f when this is an ordinary escape instead.
+;;; All three line endings R7RS admits are accepted (LF, CR, CRLF), because a source file
+;;; with CRLF endings would otherwise leave a stray return in every continued string.
+(define (rd-line-continuation s n j)
+  (let ([w (rd-intraline s n j)])
+    (if (< w n)
+        (let ([k (char->integer (string-ref s w))])
+          (cond
+            [(= k 10) (rd-intraline s n (+ w 1))]
+            [(= k 13)
+             (rd-intraline s n
+                           (if (< (+ w 1) n)
+                               (if (= (char->integer (string-ref s (+ w 1))) 10)
+                                   (+ w 2)
+                                   (+ w 1))
+                               (+ w 1)))]
+            [else #f]))
+        #f)))
+
 ;; `open` is the index of the opening " -- carried so the report can name where the string
 ;; STARTED, which is where the missing delimiter belongs (change: reader-input-termination).
 (define (rd-string s n i open)           ; i just past opening "; decodes escapes
@@ -1526,11 +1613,17 @@
              ;; its own: rd-hex stops at n, so the loop re-enters and ends below.
              (if (<= n (+ i 1))
                  (rd-fail (quote rd-unterminated-string) open)
-                 (let ([e (string-ref s (+ i 1))])
-                   (if (= (char->integer e) 120)                         ; \xHH;
-                       (let ([hx (rd-hex s n (+ i 2) 0)])
-                         (loop (cdr hx) (cons (integer->char (car hx)) acc)))
-                       (loop (+ i 2) (cons (rd-str-esc e) acc)))))]       ; \n \t \r \\ \"
+                 (let ([e (string-ref s (+ i 1))]
+                       ;; Tested BEFORE \xHH; and before the escape table: a backslash that
+                       ;; begins a continuation is not naming a character at all, so it must
+                       ;; not reach rd-str-esc (which would answer the whitespace itself).
+                       [cont (rd-line-continuation s n (+ i 1))])
+                   (cond
+                     [cont (loop cont acc)]                              ; contributes nothing
+                     [(= (char->integer e) 120)                          ; \xHH;
+                      (let ([hx (rd-hex s n (+ i 2) 0)])
+                        (loop (cdr hx) (cons (integer->char (car hx)) acc)))]
+                     [else (loop (+ i 2) (cons (rd-str-esc e) acc))])))] ; \a \b \n \t \r \\ \"
             [else (loop (+ i 1) (cons c acc))]))
         ;; NOT end of input: closing the string here fabricates a datum the source does not
         ;; contain, so a truncated file compiled as though complete (issue #66).
@@ -1541,8 +1634,20 @@
       (rd-fail (quote rd-eof) (- i 1))                     ; a lone trailing #
       (let ([k (char->integer (string-ref s i))])
         (cond
-          [(= k 116) (cons #t (+ i 1))]                        ; #t
-          [(= k 102) (cons #f (+ i 1))]                        ; #f
+          ;; #t / #true / #f / #false -- R7RS 7.1.1 gives each boolean two spellings, and the
+          ;; whole token has to be consumed.  Dispatching on the single character `t` and
+          ;; returning left `rue` behind for the next read, which is how `(list #true #false)`
+          ;; came to report `unbound variable rue` (issue #74).  A token that is neither
+          ;; spelling (`#tfoo`) is REPORTED rather than read as #t with a tail, because R7RS
+          ;; requires a delimiter here and the tail is exactly the silent misread being fixed.
+          [(if (= k 116) #t (= k 102))
+           (let ([tok (substring s i (rd-token-end s n i))])
+             (cond
+               [(string=? tok "t") (cons #t (+ i 1))]
+               [(string=? tok "true") (cons #t (+ i 4))]
+               [(string=? tok "f") (cons #f (+ i 1))]
+               [(string=? tok "false") (cons #f (+ i 5))]
+               [else (rd-fail (quote rd-hash-token) (- i 1))]))]
           [(= k 92) (rd-char s n i)]                           ; #\<char> or #\<name>
           ;; ci travels INTO a vector literal: a symbol inside #( ... ) is a symbol the
           ;; read produces, and the old shape-walking fold missed it (design D3).
@@ -1572,25 +1677,60 @@
                   (let ([v (rd-number (substring s (- i 1) j) 10)])
                     (if (rd-number-reason? v) (rd-fail v (- i 1)) (cons v j))))]))))
 
-(define (rd-char-name tok)               ; multi-char #\ name -> character
+;;; A multi-character #\ name -> the character it denotes, or #f when the name is not one
+;;; this reader knows.  #f rather than a fallback character: the old `(string-ref tok 0)`
+;;; -- "unknown name: first char" -- is what silently turned #\alarm into #\a and made a
+;;; missing name indistinguishable from a correct one in the value produced, which is why
+;;; thirteen suite forms were wrong with nothing to point at (issue #74, design D1).
+;;; The R7RS 6.6 names come first; the four after them are recorded EXTENSIONS, kept because
+;;; they already read (and, for `page`, because Chez accepts it in source this repo compiles
+;;; -- a name Emit refused would be a two-host divergence, design D8).
+(define (rd-char-name tok)
   (cond
-    [(string=? tok "space")   (integer->char 32)]
-    [(string=? tok "newline") (integer->char 10)]
-    [(string=? tok "tab")     (integer->char 9)]
-    [(string=? tok "return")  (integer->char 13)]
-    [(string=? tok "nul")     (integer->char 0)]
-    [(string=? tok "null")    (integer->char 0)]
-    [(string=? tok "delete")  (integer->char 127)]
-    [(string=? tok "altmode") (integer->char 27)]
-    [(string=? tok "esc")     (integer->char 27)]
-    [else (string-ref tok 0)]))          ; unknown name: first char (undefined per spec)
+    [(string=? tok "alarm")     (integer->char 7)]
+    [(string=? tok "backspace") (integer->char 8)]
+    [(string=? tok "delete")    (integer->char 127)]
+    [(string=? tok "escape")    (integer->char 27)]
+    [(string=? tok "newline")   (integer->char 10)]
+    [(string=? tok "null")      (integer->char 0)]
+    [(string=? tok "return")    (integer->char 13)]
+    [(string=? tok "space")     (integer->char 32)]
+    [(string=? tok "tab")       (integer->char 9)]
+    [(string=? tok "nul")       (integer->char 0)]      ; extension
+    [(string=? tok "altmode")   (integer->char 27)]     ; extension
+    [(string=? tok "esc")       (integer->char 27)]     ; extension
+    [(string=? tok "page")      (integer->char 12)]     ; extension
+    [else #f]))
+
+;;; #\x<hex digits> (R7RS 6.6) -> the codepoint, or #f when TOK is not that shape and is
+;;; therefore a character NAME.  Bare `#\x` never reaches here -- rd-char takes the
+;;; single-character path first -- so the letter x keeps its meaning (design D2).
+(define (rd-char-hex tok)
+  (if (= (char->integer (string-ref tok 0)) 120)        ; x
+      (let ([len (string-length tok)])
+        (let loop ([i 1] [acc 0])
+          (if (< i len)
+              (let ([c (string-ref tok i)])
+                (if (rd-hex-digit? c)
+                    (loop (+ i 1) (+ (* acc 16) (rd-hex-digit c)))
+                    #f))                                ; not hex: a name, not a codepoint
+              acc)))
+      #f))
+
 (define (rd-char s n i)                  ; i at '\' of #\ ; content at i+1
   (let* ([cs (+ i 1)]
          [end (rd-token-end s n (+ cs 1))]   ; force the first content char in
          [tok (substring s cs end)])
     (if (= (string-length tok) 1)
         (cons (string-ref s cs) end)         ; single-character literal
-        (cons (rd-char-name tok) end))))     ; named character
+        (let ([hx (rd-char-hex tok)])
+          (if hx
+              (cons (integer->char hx) end)  ; #\xHH
+              ;; `(- i 1)` is the `#`, so the report names the whole `#\name` token.
+              (let ([c (rd-char-name tok)])
+                (if c
+                    (cons c end)             ; named character
+                    (rd-fail (quote rd-char-name) (- i 1)))))))))
 
 ;;; R7RS 7.1.1 bar-quoted identifier: | opens a name that runs to the matching |, with
 ;;; the \| and \xHH; escapes the standard gives it.  The result is an ORDINARY interned
@@ -1738,6 +1878,12 @@
               p)]
       [(eq? why (quote rd-unterminated-string))
        (error (quote read) "unterminated string \" opened at index" p)]
+      ;; The name is NAMED.  This arm exists because the alternative -- answering the first
+      ;; character of the name -- made #\alarm read as #\a with nothing to notice (design D1).
+      [(eq? why (quote rd-char-name))
+       (error (quote read) "unknown character name" (rd-token-at s n p))]
+      [(eq? why (quote rd-hash-token))
+       (error (quote read) "not a boolean; write #t, #true, #f or #false" (rd-token-at s n p))]
       [(eq? why (quote rd-eof))
        (error (quote read) "end of input where a datum was expected, at index" p)]
       [(eq? why (quote rd-unexpected))

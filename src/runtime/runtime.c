@@ -314,13 +314,53 @@ static int is_integer_valued(val v) {
  * increase-precision-until-round-trips loop), ALWAYS carrying a '.' or exponent
  * so the reader never mistakes it for an integer.  Non-finite values render as
  * +inf.0 / -inf.0 / +nan.0.  buf must be >= 40 bytes; returns the byte length. */
+/* POSITIONAL NOTATION IS PREFERRED within the exponent range below, so 100.0 prints
+ * as 100.0 rather than 1e+02 (change: r7rs-lexical-conformance, design D6).  Shortest
+ * round-trip says nothing about which NOTATION to use, and %g picks exponent form on
+ * its own schedule -- one significant digit at 1e2 is enough for it to prefer 1e+02.
+ *
+ * The range is CHEZ'S, measured rather than chosen: probing chez across the 1eN and
+ * 1.5eN series puts its switchover at the same two points in both, independent of how
+ * many significant digits the value needs.  Matching it exactly is what keeps
+ * test/dump-parity-tests.sh comparing like with like -- Chez is the bootstrap host, and
+ * a printer that agrees on the digits but not the notation is a two-host divergence.
+ *
+ * The range is a BUFFER constraint too: this writes through snprintf(..., 32, ...), and
+ * positional 1e300 would need 300 characters.  With the 17 significant digits the loop
+ * can ask for, the worst cases are -1234567890.1234567 (19 bytes) at the top of the
+ * range and "-0." + 19 fraction digits (22 bytes) at the bottom -- both clear of 32.
+ * Widening either end costs bytes fast and must not be done without the bound.
+ *
+ * The positional form is a CANDIDATE, never a computation trusted on sight: it is
+ * accepted only if it survives the same strtod round-trip that gates the precision
+ * search above it, so the round-trip guarantee cannot be lost to exponent arithmetic at
+ * the extremes -- where it is hardest to get right and where no test will look. */
+#define FLO_POS_EXP_MIN (-3)   /* lowest decimal exponent still printed positionally */
+#define FLO_POS_EXP_MAX 10     /* first decimal exponent NOT printed positionally */
 static int flonum_format(double d, char *buf) {
   if (isnan(d)) { memcpy(buf, "+nan.0", 7); return 6; }
   if (isinf(d)) { memcpy(buf, d < 0 ? "-inf.0" : "+inf.0", 7); return 6; }
-  int len = 0;
-  for (int prec = 1; prec <= 17; prec++) {
+  int len = 0, prec = 1;
+  for (prec = 1; prec <= 17; prec++) {
     len = snprintf(buf, 32, "%.*g", prec, d);
     if (strtod(buf, NULL) == d) break;
+  }
+  const char *ex = strpbrk(buf, "eE");
+  if (ex) {                                   /* %g chose exponent form -- reconsider */
+    int exp10 = atoi(ex + 1);
+    if (exp10 >= FLO_POS_EXP_MIN && exp10 < FLO_POS_EXP_MAX) {
+      /* `prec` significant digits with the point after the first leaves prec-1-exp10
+       * of them to the RIGHT of it.  At least one, so the '.' is never left bare and
+       * the result stays distinguishable from an integer without the fixup below. */
+      int frac = prec - 1 - exp10;
+      if (frac < 1) frac = 1;
+      char alt[40];
+      int alen = snprintf(alt, sizeof alt, "%.*f", frac, d);
+      if (alen > 0 && alen < 32 && strtod(alt, NULL) == d) {
+        memcpy(buf, alt, (size_t)alen + 1);
+        return alen;
+      }
+    }
   }
   if (!strpbrk(buf, ".eEnN")) { buf[len++] = '.'; buf[len++] = '0'; buf[len] = '\0'; }
   return len;
@@ -2016,6 +2056,18 @@ val rt_error(val message, val irritants) {
  * way a number begins.  Every symbol the compiler itself prints -- mangled names
  * (`lib.name:x`), gensyms, IL keywords -- fails all of those, so no existing dump or
  * REPL echo changes shape.  `display` never consults this: it writes the raw name. */
+/* ASCII case-insensitive equality against a lowercase literal.  Local rather than
+ * strcasecmp so no new header (and no locale) enters the runtime for one comparison. */
+static int ci_streq(const char *s, const char *lower) {
+  size_t i = 0;
+  for (; lower[i]; i++) {
+    unsigned char c = (unsigned char)s[i];
+    if (c >= 'A' && c <= 'Z') c = (unsigned char)(c - 'A' + 'a');
+    if (c != (unsigned char)lower[i]) return 0;
+  }
+  return s[i] == '\0';
+}
+
 static int sym_needs_bars(const char *s) {
   size_t n = strlen(s);
   if (n == 0) return 1;                                  /* the empty symbol */
@@ -2031,7 +2083,13 @@ static int sym_needs_bars(const char *s) {
   if ((s[0] == '+' || s[0] == '-') && n > 1) {
     if (s[1] >= '0' && s[1] <= '9') return 1;                        /* -1 */
     if (s[1] == '.' && n > 2 && s[2] >= '0' && s[2] <= '9') return 1; /* +.5 */
-    if (!strcmp(s, "+inf.0") || !strcmp(s, "-inf.0") || !strcmp(s, "+nan.0")) return 1;
+    /* CASE-INSENSITIVELY, because the reader matches them that way (change:
+     * r7rs-lexical-conformance).  This comparison is the printer's mirror of
+     * rd-nonfinite, and when that became case-insensitive this had to follow or the
+     * mirror breaks in the direction that costs a round trip: `+NaN.0` reads as a
+     * NUMBER now, so the symbol of that name written bare comes back as a number
+     * rather than as itself. */
+    if (ci_streq(s, "+inf.0") || ci_streq(s, "-inf.0") || ci_streq(s, "+nan.0")) return 1;
   }
   return 0;
 }

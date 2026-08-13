@@ -40,6 +40,25 @@ run_unbound () {  # name  source  [extra args...]
 echo "(scheme base) re-home on the embedded runner (emit run)"
 run_val prelude-procs  '(map (lambda (x) (* x x)) (list 1 2 3 4))' '(1 4 9 16)'
 run_val derived-macros '(when (< 1 2) (case 2 ((1) (quote a)) ((2) (quote b)) (else (quote c))))' 'b'
+# `case` with the R7RS 4.2.1 `=>` RECEIVER clause (change: r7rs-lexical-conformance,
+# issue #81): the selected clause's expression is applied to THE KEY.  `cond` has had
+# this; `case` reported `unbound variable =>`, because no rule matched the shape and the
+# `=>` fell through as an ordinary expression.
+run_val case-else-receiver \
+  '(case (car (quote (c d))) ((a e i o u) (quote vowel)) ((w y) (quote semivowel)) (else => (lambda (x) x)))' \
+  'c'
+run_val case-clause-receiver \
+  '(case 2 ((1) (quote a)) ((2 3) => (lambda (x) (* x 10))) (else (quote c)))' '20'
+# The receiver must not re-evaluate the key expression: it receives the temp the
+# compound-KEY rule already bound.  The counter says so.
+run_val case-key-evaluated-once \
+  '(define n 0) (define (bump) (set! n (+ n 1)) 2) (define r (case (bump) ((2) => (lambda (x) x)) (else (quote no)))) (list r n)' \
+  '(2 1)'
+# ... and the non-receiver clause forms still behave, since the new rules sit in front
+# of the ones they would otherwise be shadowed by.
+run_val case-non-receiver-unchanged \
+  '(list (case 9 ((1) (quote a)) (else (quote c))) (case 2 ((1) (quote a)) ((2 3) (quote b)) (else (quote c))))' \
+  '(c b)'
 run_val user-shadow    '(define (map f xs) (quote mine)) (map car (list (list 1)))' 'mine'
 run_unbound no-prelude '(map (lambda (x) x) (list 1 2 3))' --no-prelude
 # a primitive still works under --no-prelude (proves only the prelude was dropped).

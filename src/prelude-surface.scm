@@ -172,6 +172,12 @@
     ;; worker both whole-source entry points wrap; the CI one is homed in the substrate
     ;; (see *substrate-rehomed*), the plain one stays a published (scheme base) name.
     rd-fold-char rd-fold-token rd-all
+    ;; ... and the R7RS lexical additions (change: r7rs-lexical-conformance): the two
+    ;; halves of the `\`-newline line continuation, the hex-digit predicate #\xHH needs
+    ;; (rd-hex-digit answers 0 for a non-digit, which a delimiter-terminated literal
+    ;; cannot tell from the digit zero), the #\xHH decoder itself, and the allocation-free
+    ;; case-insensitive compare the non-finite tokens are matched with.
+    rd-intraline rd-line-continuation rd-hex-digit? rd-char-hex rd-ci=?
     ;; port representation
     %port-rtd-cell %port-rtd %make-port %check-input-port %check-output-port %port-buf
     %port-at-eof? %stdout-port %stderr-port %stdin-port
@@ -292,6 +298,11 @@
     rd-radix-letter rd-exactness-letter rd-scan-prefixes rd-radix-scan
     rd-rational-body? rd-exactness-apply rd-body-number rd-number rd-number-reason?
     rd-token-at rd-bar rd-datum-comment?
+    ;; the R7RS lexical additions (change: r7rs-lexical-conformance).  All five answer a
+    ;; value or #f and none of them raises, so the substrate is where they belong: the
+    ;; unknown-character-name REPORT is rd-char's rd-fail sentinel, decoded up in
+    ;; rd-report, which keeps design D10 intact.
+    rd-intraline rd-line-continuation rd-hex-digit? rd-char-hex rd-ci=?
     ;; the numeric kernels the reader now shares with string->number, which is what
     ;; keeps ONE numeric grammar across the two entry points (design D3)
     %digit-in-radix %radix-digits %string->int
