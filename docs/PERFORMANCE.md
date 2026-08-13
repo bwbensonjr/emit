@@ -17,15 +17,15 @@ speed items in this list.
 |----|------|------|-------|------|-----------------|------|
 | [P1](#p1-dead-code-elimination-for-library-units) | Dead-code elimination for library units | size | high | med | `aot-release-profile` | ☑ |
 | [P2](#p2-immediate-non-heap-characters) | Immediate (non-heap) characters | speed + cleanup | med | med | `immediate-characters` | ☑ |
-| [P3](#p3-precompiled-prelude--library-objects) | Precompiled prelude / library objects | build speed | low | low | — | ☐ |
+| [P3](#p3--the-chez-free-doors-recompile-the-standard-library-at-every-invocation) | The Chez-free doors recompile the standard library at every invocation | build speed | **high** | med | — | ☐ |
 | [P4](#p4-on-codepoint-string-indexing) | O(n) codepoint string indexing | speed | low–med | med–high | `codepoint-string-indexing` | ☑ |
 | [P5](#p5-arithmetic-and-call-overhead-ackermann-benchmark) | Arithmetic & call overhead (Ackermann benchmark) | speed | high | med–high | `inline-fixnum-arith-and-self-calls` (A + B-self) | ☑ |
 | [P6](#p6-no-optimizer-pass-known-call-inlining-and-constant-folding) | No optimizer pass: known-call inlining & constant folding | speed + size | med–high | med | `simplify-known-calls` (A) | ☑ |
 | [P7](#p7-boxing-driven-by-desugaring-rather-than-by-mutation) | Boxing driven by desugaring rather than by mutation | speed + size | med | low–med | — | ☑ |
-| [P8](#p8-the-emit-build-door-does-not-tree-shake) | The `emit build` door does not tree-shake | size | med–high | med | — | ☐ |
+| [P8](#p8-the-emit-build-door-does-not-tree-shake) | The `emit build` door does not tree-shake | size + build speed | med–high | med | — | ☐ |
 | [P9](#p9--an-optional-argument-costs-every-call-site-its-cross-unit-direct-call) | An optional argument costs every call site its cross-unit direct call | speed | med | med | — | ☐ |
 | [P10](#p10--a-library-another-unit-imports-is-never-tree-shaken-the-substrate-ships-whole) | A library another unit imports is never tree-shaken (the substrate ships whole) | size | high | med | — | ☐ |
-| [P11](#p11--every-emit-build-recompiles-the-c-runtime-from-source) | Every `emit build` recompiles the C runtime from source | build speed | low–med | low | — | ☐ |
+| [P11](#p11--every-emit-build-recompiles-the-c-runtime-from-source) | Every `emit build` recompiles the C runtime from source | build speed | **low** (measured: 5%) | low | — | ☐ |
 | [P12](#p12--the-reader-classifier-chain-costs-20-on-the-door-that-does-not-optimize) | The reader classifier chain costs 20%, on the door that does not optimize | speed | low | med | — | ☐ |
 | [P13](#p13--the-jitrepl-door-runs-no-ir-optimization-pipeline) | The JIT/REPL door runs no IR optimization pipeline | speed | med–high | med | — | ☐ |
 | [P14](#p14--an-aggregate-constant-is-rebuilt-at-every-evaluation) | An aggregate constant is rebuilt at every evaluation | speed + size | low–med | med | — | ☐ |
@@ -45,6 +45,30 @@ P5 and overlaps it: P6-A is the first *optimizing* pass in the Scheme core (it r
 rather than translating it), while P6-B unblocks LLVM's own inliner and so partly subsumes
 P5's deferred B-general. P7 is P6's natural successor and should follow it: P6 taught the
 compiler to inline and fold, and P7 removes the boxes that hide bindings from it.
+
+**Sequencing correction (2026-08-13).** The paragraph above is historical — P1, P2, P4–P7 have
+landed — and its one live claim, "P3 folding into P1's link rework", did not survive: P1 landed as
+Scheme-level tree-shaking rather than a link rework, so there is no link rework for P3 to fold
+into. More importantly **P3 was re-measured and is now the highest-value open item on cycle time**,
+not the lowest: its recorded 0.12s is stale by more than an order of magnitude, and the cost it
+names is ~74% of the default test suite's wall clock. See P3 for the measurements.
+
+**Cycle time, as it now decomposes** (all measured 2026-08-13; see each item). For the test suites
+and the REPL, P3 is essentially the whole story. For `emit build` specifically:
+
+| | share of a 2.95 s `emit build` |
+|---|---|
+| **P3** — baked-set recompile | 58% |
+| **P8** — unshaken library IR through `-flto` | ~23% |
+| **P11** — `runtime.c` recompile | 5% |
+
+So the order is **P3, then P8, then stop**: P8 turns out to be a build-speed item as well as the
+size item it was filed as, and P11 is 5% bought with an install-contract change — its own
+"revisit once measured" test, now taken, says no. Of the remaining open items P10 is size, and
+P9/P12/P13/P14 are the speed of what gets compiled rather than the speed of compiling it.
+Separately, the redundant self-compile in `tools/regen.sh`'s fixed point (issue #99) is ~2–3
+minutes of every `make regen` and is not an entry here — it is a build-script defect with no
+trade-off to weigh.
 
 ---
 
@@ -155,9 +179,116 @@ literals now emit an inline immediate constant instead of an `rt_make_char` call
 
 ---
 
-## P3 — Precompiled prelude / library objects
+## P3 — The Chez-free doors recompile the standard library at every invocation
 
-**Status:** ☐ not started (mostly done — remaining scope is narrow)
+**Status:** ☐ not started (**re-measured and re-scoped 2026-08-13**: the remaining scope is not
+narrow, and this is the largest open lever on compile/test cycle time — see "Re-measured" below.
+The original entry, whose framing was "mostly done", is kept below with a correction appended to
+the two claims of its that the re-measurement overturns.)
+
+### Re-measured (2026-08-13) — the recorded 0.12s is stale by ~14x
+
+**Symptom.** Every `emit run`, `emit build`, and `emit lib` process recompiles the whole standard
+library from source before it does anything else. On a trivial `(display 1)`, best of five,
+arm64 darwin, `HEAD` = 31cec6a:
+
+| invocation | wall |
+|---|---|
+| `emit run FILE` | **1.80 s** |
+| `emit run --emit FILE` (compile to IR only, no JIT) | 1.50 s |
+| `emit run --no-prelude FILE` | **0.08 s** |
+| `emit run --emit --no-prelude FILE` | 0.07 s |
+| `emit repl`, one form, repo cwd | 1.95 s |
+| `emit repl --no-prelude`, one form, repo cwd | 1.65 s |
+
+So the fixed overhead is **~1.72 s per process**, and the `--emit` row splits it:
+
+- **~1.43 s** — the *Scheme-level* compile of the baked-in `*prelude-source*` (118,054 B of
+  `src/prelude.scm`) to IR text;
+- **~0.30 s** — LLVM parse + JIT of the 953,428 B of IR that produces.
+
+That the compile half is 5x the JIT half is the useful part: **caching the IR text alone recovers
+83% of the cost**, with no `.bc`/`.o` and no LLVM-side work at all. The `.bc`/`.o` idea the original
+entry proposes attacks the 0.30 s and can wait.
+
+**Cause — there is no artifact cache on the Chez-free doors at all.** The cache the original entry
+describes (`artifacts-fresh?` + `build/lib/*.{ll,exports,stamp}`) belongs to the *Chez driver*,
+`src/compile.ss`. The shipped binary has none:
+
+- `seed_session` → `register_baked_set` (`src/emit.cpp`) drives mode 8, which is
+  `run-register-baked-set` (`src/repl-core.ss`) → `compile-baked-set` (`src/core.ss`) — a full
+  compile of every baked member, on every process start;
+- `preload_user_libraries` (`src/emit.cpp`) recompiles **every user `.sld` in the program's import
+  closure** from source too, via mode 4 (`repl-load-library-text`), at every invocation.
+
+**What is actually missing is one mode.** The hard part is already built and is *half*-built in the
+right direction: an export table is a plain readable datum —
+
+```
+((mylib) ((greet . "mylib:greet")) ((greet "mylib:code:greet" 0)))
+```
+
+— and `emit lib` (mode 11) already **writes** it Chez-free (`src/emit.cpp:1602-1636`). Nothing ever
+**reads** one back. There is no mode that registers a unit into the session from a prebuilt `.ll` +
+`.exports` pair without compiling it. Add that, key it on the stamp `artifact-compiler-stamp`
+already defines (for the baked set the key is simpler still — the prelude source is *baked into the
+binary*, so the binary's own identity is the key), and all three doors plus user-library preloading
+collect the win from one change.
+
+**Cost to the test loop, measured.** `./run-all-tests.sh` at this commit: 28 suites, **1605 s**, 0
+failed. Per-suite wall clock against the number of `emit` processes each suite spawns:
+
+| suite | wall | procs | per proc |
+|---|---|---|---|
+| R7RS numeric conformance | 277 s | 118 | 2.35 s |
+| R7RS library partition | 169 s | — | — |
+| demo values (`emit run`) | 160 s | 72 | 2.22 s |
+| module-scaffold byte-identity | 125 s | 80 | 1.56 s |
+| io ports + eof object | 83 s | 41 | 2.02 s |
+| indexed access bounds | 79 s | 13 | 6.1 s |
+| R7RS-small (sections only) | 62 s | 21 | 2.95 s |
+| catchable errors + kinds | 50 s | 24 | 2.08 s |
+| module run door | 47 s | 18 | 2.6 s |
+| dynamic extent (call/cc) | 43 s | 21 | 2.05 s |
+| module vertical-slice (REPL) | 40 s | 14 | 2.9 s |
+
+The per-proc column is the finding: almost every suite sits at **~2.0–2.4 s per process against a
+1.80 s fixed cost**, i.e. the suites spend most of their time re-deriving the same standard library
+rather than testing anything. Over the 431 processes that can be counted exactly — 1017 s of the
+1605 s — the fixed cost is **431 x 1.75 s ≈ 754 s, or 74%**. Extrapolated across the rest, roughly
+**19–20 minutes of the 26m45s**.
+
+The two ends of the table bracket it. `module-scaffold byte-identity` is ~96% fixed cost: it
+compiles all 80 demos through `emit run --emit` and does essentially no other work.
+`indexed access bounds`, at 6.1 s/proc, is one of the few suites where the program under test
+actually dominates.
+
+**Why it grew.** Nothing regressed; the standard library got bigger, and this cost is linear in its
+source size. It is the same mechanism P8 records for binary size — every `(scheme base)` addition
+lands on it — with the clock as the axis instead of bytes. `scheme-io-library`, `numeric-conformance`,
+`reader-lexical-conformance` and `catchable-errors-with-kinds` have each added to it since the 0.12 s
+figure was taken.
+
+**An anomaly worth its own investigation, not folded into the above.** The REPL door's
+`--no-prelude` floor is 1.65 s, where the run door's is 0.08 s — so on that door the prelude is only
+~0.30 s of the 1.95 s and something else costs 1.65 s. It appears to be the manifest-driven load of
+`lib/scheme/base.sld` (mode 5), which the REPL uses where the run door bakes: with no manifest
+resolvable (`EMIT_MANIFEST=/dev/null`) `emit repl` starts in **0.01 s** and still evaluates
+`(map (lambda (x) (* x 2)) (list 1 2 3))` correctly. That 0.01 s is *not* a floor to design toward
+until it is understood — a door that answers correctly for a `(scheme base)` procedure without
+having compiled `(scheme base)` is presumably resolving against the linked-in unit the binary
+already carries, which is either the cheap win this item wants or a dev→ship fidelity hazard, and
+which of the two it is has not been established. Establish it before building the cache, because the
+answer decides whether the REPL needs the cache at all.
+
+**Value:** high — ~74% of the default test suite, ~1.4 s off every `emit run`/`build`/`lib`, and the
+most visible latency in the REPL, which `CLAUDE.md` names the primary development loop. **Cost:**
+med — one new core mode plus a cache-key decision and a writable cache location for an installed
+`emit`; the export-table format and the stamp both already exist.
+
+**OpenSpec change:** _none yet._
+
+### Original entry (framing superseded by the re-measurement above)
 
 **Note — the README's "separate/precompiled prelude" bullet is partly stale.** `(scheme
 base)` (and every user library) **already** compiles to a *separate, cached* `.ll` unit with
@@ -193,14 +324,21 @@ name them, where it paid nothing because it silently had no standard library at 
 the cost universal and therefore worth caching: a precompiled baked set would cut a REPL start to
 roughly its `--no-prelude` floor, which is the most visible latency in the primary development loop.
 
+**Correction (2026-08-13).** Two things above do not survive re-measurement. First, "~0.12s is the
+session and the rest is the standard library" reads the 0.84/0.72 pair backwards: 0.12 s is the
+*prelude delta*, and 0.72 s — now 1.65 s — is the `--no-prelude` floor, i.e. whatever the REPL door
+does regardless. So on the REPL door the baked set was never "the whole of startup latency"; see the
+anomaly note in the re-measurement above, which is the entry that chases where the floor comes from.
+Second, "a precompiled baked set would cut a REPL start to roughly its `--no-prelude` floor" is true
+and no longer interesting, because that floor is itself ~1.65 s. The measurement that *does* hold,
+and that this item now turns on, is the **run** door's: 1.80 s against a 0.08 s `--no-prelude` floor.
+
 **Interaction with P1 (`aot-release-profile`).** P1 landed via Scheme-level tree-shaking, which
 recompiles a *program-specific pruned* unit on the AOT ship path (it does **not** reuse the cached
 full `.ll` there). So a precompiled/cached `.bc` for the full `(scheme base)` still helps the
 **dev/REPL/JIT** door (which links the full unit), but the AOT door emits a per-program pruned
 unit. If AOT build time ever matters, cache the pruned unit keyed by its (root-set → keep-set)
 mapping rather than precompiling the full unit for AOT.
-
-**OpenSpec change:** _none yet._
 
 ---
 
@@ -969,9 +1107,33 @@ today. The likely subtlety is that `emit build` links a *committed* artifact rat
 compiled, so it needs the unit's export table to compute reachability — which
 `build/lib/*.exports` already carries.
 
-**Value:** med–high — it serves the flagship standalone-executable size goal, and it is the
-difference between 34 KB and 134 KB on a hello-world. **Cost:** med — the pass exists and is
-tested; this is wiring plus a root-set plumbing decision.
+**It is also the second-largest lever on `emit build` latency, which this entry did not know**
+(measured 2026-08-13 while re-measuring P3). `emit build` on a trivial program takes 2.95 s, and
+the unshaken library IR is a large share of it — LTO time scales with IR volume, so shipping
+~950 KB of unit IR into the link costs time as well as bytes:
+
+| component of `emit build`, trivial program | cost | share |
+|---|---|---|
+| total | **2.95 s** | |
+| baked-set recompile (P3) | ~1.72 s | 58% |
+| clang: LTO + link over 953 KB of unit IR | ~1.07 s | 36% |
+| — of which the floor at minimal IR | ~0.39 s | |
+| — **so attributable to the unshaken `(scheme base)`** | **~0.68 s** | **23%** |
+| clang: `runtime.c` → bitcode (P11) | ~0.16 s | 5% |
+
+Derived from `emit build --no-prelude`, which finishes in **0.62 s** and produces a working
+34,776 B executable against the full build's 212,192 B. The 0.68 s is inference from that
+subtraction rather than a direct measurement of a shaken link on this door — the door cannot
+shake yet, which is the item — but the mechanism (less IR through `-flto`) is not in doubt, and
+the byte figures bound it.
+
+So P8 is a **size *and* build-speed** item, and after P3 it is the largest remaining one on this
+door. That also settles its ordering against P11: P8 is worth ~4x P11 here and carries no install-
+contract risk.
+
+**Value:** med–high — it serves the flagship standalone-executable size goal, it is the difference
+between 34 KB and 134 KB on a hello-world, and it is ~23% of `emit build`'s wall clock. **Cost:**
+med — the pass exists and is tested; this is wiring plus a root-set plumbing decision.
 
 **OpenSpec change:** none yet.
 
@@ -1124,10 +1286,44 @@ Worth revisiting once there is a measurement: how much of `emit build`'s wall cl
 compile, as against the LTO link of the units? If it is a small fraction, the staleness surface buys
 nothing.
 
-**Value:** low–med — it shortens the inner loop of the project's flagship deliverable, but only by a
-constant. **Cost:** low to implement, med in contract risk (see above).
+**Measured (2026-08-13), and the answer is: a small fraction. Do not schedule this.** Compiling
+`src/runtime/runtime.c` with the flags `link_clang` uses (`-O2 -flto -c`, `src/emit.cpp:1403-1426`)
+takes **0.16 s**, best of three, against `emit build`'s **2.95 s** on a trivial program:
 
-**OpenSpec change:** none. Recorded by `installed-emit-completeness` as an explicit non-goal.
+| component of `emit build`, trivial program | cost | share |
+|---|---|---|
+| baked-set recompile (P3) | ~1.72 s | 58% |
+| clang: LTO + link over 953 KB of unit IR (P8) | ~1.07 s | 36% |
+| **clang: `runtime.c` → bitcode (this item)** | **~0.16 s** | **5%** |
+
+So this is **5% now, and ~13% once P3 removes the 1.72 s** — against an install-contract change the
+`installed-emit-completeness` reasoning above rejects. By this entry's own stated test, the
+staleness surface buys nothing.
+
+There is a mechanical reason the ceiling is this low, worth recording so the question is not
+re-opened: under `-flto`, `-c` on `runtime.c` only emits **bitcode**. The optimization and codegen
+that would dominate a non-LTO build happen at link time instead, over the whole module set, and a
+cached `runtime.o` does not avoid any of it. Caching the C compile can therefore never recover more
+than the 0.16 s, no matter how large `runtime.c` grows.
+
+**What to do instead.** The link is 36% and P8 is ~23% of it, so **P8 is worth ~4x this item on the
+same door** and carries no contract risk. P3 is worth ~11x. Both should land first, and either may
+change this denominator enough to make the question moot.
+
+**If it is ever revisited, the framing should change.** This entry proposes *shipping* a prebuilt
+object, which is what draws the install-contract objection. P3 is building a derived-artifact cache
+(local, keyed on compiler + target identity, regenerable, falling back to source on a miss) — and a
+cached `runtime.o` in *that* is not an install-surface change at all: nothing extra is shipped and
+nothing can go stale undetected. Framed that way this becomes a small second consumer of P3's cache
+rather than a contract change, i.e. much cheaper than the "med contract risk" below — still only
+worth 0.16 s, but for nearly nothing.
+
+**Value:** low — 5% of `emit build` (~13% after P3), and hard-capped at 0.16 s by the `-flto`
+argument above. **Cost:** low to implement, med in contract risk as framed here — low if it rides
+P3's cache instead.
+
+**OpenSpec change:** none, and none warranted. Recorded by `installed-emit-completeness` as an
+explicit non-goal; the measurement it asked for was taken 2026-08-13 and confirms the deferral.
 
 ---
 
