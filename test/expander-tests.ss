@@ -175,5 +175,60 @@
        (expand '(m 5) (list (dsx 'm '((_ e) (mylib:helper e)))) base-known)
        '(mylib:helper 5))
 
+;; ---- the literals list outranks _ and ... (R7RS 4.3.2, issue #80) ----
+;; Testing `_` first meant a `_` named as a literal never got to BE one, so a pattern
+;; matched input the rule was written to reject -- and answered plausibly, which is why
+;; this went unnoticed until an external suite asked.  The rules below are the suite's
+;; own count-to-2_ : with `_` a literal, (_ _ _) needs two literal `_` ARGUMENTS.
+(define count-to-2_
+  '(define-syntax count-to-2_
+     (syntax-rules (_)
+       ((_) 0)
+       ((_ _) 1)
+       ((_ _ _) 2)
+       ((x . y) (quote fail)))))
+(check "a literal _ matches only itself, not anything"
+       (map (lambda (f) (expand-with (list count-to-2_) f))
+            '((count-to-2_ _ _) (count-to-2_) (count-to-2_ a b) (count-to-2_ a b c d)))
+       '(2 0 (quote fail) (quote fail)))
+
+;; the control: the same rules with an EMPTY literals list, where `_` is the wildcard
+;; and the answers are the ordinary ones.  If this ever moves, the fix reached too far.
+(define count-to-2
+  '(define-syntax count-to-2
+     (syntax-rules ()
+       ((_) 0)
+       ((_ _) 1)
+       ((_ _ _) 2)
+       ((x . y) (quote fail)))))
+(check "an empty literals list leaves _ a wildcard"
+       (map (lambda (f) (expand-with (list count-to-2) f))
+            '((count-to-2) (count-to-2 a) (count-to-2 a b) (count-to-2 a b c)))
+       '(0 1 2 (quote fail)))
+
+;; the ellipsis half of the same precedence question.  No exclusion row reaches this
+;; (the suite's case is blocked behind other gaps), but it is the same one-line test in
+;; the same two functions, so it moves with `_` rather than waiting to be found later.
+(define lit-ellipsis
+  '(define-syntax lit-ellipsis
+     (syntax-rules (...)
+       ((_ a ...) (quote matched-literal-dots))
+       ((_ x y) (quote ordinary))
+       ((_ . r) (quote fallthrough)))))
+(check "a literal ... matches only itself, and does not mean repetition"
+       (map (lambda (f) (expand-with (list lit-ellipsis) f))
+            '((lit-ellipsis p ...) (lit-ellipsis p q) (lit-ellipsis a b c)))
+       '((quote matched-literal-dots) (quote ordinary) (quote fallthrough)))
+
+;; ... and an ordinary variadic macro is untouched by that, which is the property that
+;; makes the reordering safe for every macro in the compiler's own sources
+(check "an ordinary ellipsis pattern still repeats"
+       (map (lambda (f)
+              (expand-with
+                (list '(define-syntax my-list (syntax-rules () ((_ e ...) (list e ...)))))
+                f))
+            '((my-list 1 2 3) (my-list)))
+       '((list 1 2 3) (list)))
+
 (printf "\n  ~a passed, ~a failed\n" pass fail)
 (exit (if (= fail 0) 0 1))

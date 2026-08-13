@@ -25,6 +25,10 @@
 (define host-raise raise)
 (define host-truncate truncate)
 (define host-string->number string->number)
+;;; The non-finite cases below compare through the host's number->string rather than
+;;; equal?, because +nan.0 is not equal? to itself.  The prelude's own number->string
+;;; would shadow it and routes flonums to %flonum->string, an Emit primitive absent here.
+(define host-number->string number->string)
 (define (caught thunk)                   ; -> the report as a list, or the value
   (guard (e (#t (if (and (pair? e) (eq? (car e) 'read-report)) e (list 'host-error e))))
     (thunk)))
@@ -283,6 +287,96 @@
 (check 'plain-does-not-fold
   (read-all-from-string "(DEFINE (Greet) 1)")
   '((DEFINE (Greet) 1)))
+
+;;; --- R7RS lexical forms (change: r7rs-lexical-conformance, issue #74) -------
+;;; Every case below reads from a STRING rather than using the literal, so it is
+;;; Emit's reader under test and not the host's.  That matters here in both
+;;; directions: #\escape is R7RS but Chez rejects it, and #\page is Chez's but not
+;;; R7RS -- a literal in this file would be read by Chez before Emit ever saw it.
+
+;; #true / #false: dispatching on the single character `t` returned early and left
+;; `rue` for the next read, so (list #true #false) reported `unbound variable rue`
+(check 'boolean-long-spellings
+  (list (read-from-string "#true") (read-from-string "#false"))
+  '(#t #f))
+(check 'boolean-long-consumes-whole-token
+  (read-all-from-string "(list #true #false)")
+  '((list #t #f)))
+(check 'boolean-short-spellings-unchanged
+  (list (read-from-string "#t") (read-from-string "#f"))
+  '(#t #f))
+;; a token that is neither spelling is REPORTED, not read as #t with a tail left over
+(check 'boolean-bad-token-reports
+  (caught (lambda () (read-from-string "#tfoo")))
+  '(read-report read "not a boolean; write #t, #true, #f or #false" "#tfoo"))
+
+;; the R7RS 6.6 names.  alarm/backspace/escape used to answer the FIRST CHARACTER of
+;; the name (97/98/101), which is a valid-looking character no test could catch
+(check 'char-names-r7rs
+  (map (lambda (s) (char->integer (read-from-string s)))
+       '("#\\alarm" "#\\backspace" "#\\delete" "#\\escape" "#\\newline"
+         "#\\null" "#\\return" "#\\space" "#\\tab"))
+  '(7 8 127 27 10 0 13 32 9))
+;; the recorded extensions, `page` among them because Chez accepts it in source this
+;; repo compiles and an error here would be a two-host divergence (design D8)
+(check 'char-names-extensions
+  (map (lambda (s) (char->integer (read-from-string s)))
+       '("#\\nul" "#\\altmode" "#\\esc" "#\\page"))
+  '(0 27 27 12))
+;; an unknown name NAMES ITSELF instead of yielding its first character
+(check 'char-name-unknown-reports
+  (caught (lambda () (read-from-string "#\\alarmm")))
+  '(read-report read "unknown character name" "#\\alarmm"))
+
+;; #\xHH -- the string form "\x41;" already worked, which is what made the character
+;; form's absence an inconsistency rather than a gap
+(check 'char-hex
+  (map (lambda (s) (char->integer (read-from-string s)))
+       '("#\\x41" "#\\x03BB" "#\\x0" "#\\xFF"))
+  '(65 955 0 255))
+;; bare #\x is still the LETTER x: rd-char takes the single-character path first
+(check 'char-hex-bare-x-is-the-letter
+  (char->integer (read-from-string "#\\x"))
+  120)
+;; a name beginning with x that is not hex is a bad NAME, not a codepoint
+(check 'char-hex-non-hex-tail-reports
+  (caught (lambda () (read-from-string "#\\xyz")))
+  '(read-report read "unknown character name" "#\\xyz"))
+
+;; \a and \b joined \n \t \r; they used to return the escape letter itself
+(check 'string-escapes-alarm-backspace
+  (map char->integer (string->list (read-from-string "\"\\a\\b\"")))
+  '(7 8))
+(check 'string-escapes-unchanged
+  (map char->integer (string->list (read-from-string "\"\\n\\t\\r\\\\\\\"\"")))
+  '(10 9 13 92 34))
+;; the R7RS 6.7 line continuation: backslash, intraline whitespace, a line ending,
+;; intraline whitespace -- all of it contributing NOTHING to the string
+(check 'string-line-continuation
+  (read-from-string "\"line 1\\\n   continued\"")
+  "line 1continued")
+(check 'string-line-continuation-with-leading-space
+  (read-from-string "\"a\\  \n  b\"")
+  "ab")
+(check 'string-line-continuation-crlf
+  (read-from-string "\"a\\\r\n  b\"")
+  "ab")
+;; a backslash-newline is the ONLY way whitespace disappears: an ordinary newline
+;; inside a literal is still part of the string
+(check 'string-bare-newline-is-kept
+  (string-length (read-from-string "\"a\nb\""))
+  3)
+
+;; the non-finite tokens are case-insensitive (R7RS 7.1.1 makes the numeric syntax
+;; case-insensitive, and #X1F / 1E2 already read)
+(check 'nonfinite-case-insensitive
+  (map (lambda (s) (host-number->string (read-from-string s)))
+       '("+INF.0" "-Inf.0" "+NaN.0" "+inf.0"))
+  (map host-number->string (list +inf.0 -inf.0 +nan.0 +inf.0)))
+;; ... and a token that merely LOOKS like one still interns as a symbol
+(check 'nonfinite-near-miss-is-a-symbol
+  (read-from-string "+inf.1")
+  '|+inf.1|)
 
 (printf "\n  ~a passed, ~a failed\n" pass fail)
 (exit (if (= fail 0) 0 1))

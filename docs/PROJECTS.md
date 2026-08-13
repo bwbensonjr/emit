@@ -366,9 +366,17 @@ project:
   `#;` (which discards the next datum) all work everywhere they should. Number literals take the
   R7RS radix and exactness prefixes — `#x1f`, `#b1010`, `#o17`, `#d99`, `#i42`, `#e1.0`, and the
   two-prefix combinations `#x#e1f` / `#e#x1f` — in either case; a decimal point or exponent stays
-  radix-10 only. `|bar quoted identifiers|` read (with `\|` and `\xHH;` escapes) and are ordinary
+  radix-10 only. The three non-finite tokens read in any case, so `+INF.0` is `+inf.0`.
+  `|bar quoted identifiers|` read (with `\|` and `\xHH;` escapes) and are ordinary
   symbols, so `(eq? '|foo| 'foo)` is `#t`, and `write` emits the bars for a symbol whose name would
-  not read back without them. Not implemented: `#!fold-case` / `#!no-fold-case`, and the `#0=` /
+  not read back without them. Both boolean spellings read (`#t`/`#true`, `#f`/`#false`). Character
+  literals take the R7RS names — `#\alarm`, `#\backspace`, `#\delete`, `#\escape`, `#\newline`,
+  `#\null`, `#\return`, `#\space`, `#\tab` — plus the extensions `#\nul`, `#\altmode`, `#\esc`, and
+  `#\page`, and the hexadecimal form `#\x03BB` (bare `#\x` is still the letter). **An unknown
+  character name is a reported error**, not the first letter of the name: `#\alarmm` says so rather
+  than quietly meaning `#\a`. Strings take `\a` and `\b` beside `\n \t \r \\ \" \xHH;`, and a
+  backslash before a line break is the R7RS **line continuation** — the break and the next line's
+  indentation contribute nothing. Not implemented: `#!fold-case` / `#!no-fold-case`, and the `#0=` /
   `#0#` datum labels for circular structure.
 - **Control**: `call/cc` and `dynamic-wind` work. The exception surface you should use is `guard`,
   `raise`, and `error` — `with-exception-handler` is bound, because it is the installer `guard`
