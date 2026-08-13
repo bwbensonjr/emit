@@ -558,12 +558,25 @@
 ;;; Uncaught, an error renders and aborts as before (REPL host survives; a
 ;;; standalone executable exits non-zero).  %error-abort builds the error object
 ;;; in the runtime (rt_error) and raises it through the guard escape stack.
-(define (error a . rest)
+;;;
+;;; The object carries a KIND saying what raised it (change: catchable-errors-with-kinds,
+;;; design D1), and %raise-kinded is the one place the message is folded, so `error`, the
+;;; reader's report and the file operations cannot disagree about the text.  Only the kind
+;;; differs between them; every message is byte-identical to what it was.
+(define (%raise-kinded kind a rest)
   (if (string? a)
-      (raise (%make-error-object a rest))            ; R7RS: (error message irritant ...)
-      (raise (%make-error-object
+      (raise (%make-error-object/kind a rest kind))   ; R7RS: (error message irritant ...)
+      (raise (%make-error-object/kind
                (string-append (symbol->string a) (string-append ": " (car rest)))
-               (cdr rest)))))                         ; superset: (error who message ...)
+               (cdr rest) kind))))                    ; superset: (error who message ...)
+
+(define (error a . rest) (%raise-kinded (quote error) a rest))
+
+;;; The two kinded raisers.  A caller uses one of these INSTEAD of `error` exactly when
+;;; R7RS says the condition it signals must answer `read-error?` or `file-error?`; they
+;;; are otherwise `error` in every respect, including the who-prefix superset.
+(define (%read-error a . rest) (%raise-kinded (quote read) a rest))
+(define (%file-error a . rest) (%raise-kinded (quote file) a rest))
 
 ;;; --- dynamic extent: winds, escape continuations, handlers (dynamic-extent) --
 ;;; Rung 3 of the call/cc staircase (openspec/explorations/continuations-and-control.md).
@@ -574,7 +587,28 @@
 ;;; `raise` CALLS the current handler (it does not transfer); `guard` is a handler
 ;;; that escapes.  So there is one transfer mechanism, not two.
 (define *winds* (quote ()))
-(define *handlers* (quote ()))
+
+;;; The handler chain -- and, created with it, the runtime's route INTO it (change:
+;;; catchable-errors-with-kinds, design D3).  From the moment this initializer runs, a
+;;; wrong type, an out-of-range index, an overflow, a division by zero or an improper
+;;; `apply` list is RAISED here rather than aborting the process: the runtime builds the
+;;; error object and calls this thunk, which is the whole of the hand-off.
+;;;
+;;; The arming rides *handlers*'s initializer rather than standing as its own definition,
+;;; and that is load-bearing twice over.  Semantically the two are one thing -- a raiser
+;;; with no handler chain has nowhere to deliver, so it is armed exactly when the chain
+;;; it feeds exists.  Mechanically, the AOT tree-shake keeps a library binding only when
+;;; something reaches it (compile-library*, src/core.ss), and an arming definition nothing
+;;; references would be pruned out of every shipped executable -- silently, with traps
+;;; quietly going back to aborting.  A bare top-level command would be kept, but the
+;;; partition homes forms by the name they bind, so the prelude has no way to write one.
+;;;
+;;; Before this runs -- and in a --no-prelude program, which has no handler chain at all
+;;; -- a trap takes the runtime's own print-and-abort path.  That is the correct
+;;; behaviour there, not a degraded one.
+(define *handlers*
+  (begin (%set-trap-raiser! (lambda () (raise (%trap-object))))
+         (quote ())))
 
 ;;; Pop entries off the wind list until it is the captured TARGET, running each
 ;;; `after`.  The entry is popped BEFORE its `after` runs, so a raise or escape from
@@ -656,6 +690,14 @@
 (define (error-object? x) (%error-object? x))
 (define (error-object-message x) (%error-object-message x))
 (define (error-object-irritants x) (%error-object-irritants x))
+
+;;; R7RS 6.11's two source predicates, and the WHOLE of the public surface over the
+;;; kind -- there is deliberately no `error-object-kind`, which is what keeps the
+;;; encoding an internal detail a later change may replace (design D1).  The
+;;; %error-object? test comes first because %error-object-kind is a checked accessor:
+;;; these must answer #f for a non-error object, not report on one.
+(define (read-error? x) (and (%error-object? x) (eq? (%error-object-kind x) (quote read))))
+(define (file-error? x) (and (%error-object? x) (eq? (%error-object-kind x) (quote file))))
 
 ;;; guard: evaluate BODY; if it raises, bind the object to VAR and run the clauses
 ;;; as a `cond` in the guard's continuation.  No matching clause (and no else)
@@ -1854,16 +1896,16 @@
   (let ([why (car r)] [p (rd-fail-pos (cdr r))])
     (cond
       [(eq? why (quote rd-block-comment))
-       (error (quote read) "unterminated block comment #| opened at index" p)]
+       (%read-error (quote read) "unterminated block comment #| opened at index" p)]
       [(eq? why (quote rd-bar))
-       (error (quote read) "unterminated |identifier| opened at index" p)]
+       (%read-error (quote read) "unterminated |identifier| opened at index" p)]
       ;; ONE reason covers (, [, #( and #u8(: the source at p still says which delimiter it
       ;; was, so the message names the construct the author actually opened without four
       ;; reasons carrying identical handling.  Decoded INLINE rather than through a helper
       ;; because rd-report is duplicated into (scheme read) -- a helper would have to join
       ;; *reader-report-shared-with-read* (src/prelude-surface.scm) to travel with it.
       [(eq? why (quote rd-unterminated-list))
-       (error (quote read)
+       (%read-error (quote read)
               (string-append
                "unterminated "
                (let ([k (char->integer (string-ref s p))])
@@ -1877,23 +1919,23 @@
                " opened at index")
               p)]
       [(eq? why (quote rd-unterminated-string))
-       (error (quote read) "unterminated string \" opened at index" p)]
+       (%read-error (quote read) "unterminated string \" opened at index" p)]
       ;; The name is NAMED.  This arm exists because the alternative -- answering the first
       ;; character of the name -- made #\alarm read as #\a with nothing to notice (design D1).
       [(eq? why (quote rd-char-name))
-       (error (quote read) "unknown character name" (rd-token-at s n p))]
+       (%read-error (quote read) "unknown character name" (rd-token-at s n p))]
       [(eq? why (quote rd-hash-token))
-       (error (quote read) "not a boolean; write #t, #true, #f or #false" (rd-token-at s n p))]
+       (%read-error (quote read) "not a boolean; write #t, #true, #f or #false" (rd-token-at s n p))]
       [(eq? why (quote rd-eof))
-       (error (quote read) "end of input where a datum was expected, at index" p)]
+       (%read-error (quote read) "end of input where a datum was expected, at index" p)]
       [(eq? why (quote rd-unexpected))
-       (error (quote read) "no datum here, at index" p)]
+       (%read-error (quote read) "no datum here, at index" p)]
       [(eq? why (quote rd-rational))
-       (error (quote read)
+       (%read-error (quote read)
               (string-append "rational literal syntax is not supported -- Emit has no "
                              "exact rationals; write 0.5, or (/ 1 2)")
               (rd-token-at s n p))]
-      [else (error (quote read) "unrecognized syntax" (rd-token-at s n p))])))
+      [else (%read-error (quote read) "unrecognized syntax" (rd-token-at s n p))])))
 
 (define (read-from-string s)
   (let ([n (string-length s)])
@@ -2014,7 +2056,7 @@
   (let ((s (%read-file path)))
     (if s
         (%make-port #f #t s 0 #f #f)
-        (error 'open-input-file "cannot open file for input" path))))
+        (%file-error 'open-input-file "cannot open file for input" path))))
 
 (define (%port-at-eof? p) (>= (%record-ref p 3) (string-length (%port-buf p))))
 
@@ -2092,7 +2134,7 @@
   (let ((h (%port-open-output-file path)))
     (if h
         (%make-port h #f #f 0 #f #f)
-        (error 'open-output-file "cannot open file for output" path))))
+        (%file-error 'open-output-file "cannot open file for output" path))))
 
 (define (open-output-string)
   (let ((h (%port-open-output-string)))
@@ -2225,3 +2267,18 @@
   (call-with-port (open-output-file path) proc))
 (define (call-with-input-file path proc)
   (call-with-port (open-input-file path) proc))
+
+;;; --- the file operations that are not port constructors (change:
+;;; catchable-errors-with-kinds, design D8).  R7RS puts both in (scheme file), and they
+;;; ship together because delete-file's only interesting failure is the one
+;;; file-exists? answers.
+;;;
+;;; file-exists? NEVER raises: the absence of the file IS its answer, so a missing path
+;;; is #f and not a condition.  delete-file is the other way round -- it raises a FILE
+;;; error when it cannot remove the path, which is what lets a program tell it from an
+;;; unrelated failure caught by the same `guard`.
+(define (file-exists? path) (%file-exists? path))
+(define (delete-file path)
+  (if (%delete-file path)
+      (if #f #f)
+      (%file-error 'delete-file "cannot delete file" path)))

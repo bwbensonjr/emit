@@ -387,6 +387,9 @@ runtime must be involved.
 **Internal `%`-ops** (no plain name; the prelude's ports are built over them): `%read-file`,
 `%port-open-output-file`, `%port-open-output-string`, `%port-get-output-string`, `%port-flush`,
 `%port-close`, `%set-current-output!`, and the `%…-port` lowering targets of the table above.
+`%file-exists?` and `%delete-file` (change: `catchable-errors-with-kinds`) join them with no port
+record in front at all — a path string in, a boolean out — because the prelude is where a failure
+becomes an error object and only the prelude knows the kind it should carry.
 
 Three things are worth knowing about how these behave:
 

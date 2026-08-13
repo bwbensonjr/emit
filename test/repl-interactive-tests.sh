@@ -150,6 +150,26 @@ check error-reports-and-survives "" "$(printf '!trap: parse: bad expression x\n7
 (+ 3 4)
 EOF
 
+# change: catchable-errors-with-kinds.  A runtime trap now travels a LONGER route to
+# the host's rt_trap frame -- it is raised into the handler chain first, and only an
+# UNHANDLED one reaches the host -- so the REPL's survival path is worth re-pinning
+# from both sides.  Trap, recover, trap again: the second must be reported too (the
+# in-flight flag is cleared where the longjmp lands, design D4), and a trap CAUGHT by
+# a guard must reach neither the report nor the session's end.
+check trap-recover-trap "" "$(printf '!trap: +: not a number\n5\n!trap: car: not a pair: got a fixnum\n11')" <<'EOF'
+(+ 1 'a)
+(+ 2 3)
+(car 7)
+(+ 5 6)
+EOF
+
+check trap-caught-does-not-reach-the-host "" "$(printf 'caught\n12\ncaught\n13')" <<'EOF'
+(guard (e (#t 'caught)) (+ 1 'a))
+(+ 5 7)
+(guard (e (#t 'caught)) (vector-ref (vector 1) 9))
+(+ 6 7)
+EOF
+
 # spec (interactive-repl): a form whose result is THE unspecified value echoes NOTHING --
 # no value and no newline -- so side-effecting forms stay quiet at the prompt (change:
 # unspecified-value).  Only the two `(+ ...)` forms and `display`'s own "hi" reach stdout;

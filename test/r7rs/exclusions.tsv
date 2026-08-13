@@ -22,7 +22,6 @@
 00c7919307869b40	unimplemented	(scheme char)
 00dfc2d5f8bd4d56	issue-90	list? does not terminate on a circular list
 01fed9ade0df6bff	deliberate:#27	no exact rationals / bignums
-027ca1dabc29f79e	issue-85	needs an error-object kind
 0285380ea20af770	unimplemented	(scheme char)
 033ed0d2cb4b7661	deliberate:#27	complex or rational literal read as a variable
 03c40c45271d5b35	unimplemented	(scheme char)
@@ -50,7 +49,6 @@
 0e9b0706f1fcb320	unimplemented	binary ports and bytevector I/O
 1080553002d33c63	unimplemented	(scheme lazy) -- prelude macros once #79 is fixed
 1091e4ef18443bfb	deliberate:#27	complex or rational literal read as a variable
-117da9cda52ceb30	issue-85	needs an error-object kind
 121a5fcd571db5c5	unimplemented	(scheme char)
 121e005eae93085c	unimplemented	derived syntax / non-top-level define-syntax
 12b0451f5073052a	unimplemented	arity: optional or n-ary form
@@ -103,13 +101,11 @@
 35fa323833e5dabf	deliberate:#27	no exact rationals / bignums
 369e60cc4f1b4c6a	unimplemented	(scheme char)
 37ae3aaf3fb15429	unimplemented	(scheme char)
-37dfa2c0354813bf	issue-85	needs an error-object kind
 38e13823911aa89c	blocked-by:236f842d94beb212	needs dead-clause
 3925ea4056ca28e0	unimplemented	(scheme time)
 3a2f78c30bb8768b	unimplemented	(scheme char)
 3a74937c08c0a33e	deliberate:not-R7RS-small	exponent markers s/f/d/l are not in R7RS-small
 3b232582e53a6b24	unimplemented	binary ports and bytevector I/O
-3cfe9cd1970c957b	unimplemented	emit run: trap: write-char: not an open output port
 3d19dffcb4fb2dd8	deliberate:#27	no exact rationals / bignums
 3d61f0e5f4d1631d	unimplemented	(scheme char)
 3dae7c39e365e147	unimplemented	(scheme char)
@@ -127,7 +123,6 @@
 495a1c2a6c3276cf	unimplemented	(scheme eval)
 49ebc276aa928b2e	unimplemented	(scheme process-context)
 4a5da5d9998f941d	unimplemented	(scheme char)
-4bf10e618a7ff5ae	issue-89	apply reports, but the trap is not catchable by test-error
 4ca516c7b890b5ca	unimplemented	(scheme char)
 4ddb72d7af13667c	unimplemented	(scheme char)
 4dea3fc446ec34ba	issue-90	write of a circular structure does not terminate
@@ -190,7 +185,6 @@
 7bcb51ccd99e4aa4	deliberate:#27	(scheme complex) stays absent
 7c9bdb1814fd1ef1	unimplemented	(scheme char)
 7d3b04af70a7e097	unimplemented	(scheme char)
-7f2cbc8739ea24e4	issue-85	needs an error-object kind
 819b04dc6921b5df	deliberate:#27	(scheme complex) stays absent
 82037d19d1a1695c	unimplemented	resumable exceptions
 839d48c31261461e	unimplemented	derived syntax / non-top-level define-syntax
@@ -244,7 +238,6 @@ a3db285c108509f6	blocked-by:236f842d94beb212	needs dead-clause
 a4832407438d126a	deliberate:#27	no exact rationals / bignums
 a4c2cdc82dc57e58	deliberate:#27	(scheme complex) stays absent
 a50fb0cac5320e49	unimplemented	derived syntax / non-top-level define-syntax
-a526fac2be6195dc	issue-85	needs an error-object kind
 a569feddfe8514e9	unimplemented	(scheme lazy) -- prelude macros once #79 is fixed
 a587cf5d0a9ce894	unimplemented	(scheme char)
 a602343adbbd9dd4	unimplemented	(scheme char)
@@ -307,7 +300,6 @@ c7ec5caf20ab6eb8	blocked-by:4767069ee08aecb9	needs any-arity
 c86a58ac11199144	unimplemented	(scheme char)
 c8ca1f37d8d20757	deliberate:#27	needs exact rationals
 c92951f40d98e34d	unimplemented	(scheme char)
-c93cc4a9c969c5fa	issue-89	apply reports, but the trap is not catchable by test-error
 cb87ef0e166b625b	deliberate:#27	no exact rationals / bignums
 cbe2a9c024a619b4	unimplemented	(scheme char)
 cc03b4df8fc8568c	unimplemented	binary ports and bytevector I/O
@@ -328,9 +320,7 @@ d78394cea494af83	unimplemented	wrong answer: FAIL (get-output-string out.27) "|-
 d7974aaf3cba3d60	unimplemented	binary ports and bytevector I/O
 d7a103cf90848deb	deliberate:not-R7RS-small	exponent markers s/f/d/l are not in R7RS-small
 d7d7d3b7b34481e6	unimplemented	(scheme char)
-d812c51084039ccc	unimplemented	(scheme file) gaps
 d837f160ec582c3c	deliberate:#27	(scheme complex) stays absent
-d89c9f5e59803c48	issue-85	needs an error-object kind
 d93c0e24a7b46432	unimplemented	emit run: trap: an-error
 d9b818a758cebf92	blocked-by:236f842d94beb212	needs dead-clause
 da15d1d84616affe	deliberate:#27	(scheme complex) stays absent
@@ -360,7 +350,6 @@ ef85b641eb15f825	deliberate:#27	complex or rational literal read as a variable
 ef9cc902869ec520	unimplemented	(scheme char)
 f006fa5de025f1eb	unimplemented	missing (scheme base) name
 f1301f9ff1331576	unimplemented	(scheme char)
-f151040a9f0cf8a2	issue-89	apply reports, but the trap is not catchable by test-error
 f1f219d0e3284f04	unimplemented	(scheme lazy) -- prelude macros once #79 is fixed
 f20805f1081dbd66	issue-75	#!fold-case
 f58b9047034c8445	blocked-by:236f842d94beb212	needs dead-clause
@@ -374,7 +363,6 @@ f76377adbe8f54d5	deliberate:#27	no exact rationals / bignums
 f7b86ceb3efedf4f	unimplemented	(scheme char)
 f891f1aae6a75f46	unimplemented	binary ports and bytevector I/O
 fa161c6df93d2fe7	unimplemented	(scheme char)
-fa3f79ca38199cc4	unimplemented	(scheme file) gaps
 fa8f6c6fecb10021	unimplemented	binary ports and bytevector I/O
 fbcd30634dd83124	unimplemented	(scheme char)
 fc47f0917a89ba66	deliberate:not-R7RS-small	exponent markers s/f/d/l are not in R7RS-small

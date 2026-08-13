@@ -41,6 +41,20 @@ typedef intptr_t val;
 jmp_buf *rt_trap = NULL;
 char rt_trap_msg[128] = "";
 
+/* Is a trap currently being DELIVERED to a Scheme handler (change:
+ * catchable-errors-with-kinds, design D4)?  While set, a further trap skips the
+ * raiser in rt_trap_deliver and takes the print-and-abort path instead, so a handler
+ * that itself traps reports rather than recursing -- and a second trap cannot
+ * overwrite rt_trap_msg out from under the first, which is the same worry from the
+ * other side.
+ *
+ * IT IS CLEARED WHERE THE LONGJMP LANDS, not after the raiser call: a handler that
+ * escapes never returns to the trapping frame, so no cleanup there would run.  The
+ * two landing sites are rt_run_guarded's caught branch and rt_guard_reset (which
+ * every host calls after catching an outermost trap).  Getting this wrong makes the
+ * SECOND trap of a session fatal, which is a specific, testable failure. */
+static int rt_trap_in_flight = 0;
+
 #define TAG_MASK    7
 #define TAG_FIXNUM  0
 #define TAG_BOOL    1
@@ -66,7 +80,11 @@ char rt_trap_msg[128] = "";
 #define HDR_BYTEVECTOR 1   /* { HDR_BYTEVECTOR, byte-length, unsigned char *bytes } (reclaims
                             * the retired HDR_CHAR slot -- characters are now immediate) */
 #define HDR_VECTOR     2   /* { HDR_VECTOR, length, elem0, ... } */
-#define HDR_ERROR      3   /* { HDR_ERROR, message-string, irritants-list } (R7RS error obj) */
+#define HDR_ERROR      3   /* { HDR_ERROR, message-string, irritants-list, kind-symbol } (R7RS
+                            * error obj).  The KIND is APPENDED (change:
+                            * catchable-errors-with-kinds, design D1) precisely so that the
+                            * readers which index words 1 and 2 directly -- err_write and the
+                            * value printer -- stay correct without being touched. */
 #define HDR_HASHTABLE  4   /* { HDR_HASHTABLE, spine-vector } -- opaque wrapper around a
                             * mutable spine #(count buckets _); ops live in the prelude */
 #define HDR_RECORD     5   /* { HDR_RECORD, type-descriptor, field-count, field0, ... } -- user
@@ -371,28 +389,34 @@ static int flonum_format(double d, char *buf) {
 val rt_flonum_lit(const char *s) { return rt_make_flonum(strtod(s, NULL)); }
 
 /* --- arithmetic and predicates ----------------------------------------- */
-/* Report a fatal runtime error the same way rt_arity_error does: record the
- * message, print it, and longjmp back to the REPL host if one is installed
- * (else exit non-zero for the standalone executable). */
+/* Deliver whatever is in rt_trap_msg: hand it to the installed Scheme raiser if
+ * there is one, else print it and longjmp back to the REPL host (or exit non-zero
+ * for the standalone executable).  Defined with the error objects below, since
+ * building one is what the raiser path needs.  Never returns.
+ * (change: catchable-errors-with-kinds, design D3) */
+static void rt_trap_deliver(void);
+
+/* Report a runtime error the same way rt_arity_error does, except that the report
+ * is now a CONDITION when a raiser is installed: record the message, then deliver.
+ * Uncaught, the bytes on stderr are the same ones this used to print itself
+ * (design D7). */
 static void rt_fatal(const char *msg) {
   snprintf(rt_trap_msg, sizeof rt_trap_msg, "%s", msg);
-  fprintf(stderr, "%s\n", rt_trap_msg);
-  if (rt_trap) longjmp(*rt_trap, 1);
-  exit(1);
+  rt_trap_deliver();
 }
 
 /* Same, with a printf-style message.  Formats straight into the static trap
- * buffer -- no allocation, so it is safe on any trap path.  Used by the overflow
- * diagnostics, where naming the operands is most of the diagnostic's value: a
- * wrapped source literal reports the multiply that overflowed while reading it. */
+ * buffer.  Used by the overflow diagnostics, where naming the operands is most of
+ * the diagnostic's value: a wrapped source literal reports the multiply that
+ * overflowed while reading it.  (The formatting itself still allocates nothing;
+ * building the error object does, which design D5 accepts for exactly the traps
+ * that reach a handler.) */
 static void rt_fatalf(const char *fmt, ...) {
   va_list ap;
   va_start(ap, fmt);
   vsnprintf(rt_trap_msg, sizeof rt_trap_msg, fmt, ap);
   va_end(ap);
-  fprintf(stderr, "%s\n", rt_trap_msg);
-  if (rt_trap) longjmp(*rt_trap, 1);
-  exit(1);
+  rt_trap_deliver();
 }
 
 /* --- indexed-access bounds (change: checked-indexed-access, design D2) ----
@@ -1075,6 +1099,27 @@ val rt_read_file(val path) {
   }
   fclose(f);
   return rt_make_string(buf, (intptr_t)len);
+}
+
+/* --- the two file operations that are not port constructors (change:
+ * catchable-errors-with-kinds, design D8).  Shaped like rt_read_file above --
+ * a path string in, a VALUE out, no port record in front -- because the prelude is
+ * where a failure becomes an error object, and only the prelude knows the kind.
+ * `remove` is C89 and covers both files and empty directories, which is what R7RS
+ * `delete-file` leaves implementation-defined anyway. */
+val rt_file_exists_p(val path) {
+  if (tag_of(path) != TAG_EXT || ext_hdr(path) != HDR_STRING) return FALSE_V;
+  FILE *f = fopen(str_bytes(path), "r");
+  if (!f) return FALSE_V;
+  fclose(f);
+  return TRUE_V;
+}
+
+/* #t when the file is gone, #f when it could not be removed (missing, a non-empty
+ * directory, no permission) -- the prelude turns the #f into a FILE error. */
+val rt_delete_file(val path) {
+  if (tag_of(path) != TAG_EXT || ext_hdr(path) != HDR_STRING) return FALSE_V;
+  return truthy(remove(str_bytes(path)) == 0);
 }
 
 /* --no-prelude channel for the embedded batch entry (change:
@@ -1932,7 +1977,7 @@ static int      rt_guard_depth = 0;
 
 /* Reset the frame stack; a host calls this after catching an outermost trap so a
  * longjmp that bypassed rt_run_guarded's pop does not leave stale frames. */
-void rt_guard_reset(void) { rt_guard_depth = 0; }
+void rt_guard_reset(void) { rt_guard_depth = 0; rt_trap_in_flight = 0; }
 
 /* The innermost live frame's id, for the thunk that was just entered under
  * rt_run_guarded -- this is how `call/cc` learns which frame is its own. */
@@ -1968,12 +2013,45 @@ val rt_escape_to(val id_v, val value) {
   return FALSE_V;
 }
 
-val rt_make_error_object(val message, val irritants) {
-  val *p = (val *)GC_MALLOC(3 * sizeof(val));
-  p[0] = HDR_ERROR; p[1] = message; p[2] = irritants;
+/* --- the error-object KIND (change: catchable-errors-with-kinds, design D1) ---
+ * The kind says what RAISED the object, and is the whole of what `read-error?` and
+ * `file-error?` answer over.  Four of them, interned once: a symbol is open (a fifth
+ * costs a string), canonicalized by rt_intern so the comparison is one word, and
+ * kept alive with no extra rooting because intern_table is already an uncollectable
+ * scanned array.  It is reached from Scheme only through %error-object-kind, an
+ * internal primitive -- no public accessor freezes this encoding. */
+#define KIND_ERROR   0
+#define KIND_READ    1
+#define KIND_FILE    2
+#define KIND_RUNTIME 3
+static val rt_kinds[4];
+static int rt_kinds_ready = 0;
+static val rt_kind(int which) {
+  if (!rt_kinds_ready) {
+    rt_kinds[KIND_ERROR]   = rt_intern("error");
+    rt_kinds[KIND_READ]    = rt_intern("read");
+    rt_kinds[KIND_FILE]    = rt_intern("file");
+    rt_kinds[KIND_RUNTIME] = rt_intern("runtime");
+    rt_kinds_ready = 1;
+  }
+  return rt_kinds[which];
+}
+
+val rt_make_error_object_kind(val message, val irritants, val kind) {
+  val *p = (val *)GC_MALLOC(4 * sizeof(val));
+  p[0] = HDR_ERROR; p[1] = message; p[2] = irritants; p[3] = kind;
   return tag_ptr(p, TAG_EXT);
 }
+/* The two-argument entry point stays, defaulting to the plain kind: it is what
+ * `error` and rt_error build, and keeping it spares every existing caller. */
+val rt_make_error_object(val message, val irritants) {
+  return rt_make_error_object_kind(message, irritants, rt_kind(KIND_ERROR));
+}
 val rt_error_object_p(val v) { return truthy(is_error_obj(v)); }
+val rt_error_object_kind(val v) {
+  CHECK_TAG("%error-object-kind", v, is_error_obj, "an error object");
+  return as_ptr(v)[3];
+}
 /* User-facing, and reached from inside a `guard` clause -- the one construct a
  * program uses to recover from a failure, so an unchecked read here crashed the
  * recovery path itself. */
@@ -2005,6 +2083,62 @@ val rt_raise(val obj) {
  * it does the fastcc 0-arg call into the guarded thunk closure. */
 typedef val (*rt_apply0_t)(val);
 
+/* --- runtime traps as conditions (change: catchable-errors-with-kinds, D3) ----
+ * The runtime hands a trap off ONCE and is then out of the loop: it builds an error
+ * object, parks it, and calls the installed raiser thunk.  From that call onward the
+ * transfer is Scheme's -- `raise` walks *handlers*, a `guard` handler escapes, and
+ * the escape path runs the dynamic-wind `after` thunks.  This is why dynamic-extent's
+ * design D4 stands: what was rejected there was a C-driven UNWINDING LOOP calling
+ * back into Scheme per `after`, not a single hand-off.
+ *
+ * The raiser is a THUNK, not a one-argument procedure, and the object travels through
+ * a cell instead.  That is what lets it be invoked through the module's existing
+ * @__apply0 trampoline (the same pointer rt_run_guarded is handed), rather than
+ * needing a second trampoline whose positional-slot count would have to agree with
+ * whatever arity the installing module happened to have.
+ *
+ * Both cells are GC_MALLOC_UNCOLLECTABLE single slots -- scanned roots, following
+ * rt_repl_cell in this same file -- so the closure and the pending object survive a
+ * collection triggered between install and delivery. */
+static val *rt_raiser_cell   = NULL;      /* [1]: the installed raiser thunk */
+static val *rt_trap_obj_cell = NULL;      /* [1]: the object being delivered */
+static rt_apply0_t rt_raiser_fn = NULL;   /* the installing module's ccc trampoline */
+
+/* Install the raiser.  FN is the caller module's @__apply0, passed by the emitter's
+ * special case for %set-trap-raiser! exactly as it is for %run-guarded. */
+val rt_set_trap_raiser(rt_apply0_t fn, val thunk) {
+  rt_repl_cell(&rt_raiser_cell, FALSE_V)[0] = thunk;
+  /* Allocate the object cell HERE rather than letting rt_trap_deliver do it lazily:
+   * that keeps the uncollectable allocation off the trap path, where the less that
+   * happens before the hand-off the better. */
+  rt_repl_cell(&rt_trap_obj_cell, FALSE_V);
+  rt_raiser_fn = fn;
+  return UNSPEC_V;
+}
+
+/* The object the raiser is being asked to raise. */
+val rt_trap_object(void) { return rt_repl_cell(&rt_trap_obj_cell, FALSE_V)[0]; }
+
+static void rt_trap_deliver(void) {
+  if (rt_raiser_fn && !rt_trap_in_flight) {
+    rt_trap_in_flight = 1;
+    /* '() irritants, deliberately: err_write's HDR_ERROR arm emits the message and
+     * then one space-prefixed irritant each, so an empty list makes an UNCAUGHT trap
+     * render exactly the bytes fprintf("%s\n", rt_trap_msg) used to (design D7). */
+    rt_repl_cell(&rt_trap_obj_cell, FALSE_V)[0] =
+      rt_make_error_object_kind(rt_make_string(rt_trap_msg, (intptr_t)strlen(rt_trap_msg)),
+                                NIL_V, rt_kind(KIND_RUNTIME));
+    rt_raiser_fn(rt_raiser_cell[0]);
+    /* A raiser does not return: a handler escapes, and an unhandled raise reports and
+     * transfers from rt_raise.  Falling through anyway costs nothing and keeps this
+     * function non-returning by construction. */
+    rt_trap_in_flight = 0;
+  }
+  fprintf(stderr, "%s\n", rt_trap_msg);
+  if (rt_trap) longjmp(*rt_trap, 1);
+  exit(1);
+}
+
 /* Run THUNK guarded: push a frame, setjmp, call it through the module's ccc
  * trampoline FN.  Returns (#f . value) on normal completion, (#t . object) if a
  * raise landed here.  Frame is popped on both paths (and any deeper abandoned
@@ -2020,6 +2154,10 @@ val rt_run_guarded(rt_apply0_t fn, val thunk) {
   } else {
     val o = rt_esc_value[i];
     rt_guard_depth = i;
+    /* One of the two places a delivered trap's longjmp LANDS (design D4).  Clearing
+     * here, not after the raiser call, is what re-arms the mechanism for the next
+     * trap -- a handler that escapes never returns to rt_trap_deliver's frame. */
+    rt_trap_in_flight = 0;
     return rt_cons(TRUE_V, o);
   }
 }

@@ -143,6 +143,13 @@
     %digit-in-radix %radix-digits %string->int
     ;; dynamic-extent state and unwinding
     *winds* *handlers* %unwind-to
+    ;; the error-object KIND (change: catchable-errors-with-kinds).  %raise-kinded is the
+    ;; shared message fold; %read-error / %file-error are the two kinded raisers over it.
+    ;; There is deliberately no public accessor for the kind -- `read-error?` and
+    ;; `file-error?` are the whole of the surface, which is what keeps the encoding
+    ;; replaceable (design D1).  The trap raiser needs no name: it is armed by
+    ;; *handlers*'s own initializer, for the reasons recorded there.
+    %raise-kinded %read-error %file-error
     ;; hash-table representation
     %ht-initial-buckets %ht-load-factor %ht-count %ht-buckets %ht-set-count!
     %ht-set-buckets! %ht-index %ht-assoc %ht-remove %ht-grow! %ht-fold-buckets
@@ -351,10 +358,15 @@
 ;;; `read` and the six file procedures leave (scheme base) for the libraries R7RS-small
 ;;; assigns them to.  Unlike the cxr nine they are NOT dual-assigned: nothing inside the
 ;;; compiler calls them, so there is no consumer to keep them in scope for.
+;;; ... eight now: `delete-file` and `file-exists?` join them (change:
+;;; catchable-errors-with-kinds, design D8).  Unlike the six they are ADDITIONS -- new
+;;; names (scheme base) never exported -- so they widen (scheme file) rather than
+;;; relocating anything out of (scheme base).
 (define *scheme-read-procs* '(read))
 (define *scheme-file-procs*
   '(open-input-file open-output-file with-input-from-file with-output-to-file
-    call-with-input-file call-with-output-file))
+    call-with-input-file call-with-output-file
+    file-exists? delete-file))
 
 ;;; `read` calls %check-input-port, the wrong-type/closed-port guard, which is PRIVATE.
 ;;; It does not live in the substrate and must not (design D10): it is the only reader/port
@@ -382,6 +394,24 @@
 ;;; `read-all-from-string` it wraps.  Publishing it is the cost of the D10 line, and a
 ;;; small one: (scheme base) already publishes the non-folding twin as an extension.
 (define *reader-report-shared-with-read* '(rd-report))
+
+;;; The KINDED raisers are the same story again (change: catchable-errors-with-kinds).
+;;; They raise, so design D10 keeps them out of the substrate, and each has to be a
+;;; private copy in every member that reports with it:
+;;;
+;;;   %raise-kinded  -- (scheme base) for `error`, (scheme read) for rd-report's copy,
+;;;                     (scheme file) for %file-error's copy.  All three folds must
+;;;                     produce the same message text, and being one definition emitted
+;;;                     three times is what guarantees that (it is stateless, so the
+;;;                     copies cannot disagree -- the argument %check-input-port already
+;;;                     rests on).
+;;;   %read-error    -- follows rd-report exactly: base and read.
+;;;   %file-error    -- (scheme file) only.  Nothing in (scheme base) raises a FILE
+;;;                     error; the file entry points all live over there since the
+;;;                     partition relocated them.
+(define *kinded-raise-fold* '(%raise-kinded))
+(define *read-error-shared-with-read* '(%read-error))
+(define *file-error-raiser* '(%file-error))
 
 ;;; --- the DERIVED-FORM MACROS (change: library-body-macro-scope, issue #55) ---------
 ;;;
@@ -437,7 +467,13 @@
     (prelude-assign* *port-guards-shared-with-read*
                      '(((scheme base) private) ((scheme read) private)))
     (prelude-assign* *reader-report-shared-with-read*
-                     '(((scheme base) private) ((scheme read) private)))))
+                     '(((scheme base) private) ((scheme read) private)))
+    (prelude-assign* *kinded-raise-fold*
+                     '(((scheme base) private) ((scheme read) private)
+                       ((scheme file) private)))
+    (prelude-assign* *read-error-shared-with-read*
+                     '(((scheme base) private) ((scheme read) private)))
+    (prelude-assign* *file-error-raiser*  '(((scheme file) private)))))
 
 ;;; Prelude definitions that (scheme base) does NOT export because ANOTHER member of the
 ;;; partition does -- as opposed to *scheme-base-private*, which is "exported by nothing".
@@ -465,7 +501,10 @@
     ;; NEW in (scheme cxr) (design D9): the depth-4 forms, added so the library ships
     ;; complete.  Never exported by (scheme base), so not a break.
     caaaar caaadr caadar caaddr cadaar cadadr caddar
-    cdaaar cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr))
+    cdaaar cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr
+    ;; NEW in (scheme file) (change: catchable-errors-with-kinds, design D8).  Also
+    ;; additions, for the same reason: (scheme base) never had them to lose.
+    file-exists? delete-file))
 
 ;;; The library a HOME names, its marker (if any), and the two independent questions a
 ;;; home answers: does that library's BODY define the name, and does its EXPORT list

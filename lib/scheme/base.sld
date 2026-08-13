@@ -95,6 +95,8 @@
     error-object?
     error-object-message
     error-object-irritants
+    read-error?
+    file-error?
     guard
     make-parameter
     with-parameters
@@ -260,9 +262,11 @@
     (define (%radix-ok? r) (if (= r 10) #t (if (= r 16) #t (if (= r 8) #t (= r 2)))))
     (define (number->string n . rest) (let ((r (if (null? rest) 10 (car rest)))) (if (%radix-ok? r) (if (exact? n) (cond ((= n 0) "0") ((< n 0) (list->string (cons #\- (ns-digits-radix n r (quote ()))))) (else (list->string (ns-digits-radix (- 0 n) r (quote ()))))) (if (= r 10) (%flonum->string n) (error "number->string: radix must be 10 for an inexact number" r))) (error "number->string: unsupported radix" r))))
     (define (string->number s . rest) (let ((r (if (null? rest) 10 (car rest)))) (if (%radix-ok? r) (let ((v (rd-number s r))) (if (symbol? v) #f v)) (error "string->number: unsupported radix" r))))
-    (define (error a . rest) (if (string? a) (raise (%make-error-object a rest)) (raise (%make-error-object (string-append (symbol->string a) (string-append ": " (car rest))) (cdr rest)))))
+    (define (%raise-kinded kind a rest) (if (string? a) (raise (%make-error-object/kind a rest kind)) (raise (%make-error-object/kind (string-append (symbol->string a) (string-append ": " (car rest))) (cdr rest) kind))))
+    (define (error a . rest) (%raise-kinded (quote error) a rest))
+    (define (%read-error a . rest) (%raise-kinded (quote read) a rest))
     (define *winds* (quote ()))
-    (define *handlers* (quote ()))
+    (define *handlers* (begin (%set-trap-raiser! (lambda () (raise (%trap-object)))) (quote ())))
     (define (%unwind-to target) (if (eq? *winds* target) #t (if (null? *winds*) #t (let ((entry (car *winds*))) (set! *winds* (cdr *winds*)) ((cdr entry)) (%unwind-to target)))))
     (define (dynamic-wind before thunk after) (before) (set! *winds* (cons (cons before after) *winds*)) (let ((r (thunk))) (set! *winds* (cdr *winds*)) (after) r))
     (define (call-with-current-continuation f) (let ((saved-winds *winds*)) (cdr (%run-guarded (lambda () (let ((id (%escape-frame))) (f (lambda (v) (if (%escape-live? id) (begin (%unwind-to saved-winds) (%escape-to id v)) #f) (error (quote call/cc) "continuation invoked outside its extent")))))))))
@@ -272,6 +276,8 @@
     (define (error-object? x) (%error-object? x))
     (define (error-object-message x) (%error-object-message x))
     (define (error-object-irritants x) (%error-object-irritants x))
+    (define (read-error? x) (and (%error-object? x) (eq? (%error-object-kind x) (quote read))))
+    (define (file-error? x) (and (%error-object? x) (eq? (%error-object-kind x) (quote file))))
     (define-syntax guard (syntax-rules () ((_ (var clause ...) body ...) (let ((%gres (call-with-current-continuation (lambda (%gk) (with-exception-handler (lambda (%gobj) (%gk (cons #t %gobj))) (lambda () (cons #f (begin body ...)))))))) (if (car %gres) (let ((var (cdr %gres))) (%guard-clauses var clause ...)) (cdr %gres))))))
     (define-syntax %guard-clauses (syntax-rules (else =>) ((_ v) (raise v)) ((_ v (else e ...)) (begin e ...)) ((_ v (test => proc) rest ...) (let ((gt test)) (if gt (proc gt) (%guard-clauses v rest ...)))) ((_ v (test) rest ...) (let ((gt test)) (if gt gt (%guard-clauses v rest ...)))) ((_ v (test e ...) rest ...) (if test (begin e ...) (%guard-clauses v rest ...)))))
     (define (make-parameter init . conv) (let ((convert (if (null? conv) (lambda (x) x) (car conv))) (cell (%make-vector 1 0))) (%vector-set! cell 0 ((if (null? conv) (lambda (x) x) (car conv)) init)) (lambda args (if (null? args) (%vector-ref cell 0) (if (null? (cdr args)) (%vector-set! cell 0 (convert (car args))) (%vector-set! cell 0 (car args)))))))
@@ -351,7 +357,7 @@
     (define (hash-table->alist ht) (let ((bs (%ht-buckets ht))) (let loop ((i 0) (acc (quote ()))) (if (< i (vector-length bs)) (loop (+ i 1) (%ht-fold-buckets (vector-ref bs i) acc)) acc))))
     (define (hash-table-keys ht) (map car (hash-table->alist ht)))
     (define (hash-table-values ht) (map cdr (hash-table->alist ht)))
-    (define (rd-report s n r) (let ((why (car r)) (p (rd-fail-pos (cdr r)))) (cond ((eq? why (quote rd-block-comment)) (error (quote read) "unterminated block comment #| opened at index" p)) ((eq? why (quote rd-bar)) (error (quote read) "unterminated |identifier| opened at index" p)) ((eq? why (quote rd-unterminated-list)) (error (quote read) (string-append "unterminated " (let ((k (char->integer (string-ref s p)))) (cond ((= k 91) "list [") ((and (= k 35) (< (+ p 1) n) (= (char->integer (string-ref s (+ p 1))) 117)) "bytevector #u8(") ((= k 35) "vector #(") (else "list ("))) " opened at index") p)) ((eq? why (quote rd-unterminated-string)) (error (quote read) "unterminated string \" opened at index" p)) ((eq? why (quote rd-char-name)) (error (quote read) "unknown character name" (rd-token-at s n p))) ((eq? why (quote rd-hash-token)) (error (quote read) "not a boolean; write #t, #true, #f or #false" (rd-token-at s n p))) ((eq? why (quote rd-eof)) (error (quote read) "end of input where a datum was expected, at index" p)) ((eq? why (quote rd-unexpected)) (error (quote read) "no datum here, at index" p)) ((eq? why (quote rd-rational)) (error (quote read) (string-append "rational literal syntax is not supported -- Emit has no " "exact rationals; write 0.5, or (/ 1 2)") (rd-token-at s n p))) (else (error (quote read) "unrecognized syntax" (rd-token-at s n p))))))
+    (define (rd-report s n r) (let ((why (car r)) (p (rd-fail-pos (cdr r)))) (cond ((eq? why (quote rd-block-comment)) (%read-error (quote read) "unterminated block comment #| opened at index" p)) ((eq? why (quote rd-bar)) (%read-error (quote read) "unterminated |identifier| opened at index" p)) ((eq? why (quote rd-unterminated-list)) (%read-error (quote read) (string-append "unterminated " (let ((k (char->integer (string-ref s p)))) (cond ((= k 91) "list [") ((and (= k 35) (< (+ p 1) n) (= (char->integer (string-ref s (+ p 1))) 117)) "bytevector #u8(") ((= k 35) "vector #(") (else "list ("))) " opened at index") p)) ((eq? why (quote rd-unterminated-string)) (%read-error (quote read) "unterminated string \" opened at index" p)) ((eq? why (quote rd-char-name)) (%read-error (quote read) "unknown character name" (rd-token-at s n p))) ((eq? why (quote rd-hash-token)) (%read-error (quote read) "not a boolean; write #t, #true, #f or #false" (rd-token-at s n p))) ((eq? why (quote rd-eof)) (%read-error (quote read) "end of input where a datum was expected, at index" p)) ((eq? why (quote rd-unexpected)) (%read-error (quote read) "no datum here, at index" p)) ((eq? why (quote rd-rational)) (%read-error (quote read) (string-append "rational literal syntax is not supported -- Emit has no " "exact rationals; write 0.5, or (/ 1 2)") (rd-token-at s n p))) (else (%read-error (quote read) "unrecognized syntax" (rd-token-at s n p))))))
     (define (read-from-string s) (let ((n (string-length s))) (let ((r (rd-datum s n (rd-skip-ws s n 0) #f))) (if (rd-fail? (cdr r)) (rd-report s n r) (car r)))))
     (define (read-all-from-string s) (rd-all s #f))
     (define (read-all-from-string-ci s) (rd-all s #t))

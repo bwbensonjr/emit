@@ -442,7 +442,14 @@
     (%escape-live? "rt_escape_live_p")
     (%error-object? "rt_error_object_p")
     (%error-object-message "rt_error_object_message")
-    (%error-object-irritants "rt_error_object_irritants")))
+    (%error-object-irritants "rt_error_object_irritants")
+    ;; change: catchable-errors-with-kinds.  %set-trap-raiser! is NOT here: like
+    ;; %run-guarded it needs the module's own @__apply0 pointer, so it is emitted by
+    ;; the special case in emit-primcall.
+    (%make-error-object/kind "rt_make_error_object_kind")
+    (%error-object-kind "rt_error_object_kind")
+    (%trap-object "rt_trap_object")
+    (%file-exists? "rt_file_exists_p") (%delete-file "rt_delete_file")))
 
 ;; --- string helpers ---
 (define (comma-join lst)
@@ -914,6 +921,11 @@
   ;; %run-guarded is special: it passes the module's own ccc trampoline @__apply0
   ;; (a pointer, resolved within this module -- no cross-module symbol) so the C
   ;; runtime can invoke the guarded thunk (change: r7rs-exceptions-subset).
+  ;; %set-trap-raiser! is special for the SAME reason and in the same shape (change:
+  ;; catchable-errors-with-kinds): the runtime stores that pointer alongside the raiser
+  ;; thunk, because a trap fires from anywhere in the runtime and has no call site to
+  ;; be handed a trampoline by.  The raiser is a THUNK -- the object it raises travels
+  ;; through a cell -- so @__apply0 serves both and no 1-arg trampoline is needed.
   ;; %unspec is special the other way: it emits NOTHING and lowers to the bare
   ;; unspecified-value immediate (change: unspecified-value).  Like the immediates in
   ;; encode-const it is a pure operand -- no call, so it needs no `declare` and no
@@ -925,13 +937,18 @@
         (emit! (string-append t " = call i64 @rt_run_guarded(ptr @__apply0, i64 "
                               (car ops) ")"))
         t)
+  (if (eq? op '%set-trap-raiser!)
+      (let ([t (fresh-temp)])
+        (emit! (string-append t " = call i64 @rt_set_trap_raiser(ptr @__apply0, i64 "
+                              (car ops) ")"))
+        t)
       (let ([inl (assq op inline-arith-table)])
         (if (and inl (pair? ops) (pair? (cdr ops)) (null? (cddr ops)))  ; exactly 2 operands
             (emit-inline-arith inl (car ops) (cadr ops))
             (let ([entry (assq op prim-table)] [t (fresh-temp)])
               (unless entry (error 'emit "unknown prim" op))
               (emit! (string-append t " = call i64 @" (cadr entry) "(" (i64s ops) ")"))
-              t))))))
+              t)))))))
 
 ;; The ccc trampoline @__apply0(closure): load the closure's code pointer and do
 ;; the fastcc 0-arg call (self=closure, argc=0, K positional pads = undef,
@@ -1283,6 +1300,12 @@
    "declare i64 @rt_error(i64, i64)\n"
    "declare i64 @rt_raise(i64)\n"
    "declare i64 @rt_make_error_object(i64, i64)\n"
+   "declare i64 @rt_make_error_object_kind(i64, i64, i64)\n"
+   "declare i64 @rt_error_object_kind(i64)\n"
+   "declare i64 @rt_set_trap_raiser(ptr, i64)\n"
+   "declare i64 @rt_trap_object()\n"
+   "declare i64 @rt_file_exists_p(i64)\n"
+   "declare i64 @rt_delete_file(i64)\n"
    "declare i64 @rt_escape_frame()\n"
    "declare i64 @rt_escape_to(i64, i64)\n"
    "declare i64 @rt_escape_live_p(i64)\n"

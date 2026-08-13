@@ -60,7 +60,15 @@
                   repl-mode repl-input repl-state-ref repl-state-set!
                   %error-abort %raise %run-guarded
                   %make-error-object %escape-frame %escape-to %escape-live?
-                  %error-object? %error-object-message %error-object-irritants))
+                  %error-object? %error-object-message %error-object-irritants
+                  ;; change: catchable-errors-with-kinds -- the error object's kind
+                  ;; (constructor and private accessor), the one-time installation of
+                  ;; the Scheme raiser a runtime trap is handed to plus the cell it
+                  ;; reads the pending object from, and the two file operations that
+                  ;; are not port constructors.
+                  %make-error-object/kind %error-object-kind
+                  %set-trap-raiser! %trap-object
+                  %file-exists? %delete-file))
 (define (prim? op) (and (memq op *prims*) #t))
 
 ;; ---- primitives as first-class values ----
