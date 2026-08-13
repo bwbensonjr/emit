@@ -70,7 +70,24 @@ Two things go wrong when that barrier is crossed, both expensive:
   `git checkout -- bootstrap/` if the tree is committed, or by running regen to
   convergence if it is not.
 
-So: edit → `make regen` (~12 min) → `./run-all-tests.sh` → `./run-dev-tests.sh`.
+So: edit → `make regen` → `./run-all-tests.sh` (~27 min) → `./run-dev-tests.sh`.
+
+**Budget regen by its self-compile count, not by a wall-clock figure.** Nearly all of it is the
+compiler compiling itself — one `--emit` over ~400 KB of assembled Scheme, currently **~4 min**
+each on an 8-core M-series laptop — so the count is the part that does not drift with the machine:
+
+| `make regen` | self-compiles | wall clock |
+|---|---|---|
+| no compiler-source change (converges at fixed-point iteration 1) | 4 | **~18 min** |
+| **after a compiler-source edit** (converges at iteration 2) | 5 | ~22 min (derived) |
+
+The ~18 min is measured (`tools/regen.sh`, 17m52s, `user` 16m32s — it is single-core-bound, so a
+loaded desktop inflates it only slightly). The second row is derived from the same per-compile
+figure and is the row that matters, since the barrier exists because you edited something: it was
+**6** self-compiles until issue #99 was fixed, which removed the one the fixed point used to repeat
+per extra iteration. The first row is unaffected by that fix — a run that converges immediately
+never repeats anything. The old "~12 min" figure in this file was optimistic and described the
+*first* row while being written for the second.
 
 - **Iterate without regen** via `chez --libdirs src --script src/compile.ss`,
   which `include`s the source directly. Use it for the whole edit/test loop and

@@ -149,10 +149,21 @@ converged=0
 # way the lone `emit-boot --emit < base.sld` used to (the lone-library path resolves no
 # imports).  Taking every module from one stream also makes the set's IR self-consistent by
 # construction (change: scheme-base-partition).
+#
+# ONE self-compile per iteration, not two (issue #99).  The check emit at the bottom of
+# iteration i is BY CONSTRUCTION the emit at the top of iteration i+1: the `mv` below makes
+# emit-boot the very binary that produced build/embed.chk.emit, and `--emit` is deterministic
+# over a fixed input -- an assumption the fixed-point test already rests on, since a
+# nondeterministic compiler could never converge.  So a non-converged iteration PROMOTES its
+# chk-* artifacts to unit-*/embed.ll rather than spending ~170s recompiling 385 KB of Scheme
+# to reproduce them byte-for-byte.  `carried` says whether that has happened.
+carried=0
 for i in 1 2 3 4 5; do
-  build/emit-boot --emit < build/embed.scm > build/embed.emit
-  n=$(split_units build/embed.emit build/unit-)
-  prog_module build/embed.emit > build/embed.ll
+  if [ "$carried" = 0 ]; then
+    build/emit-boot --emit < build/embed.scm > build/embed.emit
+    n=$(split_units build/embed.emit build/unit-)
+    prog_module build/embed.emit > build/embed.ll
+  fi
   units=""; j=0
   while [ "$j" -lt "$n" ]; do j=$((j + 1)); units="$units build/unit-$j.ll"; done
   link_emit_boot build/embed.ll build/emit-boot-next $units
@@ -177,6 +188,16 @@ for i in 1 2 3 4 5; do
     break
   fi
   mv build/emit-boot-next build/emit-boot
+  # Promote the check emit to be the next iteration's emit (issue #99).  emit-boot is now
+  # the binary that produced these, so they are exactly what re-running --emit would give.
+  # The count becomes m, not n: when the partition changes size mid-loop (the case the
+  # split_units comment above describes) the promoted set is the one the NEW compiler emitted.
+  mv build/embed.chk.emit build/embed.emit
+  mv build/embed.chk     build/embed.ll
+  n=$m
+  j=0
+  while [ "$j" -lt "$n" ]; do j=$((j + 1)); mv "build/chk-$j.ll" "build/unit-$j.ll"; done
+  carried=1
 done
 [ "$converged" = 1 ] || { echo "regen: bootstrap did not converge in 5 iterations" >&2; exit 1; }
 # The converged count IS the partition's size, so this is where BAKED_LL is checked: a
