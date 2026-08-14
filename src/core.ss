@@ -52,11 +52,36 @@
 ;; names bound at the top level (prelude + program), used both as the hygiene
 ;; "known bindings" set and, with the fixed keyword/primitive sets, to decide
 ;; which template identifiers a macro is allowed to introduce.
+;;
+;; A `define-record-type`'s bindings count too (change: binding-aware-expander, issue #79).
+;; `define-name` answers #f for that form, so a template mentioning a record's constructor
+;; used to be treated as INTRODUCING the name: hygiene renamed it per expansion and the
+;; renamed spelling was unbound (`unbound variable mk.4`).  The library path already got
+;; this right by accident of ordering -- it splices record types before calling this -- so
+;; the same source compiled as a library and failed as a program.  Computing it here fixes
+;; all three paths at once, and `record-type-binding-names` allocates no fresh name, so a
+;; path that lowers the form afterwards is unaffected (design D4).
 (define (compute-known macro-env runtime-forms)
   (union* (list *core-keywords* *prims* *extra-op-keywords*
                 (map car *integrable*)     ; intrinsic integrable prims are universally known
                 (map car macro-env)
-                (filter (lambda (x) x) (map define-name runtime-forms)))))
+                (toplevel-define-names runtime-forms))))
+
+;; every name the top-level DEFINITIONS in FORMS bind, by either definition form.  Also
+;; what a keyword must be pruned against: a name defined here is a variable, so a
+;; transformer of the same spelling is displaced (change: binding-aware-expander).
+(define (toplevel-define-names forms)
+  (append (filter (lambda (x) x) (map define-name forms))
+          (record-type-names-in forms)))
+
+;; every name the record-type forms in FORMS bind, flattened
+(define (record-type-names-in forms)
+  (let loop ([fs forms] [acc '()])
+    (cond
+      [(null? fs) acc]
+      [(record-type-form? (car fs))
+       (loop (cdr fs) (append (record-type-binding-names (car fs)) acc))]
+      [else (loop (cdr fs) acc)])))
 
 ;; --- the pipeline: forms -> IR text (no target header) -------------------
 ;; `dump` is an injected side-channel: the driver passes an effectful stderr
@@ -72,7 +97,15 @@
   (reset-counter!)
   (set-import-calls! '())            ; no imports on this path (change: cross-unit-direct-calls)
   (let* ([me+rf (collect-define-syntax forms)]
-         [macro-env (car me+rf)] [runtime-forms (cadr me+rf)])
+         [runtime-forms (cadr me+rf)]
+         ;; a top-level define displaces a keyword of the same name (change:
+         ;; binding-aware-expander, issue #103).  On THIS path `collect-toplevel` folds the
+         ;; top level into a letrec first, so `exp` would shadow the keyword anyway; the
+         ;; prune is here so all three paths state the rule the same way rather than one of
+         ;; them relying on a downstream form.  `known` is computed from the pruned env, so
+         ;; a displaced keyword is not also announced as a macro to hygiene.
+         [macro-env (prune-shadowed-macros (car me+rf)
+                                           (toplevel-define-names runtime-forms))])
     (let* ([known (compute-known macro-env runtime-forms)]
            [top   (collect-toplevel runtime-forms)]
            [expd  (expand top macro-env known)]
@@ -129,7 +162,15 @@
 ;; source text + prelude text -> IR text (no header).  The prelude-aware sibling
 ;; of compile-source-string: it applies the same user-wins shadowing the batch
 ;; driver does (with-prelude), but takes the prelude as *text* rather than
-;; reading a file, so it stays free of filesystem/subprocess I/O.  Used by the
+;; reading a file, so it stays free of filesystem/subprocess I/O.
+;;
+;; NOTE, and the reason this is not the shape the doors use: it folds the prelude's
+;; PROCEDURES into the program's form list, so the two share one top level.  A program
+;; that defines `when` as a variable therefore displaces the keyword for the prelude's
+;; bodies too (change: binding-aware-expander, design D3) -- where the live path
+;; (compile-program-with-imports) prepends only the prelude's transformers and compiles
+;; its procedures as their own unit, so the same shadow is confined to the program.  Left
+;; as-is deliberately: nothing outside historical/genesis calls this.  Used by the
 ;; embedded compiler (change: path-a-embedding), whose entry bakes the prelude
 ;; source in as a string constant and passes the user program on stdin.  A lone
 ;; define-library is compiled as a unit (prelude-free in Stage 1).
@@ -1113,20 +1154,22 @@
 ;; runs the search once per candidate name over a whole program's IR -- hundreds of
 ;; candidates against tens of KB, so the allocating form spent more time making garbage than
 ;; the shake saves.  Behaviour is identical.
-;; The inner loop is `at?`, NOT `match`: this file is concatenated with src/match.scm, whose
-;; `match` is a MACRO, and this compiler's expander resolves a keyword by name without
-;; honouring a lexical binding that shadows it.  A named let called `match` therefore
-;; expands its own recursive call into the matcher's "no matching clause" raise instead of
-;; calling itself -- under Chez, which shadows correctly, the identical source works
-;; (GitHub issue filed; found by mode 17 failing on every input long enough to reach here).
+;; The inner loop is named `match` DELIBERATELY, and it is this change's proof (change:
+;; binding-aware-expander, issue #103).  This file is concatenated with src/match.scm,
+;; whose `match` is a macro, and the expander used to resolve a keyword by name without
+;; honouring a lexical binding that shadowed it -- so a named let called `match` expanded
+;; its own recursive call into the matcher's "no matching clause" raise instead of calling
+;; itself, while the identical source worked under Chez.  The loop was renamed `at?` to
+;; work around that; it is back, so a regression puts the failure here, in the compiler's
+;; own source, where mode 17 found it the first time.
 (define (str-search hay needle)
   (let ([hl (string-length hay)] [nl (string-length needle)])
     (let loop ([i 0])
       (cond
         [(> (+ i nl) hl) -1]
-        [(let at? ([j 0])
+        [(let match ([j 0])
            (cond [(>= j nl) #t]
-                 [(char=? (string-ref hay (+ i j)) (string-ref needle j)) (at? (+ j 1))]
+                 [(char=? (string-ref hay (+ i j)) (string-ref needle j)) (match (+ j 1))]
                  [else #f]))
          i]
         [else (loop (+ i 1))]))))
@@ -1167,8 +1210,16 @@
          ;; keyword of the same spelling -- the user-wins shadowing the runtime
          ;; environment already gives a define.
          [own-macro-env (car me+rf)]
-         [macro-env (append own-macro-env (import-tables->macro-env import-tables))]
          [runtime (cadr me+rf)]
+         ;; ...and a body `define` displaces a keyword of that name outright (change:
+         ;; binding-aware-expander, issue #103).  A library NEEDS the prune rather than
+         ;; inheriting it: `expand-unit-form` expands each body define's initializer on its
+         ;; own, so there is no enclosing letrec to make the name a lexical binding the way
+         ;; a program's `collect-toplevel` fold does.  Without it a library body and a
+         ;; program disagree about the same source (design D3).
+         [macro-env (prune-shadowed-macros
+                      (append own-macro-env (import-tables->macro-env import-tables))
+                      (toplevel-define-names runtime))]
          [import-env-alist (import-tables->env-alist import-tables)]
          ;; imported external names are "known" too (see compile-program-with-imports),
          ;; so a macro introducing one is not hygiene-renamed away.
@@ -1340,8 +1391,17 @@
            ;; same merge compile-library* does (change: library-macro-export, design D7).
            ;; The program's own come first, so a `define-syntax` at top level shadows an
            ;; imported keyword of the same spelling.
-           [macro-env (append (car me+rf) (import-tables->macro-env import-tables))]
+           ;;
+           ;; ...and a top-level `define` displaces one entirely, own or imported (change:
+           ;; binding-aware-expander, issue #103).  This is the path EVERY door takes, and
+           ;; the keyword being pruned is usually the baked prelude's -- `when`, `cond` --
+           ;; which is safe precisely because only the prelude's TRANSFORMERS are prepended
+           ;; here: its procedures were compiled in the baked unit, with their own macro
+           ;; environment, so a program cannot un-expand a prelude body (design D3).
            [runtime (cadr me+rf)]
+           [macro-env (prune-shadowed-macros
+                        (append (car me+rf) (import-tables->macro-env import-tables))
+                        (toplevel-define-names runtime))]
            ;; Imported external names are "known" bindings too, so a derived-form
            ;; macro (e.g. `case`) may introduce a reference to one (e.g. `memv`)
            ;; without hygiene renaming it away (change: module-prelude-scheme-base).

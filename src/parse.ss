@@ -575,6 +575,41 @@
                         rest))
             (cons getter rest)))))
 
+;; The names a `define-record-type` binds, WITHOUT building its bindings (change:
+;; binding-aware-expander, issue #79): the constructor, the predicate, and each field's
+;; accessor and modifier.
+;;
+;; A separate function rather than `(map car (record-type-bindings f))` because
+;; `record-type-bindings` calls `fresh-name` -- twice itself, twice per field -- so mapping
+;; over it to answer a question about NAMES would bump the global counter and shift every
+;; later generated name in the program, churning emitted IR for nothing.  This allocates
+;; no name and can therefore be called from anywhere, including the paths that lower the
+;; form separately afterwards (design D4).
+;;
+;; The type descriptor is deliberately absent: it is a fresh name, so no source -- and no
+;; macro template -- can reference it.
+;;
+;; Its job is to feed the hygiene known-set: a `syntax-rules` template that mentions a
+;; record's constructor is referencing a real binding, and an identifier missing from that
+;; set is renamed per expansion and then unbound (`unbound variable mk.4`).
+(define (record-type-binding-names f)
+  (check-record-type-form f)              ; same validation, same diagnostics
+  (let* ([rest1      (cddr f)]
+         [ctor-spec  (car rest1)]              ; (CTOR cf ...)
+         [rest2      (cdr rest1)]
+         [pred       (car rest2)]
+         [field-specs (cdr rest2)])            ; ((fld ACC [MUT]) ...)
+    (cons (car ctor-spec)
+          (cons pred
+                (let loop ([specs field-specs])
+                  (if (null? specs)
+                      '()
+                      (let ([spec (car specs)]
+                            [rest (loop (cdr specs))])
+                        (if (pair? (cddr spec))         ; a third element => mutator name
+                            (cons (cadr spec) (cons (caddr spec) rest))
+                            (cons (cadr spec) rest)))))))))
+
 (define (record-type-bindings f)
   (check-record-type-form f)              ; reject malformed shapes before destructuring
   (let* ([tyname     (cadr f)]

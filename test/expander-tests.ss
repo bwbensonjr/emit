@@ -230,5 +230,99 @@
             '((my-list 1 2 3) (my-list)))
        '((list 1 2 3) (list)))
 
+;; ---- a binding shadows a keyword -----------------------------------------
+;; (change: binding-aware-expander, issues #103 and #92.)  These drive `expand` at the
+;; source level, which is where the defect lived: the pass carried a recursion depth and
+;; no notion of what was BOUND, so a keyword was resolved by spelling and a binding could
+;; not shadow it.  A use of a shadowed keyword must come out as an ordinary application --
+;; the form unchanged except for its subforms -- not as the macro's expansion.
+
+(define w-macro
+  '(define-syntax w (syntax-rules () ((_ e) (quote expanded-the-macro)))))
+
+(check "a let binding shadows a keyword"
+       (expand-with (list w-macro) '(let ((w f)) (w 1)))
+       '(let ((w f)) (w 1)))
+
+(check "an initializer is still OUTSIDE the let's scope"
+       (expand-with (list w-macro) '(let ((w (w 1))) 2))
+       '(let ((w (quote expanded-the-macro))) 2))
+
+(check "a lambda formal shadows a keyword, rest formal included"
+       (list (expand-with (list w-macro) '(lambda (w) (w 1)))
+             (expand-with (list w-macro) '(lambda (a . w) (w 1)))
+             (expand-with (list w-macro) '(lambda w (w 1))))
+       '((lambda (w) (w 1))
+         (lambda (a . w) (w 1))
+         (lambda w (w 1))))
+
+;; letrec differs from let: the names are in scope for the initializers too
+(check "letrec shadows a keyword in its initializers as well as its body"
+       (expand-with (list w-macro) '(letrec ((w (lambda () (w 1)))) (w 2)))
+       '(letrec ((w (lambda () (w 1)))) (w 2)))
+
+(check "an internal define shadows a keyword for the WHOLE body"
+       (expand-with (list w-macro) '(lambda (x) (w 1) (define w x) (w 2)))
+       '(lambda (x) (w 1) (define w x) (w 2)))
+
+;; the named-let case that started this (issue #103): the loop name is a keyword, so the
+;; recursive call must call the loop, not expand the macro.  Named let is rewritten to a
+;; letrec, so what this really checks is that the rewrite is expanded under the current
+;; bindings rather than at top level.
+(check "a named let shadows a keyword in its own body"
+       (expand-with (list w-macro) '(let w ((j 0)) (w (+ j 1))))
+       '(letrec ((w (lambda (j) (w (+ j 1))))) (w 0)))
+
+(check "an unshadowed keyword still expands"
+       (expand-with (list w-macro) '(let ((x 1)) (w x)))
+       '(let ((x 1)) (quote expanded-the-macro)))
+
+;; a binding does NOT reach into quoted data, and the keyword there was never a use anyway
+(check "shadowing does not disturb quoted data"
+       (expand-with (list w-macro) '(let ((w f)) (quote (w 1))))
+       '(let ((w f)) (quote (w 1))))
+
+;; ---- a literal does not match a bound identifier (issue #92) -------------
+;; R7RS 4.3.2 compares a literal by binding, not by spelling.  `arrow` stands in for
+;; `cond`'s `=>`: the receiver-shaped rule must be skipped where the program has bound the
+;; name, and matching must FALL THROUGH to the next rule rather than fail.
+(define arrow-macro
+  '(define-syntax arrow
+     (syntax-rules (=>)
+       ((_ a => b)  (quote receiver))
+       ((_ a b ...) (quote ordinary)))))   ; arity as wide as cond's ordinary clause
+
+(check "a literal matches an unbound identifier of that spelling"
+       (expand-with (list arrow-macro) '(arrow 1 => 2))
+       '(quote receiver))
+
+(check "a literal does not match an identifier bound at the use site"
+       (expand-with (list arrow-macro) '(let ((=> #f)) (arrow 1 => 2)))
+       '(let ((=> #f)) (quote ordinary)))
+
+;; and the shadow is scoped: leaving the binding restores the literal reading
+(check "the literal reading returns outside the binding's scope"
+       (expand-with (list arrow-macro)
+                    '(begin (let ((=> #f)) (arrow 1 => 2)) (arrow 3 => 4)))
+       '(begin (let ((=> #f)) (quote ordinary)) (quote receiver)))
+
+;; ---- pruning a keyword a top-level define displaces (design D3) ----------
+;; The per-form paths (a library body, a REPL form) have no enclosing letrec to make a
+;; top-level name a lexical binding, so they prune the macro environment instead.  Same
+;; question, answered before expansion rather than during it.
+(check "prune-shadowed-macros drops exactly the displaced keyword"
+       (map car (prune-shadowed-macros
+                  (map parse-define-syntax
+                       (list w-macro
+                             '(define-syntax keep (syntax-rules () ((_) 0)))))
+                  '(w other)))
+       '(keep))
+
+(check "a pruned keyword is an ordinary application"
+       (expand (quote (w 1))
+               (prune-shadowed-macros (map parse-define-syntax (list w-macro)) '(w))
+               base-known)
+       '(w 1))
+
 (printf "\n  ~a passed, ~a failed\n" pass fail)
 (exit (if (= fail 0) 0 1))

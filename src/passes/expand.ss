@@ -52,6 +52,32 @@
        (loop (cdr fs) (cons (parse-define-syntax (car fs)) env) runtime)]
       [else (loop (cdr fs) env (cons (car fs) runtime))])))
 
+;; A TOP-LEVEL DEFINE DISPLACES A KEYWORD OF THE SAME NAME (change:
+;; binding-aware-expander, issue #103; design D3).  A keyword is a binding, so
+;; `(define (when x) ...)` makes `when` a variable and every later use of it an ordinary
+;; call -- which requires dropping the transformer, since the expander would otherwise
+;; rewrite the call before anything looked at the binding.
+;;
+;; user-wins, exactly as `with-prelude` (src/core.ss) already resolves a define-vs-define
+;; collision by dropping the prelude's; this closes the define-vs-SYNTAX combination that
+;; was missing.  Prunes imported keywords as well as the scope's own, because both arrive
+;; in one `macro-env`.
+;;
+;; Callers that fold their whole top level into a letrec before expanding (a program, via
+;; `collect-toplevel`) already get this from `exp`'s letrec arm -- the names are lexical
+;; bindings by then.  It is the per-form paths that need it: a library body form and a
+;; REPL form are each expanded on their own, with no enclosing letrec to put the name in
+;; scope.  Pruning uniformly is what makes those three paths agree (dev->ship fidelity).
+;;
+;; A collision inside our OWN sources would silently delete a macro we depend on, so it is
+;; a checked build invariant rather than a hope: test/macro-shadow-check.sh.
+(define (prune-shadowed-macros macro-env defined-names)
+  (let loop ([es macro-env] [acc '()])
+    (cond
+      [(null? es) (reverse acc)]
+      [(memq (caar es) defined-names) (loop (cdr es) acc)]
+      [else (loop (cdr es) (cons (car es) acc))])))
+
 ;; ---- syntax-rules matcher ------------------------------------------------
 ;; match-pat returns an alist var->value, or the `no-match` sentinel.  A leaf
 ;; pattern variable maps to the matched syntax; an ellipsis variable maps to an
@@ -95,26 +121,41 @@
            (walk (cdr pat) depth (walk (car pat) depth acc)))]
       [else acc])))
 
-(define (match-pat pat form literals)
+;; A LITERAL DOES NOT MATCH AN IDENTIFIER BOUND AT THE USE SITE (R7RS 4.3.2, issue #92).
+;; R7RS compares a literal by BINDING, not by spelling: where the program has bound the
+;; auxiliary keyword as a variable, the identifier at the use site is an ordinary
+;; reference and the literal-bearing rule must not match -- matching falls through to the
+;; following rules, which is what makes `(let ((=> #f)) (cond (#t => 'ok)))` answer `ok`
+;; instead of applying the clause body to the test value.  `bound` is the use site's
+;; lexical bindings, threaded from `exp`.
+;;
+;; The test comes LAST, after the literals membership and the `eq?`, so it costs nothing
+;; on any form that was not going to match anyway (design D5).  `pattern-vars` takes no
+;; `bound`: it inspects the PATTERN, where a use site's bindings mean nothing.
+;;
+;; This models the use site only.  A literal rebound in the transformer's own definition
+;; environment is not tracked -- that needs the syntax objects this expander does not have
+;; (recorded as a non-goal in the macro-system spec, not as an oversight).
+(define (match-pat pat form literals bound)
   (cond
     [(and (symbol? pat) (memq pat literals))
-     (if (eq? pat form) '() no-match)]            ; literal: identical identifier
+     (if (and (eq? pat form) (not (memq form bound))) '() no-match)]
     [(eq? pat *wildcard*) '()]
     [(symbol? pat) (list (cons pat form))]        ; pattern variable
     [(null? pat) (if (null? form) '() no-match)]
     [(pair? pat)
      (if (ellipsis-at? pat literals)
-         (match-ellipsis (car pat) (cddr pat) form literals)
+         (match-ellipsis (car pat) (cddr pat) form literals bound)
          (if (pair? form)
-             (let ([m1 (match-pat (car pat) (car form) literals)])
+             (let ([m1 (match-pat (car pat) (car form) literals bound)])
                (if (eq? m1 no-match)
                    no-match
-                   (let ([m2 (match-pat (cdr pat) (cdr form) literals)])
+                   (let ([m2 (match-pat (cdr pat) (cdr form) literals bound)])
                      (if (eq? m2 no-match) no-match (append m1 m2)))))
              no-match))]
     [else (if (equal? pat form) '() no-match)]))   ; literal datum (number, etc.)
 
-(define (match-ellipsis sub tailpat form literals)
+(define (match-ellipsis sub tailpat form literals bound)
   (let ([tail-len (proper-length tailpat)]
         [form-len (proper-length form)])
     (if (< form-len tail-len)
@@ -122,7 +163,7 @@
         (let* ([rep-count (- form-len tail-len)]
                [reps (take-n form rep-count)]
                [rest (list-tail form rep-count)]
-               [submatches (map (lambda (f) (match-pat sub f literals)) reps)])
+               [submatches (map (lambda (f) (match-pat sub f literals bound)) reps)])
           (if (memp (lambda (m) (eq? m no-match)) submatches)
               no-match
               (let* ([subvars (map car (pattern-vars sub literals))]
@@ -130,7 +171,7 @@
                                  (cons v (make-ell
                                            (map (lambda (m) (cdr (assq v m))) submatches))))
                                subvars)]
-                     [mt (match-pat tailpat rest literals)])
+                     [mt (match-pat tailpat rest literals bound)])
                 (if (eq? mt no-match) no-match (append ell mt))))))))
 
 ;; ---- template instantiation + hygiene ------------------------------------
@@ -348,28 +389,101 @@
               (loop (+ i 1)
                     (cons (instantiate sub binds2 pvars renames quoted?) acc))))))))
 
+;; ---- the lexically bound identifiers at a point in the traversal ----------
+;; (change: binding-aware-expander, issue #103.)  `exp` threads the set of identifiers
+;; bound as VARIABLES where it is looking, because two of its decisions are about what an
+;; identifier means and neither can be made from the spelling alone: whether a head names
+;; a macro (`macro-lookup`) and whether a use-site identifier matches a `syntax-rules`
+;; literal (`match-pat`).  Before this the pass carried only a recursion depth, so a
+;; binding could not shadow a keyword -- `(let ((when f)) (when 5))` expanded the MACRO,
+;; silently, since `(when 5)` is a legal use of it with an empty body.
+;;
+;; A LIST, threaded, not a global or a hash table: the pass is pure and its scopes are
+;; sibling-recursive, so a mutated global would need save/restore at every arm.
+;;
+;; The list is NOT always short, and the reason is worth knowing before optimizing it:
+;; `collect-toplevel` runs before this pass and folds a program's whole top level into one
+;; letrec, so from inside that fold `bound` holds every top-level name -- ~800 of them when
+;; the compiler compiles itself.  That is exactly why `macro-lookup` tests `macro-env`
+;; FIRST and consults `bound` only on a hit (design D5): the membership scan happens only
+;; where a head really does name a macro, never on the every-pair-head path.  Measured: a
+;; post-edit `make regen` converged at iteration 2 in 16m47s, inside its ~22-minute
+;; expectation, so the threading costs nothing observable.
+;;
+;; The formals of a `lambda`: a proper list, a dotted list whose tail is the rest
+;; parameter, or a bare symbol.  Anything else is malformed and is left to `parse`, which
+;; reports it in the frontend's own style -- this must not be the pass that dies on it.
+(define (add-formals formals bound)
+  (let loop ([f formals] [acc bound])
+    (cond
+      [(symbol? f) (cons f acc)]                 ; rest parameter (or a bare-symbol formal)
+      [(pair? f) (loop (cdr f) (if (symbol? (car f)) (cons (car f) acc) acc))]
+      [else acc])))
+
+;; The names a BODY's internal definitions bind.  `parse` turns internal defines into a
+;; letrec, so they are in scope for the whole body -- including the forms written before
+;; the define -- which is why the scan runs before any body form is expanded.  Defensive
+;; about shape on purpose: this runs on user syntax, and a malformed `define` belongs to
+;; `parse`'s diagnostics, not to a `car` of the empty list in here (cf. issue #91).
+(define (add-body-defines forms bound)
+  (let loop ([fs forms] [acc bound])
+    (if (not (pair? fs))
+        acc
+        (let ([f (car fs)])
+          (loop (cdr fs)
+                (if (and (pair? f) (eq? (car f) 'define) (pair? (cdr f)))
+                    (let ([sig (cadr f)])
+                      (cond [(symbol? sig) (cons sig acc)]
+                            [(and (pair? sig) (symbol? (car sig))) (cons (car sig) acc)]
+                            [else acc]))
+                    acc))))))
+
 ;; ---- the fixpoint driver -------------------------------------------------
 (define *macro-depth-limit* 1000)
 
 (define (expand e macro-env known)
-  (define (macro-lookup h) (and (symbol? h) (assq h macro-env)))
+  ;; A BINDING SHADOWS A KEYWORD (R7RS 4.2/5.3, issue #103).  A macro keyword is a
+  ;; binding like any other, so an identifier bound as a variable at the point of use is
+  ;; not a keyword there and the form is an ordinary application.
+  ;;
+  ;; ORDER MATTERS (design D5): `assq` on the small macro alist runs first and `memq` on
+  ;; `bound` only on a HIT -- i.e. only where the head really does name a macro, which is
+  ;; rare and where the work about to happen is far larger.  Testing `bound` first would
+  ;; put a list scan on the hottest path in the pass (every pair head of every form).
+  (define (macro-lookup h bound)
+    (and (symbol? h)
+         (let ([entry (assq h macro-env)])
+           (and entry (not (memq h bound)) entry))))
 
-  (define (apply-macro entry form)   ; entry = (name literals . rules)
+  (define (apply-macro entry form bound)   ; entry = (name literals . rules)
     (let ([literals (cadr entry)] [rules (cddr entry)])
       (let loop ([rules rules])
         (if (null? rules)
             (error 'expand "no matching syntax-rules pattern for macro use" form)
             (let* ([pat (caar rules)] [tmpl (cdar rules)]
-                   [m (match-pat (cdr pat) (cdr form) literals)])  ; ignore keyword slot
+                   ;; ignore keyword slot; `bound` narrows the literals (issue #92)
+                   [m (match-pat (cdr pat) (cdr form) literals bound)])
               (if (eq? m no-match)
                   (loop (cdr rules))
                   (let* ([pvars (map car (pattern-vars (cdr pat) literals))]
+                         ;; `known`, NOT `known` + `bound`: this asks whether a TEMPLATE
+                         ;; identifier is introduced and so must be renamed, and that
+                         ;; answer must not depend on the use site.  A template temporary
+                         ;; sharing a name with a local at the use site would otherwise
+                         ;; stop being renamed and start capturing it -- the exact
+                         ;; failure hygiene exists to prevent (design D2).
                          [renames (collect-renames tmpl pvars known)])
                     (instantiate tmpl m pvars renames #f))))))))
 
-  (define (exp1 e) (exp e 0))
+  (define (exp1 e bound) (exp e 0 bound))
+  (define (exp* es bound) (map (lambda (x) (exp1 x bound)) es))
 
-  (define (exp e depth)
+  ;; a body: its internal defines bind for the whole body, then each form expands
+  (define (exp-body forms bound)
+    (let ([b (add-body-defines forms bound)])
+      (exp* forms b)))
+
+  (define (exp e depth bound)
     (when (> depth *macro-depth-limit*)
       (error 'expand "macro expansion did not terminate (depth limit exceeded)" e))
     (if (not (pair? e))
@@ -378,33 +492,47 @@
           (cond
             [(eq? h 'quote) e]                    ; do not descend into quoted data
             [(eq? h 'quasiquote)                  ; rewrite, then re-expand the unquoted holes
-             (exp1 (qq (cadr e) 1))]
+             (exp1 (qq (cadr e) 1) bound)]
             [(memq h '(unquote unquote-splicing))
              (error 'expand "unquote/unquote-splicing outside quasiquote" e)]
-            [(macro-lookup h) => (lambda (entry) (exp (apply-macro entry e) (+ depth 1)))]
-            [(eq? h 'lambda) `(lambda ,(cadr e) ,@(map exp1 (cddr e)))]
+            [(macro-lookup h bound)
+             => (lambda (entry) (exp (apply-macro entry e bound) (+ depth 1) bound))]
+            [(eq? h 'lambda)
+             `(lambda ,(cadr e) ,@(exp-body (cddr e) (add-formals (cadr e) bound)))]
             [(eq? h 'let)
              (if (symbol? (cadr e))               ; named let (overloads core `let`)
-                 (exp1 (rewrite-named-let (cadr e) (caddr e) (cdddr e)))
-                 `(let ,(map bind-exp (cadr e)) ,@(map exp1 (cddr e))))]
+                 ;; the loop NAME is bound in the body: `rewrite-named-let` produces a
+                 ;; letrec, so the arm below adds it -- no special case needed here
+                 (exp1 (rewrite-named-let (cadr e) (caddr e) (cdddr e)) bound)
+                 ;; initializers see the OUTER scope; only the body sees the names
+                 `(let ,(map (lambda (b) (bind-exp b bound)) (cadr e))
+                    ,@(exp-body (cddr e) (add-formals (map bind-name (cadr e)) bound))))]
             ;; letrec and letrec* expand identically and are DISTINGUISHED here only
             ;; so the post-expand dump still shows the form the user wrote; parse
             ;; maps both to the one `letrec` IL node (see src/parse.ss).
+            ;; The names are in scope for the INITIALIZERS as well as the body.
             [(memq h '(letrec letrec*))
-             `(,h ,(map bind-exp (cadr e)) ,@(map exp1 (cddr e)))]
-            [(memq h '(+ - * /)) (expand-arith exp1 h (cdr e))]
-            [(eq? h 'string-append) (expand-string-append exp1 (cdr e))]
+             (let ([inner (add-formals (map bind-name (cadr e)) bound)])
+               `(,h ,(map (lambda (b) (bind-exp b inner)) (cadr e))
+                    ,@(exp-body (cddr e) inner)))]
+            [(memq h '(+ - * /)) (expand-arith (lambda (x) (exp1 x bound)) h (cdr e))]
+            [(eq? h 'string-append)
+             (expand-string-append (lambda (x) (exp1 x bound)) (cdr e))]
             ;; `string=?` is n-ary in R7RS 6.7.  It joins the chain here rather than
             ;; becoming a variadic prelude procedure (the route char=? took), because a
             ;; prelude define of an integrable name shadows the primitive for EVERY
             ;; arity -- the two-argument call would lose its bare primcall, and the
             ;; compiler's own reader leans on it.
-            [(memq h '(= < > <= >= eq? eqv? string=?)) (expand-compare exp1 h (cdr e))]
-            [else (map exp1 e)]))))               ; if/begin/set!/apply/primcall/application
+            [(memq h '(= < > <= >= eq? eqv? string=?))
+             (expand-compare (lambda (x) (exp1 x bound)) h (cdr e))]
+            [else (exp* e bound)]))))             ; if/begin/set!/apply/primcall/application
 
-  (define (bind-exp b) (list (car b) (exp1 (cadr b))))
+  (define (bind-exp b bound) (list (car b) (exp1 (cadr b) bound)))
 
-  (exp e 0))
+  (exp e 0 '()))
+
+;; a binding's name, tolerating a malformed clause (parse reports that, not this pass)
+(define (bind-name b) (if (pair? b) (car b) b))
 
 ;; named let: (let name ([x e] ...) body ...) ->
 ;;   (letrec ([name (lambda (x ...) body ...)]) (name e ...))
