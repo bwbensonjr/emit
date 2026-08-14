@@ -176,6 +176,12 @@ The warm row is the one that matters for the dev loop, and it is strictly better
 axes. The cold row is roughly a wash in time and a 100 KB win in size. Both rows are projections
 from P8's and P3's measurements and are acceptance criteria, not claims — task 8 measures them.
 
+**Measured (`hello.scm`, idle machine, best of 3).** Executable 212,232 B -> **93,656 B**, exactly
+the Chez door's figure. Rebuild of an *unchanged* program 0.732 s -> **0.611 s**; build of a
+*changed* program ~0.73 s -> **~0.90 s**; fully cold 1.902 s -> **2.054 s**. So the warm row held and
+the cold row cost more than "roughly a wash" — a shake is a recompile, and only an unchanged program
+is served from the cache. 56% smaller always, 16% faster on a rebuild, ~0.17 s slower on an edit.
+
 *Alternative — prune the emitted IR text at the build door.* Preserves the cache exactly and needs no
 recompile, but it is a second, independent reachability implementation over LLVM text, with
 link-time undefined symbols as its failure mode. Rejected against D8's reasoning.

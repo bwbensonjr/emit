@@ -108,23 +108,29 @@
 
 ## 5. Regen barrier
 
-- [ ] 5.1 Confirm every `CORE_FLAT` edit (group 2) is finished and nothing is pending, per
+- [x] 5.1 Confirm every `CORE_FLAT` edit (group 2) is finished and nothing is pending, per
       `CLAUDE.md`, and that `bootstrap/` is committed-clean before starting.
-- [ ] 5.2 Run `make regen`. Expect convergence at fixed-point iteration 2 (5 self-compiles, ~22
+- [x] 5.2 Run `make regen`. Expect convergence at fixed-point iteration 2 (5 self-compiles, ~22
       min). Record the `bootstrap/` diff and confirm it is explicable as the mode additions and the
       moved shake helpers, and nothing more.
-- [ ] 5.3 Run `make all schemec` and confirm all three backends still agree.
+      *TWO regens, 865 s and 911 s — the second for the state-vector fix task 6.5 found. Both
+      converged at iteration 2. The diff is `embed-repl.ll`, `embed.ll` and `schemec.ll` only;
+      `scheme.base.ll` and `emit.internal.ll` are byte-identical, which is the check that the
+      library IR did not move.*
+- [x] 5.3 Run `make all schemec` and confirm all three backends still agree.
+      *`demos/run-backends.sh`: 55 passed, 0 failed (aot = jit = bitcode).*
 
 ## 6. Tests
 
-- [ ] 6.1 Issue #101 regression: `emit repl --no-prelude` in a directory with a resolving manifest
+- [x] 6.1 Issue #101 regression: `emit repl --no-prelude` in a directory with a resolving manifest
       compiles no baked member. Assert on observable work (narration or timing floor), not only on
-      the binding outcome — the binding outcome was already correct.
-- [ ] 6.2 REPL seeding parity: a session against a manifest naming both baked members starts with
+      the binding outcome — the binding outcome was already correct. *`test/unit-pipeline-tests.sh`,
+      which asserts both: no `baked set` narration, and the same cost with a manifest as without.*
+- [x] 6.2 REPL seeding parity: a session against a manifest naming both baked members starts with
       the standard library available, adds no duplicate unit, and reads no library source for them.
-- [ ] 6.3 `--no-prelude` door parity: the same manifest and library through `emit repl --no-prelude`
+- [x] 6.3 `--no-prelude` door parity: the same manifest and library through `emit repl --no-prelude`
       and `emit run --no-prelude` reach the same unresolved-import outcome.
-- [ ] 6.4 User-library cache: cold vs warm byte-identity of emitted IR for a program importing a
+- [x] 6.4 User-library cache: cold vs warm byte-identity of emitted IR for a program importing a
       user library; a second invocation does not recompile it.
 - [x] 6.5 Include-closure invalidation: editing an included fragment while the `.sld` is untouched
       invalidates; touching a file without changing its content does not.
@@ -133,33 +139,76 @@
       call — which is why `source-home` rides it — so mode 16 always saw an empty record and every
       entry was keyed on its `.sld` alone. Invisible under Chez, whose globals persist, and
       invisible to any test that only edits the `.sld`.*
-- [ ] 6.6 Closure isolation: two libraries including the same fragment each record it, and the
-      second's closure does not inherit the first's (spec scenario for 2.4).
-- [ ] 6.7 Shake correctness: `emit build`'s executable on the demo corpus behaves identically to a
+- [x] 6.6 Closure isolation: two libraries including the same fragment each record it, and the
+      second's closure does not inherit the first's (spec scenario for 2.4). *Covered by mode 4's
+      reset plus the invalidation cases; the Chez probe exercises the two-library shape directly.*
+- [x] 6.7 Shake correctness: `emit build`'s executable on the demo corpus behaves identically to a
       non-shaken build, and to the Chez driver's AOT output on the same programs.
-- [ ] 6.8 Door-parity size: `emit build` and the Chez AOT path retain the same library bindings on
+      *All 80 demos built through `emit build` and compared against `emit run`: 80 agreeing on both
+      output and exit code, each executable 93-95 KB against the unshaken ~212 KB.*
+- [x] 6.8 Door-parity size: `emit build` and the Chez AOT path retain the same library bindings on
       `hello.scm`, and the two byte sizes are of the same order (task 1.2's baseline, ~134 KB →
-      ~34 KB).
-- [ ] 6.9 Kind isolation: after a build populates `shake-` entries, `emit repl` and `emit run` seed
+      ~34 KB). *Added to `test/aot-tree-shaking-tests.sh` (Chez-gated): **93,656 B on both doors**,
+      same output. Not "the same order" — the same number.*
+- [x] 6.9 Kind isolation: after a build populates `shake-` entries, `emit repl` and `emit run` seed
       from full units and every binding of that library is still available.
-- [ ] 6.10 Shaken-entry reuse: rebuilding the same program reuses the pruned units; building a
+- [x] 6.10 Shaken-entry reuse: rebuilding the same program reuses the pruned units; building a
       second program that reaches a different subset does not.
-- [ ] 6.11 Run `./run-all-tests.sh` and `./run-dev-tests.sh` (individually if a suite outlives the
+- [x] 6.11 Run `./run-all-tests.sh` and `./run-dev-tests.sh` (individually if a suite outlives the
       command timeout) and confirm both pass, including `test/trust-check.sh` after committing.
+      *`run-all-tests.sh`: 30 suites, 0 failed, 343 s (baseline 329 s + the new 15 s suite). Every
+      dev suite run individually, all passing, including self-emission equivalence, the self-hosting
+      fixed point, and **trust-check: "committed IR is exactly what the current source regenerates"**.
+      Two existing suites needed updating, both because they asserted what this change replaced: the
+      artifact-cache suite asserted the user-library DEFERRAL, and its Chez-side unit test called
+      mode 15 with a rendered name list rather than keys.*
 
 ## 7. Evidence and bookkeeping
 
-- [ ] 7.1 Re-measure tasks 1.1-1.4 after the change, on the same machine in the same session, and
+- [x] 7.1 Re-measure tasks 1.1-1.4 after the change, on the same machine in the same session, and
       record before/after. Acceptance: `emit repl --no-prelude` at the no-manifest floor; a warm
       `emit build` faster than today's on both wall clock and bytes; a cold `emit build` no worse
       than design D9's projected row.
-- [ ] 7.2 Tick P8 in `docs/PERFORMANCE.md` (heading and status table) with the measured outcome, and
+      *`emit repl --no-prelude` with a manifest: **1.163 s -> 0.069 s** against a 0.039 s floor —
+      met. Warm `emit build`: **0.732 s -> 0.611 s** and **212,232 B -> 93,656 B** — met on both
+      axes. Cold `emit build`: **1.902 s -> 2.054 s** — NOT met; D9 projected "roughly a wash" and
+      the truth is +8%, because a shake is a recompile and only an unchanged program is served from
+      the cache. Recorded as measured rather than rounded away; P8's entry states the trade in the
+      three cases that matter. `run-all-tests.sh` 329 s -> 343 s, the new suite's own 15 s.*
+- [x] 7.2 Tick P8 in `docs/PERFORMANCE.md` (heading and status table) with the measured outcome, and
       cross-reference P3's entry for the cache generalization. If the cold build regressed beyond
-      the projection, record that rather than only the warm win.
-- [ ] 7.3 If the cache directory grows faster than expected (design's open question), open a
+      the projection, record that rather than only the warm win. *Done, including the correction: a
+      first draft of the note claimed the cold build got faster, having measured a warm shake entry
+      and called it cold.*
+- [x] 7.3 If the cache directory grows faster than expected (design's open question), open a
       `docs/PERFORMANCE.md` entry for eviction rather than adding a policy here.
-- [ ] 7.4 Open an issue for shaking `emit lib` to a library's own exported interface, which the
-      `aot-codegen` root-set requirement already anticipates.
-- [ ] 7.5 Close issue #101 from the fixing commit (`Fixes #101`).
-- [ ] 7.6 Update `docs/MODULES.md` and `docs/PIPELINE.md` where they describe the doors' seeding or
-      the shake as driver-only.
+      *Measured 398 files / 7.2 MB after one suite run plus a day's iteration, dominated by ~1 MB
+      `baked-` entries orphaned by each compiler rebuild. Filed as **P17**.*
+- [x] 7.4 Open an issue for shaking `emit lib` to a library's own exported interface, which the
+      `aot-codegen` root-set requirement already anticipates. *Issue #104, with the measurement to
+      take first — a well-kept library may lose nothing.*
+- [x] 7.5 Close issue #101 from the fixing commit (`Fixes #101`).
+- [x] 7.6 Update `docs/MODULES.md` and `docs/PIPELINE.md` where they describe the doors' seeding or
+      the shake as driver-only. *`docs/MODULES.md`: the delivery paragraph, the "no tree-shaking on
+      the Chez-free door" limitation (now the prunability limit, pointing at P10), and the eager-
+      preload paragraph. `docs/PIPELINE.md` needed nothing — its one mention is label stability
+      under a tree-shaken recompile, which is still exactly right.*
+
+## 8. Found on the way (not planned)
+
+- [x] 8.1 **Issue #103** — a lexical binding does not shadow a macro keyword in the self-hosted
+      expander. A named let called `match` expanded the matcher instead of calling itself, so every
+      shake failed with `match: no matching clause 0`. Chez gets it right, so no Chez-gated suite
+      could see it. Worked around at the one site (`str-search`'s inner loop is `at?`), with the
+      reason recorded there; the expander is untouched. Design D14.
+- [x] 8.2 **The include record did not survive a host call.** The compiler's globals are re-created
+      on every `scheme_entry()`, which is why `source-home` rides the session state vector; the new
+      `*includes-read*` did not, so mode 16 always saw an empty record and every unit entry was
+      keyed on its `.sld` alone. Found by task 6.5's invalidation test — the one case that edits an
+      *included* file rather than the library. Fixed by adding it to the state vector (slot 9).
+- [x] 8.3 **A corrupt-but-non-empty cache entry was trusted.** A stamp attests that an entry was
+      written whole, not that its bytes survived. Each split module must now contain its own
+      `:__init` definition, checked BEFORE mode 14 so a rejected entry leaves the session untouched.
+- [x] 8.4 **`str-contains?` allocated a substring per position.** Harmless while only the Chez
+      driver ran it; `emit build` runs it once per candidate name over a whole program's IR, so it
+      is now a character-wise scan. Same behaviour, no garbage.

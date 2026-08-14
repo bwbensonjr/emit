@@ -31,6 +31,7 @@ speed items in this list.
 | [P14](#p14--an-aggregate-constant-is-rebuilt-at-every-evaluation) | An aggregate constant is rebuilt at every evaluation | speed + size | low–med | med | — | ☐ |
 | [P15](#p15--indexed-access-bounds-checks-measured-and-free) | Indexed-access bounds checks: measured, and free | speed | n/a | n/a | `checked-indexed-access` | ☑ |
 | [P16](#p16--argument-type-checks-free-in-time-25-in-size-and-the-size-is-where-the-choice-is) | Argument type checks: free in time, +2.5% in size | speed + size | n/a | n/a | `checked-primitive-arguments` | ☑ |
+| [P17](#p17--the-artifact-cache-has-no-eviction) | The artifact cache has no eviction | disk | low | low–med | — | ☐ |
 
 Legend — **Value**: benefit if fixed. **Cost**: rough implementation effort/risk. These are
 estimates to aid sequencing, not commitments.
@@ -1129,20 +1130,26 @@ before/after IR capture discipline.
 
 **Status:** ☑ done (change: `chez-free-unit-pipeline`, 2026-08-13).
 
-**Outcome, measured on `hello.scm` (arm64 darwin, warm cache both sides):**
+**Outcome, measured on `hello.scm` (arm64 darwin, same machine, idle, best of 3):**
 
 | | before | after |
 |---|---|---|
 | delivered executable | 212,232 B | **93,656 B** (−56%) |
 | the Chez AOT door, same program | 93,656 B | 93,656 B |
-| `emit build`, warm | 0.732 s | **0.484 s** (−34%) |
-| `emit build`, cold cache | 1.902 s | 1.720 s |
+| rebuild of an **unchanged** program | 0.732 s | **0.611 s** (−16%) |
+| build of a **changed** program (baked set warm) | ~0.73 s | ~0.90 s (+23%) |
+| fully cold cache | 1.902 s | 2.054 s (+8%) |
 | `(scheme base)` unit IR into the link | 592,048 B | 5,820 B |
 
 The size claim of this entry is now **exactly** met: the two ship doors deliver the same bytes for
-the same program, so a delivered executable no longer depends on which door built it. The build got
-*faster* rather than slower, cold as well as warm — the design expected the cold row to regress,
-because a shake is a recompile, and the smaller LTO input more than paid for it.
+the same program, so a delivered executable no longer depends on which door built it.
+
+The time rows need reading carefully, and an earlier draft of this note got them wrong by measuring
+a warm shake entry and calling it cold. A shake **is** a recompile of the unit, so a program whose
+IR has changed pays for one; only a rebuild of an unchanged program is served from the cache. The
+honest summary is: **56% smaller always, 16% faster when you rebuild without editing, ~0.17 s slower
+when you do edit.** For the door whose product is a standalone executable that is the right side of
+the trade, and it is the trade the design chose deliberately (D9) rather than one it stumbled into.
 
 The shake reuses `compile-library*` (no second implementation; its root-extraction helpers moved
 from `src/compile.ss` into the shared core so the two doors cannot drift), and each pruned unit is
@@ -1755,6 +1762,48 @@ an unsafe mode — a guarantee that depends on how the program was built is not 
 Nothing is filed as a follow-on: +8.58% on a hello-world is worth recording and watching, not worth
 contorting a memory-safety guarantee for. Item 3 is the one to reach for first if binary size becomes
 pressing, since it is not specific to this change at all.
+
+---
+
+## P17 — The artifact cache has no eviction
+
+**Status:** ☐ open
+
+**Symptom.** Nothing ever removes a cache entry. Measured on a developer machine after a single
+`./run-all-tests.sh` plus a day's iteration: **398 files, 7.2 MB** in `~/Library/Caches/emit`.
+
+Growth has two shapes, and only one of them is bounded:
+
+| entry kind | size | how many | bounded by |
+|---|---|---|---|
+| `baked-` | ~1 MB | one per compiler binary | how often you rebuild `emit` |
+| `unit-` | 8-40 KB | one per (library, compiler) | your libraries |
+| `shake-` | 5-8 KB | one per (**program**, library, compiler) | the programs you build |
+
+The `baked-` entries dominate the bytes and are the ones a developer accumulates fastest —
+every `make regen` or relink produces a new binary digest and orphans the last ~1 MB entry.
+The `shake-` entries are the ones that grow without limit in principle, but they are small: 48
+of them here total under 400 KB.
+
+**Why it has not mattered yet.** 7.2 MB is nothing, the location is `$EMIT_CACHE`-overridable,
+and `rm -rf ~/Library/Caches/emit` is always safe — the cache is a pure accelerator, so deleting
+it costs one recompile and nothing else. That is the whole reason this is filed as debt rather
+than fixed with the change that created it.
+
+**When it will matter.** A CI machine that builds many binaries, or a user who keeps a checkout
+for a year. The orphaning is the sharp edge: a stale `baked-` entry is 1 MB that can never be
+served again, because its key names a binary that no longer exists.
+
+**Fix sketch, cheapest first.** (1) On a successful store, unlink other entries of the same kind
+whose compiler digest is not the running one — precise, needs no policy, and reclaims exactly
+the orphans. (2) A total-size cap with LRU by mtime. (3) An `emit cache` verb (`--path`,
+`--clear`), which is also the discoverable answer to "where does this live?".
+
+**Value:** low — it is disk, not time, and the manual remedy is one `rm`. **Cost:** low–med —
+(1) is a few lines at one call site; (2) and (3) are policy and CLI surface.
+
+**OpenSpec change:** none — see `chez-free-unit-pipeline`'s design, which recorded this as an
+open question and deliberately left it out of scope.
 
 ---
 
