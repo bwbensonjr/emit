@@ -704,10 +704,12 @@
 ;; would surface as undefined symbols at link time on one of them only.  This driver keeps
 ;; the calls; core.ss carries the definitions and the reasoning.
 
-;; `shake?` (AOT ship path) prunes each prunable unit to the bindings the program
-;; actually reaches.  A unit is prunable only if NO OTHER unit in the closure
-;; imports it (else that importer -- kept full -- could reference a dropped
-;; binding); this keeps the first cut sound without full backward DAG propagation.
+;; `shake?` (AOT ship path) prunes EVERY unit in the closure to the bindings still
+;; reached, walking the closure in reverse topological order so that each unit is
+;; shaken against its importers' already-pruned form (change: import-dag-tree-shaking,
+;; design D1).  The first cut shook only a direct import of the program that no other
+;; unit imported -- sound, but it left the substrate whole once (scheme base) began
+;; importing it.  Backward propagation is what retires that limit.
 (define (build-modular-artifacts src out prelude?) (build-modular-artifacts* src out prelude? #f))
 (define (build-modular-artifacts* src out prelude? shake?)
   (set-source-home! src)
@@ -736,56 +738,67 @@
                    ;; the driver has no --dump-all).
                    [prog-ir   (compile-program-with-imports
                                 prelude-forms user-forms direct-tables order *dumpf*)]
-                   [prog-text (string-append header prog-ir)]
-                   [name->ll  (map cons order (reverse lls))]) ; topo-order name -> full .ll
+                   ;; No name->ll map here any more: the shake produces a .ll for EVERY unit,
+                   ;; so nothing falls back to the full artifact (import-dag-tree-shaking).
+                   [prog-text (string-append header prog-ir)])
               (write-text prog-ll prog-text)
               (note "compile ~a -> ~a  [~a bytes]\n" src prog-ll (string-length prog-text))
               (if (not shake?)
                   (values (reverse lls) prog-ll)          ; unit .ll's in link order + program .ll
-                  ;; AOT tree-shake: rebuild each prunable unit to the program's
-                  ;; reachable roots; others keep their full .ll.  Final list stays
-                  ;; in topo (link) order.
-                  (let* ([imported-by-unit                ; units some OTHER unit imports
-                          (fold-left (lambda (acc nm) (union acc (cadr (cdr (assoc nm dl-cache)))))
-                                     '() order)]
-                         [final-lls
-                          (map
-                            (lambda (nm)
-                              (let ([dl (cdr (assoc nm dl-cache))])
-                                ;; `member`, not `memq`: a library name is a LIST of symbols, and
-                                ;; these lists come from different reads -- `order`/`direct-imports`
-                                ;; from the toposort and the program's own source, `imported-by-unit`
-                                ;; from each .sld's parsed import clause -- so they are equal? but
-                                ;; never eq?.  With `memq` the "some other unit imports it" guard
-                                ;; silently never fired, which was unreachable only while no shipped
-                                ;; library imported another; (scheme base) importing the substrate
-                                ;; made it reachable, and the substrate got pruned of the reader
-                                ;; bindings (scheme base) calls -> undefined symbols at link time
-                                ;; (change: scheme-base-partition).
-                                (if (and (member nm direct-imports)
-                                         (not (member nm imported-by-unit)))
-                                    ;; prunable: recompile with the keep-set
-                                    (let* ([exps  (caddr dl)]
-                                           ;; the unit's exports plus what its exported
-                                           ;; macros' templates reach (design D6)
-                                           [cands (append
-                                                    (map cdr exps)
-                                                    (ct-own-refs
-                                                      (table-ct-half
-                                                        (cdr (assoc nm tables)))))]
-                                           [roots (program-root-internals prog-text nm cands)]
-                                           [imp-t (map (lambda (n) (cdr (assoc n tables))) (cadr dl))]
-                                           [res   (compile-library (car dl) (cadr dl) (caddr dl)
-                                                                   (cadddr dl) imp-t no-dump roots)]
-                                           [txt   (string-append header (car res))]
-                                           [pll   (string-append out "." (lib-basename nm) ".pruned.ll")])
-                                      (write-text pll txt)
-                                      (note "shake ~s -> ~a  [~a exports reached, ~a bytes]\n"
-                                            nm pll (length roots) (string-length txt))
-                                      pll)
-                                    (cdr (assoc nm name->ll)))))  ; kept full
-                            order)])
-                    (values final-lls prog-ll))))
+                  ;; AOT tree-shake: rebuild EVERY unit to the roots imposed on it, in
+                  ;; REVERSE topological order (change: import-dag-tree-shaking, design D1).
+                  ;;
+                  ;; The old rule shook only a direct import of the program that no other unit
+                  ;; imports, with this justification: an importer kept full could reference a
+                  ;; binding a dependency dropped.  That hazard is entirely a property of
+                  ;; ORDER.  Finalize importers first and it cannot arise -- so both gates go,
+                  ;; and with them the reason `(emit internal)` shipped whole in every binary
+                  ;; ever built (`(scheme base)` imports it, so it was unprunable by
+                  ;; construction: 348,536 B and 161 symbols to support 1 standard-library
+                  ;; binding in a `car`-only program).
+                  ;;
+                  ;; `root-text` accumulates: the program's IR, then each unit's FINAL (pruned)
+                  ;; IR as it is produced.  Because we walk in reverse topo order, every unit
+                  ;; that could import NM is already in that string when NM is shaken.  Units
+                  ;; that do NOT import NM are in it too and cost nothing -- a unit emits
+                  ;; `ptr @"X:name"` only for a library it imports, so a non-importer mentions
+                  ;; none of NM's symbols.  See program-root-internals in src/core.ss.
+                  ;;
+                  ;; Historical note kept because it cost a debugging session: the retired
+                  ;; guard used `member`, not `memq`, because a library name is a LIST of
+                  ;; symbols read from different places (the toposort, the program's source,
+                  ;; each .sld's import clause) -- equal? but never eq?.  With `memq` it
+                  ;; silently never fired, which was unreachable until (scheme base) imported
+                  ;; the substrate and the fixed point failed to link (scheme-base-partition).
+                  (let shake ([rest (reverse order)] [root-text prog-text] [done (quote ())])
+                    (if (null? rest)
+                        ;; final list back in topo (link) order -- the linker's order is not
+                        ;; the shake's order and this change does not alter it.
+                        (values (map (lambda (nm) (cdr (assoc nm done))) order) prog-ll)
+                        (let* ([nm    (car rest)]
+                               [dl    (cdr (assoc nm dl-cache))]
+                               [exps  (caddr dl)]
+                               ;; the unit's exports plus what its exported macros' templates
+                               ;; reach (change: library-macro-export, design D6)
+                               [cands (append (map cdr exps)
+                                              (ct-own-refs
+                                                (table-ct-half (cdr (assoc nm tables)))))]
+                               [roots (program-root-internals root-text nm cands)]
+                               [imp-t (map (lambda (n) (cdr (assoc n tables))) (cadr dl))]
+                               [res   (compile-library (car dl) (cadr dl) (caddr dl)
+                                                       (cadddr dl) imp-t no-dump roots)]
+                               [txt   (string-append header (car res))]
+                               [pll   (string-append out "." (lib-basename nm) ".pruned.ll")])
+                          (write-text pll txt)
+                          ;; A unit the program does not import directly can only have been
+                          ;; rooted through an importer -- worth saying, because that is the
+                          ;; case that used to be impossible.
+                          (note "shake ~s -> ~a  [~a exports reached, ~a bytes~a]\n"
+                                nm pll (length roots) (string-length txt)
+                                (if (member nm direct-imports) "" ", via importers"))
+                          (shake (cdr rest)
+                                 (string-append root-text txt)
+                                 (cons (cons nm pll) done)))))))
             ;; build or reuse one library
             (let* ([name    (car libs)]
                    [entry   (manifest-lookup manifest name)]
