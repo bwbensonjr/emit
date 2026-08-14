@@ -601,14 +601,62 @@ val rt_modulo(val a, val b) {
   if (r != 0 && ((r < 0) != (db < 0))) r += db;
   return rt_make_flonum(r);
 }
+/* --- comparison across the exactness boundary (change: host-runtime-corrections, #77) ---
+ * A COMPARISON IS DECIDED ON THE OPERANDS' MATHEMATICAL VALUES, not by widening the exact
+ * one to `double`.  Both predicates used to fall through to `to_double(a) OP to_double(b)`,
+ * and a fixnum with more than 53 significant bits is not representable as a double -- so
+ * `(= 9007199254740992.0 9007199254740993)` answered #t and `<` answered #f, both wrong,
+ * with the integer still inside the fixnum range (this is not #27's missing bignums).
+ *
+ * Contagion is a rule about arithmetic RESULTS: an inexact operand makes the result inexact.
+ * A comparison produces a boolean, so there is nothing to make inexact and no reason to
+ * lose precision computing it -- R7RS 6.2.6, and 6.2's rule that a mixed comparison behaves
+ * as if the exact value were used exactly.  `max`/`min` are different and are left alone:
+ * they return a value, so contagion does apply, and they already do it.
+ *
+ * Everything stays in the two-type tower.  Sign of (x - d) for a fixnum x and a double d:
+ * compare x against floor(d), then let the fractional part break the tie.  The
+ * out-of-fixnum-range guards also give the infinities for free -- floor(+inf) is +inf, which
+ * is above any fixnum -- so only NaN needs handling by the callers, where it makes every
+ * comparison false. */
+static int cmp_fix_double(intptr_t x, double d) {
+  double fl = floor(d);
+  if (fl >  9.3e18) return -1;          /* d (or +inf) exceeds every fixnum: x < d */
+  if (fl < -9.3e18) return  1;          /* ...and below every fixnum: x > d */
+  intptr_t fi = (intptr_t)fl;           /* exact: fl is integral and now in range */
+  if (x < fi) return -1;
+  if (x > fi) return  1;
+  return (d == fl) ? 0 : -1;            /* x == floor(d): d is x plus a fraction in (0,1) */
+}
+
 val rt_num_eq(val a, val b) {
   if (tag_of(a) == TAG_FIXNUM && tag_of(b) == TAG_FIXNUM) return truthy(UNFIX(a) == UNFIX(b));
-  if (is_number(a) && is_number(b)) return truthy(to_double(a) == to_double(b));
+  if (is_number(a) && is_number(b)) {
+    if (tag_of(a) == TAG_FIXNUM) {                      /* exact vs inexact */
+      double d = flo_val(b);
+      return truthy(!isnan(d) && cmp_fix_double(UNFIX(a), d) == 0);
+    }
+    if (tag_of(b) == TAG_FIXNUM) {
+      double d = flo_val(a);
+      return truthy(!isnan(d) && cmp_fix_double(UNFIX(b), d) == 0);
+    }
+    return truthy(to_double(a) == to_double(b));        /* both inexact */
+  }
   rt_fatal("=: not a number"); return NIL_V;
 }
 val rt_lt(val a, val b) {
   if (tag_of(a) == TAG_FIXNUM && tag_of(b) == TAG_FIXNUM) return truthy(UNFIX(a) < UNFIX(b));
-  if (is_number(a) && is_number(b)) return truthy(to_double(a) < to_double(b));
+  if (is_number(a) && is_number(b)) {
+    if (tag_of(a) == TAG_FIXNUM) {                      /* exact < inexact */
+      double d = flo_val(b);
+      return truthy(!isnan(d) && cmp_fix_double(UNFIX(a), d) < 0);
+    }
+    if (tag_of(b) == TAG_FIXNUM) {                      /* inexact < exact */
+      double d = flo_val(a);
+      return truthy(!isnan(d) && cmp_fix_double(UNFIX(b), d) > 0);
+    }
+    return truthy(to_double(a) < to_double(b));         /* both inexact */
+  }
   rt_fatal("<: not a number"); return NIL_V;
 }
 val rt_null_p(val v)       { return truthy(v == NIL_V); }
@@ -678,13 +726,28 @@ val *rt_apply_argv(intptr_t n, val *pre, val lst, intptr_t K) {
 }
 
 /* arity error: report to stderr and abort with a non-zero exit code. */
+/* AN ARITY MISMATCH IS A CONDITION ABOUT DATA (change: host-runtime-corrections, issue
+ * #96), so it is delivered to a handler like every other one.
+ *
+ * This body used to DUPLICATE the format-print-abort sequence rather than call rt_fatal,
+ * which is the whole reason it did not become catchable for free when
+ * `catchable-errors-with-kinds` routed the other ~44 trap sites through rt_trap_deliver:
+ * they funnelled through rt_fatal/rt_fatalf and this one never called either.  The wording
+ * cannot move, because it is the same snprintf into the same buffer.
+ *
+ * On the criterion `core-language` states for the fatal side -- "the machinery itself is
+ * unsound" -- this belongs here rather than there: a mismatch reports that a CALLER passed
+ * the wrong number of arguments, the heap and the frame stacks are intact, and a handler
+ * runs on structures whose invariants all hold.  It sat on the fatal side by the boundary of
+ * the change that introduced the mechanism, not by that test.
+ *
+ * A `guard` around a known-arity DIRECT call still sees nothing: the compiler rejects those
+ * statically, so no call is emitted.  This governs indirect and `apply` calls. */
 void rt_arity_error(intptr_t expected, intptr_t got) {
   snprintf(rt_trap_msg, sizeof rt_trap_msg,
            "arity error: expected %ld argument(s), got %ld",
            (long)expected, (long)got);
-  fprintf(stderr, "%s\n", rt_trap_msg);
-  if (rt_trap) longjmp(*rt_trap, 1);
-  exit(1);
+  rt_trap_deliver();
 }
 
 /* --- symbols (interned) ------------------------------------------------ */
@@ -1892,8 +1955,28 @@ static void err_put(char *buf, size_t cap, size_t *off, const char *s, size_t n)
   for (size_t i = 0; i < n && *off + 1 < cap; i++) buf[(*off)++] = s[i];
   buf[*off] = '\0';
 }
+/* THE TRAP FORMATTER IS BOUNDED, NOT LABELLED (change: host-runtime-corrections, issue
+ * #90; design D1).  `err_put` already respects `cap`, so a full buffer stopped the COPYING
+ * -- but every loop here kept WALKING, so a cyclic irritant spun forever having emitted
+ * nothing at all: `(error "boom" x)` on a circular list produced zero bytes and never
+ * returned.  Measured, not theorised.
+ *
+ * `write` answers this with datum labels; this path must not.  It formats into the static
+ * `rt_trap_msg` with no allocation, because it runs while a trap is being delivered and the
+ * heap is the thing least worth trusting; a visited set here would be allocation on exactly
+ * the wrong path, to make a diagnostic nobody reads back round-trip.  A bound is all it
+ * needs, and the bound falls out of the buffer it already has.
+ *
+ * One check does both jobs.  Gating on "the buffer is full" at function entry AND in every
+ * loop terminates a cycle (the walk stops once the text stops) and also caps recursion
+ * depth: each level emits at least one byte before descending, so depth cannot exceed the
+ * capacity.  A few bytes of headroom are reserved so a truncated render can say `...`
+ * rather than simply stopping mid-datum. */
+static int err_full(size_t cap, size_t *off) { return *off + 5 >= cap; }
+
 static void err_write(char *buf, size_t cap, size_t *off, val v) {
   char tmp[32];
+  if (err_full(cap, off)) return;
   switch (tag_of(v)) {
     case TAG_FIXNUM:
       err_put(buf, cap, off, tmp, (size_t)snprintf(tmp, sizeof tmp, "%ld", (long)UNFIX(v)));
@@ -1913,13 +1996,17 @@ static void err_write(char *buf, size_t cap, size_t *off, val v) {
     case TAG_PAIR: {
       err_put(buf, cap, off, "(", 1);
       val cur = v; int first = 1;
-      while (tag_of(cur) == TAG_PAIR) {
+      while (tag_of(cur) == TAG_PAIR && !err_full(cap, off)) {
         if (!first) err_put(buf, cap, off, " ", 1);
         first = 0;
         err_write(buf, cap, off, as_ptr(cur)[0]);
         cur = as_ptr(cur)[1];
       }
-      if (cur != NIL_V) { err_put(buf, cap, off, " . ", 3); err_write(buf, cap, off, cur); }
+      if (tag_of(cur) == TAG_PAIR) {                    /* stopped on the bound: say so */
+        err_put(buf, cap, off, " ...", 4);
+      } else if (cur != NIL_V) {
+        err_put(buf, cap, off, " . ", 3); err_write(buf, cap, off, cur);
+      }
       err_put(buf, cap, off, ")", 1);
       break;
     }
@@ -1929,10 +2016,14 @@ static void err_write(char *buf, size_t cap, size_t *off, val v) {
       if (ext_hdr(v) == HDR_ERROR) {                       /* message, then irritants */
         val msg = as_ptr(v)[1], irritants = as_ptr(v)[2];
         err_put(buf, cap, off, str_bytes(msg), (size_t)str_len(msg));
-        for (val cur = irritants; tag_of(cur) == TAG_PAIR; cur = as_ptr(cur)[1]) {
+        /* bounded for the same reason as the spine above: an irritant LIST can be
+         * circular too, and this loop is where `(error "msg" <cyclic>)` used to spin */
+        val cur = irritants;
+        for (; tag_of(cur) == TAG_PAIR && !err_full(cap, off); cur = as_ptr(cur)[1]) {
           err_put(buf, cap, off, " ", 1);
           err_write(buf, cap, off, as_ptr(cur)[0]);
         }
+        if (tag_of(cur) == TAG_PAIR) err_put(buf, cap, off, " ...", 4);
         break;
       }
       if (ext_hdr(v) == HDR_FLONUM) {
@@ -2104,6 +2195,34 @@ static val *rt_raiser_cell   = NULL;      /* [1]: the installed raiser thunk */
 static val *rt_trap_obj_cell = NULL;      /* [1]: the object being delivered */
 static rt_apply0_t rt_raiser_fn = NULL;   /* the installing module's ccc trampoline */
 
+/* --- selecting the raiser per host entry (change: host-runtime-corrections, issue #97) ---
+ * The cell above is ONE global, but a host process holds more than one instance of the
+ * standard library: `build/emit` links its own baked `(scheme base)`, and a REPL session
+ * JITs a second one for the code it compiles.  Each `__init` arms the raiser, so the LAST
+ * one to initialize wins -- and from the first session onward, a trap inside the COMPILER
+ * was raised into the SESSION's handler chain, which is empty while compiling.
+ *
+ * That is not merely a mis-attributed message.  `compile-one-form` (src/repl-core.ss) wraps
+ * every per-form compile in a `guard` whose handler RESTORES A SESSION SNAPSHOT -- the env,
+ * the macro environment, the known set, the counter -- so that a failing form cannot leave
+ * the session half-mutated (design D3 of the REPL work).  A trap that walks the wrong
+ * chain bypasses that handler, so the session survives with state from a form that failed.
+ *
+ * THE FIRST RAISER ARMED IN THE PROCESS IS THE HOST'S OWN, by construction: the host's
+ * linked-in standard library initializes before any JIT'd module can be added, let alone
+ * run.  Remembering it costs one cell and spares the host from having to know its own
+ * startup order -- it just asks to run "as the host" around a compile call.
+ *
+ * The saved thunks live in an UNCOLLECTABLE, SCANNED array for the same reason the live
+ * cell does: a saved closure must survive a collection between save and restore.  Function
+ * pointers are not GC objects, so those ride a plain static array. */
+#define RT_RAISER_DEPTH 8
+static val         *rt_raiser_first_cell = NULL;              /* [1]: first armed thunk */
+static rt_apply0_t  rt_raiser_first_fn   = NULL;
+static val         *rt_raiser_saved      = NULL;              /* [RT_RAISER_DEPTH] */
+static rt_apply0_t  rt_raiser_saved_fn[RT_RAISER_DEPTH];
+static int          rt_raiser_sp = 0;
+
 /* Install the raiser.  FN is the caller module's @__apply0, passed by the emitter's
  * special case for %set-trap-raiser! exactly as it is for %run-guarded. */
 val rt_set_trap_raiser(rt_apply0_t fn, val thunk) {
@@ -2113,7 +2232,37 @@ val rt_set_trap_raiser(rt_apply0_t fn, val thunk) {
    * happens before the hand-off the better. */
   rt_repl_cell(&rt_trap_obj_cell, FALSE_V);
   rt_raiser_fn = fn;
+  if (rt_raiser_first_fn == NULL) {          /* the host's own instance; see above */
+    rt_repl_cell(&rt_raiser_first_cell, FALSE_V)[0] = thunk;
+    rt_raiser_first_fn = fn;
+  }
   return UNSPEC_V;
+}
+
+/* Run the next stretch of code as the HOST's instance: save whatever raiser is current and
+ * install the first-armed one.  Returns a token for rt_raiser_leave_host, or -1 when there
+ * is nothing to swap (no raiser armed yet, or the nesting depth is exhausted -- in which
+ * case the current raiser simply stays, which is the pre-existing behaviour). */
+intptr_t rt_raiser_enter_host(void) {
+  if (rt_raiser_first_fn == NULL || rt_raiser_sp >= RT_RAISER_DEPTH) return -1;
+  if (!rt_raiser_saved)
+    rt_raiser_saved = (val *)GC_MALLOC_UNCOLLECTABLE(RT_RAISER_DEPTH * sizeof(val));
+  int t = rt_raiser_sp++;
+  rt_raiser_saved[t]    = rt_repl_cell(&rt_raiser_cell, FALSE_V)[0];
+  rt_raiser_saved_fn[t] = rt_raiser_fn;
+  rt_repl_cell(&rt_raiser_cell, FALSE_V)[0] = rt_repl_cell(&rt_raiser_first_cell, FALSE_V)[0];
+  rt_raiser_fn = rt_raiser_first_fn;
+  return t;
+}
+
+/* Put back the raiser that rt_raiser_enter_host displaced.  Safe to call after a longjmp
+ * out of the bracketed call: the token pops the stack back to where it was, so an
+ * abandoned entry leaks no depth. */
+void rt_raiser_leave_host(intptr_t t) {
+  if (t < 0 || t >= RT_RAISER_DEPTH) return;
+  rt_raiser_sp = (int)t;
+  rt_repl_cell(&rt_raiser_cell, FALSE_V)[0] = rt_raiser_saved[t];
+  rt_raiser_fn = rt_raiser_saved_fn[t];
 }
 
 /* The object the raiser is being asked to raise. */
@@ -2232,7 +2381,182 @@ static int sym_needs_bars(const char *s) {
   return 0;
 }
 
+/* --- datum labels: the printer terminates on a cycle -----------------------
+ * (change: host-runtime-corrections, issue #90.)  R7RS 6.13.3 requires `write` to use
+ * datum labels for a structure containing a cycle, so its output is finite and reads back
+ * as the same structure.  Before this the pair arm followed `cdr` until a non-pair and the
+ * vector arm recursed on elements, so a cycle -- constructible since `set-car!`/`set-cdr!`
+ * landed -- printed forever.  Measured, on all four routes: stdout, a string port (worse,
+ * since the output accumulates in the port's buffer and grows the heap), and both write and
+ * display.
+ *
+ * ONLY A CYCLE IS LABELLED, not every shared node.  A node revisited while it is still on
+ * the current path is a back-edge target and gets a label; a node revisited after it has
+ * been fully explored is acyclic sharing and is printed in full a second time.  That is the
+ * `write` / `write-shared` distinction (R7RS 6.13.3), and labelling all sharing here would
+ * make `write` do `write-shared`'s job.  Labelling back-edge targets alone is sufficient
+ * for termination: every cycle contains one, and the second visit prints `#N#`.
+ *
+ * THE TABLE IS STATIC AND REUSED, with a generation counter instead of a clear:
+ *
+ *   - no allocation for ordinary data -- 128 slots live in .bss, which covers anything a
+ *     REPL echo or a demo prints;
+ *   - O(1) lookups, so printing a long list stays linear.  A linear scan would have made
+ *     printing an n-element list O(n^2), which is a real regression on the common path and
+ *     the reason this is a hash table rather than the small array the design first proposed;
+ *   - `pl_gen++` invalidates every entry at once, so a print that is abandoned by a longjmp
+ *     (a trap while printing) leaves nothing to clean up -- the next print cannot see stale
+ *     entries.  That self-healing is why the generation counter is worth the field.
+ *
+ * The keys are Scheme pointers but nothing dereferences them after the scan, and the datum
+ * being printed is held by the caller, so the table needs no GC visibility of its own.
+ *
+ * Not addressed here, and pre-existing: `print_val` recurses on cars and vector elements, so
+ * a datum nested a million deep can still exhaust the C stack.  The scan mirrors the
+ * printer exactly -- iterative along a pair spine, recursive into cars and elements -- so it
+ * adds no new depth of its own. */
+typedef struct {
+  val           key;
+  int           label;         /* -1 until the node is found to be a back-edge target */
+  unsigned char onpath;        /* on the current DFS path (scan only) */
+  unsigned char printed;       /* `#N=` already emitted (print only) */
+  unsigned      gen;           /* entry is live iff gen == pl_gen */
+} pl_slot;
+
+#define PL_STATIC_SLOTS 128u   /* power of two */
+
+static pl_slot  pl_static[PL_STATIC_SLOTS];
+static pl_slot *pl_tab = pl_static;
+static size_t   pl_cap = PL_STATIC_SLOTS;    /* always a power of two */
+static size_t   pl_used = 0;
+static unsigned pl_gen = 0;
+static int      pl_next_label = 0;
+static int      pl_any = 0;                  /* did the scan find any cycle at all? */
+
+static int pl_labelable(val v) { return tag_of(v) == TAG_PAIR || is_vector(v); }
+
+static size_t pl_hash(val v) {
+  uintptr_t x = (uintptr_t)v >> 3;
+  x *= (uintptr_t)0x9E3779B97F4A7C15ull;      /* fibonacci mix; pointers are not random */
+  return (size_t)(x >> 17);
+}
+
+static void pl_grow(void);
+
+/* Find V's slot, creating it when CREATE.  The returned pointer is invalidated by any
+ * later create, so callers use it before recursing (they do). */
+static pl_slot *pl_find(val v, int create) {
+  size_t mask = pl_cap - 1, i = pl_hash(v) & mask;
+  for (;;) {
+    pl_slot *s = &pl_tab[i];
+    if (s->gen != pl_gen) {                   /* empty in this generation */
+      if (!create) return NULL;
+      if ((pl_used + 1) * 2 >= pl_cap) { pl_grow(); return pl_find(v, 1); }
+      s->gen = pl_gen; s->key = v; s->label = -1; s->onpath = 0; s->printed = 0;
+      pl_used++;
+      return s;
+    }
+    if (s->key == v) return s;
+    i = (i + 1) & mask;
+  }
+}
+
+/* Double the table and rehash this generation's entries.  The old static array is left
+ * alone (it is .bss); a grown table is GC_MALLOCed and simply dropped on the next grow. */
+static void pl_grow(void) {
+  size_t ncap = pl_cap * 2;
+  pl_slot *ntab = (pl_slot *)GC_MALLOC(ncap * sizeof(pl_slot));
+  pl_slot *otab = pl_tab; size_t ocap = pl_cap;
+  pl_tab = ntab; pl_cap = ncap;
+  size_t mask = ncap - 1;
+  for (size_t i = 0; i < ocap; i++) {
+    if (otab[i].gen != pl_gen) continue;
+    size_t j = pl_hash(otab[i].key) & mask;
+    while (ntab[j].gen == pl_gen) j = (j + 1) & mask;
+    ntab[j] = otab[i];
+  }
+}
+
+/* Pass 1: find every node that is reachable from itself, and label it. */
+static void pl_scan(val v) {
+  if (!pl_labelable(v)) return;
+  if (tag_of(v) == TAG_PAIR) {
+    /* Iterate the spine, exactly as the printer does, so a long list costs no C stack.
+     * Cars recurse; their depth is the datum's nesting, not its length. */
+    val cur = v; intptr_t pushed = 0;
+    while (tag_of(cur) == TAG_PAIR) {
+      pl_slot *s = pl_find(cur, 1);
+      if (s->onpath) {                          /* back edge: this node closes a cycle */
+        if (s->label < 0) { s->label = pl_next_label++; pl_any = 1; }
+        break;
+      }
+      if (s->printed) break;                    /* already fully explored (see below) */
+      s->onpath = 1; pushed++;
+      pl_scan(as_ptr(cur)[0]);
+      cur = as_ptr(cur)[1];
+    }
+    if (tag_of(cur) != TAG_PAIR && cur != NIL_V) pl_scan(cur);   /* improper tail */
+    /* Unwind EXACTLY the nodes this invocation pushed -- the first `pushed` of the spine
+     * starting at v -- and no others.  Clearing "while the node is still on the path"
+     * instead is wrong, and subtly: a car that points back at an ancestor re-enters
+     * pl_scan on a node the OUTER walk owns, and that nested call would clear the outer
+     * walk's marks on its way out.  The outer walk then unwinds nothing, leaving a later
+     * spine node marked on-path forever -- so the next node to reach it looks like a back
+     * edge and gets a label it should not have.  A spurious `#0=` on acyclic data, from a
+     * shape as ordinary as a cycle through a car plus sharing further down the list.
+     *
+     * `printed` doubles as the "fully explored" mark during the scan; it is only read by
+     * the print pass, which runs after, and reusing it keeps the slot to four fields. */
+    for (val c = v; pushed > 0; c = as_ptr(c)[1], pushed--) {
+      pl_slot *s = pl_find(c, 0);
+      if (s) { s->onpath = 0; s->printed = 1; }
+    }
+  } else {
+    pl_slot *s = pl_find(v, 1);
+    if (s->onpath) {
+      if (s->label < 0) { s->label = pl_next_label++; pl_any = 1; }
+      return;
+    }
+    if (s->printed) return;
+    s->onpath = 1;
+    intptr_t len = (intptr_t)as_ptr(v)[1];
+    for (intptr_t i = 0; i < len; i++) pl_scan(as_ptr(v)[i + 2]);
+    s = pl_find(v, 0);                  /* re-find: a nested scan may have grown the table */
+    if (s) { s->onpath = 0; s->printed = 1; }
+  }
+}
+
+/* Between the two passes: `printed` was the scan's "explored" mark, so clear it before the
+ * print pass gives it its real meaning.  Only labelled nodes matter, and there are few. */
+static void pl_reset_printed(void) {
+  for (size_t i = 0; i < pl_cap; i++)
+    if (pl_tab[i].gen == pl_gen) pl_tab[i].printed = 0;
+}
+
+static void print_node(FILE *out, val v, int display);
+
 static void print_val(FILE *out, val v, int display) {
+  if (pl_labelable(v)) {
+    pl_gen++; pl_used = 0; pl_next_label = 0; pl_any = 0;
+    pl_scan(v);
+    if (pl_any) pl_reset_printed();
+  } else {
+    pl_any = 0;                     /* an atom cannot contain a cycle: no scan, no cost */
+  }
+  print_node(out, v, display);
+}
+
+static void print_node(FILE *out, val v, int display) {
+  /* A labelled node prints `#N=` at its first occurrence and `#N#` at every later one.
+   * Gated on pl_any, so a datum with no cycle does not pay a lookup per node. */
+  if (pl_any && pl_labelable(v)) {
+    pl_slot *s = pl_find(v, 0);
+    if (s && s->label >= 0) {
+      if (s->printed) { fprintf(out, "#%d#", s->label); return; }
+      s->printed = 1;
+      fprintf(out, "#%d=", s->label);
+    }
+  }
   switch (tag_of(v)) {
     case TAG_FIXNUM: fprintf(out, "%ld", (long)UNFIX(v)); break;
     case TAG_BOOL:
@@ -2240,10 +2564,44 @@ static void print_val(FILE *out, val v, int display) {
         intptr_t cp = CHAR_CP(v);
         unsigned char buf[4];
         int n = utf8_encode(cp, buf);
-        if (display)          fwrite(buf, 1, (size_t)n, out);   /* the raw character */
-        else if (cp == ' ')   fprintf(out, "#\\space");
-        else if (cp == '\n')  fprintf(out, "#\\newline");
-        else { fprintf(out, "#\\"); fwrite(buf, 1, (size_t)n, out); }
+        /* WRITE NAMES EVERY R7RS CHARACTER AND HEX-ESCAPES THE REST (change:
+         * host-runtime-corrections, issue #94).  Only `space` and `newline` were named, so
+         * every other control character was written as `#\` plus its RAW BYTE: `#\<BEL>`
+         * rang the terminal, `#\<ESC>` could start an escape sequence, and `#\<NUL>` put a
+         * literal zero byte in the stream -- enough to make ordinary text tooling classify
+         * a transcript as binary and show nothing at all.  R7RS 6.13.3 asks only that write
+         * round-trip, which the raw byte technically did; this is the legibility and safety
+         * half, and it is why the change owns a user-visible output move.
+         *
+         * The names are R7RS 6.6's, in the R7RS spelling even where the reader also accepts
+         * an alias (`escape`, not `altmode`/`esc`), so output stays portable.  The reader's
+         * table is `rd-char-name` in src/prelude.scm and cannot be shared with this one --
+         * that is in-language, this is C -- so a round-trip test is what holds the two
+         * together (design D6).
+         *
+         * `display` is untouched: it writes the raw character in every case, which
+         * write-char and the port procedures depend on. */
+        if (display) { fwrite(buf, 1, (size_t)n, out); break; }
+        switch (cp) {
+          case 0x00: fprintf(out, "#\\null");      break;
+          case 0x07: fprintf(out, "#\\alarm");     break;
+          case 0x08: fprintf(out, "#\\backspace"); break;
+          case 0x09: fprintf(out, "#\\tab");       break;
+          case 0x0a: fprintf(out, "#\\newline");   break;
+          case 0x0d: fprintf(out, "#\\return");    break;
+          case 0x1b: fprintf(out, "#\\escape");    break;
+          case 0x20: fprintf(out, "#\\space");     break;
+          case 0x7f: fprintf(out, "#\\delete");    break;
+          default:
+            /* Any other non-graphic codepoint -- the C0 controls, and the C1 block, which
+             * is equally unprintable -- as `#\xHH`, the one spelling that makes an
+             * arbitrary control character legible AND readable (the reader accepts it since
+             * change: r7rs-lexical-conformance).  Everything else prints literally, so a
+             * letter, a digit, and `#\λ` are unaffected. */
+            if (cp < 0x20 || (cp >= 0x80 && cp <= 0x9f)) fprintf(out, "#\\x%lx", (unsigned long)cp);
+            else { fprintf(out, "#\\"); fwrite(buf, 1, (size_t)n, out); }
+            break;
+        }
       } else if (is_unspec(v)) {                /* unspecified value shares tag 001 */
         /* Non-readable, like #<procedure>: there is no reader syntax, so `write` cannot
          * round-trip it and `display` has nothing rawer to show.  Both modes print the
@@ -2266,12 +2624,31 @@ static void print_val(FILE *out, val v, int display) {
       fprintf(out, "(");
       val cur = v; int first = 1;
       while (tag_of(cur) == TAG_PAIR) {
-        if (!first) fprintf(out, " ");
+        /* A LABELLED SPINE NODE IS DELEGATED, and this is what makes a cyclic LIST
+         * terminate (issue #90).  The spine is walked iteratively -- so a long list costs
+         * no C stack -- which means the label check at print_node's entry is never reached
+         * for the nodes this loop steps to.  Without the check here, the label on the head
+         * of a cycle was emitted once and then the loop walked the ring forever:
+         * `#0=(1 2 1 2 1 2 ...`.  Only a cycle target carries a label, so delegating on one
+         * is exactly the point where the list closes back on itself, and it renders as the
+         * improper tail it actually is: `#0=(1 2 . #0#)`. */
+        if (!first) {
+          if (pl_any) {
+            pl_slot *s = pl_find(cur, 0);
+            if (s && s->label >= 0) {
+              fprintf(out, " . ");
+              print_node(out, cur, display);
+              cur = NIL_V;                      /* tail already printed */
+              break;
+            }
+          }
+          fprintf(out, " ");
+        }
         first = 0;
-        print_val(out, as_ptr(cur)[0], display);
+        print_node(out, as_ptr(cur)[0], display);
         cur = as_ptr(cur)[1];
       }
-      if (cur != NIL_V) { fprintf(out, " . "); print_val(out, cur, display); }
+      if (cur != NIL_V) { fprintf(out, " . "); print_node(out, cur, display); }
       fprintf(out, ")");
       break;
     }
@@ -2325,7 +2702,7 @@ static void print_val(FILE *out, val v, int display) {
           fprintf(out, "#(");
           for (intptr_t i = 0; i < len; i++) {
             if (i) fputc(' ', out);
-            print_val(out, as_ptr(v)[i + 2], display);
+            print_node(out, as_ptr(v)[i + 2], display);
           }
           fputc(')', out);
           break;

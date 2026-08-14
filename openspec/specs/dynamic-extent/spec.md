@@ -195,6 +195,15 @@ The behaviour of `guard` and `raise` SHALL otherwise be unchanged: a raised obje
 the nearest enclosing `guard`, and an unhandled raise is rendered and terminates the program as
 before.
 
+**A trap delivered into the handler chain SHALL reach the chain of the code that trapped.** The
+mechanism that raises a runtime trap as a condition (see `core-language`) is a host-level installation,
+and a host process may hold more than one instance of the standard library — a compiler linked with its
+own, plus one compiled for the code it is compiling. Each instance has its own `guard`/handler chain,
+so the raiser in effect SHALL be the one belonging to the code currently executing rather than
+whichever instance was initialized last. Without this, handlers installed by one instance silently
+never see traps raised in its own code, and the failure appears as an unrelated abort several layers
+from its cause.
+
 #### Scenario: Existing guard behaviour is preserved
 
 - **WHEN** a program raises an error object caught by an enclosing `guard` with no `dynamic-wind`
@@ -234,6 +243,13 @@ before.
 - **WHEN** a program catches a runtime trap and then evaluates a second trapping expression inside
   another `guard`
 - **THEN** the second is caught as well
+
+#### Scenario: A guard in one library instance catches its own trap
+
+- **WHEN** a host holds two instances of the standard library, code in the first installs a `guard`,
+  and a runtime trap fires inside that code while the second instance is the most recently initialized
+- **THEN** the first instance's handler runs, rather than the trap walking the second instance's empty
+  chain and escaping to the host
 
 ### Requirement: An after thunk that itself raises or escapes
 

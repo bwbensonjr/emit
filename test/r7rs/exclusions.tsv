@@ -20,7 +20,7 @@
 # key	reason	note
 00333ccebfc6b47c	unimplemented	(scheme char)
 00c7919307869b40	unimplemented	(scheme char)
-00dfc2d5f8bd4d56	issue-90	list? does not terminate on a circular list
+00dfc2d5f8bd4d56	issue-108	list? does not terminate on a circular list
 01fed9ade0df6bff	deliberate:#27	no exact rationals / bignums
 0285380ea20af770	unimplemented	(scheme char)
 033ed0d2cb4b7661	deliberate:#27	complex or rational literal read as a variable
@@ -55,7 +55,6 @@
 12da3a51c74995d3	deliberate:#27	(scheme complex) stays absent
 12e5cf81ec05cf03	deliberate:#27	(scheme complex) stays absent
 132848e1c2962230	unimplemented	(scheme char)
-14dc3d5924fd4a26	issue-77	= and < coerce an exact integer to double
 1510c875abc9c14b	blocked-by:4767069ee08aecb9	needs any-arity
 160d476c3ef5a946	unimplemented	(scheme lazy) -- prelude macros once #79 is fixed
 1713ba4f63ace598	unimplemented	(scheme lazy) -- prelude macros once #79 is fixed
@@ -98,6 +97,7 @@
 33c8ccd239f209df	unimplemented	derived syntax / non-top-level define-syntax
 344549e3c5f60b42	unimplemented	(scheme char)
 3565a4a68ef76f5b	unimplemented	(scheme char)
+357bdf7440b38f21	deliberate:r7rs-lexical-conformance	write spells |+NaN.0abc| bare; R7RS 7.1.1 makes it a peculiar identifier (+ . N . aN.0abc) so the bare form is legal AND round-trips -- chibi is stricter than the report
 35fa323833e5dabf	deliberate:#27	no exact rationals / bignums
 369e60cc4f1b4c6a	unimplemented	(scheme char)
 37ae3aaf3fb15429	unimplemented	(scheme char)
@@ -125,7 +125,7 @@
 4a5da5d9998f941d	unimplemented	(scheme char)
 4ca516c7b890b5ca	unimplemented	(scheme char)
 4ddb72d7af13667c	unimplemented	(scheme char)
-4dea3fc446ec34ba	issue-90	write of a circular structure does not terminate
+4dea3fc446ec34ba	issue-108	equal? does not terminate on the cyclic datum this form builds
 4df3e3dd01ca3535	deliberate:#27	(scheme complex) stays absent
 4f5fc971bcf993fb	unimplemented	(scheme char)
 4f70e6cd2216bc8b	unimplemented	binary ports and bytevector I/O
@@ -178,7 +178,6 @@
 7801bb74921536b4	unimplemented	binary ports and bytevector I/O
 78225a304c5f3a86	deliberate:not-R7RS-small	exponent markers s/f/d/l are not in R7RS-small
 78d1405688c18d6a	unimplemented	(scheme char)
-797defea53bf5441	issue-90	write of a circular structure to a string port does not terminate
 79a12b7e8e5f54fe	deliberate:#27	complex or rational literal read as a variable
 7b1a477a5e4f1e2b	unimplemented	(scheme char)
 7b6f4761ecb1f32a	unimplemented	(scheme char)
@@ -367,4 +366,3 @@ fbcd30634dd83124	unimplemented	(scheme char)
 fc47f0917a89ba66	deliberate:not-R7RS-small	exponent markers s/f/d/l are not in R7RS-small
 fc71028eb74e4a0d	deliberate:#27	complex or rational literal read as a variable
 fd7159f95292d163	unimplemented	(scheme char)
-357bdf7440b38f21	deliberate:r7rs-lexical-conformance	write spells |+NaN.0abc| bare; R7RS 7.1.1 makes it a peculiar identifier (+ . N . aN.0abc) so the bare form is legal AND round-trips -- chibi is stricter than the report
