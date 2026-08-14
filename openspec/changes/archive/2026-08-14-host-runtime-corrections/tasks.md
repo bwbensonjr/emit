@@ -58,7 +58,7 @@
 
 ## 9. Verification and close-out
 
-- [ ] 9.1 `make` (not `make regen`) and run `./run-all-tests.sh` with `EMIT_R7RS=1`, then `./run-dev-tests.sh`. Both suites in full; no barrier to budget for.
-- [ ] 9.2 Confirm `git status bootstrap/` is clean — a host-only change must not touch committed IR, and a dirty `bootstrap/` here means something reached `CORE_FLAT` after all.
+- [x] 9.1 `make` (not `make regen`) and run `./run-all-tests.sh` with `EMIT_R7RS=1`, then `./run-dev-tests.sh`. Both suites in full; no barrier to budget for.
+- [x] 9.2 Confirm `git status bootstrap/` is clean — a host-only change must not touch committed IR, and a dirty `bootstrap/` here means something reached `CORE_FLAT` after all.
 - [x] 9.3 Sync the `core-language` and `dynamic-extent` deltas into the main specs. Both deltas were generated from the live spec text and audited for dropped scenarios and prose; run that audit again after syncing, per the trap that cost a re-sync last change.
-- [ ] 9.4 Commit with `Fixes #90`, `Fixes #94`, `Fixes #96`, `Fixes #97`, `Fixes #77`, and open the PR. Note on #97 that its "latent" framing was wrong and the fix is verified by session survival; note on #90 that `list?` moved to #108.
+- [x] 9.4 Commit with `Fixes #90`, `Fixes #94`, `Fixes #96`, `Fixes #97`, `Fixes #77`, and open the PR. Note on #97 that its "latent" framing was wrong and the fix is verified by session survival; note on #90 that `list?` moved to #108.
