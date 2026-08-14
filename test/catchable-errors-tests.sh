@@ -17,8 +17,12 @@
 #     the raiser call, and getting that wrong makes exactly the second trap fatal;
 #   * a trap raised INSIDE a handler reports and aborts rather than recursing;
 #   * the four kinds, from all four sources, plus a non-error object;
-#   * a violation of the runtime's own invariants stays fatal (design D2) -- an
-#     arity error is not delivered to a handler;
+#   * an ARITY MISMATCH is delivered to a handler too (change: host-runtime-corrections,
+#     issue #96).  It used to be asserted here as fatal; it is a condition about data by
+#     design D2's own criterion -- a caller passed the wrong count, the machinery is
+#     intact -- and `core-language` was edited rather than quietly contradicted.  What
+#     stays fatal is what genuinely reports unsound machinery: guard-frame exhaustion,
+#     an escape to a dead frame, allocation failure;
 #   * `delete-file` / `file-exists?`, including the file error on a missing path.
 #
 # Uncaught wording is NOT re-checked here: it is byte-identical by construction
@@ -107,10 +111,33 @@ aborts "a trap raised inside a handler reports and aborts, without recursing" \
   '(begin (display "before") (newline) (guard (e (#t (+ 1 (quote a)))) (car 7)))' \
   'not a number'
 
-# --- the runtime's own invariants stay fatal (design D2) ---------------------
-aborts "an arity error is not delivered to a handler" \
+# --- an arity mismatch is a condition ABOUT DATA, so it IS delivered ---------
+# This row is INVERTED from what it asserted before (change: host-runtime-corrections,
+# issue #96).  `catchable-errors-with-kinds` put an arity mismatch on the fatal side by the
+# boundary of that change and recorded, in its own design D2 and open question, that the
+# placement did not follow from the criterion: a mismatch reports that a CALLER passed the
+# wrong number of arguments, so the heap and the frame stacks are intact and a handler runs
+# on structures whose invariants all hold.  `core-language` has been edited to match, and
+# `rt_arity_error` now calls rt_trap_deliver like every other trap site instead of
+# duplicating the format-print-abort body -- which is why it did not move for free before.
+check "an arity error IS delivered to a handler" \
   '(begin (define (f a b) a) (guard (e (#t (quote caught))) (apply f (list 1))))' \
-  'arity error'
+  'caught'
+# ...carrying the same diagnostic text it reports when uncaught
+check "the caught arity object is an error object with the arity message" \
+  '(begin (define (f a b) a)
+          (guard (e (#t (list (error-object? e) (error-object-message e))))
+            (apply f (list 1))))' \
+  '(#t "arity error: expected 2 argument(s), got 1")'
+# ...and with NO handler the report and the exit status are exactly as before
+aborts "an uncaught arity error still reports and aborts" \
+  '(begin (define (f a b) a) (apply f (list 1)))' \
+  'arity error: expected 2 argument(s), got 1'
+
+# --- what DOES stay fatal (design D2's criterion, unchanged) -----------------
+# The fatal side is now exactly the violations that say the machinery itself is unsound:
+# guard-frame exhaustion, an escape to a dead frame, allocation failure.  A trap raised
+# while a trap is in flight (above) is the reachable one of those.
 
 # --- the kind, from all four sources (issue #85) -----------------------------
 check "an object from error is neither kind" \

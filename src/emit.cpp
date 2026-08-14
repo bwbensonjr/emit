@@ -77,6 +77,10 @@ extern "C" {
   extern jmp_buf *rt_trap;                    // runtime trap escape hook
   extern char rt_trap_msg[];                  // last trap's message
   void rt_guard_reset(void);                  // clear guard frames after a trap
+  // Run a stretch of code as the HOST's library instance, so a trap inside the compiler
+  // reaches the COMPILER's handler chain rather than a JIT'd session's (issue #97).
+  intptr_t rt_raiser_enter_host(void);
+  void rt_raiser_leave_host(intptr_t token);
 }
 
 typedef intptr_t (*entry_t)(void);
@@ -1777,9 +1781,45 @@ static void preload_libraries(const std::vector<std::string> &manifests, bool ha
 
 // Compile one complete form's text via the embedded compiler and act on the
 // (status . payload) it returns.
+//
+// THE COMPILE CALL IS TRAP-BRACKETED, and it was not (change: host-runtime-corrections,
+// issue #97).  `run_thunk` isolates the RUN of a compiled form and clears `rt_trap` when it
+// finishes, so the next form's COMPILE ran with no trap frame installed at all -- and a trap
+// inside the compiler therefore reached `rt_raise`'s `exit(1)` and took the whole session
+// with it.  One malformed form was enough:
+//
+//   > (define-values (x y . z) (values 1 2 3))
+//   car: not a pair: got a symbol          <- the frontend's own trap (issue #91)
+//   $ echo $?  ->  1                       <- session gone, next form never read
+//
+// The compiler is compiled Scheme like any other guest code, so it gets the same isolation
+// the guest's own code has had since the REPL door existed.  `rt_guard_reset()` for the same
+// reason `run_thunk` calls it: a trap may have bypassed rt_run_guarded's frame pop.
+//
+// A compile-time trap is reported as `error:` rather than `!trap:`: from the session's point
+// of view this IS a compile-time failure of the form, which is the channel the other
+// compile-time failures below already use.
 static void process_form(const std::string &form) {
+  jmp_buf jb;
+  jmp_buf *saved = rt_trap;
+  // ...and the compiler's own raiser is current while the compiler runs, so a trap reaches
+  // `compile-one-form`'s guard -- whose handler RESTORES THE SESSION SNAPSHOT (repl-core.ss,
+  // design D3).  Without it the trap walks the JIT'd session's empty chain instead, and a
+  // form that failed mid-compile leaves its partial mutations behind.  The setjmp below
+  // stays as the backstop for a trap raised where the compiler installed no guard.
+  intptr_t raiser = rt_raiser_enter_host();
+  rt_trap = &jb;
+  if (setjmp(jb) != 0) {
+    rt_guard_reset();
+    rt_raiser_leave_host(raiser);
+    rt_trap = saved;
+    std::cerr << "error: compiler trap: " << rt_trap_msg << "\n";
+    return;
+  }
   rt_repl_set(3, form.data(), (intptr_t)form.size());
   intptr_t r = scheme_entry();
+  rt_raiser_leave_host(raiser);
+  rt_trap = saved;
   std::string st = status_of(r);
   if (st == "ok") {
     intptr_t payload = rt_cdr(r);           // (ir-text . entry-name)

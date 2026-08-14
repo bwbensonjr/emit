@@ -543,6 +543,43 @@ check "the printer still writes the lowercase spellings" \
 check "a near-miss non-finite token is still a symbol" \
   '(symbol? (read-from-string "+inf.1"))' '#t'
 
+# --- a comparison is exact across the exactness boundary (issue #77) ----------
+# R7RS 6.2.6 defines the comparison predicates on their arguments' MATHEMATICAL values, and
+# 6.2 requires a mixed exact/inexact comparison to behave as if the exact value were used
+# exactly.  Both predicates used to widen the exact operand to `double`, which loses bits
+# above 2^53 -- while still inside the 61-bit fixnum range, so this is not #27's absent
+# bignums.  Contagion is a rule about arithmetic RESULTS; a comparison returns a boolean, so
+# there is nothing to make inexact.
+check "= is exact just above 2^53" \
+  '(= 9007199254740992.0 9007199254740993)' '#f'
+check "< is exact just above 2^53" \
+  '(< 9007199254740992.0 9007199254740993)' '#t'
+check "the same comparison with the operands swapped" \
+  '(list (= 9007199254740993 9007199254740992.0) (> 9007199254740993 9007199254740992.0))' \
+  '(#f #t)'
+# 2^58, further from the double's reach, in both directions
+check "an exact/inexact pair at 2^58" \
+  '(list (= 288230376151711745 288230376151711744.0)
+         (< 288230376151711745 288230376151711744.0)
+         (< 288230376151711744.0 288230376151711745))' \
+  '(#f #f #t)'
+# the derived operators are defined over < (issue #26), so they inherit the fix -- asserted
+# rather than assumed
+check "the derived comparisons inherit exactness" \
+  '(list (<= 2 2.0) (>= 2.0 2) (> 3.0 2) (<= 9007199254740993 9007199254740992.0))' \
+  '(#t #t #t #f)'
+# a fractional flonum, a negative one, and signed zero, where floor/ceiling decide
+check "a fractional or negative flonum compares correctly" \
+  '(list (< 2.5 3) (< 3 2.5) (< -0.5 0) (= 0 -0.0) (< 0 0.5))' \
+  '(#t #f #t #t #t)'
+# NaN is false under every comparison; the infinities compare by sign
+check "NaN and the infinities" \
+  '(list (= (/ 0.0 0.0) 1) (< (/ 0.0 0.0) 1) (< 1 (/ 0.0 0.0))
+         (< 1 (/ 1.0 0.0)) (< (/ -1.0 0.0) 1) (= (/ 1.0 0.0) 1))' \
+  '(#f #f #f #t #t #f)'
+# max/min return a VALUE, so contagion does apply to them -- unchanged by this
+check "max and min keep inexactness contagion" '(list (max 1 2.0) (min 1 2.0))' '(2.0 1.0)'
+
 echo
 echo "  $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
