@@ -48,6 +48,29 @@
         filename
         (string-append d "/" filename))))
 
+;; --- what the reader opened (change: chez-free-unit-pipeline, design D7) ----
+;; The artifact cache keys a disk-sourced library on the identity of its SOURCE, and a
+;; library's source is its .sld plus everything the include family spliced into it.  So the
+;; reader records each file it opens, by the resolved token it read it from -- the one point
+;; where that path is known, and the same thing src/compile.ss's `*includes-read*` records
+;; for the Chez driver's stamp (src/compile.ss:196-222).
+;;
+;; A door RESETS this before submitting a library and reads it back afterwards, so the list
+;; describes one registration rather than accumulating across a session: two libraries that
+;; include the same fragment must each report it, and neither may inherit the other's.
+;; Accumulated newest-first and reversed on read, so the order is the order they were read.
+;; Like the source home beside it, this must RIDE THE SESSION STATE (repl-core.ss's
+;; repl-save-state!): the assembled program's globals are re-created on every host call, so
+;; what mode 4 records here would be gone by the time mode 16 asks for it.  `set-includes-read!`
+;; is what the restore uses; it takes the list in READ order, the order `includes-read`
+;; hands out.
+(define *includes-read* (quote ()))
+(define (reset-includes-read!) (set! *includes-read* (quote ())))
+(define (includes-read) (reverse *includes-read*))
+(define (set-includes-read! paths) (set! *includes-read* (reverse paths)))
+(define (note-include-read! path)
+  (set! *includes-read* (cons path *includes-read*)))
+
 ;; --- the reader ------------------------------------------------------------
 ;; `%read-file` answers #f -- not "" -- for a file it cannot open (runtime.c makes that
 ;; distinction deliberately), so a missing file is reported as one, naming the declaration
@@ -65,9 +88,13 @@
   (let* ([path (ir-resolve (if base base (source-home)) filename)]
          [text (%read-file path)])
     (if text
-        (cons path (if (eq? who 'include-ci)
-                       (read-all-from-string-ci text)
-                       (read-forms-from-string text)))
+        (begin
+          ;; Recorded only on a successful read: a file that could not be opened raises
+          ;; below, and a failed registration has no artifacts to key.
+          (note-include-read! path)
+          (cons path (if (eq? who 'include-ci)
+                         (read-all-from-string-ci text)
+                         (read-forms-from-string text))))
         (error who
                (string-append "cannot read " (render-datum filename)
                               " (resolved to " path ")")))))

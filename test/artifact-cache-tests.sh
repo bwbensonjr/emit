@@ -128,7 +128,7 @@ got=$(EMIT_CACHE="$C7" $RUN "$TMP/p.scm" 2>/dev/null)
 C8="$TMP/c8"
 EMIT_CACHE="$C8" $RUN "$TMP/p.scm" >/dev/null 2>&1
 for f in "$C8"/baked-*.stamp; do printf '(emit-artifact-stamp 1 deadbeefdeadbeef)\n' > "$f"; done
-if EMIT_VERBOSITY=verbose EMIT_CACHE="$C8" $RUN "$TMP/p.scm" 2>&1 >/dev/null | grep -q "cache: entry is stale"; then
+if EMIT_VERBOSITY=verbose EMIT_CACHE="$C8" $RUN "$TMP/p.scm" 2>&1 >/dev/null | grep -q "is stale"; then
   ok "a stale stamp is detected and narrated as stale"
 else
   bad "a stale stamp was not narrated"
@@ -194,10 +194,13 @@ else
   bad "--dump unnecessarily bypassed the cache"
 fi
 
-# --- the deferred half: user libraries are unchanged -----------------------------------
-# User-library caching is deliberately out of scope (proposal, "Scoped to the baked standard
-# library").  Assert the deferral rather than assume it: an importing program must still work
-# and must still recompile its library every invocation, so the follow-up has a baseline.
+# --- user libraries are cached too (change: chez-free-unit-pipeline) -------------------
+# This was the DEFERRED half, and these three cases used to assert the deferral -- that a
+# user library still worked and still wrote no entry -- so that the follow-up would have a
+# baseline.  The follow-up landed; the first two cases stand unchanged, and the third is
+# inverted.  Everything about a user library's own keying (its include closure, content
+# rather than mtime) is exercised in test/unit-pipeline-tests.sh; what belongs HERE is only
+# that the two kinds of entry share one cache and one set of degradation rules.
 C14="$TMP/c14"
 mkdir -p "$TMP/proj"
 printf '(define-library (ulib) (export u) (import (scheme base)) (begin (define (u) 7)))\n' \
@@ -211,8 +214,8 @@ got2=$(EMIT_CACHE="$C14" $RUN --manifest "$TMP/proj/emit-libs.scm" "$TMP/proj/up
 [ "$got2" = "7" ] && ok "and again against a warm baked-set cache => $got2" \
   || bad "second user-library import => [$got2]"
 u=$(ls "$C14" 2>/dev/null | grep -c 'ulib' || true)
-[ "$u" = 0 ] && ok "no cache entry is written for a user library (deferred, as specified)" \
-  || bad "found $u user-library cache file(s); user-library caching is out of scope"
+[ "$u" -gt 0 ] && ok "a user library gets its own cache entry ($u files) beside the baked set" \
+  || bad "no cache entry was written for a user library"
 
 # --- concurrent population (design D8) -----------------------------------------------
 # The default suite runs many `emit` processes at once under EMIT_JOBS, so the very first

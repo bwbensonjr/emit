@@ -1098,6 +1098,55 @@
            (let ([deps (cond [(assq (car work) dep-alist) => cdr] [else '()])])
              (loop (append deps (cdr work)) (cons (car work) seen)))])))
 
+;; --- the root set a PROGRAM imposes on a unit --------------------------------
+;; Moved here from src/compile.ss (change: chez-free-unit-pipeline, design D8) so that both
+;; shipping doors -- the Chez driver and `emit build` -- compute a program's roots with one
+;; implementation rather than two that can drift apart.
+;;
+;; A used import is LOADED in the program IR as `ptr @"<mangled>"`; a merely declared
+;; (unused) import appears only as `@"<mangled>" = external global`.  So `ptr @"<mangled>"`
+;; matches real uses, giving the program's root references into a unit.  Returns the unit's
+;; INTERNAL names to seed reachability.
+;; Index of NEEDLE in HAY, or -1.  Character-by-character rather than
+;; `(string=? (substring hay i (+ i nl)) needle)`, which is what this was while only the
+;; Chez driver ran it: that allocates a fresh string at EVERY position, and `emit build`
+;; runs the search once per candidate name over a whole program's IR -- hundreds of
+;; candidates against tens of KB, so the allocating form spent more time making garbage than
+;; the shake saves.  Behaviour is identical.
+;; The inner loop is `at?`, NOT `match`: this file is concatenated with src/match.scm, whose
+;; `match` is a MACRO, and this compiler's expander resolves a keyword by name without
+;; honouring a lexical binding that shadows it.  A named let called `match` therefore
+;; expands its own recursive call into the matcher's "no matching clause" raise instead of
+;; calling itself -- under Chez, which shadows correctly, the identical source works
+;; (GitHub issue filed; found by mode 17 failing on every input long enough to reach here).
+(define (str-search hay needle)
+  (let ([hl (string-length hay)] [nl (string-length needle)])
+    (let loop ([i 0])
+      (cond
+        [(> (+ i nl) hl) -1]
+        [(let at? ([j 0])
+           (cond [(>= j nl) #t]
+                 [(char=? (string-ref hay (+ i j)) (string-ref needle j)) (at? (+ j 1))]
+                 [else #f]))
+         i]
+        [else (loop (+ i 1))]))))
+
+(define (str-contains? hay needle) (>= (str-search hay needle) 0))
+
+;; Candidates are the unit's exports PLUS the own bindings its exported macros' templates
+;; reach (change: library-macro-export, design D6).  A binding reached only through a
+;; template is not an export, so nominating from the export list alone would prune it and
+;; leave the expansion's reference as a link-time undefined symbol.  The reachability GATE
+;; does not move: a candidate is kept only when the program's emitted IR actually mentions
+;; it, so a program that imports the library without using the macro still loses it.
+(define (program-root-internals prog-text unit-name candidates)  ; candidates: internal names
+  (fold-left
+    (lambda (acc n)
+      (if (and (not (memq n acc))
+               (str-contains? prog-text (string-append "ptr @\"" (mangle unit-name n) "\"")))
+          (cons n acc) acc))
+    '() candidates))
+
 ;; `keep-roots` (optional): when #f (default), compile the WHOLE library unchanged
 ;; -- byte-identical to before, so the REPL/JIT door and committed artifacts are
 ;; unaffected.  When a list of internal names, emit ONLY the bindings transitively

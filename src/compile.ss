@@ -696,29 +696,13 @@
 ;; (aot/jit/bitcode) each consume this same set, so re-home + import resolution is
 ;; one path, not per-backend.
 ;; --- closed-world AOT tree-shaking (change: aot-release-profile) -------------
-;; A used import is LOADED in the program IR as `ptr @"<mangled>"`; a merely
-;; declared (unused) import appears only as `@"<mangled>" = external global`.  So
-;; `ptr @"<mangled>"` matches real uses, giving the program's root references into
-;; a unit.  Returns the unit's INTERNAL names to seed reachability.
-(define (str-contains? hay needle)
-  (let ([hl (string-length hay)] [nl (string-length needle)])
-    (let loop ([i 0])
-      (cond [(> (+ i nl) hl) #f]
-            [(string=? (substring hay i (+ i nl)) needle) #t]
-            [else (loop (+ i 1))]))))
-;; Candidates are the unit's exports PLUS the own bindings its exported macros' templates
-;; reach (change: library-macro-export, design D6).  A binding reached only through a
-;; template is not an export, so nominating from the export list alone would prune it and
-;; leave the expansion's reference as a link-time undefined symbol.  The reachability GATE
-;; does not move: a candidate is kept only when the program's emitted IR actually mentions
-;; it, so a program that imports the library without using the macro still loses it.
-(define (program-root-internals prog-text unit-name candidates)  ; candidates: internal names
-  (fold-left
-    (lambda (acc n)
-      (if (and (not (memq n acc))
-               (str-contains? prog-text (string-append "ptr @\"" (mangle unit-name n) "\"")))
-          (cons n acc) acc))
-    '() candidates))
+;; `program-root-internals` and `str-contains?` used to live here.  They MOVED to
+;; src/core.ss (change: chez-free-unit-pipeline, design D8), because `emit build` now
+;; shakes too and the rule for "which of a unit's candidate names does this program's IR
+;; actually mention" must have exactly one implementation.  It has already had one subtle
+;; bug fixed in it (`member` vs `memq`, below), and a divergence between the two doors
+;; would surface as undefined symbols at link time on one of them only.  This driver keeps
+;; the calls; core.ss carries the definitions and the reasoning.
 
 ;; `shake?` (AOT ship path) prunes each prunable unit to the bindings the program
 ;; actually reaches.  A unit is prunable only if NO OTHER unit in the closure

@@ -1,38 +1,4 @@
-# artifact-cache Specification
-
-## Purpose
-
-Lets the Chez-free doors reuse an already-compiled library unit instead of recompiling it from
-source at every process start — the baked standard library, a library read from disk, and a unit
-pruned to one program's root set alike. The cache is a pure accelerator: it is keyed so a stale
-entry cannot be used, and every failure path falls back to compiling from source.
-## Requirements
-### Requirement: The baked standard library is compiled once and reused across processes
-
-The Chez-free doors (`emit run`, `emit build`, `emit lib`, `emit repl`) SHALL reuse an
-already-compiled baked standard library rather than recompiling it from the binary's baked-in source
-at every process start. Reuse SHALL require no access to any library source, resting on the compiled
-unit modules plus the compile-time interface each publishes.
-
-The baked set SHALL be cached and invalidated **as a whole**, in the dependency order its partition
-declares, because a member may import another and a set that is individually fresh but mutually
-inconsistent would be unusable.
-
-#### Scenario: A second invocation does not recompile the standard library
-
-- **WHEN** a trivial program is run twice through `emit run`, with nothing changed in between
-- **THEN** the second invocation reuses the cached standard library, and its wall clock approaches
-  the `--no-prelude` floor rather than paying the from-source compile again
-
-#### Scenario: The first invocation populates the cache
-
-- **WHEN** a door runs with an empty cache
-- **THEN** it compiles from source, succeeds, and leaves an entry that a later process reuses
-
-#### Scenario: Every door benefits
-
-- **WHEN** each of `emit run`, `emit build`, `emit lib`, and `emit repl` is invoked twice
-- **THEN** each one's second invocation reuses the cached set
+## ADDED Requirements
 
 ### Requirement: A library unit compiled from disk is cached on the identity of its source
 
@@ -93,6 +59,8 @@ SHALL be a property of how entries are located rather than a convention observed
   for the same library and compiler
 - **THEN** the session is seeded from full units, and every binding of that library remains available
   regardless of what any program referenced
+
+## MODIFIED Requirements
 
 ### Requirement: A cache entry is valid only for the compiler that produced it
 
@@ -162,56 +130,6 @@ every kind of entry — the baked set, a unit compiled from disk, and a unit pru
 
 - **WHEN** a program with a compile error is compiled cold and warm
 - **THEN** the same diagnostic is reported in both cases
-
-### Requirement: Every cache failure degrades to compiling from source
-
-A cache miss, a stale entry, a corrupt or unreadable entry, a missing cache directory, or a cache
-location that cannot be created or written SHALL cause the door to compile from source and complete
-normally. No door SHALL acquire a failure mode it did not have before the cache existed, and the
-cache SHALL NOT be required for correctness on any path.
-
-A metadata entry that cannot be read, or that is inconsistent with the units stored beside it, SHALL
-be refused whole rather than partially applied, so that falling back to a from-source compile always
-begins from an unmodified session.
-
-#### Scenario: An unwritable cache location still permits every door to work
-
-- **WHEN** the cache location cannot be created or written
-- **THEN** each door compiles from source and completes normally, reporting no error
-
-#### Scenario: A corrupt entry is not trusted
-
-- **WHEN** a cache entry is truncated or otherwise unreadable
-- **THEN** the door ignores it, recompiles from source, and completes normally
-
-#### Scenario: A partially applicable entry leaves the session unchanged
-
-- **WHEN** an entry's metadata is readable but inconsistent with the units stored beside it
-- **THEN** nothing from that entry is registered, and the door compiles from source
-
-#### Scenario: A read-only installation works
-
-- **WHEN** `emit` runs from a read-only installation with no writable cache location available
-- **THEN** every door behaves exactly as it does today
-
-### Requirement: The cache is available from an installed emit, not only a checkout
-
-The cache SHALL work when `emit` is run from an installation rather than a repository checkout, using
-a location that does not require the install tree to be writable, and resolved identically in both
-cases so that no code path exists only for installed users. The install contract SHALL remain
-unchanged: no compiled artifact is shipped or installed, and every entry is derived locally, on
-demand, and regenerable from source.
-
-#### Scenario: An installed emit caches on first use
-
-- **WHEN** an installed `emit` runs a program twice from a directory outside any checkout
-- **THEN** the first run populates a cache in a user-writable location and the second reuses it
-
-#### Scenario: Installation ships no compiled artifact
-
-- **WHEN** `emit` is installed
-- **THEN** the installed tree contains no compiled library unit, and a cache entry exists only after
-  a door has run
 
 ### Requirement: Cache reuse is narrated
 

@@ -285,9 +285,11 @@ build/emit build --manifest my-project.scm
 
 - **Delivery** is the in-binary Chez-free AOT door: `emit build` emits the program IR in-process
   (the `--emit` path) and forks `clang` to link the runtime and units into the executable — byte-
-  for-behavior identical to emitting the resolved source's IR and linking it directly. This slice
-  links full library units (no tree-shaking); the output path comes from the entry's `output`, an
-  `-o` override, or the default `build/<NAME>`.
+  for-behavior identical to emitting the resolved source's IR and linking it directly. It
+  **tree-shakes** (change: `chez-free-unit-pipeline`): each prunable unit is recompiled to the
+  bindings the program's emitted IR actually reaches, by the same `compile-library*` pass the Chez
+  driver's ship path uses, and the pruned unit is cached against the program that produced it. The
+  output path comes from the entry's `output`, an `-o` override, or the default `build/<NAME>`.
 
 ### `emit lib` — compile one library to its artifact
 
@@ -495,9 +497,12 @@ entry. Mechanically, `preload_user_libraries` (`src/emit.cpp`) drives two compil
 source import?" for a program and a `.sld` alike — and follows each reached `.sld`'s own
 imports. Reading those files stays in the host because the core performs no I/O by design.
 
-**The REPL host stays eager** (mode 5), and should: a session is an open world where any prompt
-may import anything, so everything on the manifest must already be loaded. Only the run door,
-compiling one known program, can be lazy.
+**The REPL host stays eager**, and should: a session is an open world where any prompt may import
+anything, so every user library on the manifest must already be loaded. Only the run door,
+compiling one known program, can be lazy. Both doors read the *same* index (mode 9), which omits
+every baked member — a session's standard library comes from the baked set, never from the
+manifest, in either prelude mode (change: `chez-free-unit-pipeline`, issue #101). Mode 5, which
+listed every manifest library including the baked ones, is retired.
 
 This was not an optimization. Eager preload was invisible while the manifest held exactly one
 library; the moment a second one landed it (a) put units a program never imported into its
@@ -720,9 +725,13 @@ This is Modules v0:
   `letrec-syntax`, inner `define-syntax`, `syntax-case`, and procedural/identifier transformers are
   all out of scope. A typo inside an exported template is reported in the importer rather than at the
   library (issue #56) — a consequence of hygiene being a name-set test with no syntax objects.
-- **No tree-shaking on the Chez-free door.** `emit build` (the in-binary AOT door) links
-  full library units; the closed-world reachability strip is only on the Chez driver's AOT ship
-  path (change: `aot-release-profile`). Porting it to the Chez-free door is future work.
+- **A unit another unit imports is never tree-shaken.** Both ship doors prune only a unit that no
+  other unit in the closure imports, because an importer kept whole could reference a binding the
+  pruned one dropped. `(scheme base)` imports the substrate, so the substrate always ships whole;
+  and a program importing a user library that imports `(scheme base)` ships the whole standard
+  library on either door. See `docs/PERFORMANCE.md` P10 — the fix is backward propagation through
+  the import DAG, not anything door-specific. (The door gap itself is closed: `emit build` shakes,
+  change `chez-free-unit-pipeline`.)
 - Import specifiers are whole-library only — no `only`/`except`/`prefix`/`rename` import sets yet.
   An import set is rejected by name; see [When you break a rule](#when-you-break-a-rule).
 - `include` and `cond-expand` are **library declarations only**. In program or body position

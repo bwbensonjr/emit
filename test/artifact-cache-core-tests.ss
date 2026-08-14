@@ -10,10 +10,12 @@
 ;;; driver (src/compile.ss) does not include repl-core.ss either.  Including it here is the
 ;;; only way to exercise a repl-core edit before the regen barrier.
 ;;;
-;;; Four stand-ins are needed for names repl-core.ss reaches outside the flat core -- the
-;;; substrate's reader, the primcall-based dumper, and R7RS's error-object accessors --
-;;; exactly as src/compile.ss supplies its own for the same reason.  They are test scaffolding,
-;;; not a second implementation: nothing under test touches them.
+;;; A handful of stand-ins are needed for names repl-core.ss reaches outside the flat core --
+;;; the substrate's reader, the primcall-based dumper, R7RS's error-object accessors, and the
+;;; include reader's record of what it opened (src/include-reader.ss calls `%read-file`, which
+;;; is a primcall, so it cannot be included here any more than src/compile.ss can include it)
+;;; -- exactly as src/compile.ss supplies its own for the same reason.  They are test
+;;; scaffolding, not a second implementation: nothing under test touches them.
 (import (chezscheme))
 (include "src/match.scm") (include "src/util.scm") (include "src/parse.ss")
 (include "src/passes/expand.ss") (include "src/passes/recognize-let.ss")
@@ -35,6 +37,16 @@
 (define (error-object-irritants e)
   (if (irritants-condition? e) (condition-irritants e) '()))
 (define *prelude-source* "")
+;; The include reader's half (change: chez-free-unit-pipeline): mode 4 resets this record
+;; before parsing and the session state carries it between host calls.  No library here
+;; includes anything, so an empty record is the whole of what these need.
+(define *includes-read* '())
+(define (reset-includes-read!) (set! *includes-read* '()))
+(define (includes-read) (reverse *includes-read*))
+(define (set-includes-read! ps) (set! *includes-read* (reverse ps)))
+(define *source-home* "")
+(define (set-source-home! p) (set! *source-home* p))
+(define (source-home) *source-home*)
 (include "src/repl-core.ss")
 (set! make-dumper (lambda (name) no-dump))
 
@@ -52,7 +64,10 @@
 (define compiled-table (assoc '(tlib) *repl-libs*))
 (define compiled-imports (cached-lib-imports '(tlib)))
 
-(define meta (repl-cached-libs-text "((tlib))"))
+;; Mode 15 selects by canonical unit KEY, not by a rendered name datum (change:
+;; chez-free-unit-pipeline): the host speaks keys everywhere else, so library-name equality
+;; stays in the core.
+(define meta (repl-cached-libs-text (string-append (mangle '(tlib) "") "\n")))
 (check "mode 15 returned ok" (car meta) 'ok)
 (printf "  metadata: ~a\n" (cdr meta))
 
@@ -74,7 +89,29 @@
 (init-session "")
 (check "empty metadata refused" (car (repl-register-cached-libs "")) 'error)
 (init-session "")
-(check "unregistered name refused by mode 15" (car (repl-cached-libs-text "((nope))")) 'error)
+(check "unregistered key refused by mode 15" (car (repl-cached-libs-text "nope:\n")) 'error)
+
+;; An entry whose imports are not registered yet is DEFERRED, not applied and not refused
+;; (change: chez-free-unit-pipeline, design D13).  A cache hit would otherwise be order-blind
+;; exactly where compiling is not: the REPL door runs each unit's __init as it adds it, so a
+;; unit registered ahead of one it reads globals from would initialize against empty slots.
+;; The host's fixpoint loop already retries this status -- it is mode 4's.
+(init-session "")
+(check "a row whose import is unregistered is deferred"
+       (car (repl-register-cached-libs "(((tlib) ((dep)) ((tlib) () ()) \"tlib:__init\"))"))
+       'deferred)
+(check "  registers nothing"   (assoc '(tlib) *repl-libs*) #f)
+
+;; ... and once that import IS registered, the same entry applies.  Two rows in one entry
+;; satisfy each other in order, which is how the baked set's members do it.
+(init-session "")
+(check "rows satisfy each other in dependency order"
+       (car (repl-register-cached-libs
+              (string-append "(((dep) () ((dep) () ()) \"dep:__init\")"
+                             " ((tlib) ((dep)) ((tlib) () ()) \"tlib:__init\"))")))
+       'ok)
+(check "  both are registered" (and (assoc '(dep) *repl-libs*)
+                                    (assoc '(tlib) *repl-libs*) #t) #t)
 
 (printf "~a passed, ~a failed\n" pass fail)
 (exit (if (= fail 0) 0 1))

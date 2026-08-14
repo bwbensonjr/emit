@@ -380,6 +380,12 @@
 ;; @code_N namespace, so the session counter must stay monotonic.
 (define (repl-load-library-text text)
   (guard (e (#t (cons (quote error) (repl-error->string e))))
+    ;; Start this library's include record empty (change: chez-free-unit-pipeline, design
+    ;; D7).  BEFORE parse-define-library, which is where the include family runs, and on
+    ;; every attempt: a library that returns `deferred` is re-submitted after its
+    ;; dependencies load, and the record must describe the attempt that succeeded rather
+    ;; than the union of all of them.  Mode 16 reads it back.
+    (reset-includes-read!)
     (let* ([forms (read-all-from-string text)]
            ;; A source that holds NO DATUM cannot yield the define-library this needs, and
            ;; (car '()) is unchecked -- it faulted the door instead of reporting (change:
@@ -402,10 +408,12 @@
        ;; duplicate module (changes: run-door-user-libraries, baked-set-on-every-door).
        ;;
        ;; The test is by library NAME, so it covers whatever the partition holds rather
-       ;; than an enumerated subset -- which is why the REPL keeps using mode 5 (every
-       ;; manifest library) instead of mode 9, whose omission is the single hard-coded
-       ;; name `(scheme base)` and would miss the substrate.  The REPL DOES reach this
-       ;; status now; it did not before it registered the baked set.
+       ;; than an enumerated subset.  It is now a BACKSTOP rather than the mechanism: mode 9
+       ;; omits every baked member from the preload list in the first place (change:
+       ;; chez-free-unit-pipeline), so a manifest entry for one no longer reaches this at
+       ;; all through a door's preload.  It still fires for an interactive `(import ...)`
+       ;; of a baked member, and it is what keeps a stale cache entry or a hand-driven mode
+       ;; 4 from adding a duplicate module.
        [(assoc name *repl-libs*) (cons (quote already) name)]
        [(not tables) (cons (quote deferred) name)]    ; retry after dependencies load
        [else
@@ -477,25 +485,32 @@
               (car forms)))
         (quote ()))))                             ; no datum: an empty manifest, as above
 
-;; Parse a manifest's text and return its LIBRARY source paths, newline-joined, so
-;; the host (which owns file I/O) can read each library source and load it (mode 4).
-;; Only `(library ...)` entries are libraries; `(program ...)` entries (emit build
-;; targets, change: emit-build-bin-entry) are ignored here -- resolving library
-;; imports is unchanged by their presence.
-(define (repl-manifest-paths text)
-  (let loop ([es (manifest-entries text)] [acc ""])
-    (if (not (pair? es))                    ; total: (), an improper tail, or a non-list manifest
-        acc
-        (let* ([e   (car es)]
-               [src (and (pair? e) (eq? (car e) (quote library))
-                         (cond [(assq (quote source) (cddr e)) => cadr] [else #f]))])
-          (loop (cdr es) (if src (string-append acc src "\n") acc))))))
+;; Mode 5 -- `repl-manifest-paths`, every (library ...) entry's source path including the
+;; baked members -- is RETIRED (change: chez-free-unit-pipeline, design D3).  The REPL host
+;; was its only caller and now uses mode 9 like every other door.  The number stays reserved
+;; rather than renumbering 6-15 downward: a mode number is a wire protocol between
+;; src/emit.cpp and this file, which regen compiles independently, so a gap costs this
+;; comment while a renumber costs a window in which the host and the core disagree about
+;; what mode 7 means.
 
-;; Like repl-manifest-paths but OMIT (scheme base): the run door bakes (scheme base)
-;; in (mode 8), or omits it entirely under --no-prelude, so it must never be loaded
-;; from the manifest -- doing so would emit a duplicate/spurious (scheme base) module
-;; (change: run-door-user-libraries).  Used by the run host (mode 9); the REPL host
-;; still wants (scheme base) from the manifest and uses mode 5.
+;; The manifest's USER libraries: every (library ...) entry that is not a member of the
+;; baked set.  A baked member is compiled into the binary and registered by mode 8, or
+;; deliberately absent under --no-prelude, so it must never be loaded from the manifest --
+;; doing so would emit a duplicate/spurious module, or (under --no-prelude) compile a
+;; standard library the session has decided not to have (change: run-door-user-libraries;
+;; chez-free-unit-pipeline, issue #101).
+;;
+;; The test is baked-set MEMBERSHIP, not the single name `(scheme base)` it used to
+;; hard-code.  The baked set is a PARTITION -- (emit internal) as well as (scheme base) --
+;; and this repository's own emit-libs.scm names both, for the Chez driver.  With one name
+;; hard-coded the substrate leaked through the same hole the standard library did: eagerly
+;; on the REPL door, on demand on the run door.
+;;
+;; EVERY door uses this now (change: chez-free-unit-pipeline, design D1).  The REPL used to
+;; take the whole manifest through mode 5, which is why `emit repl --no-prelude` compiled
+;; (scheme base) from the manifest and then bound none of it -- 1.14 s of work performed and
+;; discarded against a 0.024 s floor (issue #101).  Mode 5 is retired; see below.
+;;
 ;; Each line is "KEY<TAB>PATH" (change: numeric-conformance).  The key is
 ;; `(mangle name "")` -- the same canonical unit prefix the emitted symbols carry --
 ;; so the run host can index the manifest by library name using plain string
@@ -512,7 +527,7 @@
                [src    (and is-lib
                             (cond [(assq (quote source) (cddr entry)) => cadr] [else #f]))])
           (loop (cdr es)
-                (if (and src (not (equal? name (quote (scheme base)))))
+                (if (and src (not (baked-member? name)))
                     (string-append acc (mangle name "") "\t" src "\n")
                     acc))))))
 
@@ -568,7 +583,7 @@
 ;; (output ...) clause) -- so the host (`emit run --resolve-program`) can select
 ;; one by name and hand its source to `emit build`.  Library entries are
 ;; ignored (this lists programs, not libraries); uses only \n, mirroring
-;; repl-manifest-paths.
+;; repl-manifest-user-paths.
 ;;
 ;; Returns (status . payload) -- the convention modes 4 and 8 already use, for which the
 ;; host has status_of/door_msg -- rather than a bare string (change:
@@ -714,15 +729,46 @@
 ;; session untouched so the caller can fall back to compiling from source (spec: "refused
 ;; rather than half-registered"); validating as we go would leave a half-seeded session
 ;; that no fallback could repair.
+;;
+;; DEPENDENCY ORDER is part of that validation (change: chez-free-unit-pipeline).  A row may
+;; be registered only once every library it imports is registered -- already in the session,
+;; or earlier in this same entry, which is how the baked set's members satisfy each other.
+;; Otherwise this returns (deferred . NAME), mode 4's status for exactly the same condition,
+;; so a host that reaches libraries in manifest order retries in its existing fixpoint loop
+;; and cannot run a cached unit's __init before the unit it reads globals from has run its
+;; own.  Without this the cache would be order-blind precisely where compiling was not.
 (define (repl-register-cached-libs meta-text)
   (guard (e (#t (cons (quote error) (repl-error->string e))))
     (let ([data (read-all-from-string meta-text)])
       (if (null? data)
           (error 'cache "cache metadata holds no datum")
-          (let ([rows (car data)])
-            (check-cached-rows rows)
-            (register-cached-rows rows)
-            (cons (quote ok) (baked-init-symbols (map car rows))))))))
+          (let* ([rows (car data)]
+                 [_    (check-cached-rows rows)]
+                 [unmet (rows-unmet-import rows)])
+            (if unmet
+                (cons (quote deferred) unmet)
+                (begin
+                  (register-cached-rows rows)
+                  (cons (quote ok) (baked-init-symbols (map car rows))))))))))
+
+;; The name of the first row whose imports are not all satisfiable, or #f.  "Satisfiable"
+;; means registered in the session already or supplied by a row at or before this one.
+(define (rows-unmet-import rows)
+  (let loop ([rs rows] [have (quote ())])
+    (if (null? rs)
+        #f
+        (let* ([row  (car rs)]
+               [name (car row)]
+               [have (cons name have)])
+          (if (imports-satisfied? (cadr row) have)
+              (loop (cdr rs) have)
+              name)))))
+
+(define (imports-satisfied? imports have)
+  (cond [(null? imports) #t]
+        [(or (member (car imports) have) (assoc (car imports) *repl-libs*))
+         (imports-satisfied? (cdr imports) have)]
+        [else #f]))
 
 ;; Every row is (NAME IMPORTS TABLE INIT), and the table's own car must be the name it is
 ;; filed under -- a table paired with the wrong name would resolve imports to another
@@ -758,8 +804,12 @@
 
 ;; Mode 15: the metadata datum for libraries already registered in THIS session, ready for
 ;; the host to persist beside their IR.  NAMES-TEXT is "" for the whole baked set, in the
-;; dependency order the partition declares; otherwise it is a rendered list of library
-;; names.
+;; dependency order the partition declares; otherwise it is newline-joined canonical unit
+;; KEYS -- "demo.util", the prefix the unit's symbols carry -- which is how the host names a
+;; library everywhere else (mode 9's index, mode 17's input).  It was a rendered list of
+;; library-name datums while the baked set was the only client; keys keep library-name
+;; equality in the core rather than asking the host to render a datum it never parsed
+;; (change: chez-free-unit-pipeline).
 ;;
 ;; This is a pure query over state mode 8 or mode 4 has already established, which is the
 ;; point: it runs *after* the compile and so costs no second compilation to produce what
@@ -768,9 +818,33 @@
   (guard (e (#t (cons (quote error) (repl-error->string e))))
     (let ([names (if (string=? names-text "")
                      (map car (baked-library-entries))
-                     (let ([d (read-all-from-string names-text)])
-                       (if (null? d) (quote ()) (car d))))])
+                     (keys->registered-names names-text))])
       (cons (quote ok) (render-datum (map cached-lib-row names))))))
+
+;; Newline-joined unit keys -> the library names they are registered under.  A key with no
+;; registered library RAISES rather than being skipped: the caller is about to persist an
+;; entry described by this list, and a silently shorter list would file a unit's IR under
+;; metadata that does not mention it.
+(define (keys->registered-names text)
+  (let loop ([ls (split-lines text)] [acc (quote ())])
+    (if (null? ls)
+        (reverse acc)
+        (let ([name (registered-name-of-key (car ls))])
+          (if (not name)
+              (error 'cache "no registered library keyed" (car ls))
+              (loop (cdr ls) (cons name acc)))))))
+
+;; TEXT's non-empty lines, in order.  The newline-joined-lines convention several modes
+;; already use in both directions; this is its reader.
+(define (split-lines text)
+  (let loop ([i 0] [start 0] [acc (quote ())])
+    (cond
+      [(>= i (string-length text))
+       (reverse (if (> i start) (cons (substring text start i) acc) acc))]
+      [(char=? (string-ref text i) #\newline)
+       (loop (+ i 1) (+ i 1)
+             (if (> i start) (cons (substring text start i) acc) acc))]
+      [else (loop (+ i 1) start acc)])))
 
 (define (cached-lib-row name)
   (let ([table (assoc name *repl-libs*)])
@@ -783,6 +857,162 @@
 (define (cached-lib-imports name)
   (cond [(assoc name *repl-lib-imports*) => cdr]
         [else (quote ())]))
+
+;; Mode 16: the SOURCE FILES the most recent library registration read -- the library's own
+;; source (the path the door named through mode 13) followed by every file the include
+;; family opened for it, in read order, newline-joined (change: chez-free-unit-pipeline,
+;; design D5/D7).
+;;
+;; This is the second half of a disk-sourced library's cache key.  The compiler half is the
+;; running executable; this half is the content of the files the unit was built from, and a
+;; unit that `include`s is not described by its .sld alone.  The host digests these and
+;; stores the list IN the entry, which is what lets a later process validate an entry
+;; without compiling anything: it re-digests the files the entry names.
+;;
+;; Like modes 11 and 15, a pure query over state a previous mode established -- no
+;; compilation, no I/O.  Scoped to ONE registration: mode 4 resets the record before
+;; parsing, so two libraries including the same fragment each report it.
+;;
+;; The library's own source comes first because it is the only file the reader never opened
+;; (the door read it and handed over the text), so the record would otherwise omit exactly
+;; the file a reader of the entry would expect to see named.  Empty when the door submitted
+;; source with no path (standard input), in which case the caller has nothing to key on and
+;; must not cache.
+(define (repl-library-sources-text)
+  (guard (e (#t (cons (quote error) (repl-error->string e))))
+    (let ([home (source-home)])
+      (cons (quote ok)
+            (fold-left (lambda (acc p) (string-append acc p "\n"))
+                       (if (string=? home "") "" (string-append home "\n"))
+                       (includes-read))))))
+
+;; --- the ship door's tree-shake (change: chez-free-unit-pipeline, design D9) ---
+;; Mode 17: recompile ONE registered library, keeping only the bindings a program's emitted
+;; IR actually reaches, and return the pruned unit for the host to link in place of the full
+;; one.  This is the Chez driver's AOT tree-shake (src/compile.ss's build-modular-artifacts*)
+;; made available to `emit build`, which until now linked whole units and delivered ~2.3x the
+;; bytes for the same program (docs/PERFORMANCE.md P8).
+;;
+;; INPUT, three parts, because the core does no I/O and cannot fetch any of them itself:
+;;
+;;   <mangled unit key>\n            which library, in the same "scheme.base" key mode 9
+;;                                   hands the host, so no library-name parsing in C++
+;;   <library source text>           for a user library; EMPTY for a baked member, whose
+;;                                   source is *prelude-source* and needs no door
+;;   ; ==EMIT-UNIT-BOUNDARY==\n      the marker the host already splits module streams on
+;;   <the program's emitted IR>      what the roots are read out of
+;;
+;; RETURNS (ok . (ir . init-symbol)) -- mode 4's shape, so the host substitutes the pruned
+;; module for the full one positionally -- or (keep . NAME) when the library must NOT be
+;; pruned, or (error . msg).
+;;
+;; PRUNABILITY: a unit is prunable exactly when no OTHER registered library imports it.  On
+;; this door the session IS the program's import closure (the run door preloads lazily, and
+;; `emit build` reaches this through the same seeding), so the Chez driver's two-part rule --
+;; a direct import of the program that no other unit imports -- reduces to its second half:
+;; something must import a library that is present, and if no unit does, the program does.
+;; The rule itself is unchanged and is the sound one: a unit kept full may reference a
+;; binding in a unit that was pruned, so only leaves of the closure may lose bindings.  This
+;; is why `(emit internal)` stays whole (`(scheme base)` imports it) and why a program that
+;; imports a user library which imports `(scheme base)` shakes only the user library.
+;;
+;; A raise is reported WITH the key it was shaking.  A door that gets "kept whole (...)"
+;; for every unit needs to know whether the reason was this library's own compile or the
+;; protocol never naming a registered library at all, and the two read identically without
+;; it -- which cost an afternoon the first time.
+(define (repl-shake-library input)
+  (shake-at! "start")
+  (guard (e (#t (cons (quote error)
+                      (string-append "shaking " (shake-input-key input)
+                                     " [" *shake-step* "]: "
+                                     (repl-error->string e)))))
+    (let* ([nl   (str-index input #\newline)]
+           [key  (if (>= nl 0) (substring input 0 nl) "")]
+           [rest (if (>= nl 0) (substring input (+ nl 1) (string-length input)) "")]
+           [bpos (str-search rest *emit-unit-boundary*)]
+           [src  (if (>= bpos 0) (substring rest 0 bpos) "")]
+           [prog (if (>= bpos 0)
+                     (substring rest (+ bpos (string-length *emit-unit-boundary*))
+                                (string-length rest))
+                     rest)]
+           [name (begin (shake-at! "resolve") (registered-name-of-key key))])
+      (cond
+        [(not name) (cons (quote error) (string-append "no registered library keyed " key))]
+        [(begin (shake-at! "prunable") (imported-by-another? name))
+         (cons (quote keep) name)]
+        [else (shake-registered-library name src prog)]))))
+
+;; The key line of mode 17's input, for a diagnostic that must not itself raise.
+(define (shake-input-key input)
+  (let ([nl (str-index input #\newline)])
+    (if (>= nl 0) (substring input 0 nl) "?")))
+
+;; The registered library whose canonical unit prefix is KEY, or #f.  Matching on the
+;; mangled key rather than on a library name datum keeps library-name equality in the core,
+;; where mode 9 already put it, instead of in the host.
+(define (registered-name-of-key key)
+  (let loop ([ls *repl-lib-imports*])
+    (cond [(null? ls) #f]
+          [(string=? (mangle (car (car ls)) "") key) (car (car ls))]
+          [else (loop (cdr ls))])))
+
+;; Does any OTHER registered library import NAME?
+(define (imported-by-another? name)
+  (let loop ([ls *repl-lib-imports*])
+    (cond [(null? ls) #f]
+          [(and (not (equal? (car (car ls)) name))
+                (member name (cdr (car ls))))
+           #t]
+          [else (loop (cdr ls))])))
+
+;; Recompile NAME against the roots PROG's IR imposes.  The declaration comes from the
+;; partition for a baked member and from the door's source text for a user library -- the
+;; two ways a library body reaches this compiler, and the reason a cache-seeded session can
+;; still shake: mode 14 registers from prebuilt IR and retains no body forms, but the baked
+;; source is compiled INTO this binary and a user library's file is one read away.
+;;
+;; The pruned table is DISCARDED rather than published: the program was already compiled
+;; against the full table (mode 7 runs first), and republishing a smaller one would leave the
+;; session describing a library that no longer matches what its importers resolved against.
+;; Each step is LABELLED, because every way this can fail arrives at the door as one
+;; string and the door can only report it -- "kept whole (match: no matching clause 0)"
+;; names neither the step nor the library, and the first bug here cost an afternoon of
+;; four-minute self-compiles to place.
+;;
+;; A PLAIN VARIABLE, not a nested `guard` around each step: the mode already runs inside
+;; one guard, and a second one inside its dynamic extent is exactly the shape this compiler
+;; has the least coverage of.  Debugging a shake is no time to be discovering that.
+(define *shake-step* "")
+(define (shake-at! who) (set! *shake-step* who))
+
+(define (shake-registered-library name src prog)
+  ;; The recompile re-runs this library's `include` declarations, so the record mode 16
+  ;; reports must describe THIS read and not the preload's -- the door caches the pruned
+  ;; unit against the same source closure a full unit entry is keyed on.
+  (reset-includes-read!)
+  (let* ([_       (shake-at! "parse")]
+         [dl      (if (baked-member? name)
+                      (parse-define-library
+                        (partition-library-form
+                          (assoc name *prelude-libraries*)
+                          (read-forms-from-string *prelude-source*)))
+                      (if (string=? src "")
+                          (error "no source text for library" name)
+                          (parse-define-library (car (read-all-from-string src)))))]
+         [_       (shake-at! "imports")]
+         [tables  (repl-import-tables (cadr dl))]
+         [_       (shake-at! "candidates")]
+         [cands   (append (map cdr (caddr dl))
+                          (ct-own-refs (table-ct-half (assoc name *repl-libs*))))]
+         [_       (shake-at! "roots")]
+         [roots   (program-root-internals prog name cands)]
+         [saved   counter]
+         [_       (shake-at! "compile")]
+         [res     (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl)
+                                   (if tables tables (quote ())) no-dump roots)])
+    (set! counter saved)                        ; undo compile-library's reset-counter!
+    (shake-at! "")
+    (cons (quote ok) (cons (car res) (mangle name "__init")))))
 
 ;; Mode 7: compile a whole program that may import user libraries.  direct imports are
 ;; the program's explicit imports plus (scheme base) (run-with-scheme-base); their export
@@ -1053,10 +1283,18 @@
       ;; rides the state vector for the same reason the rest of this does: the assembled
       ;; program's globals are re-created on every host call, so a home set by mode 13
       ;; would be gone by the time mode 4/7/11/12 needed it.
-      (set-source-home! (vector-ref s 8)))))
+      (set-source-home! (vector-ref s 8))
+      ;; And the record of what the include family READ, for exactly the same reason: mode
+      ;; 4 fills it and mode 16 reads it back, one host call later (change:
+      ;; chez-free-unit-pipeline).  Without this the record is always empty by the time it
+      ;; is asked for, so a library's cache entry would be keyed on its .sld alone and an
+      ;; edit to an included file would not invalidate it -- the one failure this whole
+      ;; tracker exists to prevent, and invisible under Chez, whose globals persist.
+      (set-includes-read! (vector-ref s 9)))))
 (define (repl-save-state!)
   (repl-state-set! (vector *repl-env* *repl-macro-env* *repl-known* *repl-n* counter
-                           *repl-libs* *repl-lib-imports* *repl-calls* (source-home))))
+                           *repl-libs* *repl-lib-imports* *repl-calls* (source-home)
+                           (includes-read))))
 
 ;; --- the dispatched embedded entry (design D2) -------------------------------
 ;; The host sets (repl-mode)/(repl-input) via rt_repl_set, then calls this ccc
@@ -1084,17 +1322,19 @@
              [(= mode 1) (init-session *prelude-source*)]
              [(= mode 2) (form-complete-code (repl-input))]
              [(= mode 4) (repl-load-library-text (repl-input))]  ; load a library unit
-             [(= mode 5) (repl-manifest-paths (repl-input))]     ; manifest text -> paths
+             ;; 5 is RETIRED (chez-free-unit-pipeline): every door uses mode 9.
              [(= mode 6) (repl-autoimport-scheme-base)]          ; auto-import (scheme base)
              [(= mode 7) (compile-program-text (repl-input))]    ; run door: whole program
              [(= mode 8) (run-register-baked-set)]               ; run door: the baked set
-             [(= mode 9) (repl-manifest-user-paths (repl-input))] ; run door: manifest paths sans (scheme base)
+             [(= mode 9) (repl-manifest-user-paths (repl-input))] ; every door: manifest's user libraries
              [(= mode 10) (repl-manifest-programs (repl-input))]  ; emit build door: program entries
              [(= mode 11) (repl-library-exports-text (repl-input))] ; emit lib door: export table
              [(= mode 12) (repl-source-imports (repl-input))]     ; run door: a source's imports
              [(= mode 13) (repl-set-source-home (repl-input))]    ; every door: the next source's path
              [(= mode 14) (repl-register-cached-libs (repl-input))] ; cache: register prebuilt units
              [(= mode 15) (repl-cached-libs-text (repl-input))]   ; cache: metadata to persist
+             [(= mode 16) (repl-library-sources-text)]           ; cache: a library's source files
+             [(= mode 17) (repl-shake-library (repl-input))]     ; emit build door: prune a unit
              [else       (compile-one-form-text (repl-input))])])
       (repl-save-state!)
       result)))
