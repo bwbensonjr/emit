@@ -252,7 +252,6 @@ ab2f2e442db70d69	unimplemented	derived syntax / non-top-level define-syntax
 ab7afd3c2dd3d97c	deliberate:#27	complex or rational literal read as a variable
 abe713ee9fdedc8e	unimplemented	(scheme char)
 ad20a5558f53ad2c	unimplemented	emit: unresolved import (not baked, not in the manifest): (s
-aeb7183b887873c0	issue-92	cond treats a shadowed => as receiver syntax
 aeded30821ea29c7	deliberate:#27	no exact rationals / bignums
 af1154117f2b94aa	blocked-by:68ae45abb9b0e161	needs head
 af7c5f470c633857	unimplemented	(scheme char)

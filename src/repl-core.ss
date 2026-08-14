@@ -53,6 +53,20 @@
   (set! *repl-macro-env* (cons (parse-define-syntax form) *repl-macro-env*))
   (set! *repl-known* (cons (cadr form) *repl-known*)))
 
+;; Register the names a definition form binds: known identifiers for hygiene, and -- since
+;; a binding shadows a keyword (change: binding-aware-expander, issue #103) -- a keyword of
+;; the same name is dropped from the session's macro environment, so a LATER form's use of
+;; that name is an ordinary call.  The batch paths get this from `prune-shadowed-macros`
+;; over their whole form list; a session's forms arrive one at a time, so it is applied
+;; per form here.  Both are session state, restored with the rest of the snapshot when a
+;; form's compile fails.
+(define (repl-note-defines! names)
+  (for-each
+    (lambda (n)
+      (set! *repl-known* (cons n *repl-known*))
+      (set! *repl-macro-env* (prune-shadowed-macros *repl-macro-env* (list n))))
+    names))
+
 ;; expand a define's INIT (not its raw signature -- expanding the raw form would
 ;; treat a dotted param list like `(f . xs)` as an application), then rebuild a
 ;; simple (define name expanded-init); expand any other form whole.  (run-repl's
@@ -150,7 +164,19 @@
          (cons (quote import) "")]
         [else
          (let ([dn (define-name form)])
-           (when dn (set! *repl-known* (cons dn *repl-known*)))
+           ;; Every name this form binds: one define, or a record's whole family.  Both
+           ;; halves matter (change: binding-aware-expander).  #79: `define-name` answers
+           ;; #f for define-record-type, so a template mentioning the constructor was
+           ;; renamed per expansion and then unbound -- `compute-known` does the same for
+           ;; the batch paths, and the two must agree or dev->ship fidelity fails on a
+           ;; macro over a record.  #103: a define at the prompt DISPLACES a keyword of
+           ;; that name, and each REPL form is expanded on its own with no enclosing
+           ;; letrec to make the name a lexical binding, so the session's macro
+           ;; environment is where that shadowing has to happen (design D3).
+           (repl-note-defines!
+             (cond [dn (list dn)]
+                   [(record-type-form? form) (record-type-binding-names form)]
+                   [else (quote ())]))
            ;; --dump in the REPL: the entered form IS the unit under inspection, and
            ;; every stage is tagged with the form's identity -- its define name, else
            ;; its session index -- since these passes run once per form (design D8,
@@ -198,7 +224,12 @@
     (lambda (f)
       (cond [(define-syntax-form? f) (repl-note-syntax! f)]
             [(define-form? f)
-             (set! *repl-known* (cons (define-name f) *repl-known*))
+             ;; through repl-note-defines! so the batch states the shadowing rule the same
+             ;; way an interactive form does.  A no-op for the prelude as it stands -- no
+             ;; prelude name is both a define and a keyword, which
+             ;; test/macro-shadow-check.sh keeps true -- and the point is that it stays a
+             ;; checked property rather than an assumption buried in this loop.
+             (repl-note-defines! (list (define-name f)))
              (repl-register-define! *repl-env* f)]
             [else (if #f #f)]))
     forms)
