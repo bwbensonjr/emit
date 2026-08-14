@@ -120,6 +120,136 @@ else
   bad "door-parity: one of the two doors produced no executable"
 fi
 
+# --- backward root propagation through the import DAG ------------------------
+# (change: import-dag-tree-shaking; docs/PERFORMANCE.md P10).  A unit another unit imports
+# used to be exempt from shaking, so `(scheme base)` importing `(emit internal)` pinned the
+# whole substrate into every binary: 348,536 B and 161 `emit.internal:*` symbols in a
+# `car`-only executable, to support ONE standard-library binding.
+#
+# Every assertion here has a direction.  A test that only checks the substrate SHRANK passes
+# when the shake is too aggressive, and a test that only checks a program still RUNS passes
+# when it is not aggressive at all -- so the pair below is written to fail on either side.
+echo "backward propagation through the import DAG"
+
+sub_full=build/lib/emit.internal.ll
+sub_pruned="$TMP/caronly.emit.internal.pruned.ll"
+if [ -f "$sub_full" ] && [ -f "$sub_pruned" ]; then
+  fz=$(stat -f%z "$sub_full" 2>/dev/null || stat -c%s "$sub_full")
+  pz=$(stat -f%z "$sub_pruned" 2>/dev/null || stat -c%s "$sub_pruned")
+  # The substrate is imported by (scheme base), never by the program.  A car-only program
+  # reaches none of it, so this is the maximal case: well under a tenth of the full unit.
+  if [ "$pz" -lt $(( fz / 10 )) ]; then
+    ok "substrate shaken via its importer ($fz -> $pz B)"
+  else
+    bad "substrate not shaken through the import DAG ($fz -> $pz B)"
+  fi
+  # ...and it is shaken because an IMPORTER's roots reached it, which the narration says.
+  grep -q "shake (emit internal).*via importers" "$TMP/caronly.log" \
+    && ok "shake narrates the importer-driven case" \
+    || bad "no 'via importers' narration for the substrate"
+else
+  bad "propagation check: missing $sub_full or $sub_pruned"
+fi
+
+# The reader is the payload this change removes: 55 rd-* bindings that a car-only program
+# cannot reach through any importer.  Assert on the delivered BINARY, not just the IR --
+# the claim is about what ships.
+if command -v nm >/dev/null 2>&1; then
+  rd_min=$(nm "$TMP/caronly" 2>/dev/null | grep -c 'emit\.internal:rd-' || true)
+  [ "$rd_min" -eq 0 ] \
+    && ok "car-only binary carries no reader bindings" \
+    || bad "car-only binary still carries $rd_min reader symbols"
+
+  # The over-pruning counterpart: a program that DOES read must keep them.  Without this,
+  # every assertion above is satisfied by a shake that drops everything.
+  # read-all-from-string returns a LIST OF DATA, so car is the datum (7 8), not 7.
+  reads="$(build reads '(display (car (read-all-from-string "(7 8)")))')"
+  rd_val="${reads%%|*}"
+  [ "$rd_val" = "(7 8)" ] && ok "reading program value" || bad "reading program value ($rd_val)"
+  rd_keep=$(nm "$TMP/reads" 2>/dev/null | grep -c 'emit\.internal:rd-' || true)
+  [ "$rd_keep" -gt 0 ] \
+    && ok "reading program keeps the reader through the DAG ($rd_keep symbols)" \
+    || bad "reading program lost the reader bindings it needs"
+else
+  echo "  [SKIP] nm unavailable: binary symbol assertions"
+fi
+
+# --- the ptr / code: pairing the root rule depends on (design D3) -------------
+# `program-root-internals` finds a cross-unit reference by searching for the closure load
+# `ptr @"U:n"`.  Since cross-unit-direct-calls a reference ALSO appears as a direct call to
+# `@"U:code:n"`, and the two are paired in every unit today -- which is the only reason
+# searching one form finds every reference.  A codegen change that emitted the direct call
+# without loading the closure (P9's fixed-arity entry points are exactly that) would make the
+# root rule miss a live reference and prune a needed binding into a link-time undefined
+# symbol.  Assert the pairing here, so that change fails by name instead.
+unpaired=0; checked=0
+for u in build/lib/*.ll; do
+  own="$(basename "$u" .ll)"                       # e.g. scheme.base
+  while read -r ref; do
+    # ref looks like  emit.internal:code:rd-datum  -- split off the unit prefix
+    pfx="${ref%%:code:*}"; nm_="${ref#*:code:}"
+    [ "$pfx" = "$own" ] && continue                # own labels: defined here, not imported
+    checked=$((checked+1))
+    grep -q "ptr @\"$pfx:$nm_\"" "$u" || { unpaired=$((unpaired+1)); echo "         unpaired: $ref in $own"; }
+  done < <(grep -o '@"[a-z.]*:code:[^"]*"' "$u" | tr -d '@"' | sort -u)
+done
+if [ "$unpaired" -eq 0 ] && [ "$checked" -gt 0 ]; then
+  ok "every cross-unit direct call is paired with a closure load ($checked checked)"
+elif [ "$checked" -eq 0 ]; then
+  echo "  [SKIP] no cross-unit direct calls found to check"
+else
+  bad "$unpaired of $checked cross-unit direct calls have no ptr load (breaks the root rule)"
+fi
+
+# --- a transitively imported library is shaken to what its importer retains ---
+# The program never names lib B; only lib A does, and A is itself shaken first.  Before this
+# change B was exempt for being imported, and also for not being a direct import.
+mkdir -p "$TMP/chain"
+cat > "$TMP/chain/b.sld" <<'EOF'
+(define-library (chain b)
+  (export b-used b-unused)
+  (import (scheme base))
+  (begin
+    (define (b-used x) (* x 3))
+    (define (b-unused x) (* x 5))))
+EOF
+cat > "$TMP/chain/a.sld" <<'EOF'
+(define-library (chain a)
+  (export a-used)
+  (import (scheme base) (chain b))
+  (begin
+    (define (a-used x) (b-used x))))
+EOF
+cat > "$TMP/chain/prog.scm" <<'EOF'
+(import (chain a))
+(display (a-used 4))
+EOF
+# The manifest must also name the baked libraries the chain imports: a manifest replaces the
+# repo's, it does not extend it.  Absolute paths, since this file lives in $TMP.
+cat > "$TMP/chain/emit-libs.scm" <<EOF
+((library (emit internal) (source "$PWD/lib/emit/internal.sld"))
+ (library (scheme base)   (source "$PWD/lib/scheme/base.sld"))
+ (library (chain b) (source "$TMP/chain/b.sld") (artifacts "$TMP/chain/art"))
+ (library (chain a) (source "$TMP/chain/a.sld") (artifacts "$TMP/chain/art")))
+EOF
+if chez --libdirs src --script src/compile.ss "$TMP/chain/prog.scm" -o "$TMP/chain/prog" \
+      --manifest "$TMP/chain/emit-libs.scm" >"$TMP/chain/build.log" 2>&1; then
+  [ "$("$TMP/chain/prog" 2>/dev/null)" = "12" ] \
+    && ok "transitive chain value" \
+    || bad "transitive chain value ($("$TMP/chain/prog" 2>/dev/null))"
+  bp="$TMP/chain/prog.chain.b.pruned.ll"
+  if [ -f "$bp" ]; then
+    grep -q 'chain.b:code:b-used'   "$bp" && ok "chain: B keeps what A reaches" \
+                                          || bad "chain: B dropped a binding A reaches"
+    grep -q 'chain.b:code:b-unused' "$bp" && bad "chain: B kept a binding nothing reaches" \
+                                          || ok "chain: B drops what nothing reaches"
+  else
+    bad "chain: B was never shaken (no $bp)"
+  fi
+else
+  bad "transitive chain build failed"; sed 's/^/         /' "$TMP/chain/build.log" | tail -5
+fi
+
 echo
 echo "  $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

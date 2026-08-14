@@ -193,9 +193,17 @@ if [ -x "$P/hello" ]; then
 else
   bad "emit build produced no executable"; cat "$TMP/build1.log" | tail -5
 fi
+# INVERTED by change: import-dag-tree-shaking.  This asserted the opposite until now -- that a
+# unit another unit imports is kept whole -- which was the conservative rule and the reason
+# `(emit internal)` shipped entire in every binary.  Roots now propagate backward through the
+# import DAG, so the substrate is shaken against what the already-shaken `(scheme base)` still
+# reaches, and a hello-world reaches none of it.
 grep -q "kept whole (another unit imports it)" "$TMP/build1.log" \
-  && ok "a unit another unit imports is kept whole (the prunability rule)" \
-  || bad "the substrate was not kept whole: $(tail -3 "$TMP/build1.log")"
+  && bad "the substrate was kept whole; backward propagation did not run" \
+  || ok "a unit another unit imports is shaken, not kept whole"
+grep -q "shake: emit.internal:" "$TMP/build1.log" \
+  && ok "the substrate is pruned through its importer" \
+  || bad "the substrate was never shaken: $(grep -i shake "$TMP/build1.log" | head -3)"
 
 # Rebuilding the same program reuses the pruned unit rather than pruning again.
 (cd "$P" && EMIT_CACHE="$C" EMIT_VERBOSITY=verbose "$EMIT_ABS" build hello > "$TMP/build2.log" 2>&1)
@@ -213,6 +221,38 @@ fi
 grep -q "pruned demo.util" "$TMP/build3.log" \
   && ok "the user library is pruned to what its importer reaches" \
   || bad "the user library was not pruned: $(grep -i shake "$TMP/build3.log" | head -3)"
+
+# --- a shaken entry is keyed on the whole root text, not the program IR --------------
+# (change: import-dag-tree-shaking, design D4).  A transitively imported unit's roots depend
+# on how its IMPORTERS were pruned, so the program's digest alone no longer determines them.
+# These two programs reach different parts of `(scheme base)`, which prunes it differently,
+# which imposes different roots on the substrate underneath -- so each must be served its own
+# substrate entry, and neither may be handed the other's.
+cat > "$P/reads.scm" <<'EOF'
+(display (car (read-all-from-string "(7 8)")))
+(newline)
+EOF
+cat > "$P/emit-libs2.scm" <<EOF
+((library (demo util) (source "util.sld"))
+ (program reads (source "reads.scm") (output "reads")))
+EOF
+(cd "$P" && EMIT_CACHE="$C" EMIT_VERBOSITY=verbose "$EMIT_ABS" build reads --manifest emit-libs2.scm > "$TMP/build4.log" 2>&1)
+# read-all-from-string returns a LIST OF DATA, so car is the datum (7 8), not 7.
+if [ -x "$P/reads" ] && [ "$(cd "$P" && ./reads)" = "(7 8)" ]; then
+  ok "a reading program builds and runs with the substrate shaken"
+else
+  bad "the reading program failed to build or run"; tail -5 "$TMP/build4.log"
+fi
+# It must have pruned the substrate ITSELF rather than reusing hello's entry: hello reaches
+# no reader binding at all, so being served hello's substrate would fail to link.
+grep -q "pruned emit.internal.* reused" "$TMP/build4.log" \
+  && bad "a different program was served another's substrate entry" \
+  || ok "a program with different reach gets its own substrate entry"
+# ...and rebuilding it DOES reuse, so the key is stable, not merely unique.
+(cd "$P" && EMIT_CACHE="$C" EMIT_VERBOSITY=verbose "$EMIT_ABS" build reads --manifest emit-libs2.scm > "$TMP/build5.log" 2>&1)
+grep -q "pruned emit.internal.* reused" "$TMP/build5.log" \
+  && ok "rebuilding reuses the substrate entry (the root-text key is stable)" \
+  || bad "the substrate was pruned again on rebuild: $(grep -i shake "$TMP/build5.log" | head -2)"
 
 # --- shaking: a pruned unit is never served to an open-world door --------------------
 # The cache now holds `shake-` entries for this compiler.  A REPL session must still get

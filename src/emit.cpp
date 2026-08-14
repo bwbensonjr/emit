@@ -1340,25 +1340,41 @@ static bool compile_unit(const std::string &prog_src, std::vector<std::string> &
 // is the door's half: which module goes with which library, where a library's source is, and
 // the cache.
 //
-// A pruned unit is CACHED under its own kind, keyed additionally by a digest of the program
-// IR (design D9, refined during implementation).  The entry has to be findable before the
-// roots are known -- computing them is most of the work being avoided -- and the program's
-// emitted IR is what determines them: same IR, same roots, necessarily.  It is a coarser key
-// than the root set itself (two programs with identical roots do not share an entry) and an
-// exactly sufficient one for the case that matters, rebuilding a program that has not
-// changed.  Emitted IR is already required to be byte-identical for unchanged input, which
-// is what makes it usable as a key at all.
+// REVERSE ORDER, AND AN ACCUMULATING ROOT TEXT (change: import-dag-tree-shaking, design D1).
+// `modules` is in topological link order -- dependencies first, so `emit.internal` precedes
+// `scheme.base` -- and we walk it BACKWARD.  `root_text` starts as the program's IR and grows
+// by each unit's FINAL text as that unit is settled, so by the time a unit is shaken every
+// unit that could import it is already in the string.  That is the whole of the backward
+// propagation; the core does the rest (mode 17, and program-root-internals in src/core.ss).
+//
+// The old rule instead answered `keep` for any unit another registered library imports, which
+// made `(emit internal)` unprunable by construction once `(scheme base)` imported it: 348,536 B
+// and 161 symbols in a `car`-only binary to support one standard-library binding.
+//
+// A pruned unit is CACHED under its own kind, keyed additionally by a digest of the ROOT TEXT
+// (design D9, refined by design D4 of this change).  It used to key on the program IR alone,
+// justified as "the program's emitted IR is what determines them: same IR, same roots,
+// necessarily" -- which stopped being true the moment a unit's roots also depend on how its
+// importers were pruned.  The digest is available exactly where the old one was, because
+// `root_text` is complete for unit i before unit i is shaken.  Emitted IR is already required
+// to be byte-identical for unchanged input, which is what makes it usable as a key at all.
 //
 // Best-effort throughout: a library whose source cannot be found, a mode-17 error, an
-// unwritable cache -- each leaves that unit whole, which is always sound.
+// unwritable cache -- each leaves that unit whole, which is always sound.  Note what that
+// costs and why it is still right: a unit left whole is appended to `root_text` WHOLE, so its
+// every reference roots its own dependencies and nothing downstream can be over-pruned on its
+// behalf.  Degrading keeps bytes; it never breaks the link.
 static void shake_units(std::vector<std::string> &modules,
                         const std::vector<std::string> &module_keys,
                         const std::string &prog_ir,
                         const std::map<std::string, std::string> &path_of) {
   if (modules.size() != module_keys.size()) return;      // paranoia: never shake blind
-  std::string prog_key = fnv1a_hex(prog_ir);
-  for (size_t i = 0; i < modules.size(); i++) {
+  std::string root_text = prog_ir;
+  for (size_t i = modules.size(); i-- > 0; ) {
     const std::string &key = module_keys[i];
+    // Keyed on everything the roots are read out of, which is why it is computed per unit
+    // inside the loop rather than once outside it.
+    std::string root_key = fnv1a_hex(root_text);
     std::map<std::string, std::string>::const_iterator it = path_of.find(key);
     // A baked member has no manifest entry and needs none: its source is compiled into this
     // binary, so mode 17 rebuilds it from *prelude-source* with no source text from us.  A
@@ -1367,42 +1383,49 @@ static void shake_units(std::vector<std::string> &modules,
     std::string src_id = sld.empty() ? std::string("baked") : source_key_of(sld);
 
     std::vector<std::string> got, inits;
-    if (cache_load_entry(cache_entry_stem("shake", key, src_id + "-" + prog_key),
-                         "pruned " + key, "shake", key, src_id + "-" + prog_key,
+    if (cache_load_entry(cache_entry_stem("shake", key, src_id + "-" + root_key),
+                         "pruned " + key, "shake", key, src_id + "-" + root_key,
                          /*sources_required=*/!sld.empty(), got, inits) == CacheRead::Hit &&
         got.size() == 1) {
       modules[i] = got[0];
+      root_text += got[0];                    // a hit is this unit's final text, like any other
       continue;
     }
 
     // Mode 17's input: KEY, the library's source (empty for a baked member), the boundary,
-    // then the program IR the roots are read out of.  The source home must be the .sld, as
-    // it is when the preload compiles one: the pruned recompile re-runs the library's
-    // `include` declarations, which resolve beside their own file.
+    // then the ROOT IR the roots are read out of -- the program plus every unit already
+    // settled.  The source home must be the .sld, as it is when the preload compiles one:
+    // the pruned recompile re-runs the library's `include` declarations, which resolve
+    // beside their own file.
     if (!sld.empty()) set_source_home(sld);
     std::string input = key + "\n";
     if (!sld.empty()) input += read_file(sld);
     input += kBoundary;
-    input += prog_ir;
+    input += root_text;
     rt_repl_set(17, input.data(), (intptr_t)input.size());
     intptr_t r = scheme_entry();
     std::string st = status_of(r);
-    if (st == "keep") {
-      // Sound and expected, not a failure: a unit another unit imports must stay whole, or
-      // that importer could reference a binding this one dropped.  It is why `(emit
-      // internal)` survives intact, and why a program importing a user library that imports
-      // `(scheme base)` shakes only the user library.
-      vsay("shake: " + key + " kept whole (another unit imports it)");
-      continue;
-    }
     if (st != "ok") {
-      vsay("shake: " + key + " kept whole (" + door_msg(scm_str(rt_cdr(r))) + ")");
+      // Sound, and now the ONLY way a unit stays whole: the core no longer answers `keep`,
+      // because the import-graph gate that produced it is gone.  The whole text goes into
+      // `root_text` so that this unit's own references still root its dependencies.
+      //
+      // The payload is read ONLY for `error`, whose cdr is a message string.  Any other
+      // status is reported by name without touching its cdr: `scm_str` would call
+      // rt_string_len on whatever is there, and a status this door does not know is exactly
+      // the case where that assumption is least safe.  Found the honest way -- mid-change,
+      // a new host ran against a core that still answered `keep` (cdr = a library NAME, a
+      // list), and this line silently produced nothing at all.
+      vsay("shake: " + key + " kept whole (" +
+           (st == "error" ? door_msg(scm_str(rt_cdr(r))) : "door answered " + st) + ")");
+      root_text += modules[i];
       continue;
     }
     std::string pruned = scm_str(rt_car(rt_cdr(r)));
     vsay("shake: " + key + "  [" + std::to_string(modules[i].size()) + " -> " +
          std::to_string(pruned.size()) + " bytes]");
     modules[i] = pruned;
+    root_text += pruned;
 
     // The pruned recompile read this library's whole source closure (mode 17 resets the
     // record first), so the entry keys on the same files a full unit entry would.
@@ -1411,8 +1434,8 @@ static void shake_units(std::vector<std::string> &modules,
     if (!sld.empty() && sources.empty()) continue;       // unreadable source: do not cache
     std::vector<std::string> one;
     one.push_back(pruned);
-    cache_store_entry(cache_entry_stem("shake", key, src_id + "-" + prog_key),
-                      "pruned " + key, "shake", key, src_id + "-" + prog_key,
+    cache_store_entry(cache_entry_stem("shake", key, src_id + "-" + root_key),
+                      "pruned " + key, "shake", key, src_id + "-" + root_key,
                       /*keys=*/key + "\n", sources, one);
   }
 }
@@ -2193,9 +2216,10 @@ static int emit_build(int argc, char **argv) {
                        is_library, src))
     return 1;
 
-  // Tree-shake: replace each prunable unit with one holding only what this program reaches
-  // (change: chez-free-unit-pipeline; docs/PERFORMANCE.md P8).  This is the ship path, so
-  // the world is closed; the run and REPL doors keep whole units and are untouched.
+  // Tree-shake: replace each unit with one holding only what is still reached -- by this
+  // program, or by an importing unit already pruned (change: chez-free-unit-pipeline, then
+  // import-dag-tree-shaking; docs/PERFORMANCE.md P8 and P10).  This is the ship path, so the
+  // world is closed; the run and REPL doors keep whole units and are untouched.
   shake_units(modules, module_keys, prog_ir, library_paths_by_key(manifests));
 
   // Write each unit + the program to temp .ll files (clang infers IR from .ll).  The

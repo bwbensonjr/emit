@@ -931,21 +931,27 @@
 ;;   <library source text>           for a user library; EMPTY for a baked member, whose
 ;;                                   source is *prelude-source* and needs no door
 ;;   ; ==EMIT-UNIT-BOUNDARY==\n      the marker the host already splits module streams on
-;;   <the program's emitted IR>      what the roots are read out of
+;;   <the ROOT IR>                   what the roots are read out of
 ;;
 ;; RETURNS (ok . (ir . init-symbol)) -- mode 4's shape, so the host substitutes the pruned
-;; module for the full one positionally -- or (keep . NAME) when the library must NOT be
-;; pruned, or (error . msg).
+;; module for the full one positionally -- or (error . msg).
 ;;
-;; PRUNABILITY: a unit is prunable exactly when no OTHER registered library imports it.  On
-;; this door the session IS the program's import closure (the run door preloads lazily, and
-;; `emit build` reaches this through the same seeding), so the Chez driver's two-part rule --
-;; a direct import of the program that no other unit imports -- reduces to its second half:
-;; something must import a library that is present, and if no unit does, the program does.
-;; The rule itself is unchanged and is the sound one: a unit kept full may reference a
-;; binding in a unit that was pruned, so only leaves of the closure may lose bindings.  This
-;; is why `(emit internal)` stays whole (`(scheme base)` imports it) and why a program that
-;; imports a user library which imports `(scheme base)` shakes only the user library.
+;; There is no longer a `keep` answer.  It existed for exactly one reason, the import-graph
+;; gate below, and had no other producer; a unit that cannot be pruned now reports why as an
+;; error, which the host already narrates as "kept whole (<reason>)" and treats as sound.
+;;
+;; THE ROOT IR IS NOT ONLY THE PROGRAM (change: import-dag-tree-shaking, design D1).  The host
+;; sends the program's IR followed by the final IR of every unit it has already shaken, and it
+;; walks its module list in REVERSE link order so that everything importing this unit is in
+;; that text by the time this unit is shaken.  The core does not need to know which of those
+;; units import this one: a unit emits `ptr @"X:name"` only for a library it imports, so a
+;; non-importer contributes no match.
+;;
+;; PRUNABILITY: every registered library is prunable.  This door used to answer `keep` for a
+;; unit another registered library imports -- the Chez driver's rule, whose justification was
+;; that an importer kept full could reference a binding its dependency dropped.  Reverse order
+;; removes that hazard, and with it the reason `(emit internal)` shipped whole in every
+;; delivered binary (`(scheme base)` imports it).
 ;;
 ;; A raise is reported WITH the key it was shaking.  A door that gets "kept whole (...)"
 ;; for every unit needs to know whether the reason was this library's own compile or the
@@ -962,16 +968,14 @@
            [rest (if (>= nl 0) (substring input (+ nl 1) (string-length input)) "")]
            [bpos (str-search rest *emit-unit-boundary*)]
            [src  (if (>= bpos 0) (substring rest 0 bpos) "")]
-           [prog (if (>= bpos 0)
+           [root (if (>= bpos 0)
                      (substring rest (+ bpos (string-length *emit-unit-boundary*))
                                 (string-length rest))
                      rest)]
            [name (begin (shake-at! "resolve") (registered-name-of-key key))])
       (cond
         [(not name) (cons (quote error) (string-append "no registered library keyed " key))]
-        [(begin (shake-at! "prunable") (imported-by-another? name))
-         (cons (quote keep) name)]
-        [else (shake-registered-library name src prog)]))))
+        [else (shake-registered-library name src root)]))))
 
 ;; The key line of mode 17's input, for a diagnostic that must not itself raise.
 (define (shake-input-key input)
@@ -987,16 +991,17 @@
           [(string=? (mangle (car (car ls)) "") key) (car (car ls))]
           [else (loop (cdr ls))])))
 
-;; Does any OTHER registered library import NAME?
-(define (imported-by-another? name)
-  (let loop ([ls *repl-lib-imports*])
-    (cond [(null? ls) #f]
-          [(and (not (equal? (car (car ls)) name))
-                (member name (cdr (car ls))))
-           #t]
-          [else (loop (cdr ls))])))
+;; `imported-by-another?` used to live here and gated the shake: a unit another registered
+;; library imports was answered `keep`.  It is GONE (change: import-dag-tree-shaking, design
+;; D2).  Its hazard -- an importer kept full referencing a binding its dependency dropped --
+;; was a property of ORDER, and the host now finalizes units in reverse link order, so every
+;; importer is already pruned and already accounted for in the root text before its dependency
+;; is shaken.  Keeping the gate would keep `(emit internal)` whole in every delivered binary,
+;; which is the entire cost this change removes.
 
-;; Recompile NAME against the roots PROG's IR imposes.  The declaration comes from the
+;; Recompile NAME against the roots ROOT-IR imposes -- the program's IR plus every unit the
+;; host has already shaken, which in reverse link order is everything importing NAME (change:
+;; import-dag-tree-shaking).  The declaration comes from the
 ;; partition for a baked member and from the door's source text for a user library -- the
 ;; two ways a library body reaches this compiler, and the reason a cache-seeded session can
 ;; still shake: mode 14 registers from prebuilt IR and retains no body forms, but the baked
@@ -1016,7 +1021,7 @@
 (define *shake-step* "")
 (define (shake-at! who) (set! *shake-step* who))
 
-(define (shake-registered-library name src prog)
+(define (shake-registered-library name src root-ir)
   ;; The recompile re-runs this library's `include` declarations, so the record mode 16
   ;; reports must describe THIS read and not the preload's -- the door caches the pruned
   ;; unit against the same source closure a full unit entry is keyed on.
@@ -1036,7 +1041,7 @@
          [cands   (append (map cdr (caddr dl))
                           (ct-own-refs (table-ct-half (assoc name *repl-libs*))))]
          [_       (shake-at! "roots")]
-         [roots   (program-root-internals prog name cands)]
+         [roots   (program-root-internals root-ir name cands)]
          [saved   counter]
          [_       (shake-at! "compile")]
          [res     (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl)

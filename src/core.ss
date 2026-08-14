@@ -1139,15 +1139,42 @@
            (let ([deps (cond [(assq (car work) dep-alist) => cdr] [else '()])])
              (loop (append deps (cdr work)) (cons (car work) seen)))])))
 
-;; --- the root set a PROGRAM imposes on a unit --------------------------------
+;; --- the root set already-emitted IR imposes on a unit -----------------------
 ;; Moved here from src/compile.ss (change: chez-free-unit-pipeline, design D8) so that both
-;; shipping doors -- the Chez driver and `emit build` -- compute a program's roots with one
+;; shipping doors -- the Chez driver and `emit build` -- compute a unit's roots with one
 ;; implementation rather than two that can drift apart.
 ;;
-;; A used import is LOADED in the program IR as `ptr @"<mangled>"`; a merely declared
+;; A used import is LOADED in the referring IR as `ptr @"<mangled>"`; a merely declared
 ;; (unused) import appears only as `@"<mangled>" = external global`.  So `ptr @"<mangled>"`
-;; matches real uses, giving the program's root references into a unit.  Returns the unit's
+;; matches real uses, giving the root references into a unit.  Returns the unit's
 ;; INTERNAL names to seed reachability.
+;;
+;; ROOT-TEXT IS NOT ONLY THE PROGRAM (change: import-dag-tree-shaking, design D1).  It is the
+;; program's IR *plus* the final IR of every unit already shaken -- which, because the doors
+;; finalize units in reverse topological order, is every unit that could import this one.  That
+;; is the whole of the backward propagation: roots are a property of TEXT, so "seed a unit with
+;; what its importers still reference" is this same search over a longer string, with no new
+;; representation and no change to the reachability walk it feeds.
+;;
+;; Concatenating every finalized unit, rather than only this unit's importers, is not even an
+;; over-approximation: a unit emits `ptr @"X:name"` only for a library it imports, so a
+;; non-importer's IR contains none of this unit's mangled symbols and contributes nothing.
+;; Narrowing the string to actual importers is therefore an optimization of the SEARCH, never a
+;; correctness condition -- and it would cost the `emit build` door the reverse-import map,
+;; which it would have to ship through the mode-17 protocol to obtain.
+;;
+;; The name still says `program-` because a program is what ultimately imposes every root here;
+;; the text it is read out of just grew.
+;;
+;; ONE FORM IS SEARCHED, AND THAT IS AN ASSUMPTION WITH A TEST (design D3).  A cross-unit
+;; reference appears twice: this closure load, and -- since cross-unit-direct-calls -- a direct
+;; `call fastcc @"<unit>:code:<name>"`.  They are paired exactly in every shipped unit today, so
+;; searching the `ptr` form finds every reference.  A codegen change that emitted the direct call
+;; WITHOUT loading the closure would break that pairing, and this function would then miss a live
+;; reference and prune a needed binding into a link-time undefined symbol.  P9's sketch (a
+;; fixed-arity entry point beside the variadic one, targeted by known-arity call sites) is exactly
+;; such a change.  test/aot-tree-shaking-tests.sh asserts the pairing so that a future break is
+;; named here rather than discovered as an undefined symbol.
 ;; Index of NEEDLE in HAY, or -1.  Character-by-character rather than
 ;; `(string=? (substring hay i (+ i nl)) needle)`, which is what this was while only the
 ;; Chez driver ran it: that allocates a fresh string at EVERY position, and `emit build`
@@ -1182,11 +1209,11 @@
 ;; leave the expansion's reference as a link-time undefined symbol.  The reachability GATE
 ;; does not move: a candidate is kept only when the program's emitted IR actually mentions
 ;; it, so a program that imports the library without using the macro still loses it.
-(define (program-root-internals prog-text unit-name candidates)  ; candidates: internal names
+(define (program-root-internals root-text unit-name candidates)  ; candidates: internal names
   (fold-left
     (lambda (acc n)
       (if (and (not (memq n acc))
-               (str-contains? prog-text (string-append "ptr @\"" (mangle unit-name n) "\"")))
+               (str-contains? root-text (string-append "ptr @\"" (mangle unit-name n) "\"")))
           (cons n acc) acc))
     '() candidates))
 

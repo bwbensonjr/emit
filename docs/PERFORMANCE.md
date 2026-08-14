@@ -24,7 +24,7 @@ speed items in this list.
 | [P7](#p7-boxing-driven-by-desugaring-rather-than-by-mutation) | Boxing driven by desugaring rather than by mutation | speed + size | med | low–med | — | ☑ |
 | [P8](#p8-the-emit-build-door-does-not-tree-shake) | The `emit build` door does not tree-shake | size + build speed | med–high | med | `chez-free-unit-pipeline` | ☑ |
 | [P9](#p9--an-optional-argument-costs-every-call-site-its-cross-unit-direct-call) | An optional argument costs every call site its cross-unit direct call | speed | med | med | — | ☐ |
-| [P10](#p10--a-library-another-unit-imports-is-never-tree-shaken-the-substrate-ships-whole) | A library another unit imports is never tree-shaken (the substrate ships whole) | size | high | med | — | ☐ |
+| [P10](#p10--a-library-another-unit-imports-is-never-tree-shaken-the-substrate-ships-whole) | A library another unit imports is never tree-shaken (the substrate ships whole) | size | high | med | `import-dag-tree-shaking` | ☑ |
 | [P11](#p11--every-emit-build-recompiles-the-c-runtime-from-source) | Every `emit build` recompiles the C runtime from source | build speed | **low** (measured: 5%) | low | — | ☐ |
 | [P12](#p12--the-reader-classifier-chain-costs-20-on-the-door-that-does-not-optimize) | The reader classifier chain costs 20%, on the door that does not optimize | speed | low | med | — | ☐ |
 | [P13](#p13--the-jitrepl-door-runs-no-ir-optimization-pipeline) | The JIT/REPL door runs no IR optimization pipeline | speed | med–high | med | — | ☐ |
@@ -65,8 +65,10 @@ and the REPL, P3 is essentially the whole story. For `emit build` specifically:
 
 So the order is **P3, then P8, then stop**: P8 turns out to be a build-speed item as well as the
 size item it was filed as, and P11 is 5% bought with an install-contract change — its own
-"revisit once measured" test, now taken, says no. Of the remaining open items P10 is size, and
-P9/P12/P13/P14 are the speed of what gets compiled rather than the speed of compiling it.
+"revisit once measured" test, now taken, says no. Of the remaining open items P9/P12/P13/P14 are
+the speed of what gets compiled rather than the speed of compiling it. **P10 has since landed**
+(`import-dag-tree-shaking`), which closed the last open size item: a minimal executable went
+110,472 → 52,152 B, −52.8%.
 Separately, the redundant self-compile in `tools/regen.sh`'s fixed point (issue #99) is ~2–3
 minutes of every `make regen` and is not an entry here — it is a build-script defect with no
 trade-off to weigh.
@@ -1319,9 +1321,50 @@ variadic callee, not the three procedures that happened to expose it.
 
 ## P10 — A library another unit imports is never tree-shaken (the substrate ships whole)
 
-P1's dead-code elimination prunes a library unit to the bindings the program actually reaches, and
-it works: a program whose whole body is `(display (car (list 1 2)))` links a `(scheme base)` pruned
-from **338,670 B / ~200 defines down to 6,847 B / 4 defines**.
+**Status:** ☑ done (change: `import-dag-tree-shaking`)
+
+**Outcome.** Root sets now propagate **backward through the import DAG**. Both ship doors shake the
+closure in reverse topological order, accumulating each finalized unit's IR into the text the next
+unit's roots are read out of — so a unit is shaken against what its importers *retained*, and the
+"imported by another unit" exemption is gone. Measured on `(display (car (list 1 2)))`:
+
+| | before | after |
+|---|---|---|
+| delivered binary | 110,472 B | **52,152 B** (−52.8%) |
+| `emit.internal:*` symbols in it | 161 | **1** (`__inited`) |
+| reader (`rd-*`) bindings | 55 | **0** |
+| substrate IR linked | 348,536 B | **5,965 B** |
+
+The substrate prunes to an empty `__init` — zero bindings — because a `(scheme base)` shaken to
+`list` references none of it, and the substrate's 88 body forms contain no top-level command to seed
+`cmd-roots`. Both doors deliver byte-identical binaries, which is the cross-door requirement holding
+at the new size rather than the old one.
+
+The mechanism cost nothing new: roots were already derived by *searching emitted IR text* for
+mangled symbols, so "seed a unit with what its importers still reference" is the same search over a
+longer string. `program-root-internals` needed no change to its body at all — only to what callers
+pass it.
+
+**Note on the figures below: they were stale by roughly 2x, in the direction that understated the
+case.** The entry recorded 338,670 B for `scheme.base.ll` and 170,716 B / 114 defines for
+`emit.internal.ll`; at implementation time they were 592,185 B and 348,536 B / 174 defines. Both
+libraries had roughly doubled since the entry was written.
+
+**A related idea, measured and declined.** Issue #104 proposed shaking a *delivered* library
+(`emit lib`) to its own exported interface, using the same machinery with the export list as the
+root set. Measured before building: it removes **0%** of `(emit internal)` (174 of 174 defines
+kept), **0%** of `(scheme read)`, and **0.45%** of `(scheme base)` (487 of 491). Every internal
+helper in these libraries is reached by something exported, which is what a well-kept library looks
+like — exactly what #104 predicted. Declined, not deferred. One finding survived it: the pruned path
+is not byte-identical to the unpruned path even when it prunes nothing (`(emit internal)` came out
+15 bytes *larger*), so shaking `emit lib` by default would have broken the `emit-cli` byte-identity
+guarantee for every library, including the ones with nothing to lose.
+
+---
+
+**Symptom (original).** P1's dead-code elimination prunes a library unit to the bindings the program
+actually reaches, and it works: a program whose whole body is `(display (car (list 1 2)))` links a
+`(scheme base)` pruned from **338,670 B / ~200 defines down to 6,847 B / 4 defines**.
 
 But it prunes only a unit that **no other unit imports**. `build-modular-artifacts*`
 (`src/compile.ss`) says so in its own comment — *"A unit is prunable only if NO OTHER unit in the
@@ -1366,7 +1409,9 @@ root-union step; no new representation, and the closed-world assumption is uncha
 P8 without P10 would give that door the same blind spot; fixing P10 first means both doors inherit
 the better root computation.
 
-**OpenSpec change:** none yet. Surfaced by `scheme-base-partition` (archived
+**OpenSpec change:** `import-dag-tree-shaking` (implemented) — the fix sketch above is what was
+built, including its prediction that "a program calling only `car` should keep ~0 reader bindings";
+the measured answer was exactly 0. Surfaced by `scheme-base-partition` (archived
 `2026-08-04-scheme-base-partition`), which introduced the first library-importing-a-library in the
 shipped set and so made a dormant limitation load-bearing.
 
