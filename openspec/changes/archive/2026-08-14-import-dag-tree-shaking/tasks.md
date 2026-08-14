@@ -145,13 +145,20 @@ change the answer, the measurement is cheap to re-run and lives in `measurements
       outlives a command timeout. → **22 suites, 0 failed, 751s**, including the self-hosting
       fixed point (393s), backend equivalence, and AOT tree-shaking. `trust-check` `[SKIP]`ped
       as designed (`bootstrap/` dirty until 8.3 commits).
-- [ ] 8.3 Commit, then run `test/trust-check.sh` — it `[SKIP]`s while `bootstrap/` is dirty, by
-      design.
+- [x] 8.3 Commit, then run `test/trust-check.sh` — it `[SKIP]`s while `bootstrap/` is dirty, by
+      design. → Committed as `d2525cf` on `feat/import-dag-tree-shaking`; trust-check **passed**
+      ("committed IR is exactly what the current source regenerates"), working tree clean.
 - [x] 8.4 Check off P10 in `docs/PERFORMANCE.md` with the before/after measurements from 1.1 and
       7.1, correct its stale figures (it records 170,716 B of substrate; it is 348,536 B), and
       update the "Status at a glance" table and the cycle-time decomposition that name P10 as open.
-- [ ] 8.5 Close #104 with 1.3's measurement as the answer — the interface shake buys 0–0.45%, so it
+- [x] 8.5 Close #104 with 1.3's measurement as the answer — the interface shake buys 0–0.45%, so it
       is declined, not deferred. Record the numbers in the issue. Avoid the literal `close #N`
       phrasing in any sentence meant to say the opposite.
-- [ ] 8.6 Sync the two spec deltas (`aot-codegen`, `artifact-cache`), then `openspec validate --all`
+      → Commented with the full table and closed as **not planned** (declined on evidence, not
+      deferred). The commit message says `Refs #104`, never a closing keyword.
+- [x] 8.6 Sync the two spec deltas (`aot-codegen`, `artifact-cache`), then `openspec validate --all`
       and grep the **main** specs for stray delta headers before archiving with `--skip-specs`.
+      → Verified both deltas were faithful full rewrites of the **live** specs before syncing
+      (every existing scenario and every prose line present), so nothing was dropped. After
+      sync: no stray delta headers, `aot-codegen` 50 → 53 scenarios, `artifact-cache` 28 → 29,
+      `openspec validate --all --strict` 23/23.

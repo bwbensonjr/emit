@@ -484,6 +484,15 @@ The root set SHALL be a parameter of the reachability computation (for an execut
 entry and top-level references), so the same mechanism can later serve other roots (e.g. a
 delivered library's exported interface) without change.
 
+Root sets SHALL propagate **backward through the import graph**: a unit that another unit imports
+SHALL be shaken against what its importers **retain**, and SHALL NOT be exempted from shaking on the
+grounds that something imports it. To make that sound, the shipping doors SHALL finalize units in an
+order in which every unit that imports a given unit is already final before that unit is shaken, and
+SHALL seed each unit's root set with the program's roots together with the references still present
+in those finalized importers. Consequently a unit's eligibility for shaking SHALL NOT depend on
+whether the program imports it **directly**: every unit in the program's import closure is subject
+to the same computation.
+
 This transform SHALL apply to **every** door that delivers a native executable, and the doors SHALL
 share one implementation of it rather than each computing reachability its own way. A delivered
 executable's size SHALL NOT depend on which door produced it: for the same program and the same
@@ -532,6 +541,28 @@ a program's result SHALL be identical to a non-shaken build.
 - **THEN** exactly the bindings transitively reachable from that root set are retained, so a
   different root set (e.g. a library's exports rather than a program entry) selects a different
   retained set through the same mechanism
+
+#### Scenario: A library imported by another library is shaken, not kept whole
+
+- **WHEN** a program that reaches only a small subset of `(scheme base)` is built, and `(scheme
+  base)` imports the `(emit internal)` substrate
+- **THEN** the substrate is pruned to what the **shaken** `(scheme base)` still references, rather
+  than being linked whole because something imports it, and substrate bindings no importer retains
+  (such as the in-language reader's) are absent from the delivered executable
+
+#### Scenario: A transitively imported unit is shaken even though the program does not import it
+
+- **WHEN** a program imports a library that in turn imports a second library, and the program
+  imports the second library nowhere itself
+- **THEN** the second library is shaken to what the first retains, rather than being exempt from
+  shaking for not being a direct import of the program
+
+#### Scenario: A binding an importer still reaches is retained through the chain
+
+- **WHEN** a program uses a procedure of one library that is implemented in terms of a binding in a
+  library it imports
+- **THEN** that binding is retained in the imported unit, the executable links, and the program
+  produces the same result as a non-shaken build
 
 ### Requirement: Flonum literals are written into IR by a canonical formatter
 
