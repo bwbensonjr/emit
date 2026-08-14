@@ -564,28 +564,22 @@ static std::string manifest_mode_text(int mode, const std::string &mtext,
   return out;
 }
 
-// The REPL host deliberately stays EAGER (mode 5): a session is an open world where
-// the user may import anything at any prompt, so everything on the manifest must
-// already be loaded.  Only this door, compiling one known program, can be lazy.
-static bool preload_user_libraries(const std::vector<std::string> &manifests,
-                                   std::vector<std::string> &modules,
-                                   const std::string &program_src,
-                                   const std::string &program_home) {
-  if (manifests.empty()) return true;        // no manifest: no user libraries
-
-  // Index the whole chain, FIRST MANIFEST WINS per library name (design D3): a
-  // project's ./emit-libs.scm extends the installed one rather than replacing it, and
-  // may override a shipped library by naming it.  Each entry's relative (source ...)
-  // is resolved against ITS OWN manifest's directory -- the rule has not changed, it
-  // simply now has more than one manifest to apply to -- so an inherited entry still
-  // names the sources that shipped beside it.
-  std::map<std::string, std::string> path_of;      // library key -> source path
-  std::map<std::string, std::string> from_of;      // key -> manifest, when not the first
+// Index the whole manifest chain by library key, FIRST MANIFEST WINS per name (design D3):
+// a project's ./emit-libs.scm extends the installed one rather than replacing it, and may
+// override a shipped library by naming it.  Each entry's relative (source ...) is resolved
+// against ITS OWN manifest's directory, so an inherited entry still names the sources that
+// shipped beside it.  `from_of` records the manifest for names a LATER one supplied, which
+// the preload narrates.
+//
+// Mode 9's index omits every baked member, so what comes back is exactly the libraries that
+// have a source file -- which is what both the preload and the build door's shake want.
+static void manifest_library_index(const std::vector<std::string> &manifests,
+                                   std::map<std::string, std::string> &path_of,
+                                   std::map<std::string, std::string> &from_of) {
   for (size_t mi = 0; mi < manifests.size(); mi++) {
     const std::string &manifest = manifests[mi];
     std::string mtext = read_file(manifest);
-    // "KEY\tPATH" sans (scheme base)
-    std::string index = manifest_mode_text(9, mtext, manifest);
+    std::string index = manifest_mode_text(9, mtext, manifest);   // "KEY\tPATH" per line
     std::istringstream lines(index);
     std::string line;
     while (std::getline(lines, line)) {
@@ -598,6 +592,32 @@ static bool preload_user_libraries(const std::vector<std::string> &manifests,
       if (mi > 0) from_of[key] = manifest;
     }
   }
+}
+
+// The artifact cache is defined further down, beside the rest of the entry machinery, but
+// the two preloads are its first clients -- so its unit-level face is declared here.  A
+// read answers Hit, Miss, or Deferred: Deferred is a VALID entry whose imports are not
+// registered yet, which both preloads already know how to retry.
+enum class CacheRead { Hit, Miss, Deferred };
+static CacheRead cache_load_unit(const std::string &key, const std::string &path,
+                                 std::string &ir, std::string &init);
+static void cache_store_unit(const std::string &key, const std::string &path,
+                             const std::string &ir);
+
+// The REPL host deliberately stays EAGER: a session is an open world where the user may
+// import anything at any prompt, so every user library on the manifest must already be
+// loaded.  Only this door, compiling one known program, can be lazy.  Both doors read the
+// same mode-9 index; they differ only in how much of it they load.
+static bool preload_user_libraries(const std::vector<std::string> &manifests,
+                                   std::vector<std::string> &modules,
+                                   std::vector<std::string> &module_keys,
+                                   const std::string &program_src,
+                                   const std::string &program_home) {
+  if (manifests.empty()) return true;        // no manifest: no user libraries
+
+  std::map<std::string, std::string> path_of;      // library key -> source path
+  std::map<std::string, std::string> from_of;      // key -> manifest, when not the first
+  manifest_library_index(manifests, path_of, from_of);
   if (path_of.empty()) return true;
 
   // The closure walk: start at the program's imports and follow each reached .sld's
@@ -629,14 +649,31 @@ static bool preload_user_libraries(const std::vector<std::string> &manifests,
   for (size_t mi = 1; mi < manifests.size(); mi++)
     say_chained(manifests[mi], supplied[manifests[mi]]);
 
-  std::vector<std::string> pending;
+  // (key, path) pairs from here on: the KEY is what an entry is filed under, so the cache
+  // needs it beside the path it would otherwise have carried alone.
+  std::vector<std::pair<std::string, std::string>> pending;
   for (std::set<std::string>::const_iterator k = needed.begin(); k != needed.end(); ++k)
-    pending.push_back(path_of[*k]);
+    pending.push_back(std::make_pair(*k, path_of[*k]));
 
   while (!pending.empty()) {
-    std::vector<std::string> deferred;
+    std::vector<std::pair<std::string, std::string>> deferred;
     bool progress = false;
-    for (const std::string &p : pending) {
+    for (const std::pair<std::string, std::string> &kp : pending) {
+      const std::string &key = kp.first;
+      const std::string &p = kp.second;
+      // A cached unit registers without reading the .sld, compiling it, or running any of
+      // its includes (change: chez-free-unit-pipeline).  `Deferred` means the entry is
+      // valid but its imports are not registered yet, which is the same condition mode 4
+      // reports and goes around the same fixpoint loop.
+      std::string cached_ir, cached_init;
+      CacheRead cr = cache_load_unit(key, p, cached_ir, cached_init);
+      if (cr == CacheRead::Deferred) { deferred.push_back(kp); continue; }
+      if (cr == CacheRead::Hit) {
+        modules.push_back(cached_ir);
+        module_keys.push_back(key);
+        progress = true;
+        continue;
+      }
       std::string src = read_file(p);
       // An unreadable or empty source must be reported HERE.  Handing "" to mode 4 makes it
       // take `(car '())` on the empty form list, and a primitive trap is not catchable by the
@@ -654,18 +691,23 @@ static bool preload_user_libraries(const std::vector<std::string> &manifests,
       rt_repl_set(4, src.data(), (intptr_t)src.size());
       intptr_t r = scheme_entry();
       std::string st = status_of(r);
-      if (st == "deferred") { deferred.push_back(p); continue; }
+      if (st == "deferred") { deferred.push_back(kp); continue; }
       if (st == "already") { progress = true; continue; }  // e.g. baked (scheme base): no module
       if (st != "ok") {
         std::cerr << "emit: loading library " << p << ": " << door_msg(scm_str(rt_cdr(r))) << "\n";
         return false;
       }
-      modules.push_back(scm_str(rt_car(rt_cdr(r))));   // collect IR; do NOT run __init
+      std::string ir = scm_str(rt_car(rt_cdr(r)));
+      modules.push_back(ir);                          // collect IR; do NOT run __init
+      module_keys.push_back(key);
+      // Store BEFORE anything else compiles: mode 16 describes the most recent
+      // registration, so the window in which it still describes this one is right here.
+      cache_store_unit(key, p, ir);
       progress = true;
     }
     if (!progress) {                         // every remaining unit is stuck
-      for (const std::string &p : deferred)
-        std::cerr << "emit run: library " << p
+      for (const std::pair<std::string, std::string> &kp : deferred)
+        std::cerr << "emit run: library " << kp.second
                   << ": unresolved or cyclic import (dependency missing from manifest?)\n";
       return false;
     }
@@ -752,7 +794,10 @@ static int resolve_program(const std::string &manifest, const std::string &name,
 
 // Entry-layout version.  Bump by hand to invalidate every entry deliberately -- the same
 // lever `compiler-stamp-version` gives the Chez driver's sidecars.
-static const int kCacheVersion = 1;
+//
+// 2: entries gained a KIND and an optional second key half, so the cache serves user
+// libraries and shaken units as well as the baked set (change: chez-free-unit-pipeline).
+static const int kCacheVersion = 2;
 
 // FNV-1a, the hash the Chez driver's stamp already uses.  Non-cryptographic by intent: it
 // guards against accidental staleness, not adversarial collision, and adds no dependency.
@@ -834,23 +879,58 @@ static std::string cache_dir() {
 // the executable is 1.7 MB of reading and 2.6 ms of arithmetic spent on an answer nobody can
 // use, on every single invocation.  Cheap to get wrong the other way round, since both
 // helpers memoize and neither looks like it costs anything at the call site.
-static std::string cache_stem() {
+//
+// An entry has a KIND, an optional LABEL, and an optional second key half (change:
+// chez-free-unit-pipeline, design D10):
+//
+//   baked-v2-<compiler>                          the whole baked set, as before
+//   unit-<basename>-v2-<compiler>-<srcid>        one library compiled from disk
+//   shake-<basename>-v2-<compiler>-<srcid>-<prog>  that library pruned to a program's roots
+//
+// The KIND is in the NAME, not merely in the stamp, so "a shaken unit must never be served
+// where a full one is wanted" is a property of where an entry is looked up rather than a
+// discipline every caller has to observe.  A shaken unit is a different artifact for the
+// same source -- sound only for the program whose roots produced it -- and the open-world
+// doors would break at the first binding it dropped.
+//
+// `srcid` is a digest of the library's PATH, not of its content: the entry has to be
+// findable before anything about the source has been read, so the content digests live
+// INSIDE the entry (its `.sources` file) and are what validity is checked against.  One
+// stem per (library, compiler) therefore holds the latest content, rather than accumulating
+// a file per edit.
+static std::string cache_entry_stem(const std::string &kind, const std::string &label,
+                                    const std::string &extra) {
   std::string dir = cache_dir();
   if (dir.empty()) return std::string();
   std::string dig = compiler_digest();
   if (dig.empty()) return std::string();
   std::ostringstream s;
-  s << dir << "/baked-v" << kCacheVersion << "-" << dig;
+  s << dir << "/" << kind;
+  if (!label.empty()) s << "-" << label;
+  s << "-v" << kCacheVersion << "-" << dig;
+  if (!extra.empty()) s << "-" << extra;
   return s.str();
 }
+
+static std::string cache_stem() { return cache_entry_stem("baked", "", ""); }
 
 // The stamp file is written LAST and is the entry's completeness witness: a torn or
 // interrupted write leaves no stamp, so the entry reads as absent rather than as corrupt
 // (the same fail-safe-toward-rebuild property `artifacts-fresh?` gets by writing its
 // sidecar last).
-static std::string cache_stamp_text() {
+//
+// It repeats the whole key rather than just the compiler digest.  The name already encodes
+// the key, so this is redundant by construction -- which is the point: an entry that ends up
+// under the wrong name (a truncated write from an older format, a directory copied by hand)
+// says what it actually is instead of being trusted for where it sits.
+static std::string cache_stamp_text(const std::string &kind, const std::string &label,
+                                    const std::string &extra) {
   std::ostringstream s;
-  s << "(emit-artifact-stamp " << kCacheVersion << " " << compiler_digest() << ")\n";
+  s << "(emit-artifact-stamp " << kCacheVersion
+    << " " << kind
+    << " " << (label.empty() ? std::string("-") : label)
+    << " " << compiler_digest()
+    << " " << (extra.empty() ? std::string("-") : extra) << ")\n";
   return s.str();
 }
 
@@ -874,6 +954,68 @@ static bool cache_write_atomic(const std::string &path, const std::string &text)
   return true;
 }
 
+// --- a disk-sourced library's SOURCE identity (design D5, D6) ----------------
+// The absolute, symlink-resolved path, or the path unchanged when it cannot be resolved.
+// Entries live in a cache shared by every project on the machine and outlive the working
+// directory that produced them, so a relative path is not an identity: two projects with a
+// `lib/util.sld` apiece would key on the same string, and the same file reached from a
+// different directory would key on two.  Content validation makes either case merely
+// wasteful rather than wrong -- but "wasteful" here means silently never hitting.
+static std::string canonical_path(const std::string &path) {
+  char buf[PATH_MAX];
+  if (realpath(path.c_str(), buf)) return std::string(buf);
+  return path;
+}
+
+// One file's content digest, or "" when it cannot be read.  CONTENT, not modification
+// time: `artifacts-fresh?` can compare mtimes because its artifacts sit beside the sources
+// it compares them to, and this cache's entries do not -- they live in a user cache
+// directory shared across checkouts, worktrees and branch switches, where `git checkout`
+// restores content and moves mtimes.  A few KB of FNV-1a is nothing beside the 2.6 ms the
+// executable digest already costs.
+static std::string file_digest(const std::string &path) {
+  if (file_bytes(path) < 0) return std::string();   // absent: not a source we can key on
+  return fnv1a_hex(read_file(path));                // an EMPTY include is legal, and hashes
+}
+
+// "DIGEST\tPATH" per line, in the order the compiler read them.  "" if ANY of them cannot
+// be read, which disables caching for that library rather than keying it on a partial view
+// of its source.
+static std::string sources_manifest(const std::vector<std::string> &paths) {
+  std::string out;
+  for (const std::string &p : paths) {
+    std::string d = file_digest(p);
+    if (d.empty()) return std::string();
+    out += d;
+    out += '\t';
+    out += canonical_path(p);          // absolute: the entry outlives this directory
+    out += '\n';
+  }
+  return out;
+}
+
+// Does every file this entry was built from still have the content it had then?  A file
+// that has since vanished counts as changed: the unit can no longer be said to describe it.
+static bool sources_still_match(const std::string &text) {
+  if (text.empty()) return false;
+  std::istringstream lines(text);
+  std::string line;
+  while (std::getline(lines, line)) {
+    if (line.empty()) continue;
+    std::string::size_type tab = line.find('\t');
+    if (tab == std::string::npos) return false;      // malformed: refuse the entry
+    if (file_digest(line.substr(tab + 1)) != line.substr(0, tab)) return false;
+  }
+  return true;
+}
+
+// The path a library's entry is filed under, as a digest.  The legible half of the name is
+// the unit key the core hands out (`demo.util` for `(demo util)`); this is what distinguishes
+// two libraries that share a name but not a file.
+static std::string source_key_of(const std::string &sld_path) {
+  return fnv1a_hex(canonical_path(sld_path));
+}
+
 // Split a boundary-joined module stream into one entry per module, exactly as the
 // from-source path below does -- shared so the cached and compiled paths cannot disagree
 // about what a module is.
@@ -888,32 +1030,44 @@ static void split_modules(const std::string &joined, std::vector<std::string> &m
   modules.push_back(joined.substr(start));
 }
 
-// Try to seed the session from a cached baked set.  Returns false -- having changed
-// nothing -- on any miss, so the caller falls through to compiling.
+// Does the door want to WATCH the compile happen?  `--dump-all` (level 3) asks to see a
+// library's per-define stages, and those stages exist only while it is being compiled -- a
+// reused entry would print none of them.  So a request to observe the compile bypasses the
+// cache entirely: the flag's whole purpose is that the work happens where you can watch it.
+// Levels 1 and 2 are unaffected, because they deliberately do not dump library units
+// (emit-dump-stages, design D7), so for them a reused entry changes nothing that is printed.
 //
-// Mode 14 does the registering and refuses a malformed entry WHOLE, before touching the
-// session, so a rejected entry cannot leave a half-seeded session that the from-source
-// fallback would then compile on top of.
-static bool cache_load_baked_set(std::vector<std::string> &modules,
-                                 std::vector<std::string> &inits) {
-  // `--dump-all` (level 3) asks to SEE the standard library's per-define stages, and those
-  // stages exist only while it is being compiled -- a reused entry would print none of
-  // them.  So a request to observe the compile bypasses the cache: the flag's whole purpose
-  // is that the work happens where you can watch it.  Levels 1 and 2 are unaffected,
-  // because they deliberately do not dump library units (emit-dump-stages, design D7), so
-  // for them a reused entry changes nothing that is printed.
-  //
-  // Found by test/dump-stages-tests.sh, which asserts >100 tagged `(scheme base)` headers
-  // under --dump-all and saw zero once the cache started serving them.
+// Found by test/dump-stages-tests.sh, which asserts >100 tagged `(scheme base)` headers
+// under --dump-all and saw zero once the cache started serving them.
+static bool cache_bypassed_for_dump() {
   const char *dl = std::getenv("EMIT_DUMP_LEVEL");
   if (dl && std::atoi(dl) >= 3) {
     vsay("cache: bypassed (--dump-all asks to observe the compile)");
-    return false;
+    return true;
   }
-  std::string stem = cache_stem();
+  return false;
+}
+
+// Read one entry and register everything in it (mode 14), or report a miss having changed
+// NOTHING -- so every caller can simply fall through to compiling.  Serves all three kinds:
+// the baked set (N modules), a user library (1), and a pruned unit (1).
+//
+// `what` names the entry in narration.  `sources_required` distinguishes a disk-sourced
+// entry, whose `.sources` file must still describe the files on disk, from the baked set,
+// whose source is the binary and is already covered by the compiler half of the key.
+//
+// Mode 14 refuses a malformed entry WHOLE, before touching the session, so a rejected entry
+// cannot leave a half-seeded session that the from-source fallback would compile on top of.
+// It answers `deferred` for a valid entry whose imports are not registered yet, which is
+// NOT a miss: the caller retries it in the same fixpoint loop that orders from-source loads.
+static CacheRead cache_load_entry(const std::string &stem, const std::string &what,
+                                  const std::string &kind, const std::string &label,
+                                  const std::string &extra, bool sources_required,
+                                  std::vector<std::string> &modules,
+                                  std::vector<std::string> &inits) {
   if (stem.empty()) {
     vsay("cache: unavailable (no writable location, or cannot identify this binary)");
-    return false;
+    return CacheRead::Miss;
   }
   // The stamp is the completeness witness, so all three of "no entry yet", "written by a
   // different binary", and "a torn write" arrive here as one condition.  They are narrated
@@ -921,51 +1075,79 @@ static bool cache_load_baked_set(std::vector<std::string> &modules,
   // the interesting case: it means the compiler moved.
   std::string stamp = read_file(stem + ".stamp");
   if (stamp.empty()) {
-    vsay("cache: no entry for this compiler, compiling the baked set");
-    return false;
+    vsay("cache: no entry for " + what + ", compiling it");
+    return CacheRead::Miss;
   }
-  if (stamp != cache_stamp_text()) {
-    vsay("cache: entry is stale (changed compiler or entry format), recompiling");
-    return false;
+  if (stamp != cache_stamp_text(kind, label, extra)) {
+    vsay("cache: entry for " + what + " is stale (changed compiler or entry format), recompiling");
+    return CacheRead::Miss;
+  }
+  if (sources_required && !sources_still_match(read_file(stem + ".sources"))) {
+    vsay("cache: source changed for " + what + ", recompiling");
+    return CacheRead::Miss;
   }
   std::string joined = read_file(stem + ".ll");
   std::string meta   = read_file(stem + ".meta");
   if (joined.empty() || meta.empty()) {
-    vsay("cache: entry incomplete, recompiling");
-    return false;
+    vsay("cache: entry for " + what + " incomplete, recompiling");
+    return CacheRead::Miss;
+  }
+  // Does the IR still look like the unit modules it claims to be?  A stamp says the entry
+  // was written whole by this compiler; it says nothing about the file's CONTENT having
+  // survived since -- a truncation, an editor, a half-restored backup.  Every unit module
+  // defines its own initializer, so requiring that of each part is a cheap structural check
+  // that rejects garbage without parsing IR, and it runs BEFORE mode 14 so a rejected entry
+  // leaves the session untouched (spec: refused whole, not half-registered).
+  std::vector<std::string> mods;
+  split_modules(joined, mods);
+  for (const std::string &m : mods) {
+    if (m.find(":__init\"") == std::string::npos) {
+      vsay("cache: entry for " + what + " is not the IR it claims to be, recompiling");
+      return CacheRead::Miss;
+    }
   }
 
   rt_repl_set(14, meta.data(), (intptr_t)meta.size());
   intptr_t r = scheme_entry();
-  if (status_of(r) != "ok") {
-    vsay("cache: entry refused (" + door_msg(scm_str(rt_cdr(r))) + "), recompiling");
-    return false;
+  std::string st = status_of(r);
+  if (st == "deferred") return CacheRead::Deferred;    // valid, but not yet: retry later
+  if (st != "ok") {
+    vsay("cache: entry for " + what + " refused (" + door_msg(scm_str(rt_cdr(r))) +
+         "), recompiling");
+    return CacheRead::Miss;
   }
   std::istringstream isyms(scm_str(rt_cdr(r)));
   std::string sym;
   std::vector<std::string> got;
   while (std::getline(isyms, sym)) if (!sym.empty()) got.push_back(sym);
 
-  std::vector<std::string> mods;
-  split_modules(joined, mods);
   // The metadata and the modules are stored together and must describe each other; if they
   // do not, the entry is inconsistent and is refused rather than half-applied.
   if (mods.size() != got.size()) {
-    vsay("cache: entry inconsistent (modules/inits disagree), recompiling");
-    return false;
+    vsay("cache: entry for " + what + " inconsistent (modules/inits disagree), recompiling");
+    return CacheRead::Miss;
   }
   modules = mods;
   inits = got;
-  vsay("cache: baked set reused from " + stem + ".ll");
-  return true;
+  vsay("cache: " + what + " reused from " + stem + ".ll");
+  return CacheRead::Hit;
 }
 
-// Persist the baked set just compiled into this session.  Best-effort throughout: a
-// failure anywhere leaves the process correct and merely uncached.
-static void cache_store_baked_set(const std::vector<std::string> &modules) {
-  std::string stem = cache_stem();
+// Persist what was just compiled.  Best-effort throughout: a failure anywhere leaves the
+// process correct and merely uncached.
+//
+// `keys` selects which registered libraries the metadata describes -- empty for the whole
+// baked set (mode 15's "" case, in dependency order), otherwise the unit keys of the modules
+// being written, in the same order.  `sources` is the `.sources` text for a disk-sourced
+// entry and empty for the baked set.
+static void cache_store_entry(const std::string &stem, const std::string &what,
+                              const std::string &kind, const std::string &label,
+                              const std::string &extra,
+                              const std::string &keys,
+                              const std::string &sources,
+                              const std::vector<std::string> &modules) {
   if (stem.empty()) return;
-  rt_repl_set(15, "", 0);                       // "" = the whole baked set, in dep order
+  rt_repl_set(15, keys.data(), (intptr_t)keys.size());
   intptr_t r = scheme_entry();
   if (status_of(r) != "ok") return;
   std::string meta = scm_str(rt_cdr(r));
@@ -977,8 +1159,79 @@ static void cache_store_baked_set(const std::vector<std::string> &modules) {
   // Stamp LAST: it is the completeness witness the reader checks first.
   if (!cache_write_atomic(stem + ".ll", joined)) return;
   if (!cache_write_atomic(stem + ".meta", meta)) return;
-  if (!cache_write_atomic(stem + ".stamp", cache_stamp_text())) return;
-  vsay("cache: baked set stored -> " + stem + ".ll");
+  if (!sources.empty() && !cache_write_atomic(stem + ".sources", sources)) return;
+  if (!cache_write_atomic(stem + ".stamp", cache_stamp_text(kind, label, extra))) return;
+  vsay("cache: " + what + " stored -> " + stem + ".ll");
+}
+
+// The baked set is stored in dependency order and registers before anything else, so a
+// `deferred` answer is impossible here; it is folded into "miss" rather than given a branch
+// that could never be taken.
+static bool cache_load_baked_set(std::vector<std::string> &modules,
+                                 std::vector<std::string> &inits) {
+  if (cache_bypassed_for_dump()) return false;
+  return cache_load_entry(cache_stem(), "baked set", "baked", "", "",
+                          /*sources_required=*/false, modules, inits) == CacheRead::Hit;
+}
+
+static void cache_store_baked_set(const std::vector<std::string> &modules) {
+  cache_store_entry(cache_stem(), "baked set", "baked", "", "",
+                    /*keys=*/"", /*sources=*/"", modules);
+}
+
+// --- one library unit, compiled from disk (change: chez-free-unit-pipeline) ---
+// The half of the cache `baked-set-artifact-cache` deferred: a manifest library is
+// recompiled by every process that imports it, and unlike the baked set its source is on
+// disk, so the key needs a source half (design D5).
+//
+// Registration goes through mode 14 exactly as the baked set's does, which is why a hit and
+// a compile leave the same session behind.  A `deferred` status is passed back to the
+// caller, whose fixpoint loop retries the library once its dependencies are in: the entry
+// is valid, it is simply too early to apply it.
+static CacheRead cache_load_unit(const std::string &key, const std::string &path,
+                                 std::string &ir, std::string &init) {
+  if (cache_bypassed_for_dump()) return CacheRead::Miss;
+  std::string src_key = source_key_of(path);
+  std::vector<std::string> modules, inits;
+  CacheRead r = cache_load_entry(cache_entry_stem("unit", key, src_key), "library " + key,
+                                 "unit", key, src_key,
+                                 /*sources_required=*/true, modules, inits);
+  if (r != CacheRead::Hit) return r;
+  if (modules.size() != 1) return CacheRead::Miss;  // a unit entry holds exactly one module
+  ir = modules[0];
+  init = inits[0];
+  return CacheRead::Hit;
+}
+
+// The source files the compiler just read for a library (mode 16): its own source plus its
+// include closure.  Empty when the door submitted source with no path, in which case there
+// is nothing to key an entry on and the caller must not cache.
+static std::vector<std::string> library_sources_just_read() {
+  std::vector<std::string> out;
+  rt_repl_set(16, "", 0);
+  intptr_t r = scheme_entry();
+  if (status_of(r) != "ok") return out;
+  std::istringstream lines(scm_str(rt_cdr(r)));
+  std::string p;
+  while (std::getline(lines, p)) if (!p.empty()) out.push_back(p);
+  return out;
+}
+
+// Persist a library unit just compiled into this session.  Called immediately after mode 4
+// returned `ok`, while mode 16 still describes THIS library's read.
+static void cache_store_unit(const std::string &key, const std::string &path,
+                             const std::string &ir) {
+  if (cache_bypassed_for_dump()) return;
+  std::string stem = cache_entry_stem("unit", key, source_key_of(path));
+  if (stem.empty()) return;
+  std::vector<std::string> sources = library_sources_just_read();
+  if (sources.empty()) return;
+  std::string manifest_text = sources_manifest(sources);
+  if (manifest_text.empty()) return;               // a source we cannot read: do not key on it
+  std::vector<std::string> modules;
+  modules.push_back(ir);
+  cache_store_entry(stem, "library " + key, "unit", key, source_key_of(path),
+                    /*keys=*/key + "\n", manifest_text, modules);
 }
 
 // Register the baked library set (mode 8) into the current session and return its modules
@@ -1022,24 +1275,38 @@ static bool register_baked_set(std::vector<std::string> &modules,
 // to run its export-table mode against an unseeded session, which is why a library
 // importing `(scheme base)` failed there).  GC must be initialized and EMIT_NO_PRELUDE set
 // by the caller before this runs.
+//
+// `module_keys` is filled in step with `modules`: the canonical unit key of each module, so
+// a door holding the IR can still say which library it is.  `emit build`'s tree-shake needs
+// that (change: chez-free-unit-pipeline) -- for the baked members it is read back out of the
+// __init symbols, which carry the unit prefix ("scheme.base:__init"), rather than being
+// tracked separately and risking a second source of truth.
 static bool seed_session(const std::string &prog_src, const std::vector<std::string> &manifests,
                          bool no_prelude, std::vector<std::string> &modules,
+                         std::vector<std::string> &module_keys,
                          const std::string &source_home) {
   rt_repl_set(no_prelude ? 0 : 1, "", 0);    // init-session
   scheme_entry();
   modules.clear();
+  module_keys.clear();
 
   if (!no_prelude) {
-    std::vector<std::string> inits;           // unused here: the program's entry inits
-    if (!register_baked_set(modules, inits)) return false;
+    std::vector<std::string> inits;           // the program's entry runs these; used here
+    if (!register_baked_set(modules, inits)) return false;   // for the keys they name
+    // "scheme.base:__init" -> "scheme.base:".  The key INCLUDES the colon, because the key
+    // is `(mangle name "")` -- the unit prefix a symbol carries, separator and all -- which
+    // is what mode 9 hands the host for a manifest library and what mode 17 matches on.
+    for (const std::string &sym : inits)
+      module_keys.push_back(sym.substr(0, sym.find(':') + 1));
   }
-  return preload_user_libraries(manifests, modules, prog_src, source_home);
+  return preload_user_libraries(manifests, modules, module_keys, prog_src, source_home);
 }
 
 // Compile a whole program (or a lone define-library) against the seeded session (mode 7).
 // On success fills `prog_ir` and returns true; `is_library` is set when the source was a
 // lone define-library (then `modules` is cleared and `prog_ir` is that single unit).
 static bool compile_unit(const std::string &prog_src, std::vector<std::string> &modules,
+                         std::vector<std::string> &module_keys,
                          std::string &prog_ir, bool &is_library,
                          const std::string &source_home) {
   set_source_home(source_home);
@@ -1054,8 +1321,106 @@ static bool compile_unit(const std::string &prog_src, std::vector<std::string> &
   is_library = (pst == "library");
   // A lone define-library compiles to a single unit with no baked (scheme base) and
   // no program entry: drop the base/units set up for the program case.
-  if (is_library) modules.clear();
+  if (is_library) { modules.clear(); module_keys.clear(); }
   return true;
+}
+
+// --- the ship door's tree-shake (change: chez-free-unit-pipeline, design D9) ---
+// Replace each prunable unit with one pruned to what this program's IR actually reaches.
+// The Chez driver has done this since aot-release-profile; `emit build` did not, and shipped
+// 212 KB where the driver shipped 94 KB for the same hello-world, with the extra IR costing
+// LTO time as well as bytes (docs/PERFORMANCE.md P8).
+//
+// The core decides everything that needs the import graph or the export tables -- which
+// units are prunable, what the roots are, what the pruned unit is (mode 17).  This function
+// is the door's half: which module goes with which library, where a library's source is, and
+// the cache.
+//
+// A pruned unit is CACHED under its own kind, keyed additionally by a digest of the program
+// IR (design D9, refined during implementation).  The entry has to be findable before the
+// roots are known -- computing them is most of the work being avoided -- and the program's
+// emitted IR is what determines them: same IR, same roots, necessarily.  It is a coarser key
+// than the root set itself (two programs with identical roots do not share an entry) and an
+// exactly sufficient one for the case that matters, rebuilding a program that has not
+// changed.  Emitted IR is already required to be byte-identical for unchanged input, which
+// is what makes it usable as a key at all.
+//
+// Best-effort throughout: a library whose source cannot be found, a mode-17 error, an
+// unwritable cache -- each leaves that unit whole, which is always sound.
+static void shake_units(std::vector<std::string> &modules,
+                        const std::vector<std::string> &module_keys,
+                        const std::string &prog_ir,
+                        const std::map<std::string, std::string> &path_of) {
+  if (modules.size() != module_keys.size()) return;      // paranoia: never shake blind
+  std::string prog_key = fnv1a_hex(prog_ir);
+  for (size_t i = 0; i < modules.size(); i++) {
+    const std::string &key = module_keys[i];
+    std::map<std::string, std::string>::const_iterator it = path_of.find(key);
+    // A baked member has no manifest entry and needs none: its source is compiled into this
+    // binary, so mode 17 rebuilds it from *prelude-source* with no source text from us.  A
+    // user library needs its .sld read back, because a cache-seeded session never read it.
+    std::string sld = (it == path_of.end()) ? std::string() : it->second;
+    std::string src_id = sld.empty() ? std::string("baked") : source_key_of(sld);
+
+    std::vector<std::string> got, inits;
+    if (cache_load_entry(cache_entry_stem("shake", key, src_id + "-" + prog_key),
+                         "pruned " + key, "shake", key, src_id + "-" + prog_key,
+                         /*sources_required=*/!sld.empty(), got, inits) == CacheRead::Hit &&
+        got.size() == 1) {
+      modules[i] = got[0];
+      continue;
+    }
+
+    // Mode 17's input: KEY, the library's source (empty for a baked member), the boundary,
+    // then the program IR the roots are read out of.  The source home must be the .sld, as
+    // it is when the preload compiles one: the pruned recompile re-runs the library's
+    // `include` declarations, which resolve beside their own file.
+    if (!sld.empty()) set_source_home(sld);
+    std::string input = key + "\n";
+    if (!sld.empty()) input += read_file(sld);
+    input += kBoundary;
+    input += prog_ir;
+    rt_repl_set(17, input.data(), (intptr_t)input.size());
+    intptr_t r = scheme_entry();
+    std::string st = status_of(r);
+    if (st == "keep") {
+      // Sound and expected, not a failure: a unit another unit imports must stay whole, or
+      // that importer could reference a binding this one dropped.  It is why `(emit
+      // internal)` survives intact, and why a program importing a user library that imports
+      // `(scheme base)` shakes only the user library.
+      vsay("shake: " + key + " kept whole (another unit imports it)");
+      continue;
+    }
+    if (st != "ok") {
+      vsay("shake: " + key + " kept whole (" + door_msg(scm_str(rt_cdr(r))) + ")");
+      continue;
+    }
+    std::string pruned = scm_str(rt_car(rt_cdr(r)));
+    vsay("shake: " + key + "  [" + std::to_string(modules[i].size()) + " -> " +
+         std::to_string(pruned.size()) + " bytes]");
+    modules[i] = pruned;
+
+    // The pruned recompile read this library's whole source closure (mode 17 resets the
+    // record first), so the entry keys on the same files a full unit entry would.
+    std::string sources = sld.empty() ? std::string()
+                                      : sources_manifest(library_sources_just_read());
+    if (!sld.empty() && sources.empty()) continue;       // unreadable source: do not cache
+    std::vector<std::string> one;
+    one.push_back(pruned);
+    cache_store_entry(cache_entry_stem("shake", key, src_id + "-" + prog_key),
+                      "pruned " + key, "shake", key, src_id + "-" + prog_key,
+                      /*keys=*/key + "\n", sources, one);
+  }
+}
+
+// The manifest chain's library key -> source path map, for a door that needs to find a
+// library's source again after the session was seeded (the shake, when a cache hit meant the
+// .sld was never read).
+static std::map<std::string, std::string>
+library_paths_by_key(const std::vector<std::string> &manifests) {
+  std::map<std::string, std::string> path_of, from_of;
+  manifest_library_index(manifests, path_of, from_of);
+  return path_of;
 }
 
 // Compile a whole program (or a lone define-library) to its unit modules + program
@@ -1064,10 +1429,12 @@ static bool compile_unit(const std::string &prog_src, std::vector<std::string> &
 // sequence in the same order as before it was split, so the emitted IR does not move.
 static bool compile_program(const std::string &prog_src, const std::vector<std::string> &manifests,
                             bool no_prelude, std::vector<std::string> &modules,
+                            std::vector<std::string> &module_keys,
                             std::string &prog_ir, bool &is_library,
                             const std::string &source_home) {
-  if (!seed_session(prog_src, manifests, no_prelude, modules, source_home)) return false;
-  return compile_unit(prog_src, modules, prog_ir, is_library, source_home);
+  if (!seed_session(prog_src, manifests, no_prelude, modules, module_keys, source_home))
+    return false;
+  return compile_unit(prog_src, modules, module_keys, prog_ir, is_library, source_home);
 }
 
 static int emit_run(int argc, char **argv) {
@@ -1128,10 +1495,11 @@ static int emit_run(int argc, char **argv) {
 
   GC_INIT();                                 // once, before the compiler allocates
 
-  std::vector<std::string> modules;
+  std::vector<std::string> modules, module_keys;
   std::string prog_ir;
   bool is_library = false;
-  if (!compile_program(prog_src, manifests, no_prelude, modules, prog_ir, is_library, prog_file))
+  if (!compile_program(prog_src, manifests, no_prelude, modules, module_keys, prog_ir,
+                       is_library, prog_file))
     return 1;
 
   // --emit: write every module (units then program), joined by the boundary marker,
@@ -1274,10 +1642,11 @@ static bool run_init(const std::string &name) {
   return ok;
 }
 
-// Preload every library named in the manifest CHAIN into the shared JITDylib (change:
-// module-artifacts-vertical-slice; transitive imports: module-generalize).  Mode 5
-// turns the manifest text into source paths; mode 4 compiles each unit and returns
-// (ok . (ir . init-symbol)).  Iterated to a fixpoint (topological load order).
+// Preload every USER library named in the manifest CHAIN into the shared JITDylib (change:
+// module-artifacts-vertical-slice; transitive imports: module-generalize).  Mode 9 turns
+// each manifest's text into a "KEY<TAB>PATH" index of the libraries that are not baked
+// members; mode 4 compiles each unit and returns (ok . (ir . init-symbol)).  Iterated to a
+// fixpoint (topological load order).
 //
 // The UNION of the chain, not just the first manifest (design D7).  A session is an
 // open world where the user may import anything at any prompt, so an installed REPL
@@ -1285,50 +1654,64 @@ static bool run_init(const std::string &name) {
 // of it -- otherwise `(import (scheme file))` failing at the prompt would reintroduce
 // issue #44 one layer up.  The lazy doors need no such decision: an unresolved name
 // simply walks to the next manifest there.
-static void preload_libraries(const std::vector<std::string> &manifests) {
+//
+// ONE INDEX FOR EVERY MANIFEST AND EVERY DOOR (change: chez-free-unit-pipeline, design D1;
+// issue #101).  The first manifest used to come through mode 5 -- every library entry,
+// baked members included -- while the rest came through mode 9, and the difference was the
+// standard library: with `--no-prelude` nothing registers the baked set, so this loop
+// compiled `(scheme base)` from the manifest and bound none of it.  1.14 s of work performed
+// and discarded, against a 0.024 s floor.  Mode 9 omits every baked member (not just
+// `(scheme base)`: the substrate leaked through the same hole), which is what the run door
+// has always used, so the two doors now seed identically.
+//
+// The preload stays EAGER -- what changed is which entries are preloaded, not when.  Under
+// `--no-prelude` a manifest library that imports a baked member therefore no longer
+// resolves; that is the run door's behaviour since run-door-user-libraries, and it is
+// reported below as an unresolved import rather than silently satisfied by a standard
+// library the session deliberately does not have (design D4).
+static void preload_libraries(const std::vector<std::string> &manifests, bool have_baked) {
   if (manifests.empty()) return;             // no manifest: no libraries this session
 
-  std::vector<std::string> pending;
-  std::set<std::string> seen;                // library keys an earlier manifest claimed
-  for (size_t mi = 0; mi < manifests.size(); mi++) {
-    const std::string &manifest = manifests[mi];
-    std::vector<std::string> supplied;       // this manifest's contribution, for narration
-    std::string mtext = read_file(manifest);
-    if (mi == 0) {
-      // The first manifest, exactly as before: mode 5 lists every library entry,
-      // INCLUDING a baked member like (scheme base), which this repository's own
-      // manifest names for the Chez driver and which the already-registered guard
-      // absorbs below.
-      std::string paths = manifest_mode_text(5, mtext, manifest);
-      std::istringstream lines(paths);
-      std::string path;
-      while (std::getline(lines, path))
-        if (!path.empty()) pending.push_back(manifest_relative(manifest, path));
-      if (manifests.size() == 1) break;      // nothing to dedup against: skip the index
-    }
-    // Mode 5 yields paths; a CHAIN needs NAMES, so that a library an earlier manifest
-    // already supplies is not loaded a second time from a later one.  Mode 9's
-    // "KEY<TAB>PATH" is that index (it omits only (scheme base), which is baked and
-    // would land on the already-registered guard either way).
-    std::string index = manifest_mode_text(9, mtext, manifest);
-    std::istringstream ilines(index);
-    std::string line;
-    while (std::getline(ilines, line)) {
-      std::string::size_type tab = line.find('\t');
-      if (tab == std::string::npos) continue;
-      std::string key = line.substr(0, tab);
-      if (!seen.insert(key).second) continue;   // an earlier manifest wins this name
-      if (mi == 0) continue;                    // its paths came from mode 5 above
-      pending.push_back(manifest_relative(manifest, line.substr(tab + 1)));
-      supplied.push_back(key);
-    }
-    say_chained(manifest, supplied);
+  std::map<std::string, std::string> path_of, from_of;
+  manifest_library_index(manifests, path_of, from_of);
+  // A CHAIN needs NAMES, so that a library an earlier manifest already supplies is not
+  // loaded a second time from a later one; mode 9's index is both that and the paths to
+  // load.  A name a LATER manifest supplied is the chain reaching outward, which is named
+  // rather than silent (design D8); the first manifest is the session's own and is already
+  // reported by say_manifest.
+  std::vector<std::pair<std::string, std::string>> pending;   // (key, path)
+  std::map<std::string, std::vector<std::string>> supplied;   // manifest -> keys
+  for (std::map<std::string, std::string>::const_iterator it = path_of.begin();
+       it != path_of.end(); ++it) {
+    pending.push_back(std::make_pair(it->first, it->second));
+    std::map<std::string, std::string>::const_iterator f = from_of.find(it->first);
+    if (f != from_of.end()) supplied[f->second].push_back(it->first);
   }
+  for (size_t mi = 1; mi < manifests.size(); mi++)
+    say_chained(manifests[mi], supplied[manifests[mi]]);
 
   while (!pending.empty()) {
-    std::vector<std::string> deferred;
+    std::vector<std::pair<std::string, std::string>> deferred;
     bool progress = false;
-    for (const std::string &p : pending) {
+    for (const std::pair<std::string, std::string> &kp : pending) {
+      const std::string &key = kp.first;
+      const std::string &p = kp.second;
+      // The same cache the run door reads (change: chez-free-unit-pipeline).  This door
+      // benefits most: it preloads EVERY user library on the manifest, so a session paid for
+      // all of them on every start -- 0.138 s for this repository's four non-baked
+      // libraries, on top of the standard library the cache already covers.
+      std::string cached_ir, cached_init;
+      CacheRead cr = cache_load_unit(key, p, cached_ir, cached_init);
+      if (cr == CacheRead::Deferred) { deferred.push_back(kp); continue; }
+      if (cr == CacheRead::Hit) {
+        std::string err;
+        if (!add_ir(cached_ir, "<repl>", err))
+          std::cerr << "error: library add " << p << ": " << err << "\n";
+        else
+          run_init(cached_init);
+        progress = true;
+        continue;
+      }
       std::string src = read_file(p);
       // Unreadable or empty: report and keep the session (see the run door's note above --
       // handing "" to mode 4 traps uncatchably).  The REPL preloads EAGERLY, so a manifest
@@ -1343,7 +1726,7 @@ static void preload_libraries(const std::vector<std::string> &manifests) {
       rt_repl_set(4, src.data(), (intptr_t)src.size());
       intptr_t r = scheme_entry();
       std::string st = status_of(r);
-      if (st == "deferred") { deferred.push_back(p); continue; }
+      if (st == "deferred") { deferred.push_back(kp); continue; }
       // Already registered -- a manifest entry naming a member of the baked set, which this
       // repository's own emit-libs.scm has (the Chez driver resolves them from there).  The
       // baked member wins and this contributes no second module; adding one would collide in
@@ -1362,11 +1745,29 @@ static void preload_libraries(const std::vector<std::string> &manifests) {
       std::string err;
       if (!add_ir(ir, "<repl>", err)) { std::cerr << "error: library add " << p << ": " << err << "\n"; }
       else run_init(init);
+      // While mode 16 still describes THIS library's read.
+      cache_store_unit(key, p, ir);
       progress = true;
     }
     if (!progress) {                         // every remaining unit is stuck
-      for (const std::string &p : deferred)
-        std::cerr << "error: library " << p
+      // Under --no-prelude that is not a fault, and must not be reported as one: the
+      // session deliberately has no standard library, so every manifest library standing on
+      // one is unloadable BY REQUEST (change: chez-free-unit-pipeline, design D4).  One
+      // line naming them beats an error apiece blaming the manifest for a dependency the
+      // flag removed.  This became reachable when the preload stopped supplying
+      // (scheme base) from the manifest -- before, such a library resolved by accident, in
+      // a session where the user could not name those procedures themselves.
+      if (!have_baked) {
+        std::string names;
+        for (const std::pair<std::string, std::string> &kp : deferred)
+          names += (names.empty() ? "" : ", ") + kp.first;
+        say(std::to_string(deferred.size()) +
+            " manifest librar" + (deferred.size() == 1 ? "y" : "ies") +
+            " not loaded under --no-prelude (they import the standard library): " + names);
+        break;
+      }
+      for (const std::pair<std::string, std::string> &kp : deferred)
+        std::cerr << "error: library " << kp.second
                   << ": unresolved or cyclic import (dependency missing from manifest?)\n";
       break;
     }
@@ -1471,13 +1872,14 @@ static int emit_repl(int argc, char **argv) {
   // Register the BAKED library set, exactly as the run and build doors do (mode 8), so a
   // session's standard library does not depend on the manifest -- or on the directory the
   // session was started in.  Before this, the REPL resolved (scheme base) from the manifest
-  // (eager preload, mode 5), so `emit repl` in a user project directory had NO standard
-  // library at all and could not even load a project library that imports (scheme base)
-  // (change: baked-set-on-every-door, issue #39).
+  // (eager preload of every entry), so `emit repl` in a user project directory had NO
+  // standard library at all and could not even load a project library that imports
+  // (scheme base) (change: baked-set-on-every-door, issue #39).
   //
-  // Registration comes BEFORE the manifest preload, so a manifest that names a baked member
-  // -- as this repository's own emit-libs.scm does, for the Chez driver -- hits the
-  // already-loaded guard in repl-load-library-text and contributes no second module.
+  // Registration comes BEFORE the manifest preload, which no longer offers a baked member
+  // at all: the preload's index (mode 9) omits every one of them (change:
+  // chez-free-unit-pipeline).  The already-loaded guard in repl-load-library-text remains as
+  // a backstop for an interactive `(import (scheme base))`.
   //
   // A session has no program @scheme_entry to drive the __inits, so the host runs them
   // itself: every module is added first (a member's initializer reads globals defined by the
@@ -1505,7 +1907,7 @@ static int emit_repl(int argc, char **argv) {
 
   // Preload manifest libraries so interactive (import (L)) forms can resolve them.
   say_manifest(manifests);
-  preload_libraries(manifests);
+  preload_libraries(manifests, /*have_baked=*/prelude);
 
   // The prelude's procedures live in the now-registered (scheme base) library;
   // auto-import it into the session scope (mode 6) so later forms resolve prelude
@@ -1744,11 +2146,17 @@ static int emit_build(int argc, char **argv) {
 
   // Emit the program IR in-process (same modes the run door uses).
   std::string prog_src = read_file(src);
-  std::vector<std::string> modules;
+  std::vector<std::string> modules, module_keys;
   std::string prog_ir;
   bool is_library = false;
-  if (!compile_program(prog_src, manifests, no_prelude, modules, prog_ir, is_library, src))
+  if (!compile_program(prog_src, manifests, no_prelude, modules, module_keys, prog_ir,
+                       is_library, src))
     return 1;
+
+  // Tree-shake: replace each prunable unit with one holding only what this program reaches
+  // (change: chez-free-unit-pipeline; docs/PERFORMANCE.md P8).  This is the ship path, so
+  // the world is closed; the run and REPL doors keep whole units and are untouched.
+  shake_units(modules, module_keys, prog_ir, library_paths_by_key(manifests));
 
   // Write each unit + the program to temp .ll files (clang infers IR from .ll).  The
   // program is just the last unit for linking -- no need to distinguish it.
@@ -1840,8 +2248,9 @@ static int emit_lib(int argc, char **argv) {
   // all: seeded only afterwards (by compile_program), it saw no imports, so any library
   // declaring `(import (scheme base))` failed with `unbound variable map`
   // (change: baked-set-on-every-door).
-  std::vector<std::string> modules;
-  if (!seed_session(lib_src, manifests, /*no_prelude=*/false, modules, src)) return 1;
+  std::vector<std::string> modules, module_keys;
+  if (!seed_session(lib_src, manifests, /*no_prelude=*/false, modules, module_keys, src))
+    return 1;
 
   // .exports table + the library's basename (mode 11: (ok . "<basename>\n<datum>")).
   // The home is re-set because seeding submitted other sources in between.
@@ -1867,7 +2276,7 @@ static int emit_lib(int argc, char **argv) {
   // used to discard the registration mode 11 needed.
   std::string prog_ir;
   bool is_library = false;
-  if (!compile_unit(lib_src, modules, prog_ir, is_library, src)) return 1;
+  if (!compile_unit(lib_src, modules, module_keys, prog_ir, is_library, src)) return 1;
   if (!is_library) {
     std::cerr << "emit lib: source is not a single define-library\n";
     return 1;

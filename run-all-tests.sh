@@ -86,6 +86,7 @@ run_suite "io ports + eof object"     test/io-ports-tests.sh
 run_suite "module vertical-slice (REPL)" test/modules-repl-tests.sh
 run_suite "module run door (emit run)" test/modules-run-tests.sh
 run_suite "emit build + program resolver" test/emit-build-tests.sh
+run_suite "unit pipeline (seeding, caching, shaking)" test/unit-pipeline-tests.sh
 run_suite "CLI front door (help + final value)" test/emit-cli-tests.sh
 run_suite "(scheme base) declared surface" test/scheme-base-surface-check.sh
 run_suite "(scheme base) auto-import (REPL)" test/prelude-base-repl-tests.sh

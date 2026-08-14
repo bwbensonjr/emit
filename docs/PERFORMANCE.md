@@ -22,7 +22,7 @@ speed items in this list.
 | [P5](#p5-arithmetic-and-call-overhead-ackermann-benchmark) | Arithmetic & call overhead (Ackermann benchmark) | speed | high | med–high | `inline-fixnum-arith-and-self-calls` (A + B-self) | ☑ |
 | [P6](#p6-no-optimizer-pass-known-call-inlining-and-constant-folding) | No optimizer pass: known-call inlining & constant folding | speed + size | med–high | med | `simplify-known-calls` (A) | ☑ |
 | [P7](#p7-boxing-driven-by-desugaring-rather-than-by-mutation) | Boxing driven by desugaring rather than by mutation | speed + size | med | low–med | — | ☑ |
-| [P8](#p8-the-emit-build-door-does-not-tree-shake) | The `emit build` door does not tree-shake | size + build speed | med–high | med | — | ☐ |
+| [P8](#p8-the-emit-build-door-does-not-tree-shake) | The `emit build` door does not tree-shake | size + build speed | med–high | med | `chez-free-unit-pipeline` | ☑ |
 | [P9](#p9--an-optional-argument-costs-every-call-site-its-cross-unit-direct-call) | An optional argument costs every call site its cross-unit direct call | speed | med | med | — | ☐ |
 | [P10](#p10--a-library-another-unit-imports-is-never-tree-shaken-the-substrate-ships-whole) | A library another unit imports is never tree-shaken (the substrate ships whole) | size | high | med | — | ☐ |
 | [P11](#p11--every-emit-build-recompiles-the-c-runtime-from-source) | Every `emit build` recompiles the C runtime from source | build speed | **low** (measured: 5%) | low | — | ☐ |
@@ -1127,7 +1127,42 @@ before/after IR capture discipline.
 
 ## P8 — The `emit build` door does not tree-shake
 
-**Status:** ☐ open
+**Status:** ☑ done (change: `chez-free-unit-pipeline`, 2026-08-13).
+
+**Outcome, measured on `hello.scm` (arm64 darwin, warm cache both sides):**
+
+| | before | after |
+|---|---|---|
+| delivered executable | 212,232 B | **93,656 B** (−56%) |
+| the Chez AOT door, same program | 93,656 B | 93,656 B |
+| `emit build`, warm | 0.732 s | **0.484 s** (−34%) |
+| `emit build`, cold cache | 1.902 s | 1.720 s |
+| `(scheme base)` unit IR into the link | 592,048 B | 5,820 B |
+
+The size claim of this entry is now **exactly** met: the two ship doors deliver the same bytes for
+the same program, so a delivered executable no longer depends on which door built it. The build got
+*faster* rather than slower, cold as well as warm — the design expected the cold row to regress,
+because a shake is a recompile, and the smaller LTO input more than paid for it.
+
+The shake reuses `compile-library*` (no second implementation; its root-extraction helpers moved
+from `src/compile.ss` into the shared core so the two doors cannot drift), and each pruned unit is
+stored as its own artifact-cache entry keyed by the program that produced it — which is what keeps
+P3's saving intact instead of spending it here. Verified across the whole demo corpus: 80 programs,
+each built shaken and compared against `emit run`'s unshaken result, 80 agreeing.
+
+**What it does NOT fix, and where that now lives.** The prunability rule — a unit another unit
+imports must stay whole — bounds the win to programs whose direct imports are their only importers.
+`hello.scm` is that shape; a program importing a user library that imports `(scheme base)` gets
+212,296 B, and the **Chez door gives 212,304 B for the same program**, so this is the shake's own
+limit rather than a door gap. That limit is [P10](#p10--a-library-another-unit-imports-is-never-tree-shaken-the-substrate-ships-whole),
+which this change makes reachable on a second door: P10 is now the largest remaining size lever on
+both ship paths, and it is what a user-library program needs before it sees any of this.
+
+**OpenSpec change:** `chez-free-unit-pipeline`.
+
+---
+
+### The entry as it stood (kept for the reasoning and the measurements)
 
 **Symptom.** P1 gave the AOT ship path a root-set-driven shake, but it lives in the *Chez*
 driver (`build-modular-artifacts*` in `src/compile.ss`). The Chez-free `emit build` door links
@@ -1211,7 +1246,7 @@ contract risk.
 between 34 KB and 134 KB on a hello-world, and it is ~23% of `emit build`'s wall clock. **Cost:**
 med — the pass exists and is tested; this is wiring plus a root-set plumbing decision.
 
-**OpenSpec change:** none yet.
+**OpenSpec change:** `chez-free-unit-pipeline` (see the outcome above).
 
 ---
 
