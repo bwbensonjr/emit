@@ -168,6 +168,42 @@ check "read over a port takes the prefixed numbers and bar-quoted identifiers" \
   '(let ((p (open-input-string "#x1f |a b| #i2")))
      (list (read p) (symbol->string (read p)) (read p)))' \
   '(31 "a b" 2.0)'
+check "reader directives persist across successive reads and can be restored" \
+  '(let ((p (open-input-string "#!fold-case ABC DEF #!no-fold-case GHI")))
+     (list (read p) (read p) (read p)))' \
+  '(abc def GHI)'
+check "a directive inside a datum remains active to its right" \
+  '(let ((p (open-input-string "(A #!fold-case B) C")))
+     (list (read p) (read p)))' \
+  '((A b) c)'
+check "datum labels reconstruct cycles and sharing through read" \
+  '(let* ((p (read (open-input-string "#0=(a . #0#)")))
+          (v (read (open-input-string "#0=#(a #0#)")))
+          (s (read (open-input-string "(#0=(a) #0#)"))))
+     (list (eq? p (cdr p)) (eq? v (vector-ref v 1))
+           (eq? (car s) (cadr s))))' \
+  '(#t #t #t)'
+check "datum-label bindings do not persist across port reads" \
+  '(let ((p (open-input-string "#0=(a) #0#")))
+     (read p)
+     (guard (e (else (read-error? e))) (read p) #f))' \
+  '#t'
+check "written cyclic data can be read back with the same back edge" \
+  '(let* ((x (list 1 2)) (out (open-output-string)))
+     (set-cdr! (cdr x) x)
+     (write x out)
+     (let ((back (read (open-input-string (get-output-string out)))))
+       (list (car back) (car (cdr back)) (eq? back (cdr (cdr back))))))' \
+  '(1 2 #t)'
+check "malformed and unresolved datum labels are catchable read errors" \
+  '(define (bad? text)
+     (guard (e (else (read-error? e)))
+       (read (open-input-string text))
+       #f))
+   (list (bad? "#0#") (bad? "#0=#0#")
+         (bad? "(#0=(a) #0=(b))") (bad? "#0=")
+         (bad? "#12x") (bad? "#=(a)"))' \
+  '(#t #t #t #t #t #t)'
 
 # --- port predicates and first-classness -------------------------------------
 check "an input port is recognized by its predicates" \

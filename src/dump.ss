@@ -39,6 +39,33 @@
 ;; anyway).
 (define *pp-width* 78)
 
+;; A shared or cyclic aggregate must be handed to the runtime printer as one
+;; graph.  The fill formatter prints list elements separately, which would both
+;; lose shared-reference labels and loop while following a circular cdr.  Scan
+;; pairs/vectors by identity before choosing a layout; ordinary tree-shaped IL
+;; keeps the existing pretty layout, while a graph is safely written on one line.
+(define *pp-graph-seen* (quote ()))
+(define *pp-graph-shared?* #f)
+(define (pp-graph-scan! d)
+  (if (or (pair? d) (vector? d))
+      (if (assq d *pp-graph-seen*)
+          (set! *pp-graph-shared?* #t)
+          (begin
+            (set! *pp-graph-seen* (cons (cons d #t) *pp-graph-seen*))
+            (if (pair? d)
+                (begin (pp-graph-scan! (car d)) (pp-graph-scan! (cdr d)))
+                (let ([n (vector-length d)])
+                  (let loop ([i 0])
+                    (if (and (< i n) (not *pp-graph-shared?*))
+                        (begin (pp-graph-scan! (vector-ref d i)) (loop (+ i 1)))
+                        #f))))))
+      #f))
+(define (pp-shared-graph? d)
+  (set! *pp-graph-seen* (quote ()))
+  (set! *pp-graph-shared?* #f)
+  (pp-graph-scan! d)
+  *pp-graph-shared?*)
+
 ;; Characters print_val escapes in write style, each costing one extra column.  Keep in
 ;; sync with runtime.c's HDR_STRING write arm.
 (define (string-escape-count s)
@@ -104,7 +131,9 @@
 ;; reference keeps them together.  Filling reads much closer to that reference
 ;; without adopting its form-specific (let/lambda/if) rules.
 (define (pp-datum d col)
-  (if (or (<= (+ col (datum-width d)) *pp-width*) (not (pair? d)))
+  (if (or (pp-shared-graph? d)
+          (<= (+ col (datum-width d)) *pp-width*)
+          (not (pair? d)))
       (pp-write d)                      ; fits, or has no break rule: one line
       (pp-list d col)))
 

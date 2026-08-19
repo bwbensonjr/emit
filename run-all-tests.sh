@@ -97,6 +97,7 @@ run_suite "R7RS library partition"      test/library-partition-tests.sh
 run_suite "--dump stages (all doors)"   test/dump-stages-tests.sh
 run_suite "installed layout (libraries + support files)" test/install-layout-tests.sh
 run_suite "reader datum parity (vector consts + rendering)" test/reader-datum-parity-tests.sh
+run_suite "cyclic datum read/compare/write round trip" test/cyclic-datum-tests.sh
 run_suite "printer cycles + char names + trap delivery" test/printer-cycles-tests.sh
 run_suite "every door in a user project"      test/project-door-tests.sh
 

@@ -435,10 +435,60 @@
 ;;                       a secondary failure.  Its output is only ever read by a human,
 ;;                       never re-read by either reader, so it carries no round-trip
 ;;                       obligation and may spell what strict mode refuses.
+(define *render-graph* (quote ()))
+(define *render-next-label* 0)
+
+(define (render-labelable? x)
+  (or (pair? x) (or (vector? x) (or (string? x) (bytevector? x)))))
+(define (render-entry x) (assq x *render-graph*))
+(define (render-scan! x)
+  (if (render-labelable? x)
+      (let ([old (render-entry x)])
+        (if old
+            (vector-set! (cdr old) 0 (+ 1 (vector-ref (cdr old) 0)))
+            (begin
+              ;; #(count label printed?) -- label is assigned on first output so
+              ;; numbering follows the written order rather than the scan order.
+              (set! *render-graph*
+                    (cons (cons x (vector 1 -1 #f)) *render-graph*))
+              (cond
+                [(pair? x) (render-scan! (car x)) (render-scan! (cdr x))]
+                [(vector? x)
+                 (let ([n (vector-length x)])
+                   (let loop ([i 0])
+                     (if (< i n)
+                         (begin (render-scan! (vector-ref x i)) (loop (+ i 1)))
+                         #f)))]
+                [else #f]))))
+      #f))
+(define (render-shared? x)
+  (let ([e (and (render-labelable? x) (render-entry x))])
+    (and e (> (vector-ref (cdr e) 0) 1))))
+
 (define (render-datum x)       (render-datum* x #f))
 (define (render-datum-loose x) (render-datum* x #t))
 
 (define (render-datum* x loose)
+  (set! *render-graph* (quote ()))
+  (set! *render-next-label* 0)
+  (render-scan! x)
+  (render-node* x loose))
+
+(define (render-node* x loose)
+  (let ([e (and (render-labelable? x) (render-entry x))])
+    (if (and e (> (vector-ref (cdr e) 0) 1))
+        (let ([cell (cdr e)])
+          (if (vector-ref cell 2)
+              (string-append "#" (number->string (vector-ref cell 1)) "#")
+              (let ([label *render-next-label*])
+                (set! *render-next-label* (+ label 1))
+                (vector-set! cell 1 label)
+                (vector-set! cell 2 #t)
+                (string-append "#" (number->string label) "="
+                               (render-body* x loose)))))
+        (render-body* x loose))))
+
+(define (render-body* x loose)
   (cond
     [(string? x) (string-append "\"" x "\"")]
     [(symbol? x) (symbol->string x)]
@@ -487,7 +537,7 @@
 (define (render-seq* v i n ref loose)
   (if (>= i n)
       ""
-      (string-append (render-datum* (ref v i) loose)
+      (string-append (render-node* (ref v i) loose)
                      (if (< (+ i 1) n) " " "")
                      (render-seq* v (+ i 1) n ref loose))))
 ;; A character as BOTH readers accept it: Chez's `read` (the driver's artifact-reuse
@@ -514,11 +564,14 @@
                    "character has no portable external representation for an artifact" k)])))
 (define (render-list-body p) (render-list-body* p #f))
 (define (render-list-body* p loose)
-  (let ([a (render-datum* (car p) loose)] [d (cdr p)])
+  (let ([a (render-node* (car p) loose)] [d (cdr p)])
     (cond
       [(null? d) a]
-      [(pair? d) (string-append a " " (render-list-body* d loose))]
-      [else (string-append a " . " (render-datum* d loose))])))
+      [(pair? d)
+       (if (render-shared? d)
+           (string-append a " . " (render-node* d loose))
+           (string-append a " " (render-list-body* d loose)))]
+      [else (string-append a " . " (render-node* d loose))])))
 
 ;; A short, BOUNDED name for a form in a diagnostic: its head keyword when it has one,
 ;; else the whole form rendered.  Bounded on purpose -- a rejected declaration may carry
@@ -1127,9 +1180,17 @@
 ;; references are visible.  Unit-general: it walks any define->define reference
 ;; graph from an explicit root set.
 (define (all-symbols form)                 ; every symbol appearing in an s-expr
-  (cond [(symbol? form) (list form)]
-        [(pair? form) (append (all-symbols (car form)) (all-symbols (cdr form)))]
-        [else '()]))
+  (let ([seen (quote ())])
+    (let walk ([form form])
+      (cond
+        [(symbol? form) (list form)]
+        [(pair? form)
+         (if (memq form seen)
+             (quote ())
+             (begin
+               (set! seen (cons form seen))
+               (append (walk (car form)) (walk (cdr form)))))]
+        [else (quote ())]))))
 
 (define (reachable-names roots dep-alist)  ; transitive closure of roots over deps
   (let loop ([work roots] [seen '()])

@@ -20,7 +20,6 @@
 # key	reason	note
 00333ccebfc6b47c	unimplemented	(scheme char)
 00c7919307869b40	unimplemented	(scheme char)
-00dfc2d5f8bd4d56	issue-108	list? does not terminate on a circular list
 01fed9ade0df6bff	deliberate:#27	no exact rationals / bignums
 0285380ea20af770	unimplemented	(scheme char)
 033ed0d2cb4b7661	deliberate:#27	complex or rational literal read as a variable
@@ -111,7 +110,6 @@
 3dae7c39e365e147	unimplemented	(scheme char)
 3f551ec76a77902b	unimplemented	(scheme lazy) -- prelude macros once #79 is fixed
 41f2c4dee17795df	unimplemented	(scheme char)
-41f521b91af79d68	issue-75	#!fold-case
 426dc7aed3a511b2	unimplemented	wrong answer: FAIL something-went-wrong #t #f
 42a3ee38d0ace707	unimplemented	(scheme char)
 45269c9e25a06d23	unimplemented	(scheme char)
@@ -125,7 +123,6 @@
 4a5da5d9998f941d	unimplemented	(scheme char)
 4ca516c7b890b5ca	unimplemented	(scheme char)
 4ddb72d7af13667c	unimplemented	(scheme char)
-4dea3fc446ec34ba	issue-108	equal? does not terminate on the cyclic datum this form builds
 4df3e3dd01ca3535	deliberate:#27	(scheme complex) stays absent
 4f5fc971bcf993fb	unimplemented	(scheme char)
 4f70e6cd2216bc8b	unimplemented	binary ports and bytevector I/O
@@ -140,7 +137,6 @@
 564ef6f18925e0a1	unimplemented	wrong answer: FAIL (quasiquote #(10 5 (unquote (square 2)) (unquote-splicing (map sq
 56ef4fbd11189aa4	unimplemented	derived syntax / non-top-level define-syntax
 572f66397a6d0ec9	unimplemented	(scheme process-context)
-5748bde1e6b4af72	issue-75	datum labels
 5749f95d4bd233bc	unimplemented	wrong answer: FAIL (pair? ls.162) #t #f
 57b623b3e0c3de3f	unimplemented	arity: optional or n-ary form
 5845e5188d15cb94	unimplemented	(scheme char)
@@ -170,7 +166,6 @@
 6ba57e98564594ef	issue-91	letrec-syntax: frontend reports car: not a pair
 6c2781cd8df36abe	unimplemented	binary ports and bytevector I/O
 6cd2d7d0121ccbac	deliberate:#27	no exact rationals / bignums
-6e5ebf1010bad620	issue-75	datum labels
 6f850489ba2493bd	unimplemented	(scheme eval)
 7259c7327b8b72e4	unimplemented	(scheme char)
 73751b4c80b523a8	unimplemented	(scheme char)
@@ -349,7 +344,6 @@ ef9cc902869ec520	unimplemented	(scheme char)
 f006fa5de025f1eb	unimplemented	missing (scheme base) name
 f1301f9ff1331576	unimplemented	(scheme char)
 f1f219d0e3284f04	unimplemented	(scheme lazy) -- prelude macros once #79 is fixed
-f20805f1081dbd66	issue-75	#!fold-case
 f58b9047034c8445	blocked-by:236f842d94beb212	needs dead-clause
 f5cb2300fde10435	unimplemented	(scheme char)
 f5e4bffdcdaafcc6	deliberate:#27	(scheme complex) stays absent

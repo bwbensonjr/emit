@@ -376,8 +376,8 @@ project:
   character name is a reported error**, not the first letter of the name: `#\alarmm` says so rather
   than quietly meaning `#\a`. Strings take `\a` and `\b` beside `\n \t \r \\ \" \xHH;`, and a
   backslash before a line break is the R7RS **line continuation** — the break and the next line's
-  indentation contribute nothing. Not implemented: `#!fold-case` / `#!no-fold-case`, and the `#0=` /
-  `#0#` datum labels for circular structure.
+  indentation contribute nothing. `#!fold-case` / `#!no-fold-case` persist through a source or
+  input port, and `#0=` / `#0#` datum labels reconstruct shared and circular pairs and vectors.
 - **Control**: `call/cc` and `dynamic-wind` work. The exception surface you should use is `guard`,
   `raise`, and `error` — `with-exception-handler` is bound, because it is the installer `guard`
   expands to, but it does not give R7RS's resumable behavior (a `raise` inside it still aborts) and

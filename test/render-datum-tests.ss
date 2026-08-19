@@ -129,6 +129,34 @@
             (bad (string-append "round-trip lost: " text))))))
 
 (newline)
+(display "shared and cyclic graphs use readable datum labels")
+(newline)
+
+(let ([x (list 'a)])
+  (set-cdr! x x)
+  (let* ([text (render-datum x)]
+         [back (host-read (open-input-string text))])
+    (check "pair cycle spelling" text "#0=(a . #0#)")
+    (if (eq? back (cdr back))
+        (ok "pair cycle round-trips through Chez's read")
+        (bad "pair cycle topology was lost"))))
+(let ([v (vector 'a #f)])
+  (vector-set! v 1 v)
+  (let* ([text (render-datum v)]
+         [back (host-read (open-input-string text))])
+    (check "vector cycle spelling" text "#0=#(a #0#)")
+    (if (eq? back (vector-ref back 1))
+        (ok "vector cycle round-trips through Chez's read")
+        (bad "vector cycle topology was lost"))))
+(let* ([shared (list 'a)] [root (list shared shared)]
+       [text (render-datum root)]
+       [back (host-read (open-input-string text))])
+  (check "shared pair spelling" text "(#0=(a) #0#)")
+  (if (eq? (car back) (cadr back))
+      (ok "shared pair identity round-trips through Chez's read")
+      (bad "shared pair identity was lost")))
+
+(newline)
 (display "  ") (display pass) (display " passed, ")
 (display fail) (display " failed") (newline)
 (exit (if (= fail 0) 0 1))

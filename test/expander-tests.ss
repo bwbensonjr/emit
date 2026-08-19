@@ -39,6 +39,14 @@
          '(gen foo))
        '(list foo ...))
 
+;; The escape remains active inside quote; quote controls hygiene, not template
+;; interpretation.
+(check "ellipsis escape inside quote is instantiated"
+       (expand-with
+         (list '(define-syntax quoted-dots (syntax-rules () ((_) '(... ...)))))
+         '(quoted-dots))
+       ''...)
+
 ;; inside an escape, pattern variables still substitute but `...` stays literal
 (check "escape substitutes pvars, keeps ... literal"
        (expand-with
@@ -108,6 +116,22 @@
 (check "quoted data is untouched"
        (tmpl-of (resolve1 '(quote (helper a)) '(helper) '()))
        '(quote (helper a)))
+
+;; A datum-labelled constant is a graph, so the three syntax-rules template
+;; walks must not recursively copy its back edge.  The expansion and the
+;; exported compile-time interface both retain that exact topology.
+(let ([cycle (cons 'a '())])
+  (set-cdr! cycle cycle)
+  (let* ([tmpl (list 'quote cycle)]
+         [macro (list 'define-syntax 'cyc
+                      (list 'syntax-rules '()
+                            (list '(_) tmpl)))]
+         [expanded (expand-with (list macro) '(cyc))]
+         [exported (tmpl-of (resolve1 tmpl '() '()))])
+    (check "a cyclic quoted macro template expands without copying its back edge"
+           (list (eq? (cadr expanded) (cdr (cadr expanded)))
+                 (eq? (cadr exported) (cdr (cadr exported))))
+           '(#t #t))))
 
 ;; A syntax-rules LITERAL is matched by identity in the importer, so it must survive
 ;; verbatim even when the library happens to define a top-level binding of that name --

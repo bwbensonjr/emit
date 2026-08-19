@@ -35,6 +35,13 @@
     rd-fail?
     rd-fail-pos
     rd-fail
+    rd-state
+    rd-state-from-cell
+    rd-state-child
+    rd-fold?
+    rd-set-fold!
+    rd-match-at?
+    rd-directive-end
     rd-skip-line
     rd-block-open?
     rd-skip-block
@@ -72,6 +79,16 @@
     rd-intraline
     rd-line-continuation
     rd-string
+    rd-label-find
+    rd-label-add!
+    rd-placeholder
+    rd-placeholder?
+    rd-placeholder-entry
+    rd-seen?
+    rd-label-scan
+    rd-resolve
+    rd-finish
+    rd-label
     rd-hash
     rd-char-name
     rd-char-hex
@@ -125,10 +142,17 @@
     (define (rd-fail? i) (< i 0))
     (define (rd-fail-pos i) (- (- 0 i) 3))
     (define (rd-fail why p) (cons why (rd-fail-code p)))
+    (define (rd-state ci) (list->vector (list (list->vector (list ci)) (quote ()) (list->vector (list #f)))))
+    (define (rd-state-from-cell cell) (list->vector (list cell (quote ()) (list->vector (list #f)))))
+    (define (rd-state-child st) (rd-state-from-cell (vector-ref st 0)))
+    (define (rd-fold? st) (vector-ref (vector-ref st 0) 0))
+    (define (rd-set-fold! st v) (vector-set! (vector-ref st 0) 0 v))
+    (define (rd-match-at? s n i text) (let ((m (string-length text))) (and (<= (+ i m) n) (let loop ((k 0)) (if (= k m) #t (and (= (char->integer (string-ref s (+ i k))) (char->integer (string-ref text k))) (loop (+ k 1))))))))
+    (define (rd-directive-end s n i text) (let ((j (+ i (string-length text)))) (and (rd-match-at? s n i text) (or (= j n) (rd-delim? (string-ref s j))) j)))
     (define (rd-skip-line s n i) (if (< i n) (if (= (char->integer (string-ref s i)) 10) (+ i 1) (rd-skip-line s n (+ i 1))) i))
     (define (rd-block-open? s n i) (and (= (char->integer (string-ref s i)) 35) (< (+ i 1) n) (= (char->integer (string-ref s (+ i 1))) 124)))
     (define (rd-skip-block s n i d p) (if (< (+ i 1) n) (let ((a (char->integer (string-ref s i))) (b (char->integer (string-ref s (+ i 1))))) (cond ((and (= a 124) (= b 35)) (if (= d 1) (+ i 2) (rd-skip-block s n (+ i 2) (- d 1) p))) ((and (= a 35) (= b 124)) (rd-skip-block s n (+ i 2) (+ d 1) p)) (else (rd-skip-block s n (+ i 1) d p)))) (rd-fail-code p)))
-    (define (rd-skip-ws s n i) (if (and (<= 0 i) (< i n)) (let ((c (string-ref s i))) (cond ((rd-ws? c) (rd-skip-ws s n (+ i 1))) ((= (char->integer c) 59) (rd-skip-ws s n (rd-skip-line s n (+ i 1)))) ((rd-block-open? s n i) (let ((j (rd-skip-block s n (+ i 2) 1 i))) (if (rd-fail? j) j (rd-skip-ws s n j)))) (else i))) i))
+    (define (rd-skip-ws s n i st) (if (and (<= 0 i) (< i n)) (let ((c (string-ref s i))) (cond ((rd-ws? c) (rd-skip-ws s n (+ i 1) st)) ((= (char->integer c) 59) (rd-skip-ws s n (rd-skip-line s n (+ i 1)) st)) ((rd-block-open? s n i) (let ((j (rd-skip-block s n (+ i 2) 1 i))) (if (rd-fail? j) j (rd-skip-ws s n j st)))) ((rd-directive-end s n i "#!fold-case") => (lambda (j) (rd-set-fold! st #t) (rd-skip-ws s n j st))) ((rd-directive-end s n i "#!no-fold-case") => (lambda (j) (rd-set-fold! st #f) (rd-skip-ws s n j st))) (else i))) i))
     (define (rd-token-end s n i) (if (< i n) (if (rd-delim? (string-ref s i)) i (rd-token-end s n (+ i 1))) i))
     (define (rd-all-digits? tok a m) (if (< a m) (if (rd-digit? (string-ref tok a)) (rd-all-digits? tok (+ a 1) m) #f) #t))
     (define (rd-numeric? tok) (let ((m (string-length tok))) (and (< 0 m) (let ((c0 (char->integer (string-ref tok 0)))) (cond ((rd-digit? (string-ref tok 0)) (rd-all-digits? tok 0 m)) ((or (= c0 45) (= c0 43)) (and (< 1 m) (rd-all-digits? tok 1 m))) (else #f))))))
@@ -153,7 +177,7 @@
     (define (rd-number-reason? v) (or (eq? v (quote rd-rational)) (eq? v (quote rd-bad-number))))
     (define (rd-fold-char c) (let ((k (char->integer c))) (if (and (< 64 k) (< k 91)) (integer->char (+ k 32)) c)))
     (define (rd-fold-token tok) (let ((m (string-length tok))) (let loop ((i 0) (acc (quote ()))) (if (= i m) (list->string (reverse acc)) (loop (+ i 1) (cons (rd-fold-char (string-ref tok i)) acc))))))
-    (define (rd-atom s n i ci) (let ((j (rd-token-end s n i))) (if (= i j) (rd-fail (quote rd-unexpected) i) (let ((tok (substring s i j))) (let ((v (rd-number tok 10))) (cond ((eq? v (quote rd-not-a-number)) (cons (string->symbol (if ci (rd-fold-token tok) tok)) j)) ((rd-number-reason? v) (rd-fail v i)) (else (cons v j))))))))
+    (define (rd-atom s n i st) (let ((j (rd-token-end s n i))) (if (= i j) (rd-fail (quote rd-unexpected) i) (let ((tok (substring s i j))) (let ((v (rd-number tok 10))) (cond ((eq? v (quote rd-not-a-number)) (cons (string->symbol (if (rd-fold? st) (rd-fold-token tok) tok)) j)) ((rd-number-reason? v) (rd-fail v i)) (else (cons v j))))))))
     (define (rd-token-at s n p) (if (and (<= 0 p) (< p n)) (substring s p (rd-token-end s n (+ p 1))) ""))
     (define (rd-hex-digit c) (let ((k (char->integer c))) (cond ((and (< 47 k) (< k 58)) (- k 48)) ((and (< 96 k) (< k 103)) (- k 87)) ((and (< 64 k) (< k 71)) (- k 55)) (else 0))))
     (define (rd-hex-digit? c) (let ((k (char->integer c))) (cond ((and (< 47 k) (< k 58)) #t) ((and (< 96 k) (< k 103)) #t) ((and (< 64 k) (< k 71)) #t) (else #f))))
@@ -162,21 +186,31 @@
     (define (rd-intraline s n i) (if (< i n) (let ((k (char->integer (string-ref s i)))) (if (if (= k 32) #t (= k 9)) (rd-intraline s n (+ i 1)) i)) i))
     (define (rd-line-continuation s n j) (let ((w (rd-intraline s n j))) (if (< w n) (let ((k (char->integer (string-ref s w)))) (cond ((= k 10) (rd-intraline s n (+ w 1))) ((= k 13) (rd-intraline s n (if (< (+ w 1) n) (if (= (char->integer (string-ref s (+ w 1))) 10) (+ w 2) (+ w 1)) (+ w 1)))) (else #f))) #f)))
     (define (rd-string s n i open) (let loop ((i i) (acc (quote ()))) (if (< i n) (let* ((c (string-ref s i)) (k (char->integer c))) (cond ((= k 34) (cons (list->string (reverse acc)) (+ i 1))) ((= k 92) (if (<= n (+ i 1)) (rd-fail (quote rd-unterminated-string) open) (let ((e (string-ref s (+ i 1))) (cont (rd-line-continuation s n (+ i 1)))) (cond (cont (loop cont acc)) ((= (char->integer e) 120) (let ((hx (rd-hex s n (+ i 2) 0))) (loop (cdr hx) (cons (integer->char (car hx)) acc)))) (else (loop (+ i 2) (cons (rd-str-esc e) acc))))))) (else (loop (+ i 1) (cons c acc))))) (rd-fail (quote rd-unterminated-string) open))))
-    (define (rd-hash s n i ci) (if (<= n i) (rd-fail (quote rd-eof) (- i 1)) (let ((k (char->integer (string-ref s i)))) (cond ((if (= k 116) #t (= k 102)) (let ((tok (substring s i (rd-token-end s n i)))) (cond ((string=? tok "t") (cons #t (+ i 1))) ((string=? tok "true") (cons #t (+ i 4))) ((string=? tok "f") (cons #f (+ i 1))) ((string=? tok "false") (cons #f (+ i 5))) (else (rd-fail (quote rd-hash-token) (- i 1)))))) ((= k 92) (rd-char s n i)) ((= k 40) (let ((r (rd-list s n (+ i 1) (quote ()) ci (- i 1)))) (if (rd-fail? (cdr r)) r (cons (list->vector (car r)) (cdr r))))) ((= k 59) (let ((r (rd-datum s n (rd-skip-ws s n (+ i 1)) ci))) (if (rd-fail? (cdr r)) r (rd-datum s n (rd-skip-ws s n (cdr r)) ci)))) ((and (= k 117) (< (+ i 2) n) (= (char->integer (string-ref s (+ i 1))) 56) (= (char->integer (string-ref s (+ i 2))) 40)) (let ((r (rd-list s n (+ i 3) (quote ()) ci (- i 1)))) (if (rd-fail? (cdr r)) r (cons (list->bytevector (car r)) (cdr r))))) (else (let ((j (rd-token-end s n i))) (let ((v (rd-number (substring s (- i 1) j) 10))) (if (rd-number-reason? v) (rd-fail v (- i 1)) (cons v j)))))))))
+    (define (rd-label-find st label) (let loop ((xs (vector-ref st 1))) (if (null? xs) #f (if (= label (car (car xs))) (car xs) (loop (cdr xs))))))
+    (define (rd-label-add! st label) (let ((entry (cons label (list->vector (list (quote pending) #f))))) (vector-set! st 1 (cons entry (vector-ref st 1))) entry))
+    (define (rd-placeholder st entry) (list->vector (list (vector-ref st 2) entry)))
+    (define (rd-placeholder? st x) (and (vector? x) (= (vector-length x) 2) (eq? (vector-ref x 0) (vector-ref st 2))))
+    (define (rd-placeholder-entry x) (vector-ref x 1))
+    (define (rd-seen? x seen) (if (null? seen) #f (if (eq? x (car seen)) #t (rd-seen? x (cdr seen)))))
+    (define (rd-label-scan s n i) (if (and (< i n) (rd-digit? (string-ref s i))) (rd-label-scan s n (+ i 1)) i))
+    (define (rd-resolve st x seen) (cond ((rd-placeholder? st x) (let ((cell (cdr (rd-placeholder-entry x)))) (rd-resolve st (vector-ref cell 1) seen))) ((pair? x) (if (rd-seen? x seen) x (let ((next (cons x seen))) (set-car! x (rd-resolve st (car x) next)) (set-cdr! x (rd-resolve st (cdr x) next)) x))) ((vector? x) (if (rd-seen? x seen) x (let ((next (cons x seen)) (m (vector-length x))) (let loop ((i 0)) (if (< i m) (begin (vector-set! x i (rd-resolve st (vector-ref x i) next)) (loop (+ i 1))) x))))) (else x)))
+    (define (rd-finish st r) (if (rd-fail? (cdr r)) r (cons (rd-resolve st (car r) (quote ())) (cdr r))))
+    (define (rd-label s n i st) (let ((j (rd-label-scan s n i))) (if (>= j n) (rd-fail (quote rd-label) (- i 1)) (let* ((label (rd-digits s i j 0)) (kind (char->integer (string-ref s j))) (old (rd-label-find st label))) (cond ((= kind 61) (if old (rd-fail (quote rd-label-duplicate) (- i 1)) (let* ((entry (rd-label-add! st label)) (k (rd-skip-ws s n (+ j 1) st)) (r (rd-datum s n k st))) (if (rd-fail? (cdr r)) r (let ((v (car r)) (cell (cdr entry))) (if (and (rd-placeholder? st v) (eq? (rd-placeholder-entry v) entry)) (rd-fail (quote rd-label-self) (- i 1)) (begin (vector-set! cell 0 (quote done)) (vector-set! cell 1 v) r))))))) ((= kind 35) (if (and (< (+ j 1) n) (not (rd-delim? (string-ref s (+ j 1))))) (rd-fail (quote rd-label) (- i 1)) (if old (let ((cell (cdr old))) (if (eq? (vector-ref cell 0) (quote pending)) (cons (rd-placeholder st old) (+ j 1)) (cons (vector-ref cell 1) (+ j 1)))) (rd-fail (quote rd-label-unresolved) (- i 1))))) (else (rd-fail (quote rd-label) (- i 1))))))))
+    (define (rd-hash s n i st) (if (<= n i) (rd-fail (quote rd-eof) (- i 1)) (let ((k (char->integer (string-ref s i)))) (cond ((if (= k 116) #t (= k 102)) (let ((tok (substring s i (rd-token-end s n i)))) (cond ((string=? tok "t") (cons #t (+ i 1))) ((string=? tok "true") (cons #t (+ i 4))) ((string=? tok "f") (cons #f (+ i 1))) ((string=? tok "false") (cons #f (+ i 5))) (else (rd-fail (quote rd-hash-token) (- i 1)))))) ((rd-digit? (string-ref s i)) (rd-label s n i st)) ((= k 92) (rd-char s n i st)) ((= k 40) (let ((r (rd-list s n (+ i 1) (quote ()) st (- i 1)))) (if (rd-fail? (cdr r)) r (cons (list->vector (car r)) (cdr r))))) ((= k 59) (let* ((child (rd-state-child st)) (r (rd-finish child (rd-datum s n (rd-skip-ws s n (+ i 1) child) child)))) (if (rd-fail? (cdr r)) r (rd-datum s n (rd-skip-ws s n (cdr r) st) st)))) ((and (= k 117) (< (+ i 2) n) (= (char->integer (string-ref s (+ i 1))) 56) (= (char->integer (string-ref s (+ i 2))) 40)) (let ((r (rd-list s n (+ i 3) (quote ()) st (- i 1)))) (if (rd-fail? (cdr r)) r (cons (list->bytevector (car r)) (cdr r))))) (else (let ((j (rd-token-end s n i))) (let ((v (rd-number (substring s (- i 1) j) 10))) (if (rd-number-reason? v) (rd-fail v (- i 1)) (cons v j)))))))))
     (define (rd-char-name tok) (cond ((string=? tok "alarm") (integer->char 7)) ((string=? tok "backspace") (integer->char 8)) ((string=? tok "delete") (integer->char 127)) ((string=? tok "escape") (integer->char 27)) ((string=? tok "newline") (integer->char 10)) ((string=? tok "null") (integer->char 0)) ((string=? tok "return") (integer->char 13)) ((string=? tok "space") (integer->char 32)) ((string=? tok "tab") (integer->char 9)) ((string=? tok "nul") (integer->char 0)) ((string=? tok "altmode") (integer->char 27)) ((string=? tok "esc") (integer->char 27)) ((string=? tok "page") (integer->char 12)) (else #f)))
     (define (rd-char-hex tok) (if (= (char->integer (string-ref tok 0)) 120) (let ((len (string-length tok))) (let loop ((i 1) (acc 0)) (if (< i len) (let ((c (string-ref tok i))) (if (rd-hex-digit? c) (loop (+ i 1) (+ (* acc 16) (rd-hex-digit c))) #f)) acc))) #f))
-    (define (rd-char s n i) (let* ((cs (+ i 1)) (end (rd-token-end s n (+ cs 1))) (tok (substring s cs end))) (if (= (string-length tok) 1) (cons (string-ref s cs) end) (let ((hx (rd-char-hex tok))) (if hx (cons (integer->char hx) end) (let ((c (rd-char-name tok))) (if c (cons c end) (rd-fail (quote rd-char-name) (- i 1)))))))))
+    (define (rd-char s n i st) (let* ((cs (+ i 1)) (end (rd-token-end s n (+ cs 1))) (tok (substring s cs end))) (if (= (string-length tok) 1) (cons (string-ref s cs) end) (let* ((name (if (rd-fold? st) (rd-fold-token tok) tok)) (hx (rd-char-hex name))) (if hx (cons (integer->char hx) end) (let ((c (rd-char-name name))) (if c (cons c end) (rd-fail (quote rd-char-name) (- i 1)))))))))
     (define (rd-bar s n i p) (let loop ((i i) (acc (quote ()))) (if (< i n) (let ((c (string-ref s i))) (let ((k (char->integer c))) (cond ((= k 124) (cons (string->symbol (list->string (reverse acc))) (+ i 1))) ((and (= k 92) (< (+ i 1) n)) (let ((e (string-ref s (+ i 1)))) (if (= (char->integer e) 120) (let ((hx (rd-hex s n (+ i 2) 0))) (loop (cdr hx) (cons (integer->char (car hx)) acc))) (loop (+ i 2) (cons (rd-str-esc e) acc))))) (else (loop (+ i 1) (cons c acc)))))) (rd-fail (quote rd-bar) p))))
-    (define (rd-quote s n i ci) (let ((r (rd-datum s n (rd-skip-ws s n i) ci))) (if (rd-fail? (cdr r)) r (cons (list (quote quote) (car r)) (cdr r)))))
-    (define (rd-quasi s n i ci) (let ((r (rd-datum s n (rd-skip-ws s n i) ci))) (if (rd-fail? (cdr r)) r (cons (list (quote quasiquote) (car r)) (cdr r)))))
-    (define (rd-unquote s n i ci) (if (and (< i n) (= (char->integer (string-ref s i)) 64)) (let ((r (rd-datum s n (rd-skip-ws s n (+ i 1)) ci))) (if (rd-fail? (cdr r)) r (cons (list (quote unquote-splicing) (car r)) (cdr r)))) (let ((r (rd-datum s n (rd-skip-ws s n i) ci))) (if (rd-fail? (cdr r)) r (cons (list (quote unquote) (car r)) (cdr r))))))
+    (define (rd-quote s n i st) (let ((r (rd-datum s n (rd-skip-ws s n i st) st))) (if (rd-fail? (cdr r)) r (cons (list (quote quote) (car r)) (cdr r)))))
+    (define (rd-quasi s n i st) (let ((r (rd-datum s n (rd-skip-ws s n i st) st))) (if (rd-fail? (cdr r)) r (cons (list (quote quasiquote) (car r)) (cdr r)))))
+    (define (rd-unquote s n i st) (if (and (< i n) (= (char->integer (string-ref s i)) 64)) (let ((r (rd-datum s n (rd-skip-ws s n (+ i 1) st) st))) (if (rd-fail? (cdr r)) r (cons (list (quote unquote-splicing) (car r)) (cdr r)))) (let ((r (rd-datum s n (rd-skip-ws s n i st) st))) (if (rd-fail? (cdr r)) r (cons (list (quote unquote) (car r)) (cdr r))))))
     (define (rd-dot? s n j) (and (= (char->integer (string-ref s j)) 46) (= (rd-token-end s n (+ j 1)) (+ j 1))))
     (define (rd-append-reverse acc tail) (if (null? acc) tail (rd-append-reverse (cdr acc) (cons (car acc) tail))))
     (define (rd-datum-comment? s n i) (and (= (char->integer (string-ref s i)) 35) (< (+ i 1) n) (= (char->integer (string-ref s (+ i 1))) 59)))
-    (define (rd-list s n i acc ci open) (let ((j (rd-skip-ws s n i))) (cond ((rd-fail? j) (cons (quote rd-block-comment) j)) ((< j n) (cond ((let ((c (char->integer (string-ref s j)))) (or (= c 41) (= c 93))) (cons (reverse acc) (+ j 1))) ((rd-datum-comment? s n j) (let ((r (rd-datum s n (rd-skip-ws s n (+ j 2)) ci))) (if (rd-fail? (cdr r)) r (rd-list s n (cdr r) acc ci open)))) ((rd-dot? s n j) (let ((r (rd-datum s n (rd-skip-ws s n (+ j 1)) ci))) (if (rd-fail? (cdr r)) r (let ((j2 (rd-skip-ws s n (cdr r)))) (cond ((rd-fail? j2) (cons (quote rd-block-comment) j2)) ((<= n j2) (rd-fail (quote rd-unterminated-list) open)) (else (cons (rd-append-reverse acc (car r)) (+ j2 1)))))))) (else (let ((r (rd-datum s n j ci))) (if (rd-fail? (cdr r)) r (rd-list s n (cdr r) (cons (car r) acc) ci open)))))) (else (rd-fail (quote rd-unterminated-list) open)))))
-    (define (rd-datum s n i ci) (if (and (<= 0 i) (< i n)) (let ((k (char->integer (string-ref s i)))) (cond ((= k 40) (rd-list s n (+ i 1) (quote ()) ci i)) ((= k 91) (rd-list s n (+ i 1) (quote ()) ci i)) ((= k 39) (rd-quote s n (+ i 1) ci)) ((= k 96) (rd-quasi s n (+ i 1) ci)) ((= k 44) (rd-unquote s n (+ i 1) ci)) ((= k 34) (rd-string s n (+ i 1) i)) ((= k 35) (rd-hash s n (+ i 1) ci)) ((= k 124) (rd-bar s n (+ i 1) i)) ((or (= k 41) (= k 93)) (rd-fail (quote rd-unexpected) i)) (else (rd-atom s n i ci)))) (if (< i 0) (cons (quote rd-block-comment) i) (rd-fail (quote rd-eof) i))))
+    (define (rd-list s n i acc st open) (let ((j (rd-skip-ws s n i st))) (cond ((rd-fail? j) (cons (quote rd-block-comment) j)) ((< j n) (cond ((let ((c (char->integer (string-ref s j)))) (or (= c 41) (= c 93))) (cons (reverse acc) (+ j 1))) ((rd-datum-comment? s n j) (let* ((child (rd-state-child st)) (r (rd-finish child (rd-datum s n (rd-skip-ws s n (+ j 2) child) child)))) (if (rd-fail? (cdr r)) r (rd-list s n (cdr r) acc st open)))) ((rd-dot? s n j) (let ((r (rd-datum s n (rd-skip-ws s n (+ j 1) st) st))) (if (rd-fail? (cdr r)) r (let ((j2 (rd-skip-ws s n (cdr r) st))) (cond ((rd-fail? j2) (cons (quote rd-block-comment) j2)) ((<= n j2) (rd-fail (quote rd-unterminated-list) open)) (else (cons (rd-append-reverse acc (car r)) (+ j2 1)))))))) (else (let ((r (rd-datum s n j st))) (if (rd-fail? (cdr r)) r (rd-list s n (cdr r) (cons (car r) acc) st open)))))) (else (rd-fail (quote rd-unterminated-list) open)))))
+    (define (rd-datum s n i st) (if (and (<= 0 i) (< i n)) (let ((k (char->integer (string-ref s i)))) (cond ((= k 40) (rd-list s n (+ i 1) (quote ()) st i)) ((= k 91) (rd-list s n (+ i 1) (quote ()) st i)) ((= k 39) (rd-quote s n (+ i 1) st)) ((= k 96) (rd-quasi s n (+ i 1) st)) ((= k 44) (rd-unquote s n (+ i 1) st)) ((= k 34) (rd-string s n (+ i 1) i)) ((= k 35) (rd-hash s n (+ i 1) st)) ((= k 124) (rd-bar s n (+ i 1) i)) ((or (= k 41) (= k 93)) (rd-fail (quote rd-unexpected) i)) (else (rd-atom s n i st)))) (if (< i 0) (cons (quote rd-block-comment) i) (rd-fail (quote rd-eof) i))))
     (define %port-rtd-cell #f)
     (define (%port-rtd) (if %port-rtd-cell %port-rtd-cell (begin (set! %port-rtd-cell (%make-record-type "port")) %port-rtd-cell)))
-    (define (%make-port handle input? buf pos string? closed?) (%make-record (%port-rtd) (list handle input? buf pos string? closed?)))
+    (define (%make-port handle input? buf pos string? closed?) (%make-record (%port-rtd) (list handle input? buf pos string? closed? (list->vector (list #f)))))
     (define (%port-buf p) (let ((b (%record-ref p 2))) (if b b (let ((s (%read-all-stdin))) (%record-set! p 2 s) s))))
     ))

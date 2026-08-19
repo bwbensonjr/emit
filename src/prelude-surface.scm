@@ -161,10 +161,14 @@
     ;; below: it says "(scheme base) does not export these", which is still exactly
     ;; right, and is what keeps them out of test/scheme-base-surface-check.sh's expected
     ;; surface.  Where they are DEFINED is the assignment's business, not this list's.
-    rd-ws? rd-digit? rd-delim? rd-skip-line rd-skip-ws rd-token-end
+    rd-ws? rd-digit? rd-delim? rd-state rd-state-from-cell rd-state-child
+    rd-fold? rd-set-fold! rd-match-at? rd-directive-end
+    rd-skip-line rd-skip-ws rd-token-end
     rd-all-digits? rd-numeric? rd-digits
     rd-digits-neg rd-parse-int rd-dotchar? rd-exp-char? rd-sign-char? rd-scan-digits
-    rd-flonum? rd-nonfinite rd-atom rd-hex-digit rd-hex rd-str-esc rd-string rd-hash
+    rd-flonum? rd-nonfinite rd-atom rd-hex-digit rd-hex rd-str-esc rd-string
+    rd-label-find rd-label-add! rd-placeholder rd-placeholder? rd-placeholder-entry rd-seen?
+    rd-label-scan rd-resolve rd-finish rd-label rd-hash
     rd-char-name rd-char rd-quote rd-quasi rd-unquote rd-dot? rd-append-reverse
     rd-list rd-datum
     ;; ... and the lexical conformance additions (change: reader-lexical-conformance):
@@ -293,10 +297,14 @@
 ;;;    reason that nothing down here needs them.
 (define *substrate-rehomed*
   '(;; the in-language reader, entry point last
-    rd-ws? rd-digit? rd-delim? rd-skip-line rd-skip-ws rd-token-end
+    rd-ws? rd-digit? rd-delim? rd-state rd-state-from-cell rd-state-child
+    rd-fold? rd-set-fold! rd-match-at? rd-directive-end
+    rd-skip-line rd-skip-ws rd-token-end
     rd-all-digits? rd-numeric? rd-digits rd-digits-neg rd-parse-int
     rd-dotchar? rd-exp-char? rd-sign-char? rd-scan-digits rd-flonum? rd-nonfinite
-    rd-atom rd-hex-digit rd-hex rd-str-esc rd-string rd-hash rd-char-name rd-char
+    rd-atom rd-hex-digit rd-hex rd-str-esc rd-string
+    rd-label-find rd-label-add! rd-placeholder rd-placeholder? rd-placeholder-entry rd-seen?
+    rd-label-scan rd-resolve rd-finish rd-label rd-hash rd-char-name rd-char
     rd-quote rd-quasi rd-unquote rd-dot? rd-append-reverse rd-list rd-datum
     ;; the lexical conformance additions (change: reader-lexical-conformance).  NOT
     ;; rd-report: it is the reader's only name that raises, so it cannot come down here

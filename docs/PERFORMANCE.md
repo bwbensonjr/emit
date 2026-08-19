@@ -32,6 +32,7 @@ speed items in this list.
 | [P15](#p15--indexed-access-bounds-checks-measured-and-free) | Indexed-access bounds checks: measured, and free | speed | n/a | n/a | `checked-indexed-access` | ☑ |
 | [P16](#p16--argument-type-checks-free-in-time-25-in-size-and-the-size-is-where-the-choice-is) | Argument type checks: free in time, +2.5% in size | speed + size | n/a | n/a | `checked-primitive-arguments` | ☑ |
 | [P17](#p17--the-artifact-cache-has-no-eviction) | The artifact cache has no eviction | disk | low | low–med | — | ☐ |
+| [P18](#p18--graph-aware-constant-lowering-has-a-quadratic-identity-memo) | Graph-aware constant lowering has a quadratic identity memo | compile speed | low | med | `r7rs-cyclic-datum-round-trip` | ☐ |
 
 Legend — **Value**: benefit if fixed. **Cost**: rough implementation effort/risk. These are
 estimates to aid sequencing, not commitments.
@@ -1849,6 +1850,40 @@ the orphans. (2) A total-size cap with LRU by mtime. (3) An `emit cache` verb (`
 
 **OpenSpec change:** none — see `chez-free-unit-pipeline`'s design, which recorded this as an
 open question and deliberately left it out of scope.
+
+---
+
+## P18 — Graph-aware constant lowering has a quadratic identity memo
+
+**Status:** ☐ open (measured during `r7rs-cyclic-datum-round-trip`)
+
+**Symptom.** `encode-const` now preserves labelled sharing and cycles by memoizing each heap
+object's identity before recursively lowering its edges. The portable memo in `src/emit.ss` is an
+association list searched with `assq`, so lowering a single very large tree-shaped quoted datum is
+quadratic in its number of heap objects even though the emitted IR is linear.
+
+**Measurement.** On 2026-08-19, warmed Chez-hosted `--emit-ir` runs over one ordinary quoted list
+of repeated fixnums took 0.56s at 4,000 elements, 0.92s at 16,000, and 4.34s at 64,000. Startup and
+the rest of the pipeline dominate the two smaller cases; the 64,000-element case exposes the
+quadratic tail. The normal cyclic-datum source fixture compiled and linked through the source
+driver in 2.8–3.4s, with the two library artifacts reused, so the memo is not material for current
+compiler or test workloads. Keeping the simple representation is therefore deliberate, not an
+unmeasured assumption.
+
+**Why the obvious hash table is not portable.** The compiler core runs under both Chez and Emit.
+Chez has an eq-hashtable, while Emit's public hash tables are deliberately `equal?`-keyed and its
+`%hash` is structural rather than an object-address hash. Using either host's private table would
+split the shared core; hashing by `%hash` would also put the indistinguishable tails of a uniform
+list into the same bucket and preserve the bad case.
+
+**Fix sketch.** Add one compiler-private identity-hash primitive on both hosts, then replace the
+alist with a growable bucket vector keyed by that hash and checked with `eq?`. Keep the memo local
+to one outer constant and preserve allocate-before-fill for pairs and vectors. This is worth doing
+when real source contains constants in the tens of thousands of aggregate nodes, or if self-compile
+profiles put `const-memo-ref` on the hot path; neither is true today.
+
+**Value:** low now, potentially high for generated constant tables. **Cost:** medium — the lookup
+is small, but adding a raw primitive touches both compiler hosts and the fixed-point bootstrap.
 
 ---
 

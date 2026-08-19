@@ -9,9 +9,9 @@
 ;;;   * the compositional accessors caddr / cadddr / cdddr, which R7RS places in
 ;;;     (scheme cxr).  The passes call them at 48 sites across nine of the flat core
 ;;;     files.
-;;;   * rd-skip-ws and rd-token-end, the reader's lexeme helpers, which the REPL's
-;;;     input-completeness probe (src/repl-core.ss) deliberately reuses so the probe and
-;;;     the reader cannot drift.
+;;;   * rd-state, rd-label-scan, rd-skip-ws and rd-token-end, the reader helpers which
+;;;     the REPL's input-completeness probe (src/repl-core.ss) deliberately reuses so
+;;;     directives, datum labels, and token extent cannot drift from the real reader.
 ;;;
 ;;; Both groups live in the internal substrate, so ONE import resolves them -- instead of
 ;;; 48 edits under the self-hosting fixed point, and instead of keeping names on a public

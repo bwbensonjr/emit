@@ -392,5 +392,71 @@
   (read-from-string "+inf.1")
   '|+inf.1|)
 
+(printf "\npersistent reader directives\n")
+
+(check 'directive-persists
+  (read-all-from-string "#!fold-case ABC DEF")
+  '(abc def))
+(check 'directive-no-fold-restores
+  (read-all-from-string "#!fold-case ABC #!no-fold-case DEF ghi")
+  '(abc DEF ghi))
+(check 'directive-inside-datum-persists-rightward
+  (read-all-from-string "(A #!fold-case B) C")
+  '((A b) c))
+(check 'directive-overrides-ci-entry
+  (read-all-from-string-ci "ABC #!no-fold-case DEF")
+  '(abc DEF))
+(check 'directive-leaves-literals
+  (read-all-from-string "#!fold-case |MixedCase| \"ABC\" 12 #\\Q")
+  (list 'MixedCase "ABC" 12 #\Q))
+(check 'directive-folds-character-name
+  (char->integer (read-from-string "#!fold-case #\\SPACE"))
+  32)
+(check 'directive-in-comment-keeps-lexical-state
+  (read-all-from-string "#;#!fold-case SKIP ABC")
+  '(abc))
+(check 'directive-needs-delimiter
+  (car (caught (lambda () (read-from-string "#!fold-caseABC"))))
+  'read-report)
+
+(printf "\ndatum labels and graph topology\n")
+
+(let ([x (read-from-string "#0=(1 . #0#)")])
+  (check 'label-pair-cycle (list (car x) (eq? x (cdr x))) '(1 #t)))
+(let ([x (read-from-string "(#0=(1 2 3) #0#)")])
+  (check 'label-shared-pair (eq? (car x) (cadr x)) #t))
+(let ([x (read-from-string "#0=#(a #0#)")])
+  (check 'label-vector-cycle (eq? x (vector-ref x 1)) #t))
+(let ([x (read-from-string "#0=(#(1 #0#))")])
+  (check 'label-mixed-cycle (eq? x (vector-ref (car x) 1)) #t))
+(let ([x (read-from-string "(#0=(a) #1=#(b) #0# #1#)")])
+  (check 'label-multiple
+    (list (eq? (car x) (caddr x)) (eq? (cadr x) (cadddr x)))
+    '(#t #t)))
+(check 'label-forward-reference
+  (car (caught (lambda () (read-from-string "#0#"))))
+  'read-report)
+(check 'label-direct-self
+  (car (caught (lambda () (read-from-string "#0=#0#"))))
+  'read-report)
+(check 'label-duplicate
+  (car (caught (lambda () (read-from-string "(#0=(a) #0=(b))"))))
+  'read-report)
+(check 'label-incomplete
+  (car (caught (lambda () (read-from-string "#0="))))
+  'read-report)
+(check 'label-malformed
+  (car (caught (lambda () (read-from-string "#12x"))))
+  'read-report)
+(check 'label-no-decimal-digits
+  (car (caught (lambda () (read-from-string "#=(a)"))))
+  'read-report)
+(check 'label-scope-is-one-outer-datum
+  (car (caught (lambda () (read-all-from-string "#0=(a) #0#"))))
+  'read-report)
+(check 'commented-label-does-not-leak
+  (car (caught (lambda () (read-all-from-string "#;#0=(a) #0#"))))
+  'read-report)
+
 (printf "\n  ~a passed, ~a failed\n" pass fail)
 (exit (if (= fail 0) 0 1))

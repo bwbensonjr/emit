@@ -602,6 +602,23 @@
 #     both trees, and the two transcripts are byte-identical), and the R7RS suite goes from
 #     363 to 351 exclusions with no stale entries.  build/emit 1681192 -> 1698264 B (+1.0%).
 #     No new entries.
+#   r7rs-cyclic-datum-round-trip (issues #75, #108) -- all 80 hashes move because the
+#     baked reader substrate and (scheme base) are present in every emitted file.  A capture
+#     from HEAD's committed compiler vs the regenerated tree, split at unit boundaries,
+#     classified the change:
+#       PROGRAM modules: 71/80 are byte-identical.  The other nine differ in only one or
+#         two initializer hunks that construct quoted compound constants (case-cxr,
+#         equal-list, map-multi-list, quote-list, quote-traverse, string-char, unicode,
+#         unspecified-value, vectors).  Their pair-allocation count stays exactly 68;
+#         graph-aware lowering adds exactly 67 rt_set_car + 67 rt_set_cdr calls to fill the
+#         pairs after allocating and memoizing them.  No procedure body changes.
+#       LIBRARIES: (emit internal) adds exactly 17 stable named functions, all the new
+#         rd-state/directive/label/fixup helpers, and removes none.  (scheme base)'s stable
+#         named-function set is unchanged while list? and its reader-facing implementations
+#         move.  The additionally linked (scheme cxr) and (scheme file) units are
+#         byte-identical; (scheme read) changes as expected with its reader copy.
+#     All 80 demos' stdout is unchanged (the demo-values suite passes 80/80).  No new
+#     entries.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

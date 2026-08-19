@@ -70,16 +70,34 @@ val const-deep "(display '((#(1 #(2 #(3))) . #u8(4)) 5))" "((#(1 #(2 #(3))) . #u
 val const-in-body "(define (f) '#(1 2))(display (f))" "#(1 2)"
 
 echo
+echo "labelled cyclic and shared constants retain graph identity"
+
+val const-pair-cycle \
+  "(let ((x (quote #0=(a . #0#)))) (write (eq? x (cdr x))))" \
+  "#t"
+val const-vector-cycle \
+  "(let ((x (quote #0=#(a #0#)))) (write (eq? x (vector-ref x 1))))" \
+  "#t"
+val const-mixed-cycle \
+  "(let ((x (quote #0=(#(a #0#))))) (write (eq? x (vector-ref (car x) 1))))" \
+  "#t"
+val const-shared-pair \
+  "(let ((x (quote (#0=(a) #0#)))) (write (eq? (car x) (cadr x))))" \
+  "#t"
+
+echo
 echo "the same constants inside a LIBRARY body (the path #64 asked about)"
 
 mkdir -p "$TMP/proj"
 cat > "$TMP/proj/vlib.sld" <<'EOF'
 (define-library (vlib)
   (import (scheme base))
-  (export vconst bvconst)
+  (export vconst bvconst pcycle shared)
   (begin
     (define (vconst) (quote #(1 2)))
-    (define (bvconst) (quote #u8(3 4)))))
+    (define (bvconst) (quote #u8(3 4)))
+    (define (pcycle) (quote #0=(p . #0#)))
+    (define (shared) (quote (#1=(s) #1#)))))
 EOF
 cat > "$TMP/proj/emit-libs.scm" <<EOF
 ((library (vlib) (source "vlib.sld")))
@@ -88,9 +106,11 @@ cat > "$TMP/proj/usev.scm" <<'EOF'
 (import (vlib))
 (display (vconst))
 (display (bvconst))
+(display (let ((x (pcycle))) (eq? x (cdr x))))
+(display (let ((x (shared))) (eq? (car x) (cadr x))))
 EOF
 got="$(cd "$TMP/proj" && "$EMITABS" run usev.scm 2>"$TMP/usev.err")"
-[ "$got" = "#(1 2)#u8(3 4)" ] && ok "library body vector + bytevector constants => $got" \
+[ "$got" = "#(1 2)#u8(3 4)#t#t" ] && ok "library body constants retain cyclic/shared topology => $got" \
   || { bad "library body constants => [$got]"; sed 's/^/         /' "$TMP/usev.err"; }
 
 echo
@@ -162,6 +182,45 @@ EOF
 got="$(cd "$TMP/proj" && "$EMITABS" run usemac.scm --manifest emit-libs2.scm 2>"$TMP/usemac.err")"
 [ "$got" = "#(1 2)" ] && ok "importer expands the macro to the real vector => $got" \
   || { bad "macro expansion => [$got]"; sed 's/^/         /' "$TMP/usemac.err"; }
+
+echo
+echo "a labelled cyclic datum in an exported macro template round-trips the table"
+
+cat > "$TMP/proj/cyclelib.sld" <<'EOF'
+(define-library (cyclelib)
+  (import (scheme base))
+  (export cyclemac sharedmac)
+  (begin
+    (define-syntax cyclemac
+      (syntax-rules ()
+        ((_) (quote #0=(c . #0#)))))
+    (define-syntax sharedmac
+      (syntax-rules ()
+        ((_) (quote (#1=(s) #1#)))))))
+EOF
+cat > "$TMP/proj/emit-libs3.scm" <<EOF
+((library (cyclelib) (source "cyclelib.sld")))
+EOF
+cat > "$TMP/proj/usecycle.scm" <<'EOF'
+(import (cyclelib))
+(let ((c (cyclemac)) (s (sharedmac)))
+  (write (list (eq? c (cdr c)) (eq? (car s) (cadr s)))))
+EOF
+if (cd "$TMP/proj" && EMIT_VERBOSITY=quiet "$EMITABS" lib cyclelib.sld -o build/lib) \
+     >"$TMP/cyclelib.log" 2>&1; then
+  T="$TMP/proj/build/lib/cyclelib.exports"
+  if grep -q '#0=' "$T" && grep -q '#0#' "$T"; then
+    ok "export table records datum labels for cyclic/shared templates"
+  else
+    bad "export table lost cyclic/shared labels"; sed 's/^/         /' "$T"
+  fi
+  got="$(cd "$TMP/proj" && "$EMITABS" run usecycle.scm --manifest emit-libs3.scm \
+          2>"$TMP/usecycle.err")"
+  [ "$got" = "(#t #t)" ] && ok "imported macro constants retain graph identity => $got" \
+    || { bad "imported cyclic macro constants => [$got]"; sed 's/^/         /' "$TMP/usecycle.err"; }
+else
+  bad "emit lib on cyclic macro templates failed"; sed 's/^/         /' "$TMP/cyclelib.log"
+fi
 
 echo
 echo "diagnostics name the datum they report (issue #52)"

@@ -66,29 +66,28 @@ not an independent gap, and counting it as one overstates the inventory.
 
 ## Current baseline
 
-Measured on 2026-08-11, after the change that introduced this suite:
+Measured on 2026-08-19, after `r7rs-cyclic-datum-round-trip`:
 
 ```
-assertions: 779 passed, 0 failed;  forms: 791 run, 389 excluded
-22 section/check groups passed, 0 failed          (about 2 minutes)
+assertions: 837 passed, 0 failed;  forms: 838 run, 342 excluded
+22 section/check groups passed, 0 failed
 ```
 
-The 389 exclusions, by reason class:
+The 342 exclusions, by reason class:
 
 | Reason | Forms | What it is |
 |---|---|---|
-| `unimplemented` | 231 | `(scheme char)`, `(scheme lazy)`, binary ports, derived syntax, `(scheme eval)`, ... |
+| `unimplemented` | 226 | `(scheme char)`, `(scheme lazy)`, binary ports, derived syntax, `(scheme eval)`, ... |
 | `deliberate:#27` | 87 | exact rationals, bignums, complex numbers -- permanently absent |
-| `issue-74` | 16 | reader: named characters, hex escapes, string escapes, inf/nan case |
 | `blocked-by:*` | 15 | a helper's defining form is excluded -- not independent gaps |
 | `deliberate:not-R7RS-small` | 8 | `1s2`/`1f2`-style exponent markers, which R7RS-small does not have |
-| `issue-82` | 7 | mutable pairs |
-| `issue-85` | 6 | `read-error?`/`file-error?` need an error-object kind |
-| `issue-84` | 5 | crashes with a signal (no tag check on accessors) |
-| `issue-75` | 4 | datum labels, `#!fold-case` |
-| `issue-78`, `issue-86` | 3 each | `apply` on a non-list; flonum print convention |
-| `issue-81` | 2 | `case` with `=>` |
-| `issue-77`, `issue-80` | 1 each | exact/inexact comparison; `_` as a syntax-rules literal |
+| `issue-91` | 4 | malformed derived-syntax forms currently fail in the frontend |
+| `issue-33` | 1 | `make-list` lacks its optional fill argument |
+| `deliberate:r7rs-lexical-conformance` | 1 | a chibi expectation is stricter than the R7RS peculiar-identifier grammar |
+
+This change specifically removes six exclusions for circular `list?`, cycle-safe `equal?`, datum
+labels, and persistent fold-case directives. Its stale-exclusion pass checked all 342 remaining
+entries and reported no stale exclusions and no timeout inventory.
 
 For contrast, the same suite against the compiler immediately before the change ran 651 forms with
 529 excluded, for 635 passing assertions. Sections 6.8 Vectors and 6.9 Bytevectors moved most, from

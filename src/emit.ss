@@ -290,11 +290,32 @@
     (let ([special (flonum-inf+nan-text s)])
       (if special special (canonical-decimal d)))))
 
-;; Immediates encode inline to an operand with no emission; a symbol emits an
-;; rt_intern call and a pair materializes via rt_cons (recursing), so encode-const
-;; may emit into the current function and returns the resulting operand.
+;; One quoted datum is a graph, not necessarily a tree: datum labels can make an
+;; aggregate cyclic or make two edges share the same string/pair/vector/bytevector.
+;; The identity memo is reset at each outer constant and uses assq deliberately --
+;; structurally equal but distinct source objects must not be coalesced.
+(define *const-memo* (quote ()))
+(define (const-memo-ref d) (assq d *const-memo*))
+(define (const-memo-put! d operand)
+  (set! *const-memo* (cons (cons d operand) *const-memo*)))
+
 (define (encode-const d)
-  (cond
+  (set! *const-memo* (quote ()))
+  (encode-const* d))
+
+;; Immediates encode inline to an operand with no emission.  Heap constants are
+;; memoized by object identity; recursive aggregates publish their allocation
+;; before their edges are encoded, which gives a back edge an existing operand.
+(define (encode-const* d)
+  (let ([prior (and (or (pair? d)
+                        (or (string? d)
+                            (or (vector? d)
+                                (or (bytevector? d)
+                                    (and (real? d) (not (exact? d)))))))
+                    (const-memo-ref d))])
+    (if prior
+        (cdr prior)
+        (cond
     [(and (integer? d) (exact? d)) (fixnum-word d)]           ; fixnum: n<<3
     [(eq? d #t) "257"]                                        ; TRUE_V  (subtype BOOL, payload 1)
     [(eq? d #f) "1"]                                          ; FALSE_V (subtype BOOL, payload 0)
@@ -311,12 +332,17 @@
        (let ([t (fresh-temp)])
          (emit! (string-append t " = call i64 @rt_make_string(ptr " g ", i64 "
                                (number->string len) ")"))
+         (const-memo-put! d t)
          t))]
-    [(pair? d)                                                ; materialize at runtime
-     (let* ([a  (encode-const (car d))]
-            [dd (encode-const (cdr d))]
-            [t  (fresh-temp)])
-       (emit! (string-append t " = call i64 @rt_cons(i64 " a ", i64 " dd ")"))
+    [(pair? d)                                                ; allocate, publish, fill
+     (let ([t (fresh-temp)])
+       (emit! (string-append t " = call i64 @rt_cons(i64 " (encode-const-unspec)
+                             ", i64 " (encode-const-unspec) ")"))
+       (const-memo-put! d t)
+       (let* ([a (encode-const* (car d))] [sa (fresh-temp)])
+         (emit! (string-append sa " = call i64 @rt_set_car(i64 " t ", i64 " a ")")))
+       (let* ([dd (encode-const* (cdr d))] [sd (fresh-temp)])
+         (emit! (string-append sd " = call i64 @rt_set_cdr(i64 " t ", i64 " dd ")")))
        t)]
     ;; Vector and bytevector constants materialize at runtime like a pair does, but
     ;; ALLOCATE-THEN-FILL rather than build bottom-up: rt_make_vector once, then one
@@ -334,10 +360,11 @@
      (let ([t (fresh-temp)] [n (vector-length d)])
        (emit! (string-append t " = call i64 @rt_make_vector(i64 " (fixnum-word n)
                              ", i64 " (encode-const-unspec) ")"))
+       (const-memo-put! d t)
        (let loop ([i 0])
          (if (>= i n)
              t
-             (let ([e (encode-const (vector-ref d i))] [s (fresh-temp)])
+             (let ([e (encode-const* (vector-ref d i))] [s (fresh-temp)])
                (emit! (string-append s " = call i64 @rt_vector_set(i64 " t ", i64 "
                                      (fixnum-word i) ", i64 " e ")"))
                (loop (+ i 1))))))]
@@ -345,6 +372,7 @@
      (let ([t (fresh-temp)] [n (bytevector-length d)])
        (emit! (string-append t " = call i64 @rt_make_bytevector(i64 " (fixnum-word n)
                              ", i64 " (fixnum-word 0) ")"))
+       (const-memo-put! d t)
        (let loop ([i 0])
          (if (>= i n)
              t
@@ -364,8 +392,9 @@
      (let* ([g+len (emit-cstring-global "@.flo.lit." (flonum-lit-text d))]
             [g (car g+len)] [t (fresh-temp)])
        (emit! (string-append t " = call i64 @rt_flonum_lit(ptr " g ")"))
+       (const-memo-put! d t)
        t)]
-    [else (error 'emit "bad const" d)]))
+    [else (error 'emit "bad const" d)]))))
 
 (define prim-table
   '((%+ "rt_add") (%- "rt_sub") (%* "rt_mul") (%/ "rt_div")

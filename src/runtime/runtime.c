@@ -1913,12 +1913,71 @@ val rt_char_p(val v)    { return truthy(is_char(v)); }
 /* structural equality: eqv? fast path (immediates, interned symbols/chars, same
  * object), then recurse into pairs, compare string content by bytes (UTF-8, so
  * byte equality == codepoint equality), and recurse element-wise into vectors.
- * Everything else is #f. */
-val rt_equal(val a, val b) {
+ *
+ * A call-local open-addressed set records ordered pairs of aggregate objects
+ * already being compared.  Reaching the same comparison again is the back edge
+ * of a cyclic graph and succeeds coinductively; a differing leaf or vector length
+ * is still found before that edge can make the whole comparison succeed.  The
+ * table is lazy, so scalar/string-only equality keeps its old allocation-free
+ * fast path. */
+typedef struct {
+  val left;
+  val right;
+  unsigned char used;
+} equal_slot;
+
+typedef struct {
+  equal_slot *slots;
+  size_t cap;
+  size_t used;
+} equal_seen;
+
+static size_t equal_hash(val a, val b) {
+  uintptr_t x = (uintptr_t)a >> 3;
+  uintptr_t y = (uintptr_t)b >> 3;
+  x ^= x >> 30; x *= UINT64_C(0xbf58476d1ce4e5b9);
+  y ^= y >> 27; y *= UINT64_C(0x94d049bb133111eb);
+  return (size_t)(x ^ (y + UINT64_C(0x9e3779b97f4a7c15) + (x << 6) + (x >> 2)));
+}
+
+static void equal_seen_grow(equal_seen *seen) {
+  size_t oldcap = seen->cap;
+  equal_slot *old = seen->slots;
+  size_t cap = oldcap ? oldcap * 2 : 32;
+  equal_slot *slots = (equal_slot *)GC_MALLOC(cap * sizeof(equal_slot));
+  memset(slots, 0, cap * sizeof(equal_slot));
+  for (size_t i = 0; i < oldcap; i++) {
+    if (!old[i].used) continue;
+    size_t j = equal_hash(old[i].left, old[i].right) & (cap - 1);
+    while (slots[j].used) j = (j + 1) & (cap - 1);
+    slots[j] = old[i];
+  }
+  seen->slots = slots;
+  seen->cap = cap;
+}
+
+/* Return 1 when (a,b) was already present; otherwise insert it and return 0. */
+static int equal_seen_before(equal_seen *seen, val a, val b) {
+  if (!seen->cap || (seen->used + 1) * 4 >= seen->cap * 3)
+    equal_seen_grow(seen);
+  size_t i = equal_hash(a, b) & (seen->cap - 1);
+  while (seen->slots[i].used) {
+    if (seen->slots[i].left == a && seen->slots[i].right == b) return 1;
+    i = (i + 1) & (seen->cap - 1);
+  }
+  seen->slots[i].left = a;
+  seen->slots[i].right = b;
+  seen->slots[i].used = 1;
+  seen->used++;
+  return 0;
+}
+
+static val equal_walk(val a, val b, equal_seen *seen) {
   if (a == b) return TRUE_V;
   if (tag_of(a) == TAG_PAIR && tag_of(b) == TAG_PAIR) {
-    if (rt_equal(as_ptr(a)[0], as_ptr(b)[0]) != TRUE_V) return FALSE_V;
-    return rt_equal(as_ptr(a)[1], as_ptr(b)[1]);
+    if (equal_seen_before(seen, a, b)) return TRUE_V;
+    if (equal_walk(as_ptr(a)[0], as_ptr(b)[0], seen) != TRUE_V) return FALSE_V;
+    return equal_walk(as_ptr(a)[1], as_ptr(b)[1], seen);
   }
   if (tag_of(a) == TAG_EXT && tag_of(b) == TAG_EXT) {
     if (ext_hdr(a) == HDR_STRING && ext_hdr(b) == HDR_STRING) {
@@ -1929,8 +1988,9 @@ val rt_equal(val a, val b) {
     if (ext_hdr(a) == HDR_VECTOR && ext_hdr(b) == HDR_VECTOR) {
       intptr_t la = vec_len(a);
       if (la != vec_len(b)) return FALSE_V;
+      if (equal_seen_before(seen, a, b)) return TRUE_V;
       for (intptr_t i = 0; i < la; i++)
-        if (rt_equal(as_ptr(a)[i + 2], as_ptr(b)[i + 2]) != TRUE_V) return FALSE_V;
+        if (equal_walk(as_ptr(a)[i + 2], as_ptr(b)[i + 2], seen) != TRUE_V) return FALSE_V;
       return TRUE_V;
     }
     if (ext_hdr(a) == HDR_BYTEVECTOR && ext_hdr(b) == HDR_BYTEVECTOR) {
@@ -1942,6 +2002,11 @@ val rt_equal(val a, val b) {
       return truthy(flo_val(a) == flo_val(b));   /* equal? on flonums: by value */
   }
   return FALSE_V;
+}
+
+val rt_equal(val a, val b) {
+  equal_seen seen = { NULL, 0, 0 };
+  return equal_walk(a, b, &seen);
 }
 
 /* --- error: report who/message/irritants and abort (error-and-guard-conditions)

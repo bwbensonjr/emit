@@ -257,9 +257,23 @@
 ;; fourth-element accessor (extends the cxr set one deeper).
 (define (cadddr x) (car (cdddr x)))
 
-;; #t iff a proper list (walks to null; a dotted tail yields #f).
+;; #t iff a proper list.  The fast cursor advances twice per turn while the
+;; slow cursor advances once, so an eq? meeting detects a circular cdr chain
+;; without allocating a visited list.  A null fast cursor is proper; any other
+;; non-pair tail is dotted and therefore not a list.
 (define (list? x)
-  (if (null? x) #t (if (pair? x) (list? (cdr x)) #f)))
+  (let loop ([slow x] [fast x])
+    (cond
+      [(null? fast) #t]
+      [(not (pair? fast)) #f]
+      [else
+       (let ([fast1 (cdr fast)])
+         (cond
+           [(null? fast1) #t]
+           [(not (pair? fast1)) #f]
+           [else
+            (let ([slow1 (cdr slow)] [fast2 (cdr fast1)])
+              (if (eq? slow1 fast2) #f (loop slow1 fast2)))]))])))
 
 (define (zero? n) (= n 0))
 
@@ -1256,6 +1270,35 @@
 (define (rd-fail-pos i) (- (- 0 i) 3))   ; the sentinel index -> the position
 (define (rd-fail why p) (cons why (rd-fail-code p)))
 
+;;; Reader state has two deliberately different lifetimes.  Slot 0 is a mutable
+;;; one-element fold-mode cell shared by every datum from one source/port.  Slots
+;;; 1 and 2 are a label environment and its unforgeable placeholder marker,
+;;; fresh for each outermost datum (and for a datum discarded by #;).
+(define (rd-state ci)
+  (list->vector (list (list->vector (list ci))
+                      (quote ())
+                      (list->vector (list #f)))))
+(define (rd-state-from-cell cell)
+  (list->vector (list cell (quote ()) (list->vector (list #f)))))
+(define (rd-state-child st) (rd-state-from-cell (vector-ref st 0)))
+(define (rd-fold? st) (vector-ref (vector-ref st 0) 0))
+(define (rd-set-fold! st v) (vector-set! (vector-ref st 0) 0 v))
+
+(define (rd-match-at? s n i text)
+  (let ([m (string-length text)])
+    (and (<= (+ i m) n)
+         (let loop ([k 0])
+           (if (= k m)
+               #t
+               (and (= (char->integer (string-ref s (+ i k)))
+                       (char->integer (string-ref text k)))
+                    (loop (+ k 1))))))))
+(define (rd-directive-end s n i text)
+  (let ([j (+ i (string-length text))])
+    (and (rd-match-at? s n i text)
+         (or (= j n) (rd-delim? (string-ref s j)))
+         j)))
+
 (define (rd-skip-line s n i)             ; index just past the next newline (or n)
   (if (< i n)
       (if (= (char->integer (string-ref s i)) 10) (+ i 1) (rd-skip-line s n (+ i 1)))
@@ -1282,15 +1325,19 @@
 ;;; dispatched as a datum -- which makes it work everywhere whitespace already works
 ;;; and gives the REPL probe the same answer for free, since the probe shares this
 ;;; helper.  (`#;` cannot live here: discarding a datum needs a full recursive read.)
-(define (rd-skip-ws s n i)               ; next index that is not ws or a comment
+(define (rd-skip-ws s n i st)            ; next non-space token; directives mutate ST
   (if (and (<= 0 i) (< i n))
       (let ([c (string-ref s i)])
         (cond
-          [(rd-ws? c) (rd-skip-ws s n (+ i 1))]
-          [(= (char->integer c) 59) (rd-skip-ws s n (rd-skip-line s n (+ i 1)))]
+          [(rd-ws? c) (rd-skip-ws s n (+ i 1) st)]
+          [(= (char->integer c) 59) (rd-skip-ws s n (rd-skip-line s n (+ i 1)) st)]
           [(rd-block-open? s n i)
            (let ([j (rd-skip-block s n (+ i 2) 1 i)])
-             (if (rd-fail? j) j (rd-skip-ws s n j)))]
+             (if (rd-fail? j) j (rd-skip-ws s n j st)))]
+          [(rd-directive-end s n i "#!fold-case") =>
+           (lambda (j) (rd-set-fold! st #t) (rd-skip-ws s n j st))]
+          [(rd-directive-end s n i "#!no-fold-case") =>
+           (lambda (j) (rd-set-fold! st #f) (rd-skip-ws s n j st))]
           [else i]))
       i))
 
@@ -1556,7 +1603,7 @@
           (list->string (reverse acc))
           (loop (+ i 1) (cons (rd-fold-char (string-ref tok i)) acc))))))
 
-(define (rd-atom s n i ci)               ; token -> number, interned symbol, or a report
+(define (rd-atom s n i st)               ; token -> number, interned symbol, or a report
   (let ([j (rd-token-end s n i)])
     (if (= i j)
         ;; An EMPTY token: the character here is a delimiter no datum arm claimed.  It
@@ -1567,7 +1614,7 @@
           (let ([v (rd-number tok 10)])
             (cond
               [(eq? v (quote rd-not-a-number))
-               (cons (string->symbol (if ci (rd-fold-token tok) tok)) j)]
+               (cons (string->symbol (if (rd-fold? st) (rd-fold-token tok) tok)) j)]
               [(rd-number-reason? v) (rd-fail v i)]
               [else (cons v j)]))))))
 
@@ -1671,7 +1718,98 @@
         ;; contain, so a truncated file compiled as though complete (issue #66).
         (rd-fail (quote rd-unterminated-string) open))))
 
-(define (rd-hash s n i ci)               ; i just past #
+;;; Datum labels.  Each entry is (number . #(state value)); `state` is pending
+;;; while the labelled datum is being parsed and done afterward.  A reference to
+;;; a pending entry becomes a private placeholder which the outermost read fixes
+;;; through mutable pair/vector edges once the whole graph exists.
+(define (rd-label-find st label)
+  (let loop ([xs (vector-ref st 1)])
+    (if (null? xs)
+        #f
+        (if (= label (car (car xs))) (car xs) (loop (cdr xs))))))
+(define (rd-label-add! st label)
+  (let ([entry (cons label (list->vector (list (quote pending) #f)))])
+    (vector-set! st 1 (cons entry (vector-ref st 1)))
+    entry))
+(define (rd-placeholder st entry)
+  (list->vector (list (vector-ref st 2) entry)))
+(define (rd-placeholder? st x)
+  (and (vector? x)
+       (= (vector-length x) 2)
+       (eq? (vector-ref x 0) (vector-ref st 2))))
+(define (rd-placeholder-entry x) (vector-ref x 1))
+(define (rd-seen? x seen)
+  (if (null? seen)
+      #f
+      (if (eq? x (car seen)) #t (rd-seen? x (cdr seen)))))
+(define (rd-label-scan s n i)
+  (if (and (< i n) (rd-digit? (string-ref s i)))
+      (rd-label-scan s n (+ i 1))
+      i))
+
+(define (rd-resolve st x seen)
+  (cond
+    [(rd-placeholder? st x)
+     (let ([cell (cdr (rd-placeholder-entry x))])
+       (rd-resolve st (vector-ref cell 1) seen))]
+    [(pair? x)
+     (if (rd-seen? x seen)
+         x
+         (let ([next (cons x seen)])
+           (set-car! x (rd-resolve st (car x) next))
+           (set-cdr! x (rd-resolve st (cdr x) next))
+           x))]
+    [(vector? x)
+     (if (rd-seen? x seen)
+         x
+         (let ([next (cons x seen)] [m (vector-length x)])
+           (let loop ([i 0])
+             (if (< i m)
+                 (begin
+                   (vector-set! x i (rd-resolve st (vector-ref x i) next))
+                   (loop (+ i 1)))
+                 x))))]
+    [else x]))
+
+(define (rd-finish st r)
+  (if (rd-fail? (cdr r)) r (cons (rd-resolve st (car r) (quote ())) (cdr r))))
+
+(define (rd-label s n i st)              ; i at first digit after #
+  (let ([j (rd-label-scan s n i)])
+    (if (>= j n)
+        (rd-fail (quote rd-label) (- i 1))
+        (let* ([label (rd-digits s i j 0)]
+               [kind (char->integer (string-ref s j))]
+               [old (rd-label-find st label)])
+          (cond
+            [(= kind 61)                                       ; #N=
+             (if old
+                 (rd-fail (quote rd-label-duplicate) (- i 1))
+                 (let* ([entry (rd-label-add! st label)]
+                        [k (rd-skip-ws s n (+ j 1) st)]
+                        [r (rd-datum s n k st)])
+                   (if (rd-fail? (cdr r))
+                       r
+                       (let ([v (car r)] [cell (cdr entry)])
+                         (if (and (rd-placeholder? st v)
+                                  (eq? (rd-placeholder-entry v) entry))
+                             (rd-fail (quote rd-label-self) (- i 1))
+                             (begin
+                               (vector-set! cell 0 (quote done))
+                               (vector-set! cell 1 v)
+                               r))))))]
+            [(= kind 35)                                       ; #N#
+             (if (and (< (+ j 1) n) (not (rd-delim? (string-ref s (+ j 1)))))
+                 (rd-fail (quote rd-label) (- i 1))
+                 (if old
+                     (let ([cell (cdr old)])
+                       (if (eq? (vector-ref cell 0) (quote pending))
+                           (cons (rd-placeholder st old) (+ j 1))
+                           (cons (vector-ref cell 1) (+ j 1))))
+                     (rd-fail (quote rd-label-unresolved) (- i 1))))]
+            [else (rd-fail (quote rd-label) (- i 1))])))))
+
+(define (rd-hash s n i st)               ; i just past #
   (if (<= n i)
       (rd-fail (quote rd-eof) (- i 1))                     ; a lone trailing #
       (let ([k (char->integer (string-ref s i))])
@@ -1690,25 +1828,30 @@
                [(string=? tok "f") (cons #f (+ i 1))]
                [(string=? tok "false") (cons #f (+ i 5))]
                [else (rd-fail (quote rd-hash-token) (- i 1))]))]
-          [(= k 92) (rd-char s n i)]                           ; #\<char> or #\<name>
-          ;; ci travels INTO a vector literal: a symbol inside #( ... ) is a symbol the
+          [(rd-digit? (string-ref s i)) (rd-label s n i st)]   ; #N= / #N#
+          [(= k 92) (rd-char s n i st)]                        ; #\<char> or #\<name>
+          ;; reader state travels INTO a vector literal: a symbol inside #( ... ) is a symbol the
           ;; read produces, and the old shape-walking fold missed it (design D3).
           ;; `(- i 1)` is the `#`, not the `(`: the construct the author opened is `#(`, so
           ;; that is what the unterminated report has to name.
-          [(= k 40) (let ([r (rd-list s n (+ i 1) (quote ()) ci (- i 1))])  ; #( -> vector
+          [(= k 40) (let ([r (rd-list s n (+ i 1) (quote ()) st (- i 1))])  ; #( -> vector
                       (if (rd-fail? (cdr r)) r (cons (list->vector (car r)) (cdr r))))]
           ;; #; -- DISCARD the next datum and read the one after it (design D1).  It
           ;; cannot be skipped as whitespace: throwing a datum away needs a full
           ;; recursive read, which rd-skip-ws neither does nor is allowed to fail at.
           ;; Stacking (#;#;a b c -> c) falls out of the recursion.
           [(= k 59)
-           (let ([r (rd-datum s n (rd-skip-ws s n (+ i 1)) ci)])
-             (if (rd-fail? (cdr r)) r (rd-datum s n (rd-skip-ws s n (cdr r)) ci)))]
+           (let* ([child (rd-state-child st)]
+                  [r (rd-finish child
+                                (rd-datum s n (rd-skip-ws s n (+ i 1) child) child))])
+             (if (rd-fail? (cdr r))
+                 r
+                 (rd-datum s n (rd-skip-ws s n (cdr r) st) st)))]
           [(and (= k 117)                                        ; #u8( ... ) -> bytevector
                 (< (+ i 2) n)
                 (= (char->integer (string-ref s (+ i 1))) 56)    ; 8
                 (= (char->integer (string-ref s (+ i 2))) 40))   ; (
-           (let ([r (rd-list s n (+ i 3) (quote ()) ci (- i 1))])   ; open at the #, as above
+           (let ([r (rd-list s n (+ i 3) (quote ()) st (- i 1))])   ; open at the #, as above
              (if (rd-fail? (cdr r)) r (cons (list->bytevector (car r)) (cdr r))))]
           ;; Everything else that begins with # is a PREFIXED NUMBER or nothing at all.
           ;; This arm used to fall through to string->symbol, which is what produced
@@ -1759,17 +1902,18 @@
               acc)))
       #f))
 
-(define (rd-char s n i)                  ; i at '\' of #\ ; content at i+1
+(define (rd-char s n i st)               ; i at '\' of #\ ; content at i+1
   (let* ([cs (+ i 1)]
          [end (rd-token-end s n (+ cs 1))]   ; force the first content char in
          [tok (substring s cs end)])
     (if (= (string-length tok) 1)
         (cons (string-ref s cs) end)         ; single-character literal
-        (let ([hx (rd-char-hex tok)])
+        (let* ([name (if (rd-fold? st) (rd-fold-token tok) tok)]
+               [hx (rd-char-hex name)])
           (if hx
               (cons (integer->char hx) end)  ; #\xHH
               ;; `(- i 1)` is the `#`, so the report names the whole `#\name` token.
-              (let ([c (rd-char-name tok)])
+              (let ([c (rd-char-name name)])
                 (if c
                     (cons c end)             ; named character
                     (rd-fail (quote rd-char-name) (- i 1)))))))))
@@ -1795,21 +1939,21 @@
               [else (loop (+ i 1) (cons c acc))])))
         (rd-fail (quote rd-bar) p))))
 
-(define (rd-quote s n i ci)              ; 'x -> (quote x)
-  (let ([r (rd-datum s n (rd-skip-ws s n i) ci)])
+(define (rd-quote s n i st)              ; 'x -> (quote x)
+  (let ([r (rd-datum s n (rd-skip-ws s n i st) st)])
     (if (rd-fail? (cdr r)) r (cons (list (quote quote) (car r)) (cdr r)))))
 
-(define (rd-quasi s n i ci)              ; `x -> (quasiquote x)
-  (let ([r (rd-datum s n (rd-skip-ws s n i) ci)])
+(define (rd-quasi s n i st)              ; `x -> (quasiquote x)
+  (let ([r (rd-datum s n (rd-skip-ws s n i st) st)])
     (if (rd-fail? (cdr r)) r (cons (list (quote quasiquote) (car r)) (cdr r)))))
 
-(define (rd-unquote s n i ci)            ; ,x -> (unquote x); ,@x -> (unquote-splicing x)
+(define (rd-unquote s n i st)            ; ,x -> (unquote x); ,@x -> (unquote-splicing x)
   (if (and (< i n) (= (char->integer (string-ref s i)) 64))     ; @  -> splicing
-      (let ([r (rd-datum s n (rd-skip-ws s n (+ i 1)) ci)])
+      (let ([r (rd-datum s n (rd-skip-ws s n (+ i 1) st) st)])
         (if (rd-fail? (cdr r))
             r
             (cons (list (quote unquote-splicing) (car r)) (cdr r))))
-      (let ([r (rd-datum s n (rd-skip-ws s n i) ci)])
+      (let ([r (rd-datum s n (rd-skip-ws s n i st) st)])
         (if (rd-fail? (cdr r)) r (cons (list (quote unquote) (car r)) (cdr r))))))
 
 (define (rd-dot? s n j)                  ; a standalone `.` token at j (dotted-pair marker)
@@ -1833,8 +1977,8 @@
 ;; the same text.  That is deliberate and directional, not a duplication to be unified: a
 ;; host reading a stream can supply another line, a source file cannot.  Unifying the two
 ;; would destroy multi-line entry at the prompt.
-(define (rd-list s n i acc ci open)      ; i after (; read until ) (supports . tail)
-  (let ([j (rd-skip-ws s n i)])
+(define (rd-list s n i acc st open)      ; i after (; read until ) (supports . tail)
+  (let ([j (rd-skip-ws s n i st)])
     (cond
       [(rd-fail? j) (cons (quote rd-block-comment) j)]
       [(< j n)
@@ -1844,42 +1988,44 @@
          ;; #; between elements -- including immediately before the closing paren,
          ;; where there is no following element for rd-datum's arm to return.
          [(rd-datum-comment? s n j)
-          (let ([r (rd-datum s n (rd-skip-ws s n (+ j 2)) ci)])
-            (if (rd-fail? (cdr r)) r (rd-list s n (cdr r) acc ci open)))]
+          (let* ([child (rd-state-child st)]
+                 [r (rd-finish child
+                               (rd-datum s n (rd-skip-ws s n (+ j 2) child) child))])
+            (if (rd-fail? (cdr r)) r (rd-list s n (cdr r) acc st open)))]
          [(rd-dot? s n j)                                                          ; . tail
-          (let ([r (rd-datum s n (rd-skip-ws s n (+ j 1)) ci)])
+          (let ([r (rd-datum s n (rd-skip-ws s n (+ j 1) st) st)])
             (if (rd-fail? (cdr r))
                 r
-                (let ([j2 (rd-skip-ws s n (cdr r))])
+                (let ([j2 (rd-skip-ws s n (cdr r) st)])
                   (cond
                     [(rd-fail? j2) (cons (quote rd-block-comment) j2)]
                     ;; the close paren this arm steps past must actually BE there
                     [(<= n j2) (rd-fail (quote rd-unterminated-list) open)]
                     [else (cons (rd-append-reverse acc (car r)) (+ j2 1))]))))]     ; past )
-         [else (let ([r (rd-datum s n j ci)])
+         [else (let ([r (rd-datum s n j st)])
                  (if (rd-fail? (cdr r))
                      r
-                     (rd-list s n (cdr r) (cons (car r) acc) ci open)))])]
+                     (rd-list s n (cdr r) (cons (car r) acc) st open)))])]
       ;; NOT end of input: closing the list here fabricates a datum the source does not
       ;; contain, so a truncated file compiled as though complete (issue #66).
       [else (rd-fail (quote rd-unterminated-list) open)])))
 
-(define (rd-datum s n i ci)              ; i at a non-ws char -> (datum . next)
+(define (rd-datum s n i st)              ; i at a non-ws char -> (datum . next)
   (if (and (<= 0 i) (< i n))
       (let ([k (char->integer (string-ref s i))])
         (cond
-          [(= k 40) (rd-list s n (+ i 1) (quote ()) ci i)]     ; (
-          [(= k 91) (rd-list s n (+ i 1) (quote ()) ci i)]     ; [ (brackets = parens)
-          [(= k 39) (rd-quote s n (+ i 1) ci)]                 ; '
-          [(= k 96) (rd-quasi s n (+ i 1) ci)]                 ; `
-          [(= k 44) (rd-unquote s n (+ i 1) ci)]               ; ,
+          [(= k 40) (rd-list s n (+ i 1) (quote ()) st i)]     ; (
+          [(= k 91) (rd-list s n (+ i 1) (quote ()) st i)]     ; [ (brackets = parens)
+          [(= k 39) (rd-quote s n (+ i 1) st)]                 ; '
+          [(= k 96) (rd-quasi s n (+ i 1) st)]                 ; `
+          [(= k 44) (rd-unquote s n (+ i 1) st)]               ; ,
           [(= k 34) (rd-string s n (+ i 1) i)]                 ; "
-          [(= k 35) (rd-hash s n (+ i 1) ci)]                  ; #
+          [(= k 35) (rd-hash s n (+ i 1) st)]                  ; #
           ;; NOT given ci: R7RS 7.1.1 makes the characters between the bars the symbol's
           ;; name literally, so a bar-quoted identifier is never folded (issue #61).
           [(= k 124) (rd-bar s n (+ i 1) i)]                   ; |bar quoted identifier|
           [(or (= k 41) (= k 93)) (rd-fail (quote rd-unexpected) i)]   ; a close with no open
-          [else (rd-atom s n i ci)]))
+          [else (rd-atom s n i st)]))
       ;; A sentinel travelling outward (an unterminated block comment upstream), or a
       ;; datum the input ended before -- `#;` with nothing after it, say.  Neither is
       ;; raised here (design D2); the entry point reports.
@@ -1926,6 +2072,16 @@
        (%read-error (quote read) "unknown character name" (rd-token-at s n p))]
       [(eq? why (quote rd-hash-token))
        (%read-error (quote read) "not a boolean; write #t, #true, #f or #false" (rd-token-at s n p))]
+      [(eq? why (quote rd-label-duplicate))
+       (%read-error (quote read) "duplicate datum label" (rd-token-at s n p))]
+      [(eq? why (quote rd-label-unresolved))
+       (%read-error (quote read) "datum label reference has no earlier definition"
+                    (rd-token-at s n p))]
+      [(eq? why (quote rd-label-self))
+       (%read-error (quote read) "datum label cannot be defined as only its own reference"
+                    (rd-token-at s n p))]
+      [(eq? why (quote rd-label))
+       (%read-error (quote read) "malformed datum label" (rd-token-at s n p))]
       [(eq? why (quote rd-eof))
        (%read-error (quote read) "end of input where a datum was expected, at index" p)]
       [(eq? why (quote rd-unexpected))
@@ -1938,8 +2094,8 @@
       [else (%read-error (quote read) "unrecognized syntax" (rd-token-at s n p))])))
 
 (define (read-from-string s)
-  (let ([n (string-length s)])
-    (let ([r (rd-datum s n (rd-skip-ws s n 0) #f)])
+  (let ([n (string-length s)] [st (rd-state #f)])
+    (let ([r (rd-finish st (rd-datum s n (rd-skip-ws s n 0 st) st))])
       (if (rd-fail? (cdr r)) (rd-report s n r) (car r)))))
 
 ;;; --- whole-program read (stdin-source-reader) -----------------------------
@@ -1958,17 +2114,18 @@
 (define (read-all-from-string-ci s) (rd-all s #t))
 
 (define (rd-all s ci)
-  (let ([n (string-length s)])
-    (let loop ([i (rd-skip-ws s n 0)] [acc (quote ())])
+  (let ([n (string-length s)] [base (rd-state ci)])
+    (let loop ([i (rd-skip-ws s n 0 base)] [acc (quote ())])
       (cond
         ;; NOT end of input: an unterminated block comment here used to make every form
         ;; after the opening delimiter vanish with no diagnostic (issue #59).
         [(rd-fail? i) (rd-report s n (cons (quote rd-block-comment) i))]
         [(< i n)
-         (let ([r (rd-datum s n i ci)])
+         (let* ([st (rd-state-child base)]
+                [r (rd-finish st (rd-datum s n i st))])
            (if (rd-fail? (cdr r))
                (rd-report s n r)
-               (loop (rd-skip-ws s n (cdr r)) (cons (car r) acc))))]
+               (loop (rd-skip-ws s n (cdr r) base) (cons (car r) acc))))]
         [else (reverse acc)]))))
 
 ;;; --- ports (change: scheme-io-library, design D1/D2) -----------------------
@@ -1992,6 +2149,8 @@
 ;;;   3 pos       INPUT: cursor, a byte index into buf; OUTPUT: unused
 ;;;   4 string?   #t for a string port (get-output-string is legal on it)
 ;;;   5 closed?   #t once closed
+;;;   6 fold-cell INPUT: mutable one-element vector holding the persistent
+;;;                       #!fold-case mode; OUTPUT: unused
 ;;; The port type descriptor is made ON FIRST USE, not at load time.  Two reasons,
 ;;; both load-bearing: this file is also `load`ed into the Chez bootstrap host by
 ;;; the reader unit tests, where a `%`-primitive is unbound until Emit compiles it
@@ -2006,7 +2165,9 @@
              %port-rtd-cell)))
 
 (define (%make-port handle input? buf pos string? closed?)
-  (%make-record (%port-rtd) (list handle input? buf pos string? closed?)))
+  (%make-record (%port-rtd)
+                (list handle input? buf pos string? closed?
+                      (list->vector (list #f)))))
 
 (define (port? p) (%record-of-type? p (%port-rtd)))
 (define (input-port? p) (and (port? p) (%record-ref p 1)))
@@ -2115,13 +2276,12 @@
   (%check-input-port p 'read)
   (let* ((s (%port-buf p))
          (n (string-length s))
-         (i (rd-skip-ws s n (%record-ref p 3))))
+         (st (rd-state-from-cell (%record-ref p 6)))
+         (i (rd-skip-ws s n (%record-ref p 3) st)))
     (cond
       ((rd-fail? i) (rd-report s n (cons 'rd-block-comment i)))
       ((>= i n) (%record-set! p 3 n) (eof-object))
-      ;; No folding over a port: `include-ci` is the only folding consumer and it reads
-      ;; whole source text, not a port (design D3).
-      (else (let ((r (rd-datum s n i #f)))
+      (else (let ((r (rd-finish st (rd-datum s n i st))))
               (if (rd-fail? (cdr r))
                   (rd-report s n r)
                   (begin (%record-set! p 3 (cdr r)) (car r))))))))

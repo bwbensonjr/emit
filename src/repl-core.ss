@@ -206,10 +206,19 @@
 ;; error status rather than aborting the session.
 (define (compile-one-form-text text)
   (guard (e (#t (cons (quote error) (repl-error->string e))))
-    (let ([forms (read-all-from-string text)])
+    ;; The host submits one complete form at a time, but reader directives belong
+    ;; to the whole interactive source.  Seed this slice with the session's mode;
+    ;; directives in TEXT still override it at their lexical position.  Mode 2's
+    ;; completeness scan has already recorded the mode to carry into the next form.
+    (let ([forms (read-all-from-string
+                   (if *repl-reader-fold?*
+                       (string-append "#!fold-case " text)
+                       text))])
       (if (null? forms)
           (cons (quote error) "empty form")
-          (compile-one-form (car forms))))))
+          (begin
+            (set! *repl-reader-fold?* *repl-reader-next-fold?*)
+            (compile-one-form (car forms)))))))
 
 ;; --- prelude as one startup batch (run-repl's load-prelude!) ----------------
 ;; Load the standard library as ONE mutually-recursive group: collect its macros,
@@ -269,6 +278,8 @@
   (set! *repl-libs* (quote ()))
   (set! *repl-calls* (quote ()))
   (set! *repl-lib-imports* (quote ()))
+  (set! *repl-reader-fold?* #f)
+  (set! *repl-reader-next-fold?* #f)
   ;; Stage 3 (module-prelude-scheme-base): the prelude's PROCEDURES now come from the
   ;; (scheme base) library -- the host preloads it and then calls mode 6 to auto-import
   ;; it into the session scope.  init only merges the derived-form MACROS (the
@@ -1170,6 +1181,9 @@
 (define fc-incomplete -1)
 (define fc-malformed -2)
 (define (fc-bad? r) (< r 0))
+(define *fc-reader-state* #f)
+(define *repl-reader-fold?* #f)
+(define *repl-reader-next-fold?* #f)
 
 (define (fc-string s n i)                     ; scan "..." past the opening quote
   (if (< i n)
@@ -1189,7 +1203,8 @@
 ;; block comment be typed across lines at the prompt.  Every place the probe skips
 ;; whitespace goes through this so the mapping happens exactly once.
 (define (fc-skip-ws s n i)
-  (let ([j (rd-skip-ws s n i)]) (if (< j 0) fc-incomplete j)))
+  (let ([j (rd-skip-ws s n i *fc-reader-state*)])
+    (if (< j 0) fc-incomplete j)))
 
 ;; |bar quoted identifier| -- a datum EXTENT like a string, with the same two escapes,
 ;; and unterminated the same way (design D7).
@@ -1218,12 +1233,29 @@
                         (if (< j2 n) (fc-datum s n j2) fc-incomplete)))))
             fc-incomplete))))
 
+;; #N= is a prefix whose following datum determines the extent; #N# is an
+;; atomic reference.  Semantic checks (scope, duplicates, direct self-reference)
+;; belong to the reader, while this probe answers only complete/incomplete.
+(define (fc-label s n i)
+  (let ([j (rd-label-scan s n i)])
+    (if (>= j n)
+        fc-incomplete
+        (let ([k (char->integer (string-ref s j))])
+          (cond
+            [(= k 61) (fc-prefix s n (+ j 1))]                ; #N=datum
+            [(= k 35)
+             (if (or (= (+ j 1) n) (rd-delim? (string-ref s (+ j 1))))
+                 (+ j 1)
+                 fc-malformed)]
+            [else fc-malformed])))))
+
 (define (fc-hash s n i)                         ; scan after '#'
   (if (< i n)
       (let ([k (char->integer (string-ref s i))])
         (cond
           [(= k 40) (fc-list s n (+ i 1))]                    ; #( vector
           [(= k 92) (fc-char s n (+ i 1))]                    ; #\ char literal
+          [(rd-digit? (string-ref s i)) (fc-label s n i)]     ; #N= / #N#
           ;; Both comment forms must be mirrored HERE, not only in rd-skip-ws (design
           ;; D5): the shared skipper covers a comment in LEADING position, but the probe
           ;; walks the rest of the form itself.  Without this, `(list 1 #;2` would be
@@ -1292,9 +1324,17 @@
 ;; (an integer, not the spike's (complete . n)|symbol shape, so the C++ host
 ;; branches on one fixnum's sign with no pair/symbol destructuring.)
 (define (form-complete-code s)
+  (set! *fc-reader-state* (rd-state *repl-reader-fold?*))
   (let ([n (string-length s)])
     (let ([i (fc-skip-ws s n 0)])
-      (if (fc-bad? i) i (if (< i n) (fc-datum s n i) fc-incomplete)))))
+      (let ([result (if (fc-bad? i)
+                        i
+                        (if (< i n) (fc-datum s n i) fc-incomplete))])
+        (if (fc-bad? result)
+            result
+            (begin
+              (set! *repl-reader-next-fold?* (rd-fold? *fc-reader-state*))
+              result))))))
 
 ;; --- cross-call state persistence -------------------------------------------
 ;; The assembled program is one @scheme_entry, so *repl-env* etc. are locals
@@ -1326,11 +1366,17 @@
       ;; is asked for, so a library's cache entry would be keyed on its .sld alone and an
       ;; edit to an included file would not invalidate it -- the one failure this whole
       ;; tracker exists to prevent, and invisible under Chez, whose globals persist.
-      (set-includes-read! (vector-ref s 9)))))
+      (set-includes-read! (vector-ref s 9))
+      ;; Reader directives span the interactive source even though the host
+      ;; submits it one complete form at a time.  NEXT is the mode computed by
+      ;; the most recent completeness scan and committed when mode 3 reads it.
+      (set! *repl-reader-fold?* (vector-ref s 10))
+      (set! *repl-reader-next-fold?* (vector-ref s 11)))))
 (define (repl-save-state!)
   (repl-state-set! (vector *repl-env* *repl-macro-env* *repl-known* *repl-n* counter
                            *repl-libs* *repl-lib-imports* *repl-calls* (source-home)
-                           (includes-read))))
+                           (includes-read) *repl-reader-fold?*
+                           *repl-reader-next-fold?*)))
 
 ;; --- the dispatched embedded entry (design D2) -------------------------------
 ;; The host sets (repl-mode)/(repl-input) via rt_repl_set, then calls this ccc

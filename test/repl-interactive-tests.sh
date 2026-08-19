@@ -141,6 +141,22 @@ check in-language-reader "" "$(printf '(a (b c) 42)')" <<'EOF'
 (read-from-string "(a (b c) 42)")
 EOF
 
+# Reader directives belong to the interactive source, not merely to the one
+# host-sliced form that contains them.  The first directive therefore folds the
+# next two data, the second restores case, and a directive inside a list carries
+# into the following top-level datum.  Datum labels also have to survive the
+# completeness scan and reach the compiler reader with their full extent.
+check reader-state-and-labels "" "$(printf 'abc\ndef\nGHI\n(A b)\nc\n#t')" <<'EOF'
+#!fold-case
+'ABC
+'DEF
+#!no-fold-case
+'GHI
+(list 'A #!fold-case 'B)
+'C
+(let ((x '#0=(a . #0#))) (eq? x (cdr x)))
+EOF
+
 # spec (error-and-guard-conditions): (error who msg irritant) reports the
 # who/message/irritant diagnostic (echoed as !trap: ...) and the session
 # survives, so the following form still yields its value (7).

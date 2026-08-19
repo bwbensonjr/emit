@@ -177,10 +177,34 @@
 ;; ---- template instantiation + hygiene ------------------------------------
 ;; pattern vars occurring in a template (unique)
 (define (template-vars t pvars)
-  (cond
-    [(symbol? t) (if (memq t pvars) (list t) '())]
-    [(pair? t) (union (template-vars (car t) pvars) (template-vars (cdr t) pvars))]
-    [else '()]))
+  (let ([seen (quote ())])
+    (let walk ([t t])
+      (cond
+        [(symbol? t) (if (memq t pvars) (list t) (quote ()))]
+        [(pair? t)
+         (if (memq t seen)
+             (quote ())
+             (begin
+               (set! seen (cons t seen))
+               (union (walk (car t)) (walk (cdr t)))))]
+        [else (quote ())]))))
+
+;; A quoted template can be reused as an object graph only when it contains no
+;; ellipsis escape.  Even without pattern variables, (... <template>) is active
+;; syntax-rules template syntax and must be instantiated.
+(define (template-ellipsis-escape? t)
+  (let ([seen (quote ())])
+    (let walk ([t t])
+      (cond
+        [(not (pair? t)) #f]
+        [(memq t seen) #f]
+        [else
+         (set! seen (cons t seen))
+         (or (and (eq? (car t) *ellipsis*)
+                  (pair? (cdr t))
+                  (null? (cddr t)))
+             (walk (car t))
+             (walk (cdr t)))]))))
 
 ;; introduced identifiers to rename: template symbols that are not pattern vars,
 ;; not ellipsis/wildcard, not known bindings, and not inside quote.
@@ -206,7 +230,9 @@
            (set! seen (cons (cons t (fresh-name t)) seen)))]
         [(pair? t)
          (if (eq? (car t) 'quote)
-             (for-each (lambda (x) (walk x #t)) (cdr t))
+             ;; No introduced identifier exists inside quoted data.  Treating it
+             ;; atomically also lets a labelled cyclic constant remain a graph.
+             (if #f #f)
              (begin (walk (car t) quoted?) (walk (cdr t) quoted?)))]
         [else (if #f #f)]))
     seen))
@@ -291,7 +317,9 @@
            (if (or quoted? (memq t pvars) (memq t literals)) t (resolve-id t))]
           [(pair? t)
            (if (eq? (car t) 'quote)
-               (cons 'quote (walk (cdr t) #t))
+               ;; Export-time name resolution never rewrites quoted data.  Reuse
+               ;; its graph so sharing/back-edges survive into the artifact.
+               t
                (cons (walk (car t) quoted?) (walk (cdr t) quoted?)))]
           [else t])))
     (define (resolve-entry out entry)                  ; entry = (name literals . rules)
@@ -331,7 +359,13 @@
     [(pair? tmpl)
      (cond
        [(eq? (car tmpl) 'quote)
-        (cons 'quote (instantiate-seq (cdr tmpl) binds pvars renames #t))]
+        ;; A quoted constant with no pattern variables is already the exact
+        ;; object graph the expansion needs.  Reusing its tail preserves datum-
+        ;; labelled cycles and sharing instead of recursively copying forever.
+        (if (and (null? (template-vars (cdr tmpl) pvars))
+                 (not (template-ellipsis-escape? (cdr tmpl))))
+            (cons 'quote (cdr tmpl))
+            (cons 'quote (instantiate-seq (cdr tmpl) binds pvars renames #t)))]
        [(and (eq? (car tmpl) *ellipsis*)                ; (... <tmpl>) ellipsis escape
              (pair? (cdr tmpl)) (null? (cddr tmpl)))
         (instantiate-escaped (cadr tmpl) binds pvars renames quoted?)]
@@ -355,7 +389,10 @@
        [else tmpl])]
     [(pair? tmpl)
      (if (eq? (car tmpl) 'quote)
-         (cons 'quote (instantiate-escaped (cdr tmpl) binds pvars renames #t))
+         (if (and (null? (template-vars (cdr tmpl) pvars))
+                  (not (template-ellipsis-escape? (cdr tmpl))))
+             (cons 'quote (cdr tmpl))
+             (cons 'quote (instantiate-escaped (cdr tmpl) binds pvars renames #t)))
          (cons (instantiate-escaped (car tmpl) binds pvars renames quoted?)
                (instantiate-escaped (cdr tmpl) binds pvars renames quoted?)))]
     [else tmpl]))
