@@ -6,7 +6,9 @@ Defines textual I/O through port objects: ports over files and strings in both d
 the eof object, character/line/datum input, string-accumulating and file output, and the
 current input, output, and error ports as parameter objects that `with-output-to-file`,
 `with-input-from-file`, and `call-with-port` rebind and close over a dynamic extent.
+
 ## Requirements
+
 ### Requirement: Port objects and their predicates
 
 The language SHALL provide **port** objects representing a source of or destination for textual
@@ -104,7 +106,12 @@ remains.
   only at end of input.
 - `read` SHALL parse and return the next **datum**, leaving the port positioned after it. It SHALL
   accept the same external representations the implementation's own reader accepts, and SHALL skip
-  leading whitespace and comments.
+  leading whitespace, comments, and reader directives.
+
+An input port SHALL retain the case-folding state selected by `#!fold-case` or `#!no-fold-case`
+between successive calls to `read`. Datum-label bindings SHALL instead be fresh for each call:
+labels defined while reading one outermost datum SHALL NOT be visible to the next `read` from the
+same port.
 
 #### Scenario: peek-char does not consume
 
@@ -127,6 +134,17 @@ remains.
 - **WHEN** a program calls `read` on a port whose text begins with a line comment and blank lines
   before its first datum
 - **THEN** the first datum is returned, and the comment is not part of it
+
+#### Scenario: Reader directives persist on a port
+
+- **WHEN** a program calls `read` three times on a port containing
+  `#!fold-case ABC #!no-fold-case DEF ghi`
+- **THEN** the results are the symbols `abc`, `DEF`, and `ghi`
+
+#### Scenario: Datum-label bindings do not persist on a port
+
+- **WHEN** a program reads `#0=(a)` and then `#0#` from the same port
+- **THEN** the first call returns `(a)` and the second reports an unresolved-label read error
 
 ### Requirement: Textual output ports over files and strings
 
