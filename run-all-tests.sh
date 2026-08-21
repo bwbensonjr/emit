@@ -88,6 +88,7 @@ run_suite "module run door (emit run)" test/modules-run-tests.sh
 run_suite "emit build + program resolver" test/emit-build-tests.sh
 run_suite "unit pipeline (seeding, caching, shaking)" test/unit-pipeline-tests.sh
 run_suite "CLI front door (help + final value)" test/emit-cli-tests.sh
+run_suite "JIT optimization profiles" test/jit-optimization-tests.sh
 run_suite "(scheme base) declared surface" test/scheme-base-surface-check.sh
 run_suite "flat top-level name hazards" test/flat-name-check.sh
 run_suite "binding shadows a keyword"   test/binding-shadowing-tests.sh

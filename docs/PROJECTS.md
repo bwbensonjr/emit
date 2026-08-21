@@ -74,6 +74,11 @@ hi
 That is the same rule the REPL follows, and a delivered executable follows it too — so a program's
 output is identical however you run it. `emit run` also reads stdin, so `emit run < main.scm` works.
 
+The run door uses LLVM's `-O1` JIT profile by default. Use `emit run -O0 main.scm` for the old
+unoptimized diagnostic/baseline path, or `emit run -O2 main.scm` when a longer-running program can
+justify more JIT latency. These profiles affect execution only: `emit run --emit` remains the
+compiler-produced IR path and therefore rejects a simultaneous `-O` option rather than ignoring it.
+
 ## A library of your own
 
 Split code into libraries with R7RS `define-library`. A library declares its name, what it
@@ -202,6 +207,8 @@ Emit (embedded compiler, ORC/LLJIT).  ^D to exit.
   whole.
 - `^D` exits. `emit repl --no-prelude` starts faster with no standard library, for when you want
   only primitives.
+- The session uses the same `-O0`/`-O1`/`-O2` JIT profiles as `emit run`, with O1 as the default.
+  The selection is fixed when the session starts and applies to libraries and every later form.
 
 After editing a library source, restart the session to pick it up — a running session holds the
 unit it already loaded.
@@ -227,6 +234,11 @@ wrote build/myproj  [155768 bytes exe]
 This is a real standalone native binary: your program, every library in its transitive import
 closure, the baked standard library, and the C runtime, linked by `clang`. It has no dependency on
 the Emit checkout at runtime.
+
+Before linking, `emit build` tree-shakes unreachable bindings through the whole import DAG and
+then runs the closed-world `-O2 -flto` ship profile. This is intentionally stronger than the
+open-world per-module JIT optimization. The missing tree shake in this door was fixed by
+`chez-free-unit-pipeline` and `import-dag-tree-shaking` (`Fixes #112`).
 
 If the manifest has exactly one `(program …)` entry you can omit the name (`emit build`). With
 zero or several, omitting it is an error that lists the available entries. `-o PATH` overrides the
@@ -398,9 +410,6 @@ project:
 - **An unsupported import set fails confusingly.** `(import (only (scheme inexact) sqrt))` reports
   `program imports a library not found in the manifest`, because `(only …)` is read as a library
   name. Use whole-library imports.
-- **`emit build` does not tree-shake.** It links whole library units; the closed-world strip runs
-  only on the Chez driver's ship path. Expect a delivered binary to be larger than necessary
-  (`docs/PERFORMANCE.md`, P8 and P10).
 - **The final value is printed**, as shown above.
 
 ## If you are also changing the compiler

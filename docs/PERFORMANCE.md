@@ -26,8 +26,8 @@ speed items in this list.
 | [P9](#p9--an-optional-argument-costs-every-call-site-its-cross-unit-direct-call) | An optional argument costs every call site its cross-unit direct call | speed | med | med | — | ☐ |
 | [P10](#p10--a-library-another-unit-imports-is-never-tree-shaken-the-substrate-ships-whole) | A library another unit imports is never tree-shaken (the substrate ships whole) | size | high | med | `import-dag-tree-shaking` | ☑ |
 | [P11](#p11--every-emit-build-recompiles-the-c-runtime-from-source) | Every `emit build` recompiles the C runtime from source | build speed | **low** (measured: 5%) | low | — | ☐ |
-| [P12](#p12--the-reader-classifier-chain-costs-20-on-the-door-that-does-not-optimize) | The reader classifier chain costs 20%, on the door that does not optimize | speed | low | med | — | ☐ |
-| [P13](#p13--the-jitrepl-door-runs-no-ir-optimization-pipeline) | The JIT/REPL door runs no IR optimization pipeline | speed | med–high | med | — | ☐ |
+| [P12](#p12--the-reader-classifier-chain-remains-expensive-after-per-module-jit-optimization) | The reader classifier chain remains expensive after per-module JIT optimization | speed | low | med | `jit-dev-optimization-profile` (measured) | ☐ |
+| [P13](#p13--jitrepl-backend-optimization-profiles) | JIT/REPL backend optimization profiles | speed | med–high | med | `jit-dev-optimization-profile` | ☑ |
 | [P14](#p14--an-aggregate-constant-is-rebuilt-at-every-evaluation) | An aggregate constant is rebuilt at every evaluation | speed + size | low–med | med | — | ☐ |
 | [P15](#p15--indexed-access-bounds-checks-measured-and-free) | Indexed-access bounds checks: measured, and free | speed | n/a | n/a | `checked-indexed-access` | ☑ |
 | [P16](#p16--argument-type-checks-free-in-time-25-in-size-and-the-size-is-where-the-choice-is) | Argument type checks: free in time, +2.5% in size | speed + size | n/a | n/a | `checked-primitive-arguments` | ☑ |
@@ -1491,10 +1491,19 @@ explicit non-goal; the measurement it asked for was taken 2026-08-13 and confirm
 
 ---
 
-## P12 — The reader classifier chain costs 20%, on the door that does not optimize
+## P12 — The reader classifier chain remains expensive after per-module JIT optimization
 
-**Status:** ☐ not started (**re-measured and re-scoped** by `reader-token-path`; the fix it once
-proposed is no longer the right one — see "What the re-measurement changed")
+**Status:** ☐ not started (**re-measured and re-scoped again** by
+`jit-dev-optimization-profile`; the safe backend slice recovered none of this path)
+
+**2026-08-20 re-measurement.** The new JIT profiles run LLVM's standard pipeline separately over
+every admitted module.  On the generated 200,000-token corpus, median guest execution was
+3.645 s at O0, 3.651 s at O1, and 3.635 s at O2, versus 2.93 s for the delivered `-O2 -flto`
+executable.  O1 therefore recovers **0%** of this item and the JIT remains about 25% slower before
+startup.  P13 is complete—the door now optimizes—but its open-world per-module boundary prevents
+the cross-unit/closed-world work that makes the calls free under AOT.  This item remains the
+reader-specific debt; its Scheme-level sketches below are again the available fixes unless a
+separately designed safe cross-module JIT strategy lands first.
 
 **Symptom.** On `emit run`, reading a token-dense source is **~17% slower** than before
 `reader-lexical-conformance` (+20% of wall clock, but part of that is a bigger substrate to JIT —
@@ -1526,13 +1535,14 @@ shows is the per-call overhead that P5 names, multiplied by the number of tokens
 procedures is a real call with a real frame, and the classifiers themselves are character loops
 written in Scheme.
 
-**What the re-measurement changed** (`reader-token-path`, which set out to fix this and did not).
+**What the earlier re-measurement changed** (`reader-token-path`, which set out to fix this and did not).
 The original entry recorded the `emit run` number alone and read it as a property of the reader. It
-is a property of the reader *and the door*. `emit run` builds a plain `LLJITBuilder().create()` with
-no IR optimization pipeline (`src/emit.cpp:839`); the AOT link passes `-O2 -flto`
-(`src/emit.cpp:1337`, `ship-opt`/`ship-lto` at `src/compile.ss:299`). Where an optimizer runs, the
-extra calls cost nothing measurable. (That `-O2 -flto` removes it is measured; *which* inlining
-decision removes it is inference, and is not claimed as more.)
+is a property of the reader *and the door*. At that time `emit run` built a plain
+`LLJITBuilder().create()` with no IR optimization pipeline; the AOT link passes `-O2 -flto`
+(`src/emit.cpp:2322,2330`, `ship-opt`/`ship-lto` at `src/compile.ss:320,330`). Where an optimizer runs, the
+extra calls can cost nothing measurable. The new evidence sharpens that statement: AOT LTO removes
+the cost, but the safe per-module JIT pipeline does not. Which cross-unit or closed-world decision
+matters is still inference and is not claimed as more.
 
 Three consequences, and they are why this is still ☐ rather than in progress:
 
@@ -1543,13 +1553,14 @@ Three consequences, and they are why this is still ☐ rather than in progress:
 2. **The fix below would hand-fold what `-O2` already folds** — and would cost
    `reader-lexical-conformance` design D3 its by-construction guarantee that `rd-atom` and
    `string->number` accept the same tokens (they hold it today by being the same call), replacing it
-   with a corpus test. Real complexity, for a benefit confined to the door that does not optimize.
-3. **P13 is the entry these numbers actually justify.** No IR optimization on the dev door is a cost
-   every JITted program pays on every call, not just the reader's. Fixing P13 would recover most of
-   this item for free; fixing this item recovers only the reader.
+   with a corpus test. Real complexity, for a benefit confined to the door whose safe backend
+   profile still does not remove this call chain.
+3. **P13 was the right next experiment, not the fix.** It is now complete and improves a
+   whole-program call-heavy workload, but recovered none of this item. Fixing this item still
+   recovers only the reader, which is why its value remains low.
 
-**Possible fixes**, in increasing order of ambition — still the right sketches *if* P13 is never
-taken, since they are what a door with no optimizer needs:
+**Possible fixes**, in increasing order of ambition — again the live sketches now that P13's safe
+slice was taken and did not move the measurement:
 
 - Classify from the token's FIRST character before calling anything: a token starting with a
   character that is not a digit, sign, or dot cannot be any kind of number, which is most tokens in
@@ -1578,65 +1589,42 @@ emitted code, or on binary size. (Was "low–med", on the belief that it touched
 shared-grammar property (`reader-lexical-conformance` design D3) has to survive whatever is done,
 and every one of them forces a `make regen`.
 
-**OpenSpec change:** none. Measured and recorded by `reader-lexical-conformance` (task 9.4);
+**OpenSpec change:** none scheduled. Measured and recorded by `reader-lexical-conformance` (task 9.4);
 re-measured, re-scoped, and given a generator by `reader-token-path`, which dropped it from its own
-scope on the strength of the numbers above.
+scope on the strength of the numbers above; measured again by `jit-dev-optimization-profile`.
 
 ---
 
-## P13 — The JIT/REPL door runs no IR optimization pipeline
+## P13 — JIT/REPL backend optimization profiles
 
-**Status:** ☐ not started (found by `reader-token-path`'s baseline measurement)
+**Status:** ☑ done (change: `jit-dev-optimization-profile`)
 
-**Symptom.** `emit run` and `emit repl` compile a program to LLVM IR and hand it straight to ORC
-with no optimization passes, so every JITted program pays full per-call, per-allocation overhead.
-The same program built with `emit build` is materially faster. On the reader benchmark above, the
-identical source runs in **2.84 s** as a delivered binary and **3.64 s** under `emit run` — the dev
-door is **~28% slower** on the same work, and that is *after* setting aside the 0.83 s it spends
-compiling and JITting the baked set first (4.47 s of wall clock in total).
+**Outcome.** `emit run` and `emit repl` now install one shared ORC transform before admitting any
+module.  `-O0` is the identity path, `-O1` and `-O2` use LLVM's standard per-module pipelines, and
+O1 is the default.  Baked libraries, manifest libraries, whole programs, and separate REPL forms
+all pass through the transform without merging or internalization, preserving the REPL's open
+world.  Verbose narration separates Scheme compile/cache, LLVM transform, remaining
+materialization, and guest execution time.  Compiler IR, `--dump`, `--emit`, bootstrap IR, and the
+AOT path are unchanged.
 
-That gap is why P12 above looked like a 20% reader regression: the reader's added calls are free
-once something inlines them, and nothing does on this door.
+**Measured result.** Three interleaved warm-cache samples on LLVM 22.1.4 show O1 adds about 57 ms
+of transform work to a run (about 70 ms to the measured first-form REPL session).  Whole-program
+Ackermann guest execution improves from 2.85 s to 2.51 s, about 12%, making O1 the useful knee;
+O2 adds another ~35 ms without improving that workload.  Tiny and allocation-heavy programs do
+not recoup the fixed optimization cost.  In a six-form Ackermann session, O1 changes five calls
+from 1.011 s to 0.978 s while total session time rises from 1.37 s to 1.44 s.
 
-**Cause.** `src/emit.cpp:839` (the run door) and `:1114` (the REPL host) each build the JIT with a
-bare
+**Limit found by doing it.** The original entry incorrectly described a merged module.  The host
+admits separate library/program/form modules, and external definitions must remain visible to
+future forms.  Consequently the safe standard per-module pipeline recovers none of P12: the reader
+guest remains about 3.65 s at every JIT level versus 2.93 s under AOT `-O2 -flto`.  That is no
+longer a missing-pipeline bug, so this entry is complete; the remaining reader-specific debt stays
+in P12.  Cross-module JIT optimization would be a different design involving symbol lifecycle and
+open-world semantics, not unfinished work hidden under this checkbox.
 
-```cpp
-auto jitOr = LLJITBuilder().create();
-```
-
-and never construct a pass pipeline over the module. The AOT path, by contrast, hands clang `-O2`
-and `-flto` (`src/emit.cpp:1337`; mirrored as `ship-opt`/`ship-lto` in `src/compile.ss:299`). This
-is not an oversight so much as an unexamined default: `aot-release-profile` fixed the *ship* side
-when it found the delivered binary was linked at clang's `-O0` — "so it was both slower and larger
-than the JIT (dev beat ship)" — and explicitly noted that the JIT/REPL door "is not gated by this".
-Ship overtook dev, and dev was never revisited.
-
-**Possible fix.** Run a standard optimization pipeline over the merged module before handing it to
-ORC — `LLJITBuilder` supports a transform layer, and the module is already fully linked at that
-point on both doors. The dial worth having is a `-O` level on the dev door, defaulting to something
-above zero: JIT compile time is itself part of the dev loop, so the goal is the knee of the
-curve, not `-O2` unconditionally.
-
-**Why it is not scheduled here.** `reader-token-path` found it while measuring something else and
-recorded it rather than taking it: the change in flight was a correctness fix for `include-ci`, and
-an optimizer on the dev door is a different change with a different risk surface — it can alter
-timing-dependent behaviour, it interacts with the REPL's incremental compilation of one form at a
-time, and it needs its own before/after across more than one benchmark.
-
-**Sequencing.** This partly **subsumes P12**: recovering the dev door's inlining would recover most
-of P12's 20% without touching the reader's shared numeric grammar at all, which is the property P12's
-own fixes put at risk. Do this first, then re-measure P12 and decide whether anything is left. It
-also interacts with P5 (arithmetic and call overhead) and P6 (known-call inlining) from the other
-side: those add optimizations to the *compiler*, while this one turns on the optimizations LLVM
-already has.
-
-**Value:** med–high — every `emit run` and every REPL evaluation, on every program, with no change to
-the delivered artifact. **Cost:** med — a pipeline over an already-merged module is mechanical, but
-picking the level needs measurement across both doors, and the REPL's per-form path needs checking
-separately from the run door's whole-program one.
-
-**OpenSpec change:** none.
+**OpenSpec change:** `jit-dev-optimization-profile` (implemented).  Full commands, component
+timings, raw samples, and the compiler-IR byte-identity hash are in the change's
+`measurements.md`.
 
 ---
 

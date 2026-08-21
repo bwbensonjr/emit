@@ -27,12 +27,15 @@
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Error.h"
 
+#include <chrono>
 #include <cstdint>
 #include <csetjmp>
 #include <cstdio>
@@ -88,6 +91,149 @@ typedef intptr_t (*entry_t)(void);
 // Per-process JIT (one verb runs per invocation, so the run and REPL doors never
 // contend for it).
 static std::unique_ptr<LLJIT> JIT;
+
+// The shipped JIT doors use one backend policy (change: jit-dev-optimization-profile).
+// O1 is the development default: enough to remove ordinary call/allocation scaffolding
+// without unconditionally paying O2's compile-time cost at every prompt.  O0 is the exact
+// identity-transform rollback/measurement path; O2 is explicit.  The choice is fixed for
+// one process, which is one run or one REPL session.
+enum class JitOptLevel { O0, O1, O2 };
+
+struct JitMetrics {
+  uint64_t transform_ns = 0;
+  uint64_t materialize_ns = 0;
+  uint64_t execute_ns = 0;
+  size_t added = 0;
+  size_t transformed = 0;
+};
+
+static JitMetrics g_jit_metrics;
+
+// Defined with the shared narration helpers below; declared here so the JIT setup
+// can announce its selected profile without owning a second output path.
+static void vsay(const std::string &m);
+
+static const char *jit_opt_name(JitOptLevel level) {
+  switch (level) {
+    case JitOptLevel::O0: return "-O0";
+    case JitOptLevel::O1: return "-O1";
+    case JitOptLevel::O2: return "-O2";
+  }
+  return "-O?";
+}
+
+// Shared parser for the only three JIT optimization flags.  Returns true when A
+// was one of them (whether accepted or conflicting), and sets OK false only for a
+// conflict.  Unsupported -O spellings fall through to the door's normal unknown-
+// option arm, so its established diagnostic and exit status stay single-sourced.
+static bool parse_jit_opt(const std::string &a, const char *door,
+                          JitOptLevel &level, std::string &seen, bool &ok) {
+  JitOptLevel next;
+  if      (a == "-O0") next = JitOptLevel::O0;
+  else if (a == "-O1") next = JitOptLevel::O1;
+  else if (a == "-O2") next = JitOptLevel::O2;
+  else return false;
+  if (!seen.empty()) {
+    std::cerr << "emit " << door << ": conflicting JIT optimization options "
+              << seen << " and " << a << "\n";
+    ok = false;
+    return true;
+  }
+  level = next;
+  seen = a;
+  ok = true;
+  return true;
+}
+
+using SteadyClock = std::chrono::steady_clock;
+
+static double elapsed_ms(SteadyClock::time_point begin, SteadyClock::time_point end) {
+  return std::chrono::duration<double, std::milli>(end - begin).count();
+}
+
+static double nanos_ms(uint64_t ns) { return (double)ns / 1000000.0; }
+
+static std::string ms_text(double ms) {
+  std::ostringstream os;
+  os.setf(std::ios::fixed);
+  os.precision(1);
+  os << ms << "ms";
+  return os.str();
+}
+
+// Count direct calls whose callee has a body in this module.  The count is exposed
+// only by EMIT_JIT_TEST_TRACE, giving the host tests deterministic evidence that the
+// identity and optimized transforms differ without making optimized IR a public dump
+// surface (issue #111 owns broader JIT introspection).
+static size_t same_module_call_count(Module &module) {
+  size_t count = 0;
+  for (Function &function : module)
+    for (BasicBlock &block : function)
+      for (Instruction &instruction : block)
+        if (CallBase *call = dyn_cast<CallBase>(&instruction))
+          if (Function *callee = call->getCalledFunction())
+            if (!callee->isDeclaration()) ++count;
+  return count;
+}
+
+// Install one standard per-module pipeline at ORC's transform seam.  Modules stay
+// separate: this deliberately adds no link-time merge, internalization, keep-list or
+// closed-world DCE.  External definitions therefore remain available to a later REPL
+// form exactly as they do under the identity path.
+static void install_jit_transform(LLJIT &jit, JitOptLevel level) {
+  g_jit_metrics = JitMetrics();
+  bool test_trace = std::getenv("EMIT_JIT_TEST_TRACE") != nullptr;
+  jit.getIRTransformLayer().setTransform(
+      [level, test_trace](ThreadSafeModule tsm,
+              MaterializationResponsibility &) -> Expected<ThreadSafeModule> {
+        auto begin = SteadyClock::now();
+        tsm.withModuleDo([&](Module &module) {
+          size_t calls_before = test_trace ? same_module_call_count(module) : 0;
+          if (level != JitOptLevel::O0) {
+            LoopAnalysisManager lam;
+            FunctionAnalysisManager fam;
+            CGSCCAnalysisManager cgam;
+            ModuleAnalysisManager mam;
+            PassBuilder pb;
+            pb.registerModuleAnalyses(mam);
+            pb.registerCGSCCAnalyses(cgam);
+            pb.registerFunctionAnalyses(fam);
+            pb.registerLoopAnalyses(lam);
+            pb.crossRegisterProxies(lam, fam, cgam, mam);
+            OptimizationLevel opt = level == JitOptLevel::O1
+                                        ? OptimizationLevel::O1
+                                        : OptimizationLevel::O2;
+            ModulePassManager pipeline = pb.buildPerModuleDefaultPipeline(opt);
+            pipeline.run(module, mam);
+          }
+          if (test_trace)
+            std::cerr << "jit-test: " << module.getModuleIdentifier() << " "
+                      << jit_opt_name(level) << " same-module calls "
+                      << calls_before << " -> " << same_module_call_count(module) << "\n";
+        });
+        auto end = SteadyClock::now();
+        g_jit_metrics.transform_ns +=
+            (uint64_t)std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count();
+        ++g_jit_metrics.transformed;
+        return std::move(tsm);
+      });
+  vsay(std::string("jit profile -> ") + jit_opt_name(level));
+}
+
+// ORC materializes lazily at lookup.  Keep transform time out of the materialization
+// bucket so verbose measurements distinguish LLVM optimization from the remaining
+// object generation/link work at both shipped JIT doors.
+static Expected<ExecutorAddr> jit_lookup(const std::string &name) {
+  auto begin = SteadyClock::now();
+  uint64_t transform_before = g_jit_metrics.transform_ns;
+  Expected<ExecutorAddr> result = JIT->lookup(name);
+  auto end = SteadyClock::now();
+  double total_ms = elapsed_ms(begin, end);
+  double transform_ms = nanos_ms(g_jit_metrics.transform_ns - transform_before);
+  double materialize_ms = total_ms > transform_ms ? total_ms - transform_ms : 0.0;
+  g_jit_metrics.materialize_ns += (uint64_t)(materialize_ms * 1000000.0);
+  return result;
+}
 
 // The absolute path of this binary's argv[0], captured in main.  Used to locate the
 // repo's toolchain script + runtime source for the build/lib doors.
@@ -177,6 +323,9 @@ static void usage_run(std::ostream &os) {
         "  FILE                      program source; stdin when FILE is omitted\n"
         "  --manifest F              manifest to resolve libraries and programs against\n"
         "  --no-prelude              do not bake or imply (scheme base)\n"
+        "  -O0                       unoptimized JIT profile\n"
+        "  -O1                       standard O1 JIT profile (default)\n"
+        "  -O2                       standard O2 JIT profile\n"
         "  --emit                    write the program's LLVM IR to stdout; do not run\n"
         "  --resolve-program [NAME]  print a manifest program entry's source and output\n"
         "                            path, one per line; do not run\n";
@@ -187,7 +336,10 @@ static void usage_repl(std::ostream &os) {
   os << "usage: emit repl [options]           interactive REPL (^D to exit)\n"
         "\n"
         "  --manifest F              manifest whose libraries are preloaded into the session\n"
-        "  --no-prelude              do not bake or auto-import (scheme base)\n";
+        "  --no-prelude              do not bake or auto-import (scheme base)\n"
+        "  -O0                       unoptimized JIT profile\n"
+        "  -O1                       standard O1 JIT profile (default)\n"
+        "  -O2                       standard O2 JIT profile\n";
   usage_shared(os);
 }
 
@@ -286,6 +438,7 @@ static bool add_ir(const std::string &ir, const char *name, std::string &err) {
     err = toString(std::move(e));
     return false;
   }
+  ++g_jit_metrics.added;
   return true;
 }
 
@@ -1469,12 +1622,18 @@ static int emit_run(int argc, char **argv) {
   bool no_prelude = false;
   bool dump = false, dump_all = false;
   bool resolve = false;                        // --resolve-program: print an entry, no run
+  JitOptLevel jit_opt = JitOptLevel::O1;
+  std::string jit_opt_flag;
   std::string resolve_name;                    // "" => select the sole program entry
   std::string manifest;
   std::string prog_file;                       // positional FILE (else stdin)
   for (int i = 1; i < argc; i++) {
     std::string a(argv[i]);
+    bool opt_ok = true;
     if (is_help_flag(a)) { usage_run(std::cout); return 0; }
+    else if (parse_jit_opt(a, "run", jit_opt, jit_opt_flag, opt_ok)) {
+      if (!opt_ok) return 2;
+    }
     else if (a == "--emit") emit = true;
     else if (is_dump_flag(a, dump, dump_all)) { }
     else if (a == "--no-prelude") no_prelude = true;
@@ -1485,6 +1644,12 @@ static int emit_run(int argc, char **argv) {
     }
     else if (!a.empty() && a[0] != '-') prog_file = a;   // program source FILE
     else { std::cerr << "emit run: unknown option " << a << "\n"; return 2; }
+  }
+  if (!jit_opt_flag.empty() && (emit || resolve)) {
+    std::cerr << "emit run: JIT optimization option " << jit_opt_flag
+              << " conflicts with non-executing mode "
+              << (emit ? "--emit" : "--resolve-program") << "\n";
+    return 2;
   }
   // Manifest resolution: the shared ordered lookup (change: manifest-search-path),
   // now a chain over the searched candidates (change: installed-emit-completeness).
@@ -1525,9 +1690,11 @@ static int emit_run(int argc, char **argv) {
   std::vector<std::string> modules, module_keys;
   std::string prog_ir;
   bool is_library = false;
+  auto compile_begin = SteadyClock::now();
   if (!compile_program(prog_src, manifests, no_prelude, modules, module_keys, prog_ir,
                        is_library, prog_file))
     return 1;
+  auto compile_end = SteadyClock::now();
 
   // --emit: write every module (units then program), joined by the boundary marker,
   // to stdout and stop -- no JIT.  The IR is byte-for-byte what the JIT path runs.
@@ -1552,6 +1719,7 @@ static int emit_run(int argc, char **argv) {
     return 1;
   }
   JIT = std::move(*jitOr);
+  install_jit_transform(*JIT, jit_opt);
 
   auto gen = DynamicLibrarySearchGenerator::GetForCurrentProcess(
       JIT->getDataLayout().getGlobalPrefix());
@@ -1565,21 +1733,25 @@ static int emit_run(int argc, char **argv) {
   // program.  Add order is irrelevant -- the program's @scheme_entry drives __init
   // in topological order; its JITDylib definition shadows the linked-in compiler's.
   std::string err;
+  auto admit_begin = SteadyClock::now();
   for (size_t i = 0; i < modules.size(); i++)
     if (!add_ir(modules[i], "<unit>", err)) { std::cerr << "emit run: " << err << "\n"; return 1; }
   if (!add_ir(prog_ir, "<program>", err)) { std::cerr << "emit run: " << err << "\n"; return 1; }
+  auto admit_end = SteadyClock::now();
 
-  Expected<ExecutorAddr> sym = JIT->lookup("scheme_entry");
+  Expected<ExecutorAddr> sym = jit_lookup("scheme_entry");
   if (!sym) {
     std::cerr << "emit run: lookup error: " << toString(sym.takeError()) << "\n";
     return 1;
   }
+  uint64_t transform_before_run = g_jit_metrics.transform_ns;
   entry_t fn = sym->toPtr<entry_t>();
 
   // Run the program.  A runtime trap longjmps back here so we report it rather than
   // crashing; conservative GC needs no unwinding.
   jmp_buf jb;
   rt_trap = &jb;
+  auto run_begin = SteadyClock::now();
   if (setjmp(jb) == 0) {
     intptr_t r = fn();
     // Report the program's final value -- the observation channel much of the
@@ -1604,7 +1776,22 @@ static int emit_run(int argc, char **argv) {
     rt_trap = nullptr;
     return 1;
   }
+  auto run_end = SteadyClock::now();
   rt_trap = nullptr;
+  uint64_t transform_during_run = g_jit_metrics.transform_ns - transform_before_run;
+  double run_ms = elapsed_ms(run_begin, run_end);
+  double lazy_transform_ms = nanos_ms(transform_during_run);
+  double execute_ms = run_ms > lazy_transform_ms ? run_ms - lazy_transform_ms : 0.0;
+  g_jit_metrics.execute_ns += (uint64_t)(execute_ms * 1000000.0);
+  vsay(std::string("jit ") + jit_opt_name(jit_opt) + " program -> execute  [" +
+       std::to_string(g_jit_metrics.transformed) + "/" +
+       std::to_string(g_jit_metrics.added) + " modules, compile " +
+       ms_text(elapsed_ms(compile_begin, compile_end)) + ", admit " +
+       ms_text(elapsed_ms(admit_begin, admit_end)) + ", transform " +
+       ms_text(nanos_ms(g_jit_metrics.transform_ns)) + ", materialize " +
+       ms_text(nanos_ms(g_jit_metrics.materialize_ns)) +
+       ", execute " + ms_text(nanos_ms(g_jit_metrics.execute_ns)) +
+       "]");
   return 0;
 }
 
@@ -1618,7 +1805,7 @@ typedef intptr_t (*thunk_t)(void);
 // (stdout) or "!trap: <msg>" (stdout).  A runtime trap longjmps back here so the
 // session survives; conservative GC needs no unwinding of the JIT'd frames.
 static void run_thunk(const std::string &name) {
-  Expected<ExecutorAddr> sym = JIT->lookup(name);
+  Expected<ExecutorAddr> sym = jit_lookup(name);
   if (!sym) {
     std::cout << "!lookup error: " << toString(sym.takeError()) << "\n" << std::flush;
     return;
@@ -1626,6 +1813,7 @@ static void run_thunk(const std::string &name) {
   thunk_t fn = sym->toPtr<thunk_t>();
   jmp_buf jb;
   rt_trap = &jb;
+  auto execute_begin = SteadyClock::now();
   if (setjmp(jb) == 0) {
     intptr_t r = fn();
     // Echo suppression (change: unspecified-value, decision 6): a form whose result is
@@ -1648,13 +1836,17 @@ static void run_thunk(const std::string &name) {
     rt_guard_reset();
     std::cout << "!trap: " << rt_trap_msg << "\n" << std::flush;
   }
+  auto execute_end = SteadyClock::now();
+  g_jit_metrics.execute_ns +=
+      (uint64_t)std::chrono::duration_cast<std::chrono::nanoseconds>(
+          execute_end - execute_begin).count();
   rt_trap = nullptr;
 }
 
 // Run a named entry thunk once for effect (no value print), under trap isolation.
 // Used for the one-shot library @"L:__init" populators.
 static bool run_init(const std::string &name) {
-  Expected<ExecutorAddr> sym = JIT->lookup(name);
+  Expected<ExecutorAddr> sym = jit_lookup(name);
   if (!sym) {
     std::cerr << "error: library init lookup: " << toString(sym.takeError()) << "\n";
     return false;
@@ -1863,10 +2055,16 @@ static void process_form(const std::string &form) {
 static int emit_repl(int argc, char **argv) {
   bool prelude = true;
   bool dump = false, dump_all = false;
+  JitOptLevel jit_opt = JitOptLevel::O1;
+  std::string jit_opt_flag;
   std::string manifest;
   for (int i = 1; i < argc; i++) {
     std::string a(argv[i]);
+    bool opt_ok = true;
     if (is_help_flag(a)) { usage_repl(std::cout); return 0; }
+    else if (parse_jit_opt(a, "repl", jit_opt, jit_opt_flag, opt_ok)) {
+      if (!opt_ok) return 2;
+    }
     else if (a == "--no-prelude") prelude = false;
     else if (is_dump_flag(a, dump, dump_all)) { }
     else if (a == "--manifest" && i + 1 < argc) manifest = argv[++i];
@@ -1894,6 +2092,7 @@ static int emit_repl(int argc, char **argv) {
     return 1;
   }
   JIT = std::move(*jitOr);
+  install_jit_transform(*JIT, jit_opt);
 
   auto gen = DynamicLibrarySearchGenerator::GetForCurrentProcess(
       JIT->getDataLayout().getGlobalPrefix());
@@ -1914,7 +2113,7 @@ static int emit_repl(int argc, char **argv) {
       std::cerr << "fatal: prelude add: " << err << "\n";
       return 1;
     }
-    Expected<ExecutorAddr> sym = JIT->lookup("__repl_prelude");
+    Expected<ExecutorAddr> sym = jit_lookup("__repl_prelude");
     if (!sym) {
       std::cerr << "fatal: prelude entry: " << toString(sym.takeError()) << "\n";
       return 1;
@@ -2011,6 +2210,12 @@ static int emit_repl(int argc, char **argv) {
     std::cerr << "> " << std::flush;
   }
   std::cerr << "\n";
+  vsay(std::string("jit ") + jit_opt_name(jit_opt) + " repl -> session  [" +
+       std::to_string(g_jit_metrics.transformed) + "/" +
+       std::to_string(g_jit_metrics.added) + " modules, transform " +
+       ms_text(nanos_ms(g_jit_metrics.transform_ns)) + ", materialize " +
+       ms_text(nanos_ms(g_jit_metrics.materialize_ns)) + ", execute " +
+       ms_text(nanos_ms(g_jit_metrics.execute_ns)) + "]");
   return 0;
 }
 

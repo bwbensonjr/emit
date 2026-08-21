@@ -116,15 +116,19 @@ fi
 
 # --- caching: a user library is compiled once ---------------------------------------
 C="$TMP/c-unit"
-cold=$(cd "$P" && EMIT_CACHE="$C" EMIT_VERBOSITY=verbose "$EMIT_ABS" run uses-lib.scm 2>&1)
-warm=$(cd "$P" && EMIT_CACHE="$C" EMIT_VERBOSITY=verbose "$EMIT_ABS" run uses-lib.scm 2>&1)
+(cd "$P" && EMIT_CACHE="$C" EMIT_VERBOSITY=verbose "$EMIT_ABS" run uses-lib.scm \
+  >"$TMP/cold.out" 2>"$TMP/cold.err")
+(cd "$P" && EMIT_CACHE="$C" EMIT_VERBOSITY=verbose "$EMIT_ABS" run uses-lib.scm \
+  >"$TMP/warm.out" 2>"$TMP/warm.err")
+cold="$(cat "$TMP/cold.err")"
+warm="$(cat "$TMP/warm.err")"
 printf '%s' "$cold" | grep -q "no entry for library demo.util" \
   && ok "cold cache: the user library is compiled and stored" \
   || bad "cold cache did not compile the user library: $cold"
 printf '%s' "$warm" | grep -q "library demo.util.* reused" \
   && ok "warm cache: the user library is reused, not recompiled" \
   || bad "warm cache recompiled the user library: $warm"
-[ "$(printf '%s' "$warm" | tail -1)" = "42" ] \
+[ "$(cat "$TMP/warm.out")" = "42" ] \
   && ok "warm cache: the program still produces its value" \
   || bad "warm cache changed the program's value"
 
@@ -140,7 +144,9 @@ cmp -s "$TMP/ir-cold.ll" "$TMP/ir-warm.ll" \
 C="$TMP/c-incl"
 (cd "$P" && EMIT_CACHE="$C" "$EMIT_ABS" run uses-lib.scm >/dev/null 2>&1)
 touch "$P/util-body.scm"
-out=$(cd "$P" && EMIT_CACHE="$C" EMIT_VERBOSITY=verbose "$EMIT_ABS" run uses-lib.scm 2>&1)
+(cd "$P" && EMIT_CACHE="$C" EMIT_VERBOSITY=verbose "$EMIT_ABS" run uses-lib.scm \
+  >"$TMP/include-touch.out" 2>"$TMP/include-touch.err")
+out="$(cat "$TMP/include-touch.err")"
 printf '%s' "$out" | grep -q "library demo.util.* reused" \
   && ok "touching an included file without changing it does not invalidate (content, not mtime)" \
   || bad "a touch invalidated the entry: $out"
@@ -149,9 +155,11 @@ cat > "$P/util-body.scm" <<'EOF'
 (define (double x) (+ x x x))
 (define (triple x) (* x 3))
 EOF
-out=$(cd "$P" && EMIT_CACHE="$C" EMIT_VERBOSITY=verbose "$EMIT_ABS" run uses-lib.scm 2>&1)
+(cd "$P" && EMIT_CACHE="$C" EMIT_VERBOSITY=verbose "$EMIT_ABS" run uses-lib.scm \
+  >"$TMP/include-edit.out" 2>"$TMP/include-edit.err")
+out="$(cat "$TMP/include-edit.err")"
 if printf '%s' "$out" | grep -q "source changed for library demo.util" \
-   && [ "$(printf '%s' "$out" | tail -1)" = "63" ]; then
+   && [ "$(cat "$TMP/include-edit.out")" = "63" ]; then
   ok "editing an INCLUDED file invalidates the entry and the program sees the change"
 else
   bad "an edited include was not noticed: $out"

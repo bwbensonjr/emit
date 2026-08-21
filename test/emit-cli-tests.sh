@@ -74,6 +74,26 @@ for v in run repl build lib; do
     || bad "emit $v --help => [$first]"
 done
 
+# The two JIT doors document the exact profile set and its default.  Check both help
+# spellings because `emit help VERB` is routed separately from `emit VERB --help`.
+for v in run repl; do
+  for spelling in direct routed; do
+    if [ "$spelling" = direct ]; then
+      profile_help="$("$EMIT" "$v" --help 2>/dev/null)"
+    else
+      profile_help="$("$EMIT" help "$v" 2>/dev/null)"
+    fi
+    if printf '%s' "$profile_help" | grep -q -- '-O0' \
+       && printf '%s' "$profile_help" | grep -q -- '-O1.*default' \
+       && printf '%s' "$profile_help" | grep -q -- '-O2' \
+       && printf '%s' "$profile_help" | grep -q -- 'JIT profile'; then
+      ok "emit $v $spelling help documents -O0/-O1/-O2 and the O1 default"
+    else
+      bad "emit $v $spelling help omits the JIT profile contract"
+    fi
+  done
+done
+
 # The point of D1: pipeable without redirection.  `head` closes the pipe, so this also
 # checks we do not die on SIGPIPE before writing anything.
 [ "$("$EMIT" --help 2>/dev/null | head -1)" = "usage: emit <verb> [args]" ] \
@@ -111,6 +131,74 @@ for v in run repl build lib; do
   "$EMIT" "$v" --bogus-flag 2>&1 >/dev/null </dev/null | grep -q "^emit $v: unknown option --bogus-flag" \
     && ok "emit $v names the door and the option" \
     || bad "emit $v diagnostic wording"
+done
+
+# JIT profile parsing is shared by run/repl and stops before either door compiles input.
+# Unsupported, repeated, and conflicting levels name the door/options on stderr only.
+for v in run repl; do
+  err_case "emit $v rejects -O3" 2 "$v" -O3
+  "$EMIT" "$v" -O3 </dev/null >"$TMP/o" 2>"$TMP/e"
+  grep -q "^emit $v:.*-O3" "$TMP/e" \
+    && ok "emit $v unsupported-level diagnostic names the door and -O3" \
+    || bad "emit $v unsupported-level diagnostic wording"
+
+  for pair in '-O0 -O0' '-O0 -O1' '-O1 -O2'; do
+    # Intentional word splitting: PAIR is exactly two fixed test arguments.
+    err_case "emit $v rejects profile pair $pair" 2 "$v" $pair
+    "$EMIT" "$v" $pair </dev/null >"$TMP/o" 2>"$TMP/e"
+    first="${pair% *}"; second="${pair#* }"
+    if grep -q "^emit $v: conflicting JIT optimization options" "$TMP/e" \
+       && grep -q -- "$first" "$TMP/e" && grep -q -- "$second" "$TMP/e"; then
+      ok "emit $v conflict names $first and $second"
+    else
+      bad "emit $v conflict diagnostic for $pair"
+    fi
+  done
+done
+
+# These doors retain their existing backend policy: a JIT-only flag is unknown here.
+for v in build lib; do
+  for level in -O0 -O1 -O2; do
+    err_case "emit $v rejects JIT profile $level" 2 "$v" "$level"
+    "$EMIT" "$v" "$level" </dev/null >"$TMP/o" 2>"$TMP/e"
+    grep -q "^emit $v: unknown option $level" "$TMP/e" \
+      && ok "emit $v names unknown JIT profile $level" \
+      || bad "emit $v diagnostic for $level"
+  done
+done
+
+# A profile cannot be silently ignored by either non-executing run mode.  The parser
+# rejects the combination before manifest resolution/source compilation and emits no data.
+for mode in --emit --resolve-program; do
+  for level in -O0 -O1 -O2; do
+    err_case "emit run $mode conflicts with $level" 2 run "$mode" "$level"
+    "$EMIT" run "$mode" "$level" </dev/null >"$TMP/o" 2>"$TMP/e"
+    if grep -q '^emit run:' "$TMP/e" && grep -q -- "$mode" "$TMP/e" \
+       && grep -q -- "$level" "$TMP/e"; then
+      ok "emit run conflict names $mode and $level"
+    else
+      bad "emit run conflict diagnostic for $mode $level"
+    fi
+  done
+done
+
+# Every supported spelling reaches a working run and REPL session.  Quiet mode makes an
+# unexpected narration byte independently visible rather than folding it into stdout.
+printf '(%%display 42)\n' > "$TMP/profile.scm"
+printf '(define x 41)\n(+ x 1)\n' > "$TMP/profile-repl.scm"
+for level in -O0 -O1 -O2; do
+  EMIT_VERBOSITY=quiet "$EMIT" run "$level" --no-prelude "$TMP/profile.scm" \
+    >"$TMP/o" 2>"$TMP/e"; rc=$?
+  [ "$rc" -eq 0 ] && [ "$(cat "$TMP/o")" = 42 ] && [ ! -s "$TMP/e" ] \
+    && ok "emit run $level selects a working quiet profile" \
+    || bad "emit run $level (exit $rc, stdout [$(cat "$TMP/o")], stderr [$(cat "$TMP/e")])"
+
+  EMIT_VERBOSITY=quiet "$EMIT" repl "$level" --no-prelude <"$TMP/profile-repl.scm" \
+    >"$TMP/o" 2>"$TMP/e"; rc=$?
+  [ "$rc" -eq 0 ] && [ "$(cat "$TMP/o")" = 42 ] \
+    && grep -q 'Emit (embedded compiler, ORC/LLJIT)' "$TMP/e" \
+    && ok "emit repl $level selects a working profile" \
+    || bad "emit repl $level (exit $rc, stdout [$(cat "$TMP/o")])"
 done
 
 # `emit lib` with no SRC: an arity error, so usage goes to stderr and the exit is 1.

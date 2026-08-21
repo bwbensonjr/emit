@@ -221,6 +221,24 @@ inspection are dumped only under `--dump-all`, tagged `[unit (scheme base)]` —
 auto-imported standard library's ~600 stage dumps would bury the program's seven. See
 `docs/OUTPUT.md` for the flags and the level/environment channel.
 
+**The LLVM backend transform is after this observation boundary.** The `emit` stage above writes
+the compiler-produced textual IR. `emit run --emit` stops there, and `--dump` observes only the
+Scheme pass ladder, so both outputs are independent of JIT optimization. When `emit run` executes
+or `emit repl` starts a session, the host admits each textual module separately to ORC: baked
+libraries, manifest libraries, the program, and every REPL form remain distinct modules. ORC's IR
+transform layer then applies the session profile immediately before that module is materialized:
+
+- `-O0` is an identity transform;
+- `-O1` (the default) is LLVM's standard per-module O1 pipeline; and
+- `-O2` is LLVM's standard per-module O2 pipeline.
+
+This is backend optimization, not another compiler pass: it is absent from `--dump`, never changes
+`--emit` bytes, and does not run for `emit build`/`emit lib` or the Chez driver's backend. It also
+does not merge modules, run LTO, internalize external definitions, or assume a closed REPL world.
+Verbose narration reports the selected profile and aggregate transform/materialization/execution
+time on stderr. The profile is fixed for one run or REPL session; see `emit run --help` and
+`emit repl --help`.
+
 Two passes beyond the spike's three were new here: **lambda-lift + lowering** (hoist code,
 make closures explicit heap objects, calls indirect through `code_ptr`). Codegen upholds
 `LLVM.md`'s conventions: tagged-pointer values, heap closures, one uniform calling
