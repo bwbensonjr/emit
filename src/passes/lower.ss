@@ -38,13 +38,14 @@
 (define (add-known! xs labels)
   (set! *known-closures* (append (map cons xs labels) *known-closures*)))
 
-;; Imported library procedures whose code label this unit may name: an alist
-;; mangled-symbol -> (label . arity), from the import tables of the unit being
-;; compiled (change: cross-unit-direct-calls).  A call whose operator is a
-;; `(global-ref sym)` found here, with a matching argument count, is direct-called
-;; exactly like a known closure-block binding; anything else -- an arity mismatch, a
-;; value export, a variadic export, an unimported global -- keeps the indirect path,
-;; so an arity error still traps where it always did.
+;; Imported library procedures whose code label this unit may name: an alist of
+;; (mangled-symbol label arity rest?), from the import tables of the unit being
+;; compiled.  A call whose operator is a `(global-ref sym)` found here, with an
+;; argument count equal to a fixed arity or at least a variadic minimum, is
+;; direct-called exactly like a known closure-block binding.  Anything else -- an
+;; arity mismatch, a value export, an unimported global -- keeps the indirect path,
+;; so an arity error still traps where it always did (changes:
+;; cross-unit-direct-calls, cross-unit-variadic-direct-calls).
 ;;
 ;; This is per-UNIT state, not per-form: a library or program is lowered one
 ;; top-level form at a time, so `lower-program` must NOT clear it.  Every core entry
@@ -64,7 +65,9 @@
 (define (set-import-calls! alist) (set! *import-calls* alist))
 (define (known-import sym n)
   (let ([p (assq sym *import-calls*)])
-    (and p (= n (cddr p)) (cadr p))))
+    (and p
+         (if (cadddr p) (>= n (caddr p)) (= n (caddr p)))
+         (cadr p))))
 
 ;; The current compilation unit's library name (change: module-resolution-scaffold),
 ;; threaded in by lower-program as module state alongside `*code-defs*`.  Lifted
@@ -92,16 +95,21 @@
   (mangle *unit* (string-append "code:" (symbol->string s))))
 
 ;; The unit's exported-procedure call interface, accumulated as the stable labels
-;; above are handed out: (internal-name label arity) per FIXED-ARITY top-level
-;; lambda binding.  compile-library* reads this back to fill the export table's
-;; call rows (change: cross-unit-direct-calls), so what the table advertises is
-;; exactly what was emitted rather than a re-derivation from the source.  It spans
-;; a whole unit -- lower-program runs once per top-level form -- so the unit driver
-;; resets it, not lower-program.
+;; above are handed out: (internal-name label arity [rest]) per top-level lambda
+;; binding.  `arity` is exact without the marker and the minimum with it (change:
+;; cross-unit-variadic-direct-calls).  compile-library* reads this back to fill the
+;; export table's call rows, so what the table advertises is exactly what was
+;; emitted rather than a re-derivation from the source.  It spans a whole unit --
+;; lower-program runs once per top-level form -- so the unit driver resets it, not
+;; lower-program.
 (define *unit-procs* '())
 (define (reset-unit-procs!) (set! *unit-procs* '()))
-(define (add-unit-proc! name label arity)
-  (set! *unit-procs* (cons (list name label arity) *unit-procs*)))
+(define (add-unit-proc! name label arity rest?)
+  (set! *unit-procs*
+        (cons (if rest?
+                  (list name label arity 'rest)
+                  (list name label arity))
+              *unit-procs*)))
 
 ;; The top-level names this unit ASSIGNS (change: library-toplevel-set, issue #14).
 ;; A unit may `set!` its own top-level binding, so its slot can hold a different
@@ -123,7 +131,7 @@
 ;; is complete by the time the table is built, whichever order the forms came in
 ;; (design D1).  The withheld binding's code is still emitted under its stable
 ;; label (its define's `make-closure` needs it); the label just stops being
-;; published, exactly as for a variadic export.
+;; published, exactly as for a non-procedure export.
 (define (unit-procs)
   (reverse (filter (lambda (p) (not (unit-assigned? (car p)))) *unit-procs*)))
 
@@ -234,7 +242,7 @@
      ;; its own closure value as `self`.  A self-call stays a `self-app` because it
      ;; can reuse `%self` and skip loading the closure at all.
      ;; Cross-unit (change: cross-unit-direct-calls): an operator that resolved to an
-     ;; IMPORTED binding with a recorded label and matching arity is the same shape --
+     ;; IMPORTED binding with a recorded label and matching exact/minimum arity is the same shape --
      ;; the global is still loaded (it carries the captured environment) and passed as
      ;; the callee's self; only the code-pointer load out of it disappears.
      (let ([k (and (symbol? f) (known-closure f))]
@@ -249,7 +257,7 @@
 
 ;; The initializer of a top-level binding (change: cross-unit-direct-calls).  In a
 ;; LIBRARY unit a lambda initializer is hoisted under the stable, name-derived label
-;; rather than a counter one, and -- when its arity is fixed -- recorded as part of
+;; rather than a counter one and recorded with its exact or minimum arity as part of
 ;; the unit's call interface.  Everything else (a value initializer, and every
 ;; program/REPL-unit binding, where `*unit*` is the empty prefix) falls through to
 ;; the ordinary `lower`, so those paths are untouched.
@@ -268,8 +276,7 @@
              [body   (caddr rhs)]
              [fvs    (free-vars rhs)]
              [label  (stable-code-label s)])
-        (unless (param-rest params)                ; fixed arity: direct-callable
-          (add-unit-proc! s label (length (param-fixed params))))
+        (add-unit-proc! s label (length (param-fixed params)) (param-rest params))
         (hoist-code! label params body fvs #f)     ; anonymous: no self-name
         `(make-closure ,label ,(map-lr (lambda (v) (lower v locals fmap self)) fvs)))
       (lower rhs locals fmap self)))

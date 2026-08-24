@@ -13,7 +13,9 @@
 #   * an ARITY MISMATCH stays indirect and still traps exactly as before -- the
 #     easy thing to get wrong, since a direct call would bypass the callee's
 #     entry arity check;
-#   * a VARIADIC export is never direct-called (no label is recorded for one);
+#   * an immutable VARIADIC export records its minimum arity and is direct-called
+#     at every statically valid count, including through the overflow slots;
+#   * too-few, apply, and value-position uses of that export stay indirect;
 #   * a USER library gets the same treatment, not only (scheme base);
 #   * program-unit code labels are untouched (still code_N) -- only LIBRARY
 #     procedure labels are name-derived;
@@ -76,6 +78,18 @@ else
   ok  "direct: code-pointer chain removed"
 fi
 
+# The old fixed row stays byte-identical while a variadic row appends the explicit
+# `rest` marker (change: cross-unit-variadic-direct-calls, design D1).
+mkdir -p "$TMP/artifacts"
+build/emit lib test/modules/mylib.sld -o "$TMP/artifacts" >/dev/null 2>&1
+build/emit lib test/modules/varlib.sld -o "$TMP/artifacts" >/dev/null 2>&1
+want   "table: fixed call row is unchanged" "$TMP/artifacts/mylib.exports" \
+       '\(greet "mylib:code:greet" 0\)'
+reject "table: fixed call row has no rest marker" "$TMP/artifacts/mylib.exports" \
+       '\(greet "mylib:code:greet" 0 rest\)'
+want   "table: variadic call row records minimum arity and rest" \
+       "$TMP/artifacts/varlib.exports" '\(collect "varlib:code:collect" 2 rest\)'
+
 # --- arity mismatch: indirect, and still traps -------------------------------
 ll="$(prog_ir '(display (zero? 1 2))')"
 reject "arity mismatch: NOT direct-called" "$ll" \
@@ -91,9 +105,56 @@ else
   bad "arity mismatch: traps at run time (wrong diagnostic: $out)"
 fi
 
-# --- a variadic export records no label and stays indirect -------------------
-ll="$(prog_ir '(display (list 1 2 3))')"
-reject "variadic export: never direct-called" "$ll" 'call fastcc i64 @"scheme\.base:code:list"'
+# --- a variadic export is direct-called at every valid static count -----------
+src='(import (varlib))
+(list (collect 1 2)
+      (collect 1 2 3 4)
+      (collect 1 2 3 4 5 6 7 8 9 10))'
+ll="$(prog_ir "$src" "$MAN")"
+want "variadic minimum: direct call" "$ll" \
+     'call fastcc i64 @"varlib:code:collect"\(i64 %t[0-9]+, i64 2,'
+want "variadic above minimum: direct call" "$ll" \
+     'call fastcc i64 @"varlib:code:collect"\(i64 %t[0-9]+, i64 4,'
+want "variadic beyond slots: direct call" "$ll" \
+     'call fastcc i64 @"varlib:code:collect"\(i64 %t[0-9]+, i64 10,'
+want "variadic direct: closure global still loaded for self/rooting" "$ll" \
+     'load i64, ptr @"varlib:collect"'
+if grep -A3 'load i64, ptr @"varlib:collect"' "$ll" | grep -q 'and i64 .*, -8'; then
+  bad "variadic direct: code-pointer chain removed"
+else
+  ok "variadic direct: code-pointer chain removed"
+fi
+got="$(printf '%s\n' "$src" | $RUN --manifest "$MAN" 2>/dev/null)"
+want_value='((1 2 ()) (1 2 (3 4)) (1 2 (3 4 5 6 7 8 9 10)))'
+[ "$got" = "$want_value" ] \
+  && ok "variadic direct: rest values preserved through positional overflow" \
+  || bad "variadic direct: value $got (expected $want_value)"
+
+# A statically invalid count deliberately keeps the old indirect/trap path.
+ll="$(prog_ir '(import (varlib)) (collect 1)' "$MAN")"
+reject "variadic too few: NOT direct-called" "$ll" \
+       'call fastcc i64 @"varlib:code:collect"'
+want "variadic too few: still loads the code pointer" "$ll" \
+     'call fastcc i64 ?%t[0-9]+\(i64 %t[0-9]+, i64 1,'
+printf '(import (varlib)) (collect 1)\n' > "$TMP/bad-var.scm"
+if out="$($RUN --manifest "$MAN" "$TMP/bad-var.scm" 2>&1)"; then
+  bad "variadic too few: traps at run time (it did not)"
+elif printf '%s' "$out" | grep -q "arity error"; then
+  ok "variadic too few: traps at run time with an arity error"
+else
+  bad "variadic too few: wrong diagnostic ($out)"
+fi
+
+# `apply` owns a dynamic argv and value-position use is not a call to the imported
+# binding, so neither is rewritten to known-app.
+ll="$(prog_ir '(import (varlib)) (apply collect (list 1 2 3))' "$MAN")"
+reject "variadic apply: stays indirect" "$ll" 'call fastcc i64 @"varlib:code:collect"'
+want   "variadic apply: uses the dynamic argv path" "$ll" 'call ptr @rt_apply_argv'
+ll="$(prog_ir '(import (varlib)) (map collect (list 1) (list 2))' "$MAN")"
+reject "variadic value position: stays indirect" "$ll" \
+       'call fastcc i64 @"varlib:code:collect"'
+want   "variadic value position: closure remains first-class" "$ll" \
+       'load i64, ptr @"varlib:collect"'
 
 # --- program-unit labels are untouched ---------------------------------------
 ll="$(prog_ir '(define (f a b) (+ a b)) (display (f 1 2)) (display (f 3 4))')"

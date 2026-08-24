@@ -23,7 +23,7 @@ speed items in this list.
 | [P6](#p6-no-optimizer-pass-known-call-inlining-and-constant-folding) | No optimizer pass: known-call inlining & constant folding | speed + size | med–high | med | `simplify-known-calls` (A) | ☑ |
 | [P7](#p7-boxing-driven-by-desugaring-rather-than-by-mutation) | Boxing driven by desugaring rather than by mutation | speed + size | med | low–med | — | ☑ |
 | [P8](#p8-the-emit-build-door-does-not-tree-shake) | The `emit build` door does not tree-shake | size + build speed | med–high | med | `chez-free-unit-pipeline` | ☑ |
-| [P9](#p9--an-optional-argument-costs-every-call-site-its-cross-unit-direct-call) | An optional argument costs every call site its cross-unit direct call | speed | med | med | — | ☐ |
+| [P9](#p9--an-optional-argument-costs-every-call-site-its-cross-unit-direct-call) | An optional argument costs every call site its cross-unit direct call | speed + IR size | **low** (measured: 0% speed) | med | `cross-unit-variadic-direct-calls` | ☐ |
 | [P10](#p10--a-library-another-unit-imports-is-never-tree-shaken-the-substrate-ships-whole) | A library another unit imports is never tree-shaken (the substrate ships whole) | size | high | med | `import-dag-tree-shaking` | ☑ |
 | [P11](#p11--every-emit-build-recompiles-the-c-runtime-from-source) | Every `emit build` recompiles the C runtime from source | build speed | **low** (measured: 5%) | low | — | ☐ |
 | [P12](#p12--the-reader-classifier-chain-remains-expensive-after-per-module-jit-optimization) | The reader classifier chain remains expensive after per-module JIT optimization | speed | low | med | `jit-dev-optimization-profile` (measured) | ☐ |
@@ -683,13 +683,18 @@ Delivered through the AOT door — pre-change (indirect, `-O2`) versus post-chan
 | cross-unit sites converted | — | **401 of 872** |
 | delivered binary, 6 demos | 375,632 B | **234,416 B (−37.6%)** |
 
-**What did not convert, and why.** All 471 remaining cross-unit indirect sites call one of eight
-**variadic** exports — `map` (193), `list` (84), `append` (78), `error` (68), `for-each` (41),
-`string`, `char=?`, `vector`. A variadic export records no label, by design in this increment: the
-callee builds a rest list from `argc`, so a direct call would have to reproduce that protocol at
-the call site. 104 of `(scheme base)`'s 120 exports are fixed-arity and do carry one. Extending
-this to variadic callees is the obvious next increment and is where the other half of the 872
-sites is.
+**What did not convert in that increment, and why.** All 471 then-remaining cross-unit indirect
+sites called one of eight **variadic** exports — `map` (193), `list` (84), `append` (78), `error`
+(68), `for-each` (41), `string`, `char=?`, `vector`. The call interface then omitted labels for
+rest-parameter procedures because the design assumed a direct caller would have to reproduce the
+callee's rest-list protocol. 104 of `(scheme base)`'s 120 exports were fixed-arity and carried a
+label. Extending this to variadic callees was the obvious next increment and the other half of the
+872 sites.
+
+**Follow-through:** P9 later established that the shared closure ABI already carries `argc`, the
+positional slots, and overflow on a direct call, so reproducing the protocol at the caller was not
+necessary. Change `cross-unit-variadic-direct-calls` publishes the missing minimum-arity descriptor
+and reuses the callee's existing rest-building prologue.
 
 **LTO is a large size win and an occasional speed loss.** Enabling `-flto` on the AOT link cuts
 the delivered binary by **−38%** across a spread of demos (57,984 → 34,768 on `ackermann`;
@@ -1262,9 +1267,30 @@ med — the pass exists and is tested; this is wiring plus a root-set plumbing d
 
 ## P9 — An optional argument costs every call site its cross-unit direct call
 
-**Status:** ☐ open
+**Status:** ☐ implementation complete, awaiting archive (change:
+`cross-unit-variadic-direct-calls`)
 
-**Symptom.** Giving a prelude procedure an optional argument turns *every* call to it, at every
+**Outcome.** Immutable variadic exports now publish `(name label minimum-arity rest)`, and an
+imported call with at least that many statically counted arguments uses the existing direct
+`known-app` ABI. The closure is still loaded and passed as `self`; only the callable check and
+code-pointer load chain disappear. Existing three-field fixed rows are byte-identical and remain
+readable, and assigned exports still publish no label.
+
+The code-shape result is broad and clean: an 80-demo before/after capture converted 97 sites in 40
+demos, all 40 changed files became smaller (−7,772 B total), and the other 40 were byte-identical.
+But the original performance hypothesis did **not** survive measurement. Six alternating pairs of
+the preserved indirect executable and regenerated direct executable both had a **0.40 s median**
+(best 0.39 s; raw ranges 0.39–0.42 and 0.39–0.40 respectively), while both printed `19888890`.
+The observed median delta is 0% at 0.01-second timer resolution.
+
+So this change fixes the cross-unit metadata/lowering gap, but does not recover the historical
+0.32 -> 0.39 s optional-argument regression. The corrected remaining cost is the variadic callee
+prologue: even with no optional arguments it spills the positional slots and calls
+`rt_build_rest`. That function allocates no pairs for an empty rest list, but the spill and
+out-of-line call remain. Avoiding that cost would require a specialized fixed-arity entry/prologue
+or an equivalent body entry, a separate optimization from the direct-call work completed here.
+
+**Original symptom.** Giving a prelude procedure an optional argument turned *every* call to it, at every
 arity, from a direct cross-unit call into an indirect call through the closure. Found while
 implementing `numeric-conformance`: R7RS requires `(number->string z [radix])`, so
 `number->string` gained a rest parameter, and `demos/exact-range.scm` — the only demo that calls
@@ -1295,28 +1321,25 @@ variadic) and to any future prelude procedure that acquires an optional argument
 most for `number->string` specifically because the *compiler itself* calls it for every integer
 it emits.
 
-**Cause.** The direct-call rule requires a callee whose arity is fixed, since a rest-parameter
-callee needs its rest list built before the body runs; the caller cannot jump straight to the
-code label under the fixed convention. So the moment a callee becomes variadic, every call site
-— including the ones passing exactly the required arguments — falls back to the indirect path.
-The arity is nearly always known at the call site, so the information needed to do better is
-present and simply unused.
+**Corrected cause.** The export call interface recorded only exact fixed arity, so the importer had
+no stable label or minimum-arity shape for a variadic binding. The calling convention was not the
+barrier originally described: direct calls already pass `self`, `argc`, positional slots, and the
+overflow pointer, and the variadic callee already builds its own rest list from those operands.
+The missing information was solely in the cross-unit descriptor and its arity matcher.
 
-**Fix sketch.** At a call site whose argument count is statically known and whose callee is a
-known rest-parameter procedure, build the rest list at the call site (empty list in the common
-no-optional-argument case) and keep the direct call to the code label. Equivalently: emit a
-fixed-arity entry point alongside the variadic one for such callees and have known-arity call
-sites target it. Either way the win is largest exactly where it is needed, the
-one-required-argument call.
+**Fix delivered.** Variadic call rows carry an explicit `rest` marker and minimum arity; importing
+calls are direct when their static argument count is at least that minimum. The callee's existing
+rest-building prologue is reused, so no caller-built list or new calling convention is needed.
 
-**Value:** med — it recovers a regression that R7RS conformance will keep re-introducing as more
-procedures gain optional arguments, and `number->string` is on the compiler's own hot path.
-**Cost:** med — the direct-call machinery and the arity information both exist; this is a
-lowering decision plus rest-list construction at the call site.
+**Value:** low for speed — the measured delta is 0%. It still removes 97 indirect-call sequences
+from the demo corpus, shrinks every affected IR file, and makes the cross-unit call graph explicit
+to later optimizers, but those are modest cleanup benefits rather than the predicted hot-path win.
+**Cost:** med — the implementation itself is a small descriptor/lowering change that reuses the
+existing ABI, but compiler regeneration and the cross-door compatibility matrix dominate the work.
 
-**OpenSpec change:** none yet. Deliberately NOT bundled into `numeric-conformance`: that change
-is about the accepted language, and this is a codegen improvement whose correct scope is every
-variadic callee, not the three procedures that happened to expose it.
+**OpenSpec change:** `cross-unit-variadic-direct-calls` (implementation complete; archive pending).
+It was deliberately not bundled into `numeric-conformance`: that change was about the accepted
+language, while this codegen improvement applies to every variadic callee.
 
 ---
 

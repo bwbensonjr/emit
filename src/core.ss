@@ -421,9 +421,11 @@
 ;; (sym_needs_bars, src/runtime/runtime.c) is the natural thing for this to grow if that
 ;; ever becomes possible.
 ;; TWO ENTRY POINTS OVER ONE WORKER (change: reader-datum-parity, design D4), the
-;; arrangement `read-all-from-string` / `-ci` uses over `rd-all` and for the same reason:
-;; an optional argument would cost every call site its cross-unit direct call
-;; (PERFORMANCE.md P9), and the export-table writer is on the compile path.
+;; arrangement `read-all-from-string` / `-ci` uses over `rd-all`.  This originally
+;; avoided P9's loss of cross-unit direct calls on an optional argument.  Change
+;; cross-unit-variadic-direct-calls removed that call-shape cost, but a variadic
+;; callee would still build an empty rest list on every hot call; the two names also
+;; keep strict artifact rendering separate from total diagnostic rendering.
 ;;
 ;; They differ in ONE place, and the difference is which failure is worse:
 ;;
@@ -494,7 +496,8 @@
     [(symbol? x) (symbol->string x)]
     [(null? x) "()"]
     [(pair? x) (string-append "(" (render-list-body* x loose) ")")]
-    ;; the call rows carry an arity (change: cross-unit-direct-calls)
+    ;; call rows carry exact/minimum arities (changes: cross-unit-direct-calls,
+    ;; cross-unit-variadic-direct-calls)
     [(number? x) (number->string x)]
     ;; A macro template may hold a boolean or a character (change: library-macro-export).
     ;; This renderer WRITES the export artifact on every door now, not just diagnostics,
@@ -1122,38 +1125,47 @@
       exports)
     (make-ct-half (reverse entries) (quote ()) (reverse foreign))))
 
-;; The direct-call view of the same tables (change: cross-unit-direct-calls): an
-;; alist mangled-symbol -> (label . arity), keyed the way `lower` sees an imported
+;; The direct-call view of the same tables (changes: cross-unit-direct-calls,
+;; cross-unit-variadic-direct-calls): an alist of
+;; (mangled-symbol label arity rest?), keyed the way `lower` sees an imported
 ;; reference -- as the `(global-ref sym)` the resolver produced -- so a call through
-;; one can be recognized as having a statically known callee.  Built by joining each
-;; table's CALL rows (external label arity) against its export alist on the external
-;; name.  A table with no call rows contributes nothing, so importing only values
-;; lowers exactly as before.
+;; one can be recognized as having a statically known callee.  CALL rows are
+;; (external label exact-arity) or (external label minimum-arity rest).  A table
+;; with no call rows contributes nothing, so importing only values lowers exactly
+;; as before.
 (define (import-tables->call-alist import-tables)
   (apply append
     (map (lambda (t)
            (let ([exports (cadr t)])
              (map (lambda (c)
-                    (cons (string->symbol (cdr (assq (car c) exports)))
-                          (cons (cadr c) (caddr c))))
+                    (let* ([tail (cdddr c)]
+                           [rest? (cond
+                                    [(null? tail) #f]
+                                    [(and (pair? tail) (eq? (car tail) 'rest)
+                                          (null? (cdr tail))) #t]
+                                    [else (error 'compile "malformed library call row" c)])])
+                      (list (string->symbol (cdr (assq (car c) exports)))
+                            (cadr c) (caddr c) rest?)))
                   (caddr t))))
          import-tables)))
 
 ;; The export table's CALL rows for a unit just lowered (change:
 ;; cross-unit-direct-calls): for each export whose top-level initializer `lower`
-;; hoisted as a FIXED-ARITY lambda, its external name, the stable code label lower
-;; assigned it, and that arity -- everything an importer needs to emit a direct call
+;; hoisted as a lambda, its external name, stable code label, and either exact arity
+;; or minimum arity plus `rest` -- everything an importer needs to emit a direct call
 ;; with no access to the library's source.  `procs` is lower's own record of what it
 ;; emitted (`unit-procs`), so the table can never advertise a label the unit does not
-;; define.  A value export, or a procedure of variable arity, gets no row and calls
-;; to it stay indirect -- and so does a binding the unit ASSIGNS, which `unit-procs`
-;; filters out, since its slot can hold a different closure after __init (change:
-;; library-toplevel-set, issue #14).
+;; define.  A value export gets no row.  A binding the unit ASSIGNS also gets no row,
+;; which `unit-procs` filters out, since its slot can hold a different closure after
+;; __init (change: library-toplevel-set, issue #14).
 (define (export-call-rows exports procs)
   (filter (lambda (x) x)
           (map (lambda (e)
                  (let ([p (assq (cdr e) procs)])
-                   (and p (list (car e) (cadr p) (caddr p)))))
+                   (and p
+                        (if (and (pair? (cdddr p)) (eq? (cadddr p) 'rest))
+                            (list (car e) (cadr p) (caddr p) 'rest)
+                            (list (car e) (cadr p) (caddr p))))))
                exports)))
 
 ;; Compile a library's declarations into (list ir-text export-table).
@@ -1163,10 +1175,11 @@
 ;;   import-tables : the export tables of the libraries THIS library imports (its
 ;;                   direct dependencies); '() for an import-free library.
 ;; export-table : (list name ((external-name . mangled-string) ...)
-;;                     ((external-name code-label arity) ...))
+;;                     ((external-name code-label arity [rest]) ...))
 ;; -- the symbol rows every importer needs, then the CALL rows for the exports whose
-;; initializer is a fixed-arity lambda, which let an importer emit a direct call to
-;; the procedure's code (change: cross-unit-direct-calls).
+;; initializer is a lambda, which let an importer emit a direct call to the
+;; procedure's code at a valid static argument count (change:
+;; cross-unit-variadic-direct-calls).
 ;; A library may import other libraries (change: module-generalize): its body
 ;; resolves those imports' exports as external globals, exactly as a program does.
 ;; Libraries do not share the prelude (that is Stage 3), so the body uses
@@ -1232,10 +1245,10 @@
 ;; `call fastcc @"<unit>:code:<name>"`.  They are paired exactly in every shipped unit today, so
 ;; searching the `ptr` form finds every reference.  A codegen change that emitted the direct call
 ;; WITHOUT loading the closure would break that pairing, and this function would then miss a live
-;; reference and prune a needed binding into a link-time undefined symbol.  P9's sketch (a
-;; fixed-arity entry point beside the variadic one, targeted by known-arity call sites) is exactly
-;; such a change.  test/aot-tree-shaking-tests.sh asserts the pairing so that a future break is
-;; named here rather than discovered as an undefined symbol.
+;; reference and prune a needed binding into a link-time undefined symbol.  P9 explicitly rejected
+;; that extra-entry approach: variadic direct calls reuse `known-app`, including its closure load.
+;; test/aot-tree-shaking-tests.sh asserts the pairing so that a future break is named here rather
+;; than discovered as an undefined symbol.
 ;; Index of NEEDLE in HAY, or -1.  Character-by-character rather than
 ;; `(string=? (substring hay i (+ i nl)) needle)`, which is what this was while only the
 ;; Chez driver ran it: that allocates a fresh string at EVERY position, and `emit build`
@@ -1470,8 +1483,9 @@
          [import-env-alist (import-tables->env-alist import-tables)] ; (ext . mangled-sym)
          [forms (with-prelude prelude-forms runtime-user)])
     (reset-counter!)
-    ;; a call to one of these imports' fixed-arity procedures lowers to a direct call
-    ;; to its code label (change: cross-unit-direct-calls).
+    ;; a call matching one of these imports' exact/minimum arities lowers to a direct
+    ;; call to its code label (changes: cross-unit-direct-calls,
+    ;; cross-unit-variadic-direct-calls).
     (set-import-calls! (import-tables->call-alist import-tables))
     (let* ([me+rf (collect-define-syntax forms)]
            ;; the program's own transformers (and the baked prelude's, prepended into

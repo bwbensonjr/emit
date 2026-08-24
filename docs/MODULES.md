@@ -305,9 +305,11 @@ build/emit lib test/modules/mylib.sld -o build/lib
 ```
 
 The table has three parts: the library name, the **symbol** rows mapping each external name to its
-mangled global, and the **call** rows — for each export whose initializer is a fixed-arity lambda,
-its code label and that arity, so an importer can emit a direct call to the procedure's code with
-no access to the library's source (change: `cross-unit-direct-calls`).
+mangled global, and the **call** rows — for each export whose initializer is a lambda, its code
+label and accepted arity. A fixed procedure records `(name label exact-arity)`; a procedure with a
+rest parameter records `(name label minimum-arity rest)`. An importer can therefore emit a direct
+call to the procedure's code with no access to the library's source (changes:
+`cross-unit-direct-calls`, `cross-unit-variadic-direct-calls`).
 
 A call row is recorded only for a binding whose slot cannot move after `__init`. A binding the
 library **assigns** therefore gets a symbol row but no call row, however its initializer is shaped
@@ -535,11 +537,14 @@ other — the same gap as `docs/PERFORMANCE.md` P8.
   recorded label and a *matching* argument count is emitted as
   `call fastcc @"libname:code:export"` instead of loading the code pointer out of the binding's
   closure. The global is still loaded and passed as the callee's `self`, since it carries the
-  captured environment; only the four-instruction code-pointer chain disappears. An arity
-  mismatch, a value export, or a variadic export keeps the indirect path, so arity errors trap
-  exactly as before. The importing module `declare`s each label it names; no linkage change is
-  needed, as library code labels already have external linkage. This rests on the callee's slot
-  still holding the closure its label belongs to, which the export table — the only channel by
+  captured environment; only the four-instruction code-pointer chain disappears. Matching means
+  equality for a fixed procedure and at least the recorded minimum for a variadic one. The shared
+  direct-call ABI already passes the actual count, positional slots, and overflow pointer, so the
+  variadic callee's ordinary prologue builds its rest list without a wrapper or caller-side list.
+  An arity mismatch, a value export, `apply`, or value-position use keeps the indirect path, so
+  arity errors trap exactly as before. The importing module `declare`s each label it names; no
+  linkage change is needed, as library code labels already have external linkage. This rests on the
+  callee's slot still holding the closure its label belongs to, which the export table — the only channel by
   which an importer learns a label — enforces by recording a label only for a binding no unit can
   reassign after `__init`. Three things make that hold on every door: assignment to an *imported*
   binding is a compile error, so no unit writes another unit's slot; a binding a unit assigns

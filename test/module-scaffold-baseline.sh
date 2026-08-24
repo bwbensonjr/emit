@@ -619,6 +619,16 @@
 #         byte-identical; (scheme read) changes as expected with its reader copy.
 #     All 80 demos' stdout is unchanged (the demo-values suite passes 80/80).  No new
 #     entries.
+#   cross-unit-variadic-direct-calls (docs/PERFORMANCE.md P9) -- immutable variadic
+#     library exports now publish their minimum arity and existing code label, so calls
+#     with enough statically counted arguments use the same known-app ABI as fixed-arity
+#     exports.  Verified against an 80-demo before/after capture: 40 demos are
+#     byte-identical; the other 40 all shrink, by 7,772 bytes in aggregate.  Exactly 97
+#     call sites lose rt_check_callable plus the closure mask/code-pointer load chain and
+#     gain a direct code-label call; 60 external code-label declarations are added.  No
+#     other program-unit shape changed.  ports.ll also changes its linked (scheme file)
+#     unit, as expected because that library directly calls variadic (scheme base)
+#     exports.  All other linked library units are byte-identical.  No new entries.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

@@ -10,8 +10,8 @@
 #
 #   * the assignment is permitted, and every reader observes it: an importing
 #     program, the assigning unit's own procedures, and a REPL session;
-#   * the export table WITHHOLDS the direct-call row for an assigned binding, while
-#     an unassigned sibling of the same fixed-arity shape keeps its row -- the
+#   * the export table WITHHOLDS the direct-call row for assigned fixed-arity AND
+#     variadic bindings, while an unassigned sibling keeps its row -- the
 #     withholding is per binding, not per unit, and does not depend on whether the
 #     assignment was lowered before or after the binding it assigns;
 #   * the importer therefore does NOT emit `call fastcc @"mutlib:code:f"`.  This is
@@ -60,7 +60,9 @@ reject () { if grep -Eq "$3" "$2"; then bad "$1 (present but should not be: $3)"
 #   h before bump-h      8  (h x) = x+7
 #   h after  bump-h    701  reassigned to x+700     <- the other lowering order
 #   g                 1001  never assigned; keeps its direct-call row
-WANT='(2 101 101 8 701 1001)'
+#   v before bump-v  (1 2)  variadic original
+#   v after bump-v   (changed 1 2), through importer and unit-local call
+WANT='(2 101 101 8 701 1001 (1 2) (changed 1 2) (changed 1 2))'
 
 echo "library top-level set! (issue #14)"
 
@@ -88,9 +90,9 @@ else
 fi
 
 # A REPL session: same library, entered form by form.
-out="$(printf '(import (mutlib))\n(f 1)\n(bump)\n(f 1)\n(call-f 1)\n(g 1)\n' \
+out="$(printf '(import (mutlib))\n(f 1)\n(bump)\n(f 1)\n(call-f 1)\n(g 1)\n(v 1 2)\n(bump-v)\n(v 1 2)\n(call-v 1 2)\n' \
         | build/emit repl --manifest "$MAN" 2>/dev/null | tr -d ' >' | grep -v '^$')"
-if [ "$out" = "$(printf '2\n101\n101\n1001')" ]; then
+if [ "$out" = "$(printf '2\n101\n101\n1001\n(12)\n(changed12)\n(changed12)')" ]; then
   ok "REPL door: the session observes the assignment"
 else
   bad "REPL door (got: $(printf '%s' "$out" | tr '\n' '/'))"
@@ -106,6 +108,8 @@ if [ -f "$EXP" ]; then
          '\(f "mutlib:code:f"'
   reject "table: no call row for h (assigned after its define was lowered)" "$EXP" \
          '\(h "mutlib:code:h"'
+  reject "table: no call row for assigned variadic v" "$EXP" \
+         '\(v "mutlib:code:v"'
   want   "table: the unassigned sibling g keeps its call row" "$EXP" \
          '\(g "mutlib:code:g" 1\)'
   want   "table: the assigning procedure itself keeps its call row" "$EXP" \
@@ -126,8 +130,12 @@ reject "program: no direct call to the withheld label f" "$TMP/prog.ll" \
        'call fastcc i64 @"mutlib:code:f"'
 reject "program: no direct call to the withheld label h" "$TMP/prog.ll" \
        'call fastcc i64 @"mutlib:code:h"'
+reject "program: no direct call to the withheld variadic label v" "$TMP/prog.ll" \
+       'call fastcc i64 @"mutlib:code:v"'
 want   "program: still reads f's slot on each call" "$TMP/prog.ll" \
        'load i64, ptr @"mutlib:f"'
+want   "program: still reads v's slot on each call" "$TMP/prog.ll" \
+       'load i64, ptr @"mutlib:v"'
 # the control: g was not assigned, so the direct call is still emitted -- otherwise
 # the two rejections above would pass for the wrong reason (nothing direct-called).
 want   "program: the unassigned sibling g IS direct-called" "$TMP/prog.ll" \

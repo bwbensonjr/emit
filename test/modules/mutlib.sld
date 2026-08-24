@@ -8,10 +8,11 @@
 ;;;
 ;;; Both orders are present on purpose.  `bump` is defined BEFORE the `f` it assigns,
 ;;; and `bump-h` AFTER the `h` it assigns, so the withholding cannot depend on the
-;;; order the forms are lowered in (design D1).  `g` is the control: same fixed-arity
-;;; shape, never assigned, so it keeps its call row.
+;;; order the forms are lowered in (design D1).  `v` is the variadic counterpart:
+;;; it too must withhold its call row.  `g` is the control: same fixed-arity shape,
+;;; never assigned, so it keeps its call row.
 (define-library (mutlib)
-  (export f bump call-f h bump-h g)
+  (export f bump call-f h bump-h g v bump-v call-v)
   (begin
     (define (bump) (set! f (lambda (x) (+ x 100))))
     (define (f x) (+ x 1))
@@ -24,4 +25,9 @@
     ;; so it must observe the assignment too.
     (define (call-f x) (f x))
 
-    (define (g x) (+ x 1000))))
+    (define (g x) (+ x 1000))
+
+    (define (bump-v)
+      (set! v (lambda xs (cons (quote changed) xs))))
+    (define (v first . rest) (cons first rest))
+    (define (call-v x y) (v x y))))

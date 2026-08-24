@@ -2105,11 +2105,13 @@
 ;;; list for empty or whitespace/comment-only input).  This is what a self-hosted
 ;;; core uses to turn its input text into the form list it compiles.
 ;;; TWO entry points over ONE worker, rather than one entry point with an optional
-;;; argument (change: reader-token-path, design D1/D2).  An optional argument would cost
-;;; every call site its cross-unit direct call (PERFORMANCE.md P9), and the ordinary read
-;;; is the compiler's own hot path -- making every read pay for the rare folding one is
-;;; backwards.  `-ci` is R7RS's spelling for case-insensitivity (string-ci=?, char-ci=?,
-;;; and `include-ci`, which is what this exists for).
+;;; argument (change: reader-token-path, design D1/D2).  P9 originally made an optional
+;;; argument cost every call site its cross-unit direct call; change
+;;; cross-unit-variadic-direct-calls removed that call-shape cost, but the variadic
+;;; prologue would still build an empty rest list on every ordinary read.  This is the
+;;; compiler's own hot path, so making it pay for the rare folding read is backwards.
+;;; `-ci` is R7RS's spelling for case-insensitivity (string-ci=?, char-ci=?, and
+;;; `include-ci`, which is what this exists for).
 (define (read-all-from-string s) (rd-all s #f))
 (define (read-all-from-string-ci s) (rd-all s #t))
 

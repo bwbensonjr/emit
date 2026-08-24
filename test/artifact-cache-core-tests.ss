@@ -59,10 +59,42 @@
 
 (init-session "")
 (define r4 (repl-load-library-text
-  "(define-library (tlib) (export greet twice) (import) (begin (define (greet) 42) (define (twice x) (* x 2))))"))
+  "(define-library (tlib) (export greet twice collect) (import) (begin (define (greet) 42) (define (twice x) (* x 2)) (define (collect a . rest) rest)))"))
 (check "mode 4 compiled the library" (car r4) 'ok)
 (define compiled-table (assoc '(tlib) *repl-libs*))
 (define compiled-imports (cached-lib-imports '(tlib)))
+
+;; The call interface preserves old fixed rows and adds one explicit marker to a
+;; variadic row (change: cross-unit-variadic-direct-calls).  Decode both shapes to
+;; the exact/minimum descriptor `lower` consumes.
+(check "fixed call row stays three fields"
+       (assq 'greet (caddr compiled-table))
+       '(greet "tlib:code:greet" 0))
+(check "variadic call row records minimum plus rest"
+       (assq 'collect (caddr compiled-table))
+       '(collect "tlib:code:collect" 1 rest))
+(define call-alist (import-tables->call-alist (list compiled-table)))
+(check "fixed call row decodes as exact"
+       (assq 'tlib:greet call-alist)
+       '(tlib:greet "tlib:code:greet" 0 #f))
+(check "variadic call row decodes as minimum"
+       (assq 'tlib:collect call-alist)
+       '(tlib:collect "tlib:code:collect" 1 #t))
+(set-import-calls! call-alist)
+(check "fixed descriptor matches exactly" (known-import 'tlib:greet 0)
+       "tlib:code:greet")
+(check "fixed descriptor rejects another count" (known-import 'tlib:greet 1) #f)
+(check "variadic descriptor rejects below minimum" (known-import 'tlib:collect 0) #f)
+(check "variadic descriptor matches its minimum" (known-import 'tlib:collect 1)
+       "tlib:code:collect")
+(check "variadic descriptor matches above minimum" (known-import 'tlib:collect 9)
+       "tlib:code:collect")
+(check "unknown call-row marker is rejected"
+       (guard (e [#t 'rejected])
+         (import-tables->call-alist
+           '(((bad) ((f . "bad:f")) ((f "bad:code:f" 0 optional)))))
+         'accepted)
+       'rejected)
 
 ;; Mode 15 selects by canonical unit KEY, not by a rendered name datum (change:
 ;; chez-free-unit-pipeline): the host speaks keys everywhere else, so library-name equality
