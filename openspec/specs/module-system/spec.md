@@ -659,11 +659,14 @@ external name equals the internal name; for `(rename <internal> <external>)` the
 together with the unit module SHALL have everything needed to resolve references into the library
 with no access to the library's source.
 
-For an export whose top-level initializer is a **lambda of fixed arity**, the table SHALL
-additionally record the binding's **code label** and that arity, so that a program compiled
-against the table alone can emit a direct call to the procedure's code without loading a code
-pointer out of its closure. Exports that are not fixed-arity lambdas SHALL record no label, and
-calls to them SHALL continue to be lowered indirectly.
+For an export whose top-level initializer is a lambda, the table SHALL additionally record the
+binding's **code label** and accepted arity shape. A fixed-arity lambda SHALL record its exact arity.
+A lambda with a rest parameter SHALL record its minimum arity and SHALL be explicitly distinguished
+from a fixed-arity lambda with that arity. A program compiled against the table alone SHALL emit a
+direct call to the procedure's code when a statically known argument count satisfies that shape:
+equal to the exact arity for a fixed procedure, or at least the minimum arity for a variadic one.
+Calls with a statically invalid argument count, calls made through `apply`, and calls whose operator
+is not the imported binding directly SHALL continue to be lowered indirectly.
 
 The table SHALL record a code label only for a binding whose slot cannot be reassigned after the
 unit's initialization. A binding that the defining unit itself **assigns** SHALL therefore record
@@ -681,7 +684,8 @@ that a library's interface is byte-identical however and wherever it is compiled
 
 A reader SHALL accept an export table written without a compile-time interface, treating it as a
 library that exports no macro, so that an artifact produced before this change is read rather than
-crashed on.
+crashed on. It SHALL also interpret the existing three-field procedure call row as fixed arity, so
+previously produced library artifacts remain usable.
 
 A library that exports no macro SHALL produce an empty compile-time interface and an emitted unit
 byte-identical to the one it produced before this change.
@@ -701,19 +705,37 @@ byte-identical to the one it produced before this change.
 #### Scenario: A procedure export records its code label and arity
 
 - **WHEN** `(mylib)` exports `greet`, defined as a two-argument lambda
-- **THEN** its export table additionally records `greet`'s code label and the arity 2
-- **AND** a program that imports `(mylib)` can emit a call to that label without reading the
-  library's source or its unit module
+- **THEN** its export table additionally records `greet`'s code label and the exact arity 2
+- **AND** a two-argument call can target that label without reading the library's source or unit
+  module
+
+#### Scenario: A variadic procedure export records its code label and minimum arity
+
+- **WHEN** `(mylib)` exports `collect`, defined as a lambda with two required parameters and a rest
+  parameter
+- **THEN** its export table records `collect`'s code label, minimum arity 2, and variadic shape
+- **AND** calls passing two or more statically counted arguments target that label and construct the
+  same rest list as the indirect call path
+
+#### Scenario: Too few arguments retain the existing arity error path
+
+- **WHEN** a call to that variadic `collect` export passes fewer than two arguments
+- **THEN** the call is lowered indirectly and reports the same arity error as before
+
+#### Scenario: Apply and value-position use stay dynamic
+
+- **WHEN** the variadic export is passed as a value or invoked through `apply`
+- **THEN** its closure remains a first-class value and the eventual call is lowered indirectly
 
 #### Scenario: A non-procedure export records no label
 
-- **WHEN** `(mylib)` exports a value binding, or a procedure of variable arity
+- **WHEN** `(mylib)` exports a value binding whose initializer is not a lambda
 - **THEN** the table records no code label for it, and calls to it are lowered indirectly
 
 #### Scenario: An export the unit assigns records no label
 
-- **WHEN** `(mylib)` exports `f`, defined as a fixed-arity lambda, and some procedure in `(mylib)`
-  assigns `f`
+- **WHEN** `(mylib)` exports `f`, defined as a fixed or variadic lambda, and some procedure in
+  `(mylib)` assigns `f`
 - **THEN** the export table records `f`'s mangled symbol but no code label for it
 - **AND** an importing program lowers every call to `f` indirectly, reading the slot on each call
 
@@ -737,11 +759,15 @@ byte-identical to the one it produced before this change.
 - **THEN** it resolves the library's runtime exports as before and treats the library as exporting no
   macro
 
+#### Scenario: An existing fixed-arity call row is still readable
+
+- **WHEN** a driver reads a three-field procedure call row written before variadic descriptors existed
+- **THEN** it treats the recorded arity as exact and preserves fixed-arity direct-call behavior
+
 #### Scenario: A macro-free library's unit is unchanged
 
 - **WHEN** a library that exports no macro is recompiled after this change
 - **THEN** its emitted IR is byte-for-byte identical to what it produced before
-
 ### Requirement: An export table represents every datum faithfully or fails
 
 The export table SHALL record an exported macro's transformer such that every datum in its patterns
@@ -1990,4 +2016,3 @@ SHALL be the same on every door.
 - **WHEN** a `define-library` with no `(import (scheme base))` uses `(when …)` in its body
 - **THEN** the diagnostic names `when` as a macro that is not in scope and names `(scheme base)` as
   the library that exports it, and does not say `unbound variable when`
-

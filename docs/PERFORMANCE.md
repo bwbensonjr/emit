@@ -23,7 +23,7 @@ speed items in this list.
 | [P6](#p6-no-optimizer-pass-known-call-inlining-and-constant-folding) | No optimizer pass: known-call inlining & constant folding | speed + size | med–high | med | `simplify-known-calls` (A) | ☑ |
 | [P7](#p7-boxing-driven-by-desugaring-rather-than-by-mutation) | Boxing driven by desugaring rather than by mutation | speed + size | med | low–med | — | ☑ |
 | [P8](#p8-the-emit-build-door-does-not-tree-shake) | The `emit build` door does not tree-shake | size + build speed | med–high | med | `chez-free-unit-pipeline` | ☑ |
-| [P9](#p9--an-optional-argument-costs-every-call-site-its-cross-unit-direct-call) | An optional argument costs every call site its cross-unit direct call | speed + IR size | **low** (measured: 0% speed) | med | `cross-unit-variadic-direct-calls` | ☐ |
+| [P9](#p9--an-optional-argument-costs-every-call-site-its-cross-unit-direct-call) | An optional argument costs every call site its cross-unit direct call | speed + IR size | **low** (measured: 0% speed) | med | `cross-unit-variadic-direct-calls` | ☑ |
 | [P10](#p10--a-library-another-unit-imports-is-never-tree-shaken-the-substrate-ships-whole) | A library another unit imports is never tree-shaken (the substrate ships whole) | size | high | med | `import-dag-tree-shaking` | ☑ |
 | [P11](#p11--every-emit-build-recompiles-the-c-runtime-from-source) | Every `emit build` recompiles the C runtime from source | build speed | **low** (measured: 5%) | low | — | ☐ |
 | [P12](#p12--the-reader-classifier-chain-remains-expensive-after-per-module-jit-optimization) | The reader classifier chain remains expensive after per-module JIT optimization | speed | low | med | `jit-dev-optimization-profile` (measured) | ☐ |
@@ -1267,8 +1267,7 @@ med — the pass exists and is tested; this is wiring plus a root-set plumbing d
 
 ## P9 — An optional argument costs every call site its cross-unit direct call
 
-**Status:** ☐ implementation complete, awaiting archive (change:
-`cross-unit-variadic-direct-calls`)
+**Status:** ☑ done (change: `cross-unit-variadic-direct-calls`, archived 2026-08-24)
 
 **Outcome.** Immutable variadic exports now publish `(name label minimum-arity rest)`, and an
 imported call with at least that many statically counted arguments uses the existing direct
@@ -1337,9 +1336,10 @@ to later optimizers, but those are modest cleanup benefits rather than the predi
 **Cost:** med — the implementation itself is a small descriptor/lowering change that reuses the
 existing ABI, but compiler regeneration and the cross-door compatibility matrix dominate the work.
 
-**OpenSpec change:** `cross-unit-variadic-direct-calls` (implementation complete; archive pending).
-It was deliberately not bundled into `numeric-conformance`: that change was about the accepted
-language, while this codegen improvement applies to every variadic callee.
+**OpenSpec change:** `cross-unit-variadic-direct-calls` (implemented; archived at
+`openspec/changes/archive/2026-08-24-cross-unit-variadic-direct-calls`). It was deliberately not
+bundled into `numeric-conformance`: that change was about the accepted language, while this codegen
+improvement applies to every variadic callee.
 
 ---
 
