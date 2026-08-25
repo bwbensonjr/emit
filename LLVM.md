@@ -312,19 +312,32 @@ with `0`. That was fixed-arity only: it could not express dotted rest params, va
 `emit.ss`).** Every Scheme function shares the widened prototype
 `fastcc i64 (i64 self, i64 argc, i64 a0 … i64 a{K-1}, ptr overflow)`:
 
-- `argc` — real argument count. Every callee checks it at entry: fixed-arity requires
+- `argc` — real argument count. Every ordinary closure entry checks it: fixed-arity requires
   `argc == f`, variadic requires `argc >= f`; a mismatch calls `rt_arity_error` and aborts
-  (non-zero exit) instead of miscomputing.
+  (non-zero exit) instead of miscomputing. A compiler-proven exact-minimum variadic direct call may
+  target the same-prototype minimum entry, where the static proof makes that check redundant.
 - `a0..a{K-1}` — positional slots. `K` is the whole-program max fixed arity on the
   single-module path; on the **modular** path — the one every shipped door takes, where a
   closure built in one unit is called from another — it is pinned to a fixed **8**, so the
   prototype agrees across separately-emitted modules.
-- `overflow` — pointer to a heap vector of args beyond `K` (or null). A variadic callee
+- `overflow` — pointer to a heap vector of args beyond `K` (or null). An ordinary variadic entry
   binds `rest` to `rt_build_rest(argc, fixed, K, slots, overflow)`, which walks arg indices
   `[fixed, argc)` — reading `slots[i]` for `i < K` (the positional slots spilled to a small
   array) and `overflow[i-K]` beyond — building a proper list. `apply` fills the positional
   slots with the leading args and the first list elements, then points `overflow` at the
   remaining flattened args (`rt_apply_argv`), so it is unbounded regardless of `K`.
+
+**Variadic minimum entry.** Every variadic body is also emitted under a deterministic
+`min-entry:$...` label with the identical `fastcc` prototype. The complete ordinary label is encoded
+after that prefix (`$` becomes `$d`, `:` becomes `$c`), putting compiler entries in a namespace that
+cannot collide with an ordinary label such as the one for a Scheme procedure named `foo.min`.
+Statically known self, local, or imported calls target it only when their syntactic argument count
+equals the callee's minimum. It binds the rest parameter directly to the tagged empty list (`2`) and
+omits the ordinary arity check, positional spill, and `rt_build_rest`. The closure code pointer
+always remains on the checked ordinary label; direct callers load and pass that closure as `self`,
+preserving captured environments. Calls above the minimum, `apply`, first-class calls, and imports
+described by older four-field variadic call rows all use the ordinary entry. Because both labels
+share the prototype, exact-minimum tail calls retain `musttail`.
 
 **Why `fastcc`, not `tailcc`** (change: `fix-high-arity-call-convention`). The spike and
 the M1 convention above both used `tailcc`. A *non-tail* `call tailcc` with a stack-passed
@@ -336,11 +349,13 @@ prototype moved to `fastcc` with no other change. See the header of `src/emit.ss
 The convention is now **fully consumed** (as of the variadic/`apply` change). A direct
 call passes the true `argc`, the first `K` args in the positional slots, and either
 `ptr null` (no excess) or a freshly spilled `overflow` vector when the call supplies more
-than `K` args. The **fixed-arity hot path stays allocation-free** — only variadic callees
-build a rest list and only over-`K`/`apply` call sites allocate an overflow vector; the
-entry arity check is a compare-and-branch on the cold path and the self tail-call passes
+than `K` args. The **fixed-arity and exact-minimum variadic hot paths stay allocation-free** —
+ordinary variadic entries build a rest list, while the minimum entry binds `()` directly, and only
+over-`K`/`apply` call sites allocate an overflow vector; the ordinary entry arity check is a
+compare-and-branch on the cold path and the self tail-call passes
 the right `argc`, so it never trips. `musttail` is preserved: the rest list is built as
-straight-line code at callee entry, before the tail body, and the uniform prototype is
+straight-line code at an ordinary callee entry (or bound directly by the minimum entry), before the tail body,
+and the uniform prototype is
 unchanged (verified by `countdown`/`namedloop` at 10M iterations and by a variadic callee
 whose body tail-calls under `musttail`).
 

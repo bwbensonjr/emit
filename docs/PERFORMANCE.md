@@ -23,7 +23,7 @@ speed items in this list.
 | [P6](#p6-no-optimizer-pass-known-call-inlining-and-constant-folding) | No optimizer pass: known-call inlining & constant folding | speed + size | med–high | med | `simplify-known-calls` (A) | ☑ |
 | [P7](#p7-boxing-driven-by-desugaring-rather-than-by-mutation) | Boxing driven by desugaring rather than by mutation | speed + size | med | low–med | — | ☑ |
 | [P8](#p8-the-emit-build-door-does-not-tree-shake) | The `emit build` door does not tree-shake | size + build speed | med–high | med | `chez-free-unit-pipeline` | ☑ |
-| [P9](#p9--an-optional-argument-costs-every-call-site-its-cross-unit-direct-call) | An optional argument costs every call site its cross-unit direct call | speed + IR size | **low** (measured: 0% speed) | med | `cross-unit-variadic-direct-calls` | ☑ |
+| [P9](#p9--an-optional-argument-costs-every-call-site-its-cross-unit-direct-call) | An optional argument costs every call site its cross-unit direct call | speed + IR size | **med** (follow-up: −5.00% confirmed) | med | `cross-unit-variadic-direct-calls`, `variadic-min-arity-fast-entry` | ☑ |
 | [P10](#p10--a-library-another-unit-imports-is-never-tree-shaken-the-substrate-ships-whole) | A library another unit imports is never tree-shaken (the substrate ships whole) | size | high | med | `import-dag-tree-shaking` | ☑ |
 | [P11](#p11--every-emit-build-recompiles-the-c-runtime-from-source) | Every `emit build` recompiles the C runtime from source | build speed | **low** (measured: 5%) | low | — | ☐ |
 | [P12](#p12--the-reader-classifier-chain-remains-expensive-after-per-module-jit-optimization) | The reader classifier chain remains expensive after per-module JIT optimization | speed | low | med | `jit-dev-optimization-profile` (measured) | ☐ |
@@ -1267,27 +1267,47 @@ med — the pass exists and is tested; this is wiring plus a root-set plumbing d
 
 ## P9 — An optional argument costs every call site its cross-unit direct call
 
-**Status:** ☑ done (change: `cross-unit-variadic-direct-calls`, archived 2026-08-24)
+**Status:** ☑ done (changes: `cross-unit-variadic-direct-calls`, archived 2026-08-24;
+follow-up `variadic-min-arity-fast-entry`)
 
-**Outcome.** Immutable variadic exports now publish `(name label minimum-arity rest)`, and an
+**Initial outcome.** Immutable variadic exports published `(name label minimum-arity rest)`, and an
 imported call with at least that many statically counted arguments uses the existing direct
 `known-app` ABI. The closure is still loaded and passed as `self`; only the callable check and
 code-pointer load chain disappear. Existing three-field fixed rows are byte-identical and remain
 readable, and assigned exports still publish no label.
 
-The code-shape result is broad and clean: an 80-demo before/after capture converted 97 sites in 40
+The initial code-shape result was broad and clean: an 80-demo before/after capture converted 97 sites in 40
 demos, all 40 changed files became smaller (−7,772 B total), and the other 40 were byte-identical.
 But the original performance hypothesis did **not** survive measurement. Six alternating pairs of
 the preserved indirect executable and regenerated direct executable both had a **0.40 s median**
 (best 0.39 s; raw ranges 0.39–0.42 and 0.39–0.40 respectively), while both printed `19888890`.
 The observed median delta is 0% at 0.01-second timer resolution.
 
-So this change fixes the cross-unit metadata/lowering gap, but does not recover the historical
+So the first change fixed the cross-unit metadata/lowering gap, but did not recover the historical
 0.32 -> 0.39 s optional-argument regression. The corrected remaining cost is the variadic callee
-prologue: even with no optional arguments it spills the positional slots and calls
+prologue: at that point, even with no optional arguments it spilled the positional slots and called
 `rt_build_rest`. That function allocates no pairs for an empty rest list, but the spill and
-out-of-line call remain. Avoiding that cost would require a specialized fixed-arity entry/prologue
-or an equivalent body entry, a separate optimization from the direct-call work completed here.
+out-of-line call remained. Avoiding that cost required a specialized fixed-arity entry/prologue
+or an equivalent body entry, a separate optimization from the original direct-call work.
+
+**Follow-up outcome.** `variadic-min-arity-fast-entry` delivered that specialization. Every
+variadic body now has its ordinary checked closure entry and a same-ABI minimum entry. A statically
+known call with exactly the minimum argument count targets its encoded `min-entry:$...` label,
+which binds the rest parameter directly to `()` and omits the arity check, positional spill, and `rt_build_rest`; calls above the
+minimum, first-class calls, and `apply` keep the ordinary entry. The closure continues to point at
+the ordinary entry and is passed as `self` to either label, preserving captures and `musttail`.
+Encoding the complete ordinary label (`$` as `$d`, `:` as `$c`) prevents a legal binding such as
+`foo.min` from aliasing the compiler-generated entry.
+
+Ten alternating source-driver final-representation pairs measured **0.38 s before vs. 0.35 s
+after** at the median, a **7.89% improvement**; the required post-regeneration confirmation measured
+**0.40 s before vs. 0.38 s after** across another ten alternating pairs, **5.00%**, meeting the
+change's at-least-5% retention gate at 0.01-second resolution. Both executables printed `19888890`.
+The converged compiler's delivered executable grew from 70,600 B to 70,688 B (**+88 B, +0.125%**;
+the source-driver build was +80 B). Raw 80-demo IR grew from 82,577,977 B to 89,326,012 B
+(**+6,748,035 B, +8.17%**) because every variadic body is duplicated, but tree shaking and LTO
+reduce that cached-artifact cost to the small standalone delta. This trade-off is accepted for the
+measured hot-path improvement and negligible delivered-binary growth.
 
 **Original symptom.** Giving a prelude procedure an optional argument turned *every* call to it, at every
 arity, from a direct cross-unit call into an indirect call through the closure. Found while
@@ -1327,19 +1347,21 @@ overflow pointer, and the variadic callee already builds its own rest list from 
 The missing information was solely in the cross-unit descriptor and its arity matcher.
 
 **Fix delivered.** Variadic call rows carry an explicit `rest` marker and minimum arity; importing
-calls are direct when their static argument count is at least that minimum. The callee's existing
-rest-building prologue is reused, so no caller-built list or new calling convention is needed.
+calls are direct when their static argument count is at least that minimum. The follow-up appends an
+optional encoded minimum label: exact-minimum calls use its empty-rest prologue, while larger calls reuse the
+ordinary rest-building prologue. Neither path needs a caller-built list or a new calling convention.
 
-**Value:** low for speed — the measured delta is 0%. It still removes 97 indirect-call sequences
-from the demo corpus, shrinks every affected IR file, and makes the cross-unit call graph explicit
-to later optimizers, but those are modest cleanup benefits rather than the predicted hot-path win.
-**Cost:** med — the implementation itself is a small descriptor/lowering change that reuses the
-existing ABI, but compiler regeneration and the cross-door compatibility matrix dominate the work.
+**Value:** low for the first change alone, whose measured delta was 0%; med after the follow-up's
+5.00% regenerated confirmation (7.89% in the source-driver gate). The first change also removes 97
+indirect-call sequences from the demo corpus
+and makes the cross-unit call graph explicit. **Cost:** med — the metadata and lowering changes
+reuse the existing ABI, but the fast entry duplicates variadic bodies in raw IR and the compiler
+regeneration and cross-door compatibility matrix dominate the work.
 
 **OpenSpec change:** `cross-unit-variadic-direct-calls` (implemented; archived at
 `openspec/changes/archive/2026-08-24-cross-unit-variadic-direct-calls`). It was deliberately not
 bundled into `numeric-conformance`: that change was about the accepted language, while this codegen
-improvement applies to every variadic callee.
+improvement applies to every variadic callee. Follow-up: `variadic-min-arity-fast-entry`.
 
 ---
 

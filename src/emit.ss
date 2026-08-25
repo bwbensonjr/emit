@@ -924,7 +924,8 @@
         [(app ,f ,args) (S f) (for-each S args)]
         [(apply-app ,f ,args) (S f) (for-each S args)]
         [(self-app ,l ,args)
-         (when (equal? l label) (set! acc (cons args acc)))
+         (when (or (equal? l label) (equal? l (minimum-entry-label label)))
+           (set! acc (cons args acc)))
          (for-each S args)]
         [(known-app ,l ,f ,args) (S f) (for-each S args)]))  ; not a back-edge
     (S body)
@@ -1376,32 +1377,46 @@
                           ", i64 " (number->string k) ", ptr " slots ", ptr %overflow)"))
     r))
 
+;; Emit one callable entry for a lifted body.  MINIMUM? selects the exact-minimum
+;; entry for a variadic procedure: the lowering proof supplies the
+;; accepted argc, and the rest binding is therefore the empty list without a
+;; spill or runtime call.  ANALYSIS-LABEL remains the ordinary label so both
+;; entries use the same self-call facts for flonum-region selection.
+(define (emit-code-entry label analysis-label fixed rest body k minimum?)
+  (set! emit-lines '())
+  (set! current-bb "entry")
+  (let* ([f (length fixed)]
+         [argdecls (comma-join
+                     (append
+                       (list "i64 %self" "i64 %argc")
+                       (map (lambda (i) (string-append "i64 %a" (number->string i))) (iota k))
+                       (list "ptr %overflow")))]
+         [env0 (map (lambda (p i) (cons p (string-append "%a" (number->string i))))
+                    fixed (iota f))])
+    (start-bb "entry")
+    (unless minimum? (emit-arity-check f rest))
+    (let ([env (if rest
+                   (cons (cons rest (if minimum? "2" (emit-build-rest f k))) env0)
+                   env0)]
+          [saved-fset *fset*])
+      ;; flonum-stable params of THIS code block drive f64 region selection in
+      ;; its body (change: flonum-unboxing).  Empty for flonum-free code, so
+      ;; emission is unchanged there.  Save/restore keeps each def independent.
+      (set! *fset* (compute-flonum-params fixed body analysis-label))
+      (et body env "%self" #t)
+      (set! *fset* saved-fset))
+    (string-append "define fastcc i64 " (label-operand label) "(" argdecls ") {\n"
+                   (lines->string (reverse emit-lines)) "}\n\n")))
+
 (define (emit-code-def def k)
   (match def
     [(code ,label ,self ,fixed ,rest ,body)
-     (set! emit-lines '()) (set! current-bb "entry")
-     (let* ([f (length fixed)]
-            [argdecls (comma-join
-                        (append
-                          (list "i64 %self" "i64 %argc")
-                          (map (lambda (i) (string-append "i64 %a" (number->string i))) (iota k))
-                          (list "ptr %overflow")))]
-            [env0 (map (lambda (p i) (cons p (string-append "%a" (number->string i))))
-                       fixed (iota f))])
-       (start-bb "entry")
-       (emit-arity-check f rest)                    ; then positioned in the ok block
-       (let ([env (if rest
-                      (cons (cons rest (emit-build-rest f k)) env0)  ; hot path: fixed only
-                      env0)]
-             [saved-fset *fset*])
-         ;; flonum-stable params of THIS code block drive f64 region selection in
-         ;; its body (change: flonum-unboxing).  Empty for flonum-free code, so
-         ;; emission is unchanged there.  Save/restore keeps each def independent.
-         (set! *fset* (compute-flonum-params fixed body label))
-         (et body env "%self" #t)
-         (set! *fset* saved-fset))
-       (string-append "define fastcc i64 " (label-operand label) "(" argdecls ") {\n"
-                      (lines->string (reverse emit-lines)) "}\n\n"))]))
+     (let* ([ordinary (emit-code-entry label label fixed rest body k #f)]
+            [minimum (if rest
+                         (emit-code-entry (minimum-entry-label label) label
+                                          fixed rest body k #t)
+                         "")])
+       (string-append ordinary minimum))]))
 
 (define (emit-entry entry)
   (set! emit-lines '()) (set! current-bb "entry")
@@ -1533,7 +1548,11 @@
           [(program ,cdefs ,entry)
            (for-each (lambda (d)
                        (match d [(code ,l ,self ,fixed ,rest ,body)
-                                 (set! defined (cons l defined)) (S body)]))
+                                 (set! defined
+                                       (if rest
+                                           (cons (minimum-entry-label l) (cons l defined))
+                                           (cons l defined)))
+                                 (S body)]))
                      cdefs)
            (S entry)]))
       progs)

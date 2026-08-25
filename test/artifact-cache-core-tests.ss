@@ -64,35 +64,54 @@
 (define compiled-table (assoc '(tlib) *repl-libs*))
 (define compiled-imports (cached-lib-imports '(tlib)))
 
-;; The call interface preserves old fixed rows and adds one explicit marker to a
-;; variadic row (change: cross-unit-variadic-direct-calls).  Decode both shapes to
-;; the exact/minimum descriptor `lower` consumes.
+;; The call interface preserves old fixed rows and appends an optional minimum
+;; entry to a variadic row.  Decode fixed, old variadic, and new variadic shapes
+;; to the exact/minimum descriptor `lower` consumes.
 (check "fixed call row stays three fields"
        (assq 'greet (caddr compiled-table))
        '(greet "tlib:code:greet" 0))
-(check "variadic call row records minimum plus rest"
+(check "variadic call row records minimum, rest, and fast entry"
        (assq 'collect (caddr compiled-table))
-       '(collect "tlib:code:collect" 1 rest))
+       '(collect "tlib:code:collect" 1 rest "min-entry:$tlib$ccode$ccollect"))
 (define call-alist (import-tables->call-alist (list compiled-table)))
+(check "minimum label occupies its encoded namespace"
+       (minimum-entry-label "u$:code:foo.min")
+       "min-entry:$u$d$ccode$cfoo.min")
 (check "fixed call row decodes as exact"
        (assq 'tlib:greet call-alist)
-       '(tlib:greet "tlib:code:greet" 0 #f))
-(check "variadic call row decodes as minimum"
+       '(tlib:greet "tlib:code:greet" 0 #f #f))
+(check "new variadic call row decodes its minimum entry"
        (assq 'tlib:collect call-alist)
-       '(tlib:collect "tlib:code:collect" 1 #t))
+       '(tlib:collect "tlib:code:collect" 1 #t "min-entry:$tlib$ccode$ccollect"))
 (set-import-calls! call-alist)
 (check "fixed descriptor matches exactly" (known-import 'tlib:greet 0)
        "tlib:code:greet")
 (check "fixed descriptor rejects another count" (known-import 'tlib:greet 1) #f)
 (check "variadic descriptor rejects below minimum" (known-import 'tlib:collect 0) #f)
 (check "variadic descriptor matches its minimum" (known-import 'tlib:collect 1)
-       "tlib:code:collect")
+       "min-entry:$tlib$ccode$ccollect")
 (check "variadic descriptor matches above minimum" (known-import 'tlib:collect 9)
        "tlib:code:collect")
+(define old-call-alist
+  (import-tables->call-alist
+    '(((old) ((collect . "old:collect")) ((collect "old:code:collect" 1 rest))))))
+(check "old variadic row decodes without a minimum entry"
+       (assq 'old:collect old-call-alist)
+       '(old:collect "old:code:collect" 1 #t #f))
+(set-import-calls! old-call-alist)
+(check "old variadic row uses its ordinary label at the minimum"
+       (known-import 'old:collect 1)
+       "old:code:collect")
 (check "unknown call-row marker is rejected"
        (guard (e [#t 'rejected])
          (import-tables->call-alist
            '(((bad) ((f . "bad:f")) ((f "bad:code:f" 0 optional)))))
+         'accepted)
+       'rejected)
+(check "non-string minimum entry is rejected"
+       (guard (e [#t 'rejected])
+         (import-tables->call-alist
+           '(((bad) ((f . "bad:f")) ((f "bad:code:f" 0 rest 17)))))
          'accepted)
        'rejected)
 

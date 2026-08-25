@@ -1127,10 +1127,11 @@
 
 ;; The direct-call view of the same tables (changes: cross-unit-direct-calls,
 ;; cross-unit-variadic-direct-calls): an alist of
-;; (mangled-symbol label arity rest?), keyed the way `lower` sees an imported
+;; (mangled-symbol label arity rest? minimum-label), keyed the way `lower` sees an imported
 ;; reference -- as the `(global-ref sym)` the resolver produced -- so a call through
 ;; one can be recognized as having a statically known callee.  CALL rows are
-;; (external label exact-arity) or (external label minimum-arity rest).  A table
+;; (external label exact-arity), (external label minimum-arity rest), or
+;; (external label minimum-arity rest minimum-label).  A table
 ;; with no call rows contributes nothing, so importing only values lowers exactly
 ;; as before.
 (define (import-tables->call-alist import-tables)
@@ -1139,20 +1140,25 @@
            (let ([exports (cadr t)])
              (map (lambda (c)
                     (let* ([tail (cdddr c)]
-                           [rest? (cond
-                                    [(null? tail) #f]
+                           [shape (cond
+                                    [(null? tail) (list #f #f)]
                                     [(and (pair? tail) (eq? (car tail) 'rest)
-                                          (null? (cdr tail))) #t]
+                                          (null? (cdr tail))) (list #t #f)]
+                                    [(and (pair? tail) (eq? (car tail) 'rest)
+                                          (pair? (cdr tail)) (string? (cadr tail))
+                                          (null? (cddr tail)))
+                                     (list #t (cadr tail))]
                                     [else (error 'compile "malformed library call row" c)])])
                       (list (string->symbol (cdr (assq (car c) exports)))
-                            (cadr c) (caddr c) rest?)))
+                            (cadr c) (caddr c) (car shape) (cadr shape))))
                   (caddr t))))
          import-tables)))
 
 ;; The export table's CALL rows for a unit just lowered (change:
 ;; cross-unit-direct-calls): for each export whose top-level initializer `lower`
 ;; hoisted as a lambda, its external name, stable code label, and either exact arity
-;; or minimum arity plus `rest` -- everything an importer needs to emit a direct call
+;; or minimum arity plus `rest` and the optional minimum-entry label --
+;; everything an importer needs to emit a direct call
 ;; with no access to the library's source.  `procs` is lower's own record of what it
 ;; emitted (`unit-procs`), so the table can never advertise a label the unit does not
 ;; define.  A value export gets no row.  A binding the unit ASSIGNS also gets no row,
@@ -1164,7 +1170,8 @@
                  (let ([p (assq (cdr e) procs)])
                    (and p
                         (if (and (pair? (cdddr p)) (eq? (cadddr p) 'rest))
-                            (list (car e) (cadr p) (caddr p) 'rest)
+                            (list (car e) (cadr p) (caddr p) 'rest
+                                  (cadr (cdddr p)))
                             (list (car e) (cadr p) (caddr p))))))
                exports)))
 

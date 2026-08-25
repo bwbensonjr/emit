@@ -176,22 +176,35 @@ fi
 
 # --- the ptr / code: pairing the root rule depends on (design D3) -------------
 # `program-root-internals` finds a cross-unit reference by searching for the closure load
-# `ptr @"U:n"`.  Since cross-unit-direct-calls a reference ALSO appears as a direct call to
-# `@"U:code:n"`, and the two are paired in every unit today -- which is the only reason
-# searching one form finds every reference.  A codegen change that emitted the direct call
-# without loading the closure (P9's fixed-arity entry points are exactly that) would make the
-# root rule miss a live reference and prune a needed binding into a link-time undefined
-# symbol.  Assert the pairing here, so that change fails by name instead.
+# `ptr @"U:n"`.  A direct reference may call either `@"U:code:n"` or the encoded variadic
+# exact-minimum entry; both must remain paired with the ordinary closure
+# global.  A codegen change that emitted either direct call without loading the closure would
+# make the root rule miss a live reference and prune a needed binding into a link-time
+# undefined symbol.  Assert the pairing here, so that change fails by name instead.
+decode_minimum_label () {
+  local encoded="${1#min-entry:\$}" out=""
+  while [ -n "$encoded" ]; do
+    case "$encoded" in
+      '$c'*) out="${out}:"; encoded="${encoded:2}" ;;
+      '$d'*) out="${out}\$"; encoded="${encoded:2}" ;;
+      *) out="${out}${encoded:0:1}"; encoded="${encoded:1}" ;;
+    esac
+  done
+  printf '%s' "$out"
+}
 unpaired=0; checked=0
 for u in build/lib/*.ll; do
   own="$(basename "$u" .ll)"                       # e.g. scheme.base
   while read -r ref; do
+    case "$ref" in min-entry:\$*) ref="$(decode_minimum_label "$ref")" ;; esac
+    case "$ref" in *:code:*) ;; *) continue ;; esac  # unit-local code_N is not imported
     # ref looks like  emit.internal:code:rd-datum  -- split off the unit prefix
     pfx="${ref%%:code:*}"; nm_="${ref#*:code:}"
     [ "$pfx" = "$own" ] && continue                # own labels: defined here, not imported
     checked=$((checked+1))
     grep -q "ptr @\"$pfx:$nm_\"" "$u" || { unpaired=$((unpaired+1)); echo "         unpaired: $ref in $own"; }
-  done < <(grep -o '@"[a-z.]*:code:[^"]*"' "$u" | tr -d '@"' | sort -u)
+  done < <({ grep -o '@"[a-z.]*:code:[^"]*"' "$u"
+             grep -o '@"min-entry:\$[^"]*"' "$u"; } | tr -d '@"' | sort -u)
 done
 if [ "$unpaired" -eq 0 ] && [ "$checked" -gt 0 ]; then
   ok "every cross-unit direct call is paired with a closure load ($checked checked)"

@@ -629,6 +629,18 @@
 #     other program-unit shape changed.  ports.ll also changes its linked (scheme file)
 #     unit, as expected because that library directly calls variadic (scheme base)
 #     exports.  All other linked library units are byte-identical.  No new entries.
+#   variadic-min-arity-fast-entry (docs/PERFORMANCE.md P9 follow-up) -- every variadic
+#     body gains a same-ABI minimum definition, so all 80 hashes move.  A preserved
+#     before/after capture showed 80 changed and 0 byte-identical files, with aggregate
+#     raw IR 82,577,977 -> 89,326,012 bytes (+6,748,035, +8.17%).  The common delta is
+#     +84,585 bytes per demo; the small deviations are program call-label changes, plus
+#     ports.ll's additional (scheme file) unit.  Across the capture, 13 direct call sites
+#     select the encoded minimum entry and 85 calls to procedures that have one retain the
+#     ordinary label.  Every demo's stdout is unchanged.  The P9 source-driver gate
+#     improved 7.89% at the median while growing 80 bytes (+0.113%);
+#     the converged compiler confirmed 5.00% while growing 88 bytes (+0.125%).  The
+#     `min-entry:$...` encoding keeps generated labels disjoint from legal Scheme names such
+#     as `foo.min`.  No new entries.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

@@ -21,10 +21,10 @@
 (define *code-defs* '())
 (define (add-code! def) (set! *code-defs* (cons def *code-defs*)))
 
-;; Statically-known closures: name -> code label, for every closure-block binding
-;; in the unit (P5-B-general).  A call whose operator is one of these needs no
-;; code-pointer load -- the label is known here -- though the closure value is
-;; still passed as the callee's `self`.
+;; Statically-known closures: (name code-label arity rest? minimum-label), for every
+;; closure-block binding in the unit (P5-B-general).  A call whose operator is one
+;; of these needs no code-pointer load -- the label is known here -- though the
+;; closure value is still passed as the callee's `self`.
 ;;
 ;; Keyed by NAME, which is sound because the IL is alpha-renamed before this pass:
 ;; a name identifies its binding, so no scope tracking is needed and a stale entry
@@ -35,12 +35,50 @@
 ;; closure-block binding, so redefinition keeps working exactly as before.
 (define *known-closures* '())
 (define (known-closure x) (assq x *known-closures*))
-(define (add-known! xs labels)
-  (set! *known-closures* (append (map cons xs labels) *known-closures*)))
+(define (add-known! xs labels paramss)
+  (set! *known-closures*
+        (append
+          (map-lr2 (lambda (x label+params)
+                     (let ([label (car label+params)] [params (cdr label+params)])
+                       (let ([rest? (and (param-rest params) #t)])
+                         (list x label (length (param-fixed params)) rest?
+                               (and rest? (minimum-entry-label label))))))
+                   xs (map-lr2 cons labels paramss))
+          *known-closures*)))
+
+;; The empty-rest entry has the same ABI as LABEL, but is reachable only from a
+;; statically-known call with exactly the variadic minimum arity.  Encode the
+;; complete ordinary label into a disjoint namespace: library ordinary labels
+;; contain `:`, program labels have the generated `code_N` form, and minimum
+;; labels always start `min-entry:$` with every later `:`/`$` escaped.  Thus a
+;; legal binding such as `foo.min` cannot collide with `foo`'s minimum entry.
+;; The pure, reversible derivation makes separately emitted callers and callees
+;; agree without consulting mutable compiler state.
+(define (minimum-entry-label label)
+  (let loop ([i 0] [out "min-entry:$"])
+    (if (= i (string-length label))
+        out
+        (let* ([c (string-ref label i)]
+               [piece (cond
+                        [(char=? c #\:) "$c"]
+                        [(= (char->integer c) 36) "$d"]
+                        [else (string c)])])
+          (loop (+ i 1) (string-append out piece))))))
+
+;; P is (name label arity rest? minimum-label).  Local/self rows always carry the
+;; derived minimum label; an imported row read from an older four-field artifact
+;; carries #f and therefore stays on its ordinary label.  Local/self calls already
+;; name the callee even when the count is invalid (the ordinary entry reports the
+;; error), so only the exact variadic minimum changes its target here.
+(define (known-call-label p n)
+  (let ([minimum-label (cadr (cdddr p))])
+    (if (and (cadddr p) (= n (caddr p)) minimum-label)
+        minimum-label
+        (cadr p))))
 
 ;; Imported library procedures whose code label this unit may name: an alist of
-;; (mangled-symbol label arity rest?), from the import tables of the unit being
-;; compiled.  A call whose operator is a `(global-ref sym)` found here, with an
+;; (mangled-symbol label arity rest? minimum-label), from the import tables of the
+;; unit being compiled.  A call whose operator is a `(global-ref sym)` found here, with an
 ;; argument count equal to a fixed arity or at least a variadic minimum, is
 ;; direct-called exactly like a known closure-block binding.  Anything else -- an
 ;; arity mismatch, a value export, an unimported global -- keeps the indirect path,
@@ -67,7 +105,7 @@
   (let ([p (assq sym *import-calls*)])
     (and p
          (if (cadddr p) (>= n (caddr p)) (= n (caddr p)))
-         (cadr p))))
+         (known-call-label p n))))
 
 ;; The current compilation unit's library name (change: module-resolution-scaffold),
 ;; threaded in by lower-program as module state alongside `*code-defs*`.  Lifted
@@ -95,19 +133,18 @@
   (mangle *unit* (string-append "code:" (symbol->string s))))
 
 ;; The unit's exported-procedure call interface, accumulated as the stable labels
-;; above are handed out: (internal-name label arity [rest]) per top-level lambda
-;; binding.  `arity` is exact without the marker and the minimum with it (change:
-;; cross-unit-variadic-direct-calls).  compile-library* reads this back to fill the
-;; export table's call rows, so what the table advertises is exactly what was
-;; emitted rather than a re-derivation from the source.  It spans a whole unit --
-;; lower-program runs once per top-level form -- so the unit driver resets it, not
-;; lower-program.
+;; above are handed out: (internal-name label arity [rest minimum-label]) per
+;; top-level lambda binding.  `arity` is exact without the marker and the minimum
+;; with it (change: cross-unit-variadic-direct-calls).  compile-library* reads this
+;; back to fill the export table's call rows, so what the table advertises is
+;; exactly what was emitted.  It spans a whole unit -- lower-program runs once per
+;; top-level form -- so the unit driver resets it, not lower-program.
 (define *unit-procs* '())
 (define (reset-unit-procs!) (set! *unit-procs* '()))
 (define (add-unit-proc! name label arity rest?)
   (set! *unit-procs*
         (cons (if rest?
-                  (list name label arity 'rest)
+                  (list name label arity 'rest (minimum-entry-label label))
                   (list name label arity))
               *unit-procs*)))
 
@@ -184,9 +221,10 @@
     [else (lower e '() '() #f)]))
 
 ;; lower expr in a code context: locals = names bound here; fmap = var -> env index.
-;; `self` = (name . label) naming the enclosing function's self-binding and its code
-;; label, or #f at the top level / in an anonymous lambda (change:
-;; inline-fixnum-arith-and-self-calls) -- used to turn a self-call into a direct call.
+;; `self` = (name label arity rest? minimum-label), naming the enclosing function's
+;; self-binding and call shape, or #f at the top level / in an anonymous lambda
+;; (change: inline-fixnum-arith-and-self-calls) -- used to turn a self-call into a
+;; direct call.
 (define (lower e locals fmap self)
   (define (L x) (lower x locals fmap self))
   (match e
@@ -218,7 +256,8 @@
      (let* ([xs (map car cbinds)]
             [locals2 (append xs locals)]
             [labels (map-lr (lambda (b) (fresh-code-label)) cbinds)]
-            [ignored (add-known! xs labels)]
+            [paramss (map (lambda (b) (cadr (caddr b))) cbinds)]
+            [ignored (add-known! xs labels paramss)]
             [entries
              (map-lr2 (lambda (b label)
                     (match (caddr b)
@@ -250,8 +289,8 @@
                    (known-import (cadr f) (length args)))])
        (cond
          [(and self (symbol? f) (eq? f (car self)) (not (memq f locals)))
-          `(self-app ,(cdr self) ,(map L args))]
-         [k `(known-app ,(cdr k) ,(L f) ,(map L args))]
+          `(self-app ,(known-call-label self (length args)) ,(map L args))]
+         [k `(known-app ,(known-call-label k (length args)) ,(L f) ,(map L args))]
          [g `(known-app ,g ,(L f) ,(map L args))]
          [else `(app ,(L f) ,(map L args))]))]))
 
@@ -292,5 +331,8 @@
                  (if (null? fvs) (reverse acc)
                      (loop (cdr fvs) (+ i 1) (cons (cons (car fvs) i) acc))))]
          [lbody (lower body (param-names params) fmap
-                       (and self-name (cons self-name label)))])
+                       (and self-name
+                            (list self-name label (length (param-fixed params))
+                                  (and (param-rest params) #t)
+                                  (and (param-rest params) (minimum-entry-label label)))))])
     (add-code! `(code ,label ,self ,(param-fixed params) ,(param-rest params) ,lbody))))

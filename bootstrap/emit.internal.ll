@@ -327,6 +327,11 @@ argok2:
   ret i64 %t11
 }
 
+define fastcc i64 @"min-entry:$emit.internal$ccode$clist"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
+entry:
+  ret i64 2
+}
+
 define fastcc i64 @"emit.internal:code:caar"(i64 %self, i64 %argc, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr %overflow) {
 entry:
   %t16 = icmp eq i64 %argc, 1

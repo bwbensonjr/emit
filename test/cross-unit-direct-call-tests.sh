@@ -13,8 +13,9 @@
 #   * an ARITY MISMATCH stays indirect and still traps exactly as before -- the
 #     easy thing to get wrong, since a direct call would bypass the callee's
 #     entry arity check;
-#   * an immutable VARIADIC export records its minimum arity and is direct-called
-#     at every statically valid count, including through the overflow slots;
+#   * an immutable VARIADIC export records its ordinary and exact-minimum labels;
+#     exact-minimum calls use the empty-rest entry while larger valid counts use
+#     the ordinary entry, including through the overflow slots;
 #   * too-few, apply, and value-position uses of that export stay indirect;
 #   * a USER library gets the same treatment, not only (scheme base);
 #   * program-unit code labels are untouched (still code_N) -- only LIBRARY
@@ -78,8 +79,8 @@ else
   ok  "direct: code-pointer chain removed"
 fi
 
-# The old fixed row stays byte-identical while a variadic row appends the explicit
-# `rest` marker (change: cross-unit-variadic-direct-calls, design D1).
+# The old fixed row stays byte-identical while a variadic row appends its explicit
+# `rest` marker and exact-minimum entry label.
 mkdir -p "$TMP/artifacts"
 build/emit lib test/modules/mylib.sld -o "$TMP/artifacts" >/dev/null 2>&1
 build/emit lib test/modules/varlib.sld -o "$TMP/artifacts" >/dev/null 2>&1
@@ -87,8 +88,12 @@ want   "table: fixed call row is unchanged" "$TMP/artifacts/mylib.exports" \
        '\(greet "mylib:code:greet" 0\)'
 reject "table: fixed call row has no rest marker" "$TMP/artifacts/mylib.exports" \
        '\(greet "mylib:code:greet" 0 rest\)'
-want   "table: variadic call row records minimum arity and rest" \
-       "$TMP/artifacts/varlib.exports" '\(collect "varlib:code:collect" 2 rest\)'
+want   "table: variadic row records minimum arity, rest, and fast label" \
+       "$TMP/artifacts/varlib.exports" \
+       '\(collect "varlib:code:collect" 2 rest "min-entry:\$varlib\$ccode\$ccollect"\)'
+want   "unit: closure code pointer remains the ordinary checked entry" \
+       "$TMP/artifacts/varlib.ll" \
+       'store i64 ptrtoint \(ptr @"varlib:code:collect" to i64\), ptr'
 
 # --- arity mismatch: indirect, and still traps -------------------------------
 ll="$(prog_ir '(display (zero? 1 2))')"
@@ -112,7 +117,9 @@ src='(import (varlib))
       (collect 1 2 3 4 5 6 7 8 9 10))'
 ll="$(prog_ir "$src" "$MAN")"
 want "variadic minimum: direct call" "$ll" \
-     'call fastcc i64 @"varlib:code:collect"\(i64 %t[0-9]+, i64 2,'
+     'call fastcc i64 @"min-entry:\$varlib\$ccode\$ccollect"\(i64 %t[0-9]+, i64 2,'
+want "variadic minimum: fast label is declared" "$ll" \
+     '^declare fastcc i64 @"min-entry:\$varlib\$ccode\$ccollect"\(i64(, i64)+, ptr\)$'
 want "variadic above minimum: direct call" "$ll" \
      'call fastcc i64 @"varlib:code:collect"\(i64 %t[0-9]+, i64 4,'
 want "variadic beyond slots: direct call" "$ll" \
@@ -133,7 +140,7 @@ want_value='((1 2 ()) (1 2 (3 4)) (1 2 (3 4 5 6 7 8 9 10)))'
 # A statically invalid count deliberately keeps the old indirect/trap path.
 ll="$(prog_ir '(import (varlib)) (collect 1)' "$MAN")"
 reject "variadic too few: NOT direct-called" "$ll" \
-       'call fastcc i64 @"varlib:code:collect"'
+       'call fastcc i64 @"(varlib:code:collect|min-entry:\$varlib\$ccode\$ccollect)"'
 want "variadic too few: still loads the code pointer" "$ll" \
      'call fastcc i64 ?%t[0-9]+\(i64 %t[0-9]+, i64 1,'
 printf '(import (varlib)) (collect 1)\n' > "$TMP/bad-var.scm"
@@ -148,11 +155,12 @@ fi
 # `apply` owns a dynamic argv and value-position use is not a call to the imported
 # binding, so neither is rewritten to known-app.
 ll="$(prog_ir '(import (varlib)) (apply collect (list 1 2 3))' "$MAN")"
-reject "variadic apply: stays indirect" "$ll" 'call fastcc i64 @"varlib:code:collect"'
+reject "variadic apply: stays indirect" "$ll" \
+       'call fastcc i64 @"(varlib:code:collect|min-entry:\$varlib\$ccode\$ccollect)"'
 want   "variadic apply: uses the dynamic argv path" "$ll" 'call ptr @rt_apply_argv'
 ll="$(prog_ir '(import (varlib)) (map collect (list 1) (list 2))' "$MAN")"
 reject "variadic value position: stays indirect" "$ll" \
-       'call fastcc i64 @"varlib:code:collect"'
+       'call fastcc i64 @"(varlib:code:collect|min-entry:\$varlib\$ccode\$ccollect)"'
 want   "variadic value position: closure remains first-class" "$ll" \
        'load i64, ptr @"varlib:collect"'
 
@@ -160,6 +168,65 @@ want   "variadic value position: closure remains first-class" "$ll" \
 ll="$(prog_ir '(define (f a b) (+ a b)) (display (f 1 2)) (display (f 3 4))')"
 want   "program unit: labels are still counter-derived" "$ll" '^define fastcc i64 @code_[0-9]+\('
 reject "program unit: no name-derived label" "$ll" '^define fastcc i64 @"?[^"]*code:'
+
+# --- local known calls use the same split without changing closure identity ---
+src='(let ((prefix 7))
+       (letrec ((collecting (lambda (x . rest) (list prefix x rest))))
+         (list (collecting 1)
+               (collecting 1 2 3)
+               (apply collecting (list 1 2 3 4)))))'
+ll="$(prog_ir "$src")"
+want "local variadic minimum: direct fast call" "$ll" \
+     'call fastcc i64 @"min-entry:\$code_[0-9]+"\(i64 %t[0-9]+, i64 1,'
+want "local variadic above minimum: ordinary direct call" "$ll" \
+     'call fastcc i64 @code_[0-9]+\(i64 %t[0-9]+, i64 3,'
+want "local variadic closure: code pointer remains ordinary" "$ll" \
+     'store i64 ptrtoint \(ptr @code_[0-9]+ to i64\), ptr'
+want "local variadic apply: remains dynamic" "$ll" 'call ptr @rt_apply_argv'
+got="$(printf '%s\n' "$src" | $RUN 2>/dev/null)"
+[ "$got" = "((7 1 ()) (7 1 (2 3)) (7 1 (2 3 4)))" ] \
+  && ok "local variadic: capturing direct/ordinary/apply values agree" \
+  || bad "local variadic values: $got"
+
+src='(define (countdown n . rest)
+       (if (= n 0) (if (null? rest) (quote done) rest)
+           (countdown (- n 1))))
+     (countdown 100000)'
+ll="$(prog_ir "$src")"
+want "variadic self tail call: exact minimum uses fast entry" "$ll" \
+     'musttail call fastcc i64 @"min-entry:\$code_[0-9]+"\(i64 %self, i64 1,'
+got="$(printf '%s\n' "$src" | $RUN 2>/dev/null)"
+[ "$got" = "done" ] && ok "variadic self tail call: bounded-stack value" \
+                   || bad "variadic self tail call: $got"
+
+# --- generated labels cannot alias legal Scheme procedure names -------------
+# This is intentionally compiled through the source driver so it guards task 4.7
+# before regeneration as well as the shipped compiler afterward.
+collision_man="$TMP/collision-libs.scm"
+collision_art="$TMP/collision-artifacts"
+printf '((library (emit internal) (source "%s/lib/emit/internal.sld") (artifacts "%s"))\n (library (scheme base) (source "%s/lib/scheme/base.sld") (artifacts "%s"))\n (library (min-label-collision) (source "%s/test/modules/min-label-collision.sld") (artifacts "%s")))\n' \
+  "$PWD" "$collision_art" "$PWD" "$collision_art" "$PWD" "$collision_art" > "$collision_man"
+printf '%s\n' '(import (scheme base) (min-label-collision))' \
+  '(write (list (foo 7) (foo.min 8)))' '(newline)' > "$TMP/collision.scm"
+if chez --libdirs src --script src/compile.ss "$TMP/collision.scm" \
+     --manifest "$collision_man" -o "$TMP/collision" >"$TMP/collision.build" 2>&1; then
+  got="$("$TMP/collision" 2>/dev/null)"
+  [ "$got" = "((7) 8)" ] \
+    && ok "collision namespace: foo and foo.min both link and run" \
+    || bad "collision namespace values: $got"
+else
+  bad "collision namespace: source-driver build failed"
+  sed 's/^/         /' "$TMP/collision.build"
+fi
+collision_ll="$collision_art/min-label-collision.ll"
+fast_label='min-entry:$min-label-collision$ccode$cfoo'
+for label in 'min-label-collision:code:foo' \
+             'min-label-collision:code:foo.min' "$fast_label"; do
+  count="$(grep -Fc "define fastcc i64 @\"$label\"(" "$collision_ll" 2>/dev/null || true)"
+  [ "$count" -eq 1 ] \
+    && ok "collision namespace: one definition for $label" \
+    || bad "collision namespace: $count definitions for $label"
+done
 
 # --- a USER library gets the same treatment ----------------------------------
 ll="$(prog_ir '(import (mylib)) (display (greet))' "$MAN")"

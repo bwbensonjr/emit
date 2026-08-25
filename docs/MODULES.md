@@ -307,9 +307,12 @@ build/emit lib test/modules/mylib.sld -o build/lib
 The table has three parts: the library name, the **symbol** rows mapping each external name to its
 mangled global, and the **call** rows — for each export whose initializer is a lambda, its code
 label and accepted arity. A fixed procedure records `(name label exact-arity)`; a procedure with a
-rest parameter records `(name label minimum-arity rest)`. An importer can therefore emit a direct
-call to the procedure's code with no access to the library's source (changes:
-`cross-unit-direct-calls`, `cross-unit-variadic-direct-calls`).
+rest parameter records `(name label minimum-arity rest minimum-label)`. The final field advertises
+the same-ABI empty-rest entry used only at exactly the minimum arity. A new compiler also accepts an
+older four-field variadic row `(name label minimum-arity rest)` and uses its ordinary label for all
+valid counts. An importer can therefore emit a direct call to the procedure's code with no access
+to the library's source (changes: `cross-unit-direct-calls`,
+`cross-unit-variadic-direct-calls`, `variadic-min-arity-fast-entry`).
 
 A call row is recorded only for a binding whose slot cannot move after `__init`. A binding the
 library **assigns** therefore gets a symbol row but no call row, however its initializer is shaped
@@ -538,9 +541,14 @@ other — the same gap as `docs/PERFORMANCE.md` P8.
   `call fastcc @"libname:code:export"` instead of loading the code pointer out of the binding's
   closure. The global is still loaded and passed as the callee's `self`, since it carries the
   captured environment; only the four-instruction code-pointer chain disappears. Matching means
-  equality for a fixed procedure and at least the recorded minimum for a variadic one. The shared
-  direct-call ABI already passes the actual count, positional slots, and overflow pointer, so the
-  variadic callee's ordinary prologue builds its rest list without a wrapper or caller-side list.
+  equality for a fixed procedure and at least the recorded minimum for a variadic one. At exactly
+  a variadic procedure's minimum, a new five-field call row selects the collision-safe encoded
+  label `@"min-entry:$libname$ccode$cexport"`; that same-ABI entry binds rest to `()` without the ordinary arity
+  check, positional spill, or `rt_build_rest`. Larger counts and old four-field rows select the
+  ordinary label, whose prologue builds the rest list. The closure still points at the checked
+  ordinary entry and is loaded and passed as `self` on both direct paths, so captures work without
+  a wrapper or caller-side list. Encoding `$` as `$d` and `:` as `$c` keeps the generated namespace
+  disjoint from every ordinary code label, including legal names such as `foo.min`.
   An arity mismatch, a value export, `apply`, or value-position use keeps the indirect path, so
   arity errors trap exactly as before. The importing module `declare`s each label it names; no
   linkage change is needed, as library code labels already have external linkage. This rests on the
@@ -634,7 +642,8 @@ other — the same gap as `docs/PERFORMANCE.md` P8.
     those libraries *are* the implementation. Nothing shipped uses it today; issue #31 (baking
     `lib/scheme/base.sld`) inherits the commitment.
 - **Artifacts** — each library compiles to `<artifacts>/<name>.ll` plus a readable
-  `<name>.exports` table (`(NAME ((external . "mangled") …) ((external "label" arity) …)
+  `<name>.exports` table (`(NAME ((external . "mangled") …) ((external "label" arity [rest
+  "minimum-label"]) …)
   [<compile-time-interface>])`) and a `<name>.stamp` sidecar
   recording the compiler that produced them. Artifacts are reused only when fresh — neither the
   source nor anything it **included** is newer than the artifact, **and** the recorded
