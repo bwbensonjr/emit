@@ -66,28 +66,30 @@ not an independent gap, and counting it as one overstates the inventory.
 
 ## Current baseline
 
-Measured on 2026-08-19, after `r7rs-cyclic-datum-round-trip`:
+Measured on 2026-08-25, after `support-pitch-r7rs-prerequisites`:
 
 ```
-assertions: 837 passed, 0 failed;  forms: 838 run, 342 excluded
-22 section/check groups passed, 0 failed
+assertions: 973 passed, 0 failed;  forms: 975 run, 205 excluded
+21 section/check groups passed, 0 failed
 ```
 
-The 342 exclusions, by reason class:
+The 205 exclusions, by reason class:
 
 | Reason | Forms | What it is |
 |---|---|---|
-| `unimplemented` | 226 | `(scheme char)`, `(scheme lazy)`, binary ports, derived syntax, `(scheme eval)`, ... |
+| `unimplemented` | 104 | `(scheme lazy)`, binary ports, derived syntax, `(scheme eval)`, ... |
 | `deliberate:#27` | 87 | exact rationals, bignums, complex numbers -- permanently absent |
-| `blocked-by:*` | 15 | a helper's defining form is excluded -- not independent gaps |
+| `blocked-by:*` | 2 | a helper's defining form is excluded -- not independent gaps |
 | `deliberate:not-R7RS-small` | 8 | `1s2`/`1f2`-style exponent markers, which R7RS-small does not have |
-| `issue-91` | 4 | malformed derived-syntax forms currently fail in the frontend |
+| `issue-91` | 2 | unrelated `letrec-syntax` / dotted `define-values` frontend forms |
 | `issue-33` | 1 | `make-list` lacks its optional fill argument |
 | `deliberate:r7rs-lexical-conformance` | 1 | a chibi expectation is stricter than the R7RS peculiar-identifier grammar |
 
-This change specifically removes six exclusions for circular `list?`, cycle-safe `equal?`, datum
-labels, and persistent fold-case directives. Its stale-exclusion pass checked all 342 remaining
-entries and reported no stale exclusions and no timeout inventory.
+This change removes 138 exclusions for `(scheme case-lambda)`, `(scheme char)`, continuable
+exceptions, `(scheme process-context)`, `(scheme write)`, and checks blocked only by those roots.
+Characters and Strings now report zero exclusions; the completed library/exception forms have no
+remaining exclusion entry. `char-ready?` remains explicitly excluded under the streaming-I/O
+follow-on rather than the character library.
 
 For contrast, the same suite against the compiler immediately before the change ran 651 forms with
 529 excluded, for 635 passing assertions. Sections 6.8 Vectors and 6.9 Bytevectors moved most, from

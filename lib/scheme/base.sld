@@ -87,11 +87,13 @@
     number->string
     string->number
     error
+    unwind-all!
     dynamic-wind
     call-with-current-continuation
     call/cc
     with-exception-handler
     raise
+    raise-continuable
     error-object?
     error-object-message
     error-object-irritants
@@ -268,11 +270,13 @@
     (define *winds* (quote ()))
     (define *handlers* (begin (%set-trap-raiser! (lambda () (raise (%trap-object)))) (quote ())))
     (define (%unwind-to target) (if (eq? *winds* target) #t (if (null? *winds*) #t (let ((entry (car *winds*))) (set! *winds* (cdr *winds*)) ((cdr entry)) (%unwind-to target)))))
-    (define (dynamic-wind before thunk after) (before) (set! *winds* (cons (cons before after) *winds*)) (let ((r (thunk))) (set! *winds* (cdr *winds*)) (after) r))
+    (define (unwind-all!) (%unwind-to (quote ())))
+    (define (dynamic-wind before thunk after) (before) (set! *winds* (cons (cons before after) *winds*)) (call-with-values thunk (lambda results (set! *winds* (cdr *winds*)) (after) (apply values results))))
     (define (call-with-current-continuation f) (let ((saved-winds *winds*)) (cdr (%run-guarded (lambda () (let ((id (%escape-frame))) (f (lambda (v) (if (%escape-live? id) (begin (%unwind-to saved-winds) (%escape-to id v)) #f) (error (quote call/cc) "continuation invoked outside its extent")))))))))
     (define (call/cc f) (call-with-current-continuation f))
     (define (with-exception-handler handler thunk) (let ((saved *handlers*)) (dynamic-wind (lambda () (set! *handlers* (cons handler saved))) thunk (lambda () (set! *handlers* saved)))))
     (define (raise obj) (if (null? *handlers*) (%raise obj) (let ((h (car *handlers*)) (saved *handlers*)) (set! *handlers* (cdr *handlers*)) (h obj) (set! *handlers* saved) (%raise obj))))
+    (define (raise-continuable obj) (if (null? *handlers*) (%raise obj) (let ((handler (car *handlers*)) (saved *handlers*)) (dynamic-wind (lambda () (set! *handlers* (cdr saved))) (lambda () (handler obj)) (lambda () (set! *handlers* saved))))))
     (define (error-object? x) (%error-object? x))
     (define (error-object-message x) (%error-object-message x))
     (define (error-object-irritants x) (%error-object-irritants x))

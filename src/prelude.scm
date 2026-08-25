@@ -638,15 +638,22 @@
             ((cdr entry))
             (%unwind-to target)))))
 
+;;; Public extension used by the ordinary (scheme process-context) library.  Keeping
+;;; the wind stack in this one owner lets `exit` share exactly the same cleanup order
+;;; as continuation and exception transfers without exposing the stack itself.
+(define (unwind-all!) (%unwind-to (quote ())))
+
 ;;; dynamic-wind: before, body, after -- with `after` on EVERY exit.  The normal
 ;;; path pops and runs it here; an escape or a raise runs it through %unwind-to.
 (define (dynamic-wind before thunk after)
   (before)
   (set! *winds* (cons (cons before after) *winds*))
-  (let ((r (thunk)))
-    (set! *winds* (cdr *winds*))
-    (after)
-    r))
+  (call-with-values
+    thunk
+    (lambda results
+      (set! *winds* (cdr *winds*))
+      (after)
+      (apply values results))))
 
 ;;; call/cc, restricted to ESCAPE continuations (design D1).  %run-guarded pushes a
 ;;; runtime escape frame and runs the thunk; %escape-frame reads that frame's id
@@ -678,8 +685,7 @@
 ;;; same semantics -- and it is spelled that way rather than `%…` because `guard`'s
 ;;; template calls it in the IMPORTER's scope, so the name is published either way
 ;;; (change: scheme-base-declared-surface, issue #29); publishing the R7RS spelling
-;;; is a conformance gain instead of an internal leak.  `raise-continuable` is still
-;;; absent: a handler that returns normally falls through to the unhandled path.
+;;; is a conformance gain instead of an internal leak.
 (define (with-exception-handler handler thunk)
   (let ((saved *handlers*))
     (dynamic-wind
@@ -699,6 +705,19 @@
         (h obj)
         (set! *handlers* saved)
         (%raise obj))))
+
+;;; Continuable delivery uses the same stack as `raise`, but a returning handler
+;;; restores the installed handler and supplies every one of its values to the call
+;;; site.  dynamic-wind also restores the chain if the handler transfers outward;
+;;; during the handler call the saved outer chain is current, as R7RS requires.
+(define (raise-continuable obj)
+  (if (null? *handlers*)
+      (%raise obj)
+      (let ((handler (car *handlers*)) (saved *handlers*))
+        (dynamic-wind
+          (lambda () (set! *handlers* (cdr saved)))
+          (lambda () (handler obj))
+          (lambda () (set! *handlers* saved))))))
 
 ;;; R7RS error-object accessors over the runtime error-object representation.
 (define (error-object? x) (%error-object? x))

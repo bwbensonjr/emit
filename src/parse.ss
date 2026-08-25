@@ -42,7 +42,8 @@
                   %finite? %nan?
                   %flo-floor %flo-ceiling %flo-truncate %flo-round
                   %sqrt %exp %log %sin %cos %tan %asin %acos %atan %atan2 %pow
-                  %read-all-stdin %display %write %write-char %newline
+                  %read-all-stdin %display %write %write-simple %write-shared
+                  %write-char %newline
                   ;; change: scheme-io-library -- the eof object, the file/handle
                   ;; edge primitives the prelude's ports are built over, and the
                   ;; port-directed (2-argument) forms of the output procedures.
@@ -51,12 +52,15 @@
                   %port-get-output-string %port-flush %port-close
                   %set-current-output!
                   %write-string
-                  %display-port %write-port %newline-port %write-char-port
+                  %display-port %write-port %write-simple-port %write-shared-port
+                  %newline-port %write-char-port
                   %write-string-port
                   %hash %make-hash-table %hash-table? %hash-table-spine
                   %make-record-type %make-record %record-ref %record-set! %record-of-type? %record?
                   %list->mv %mv? %mv->list
                   %no-prelude? %dump-level %stderr-write
+                  %command-line %get-environment-variable %get-environment-variables
+                  %process-exit %process-emergency-exit
                   repl-mode repl-input repl-state-ref repl-state-set!
                   %error-abort %raise %run-guarded
                   %make-error-object %escape-frame %escape-to %escape-live?

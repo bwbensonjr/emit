@@ -828,6 +828,69 @@ static const char *str_bytes(val v)  { return (const char *)as_ptr(v)[3]; }
 intptr_t    rt_string_len(val v)   { return str_len(v); }
 const char *rt_string_bytes(val v) { return str_bytes(v); }
 
+/* --- process context -----------------------------------------------------
+ * The host installs an owned byte snapshot.  Every Scheme query allocates fresh
+ * strings and pairs, so mutating a returned string or list cannot alter a later
+ * command-line result or the host's argv storage. */
+static int rt_process_argc = 0;
+static char **rt_process_argv = NULL;
+
+void rt_set_command_line(int argc, const char *const *argv) {
+  char **copy = (char **)GC_MALLOC((size_t)(argc > 0 ? argc : 1) * sizeof(char *));
+  for (int i = 0; i < argc; i++) {
+    size_t n = strlen(argv[i]);
+    copy[i] = (char *)GC_MALLOC_ATOMIC(n + 1);
+    memcpy(copy[i], argv[i], n + 1);
+  }
+  rt_process_argc = argc;
+  rt_process_argv = copy;
+}
+
+val rt_command_line(void) {
+  val out = NIL_V;
+  for (int i = rt_process_argc - 1; i >= 0; i--)
+    out = rt_cons(rt_make_string(rt_process_argv[i], (intptr_t)strlen(rt_process_argv[i])), out);
+  return out;
+}
+
+val rt_get_environment_variable(val name) {
+  CHECK_TAG("get-environment-variable", name, is_string, "a string");
+  const char *value = getenv(str_bytes(name));
+  return value ? rt_make_string(value, (intptr_t)strlen(value)) : FALSE_V;
+}
+
+extern char **environ;
+val rt_get_environment_variables(void) {
+  val out = NIL_V;
+  if (!environ) return out;
+  for (char **p = environ; *p; p++) {
+    const char *eq = strchr(*p, '=');
+    if (!eq) continue;
+    val name = rt_make_string(*p, (intptr_t)(eq - *p));
+    val value = rt_make_string(eq + 1, (intptr_t)strlen(eq + 1));
+    out = rt_cons(rt_cons(name, value), out);
+  }
+  return out;
+}
+
+static int rt_status_code(val status) {
+  if (status == TRUE_V || is_unspec(status)) return EXIT_SUCCESS;
+  if (status == FALSE_V) return EXIT_FAILURE;
+  if (tag_of(status) == TAG_FIXNUM) return (int)UNFIX(status);
+  return EXIT_FAILURE;
+}
+
+val rt_process_exit(val status) {
+  fflush(NULL);
+  exit(rt_status_code(status));
+  return UNSPEC_V;                    /* unreachable; keeps the primitive signature */
+}
+
+val rt_process_emergency_exit(val status) {
+  _Exit(rt_status_code(status));
+  return UNSPEC_V;
+}
+
 /* flonum <-> string (change: inexact-numbers).  number->string routes flonums
  * here; the reader routes a flonum token here.  strtod is correctly rounded and
  * flonum_format is shortest-round-trippable, so string->flonum->string and
@@ -1300,7 +1363,8 @@ val rt_repl_state_set(val v) { rt_repl_cell(&rt_repl_state_cell, FALSE_V)[0] = v
  * Dispatching on the tag makes this memory-safe for every value type -- a
  * non-string no longer dereferences as a string header and crashes.  Returns an
  * unspecified value (NIL) so it composes inside a `begin`. */
-static void print_val(FILE *out, val v, int display);   /* defined with rt_write below */
+enum print_policy { PRINT_ORDINARY, PRINT_SIMPLE, PRINT_SHARED };
+static void print_val(FILE *out, val v, int display, enum print_policy policy);
 
 /* WHERE THE PORT-LESS OUTPUT PROCEDURES WRITE (change: scheme-io-library).
  *
@@ -1334,7 +1398,7 @@ val rt_set_current_output(val handle) {
 }
 
 val rt_display(val v) {
-  print_val(cur_out(), v, /*display=*/1);
+  print_val(cur_out(), v, /*display=*/1, PRINT_ORDINARY);
   return UNSPEC_V;
 }
 
@@ -1345,7 +1409,17 @@ val rt_display(val v) {
  * from that void entry: a primitive must return a val (the unspecified value)
  * so it composes inside a `begin`, whereas the runner entry returns nothing. */
 val rt_write_val(val v) {
-  print_val(cur_out(), v, /*display=*/0);
+  print_val(cur_out(), v, /*display=*/0, PRINT_ORDINARY);
+  return UNSPEC_V;
+}
+
+val rt_write_simple_val(val v) {
+  print_val(cur_out(), v, /*display=*/0, PRINT_SIMPLE);
+  return UNSPEC_V;
+}
+
+val rt_write_shared_val(val v) {
+  print_val(cur_out(), v, /*display=*/0, PRINT_SHARED);
   return UNSPEC_V;
 }
 
@@ -1361,7 +1435,7 @@ val rt_write_val(val v) {
  * display style for its own headers, indentation, and newlines.  Returns `v`, so
  * a dumper can thread a value through a write without an extra binding. */
 val rt_stderr_write(val v, val display_p) {
-  print_val(stderr, v, /*display=*/display_p != FALSE_V);
+  print_val(stderr, v, /*display=*/display_p != FALSE_V, PRINT_ORDINARY);
   return v;
 }
 
@@ -1555,11 +1629,23 @@ val rt_port_close(val handle) {
  * one-argument entry points above are untouched, so a program that never passes a
  * port emits byte-identical code. */
 val rt_port_display(val v, val p) {
-  print_val(port_arg_or_die(p, "display: not an open output port"), v, /*display=*/1);
+  print_val(port_arg_or_die(p, "display: not an open output port"), v,
+            /*display=*/1, PRINT_ORDINARY);
   return UNSPEC_V;
 }
 val rt_port_write(val v, val p) {
-  print_val(port_arg_or_die(p, "write: not an open output port"), v, /*display=*/0);
+  print_val(port_arg_or_die(p, "write: not an open output port"), v,
+            /*display=*/0, PRINT_ORDINARY);
+  return UNSPEC_V;
+}
+val rt_port_write_simple(val v, val p) {
+  print_val(port_arg_or_die(p, "write-simple: not an open output port"), v,
+            /*display=*/0, PRINT_SIMPLE);
+  return UNSPEC_V;
+}
+val rt_port_write_shared(val v, val p) {
+  print_val(port_arg_or_die(p, "write-shared: not an open output port"), v,
+            /*display=*/0, PRINT_SHARED);
   return UNSPEC_V;
 }
 val rt_port_newline(val p) {
@@ -2483,6 +2569,7 @@ static int sym_needs_bars(const char *s) {
 typedef struct {
   val           key;
   int           label;         /* -1 until the node is found to be a back-edge target */
+  unsigned      count;         /* incoming occurrences seen by the shared prepass */
   unsigned char onpath;        /* on the current DFS path (scan only) */
   unsigned char printed;       /* `#N=` already emitted (print only) */
   unsigned      gen;           /* entry is live iff gen == pl_gen */
@@ -2517,7 +2604,8 @@ static pl_slot *pl_find(val v, int create) {
     if (s->gen != pl_gen) {                   /* empty in this generation */
       if (!create) return NULL;
       if ((pl_used + 1) * 2 >= pl_cap) { pl_grow(); return pl_find(v, 1); }
-      s->gen = pl_gen; s->key = v; s->label = -1; s->onpath = 0; s->printed = 0;
+      s->gen = pl_gen; s->key = v; s->label = -1; s->count = 0;
+      s->onpath = 0; s->printed = 0;
       pl_used++;
       return s;
     }
@@ -2543,7 +2631,7 @@ static void pl_grow(void) {
 }
 
 /* Pass 1: find every node that is reachable from itself, and label it. */
-static void pl_scan(val v) {
+static void pl_scan(val v, enum print_policy policy) {
   if (!pl_labelable(v)) return;
   if (tag_of(v) == TAG_PAIR) {
     /* Iterate the spine, exactly as the printer does, so a long list costs no C stack.
@@ -2551,16 +2639,20 @@ static void pl_scan(val v) {
     val cur = v; intptr_t pushed = 0;
     while (tag_of(cur) == TAG_PAIR) {
       pl_slot *s = pl_find(cur, 1);
+      s->count++;
+      if (policy == PRINT_SHARED && s->count == 2 && s->label < 0) {
+        s->label = pl_next_label++; pl_any = 1;
+      }
       if (s->onpath) {                          /* back edge: this node closes a cycle */
         if (s->label < 0) { s->label = pl_next_label++; pl_any = 1; }
         break;
       }
       if (s->printed) break;                    /* already fully explored (see below) */
       s->onpath = 1; pushed++;
-      pl_scan(as_ptr(cur)[0]);
+      pl_scan(as_ptr(cur)[0], policy);
       cur = as_ptr(cur)[1];
     }
-    if (tag_of(cur) != TAG_PAIR && cur != NIL_V) pl_scan(cur);   /* improper tail */
+    if (tag_of(cur) != TAG_PAIR && cur != NIL_V) pl_scan(cur, policy);
     /* Unwind EXACTLY the nodes this invocation pushed -- the first `pushed` of the spine
      * starting at v -- and no others.  Clearing "while the node is still on the path"
      * instead is wrong, and subtly: a car that points back at an ancestor re-enters
@@ -2578,6 +2670,10 @@ static void pl_scan(val v) {
     }
   } else {
     pl_slot *s = pl_find(v, 1);
+    s->count++;
+    if (policy == PRINT_SHARED && s->count == 2 && s->label < 0) {
+      s->label = pl_next_label++; pl_any = 1;
+    }
     if (s->onpath) {
       if (s->label < 0) { s->label = pl_next_label++; pl_any = 1; }
       return;
@@ -2585,7 +2681,7 @@ static void pl_scan(val v) {
     if (s->printed) return;
     s->onpath = 1;
     intptr_t len = (intptr_t)as_ptr(v)[1];
-    for (intptr_t i = 0; i < len; i++) pl_scan(as_ptr(v)[i + 2]);
+    for (intptr_t i = 0; i < len; i++) pl_scan(as_ptr(v)[i + 2], policy);
     s = pl_find(v, 0);                  /* re-find: a nested scan may have grown the table */
     if (s) { s->onpath = 0; s->printed = 1; }
   }
@@ -2600,10 +2696,10 @@ static void pl_reset_printed(void) {
 
 static void print_node(FILE *out, val v, int display);
 
-static void print_val(FILE *out, val v, int display) {
-  if (pl_labelable(v)) {
+static void print_val(FILE *out, val v, int display, enum print_policy policy) {
+  if (policy != PRINT_SIMPLE && pl_labelable(v)) {
     pl_gen++; pl_used = 0; pl_next_label = 0; pl_any = 0;
-    pl_scan(v);
+    pl_scan(v, policy);
     if (pl_any) pl_reset_printed();
   } else {
     pl_any = 0;                     /* an atom cannot contain a cycle: no scan, no cost */
@@ -2825,7 +2921,7 @@ static void print_node(FILE *out, val v, int display) {
 
 /* write-style value printer (quoted strings, `#\`-prefixed chars): the standalone
  * entry uses this to print a program's final value. */
-void rt_write(val v) { print_val(stdout, v, /*display=*/0); }
+void rt_write(val v) { print_val(stdout, v, /*display=*/0, PRINT_ORDINARY); }
 
 /* --- entry: exit code = ran/failed, stdout = value (design R1) ----------
  * The standalone AOT/JIT executables use this main.  The persistent REPL host
@@ -2841,8 +2937,9 @@ void rt_write(val v) { print_val(stdout, v, /*display=*/0); }
 #ifndef RT_NO_MAIN
 extern val scheme_entry(void);
 
-int main(void) {
+int main(int argc, char **argv) {
   GC_INIT();
+  rt_set_command_line(argc, (const char *const *)argv);
 #ifdef RT_FILTER_MAIN
   scheme_entry();          /* run for effect; the program handles its own I/O */
 #else

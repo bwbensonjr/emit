@@ -446,6 +446,7 @@
     (%boolean? "rt_boolean_p") (%integer? "rt_integer_p") (%exact? "rt_exact_p")
     (%read-all-stdin "rt_read_all_stdin") (%display "rt_display")
     (%write "rt_write_val") (%newline "rt_newline")
+    (%write-simple "rt_write_simple_val") (%write-shared "rt_write_shared_val")
     ;; change: scheme-io-library -- eof object, file/handle edge prims, and the
     ;; port-directed forms of the output procedures (the same printer, with `out`
     ;; taken from the port instead of hardwired to stdout).
@@ -458,9 +459,16 @@
     (%set-current-output! "rt_set_current_output")
     (%write-string "rt_write_string")
     (%display-port "rt_port_display") (%write-port "rt_port_write")
+    (%write-simple-port "rt_port_write_simple")
+    (%write-shared-port "rt_port_write_shared")
     (%newline-port "rt_port_newline") (%write-char-port "rt_port_write_char")
     (%write-string-port "rt_port_write_string")
     (%no-prelude? "rt_no_prelude_p")
+    (%command-line "rt_command_line")
+    (%get-environment-variable "rt_get_environment_variable")
+    (%get-environment-variables "rt_get_environment_variables")
+    (%process-exit "rt_process_exit")
+    (%process-emergency-exit "rt_process_emergency_exit")
     (%dump-level "rt_dump_level") (%stderr-write "rt_stderr_write")
     (repl-mode "rt_repl_mode") (repl-input "rt_repl_input")
     (repl-state-ref "rt_repl_state_ref") (repl-state-set! "rt_repl_state_set")
@@ -1305,6 +1313,8 @@
    "declare i64 @rt_root(i64)\n"
    "declare i64 @rt_display(i64)\n"
    "declare i64 @rt_write_val(i64)\n"
+   "declare i64 @rt_write_simple_val(i64)\n"
+   "declare i64 @rt_write_shared_val(i64)\n"
    "declare i64 @rt_newline()\n"
    "declare i64 @rt_eof_object()\n"
    "declare i64 @rt_eof_object_p(i64)\n"
@@ -1318,9 +1328,16 @@
    "declare i64 @rt_write_string(i64)\n"
    "declare i64 @rt_port_display(i64, i64)\n"
    "declare i64 @rt_port_write(i64, i64)\n"
+   "declare i64 @rt_port_write_simple(i64, i64)\n"
+   "declare i64 @rt_port_write_shared(i64, i64)\n"
    "declare i64 @rt_port_newline(i64)\n"
    "declare i64 @rt_port_write_char(i64, i64)\n"
    "declare i64 @rt_port_write_string(i64, i64)\n"
+   "declare i64 @rt_command_line()\n"
+   "declare i64 @rt_get_environment_variable(i64)\n"
+   "declare i64 @rt_get_environment_variables()\n"
+   "declare i64 @rt_process_exit(i64)\n"
+   "declare i64 @rt_process_emergency_exit(i64)\n"
    "declare i64 @rt_list_length(i64)\n"
    "declare i64 @rt_build_rest(i64, i64, i64, ptr, ptr)\n"
    "declare ptr @rt_apply_argv(i64, ptr, i64, i64)\n"

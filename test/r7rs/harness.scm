@@ -26,7 +26,8 @@
 ;;;   SUMMARY <tab> pass=<N> <tab> fail=<N>
 ;;; `write` escapes newlines and tabs inside strings, so a value can never split a line.
 
-(import (scheme base) (scheme inexact) (scheme file) (scheme read) (scheme cxr))
+(import (scheme base) (scheme inexact) (scheme file) (scheme read) (scheme cxr)
+        (scheme case-lambda) (scheme char) (scheme process-context) (scheme write))
 
 (define hx-pass 0)
 (define hx-fail 0)

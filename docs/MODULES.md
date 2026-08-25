@@ -134,7 +134,8 @@ Library *names* are mapped to *source files* by a manifest — an s-expression f
   entry's `source`/`output`; the *default* artifact dir (`build/lib`) is the driver's own and
   stays relative to the invocation.
 - The default `emit-libs.scm` at the repo root lists the shipped libraries — `(emit internal)`,
-  `(scheme base)`, `(scheme cxr)`, `(scheme read)`, `(scheme file)` and `(scheme inexact)`; point
+  `(scheme base)`, `(scheme cxr)`, `(scheme read)`, `(scheme file)`, `(scheme inexact)`,
+  `(scheme case-lambda)`, `(scheme char)`, `(scheme process-context)`, and `(scheme write)`; point
   `--manifest` at your own for additional libraries (as the test
   suites do with `test/modules/emit-libs.scm`). Listing a library costs a program nothing unless
   it imports it: the run door preloads lazily (see below) and `emit build` links only the
@@ -398,8 +399,12 @@ published fails the default suite, so adding a helper forces a visibility decisi
 | `(scheme read)` | generated from `src/prelude.scm` | `(import (scheme read))` | manifest |
 | `(scheme file)` | generated from `src/prelude.scm` | `(import (scheme file))` | manifest |
 | `(scheme inexact)` | hand-written | `(import (scheme inexact))` | manifest |
+| `(scheme case-lambda)` | hand-written | `(import (scheme case-lambda))` | manifest |
+| `(scheme char)` | hand-written + generated Unicode 17.0.0 include | `(import (scheme char))` | manifest |
+| `(scheme process-context)` | hand-written | `(import (scheme process-context))` | manifest |
+| `(scheme write)` | hand-written | `(import (scheme write))` | manifest |
 
-Everything but `(scheme inexact)` is generated, because `src/prelude.scm` is the single source of
+The prelude partition members are generated because `src/prelude.scm` is their single source of
 truth for what those procedures *are* — relocating a name must not fork its definition. The
 partition in `src/prelude-surface.scm` says which library gets which definition;
 `tools/gen-scheme-base.ss` writes one `.sld` per member and `test/scheme-base-gen-check.sh` diffs
@@ -409,8 +414,8 @@ every one of them.
 from the baked-in prelude source, so a program that imports nothing — or only `(scheme base)` — runs
 with **no manifest present at all**. That guarantee is why the substrate had to be baked too:
 `(scheme base)` imports it, and anything `(scheme base)` depends on inherits the requirement. The
-three relocated libraries are ordinary: a program reaches them only through the manifest, exactly as
-it reaches `(scheme inexact)`.
+Every remaining standard library in the table is ordinary: a program reaches it only through the
+manifest, exactly as it reaches `(scheme inexact)`.
 
 **Every door registers the baked set** before it consults the manifest — the AOT door, the run door,
 the REPL door, and the compile-unit (`emit lib`) door alike (change: `baked-set-on-every-door`). So a

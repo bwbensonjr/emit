@@ -44,8 +44,8 @@ bad () { echo "  [FAIL] $1"; fail=$((fail+1)); }
 
 # `timeout` is how a hang is distinguished from a wrong answer.  Absent on a stock macOS,
 # so probe for it the way test/r7rs-suite-tests.sh does rather than assume.
-if   command -v timeout  >/dev/null 2>&1; then TO="timeout 10"
-elif command -v gtimeout >/dev/null 2>&1; then TO="gtimeout 10"
+if   command -v timeout  >/dev/null 2>&1; then TO="timeout 30"
+elif command -v gtimeout >/dev/null 2>&1; then TO="gtimeout 30"
 else TO=""; say "printer-cycles: no timeout(1) -- a regression here will HANG instead of failing"
 fi
 

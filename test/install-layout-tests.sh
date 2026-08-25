@@ -65,6 +65,9 @@ echo "installed layout"
 # shipping the script alone installs one that fails on its first line.
 for f in bin/emit share/emit/emit-libs.scm share/emit/lib/scheme/base.sld \
          share/emit/lib/scheme/inexact.sld \
+         share/emit/lib/scheme/case-lambda.sld share/emit/lib/scheme/char.sld \
+         share/emit/lib/scheme/char-data.scm \
+         share/emit/lib/scheme/process-context.sld share/emit/lib/scheme/write.sld \
          share/emit/tools/llvm-env.sh share/emit/tools/log.sh \
          share/emit/src/runtime/runtime.c; do
   [ -f "$PREFIX/$f" ] && ok "installed $f" || bad "missing $f"
@@ -172,6 +175,22 @@ do
          sed 's/^/         /' "$TMP/eprobe"; }
 done
 
+# Pitch prerequisite libraries are ordinary installed members too.  The character
+# include is especially important: char.sld resolves beside it after installation.
+for probe in \
+  "(scheme case-lambda)|(import (scheme case-lambda)) ((case-lambda (() 7)))|7" \
+  "(scheme char)|(import (scheme char)) (string-foldcase \"Straße\")|\"strasse\"" \
+  "(scheme process-context)|(import (scheme process-context)) (car (command-line))|\"-\"" \
+  "(scheme write)|(import (scheme base) (scheme write)) (let ((p (open-output-string))) (write-shared (list 1 2) p) (get-output-string p))|\"(1 2)\""
+do
+  lib="${probe%%|*}"; rest="${probe#*|}"; prog="${rest%%|*}"; pwant="${rest##*|}"
+  pgot="$(printf '%s\n' "$prog" | EMIT_VERBOSITY=quiet "$EMIT" run 2>"$TMP/eprobe")"
+  [ "$pgot" = "$pwant" ] \
+    && ok "$lib resolves from the installed ordinary-library set => $pgot" \
+    || { bad "$lib installed probe => [$pgot] (expected [$pwant])"
+         sed 's/^/         /' "$TMP/eprobe"; }
+done
+
 # The substrate installs too -- not for a user to import, but because base.sld imports it
 # and the REPL door resolves (scheme base) through the manifest (see issue #39).  The REPL
 # check above already proves it resolves; this asserts the file is actually shipped, since
@@ -192,11 +211,16 @@ PROJ="$TMP/proj"
 mkdir -p "$PROJ"
 cd "$PROJ"
 cat > emit-libs.scm <<'EOF'
-((program hello (source "hello.scm") (output "hello")))
+((program hello (source "hello.scm") (output "hello"))
+ (program context (source "context.scm") (output "context")))
 EOF
 cat > hello.scm <<'EOF'
 (import (scheme inexact))
 (display (sqrt 2.0))
+EOF
+cat > context.scm <<'EOF'
+(import (scheme base) (scheme process-context))
+(write (cdr (command-line)))
 EOF
 
 # #36: `emit build` needs tools/llvm-env.sh + src/runtime/runtime.c, neither of which
@@ -213,6 +237,17 @@ if env -u CC -u GC_INC -u GC_LIB -u EMIT_GC_INC -u EMIT_GC_LIB \
   else bad "emit build reported success but wrote no executable"; fi
 else
   bad "emit build from an install failed"; sed 's/^/         /' "$TMP/build.log"
+fi
+
+if EMIT_VERBOSITY=quiet "$EMIT" build context >"$TMP/context-build.log" 2>&1; then
+  context_got="$("$PROJ/context" --check '' 2>"$TMP/context.err")"
+  [ "$context_got" = '("--check" "")' ] \
+    && ok "installed emit AOT-builds (scheme process-context) with actual arguments" \
+    || { bad "installed process-context executable => [$context_got]";
+         sed 's/^/         /' "$TMP/context.err"; }
+else
+  bad "installed emit could not AOT-build (scheme process-context)"
+  sed 's/^/         /' "$TMP/context-build.log"
 fi
 
 # #44: the same program's (import (scheme inexact)) must resolve THROUGH THE CHAIN --
@@ -397,6 +432,7 @@ echo "--manifest outranks \$EMIT_MANIFEST"
 cp "$PREFIX/share/emit/emit-libs.scm" "$TMP/flag-man.scm"
 mkdir -p "$TMP/lib/scheme"
 cp "$PREFIX/share/emit/lib/scheme/"*.sld "$TMP/lib/scheme/"
+cp "$PREFIX/share/emit/lib/scheme/char-data.scm" "$TMP/lib/scheme/"
 line="$(EMIT_MANIFEST="$PREFIX/share/emit/emit-libs.scm" \
         "$EMIT" run --manifest "$TMP/flag-man.scm" <<< '(+ 1 2)' 2>&1 >/dev/null \
         | grep 'resolve manifest' | head -1)"

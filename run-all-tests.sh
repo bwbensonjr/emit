@@ -81,6 +81,7 @@ run_suite "library top-level set!"    test/library-toplevel-set-tests.sh
 run_suite "library body declarations" test/library-body-declarations-tests.sh
 run_suite "library include declarations" test/library-include-tests.sh
 run_suite "dynamic extent (call/cc)"  test/dynamic-extent-tests.sh
+run_suite "Pitch-facing R7RS prerequisites" test/pitch-prerequisites-tests.sh
 run_suite "catchable errors + kinds"  test/catchable-errors-tests.sh
 run_suite "io ports + eof object"     test/io-ports-tests.sh
 run_suite "module vertical-slice (REPL)" test/modules-repl-tests.sh
@@ -90,6 +91,7 @@ run_suite "unit pipeline (seeding, caching, shaking)" test/unit-pipeline-tests.s
 run_suite "CLI front door (help + final value)" test/emit-cli-tests.sh
 run_suite "JIT optimization profiles" test/jit-optimization-tests.sh
 run_suite "(scheme base) declared surface" test/scheme-base-surface-check.sh
+run_suite "Unicode data checksums + generated tables" test/unicode-data-gen-check.sh
 run_suite "flat top-level name hazards" test/flat-name-check.sh
 run_suite "binding shadows a keyword"   test/binding-shadowing-tests.sh
 run_suite "(scheme base) auto-import (REPL)" test/prelude-base-repl-tests.sh

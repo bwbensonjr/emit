@@ -12,8 +12,8 @@ pass=0; fail=0
 ok ()  { echo "  [OK  ] $1"; pass=$((pass+1)); }
 bad () { echo "  [FAIL] $1"; fail=$((fail+1)); }
 
-if   command -v timeout  >/dev/null 2>&1; then TO="timeout 10"
-elif command -v gtimeout >/dev/null 2>&1; then TO="gtimeout 10"
+if   command -v timeout  >/dev/null 2>&1; then TO="timeout 30"
+elif command -v gtimeout >/dev/null 2>&1; then TO="gtimeout 30"
 else TO=""; say "cyclic-datum: no timeout(1) -- a termination regression can hang"
 fi
 

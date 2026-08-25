@@ -74,6 +74,17 @@ hi
 That is the same rule the REPL follows, and a delivered executable follows it too — so a program's
 output is identical however you run it. `emit run` also reads stdin, so `emit run < main.scm` works.
 
+Pass program arguments after a mandatory separator:
+
+```sh
+emit run formatter.scm -- --check input.scm
+```
+
+Before `--`, Emit parses its own options and accepts at most one source file. After it, every token
+is forwarded unchanged; `(command-line)` sees `formatter.scm`, `--check`, and `input.scm`. Source
+read from stdin uses `-` as its logical command name. Non-executing modes such as `--emit` reject
+program arguments.
+
 The run door uses LLVM's `-O1` JIT profile by default. Use `emit run -O0 main.scm` for the old
 unoptimized diagnostic/baseline path, or `emit run -O2 main.scm` when a longer-running program can
 justify more JIT latency. These profiles affect execution only: `emit run --emit` remains the
@@ -145,8 +156,9 @@ Four things to know:
 - **You list only your own entries.** The manifest above names no standard library and no path into
   the Emit installation, yet `main.scm` may import `(scheme inexact)` freely — see below.
 
-Non-baked standard libraries — `(scheme inexact)`, `(scheme cxr)`, `(scheme read)`, and
-`(scheme file)` — ship as **source files** and are reached through the manifest. Your project's
+Non-baked standard libraries — `(scheme inexact)`, `(scheme cxr)`, `(scheme read)`,
+`(scheme file)`, `(scheme case-lambda)`, `(scheme char)`, `(scheme process-context)`, and
+`(scheme write)` — ship as **source files** and are reached through the manifest. Your project's
 manifest does not have to name them, because **the searched manifests chain** (change:
 `installed-emit-completeness`, issue #44): your `./emit-libs.scm` is consulted first, and any
 library name it does not resolve falls through to the manifest installed beside `emit`. So a
@@ -284,6 +296,10 @@ import:
 | `(scheme read)` | `read` |
 | `(scheme file)` | `open-input-file`, `open-output-file`, `call-with-input-file`, `file-exists?`, `delete-file`, … |
 | `(scheme inexact)` | `sqrt`, `exp`, `log`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `finite?`, `infinite?`, `nan?` |
+| `(scheme case-lambda)` | the `case-lambda` derived form |
+| `(scheme char)` | Unicode 17.0.0 properties, casing, folding, and case-insensitive comparisons |
+| `(scheme process-context)` | `command-line`, `exit`, `emergency-exit`, and environment access |
+| `(scheme write)` | `display`, `write`, `write-simple`, and `write-shared` |
 
 ```scheme
 (caddr (list 1 2 3))        ; => unbound variable caddr
@@ -393,7 +409,7 @@ project:
 - **Control**: `call/cc` and `dynamic-wind` work. The exception surface you should use is `guard`,
   `raise`, and `error` — `with-exception-handler` is bound, because it is the installer `guard`
   expands to, but it does not give R7RS's resumable behavior (a `raise` inside it still aborts) and
-  `raise-continuable` is absent.
+  `raise-continuable` resumes with all values returned by the current handler.
 - **A runtime-detected error is a condition you can catch.** A wrong-typed argument, an
   out-of-range index, a negative size, an exact-integer overflow, a division by zero, and `apply`
   with an improper last argument all raise into the same handler chain `raise` uses, so a `guard`

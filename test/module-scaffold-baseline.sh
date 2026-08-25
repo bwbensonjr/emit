@@ -47,6 +47,10 @@
 # change is intended and has been shown to be exactly what was intended -- capture
 # a before/after pair and diff them, as the original change did.  Log of intended
 # re-records:
+#   support-pitch-r7rs-prerequisites -- `(scheme base)` adds `raise-continuable`
+#     and the shared `unwind-all!` helper used by process-context `exit`, changing
+#     the baked-library IR prefix of all 80 demos.  The manifest retained exactly
+#     the same 80 sorted names, and the demo value suite remained 80/80.
 #   emit-dump-stages -- +2 lines in every module's runtime declare header
 #     (@rt_dump_level, @rt_stderr_write).  Verified: a 69-demo before/after capture
 #     differed in exactly those 2 lines per module (138 lines, no deletions).

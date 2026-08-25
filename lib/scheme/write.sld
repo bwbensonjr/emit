@@ -1,0 +1,17 @@
+;;; write.sld -- ordinary R7RS-small graph-writing library.
+(define-library (scheme write)
+  (import (scheme base))
+  (export display write write-simple write-shared)
+  (begin
+    (define (display obj . port)
+      (if (null? port) (%display obj) (%display-port obj (car port))))
+    (define (write obj . port)
+      (if (null? port) (%write obj) (%write-port obj (car port))))
+    (define (write-simple obj . port)
+      (if (null? port)
+          (%write-simple obj)
+          (%write-simple-port obj (car port))))
+    (define (write-shared obj . port)
+      (if (null? port)
+          (%write-shared obj)
+          (%write-shared-port obj (car port))))))

@@ -68,6 +68,7 @@ extern "C" {
 
   // Runtime REPL channel + value accessors (src/runtime/runtime.c).
   void rt_repl_set(intptr_t mode, const char *bytes, intptr_t len);
+  void rt_set_command_line(int argc, const char *const *argv);
   intptr_t rt_fixnum_value(intptr_t v);
   intptr_t rt_car(intptr_t v);
   intptr_t rt_cdr(intptr_t v);
@@ -318,9 +319,10 @@ static void usage(std::ostream &os) {
 }
 
 static void usage_run(std::ostream &os) {
-  os << "usage: emit run [FILE] [options]     compile and run a program\n"
+  os << "usage: emit run [options] [FILE] [-- ARG ...]  compile and run a program\n"
         "\n"
-        "  FILE                      program source; stdin when FILE is omitted\n"
+        "  FILE                      program source; stdin when FILE is omitted or -\n"
+        "  -- ARG ...                pass remaining tokens to the Scheme program\n"
         "  --manifest F              manifest to resolve libraries and programs against\n"
         "  --no-prelude              do not bake or imply (scheme base)\n"
         "  -O0                       unoptimized JIT profile\n"
@@ -1627,10 +1629,15 @@ static int emit_run(int argc, char **argv) {
   std::string resolve_name;                    // "" => select the sole program entry
   std::string manifest;
   std::string prog_file;                       // positional FILE (else stdin)
+  std::vector<std::string> program_args;       // tokens after the mandatory separator
   for (int i = 1; i < argc; i++) {
     std::string a(argv[i]);
     bool opt_ok = true;
-    if (is_help_flag(a)) { usage_run(std::cout); return 0; }
+    if (a == "--") {
+      for (++i; i < argc; i++) program_args.emplace_back(argv[i]);
+      break;
+    }
+    else if (is_help_flag(a)) { usage_run(std::cout); return 0; }
     else if (parse_jit_opt(a, "run", jit_opt, jit_opt_flag, opt_ok)) {
       if (!opt_ok) return 2;
     }
@@ -1642,8 +1649,19 @@ static int emit_run(int argc, char **argv) {
       resolve = true;
       if (i + 1 < argc && argv[i + 1][0] != '-') resolve_name = argv[++i];
     }
-    else if (!a.empty() && a[0] != '-') prog_file = a;   // program source FILE
+    else if (a == "-" || (!a.empty() && a[0] != '-')) {
+      if (!prog_file.empty()) {
+        std::cerr << "emit run: multiple source files: " << prog_file << " and " << a << "\n";
+        return 2;
+      }
+      prog_file = a;
+    }
     else { std::cerr << "emit run: unknown option " << a << "\n"; return 2; }
+  }
+  if (!program_args.empty() && (emit || resolve)) {
+    std::cerr << "emit run: program arguments require execution and conflict with "
+              << (emit ? "--emit" : "--resolve-program") << "\n";
+    return 2;
   }
   if (!jit_opt_flag.empty() && (emit || resolve)) {
     std::cerr << "emit run: JIT optimization option " << jit_opt_flag
@@ -1677,7 +1695,7 @@ static int emit_run(int argc, char **argv) {
 
   // Program source: FILE when given, otherwise stdin (spec: emit run [FILE]).
   std::string prog_src;
-  if (!prog_file.empty()) {
+  if (!prog_file.empty() && prog_file != "-") {
     prog_src = read_file(prog_file);
   } else {
     std::ostringstream ss;
@@ -1692,7 +1710,7 @@ static int emit_run(int argc, char **argv) {
   bool is_library = false;
   auto compile_begin = SteadyClock::now();
   if (!compile_program(prog_src, manifests, no_prelude, modules, module_keys, prog_ir,
-                       is_library, prog_file))
+                       is_library, prog_file == "-" ? "" : prog_file))
     return 1;
   auto compile_end = SteadyClock::now();
 
@@ -1746,6 +1764,14 @@ static int emit_run(int argc, char **argv) {
   }
   uint64_t transform_before_run = g_jit_metrics.transform_ns;
   entry_t fn = sym->toPtr<entry_t>();
+
+  // Install the logical program command line only after compilation and immediately
+  // before executing user code, keeping compiler/REPL control state separate.
+  std::string command_name = prog_file.empty() ? "-" : prog_file;
+  std::vector<const char *> process_argv;
+  process_argv.push_back(command_name.c_str());
+  for (const std::string &arg : program_args) process_argv.push_back(arg.c_str());
+  rt_set_command_line((int)process_argv.size(), process_argv.data());
 
   // Run the program.  A runtime trap longjmps back here so we report it rather than
   // crashing; conservative GC needs no unwinding.

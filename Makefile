@@ -202,6 +202,7 @@ BINDIR   := $(DESTDIR)$(PREFIX)/bin
 SHAREDIR := $(DESTDIR)$(PREFIX)/share/emit
 LIBDIRS  := lib/scheme lib/emit
 SLDS     := $(foreach d,$(LIBDIRS),$(wildcard $(d)/*.sld))
+LIBDATA  := lib/scheme/char-data.scm
 SUPPORT_EXEC := tools/llvm-env.sh tools/log.sh
 SUPPORT_DATA := src/runtime/runtime.c
 SUPPORT      := $(SUPPORT_EXEC) $(SUPPORT_DATA)
@@ -215,11 +216,12 @@ install: $(EMIT)
 	@install -m 755 $(EMIT) "$(BINDIR)/emit"
 	@install -m 644 emit-libs.scm "$(SHAREDIR)/emit-libs.scm"
 	@$(foreach d,$(LIBDIRS),install -m 644 $(wildcard $(d)/*.sld) "$(SHAREDIR)/$(d)/";)
+	@install -m 644 $(LIBDATA) "$(SHAREDIR)/lib/scheme/"
 	@$(foreach f,$(SUPPORT_EXEC),install -m 755 $(f) "$(SHAREDIR)/$(f)";)
 	@$(foreach f,$(SUPPORT_DATA),install -m 644 $(f) "$(SHAREDIR)/$(f)";)
 	@. tools/log.sh; \
 	  say "install $(EMIT) -> $(BINDIR)/emit  [$$(bytes $(BINDIR)/emit) bytes]"; \
-	  say "install emit-libs.scm + $(words $(SLDS)) library source(s) -> $(SHAREDIR)"; \
+	  say "install emit-libs.scm + $(words $(SLDS)) library source(s) + $(words $(LIBDATA)) include(s) -> $(SHAREDIR)"; \
 	  say "install $(words $(SUPPORT)) support file(s) -> $(SHAREDIR)  [$(SUPPORT)]"
 
 # build/ is a real directory (order-only prerequisite), not a phony target.

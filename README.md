@@ -353,17 +353,22 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
   value today, and the inline fast path is already wired so that change lands in the `rt_*`
   runtime alone. Flonums are boxed doubles today; keeping intermediates unboxed in registers is
   a planned codegen follow-on (see `openspec/explorations/flonum-unboxing.md`).
-- **Control and exceptions** — full unlimited-extent, re-entrant continuations and
-  `raise-continuable`. The current `call/cc` is an escape continuation valid only within its
+- **Control and exceptions** — full unlimited-extent, re-entrant continuations. The current
+  `call/cc` is an escape continuation valid only within its
   creating extent, and a non-matching `guard` re-raises in the guard's dynamic environment rather
   than the original `raise` environment.
 - **I/O follow-ons** — binary ports and bytevector I/O, plus `char-ready?`. Textual ports, files,
   `read`, and the output procedures ship, but input operations require an explicit port and input
   files are read completely when opened rather than streamed.
-- **Remaining standard libraries** — `(scheme case-lambda)`, `(scheme char)`, `(scheme eval)`,
-  `(scheme lazy)`, `(scheme load)`, `(scheme process-context)`, `(scheme repl)`, `(scheme time)`,
-  `(scheme write)`, and `(scheme r5rs)` are not implemented. `(scheme complex)` is not provided
+- **Remaining standard libraries** — `(scheme eval)`, `(scheme lazy)`, `(scheme load)`,
+  `(scheme repl)`, `(scheme time)`, and `(scheme r5rs)` are not implemented. `(scheme complex)` is not provided
   under the deliberate real-only numeric restriction.
+
+The Pitch prerequisites now shipped are `(scheme case-lambda)`, Unicode 17.0.0
+`(scheme char)`, continuable exceptions, `(scheme process-context)`, and `(scheme write)`.
+The later Pitch port still owns its non-R7RS adaptations: R6RS condition composition,
+record protocols/inheritance, R6RS hash tables, sorting, bitwise/fixnum APIs, host filesystem
+operations, and numeric lexemes outside Emit's bounded real-only tower.
 
 **Self-hosting (the north star)**
 - The compiler compiles itself to a byte-identical fixed point, and there are now three
@@ -394,3 +399,6 @@ added to it). Vendored today:
 - `test/r7rs/r7rs-tests.scm` — the R7RS-small conformance suite, from
   [chibi-scheme](https://github.com/ashinn/chibi-scheme); BSD 3-clause, see
   [`test/r7rs/LICENSE.chibi-scheme`](test/r7rs/LICENSE.chibi-scheme).
+- `vendor/unicode/17.0.0/` — the Unicode 17.0.0 Character Database inputs used
+  to generate `(scheme char)` tables; Unicode Data Files and Software License,
+  see [`vendor/unicode/17.0.0/LICENSE.txt`](vendor/unicode/17.0.0/LICENSE.txt).

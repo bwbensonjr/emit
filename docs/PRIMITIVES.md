@@ -369,6 +369,14 @@ If a new integrable is used inside macro templates, no extra work is needed: uni
 
 ## The I/O primitives (change: `scheme-io-library`)
 
+The ordinary `(scheme write)` library also selects two graph policies through internal
+edges: `%write-simple` bypasses datum labels, while `%write-shared` labels every repeated
+pair/vector. Their port-directed counterparts use the same tag walker and destination path.
+
+`(scheme process-context)` is likewise ordinary library code over a deliberately small host
+edge: fresh argv/environment snapshots plus non-returning normal and emergency status exits.
+The normal Scheme `exit` wrapper unwinds the prelude's wind stack before entering that edge.
+
 The port surface is deliberately thin at the primitive layer: everything about *what a port
 is* lives in `src/prelude.scm` as a record, and the primitives are only the edges where the
 runtime must be involved.
