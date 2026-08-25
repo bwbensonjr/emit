@@ -230,9 +230,9 @@ read source → collect-toplevel → expand → parse+rename+imports → inline-
 
 The standard library is not prepended: it is the auto-imported module `(scheme base)`, compiled to
 its own unit and linked (or JIT-loaded) alongside the program, together with the internal substrate
-`(emit internal)` it imports. The sixteen names R7RS-small places elsewhere live in
-`(scheme cxr)`, `(scheme read)` and `(scheme file)`, which are **not** auto-imported — see
-[`docs/MODULES.md`](docs/MODULES.md).
+`(emit internal)` it imports. The implemented standard-library surface outside `(scheme base)`
+lives in `(scheme cxr)`, `(scheme read)`, `(scheme file)`, and `(scheme inexact)`, which are **not**
+auto-imported — see [`docs/MODULES.md`](docs/MODULES.md).
 
 Values are tagged 64-bit words. All 8 tags are assigned: fixnum, boolean, nil, pair,
 closure, box, symbol (interned), and an extended/header-word object (tag 7) hosting strings
@@ -256,10 +256,12 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
   (change: `library-macro-export`, issue #48) — the `.exports` artifact carries a compile-time half,
   and a template's free identifiers are resolved in the *defining* library, so an exported macro may
   reach the library's private procedures and private macros without widening its public surface.
-- **Exceptions (R7RS-small subset)**: `guard`, `raise`, and `error` with catchable error
-  objects (`error-object?`/`-message`/`-irritants`). `guard` is a one-shot upward escape
-  over a runtime `setjmp` frame stack (no `call/cc` needed); an uncaught raise aborts as
-  before. `error` is a superset — `(error message ...)` (R7RS) or `(error who message ...)`.
+- **Control and exceptions (restricted R7RS-small subset)**: `dynamic-wind`, escape-only
+  `call/cc` / `call-with-current-continuation`, `with-exception-handler`, `guard`, `raise`, and
+  `error` with catchable error objects (`error-object?`/`-message`/`-irritants`, plus
+  `read-error?`/`file-error?`). Runtime type and arity errors are catchable through the same
+  handler chain. `error` is a superset — `(error message ...)` (R7RS) or
+  `(error who message ...)`.
 - Arithmetic: n-ary `+ - *`. Comparisons: n-ary/chained `= < > <= >=`, `eq?` / `eqv?`, and
   structural `equal?`.
 - Variadic `lambda`, dotted rest parameters, `apply`, and runtime arity checking — on the
@@ -301,9 +303,9 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
   `(scheme base)` is now **library zero** for the compiler's own build too: the compiler
   binaries link the baked library set and reference its exports rather than inlining the
   prelude (change: `compiler-bootstrap-rehome`).
-- The R7RS-small **library partition** (change: `scheme-base-partition`, issue #33): the sixteen
-  names the standard places outside `(scheme base)` are exported by `(scheme cxr)` (complete, all
-  twenty-four `car`/`cdr` compositions), `(scheme read)` and `(scheme file)`, each an ordinary
+- The implemented R7RS-small **library partition** (change: `scheme-base-partition`, issue #33):
+  `(scheme cxr)` is complete with all twenty-four `car`/`cdr` compositions, while `(scheme read)`
+  and `(scheme file)` export their implemented standard procedures; each is an ordinary
   manifest-resolved library. **Breaking** — a program using `caddr`, `read` or the file procedures
   must now import the library that owns it. `caar`/`cadr`/`cdar`/`cddr` stay in `(scheme base)`.
   The private port and reader machinery they share lives in `(emit internal)`, which is baked but
@@ -351,15 +353,17 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
   value today, and the inline fast path is already wired so that change lands in the `rt_*`
   runtime alone. Flonums are boxed doubles today; keeping intermediates unboxed in registers is
   a planned codegen follow-on (see `openspec/explorations/flonum-unboxing.md`).
-- **Control**: `call/cc`, `dynamic-wind`; and the rest of the R7RS exception system beyond the
-  shipped subset — `with-exception-handler` and `raise-continuable` (their
-  non-unwinding/resumable semantics need `call/cc`), `read-error?`/`file-error?`.
-  (`values`/`call-with-values` shipped — see "Accomplished" — independently of `call/cc`.)
-- **I/O**: ports, files, `read` from stdin, `write` as a procedure (`display` is
-  supported — see above; `newline`/`write`/ports are not yet).
-- Recoverable error handling: `guard` catches in-language `raise`/`error` (see above), but
-  runtime type/arity errors are still not guard-catchable (they trap to the host, per R7RS
-  "it is an error" latitude); no general condition-type hierarchy.
+- **Control and exceptions** — full unlimited-extent, re-entrant continuations and
+  `raise-continuable`. The current `call/cc` is an escape continuation valid only within its
+  creating extent, and a non-matching `guard` re-raises in the guard's dynamic environment rather
+  than the original `raise` environment.
+- **I/O follow-ons** — binary ports and bytevector I/O, plus `char-ready?`. Textual ports, files,
+  `read`, and the output procedures ship, but input operations require an explicit port and input
+  files are read completely when opened rather than streamed.
+- **Remaining standard libraries** — `(scheme case-lambda)`, `(scheme char)`, `(scheme eval)`,
+  `(scheme lazy)`, `(scheme load)`, `(scheme process-context)`, `(scheme repl)`, `(scheme time)`,
+  `(scheme write)`, and `(scheme r5rs)` are not implemented. `(scheme complex)` is not provided
+  under the deliberate real-only numeric restriction.
 
 **Self-hosting (the north star)**
 - The compiler compiles itself to a byte-identical fixed point, and there are now three
