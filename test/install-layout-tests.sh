@@ -180,7 +180,7 @@ done
 # include is especially important: char.sld resolves beside it after installation.
 for probe in \
   "(scheme case-lambda)|(import (scheme case-lambda)) ((case-lambda (() 7)))|7" \
-  "(scheme char)|(import (scheme char)) (string-foldcase \"Straße\")|\"strasse\"" \
+  "(scheme char)|(import (scheme char)) (list (string-foldcase \"Straße\") (char-general-category #\\x2003))|(\"strasse\" Zs)" \
   "(scheme process-context)|(import (scheme process-context)) (car (command-line))|\"-\"" \
   "(scheme write)|(import (scheme base) (scheme write)) (let ((p (open-output-string))) (write-shared (list 1 2) p) (get-output-string p))|\"(1 2)\"" \
   "(emit filesystem)|(import (emit filesystem)) (list (file-directory? \".\") (file-symbolic-link? \".\"))|(#t #f)"

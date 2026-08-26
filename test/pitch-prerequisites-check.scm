@@ -42,6 +42,38 @@
              (digit-value #\x03bb))
        '(#t #t #t #t #t #t 3 4 0 #f))
 
+(check 'unicode-general-categories
+       (map char-general-category
+            (list #\A #\a #\x01c5 #\x0301 #\x0664 #\x2003 #\x2603
+                  #\xe000 #\x3400 #\x4000 #\x4dbf #\x0378))
+       '(Lu Ll Lt Mn Nd Zs So Co Lo Lo Lo Cn))
+
+;;; These are the exact category groups in Pitch's derived reader.  Keeping the
+;;; policy in this fixture (rather than the library) proves the extension supplies
+;;; the information the port needs without baking lexer rules into Emit.
+(define pitch-initial-categories
+  '(Lu Ll Lt Lm Lo Mn Nl No Pd Pc Po Sc Sm Sk So Co))
+(define pitch-subsequent-categories
+  '(Lu Ll Lt Lm Lo Mn Nl No Pd Pc Po Sc Sm Sk So Co Nd Mc Me))
+(define (category-member? ch categories)
+  (if (memq (char-general-category ch) categories) #t #f))
+(define (pitch-initial? ch)
+  (category-member? ch pitch-initial-categories))
+(define (pitch-subsequent? ch)
+  (category-member? ch pitch-subsequent-categories))
+(define (pitch-intraline-whitespace? ch)
+  (eq? (char-general-category ch) 'Zs))
+(check 'pitch-unicode-category-policy
+       (list (pitch-initial? #\x03bb)
+             (pitch-initial? #\x4e00)
+             (pitch-initial? #\x0664)
+             (pitch-subsequent? #\x0664)
+             (pitch-subsequent? #\x0903)
+             (pitch-subsequent? #\x0488)
+             (pitch-intraline-whitespace? #\x2003)
+             (pitch-intraline-whitespace? #\tab))
+       '(#t #t #f #t #t #t #t #f))
+
 (check 'unicode-simple-case
        (list (char-upcase #\x03bb) (char-downcase #\x039b)
              (char-foldcase #\x212a) (char-upcase #\x2603)

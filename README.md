@@ -370,7 +370,8 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
   under the deliberate real-only numeric restriction.
 
 The Pitch prerequisites now shipped are `(scheme case-lambda)`, Unicode 17.0.0
-`(scheme char)`, continuable exceptions, `(scheme process-context)`, `(scheme write)`, and the
+`(scheme char)` (including Emit's `char-general-category` extension), continuable exceptions,
+`(scheme process-context)`, `(scheme write)`, and the
 narrow `(emit filesystem)` host extension.
 The later Pitch port still owns its non-R7RS adaptations: R6RS condition composition,
 record protocols/inheritance, R6RS hash tables, sorting, bitwise/fixnum APIs, the filesystem host

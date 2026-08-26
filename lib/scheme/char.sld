@@ -2,7 +2,7 @@
 (define-library (scheme char)
   (import (scheme base))
   (export char-alphabetic? char-numeric? char-whitespace?
-          char-upper-case? char-lower-case? digit-value
+          char-upper-case? char-lower-case? digit-value char-general-category
           char-upcase char-downcase char-foldcase
           char-ci=? char-ci<? char-ci>? char-ci<=? char-ci>=?
           string-upcase string-downcase string-foldcase
@@ -31,6 +31,19 @@
               (cond ((< cp key) (loop lo (- mid 1)))
                     ((> cp key) (loop (+ mid 1) hi))
                     (else (vector-ref table (+ i 1))))))))
+
+    (define (char-general-category ch)
+      (let ((cp (char->integer ch)))
+        (let loop ((lo 0)
+                   (hi (- (quotient (vector-length %unicode-general-category) 3) 1)))
+          (if (> lo hi) 'Cn
+              (let* ((mid (quotient (+ lo hi) 2))
+                     (i (* mid 3))
+                     (a (vector-ref %unicode-general-category i))
+                     (b (vector-ref %unicode-general-category (+ i 1))))
+                (cond ((< cp a) (loop lo (- mid 1)))
+                      ((> cp b) (loop (+ mid 1) hi))
+                      (else (vector-ref %unicode-general-category (+ i 2)))))))))
 
     (define (char-alphabetic? ch)
       (uc-in-ranges? %unicode-alphabetic (char->integer ch)))

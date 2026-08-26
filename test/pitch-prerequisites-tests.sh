@@ -24,11 +24,12 @@ cat > "$TMP/dispatch.sld" <<'EOF'
 (define-library (pitch prerequisite dispatch)
   (import (scheme base) (scheme case-lambda) (scheme char)
           (scheme process-context) (scheme write))
-  (export choose folded render library-command-line
+  (export choose folded category render library-command-line
           library-environment library-environments library-exit library-emergency-exit)
   (begin
     (define choose (case-lambda (() 'zero) ((x) x) (xs xs)))
     (define (folded s) (string-foldcase s))
+    (define (category ch) (char-general-category ch))
     (define (render x)
       (let ((p (open-output-string))) (write-shared x p) (get-output-string p)))
     (define (library-command-line) (command-line))
@@ -39,7 +40,7 @@ cat > "$TMP/dispatch.sld" <<'EOF'
 EOF
 cat > "$TMP/use-dispatch.scm" <<'EOF'
 (import (scheme base) (pitch prerequisite dispatch))
-(list (choose 1 2 3) (folded "Straße") (render (list 1 2))
+(list (choose 1 2 3) (folded "Straße") (category #\x2003) (render (list 1 2))
       (cdr (library-command-line))
       (library-environment "EMIT_PITCH_TEST")
       (pair? (library-environments)))
@@ -53,16 +54,25 @@ cat > "$TMP/user-manifest.scm" <<EOF
 EOF
 ugot="$(EMIT_VERBOSITY=quiet EMIT_PITCH_TEST=present build/emit run "$TMP/use-dispatch.scm" \
           --manifest "$TMP/user-manifest.scm" 2>"$TMP/user.err")"
-[ "$ugot" = '((1 2 3) "strasse" "(1 2)" () "present" #t)' ] \
+[ "$ugot" = '((1 2 3) "strasse" Zs "(1 2)" () "present" #t)' ] \
   && ok "a user library re-exports the prerequisite behavior" \
   || { bad "user-library prerequisites => [$ugot]"; sed 's/^/         /' "$TMP/user.err"; }
 
 rgot="$(printf '%s\n' '(import (scheme base) (scheme char) (scheme write))' \
-          '(list (string-foldcase "Straße") (let ((p (open-output-string))) (write-shared (list 1 2) p) (get-output-string p)))' \
+          '(list (string-foldcase "Straße") (char-general-category #\x2003) (let ((p (open-output-string))) (write-shared (list 1 2) p) (get-output-string p)))' \
           | EMIT_VERBOSITY=quiet build/emit repl 2>"$TMP/repl.err" \
           | awk 'NF{last=$0} END{print last}')"
-[ "$rgot" = '("strasse" "(1 2)")' ] && ok "character and writer libraries work in the REPL" \
+[ "$rgot" = '("strasse" Zs "(1 2)")' ] && ok "character and writer libraries work in the REPL" \
   || { bad "REPL prerequisite libraries => [$rgot]"; sed 's/^/         /' "$TMP/repl.err"; }
+
+if printf '%s\n' '(char-general-category #\a)' \
+     | EMIT_VERBOSITY=quiet build/emit run >"$TMP/unimported.out" 2>"$TMP/unimported.err"; then
+  bad "char-general-category was auto-imported without (scheme char)"
+elif grep -q 'unbound variable.*char-general-category' "$TMP/unimported.err"; then
+  ok "char-general-category remains outside auto-imported (scheme base)"
+else
+  bad "missing-import diagnostic did not name char-general-category"
+fi
 
 # Build and run the combined fixture as the shipping path.  The project manifest
 # supplies only its program; the repository manifest supplies ordinary libraries.

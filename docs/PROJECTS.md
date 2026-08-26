@@ -297,7 +297,7 @@ import:
 | `(scheme file)` | `open-input-file`, `open-output-file`, `call-with-input-file`, `file-exists?`, `delete-file`, … |
 | `(scheme inexact)` | `sqrt`, `exp`, `log`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `finite?`, `infinite?`, `nan?` |
 | `(scheme case-lambda)` | the `case-lambda` derived form |
-| `(scheme char)` | Unicode 17.0.0 properties, casing, folding, and case-insensitive comparisons |
+| `(scheme char)` | Unicode 17.0.0 properties, casing, folding, and case-insensitive comparisons; plus Emit's `char-general-category` extension |
 | `(scheme process-context)` | `command-line`, `exit`, `emergency-exit`, and environment access |
 | `(scheme write)` | `display`, `write`, `write-simple`, and `write-shared` |
 
@@ -306,6 +306,11 @@ Emit also ships one explicit non-standard host extension:
 | library | what it holds |
 |---|---|
 | `(emit filesystem)` | unsorted bare-name `directory-list`, link-following `file-directory?`, final-component `file-symbolic-link?`, and atomic same-filesystem `replace-file` |
+
+`char-general-category` is a second deliberate extension, kept in `(scheme char)`
+because it shares that ordinary library's generated Unicode table. It returns
+two-letter Unicode 17.0.0 category symbols such as `Lu`, `Ll`, and `Zs`, or `Cn`
+for an unassigned scalar; Emit does not provide an `(rnrs unicode (6))` alias.
 
 The predicates return `#f` for missing paths. Enumeration, classification failures other than a
 missing path, and failed replacement raise catchable objects satisfying `file-error?`.

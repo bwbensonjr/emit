@@ -28,6 +28,7 @@
       (list (char-alphabetic? #\x03bb)
             (char-whitespace? #\x2003)
             (digit-value #\x0664)
+            (char-general-category #\x03bb)
             (string-foldcase "Straße"))
       warning-result
       (command-line)

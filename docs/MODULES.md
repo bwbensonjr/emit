@@ -405,6 +405,16 @@ published fails the default suite, so adding a helper forces a visibility decisi
 | `(scheme process-context)` | hand-written | `(import (scheme process-context))` | manifest |
 | `(scheme write)` | hand-written | `(import (scheme write))` | manifest |
 
+### Character library extension
+
+In addition to the R7RS-small `(scheme char)` surface, Emit deliberately exports
+`char-general-category` from that library for Unicode-aware readers. It returns
+the two-letter Unicode 17.0.0 `General_Category` symbol for a character — for
+example `Lu`, `Ll`, or `Zs` — and returns `Cn` for a scalar unassigned in that
+version. The name is an Emit extension, not an R7RS-small procedure or an R6RS
+library alias, and remains unavailable until `(scheme char)` is explicitly
+imported.
+
 The prelude partition members are generated because `src/prelude.scm` is their single source of
 truth for what those procedures *are* — relocating a name must not fork its definition. The
 partition in `src/prelude-surface.scm` says which library gets which definition;

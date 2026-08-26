@@ -25,6 +25,14 @@ if ! chez --script tools/gen-unicode-tables.ss "$TMP/char-data.scm" \
 fi
 sed 's/^/  [INFO] /' "$TMP/generate.err"
 
+if category_check="$(chez --script test/unicode-category-data-check.ss 2>"$TMP/category.err")"; then
+  echo "  [OK  ] $category_check"
+else
+  echo "  [FAIL] generated general categories differ from UnicodeData.txt"
+  sed 's/^/           /' "$TMP/category.err" | head -10
+  exit 1
+fi
+
 if diff -q lib/scheme/char-data.scm "$TMP/char-data.scm" >/dev/null; then
   echo "  [OK  ] lib/scheme/char-data.scm is deterministic and current"
 else
@@ -42,6 +50,22 @@ if EMIT_VERBOSITY=quiet chez --script tools/gen-unicode-tables.ss \
 else
   echo "  [FAIL] Unicode generation quiet mode changed output or wrote narration"
   sed 's/^/           /' "$TMP/quiet.err" | head -10
+  exit 1
+fi
+
+# A malformed First/Last pair must fail instead of silently dropping the range
+# interior.  The optional input root exists for this isolated validation path.
+cp -R vendor/unicode/17.0.0 "$TMP/bad-unicode"
+perl -pi -e 'if (/^4DBF;/) { s/;Lo;/;Ll;/ }' "$TMP/bad-unicode/UnicodeData.txt"
+if chez --script tools/gen-unicode-tables.ss "$TMP/bad.scm" "$TMP/bad-unicode" \
+     >/dev/null 2>"$TMP/bad.err"; then
+  echo "  [FAIL] mismatched UnicodeData First/Last pair was accepted"
+  exit 1
+elif grep -q 'mismatched UnicodeData First/Last range' "$TMP/bad.err"; then
+  echo "  [OK  ] mismatched UnicodeData First/Last pair is rejected"
+else
+  echo "  [FAIL] malformed-range diagnostic did not identify the mismatch"
+  sed 's/^/           /' "$TMP/bad.err" | head -10
   exit 1
 fi
 
