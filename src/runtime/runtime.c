@@ -1543,15 +1543,21 @@ val rt_eof_object_p(val v)     { return truthy(is_eof(v)); }
  * is a genuine FILE * writing into a growable memory buffer.  That is what keeps
  * this simple -- print_val takes a FILE *, so display/write to a string port is
  * the SAME printer with a different stream, not a second Scheme-side accumulation
- * path.  get-output-string flushes and copies the buffer out.
+ * path.  get-output-string flushes and copies the buffer out.  open_memstream
+ * retains the ADDRESSES of its buffer and size cells, so those live in a separate
+ * process-lifetime allocation: putting them in the moving table would leave libc
+ * updating stale cells after the table grows.
  *
  * `slots` itself is GC_MALLOC_UNCOLLECTABLE (never scanned for Scheme values --
  * it holds only C pointers and sizes) and grows by doubling. */
 typedef struct {
-  FILE  *f;         /* the stream; NULL once closed */
-  char  *membuf;    /* open_memstream buffer (string ports only), else NULL */
-  size_t memsize;   /* open_memstream size cell */
-  int    is_string; /* 1 = string port (get-output-string is legal) */
+  char  *buf;       /* open_memstream buffer, malloc'd outside the GC heap */
+  size_t size;      /* open_memstream size cell */
+} port_memstream_state;
+
+typedef struct {
+  FILE *f;                       /* the stream; NULL once closed */
+  port_memstream_state *memstate; /* non-NULL only for string ports */
 } port_slot;
 
 static port_slot *port_slots = NULL;
@@ -1571,9 +1577,7 @@ static intptr_t port_alloc_slot(void) {
     port_slots = ns; port_cap = ncap;
   }
   port_slots[port_count].f = NULL;
-  port_slots[port_count].membuf = NULL;
-  port_slots[port_count].memsize = 0;
-  port_slots[port_count].is_string = 0;
+  port_slots[port_count].memstate = NULL;
   return port_count++ + PORT_FIRST;
 }
 
@@ -1636,9 +1640,17 @@ val rt_port_open_output_file(val path) {
 val rt_port_open_output_string(void) {
   intptr_t h = port_alloc_slot();
   port_slot *s = &port_slots[h - PORT_FIRST];
-  s->f = open_memstream(&s->membuf, &s->memsize);
-  if (!s->f) return FALSE_V;
-  s->is_string = 1;
+  port_memstream_state *state =
+      (port_memstream_state *)GC_MALLOC_UNCOLLECTABLE(sizeof(port_memstream_state));
+  state->buf = NULL;
+  state->size = 0;
+  FILE *f = open_memstream(&state->buf, &state->size);
+  if (!f) {
+    GC_free(state);
+    return FALSE_V;
+  }
+  s->f = f;
+  s->memstate = state;
   return FIX(h);
 }
 
@@ -1658,9 +1670,10 @@ val rt_port_get_output_string(val handle) {
   intptr_t i = h - PORT_FIRST;
   if (tag_of(handle) != TAG_FIXNUM || i < 0 || i >= port_count) return FALSE_V;
   port_slot *s = &port_slots[i];
-  if (!s->is_string) return FALSE_V;
+  port_memstream_state *state = s->memstate;
+  if (!state) return FALSE_V;
   if (s->f) fflush(s->f);
-  return rt_make_string(s->membuf ? s->membuf : "", (intptr_t)s->memsize);
+  return rt_make_string(state->buf ? state->buf : "", (intptr_t)state->size);
 }
 
 /* Flush a port's buffered output through to its destination. */
@@ -1674,7 +1687,7 @@ val rt_port_flush(val handle) {
  * already-closed port is permitted and does nothing (R7RS), which falls out of
  * the NULL check.  The reserved stdout/stderr handles are never closed -- a
  * program that closes (current-output-port) must not take the process's stdout
- * with it.  A string port keeps its membuf so get-output-string still works after
+ * with it.  A string port keeps its memstate so get-output-string still works after
  * close; the memstream is flushed and closed, which finalizes buffer and size. */
 val rt_port_close(val handle) {
   intptr_t h = UNFIX(handle);

@@ -18,6 +18,8 @@
 #   * the eof object is distinct from #f, (), and the unspecified value, and
 #     prints without faulting;
 #   * write-string writes contents LITERALLY, where `write` would quote and escape;
+#   * a retained string output port keeps its memstream state when opening later
+#     ports grows the runtime handle table;
 #   * CLEANUP ON A NON-LOCAL EXIT (the design's stated risk, not the happy path):
 #     call-with-port closes on a normal return, on an escape via a continuation,
 #     AND on a raise.  A test that only exercised normal return would not test
@@ -225,6 +227,17 @@ check "a string port accumulates what was written" \
   '(let ((p (open-output-string)))
      (display "ab" p) (write-char #\c p) (get-output-string p))' \
   '"abc"'
+# The table begins with eight slots. Retaining the first port and opening eight
+# more deliberately crosses that capacity boundary; open_memstream must still
+# update metadata that get-output-string can reach after the table moves.
+check "a retained string port survives port-table growth" \
+  '(let ((retained (open-output-string)))
+     (do ((index 0 (+ index 1)))
+         ((= index 8))
+       (open-output-string))
+     (write-string "captured" retained)
+     (get-output-string retained))' \
+  '"captured"'
 check "all five output procedures accept a port" \
   '(let ((p (open-output-string)))
      (display "d" p) (write "w" p) (write-char #\c p) (write-string "s" p) (newline p)
