@@ -1865,8 +1865,23 @@ val rt_hash(val v) {
   return FIX((intptr_t)(hash_word(v, 4) & (uintptr_t)0x0FFFFFFFFFFFFFFFu));
 }
 
+/* Identity hashing never inspects an object's contents.  Boehm allocations do
+ * not move, so the tagged word is stable for the lifetime of a live heap object;
+ * immediates are canonical tagged words already.  Mix before truncating so
+ * allocator alignment and adjacent addresses do not cluster in small bucket
+ * vectors, and so the result is not a raw address-shaped value. */
+val rt_eq_hash(val v) {
+  uintptr_t x = (uintptr_t)v;
+  x ^= x >> 33;
+  x *= UINT64_C(0xff51afd7ed558ccd);
+  x ^= x >> 33;
+  x *= UINT64_C(0xc4ceb9fe1a85ec53);
+  x ^= x >> 33;
+  return FIX((intptr_t)(x & UINT64_C(0x0FFFFFFFFFFFFFFF)));
+}
+
 /* --- hash tables (tag-7 HDR_HASHTABLE: { HDR_HASHTABLE, spine }) ----------
- * An opaque wrapper around a mutable spine vector #(count buckets _); every
+ * An opaque wrapper around a mutable spine vector #(count buckets identity?); every
  * hash-table-* operation lives in the prelude over the spine.  The wrapper
  * exists only to give hash-table? a disjoint type and a distinct printed form
  * -- a bare vector could not be told apart from a user vector. */

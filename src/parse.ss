@@ -55,7 +55,7 @@
                   %display-port %write-port %write-simple-port %write-shared-port
                   %newline-port %write-char-port
                   %write-string-port
-                  %hash %make-hash-table %hash-table? %hash-table-spine
+                  %hash %eq-hash %make-hash-table %hash-table? %hash-table-spine
                   %make-record-type %make-record %record-ref %record-set! %record-of-type? %record?
                   %list->mv %mv? %mv->list
                   %no-prelude? %dump-level %stderr-write

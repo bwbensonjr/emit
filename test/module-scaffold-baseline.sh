@@ -652,6 +652,24 @@
 #     all 80 files byte-identical to the pre-change capture (0 unexpected additions,
 #     removals, codegen changes, or new demos).  The ordinary `(emit filesystem)` unit
 #     appears only when imported and therefore enters no existing demo's closure.
+#   eq-keyed-hash-tables, primitive bootstrap phase -- `%eq-hash` adds one
+#     `declare i64 @rt_eq_hash(i64)` line to every emitted unit's shared header.  A
+#     preserved post-change capture held all 80 prior demos plus the new `eq-hash`
+#     primitive probe.  Removing exactly that declaration from every prior demo made
+#     all 80 hashes byte-identical to this manifest's pre-change revision (0 unexpected
+#     additions, removals, or codegen changes); demo values stayed 80/80 and the new
+#     cycle/stability probe made the suite 81/81.
+#   eq-keyed-hash-tables, table-surface phase -- a preserved 82-demo final capture
+#     differs from the 81-demo primitive-phase capture by exactly the new
+#     `eq-hash-tables` demo.  All 81 prior files move because their linked `(scheme
+#     base)` unit gains the identity-table implementation and each program unit declares
+#     the newly exported `make-eq-hash-table`.  Removing that base unit and exactly one
+#     such external declaration per file makes all 81 remainders byte-identical (0
+#     unexplained changes).  The base unit grows 694,763 -> 701,068 bytes; its named set
+#     adds exactly four globals and four matching code bodies (`make-eq-hash-table`,
+#     `%ht-identity?`, `%ht-hash`, `%ht-key=?`) with no named removals.  Focused values
+#     stayed unchanged for the existing structural table and matched exactly through
+#     source, REPL, AOT, JIT, and bitcode for the new identity table.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

@@ -103,6 +103,8 @@ run3 equallist demos/equal-list.scm       '(1 1 0 ((2) (3)) ("b" . 2) (2 3 4) -6
 run3 vectors   demos/vectors.scm          '(20 4 99 #t #f #(1 2 3) #t #f 9)'  # vector type: ops + printer + #(...) reader, survives GC under lli
 run3 bytevectors demos/bytevectors.scm    '(20 4 255 #t #f #u8(1 2 3) #t #f 9)'  # bytevector type: ops + printer + #u8(...) reader, survives GC under lli
 run3 hashtables demos/hash-tables.scm     '(1 42 2 #f 100 #t #t #t #f #t)'  # hash-table: set/ref/delete/grow+rehash survives GC under lli
+run3 eqhash     demos/eq-hash.scm         '(#t #t #t 1000)'  # identity hash is stable and cycle-safe
+run3 eqhashtables demos/eq-hash-tables.scm '(2 first second 1 replaced #t pair vector #f 100 #t missing 100 100 100 1 structural-second #<hash-table 1>)'  # eq?-keyed mode across all backends
 run3 hashprint  demos/hash-print.scm      '#<hash-table 2>'  # opaque hash-table print
 run3 records    demos/records.scm         '(3 4 #t #f #f #t 9 #t #f)'  # define-record-type survives GC under lli
 run3 recordprint demos/record-print.scm   '#<record point>'  # opaque record print

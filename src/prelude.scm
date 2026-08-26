@@ -1143,62 +1143,74 @@
         (apply consumer (%mv->list r))
         (consumer r))))
 
-;; --- hash tables (openspec hash-tables): SRFI-69 subset, equal?-keyed --------
-;; Built on vectors + the %hash primitive.  A table is an opaque HDR_HASHTABLE
-;; wrapper (%make-hash-table) around a mutable spine vector #(count buckets _);
-;; `buckets` is a vector of association lists ((key . val) ...).  Pairs are
-;; immutable here, so an existing key is updated by rebuilding its bucket alist
+;; --- hash tables (openspec eq-keyed-hash-tables): equal? or eq? keyed -------
+;; Built on vectors plus %hash/%eq-hash.  A table is an opaque HDR_HASHTABLE
+;; wrapper (%make-hash-table) around a mutable spine vector
+;; #(count buckets identity?).  `buckets` is a vector of association lists
+;; ((key . val) ...).  An existing key is updated by rebuilding its bucket alist
 ;; (drop the old entry, prepend the new one).  The table grows (rehashes into
 ;; ~2x buckets) once count/nbuckets exceeds the load factor, keeping lookup
-;; amortized O(1).  %hash need only be CONSISTENT with equal? (the bucket scan
-;; below is the source of truth), so collisions are merely slow, never wrong.
+;; amortized O(1).  The mode flag always selects comparison and hashing together:
+;; equal?/%hash or eq?/%eq-hash.  Bucket scans are the source of truth, so hash
+;; collisions are merely slow, never wrong.
 (define %ht-initial-buckets 8)
 (define %ht-load-factor 3)
 
 (define (make-hash-table)
   (%make-hash-table (vector 0 (make-vector %ht-initial-buckets (quote ())) #f)))
+(define (make-eq-hash-table)
+  (%make-hash-table (vector 0 (make-vector %ht-initial-buckets (quote ())) #t)))
 (define (hash-table? x) (%hash-table? x))
 
 (define (%ht-count ht)        (vector-ref (%hash-table-spine ht) 0))
 (define (%ht-buckets ht)      (vector-ref (%hash-table-spine ht) 1))
+(define (%ht-identity? ht)    (vector-ref (%hash-table-spine ht) 2))
 (define (%ht-set-count! ht n) (vector-set! (%hash-table-spine ht) 0 n))
 (define (%ht-set-buckets! ht b) (vector-set! (%hash-table-spine ht) 1 b))
 
-;; %hash is non-negative and nbuckets positive, so remainder == modulo here.
-(define (%ht-index key nbuckets) (remainder (%hash key) nbuckets))
+;; Both hashes are non-negative and nbuckets positive, so remainder == modulo.
+(define (%ht-hash ht key) (if (%ht-identity? ht) (%eq-hash key) (%hash key)))
+(define (%ht-key=? ht a b) (if (%ht-identity? ht) (eq? a b) (equal? a b)))
+(define (%ht-index ht key nbuckets) (remainder (%ht-hash ht key) nbuckets))
 
-;; the (key . val) pair for an equal? key in an alist, or #f
-(define (%ht-assoc key al)
+;; The (key . val) pair for an equivalent key in an alist, or #f.
+(define (%ht-assoc ht key al)
   (if (null? al) #f
-      (if (equal? key (car (car al))) (car al) (%ht-assoc key (cdr al)))))
-;; the alist with the (first) equal? key removed
-(define (%ht-remove key al)
+      (if (%ht-key=? ht key (car (car al)))
+          (car al)
+          (%ht-assoc ht key (cdr al)))))
+;; The alist with the first equivalent key removed.
+(define (%ht-remove ht key al)
   (if (null? al) (quote ())
-      (if (equal? key (car (car al)))
+      (if (%ht-key=? ht key (car (car al)))
           (cdr al)
-          (cons (car al) (%ht-remove key (cdr al))))))
+          (cons (car al) (%ht-remove ht key (cdr al))))))
 
 (define (hash-table-ref/default ht key default)
   (let* ((bs (%ht-buckets ht))
-         (p (%ht-assoc key (vector-ref bs (%ht-index key (vector-length bs))))))
+         (p (%ht-assoc ht key
+              (vector-ref bs (%ht-index ht key (vector-length bs))))))
     (if p (cdr p) default)))
 
 (define (hash-table-contains? ht key)
   (let ((bs (%ht-buckets ht)))
-    (if (%ht-assoc key (vector-ref bs (%ht-index key (vector-length bs)))) #t #f)))
+    (if (%ht-assoc ht key
+          (vector-ref bs (%ht-index ht key (vector-length bs)))) #t #f)))
 
 (define (hash-table-ref ht key)
   (let* ((bs (%ht-buckets ht))
-         (p (%ht-assoc key (vector-ref bs (%ht-index key (vector-length bs))))))
+         (p (%ht-assoc ht key
+              (vector-ref bs (%ht-index ht key (vector-length bs))))))
     (if p (cdr p) (error "hash-table-ref: key not found" key))))
 
 (define (hash-table-set! ht key val)
   (let* ((bs (%ht-buckets ht))
          (n (vector-length bs))
-         (i (%ht-index key n))
+         (i (%ht-index ht key n))
          (al (vector-ref bs i))
-         (existed (%ht-assoc key al)))
-    (vector-set! bs i (cons (cons key val) (if existed (%ht-remove key al) al)))
+         (existed (%ht-assoc ht key al)))
+    (vector-set! bs i
+      (cons (cons key val) (if existed (%ht-remove ht key al) al)))
     (if existed
         #f
         (begin
@@ -1207,10 +1219,10 @@
 
 (define (hash-table-delete! ht key)
   (let* ((bs (%ht-buckets ht))
-         (i (%ht-index key (vector-length bs)))
+         (i (%ht-index ht key (vector-length bs)))
          (al (vector-ref bs i)))
-    (if (%ht-assoc key al)
-        (begin (vector-set! bs i (%ht-remove key al))
+    (if (%ht-assoc ht key al)
+        (begin (vector-set! bs i (%ht-remove ht key al))
                (%ht-set-count! ht (- (%ht-count ht) 1)))
         #f)))
 
@@ -1224,7 +1236,7 @@
           (begin
             (let bloop ((al (vector-ref old i)))
               (if (null? al) #f
-                  (let* ((kv (car al)) (j (%ht-index (car kv) newn)))
+                  (let* ((kv (car al)) (j (%ht-index ht (car kv) newn)))
                     (vector-set! newb j (cons kv (vector-ref newb j)))
                     (bloop (cdr al)))))
             (loop (+ i 1)))

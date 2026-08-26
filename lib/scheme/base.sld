@@ -135,6 +135,7 @@
     values
     call-with-values
     make-hash-table
+    make-eq-hash-table
     hash-table?
     hash-table-ref/default
     hash-table-contains?
@@ -342,20 +343,24 @@
     (define %ht-initial-buckets 8)
     (define %ht-load-factor 3)
     (define (make-hash-table) (%make-hash-table (vector 0 (make-vector %ht-initial-buckets (quote ())) #f)))
+    (define (make-eq-hash-table) (%make-hash-table (vector 0 (make-vector %ht-initial-buckets (quote ())) #t)))
     (define (hash-table? x) (%hash-table? x))
     (define (%ht-count ht) (vector-ref (%hash-table-spine ht) 0))
     (define (%ht-buckets ht) (vector-ref (%hash-table-spine ht) 1))
+    (define (%ht-identity? ht) (vector-ref (%hash-table-spine ht) 2))
     (define (%ht-set-count! ht n) (vector-set! (%hash-table-spine ht) 0 n))
     (define (%ht-set-buckets! ht b) (vector-set! (%hash-table-spine ht) 1 b))
-    (define (%ht-index key nbuckets) (remainder (%hash key) nbuckets))
-    (define (%ht-assoc key al) (if (null? al) #f (if (equal? key (car (car al))) (car al) (%ht-assoc key (cdr al)))))
-    (define (%ht-remove key al) (if (null? al) (quote ()) (if (equal? key (car (car al))) (cdr al) (cons (car al) (%ht-remove key (cdr al))))))
-    (define (hash-table-ref/default ht key default) (let* ((bs (%ht-buckets ht)) (p (%ht-assoc key (vector-ref bs (%ht-index key (vector-length bs)))))) (if p (cdr p) default)))
-    (define (hash-table-contains? ht key) (let ((bs (%ht-buckets ht))) (if (%ht-assoc key (vector-ref bs (%ht-index key (vector-length bs)))) #t #f)))
-    (define (hash-table-ref ht key) (let* ((bs (%ht-buckets ht)) (p (%ht-assoc key (vector-ref bs (%ht-index key (vector-length bs)))))) (if p (cdr p) (error "hash-table-ref: key not found" key))))
-    (define (hash-table-set! ht key val) (let* ((bs (%ht-buckets ht)) (n (vector-length bs)) (i (%ht-index key n)) (al (vector-ref bs i)) (existed (%ht-assoc key al))) (vector-set! bs i (cons (cons key val) (if existed (%ht-remove key al) al))) (if existed #f (begin (%ht-set-count! ht (+ (%ht-count ht) 1)) (if (> (%ht-count ht) (* %ht-load-factor n)) (%ht-grow! ht) #f)))))
-    (define (hash-table-delete! ht key) (let* ((bs (%ht-buckets ht)) (i (%ht-index key (vector-length bs))) (al (vector-ref bs i))) (if (%ht-assoc key al) (begin (vector-set! bs i (%ht-remove key al)) (%ht-set-count! ht (- (%ht-count ht) 1))) #f)))
-    (define (%ht-grow! ht) (let* ((old (%ht-buckets ht)) (newn (* 2 (vector-length old))) (newb (make-vector newn (quote ())))) (let loop ((i 0)) (if (< i (vector-length old)) (begin (let bloop ((al (vector-ref old i))) (if (null? al) #f (let* ((kv (car al)) (j (%ht-index (car kv) newn))) (vector-set! newb j (cons kv (vector-ref newb j))) (bloop (cdr al))))) (loop (+ i 1))) #f)) (%ht-set-buckets! ht newb)))
+    (define (%ht-hash ht key) (if (%ht-identity? ht) (%eq-hash key) (%hash key)))
+    (define (%ht-key=? ht a b) (if (%ht-identity? ht) (eq? a b) (equal? a b)))
+    (define (%ht-index ht key nbuckets) (remainder (%ht-hash ht key) nbuckets))
+    (define (%ht-assoc ht key al) (if (null? al) #f (if (%ht-key=? ht key (car (car al))) (car al) (%ht-assoc ht key (cdr al)))))
+    (define (%ht-remove ht key al) (if (null? al) (quote ()) (if (%ht-key=? ht key (car (car al))) (cdr al) (cons (car al) (%ht-remove ht key (cdr al))))))
+    (define (hash-table-ref/default ht key default) (let* ((bs (%ht-buckets ht)) (p (%ht-assoc ht key (vector-ref bs (%ht-index ht key (vector-length bs)))))) (if p (cdr p) default)))
+    (define (hash-table-contains? ht key) (let ((bs (%ht-buckets ht))) (if (%ht-assoc ht key (vector-ref bs (%ht-index ht key (vector-length bs)))) #t #f)))
+    (define (hash-table-ref ht key) (let* ((bs (%ht-buckets ht)) (p (%ht-assoc ht key (vector-ref bs (%ht-index ht key (vector-length bs)))))) (if p (cdr p) (error "hash-table-ref: key not found" key))))
+    (define (hash-table-set! ht key val) (let* ((bs (%ht-buckets ht)) (n (vector-length bs)) (i (%ht-index ht key n)) (al (vector-ref bs i)) (existed (%ht-assoc ht key al))) (vector-set! bs i (cons (cons key val) (if existed (%ht-remove ht key al) al))) (if existed #f (begin (%ht-set-count! ht (+ (%ht-count ht) 1)) (if (> (%ht-count ht) (* %ht-load-factor n)) (%ht-grow! ht) #f)))))
+    (define (hash-table-delete! ht key) (let* ((bs (%ht-buckets ht)) (i (%ht-index ht key (vector-length bs))) (al (vector-ref bs i))) (if (%ht-assoc ht key al) (begin (vector-set! bs i (%ht-remove ht key al)) (%ht-set-count! ht (- (%ht-count ht) 1))) #f)))
+    (define (%ht-grow! ht) (let* ((old (%ht-buckets ht)) (newn (* 2 (vector-length old))) (newb (make-vector newn (quote ())))) (let loop ((i 0)) (if (< i (vector-length old)) (begin (let bloop ((al (vector-ref old i))) (if (null? al) #f (let* ((kv (car al)) (j (%ht-index ht (car kv) newn))) (vector-set! newb j (cons kv (vector-ref newb j))) (bloop (cdr al))))) (loop (+ i 1))) #f)) (%ht-set-buckets! ht newb)))
     (define (hash-table-size ht) (%ht-count ht))
     (define (%ht-fold-buckets al acc) (if (null? al) acc (cons (cons (car (car al)) (cdr (car al))) (%ht-fold-buckets (cdr al) acc))))
     (define (hash-table->alist ht) (let ((bs (%ht-buckets ht))) (let loop ((i 0) (acc (quote ()))) (if (< i (vector-length bs)) (loop (+ i 1) (%ht-fold-buckets (vector-ref bs i) acc)) acc))))

@@ -282,8 +282,9 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
   **strings** that are Unicode-capable (UTF-8
   storage, codepoint-indexed operations, in-place `string-set!`); **vectors** (mutable,
   fixed-length, `#(...)` syntax); **bytevectors** (mutable, fixed-length, packed bytes,
-  `#u8(...)` syntax); **hash tables** (mutable, `equal?`-keyed, auto-growing — SRFI-69 subset
-  built on vectors + a `%hash` primitive); **records** (R7RS `define-record-type` — disjoint
+  `#u8(...)` syntax); **hash tables** (mutable, auto-growing, `equal?`-keyed through
+  `make-hash-table` or `eq?`-keyed through `make-eq-hash-table`, built on vectors plus
+  `%hash`/`%eq-hash` primitives); **records** (R7RS `define-record-type` — disjoint
   types, constructor/predicate/accessors/mutators, identity equality, opaque `#<record …>`).
 - Primitives: `+ - * / = < cons car cdr null? pair? eq? eqv? equal? not quotient remainder
   modulo char->integer integer->char string-length string-ref substring string->symbol

@@ -36,7 +36,7 @@ check () {  # demo-name
 echo "REPL vs batch equivalence"
 for d in fact length countdown derived named-let-loop \
          nary-arith nary-compare eq-not quote-list quote-traverse \
-         string-ops string-symbol symbol-eq prelude; do
+         string-ops string-symbol symbol-eq prelude eq-hash-tables; do
   check "$d"
 done
 # --- inline cases (issue #5) -------------------------------------------------

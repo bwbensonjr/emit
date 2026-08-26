@@ -358,7 +358,7 @@ The exported surface has two tiers:
 | Tier | What it means |
 |---|---|
 | **R7RS** | names R7RS-small defines, and that it places in `(scheme base)`. The sixteen it places elsewhere are no longer here — see *The relocated sixteen* below. |
-| **extension** | Emit additions with no R7RS home: `filter`, `fold-left`, `fold-right`, `andmap`, `memp`, `iota`, `list-head`, `void`, `list->bytevector`, `port-closed?`, `read-from-string`, `read-all-from-string`, `with-parameters`, and the `hash-table-*` family. Published deliberately, spelled R6RS/SRFI. |
+| **extension** | Emit additions with no R7RS home: `filter`, `fold-left`, `fold-right`, `andmap`, `memp`, `iota`, `list-head`, `void`, `list->bytevector`, `port-closed?`, `read-from-string`, `read-all-from-string`, `with-parameters`, `make-eq-hash-table`, and the `hash-table-*` family. Published deliberately, with Emit's established hyphenated spelling. |
 
 There used to be a third, **unstable**: names exported *only* because something outside the library
 had to resolve them. It held exactly two, `rd-skip-ws` and `rd-token-end`, and that something was the

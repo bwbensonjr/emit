@@ -189,11 +189,14 @@ byte-wise (`memcmp`).
 
 **Hash tables (tag 7, header-word).** A hash table is an extended object
 `{HDR_HASHTABLE, spine}` (header code 4) — an opaque wrapper around a mutable *spine* vector
-`#(count buckets _)`, where `buckets` is a vector of association lists. The wrapper is the whole
+`#(count buckets identity?)`, where `buckets` is a vector of association lists and `identity?`
+selects the table's key contract. The wrapper is the whole
 runtime footprint (`rt_make_hash_table`/`rt_hash_table_spine`/`rt_hash_table_p`); every
-`hash-table-*` operation lives in the prelude over the spine, keyed by `equal?` and bucketed by
-`rt_hash` (`%hash`) — an FNV-1a/word hash guaranteed only to be *consistent with* `equal?` (the
-bucket scan is the source of truth, so collisions are slow, never wrong). The table grows
+`hash-table-*` operation lives in the prelude over the spine. `make-hash-table` selects `equal?`
+with `rt_hash` (`%hash`), an FNV-1a/word structural hash; `make-eq-hash-table` selects `eq?` with
+`rt_eq_hash` (`%eq-hash`), a constant-time mixed identity hash that does not traverse heap-object
+contents. Each hash is guaranteed only to be consistent with its comparison (the bucket scan is
+the source of truth, so collisions are slow, never wrong). The table grows
 (rehashes into ~2× buckets) past a load factor. `rt_write` prints the opaque `#<hash-table N>`
 (N = count); tables are not readable.
 

@@ -1903,20 +1903,24 @@ driver in 2.8–3.4s, with the two library artifacts reused, so the memo is not 
 compiler or test workloads. Keeping the simple representation is therefore deliberate, not an
 unmeasured assumption.
 
-**Why the obvious hash table is not portable.** The compiler core runs under both Chez and Emit.
-Chez has an eq-hashtable, while Emit's public hash tables are deliberately `equal?`-keyed and its
-`%hash` is structural rather than an object-address hash. Using either host's private table would
-split the shared core; hashing by `%hash` would also put the indistinguishable tails of a uniform
-list into the same bucket and preserve the bad case.
+**Why the obvious hash table still is not portable.** Emit now provides
+`make-eq-hash-table`, backed by constant-time `%eq-hash`, but the compiler core runs under both
+Chez and Emit. Chez exposes the equivalent facility through its own `make-eq-hashtable` API and
+operation names. Calling either host's constructor directly would split the shared core; the
+remaining work is a small host-neutral table interface, not a missing Emit capability.
 
-**Fix sketch.** Add one compiler-private identity-hash primitive on both hosts, then replace the
-alist with a growable bucket vector keyed by that hash and checked with `eq?`. Keep the memo local
-to one outer constant and preserve allocate-before-fill for pairs and vectors. This is worth doing
-when real source contains constants in the tens of thousands of aggregate nodes, or if self-compile
-profiles put `const-memo-ref` on the hot path; neither is true today.
+**Fix sketch.** Add a compiler-host compatibility wrapper over Emit's `make-eq-hash-table` and
+Chez's eq-hashtable, then replace the alist while keeping the memo local to one outer constant and
+preserving allocate-before-fill for pairs and vectors. This is worth doing when real source
+contains constants in the tens of thousands of aggregate nodes, or if self-compile profiles put
+`const-memo-ref` on the hot path; neither is true today.
 
-**Value:** low now, potentially high for generated constant tables. **Cost:** medium — the lookup
-is small, but adding a raw primitive touches both compiler hosts and the fixed-point bootstrap.
+**Value:** low now, potentially high for generated constant tables. **Cost:** low–medium — the
+identity-table substrate exists, but the compiler still needs the dual-host wrapper and memo
+conversion.
+
+**OpenSpec change:** `eq-keyed-hash-tables` supplies the Emit-side prerequisite but deliberately
+does not convert the compiler memo.
 
 ---
 

@@ -436,7 +436,8 @@
     (%make-bytevector "rt_make_bytevector") (%bytevector-u8-ref "rt_bytevector_u8_ref")
     (%bytevector-u8-set! "rt_bytevector_u8_set") (%bytevector-length "rt_bytevector_length")
     (%bytevector? "rt_bytevector_p")
-    (%hash "rt_hash") (%make-hash-table "rt_make_hash_table")
+    (%hash "rt_hash") (%eq-hash "rt_eq_hash")
+    (%make-hash-table "rt_make_hash_table")
     (%hash-table? "rt_hash_table_p") (%hash-table-spine "rt_hash_table_spine")
     (%make-record-type "rt_make_record_type") (%make-record "rt_make_record")
     (%record-ref "rt_record_ref") (%record-set! "rt_record_set")
@@ -1290,6 +1291,7 @@
    "declare i64 @rt_bytevector_length(i64)\n"
    "declare i64 @rt_bytevector_p(i64)\n"
    "declare i64 @rt_hash(i64)\n"
+   "declare i64 @rt_eq_hash(i64)\n"
    "declare i64 @rt_make_hash_table(i64)\n"
    "declare i64 @rt_hash_table_p(i64)\n"
    "declare i64 @rt_hash_table_spine(i64)\n"

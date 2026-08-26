@@ -135,6 +135,8 @@ check equallist demos/equal-list.scm   '(1 1 0 ((2) (3)) ("b" . 2) (2 3 4) -6 (1
 check vectors  demos/vectors.scm       '(20 4 99 #t #f #(1 2 3) #t #f 9)'  # vector type + ops + printer + #(...) reader
 check bytevectors demos/bytevectors.scm '(20 4 255 #t #f #u8(1 2 3) #t #f 9)'  # bytevector type + ops + printer + #u8(...) reader
 check hashtables demos/hash-tables.scm '(1 42 2 #f 100 #t #t #t #f #t)'  # hash-table set/ref/default/overwrite/delete/grow/predicate/%hash
+check eqhash demos/eq-hash.scm '(#t #t #t 1000)'  # identity hash is stable and terminates on a cyclic key
+check eqhashtables demos/eq-hash-tables.scm '(2 first second 1 replaced #t pair vector #f 100 #t missing 100 100 100 1 structural-second #<hash-table 1>)'  # eq?-keyed table semantics, growth, enumeration, print
 check hashprint demos/hash-print.scm   '#<hash-table 2>'  # opaque hash-table print
 check records   demos/records.scm      '(3 4 #t #f #f #t 9 #t #f)'  # define-record-type: ctor/pred/accessors/mutator/disjoint/identity
 check recordprint demos/record-print.scm '#<record point>'  # opaque record print

@@ -38,7 +38,8 @@
 ;;;   extension  Emit additions with no R7RS home: filter, fold-left, fold-right,
 ;;;              andmap, memp, iota, list-head, void, list->bytevector, port-closed?,
 ;;;              read-from-string, read-all-from-string, with-parameters and the
-;;;              hash-table-* family.  Published deliberately, spelled R6RS/SRFI.
+;;;              hash-table-* family and the make-eq-hash-table constructor.
+;;;              Published deliberately, with Emit's established hyphenated spelling.
 ;;;   unstable   *scheme-base-unstable* below: exported ONLY because something
 ;;;              outside the library must resolve the name.  No stability guarantee,
 ;;;              not documented as API, may change or disappear.
@@ -151,8 +152,9 @@
     ;; *handlers*'s own initializer, for the reasons recorded there.
     %raise-kinded %read-error %file-error
     ;; hash-table representation
-    %ht-initial-buckets %ht-load-factor %ht-count %ht-buckets %ht-set-count!
-    %ht-set-buckets! %ht-index %ht-assoc %ht-remove %ht-grow! %ht-fold-buckets
+    %ht-initial-buckets %ht-load-factor %ht-count %ht-buckets %ht-identity?
+    %ht-set-count! %ht-set-buckets! %ht-hash %ht-key=? %ht-index %ht-assoc
+    %ht-remove %ht-grow! %ht-fold-buckets
     ;; the in-language reader (issue #25 will change these; they are not API).
     ;; ALL of them now, including rd-skip-ws / rd-token-end, which used to be the two
     ;; `unstable` exceptions and are ordinary internals again -- their one outside
