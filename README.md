@@ -83,7 +83,7 @@ cat src/prelude.scm demos/fact.scm | build/schemec > /tmp/fact.ll   # source tex
 **Installing.** `make install` puts `emit` on a prefix together with the library sources it
 needs beside it — `(scheme base)` and the internal substrate `(emit internal)` are baked into the
 binary, but every other library (`(scheme cxr)`, `(scheme read)`, `(scheme file)`,
-`(scheme inexact)`) is found through a manifest, so the manifest and `lib/**.sld` are installed
+`(scheme inexact)`, `(emit filesystem)`) is found through a manifest, so the manifest and `lib/**.sld` are installed
 into `<prefix>/share/emit/` where the binary's own lookup finds them:
 
 ```sh
@@ -310,6 +310,11 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
   must now import the library that owns it. `caar`/`cadr`/`cdar`/`cddr` stay in `(scheme base)`.
   The private port and reader machinery they share lives in `(emit internal)`, which is baked but
   not auto-imported, so it is out of scope in an ordinary program.
+- The explicit non-standard `(emit filesystem)` extension provides the four host-edge operations
+  R7RS-small omits: `directory-list`, `file-directory?`, `file-symbolic-link?`, and atomic
+  same-filesystem `replace-file`. Listings contain unsorted bare entry names without `.` or `..`;
+  the directory predicate follows a final symbolic link while the link predicate inspects it.
+  Failures are catchable file errors, and no name is visible without importing the extension.
 - `read-from-string` — a recursive-descent Scheme reader (integers, symbols, lists,
   dotted/improper lists, `#t`/`#f`, characters incl. named `#\newline`/`#\space`/…,
   `"strings"` with `\n`/`\t`/`\r`/`\\`/`\"`/`\xHH;` escapes, `#(...)` vectors, `'`-quote
@@ -365,10 +370,11 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
   under the deliberate real-only numeric restriction.
 
 The Pitch prerequisites now shipped are `(scheme case-lambda)`, Unicode 17.0.0
-`(scheme char)`, continuable exceptions, `(scheme process-context)`, and `(scheme write)`.
+`(scheme char)`, continuable exceptions, `(scheme process-context)`, `(scheme write)`, and the
+narrow `(emit filesystem)` host extension.
 The later Pitch port still owns its non-R7RS adaptations: R6RS condition composition,
-record protocols/inheritance, R6RS hash tables, sorting, bitwise/fixnum APIs, host filesystem
-operations, and numeric lexemes outside Emit's bounded real-only tower.
+record protocols/inheritance, R6RS hash tables, sorting, bitwise/fixnum APIs, the filesystem host
+adapter and traversal policy, and numeric lexemes outside Emit's bounded real-only tower.
 
 **Self-hosting (the north star)**
 - The compiler compiles itself to a byte-identical fixed point, and there are now three

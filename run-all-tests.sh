@@ -82,6 +82,7 @@ run_suite "library body declarations" test/library-body-declarations-tests.sh
 run_suite "library include declarations" test/library-include-tests.sh
 run_suite "dynamic extent (call/cc)"  test/dynamic-extent-tests.sh
 run_suite "Pitch-facing R7RS prerequisites" test/pitch-prerequisites-tests.sh
+run_suite "filesystem access extension" test/filesystem-access-tests.sh
 run_suite "catchable errors + kinds"  test/catchable-errors-tests.sh
 run_suite "io ports + eof object"     test/io-ports-tests.sh
 run_suite "module vertical-slice (REPL)" test/modules-repl-tests.sh

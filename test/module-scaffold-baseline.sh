@@ -645,6 +645,13 @@
 #     the converged compiler confirmed 5.00% while growing 88 bytes (+0.125%).  The
 #     `min-entry:$...` encoding keeps generated labels disjoint from legal Scheme names such
 #     as `foo.min`.  No new entries.
+#   add-filesystem-access -- the four private raw runtime edges add four declaration
+#     lines to every emitted unit's shared header.  A preserved 80-demo before/after
+#     capture contained 972 added lines: exactly four `rt_filesystem_*` declarations
+#     across 243 units.  Removing those declarations from the post-change capture made
+#     all 80 files byte-identical to the pre-change capture (0 unexpected additions,
+#     removals, codegen changes, or new demos).  The ordinary `(emit filesystem)` unit
+#     appears only when imported and therefore enters no existing demo's closure.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

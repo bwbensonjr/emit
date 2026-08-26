@@ -64,6 +64,7 @@ echo "installed layout"
 # checkout and the installed layout.  log.sh is here because llvm-env.sh SOURCES it:
 # shipping the script alone installs one that fails on its first line.
 for f in bin/emit share/emit/emit-libs.scm share/emit/lib/scheme/base.sld \
+         share/emit/lib/emit/filesystem.sld \
          share/emit/lib/scheme/inexact.sld \
          share/emit/lib/scheme/case-lambda.sld share/emit/lib/scheme/char.sld \
          share/emit/lib/scheme/char-data.scm \
@@ -181,7 +182,8 @@ for probe in \
   "(scheme case-lambda)|(import (scheme case-lambda)) ((case-lambda (() 7)))|7" \
   "(scheme char)|(import (scheme char)) (string-foldcase \"Straße\")|\"strasse\"" \
   "(scheme process-context)|(import (scheme process-context)) (car (command-line))|\"-\"" \
-  "(scheme write)|(import (scheme base) (scheme write)) (let ((p (open-output-string))) (write-shared (list 1 2) p) (get-output-string p))|\"(1 2)\""
+  "(scheme write)|(import (scheme base) (scheme write)) (let ((p (open-output-string))) (write-shared (list 1 2) p) (get-output-string p))|\"(1 2)\"" \
+  "(emit filesystem)|(import (emit filesystem)) (list (file-directory? \".\") (file-symbolic-link? \".\"))|(#t #f)"
 do
   lib="${probe%%|*}"; rest="${probe#*|}"; prog="${rest%%|*}"; pwant="${rest##*|}"
   pgot="$(printf '%s\n' "$prog" | EMIT_VERBOSITY=quiet "$EMIT" run 2>"$TMP/eprobe")"
@@ -212,7 +214,8 @@ mkdir -p "$PROJ"
 cd "$PROJ"
 cat > emit-libs.scm <<'EOF'
 ((program hello (source "hello.scm") (output "hello"))
- (program context (source "context.scm") (output "context")))
+ (program context (source "context.scm") (output "context"))
+ (program filesystem (source "filesystem.scm") (output "filesystem")))
 EOF
 cat > hello.scm <<'EOF'
 (import (scheme inexact))
@@ -222,6 +225,21 @@ cat > context.scm <<'EOF'
 (import (scheme base) (scheme process-context))
 (write (cdr (command-line)))
 EOF
+cat > filesystem.scm <<'EOF'
+(import (scheme base) (scheme file) (emit filesystem))
+(let ((listed (directory-list "fs-dir")))
+  (let ((result
+          (list (null? listed)
+                (file-directory? "fs-dir")
+                (file-directory? "fs-link")
+                (file-symbolic-link? "fs-link")
+                (eq? (replace-file "fs-new.tmp" "fs-target.scm") (if #f #f)))))
+    (display result)))
+EOF
+mkdir -p fs-dir
+ln -s fs-dir fs-link
+printf 'new\n' > fs-new.tmp
+printf 'old\n' > fs-target.scm
 
 # #36: `emit build` needs tools/llvm-env.sh + src/runtime/runtime.c, neither of which
 # is a library.  `env -u` strips the toolchain so discovery has to work on its own --
@@ -248,6 +266,21 @@ if EMIT_VERBOSITY=quiet "$EMIT" build context >"$TMP/context-build.log" 2>&1; th
 else
   bad "installed emit could not AOT-build (scheme process-context)"
   sed 's/^/         /' "$TMP/context-build.log"
+fi
+
+if EMIT_VERBOSITY=quiet "$EMIT" build filesystem >"$TMP/filesystem-build.log" 2>&1; then
+  filesystem_got="$("$PROJ/filesystem" 2>"$TMP/filesystem.err")"
+  if [ "$filesystem_got" = '(#t #t #t #t #t)' ] \
+     && [ ! -e "$PROJ/fs-new.tmp" ] \
+     && [ "$(sed -n '1p' "$PROJ/fs-target.scm")" = new ]; then
+    ok "installed emit AOT-builds filesystem listing, links, and replacement"
+  else
+    bad "installed filesystem executable => [$filesystem_got]"
+    sed 's/^/         /' "$TMP/filesystem.err"
+  fi
+else
+  bad "installed emit could not AOT-build (emit filesystem)"
+  sed 's/^/         /' "$TMP/filesystem-build.log"
 fi
 
 # #44: the same program's (import (scheme inexact)) must resolve THROUGH THE CHAIN --
@@ -309,7 +342,9 @@ case "$ogot" in
   *) bad "override => [$ogot] (expected overridden...)"; sed 's/^/         /' "$TMP/e6" ;;
 esac
 cat > "$PROJ/emit-libs.scm" <<'EOF'
-((program hello (source "hello.scm") (output "hello")))
+((program hello (source "hello.scm") (output "hello"))
+ (program context (source "context.scm") (output "context"))
+ (program filesystem (source "filesystem.scm") (output "filesystem")))
 EOF
 
 # An EXPLICIT request names exactly one manifest and is NOT extended: that is what

@@ -134,7 +134,7 @@ Library *names* are mapped to *source files* by a manifest — an s-expression f
   entry's `source`/`output`; the *default* artifact dir (`build/lib`) is the driver's own and
   stays relative to the invocation.
 - The default `emit-libs.scm` at the repo root lists the shipped libraries — `(emit internal)`,
-  `(scheme base)`, `(scheme cxr)`, `(scheme read)`, `(scheme file)`, `(scheme inexact)`,
+  `(emit filesystem)`, `(scheme base)`, `(scheme cxr)`, `(scheme read)`, `(scheme file)`, `(scheme inexact)`,
   `(scheme case-lambda)`, `(scheme char)`, `(scheme process-context)`, and `(scheme write)`; point
   `--manifest` at your own for additional libraries (as the test
   suites do with `test/modules/emit-libs.scm`). Listing a library costs a program nothing unless
@@ -394,6 +394,7 @@ published fails the default suite, so adding a helper forces a visibility decisi
 | library | source | reached by | resolved |
 |---|---|---|---|
 | `(emit internal)` | generated from `src/prelude.scm` | explicit import; **not API** | **baked** + manifest |
+| `(emit filesystem)` | hand-written | `(import (emit filesystem))` | manifest |
 | `(scheme base)` | generated from `src/prelude.scm` | auto-imported everywhere | **baked** + manifest |
 | `(scheme cxr)` | generated from `src/prelude.scm` | `(import (scheme cxr))` | manifest |
 | `(scheme read)` | generated from `src/prelude.scm` | `(import (scheme read))` | manifest |
@@ -414,7 +415,7 @@ every one of them.
 from the baked-in prelude source, so a program that imports nothing — or only `(scheme base)` — runs
 with **no manifest present at all**. That guarantee is why the substrate had to be baked too:
 `(scheme base)` imports it, and anything `(scheme base)` depends on inherits the requirement. The
-Every remaining standard library in the table is ordinary: a program reaches it only through the
+Every remaining library in the table is ordinary: a program reaches it only through the
 manifest, exactly as it reaches `(scheme inexact)`.
 
 **Every door registers the baked set** before it consults the manifest — the AOT door, the run door,
@@ -447,6 +448,25 @@ carries no stability guarantee.
 
 The compiler imports it directly, which is why no name reaches a public export list merely because
 the compiler needs it — the reason the `unstable` tier could be retired (issue #32).
+
+### `(emit filesystem)` — the narrow public host edge
+
+`(emit filesystem)` is public but deliberately non-standard. It exports exactly four procedures:
+`directory-list`, `file-directory?`, `file-symbolic-link?`, and `replace-file`. A listing returns
+the immediate bare entry names in unspecified filesystem order and omits `.` and `..`; consumers
+sort when their policy requires deterministic traversal. `file-directory?` follows the final
+symbolic link, while `file-symbolic-link?` inspects that final component, so a link to a directory
+answers true to both predicates.
+
+`replace-file` is one host rename. For source and destination on the same filesystem it atomically
+moves the closed source over the destination without a delete/truncate window; it neither copies
+across filesystems nor promises crash durability. Failed enumeration, non-missing classification
+errors, and failed replacement raise catchable file errors. Missing paths are ordinary `#f`
+answers from the two predicates.
+
+The library contains no recursion, sorting, hidden-directory rules, temporary-name construction,
+or write policy. Those decisions belong to applications such as Pitch. It is an ordinary manifest
+unit and is omitted from programs that do not explicitly import it.
 
 ### The relocated sixteen
 

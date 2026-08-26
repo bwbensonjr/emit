@@ -25,6 +25,9 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <string.h>
+#include <errno.h>
+#include <dirent.h>
+#include <sys/stat.h>
 #include <math.h>
 #include <setjmp.h>
 #include <gc/gc.h>
@@ -1246,6 +1249,68 @@ val rt_file_exists_p(val path) {
 val rt_delete_file(val path) {
   if (tag_of(path) != TAG_EXT || ext_hdr(path) != HDR_STRING) return FALSE_V;
   return truthy(remove(str_bytes(path)) == 0);
+}
+
+/* --- non-standard filesystem extension (change: add-filesystem-access) ---
+ * These are the deliberately narrow host operations behind (emit filesystem).
+ * The public library turns the failure/status values into kinded Scheme file
+ * errors; keeping that policy out here mirrors rt_delete_file above.
+ *
+ * A listing is all-or-nothing.  errno is reset immediately before EACH readdir:
+ * allocating the preceding entry's Scheme string/list may itself disturb errno,
+ * and a later end-of-directory must not mistake that unrelated value for an I/O
+ * failure. */
+val rt_filesystem_directory_list(val path) {
+  CHECK_TAG("directory-list", path, is_string, "a string");
+  DIR *dir = opendir(str_bytes(path));
+  if (!dir) return FALSE_V;
+
+  val entries = NIL_V;
+  int read_error = 0;
+  for (;;) {
+    errno = 0;
+    struct dirent *entry = readdir(dir);
+    if (!entry) {
+      read_error = errno;
+      break;
+    }
+    if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+      continue;
+    val name = rt_make_string(entry->d_name, (intptr_t)strlen(entry->d_name));
+    entries = rt_cons(name, entries);
+  }
+
+  int close_error = closedir(dir) != 0;
+  return (read_error || close_error) ? FALSE_V : entries;
+}
+
+/* Classification has three states so a real host failure cannot masquerade as
+ * an ordinary negative predicate answer: 1 yes, 0 absent/not-that-kind, -1 error.
+ * stat follows the final symbolic link; lstat inspects that link itself. */
+static val rt_filesystem_classify(val path, int follow, const char *who) {
+  CHECK_TAG(who, path, is_string, "a string");
+  struct stat info;
+  int rc = follow ? stat(str_bytes(path), &info) : lstat(str_bytes(path), &info);
+  if (rc == 0)
+    return FIX(follow ? S_ISDIR(info.st_mode) : S_ISLNK(info.st_mode));
+  return FIX((errno == ENOENT || errno == ENOTDIR) ? 0 : -1);
+}
+
+val rt_filesystem_directory_status(val path) {
+  return rt_filesystem_classify(path, 1, "file-directory?");
+}
+
+val rt_filesystem_symlink_status(val path) {
+  return rt_filesystem_classify(path, 0, "file-symbolic-link?");
+}
+
+/* One rename and no preparatory destination mutation.  On a supported
+ * same-filesystem pair this is the atomic name transition promised by the
+ * public library; every failure is returned for Scheme to raise. */
+val rt_filesystem_replace_file(val source, val destination) {
+  CHECK_TAG("replace-file", source, is_string, "a string");
+  CHECK_TAG("replace-file", destination, is_string, "a string");
+  return truthy(rename(str_bytes(source), str_bytes(destination)) == 0);
 }
 
 /* --no-prelude channel for the embedded batch entry (change:

@@ -301,6 +301,15 @@ import:
 | `(scheme process-context)` | `command-line`, `exit`, `emergency-exit`, and environment access |
 | `(scheme write)` | `display`, `write`, `write-simple`, and `write-shared` |
 
+Emit also ships one explicit non-standard host extension:
+
+| library | what it holds |
+|---|---|
+| `(emit filesystem)` | unsorted bare-name `directory-list`, link-following `file-directory?`, final-component `file-symbolic-link?`, and atomic same-filesystem `replace-file` |
+
+The predicates return `#f` for missing paths. Enumeration, classification failures other than a
+missing path, and failed replacement raise catchable objects satisfying `file-error?`.
+
 ```scheme
 (caddr (list 1 2 3))        ; => unbound variable caddr
 (cadr  (list 1 2 3))        ; => 2   -- the depth-2 forms ARE in (scheme base)

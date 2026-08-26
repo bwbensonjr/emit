@@ -72,7 +72,12 @@
                   ;; are not port constructors.
                   %make-error-object/kind %error-object-kind
                   %set-trap-raiser! %trap-object
-                  %file-exists? %delete-file))
+                  %file-exists? %delete-file
+                  ;; change: add-filesystem-access -- the private raw edge behind
+                  ;; the ordinary non-standard (emit filesystem) library.
+                  %filesystem-directory-list
+                  %filesystem-directory-status %filesystem-symlink-status
+                  %filesystem-replace-file))
 (define (prim? op) (and (memq op *prims*) #t))
 
 ;; ---- primitives as first-class values ----

@@ -486,7 +486,13 @@
     (%make-error-object/kind "rt_make_error_object_kind")
     (%error-object-kind "rt_error_object_kind")
     (%trap-object "rt_trap_object")
-    (%file-exists? "rt_file_exists_p") (%delete-file "rt_delete_file")))
+    (%file-exists? "rt_file_exists_p") (%delete-file "rt_delete_file")
+    ;; change: add-filesystem-access -- private raw operations wrapped by the
+    ;; ordinary (emit filesystem) library.
+    (%filesystem-directory-list "rt_filesystem_directory_list")
+    (%filesystem-directory-status "rt_filesystem_directory_status")
+    (%filesystem-symlink-status "rt_filesystem_symlink_status")
+    (%filesystem-replace-file "rt_filesystem_replace_file")))
 
 ;; --- string helpers ---
 (define (comma-join lst)
@@ -1353,6 +1359,10 @@
    "declare i64 @rt_trap_object()\n"
    "declare i64 @rt_file_exists_p(i64)\n"
    "declare i64 @rt_delete_file(i64)\n"
+   "declare i64 @rt_filesystem_directory_list(i64)\n"
+   "declare i64 @rt_filesystem_directory_status(i64)\n"
+   "declare i64 @rt_filesystem_symlink_status(i64)\n"
+   "declare i64 @rt_filesystem_replace_file(i64, i64)\n"
    "declare i64 @rt_escape_frame()\n"
    "declare i64 @rt_escape_to(i64, i64)\n"
    "declare i64 @rt_escape_live_p(i64)\n"

@@ -52,6 +52,42 @@ else
   bad "size does not scale with reachable set ($car_sz / $map_sz / $hvy_sz)"
 fi
 
+# A non-standard ordinary library must have the same pay-for-use shape.  The C
+# runtime source is present at every AOT link, so this checks both layers: the
+# non-importing program has no library unit and LTO removes every rt_filesystem_*
+# edge, while the importing program still performs a real classification.
+fs_plain="$(build filesystem-plain '(display "filesystem-size-ok")')"
+fs_import="$(build filesystem-import '(import (emit filesystem)) (if (file-directory? ".") (display "filesystem-size-ok") (display "bad"))')"
+fs_plain_val="${fs_plain%%|*}"; fs_plain_size="${fs_plain##*|}"
+fs_import_val="${fs_import%%|*}"; fs_import_size="${fs_import##*|}"
+[ "$fs_plain_val" = filesystem-size-ok ] && [ "$fs_import_val" = filesystem-size-ok ] \
+  && ok "filesystem size probes have equivalent behavior" \
+  || bad "filesystem size values (plain [$fs_plain_val], import [$fs_import_val])"
+
+if command -v nm >/dev/null 2>&1; then
+  fs_runtime_symbols="$(nm "$TMP/filesystem-plain" 2>/dev/null | grep -c 'rt_filesystem_' || true)"
+  fs_library_symbols="$(nm "$TMP/filesystem-plain" 2>/dev/null | grep -c 'emit\.filesystem:' || true)"
+  [ "$fs_runtime_symbols" -eq 0 ] && [ "$fs_library_symbols" -eq 0 ] \
+    && ok "non-importing AOT binary retains no filesystem library/runtime symbols" \
+    || bad "non-importing binary retained $fs_library_symbols library / $fs_runtime_symbols runtime symbols"
+else
+  echo "  [SKIP] nm unavailable: filesystem retained-symbol check"
+fi
+
+if [ -f "$TMP/filesystem-import.emit.filesystem.pruned.ll" ] \
+   && grep -q 'rt_filesystem_directory_status' "$TMP/filesystem-import.emit.filesystem.pruned.ll"; then
+  ok "importing AOT closure contains the filesystem unit and required raw edge"
+else
+  bad "importing AOT closure lacks its filesystem unit/raw edge"
+fi
+
+cp "$TMP/filesystem-plain" "$TMP/filesystem-plain.stripped"
+cp "$TMP/filesystem-import" "$TMP/filesystem-import.stripped"
+strip "$TMP/filesystem-plain.stripped" "$TMP/filesystem-import.stripped"
+fs_plain_stripped="$(stat -f%z "$TMP/filesystem-plain.stripped" 2>/dev/null || stat -c%s "$TMP/filesystem-plain.stripped")"
+fs_import_stripped="$(stat -f%z "$TMP/filesystem-import.stripped" 2>/dev/null || stat -c%s "$TMP/filesystem-import.stripped")"
+ok "filesystem stripped size measured (plain $fs_plain_stripped B, import $fs_import_stripped B; unstripped $fs_plain_size/$fs_import_size B)"
+
 # the narration reports the shake, and car-only reaches 0 exports
 grep -q "shake (scheme base)" "$TMP/caronly.log" && ok "shake narrated" || bad "no shake narration"
 grep -q "0 exports reached"   "$TMP/caronly.log" && ok "car-only: 0 exports reached" || bad "car-only reached exports"
