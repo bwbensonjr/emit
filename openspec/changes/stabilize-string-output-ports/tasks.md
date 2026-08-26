@@ -32,9 +32,9 @@
 - [x] 3.2 Run the in-progress Pitch R7RS CLI suite against this checkout's rebuilt Emit and Pitch's
   `emit-libs.scm`; verify all 207 assertions pass, including the formatted standard-input capture,
   with no exit status 134.
-- [ ] 3.3 Run `./run-all-tests.sh` and the independent suites in `./run-dev-tests.sh`; verify every
+- [x] 3.3 Run `./run-all-tests.sh` and the independent suites in `./run-dev-tests.sh`; verify every
   suite passes and `git diff -- bootstrap/` remains empty, with no `make regen` required for this
   host-runtime-only change.
-- [ ] 3.4 Run `openspec validate stabilize-string-output-ports --strict`, review the final diff for
+- [x] 3.4 Run `openspec validate stabilize-string-output-ports --strict`, review the final diff for
   the proposal's runtime-and-test scope, and verify the change is ready to sync/archive and the
   eventual fixing commit is identified with `Fixes #113`.
