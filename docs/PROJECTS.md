@@ -159,17 +159,35 @@ Four things to know:
 Non-baked standard libraries — `(scheme inexact)`, `(scheme cxr)`, `(scheme read)`,
 `(scheme file)`, `(scheme case-lambda)`, `(scheme char)`, `(scheme process-context)`, and
 `(scheme write)` — ship as **source files** and are reached through the manifest. Your project's
-manifest does not have to name them, because **the searched manifests chain** (change:
-`installed-emit-completeness`, issue #44): your `./emit-libs.scm` is consulted first, and any
-library name it does not resolve falls through to the manifest installed beside `emit`. So a
-project manifest *extends* the installed one rather than shadowing it, and needs no absolute path
-into the installation prefix — which matters because that prefix is a Cellar directory that moves
-on every Homebrew upgrade.
+manifest does not have to name them, because **project manifests chain installed libraries**
+(changes: `installed-emit-completeness`, issue #44; `chain-explicit-manifests`, issue #114).
+Whether Emit discovers `./emit-libs.scm` in the project or you select that file with
+`--manifest FILE` / `EMIT_MANIFEST`, any library name it does not resolve falls through to the
+manifest installed beside `emit`. A project manifest therefore *extends* the installed one rather
+than shadowing it, and needs no absolute path into the installation prefix — which matters because
+that prefix is a Cellar directory that moves on every Homebrew upgrade.
 
 If you *want* a name to mean something of your own, define it: your entry is consulted first and
-wins. And if you want no ambient state at all — a hermetic build, resolved against exactly one set
-of libraries — pass `--manifest FILE`. An explicit request names one manifest and is never
-extended.
+wins. Explicit selection does not consult `./emit-libs.scm` in the caller's current directory; the
+named project is first and only the installed candidates extend it. That makes an out-of-tree build
+ordinary:
+
+```sh
+work="$(mktemp -d)"
+cd "$work"
+emit build myproj --manifest /path/to/myproj/emit-libs.scm
+```
+
+The program entry and all project-relative paths come from `/path/to/myproj/emit-libs.scm`, while
+standard libraries come from the installed manifest. If library resolution must use exactly one
+manifest, add `--no-manifest-chain`:
+
+```sh
+emit build myproj --manifest /path/to/myproj/emit-libs.scm --no-manifest-chain
+```
+
+This is manifest hermeticity specifically; toolchain discovery and other environment inputs are
+unchanged.
 
 Emit reports which manifests it used, on stderr:
 
@@ -184,9 +202,10 @@ chain /usr/local/share/emit/emit-libs.scm -> scheme.inexact  [1 library]
 ```
 
 The `chain` line names the manifest a library actually came from, so a resolution reaching outside
-your project is visible rather than silent. To use a different manifest: `--manifest FILE`, or the
-`EMIT_MANIFEST` environment variable. Naming one that does not exist is an error rather than a
-silent fallback.
+your project is visible rather than silent. To use a different project manifest: `--manifest FILE`,
+or the `EMIT_MANIFEST` environment variable. The flag wins when both are present. Naming one that
+does not exist is an error rather than a silent fallback, and a physical manifest reached through
+multiple candidate paths is resolved and narrated only once.
 
 ## The development loop
 

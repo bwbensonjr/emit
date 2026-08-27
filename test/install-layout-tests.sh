@@ -2,7 +2,8 @@
 # install-layout-tests.sh -- guard that an INSTALLED emit is a complete product:
 # it resolves its libraries (change: manifest-search-path, GitHub issue #35) AND its
 # support files, so every door works from an install (change:
-# installed-emit-completeness, issues #36 and #44).
+# installed-emit-completeness, issues #36 and #44), including a project manifest
+# selected explicitly from another working directory (issue #114).
 #
 # A library that is not baked into the compiler is reachable only through a manifest,
 # and the manifest used to be looked up as the bare relative string "emit-libs.scm" --
@@ -215,7 +216,9 @@ cd "$PROJ"
 cat > emit-libs.scm <<'EOF'
 ((program hello (source "hello.scm") (output "hello"))
  (program context (source "context.scm") (output "context"))
- (program filesystem (source "filesystem.scm") (output "filesystem")))
+ (program filesystem (source "filesystem.scm") (output "filesystem"))
+ (program outside (source "outside.scm") (output "build/outside"))
+ (program hermetic (source "hermetic.scm") (output "build/hermetic")))
 EOF
 cat > hello.scm <<'EOF'
 (import (scheme inexact))
@@ -235,6 +238,13 @@ cat > filesystem.scm <<'EOF'
                 (file-symbolic-link? "fs-link")
                 (eq? (replace-file "fs-new.tmp" "fs-target.scm") (if #f #f)))))
     (display result)))
+EOF
+cat > outside.scm <<'EOF'
+(import (scheme base) (scheme file) (scheme process-context))
+(write (list (file-exists? "hello.scm") (cdr (command-line))))
+EOF
+cat > hermetic.scm <<'EOF'
+(display 17)
 EOF
 mkdir -p fs-dir
 ln -s fs-dir fs-link
@@ -336,7 +346,8 @@ cat > "$PROJ/emit-libs.scm" <<'EOF'
 ((library (scheme cxr) (source "mylib/cxr.sld"))
  (program hello (source "hello.scm") (output "hello")))
 EOF
-ogot="$(EMIT_VERBOSITY=quiet "$EMIT" run cxr.scm 2>"$TMP/e6")"
+ogot="$(EMIT_VERBOSITY=quiet "$EMIT" run --manifest "$PROJ/emit-libs.scm" \
+          "$PROJ/cxr.scm" 2>"$TMP/e6")"
 case "$ogot" in
   overridden*) ok "a project entry overrides a shipped library of the same name => $ogot" ;;
   *) bad "override => [$ogot] (expected overridden...)"; sed 's/^/         /' "$TMP/e6" ;;
@@ -344,27 +355,147 @@ esac
 cat > "$PROJ/emit-libs.scm" <<'EOF'
 ((program hello (source "hello.scm") (output "hello"))
  (program context (source "context.scm") (output "context"))
- (program filesystem (source "filesystem.scm") (output "filesystem")))
+ (program filesystem (source "filesystem.scm") (output "filesystem"))
+ (program outside (source "outside.scm") (output "build/outside"))
+ (program hermetic (source "hermetic.scm") (output "build/hermetic")))
 EOF
 
-# An EXPLICIT request names exactly one manifest and is NOT extended: that is what
-# keeps a hermetic build expressible.  The same program that resolves through the
-# chain must fail when the chain is replaced by one file that does not name it.
-if EMIT_VERBOSITY=quiet "$EMIT" run --manifest "$PROJ/emit-libs.scm" hello.scm \
-     >/dev/null 2>"$TMP/e7"; then
-  bad "--manifest chained: (scheme inexact) resolved from the installed manifest"
+# #114: EXPLICIT project selection and manifest chaining are separate choices.  Name
+# the project from a THIRD directory that has its own hostile manifest: the explicit
+# file must be first, the caller's ./emit-libs.scm must be skipped, and the installed
+# manifest must extend the project for ordinary standard libraries.
+CALLER="$TMP/caller"
+mkdir -p "$CALLER"
+cat > "$CALLER/cwd-inexact.sld" <<'EOF'
+(define-library (scheme inexact)
+  (import (scheme base))
+  (export sqrt)
+  (begin (define (sqrt x) 'wrong-cwd-manifest)))
+EOF
+cat > "$CALLER/emit-libs.scm" <<'EOF'
+((library (scheme inexact) (source "cwd-inexact.sld")))
+EOF
+
+egot="$(cd "$CALLER" && EMIT_VERBOSITY=quiet "$EMIT" run \
+          --manifest "$PROJ/emit-libs.scm" "$PROJ/hello.scm" 2>"$TMP/e7")"
+[ "$egot" = "$want" ] \
+  && ok "an explicit project manifest chains installed libraries from an unrelated cwd => $egot" \
+  || { bad "explicit chained run => [$egot] (expected [$want])"; sed 's/^/         /' "$TMP/e7"; }
+
+# The same explicit chain is transparent at default verbosity: project first, install
+# second, and the supplying installed manifest named.  The hostile CWD manifest must
+# not appear anywhere.
+(cd "$CALLER" && "$EMIT" run --manifest "$PROJ/emit-libs.scm" \
+   "$PROJ/hello.scm" >/dev/null 2>"$TMP/e7n")
+if [ "$(grep -c '^resolve manifest ->' "$TMP/e7n" || true)" = 2 ] \
+   && sed -n '1p' "$TMP/e7n" | grep -q "resolve manifest -> $PROJ/emit-libs.scm" \
+   && grep -q "resolve manifest -> $RPREFIX/share/emit/emit-libs.scm  \[chained\]" "$TMP/e7n" \
+   && grep -q "^chain $RPREFIX/share/emit/emit-libs.scm -> scheme.inexact" "$TMP/e7n" \
+   && ! grep -q "$CALLER/emit-libs.scm" "$TMP/e7n"; then
+  ok "an explicit chain is narrated and excludes the caller's manifest"
 else
-  ok "--manifest names exactly one manifest and does not chain"
+  bad "explicit chain narration"; sed 's/^/         /' "$TMP/e7n"
 fi
 
-# Program lookup does NOT chain either: a name the project's manifest does not define
-# is reported against the PROJECT'S file -- the one the user can fix -- and is not
-# searched for in the installed manifest.
-"$EMIT" build nosuchprog >/dev/null 2>"$TMP/e8" && bad "emit build nosuchprog succeeded"
-if grep -q 'no program entry named nosuchprog in emit-libs.scm' "$TMP/e8"; then
-  ok "an unknown program names the project's own manifest"
+# EMIT_MANIFEST selects the same project and has the same installed extension.
+envgot="$(cd "$CALLER" && EMIT_VERBOSITY=quiet EMIT_MANIFEST="$PROJ/emit-libs.scm" \
+            "$EMIT" run "$PROJ/hello.scm" 2>"$TMP/e7env")"
+[ "$envgot" = "$want" ] \
+  && ok "EMIT_MANIFEST chains the installed standard libraries => $envgot" \
+  || { bad "EMIT_MANIFEST chain => [$envgot]"; sed 's/^/         /' "$TMP/e7env"; }
+
+# The flag remains more local than the environment.  A conflicting environment file
+# is ignored, not inserted into the chain.
+fgot="$(cd "$CALLER" && EMIT_VERBOSITY=quiet EMIT_MANIFEST="$CALLER/emit-libs.scm" \
+          "$EMIT" run --manifest "$PROJ/emit-libs.scm" "$PROJ/hello.scm" 2>"$TMP/e7flag")"
+[ "$fgot" = "$want" ] \
+  && ok "--manifest outranks a conflicting EMIT_MANIFEST in an explicit chain" \
+  || { bad "explicit flag precedence => [$fgot]"; sed 's/^/         /' "$TMP/e7flag"; }
+
+# Build-system invocation is the defect's important shape: program lookup and both
+# paths come from the explicit project manifest, while (scheme file) and
+# (scheme process-context) come from the installed one.
+if (cd "$CALLER" && EMIT_VERBOSITY=quiet "$EMIT" build outside \
+      --manifest "$PROJ/emit-libs.scm") >"$TMP/outside-build.log" 2>&1; then
+  outside_got="$(cd "$PROJ" && build/outside outside 2>"$TMP/outside.err")"
+  [ "$outside_got" = '(#t ("outside"))' ] \
+    && ok "an explicit out-of-tree build resolves project paths and installed imports" \
+    || { bad "explicit out-of-tree executable => [$outside_got]";
+         sed 's/^/         /' "$TMP/outside.err"; }
 else
-  bad "unknown program diagnostic"; sed 's/^/         /' "$TMP/e8"
+  bad "explicit out-of-tree build"; sed 's/^/         /' "$TMP/outside-build.log"
+fi
+
+# Exact-one-manifest resolution is now intentional rather than coupled to location.
+# An installed-only import fails with the opt-out, while a baked-only build succeeds.
+if (cd "$CALLER" && EMIT_VERBOSITY=quiet "$EMIT" run --no-manifest-chain \
+      --manifest "$PROJ/emit-libs.scm" "$PROJ/hello.scm") >/dev/null 2>"$TMP/e7single"; then
+  bad "--no-manifest-chain resolved an installed-only import"
+elif grep -q 'not in the manifest\|unresolved or cyclic import' "$TMP/e7single"; then
+  ok "--no-manifest-chain preserves single-manifest library isolation"
+else
+  bad "--no-manifest-chain diagnostic"; sed 's/^/         /' "$TMP/e7single"
+fi
+if (cd "$CALLER" && EMIT_VERBOSITY=quiet "$EMIT" build hermetic \
+      --no-manifest-chain --manifest "$PROJ/emit-libs.scm") >"$TMP/hermetic.log" 2>&1 \
+   && [ "$("$PROJ/build/hermetic" 2>/dev/null)" = 17 ]; then
+  ok "emit build accepts --no-manifest-chain for a baked-only program"
+else
+  bad "emit build --no-manifest-chain"; sed 's/^/         /' "$TMP/hermetic.log"
+fi
+
+# The other two doors accept the shared opt-out too.  REPL needs no input; emit lib
+# compiles a baked-only library against exactly the project manifest.
+if (cd "$CALLER" && "$EMIT" repl --no-manifest-chain \
+      --manifest "$PROJ/emit-libs.scm" </dev/null) >"$TMP/single-repl.out" 2>"$TMP/single-repl.err"; then
+  ok "emit repl accepts --no-manifest-chain"
+else
+  bad "emit repl --no-manifest-chain"; sed 's/^/         /' "$TMP/single-repl.err"
+fi
+cat > "$CALLER/only-base.sld" <<'EOF'
+(define-library (only-base)
+  (import (scheme base))
+  (export answer)
+  (begin (define answer 42)))
+EOF
+if (cd "$CALLER" && EMIT_VERBOSITY=quiet "$EMIT" lib only-base.sld \
+      --no-manifest-chain --manifest "$PROJ/emit-libs.scm" -o artifacts) \
+      >"$TMP/single-lib.log" 2>&1 \
+   && [ -s "$CALLER/artifacts/only-base.ll" ]; then
+  ok "emit lib accepts --no-manifest-chain"
+else
+  bad "emit lib --no-manifest-chain"; sed 's/^/         /' "$TMP/single-lib.log"
+fi
+
+# If the explicit file IS the installed manifest, candidates 4 and 5 identify the
+# same physical file and must not preload or narrate it again.
+(cd "$CALLER" && "$EMIT" run --manifest "$RPREFIX/share/emit/emit-libs.scm" \
+   "$PROJ/hello.scm" >/dev/null 2>"$TMP/e7dedup")
+if [ "$(grep -c '^resolve manifest ->' "$TMP/e7dedup" || true)" = 1 ] \
+   && ! grep -q '\[chained\]' "$TMP/e7dedup"; then
+  ok "one physical manifest is de-duplicated across explicit and installed candidates"
+else
+  bad "canonical manifest de-duplication"; sed 's/^/         /' "$TMP/e7dedup"
+fi
+
+# Program entries never chain.  Temporarily give the installed manifest a target
+# absent from the project, then prove the diagnostic still names the first file.
+INST_MAN="$PREFIX/share/emit/emit-libs.scm"
+cp "$INST_MAN" "$TMP/installed-manifest.original"
+sed '$s/)$//' "$INST_MAN" > "$TMP/installed-manifest.with-program"
+printf ' (program installed-only (source "installed-only.scm")))\n' \
+  >> "$TMP/installed-manifest.with-program"
+cp "$TMP/installed-manifest.with-program" "$INST_MAN"
+printf '(display 99)\n' > "$PREFIX/share/emit/installed-only.scm"
+(cd "$CALLER" && "$EMIT" build installed-only \
+   --manifest "$PROJ/emit-libs.scm") >/dev/null 2>"$TMP/e8"
+rc=$?
+cp "$TMP/installed-manifest.original" "$INST_MAN"
+if [ "$rc" -ne 0 ] \
+   && grep -q "no program entry named installed-only in $PROJ/emit-libs.scm" "$TMP/e8"; then
+  ok "program lookup stays confined to the first explicit manifest"
+else
+  bad "first-manifest program lookup (exit $rc)"; sed 's/^/         /' "$TMP/e8"
 fi
 
 # A malformed manifest IN A CHAIN has to name WHICH file (issue #66, design D5).  Two
@@ -477,8 +608,9 @@ case "$line" in
 esac
 
 # --- explicit requests fail loudly rather than falling through ----------------
-# --manifest/EMIT_MANIFEST name a SPECIFIC file; falling through to an installed one
-# would silently run against different libraries than were asked for.
+# --manifest/EMIT_MANIFEST name a SPECIFIC project file.  If that file is missing,
+# falling through would silently run against different project inputs than requested;
+# this error rule is independent of the installed-library chain for a readable file.
 echo
 echo "an explicitly named missing manifest is an error"
 if echo '(display 1)' | "$EMIT" run --manifest "$TMP/nope.scm" >/dev/null 2>"$TMP/e3"; then

@@ -10,7 +10,8 @@ cd "$(dirname "$0")/.."
 . tools/log.sh
 
 export EMIT_MANIFEST=test/modules/emit-libs.scm
-HOST="build/emit repl"
+# This is an exact eager-preload fixture, not a project asking for installed fallback.
+HOST="build/emit repl --no-manifest-chain"
 make emit >/dev/null 2>&1 || { echo "failed to build emit"; exit 1; }
 
 pass=0; fail=0

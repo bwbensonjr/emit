@@ -154,14 +154,23 @@ Every door looks for the manifest the same way (change: `manifest-search-path`, 
 | 4 | `<dir of the real path of the running exe>/../share/emit/emit-libs.scm` | a relocatable install |
 | 5 | `<build-time PREFIX>/share/emit/emit-libs.scm` | the prefix the binary was built for |
 
-- **1–2 name a specific file, and are never extended.** If it is missing that is an error —
-  falling through would silently run against different libraries than you asked for. This is also
-  what makes a *hermetic* build expressible: one flag, one manifest, nothing ambient.
-- **3–5 are a search, and they chain** (change: `installed-emit-completeness`, issue #44). *Every*
-  candidate that exists is used, in order, and a **library name** is resolved by taking the first
-  manifest that names it. So a project's own `./emit-libs.scm` **extends** the installed one rather
-  than replacing it: your project keeps every shipped library without naming it and without an
-  absolute path into the install prefix. Define a name yourself and yours wins.
+- **1–2 select the first manifest; 4–5 extend it for libraries** (change:
+  `chain-explicit-manifests`, issue #114). `--manifest FILE` wins over `$EMIT_MANIFEST`. A readable
+  explicit file is the project: candidate 3 is skipped, so the caller's unrelated working directory
+  cannot leak into that project, and every readable installed candidate follows it. If the explicit
+  file is missing that is still an error rather than a fallback to different project inputs.
+- **Without an explicit selection, 3–5 are a search and chain** (change:
+  `installed-emit-completeness`, issue #44). Every readable candidate is used in order. Under either
+  route, a **library name** comes from the first manifest that names it, so a project manifest
+  **extends** the installed one rather than replacing it. Your project keeps every shipped library
+  without naming it or embedding an install path; define a name yourself and yours wins.
+- **`--no-manifest-chain` selects only the first readable manifest.** Use it with
+  `--manifest FILE` when library resolution must be hermetic: one project manifest, nothing
+  installed. The option is accepted by `run`, `repl`, `build`, and `lib` and controls only manifest
+  chaining — it does not disable toolchain discovery, caches, or other environment inputs.
+- A physical manifest reached through more than one spelling (an explicit symlink, the
+  executable-relative candidate, and the same build-time prefix, for example) is used only once;
+  the first spelling owns narration and relative paths.
 - A missing candidate is ordinary, and finding no manifest at all is *not* an error: `(scheme base)`
   is baked into the binary, so a program that imports only baked-in libraries needs no manifest
   anywhere. Anything else is reported by name at import resolution.
@@ -184,7 +193,8 @@ Every door looks for the manifest the same way (change: `manifest-search-path`, 
   `test/install-layout-tests.sh`.
 
 The Chez driver (`src/compile.ss`) implements candidates 1–3 and the same relative-path rule, but
-not 4–5: it is a bootstrap-only path that runs from a checkout and is never installed.
+not installed candidates 4–5 or `--no-manifest-chain`: it is a bootstrap-only path that runs from
+a checkout and is never installed.
 
 A manifest may also carry **program entries** — the deliverables `emit build` produces (change:
 `emit-build-bin-entry`):

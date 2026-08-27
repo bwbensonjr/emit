@@ -72,6 +72,13 @@ for v in run repl build lib; do
   [ "${first#usage: emit $v}" != "$first" ] \
     && ok "emit $v --help names the verb" \
     || bad "emit $v --help => [$first]"
+
+  # --no-manifest-chain is a shared valueless option, parsed by every door.  Put it
+  # before --help so an unimplemented/typo'd branch fails before help can short-circuit.
+  help_ok "emit $v accepts --no-manifest-chain" "$v" --no-manifest-chain --help
+  "$EMIT" "$v" --help 2>/dev/null | grep -q -- '--no-manifest-chain' \
+    && ok "emit $v help documents --no-manifest-chain" \
+    || bad "emit $v help omits --no-manifest-chain"
 done
 
 # The two JIT doors document the exact profile set and its default.  Check both help

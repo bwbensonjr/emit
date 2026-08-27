@@ -3,10 +3,10 @@
 // One compiled binary, the sole user-facing entry point, dispatching on its first
 // argument (the VERB) to the four compiler doors:
 //
-//   emit run  [FILE] [--manifest F] [--no-prelude]   in-process compile-and-run
-//   emit repl [--manifest F] [--no-prelude]          persistent interactive REPL
-//   emit build [NAME] [--manifest F] [-o OUT] [--no-prelude]   deliver a native exe
-//   emit lib  SRC  [-o DIR] [--manifest F]           compile one library -> artifact
+//   emit run  [FILE] [--manifest F] [--no-manifest-chain] [--no-prelude]
+//   emit repl [--manifest F] [--no-manifest-chain] [--no-prelude]
+//   emit build [NAME] [--manifest F] [--no-manifest-chain] [-o OUT] [--no-prelude]
+//   emit lib  SRC  [-o DIR] [--manifest F] [--no-manifest-chain]
 //
 // The run door (was build/scheme-run, src/run.cpp) and the REPL door (was
 // build/repl-host, src/repl/host.cpp) link byte-for-byte the SAME embedded compiler
@@ -301,6 +301,7 @@ static bool is_help_flag(const std::string &a) { return a == "--help" || a == "-
 static void usage_shared(std::ostream &os) {
   os << "\n"
         "options every verb accepts:\n"
+        "  --no-manifest-chain   resolve libraries from only the first manifest\n"
         "  --dump       print the IL after each compiler pass to stderr (stdout unchanged)\n"
         "  --dump-all   --dump, plus the stages of (scheme base) and imported libraries\n"
         "  --help, -h   print this usage on stdout and exit\n";
@@ -533,58 +534,72 @@ static std::string support_file(const std::string &relpath) {
 //   4. <exe>/../share/emit/…    a relocatable install (symlinks resolved)
 //   5. <EMIT_PREFIX>/share/…    the prefix this binary was built for
 //
-// 1-2 name a specific file: if it is absent that is a user error, and falling
-// through would silently run against DIFFERENT libraries than were asked for.  3-5
-// are a search, so a missing candidate is ordinary and finding nothing at all stays
-// non-fatal -- a program importing only baked-in libraries needs no manifest, and
-// import resolution reports anything else by name.
+// 1-2 select a specific PROJECT manifest: if it is absent that is a user error, and
+// falling through would silently run against DIFFERENT project inputs than were
+// asked for.  An explicit selection skips candidate 3 -- the caller's unrelated CWD
+// is not part of the selected project -- but still extends through installed
+// candidates 4-5 for libraries (change: chain-explicit-manifests; issue #114).
+// `--no-manifest-chain` restores exact-one-manifest resolution.
 //
-// THE SEARCHED CANDIDATES CHAIN (change: installed-emit-completeness; issue #44).
+// THE CANDIDATES CHAIN (change: installed-emit-completeness; issues #44, #114).
 // Stopping at the first candidate that EXISTS was right while the only question was
 // "is there a manifest at all", but it means a project's own ./emit-libs.scm -- which
 // a project must have to declare its own program -- hides the installed one, and the
 // project silently loses every standard library that is not baked in.  So 3-5 yield
-// EVERY candidate that exists, in order, and a LIBRARY NAME is resolved by taking the
-// first manifest in that list which names it: an earlier manifest EXTENDS a later one,
-// and may override a shipped library by defining the same name (design D1, D3).
-//
-// An explicit request still names exactly one manifest and is never extended (design
-// D2) -- that is what keeps a hermetic build expressible.  Program-entry lookup does
-// not chain either (design D4): see resolve_program.
+// EVERY applicable candidate that exists, in order, and a LIBRARY NAME is resolved by
+// taking the first manifest in that list which names it: an earlier manifest EXTENDS a
+// later one, and may override a shipped library by defining the same name. Program-entry
+// lookup does not chain: see resolve_program.
 static const char *kManifestName = "emit-libs.scm";
 
+// Defined with the artifact-cache helpers below. Manifest resolution needs only the
+// path identity half: retain the first spelling for narration and relative entries.
+static std::string canonical_path(const std::string &path);
+
+static void append_manifest(std::vector<std::string> &found,
+                            std::set<std::string> &identities,
+                            const std::string &candidate) {
+  if (!file_readable(candidate)) return;
+  if (identities.insert(canonical_path(candidate)).second)
+    found.push_back(candidate);
+}
+
 // Resolve the manifest chain for a door.  `flag` is the door's --manifest argument
-// (empty if not given).  Returns the manifests to consult, in resolution order --
-// exactly one for an explicit request, every searched candidate that exists
-// otherwise, and empty when none does.  Sets `bad` when an EXPLICIT request names a
-// missing file (message already printed); the door must then exit non-zero.
-static std::vector<std::string> resolve_manifests(const std::string &flag, bool &bad) {
+// (empty if not given). An explicit request is first and is followed by installed
+// candidates only; discovery considers the CWD and installed candidates. When
+// `chain` is false, either path stops after its first readable manifest. Sets `bad`
+// when an EXPLICIT request names a missing file (message already printed); the door
+// must then exit non-zero.
+static std::vector<std::string> resolve_manifests(const std::string &flag, bool chain,
+                                                  bool &bad) {
   bad = false;
   std::vector<std::string> found;
+  std::set<std::string> identities;
   const char *env = std::getenv("EMIT_MANIFEST");
   std::string explicit_req = !flag.empty() ? flag : (env ? std::string(env) : std::string());
-  if (!explicit_req.empty()) {                   // candidates 1-2: exactly one file
+  if (!explicit_req.empty()) {                   // candidates 1-2: the project file
     if (!file_readable(explicit_req)) {
       std::cerr << "emit: manifest not found: " << explicit_req << "\n";
       bad = true;
       return found;
     }
-    found.push_back(explicit_req);
-    return found;
+    append_manifest(found, identities, explicit_req);
+    if (!chain) return found;
+  } else {
+    append_manifest(found, identities, kManifestName);             // candidate 3
+    if (!chain && !found.empty()) return found;
   }
-  if (file_readable(kManifestName)) found.push_back(kManifestName); // candidate 3
+
   std::string exe = exe_path();                                     // candidate 4
   std::string share;
   if (!exe.empty()) {
     share = dir_of(dir_of(exe)) + "/share/emit/" + kManifestName;
-    if (file_readable(share)) found.push_back(share);
+    append_manifest(found, identities, share);
+    if (!chain && !found.empty()) return found;
   }
   std::string prefixed =                                            // candidate 5
       std::string(EMIT_PREFIX) + "/share/emit/" + kManifestName;
-  // Candidates 4 and 5 name the same file whenever emit runs from the prefix it was
-  // built for, which is the ordinary installed case; listing it twice would preload
-  // every installed library a second time.
-  if (prefixed != share && file_readable(prefixed)) found.push_back(prefixed);
+  append_manifest(found, identities, prefixed);
   return found;
 }
 
@@ -1622,6 +1637,7 @@ static bool compile_program(const std::string &prog_src, const std::vector<std::
 static int emit_run(int argc, char **argv) {
   bool emit = false;
   bool no_prelude = false;
+  bool manifest_chain = true;
   bool dump = false, dump_all = false;
   bool resolve = false;                        // --resolve-program: print an entry, no run
   JitOptLevel jit_opt = JitOptLevel::O1;
@@ -1644,6 +1660,7 @@ static int emit_run(int argc, char **argv) {
     else if (a == "--emit") emit = true;
     else if (is_dump_flag(a, dump, dump_all)) { }
     else if (a == "--no-prelude") no_prelude = true;
+    else if (a == "--no-manifest-chain") manifest_chain = false;
     else if (a == "--manifest" && i + 1 < argc) manifest = argv[++i];
     else if (a == "--resolve-program") {
       resolve = true;
@@ -1672,7 +1689,8 @@ static int emit_run(int argc, char **argv) {
   // Manifest resolution: the shared ordered lookup (change: manifest-search-path),
   // now a chain over the searched candidates (change: installed-emit-completeness).
   bool bad_manifest = false;
-  std::vector<std::string> manifests = resolve_manifests(manifest, bad_manifest);
+  std::vector<std::string> manifests =
+      resolve_manifests(manifest, manifest_chain, bad_manifest);
   if (bad_manifest) return 1;
   say_manifest(manifests);
 
@@ -2080,6 +2098,7 @@ static void process_form(const std::string &form) {
 
 static int emit_repl(int argc, char **argv) {
   bool prelude = true;
+  bool manifest_chain = true;
   bool dump = false, dump_all = false;
   JitOptLevel jit_opt = JitOptLevel::O1;
   std::string jit_opt_flag;
@@ -2093,6 +2112,7 @@ static int emit_repl(int argc, char **argv) {
     }
     else if (a == "--no-prelude") prelude = false;
     else if (is_dump_flag(a, dump, dump_all)) { }
+    else if (a == "--no-manifest-chain") manifest_chain = false;
     else if (a == "--manifest" && i + 1 < argc) manifest = argv[++i];
     // The rejection arm the other three doors already had (design D3).  Without it
     // `emit repl --bogus-flag` started a session and exited 0, so a typo'd flag was
@@ -2102,7 +2122,8 @@ static int emit_repl(int argc, char **argv) {
                      << " (emit repl takes no positional argument)\n"; return 2; }
   }
   bool bad_manifest = false;
-  std::vector<std::string> manifests = resolve_manifests(manifest, bad_manifest);
+  std::vector<std::string> manifests =
+      resolve_manifests(manifest, manifest_chain, bad_manifest);
   if (bad_manifest) return 1;
   // Per-form stage dumps for the whole session (change: emit-dump-stages).
   forward_dump_level(dump, dump_all);
@@ -2396,11 +2417,13 @@ static void ensure_parent_dir(const std::string &path) {
 static int emit_build(int argc, char **argv) {
   std::string name, manifest, out;
   bool no_prelude = false;
+  bool manifest_chain = true;
   bool dump = false, dump_all = false;
   for (int i = 1; i < argc; i++) {
     std::string a(argv[i]);
     if (is_help_flag(a)) { usage_build(std::cout); return 0; }
     else if (a == "--manifest" && i + 1 < argc) manifest = argv[++i];
+    else if (a == "--no-manifest-chain") manifest_chain = false;
     else if (a == "-o" && i + 1 < argc) out = argv[++i];
     else if (is_dump_flag(a, dump, dump_all)) { }
     else if (a == "--no-prelude") no_prelude = true;
@@ -2408,7 +2431,8 @@ static int emit_build(int argc, char **argv) {
     else name = a;
   }
   bool bad_manifest = false;
-  std::vector<std::string> manifests = resolve_manifests(manifest, bad_manifest);
+  std::vector<std::string> manifests =
+      resolve_manifests(manifest, manifest_chain, bad_manifest);
   if (bad_manifest) return 1;
   say_manifest(manifests);
 
@@ -2507,12 +2531,14 @@ static int emit_build(int argc, char **argv) {
 
 static int emit_lib(int argc, char **argv) {
   std::string src, dir = "build/lib", manifest;
+  bool manifest_chain = true;
   bool dump = false, dump_all = false;
   for (int i = 1; i < argc; i++) {
     std::string a(argv[i]);
     if (is_help_flag(a)) { usage_lib(std::cout); return 0; }
     else if (a == "-o" && i + 1 < argc) dir = argv[++i];
     else if (a == "--manifest" && i + 1 < argc) manifest = argv[++i];
+    else if (a == "--no-manifest-chain") manifest_chain = false;
     else if (is_dump_flag(a, dump, dump_all)) { }
     else if (!a.empty() && a[0] == '-') { std::cerr << "emit lib: unknown option " << a << "\n"; return 2; }
     else src = a;
@@ -2524,7 +2550,8 @@ static int emit_lib(int argc, char **argv) {
     return 1;
   }
   bool bad_manifest = false;
-  std::vector<std::string> manifests = resolve_manifests(manifest, bad_manifest);
+  std::vector<std::string> manifests =
+      resolve_manifests(manifest, manifest_chain, bad_manifest);
   if (bad_manifest) return 1;
   say_manifest(manifests);
 

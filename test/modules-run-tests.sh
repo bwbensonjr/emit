@@ -16,7 +16,8 @@ cd "$(dirname "$0")/.."
 
 MOD=test/modules
 MAN="$MOD/emit-libs.scm"
-RUN="build/emit run"
+# Negative import cases depend on this fixture alone, even if Emit is installed locally.
+RUN="build/emit run --no-manifest-chain"
 make emit >/dev/null 2>&1 || { echo "failed to build emit"; exit 1; }
 
 TMP="$(mktemp -d)"
@@ -144,7 +145,8 @@ fi
 # would trade one defect for a worse one.
 echo "REPL door: a define-library at the prompt is named, and the session survives"
 repl_in=$'(define-library (r) (export f) (begin (define (f x) x)))\n(+ 1 2)\n'
-printf '%s' "$repl_in" | build/emit repl --manifest "$MAN" >"$TMP/repl.out" 2>"$TMP/repl.err"
+printf '%s' "$repl_in" | build/emit repl --no-manifest-chain --manifest "$MAN" \
+  >"$TMP/repl.out" 2>"$TMP/repl.err"
 if grep -Eq 'libraries are not defined at the prompt: \(r\)' "$TMP/repl.out" "$TMP/repl.err"; then
   echo "  [OK  ] repl-library-named"; pass=$((pass+1))
 else
