@@ -760,16 +760,63 @@ void rt_arity_error(intptr_t expected, intptr_t got) {
  * GC_MALLOC_UNCOLLECTABLE: it is never collected and IS scanned for pointers, so
  * the symbols it holds are kept alive as roots.  (A plain static pointer into
  * the GC heap is not enough — under lli's JIT the module's data segment is not a
- * registered Boehm root, so the array would be collected mid-run.) */
-static val *intern_table = NULL;   /* uncollectable, scanned array of symbols */
+ * registered Boehm root, so the array would be collected mid-run.)
+ *
+ * The table is an open-addressed hash set rather than a flat array, because
+ * rt_intern is not only called when a program says `string->symbol`: the code
+ * generator emits a call for every evaluation of a quoted symbol literal, so
+ * `(eq? k 'concat)` in an inner loop interns on every iteration.  While the
+ * lookup was a strcmp against every symbol interned so far, that made a program's
+ * cost the product of how much work it does and how many distinct symbols it has
+ * seen — quadratic for anything, like a formatter or a compiler, whose input
+ * supplies both.  Linear probing over a power-of-two table keeps a hit to one
+ * hash and normally one strcmp.
+ *
+ * Empty slots are 0, which no symbol can be: a symbol is a tagged non-null
+ * pointer.  GC_MALLOC_UNCOLLECTABLE zeroes, so a fresh table is all-empty. */
+static val *intern_table = NULL;   /* uncollectable, scanned; open-addressed */
 static intptr_t intern_count = 0;
-static intptr_t intern_cap = 0;
+static intptr_t intern_cap = 0;    /* power of two, or 0 before first use */
 
 static const char *sym_name(val s) { return (const char *)as_ptr(s)[0]; }
 
+/* FNV-1a.  Cheap, no seeding, and adequate for identifier-shaped keys. */
+static uintptr_t sym_hash(const char *name) {
+  uintptr_t h = (uintptr_t)1469598103934665603ULL;
+  for (const unsigned char *p = (const unsigned char *)name; *p; p++) {
+    h ^= (uintptr_t)*p;
+    h *= (uintptr_t)1099511628211ULL;
+  }
+  return h;
+}
+
+/* The slot `name` belongs in: either the symbol itself, or the first empty slot
+ * on its probe sequence.  The table is never full — it is grown at half load —
+ * so the walk always terminates. */
+static intptr_t intern_slot(val *table, intptr_t cap, const char *name) {
+  intptr_t mask = cap - 1;
+  intptr_t i = (intptr_t)(sym_hash(name) & (uintptr_t)mask);
+  while (table[i] != 0 && strcmp(sym_name(table[i]), name) != 0)
+    i = (i + 1) & mask;
+  return i;
+}
+
+static void intern_grow(void) {
+  intptr_t ncap = intern_cap ? intern_cap * 2 : 64;
+  val *nt = (val *)GC_MALLOC_UNCOLLECTABLE((size_t)ncap * sizeof(val));
+  memset(nt, 0, (size_t)ncap * sizeof(val));
+  for (intptr_t i = 0; i < intern_cap; i++)
+    if (intern_table[i] != 0)
+      nt[intern_slot(nt, ncap, sym_name(intern_table[i]))] = intern_table[i];
+  if (intern_table) GC_free(intern_table);
+  intern_table = nt;
+  intern_cap = ncap;
+}
+
 val rt_intern(const char *name) {
-  for (intptr_t i = 0; i < intern_count; i++)
-    if (strcmp(sym_name(intern_table[i]), name) == 0) return intern_table[i];
+  if (intern_cap == 0) intern_grow();
+  intptr_t i = intern_slot(intern_table, intern_cap, name);
+  if (intern_table[i] != 0) return intern_table[i];
 
   size_t len = strlen(name);
   char *copy = (char *)GC_MALLOC_ATOMIC(len + 1);   /* name has no pointers */
@@ -778,15 +825,13 @@ val rt_intern(const char *name) {
   p[0] = (val)copy;
   val s = tag_ptr(p, TAG_SYMBOL);
 
-  if (intern_count == intern_cap) {
-    intptr_t ncap = intern_cap ? intern_cap * 2 : 16;
-    val *nt = (val *)GC_MALLOC_UNCOLLECTABLE((size_t)ncap * sizeof(val));
-    for (intptr_t i = 0; i < intern_count; i++) nt[i] = intern_table[i];
-    if (intern_table) GC_free(intern_table);
-    intern_table = nt;
-    intern_cap = ncap;
+  /* Grow at half load, then re-find the slot: the probe sequence has moved. */
+  if ((intern_count + 1) * 2 > intern_cap) {
+    intern_grow();
+    i = intern_slot(intern_table, intern_cap, name);
   }
-  intern_table[intern_count++] = s;
+  intern_table[i] = s;
+  intern_count++;
   return s;
 }
 
@@ -1148,10 +1193,31 @@ val rt_string_set(val s, val idx, val ch) {
    * clamped at blen and the seq_len of the trailing NUL then made `blen - eo`
    * negative -- a memcpy size of ~2^64, which died on SIGBUS. */
   CHECK_INDEX("string-set!", UNFIX(idx), str_cplen(s));
-  intptr_t so = utf8_offset(b, blen, UNFIX(idx));
+  /* Locate the codepoint the same way string-ref does -- byte index when the
+   * string is all-ASCII, otherwise through the breadcrumb index -- rather than
+   * rescanning from byte 0.  Scanning from zero made a left-to-right fill
+   * quadratic on its own, before the copy below added a second n. */
+  intptr_t so = (blen == str_cplen(s)) ? UNFIX(idx)
+                                       : cpidx_offset(s, UNFIX(idx));
   intptr_t eo = so + utf8_seq_len(b[so]);          /* byte range of the old codepoint */
   unsigned char enc[4];
   int le = utf8_encode(CHAR_CP(ch), enc);
+
+  /* Same encoded width -- every ASCII-for-ASCII replacement, and so every
+   * character-at-a-time buffer fill -- writes in place.  The byte length, the
+   * codepoint count and every byte offset are unchanged, so the breadcrumb index
+   * stays valid and is kept.  Every string's bytes are uniquely owned: the only
+   * two places a buffer pointer is installed are rt_make_string, which copies,
+   * and this function, so no other string can be aliasing them and a literal is
+   * a fresh copy like any other.  Reallocating here instead made string-set! O(n)
+   * in time AND in allocation, which made filling an n-character buffer O(n^2)
+   * and was a large part of one downstream program's total run time. */
+  if (le == eo - so) {
+    memcpy((char *)as_ptr(s)[3] + so, enc, (size_t)le);
+    return UNSPEC_V;
+  }
+
+  /* Widths differ, so the bytes have to move. */
   intptr_t newlen = blen - (eo - so) + le;
   char *buf = (char *)GC_MALLOC_ATOMIC((size_t)newlen + 1);
   memcpy(buf, b, (size_t)so);                       /* prefix */
