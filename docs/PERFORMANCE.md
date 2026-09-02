@@ -33,6 +33,9 @@ speed items in this list.
 | [P16](#p16--argument-type-checks-free-in-time-25-in-size-and-the-size-is-where-the-choice-is) | Argument type checks: free in time, +2.5% in size | speed + size | n/a | n/a | `checked-primitive-arguments` | ☑ |
 | [P17](#p17--the-artifact-cache-has-no-eviction) | The artifact cache has no eviction | disk | low | low–med | — | ☐ |
 | [P18](#p18--graph-aware-constant-lowering-has-a-quadratic-identity-memo) | Graph-aware constant lowering has a quadratic identity memo | compile speed | low | med | `r7rs-cyclic-datum-round-trip` | ☐ |
+| [P19](#p19--rt_intern-scanned-the-whole-symbol-table-on-every-quoted-symbol) | `rt_intern` scanned the whole symbol table, on every quoted symbol | speed | **high** | low | — | ☑ |
+| [P20](#p20--string-set-reallocated-and-copied-the-whole-string) | `string-set!` reallocated and copied the whole string | speed + memory | **high** | low | — | ☑ |
+| [P21](#p21--an-output-string-port-is-a-libc-file-and-an-unclosed-one-costs-every-later-port) | An output string port is a libc `FILE`, and an unclosed one costs every later port | speed | med | med–high | — | ☐ |
 
 Legend — **Value**: benefit if fixed. **Cost**: rough implementation effort/risk. These are
 estimates to aid sequencing, not commitments.
@@ -1921,6 +1924,123 @@ conversion.
 
 **OpenSpec change:** `eq-keyed-hash-tables` supplies the Emit-side prerequisite but deliberately
 does not convert the compiler memo.
+
+---
+
+## P19 — `rt_intern` scanned the whole symbol table, on every quoted symbol
+
+**Kind:** speed · **Value:** high · **Cost:** low · **OpenSpec change:** none · ☑
+
+`rt_intern` walked its entire table and `strcmp`'d each entry. That would be defensible if
+interning happened only where a program says `string->symbol` — but `encode-const` emits a
+`rt_intern` call for every **evaluation** of a quoted symbol literal, so
+
+```scheme
+(define (doc-concat? d) (and (doc? d) (eq? (doc-kind d) 'concat)))
+```
+
+interned `concat` on every call. A predicate like that in an inner loop therefore cost
+O(symbols interned so far), and for any program whose *input* supplies symbols — a compiler, a
+formatter, a reader — both factors grow together and the program is quadratic.
+
+Measured in isolation, two million `eq?` comparisons against a constant:
+
+| interned symbols | `(eq? x 'concat)` | `(eq? x kind-concat)` |
+|---|---|---|
+| 500 | 2.19 s | 0.00 s |
+| 4000 | 15.39 s | 0.02 s |
+| 8000 | 30.59 s | 0.07 s |
+
+**Fixed** by making the table an open-addressed hash set (FNV-1a, linear probing, grown at half
+load). It stays `GC_MALLOC_UNCOLLECTABLE` and scanned, so it still roots its symbols; empty
+slots are 0, which no symbol can be. A hit is one hash and normally one `strcmp`.
+
+Found while profiling `pitch`, an external formatter written in Emit: this was the single
+dominant term in its whole pipeline, and removing it plus P20 and the caller-side fix for P21
+made it 7–9× faster on its own corpus.
+
+**The other half is still open, and it is P14's.** Hoisting a quoted symbol literal to a
+module-level slot would remove the call rather than making it cheap — the same treatment P14-A
+proposes for pairs and vectors, and the symbol case is the one that showed up in a profile
+first. With the hash in place the remaining cost is a hash of a short string per evaluation,
+which is small but not nothing in a tight loop.
+
+---
+
+## P20 — `string-set!` reallocated and copied the whole string
+
+**Kind:** speed + memory · **Value:** high · **Cost:** low · **OpenSpec change:** none · ☑
+
+`rt_string_set` did two O(n) things per call. It located the codepoint by scanning UTF-8 from
+byte 0 — ignoring the breadcrumb index `string-ref` already uses (see P4) — and then allocated
+a whole new byte buffer and copied prefix, replacement and suffix into it, even when the
+replacement encodes to exactly the same width as what it replaced, which every
+ASCII-for-ASCII write does.
+
+So the ordinary idiom of filling a buffer a character at a time —
+
+```scheme
+(let ((out (make-string total)))
+  ... (string-set! out i (string-ref s k)) ...)
+```
+
+— was **O(n²) in time and in allocation**, and the allocation half also fed the collector n
+buffers of average size n/2. It is the idiom a program reaches for precisely to *avoid* the
+quadratic of folding `string-append`, so the cost was hiding where a careful author would look
+for safety.
+
+**Fixed**: locate the codepoint the way `string-ref` does, and when `le == eo - so`, write the
+encoded bytes in place and return. The byte length, the codepoint count and every byte offset
+are unchanged, so the breadcrumb index stays valid and is kept rather than dropped. In-place
+is sound because every string's bytes are uniquely owned: `rt_make_string` — which copies —
+and `rt_string_set` itself are the only two places a buffer pointer is installed, so no two
+strings can share bytes and a literal is a fresh copy like any other. The differing-width case
+keeps the old reallocating path.
+
+Found alongside P19, in the same profile: with interning fixed, this became the hottest
+procedure in the program under test.
+
+---
+
+## P21 — An output string port is a libc `FILE`, and an unclosed one costs every later port
+
+**Kind:** speed · **Value:** med · **Cost:** med–high · **OpenSpec change:** none · ☐
+
+`open-output-string` is `open_memstream`, which is `funopen`, which is `__sfp` — and `__sfp`
+walks libc's list of `FILE` objects looking for a free slot. A stream that is never closed is
+never a free slot, so a program that opens string ports and drops them without closing pays,
+for each new port, a walk past every port it has ever opened.
+
+Opening N string ports, writing ten characters to each and taking the text:
+
+| ports | left open | closed |
+|---|---|---|
+| 20,000 | 0.68 s | 0.49 s |
+| 40,000 | 1.19 s | 0.50 s |
+| 80,000 | 7.09 s | 0.52 s |
+
+Quadratic against flat, and the flat column is entirely process startup.
+
+**A caller can avoid it** by closing a port it owns, and the program this was found in did
+exactly that — a helper that opens a port, writes, takes the text and returns is unambiguously
+the port's owner. That is good hygiene independent of this entry, and it took the program's
+data-heavy benchmark from 19.9 s to 2.3 s. It is not a fix here: a program that legitimately
+holds many string ports open still hits the wall, and no R7RS program is obliged to close a
+port it is finished with — the GC is supposed to be the answer.
+
+**The fix is to stop backing string ports with a `FILE`.** The reason they are one is good and
+is recorded at the port table (design D1): `print_val` takes a `FILE *`, so writing to a string
+port is the *same* printer with a different stream rather than a second accumulation path in
+Scheme. Undoing that means giving the printer a small sink abstraction — a tagged union of a
+`FILE *` and a growable runtime-owned buffer, with `sink_putc` / `sink_puts` / `sink_printf`
+replacing the ~50 direct calls in the printer. Mechanical, contained to `runtime.c`, no
+compiler regeneration, and it removes a platform dependency rather than adding one. Two
+smaller alternatives were considered and rejected: a Boehm finalizer that closes unreachable
+ports (finalizer ordering and cost), and closing the stream at `get-output-string` and
+reopening on the next write (turns a write/read/write loop quadratic instead).
+
+Filed rather than fixed because it is a design change to a subsystem that was deliberately
+settled, and it wants its own OpenSpec change rather than being folded into a runtime bug fix.
 
 ---
 
