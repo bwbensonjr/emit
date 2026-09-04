@@ -52,7 +52,7 @@ WRITE=0
 #   vendored  third-party code copied into the tree (none currently)
 #   reference external material reproduced for convenience (imported specs, genesis)
 #   tracking  OpenSpec changes + specs (process history, not system code)
-#   config    agent / editor config (.claude)
+#   config    agent / editor / repo config (.claude, .agents, .gitignore, LICENSE)
 #   test      test programs and harnesses
 #   demo      example programs under demos/
 #   spike     first-party experiments under spike/ (none currently)
@@ -64,10 +64,17 @@ classify() {
   case "$f" in
     # --- generated / vendored / reference (non-authored, path-specific first) ---
     bootstrap/*.ll)               role=generated; comp="bootstrap-ir" ;;
-    # vendored: no third-party code is checked in today (the nanopass copy under
-    # spike/ was removed by the retire-spikes change); this rule stays so any future
-    # vendored tree classifies consistently.
+    # vendored: the nanopass copy under spike/ was removed by the retire-spikes change;
+    # this rule stays so any future vendored tree classifies consistently.
     spike/nanopass/vendor/*)      role=vendored;  comp="nanopass-vendor" ;;
+    # the chibi-scheme R7RS-small suite, carried verbatim with its license (see
+    # test/r7rs/README.md, which names these two files as the upstream ones).  It must
+    # precede the test/* rule: it lives under test/ but nobody here wrote it, and the
+    # authored-vs-not split is the whole point of the catalogue.  The rest of test/r7rs/
+    # -- the harness, the form manifest, the exclusion list, the sha256 pin -- is ours
+    # and stays under `test`.
+    test/r7rs/r7rs-tests.scm|test/r7rs/LICENSE.chibi-scheme)
+                                  role=vendored;  comp="r7rs-suite-vendor" ;;
     # the imported R7RS-small report: a single docs/r7rs-small.md until commit 6cb266b
     # split it into a per-chapter tree under docs/r7rs/ (README.md there is the report's
     # own front matter, not project prose) -- both spellings stay matched.
@@ -77,7 +84,11 @@ classify() {
     openspec/changes/archive/*)   role=tracking;  comp="openspec-archive" ;;
     openspec/*)                   role=tracking;  comp="openspec-active" ;;
     .claude/*)                    role=config;    comp="agent-config" ;;
-    .gitignore)                   role=config;    comp="repo-config" ;;
+    # the cross-harness skills mirror: OpenSpec writes a real parallel copy here
+    # (see .agents/skills/.openspec-target), not a symlink, so it is tracked config
+    # content of its own and is counted alongside .claude.
+    .agents/*)                    role=config;    comp="agent-config" ;;
+    .gitignore|LICENSE)           role=config;    comp="repo-config" ;;
     # --- tests, demos, spikes ---
     test/*)                       role=test;      comp="test" ;;
     run-all-tests.sh|run-dev-tests.sh) role=test; comp="test-harness" ;;
@@ -129,6 +140,11 @@ trap 'rm -f "$TSV"' EXIT
 nfiles=0
 while IFS= read -r -d '' f; do
   [ -f "$f" ] || continue
+  # Symlinks hold no lines of their own, and both `-f` and `wc -l` follow them, so
+  # counting one would double-count its target.  The repo tracks relative symlinks
+  # to point other harnesses at the Claude assets (AGENTS.md -> CLAUDE.md); the
+  # target is catalogued under its own path, and the link adds no code.
+  [ -L "$f" ] && continue
   # The tool's own metrics ledger is instrumentation, not catalogued code: counting a file
   # the tool itself appends to would be self-referential and the history append could never
   # converge (see the HIST comment above).  It is the sole tracked file excluded from the count.
