@@ -49,7 +49,7 @@ WRITE=0
 #   authored  hand-written compiler / runtime / stdlib / build+dev tooling source
 #   docs      hand-written project prose (README, docs/, design notes)
 #   generated build artifacts checked into the tree (bootstrap/*.ll)
-#   vendored  third-party code copied into the tree (none currently)
+#   vendored  third-party code copied into the tree (the chibi R7RS suite, the UCD)
 #   reference external material reproduced for convenience (imported specs, genesis)
 #   tracking  OpenSpec changes + specs (process history, not system code)
 #   config    agent / editor / repo config (.claude, .agents, .gitignore, LICENSE)
@@ -75,6 +75,11 @@ classify() {
     # and stays under `test`.
     test/r7rs/r7rs-tests.scm|test/r7rs/LICENSE.chibi-scheme)
                                   role=vendored;  comp="r7rs-suite-vendor" ;;
+    # the Unicode Character Database, downloaded verbatim from unicode.org and pinned
+    # by CHECKSUMS.sha256 (see vendor/unicode/*/README.md).  tools/gen-unicode-tables.ss
+    # reads it to generate lib/scheme/char-data.scm; nobody here authors or edits these
+    # bytes, and at ~58K lines they would otherwise dominate the fallback bucket.
+    vendor/unicode/*)             role=vendored;  comp="unicode-data-vendor" ;;
     # the imported R7RS-small report: a single docs/r7rs-small.md until commit 6cb266b
     # split it into a per-chapter tree under docs/r7rs/ (README.md there is the report's
     # own front matter, not project prose) -- both spellings stay matched.
@@ -100,7 +105,20 @@ classify() {
     src/*.cpp)                    role=authored;  comp="native-drivers" ;;
     src/*.md)                     role=docs;      comp="docs" ;;
     src/*)                        role=authored;  comp="compiler-core" ;;
-    lib/*)                        role=authored;  comp="stdlib" ;;
+    # lib/ mixes hand-authored R7RS libraries with generator output, so the split is by
+    # the GENERATED marker the files carry rather than by path -- the same signal
+    # test/scheme-base-gen-check.sh and test/unicode-data-gen-check.sh scan for when they
+    # assert the bytes are byte-identical to a fresh generation.  Marker-driven so a new
+    # generated library classifies correctly the day it lands.  Counting these as authored
+    # overstated the headline by 3137 LOC (13%): char-data.scm is a 2397-line Unicode
+    # table, and the .sld wrappers are export lists whose bodies live in src/prelude.scm
+    # and are already counted once under compiler-core.
+    lib/*)
+      if head -2 "$f" | grep -q GENERATED; then
+        role=generated; comp="stdlib-generated"
+      else
+        role=authored;  comp="stdlib"
+      fi ;;
     tools/*)                      role=authored;  comp="tools" ;;
     Makefile|*.mk)                role=authored;  comp="build" ;;
     emit-libs.scm)                role=authored;  comp="build" ;;
