@@ -35,7 +35,8 @@ speed items in this list.
 | [P18](#p18--graph-aware-constant-lowering-has-a-quadratic-identity-memo) | Graph-aware constant lowering has a quadratic identity memo | compile speed | low | med | `r7rs-cyclic-datum-round-trip` | ☐ |
 | [P19](#p19--rt_intern-scanned-the-whole-symbol-table-on-every-quoted-symbol) | `rt_intern` scanned the whole symbol table, on every quoted symbol | speed | **high** | low | — | ☑ |
 | [P20](#p20--string-set-reallocated-and-copied-the-whole-string) | `string-set!` reallocated and copied the whole string | speed + memory | **high** | low | — | ☑ |
-| [P21](#p21--an-output-string-port-is-a-libc-file-and-an-unclosed-one-costs-every-later-port) | An output string port is a libc `FILE`, and an unclosed one costs every later port | speed | med | med–high | — | ☐ |
+| [P21](#p21--an-output-string-port-is-a-libc-file-and-an-unclosed-one-costs-every-later-port) | An output string port is a libc `FILE`, and an unclosed one costs every later port | speed | med | med–high | `buffer-backed-string-ports` | ☑ |
+| [P22](#p22--a-string-ports-buffer-is-retained-for-the-life-of-the-process) | A string port's buffer is retained for the life of the process | memory | low–med | med | — | ☐ |
 
 Legend — **Value**: benefit if fixed. **Cost**: rough implementation effort/risk. These are
 estimates to aid sequencing, not commitments.
@@ -2004,14 +2005,19 @@ procedure in the program under test.
 
 ## P21 — An output string port is a libc `FILE`, and an unclosed one costs every later port
 
-**Kind:** speed · **Value:** med · **Cost:** med–high · **OpenSpec change:** none · ☐
+**Kind:** speed · **Value:** med · **Cost:** med–high · **OpenSpec change:**
+`buffer-backed-string-ports` · ☑
 
-`open-output-string` is `open_memstream`, which is `funopen`, which is `__sfp` — and `__sfp`
-walks libc's list of `FILE` objects looking for a free slot. A stream that is never closed is
-never a free slot, so a program that opens string ports and drops them without closing pays,
-for each new port, a walk past every port it has ever opened.
+**Status:** ☑ done (change: `buffer-backed-string-ports`, archived 2026-09-04) — the design, the
+site counts, and the reasoning behind each decision are in that change's `design.md` and
+`proposal.md`, at `openspec/changes/archive/2026-09-04-buffer-backed-string-ports`.
 
-Opening N string ports, writing ten characters to each and taking the text:
+`open-output-string` **was** `open_memstream`, which is `funopen`, which is `__sfp` — and `__sfp`
+walked libc's list of `FILE` objects looking for a free slot. A stream that is never closed is
+never a free slot, so a program that opened string ports and dropped them without closing paid,
+for each new port, a walk past every port it had ever opened.
+
+Opening N string ports, writing ten characters to each and taking the text, as originally filed:
 
 | ports | left open | closed |
 |---|---|---|
@@ -2019,28 +2025,106 @@ Opening N string ports, writing ten characters to each and taking the text:
 | 40,000 | 1.19 s | 0.50 s |
 | 80,000 | 7.09 s | 0.52 s |
 
-Quadratic against flat, and the flat column is entirely process startup.
+Quadratic against flat, and the flat column was entirely process startup.
 
-**A caller can avoid it** by closing a port it owns, and the program this was found in did
+**A caller could avoid it** by closing a port it owns, and the program this was found in did
 exactly that — a helper that opens a port, writes, takes the text and returns is unambiguously
-the port's owner. That is good hygiene independent of this entry, and it took the program's
-data-heavy benchmark from 19.9 s to 2.3 s. It is not a fix here: a program that legitimately
-holds many string ports open still hits the wall, and no R7RS program is obliged to close a
-port it is finished with — the GC is supposed to be the answer.
+the port's owner. That was good hygiene independent of this entry, and it took the program's
+data-heavy benchmark from 19.9 s to 2.3 s. It was never the fix: a program that legitimately
+holds many string ports open still hit the wall, and no R7RS program is obliged to close a port
+it is finished with — the GC is supposed to be the answer. That workaround is now one way to
+write the program rather than the only way it scales.
 
-**The fix is to stop backing string ports with a `FILE`.** The reason they are one is good and
-is recorded at the port table (design D1): `print_val` takes a `FILE *`, so writing to a string
-port is the *same* printer with a different stream rather than a second accumulation path in
-Scheme. Undoing that means giving the printer a small sink abstraction — a tagged union of a
-`FILE *` and a growable runtime-owned buffer, with `sink_putc` / `sink_puts` / `sink_printf`
-replacing the ~50 direct calls in the printer. Mechanical, contained to `runtime.c`, no
-compiler regeneration, and it removes a platform dependency rather than adding one. Two
-smaller alternatives were considered and rejected: a Boehm finalizer that closes unreachable
-ports (finalizer ordering and cost), and closing the stream at `get-output-string` and
-reopening on the next write (turns a write/read/write loop quadratic instead).
+**The fix was to stop backing string ports with a `FILE`, and that is what landed.** The reason
+they were one is good and is still recorded at the port table (design D1): the printer takes
+one destination, so writing to a string port must be the *same* printer with a different
+destination rather than a second accumulation path in Scheme. What changed is what that
+destination is. `print_val` and `print_node` now take a `sink` — a tagged union of a `FILE *`
+and a growable runtime-owned buffer, with `sink_putc` / `sink_puts` / `sink_write` /
+`sink_printf` in place of the 62 direct stdio calls in the printer — and a string port is the
+buffer arm. libc's stream list is never touched, so what opening a string port costs no longer
+depends on how many are live. Two smaller alternatives were considered and rejected: a Boehm
+finalizer that closes unreachable ports (finalizer ordering and cost), and closing the stream
+at `get-output-string` and reopening on the next write (turns a write/read/write loop quadratic
+instead).
 
-Filed rather than fixed because it is a design change to a subsystem that was deliberately
-settled, and it wants its own OpenSpec change rather than being folded into a runtime bug fix.
+The same program on the machine the change was implemented on, best of three — a faster machine,
+so its startup cost is ~0.015 s rather than ~0.5 s and the defect showed up worse:
+
+| ports | left open (before) | left open (after) | closed (after) |
+|---|---|---|---|
+| 20,000 | 0.50 s | 0.022 s | 0.022 s |
+| 40,000 | 1.42 s | 0.035 s | 0.029 s |
+| 80,000 | **9.14 s** | **0.042 s** | 0.039 s |
+
+The left-open column now tracks the closed one within noise, which is the property the spec
+states and `test/string-port-scaling-tests.sh` asserts as a ratio (no correctness suite can see
+this defect: every port test passed while it was live). The printer stayed cost-neutral where it
+had to — 200,000 mixed `display`/`write` lines, medians over five interleaved runs: stdout
+0.229 s → 0.231 s, file 0.238 s → 0.240 s, string port 0.236 s → **0.152 s**. The first draft of
+the conversion was *not* neutral (stdout +25%), because routing all 62 calls through the
+variadic `sink_printf` added a varargs layer to the hottest path; converting the 27 calls whose
+format holds no conversions into `sink_puts` / `sink_putc` — byte-identical output — recovered
+it.
+
+**Two things went away with the cost**, and they are half the value of the change. The
+`open_memstream` dependency is gone, so string ports no longer rest on a POSIX extension. And
+`port_memstream_state` is gone with it: `open_memstream` retained the *addresses* of its buffer
+and size cells, so those could not live in the doubling port table (issue #113,
+`stabilize-string-output-ports`) and needed a second, process-lifetime allocation per port. A
+runtime-owned buffer has no such constraint, so the hazard is designed out rather than guarded
+against, and a string port now costs one allocation instead of two.
+
+**What did NOT go away is the retention**, and P22 records it. The proposal expected the buffer
+to become collectable once the port was unreachable; it does not, and the reason is structural
+rather than a matter of allocator choice. See P22.
+
+---
+
+## P22 — A string port's buffer is retained for the life of the process
+
+**Kind:** memory · **Value:** low–med · **Cost:** med · **OpenSpec change:** none · ☐
+
+A string output port's accumulated bytes are never reclaimed while the process runs. They are
+`GC_MALLOC_ATOMIC` bytes hanging off the port's slot in `port_slots` (`src/runtime/runtime.c`),
+and that table is `GC_MALLOC_UNCOLLECTABLE` — which Boehm defines as *scanned for pointers but
+never itself collected, and scanned even when it does not appear reachable*. So the table is a
+permanent strong root, slots are never freed or reused, and a buffer named from a slot is
+pinned until exit. A program that opens many string ports holds every byte it ever wrote to one.
+
+This is not a regression. Before `buffer-backed-string-ports` the same bytes leaked harder: the
+memstream buffer was `malloc`'d *outside* the GC heap and never freed, alongside a second
+`GC_MALLOC_UNCOLLECTABLE` allocation per port for the memstream's cells. That change deleted one
+of the two allocations and moved the survivor into the GC heap. It did not, and could not,
+reclaim it — which is why this is its own entry rather than a footnote to P21.
+
+**The obstacle is that the runtime cannot see a port die.** A Scheme port record holds its
+handle as a *fixnum* in field 0 (the layout contract in `src/prelude.scm`), so there is no GC
+edge from any Scheme object to the buffer. The collector therefore learns nothing about the
+port's reachability, and the owner of the storage has no signal to act on. Reclamation needs one
+of:
+
+- **A. Hang the storage off the port record.** Give the buffer a real Scheme-side referent — the
+  output port's record has two fields (`buf`, `pos`) that only input ports use — and pass the
+  record rather than the handle to `%port-get-output-string` and `%set-current-output!`. Then the
+  buffer dies with the record and no finalizer is involved. This is the clean answer and the
+  reason it was out of scope: it changes `src/prelude.scm`, which is baked into the compiler as
+  `*prelude-source*`, so it crosses the regen barrier and widens a change that was otherwise
+  `runtime.c`-only.
+- **B. A Boehm finalizer on the port record**, clearing the slot when the record dies. Cheaper to
+  write and worse on every other axis: P21 rejected finalizers for ordering and cost, the
+  registration needs a record the runtime only sees on a port-*directed* write (a port written
+  only through `current-output-port` never presents one), and it buys the same result as A with a
+  weaker guarantee.
+- **C. Free at `close-port`.** Rejected outright, not deferred: `get-output-string` after
+  `close-port` is documented, tested, and the natural write-then-close-then-collect idiom.
+
+**Value is low–med and deliberately so.** The retained bytes are bounded by what a program
+actually wrote to string ports, which for a formatter or compiler is a fraction of its input, and
+nothing about it is quadratic — this is the flat-cost half of what P21 was. It becomes worth
+paying for if a long-running process (the REPL host, a server) accumulates string-port text
+across a session, since that is the shape where "until exit" stops being a bound. Sequence it
+behind or alongside A: hanging storage off the record is the same prelude change either way.
 
 ---
 

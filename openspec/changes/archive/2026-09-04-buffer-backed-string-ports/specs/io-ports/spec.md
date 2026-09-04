@@ -16,9 +16,11 @@ with the number it has already opened. Closing a port is an optional act of hygi
 requirement for a program to scale: a program that legitimately retains many open string ports
 SHALL behave the same as one that closes each in turn.
 
-A string output port's accumulated storage SHALL be reclaimable once the port is unreachable.
-Storage for string ports MUST NOT accumulate for the lifetime of the process independently of
-whether the ports are still in use.
+A string output port's accumulated storage SHALL be a single allocation per port, sized by the
+text written to that port, and SHALL NOT require a second per-port allocation to hold its
+bookkeeping. An implementation MAY retain that storage for the lifetime of the process: a port
+record names its storage only through a runtime handle, so the reachability of the port is not
+observable to whatever owns the storage, and reclaiming it early is therefore not required here.
 
 `flush-output-port` SHALL make any buffered output of a port visible to other readers of its
 destination; `close-port` SHALL flush before closing. Output written to a file port SHALL be

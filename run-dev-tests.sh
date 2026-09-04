@@ -7,6 +7,7 @@
 #   * backend equivalence (AOT/JIT/bitcode) and demo values via the Chez AOT path
 #   * IL-level unit tests (expander, read-all reader, REPL front-end, batch)
 #   * process-I/O primitives
+#   * string-port SCALING -- the one P21 shape no correctness suite can see
 #   * self-emission equivalence (schemec IR == Chez-hosted IR)
 #   * self-hosting fixed point + independent-host re-derivation of committed IR
 #   * embedded runner vs AOT parity
@@ -63,6 +64,7 @@ run_suite "module vertical-slice (AOT)" test/modules-tests.sh
 run_suite "(scheme base) gen guard"     test/scheme-base-gen-check.sh
 run_suite "(scheme base) auto-import (AOT)" test/prelude-base-tests.sh
 run_suite "process-I/O primitives"      test/io-primitives-tests.sh
+run_suite "string-port scaling (P21)"   test/string-port-scaling-tests.sh
 run_suite "self-emission equivalence"   bash -c 'make build/schemec >/dev/null 2>&1 && test/self-emit-equiv.sh'
 run_suite "self-hosting fixed point"    test/self-host-fixpoint.sh
 run_suite "embedded runner vs AOT"      demos/run-embedded.sh

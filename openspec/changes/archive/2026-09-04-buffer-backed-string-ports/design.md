@@ -44,7 +44,7 @@ port behind them.
 - Keep one printer. The value of the current design is that there is exactly one
   `print_val`, and this change must not produce a second accumulation path.
 - Remove the `open_memstream` dependency and the two workarounds it forced, rather than
-  adding a third.
+  adding a third, and drop one of the two per-port allocations it required.
 - Change no Scheme source, no primitive signature, and no port record layout.
 
 **Non-Goals**
@@ -55,9 +55,9 @@ port behind them.
   there that a runtime buffer would have to reimplement.
 - Making `print_val` faster. This change should be cost-neutral on the file and stdout
   paths, and it is a regression if it is not.
-- Freeing a string port's storage at `close-port`. The buffer becomes collectable when the
-  port is unreachable, which is the R7RS-appropriate answer; an eager free at close would
-  break `get-output-string`-after-close exactly as it does today.
+- Freeing a string port's storage, at `close-port` or ever. An eager free at close would
+  break `get-output-string`-after-close exactly as it does today, and early reclamation on
+  unreachability turned out to be unavailable to a runtime-owned buffer at all (see D3).
 
 ## Decisions
 
@@ -85,16 +85,29 @@ in place of `FILE *f` plus `port_memstream_state *memstate`. The bytes are
 external party retains the address of the buffer *cell*, which is the property
 `open_memstream` lacked and the entire reason `port_memstream_state` had to be a separate
 allocation. `port_memstream_state` is deleted, and the #113 hazard is designed out rather
-than guarded against. The table may double freely; a slot's `buf` pointer moves with it and
-nothing outside holds a pointer to the slot.
+than guarded against. The table may double freely; a slot's `buf` pointer is copied with it,
+and nothing outside may hold a pointer *into* the table — which is why `rt_current_out`
+stops caching a destination pointer and caches the current output HANDLE instead, resolving
+it per call. A `sink *` into `port_slots` would be exactly the #113 stale-pointer bug in a
+new place; a handle cannot go stale.
 
 **D3 — `close-port` releases the stream and keeps the buffer.** For a string port there is
 no stream to release, so closing marks the slot dead and does nothing else; the buffer stays
 reachable from the slot and `get-output-string` keeps working, which is today's documented
-behavior and now falls out rather than being arranged. The difference from today is that the
-buffer is collectable when the port record becomes unreachable, because it is GC-heap memory
-under a slot the collector can reach — where the memstream buffer was `malloc`'d and
-permanently lost.
+behavior and now falls out rather than being arranged.
+
+**The buffer is nonetheless NOT reclaimed early, and this was a finding during
+implementation, not a plan.** `GC_MALLOC_UNCOLLECTABLE` memory is, by Boehm's definition,
+*scanned for pointers but never collected, and scanned even when unreachable* — so
+`port_slots` is a permanent strong root and a buffer named from a slot is pinned for the life
+of the process. The obstacle is structural rather than an allocator choice: a port record
+holds only a fixnum handle, so there is no GC edge from Scheme to the buffer and the port's
+reachability is not observable to the runtime that owns the storage. Reclamation would need
+the storage hung off the port record — a `src/prelude.scm` change, and therefore the regen
+barrier and a blast radius wider than "runtime.c only". This change keeps the scope it
+proposed: it deletes one of the two per-port allocations and moves the survivor into the GC
+heap, and the retained-storage half is filed as its own entry in `docs/PERFORMANCE.md`. The
+spec states the storage shape it delivers and explicitly does not require early reclamation.
 
 **D4 — `sink_printf` formats through `vsnprintf` into the destination.** For the stream arm,
 `vfprintf`. For the buffer arm, `vsnprintf` into the free tail with the remaining capacity;

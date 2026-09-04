@@ -1489,13 +1489,135 @@ val rt_root(val v) {
 val rt_repl_state_ref(void)  { return rt_repl_cell(&rt_repl_state_cell, FALSE_V)[0]; }
 val rt_repl_state_set(val v) { rt_repl_cell(&rt_repl_state_cell, FALSE_V)[0] = v; return UNSPEC_V; }
 
+/* --- output sinks (change: buffer-backed-string-ports, design D1) ---------
+ * Everything the runtime PRINTS goes to a `sink`: either a stdio stream or a
+ * growable runtime-owned byte buffer.  A file port and the two standard ports are
+ * the stream arm; a string output port is the buffer arm, and that is what closes
+ * docs/PERFORMANCE.md P21.  A string port used to be a real `FILE` over
+ * open_memstream, and libc allocates a `FILE` by WALKING its list of streams
+ * looking for a free one -- so a program that opened string ports and dropped
+ * them paid, per new port, a walk past every port it had ever opened.  A buffer
+ * never touches that list.
+ *
+ * A TAGGED UNION BRANCHING ON `f`, NOT A VTABLE.  print_val is the most-used code
+ * path in the runtime -- every display, write, and error diagnostic goes through
+ * it -- and a vtable would turn a predictable test on a hot-in-cache field into an
+ * indirect call, buying an extensibility this runtime has no use for.
+ *
+ * THE STREAM ARM IS A PASS-THROUGH, deliberately: each operation below calls
+ * exactly the stdio function the pre-sink code called at that site, so the file
+ * and stdout paths pay one branch and nothing else.  Keeping them cost-neutral is
+ * a requirement of the change, not an aspiration; a measured regression there is a
+ * reason to reconsider this shape rather than to accept it. */
+typedef struct {
+  FILE  *f;      /* non-NULL: write through to this stream (the stream arm) */
+  char  *buf;    /* non-NULL: accumulate here (the buffer arm), GC_MALLOC_ATOMIC */
+  size_t len;    /* bytes accumulated */
+  size_t cap;    /* bytes allocated at buf */
+} sink;
+
+/* The buffer arm starts at this capacity and doubles.  Anything from 64 to 256 is
+ * defensible and the doubling makes the choice second-order (design, Open
+ * Questions); 128 holds a typical one-line render without a single growth. */
+#define SINK_INIT_CAP 128
+
+/* Grow a buffer sink so NEED more bytes fit, doubling (design D2).  The bytes hold
+ * no Scheme values -- exactly like the byte storage rt_make_string allocates -- so
+ * GC_MALLOC_ATOMIC is the right allocator.  Every arithmetic step is checked: a
+ * size_t wrap here would be a silent short buffer, and write-string is the one
+ * caller that supplies a length from Scheme. */
+static void sink_grow(sink *s, size_t need) {
+  size_t want = s->len + need;
+  if (want < s->len) rt_fatal("output port: size overflow");
+  if (want <= s->cap) return;
+  size_t ncap = s->cap ? s->cap : SINK_INIT_CAP;
+  while (ncap < want) {
+    size_t doubled = ncap * 2;
+    if (doubled < ncap) rt_fatal("output port: size overflow");
+    ncap = doubled;
+  }
+  char *nbuf = (char *)GC_MALLOC_ATOMIC(ncap);
+  if (!nbuf) rt_fatal("output port: out of memory");
+  if (s->len) memcpy(nbuf, s->buf, s->len);
+  s->buf = nbuf;
+  s->cap = ncap;
+}
+
+/* A known-length byte run: what write-char, write-string, and the printer's raw
+ * arms emit.  Return values are ignored on both arms, as the pre-sink code ignored
+ * fwrite's, and an embedded NUL is just another byte -- Scheme strings may hold
+ * one and this is the path they take. */
+static void sink_write(sink *s, const void *bytes, size_t n) {
+  if (s->f) { fwrite(bytes, 1, n, s->f); return; }
+  if (n == 0) return;
+  sink_grow(s, n);
+  memcpy(s->buf + s->len, bytes, n);
+  s->len += n;
+}
+
+static void sink_putc(sink *s, int c) {
+  if (s->f) { fputc(c, s->f); return; }
+  sink_grow(s, 1);
+  s->buf[s->len++] = (char)c;
+}
+
+/* A NUL-terminated C string: the printer's fixed spellings and #f/#t. */
+static void sink_puts(sink *s, const char *str) {
+  if (s->f) { fputs(str, s->f); return; }
+  sink_write(s, str, strlen(str));
+}
+
+/* Formatted output (design D4).  The stream arm is vfprintf, which is what fprintf
+ * is.  The buffer arm formats with vsnprintf STRAIGHT INTO the free tail, so the
+ * common case is one format and no scratch buffer to overflow; when vsnprintf
+ * reports it did not fit, grow to the length it reported and format once more.
+ * The printer's formats are small and bounded (numbers, labels, `#<...>` forms),
+ * so the second pass essentially never runs. */
+static void sink_printf(sink *s, const char *fmt, ...) {
+  va_list ap;
+  if (s->f) {
+    va_start(ap, fmt);
+    vfprintf(s->f, fmt, ap);
+    va_end(ap);
+    return;
+  }
+  for (int attempt = 0; attempt < 2; attempt++) {
+    /* vsnprintf writes at most `room` bytes INCLUDING its NUL, and reports the
+     * length it wanted.  n < room means the whole string landed; the NUL it wrote
+     * past it sits in free capacity and the next append overwrites it. */
+    size_t room = s->cap - s->len;
+    int n;
+    va_start(ap, fmt);
+    n = vsnprintf(s->buf + s->len, room, fmt, ap);
+    va_end(ap);
+    if (n < 0) return;                       /* encoding error: emit nothing */
+    if ((size_t)n < room) { s->len += (size_t)n; return; }
+    sink_grow(s, (size_t)n + 1);             /* +1 for the NUL vsnprintf insists on */
+  }
+}
+
+/* The two reserved handles (0 stdout, 1 stderr) resolve to these, so the standard
+ * ports still need no table slot and no initialization order (design D5).  The
+ * pointer is filled on FIRST USE rather than in the initializer because `stdout`
+ * and `stderr` are libc variables, not constant expressions -- which preserves the
+ * property the plain `FILE *` version had rather than trading it away. */
+static sink sink_stdout_obj, sink_stderr_obj;
+static sink *sink_stdout(void) {
+  if (!sink_stdout_obj.f) sink_stdout_obj.f = stdout;
+  return &sink_stdout_obj;
+}
+static sink *sink_stderr(void) {
+  if (!sink_stderr_obj.f) sink_stderr_obj.f = stderr;
+  return &sink_stderr_obj;
+}
+
 /* display ANY datum in R7RS *display* style (strings unquoted, chars raw),
  * sharing the tag-walking printer with rt_write (change: fix-display-non-string).
  * Dispatching on the tag makes this memory-safe for every value type -- a
  * non-string no longer dereferences as a string header and crashes.  Returns an
  * unspecified value (NIL) so it composes inside a `begin`. */
 enum print_policy { PRINT_ORDINARY, PRINT_SIMPLE, PRINT_SHARED };
-static void print_val(FILE *out, val v, int display, enum print_policy policy);
+static void print_val(sink *out, val v, int display, enum print_policy policy);
 
 /* WHERE THE PORT-LESS OUTPUT PROCEDURES WRITE (change: scheme-io-library).
  *
@@ -1505,26 +1627,39 @@ static void print_val(FILE *out, val v, int display, enum print_policy policy);
  * But `(display x)` compiles to a bare `rt_display` primcall, and keeping that
  * primcall byte-identical is a requirement of this change (a port-free program's
  * emitted code must not move).  Both hold at once by making the DESTINATION
- * indirect instead of the call: the port-less entry points write to this cell
- * rather than to the literal `stdout`, and the prelude's current-output-port
- * parameter stores its port's stream here on every rebinding.  The cost is one
- * global load per call; the emitted IR is unchanged.
+ * indirect instead of the call: the port-less entry points write to the
+ * destination this cell names rather than to the literal `stdout`, and the
+ * prelude's current-output-port parameter stores its port's HANDLE here on every
+ * rebinding.  The cost is one global load and a handle decode per call; the
+ * emitted IR is unchanged.
  *
- * NULL means "not yet set" and reads as stdout, so this is correct before any
+ * A HANDLE AND NOT A DESTINATION POINTER (change: buffer-backed-string-ports).
+ * This held a `FILE *` while a FILE was the destination, and a FILE * is stable
+ * for as long as the stream lives.  A sink is not: a string port's sink lives IN
+ * the port table, which doubles, so a cached `sink *` would dangle the moment a
+ * later port grew the table -- issue #113's stale-pointer bug in a new place.  A
+ * handle cannot go stale, and re-resolving it also means a port closed while it
+ * was current falls back to stdout instead of writing to a closed stream.
+ *
+ * -1 means "not yet set" and reads as stdout, so this is correct before any
  * Scheme runs -- the standard ports need no initialization order.  The REAL stdout
  * stays reachable as handle 0 throughout, so the stdout PORT OBJECT keeps meaning
  * stdout even while the current-output-port parameter points somewhere else. */
-static FILE *rt_current_out = NULL;
-static FILE *cur_out(void) { return rt_current_out ? rt_current_out : stdout; }
-static FILE *port_stream(intptr_t h);      /* fwd: the handle table, defined below */
+static intptr_t rt_current_out_handle = -1;
+static sink *port_sink(intptr_t h);       /* fwd: the handle table, defined below */
+static sink *cur_out(void) {
+  if (rt_current_out_handle < 0) return sink_stdout();
+  sink *s = port_sink(rt_current_out_handle);
+  return s ? s : sink_stdout();
+}
 
 /* Point the port-less output procedures at the stream of HANDLE (called by the
  * prelude's current-output-port parameter on every rebinding, including the
  * restore leg of parameterize / with-output-to-file).  An unusable handle resets
  * to stdout rather than leaving output going nowhere. */
 val rt_set_current_output(val handle) {
-  FILE *f = (tag_of(handle) == TAG_FIXNUM) ? port_stream(UNFIX(handle)) : NULL;
-  rt_current_out = f;
+  rt_current_out_handle =
+      (tag_of(handle) == TAG_FIXNUM && port_sink(UNFIX(handle))) ? UNFIX(handle) : -1;
   return UNSPEC_V;
 }
 
@@ -1566,14 +1701,14 @@ val rt_write_shared_val(val v) {
  * display style for its own headers, indentation, and newlines.  Returns `v`, so
  * a dumper can thread a value through a write without an extra binding. */
 val rt_stderr_write(val v, val display_p) {
-  print_val(stderr, v, /*display=*/display_p != FALSE_V, PRINT_ORDINARY);
+  print_val(sink_stderr(), v, /*display=*/display_p != FALSE_V, PRINT_ORDINARY);
   return v;
 }
 
 /* newline: write a single line feed (U+000A) to standard output.  Nullary;
  * returns the unspecified value (NIL) so it composes inside a `begin`. */
 val rt_newline(void) {
-  fputc('\n', cur_out());
+  sink_putc(cur_out(), '\n');
   return UNSPEC_V;
 }
 
@@ -1582,7 +1717,7 @@ val rt_newline(void) {
 val rt_write_char(val c) {
   unsigned char buf[4];
   int n = utf8_encode(CHAR_CP(c), buf);
-  fwrite(buf, 1, (size_t)n, cur_out());
+  sink_write(cur_out(), buf, (size_t)n);
   return UNSPEC_V;
 }
 
@@ -1593,37 +1728,41 @@ val rt_eof_object(void)        { return EOF_V; }
 val rt_eof_object_p(val v)     { return truthy(is_eof(v)); }
 
 /* --- output-port handle table (change: scheme-io-library, design D1) -------
- * A Scheme record field holds a `val`, and a C `FILE *` is not one.  Rather than
- * smuggle the pointer through a fixnum (where a stale one after close-port is a
- * wild pointer the collector and printer can both see), the runtime owns the
- * FILE * and hands Scheme a small integer INDEX into this table.  Every use is
- * then a range + liveness check away from a proper diagnostic instead of a fault,
- * which is the entire reason D1 chose a table over a raw pointer.
+ * A Scheme record field holds a `val`, and neither a C `FILE *` nor a byte buffer
+ * is one.  Rather than smuggle the pointer through a fixnum (where a stale one
+ * after close-port is a wild pointer the collector and printer can both see), the
+ * runtime owns the destination and hands Scheme a small integer INDEX into this
+ * table.  Every use is then a range + liveness check away from a proper diagnostic
+ * instead of a fault, which is the entire reason D1 chose a table over a raw
+ * pointer.
  *
  * Two handles are reserved and always live, so the standard ports need no table
  * slot and no initialization order:
  *   handle 0 = stdout      handle 1 = stderr
  * Table slots are handles 2 and up.
  *
- * A STRING output port is a table slot too, backed by open_memstream (POSIX): it
- * is a genuine FILE * writing into a growable memory buffer.  That is what keeps
- * this simple -- print_val takes a FILE *, so display/write to a string port is
- * the SAME printer with a different stream, not a second Scheme-side accumulation
- * path.  get-output-string flushes and copies the buffer out.  open_memstream
- * retains the ADDRESSES of its buffer and size cells, so those live in a separate
- * process-lifetime allocation: putting them in the moving table would leave libc
- * updating stale cells after the table grows.
+ * A STRING output port is a table slot too, and what it holds is a runtime-owned
+ * BUFFER, not a stream (change: buffer-backed-string-ports).  The half of the
+ * original design that survives is the half that mattered: there is still exactly
+ * one printer, because print_val takes a `sink` and display/write to a string port
+ * is the SAME printer with a different sink -- not a second Scheme-side
+ * accumulation path.  The half that is gone is open_memstream.  It made a string
+ * port a genuine `FILE`, and libc allocates a `FILE` by walking its list of streams
+ * looking for a free one, so a string port left open taxed every port opened after
+ * it (docs/PERFORMANCE.md P21); it also retained the ADDRESSES of its buffer and
+ * size cells, which is why those needed a separate process-lifetime allocation
+ * outside this doubling table (issue #113).  A runtime-owned buffer removes both:
+ * nothing outside the table retains a pointer into it, so the table may double
+ * freely, and get-output-string reads the buffer with no stream to flush.
  *
- * `slots` itself is GC_MALLOC_UNCOLLECTABLE (never scanned for Scheme values --
- * it holds only C pointers and sizes) and grows by doubling. */
+ * `slots` is GC_MALLOC_UNCOLLECTABLE, which Boehm defines as scanned for pointers
+ * but never itself collected -- so it ROOTS each string port's buffer.  That is
+ * what makes a retained port's text safe, and equally why the buffer is not
+ * reclaimed before exit: a port record names its storage only through a handle, so
+ * the port's reachability is not observable from here.  See docs/PERFORMANCE.md. */
 typedef struct {
-  char  *buf;       /* open_memstream buffer, malloc'd outside the GC heap */
-  size_t size;      /* open_memstream size cell */
-} port_memstream_state;
-
-typedef struct {
-  FILE *f;                       /* the stream; NULL once closed */
-  port_memstream_state *memstate; /* non-NULL only for string ports */
+  sink out;   /* file port: `f` set.  string port: `buf` set.  See port_sink. */
+  int  open;  /* 0 once close-port has run; a closed string port keeps its buffer */
 } port_slot;
 
 static port_slot *port_slots = NULL;
@@ -1642,20 +1781,20 @@ static intptr_t port_alloc_slot(void) {
     if (port_slots) GC_free(port_slots);
     port_slots = ns; port_cap = ncap;
   }
-  port_slots[port_count].f = NULL;
-  port_slots[port_count].memstate = NULL;
+  port_slots[port_count].out = (sink){ NULL, NULL, 0, 0 };
+  port_slots[port_count].open = 1;
   return port_count++ + PORT_FIRST;
 }
 
-/* Resolve a handle to its live stream, or NULL.  The two reserved handles always
+/* Resolve a handle to its live sink, or NULL.  The two reserved handles always
  * resolve; a table handle resolves only while it is in range AND open, so a use
  * after close-port lands on the caller's error path rather than in libc. */
-static FILE *port_stream(intptr_t h) {
-  if (h == PORT_STDOUT) return stdout;
-  if (h == PORT_STDERR) return stderr;
+static sink *port_sink(intptr_t h) {
+  if (h == PORT_STDOUT) return sink_stdout();
+  if (h == PORT_STDERR) return sink_stderr();
   intptr_t i = h - PORT_FIRST;
   if (i < 0 || i >= port_count) return NULL;
-  return port_slots[i].f;
+  return port_slots[i].open ? &port_slots[i].out : NULL;
 }
 
 /* Decode the port a Scheme-level output operation was handed.  The port passed to
@@ -1674,17 +1813,17 @@ static FILE *port_stream(intptr_t h) {
  * live handle would write there.  That is a wrong-type bug, never a fault.
  * Returns NULL when the argument is not a usable port, and the caller traps. */
 static intptr_t rec_len(val r);                 /* fwd (defined with the records) */
-static FILE *port_arg_stream(val p) {
+static sink *port_arg_sink(val p) {
   if (tag_of(p) != TAG_EXT || ext_hdr(p) != HDR_RECORD) return NULL;
   if (rec_len(p) < 1) return NULL;              /* no field 0 to read */
   val h = as_ptr(p)[3];
   if (tag_of(h) != TAG_FIXNUM) return NULL;
-  return port_stream(UNFIX(h));
+  return port_sink(UNFIX(h));
 }
-static FILE *port_arg_or_die(val p, const char *who) {
-  FILE *f = port_arg_stream(p);
-  if (!f) rt_fatal(who);
-  return f;
+static sink *port_arg_or_die(val p, const char *who) {
+  sink *s = port_arg_sink(p);
+  if (!s) rt_fatal(who);
+  return s;
 }
 
 /* Open a file for textual output; returns the handle as a fixnum, or #f when the
@@ -1697,71 +1836,87 @@ val rt_port_open_output_file(val path) {
   FILE *f = fopen(str_bytes(path), "w");
   if (!f) return FALSE_V;
   intptr_t h = port_alloc_slot();
-  port_slots[h - PORT_FIRST].f = f;
+  port_slots[h - PORT_FIRST].out.f = f;
   return FIX(h);
 }
 
-/* Open an in-memory output port (open-output-string).  A memstream failure is
- * reported the same way as a failed file open. */
+/* Open an in-memory output port (open-output-string): a buffer sink, and NO stream.
+ * This is the line that closes P21 -- libc's list of `FILE` objects is never
+ * touched, so what this costs does not depend on how many ports are already live.
+ *
+ * The buffer is allocated EAGERLY rather than on first write, because a non-NULL
+ * `buf` is what distinguishes a string port from a file port (the role `memstate`
+ * used to play), and because a port written to zero times must still hand
+ * get-output-string an empty string rather than a #f meaning "not a string port".
+ * An allocation failure is reported the same way a failed file open is -- as a
+ * VALUE, so the prelude can raise a catchable error -- and is checked before a slot
+ * is taken, so a failure leaves no dead handle behind. */
 val rt_port_open_output_string(void) {
+  char *buf = (char *)GC_MALLOC_ATOMIC(SINK_INIT_CAP);
+  if (!buf) return FALSE_V;
   intptr_t h = port_alloc_slot();
   port_slot *s = &port_slots[h - PORT_FIRST];
-  port_memstream_state *state =
-      (port_memstream_state *)GC_MALLOC_UNCOLLECTABLE(sizeof(port_memstream_state));
-  state->buf = NULL;
-  state->size = 0;
-  FILE *f = open_memstream(&state->buf, &state->size);
-  if (!f) {
-    GC_free(state);
-    return FALSE_V;
-  }
-  s->f = f;
-  s->memstate = state;
+  s->out.f   = NULL;
+  s->out.buf = buf;
+  s->out.len = 0;
+  s->out.cap = SINK_INIT_CAP;
   return FIX(h);
 }
 
-/* The accumulated text of a string port, as a fresh Scheme string.  Flushing first
- * is what makes the memstream buffer/size cells current.  Returns #f for a handle
- * that is not a string port, so the prelude can raise a proper error for
- * get-output-string on a file port.
+/* The accumulated text of a string port, as a fresh Scheme string -- a straight copy
+ * out of the port's own buffer, with no stream to flush first.  Returns #f for a
+ * handle that is not a string port, so the prelude can raise a proper error for
+ * get-output-string on a file port; a buffer sink IS the definition of a string
+ * port, so `buf` is that test.
  *
- * Deliberately works AFTER close-port: write-then-close-then-collect is the natural
- * idiom, and closing a memstream finalizes its buffer and size rather than releasing
- * them.  So this needs a live stream only for the flush.  (The consequence is that a
- * string port's buffer -- malloc'd by open_memstream, outside the GC heap -- is never
- * freed.  Bounded by the number of string ports a program opens; freeing it at close
- * would be what makes this call impossible.) */
+ * Reads the slot DIRECTLY rather than through port_sink, because it deliberately
+ * works AFTER close-port: write-then-close-then-collect is the natural idiom, and a
+ * closed string port keeps its buffer (there was never a stream to release).  The
+ * bytes are COPIED, so the returned string is a value in its own right rather than a
+ * window on storage a later write could move. */
 val rt_port_get_output_string(val handle) {
   intptr_t h = UNFIX(handle);
   intptr_t i = h - PORT_FIRST;
   if (tag_of(handle) != TAG_FIXNUM || i < 0 || i >= port_count) return FALSE_V;
   port_slot *s = &port_slots[i];
-  port_memstream_state *state = s->memstate;
-  if (!state) return FALSE_V;
-  if (s->f) fflush(s->f);
-  return rt_make_string(state->buf ? state->buf : "", (intptr_t)state->size);
+  if (!s->out.buf) return FALSE_V;              /* a file port: not a string port */
+  return rt_make_string(s->out.buf, (intptr_t)s->out.len);
 }
 
-/* Flush a port's buffered output through to its destination. */
+/* Flush a port's buffered output through to its destination.
+ *
+ * For a string port this is a DELIBERATE no-op returning success, not an accident of
+ * a NULL check (design, Open Questions): a string port's buffer IS its destination,
+ * so nothing sits between a write and the get-output-string that observes it, and
+ * R7RS asks only that a flush make buffered output visible to other readers of the
+ * destination -- which is vacuously true when there is no buffering in between. */
 val rt_port_flush(val handle) {
-  FILE *f = port_stream(UNFIX(handle));
-  if (f) fflush(f);
+  sink *s = port_sink(UNFIX(handle));
+  if (s && s->f) fflush(s->f);
   return UNSPEC_V;
 }
 
-/* Close a port: flush, release the stream, mark the slot dead.  Closing an
- * already-closed port is permitted and does nothing (R7RS), which falls out of
- * the NULL check.  The reserved stdout/stderr handles are never closed -- a
- * program that closes (current-output-port) must not take the process's stdout
- * with it.  A string port keeps its memstate so get-output-string still works after
- * close; the memstream is flushed and closed, which finalizes buffer and size. */
+/* Close a port: flush and release the stream if there is one, then mark the slot
+ * dead, so a later write finds no live sink and reports instead of faulting.
+ * Closing an already-closed port is permitted and does nothing (R7RS), which falls
+ * out of the `open` flag.  The reserved stdout/stderr handles are never closed -- a
+ * program that closes (current-output-port) must not take the process's stdout with
+ * it.
+ *
+ * A STRING PORT'S CLOSE RELEASES NOTHING.  There is no stream to close, and the
+ * buffer stays reachable from the slot, so get-output-string keeps working
+ * afterward -- the documented behavior, which now falls out of the design instead of
+ * being arranged by it (design D3).  Freeing the buffer here is precisely what would
+ * make that call impossible. */
 val rt_port_close(val handle) {
   intptr_t h = UNFIX(handle);
   if (tag_of(handle) != TAG_FIXNUM || h < PORT_FIRST) return UNSPEC_V;
   intptr_t i = h - PORT_FIRST;
   if (i < 0 || i >= port_count) return UNSPEC_V;
   port_slot *s = &port_slots[i];
-  if (s->f) { fflush(s->f); fclose(s->f); s->f = NULL; }
+  if (!s->open) return UNSPEC_V;
+  if (s->out.f) { fflush(s->out.f); fclose(s->out.f); s->out.f = NULL; }
+  s->open = 0;
   return UNSPEC_V;
 }
 
@@ -1793,27 +1948,27 @@ val rt_port_write_shared(val v, val p) {
   return UNSPEC_V;
 }
 val rt_port_newline(val p) {
-  fputc('\n', port_arg_or_die(p, "newline: not an open output port"));
+  sink_putc(port_arg_or_die(p, "newline: not an open output port"), '\n');
   return UNSPEC_V;
 }
 val rt_port_write_char(val c, val p) {
-  FILE *f = port_arg_or_die(p, "write-char: not an open output port");
+  sink *out = port_arg_or_die(p, "write-char: not an open output port");
   unsigned char buf[4];
   int n = utf8_encode(CHAR_CP(c), buf);
-  fwrite(buf, 1, (size_t)n, f);
+  sink_write(out, buf, (size_t)n);
   return UNSPEC_V;
 }
 /* write-string: the string's bytes, literally -- no quotes, no escapes.  This is
  * `display` narrowed to strings, NOT `write`; the one-argument form targets stdout. */
 val rt_write_string(val s) {
   CHECK_TAG("write-string", s, is_string, "a string");
-  fwrite(str_bytes(s), 1, (size_t)str_len(s), cur_out());
+  sink_write(cur_out(), str_bytes(s), (size_t)str_len(s));
   return UNSPEC_V;
 }
 val rt_port_write_string(val s, val p) {
   CHECK_TAG("write-string", s, is_string, "a string");
-  FILE *f = port_arg_or_die(p, "write-string: not an open output port");
-  fwrite(str_bytes(s), 1, (size_t)str_len(s), f);
+  sink *out = port_arg_or_die(p, "write-string: not an open output port");
+  sink_write(out, str_bytes(s), (size_t)str_len(s));
   return UNSPEC_V;
 }
 
@@ -2853,9 +3008,9 @@ static void pl_reset_printed(void) {
     if (pl_tab[i].gen == pl_gen) pl_tab[i].printed = 0;
 }
 
-static void print_node(FILE *out, val v, int display);
+static void print_node(sink *out, val v, int display);
 
-static void print_val(FILE *out, val v, int display, enum print_policy policy) {
+static void print_val(sink *out, val v, int display, enum print_policy policy) {
   if (policy != PRINT_SIMPLE && pl_labelable(v)) {
     pl_gen++; pl_used = 0; pl_next_label = 0; pl_any = 0;
     pl_scan(v, policy);
@@ -2866,19 +3021,19 @@ static void print_val(FILE *out, val v, int display, enum print_policy policy) {
   print_node(out, v, display);
 }
 
-static void print_node(FILE *out, val v, int display) {
+static void print_node(sink *out, val v, int display) {
   /* A labelled node prints `#N=` at its first occurrence and `#N#` at every later one.
    * Gated on pl_any, so a datum with no cycle does not pay a lookup per node. */
   if (pl_any && pl_labelable(v)) {
     pl_slot *s = pl_find(v, 0);
     if (s && s->label >= 0) {
-      if (s->printed) { fprintf(out, "#%d#", s->label); return; }
+      if (s->printed) { sink_printf(out, "#%d#", s->label); return; }
       s->printed = 1;
-      fprintf(out, "#%d=", s->label);
+      sink_printf(out, "#%d=", s->label);
     }
   }
   switch (tag_of(v)) {
-    case TAG_FIXNUM: fprintf(out, "%ld", (long)UNFIX(v)); break;
+    case TAG_FIXNUM: sink_printf(out, "%ld", (long)UNFIX(v)); break;
     case TAG_BOOL:
       if (is_char(v)) {                                  /* char shares tag 001 */
         intptr_t cp = CHAR_CP(v);
@@ -2901,25 +3056,25 @@ static void print_node(FILE *out, val v, int display) {
          *
          * `display` is untouched: it writes the raw character in every case, which
          * write-char and the port procedures depend on. */
-        if (display) { fwrite(buf, 1, (size_t)n, out); break; }
+        if (display) { sink_write(out, buf, (size_t)n); break; }
         switch (cp) {
-          case 0x00: fprintf(out, "#\\null");      break;
-          case 0x07: fprintf(out, "#\\alarm");     break;
-          case 0x08: fprintf(out, "#\\backspace"); break;
-          case 0x09: fprintf(out, "#\\tab");       break;
-          case 0x0a: fprintf(out, "#\\newline");   break;
-          case 0x0d: fprintf(out, "#\\return");    break;
-          case 0x1b: fprintf(out, "#\\escape");    break;
-          case 0x20: fprintf(out, "#\\space");     break;
-          case 0x7f: fprintf(out, "#\\delete");    break;
+          case 0x00: sink_puts(out, "#\\null");      break;
+          case 0x07: sink_puts(out, "#\\alarm");     break;
+          case 0x08: sink_puts(out, "#\\backspace"); break;
+          case 0x09: sink_puts(out, "#\\tab");       break;
+          case 0x0a: sink_puts(out, "#\\newline");   break;
+          case 0x0d: sink_puts(out, "#\\return");    break;
+          case 0x1b: sink_puts(out, "#\\escape");    break;
+          case 0x20: sink_puts(out, "#\\space");     break;
+          case 0x7f: sink_puts(out, "#\\delete");    break;
           default:
             /* Any other non-graphic codepoint -- the C0 controls, and the C1 block, which
              * is equally unprintable -- as `#\xHH`, the one spelling that makes an
              * arbitrary control character legible AND readable (the reader accepts it since
              * change: r7rs-lexical-conformance).  Everything else prints literally, so a
              * letter, a digit, and `#\λ` are unaffected. */
-            if (cp < 0x20 || (cp >= 0x80 && cp <= 0x9f)) fprintf(out, "#\\x%lx", (unsigned long)cp);
-            else { fprintf(out, "#\\"); fwrite(buf, 1, (size_t)n, out); }
+            if (cp < 0x20 || (cp >= 0x80 && cp <= 0x9f)) sink_printf(out, "#\\x%lx", (unsigned long)cp);
+            else { sink_puts(out, "#\\"); sink_write(out, buf, (size_t)n); }
             break;
         }
       } else if (is_unspec(v)) {                /* unspecified value shares tag 001 */
@@ -2927,21 +3082,21 @@ static void print_node(FILE *out, val v, int display) {
          * round-trip it and `display` has nothing rawer to show.  Both modes print the
          * same text.  The REPL suppresses the ECHO of this value (src/emit.cpp), but an
          * explicit (write (if #f #f)) still lands here and prints. */
-        fprintf(out, "#<unspecified>");
+        sink_puts(out, "#<unspecified>");
       } else if (is_eof(v)) {                   /* eof object shares tag 001 */
         /* Non-readable, like #<unspecified>: no reader syntax, so write cannot
          * round-trip it and display has nothing rawer to show.  Printing it must be
          * safe -- a program that displays whatever read-char returned lands here at
          * end of input -- so it gets an arm rather than falling into the boolean
          * arm below, which would print it as "#t". */
-        fprintf(out, "#<eof>");
+        sink_puts(out, "#<eof>");
       } else {
-        fputs(v == FALSE_V ? "#f" : "#t", out);   /* fputs: the string is not a literal */
+        sink_puts(out, v == FALSE_V ? "#f" : "#t");   /* not a literal: chosen above */
       }
       break;
-    case TAG_NIL:    fprintf(out, "()"); break;
+    case TAG_NIL:    sink_puts(out, "()"); break;
     case TAG_PAIR: {
-      fprintf(out, "(");
+      sink_putc(out, '(');
       val cur = v; int first = 1;
       while (tag_of(cur) == TAG_PAIR) {
         /* A LABELLED SPINE NODE IS DELEGATED, and this is what makes a cyclic LIST
@@ -2956,40 +3111,40 @@ static void print_node(FILE *out, val v, int display) {
           if (pl_any) {
             pl_slot *s = pl_find(cur, 0);
             if (s && s->label >= 0) {
-              fprintf(out, " . ");
+              sink_puts(out, " . ");
               print_node(out, cur, display);
               cur = NIL_V;                      /* tail already printed */
               break;
             }
           }
-          fprintf(out, " ");
+          sink_putc(out, ' ');
         }
         first = 0;
         print_node(out, as_ptr(cur)[0], display);
         cur = as_ptr(cur)[1];
       }
-      if (cur != NIL_V) { fprintf(out, " . "); print_node(out, cur, display); }
-      fprintf(out, ")");
+      if (cur != NIL_V) { sink_puts(out, " . "); print_node(out, cur, display); }
+      sink_putc(out, ')');
       break;
     }
-    case TAG_CLOSURE: fprintf(out, "#<procedure>"); break;
-    case TAG_BOX:     fprintf(out, "#<box>"); break;
+    case TAG_CLOSURE: sink_puts(out, "#<procedure>"); break;
+    case TAG_BOX:     sink_puts(out, "#<box>"); break;
     case TAG_SYMBOL: {
       const char *nm = sym_name(v);
-      if (display || !sym_needs_bars(nm)) { fprintf(out, "%s", nm); break; }
-      fputc('|', out);
+      if (display || !sym_needs_bars(nm)) { sink_puts(out, nm); break; }
+      sink_putc(out, '|');
       for (const char *p = nm; *p; p++) {
-        if (*p == '|' || *p == '\\') fputc('\\', out);   /* the two the reader unescapes */
-        fputc(*p, out);
+        if (*p == '|' || *p == '\\') sink_putc(out, '\\');   /* the two the reader unescapes */
+        sink_putc(out, *p);
       }
-      fputc('|', out);
+      sink_putc(out, '|');
       break;
     }
     case TAG_EXT:
       switch (ext_hdr(v)) {
         case HDR_STRING:
           if (display) {
-            fwrite(str_bytes(v), 1, (size_t)str_len(v), out);
+            sink_write(out, str_bytes(v), (size_t)str_len(v));
           } else {
             /* write style ESCAPES (change: emit-dump-stages).  R7RS requires written
              * output to read back as the same datum, and this arm used to emit the raw
@@ -3002,85 +3157,85 @@ static void print_node(FILE *out, val v, int display) {
              * bytes are all >= 0x80 and pass through verbatim. */
             const char *b = str_bytes(v);
             intptr_t n = str_len(v);
-            fputc('"', out);
+            sink_putc(out, '"');
             for (intptr_t i = 0; i < n; i++) {
               unsigned char c = (unsigned char)b[i];
               switch (c) {
-                case '"':  fputs("\\\"", out); break;
-                case '\\': fputs("\\\\", out); break;
-                case '\n': fputs("\\n", out);  break;
-                case '\t': fputs("\\t", out);  break;
-                case '\r': fputs("\\r", out);  break;
-                default:   fputc((int)c, out); break;
+                case '"':  sink_puts(out, "\\\""); break;
+                case '\\': sink_puts(out, "\\\\"); break;
+                case '\n': sink_puts(out, "\\n");  break;
+                case '\t': sink_puts(out, "\\t");  break;
+                case '\r': sink_puts(out, "\\r");  break;
+                default:   sink_putc(out, (int)c); break;
               }
             }
-            fputc('"', out);
+            sink_putc(out, '"');
           }
           break;
         case HDR_VECTOR: {
           intptr_t len = (intptr_t)as_ptr(v)[1];
-          fprintf(out, "#(");
+          sink_puts(out, "#(");
           for (intptr_t i = 0; i < len; i++) {
-            if (i) fputc(' ', out);
+            if (i) sink_putc(out, ' ');
             print_node(out, as_ptr(v)[i + 2], display);
           }
-          fputc(')', out);
+          sink_putc(out, ')');
           break;
         }
         case HDR_BYTEVECTOR: {
           intptr_t len = (intptr_t)as_ptr(v)[1];
           unsigned char *bytes = (unsigned char *)as_ptr(v)[2];
-          fprintf(out, "#u8(");
+          sink_puts(out, "#u8(");
           for (intptr_t i = 0; i < len; i++) {
-            if (i) fputc(' ', out);
-            fprintf(out, "%d", bytes[i]);
+            if (i) sink_putc(out, ' ');
+            sink_printf(out, "%d", bytes[i]);
           }
-          fputc(')', out);
+          sink_putc(out, ')');
           break;
         }
         case HDR_ERROR: {
           val msg = as_ptr(v)[1];
-          fprintf(out, "#<error ");
-          fwrite(str_bytes(msg), 1, (size_t)str_len(msg), out);
-          fputc('>', out);
+          sink_puts(out, "#<error ");
+          sink_write(out, str_bytes(msg), (size_t)str_len(msg));
+          sink_putc(out, '>');
           break;
         }
         case HDR_HASHTABLE: {
           val spine = as_ptr(v)[1];             /* #(count buckets _) */
           intptr_t count = UNFIX(as_ptr(spine)[2]);  /* vector elem 0 = count */
-          fprintf(out, "#<hash-table %ld>", (long)count);
+          sink_printf(out, "#<hash-table %ld>", (long)count);
           break;
         }
         case HDR_RECORD: {
           val td = as_ptr(v)[1], nm = as_ptr(td)[1];  /* descriptor -> name string */
-          fprintf(out, "#<record ");
-          fwrite(str_bytes(nm), 1, (size_t)str_len(nm), out);
-          fputc('>', out);
+          sink_puts(out, "#<record ");
+          sink_write(out, str_bytes(nm), (size_t)str_len(nm));
+          sink_putc(out, '>');
           break;
         }
         case HDR_RECORD_TYPE: {
           val nm = as_ptr(v)[1];
-          fprintf(out, "#<record-type ");
-          fwrite(str_bytes(nm), 1, (size_t)str_len(nm), out);
-          fputc('>', out);
+          sink_puts(out, "#<record-type ");
+          sink_write(out, str_bytes(nm), (size_t)str_len(nm));
+          sink_putc(out, '>');
           break;
         }
-        case HDR_MV:  fprintf(out, "#<values>"); break;   /* stray bundle: print safely */
+        case HDR_MV:  sink_puts(out, "#<values>"); break;   /* stray bundle: print safely */
         case HDR_FLONUM: {                          /* inexact real, always with a '.' */
           char buf[40]; int n = flonum_format(flo_val(v), buf);
-          fwrite(buf, 1, (size_t)n, out);
+          sink_write(out, buf, (size_t)n);
           break;
         }
-        default: fprintf(out, "#<ext:%ld>", (long)ext_hdr(v));
+        default: sink_printf(out, "#<ext:%ld>", (long)ext_hdr(v));
       }
       break;
-    default:          fprintf(out, "#<unknown:%ld>", (long)v);
+    default:          sink_printf(out, "#<unknown:%ld>", (long)v);
   }
 }
 
 /* write-style value printer (quoted strings, `#\`-prefixed chars): the standalone
  * entry uses this to print a program's final value. */
-void rt_write(val v) { print_val(stdout, v, /*display=*/0, PRINT_ORDINARY); }
+void rt_write(val v) { print_val(sink_stdout(), v, /*display=*/0, PRINT_ORDINARY); }
 
 /* --- entry: exit code = ran/failed, stdout = value (design R1) ----------
  * The standalone AOT/JIT executables use this main.  The persistent REPL host
