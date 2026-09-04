@@ -20,6 +20,13 @@ configuration.
 (the 32 hand-authored files plus the 6 generated ones, to decide their exclusion on
 evidence). Two figures per file: what `--check` costs, and how large the resulting diff is.
 
+> **Both columns are superseded** by work that landed upstream the day after this change
+> was written — see "What landed after this change was written" below. The `--check`
+> seconds are pre-`reduce-formatting-cost` and are now roughly 6x too high; the changed-line
+> counts are pre-#13 and are too high for the files dominated by quoted data. The table is
+> kept as recorded because the decisions below were made on it and because it is the
+> before-half of the comparison.
+
 | file | lines before | lines after | changed lines | `--check` seconds |
 |---|---|---|---|---|
 | `src/emit.ss` | 1837 | 2176 | 2159 | 78 |
@@ -74,9 +81,12 @@ the corpus; the tree grows 7.7%. Three files already conform
 (`src/entry-repl.scm`, `src/entry-schemec.scm`, `src/import-substrate.scm`) — too few to
 build an incremental allowlist on.
 
-**Cost shapes the gate.** Pitch is single-threaded and superlinear in file size: 112 s for
-2,477 lines, 191 s for the 2,397-line Unicode table. The covered set costs ~7.4 min
-sequentially, ~2.5 min at `-P4`. That is a suite-sized cost, not a hook-sized one.
+**Cost shapes the gate — as measured here, and no longer.** Pitch was single-threaded and
+superlinear in file size: 112 s for 2,477 lines, 191 s for the 2,397-line Unicode table;
+the covered set ~7.4 min sequentially, ~2.5 min at `-P4`. That was a suite-sized cost, not
+a hook-sized one, and it is what D7 was decided against. `reduce-formatting-cost` has since
+removed it — the covered set is now well inside a minute — so this conclusion no longer
+holds and D7's justification is restated below.
 
 **Four collisions with the house style**, in descending cost:
 
@@ -150,6 +160,52 @@ produces output byte-identical to the default on an overflowing quoted list. The
 configuration is demonstrably live — a `width 40` override reflows, and a bogus terminal
 is rejected with exit 2 — so the entry is accepted and simply never consulted, exactly as
 `docs/DESIGN.md`'s "data is never looked up" implies.
+
+**What landed after this change was written (2026-09-01 to 09-02).** This change was
+proposed on 2026-09-01 and filed its three pitch issues that day. Profiling #15 then found
+five causes, and they split across both repos — which is the reason this section exists:
+the tool being adopted and the compiler that builds it moved underneath the measurements
+above.
+
+Two causes were Emit's, not pitch's, and are fixed in `src/runtime/runtime.c`
+(`53a238a`): `rt_intern` scanned its whole table on every evaluation of a quoted symbol
+literal (`docs/PERFORMANCE.md` P19), and `string-set!` reallocated and copied the whole
+string, making a character-at-a-time buffer fill quadratic (P20). A third is recorded open
+as **P21** — an output string port is a libc `FILE`, and allocating one walks libc's stream
+list — with a caller-side fix in pitch, which now closes the ports its reader shim and
+`cst->text` own. Two were pitch's own: symbol literals in the hot loops of `(pitch doc)`
+and `(pitch table)`.
+
+Measured effect, from the results recorded on #15:
+
+| | before | after |
+|---|---|---|
+| covered set, sequential | 480 s | **78 s** |
+| covered set, `-P4` | 146 s | **32 s** |
+| staging `src/prelude.scm` | 83 s | **8.8 s** |
+
+Those before-figures are close to this design's 442 s and 150 s but are **not** the same
+measurement — the upstream comparison could not reconstruct the exact 13,229-line set and
+used a denser one. Read 480 → 78 as the real comparison, not 442 → 78. The `char-data.scm`
+outlier that motivated #15's "per-form quadratic" hypothesis is gone: the generated table
+is now the *cheapest* file per line rather than the most expensive. What remains is a
+2,500-line file at 8.8 s — not save-time — caused by collector time scaling with the live
+heap, so #15 stays open on a narrower claim than it was filed on.
+
+**Collision 1 is largely resolved upstream.** `ebc01cd` on scheme-pitch main makes a
+quoted position change the *fallback* shape, so an overflowing quoted data list is packed
+rather than staircased, while a quoted compound whose head has a style entry keeps it.
+Measured against a build reproducing #13's numbers exactly: `src/prelude-surface.scm`
+784 → **553** lines (against 563 before formatting — the table effectively survives), and
+`src/emit.ss` 2176 → **2094**. Two costs are recorded upstream rather than glossed: a data
+position is now sensitive to the style table (two such sites in Emit's 13,229 lines,
+neither visible at any real width), and grouping expressed by a bare line break is lost.
+
+**This does not yet unblock the reformat**, for a reason that is itself a finding — see D6.
+The fix is on `main` and unreleased; issue #13 is still open; and `pitch-version` is still
+`"0.1.0"`, so the pin this change specifies cannot tell the two pitches apart. The covered
+set has not been re-measured against post-#13 pitch, so the 9,219-line figure below is
+still the best available number and is known to be too high.
 
 ## Goals / Non-Goals
 
@@ -233,7 +289,20 @@ against 12,909 total, so 88 is close to the width the code was already written t
 Widening to accommodate the 443-column outlier in `src/compile.ss` would reflow the whole
 tree looser to serve one line.
 
-**D6 — The formatter version is pinned and checked, not floated.** Pitch's README states
+**D6 — The formatter version is pinned and checked, not floated.**
+
+> **As filed, the pin does not work, and the events since have demonstrated it.**
+> `pitch-version` is still `"0.1.0"` on scheme-pitch main after both the `ebc01cd` layout
+> fix for #13 and the whole of `reduce-formatting-cost`. So the pin cannot distinguish the
+> pitch this change was measured against from the pitch that resolves its blocker and runs
+> six times faster — which is precisely the silent-invalidation this decision exists to
+> prevent. A version pin is only a pin if the version moves. The mechanism is kept, because
+> the fix belongs upstream and is cheap there: task 5.6 asks scheme-pitch to bump
+> `pitch-version` on any layout-affecting change. Until that is answered, treat the pin as
+> documentation of intent rather than as an enforced check, and confirm the formatter by
+> commit rather than by `--version` when running task 6.1.
+
+Pitch's README states
 that its shipped cost objective is the reference implementation's rather than pitch's own
 and wants a corpus to tune against, i.e. layout *will* change. `tools/format.sh` compares
 `pitch --version` against a pinned value and reports a mismatch. A pitch upgrade then
@@ -242,7 +311,15 @@ vendoring or building pitch in-tree — it inverts the dependency, since Emit co
 
 **D7 — The gate is a pre-commit hook over *staged* files, installed opt-in.** The covered
 set costs minutes; a staged set costs seconds, except when `src/prelude.scm` (112 s) or
-`src/core.ss` (52 s) is staged, which is both rare and proportionate. The hook is installed
+`src/core.ss` (52 s) is staged, which is both rare and proportionate.
+
+> **The cost premise no longer holds.** `reduce-formatting-cost` took the covered set to
+> ~78 s sequential and ~32 s at `-P4`, and staged `src/prelude.scm` to 8.8 s. A whole-tree
+> gate is now affordable, which it was not when this was decided. The decision stands
+> provisionally on a *scope* argument the cost argument was hiding — a commit gate should
+> judge what is being committed, and a tree gate fails on drift the committer did not
+> cause — but that argument was never the one made here, so it is not yet settled. See
+> Open Questions; decide it when group 3 is built. The hook is installed
 by `make install-hooks` rather than being present on clone, because `.git/hooks` is not
 version-controlled and a hook nobody chose is a hook nobody trusts. It calls the same
 `tools/format.sh` with a file list, so membership and dialect are decided once.
@@ -262,6 +339,11 @@ issues block *only* the reformat step:
   aligned under the second element, rather than filled. The substantive blocker: without
   it the emitter and surface tables get materially worse, and the measurement pass shows
   it is unreachable from configuration because a quoted list's head is never consulted.
+  **Fixed on scheme-pitch main by `ebc01cd`, and still blocking.** A quoted position now
+  changes the fallback shape, packing data while leaving quoted code alone; measured,
+  `src/prelude-surface.scm` comes back to 553 lines against 563 before formatting. What
+  remains is delivery, not design: the issue is open, there is no release carrying the fix,
+  and per D6 the version pin cannot identify a pitch that has it.
 - **[#14](https://github.com/bwbensonjr/scheme-pitch/issues/14)** — trailing-comment
   column alignment is not preserved. 372 sites against 7 single-space ones. Needs an
   addition to pitch's "Preserved formatting" list, which pitch's own `CLAUDE.md` requires
@@ -276,7 +358,13 @@ One issue does **not** block:
   superlinear in file size. D7 works around it; the measurements are filed so they are not
   lost, with the `char-data.scm` outlier (80 s per 1000 lines against 42 s for
   hand-written code of the same size) as the hint that this is a per-form quadratic rather
-  than uniform slowness.
+  than uniform slowness. **That hint was right and is resolved**: `reduce-formatting-cost`
+  found five causes — two of them Emit runtime defects, now P19 and P20 — and took the
+  covered set from 480 s to 78 s. `char-data.scm` is now the cheapest file per line rather
+  than the most expensive, so the shape defect the issue opened on is gone. It stays open
+  on a narrower claim: a 2,500-line file at 8.8 s is still not save-time, because collector
+  time scales with the live heap. Still not blocking, and D7's premise is now its casualty
+  rather than its beneficiary.
 
 Collision 3 needed no issue: D4's `((define-library) (_ d . body))` resolves it.
 
@@ -303,11 +391,14 @@ comparison that makes the whole thing verifiable.
   is archivable in that state, with the reformat re-proposed when pitch is ready. This is
   a deliberate trade: a change that stops short of its most visible step, in exchange for
   not degrading 372 comment columns and every hand-grouped table.
-- **A pitch release changes layout and the tree silently drifts.** → D6's version pin turns
-  drift into a reported mismatch.
+- **A pitch release changes layout and the tree silently drifts.** → D6's version pin was
+  the answer, and it has already failed once: pitch's layout changed under `ebc01cd` with
+  `pitch-version` unmoved. Task 5.6 asks upstream to fix that; until it is answered this
+  risk is *open*, not mitigated, and it is the reason 6.1 verifies the formatter by commit.
 - **The hook makes committing slow when a large file is staged.** → Bounded by the staged
-  set; 112 s worst case on `src/prelude.scm`, and the hook is opt-in, so the cost is
-  chosen.
+  set, and no longer a meaningful cost: `src/prelude.scm` is 8.8 s after
+  `reduce-formatting-cost`, against the 112 s worst case this risk was written for. The
+  hook is opt-in regardless.
 - **A reformat mid-flight leaves `bootstrap/` mixed-source.** → The reformat is a
   `make regen` barrier crossing in exactly the sense `CLAUDE.md` describes. Recovery is the
   documented one (`git checkout -- bootstrap/`), which is why the reformat commit must
@@ -330,15 +421,27 @@ comparison that makes the whole thing verifiable.
    almost any staged covered file fails.
 3. Done: pitch issues #13, #14 (blocking) and #15 (not blocking) are filed. Nothing in
    Emit depends on them until step 4.
-4. When #13 and #14 are resolved: bump the version pin, `make format`, commit the
-   reformat alone with `.git-blame-ignore-revs`, then `make regen`, then
-   `./run-all-tests.sh` and `./run-dev-tests.sh`, checking the four IR assertions.
+4. When #13 and #14 are resolved *and carried by an identifiable pitch*: update the pin,
+   `make format`, commit the reformat alone with `.git-blame-ignore-revs`, then
+   `make regen`, then `./run-all-tests.sh` and `./run-dev-tests.sh`, checking the four IR
+   assertions. "Identifiable" is doing real work here — #13's fix is on main today with the
+   version string unchanged, so this step cannot currently name the pitch it requires (D6).
 
 Rollback: steps 1–3 are additive and removable without touching source. Step 4 is a single
 revert plus a regen.
 
 ## Open Questions
 
+- **Whether the gate should check the whole covered set rather than staged files.** D7 chose
+  staged files because a whole-set check cost minutes; at ~32 s at `-P4` it no longer does.
+  The remaining argument for staged files is scope rather than cost — a tree gate fails on
+  drift the committer did not cause — but that argument was not the one D7 made, so it is
+  unsettled. Decide it when task group 3 is built, not before.
+- **Whether the covered set should be re-measured before group 6 is planned in detail.** The
+  9,219-line figure predates #13's fix and is known to be too high; `src/prelude-surface.scm`
+  alone accounts for ~230 of it. The reformat's scale is therefore not currently known to
+  better than "smaller than 9,219", which is enough to keep the change gated but not enough
+  to review the reformat against.
 - Whether `pitch.scm` should declare styles beyond the two in D4. The second measurement
   pass shows no other project macro laying out badly, so this is answerable by reading the
   reformat when it happens, and it changes no requirement.

@@ -78,17 +78,31 @@
 - [x] 5.3 File a performance report with the measured figures (2,477 lines / 112 s;
       2,397 lines / 191 s; covered set ~7.4 min single-threaded), including the per-1000-line
       cost curve that distinguishes a per-form quadratic from uniform slowness. Filed as
-      **#15**, not blocking.
+      **#15**, not blocking. Outcome recorded on the issue: five causes found, two of them
+      Emit runtime defects (P19, P20 -- fixed; P21 open), covered set 480 s -> 78 s
+      sequential and 146 s -> 32 s at `-P4`. The per-form quadratic hypothesis was correct.
 - [x] 5.4 Record the issue numbers in `design.md` under D9, marking #13 and #14 as the
       gate on group 6 and #15 as non-blocking.
 - [x] 5.5 No `define-library` issue is needed: `((define-library) (_ d . body))` in
       `pitch.scm` resolves that collision (design D4, verified at a break-forcing width).
+- [ ] 5.6 File a `bwbensonjr/scheme-pitch` issue asking that any layout-affecting change
+      bump `pitch-version`. Evidence: `ebc01cd` changed quoted-data layout and
+      `reduce-formatting-cost` changed cost by ~6x, both with the version string still
+      `"0.1.0"`, so a downstream pin cannot identify which pitch produced a formatted tree.
+      This is what D6 depends on; without it the pin is documentation, not a check.
 
 ## 6. The one-time reformat — gated on pitch #13 and #14
 
-- [ ] 6.1 Confirm the blockers are resolved: install the new pitch, bump the pin in
+- [ ] 6.1 Confirm the blockers are resolved: install the new pitch, update the pin in
       `tools/format.sh`, and re-measure the covered set. The data tables and comment
       columns must survive; if they do not, stop and report rather than proceeding.
+      Two adjustments since this was written. **Identify the formatter by commit, not by
+      `--version`**, unless 5.6 has landed -- `pitch-version` did not move across the
+      `ebc01cd` layout fix, so the version string cannot confirm the pitch being installed
+      is the one required (design D6). And **expect the re-measurement to come in well
+      below 9,219 changed lines**: that figure predates #13's fix, which returns
+      `src/prelude-surface.scm` to 553 lines against 563 before formatting. A result near
+      9,219 means the installed pitch does not carry `ebc01cd`.
 - [ ] 6.2 Capture the pre-reformat baseline: record the SHA-256 of every `bootstrap/*.ll`
       and confirm the working tree is clean and committed.
 - [ ] 6.3 Run `make format` and commit the reformat with nothing else in it, adding

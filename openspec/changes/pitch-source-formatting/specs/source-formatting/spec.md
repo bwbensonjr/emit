@@ -135,8 +135,9 @@ modification times SHALL change — so that formatting never provokes a rebuild.
 
 The project SHALL provide an opt-in commit-time gate, installed by an explicit action
 rather than by cloning the repository. The gate SHALL check only the covered files that
-are staged for the commit, not the whole covered set: whole-set checking costs minutes and
-would make committing unusable.
+are staged for the commit, not the whole covered set: a commit gate judges what is being
+committed, and a whole-set gate would block a commit on drift elsewhere in the tree that
+the committer did not introduce.
 
 The gate SHALL take its covered-set membership and its dialect assignment from the same
 single declaration the doors use, so a file cannot be gated under one policy and formatted
