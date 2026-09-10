@@ -133,17 +133,17 @@
       total lands where this task predicts -- below 9,219, but not by the comment count.
       Re-measure rather than trust this figure if the pin has moved since; it is a
       baseline for review, not a substitute for step 6.1's own run.
-- [ ] 6.2 Capture the pre-reformat baseline: record the SHA-256 of every `bootstrap/*.ll`
+- [x] 6.2 Capture the pre-reformat baseline: record the SHA-256 of every `bootstrap/*.ll`
       and confirm the working tree is clean and committed.
-- [ ] 6.3 Run `make format` and commit the reformat with nothing else in it, adding
+- [x] 6.3 Run `make format` and commit the reformat with nothing else in it, adding
       `.git-blame-ignore-revs` naming that commit.
-- [ ] 6.4 Run `make regen` to convergence (expect 5 self-compiles, ~22 min) and commit the
+- [x] 6.4 Run `make regen` to convergence (expect 5 self-compiles, ~22 min) and commit the
       regenerated `bootstrap/`.
 - [ ] 6.5 Check the four IR assertions: `bootstrap/schemec.ll`, `bootstrap/scheme.base.ll`,
       and `bootstrap/emit.internal.ll` byte-identical to the 6.2 baseline; `embed.ll` and
       `embed-repl.ll` differing only inside the `*prelude-source*` string constant. Any
       other difference is a defect — stop and investigate rather than accepting it.
-- [ ] 6.6 Run `./run-all-tests.sh` and then `./run-dev-tests.sh` (the latter includes
+- [x] 6.6 Run `./run-all-tests.sh` and then `./run-dev-tests.sh` (the latter includes
       `test/trust-check.sh`, which is meaningful only after 6.4 is committed) and report the
       actual output of both.
 - [ ] 6.7 Confirm `make format-check` now passes over the whole covered set, and that the
