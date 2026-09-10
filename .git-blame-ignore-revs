@@ -1,0 +1,8 @@
+# Revisions a line-history query should ignore: mechanical reformats that moved
+# every line without changing any program's meaning.
+#
+# Configure git to use this file once per clone:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# style: reformat the covered Scheme sources with pitch (change: pitch-source-formatting)
+4c83b4f24c6fa77ea9f0825ee7f1373a4c0a363a
