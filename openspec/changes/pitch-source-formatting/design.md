@@ -385,7 +385,10 @@ does, and black's history says this is the argument not worth having.
 `bootstrap/*.ll` contains no `!dbg` or `DILocation` metadata, so a layout-only change to
 `CORE_FLAT` must produce byte-identical IR. `tools/regen.sh` bakes `src/prelude.scm`'s
 *source text* into `build/prelude-source.scm` as the `*prelude-source*` string constant, so
-`embed.ll` and `embed-repl.ll` change — and must change *only* inside that constant.
+`embed.ll` and `embed-repl.ll` change — and must change *only* inside that constant and in
+the operand stating its length, which the text's own size decides (the reformat shortened
+`src/prelude.scm`, so the constant went 126,593 to 125,430 bytes and the `rt_make_string`
+length with it).
 `scheme.base.ll` and `emit.internal.ll` are compiled from generated `.sld` files that D2
 shows do not move, so they too must be byte-identical. That gives four checkable
 assertions instead of a reviewer's judgment over 9,795 lines. *Alternative rejected:*

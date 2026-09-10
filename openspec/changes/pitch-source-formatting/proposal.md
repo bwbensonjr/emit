@@ -71,7 +71,7 @@ columns to get formatting sooner.
   checkable rather than merely believed: `bootstrap/schemec.ll`,
   `bootstrap/scheme.base.ll`, and `bootstrap/emit.internal.ll` must come back
   byte-identical, and `embed.ll`/`embed-repl.ll` must differ only inside the baked
-  `*prelude-source*` string constant.
+  `*prelude-source*` string constant and in the operand stating its length.
 
 Non-goals: formatting `demos/` (whose hand layout is part of their teaching value),
 `test/`, or `historical/`; introducing CI to a repo that has none; adding a formatting

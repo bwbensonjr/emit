@@ -139,10 +139,16 @@
       `.git-blame-ignore-revs` naming that commit.
 - [x] 6.4 Run `make regen` to convergence (expect 5 self-compiles, ~22 min) and commit the
       regenerated `bootstrap/`.
-- [ ] 6.5 Check the four IR assertions: `bootstrap/schemec.ll`, `bootstrap/scheme.base.ll`,
+- [x] 6.5 Check the four IR assertions: `bootstrap/schemec.ll`, `bootstrap/scheme.base.ll`,
       and `bootstrap/emit.internal.ll` byte-identical to the 6.2 baseline; `embed.ll` and
-      `embed-repl.ll` differing only inside the `*prelude-source*` string constant. Any
-      other difference is a defect — stop and investigate rather than accepting it.
+      `embed-repl.ll` differing only inside the `*prelude-source*` string constant and in
+      the operand stating that constant's length — the text got shorter, so the length the
+      `rt_make_string` call passes changes with it, one line per file. Any other difference
+      is a defect — stop and investigate rather than accepting it.
+      **Result:** all four hold. `schemec.ll`, `scheme.base.ll` and `emit.internal.ll` are
+      byte-identical to the 6.2 baseline; `embed.ll` and `embed-repl.ll` carry exactly two
+      changed lines each — the constant (126,593 -> 125,430 bytes) and its length operand
+      (126,592 -> 125,429) — with zero changed lines that are neither.
 - [x] 6.6 Run `./run-all-tests.sh` and then `./run-dev-tests.sh` (the latter includes
       `test/trust-check.sh`, which is meaningful only after 6.4 is committed) and report the
       actual output of both.

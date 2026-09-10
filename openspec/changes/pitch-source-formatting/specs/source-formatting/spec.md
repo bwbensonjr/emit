@@ -204,8 +204,11 @@ commit as one a line-history query ignores.
 Because the committed intermediate representation carries no source-position metadata, a
 reformat of the compiler's own sources SHALL reproduce the committed artifacts exactly,
 with one declared exception: the artifacts that bake the prelude's *source text* into a
-string constant necessarily change inside that constant. That exception SHALL be the only
-difference.
+string constant necessarily change inside that constant, and in the operand that carries
+that constant's length, which the length of the text mechanically decides. That exception
+SHALL be the only difference. A length operand is admitted because it states the size of
+the admitted constant and nothing else; any difference that is not the constant's bytes or
+its measured length is a defect.
 
 #### Scenario: Regenerated compiler IR is byte-identical
 
@@ -214,12 +217,14 @@ difference.
 - **THEN** the committed IR for the batch compiler and for every separately compiled
   runtime library is byte-identical to its pre-reformat content
 
-#### Scenario: The embedded artifacts differ only inside the baked prelude source
+#### Scenario: The embedded artifacts differ only in the baked prelude source and its length
 
 - **WHEN** the reformatted tree is regenerated
 - **THEN** the artifacts that embed the prelude's source text differ from their
-  pre-reformat content only within that embedded string constant
-- **AND** no other region of those artifacts differs
+  pre-reformat content only within that embedded string constant, and in the operand
+  stating that constant's length
+- **AND** no other region of those artifacts differs — no instruction, no block, and no
+  metadata
 
 #### Scenario: Both test suites pass after the reformat
 
