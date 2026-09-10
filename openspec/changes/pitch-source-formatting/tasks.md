@@ -146,7 +146,7 @@
 - [x] 6.6 Run `./run-all-tests.sh` and then `./run-dev-tests.sh` (the latter includes
       `test/trust-check.sh`, which is meaningful only after 6.4 is committed) and report the
       actual output of both.
-- [ ] 6.7 Confirm `make format-check` now passes over the whole covered set, and that the
+- [x] 6.7 Confirm `make format-check` now passes over the whole covered set, and that the
       pre-commit hook permits an ordinary commit.
-- [ ] 6.8 Re-run `tools/complexity.sh --write`, since the covered set's line counts moved by
+- [x] 6.8 Re-run `tools/complexity.sh --write`, since the covered set's line counts moved by
       about +1,000 lines.
