@@ -95,30 +95,42 @@ Two things go wrong when that barrier is crossed, both expensive:
 
 - `run-dev-tests.sh` ends with `test/trust-check.sh`, which regenerates and
   requires `git diff bootstrap/` to be empty. A source edit made after the last
-  regen guarantees a failure ~25 minutes into a 20-suite run.
+  regen guarantees a failure ~14 minutes into a 23-suite run.
 - Killing a regen mid-flight leaves `bootstrap/` **mixed-source** — one `.ll`
   from the new source, the others from the old. Recover with
   `git checkout -- bootstrap/` if the tree is committed, or by running regen to
   convergence if it is not.
 
-So: edit → `make regen` → `./run-all-tests.sh` (~27 min) → `./run-dev-tests.sh`.
+So: edit → `make regen` (~4 min) → `./run-all-tests.sh` (~10 min) →
+`./run-dev-tests.sh` (~14 min).
 
 **Budget regen by its self-compile count, not by a wall-clock figure.** Nearly all of it is the
-compiler compiling itself — one `--emit` over ~400 KB of assembled Scheme, currently **~4 min**
+compiler compiling itself — one `--emit` over ~400 KB of assembled Scheme, currently **~57 s**
 each on an 8-core M-series laptop — so the count is the part that does not drift with the machine:
 
 | `make regen` | self-compiles | wall clock |
 |---|---|---|
-| no compiler-source change (converges at fixed-point iteration 1) | 4 | **~18 min** |
-| **after a compiler-source edit** (converges at iteration 2) | 5 | ~22 min (derived) |
+| no compiler-source change (converges at fixed-point iteration 1) | 4 | **~4 min** |
+| **after a compiler-source edit** (converges at iteration 2) | 5 | ~5 min (derived) |
 
-The ~18 min is measured (`tools/regen.sh`, 17m52s, `user` 16m32s — it is single-core-bound, so a
-loaded desktop inflates it only slightly). The second row is derived from the same per-compile
-figure and is the row that matters, since the barrier exists because you edited something: it was
-**6** self-compiles until issue #99 was fixed, which removed the one the fixed point used to repeat
-per extra iteration. The first row is unaffected by that fix — a run that converges immediately
-never repeats anything. The old "~12 min" figure in this file was optimistic and described the
-*first* row while being written for the second.
+The first row is measured twice on 2026-09-10 — 221 s and 230 s — the second with per-stage
+detail: 120 s for the fixed point's two self-compiles, 107 s for stage 3's two, which is where the
+~57 s comes from. The second row is derived from that per-compile figure and is the row that
+matters, since the barrier exists because you edited something: it was **6** self-compiles until
+issue #99 was fixed, which removed the one the fixed point used to repeat per extra iteration. The
+first row is unaffected by that fix — a run that converges immediately never repeats anything. One
+kind of compiler-source edit still lands on the first row: a **layout-only** change, per the
+formatting section above, converges at iteration 1 because the emitted IR is identical and the
+fixed point has nothing to chase.
+
+**This section said ~18 min until 2026-09-10, and that figure was not wrong when it was written.**
+It was measured 2026-08-13, before three runtime quadratics were fixed: `rt_intern` scanning the
+whole symbol table on every quoted symbol literal and `string-set!` reallocating the whole string
+(`53a238a`, `docs/PERFORMANCE.md` P19 and P20, 2026-09-01), and an output string port being a libc
+`FILE` (`3169264`, P21, 2026-09-04). A self-compile is a large Scheme program doing exactly that
+work, and it went from ~268 s to ~57 s; the same three fixes took pitch's formatting of this repo
+from 480 s to 78 s. Re-measure this table after a comparable runtime change rather than trusting
+the row.
 
 - **Iterate without regen** via `chez --libdirs src --script src/compile.ss`,
   which `include`s the source directly. Use it for the whole edit/test loop and
