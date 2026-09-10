@@ -110,7 +110,7 @@
 
 ## 6. The one-time reformat — gated on pitch #13 and #14
 
-- [ ] 6.1 Confirm the blockers are resolved: install the new pitch, update the pin in
+- [x] 6.1 Confirm the blockers are resolved: install the new pitch, update the pin in
       `tools/format.sh`, and re-measure the covered set. The data tables and comment
       columns must survive; if they do not, stop and report rather than proceeding.
       Two adjustments since this was written. **Identify the formatter by the 1.5 layout
@@ -125,6 +125,14 @@
       rather than restoring the authored one, so most of those sites still change, to a
       defensible column instead of a single space. A result near 9,219 means the installed
       pitch carries neither fix.
+      **Measured early on 2026-09-10**, as a by-product of task 2.4's no-write check: a
+      scratch clone of the pre-reformat tree, formatted with the pinned pitch
+      (scheme-pitch `9f57119`), gives **8,325 changed lines across 29 of 32 files**
+      (4,419 insertions, 3,906 deletions), with `src/prelude-surface.scm` 563 -> 553 and
+      `src/emit.ss` 1837 -> 2085. Both file figures confirm `ebc01cd` is present, and the
+      total lands where this task predicts -- below 9,219, but not by the comment count.
+      Re-measure rather than trust this figure if the pin has moved since; it is a
+      baseline for review, not a substitute for step 6.1's own run.
 - [ ] 6.2 Capture the pre-reformat baseline: record the SHA-256 of every `bootstrap/*.ll`
       and confirm the working tree is clean and committed.
 - [ ] 6.3 Run `make format` and commit the reformat with nothing else in it, adding
