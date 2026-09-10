@@ -67,8 +67,11 @@ Each group within the covered set SHALL be formatted under the dialect its sourc
 written in. The dialect SHALL be selected by the declared group a file belongs to, never
 inferred from its file extension.
 
-The formatter version SHALL be pinned and recorded. The formatter's layout is not a
-stable interface; an unrecorded upgrade would silently invalidate the formatted tree.
+The formatter's identity SHALL be pinned and checked, and the pinned identity SHALL be
+one that distinguishes builds laying out differently. The formatter's layout is not a
+stable interface; an unrecorded upgrade would silently invalidate the formatted tree. A
+self-reported version serves as that identity only while it moves whenever layout moves;
+where it does not, the check SHALL rest on the formatter's observed layout instead.
 
 #### Scenario: Layout comes from the project configuration
 
@@ -85,12 +88,18 @@ stable interface; an unrecorded upgrade would silently invalidate the formatted 
   their own declared dialect
 - **AND** no file's dialect is decided by whether it is named `.scm` or `.ss`
 
-#### Scenario: The pinned formatter version is recorded and checked
+#### Scenario: The pinned formatter identity is recorded and checked
 
-- **WHEN** the formatting doors run and the available formatter's version is not the
-  pinned one
-- **THEN** the mismatch is reported, naming both the pinned and the found version, rather
+- **WHEN** the formatting doors run and the available formatter is not the pinned one
+- **THEN** the mismatch is reported, naming both the pinned and the found identity, rather
   than silently producing layout the tree was not formatted with
+
+#### Scenario: A differently laying out formatter is caught despite reporting the pinned version
+
+- **WHEN** the available formatter reports the pinned version but lays out differently
+  from the build the covered set was formatted with
+- **THEN** the doors report the mismatch rather than accepting the version as sufficient
+- **AND** the report says which layer of the identity check failed
 
 ### Requirement: Two doors format and check, and they narrate
 

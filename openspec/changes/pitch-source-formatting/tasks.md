@@ -19,13 +19,26 @@
       hand-authored `lib/**/*.sld` under `--dialect r7rs`, everything else under
       `--dialect common` — and invoke pitch once per group with `--config pitch.scm`.
       Selection is by group membership, never by file extension (design D3).
-- [ ] 1.5 Add the pinned pitch version to `tools/format.sh` and compare it against
-      `pitch --version`, reporting a mismatch that names both versions (design D6). Pin
-      `0.1.0` for now.
-- [ ] 1.6 Verify the resolver: assert it yields exactly the 32 files in `design.md`'s table
+- [ ] 1.5 Record the pinned formatter identity in `tools/format.sh` and check the
+      installed pitch against it in two layers (design D6). `pitch --version` reports
+      `0.1.0` for every build shipped so far, including ones on either side of both layout
+      fixes this change waited on, so the string is a floor and not an identity
+      (scheme-pitch #19). Check it first as a cheap reject, pinned at `0.1.0`; then format
+      the layout probe from 1.6 and require its bytes to equal the committed expectation.
+      Report a mismatch naming the pinned and the found identity, and saying which layer
+      failed. When #19 lands, the stamped version becomes the pin and the probe narrows to
+      a backstop.
+- [ ] 1.6 Add the layout probe 1.5 checks against: a fixture holding a quoted list that
+      overflows the width (#13's fix) and two trailing comments sharing a column (#14's
+      fix), plus its formatted expectation as produced by the pinned pitch — scheme-pitch
+      `9f57119` today. Those two features are what separate the builds this change has been
+      measured against, so the probe fails exactly when layout moves and stays quiet when a
+      teammate's binary merely differs. Regenerate the expectation in the same commit that
+      moves the pin, never separately.
+- [ ] 1.7 Verify the resolver: assert it yields exactly the 32 files in `design.md`'s table
       and excludes `lib/scheme/base.sld`, `cxr.sld`, `read.sld`, `file.sld`,
       `lib/emit/internal.sld`, and `lib/scheme/char-data.scm`.
-- [ ] 1.7 Verify the exclusion is self-maintaining: add a throwaway `GENERATED`-marked file
+- [ ] 1.8 Verify the exclusion is self-maintaining: add a throwaway `GENERATED`-marked file
       under `lib/scheme/`, confirm the resolver skips it, and remove it.
 
 ## 2. Doors and narration
@@ -85,24 +98,33 @@
       gate on group 6 and #15 as non-blocking.
 - [x] 5.5 No `define-library` issue is needed: `((define-library) (_ d . body))` in
       `pitch.scm` resolves that collision (design D4, verified at a break-forcing width).
-- [ ] 5.6 File a `bwbensonjr/scheme-pitch` issue asking that any layout-affecting change
+- [x] 5.6 File a `bwbensonjr/scheme-pitch` issue asking that any layout-affecting change
       bump `pitch-version`. Evidence: `ebc01cd` changed quoted-data layout and
       `reduce-formatting-cost` changed cost by ~6x, both with the version string still
       `"0.1.0"`, so a downstream pin cannot identify which pitch produced a formatted tree.
       This is what D6 depends on; without it the pin is documentation, not a check.
+      Filed as **#19**, with a third instance added — `343fa25` (merged as `9f57119`)
+      changed trailing-comment layout under the same version string — and a second ask
+      beyond the bump: stamp the build commit into `--version` output, so the identity
+      moves whether or not a change is recognized as layout-affecting at the time.
 
 ## 6. The one-time reformat — gated on pitch #13 and #14
 
 - [ ] 6.1 Confirm the blockers are resolved: install the new pitch, update the pin in
       `tools/format.sh`, and re-measure the covered set. The data tables and comment
       columns must survive; if they do not, stop and report rather than proceeding.
-      Two adjustments since this was written. **Identify the formatter by commit, not by
-      `--version`**, unless 5.6 has landed -- `pitch-version` did not move across the
-      `ebc01cd` layout fix, so the version string cannot confirm the pitch being installed
-      is the one required (design D6). And **expect the re-measurement to come in well
-      below 9,219 changed lines**: that figure predates #13's fix, which returns
-      `src/prelude-surface.scm` to 553 lines against 563 before formatting. A result near
-      9,219 means the installed pitch does not carry `ebc01cd`.
+      Two adjustments since this was written. **Identify the formatter by the 1.5 layout
+      probe, not by `--version`**, until scheme-pitch #19 lands -- `pitch-version` did not
+      move across either layout fix, so the version string cannot confirm the installed
+      pitch is the one required (design D6). And **expect the re-measurement to come in
+      well below 9,219 changed lines, but not by the comment count**: that figure predates
+      both fixes, and the two push in opposite directions. #13 shrinks the diff outright --
+      `src/prelude-surface.scm` returns to 553 lines against 563 before formatting, and
+      `src/emit.ss` to 2,094 against 2,176. #14 does *not* give back the 372 aligned
+      comment lines: it re-derives a shared column from the width of the formatted code
+      rather than restoring the authored one, so most of those sites still change, to a
+      defensible column instead of a single space. A result near 9,219 means the installed
+      pitch carries neither fix.
 - [ ] 6.2 Capture the pre-reformat baseline: record the SHA-256 of every `bootstrap/*.ll`
       and confirm the working tree is clean and committed.
 - [ ] 6.3 Run `make format` and commit the reformat with nothing else in it, adding

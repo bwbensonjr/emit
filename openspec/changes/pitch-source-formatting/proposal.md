@@ -49,12 +49,20 @@ columns to get formatting sooner.
 - **Named upstream blockers**, now filed: `bwbensonjr/scheme-pitch#13` (filled layout for
   overflowing quoted data lists) and `#14` (preserve trailing-comment column alignment).
   The one-time reformat is sequenced behind those two and nothing else. `#15` records
-  pitch's superlinear formatting cost and does not block. **Status since filing:** #13's
-  fix has landed on scheme-pitch main (`ebc01cd`) but is unreleased and its issue is open,
-  so it still gates the reformat; #14 is untouched; #15 is largely resolved — the covered
-  set went 480 s to 78 s — and stays open on a narrower claim. A fourth item surfaced from
-  that work and is filed here as task 5.6: pitch changed its layout without moving
-  `pitch-version`, which defeats this change's version pin.
+  pitch's superlinear formatting cost and does not block. **Status as of 2026-09-10:**
+  #13's fix has landed on scheme-pitch main (`ebc01cd`) but is unreleased, and its issue
+  stays open on a narrower residue — the `; fmt: off` hatch and the written-out
+  `(quote datum)` spelling — while the layout collision this change named is resolved.
+  #14 is **fixed and closed**: `343fa25`, merged as `9f57119` (PR #18). Its fix
+  re-derives a shared comment column from the width of the formatted code rather than
+  restoring the authored one, which resolves the collision without preserving the
+  original columns. #15 is largely resolved — the covered set went 480 s to 78 s
+  sequential, 32 s at `-P4` — and stays open on a narrower claim. A fourth item surfaced
+  from that work and is now filed as **#19**: pitch changed its layout twice without
+  moving `pitch-version`, which defeats this change's version pin; it asks both for a
+  bump on layout-affecting changes and for the build commit to be stamped into
+  `--version`. So both named blockers are resolved in substance, and what stands between
+  here and the reformat is task 6.1's re-measurement rather than an upstream wait.
 - **The one-time reformat**, as the change's final step once those land: a single commit
   containing nothing else, plus `.git-blame-ignore-revs`, followed by `make regen` and
   both suites. Because the committed IR carries no debug metadata, the reformat is
@@ -93,13 +101,16 @@ compiles Pitch, so Emit's own build and test path must never require it.
   barrier crossing in the sense `CLAUDE.md` defines. It must be the only change in its
   commit, and it costs one full `make regen` (5 self-compiles, ~22 min) plus
   `./run-all-tests.sh` and `./run-dev-tests.sh`.
-- **Dependencies**: Pitch becomes an optional developer tool, pinned by version, resolved
-  from `PATH`. Pitch's layout is explicitly not yet stable — its shipped cost objective is
+- **Dependencies**: Pitch becomes an optional developer tool, resolved from `PATH` and
+  pinned by a recorded identity — its version string, backed by a layout probe, since the
+  version alone does not move when layout does (design D6, scheme-pitch #19). Pitch's layout is explicitly not yet stable — its shipped cost objective is
   the reference implementation's and is expected to change — so an unpinned upgrade would
   silently invalidate the formatted tree.
-- **External**: three issues filed against `bwbensonjr/scheme-pitch` — #13 and #14 block
-  the final step of this change and nothing else in it; #15 blocks nothing. A fourth (the
-  version-bump ask behind D6) is task 5.6 and not yet filed.
+- **External**: four issues filed against `bwbensonjr/scheme-pitch` — #13 and #14 gated
+  the final step of this change and nothing else in it, and both are now resolved in
+  substance (#14 closed, #13's fix on main); #15 blocks nothing. The fourth, the
+  version-identity ask behind D6, is **#19**, and blocks nothing either — it decides
+  whether the pin is enforced by a stamped version or by this change's own layout probe.
 - **Performance debt**: Pitch's cost on large files was superlinear enough to shape this
   design (112 s for 2,477 lines; 191 s for the 2,397-line generated Unicode table), which
   is why the gate checks staged files rather than the tree. That was Pitch's backlog to
@@ -107,5 +118,6 @@ compiles Pitch, so Emit's own build and test path must never require it.
   32 s at `-P4`. **Two of the five causes turned out to be Emit's**, and are fixed in
   `src/runtime/runtime.c` — a linear symbol-table scan on every quoted symbol literal
   (`docs/PERFORMANCE.md` P19) and a whole-string realloc in `string-set!` (P20). A third,
-  P21, is open: an output string port is a libc `FILE`. The gate's staged-files scope is
+  P21 — an output string port was a libc `FILE` — is now fixed too, by
+  `buffer-backed-string-ports` (`3169264`), so all three Emit-side causes are closed. The gate's staged-files scope is
   consequently no longer forced by cost, and design D7 records that as an open question.

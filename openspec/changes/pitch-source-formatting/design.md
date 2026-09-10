@@ -298,14 +298,24 @@ tree looser to serve one line.
 > six times faster — which is precisely the silent-invalidation this decision exists to
 > prevent. A version pin is only a pin if the version moves. The mechanism is kept, because
 > the fix belongs upstream and is cheap there: task 5.6 asks scheme-pitch to bump
-> `pitch-version` on any layout-affecting change. Until that is answered, treat the pin as
-> documentation of intent rather than as an enforced check, and confirm the formatter by
-> commit rather than by `--version` when running task 6.1.
+> `pitch-version` on any layout-affecting change, filed as **#19** (which also asks that
+> the build commit be stamped into `--version`, making the identity mechanical rather than
+> a discipline).
+>
+> Until that is answered the pin is enforced by what the project can observe for itself:
+> **a layout probe.** `tools/format.sh` checks two layers — the version string as a cheap
+> reject, then a committed fixture whose formatted bytes must match an expectation
+> produced by the pinned pitch (`9f57119` today). The fixture holds a quoted list that
+> overflows the width and two trailing comments sharing a column, which are exactly the
+> features that separate the builds this change has been measured against. A probe fails
+> when layout moves and stays quiet when a teammate's binary merely differs, which a
+> binary hash would not; it is also self-maintaining in the way the version string is not,
+> since it tests the property being pinned rather than a promise about it. When #19 lands,
+> the stamped version becomes the pin and the probe narrows to a backstop.
 
 Pitch's README states
 that its shipped cost objective is the reference implementation's rather than pitch's own
-and wants a corpus to tune against, i.e. layout *will* change. `tools/format.sh` compares
-`pitch --version` against a pinned value and reports a mismatch. A pitch upgrade then
+and wants a corpus to tune against, i.e. layout *will* change. A pitch upgrade then
 becomes a deliberate act: bump the pin, reformat, regenerate. *Alternative rejected:*
 vendoring or building pitch in-tree — it inverts the dependency, since Emit compiles pitch.
 
