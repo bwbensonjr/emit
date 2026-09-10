@@ -27,8 +27,10 @@
     [(global-set! ,s ,rhs) (fa rhs)]
     [(primcall ,op . ,args) (union* (map fa args))]
     [(lambda ,params ,body) (fa body)]
-    [(let ,binds ,body) (union (union* (map (lambda (b) (fa (cadr b))) binds)) (fa body))]
-    [(letrec ,binds ,body) (union (union* (map (lambda (b) (fa (cadr b))) binds)) (fa body))]
+    [(let ,binds ,body) (union (union* (map (lambda (b) (fa (cadr b))) binds))
+                               (fa body))]
+    [(letrec ,binds ,body) (union (union* (map (lambda (b) (fa (cadr b))) binds))
+                                  (fa body))]
     [(apply ,f . ,args) (union (fa f) (union* (map fa args)))]
     [(call ,f . ,args) (union (fa f) (union* (map fa args)))]))
 
@@ -79,11 +81,10 @@
           (let ([b (car bs)])
             (cond
               [(mem? (car b) assigned) (loop (cdr bs) plain (cons b boxed) keep)]
-              [(il-lambda? (cadr b))   (loop (cdr bs) plain boxed (cons b keep))]
-              [(null? (filter (lambda (x)
-                                (and (mem? x names) (not (mem? x (map car plain)))))
-                              (il-refs (cadr b))))
-               (loop (cdr bs) (cons b plain) boxed keep)]
+              [(il-lambda? (cadr b)) (loop (cdr bs) plain boxed (cons b keep))]
+              [(null? (filter
+                        (lambda (x) (and (mem? x names) (not (mem? x (map car plain)))))
+                        (il-refs (cadr b)))) (loop (cdr bs) (cons b plain) boxed keep)]
               [else (loop (cdr bs) plain (cons b boxed) keep)]))))))
 
 ;; the letrec bindings that end up boxed, program-wide -- these need `unbox` at
@@ -102,9 +103,8 @@
     [(primcall ,op . ,args) (union* (map fb args))]
     [(lambda ,params ,body) (fb body)]
     [(let ,binds ,body) (union (binds-of binds) (fb body))]
-    [(letrec ,binds ,body)
-     (union (map car (cadr (classify-letrec binds assigned)))
-            (union (binds-of binds) (fb body)))]
+    [(letrec ,binds ,body) (union (map car (cadr (classify-letrec binds assigned)))
+                                  (union (binds-of binds) (fb body)))]
     [(apply ,f . ,args) (union (fb f) (union* (map fb args)))]
     [(call ,f . ,args) (union (fb f) (union* (map fb args)))]))
 
@@ -121,10 +121,12 @@
             (if (null? as)
                 (list nx body)
                 (list nx
-                  `(let ,(map (lambda (a t) (list a `(primcall box ,t))) as ts) ,body))))
+                      `(let ,(map (lambda (a t) (list a `(primcall box ,t))) as ts)
+                            ,body))))
           (let ([x (car xs)])
             (if (asgd? x)
-                (let ([t (fresh-name x)]) (loop (cdr xs) (cons t nx) (cons x as) (cons t ts)))
+                (let ([t (fresh-name x)])
+                  (loop (cdr xs) (cons t nx) (cons x as) (cons t ts)))
                 (loop (cdr xs) (cons x nx) as ts))))))
   (define (cvt e)
     (match e
@@ -136,20 +138,22 @@
       [(if ,a ,b ,c) `(if ,(cvt a) ,(cvt b) ,(cvt c))]
       [(seq ,a ,b) `(seq ,(cvt a) ,(cvt b))]
       [(primcall ,op . ,args) `(primcall ,op ,@(map cvt args))]
-      [(lambda ,params ,body)                    ; params may be variadic
-       (let ([rest (param-rest params)])
-         (let* ([nx+body (rebind (param-names params) (cvt body))]
-                [nx (car nx+body)] [body^ (cadr nx+body)])
-           (if rest
-               (let ([nrest  (list-ref nx (- (length nx) 1))]
-                     [nfixed (list-head nx (- (length nx) 1))])
-                 `(lambda ,(rebuild-params nfixed nrest) ,body^))
-               `(lambda ,nx ,body^))))]
+      [(lambda ,params ,body) ; params may be variadic
+        (let ([rest (param-rest params)])
+          (let* ([nx+body (rebind (param-names params) (cvt body))]
+                 [nx (car nx+body)]
+                 [body^ (cadr nx+body)])
+            (if rest
+                (let ([nrest (list-ref nx (- (length nx) 1))]
+                      [nfixed (list-head nx (- (length nx) 1))])
+                  `(lambda ,(rebuild-params nfixed nrest) ,body^))
+                `(lambda ,nx ,body^))))]
       [(let ,binds ,body)
-       (let ([xs (map car binds)] [es (map (lambda (b) (cvt (cadr b))) binds)])
-         (let* ([nx+body (rebind xs (cvt body))]
-                [nx (car nx+body)] [body^ (cadr nx+body)])
-           `(let ,(map list nx es) ,body^)))]
+        (let ([xs (map car binds)] [es (map (lambda (b) (cvt (cadr b))) binds)])
+          (let* ([nx+body (rebind xs (cvt body))]
+                 [nx (car nx+body)]
+                 [body^ (cadr nx+body)])
+            `(let ,(map list nx es) ,body^)))]
       ;; The three-way split (see classify-letrec).  What stays in the letrec is
       ;; always all-lambda, which is what `lower` requires; the rest becomes plain
       ;; nested `let` bindings or '()-boxes.  Three histories meet here:
@@ -166,28 +170,33 @@
       ;;     `set!`, so it merely LOOKED assigned.  build-program now hands over a
       ;;     plain letrec group and this is where the question is settled.
       [(letrec ,binds ,body)
-       (let* ([c     (classify-letrec binds assigned)]
-              [plain (car c)] [boxed (cadr c)] [keep (caddr c)]
-              ;; innermost: fill the boxes in binding order, then the body
-              [filled (fold-right
-                        (lambda (b acc)
-                          `(seq (primcall set-box! ,(car b) ,(cvt (cadr b))) ,acc))
-                        (cvt body) boxed)]
-              ;; the closure block, if any lambda survived unassigned
-              [with-fns (if (null? keep)
-                            filled
-                            `(letrec ,(map (lambda (b) (list (car b) (cvt (cadr b)))) keep)
-                               ,filled))]
-              [with-boxes (if (null? boxed)
-                              with-fns
-                              `(let ,(map (lambda (b)
-                                            (list (car b) '(primcall box (const ()))))
-                                          boxed)
-                                 ,with-fns))])
-         ;; plain bindings nest OUTSIDE, in binding order, so a later initializer
-         ;; can read an earlier one and letrec* order is preserved
-         (fold-right (lambda (b acc) `(let ((,(car b) ,(cvt (cadr b)))) ,acc))
-                     with-boxes plain))]
+        (let* ([c (classify-letrec binds assigned)]
+               [plain (car c)]
+               [boxed (cadr c)]
+               [keep (caddr c)]
+               ;; innermost: fill the boxes in binding order, then the body
+               [filled (fold-right
+                         (lambda (b acc)
+                           `(seq (primcall set-box! ,(car b) ,(cvt (cadr b))) ,acc))
+                         (cvt body)
+                         boxed)]
+               ;; the closure block, if any lambda survived unassigned
+               [with-fns
+                 (if (null? keep)
+                     filled
+                     `(letrec ,(map (lambda (b) (list (car b) (cvt (cadr b)))) keep)
+                              ,filled))]
+               [with-boxes
+                 (if (null? boxed)
+                     with-fns
+                     `(let ,(map (lambda (b) (list (car b) '(primcall box (const ()))))
+                                 boxed)
+                           ,with-fns))])
+          ;; plain bindings nest OUTSIDE, in binding order, so a later initializer
+          ;; can read an earlier one and letrec* order is preserved
+          (fold-right (lambda (b acc) `(let ((,(car b) ,(cvt (cadr b)))) ,acc))
+                      with-boxes
+                      plain))]
       [(apply ,f . ,args) `(apply ,(cvt f) ,@(map cvt args))]
       [(call ,f . ,args) `(call ,(cvt f) ,@(map cvt args))]))
   (cvt prog))

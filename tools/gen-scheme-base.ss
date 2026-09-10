@@ -35,8 +35,7 @@
 (import (chezscheme))
 
 (define prelude-path "src/prelude.scm")
-(define out-root
-  (let ([a (command-line-arguments)]) (if (null? a) "." (car a))))
+(define out-root (let ([a (command-line-arguments)]) (if (null? a) "." (car a))))
 
 ;; OUT-ROOT/REL, creating REL's directories.  Chez's mkdir is one level at a time, so walk
 ;; the prefixes -- "lib/emit/internal.sld" needs both lib and lib/emit to exist.
@@ -45,9 +44,9 @@
     (cond
       [(= i (string-length rel)) (string-append dir "/" rel)]
       [(char=? (string-ref rel i) #\/)
-       (let ([d (string-append out-root "/" (substring rel 0 i))])
-         (unless (file-directory? d) (mkdir d))
-         (loop (+ i 1) dir))]
+        (let ([d (string-append out-root "/" (substring rel 0 i))])
+          (unless (file-directory? d) (mkdir d))
+          (loop (+ i 1) dir))]
       [else (loop (+ i 1) dir)])))
 
 ;; the declared surface: *scheme-base-private* and the partition (*prelude-libraries* /
@@ -62,10 +61,10 @@
 
 ;; every top-level (define NAME ...) / (define (NAME . _) ...), in source order.
 (define (proc-name f)
-  (and (pair? f) (eq? (car f) 'define)
+  (and (pair? f)
+       (eq? (car f) 'define)
        (let ([sig (cadr f)]) (if (pair? sig) (car sig) sig))))
-(define (syntax-name f)
-  (and (pair? f) (eq? (car f) 'define-syntax) (cadr f)))
+(define (syntax-name f) (and (pair? f) (eq? (car f) 'define-syntax) (cadr f)))
 
 (define define-names (filter (lambda (x) x) (map proc-name forms)))
 (define syntax-names (filter (lambda (x) x) (map syntax-name forms)))
@@ -107,7 +106,8 @@
 ;; partition rot (change: scheme-base-partition): an assignment naming a definition the
 ;; prelude does not have, a name assigned twice, or an assignment to a library that is
 ;; not a partition member would each silently emit a different surface.
-(let ([stale (filter (lambda (e) (not (memq (car e) binding-names))) *prelude-assignments*)])
+(let ([stale (filter (lambda (e) (not (memq (car e) binding-names)))
+                     *prelude-assignments*)])
   (unless (null? stale)
     (die "assignment for a name the prelude does not define" (map car stale))))
 (let ([dups (let loop ([es *prelude-assignments*] [seen '()] [d '()])
@@ -117,36 +117,41 @@
                 [else (loop (cdr es) (cons (caar es) seen) d)]))])
   (unless (null? dups) (die "name assigned more than once" dups)))
 (let* ([known (map car *prelude-libraries*)]
-       [bad   (filter (lambda (l) (not (member l known)))
-                      ;; each home is a LIBRARY or a (LIBRARY private); compare libraries
-                      (map home-library (apply append (map cdr *prelude-assignments*))))])
-  (unless (null? bad) (die "assignment to a library that is not a partition member" bad)))
+       [bad (filter (lambda (l) (not (member l known)))
+                    ;; each home is a LIBRARY or a (LIBRARY private); compare libraries
+                    (map home-library (apply append (map cdr *prelude-assignments*))))])
+  (unless (null? bad)
+    (die "assignment to a library that is not a partition member" bad)))
 ;; One library named twice in a name's home list would emit two definitions of it into
 ;; ONE unit -- a duplicate top-level define, whose cost is silent (issue #38).
 (let ([twice (map car
-               (filter (lambda (e)
-                         (let ([ls (map home-library (cdr e))])
-                           (let loop ([ls ls])
-                             (cond [(null? ls) #f]
-                                   [(member (car ls) (cdr ls)) #t]
-                                   [else (loop (cdr ls))]))))
-                       *prelude-assignments*))])
+                  (filter (lambda (e)
+                            (let ([ls (map home-library (cdr e))])
+                              (let loop ([ls ls])
+                                (cond
+                                  [(null? ls) #f]
+                                  [(member (car ls) (cdr ls)) #t]
+                                  [else (loop (cdr ls))]))))
+                          *prelude-assignments*))])
   (unless (null? twice) (die "name assigned to the same library twice" twice)))
 
 ;; *scheme-base-elsewhere* is a derived convenience for the Chez-free surface guard, which
 ;; cannot parse home specs.  Recompute it here from the authoritative assignments -- a
 ;; prelude define that is neither private nor exported by (scheme base) -- and fail on any
 ;; disagreement, so it cannot drift into a second source of truth.
-(let* ([actual (filter (lambda (n) (and (not (memq n *scheme-base-private*))
-                                        (not (prelude-exports? '(scheme base) n))))
+(let* ([actual (filter (lambda (n)
+                         (and (not (memq n *scheme-base-private*))
+                              (not (prelude-exports? '(scheme base) n))))
                        define-names)]
        [missing (filter (lambda (n) (not (memq n *scheme-base-elsewhere*))) actual)]
-       [extra   (filter (lambda (n) (not (memq n actual))) *scheme-base-elsewhere*)])
+       [extra (filter (lambda (n) (not (memq n actual))) *scheme-base-elsewhere*)])
   (unless (null? missing)
-    (die "not exported by (scheme base) but missing from *scheme-base-elsewhere*" missing))
+    (die "not exported by (scheme base) but missing from *scheme-base-elsewhere*"
+         missing))
   (unless (null? extra)
-    (die "in *scheme-base-elsewhere* but (scheme base) still exports it (or the prelude does not define it)"
-         extra)))
+    (die
+      "in *scheme-base-elsewhere* but (scheme base) still exports it (or the prelude does not define it)"
+      extra)))
 
 (let ([dups (let loop ([ns export-names] [seen '()] [d '()])
               (cond
@@ -164,27 +169,39 @@
 ;; half, lifted out before anything is lowered, so they cost no emitted code and a
 ;; member whose procedures use `cond`/`case` internally can compile at all.
 (define (write-library entry path)
-  (let* ([lib      (car entry)]
-         [imports  (caddr entry)]
-         [exports  (filter (lambda (n) (prelude-exports? lib n)) binding-names)]
-         [body     (filter (lambda (f)
-                             (let ([n (binding-name f)])
-                               (and n (member lib (prelude-homes-of n)))))
-                           forms)]
-         [o        (open-output-file path 'replace)])
-    (fprintf o ";;; ~a -- GENERATED from src/prelude.scm by tools/gen-scheme-base.ss~n"
+  (let* ([lib (car entry)]
+         [imports (caddr entry)]
+         [exports (filter (lambda (n) (prelude-exports? lib n)) binding-names)]
+         [body (filter (lambda (f)
+                         (let ([n (binding-name f)])
+                           (and n (member lib (prelude-homes-of n)))))
+                       forms)]
+         [o (open-output-file path 'replace)])
+    (fprintf o
+             ";;; ~a -- GENERATED from src/prelude.scm by tools/gen-scheme-base.ss~n"
              (let loop ([i (- (string-length path) 1)])
-               (cond [(< i 0) path]
-                     [(char=? (string-ref path i) #\/) (substring path (+ i 1) (string-length path))]
-                     [else (loop (- i 1))])))
-    (fprintf o ";;; -- DO NOT EDIT BY HAND.  Edit src/prelude.scm (or the partition in~n")
+               (cond
+                 [(< i 0) path]
+                 [(char=? (string-ref path i) #\/)
+                   (substring path (+ i 1) (string-length path))]
+                 [else (loop (- i 1))])))
+    (fprintf o
+             ";;; -- DO NOT EDIT BY HAND.  Edit src/prelude.scm (or the partition in~n")
     (fprintf o ";;; src/prelude-surface.scm) and regenerate; guarded by~n")
     (fprintf o ";;; test/scheme-base-gen-check.sh.~n")
     (fprintf o ";;;~n")
-    (fprintf o ";;; One member of the prelude's partition: the definitions the declaration~n")
-    (fprintf o ";;; homes here, exporting the declared public ones.  Private helpers and the~n")
-    (fprintf o ";;; derived-form macros stay in the body, where the exported procedures still~n")
-    (fprintf o ";;; call them.  One export per line, so a surface change is a reviewable~n")
+    (fprintf
+      o
+      ";;; One member of the prelude's partition: the definitions the declaration~n")
+    (fprintf
+      o
+      ";;; homes here, exporting the declared public ones.  Private helpers and the~n")
+    (fprintf
+      o
+      ";;; derived-form macros stay in the body, where the exported procedures still~n")
+    (fprintf
+      o
+      ";;; call them.  One export per line, so a surface change is a reviewable~n")
     (fprintf o ";;; one-line diff.~n")
     (fprintf o "(define-library ~a~n" lib)
     (unless (null? imports)
@@ -193,23 +210,29 @@
     (for-each (lambda (n) (fprintf o "    ~a~n" n)) exports)
     (fprintf o "    )~n")
     (fprintf o "  (begin~n")
-    (for-each
-      (lambda (f)
-        (parameterize ([print-graph #f] [print-gensym #f])
-          (fprintf o "    ")
-          (write f o)
-          (newline o)))
-      body)
+    (for-each (lambda (f)
+                (parameterize ([print-graph #f] [print-gensym #f])
+                              (fprintf o "    ")
+                              (write f o)
+                              (newline o)))
+              body)
     (fprintf o "    ))~n")
     (close-port o)
-    (fprintf (current-error-port) "wrote ~a  (~a exports, ~a body forms)~n"
-             path (length exports) (length body))))
+    (fprintf (current-error-port)
+             "wrote ~a  (~a exports, ~a body forms)~n"
+             path
+             (length exports)
+             (length body))))
 
 ;; Each member to the path its partition entry declares, under OUT-ROOT.
 (for-each (lambda (e) (write-library e (out-file (cadddr e)))) *prelude-libraries*)
-(fprintf (current-error-port)
-         "partition: ~a librar~a, ~a (scheme base) exports of ~a defines, ~a private, ~a assigned, ~a forms~n"
-         (length *prelude-libraries*)
-         (if (null? (cdr *prelude-libraries*)) "y" "ies")
-         (length export-names) (length define-names)
-         (length *scheme-base-private*) (length *prelude-assignments*) (length forms))
+(fprintf
+  (current-error-port)
+  "partition: ~a librar~a, ~a (scheme base) exports of ~a defines, ~a private, ~a assigned, ~a forms~n"
+  (length *prelude-libraries*)
+  (if (null? (cdr *prelude-libraries*)) "y" "ies")
+  (length export-names)
+  (length define-names)
+  (length *scheme-base-private*)
+  (length *prelude-assignments*)
+  (length forms))

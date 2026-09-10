@@ -16,15 +16,13 @@
       path
       (string-append path "/")))
 (define root
-  (directory-path
-    (if (< (length arguments) 2)
-        (string-append "vendor/unicode/" version)
-        (cadr arguments))))
+  (directory-path (if (< (length arguments) 2)
+                      (string-append "vendor/unicode/" version)
+                      (cadr arguments))))
 (define quiet?
   (let ([v (getenv "EMIT_VERBOSITY")])
     (and v (or (string=? v "quiet") (string=? v "q") (string=? v "0")))))
-(define output
-  (if (null? arguments) "lib/scheme/char-data.scm" (car arguments)))
+(define output (if (null? arguments) "lib/scheme/char-data.scm" (car arguments)))
 (define started (current-time 'time-monotonic))
 
 (define (trim s)
@@ -44,17 +42,19 @@
       (cond
         [(= i n) (reverse (cons (substring s start i) out))]
         [(char=? (string-ref s i) ch)
-         (loop (+ i 1) (+ i 1) (cons (substring s start i) out))]
+          (loop (+ i 1) (+ i 1) (cons (substring s start i) out))]
         [else (loop (+ i 1) start out)]))))
 
 (define (before-comment s)
   (let loop ([i 0])
-    (cond [(= i (string-length s)) s]
-          [(char=? (string-ref s i) #\#) (substring s 0 i)]
-          [else (loop (+ i 1))])))
+    (cond
+      [(= i (string-length s)) s]
+      [(char=? (string-ref s i) #\#) (substring s 0 i)]
+      [else (loop (+ i 1))])))
 
 (define (file-lines path)
-  (call-with-input-file path
+  (call-with-input-file
+    path
     (lambda (p)
       (let loop ([out '()])
         (let ([line (get-line p)])
@@ -62,7 +62,8 @@
 
 (define (hex s) (string->number (trim s) 16))
 (define (hex-list s)
-  (if (string=? (trim s) "") '()
+  (if (string=? (trim s) "")
+      '()
       (map hex (filter (lambda (x) (not (string=? x ""))) (split (trim s) #\space)))))
 
 (define (range-field s)
@@ -74,7 +75,8 @@
 
 (define (property-ranges path wanted)
   (let loop ([lines (file-lines path)] [out '()])
-    (if (null? lines) (reverse out)
+    (if (null? lines)
+        (reverse out)
         (let* ([line (trim (before-comment (car lines)))]
                [fields (if (string=? line "") '() (split line #\;))])
           (if (and (= (length fields) 2) (string=? (trim (cadr fields)) wanted))
@@ -86,8 +88,8 @@
     (cond
       [(null? in) (reverse out)]
       [(and (pair? out) (<= (caar in) (+ (cdar out) 1)))
-       (set-cdr! (car out) (max (cdar out) (cdar in)))
-       (loop (cdr in) out)]
+        (set-cdr! (car out) (max (cdar out) (cdar in)))
+        (loop (cdr in) out)]
       [else (loop (cdr in) (cons (cons (caar in) (cdar in)) out))])))
 
 (define (string-suffix? suffix s)
@@ -102,52 +104,54 @@
 ;; their interiors into unassigned code points.
 (define (unicode-category-ranges lines)
   (let loop ([lines lines] [pending #f] [previous -1] [out '()])
-    (if (null? lines)
-        (if pending
-            (error 'gen-unicode-tables "unmatched UnicodeData First row" pending)
-            (reverse out))
-        (let ([fields (split (car lines) #\;)])
-          (when (< (length fields) 15)
-            (error 'gen-unicode-tables "short UnicodeData row" (car lines)))
-          (let* ([cp (hex (list-ref fields 0))]
-                 [name (list-ref fields 1)]
-                 [category (string->symbol (list-ref fields 2))]
-                 [first? (string-suffix? ", First>" name)]
-                 [last? (string-suffix? ", Last>" name)])
-            (cond
-              [pending
-               (unless last?
-                 (error 'gen-unicode-tables
-                        "UnicodeData First row is not followed by Last row"
-                        pending name))
-               (let ([start (car pending)]
-                     [base (cadr pending)]
-                     [start-category (caddr pending)])
-                 (unless (and (< start cp)
-                              (> start previous)
-                              (string=? base (range-name-base name ", Last>"))
-                              (eq? start-category category))
-                   (error 'gen-unicode-tables
-                          "mismatched UnicodeData First/Last range"
-                          pending (list cp name category)))
-                 (loop (cdr lines) #f cp
-                       (cons (list start cp category) out)))]
-              [last?
-               (error 'gen-unicode-tables
-                      "UnicodeData Last row has no First row" name)]
-              [first?
-               (unless (> cp previous)
-                 (error 'gen-unicode-tables
-                        "UnicodeData rows are not strictly ordered" cp previous))
-               (loop (cdr lines)
-                     (list cp (range-name-base name ", First>") category)
-                     previous out)]
-              [else
-               (unless (> cp previous)
-                 (error 'gen-unicode-tables
-                        "UnicodeData rows are not strictly ordered" cp previous))
-               (loop (cdr lines) #f cp
-                     (cons (list cp cp category) out))]))))))
+    (if
+      (null? lines)
+      (if pending
+          (error 'gen-unicode-tables "unmatched UnicodeData First row" pending)
+          (reverse out))
+      (let ([fields (split (car lines) #\;)])
+        (when (< (length fields) 15)
+          (error 'gen-unicode-tables "short UnicodeData row" (car lines)))
+        (let* ([cp (hex (list-ref fields 0))]
+               [name (list-ref fields 1)]
+               [category (string->symbol (list-ref fields 2))]
+               [first? (string-suffix? ", First>" name)]
+               [last? (string-suffix? ", Last>" name)])
+          (cond
+            [pending (unless last?
+                       (error 'gen-unicode-tables
+                              "UnicodeData First row is not followed by Last row"
+                              pending
+                              name))
+                     (let ([start (car pending)]
+                           [base (cadr pending)]
+                           [start-category (caddr pending)])
+                       (unless (and (< start cp)
+                                    (> start previous)
+                                    (string=? base (range-name-base name ", Last>"))
+                                    (eq? start-category category))
+                         (error 'gen-unicode-tables
+                                "mismatched UnicodeData First/Last range"
+                                pending
+                                (list cp name category)))
+                       (loop (cdr lines) #f cp (cons (list start cp category) out)))]
+            [last?
+              (error 'gen-unicode-tables "UnicodeData Last row has no First row" name)]
+            [first? (unless (> cp previous)
+                      (error 'gen-unicode-tables
+                             "UnicodeData rows are not strictly ordered"
+                             cp
+                             previous))
+                    (loop (cdr lines)
+                          (list cp (range-name-base name ", First>") category)
+                          previous
+                          out)]
+            [else (unless (> cp previous)
+                    (error 'gen-unicode-tables
+                           "UnicodeData rows are not strictly ordered"
+                           cp
+                           previous))
+                  (loop (cdr lines) #f cp (cons (list cp cp category) out))]))))))
 
 (define (merge-category-ranges ranges)
   (let loop ([in ranges] [out '()])
@@ -158,8 +162,7 @@
                    (= (car current) (+ (cadar out) 1))
                    (eq? (caddr current) (caddar out)))
               (loop (cdr in)
-                    (cons (list (caar out) (cadr current) (caddr current))
-                          (cdr out)))
+                    (cons (list (caar out) (cadr current) (caddr current)) (cdr out)))
               (loop (cdr in) (cons current out)))))))
 
 (define simple-up (make-eqv-hashtable))
@@ -179,57 +182,59 @@
     (hashtable-set! table cp mapping)))
 
 ;; UnicodeData supplies general category, decimal value, and default simple casing.
-(for-each
-  (lambda (line)
-    (let ([f (split line #\;)])
-      (when (>= (length f) 15)
-        (let ([cp (hex (list-ref f 0))])
-          (when (string=? (list-ref f 2) "Nd")
-            (set! decimal-points (cons (cons cp cp) decimal-points))
-            (when (string=? (list-ref f 6) "0")
-              (set! digit-zeroes (cons cp digit-zeroes))))
-          (unless (string=? (list-ref f 12) "")
-            (let ([m (list (hex (list-ref f 12)))])
-              (put-map! simple-up cp m) (put-map! full-up cp m)))
-          (unless (string=? (list-ref f 13) "")
-            (let ([m (list (hex (list-ref f 13)))])
-              (put-map! simple-down cp m) (put-map! full-down cp m)))))))
-  unicode-data-lines)
+(for-each (lambda (line)
+            (let ([f (split line #\;)])
+              (when (>= (length f) 15)
+                (let ([cp (hex (list-ref f 0))])
+                  (when (string=? (list-ref f 2) "Nd")
+                    (set! decimal-points (cons (cons cp cp) decimal-points))
+                    (when (string=? (list-ref f 6) "0")
+                      (set! digit-zeroes (cons cp digit-zeroes))))
+                  (unless (string=? (list-ref f 12) "")
+                    (let ([m (list (hex (list-ref f 12)))])
+                      (put-map! simple-up cp m)
+                      (put-map! full-up cp m)))
+                  (unless (string=? (list-ref f 13) "")
+                    (let ([m (list (hex (list-ref f 13)))])
+                      (put-map! simple-down cp m)
+                      (put-map! full-down cp m)))))))
+          unicode-data-lines)
 
 ;; Unconditional SpecialCasing entries replace the default full mappings.
-(for-each
-  (lambda (raw)
-    (let* ([line (trim (before-comment raw))]
-           [f (if (string=? line "") '() (split line #\;))])
-      (when (and (>= (length f) 5) (string=? (trim (list-ref f 4)) ""))
-        (let ([cp (hex (list-ref f 0))])
-          (put-map! full-down cp (hex-list (list-ref f 1)))
-          (put-map! full-up cp (hex-list (list-ref f 3)))))))
-  (file-lines (string-append root "SpecialCasing.txt")))
+(for-each (lambda (raw)
+            (let* ([line (trim (before-comment raw))]
+                   [f (if (string=? line "") '() (split line #\;))])
+              (when (and (>= (length f) 5) (string=? (trim (list-ref f 4)) ""))
+                (let ([cp (hex (list-ref f 0))])
+                  (put-map! full-down cp (hex-list (list-ref f 1)))
+                  (put-map! full-up cp (hex-list (list-ref f 3)))))))
+          (file-lines (string-append root "SpecialCasing.txt")))
 
 ;; C/S are simple folds; C/F are full folds.  Turkic mappings are locale-specific.
-(for-each
-  (lambda (raw)
-    (let* ([line (trim (before-comment raw))]
-           [f (if (string=? line "") '() (split line #\;))])
-      (when (>= (length f) 3)
-        (let ([cp (hex (list-ref f 0))]
-              [status (trim (list-ref f 1))]
-              [mapping (hex-list (list-ref f 2))])
-          (when (or (string=? status "C") (string=? status "S"))
-            (put-map! simple-fold cp mapping))
-          (when (or (string=? status "C") (string=? status "F"))
-            (put-map! full-fold cp mapping))))))
-  (file-lines (string-append root "CaseFolding.txt")))
+(for-each (lambda (raw)
+            (let* ([line (trim (before-comment raw))]
+                   [f (if (string=? line "") '() (split line #\;))])
+              (when (>= (length f) 3)
+                (let ([cp (hex (list-ref f 0))]
+                      [status (trim (list-ref f 1))]
+                      [mapping (hex-list (list-ref f 2))])
+                  (when (or (string=? status "C") (string=? status "S"))
+                    (put-map! simple-fold cp mapping))
+                  (when (or (string=? status "C") (string=? status "F"))
+                    (put-map! full-fold cp mapping))))))
+          (file-lines (string-append root "CaseFolding.txt")))
 
-(define alphabetic (merge-ranges
-  (property-ranges (string-append root "DerivedCoreProperties.txt") "Alphabetic")))
-(define uppercase (merge-ranges
-  (property-ranges (string-append root "DerivedCoreProperties.txt") "Uppercase")))
-(define lowercase (merge-ranges
-  (property-ranges (string-append root "DerivedCoreProperties.txt") "Lowercase")))
-(define whitespace (merge-ranges
-  (property-ranges (string-append root "PropList.txt") "White_Space")))
+(define alphabetic
+  (merge-ranges (property-ranges (string-append root "DerivedCoreProperties.txt")
+                                 "Alphabetic")))
+(define uppercase
+  (merge-ranges (property-ranges (string-append root "DerivedCoreProperties.txt")
+                                 "Uppercase")))
+(define lowercase
+  (merge-ranges (property-ranges (string-append root "DerivedCoreProperties.txt")
+                                 "Lowercase")))
+(define whitespace
+  (merge-ranges (property-ranges (string-append root "PropList.txt") "White_Space")))
 (define decimal (merge-ranges (sort (lambda (a b) (< (car a) (car b))) decimal-points)))
 (set! digit-zeroes (sort < digit-zeroes))
 
@@ -261,8 +266,7 @@
   (let loop ([xs ranges] [column 0])
     (unless (null? xs)
       (fprintf o "~a ~a ~s" (caar xs) (cadar xs) (caddar xs))
-      (unless (null? (cdr xs))
-        (if (= column 5) (fprintf o "~n  ") (fprintf o " ")))
+      (unless (null? (cdr xs)) (if (= column 5) (fprintf o "~n  ") (fprintf o " ")))
       (loop (cdr xs) (if (= column 5) 0 (+ column 1)))))
   (fprintf o "))~n"))
 
@@ -302,13 +306,23 @@
   (let ([p (open-file-input-port output)])
     (let ([n (file-length p)]) (close-port p) n)))
 (unless quiet?
-  (fprintf (current-error-port)
+  (fprintf
+    (current-error-port)
     "generate Unicode ~a ~a -> ~a  [~a category ranges, ~a property ranges, ~a mappings, ~a bytes, ~,2fs]~n"
-    version root output
+    version
+    root
+    output
     (length general-category)
-    (+ (length alphabetic) (length uppercase) (length lowercase)
-       (length whitespace) (length decimal))
-    (+ (hashtable-size simple-up) (hashtable-size simple-down)
-       (hashtable-size simple-fold) (hashtable-size full-up)
-       (hashtable-size full-down) (hashtable-size full-fold))
-    bytes elapsed))
+    (+ (length alphabetic)
+       (length uppercase)
+       (length lowercase)
+       (length whitespace)
+       (length decimal))
+    (+ (hashtable-size simple-up)
+       (hashtable-size simple-down)
+       (hashtable-size simple-fold)
+       (hashtable-size full-up)
+       (hashtable-size full-down)
+       (hashtable-size full-fold))
+    bytes
+    elapsed))

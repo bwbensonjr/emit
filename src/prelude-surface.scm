@@ -129,19 +129,15 @@
     ;; range plumbing and kernels for the R7RS surface completed by change
     ;; r7rs-conformance-suite.  Unsigiled deliberately: a %-name is a RESERVED raw
     ;; primitive (src/parse.ss *prims*), so a helper must not carry that prefix.
-    rng-start rng-end rng-check
-    eqv-chain? str-cmp str-chain?
-    vec-total vec-min-len vec-nth
-    str-map1 str-mapn str-min-len str-nth
-    bv-total
-    member-by assoc-by
+    rng-start rng-end rng-check eqv-chain? str-cmp str-chain? vec-total vec-min-len
+    vec-nth str-map1 str-mapn str-min-len str-nth bv-total member-by assoc-by
     rat-max-denom rat-exact rat-inexact rat-ceil rat-floor rat-num-in rat-ceil-flo
     ;; number->string / string->number internals (ns-digits* likewise unsigiled).
     ;; The last three are now the READER's too and are re-homed in the substrate with
     ;; it (change: reader-lexical-conformance) -- they stay here because this list says
     ;; "(scheme base) does not export these", which is still exactly right.
-    ns-digits ns-digits-radix %ns-digit-char %radix-ok?
-    %digit-in-radix %radix-digits %string->int
+    ns-digits ns-digits-radix %ns-digit-char %radix-ok? %digit-in-radix %radix-digits
+    %string->int
     ;; dynamic-extent state and unwinding
     *winds* *handlers* %unwind-to
     ;; the error-object KIND (change: catchable-errors-with-kinds).  %raise-kinded is the
@@ -153,8 +149,8 @@
     %raise-kinded %read-error %file-error
     ;; hash-table representation
     %ht-initial-buckets %ht-load-factor %ht-count %ht-buckets %ht-identity?
-    %ht-set-count! %ht-set-buckets! %ht-hash %ht-key=? %ht-index %ht-assoc
-    %ht-remove %ht-grow! %ht-fold-buckets
+    %ht-set-count! %ht-set-buckets! %ht-hash %ht-key=? %ht-index %ht-assoc %ht-remove
+    %ht-grow! %ht-fold-buckets
     ;; the in-language reader (issue #25 will change these; they are not API).
     ;; ALL of them now, including rd-skip-ws / rd-token-end, which used to be the two
     ;; `unstable` exceptions and are ordinary internals again -- their one outside
@@ -163,24 +159,22 @@
     ;; below: it says "(scheme base) does not export these", which is still exactly
     ;; right, and is what keeps them out of test/scheme-base-surface-check.sh's expected
     ;; surface.  Where they are DEFINED is the assignment's business, not this list's.
-    rd-ws? rd-digit? rd-delim? rd-state rd-state-from-cell rd-state-child
-    rd-fold? rd-set-fold! rd-match-at? rd-directive-end
-    rd-skip-line rd-skip-ws rd-token-end
-    rd-all-digits? rd-numeric? rd-digits
-    rd-digits-neg rd-parse-int rd-dotchar? rd-exp-char? rd-sign-char? rd-scan-digits
-    rd-flonum? rd-nonfinite rd-atom rd-hex-digit rd-hex rd-str-esc rd-string
-    rd-label-find rd-label-add! rd-placeholder rd-placeholder? rd-placeholder-entry rd-seen?
-    rd-label-scan rd-resolve rd-finish rd-label rd-hash
-    rd-char-name rd-char rd-quote rd-quasi rd-unquote rd-dot? rd-append-reverse
-    rd-list rd-datum
+    rd-ws? rd-digit? rd-delim? rd-state rd-state-from-cell rd-state-child rd-fold?
+    rd-set-fold! rd-match-at? rd-directive-end rd-skip-line rd-skip-ws rd-token-end
+    rd-all-digits? rd-numeric? rd-digits rd-digits-neg rd-parse-int rd-dotchar?
+    rd-exp-char? rd-sign-char? rd-scan-digits rd-flonum? rd-nonfinite rd-atom
+    rd-hex-digit rd-hex rd-str-esc rd-string rd-label-find rd-label-add! rd-placeholder
+    rd-placeholder? rd-placeholder-entry rd-seen? rd-label-scan rd-resolve rd-finish
+    rd-label rd-hash rd-char-name rd-char rd-quote rd-quasi rd-unquote rd-dot?
+    rd-append-reverse rd-list rd-datum
     ;; ... and the lexical conformance additions (change: reader-lexical-conformance):
     ;; the sentinel convention, nested block comments, datum comments, the prefixed
     ;; number grammar, and bar-quoted identifiers.  `rd-report` is the one that RAISES,
     ;; so it is homed differently -- see *reader-report-shared-with-read* below.
     rd-fail-code rd-fail? rd-fail-pos rd-fail rd-block-open? rd-skip-block
-    rd-radix-letter rd-exactness-letter rd-scan-prefixes rd-radix-scan
-    rd-rational-body? rd-exactness-apply rd-body-number rd-number rd-number-reason?
-    rd-token-at rd-bar rd-datum-comment? rd-report
+    rd-radix-letter rd-exactness-letter rd-scan-prefixes rd-radix-scan rd-rational-body?
+    rd-exactness-apply rd-body-number rd-number rd-number-reason? rd-token-at rd-bar
+    rd-datum-comment? rd-report
     ;; ... and the read-time case folding (change: reader-token-path).  rd-all is the
     ;; worker both whole-source entry points wrap; the CI one is homed in the substrate
     ;; (see *substrate-rehomed*), the plain one stays a published (scheme base) name.
@@ -236,11 +230,11 @@
 ;;; handler chain (design D10).  So these three get it the honest way, by importing the
 ;;; library that owns it.
 (define *prelude-libraries*
-  '(((emit internal) #t ()                              "lib/emit/internal.sld")
-    ((scheme base)   #t ((emit internal))               "lib/scheme/base.sld")
-    ((scheme cxr)    #f ((scheme base))                 "lib/scheme/cxr.sld")
-    ((scheme read)   #f ((scheme base) (emit internal)) "lib/scheme/read.sld")
-    ((scheme file)   #f ((scheme base) (emit internal)) "lib/scheme/file.sld")))
+  '(((emit internal) #t () "lib/emit/internal.sld")
+    ((scheme base) #t ((emit internal)) "lib/scheme/base.sld")
+    ((scheme cxr) #f ((scheme base)) "lib/scheme/cxr.sld")
+    ((scheme read) #f ((scheme base) (emit internal)) "lib/scheme/read.sld")
+    ((scheme file) #f ((scheme base) (emit internal)) "lib/scheme/file.sld")))
 
 ;;; Assignment EXCEPTIONS to the default of (scheme base); see the partition notes in
 ;;; the header.  Each entry is (NAME HOME ...), one HOME per library whose BODY defines
@@ -271,8 +265,7 @@
 ;;; Give every NAME the same HOMES.  The three groups below differ only in their homes,
 ;;; and the reason for each group is the interesting part, so they are written as three
 ;;; declarations rather than as fifty-four hand-repeated entries.
-(define (prelude-assign* names homes)
-  (map (lambda (n) (cons n homes)) names))
+(define (prelude-assign* names homes) (map (lambda (n) (cons n homes)) names))
 
 ;;; The SUBSTRATE's own contents, in three groups.
 ;;;
@@ -299,22 +292,21 @@
 ;;;    reason that nothing down here needs them.
 (define *substrate-rehomed*
   '(;; the in-language reader, entry point last
-    rd-ws? rd-digit? rd-delim? rd-state rd-state-from-cell rd-state-child
-    rd-fold? rd-set-fold! rd-match-at? rd-directive-end
-    rd-skip-line rd-skip-ws rd-token-end
-    rd-all-digits? rd-numeric? rd-digits rd-digits-neg rd-parse-int
-    rd-dotchar? rd-exp-char? rd-sign-char? rd-scan-digits rd-flonum? rd-nonfinite
-    rd-atom rd-hex-digit rd-hex rd-str-esc rd-string
-    rd-label-find rd-label-add! rd-placeholder rd-placeholder? rd-placeholder-entry rd-seen?
-    rd-label-scan rd-resolve rd-finish rd-label rd-hash rd-char-name rd-char
-    rd-quote rd-quasi rd-unquote rd-dot? rd-append-reverse rd-list rd-datum
+    rd-ws? rd-digit? rd-delim? rd-state rd-state-from-cell rd-state-child rd-fold?
+    rd-set-fold! rd-match-at? rd-directive-end rd-skip-line rd-skip-ws rd-token-end
+    rd-all-digits? rd-numeric? rd-digits rd-digits-neg rd-parse-int rd-dotchar?
+    rd-exp-char? rd-sign-char? rd-scan-digits rd-flonum? rd-nonfinite rd-atom
+    rd-hex-digit rd-hex rd-str-esc rd-string rd-label-find rd-label-add! rd-placeholder
+    rd-placeholder? rd-placeholder-entry rd-seen? rd-label-scan rd-resolve rd-finish
+    rd-label rd-hash rd-char-name rd-char rd-quote rd-quasi rd-unquote rd-dot?
+    rd-append-reverse rd-list rd-datum
     ;; the lexical conformance additions (change: reader-lexical-conformance).  NOT
     ;; rd-report: it is the reader's only name that raises, so it cannot come down here
     ;; (design D10) -- it is homed like %check-input-port, below.
     rd-fail-code rd-fail? rd-fail-pos rd-fail rd-block-open? rd-skip-block
-    rd-radix-letter rd-exactness-letter rd-scan-prefixes rd-radix-scan
-    rd-rational-body? rd-exactness-apply rd-body-number rd-number rd-number-reason?
-    rd-token-at rd-bar rd-datum-comment?
+    rd-radix-letter rd-exactness-letter rd-scan-prefixes rd-radix-scan rd-rational-body?
+    rd-exactness-apply rd-body-number rd-number rd-number-reason? rd-token-at rd-bar
+    rd-datum-comment?
     ;; the R7RS lexical additions (change: r7rs-lexical-conformance).  All five answer a
     ;; value or #f and none of them raises, so the substrate is where they belong: the
     ;; unknown-character-name REPORT is rd-char's rd-fail sentinel, decoded up in
@@ -341,14 +333,13 @@
 ;;;    passes call caddr/cadddr/cdddr at 48 sites across nine CORE_FLAT files and which
 ;;;    would otherwise need 48 edits under the self-hosting fixed point (design D6).  Nine
 ;;;    one-line wrappers over car/cdr, in a library most programs never link.
-(define *substrate-cxr*
-  '(caaar caadr cadar caddr cdaar cdadr cddar cdddr cadddr))
+(define *substrate-cxr* '(caaar caadr cadar caddr cdaar cdadr cddar cdddr cadddr))
 
 ;;; The other fifteen of R7RS's twenty-four: the depth-4 forms.  (scheme cxr) ONLY -- the
 ;;; compiler uses none of them, so they do not go to the substrate (design D9).
 (define *cxr-depth4*
-  '(caaaar caaadr caadar caaddr cadaar cadadr caddar
-    cdaaar cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr))
+  '(caaaar caaadr caadar caaddr cadaar cadadr caddar cdaaar cdaadr cdadar cdaddr cddaar
+    cddadr cdddar cddddr))
 
 ;;; 3. Defined in the substrate but NOT exported by it, and exported by (scheme base) as
 ;;;    always -- the base-exported names the substrate's own body reaches.  The substrate
@@ -375,8 +366,7 @@
 (define *scheme-read-procs* '(read))
 (define *scheme-file-procs*
   '(open-input-file open-output-file with-input-from-file with-output-to-file
-    call-with-input-file call-with-output-file
-    file-exists? delete-file))
+    call-with-input-file call-with-output-file file-exists? delete-file))
 
 ;;; `read` calls %check-input-port, the wrong-type/closed-port guard, which is PRIVATE.
 ;;; It does not live in the substrate and must not (design D10): it is the only reader/port
@@ -465,15 +455,14 @@
 
 (define *prelude-assignments*
   (append
-    (prelude-assign* *substrate-macros*
-                     '((emit internal) ((scheme base) reexport)))
-    (prelude-assign* *base-macros*        '((scheme base)))
-    (prelude-assign* *substrate-rehomed*  '((emit internal)))
-    (prelude-assign* *substrate-cxr*      '((emit internal) (scheme cxr)))
-    (prelude-assign* *cxr-depth4*         '((scheme cxr)))
+    (prelude-assign* *substrate-macros* '((emit internal) ((scheme base) reexport)))
+    (prelude-assign* *base-macros* '((scheme base)))
+    (prelude-assign* *substrate-rehomed* '((emit internal)))
+    (prelude-assign* *substrate-cxr* '((emit internal) (scheme cxr)))
+    (prelude-assign* *cxr-depth4* '((scheme cxr)))
     (prelude-assign* *substrate-borrowed* '(((emit internal) private) (scheme base)))
-    (prelude-assign* *scheme-read-procs*  '((scheme read)))
-    (prelude-assign* *scheme-file-procs*  '((scheme file)))
+    (prelude-assign* *scheme-read-procs* '((scheme read)))
+    (prelude-assign* *scheme-file-procs* '((scheme file)))
     (prelude-assign* *port-guards-shared-with-read*
                      '(((scheme base) private) ((scheme read) private)))
     (prelude-assign* *reader-report-shared-with-read*
@@ -483,7 +472,7 @@
                        ((scheme file) private)))
     (prelude-assign* *read-error-shared-with-read*
                      '(((scheme base) private) ((scheme read) private)))
-    (prelude-assign* *file-error-raiser*  '(((scheme file) private)))))
+    (prelude-assign* *file-error-raiser* '(((scheme file) private)))))
 
 ;;; Prelude definitions that (scheme base) does NOT export because ANOTHER member of the
 ;;; partition does -- as opposed to *scheme-base-private*, which is "exported by nothing".
@@ -510,8 +499,8 @@
     call-with-input-file call-with-output-file
     ;; NEW in (scheme cxr) (design D9): the depth-4 forms, added so the library ships
     ;; complete.  Never exported by (scheme base), so not a break.
-    caaaar caaadr caadar caaddr cadaar cadadr caddar
-    cdaaar cdaadr cdadar cdaddr cddaar cddadr cdddar cddddr
+    caaaar caaadr caadar caaddr cadaar cadadr caddar cdaaar cdaadr cdadar cdaddr cddaar
+    cddadr cdddar cddddr
     ;; NEW in (scheme file) (change: catchable-errors-with-kinds, design D8).  Also
     ;; additions, for the same reason: (scheme base) never had them to lose.
     file-exists? delete-file))
@@ -528,7 +517,7 @@
 ;;; importing (scheme base).  Before this change a home could only ever narrow visibility
 ;;; (`private`); `reexport` is the first that widens it past the defining library.
 (define (home-library h) (if (pair? (car h)) (car h) h))
-(define (home-marker  h) (if (pair? (car h)) (cadr h) #f))
+(define (home-marker h) (if (pair? (car h)) (cadr h) #f))
 (define (home-exports? h) (not (eq? (home-marker h) 'private)))
 (define (home-defines? h) (not (eq? (home-marker h) 'reexport)))
 
@@ -537,9 +526,10 @@
 ;;; still has to live in the body of the library whose exported procedures call it.
 (define (prelude-home-specs name)
   (let ((e (assq name *prelude-assignments*)))
-    (cond (e (cdr e))
-          ((memq name *scheme-base-private*) '(((scheme base) private)))
-          (else '((scheme base))))))
+    (cond
+      (e (cdr e))
+      ((memq name *scheme-base-private*) '(((scheme base) private)))
+      (else '((scheme base))))))
 
 ;;; The libraries whose body DEFINES name.  Home and visibility are separate axes, which
 ;;; is what lets a name move to another library (a new home) while staying hidden, or be
@@ -554,10 +544,10 @@
 ;;; src/core.ss and the Chez generator, so they cannot disagree about where a name lives.
 (define (prelude-exports? lib name)
   (let loop ((hs (prelude-home-specs name)))
-    (cond ((null? hs) #f)
-          ((equal? (home-library (car hs)) lib) (home-exports? (car hs)))
-          (else (loop (cdr hs))))))
+    (cond
+      ((null? hs) #f)
+      ((equal? (home-library (car hs)) lib) (home-exports? (car hs)))
+      (else (loop (cdr hs))))))
 
 ;;; Does LIB's body define NAME?
-(define (prelude-defines? lib name)
-  (if (member lib (prelude-homes-of name)) #t #f))
+(define (prelude-defines? lib name) (if (member lib (prelude-homes-of name)) #t #f))

@@ -40,22 +40,24 @@
 (define (token kind i)
   (cond
     [(= kind 0) (string-append "sym-" (number->string i))]
-    [(= kind 1) (if (even? i)
-                    (number->string i)
-                    (string-append "-" (number->string i)))]
-    [(= kind 2) (if (= 0 (modulo i 4))
-                    (string-append (number->string i) ".5e2")
-                    (string-append (number->string i) "." (number->string (modulo i 100))))]
+    [(= kind 1)
+      (if (even? i) (number->string i) (string-append "-" (number->string i)))]
+    [(= kind 2)
+      (if (= 0 (modulo i 4))
+          (string-append (number->string i) ".5e2")
+          (string-append (number->string i) "." (number->string (modulo i 100))))]
     [else (string-append "\"str-" (number->string i) "\"")]))
 
 ;;; Emit exactly PER-KIND of each kind, choosing the next kind at random among those that
 ;;; still have tokens left -- so the file is shuffled but the mix is exact, not approximate.
 (define (generate port)
-  (let ([left (vector per-kind per-kind per-kind per-kind)]
-        [used (vector 0 0 0 0)])
-    (define (remaining) (+ (vector-ref left 0) (vector-ref left 1)
-                           (vector-ref left 2) (vector-ref left 3)))
-    (define (pick)                       ; a kind that still has tokens left
+  (let ([left (vector per-kind per-kind per-kind per-kind)] [used (vector 0 0 0 0)])
+    (define (remaining)
+      (+ (vector-ref left 0)
+         (vector-ref left 1)
+         (vector-ref left 2)
+         (vector-ref left 3)))
+    (define (pick) ; a kind that still has tokens left
       (let loop ([k (modulo (next-random!) 4)] [tries 0])
         (if (and (< tries 4) (= 0 (vector-ref left k)))
             (loop (modulo (+ k 1) 4) (+ tries 1))
@@ -75,12 +77,12 @@
         (form-loop)))))
 
 (define (main)
-  (fprintf (console-error-port) "gen reader bench -> ~a  [~a tokens]\n"
-           out-path (* 4 per-kind))
+  (fprintf (console-error-port)
+           "gen reader bench -> ~a  [~a tokens]\n"
+           out-path
+           (* 4 per-kind))
   (when (file-exists? out-path) (delete-file out-path))
-  (let ([port (open-output-file out-path)])
-    (generate port)
-    (close-port port))
+  (let ([port (open-output-file out-path)]) (generate port) (close-port port))
   (let* ([p (open-input-file out-path)] [n (file-length p)])
     (close-port p)
     (fprintf (console-error-port) "  wrote ~a  [~a bytes]\n" out-path n)))

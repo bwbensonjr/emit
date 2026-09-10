@@ -22,24 +22,25 @@
 ;; quasiquote/unquote/unquote-splicing are intercepted by `exp` (rewritten to
 ;; core forms before parse); they appear here only so hygiene's `known` set
 ;; leaves them un-renamed.
-(define *core-keywords* '(quote if lambda let letrec letrec* begin set! define apply
-                          define-syntax syntax-rules
-                          quasiquote unquote unquote-splicing))
+(define *core-keywords*
+  '(quote if lambda let letrec letrec* begin set! define apply define-syntax
+    syntax-rules quasiquote unquote unquote-splicing))
 ;; comparison heads handled by the hand-written desugar but not in *prims*
 (define *extra-op-keywords* '(> <= >=))
 
 ;; ---- macro environment ---------------------------------------------------
 ;; env: alist keyword -> (literals . rules); rules: list of (pattern . template)
 
-(define (define-syntax-form? f)
-  (and (pair? f) (eq? (car f) 'define-syntax)))
+(define (define-syntax-form? f) (and (pair? f) (eq? (car f) 'define-syntax)))
 
-(define (parse-define-syntax f)          ; (define-syntax name (syntax-rules (lit ...) (pat tmpl) ...))
+(define (parse-define-syntax
+         f) ; (define-syntax name (syntax-rules (lit ...) (pat tmpl) ...))
   (let ([name (cadr f)] [sr (caddr f)])
     (unless (and (pair? sr) (eq? (car sr) 'syntax-rules))
       (error 'expand "define-syntax requires a syntax-rules transformer" f))
-    (cons name (cons (cadr sr)                          ; literals
-                     (map (lambda (r) (cons (car r) (cadr r))) (cddr sr))))))
+    (cons name
+          (cons (cadr sr) ; literals
+                (map (lambda (r) (cons (car r) (cadr r))) (cddr sr))))))
 
 ;; Scan the (prelude-first) top-level forms: lift define-syntax into a macro
 ;; environment, return (list macro-env remaining-runtime-forms).  define-syntax
@@ -49,7 +50,7 @@
     (cond
       [(null? fs) (list (reverse env) (reverse runtime))]
       [(define-syntax-form? (car fs))
-       (loop (cdr fs) (cons (parse-define-syntax (car fs)) env) runtime)]
+        (loop (cdr fs) (cons (parse-define-syntax (car fs)) env) runtime)]
       [else (loop (cdr fs) env (cons (car fs) runtime))])))
 
 ;; A TOP-LEVEL DEFINE DISPLACES A KEYWORD OF THE SAME NAME (change:
@@ -88,7 +89,7 @@
 (define (ell? v) (and (pair? v) (eq? (car v) ell-tag)))
 (define (ell-list v) (cdr v))
 
-(define (proper-length x)                ; number of leading pairs
+(define (proper-length x) ; number of leading pairs
   (let loop ([x x] [n 0]) (if (pair? x) (loop (cdr x) (+ n 1)) n)))
 (define (take-n xs n) (if (= n 0) '() (cons (car xs) (take-n (cdr xs) (- n 1)))))
 
@@ -103,10 +104,8 @@
 ;; variable-collector that disagree about what `...` means would be worse than either bug.
 ;; Inert for every rule whose literals list is empty or names neither identifier, which is
 ;; every macro in the compiler's own sources.
-(define (ellipsis-at? pat literals)      ; is (cadr pat) a repetition marker, not a literal?
-  (and (pair? (cdr pat))
-       (eq? (cadr pat) *ellipsis*)
-       (not (memq *ellipsis* literals))))
+(define (ellipsis-at? pat literals) ; is (cadr pat) a repetition marker, not a literal?
+  (and (pair? (cdr pat)) (eq? (cadr pat) *ellipsis*) (not (memq *ellipsis* literals))))
 
 ;; pattern variables of a pattern (excluding literals / _ / ...), as (var . depth)
 (define (pattern-vars pat literals)
@@ -115,10 +114,9 @@
       [(and (symbol? pat) (memq pat literals)) acc]
       [(or (eq? pat *wildcard*) (eq? pat *ellipsis*)) acc]
       [(symbol? pat) (cons (cons pat depth) acc)]
-      [(pair? pat)
-       (if (ellipsis-at? pat literals)
-           (walk (cddr pat) depth (walk (car pat) (+ depth 1) acc))
-           (walk (cdr pat) depth (walk (car pat) depth acc)))]
+      [(pair? pat) (if (ellipsis-at? pat literals)
+                       (walk (cddr pat) depth (walk (car pat) (+ depth 1) acc))
+                       (walk (cdr pat) depth (walk (car pat) depth acc)))]
       [else acc])))
 
 ;; A LITERAL DOES NOT MATCH AN IDENTIFIER BOUND AT THE USE SITE (R7RS 4.3.2, issue #92).
@@ -139,25 +137,24 @@
 (define (match-pat pat form literals bound)
   (cond
     [(and (symbol? pat) (memq pat literals))
-     (if (and (eq? pat form) (not (memq form bound))) '() no-match)]
+      (if (and (eq? pat form) (not (memq form bound))) '() no-match)]
     [(eq? pat *wildcard*) '()]
-    [(symbol? pat) (list (cons pat form))]        ; pattern variable
+    [(symbol? pat) (list (cons pat form))] ; pattern variable
     [(null? pat) (if (null? form) '() no-match)]
     [(pair? pat)
-     (if (ellipsis-at? pat literals)
-         (match-ellipsis (car pat) (cddr pat) form literals bound)
-         (if (pair? form)
-             (let ([m1 (match-pat (car pat) (car form) literals bound)])
-               (if (eq? m1 no-match)
-                   no-match
-                   (let ([m2 (match-pat (cdr pat) (cdr form) literals bound)])
-                     (if (eq? m2 no-match) no-match (append m1 m2)))))
-             no-match))]
-    [else (if (equal? pat form) '() no-match)]))   ; literal datum (number, etc.)
+      (if (ellipsis-at? pat literals)
+          (match-ellipsis (car pat) (cddr pat) form literals bound)
+          (if (pair? form)
+              (let ([m1 (match-pat (car pat) (car form) literals bound)])
+                (if (eq? m1 no-match)
+                    no-match
+                    (let ([m2 (match-pat (cdr pat) (cdr form) literals bound)])
+                      (if (eq? m2 no-match) no-match (append m1 m2)))))
+              no-match))]
+    [else (if (equal? pat form) '() no-match)])) ; literal datum (number, etc.)
 
 (define (match-ellipsis sub tailpat form literals bound)
-  (let ([tail-len (proper-length tailpat)]
-        [form-len (proper-length form)])
+  (let ([tail-len (proper-length tailpat)] [form-len (proper-length form)])
     (if (< form-len tail-len)
         no-match
         (let* ([rep-count (- form-len tail-len)]
@@ -168,8 +165,9 @@
               no-match
               (let* ([subvars (map car (pattern-vars sub literals))]
                      [ell (map (lambda (v)
-                                 (cons v (make-ell
-                                           (map (lambda (m) (cdr (assq v m))) submatches))))
+                                 (cons v
+                                       (make-ell (map (lambda (m) (cdr (assq v m)))
+                                                      submatches))))
                                subvars)]
                      [mt (match-pat tailpat rest literals bound)])
                 (if (eq? mt no-match) no-match (append ell mt))))))))
@@ -182,11 +180,9 @@
       (cond
         [(symbol? t) (if (memq t pvars) (list t) (quote ()))]
         [(pair? t)
-         (if (memq t seen)
-             (quote ())
-             (begin
-               (set! seen (cons t seen))
-               (union (walk (car t)) (walk (cdr t)))))]
+          (if (memq t seen)
+              (quote ())
+              (begin (set! seen (cons t seen)) (union (walk (car t)) (walk (cdr t)))))]
         [else (quote ())]))))
 
 ;; A quoted template can be reused as an object graph only when it contains no
@@ -198,13 +194,10 @@
       (cond
         [(not (pair? t)) #f]
         [(memq t seen) #f]
-        [else
-         (set! seen (cons t seen))
-         (or (and (eq? (car t) *ellipsis*)
-                  (pair? (cdr t))
-                  (null? (cddr t)))
-             (walk (car t))
-             (walk (cdr t)))]))))
+        [else (set! seen (cons t seen))
+              (or (and (eq? (car t) *ellipsis*) (pair? (cdr t)) (null? (cddr t)))
+                  (walk (car t))
+                  (walk (cdr t)))]))))
 
 ;; introduced identifiers to rename: template symbols that are not pattern vars,
 ;; not ellipsis/wildcard, not known bindings, and not inside quote.
@@ -220,20 +213,20 @@
   (let ([seen '()])
     (let walk ([t tmpl] [quoted? #f])
       (cond
-        [(symbol? t)
-         (when (and (not quoted?)
-                    (not (memq t pvars))
-                    (not (eq? t *ellipsis*)) (not (eq? t *wildcard*))
-                    (not (memq t known))
-                    (not (unit-qualified? t))
-                    (not (assq t seen)))
-           (set! seen (cons (cons t (fresh-name t)) seen)))]
+        [(symbol? t) (when (and (not quoted?)
+                                (not (memq t pvars))
+                                (not (eq? t *ellipsis*))
+                                (not (eq? t *wildcard*))
+                                (not (memq t known))
+                                (not (unit-qualified? t))
+                                (not (assq t seen)))
+                       (set! seen (cons (cons t (fresh-name t)) seen)))]
         [(pair? t)
-         (if (eq? (car t) 'quote)
-             ;; No introduced identifier exists inside quoted data.  Treating it
-             ;; atomically also lets a labelled cyclic constant remain a graph.
-             (if #f #f)
-             (begin (walk (car t) quoted?) (walk (cdr t) quoted?)))]
+          (if (eq? (car t) 'quote)
+              ;; No introduced identifier exists inside quoted data.  Treating it
+              ;; atomically also lets a labelled cyclic constant remain a graph.
+              (if #f #f)
+              (begin (walk (car t) quoted?) (walk (cdr t) quoted?)))]
         [else (if #f #f)]))
     seen))
 
@@ -272,11 +265,11 @@
       (eq? s *wildcard*)))
 
 (define (resolve-exported-macros unit exports macro-env defined-names import-env-alist)
-  (let ([entries '()]      ; resolved (keyword literals . rules), reverse order
-        [seen    '()]      ; OUTPUT keywords already queued (dup/cycle guard)
-        [queue   '()]      ; (external-keyword . internal-keyword) still to resolve
-        [own     '()]      ; this unit's own internal names the templates reach
-        [foreign '()])     ; other units' mangled symbols the templates reach, as strings
+  (let ([entries '()]  ; resolved (keyword literals . rules), reverse order
+        [seen '()]     ; OUTPUT keywords already queued (dup/cycle guard)
+        [queue '()]    ; (external-keyword . internal-keyword) still to resolve
+        [own '()]      ; this unit's own internal names the templates reach
+        [foreign '()]) ; other units' mangled symbols the templates reach, as strings
     ;; Keyed on the OUTPUT keyword, not the internal name: one internal macro may have to
     ;; travel under two keywords -- its external name (because it is exported) and its
     ;; unit-qualified spelling (because another template mentions it).  Keying on the
@@ -287,8 +280,7 @@
       (unless (memq out seen)
         (set! seen (cons out seen))
         (set! queue (append queue (list (cons out internal))))))
-    (define (note-own! s)
-      (unless (memq s own) (set! own (cons s own))))
+    (define (note-own! s) (unless (memq s own) (set! own (cons s own))))
     (define (note-foreign! sym)
       (let ([str (symbol->string sym)])
         (unless (member str foreign) (set! foreign (cons str foreign)))))
@@ -298,14 +290,13 @@
         [(universally-known-id? s) s]
         [(memq s defined-names) (note-own! s) (string->symbol (mangle unit s))]
         [(assq s macro-env)
-         ;; a private macro travels hidden under a unit-qualified KEYWORD, transitively,
-         ;; so an exported macro may be written on top of one (design D3)
-         (let ([k (string->symbol (mangle unit s))]) (enqueue! k s) k)]
-        [else
-         (let ([imp (assq s import-env-alist)])
-           (if imp
-               (begin (note-foreign! (cdr imp)) (cdr imp))
-               s))]))                                  ; design D4: leave it exactly as written
+          ;; a private macro travels hidden under a unit-qualified KEYWORD, transitively,
+          ;; so an exported macro may be written on top of one (design D3)
+          (let ([k (string->symbol (mangle unit s))]) (enqueue! k s) k)]
+        [else (let ([imp (assq s import-env-alist)])
+                (if imp
+                    (begin (note-foreign! (cdr imp)) (cdr imp))
+                    s))])) ; design D4: leave it exactly as written
     ;; Rewrite one template, skipping pattern variables, LITERALS, and quoted data.  A
     ;; literal is matched by identity against the use site (`match-pat`), so rewriting one
     ;; would break the match in the importer -- which a library that happens to define a
@@ -314,15 +305,15 @@
       (let walk ([t t] [quoted? #f])
         (cond
           [(symbol? t)
-           (if (or quoted? (memq t pvars) (memq t literals)) t (resolve-id t))]
+            (if (or quoted? (memq t pvars) (memq t literals)) t (resolve-id t))]
           [(pair? t)
-           (if (eq? (car t) 'quote)
-               ;; Export-time name resolution never rewrites quoted data.  Reuse
-               ;; its graph so sharing/back-edges survive into the artifact.
-               t
-               (cons (walk (car t) quoted?) (walk (cdr t) quoted?)))]
+            (if (eq? (car t) 'quote)
+                ;; Export-time name resolution never rewrites quoted data.  Reuse
+                ;; its graph so sharing/back-edges survive into the artifact.
+                t
+                (cons (walk (car t) quoted?) (walk (cdr t) quoted?)))]
           [else t])))
-    (define (resolve-entry out entry)                  ; entry = (name literals . rules)
+    (define (resolve-entry out entry) ; entry = (name literals . rules)
       (let ([literals (cadr entry)])
         (cons out
               (cons literals
@@ -340,36 +331,38 @@
       (unless (null? queue)
         (let ([job (car queue)])
           (set! queue (cdr queue))
-          (set! entries (cons (resolve-entry (car job) (assq (cdr job) macro-env)) entries))
+          (set! entries
+            (cons (resolve-entry (car job) (assq (cdr job) macro-env)) entries))
           (loop))))
     (list (reverse entries) (reverse own) (reverse foreign))))
 
 (define (instantiate tmpl binds pvars renames quoted?)
   (cond
     [(symbol? tmpl)
-     (cond
-       [(memq tmpl pvars)
-        (let ([v (cdr (assq tmpl binds))])
-          (when (ell? v)
-            (error 'expand "pattern variable used at wrong ellipsis depth" tmpl))
-          v)]
-       [quoted? tmpl]
-       [(assq tmpl renames) => cdr]
-       [else tmpl])]
+      (cond
+        [(memq tmpl pvars)
+          (let ([v (cdr (assq tmpl binds))])
+            (when (ell? v)
+              (error 'expand "pattern variable used at wrong ellipsis depth" tmpl))
+            v)]
+        [quoted? tmpl]
+        [(assq tmpl renames) => cdr]
+        [else tmpl])]
     [(pair? tmpl)
-     (cond
-       [(eq? (car tmpl) 'quote)
-        ;; A quoted constant with no pattern variables is already the exact
-        ;; object graph the expansion needs.  Reusing its tail preserves datum-
-        ;; labelled cycles and sharing instead of recursively copying forever.
-        (if (and (null? (template-vars (cdr tmpl) pvars))
-                 (not (template-ellipsis-escape? (cdr tmpl))))
-            (cons 'quote (cdr tmpl))
-            (cons 'quote (instantiate-seq (cdr tmpl) binds pvars renames #t)))]
-       [(and (eq? (car tmpl) *ellipsis*)                ; (... <tmpl>) ellipsis escape
-             (pair? (cdr tmpl)) (null? (cddr tmpl)))
-        (instantiate-escaped (cadr tmpl) binds pvars renames quoted?)]
-       [else (instantiate-seq tmpl binds pvars renames quoted?)])]
+      (cond
+        [(eq? (car tmpl) 'quote)
+          ;; A quoted constant with no pattern variables is already the exact
+          ;; object graph the expansion needs.  Reusing its tail preserves datum-
+          ;; labelled cycles and sharing instead of recursively copying forever.
+          (if (and (null? (template-vars (cdr tmpl) pvars))
+                   (not (template-ellipsis-escape? (cdr tmpl))))
+              (cons 'quote (cdr tmpl))
+              (cons 'quote (instantiate-seq (cdr tmpl) binds pvars renames #t)))]
+        [(and (eq? (car tmpl) *ellipsis*) ; (... <tmpl>) ellipsis escape
+              (pair? (cdr tmpl))
+              (null? (cddr tmpl)))
+          (instantiate-escaped (cadr tmpl) binds pvars renames quoted?)]
+        [else (instantiate-seq tmpl binds pvars renames quoted?)])]
     [else tmpl]))
 
 ;; (... <tmpl>) escape: instantiate <tmpl> with every `...` treated as a literal
@@ -378,35 +371,34 @@
   (cond
     [(eq? tmpl *ellipsis*) *ellipsis*]
     [(symbol? tmpl)
-     (cond
-       [(memq tmpl pvars)
-        (let ([v (cdr (assq tmpl binds))])
-          (when (ell? v)
-            (error 'expand "pattern variable used at wrong ellipsis depth" tmpl))
-          v)]
-       [quoted? tmpl]
-       [(assq tmpl renames) => cdr]
-       [else tmpl])]
+      (cond
+        [(memq tmpl pvars)
+          (let ([v (cdr (assq tmpl binds))])
+            (when (ell? v)
+              (error 'expand "pattern variable used at wrong ellipsis depth" tmpl))
+            v)]
+        [quoted? tmpl]
+        [(assq tmpl renames) => cdr]
+        [else tmpl])]
     [(pair? tmpl)
-     (if (eq? (car tmpl) 'quote)
-         (if (and (null? (template-vars (cdr tmpl) pvars))
-                  (not (template-ellipsis-escape? (cdr tmpl))))
-             (cons 'quote (cdr tmpl))
-             (cons 'quote (instantiate-escaped (cdr tmpl) binds pvars renames #t)))
-         (cons (instantiate-escaped (car tmpl) binds pvars renames quoted?)
-               (instantiate-escaped (cdr tmpl) binds pvars renames quoted?)))]
+      (if (eq? (car tmpl) 'quote)
+          (if (and (null? (template-vars (cdr tmpl) pvars))
+                   (not (template-ellipsis-escape? (cdr tmpl))))
+              (cons 'quote (cdr tmpl))
+              (cons 'quote (instantiate-escaped (cdr tmpl) binds pvars renames #t)))
+          (cons (instantiate-escaped (car tmpl) binds pvars renames quoted?)
+                (instantiate-escaped (cdr tmpl) binds pvars renames quoted?)))]
     [else tmpl]))
 
 (define (instantiate-seq tmpls binds pvars renames quoted?)
   (cond
     [(null? tmpls) '()]
-    [(not (pair? tmpls)) (instantiate tmpls binds pvars renames quoted?)]   ; dotted tail
+    [(not (pair? tmpls)) (instantiate tmpls binds pvars renames quoted?)] ; dotted tail
     [(and (pair? (cdr tmpls)) (eq? (cadr tmpls) *ellipsis*))
-     (append (expand-ellipsis (car tmpls) binds pvars renames quoted?)
-             (instantiate-seq (cddr tmpls) binds pvars renames quoted?))]
-    [else
-     (cons (instantiate (car tmpls) binds pvars renames quoted?)
-           (instantiate-seq (cdr tmpls) binds pvars renames quoted?))]))
+      (append (expand-ellipsis (car tmpls) binds pvars renames quoted?)
+              (instantiate-seq (cddr tmpls) binds pvars renames quoted?))]
+    [else (cons (instantiate (car tmpls) binds pvars renames quoted?)
+                (instantiate-seq (cdr tmpls) binds pvars renames quoted?))]))
 
 (define (expand-ellipsis sub binds pvars renames quoted?)
   (let ([ctrl (filter (lambda (v) (let ([p (assq v binds)]) (and p (ell? (cdr p)))))
@@ -415,16 +407,18 @@
       (error 'expand "ellipsis template has no matching pattern variable" sub))
     (let* ([lists (map (lambda (v) (ell-list (cdr (assq v binds)))) ctrl)]
            [n (length (car lists))])
-      (for-each (lambda (l) (unless (= (length l) n)
-                              (error 'expand "mismatched ellipsis match lengths" sub)))
+      (for-each (lambda (l)
+                  (unless (= (length l) n)
+                    (error 'expand "mismatched ellipsis match lengths" sub)))
                 lists)
       (let loop ([i 0] [acc '()])
-        (if (= i n)
-            (reverse acc)
-            (let ([binds2 (append (map (lambda (v l) (cons v (list-ref l i))) ctrl lists)
-                                  binds)])
-              (loop (+ i 1)
-                    (cons (instantiate sub binds2 pvars renames quoted?) acc))))))))
+        (if
+          (= i n)
+          (reverse acc)
+          (let ([binds2 (append (map (lambda (v l) (cons v (list-ref l i))) ctrl lists)
+                                binds)])
+            (loop (+ i 1)
+                  (cons (instantiate sub binds2 pvars renames quoted?) acc))))))))
 
 ;; ---- the lexically bound identifiers at a point in the traversal ----------
 ;; (change: binding-aware-expander, issue #103.)  `exp` threads the set of identifiers
@@ -453,7 +447,7 @@
 (define (add-formals formals bound)
   (let loop ([f formals] [acc bound])
     (cond
-      [(symbol? f) (cons f acc)]                 ; rest parameter (or a bare-symbol formal)
+      [(symbol? f) (cons f acc)] ; rest parameter (or a bare-symbol formal)
       [(pair? f) (loop (cdr f) (if (symbol? (car f)) (cons (car f) acc) acc))]
       [else acc])))
 
@@ -470,9 +464,10 @@
           (loop (cdr fs)
                 (if (and (pair? f) (eq? (car f) 'define) (pair? (cdr f)))
                     (let ([sig (cadr f)])
-                      (cond [(symbol? sig) (cons sig acc)]
-                            [(and (pair? sig) (symbol? (car sig))) (cons (car sig) acc)]
-                            [else acc]))
+                      (cond
+                        [(symbol? sig) (cons sig acc)]
+                        [(and (pair? sig) (symbol? (car sig))) (cons (car sig) acc)]
+                        [else acc]))
                     acc))))))
 
 ;; ---- the fixpoint driver -------------------------------------------------
@@ -489,80 +484,82 @@
   ;; put a list scan on the hottest path in the pass (every pair head of every form).
   (define (macro-lookup h bound)
     (and (symbol? h)
-         (let ([entry (assq h macro-env)])
-           (and entry (not (memq h bound)) entry))))
+         (let ([entry (assq h macro-env)]) (and entry (not (memq h bound)) entry))))
 
-  (define (apply-macro entry form bound)   ; entry = (name literals . rules)
+  (define (apply-macro entry form bound) ; entry = (name literals . rules)
     (let ([literals (cadr entry)] [rules (cddr entry)])
       (let loop ([rules rules])
         (if (null? rules)
             (error 'expand "no matching syntax-rules pattern for macro use" form)
-            (let* ([pat (caar rules)] [tmpl (cdar rules)]
+            (let* ([pat (caar rules)]
+                   [tmpl (cdar rules)]
                    ;; ignore keyword slot; `bound` narrows the literals (issue #92)
                    [m (match-pat (cdr pat) (cdr form) literals bound)])
-              (if (eq? m no-match)
-                  (loop (cdr rules))
-                  (let* ([pvars (map car (pattern-vars (cdr pat) literals))]
-                         ;; `known`, NOT `known` + `bound`: this asks whether a TEMPLATE
-                         ;; identifier is introduced and so must be renamed, and that
-                         ;; answer must not depend on the use site.  A template temporary
-                         ;; sharing a name with a local at the use site would otherwise
-                         ;; stop being renamed and start capturing it -- the exact
-                         ;; failure hygiene exists to prevent (design D2).
-                         [renames (collect-renames tmpl pvars known)])
-                    (instantiate tmpl m pvars renames #f))))))))
+              (if
+                (eq? m no-match)
+                (loop (cdr rules))
+                (let* ([pvars (map car (pattern-vars (cdr pat) literals))]
+                       ;; `known`, NOT `known` + `bound`: this asks whether a TEMPLATE
+                       ;; identifier is introduced and so must be renamed, and that
+                       ;; answer must not depend on the use site.  A template temporary
+                       ;; sharing a name with a local at the use site would otherwise
+                       ;; stop being renamed and start capturing it -- the exact
+                       ;; failure hygiene exists to prevent (design D2).
+                       [renames (collect-renames tmpl pvars known)])
+                  (instantiate tmpl m pvars renames #f))))))))
 
   (define (exp1 e bound) (exp e 0 bound))
   (define (exp* es bound) (map (lambda (x) (exp1 x bound)) es))
 
   ;; a body: its internal defines bind for the whole body, then each form expands
   (define (exp-body forms bound)
-    (let ([b (add-body-defines forms bound)])
-      (exp* forms b)))
+    (let ([b (add-body-defines forms bound)]) (exp* forms b)))
 
   (define (exp e depth bound)
     (when (> depth *macro-depth-limit*)
       (error 'expand "macro expansion did not terminate (depth limit exceeded)" e))
     (if (not (pair? e))
-        e                                        ; atoms/symbols/literals unchanged
+        e ; atoms/symbols/literals unchanged
         (let ([h (car e)])
           (cond
-            [(eq? h 'quote) e]                    ; do not descend into quoted data
-            [(eq? h 'quasiquote)                  ; rewrite, then re-expand the unquoted holes
-             (exp1 (qq (cadr e) 1) bound)]
+            [(eq? h 'quote) e]   ; do not descend into quoted data
+            [(eq? h 'quasiquote) ; rewrite, then re-expand the unquoted holes
+              (exp1 (qq (cadr e) 1) bound)]
             [(memq h '(unquote unquote-splicing))
-             (error 'expand "unquote/unquote-splicing outside quasiquote" e)]
+              (error 'expand "unquote/unquote-splicing outside quasiquote" e)]
             [(macro-lookup h bound)
-             => (lambda (entry) (exp (apply-macro entry e bound) (+ depth 1) bound))]
-            [(eq? h 'lambda)
-             `(lambda ,(cadr e) ,@(exp-body (cddr e) (add-formals (cadr e) bound)))]
+              =>
+              (lambda (entry) (exp (apply-macro entry e bound) (+ depth 1) bound))]
+            [(eq? h 'lambda) `(lambda ,(cadr e)
+                                ,@(exp-body (cddr e) (add-formals (cadr e) bound)))]
             [(eq? h 'let)
-             (if (symbol? (cadr e))               ; named let (overloads core `let`)
-                 ;; the loop NAME is bound in the body: `rewrite-named-let` produces a
-                 ;; letrec, so the arm below adds it -- no special case needed here
-                 (exp1 (rewrite-named-let (cadr e) (caddr e) (cdddr e)) bound)
-                 ;; initializers see the OUTER scope; only the body sees the names
-                 `(let ,(map (lambda (b) (bind-exp b bound)) (cadr e))
-                    ,@(exp-body (cddr e) (add-formals (map bind-name (cadr e)) bound))))]
+              (if (symbol? (cadr e)) ; named let (overloads core `let`)
+                  ;; the loop NAME is bound in the body: `rewrite-named-let` produces a
+                  ;; letrec, so the arm below adds it -- no special case needed here
+                  (exp1 (rewrite-named-let (cadr e) (caddr e) (cdddr e)) bound)
+                  ;; initializers see the OUTER scope; only the body sees the names
+                  `(let ,(map (lambda (b) (bind-exp b bound)) (cadr e))
+                        ,@(exp-body (cddr e)
+                                    (add-formals (map bind-name (cadr e)) bound))))]
             ;; letrec and letrec* expand identically and are DISTINGUISHED here only
             ;; so the post-expand dump still shows the form the user wrote; parse
             ;; maps both to the one `letrec` IL node (see src/parse.ss).
             ;; The names are in scope for the INITIALIZERS as well as the body.
             [(memq h '(letrec letrec*))
-             (let ([inner (add-formals (map bind-name (cadr e)) bound)])
-               `(,h ,(map (lambda (b) (bind-exp b inner)) (cadr e))
-                    ,@(exp-body (cddr e) inner)))]
+              (let ([inner (add-formals (map bind-name (cadr e)) bound)])
+                `(,h ,(map (lambda (b) (bind-exp b inner)) (cadr e))
+                     ,@(exp-body (cddr e) inner)))]
             [(memq h '(+ - * /)) (expand-arith (lambda (x) (exp1 x bound)) h (cdr e))]
-            [(eq? h 'string-append)
-             (expand-string-append (lambda (x) (exp1 x bound)) (cdr e))]
+            [(eq? h 'string-append) (expand-string-append (lambda (x) (exp1 x bound))
+                                                          (cdr e))]
             ;; `string=?` is n-ary in R7RS 6.7.  It joins the chain here rather than
             ;; becoming a variadic prelude procedure (the route char=? took), because a
             ;; prelude define of an integrable name shadows the primitive for EVERY
             ;; arity -- the two-argument call would lose its bare primcall, and the
             ;; compiler's own reader leans on it.
             [(memq h '(= < > <= >= eq? eqv? string=?))
-             (expand-compare (lambda (x) (exp1 x bound)) h (cdr e))]
-            [else (exp* e bound)]))))             ; if/begin/set!/apply/primcall/application
+              (expand-compare (lambda (x) (exp1 x bound)) h (cdr e))]
+            [else (exp* e bound)])))) ; if/begin/set!/apply/primcall/application
 
   (define (bind-exp b bound) (list (car b) (exp1 (cadr b) bound)))
 
@@ -574,8 +571,7 @@
 ;; named let: (let name ([x e] ...) body ...) ->
 ;;   (letrec ([name (lambda (x ...) body ...)]) (name e ...))
 (define (rewrite-named-let name binds body)
-  `(letrec ([,name (lambda ,(map car binds) ,@body)])
-     (,name ,@(map cadr binds))))
+  `(letrec ([,name (lambda ,(map car binds) ,@body)]) (,name ,@(map cadr binds))))
 
 ;; quasiquote: rewrite a quasiquoted datum `d` at nesting `level` into core forms
 ;; (cons/append/list/quote).  Unquoted expressions are emitted as-is; the caller
@@ -588,22 +584,25 @@
     ;; (kw . (X)) form.  A bare `(unquote)`/`(quasiquote)` symbol appearing as list
     ;; *data* (e.g. `` `(quote unquote) ``) falls through to the general-pair arm
     ;; and is reproduced structurally instead of crashing in `cadr` (gap G6).
-    [(and (pair? d) (eq? (car d) 'unquote) (pair? (cdr d)))  ; (unquote x)
-     (if (= level 1)
-         (cadr d)                                          ; level 1: splice the expression
-         `(list (quote unquote) ,(qq (cadr d) (- level 1))))]  ; nested: keep structurally
-    [(and (pair? d) (eq? (car d) 'unquote-splicing) (pair? (cdr d)))  ; bare (u-s x)
-     (if (= level 1)
-         (error 'expand "unquote-splicing not in list context" d)
-         `(list (quote unquote-splicing) ,(qq (cadr d) (- level 1))))]
-    [(and (pair? d) (eq? (car d) 'quasiquote) (pair? (cdr d)))  ; nested qq: level+1
-     `(list (quote quasiquote) ,(qq (cadr d) (+ level 1)))]
-    [(and (pair? d) (pair? (car d))                       ; list with leading splice
-          (eq? (car (car d)) 'unquote-splicing) (pair? (cdr (car d))) (= level 1))
-     `(append ,(cadr (car d)) ,(qq (cdr d) level))]
-    [(pair? d)                                            ; general pair
-     `(cons ,(qq (car d) level) ,(qq (cdr d) level))]
-    [else `(quote ,d)]))                                  ; atom / () / boolean
+    [(and (pair? d) (eq? (car d) 'unquote) (pair? (cdr d))) ; (unquote x)
+      (if (= level 1)
+          (cadr d) ; level 1: splice the expression
+          `(list (quote unquote)
+                 ,(qq (cadr d) (- level 1))))] ; nested: keep structurally
+    [(and (pair? d) (eq? (car d) 'unquote-splicing) (pair? (cdr d))) ; bare (u-s x)
+      (if (= level 1)
+          (error 'expand "unquote-splicing not in list context" d)
+          `(list (quote unquote-splicing) ,(qq (cadr d) (- level 1))))]
+    [(and (pair? d) (eq? (car d) 'quasiquote) (pair? (cdr d))) ; nested qq: level+1
+      `(list (quote quasiquote) ,(qq (cadr d) (+ level 1)))]
+    [(and (pair? d)
+          (pair? (car d)) ; list with leading splice
+          (eq? (car (car d)) 'unquote-splicing)
+          (pair? (cdr (car d)))
+          (= level 1)) `(append ,(cadr (car d)) ,(qq (cdr d) level))]
+    [(pair? d) ; general pair
+      `(cons ,(qq (car d) level) ,(qq (cdr d) level))]
+    [else `(quote ,d)])) ; atom / () / boolean
 
 ;; ---- hand-written arithmetic / comparison desugaring ---------------------
 ;; N-ary arithmetic -> nested binary forms.  Operands are expanded first, then
@@ -613,20 +612,18 @@
 (define (expand-arith exp1 op args)
   (let ([xs (map exp1 args)])
     (case op
-      [(+) (cond [(null? xs) 0]
-                 [(null? (cdr xs)) (car xs)]
-                 [else (fold-arith op xs)])]
-      [(*) (cond [(null? xs) 1]
-                 [(null? (cdr xs)) (car xs)]
-                 [else (fold-arith op xs)])]
-      [(-) (cond [(null? xs) (error 'expand "(-) requires at least one argument")]
-                 [(null? (cdr xs)) `(- 0 ,(car xs))]
-                 [else (fold-arith op xs)])]
+      [(+) (cond [(null? xs) 0] [(null? (cdr xs)) (car xs)] [else (fold-arith op xs)])]
+      [(*) (cond [(null? xs) 1] [(null? (cdr xs)) (car xs)] [else (fold-arith op xs)])]
+      [(-) (cond
+             [(null? xs) (error 'expand "(-) requires at least one argument")]
+             [(null? (cdr xs)) `(- 0 ,(car xs))]
+             [else (fold-arith op xs)])]
       ;; `/` mirrors `-`: `(/ a)` is the reciprocal `(/ 1 a)`, `(/ a b ...)` folds
       ;; left; `(/)` is an error.  (change: inexact-numbers)
-      [(/) (cond [(null? xs) (error 'expand "(/) requires at least one argument")]
-                 [(null? (cdr xs)) `(/ 1 ,(car xs))]
-                 [else (fold-arith op xs)])])))
+      [(/) (cond
+             [(null? xs) (error 'expand "(/) requires at least one argument")]
+             [(null? (cdr xs)) `(/ 1 ,(car xs))]
+             [else (fold-arith op xs)])])))
 
 (define (fold-arith op xs)
   (let loop ([acc (list op (car xs) (cadr xs))] [rest (cddr xs)])
@@ -640,9 +637,10 @@
 ;; the direct-call form the core uses pervasively in `emit.ss`.
 (define (expand-string-append exp1 args)
   (let ([xs (map exp1 args)])
-    (cond [(null? xs) ""]
-          [(null? (cdr xs)) (car xs)]
-          [else (fold-arith 'string-append xs)])))
+    (cond
+      [(null? xs) ""]
+      [(null? (cdr xs)) (car xs)]
+      [else (fold-arith 'string-append xs)])))
 
 ;; N-ary comparisons -> single-evaluation chained pairwise comparisons.  Each
 ;; operand is bound to a fresh temp (so <=/>= may reference it twice), then the
@@ -658,28 +656,27 @@
 (define (bind-temps temps exprs body)
   (if (null? temps)
       body
-      `(let ([,(car temps) ,(car exprs)])
-         ,(bind-temps (cdr temps) (cdr exprs) body))))
+      `(let ([,(car temps) ,(car exprs)]) ,(bind-temps (cdr temps) (cdr exprs) body))))
 
 (define (compare-chain op temps)
-  (and-core
-    (let loop ([ts temps])
-      (if (null? (cdr ts))
-          '()
-          (cons (cmp-pair op (car ts) (cadr ts)) (loop (cdr ts)))))))
+  (and-core (let loop ([ts temps])
+              (if (null? (cdr ts))
+                  '()
+                  (cons (cmp-pair op (car ts) (cadr ts)) (loop (cdr ts)))))))
 
 (define (and-core ps)
-  (cond [(null? ps) #t]
-        [(null? (cdr ps)) (car ps)]
-        [else `(if ,(car ps) ,(and-core (cdr ps)) #f)]))
+  (cond
+    [(null? ps) #t]
+    [(null? (cdr ps)) (car ps)]
+    [else `(if ,(car ps) ,(and-core (cdr ps)) #f)]))
 
 (define (cmp-pair op x y)
   (case op
-    [(=)    `(= ,x ,y)]
-    [(<)    `(< ,x ,y)]
-    [(>)    `(< ,y ,x)]
-    [(<=)   `(if (< ,x ,y) #t (= ,x ,y))]
-    [(>=)   `(if (< ,y ,x) #t (= ,x ,y))]
-    [(eq?)  `(eq? ,x ,y)]
+    [(=) `(= ,x ,y)]
+    [(<) `(< ,x ,y)]
+    [(>) `(< ,y ,x)]
+    [(<=) `(if (< ,x ,y) #t (= ,x ,y))]
+    [(>=) `(if (< ,y ,x) #t (= ,x ,y))]
+    [(eq?) `(eq? ,x ,y)]
     [(eqv?) `(eqv? ,x ,y)]
     [(string=?) `(string=? ,x ,y)]))

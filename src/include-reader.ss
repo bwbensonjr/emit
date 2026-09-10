@@ -42,9 +42,7 @@
 
 (define (ir-resolve base filename)
   (let ([d (ir-dir-of base)])
-    (if (or (string=? filename "")
-            (char=? (string-ref filename 0) #\/)
-            (string=? d ""))
+    (if (or (string=? filename "") (char=? (string-ref filename 0) #\/) (string=? d ""))
         filename
         (string-append d "/" filename))))
 
@@ -68,8 +66,7 @@
 (define (reset-includes-read!) (set! *includes-read* (quote ())))
 (define (includes-read) (reverse *includes-read*))
 (define (set-includes-read! paths) (set! *includes-read* (reverse paths)))
-(define (note-include-read! path)
-  (set! *includes-read* (cons path *includes-read*)))
+(define (note-include-read! path) (set! *includes-read* (cons path *includes-read*)))
 
 ;; --- the reader ------------------------------------------------------------
 ;; `%read-file` answers #f -- not "" -- for a file it cannot open (runtime.c makes that
@@ -92,11 +89,15 @@
           ;; Recorded only on a successful read: a file that could not be opened raises
           ;; below, and a failed registration has no artifacts to key.
           (note-include-read! path)
-          (cons path (if (eq? who 'include-ci)
-                         (read-all-from-string-ci text)
-                         (read-forms-from-string text))))
+          (cons path
+                (if (eq? who 'include-ci)
+                    (read-all-from-string-ci text)
+                    (read-forms-from-string text))))
         (error who
-               (string-append "cannot read " (render-datum filename)
-                              " (resolved to " path ")")))))
+               (string-append "cannot read "
+                              (render-datum filename)
+                              " (resolved to "
+                              path
+                              ")")))))
 
 (set-include-reader! emit-include-reader)

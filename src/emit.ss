@@ -24,10 +24,19 @@
 (define temp-n 0)
 (define lbl-n 0)
 (define current-bb "entry")
-(define (fresh-temp) (set! temp-n (+ temp-n 1)) (string-append "%t" (number->string temp-n)))
-(define (fresh-bb base) (set! lbl-n (+ lbl-n 1)) (string-append base (number->string lbl-n)))
+(define (fresh-temp)
+  (set! temp-n (+ temp-n 1))
+  (string-append "%t" (number->string temp-n)))
+(define (fresh-bb base)
+  (set! lbl-n (+ lbl-n 1))
+  (string-append base (number->string lbl-n)))
 (define (start-bb name) (emit! (string-append name ":")) (set! current-bb name))
-(define (reset-emit!) (set! temp-n 0) (set! lbl-n 0) (set! emit-lines '()) (set! current-bb "entry") (set! *fset* '()))
+(define (reset-emit!)
+  (set! temp-n 0)
+  (set! lbl-n 0)
+  (set! emit-lines '())
+  (set! current-bb "entry")
+  (set! *fset* '()))
 
 ;; --- private byte-array constants (module-level globals, reset per program) ---
 ;; Symbol names and string literals both become private constant globals holding
@@ -50,7 +59,7 @@
 ;; and quotient/remainder, so the emitter can compile itself.  Output is
 ;; byte-for-byte identical to the previous bytevector-based version.
 (define hex-digits "0123456789ABCDEF")
-(define (hex2 b)                  ; byte 0..255 -> two uppercase hex digits
+(define (hex2 b) ; byte 0..255 -> two uppercase hex digits
   (string-append (string (string-ref hex-digits (quotient b 16)))
                  (string (string-ref hex-digits (remainder b 16)))))
 
@@ -60,23 +69,19 @@
 (define (utf8-bytes cp)
   (cond
     [(< cp 128) (list cp)]
-    [(< cp 2048)
-     (list (+ 192 (quotient cp 64))
-           (+ 128 (remainder cp 64)))]
-    [(< cp 65536)
-     (list (+ 224 (quotient cp 4096))
-           (+ 128 (remainder (quotient cp 64) 64))
-           (+ 128 (remainder cp 64)))]
-    [else
-     (list (+ 240 (quotient cp 262144))
-           (+ 128 (remainder (quotient cp 4096) 64))
-           (+ 128 (remainder (quotient cp 64) 64))
-           (+ 128 (remainder cp 64)))]))
+    [(< cp 2048) (list (+ 192 (quotient cp 64)) (+ 128 (remainder cp 64)))]
+    [(< cp 65536) (list (+ 224 (quotient cp 4096))
+                        (+ 128 (remainder (quotient cp 64) 64))
+                        (+ 128 (remainder cp 64)))]
+    [else (list (+ 240 (quotient cp 262144))
+                (+ 128 (remainder (quotient cp 4096) 64))
+                (+ 128 (remainder (quotient cp 64) 64))
+                (+ 128 (remainder cp 64)))]))
 
-(define (byte-escape b)           ; one UTF-8 byte -> its c"..." fragment
+(define (byte-escape b) ; one UTF-8 byte -> its c"..." fragment
   (if (and (>= b 32) (<= b 126) (not (= b 34)) (not (= b 92)))
-      (string (integer->char b))          ; printable ASCII except " (34) and \ (92)
-      (string-append "\\" (hex2 b))))      ; everything else -> \XX
+      (string (integer->char b)) ; printable ASCII except " (34) and \ (92)
+      (string-append "\\" (hex2 b)))) ; everything else -> \XX
 
 ;; escape a name for an LLVM c"..." literal; return (list escaped byte-count),
 ;; the count including the trailing NUL.  Walk the string by Unicode scalar,
@@ -95,22 +100,26 @@
 ;; emit a private constant global (prefix + counter) holding s's UTF-8 bytes and
 ;; a trailing NUL; return (list @global byte-length-without-NUL).
 (define (emit-cstring-global prefix s)
-  (let* ([esc+len (llvm-cstring s)]            ; len includes the trailing NUL
-         [esc (car esc+len)] [len (cadr esc+len)]
+  (let* ([esc+len (llvm-cstring s)] ; len includes the trailing NUL
+         [esc (car esc+len)]
+         [len (cadr esc+len)]
          [g (string-append prefix (number->string sym-n))]
-         [def (string-append g " = private unnamed_addr constant ["
-                             (number->string len) " x i8] c\"" esc "\\00\"\n")])
+         [def (string-append g
+                             " = private unnamed_addr constant ["
+                             (number->string len)
+                             " x i8] c\""
+                             esc
+                             "\\00\"\n")])
     (set! sym-n (+ sym-n 1))
     (set! sym-globals (cons def sym-globals))
     (list g (- len 1))))
 
-(define (symbol-global name)      ; dedup the name's global, return its @operand
+(define (symbol-global name) ; dedup the name's global, return its @operand
   (cond
     [(assoc name sym-table) => cdr]
-    [else
-     (let* ([g+len (emit-cstring-global "@.str.sym." name)] [g (car g+len)])
-       (set! sym-table (cons (cons name g) sym-table))
-       g)]))
+    [else (let* ([g+len (emit-cstring-global "@.str.sym." name)] [g (car g+len)])
+            (set! sym-table (cons (cons name g) sym-table))
+            g)]))
 
 ;; --- constants and primitives (must match runtime.c tags) ---
 ;; THE unspecified value as an inline operand (change: unspecified-value).  A pure
@@ -133,12 +142,13 @@
 ;; each step is one digit times 8 plus a carry below 8.  For every literal the old
 ;; expression already got right this returns the identical string, so emitted IR is
 ;; unchanged wherever it was correct.
-(define (times-8-decimal digits)               ; "123" -> "984"
+(define (times-8-decimal digits) ; "123" -> "984"
   (let loop ([i (- (string-length digits) 1)] [carry 0] [acc '()])
     (if (< i 0)
         (list->string (if (= carry 0) acc (cons (integer->char (+ 48 carry)) acc)))
         (let ([v (+ (* (- (char->integer (string-ref digits i)) 48) 8) carry)])
-          (loop (- i 1) (quotient v 10)
+          (loop (- i 1)
+                (quotient v 10)
                 (cons (integer->char (+ 48 (remainder v 10))) acc))))))
 
 ;; d -> the decimal text of its tagged word.  The sign is handled on the STRING, so
@@ -181,16 +191,18 @@
 
 (define (all-zeros? s)
   (let loop ([i 0])
-    (cond [(>= i (string-length s)) #t]
-          [(char=? (string-ref s i) #\0) (loop (+ i 1))]
-          [else #f])))
+    (cond
+      [(>= i (string-length s)) #t]
+      [(char=? (string-ref s i) #\0) (loop (+ i 1))]
+      [else #f])))
 
 ;; index of the first occurrence of char c in s, or -1
 (define (str-index s c)
   (let loop ([i 0])
-    (cond [(>= i (string-length s)) -1]
-          [(char=? (string-ref s i) c) i]
-          [else (loop (+ i 1))])))
+    (cond
+      [(>= i (string-length s)) -1]
+      [(char=? (string-ref s i) c) i]
+      [else (loop (+ i 1))])))
 
 ;; "-123" -> -123.  Only ever applied to a printed exponent, so it is small and
 ;; cannot overflow; kept local so the emitter needs no string->number.
@@ -206,20 +218,20 @@
 ;; SIGN 0.DIGITS x 10^POINT, DIGITS has no leading or trailing zero, and DIGITS is
 ;; "" exactly for zero.  Handles both doors' framing and Chez's `|BITS` suffix.
 (define (flonum-parts s0)
-  (let* ([bar (str-index s0 #\|)]                     ; Chez subnormal annotation
-         [s1  (if (< bar 0) s0 (substring s0 0 bar))]
+  (let* ([bar (str-index s0 #\|)] ; Chez subnormal annotation
+         [s1 (if (< bar 0) s0 (substring s0 0 bar))]
          [neg? (char=? (string-ref s1 0) #\-)]
          [sign (if neg? "-" "")]
-         [s   (if (or neg? (char=? (string-ref s1 0) #\+))
-                  (substring s1 1 (string-length s1))
-                  s1)]
+         [s (if (or neg? (char=? (string-ref s1 0) #\+))
+                (substring s1 1 (string-length s1))
+                s1)]
          [epos (let ([l (str-index s #\e)]) (if (< l 0) (str-index s #\E) l))]
          [mant (if (< epos 0) s (substring s 0 epos))]
-         [ex   (if (< epos 0) 0 (digits->int (substring s (+ epos 1) (string-length s))))]
-         [dot  (str-index mant #\.)]
+         [ex (if (< epos 0) 0 (digits->int (substring s (+ epos 1) (string-length s))))]
+         [dot (str-index mant #\.)]
          [ipart (if (< dot 0) mant (substring mant 0 dot))]
          [fpart (if (< dot 0) "" (substring mant (+ dot 1) (string-length mant)))]
-         [raw  (string-append ipart fpart)]
+         [raw (string-append ipart fpart)]
          [point (+ (string-length ipart) ex)])
     (if (all-zeros? raw)
         (list sign "" 0)
@@ -227,7 +239,7 @@
         (let* ([lead (let loop ([i 0])
                        (if (char=? (string-ref raw i) #\0) (loop (+ i 1)) i))]
                [d1 (substring raw lead (string-length raw))]
-               [p  (- point lead)]
+               [p (- point lead)]
                [end (let loop ([i (string-length d1)])
                       (if (char=? (string-ref d1 (- i 1)) #\0) (loop (- i 1)) i))])
           (list sign (substring d1 0 end) p)))))
@@ -238,25 +250,28 @@
     (cond
       [(<= point 0) (string-append "0." (zeros (- 0 point)) digits)]
       [(>= point n) (string-append digits (zeros (- point n)) ".0")]
-      [else (string-append (substring digits 0 point) "."
-                           (substring digits point n))])))
+      [else
+        (string-append (substring digits 0 point) "." (substring digits point n))])))
 
 ;; digits+point -> "1.2345e17" (one digit before the '.', bare '-' exponent)
 (define (scientific-text digits point)
   (let ([n (string-length digits)])
-    (string-append (substring digits 0 1) "."
+    (string-append (substring digits 0 1)
+                   "."
                    (if (= n 1) "0" (substring digits 1 n))
-                   "e" (number->string (- point 1)))))
+                   "e"
+                   (number->string (- point 1)))))
 
 ;; The canonical decimal for a FINITE flonum: shorter spelling wins, ties to
 ;; positional.  Always carries a '.', so LLVM never reads it as an integer.
 (define (canonical-decimal d)
   (let* ([parts (flonum-parts (number->string d))]
-         [sign (car parts)] [digits (cadr parts)] [point (caddr parts)])
+         [sign (car parts)]
+         [digits (cadr parts)]
+         [point (caddr parts)])
     (if (string=? digits "")
         (string-append sign "0.0")
-        (let ([pos (positional-text digits point)]
-              [sci (scientific-text digits point)])
+        (let ([pos (positional-text digits point)] [sci (scientific-text digits point)])
           (string-append sign
                          (if (<= (string-length pos) (string-length sci)) pos sci))))))
 
@@ -264,11 +279,12 @@
 ;; +inf.0/-inf.0/+nan.0, so this needs no float comparison (and no primitive that
 ;; the Chez host, which EVALUATES this file, would not have).
 (define (flonum-inf+nan-text s)
-  (cond [(string=? s "+inf.0") "inf"]
-        [(string=? s "-inf.0") "-inf"]
-        [(string=? s "+nan.0") "nan"]
-        [(string=? s "-nan.0") "nan"]
-        [else #f]))
+  (cond
+    [(string=? s "+inf.0") "inf"]
+    [(string=? s "-inf.0") "-inf"]
+    [(string=? s "+nan.0") "nan"]
+    [(string=? s "-nan.0") "nan"]
+    [else #f]))
 
 ;; d -> the operand text for a `double` position in emitted IR.  A non-finite
 ;; value has no decimal spelling LLVM accepts, so it emits the hexadecimal
@@ -278,7 +294,7 @@
     (cond
       [(string=? s "+inf.0") "0x7FF0000000000000"]
       [(string=? s "-inf.0") "0xFFF0000000000000"]
-      [(flonum-inf+nan-text s) "0x7FF8000000000000"]        ; the NaNs
+      [(flonum-inf+nan-text s) "0x7FF8000000000000"] ; the NaNs
       [else (canonical-decimal d)])))
 
 ;; d -> the C string text handed to rt_flonum_lit, which rebuilds the double with
@@ -299,9 +315,7 @@
 (define (const-memo-put! d operand)
   (set! *const-memo* (cons (cons d operand) *const-memo*)))
 
-(define (encode-const d)
-  (set! *const-memo* (quote ()))
-  (encode-const* d))
+(define (encode-const d) (set! *const-memo* (quote ())) (encode-const* d))
 
 ;; Immediates encode inline to an operand with no emission.  Heap constants are
 ;; memoized by object identity; recursive aggregates publish their allocation
@@ -310,134 +324,156 @@
   (let ([prior (and (or (pair? d)
                         (or (string? d)
                             (or (vector? d)
-                                (or (bytevector? d)
-                                    (and (real? d) (not (exact? d)))))))
+                                (or (bytevector? d) (and (real? d) (not (exact? d)))))))
                     (const-memo-ref d))])
-    (if prior
-        (cdr prior)
-        (cond
-    [(and (integer? d) (exact? d)) (fixnum-word d)]           ; fixnum: n<<3
-    [(eq? d #t) "257"]                                        ; TRUE_V  (subtype BOOL, payload 1)
-    [(eq? d #f) "1"]                                          ; FALSE_V (subtype BOOL, payload 0)
-    [(null? d) "2"]                                           ; NIL_V
-    [(char? d)                                                ; immediate char: (cp<<8)|(SUB_CHAR<<3)|TAG_BOOL
-     (number->string (+ (* (char->integer d) 256) 9))]
-    [(symbol? d)
-     (let ([g (symbol-global (symbol->string d))] [t (fresh-temp)])
-       (emit! (string-append t " = call i64 @rt_intern(ptr " g ")"))
-       t)]
-    [(string? d)                                              ; UTF-8 bytes + rt_make_string
-     (let* ([g+len (emit-cstring-global "@.str.lit." d)]
-            [g (car g+len)] [len (cadr g+len)])
-       (let ([t (fresh-temp)])
-         (emit! (string-append t " = call i64 @rt_make_string(ptr " g ", i64 "
-                               (number->string len) ")"))
-         (const-memo-put! d t)
-         t))]
-    [(pair? d)                                                ; allocate, publish, fill
-     (let ([t (fresh-temp)])
-       (emit! (string-append t " = call i64 @rt_cons(i64 " (encode-const-unspec)
-                             ", i64 " (encode-const-unspec) ")"))
-       (const-memo-put! d t)
-       (let* ([a (encode-const* (car d))] [sa (fresh-temp)])
-         (emit! (string-append sa " = call i64 @rt_set_car(i64 " t ", i64 " a ")")))
-       (let* ([dd (encode-const* (cdr d))] [sd (fresh-temp)])
-         (emit! (string-append sd " = call i64 @rt_set_cdr(i64 " t ", i64 " dd ")")))
-       t)]
-    ;; Vector and bytevector constants materialize at runtime like a pair does, but
-    ;; ALLOCATE-THEN-FILL rather than build bottom-up: rt_make_vector once, then one
-    ;; rt_vector_set per element, each element operand from a recursive encode-const
-    ;; (change: reader-datum-parity; issue #64).  The reader reads #(...) and #u8(...)
-    ;; and core-language requires that it SHALL, so refusing them here was a datum the
-    ;; compiler could read and not compile -- `emit: bad const ?`, naming nothing because
-    ;; the renderer had no vector arm either.
-    ;;
-    ;; The fill is the unspecified value; every slot is assigned immediately after, so it
-    ;; is never observable.  A static LLVM global (what strings do) would only work for an
-    ;; all-immediate vector -- a symbol element needs rt_intern at run time -- so it would
-    ;; mean two paths for one clause; noted in PERFORMANCE.md instead.
-    [(vector? d)
-     (let ([t (fresh-temp)] [n (vector-length d)])
-       (emit! (string-append t " = call i64 @rt_make_vector(i64 " (fixnum-word n)
-                             ", i64 " (encode-const-unspec) ")"))
-       (const-memo-put! d t)
-       (let loop ([i 0])
-         (if (>= i n)
-             t
-             (let ([e (encode-const* (vector-ref d i))] [s (fresh-temp)])
-               (emit! (string-append s " = call i64 @rt_vector_set(i64 " t ", i64 "
-                                     (fixnum-word i) ", i64 " e ")"))
-               (loop (+ i 1))))))]
-    [(bytevector? d)
-     (let ([t (fresh-temp)] [n (bytevector-length d)])
-       (emit! (string-append t " = call i64 @rt_make_bytevector(i64 " (fixnum-word n)
-                             ", i64 " (fixnum-word 0) ")"))
-       (const-memo-put! d t)
-       (let loop ([i 0])
-         (if (>= i n)
-             t
-             (let ([s (fresh-temp)])
-               (emit! (string-append s " = call i64 @rt_bytevector_u8_set(i64 " t ", i64 "
-                                     (fixnum-word i) ", i64 "
-                                     (fixnum-word (bytevector-u8-ref d i)) ")"))
-               (loop (+ i 1))))))]
-    ;; inexact real (flonum) literal (change: inexact-numbers): emit its canonical
-    ;; decimal as a C string constant and rebuild the flonum at runtime with
-    ;; rt_flonum_lit (strtod, correctly rounded -> the same double).  The text comes
-    ;; from flonum-lit-text, NOT the host printer, so it is identical on every door
-    ;; (change: numeric-conformance, design D1).  Placed after the
-    ;; exact/char/symbol/string/pair clauses; an integral flonum (3.0) reaches here
-    ;; because it fails clause 1's exact? test.
-    [(and (real? d) (not (exact? d)))
-     (let* ([g+len (emit-cstring-global "@.flo.lit." (flonum-lit-text d))]
-            [g (car g+len)] [t (fresh-temp)])
-       (emit! (string-append t " = call i64 @rt_flonum_lit(ptr " g ")"))
-       (const-memo-put! d t)
-       t)]
-    [else (error 'emit "bad const" d)]))))
+    (if
+      prior
+      (cdr prior)
+      (cond
+        [(and (integer? d) (exact? d)) (fixnum-word d)] ; fixnum: n<<3
+        [(eq? d #t) "257"] ; TRUE_V  (subtype BOOL, payload 1)
+        [(eq? d #f) "1"] ; FALSE_V (subtype BOOL, payload 0)
+        [(null? d) "2"] ; NIL_V
+        [(char? d) ; immediate char: (cp<<8)|(SUB_CHAR<<3)|TAG_BOOL
+          (number->string (+ (* (char->integer d) 256) 9))]
+        [(symbol? d) (let ([g (symbol-global (symbol->string d))] [t (fresh-temp)])
+                       (emit! (string-append t " = call i64 @rt_intern(ptr " g ")"))
+                       t)]
+        [(string? d) ; UTF-8 bytes + rt_make_string
+          (let* ([g+len (emit-cstring-global "@.str.lit." d)]
+                 [g (car g+len)]
+                 [len (cadr g+len)])
+            (let ([t (fresh-temp)])
+              (emit! (string-append t
+                                    " = call i64 @rt_make_string(ptr "
+                                    g
+                                    ", i64 "
+                                    (number->string len)
+                                    ")"))
+              (const-memo-put! d t)
+              t))]
+        [(pair? d) ; allocate, publish, fill
+          (let ([t (fresh-temp)])
+            (emit! (string-append t
+                                  " = call i64 @rt_cons(i64 "
+                                  (encode-const-unspec)
+                                  ", i64 "
+                                  (encode-const-unspec)
+                                  ")"))
+            (const-memo-put! d t)
+            (let* ([a (encode-const* (car d))] [sa (fresh-temp)])
+              (emit!
+                (string-append sa " = call i64 @rt_set_car(i64 " t ", i64 " a ")")))
+            (let* ([dd (encode-const* (cdr d))] [sd (fresh-temp)])
+              (emit!
+                (string-append sd " = call i64 @rt_set_cdr(i64 " t ", i64 " dd ")")))
+            t)]
+        ;; Vector and bytevector constants materialize at runtime like a pair does, but
+        ;; ALLOCATE-THEN-FILL rather than build bottom-up: rt_make_vector once, then one
+        ;; rt_vector_set per element, each element operand from a recursive encode-const
+        ;; (change: reader-datum-parity; issue #64).  The reader reads #(...) and #u8(...)
+        ;; and core-language requires that it SHALL, so refusing them here was a datum the
+        ;; compiler could read and not compile -- `emit: bad const ?`, naming nothing because
+        ;; the renderer had no vector arm either.
+        ;;
+        ;; The fill is the unspecified value; every slot is assigned immediately after, so it
+        ;; is never observable.  A static LLVM global (what strings do) would only work for an
+        ;; all-immediate vector -- a symbol element needs rt_intern at run time -- so it would
+        ;; mean two paths for one clause; noted in PERFORMANCE.md instead.
+        [(vector? d)
+          (let ([t (fresh-temp)] [n (vector-length d)])
+            (emit! (string-append t
+                                  " = call i64 @rt_make_vector(i64 "
+                                  (fixnum-word n)
+                                  ", i64 "
+                                  (encode-const-unspec)
+                                  ")"))
+            (const-memo-put! d t)
+            (let loop ([i 0])
+              (if (>= i n)
+                  t
+                  (let ([e (encode-const* (vector-ref d i))] [s (fresh-temp)])
+                    (emit! (string-append s
+                                          " = call i64 @rt_vector_set(i64 "
+                                          t
+                                          ", i64 "
+                                          (fixnum-word i)
+                                          ", i64 "
+                                          e
+                                          ")"))
+                    (loop (+ i 1))))))]
+        [(bytevector? d)
+          (let ([t (fresh-temp)] [n (bytevector-length d)])
+            (emit! (string-append t
+                                  " = call i64 @rt_make_bytevector(i64 "
+                                  (fixnum-word n)
+                                  ", i64 "
+                                  (fixnum-word 0)
+                                  ")"))
+            (const-memo-put! d t)
+            (let loop ([i 0])
+              (if (>= i n)
+                  t
+                  (let ([s (fresh-temp)])
+                    (emit! (string-append s
+                                          " = call i64 @rt_bytevector_u8_set(i64 "
+                                          t
+                                          ", i64 "
+                                          (fixnum-word i)
+                                          ", i64 "
+                                          (fixnum-word (bytevector-u8-ref d i))
+                                          ")"))
+                    (loop (+ i 1))))))]
+        ;; inexact real (flonum) literal (change: inexact-numbers): emit its canonical
+        ;; decimal as a C string constant and rebuild the flonum at runtime with
+        ;; rt_flonum_lit (strtod, correctly rounded -> the same double).  The text comes
+        ;; from flonum-lit-text, NOT the host printer, so it is identical on every door
+        ;; (change: numeric-conformance, design D1).  Placed after the
+        ;; exact/char/symbol/string/pair clauses; an integral flonum (3.0) reaches here
+        ;; because it fails clause 1's exact? test.
+        [(and (real? d) (not (exact? d)))
+          (let* ([g+len (emit-cstring-global "@.flo.lit." (flonum-lit-text d))]
+                 [g (car g+len)]
+                 [t (fresh-temp)])
+            (emit! (string-append t " = call i64 @rt_flonum_lit(ptr " g ")"))
+            (const-memo-put! d t)
+            t)]
+        [else (error 'emit "bad const" d)]))))
 
 (define prim-table
-  '((%+ "rt_add") (%- "rt_sub") (%* "rt_mul") (%/ "rt_div")
-    (%quotient "rt_quotient") (%remainder "rt_remainder") (%modulo "rt_modulo")
-    (%= "rt_num_eq") (%< "rt_lt")
+  '((%+ "rt_add") (%- "rt_sub") (%* "rt_mul") (%/ "rt_div") (%quotient "rt_quotient")
+    (%remainder "rt_remainder") (%modulo "rt_modulo") (%= "rt_num_eq") (%< "rt_lt")
     (%flonum? "rt_flonum_p") (%number? "rt_number_p") (%real? "rt_real_p")
     (%inexact? "rt_inexact_p") (%exact->inexact "rt_exact_to_inexact")
-    (%inexact->exact "rt_inexact_to_exact")
-    (%string->flonum "rt_string_to_flonum") (%flonum->string "rt_flonum_to_string")
+    (%inexact->exact "rt_inexact_to_exact") (%string->flonum "rt_string_to_flonum")
+    (%flonum->string "rt_flonum_to_string")
     ;; classification, rounding, and libm (change: numeric-conformance).  All
     ;; permanently-internal: the prelude and (scheme inexact) wrap them, so none is
     ;; integrable and none of these names is in scope for a user program.
-    (%finite? "rt_finite_p") (%nan? "rt_nan_p")
-    (%flo-floor "rt_flo_floor") (%flo-ceiling "rt_flo_ceiling")
-    (%flo-truncate "rt_flo_truncate") (%flo-round "rt_flo_round")
-    (%sqrt "rt_sqrt") (%exp "rt_exp") (%log "rt_log")
-    (%sin "rt_sin") (%cos "rt_cos") (%tan "rt_tan")
-    (%asin "rt_asin") (%acos "rt_acos") (%atan "rt_atan") (%atan2 "rt_atan2")
-    (%pow "rt_pow")
-    (%write-char "rt_write_char")
-    (%cons "rt_cons") (%car "rt_car") (%cdr "rt_cdr")
-    (%set-car! "rt_set_car") (%set-cdr! "rt_set_cdr")
-    (%null? "rt_null_p") (%pair? "rt_pair_p") (%eq? "rt_eq_p")
-    (%procedure? "rt_procedure_p")
-    (%eqv? "rt_eqv_p") (%equal? "rt_equal") (%not "rt_not")
-    (box "rt_box") (unbox "rt_unbox") (set-box! "rt_set_box")
+    (%finite? "rt_finite_p") (%nan? "rt_nan_p") (%flo-floor "rt_flo_floor")
+    (%flo-ceiling "rt_flo_ceiling") (%flo-truncate "rt_flo_truncate")
+    (%flo-round "rt_flo_round") (%sqrt "rt_sqrt") (%exp "rt_exp") (%log "rt_log")
+    (%sin "rt_sin") (%cos "rt_cos") (%tan "rt_tan") (%asin "rt_asin") (%acos "rt_acos")
+    (%atan "rt_atan") (%atan2 "rt_atan2") (%pow "rt_pow") (%write-char "rt_write_char")
+    (%cons "rt_cons") (%car "rt_car") (%cdr "rt_cdr") (%set-car! "rt_set_car")
+    (%set-cdr! "rt_set_cdr") (%null? "rt_null_p") (%pair? "rt_pair_p") (%eq? "rt_eq_p")
+    (%procedure? "rt_procedure_p") (%eqv? "rt_eqv_p") (%equal? "rt_equal")
+    (%not "rt_not") (box "rt_box") (unbox "rt_unbox") (set-box! "rt_set_box")
     (%char->integer "rt_char_to_integer") (%integer->char "rt_integer_to_char")
     (%string-length "rt_string_length") (%string-ref "rt_string_ref")
     (%substring "rt_substring") (%string->symbol "rt_string_to_symbol")
     (%string=? "rt_string_eq") (%string-append "rt_string_append")
     (%symbol->string "rt_symbol_to_string") (%list->string "rt_list_to_string")
-    (%make-string "rt_make_string_fill")
-    (%make-string-1 "rt_make_string_1") (%make-vector-1 "rt_make_vector_1")
-    (%string-copy-from "rt_string_copy_from")
+    (%make-string "rt_make_string_fill") (%make-string-1 "rt_make_string_1")
+    (%make-vector-1 "rt_make_vector_1") (%string-copy-from "rt_string_copy_from")
     (%string-set! "rt_string_set") (%string-copy "rt_string_copy")
     (%make-vector "rt_make_vector") (%vector-ref "rt_vector_ref")
     (%vector-set! "rt_vector_set") (%vector-length "rt_vector_length")
-    (%vector? "rt_vector_p")
-    (%make-bytevector "rt_make_bytevector") (%bytevector-u8-ref "rt_bytevector_u8_ref")
-    (%bytevector-u8-set! "rt_bytevector_u8_set") (%bytevector-length "rt_bytevector_length")
-    (%bytevector? "rt_bytevector_p")
-    (%hash "rt_hash") (%eq-hash "rt_eq_hash")
-    (%make-hash-table "rt_make_hash_table")
+    (%vector? "rt_vector_p") (%make-bytevector "rt_make_bytevector")
+    (%bytevector-u8-ref "rt_bytevector_u8_ref")
+    (%bytevector-u8-set! "rt_bytevector_u8_set")
+    (%bytevector-length "rt_bytevector_length") (%bytevector? "rt_bytevector_p")
+    (%hash "rt_hash") (%eq-hash "rt_eq_hash") (%make-hash-table "rt_make_hash_table")
     (%hash-table? "rt_hash_table_p") (%hash-table-spine "rt_hash_table_spine")
     (%make-record-type "rt_make_record_type") (%make-record "rt_make_record")
     (%record-ref "rt_record_ref") (%record-set! "rt_record_set")
@@ -452,32 +488,25 @@
     ;; port-directed forms of the output procedures (the same printer, with `out`
     ;; taken from the port instead of hardwired to stdout).
     (%eof-object "rt_eof_object") (%eof-object? "rt_eof_object_p")
-    (%read-file "rt_read_file")
-    (%port-open-output-file "rt_port_open_output_file")
+    (%read-file "rt_read_file") (%port-open-output-file "rt_port_open_output_file")
     (%port-open-output-string "rt_port_open_output_string")
-    (%port-get-output-string "rt_port_get_output_string")
-    (%port-flush "rt_port_flush") (%port-close "rt_port_close")
-    (%set-current-output! "rt_set_current_output")
-    (%write-string "rt_write_string")
-    (%display-port "rt_port_display") (%write-port "rt_port_write")
-    (%write-simple-port "rt_port_write_simple")
-    (%write-shared-port "rt_port_write_shared")
-    (%newline-port "rt_port_newline") (%write-char-port "rt_port_write_char")
-    (%write-string-port "rt_port_write_string")
-    (%no-prelude? "rt_no_prelude_p")
-    (%command-line "rt_command_line")
+    (%port-get-output-string "rt_port_get_output_string") (%port-flush "rt_port_flush")
+    (%port-close "rt_port_close") (%set-current-output! "rt_set_current_output")
+    (%write-string "rt_write_string") (%display-port "rt_port_display")
+    (%write-port "rt_port_write") (%write-simple-port "rt_port_write_simple")
+    (%write-shared-port "rt_port_write_shared") (%newline-port "rt_port_newline")
+    (%write-char-port "rt_port_write_char") (%write-string-port "rt_port_write_string")
+    (%no-prelude? "rt_no_prelude_p") (%command-line "rt_command_line")
     (%get-environment-variable "rt_get_environment_variable")
     (%get-environment-variables "rt_get_environment_variables")
     (%process-exit "rt_process_exit")
-    (%process-emergency-exit "rt_process_emergency_exit")
-    (%dump-level "rt_dump_level") (%stderr-write "rt_stderr_write")
-    (repl-mode "rt_repl_mode") (repl-input "rt_repl_input")
-    (repl-state-ref "rt_repl_state_ref") (repl-state-set! "rt_repl_state_set")
-    (%error-abort "rt_error") (%raise "rt_raise")
+    (%process-emergency-exit "rt_process_emergency_exit") (%dump-level "rt_dump_level")
+    (%stderr-write "rt_stderr_write") (repl-mode "rt_repl_mode")
+    (repl-input "rt_repl_input") (repl-state-ref "rt_repl_state_ref")
+    (repl-state-set! "rt_repl_state_set") (%error-abort "rt_error") (%raise "rt_raise")
     ;; change: dynamic-extent -- escape frames back call/cc AND guard (design D4)
-    (%make-error-object "rt_make_error_object")
-    (%escape-frame "rt_escape_frame") (%escape-to "rt_escape_to")
-    (%escape-live? "rt_escape_live_p")
+    (%make-error-object "rt_make_error_object") (%escape-frame "rt_escape_frame")
+    (%escape-to "rt_escape_to") (%escape-live? "rt_escape_live_p")
     (%error-object? "rt_error_object_p")
     (%error-object-message "rt_error_object_message")
     (%error-object-irritants "rt_error_object_irritants")
@@ -485,8 +514,7 @@
     ;; %run-guarded it needs the module's own @__apply0 pointer, so it is emitted by
     ;; the special case in emit-primcall.
     (%make-error-object/kind "rt_make_error_object_kind")
-    (%error-object-kind "rt_error_object_kind")
-    (%trap-object "rt_trap_object")
+    (%error-object-kind "rt_error_object_kind") (%trap-object "rt_trap_object")
     (%file-exists? "rt_file_exists_p") (%delete-file "rt_delete_file")
     ;; change: add-filesystem-access -- private raw operations wrapped by the
     ;; ordinary (emit filesystem) library.
@@ -497,16 +525,18 @@
 
 ;; --- string helpers ---
 (define (comma-join lst)
-  (cond [(null? lst) ""]
-        [(null? (cdr lst)) (car lst)]
-        [else (string-append (car lst) ", " (comma-join (cdr lst)))]))
+  (cond
+    [(null? lst) ""]
+    [(null? (cdr lst)) (car lst)]
+    [else (string-append (car lst) ", " (comma-join (cdr lst)))]))
 (define (i64s ops) (comma-join (map (lambda (o) (string-append "i64 " o)) ops)))
 (define (label-line? l)
   (let ([n (string-length l)]) (and (> n 0) (char=? (string-ref l (- n 1)) #\:))))
 (define (lines->string lines)
   (apply string-append
-    (map (lambda (l) (if (label-line? l) (string-append l "\n") (string-append "  " l "\n")))
-         lines)))
+         (map (lambda (l)
+                (if (label-line? l) (string-append l "\n") (string-append "  " l "\n")))
+              lines)))
 
 ;; LLVM global operand for a code label (change: module-artifacts-vertical-slice).
 ;; A program-unit label ("code_N") is a legal unquoted identifier and stays
@@ -514,9 +544,7 @@
 ;; ':' (e.g. "mylib:code_N"), illegal unquoted, so it is quoted `@"mylib:code_N"`.
 (define (label-has-colon? s)
   (let loop ([i 0] [n (string-length s)])
-    (cond [(= i n) #f]
-          [(char=? (string-ref s i) #\:) #t]
-          [else (loop (+ i 1) n)])))
+    (cond [(= i n) #f] [(char=? (string-ref s i) #\:) #t] [else (loop (+ i 1) n)])))
 (define (label-operand label)
   (if (label-has-colon? label)
       (string-append "@\"" label "\"")
@@ -528,92 +556,89 @@
     [(const ,d) (encode-const d)]
     [(local ,x) (cdr (assq x env))]
     [(free-ref ,i) (load-free cp i)]
-    [(global-ref ,s)
-     (let ([t (fresh-temp)])
-       (emit! (string-append t " = load i64, ptr " (global-operand s)))
-       t)]
-    [(global-set! ,s ,e)                     ; store into the slot; value = UNSPECIFIED
-     ;; Route the value through rt_root so it survives GC: the JIT'd global slot
-     ;; lives in memory libgc does not scan, so a value reachable only through the
-     ;; slot would be collected (change: repl-embedded-incremental).
-     ;; let* (not let): `op` (which emits and allocates temps) MUST evaluate before
-     ;; the result temp, so temp numbering is identical under Chez (right-to-left
-     ;; let) and the embedded compiler (left-to-right) -- the cross-door unit
-     ;; byte-identity guarantee (change: module-artifacts-vertical-slice).
-     ;;
-     ;; The node's VALUE is the unspecified immediate, not the stored value (change:
-     ;; unspecified-value).  This is a mutation, so R7RS leaves its value unspecified --
-     ;; and a local `(set! x v)`, which lowers to a set-box! primcall, already yields the
-     ;; unspecified value via rt_set_box.  Returning the stored value here made the two
-     ;; disagree, and made a top-level `(define f (lambda ...))` echo `#<procedure>` at
-     ;; the REPL as though the definition evaluated TO the procedure.  `t` is still bound:
-     ;; the rt_root call and the store are unchanged, so temp numbering (and the
-     ;; cross-door byte-identity guarantee above) is unaffected -- only the operand a
-     ;; consumer sees changes, and in statement position there is no consumer at all.
-     (let* ([op (ev e env cp tc?)] [t (fresh-temp)])
-       (emit! (string-append t " = call i64 @rt_root(i64 " op ")"))
-       (emit! (string-append "store i64 " t ", ptr " (global-operand s)))
-       (encode-const-unspec))]
+    [(global-ref ,s) (let ([t (fresh-temp)])
+                       (emit! (string-append t " = load i64, ptr " (global-operand s)))
+                       t)]
+    [(global-set! ,s ,e) ; store into the slot; value = UNSPECIFIED
+      ;; Route the value through rt_root so it survives GC: the JIT'd global slot
+      ;; lives in memory libgc does not scan, so a value reachable only through the
+      ;; slot would be collected (change: repl-embedded-incremental).
+      ;; let* (not let): `op` (which emits and allocates temps) MUST evaluate before
+      ;; the result temp, so temp numbering is identical under Chez (right-to-left
+      ;; let) and the embedded compiler (left-to-right) -- the cross-door unit
+      ;; byte-identity guarantee (change: module-artifacts-vertical-slice).
+      ;;
+      ;; The node's VALUE is the unspecified immediate, not the stored value (change:
+      ;; unspecified-value).  This is a mutation, so R7RS leaves its value unspecified --
+      ;; and a local `(set! x v)`, which lowers to a set-box! primcall, already yields the
+      ;; unspecified value via rt_set_box.  Returning the stored value here made the two
+      ;; disagree, and made a top-level `(define f (lambda ...))` echo `#<procedure>` at
+      ;; the REPL as though the definition evaluated TO the procedure.  `t` is still bound:
+      ;; the rt_root call and the store are unchanged, so temp numbering (and the
+      ;; cross-door byte-identity guarantee above) is unaffected -- only the operand a
+      ;; consumer sees changes, and in statement position there is no consumer at all.
+      (let* ([op (ev e env cp tc?)] [t (fresh-temp)])
+        (emit! (string-append t " = call i64 @rt_root(i64 " op ")"))
+        (emit! (string-append "store i64 " t ", ptr " (global-operand s)))
+        (encode-const-unspec))]
     [(if ,a ,b ,c) (ev-if a b c env cp tc?)]
     [(seq ,a ,b) (ev a env cp tc?) (ev b env cp tc?)]
     [(let ,binds ,body)
-     (let* ([ops (map-lr (lambda (b) (ev (cadr b) env cp tc?)) binds)]
-            [env2 (append (map (lambda (b op) (cons (car b) op)) binds ops) env)])
-       (ev body env2 cp tc?))]
+      (let* ([ops (map-lr (lambda (b) (ev (cadr b) env cp tc?)) binds)]
+             [env2 (append (map (lambda (b op) (cons (car b) op)) binds ops) env)])
+        (ev body env2 cp tc?))]
     [(primcall ,op . ,args)
-     ;; A flonum-evident numeric region is unboxed in native f64 (change:
-     ;; flonum-unboxing); otherwise the existing per-op lowering, byte-identical.
-     (if (flonum-region-root? op args *fset*)
-         (emit-flonum-region e env cp tc?)
-         (emit-primcall op (map-lr (lambda (a) (ev a env cp tc?)) args)))]
+      ;; A flonum-evident numeric region is unboxed in native f64 (change:
+      ;; flonum-unboxing); otherwise the existing per-op lowering, byte-identical.
+      (if (flonum-region-root? op args *fset*)
+          (emit-flonum-region e env cp tc?)
+          (emit-primcall op (map-lr (lambda (a) (ev a env cp tc?)) args)))]
     [(make-closure ,label ,caps)
-     (emit-make-closure label (map-lr (lambda (c) (ev c env cp tc?)) caps))]
+      (emit-make-closure label (map-lr (lambda (c) (ev c env cp tc?)) caps))]
     [(closure-block ,entries ,body)
-     (ev body (emit-closure-block entries env cp tc?) cp tc?)]
+      (ev body (emit-closure-block entries env cp tc?) cp tc?)]
     [(apply-app ,f ,args)
-     ;; sequence operands then callee explicitly (fix-emit-eval-order): don't
-     ;; rely on host argument-evaluation order, so schemec and the Chez-hosted
-     ;; compiler emit temps in the same order.  Operands-first matches Chez.
-     (let* ([aops (map-lr (lambda (a) (ev a env cp tc?)) args)]
-            [fop  (ev f env cp tc?)])
-       (emit-apply fop aops #f tc?))]
-    [(app ,f ,args)
-     (let* ([aops (map-lr (lambda (a) (ev a env cp tc?)) args)]
-            [fop  (ev f env cp tc?)])
-       (emit-app fop aops #f tc?))]
-    [(self-app ,label ,args)                       ; direct self-call (B-self)
-     (let ([aops (map-lr (lambda (a) (ev a env cp tc?)) args)])
-       (emit-self-app label aops #f tc? cp))]
-    [(known-app ,label ,f ,args)                   ; direct call, known callee (B-general)
-     (let* ([aops (map-lr (lambda (a) (ev a env cp tc?)) args)]
-            [fop  (ev f env cp tc?)])
-       (emit-known-app label fop aops #f tc?))]))
+      ;; sequence operands then callee explicitly (fix-emit-eval-order): don't
+      ;; rely on host argument-evaluation order, so schemec and the Chez-hosted
+      ;; compiler emit temps in the same order.  Operands-first matches Chez.
+      (let* ([aops (map-lr (lambda (a) (ev a env cp tc?)) args)]
+             [fop (ev f env cp tc?)])
+        (emit-apply fop aops #f tc?))]
+    [(app ,f ,args) (let* ([aops (map-lr (lambda (a) (ev a env cp tc?)) args)]
+                           [fop (ev f env cp tc?)])
+                      (emit-app fop aops #f tc?))]
+    [(self-app ,label ,args) ; direct self-call (B-self)
+      (let ([aops (map-lr (lambda (a) (ev a env cp tc?)) args)])
+        (emit-self-app label aops #f tc? cp))]
+    [(known-app ,label ,f ,args) ; direct call, known callee (B-general)
+      (let* ([aops (map-lr (lambda (a) (ev a env cp tc?)) args)]
+             [fop (ev f env cp tc?)])
+        (emit-known-app label fop aops #f tc?))]))
 
 (define (et e env cp tc?)
   (match e
     [(if ,a ,b ,c) (et-if a b c env cp tc?)]
     [(seq ,a ,b) (ev a env cp tc?) (et b env cp tc?)]
     [(let ,binds ,body)
-     (let* ([ops (map-lr (lambda (b) (ev (cadr b) env cp tc?)) binds)]
-            [env2 (append (map (lambda (b op) (cons (car b) op)) binds ops) env)])
-       (et body env2 cp tc?))]
+      (let* ([ops (map-lr (lambda (b) (ev (cadr b) env cp tc?)) binds)]
+             [env2 (append (map (lambda (b op) (cons (car b) op)) binds ops) env)])
+        (et body env2 cp tc?))]
     [(closure-block ,entries ,body)
-     (et body (emit-closure-block entries env cp tc?) cp tc?)]
-    [(apply-app ,f ,args)                          ; operands-first (fix-emit-eval-order)
-     (let* ([aops (map-lr (lambda (a) (ev a env cp tc?)) args)]
-            [fop  (ev f env cp tc?)])
-       (emit-apply fop aops #t tc?))]
-    [(app ,f ,args)
-     (let* ([aops (map-lr (lambda (a) (ev a env cp tc?)) args)]
-            [fop  (ev f env cp tc?)])
-       (emit-app fop aops #t tc?))]
-    [(self-app ,label ,args)                       ; direct self-call in tail position
-     (let ([aops (map-lr (lambda (a) (ev a env cp tc?)) args)])
-       (emit-self-app label aops #t tc? cp))]
-    [(known-app ,label ,f ,args)                   ; known callee in tail position
-     (let* ([aops (map-lr (lambda (a) (ev a env cp tc?)) args)]
-            [fop  (ev f env cp tc?)])
-       (emit-known-app label fop aops #t tc?))]
+      (et body (emit-closure-block entries env cp tc?) cp tc?)]
+    [(apply-app ,f ,args) ; operands-first (fix-emit-eval-order)
+      (let* ([aops (map-lr (lambda (a) (ev a env cp tc?)) args)]
+             [fop (ev f env cp tc?)])
+        (emit-apply fop aops #t tc?))]
+    [(app ,f ,args) (let* ([aops (map-lr (lambda (a) (ev a env cp tc?)) args)]
+                           [fop (ev f env cp tc?)])
+                      (emit-app fop aops #t tc?))]
+    [(self-app ,label ,args) ; direct self-call in tail position
+      (let ([aops (map-lr (lambda (a) (ev a env cp tc?)) args)])
+        (emit-self-app label aops #t tc? cp))]
+    [(known-app ,label ,f ,args) ; known callee in tail position
+      (let* ([aops (map-lr (lambda (a) (ev a env cp tc?)) args)]
+             [fop (ev f env cp tc?)])
+        (emit-known-app label fop aops #t tc?))]
     [else (emit! (string-append "ret i64 " (ev e env cp tc?)))]))
 
 (define (ev-if a b c env cp tc?)
@@ -622,9 +647,11 @@
   ;; (Chez right-to-left vs Emit left-to-right), diverging temp/label
   ;; numbering (fix-emit-eval-order, ev-if/et-if sites).
   (let* ([tv (ev a env cp tc?)]
-         [tl (fresh-bb "then")] [el (fresh-bb "else")] [ml (fresh-bb "merge")]
+         [tl (fresh-bb "then")]
+         [el (fresh-bb "else")]
+         [ml (fresh-bb "merge")]
          [cmp (fresh-temp)])
-    (emit! (string-append cmp " = icmp ne i64 " tv ", 1"))   ; != FALSE_V
+    (emit! (string-append cmp " = icmp ne i64 " tv ", 1")) ; != FALSE_V
     (emit! (string-append "br i1 " cmp ", label %" tl ", label %" el))
     (start-bb tl)
     ;; let* (not let): the arm must be emitted BEFORE reading current-bb, or
@@ -638,22 +665,31 @@
         (emit! (string-append "br label %" ml))
         (start-bb ml)
         (let ([r (fresh-temp)])
-          (emit! (string-append r " = phi i64 [ " bv ", %" bbb " ], [ " cv ", %" bbc " ]"))
+          (emit!
+            (string-append r " = phi i64 [ " bv ", %" bbb " ], [ " cv ", %" bbc " ]"))
           r)))))
 
 (define (et-if a b c env cp tc?)
-  (let* ([tv (ev a env cp tc?)]                ; operands-order fixed (see ev-if)
-         [tl (fresh-bb "then")] [el (fresh-bb "else")] [cmp (fresh-temp)])
+  (let* ([tv (ev a env cp tc?)] ; operands-order fixed (see ev-if)
+         [tl (fresh-bb "then")]
+         [el (fresh-bb "else")]
+         [cmp (fresh-temp)])
     (emit! (string-append cmp " = icmp ne i64 " tv ", 1"))
     (emit! (string-append "br i1 " cmp ", label %" tl ", label %" el))
-    (start-bb tl) (et b env cp tc?)
-    (start-bb el) (et c env cp tc?)))
+    (start-bb tl)
+    (et b env cp tc?)
+    (start-bb el)
+    (et c env cp tc?)))
 
 (define (load-free cp i)
   (let* ([b (fresh-temp)] [p (fresh-temp)] [g (fresh-temp)] [v (fresh-temp)])
     (emit! (string-append b " = and i64 " cp ", -8"))
     (emit! (string-append p " = inttoptr i64 " b " to ptr"))
-    (emit! (string-append g " = getelementptr i64, ptr " p ", i64 " (number->string (+ i 1))))
+    (emit! (string-append g
+                          " = getelementptr i64, ptr "
+                          p
+                          ", i64 "
+                          (number->string (+ i 1))))
     (emit! (string-append v " = load i64, ptr " g))
     v))
 
@@ -677,11 +713,8 @@
 ;; branched on tag but not on overflow, so an overflowing both-fixnum operation
 ;; never reached the runtime at all and silently wrapped.
 (define inline-arith-table
-  '((%+ "rt_add"    add "sadd")
-    (%- "rt_sub"    add "ssub")
-    (%* "rt_mul"    mul "smul")
-    (%= "rt_num_eq" cmp "icmp eq")
-    (%< "rt_lt"     cmp "icmp slt")))
+  '((%+ "rt_add" add "sadd") (%- "rt_sub" add "ssub") (%* "rt_mul" mul "smul")
+    (%= "rt_num_eq" cmp "icmp eq") (%< "rt_lt" cmp "icmp slt")))
 
 ;; Emit the fast-path op; returns (value-operand . overflow-operand), where the
 ;; overflow operand is an i1 set exactly when the result left the fixnum range, or
@@ -695,43 +728,59 @@
 ;; extra shifts, no range comparison, no false positives or negatives.
 (define (emit-inline-fast kind instr a b)
   (cond
-    [(eq? kind 'add)                          ; + -> sadd, - -> ssub (tag 000, no shift)
-     (let* ([s (fresh-temp)] [f (fresh-temp)] [o (fresh-temp)])
-       (emit! (string-append s " = call {i64, i1} @llvm." instr
-                             ".with.overflow.i64(i64 " a ", i64 " b ")"))
-       (emit! (string-append f " = extractvalue {i64, i1} " s ", 0"))
-       (emit! (string-append o " = extractvalue {i64, i1} " s ", 1"))
-       (cons f o))]
-    [(eq? kind 'mul)                          ; (a>>3) * b = (va*vb)<<3
-     (let* ([sh (fresh-temp)] [s (fresh-temp)] [f (fresh-temp)] [o (fresh-temp)])
-       (emit! (string-append sh " = ashr i64 " a ", 3"))
-       (emit! (string-append s " = call {i64, i1} @llvm." instr
-                             ".with.overflow.i64(i64 " sh ", i64 " b ")"))
-       (emit! (string-append f " = extractvalue {i64, i1} " s ", 0"))
-       (emit! (string-append o " = extractvalue {i64, i1} " s ", 1"))
-       (cons f o))]
-    [(eq? kind 'cmp)                          ; icmp (i1) then select TRUE_V(257)/FALSE_V(1)
-     (let* ([c (fresh-temp)] [f (fresh-temp)])
-       (emit! (string-append c " = " instr " i64 " a ", " b))
-       (emit! (string-append f " = select i1 " c ", i64 257, i64 1"))
-       (cons f #f))]
+    [(eq? kind 'add) ; + -> sadd, - -> ssub (tag 000, no shift)
+      (let* ([s (fresh-temp)] [f (fresh-temp)] [o (fresh-temp)])
+        (emit! (string-append s
+                              " = call {i64, i1} @llvm."
+                              instr
+                              ".with.overflow.i64(i64 "
+                              a
+                              ", i64 "
+                              b
+                              ")"))
+        (emit! (string-append f " = extractvalue {i64, i1} " s ", 0"))
+        (emit! (string-append o " = extractvalue {i64, i1} " s ", 1"))
+        (cons f o))]
+    [(eq? kind 'mul) ; (a>>3) * b = (va*vb)<<3
+      (let* ([sh (fresh-temp)] [s (fresh-temp)] [f (fresh-temp)] [o (fresh-temp)])
+        (emit! (string-append sh " = ashr i64 " a ", 3"))
+        (emit! (string-append s
+                              " = call {i64, i1} @llvm."
+                              instr
+                              ".with.overflow.i64(i64 "
+                              sh
+                              ", i64 "
+                              b
+                              ")"))
+        (emit! (string-append f " = extractvalue {i64, i1} " s ", 0"))
+        (emit! (string-append o " = extractvalue {i64, i1} " s ", 1"))
+        (cons f o))]
+    [(eq? kind 'cmp) ; icmp (i1) then select TRUE_V(257)/FALSE_V(1)
+      (let* ([c (fresh-temp)] [f (fresh-temp)])
+        (emit! (string-append c " = " instr " i64 " a ", " b))
+        (emit! (string-append f " = select i1 " c ", i64 257, i64 1"))
+        (cons f #f))]
     [else (error 'emit "bad inline arith kind" kind)]))
 
-(define (emit-inline-arith entry a b)  ; guard -> fast op | slow rt_* call, joined by phi
+(define (emit-inline-arith entry a b) ; guard -> fast op | slow rt_* call, joined by phi
   ;; let* throughout so temp/label numbering is fixed regardless of host
   ;; argument-evaluation order (the cross-door byte-identity guarantee; see ev-if).
-  (let* ([rt    (cadr entry)]
-         [kind  (caddr entry)]
+  (let* ([rt (cadr entry)]
+         [kind (caddr entry)]
          [instr (cadddr entry)]
-         [g1 (fresh-temp)] [g2 (fresh-temp)] [g3 (fresh-temp)]
-         [fast (fresh-bb "fixfast")] [slow (fresh-bb "fixslow")] [mrg (fresh-bb "fixmerge")])
-    (emit! (string-append g1 " = or i64 " a ", " b))         ; both fixnum iff
-    (emit! (string-append g2 " = and i64 " g1 ", 7"))        ; (a|b)&7 == 0
+         [g1 (fresh-temp)]
+         [g2 (fresh-temp)]
+         [g3 (fresh-temp)]
+         [fast (fresh-bb "fixfast")]
+         [slow (fresh-bb "fixslow")]
+         [mrg (fresh-bb "fixmerge")])
+    (emit! (string-append g1 " = or i64 " a ", " b))  ; both fixnum iff
+    (emit! (string-append g2 " = and i64 " g1 ", 7")) ; (a|b)&7 == 0
     (emit! (string-append g3 " = icmp eq i64 " g2 ", 0"))
     (emit! (string-append "br i1 " g3 ", label %" fast ", label %" slow))
     (start-bb fast)
-    (let* ([fo  (emit-inline-fast kind instr a b)]
-           [fv  (car fo)]
+    (let* ([fo (emit-inline-fast kind instr a b)]
+           [fv (car fo)]
            [ovf (cdr fo)]
            [fbb current-bb])
       ;; An overflowing fast op takes the SAME exit as a non-fixnum operand
@@ -749,7 +798,8 @@
         (emit! (string-append "br label %" mrg))
         (start-bb mrg)
         (let ([r (fresh-temp)])
-          (emit! (string-append r " = phi i64 [ " fv ", %" fbb " ], [ " sv ", %" slow " ]"))
+          (emit!
+            (string-append r " = phi i64 [ " fv ", %" fbb " ], [ " sv ", %" slow " ]"))
           r)))))
 
 ;; --- flonum unboxing: intra-expression f64 regions (change: flonum-unboxing) ---
@@ -776,7 +826,7 @@
 ;; so it never perturbs existing emission.
 (define *fset* '())
 
-(define (flonum-value? d) (and (real? d) (not (exact? d))))   ; an inexact real literal
+(define (flonum-value? d) (and (real? d) (not (exact? d)))) ; an inexact real literal
 (define (flonum-const? e) (match e [(const ,d) (flonum-value? d)] [,_ #f]))
 
 ;; flonum-source?: is expr e statically flonum-EVIDENT under flonum-var set fs?
@@ -789,26 +839,30 @@
     [(const ,d) (flonum-value? d)]
     [(local ,x) (and (memq x fs) #t)]
     [(primcall ,op . ,args)
-     (cond
-       [(eq? op '%exact->inexact) #t]
-       [(and (memq op '(%+ %- %*)) (pair? args) (pair? (cdr args)) (null? (cddr args)))
-        (or (flo-src? (car args) fs) (flo-src? (cadr args) fs))]
-       [else #f])]
+      (cond
+        [(eq? op '%exact->inexact) #t]
+        [(and (memq op '(%+ %- %*)) (pair? args) (pair? (cdr args)) (null? (cddr args)))
+          (or (flo-src? (car args) fs) (flo-src? (cadr args) fs))]
+        [else #f])]
     [,_ #f]))
 
 ;; A binary numeric primcall is a flonum REGION ROOT when an operand is flonum-src.
 (define (flonum-region-root? op args fs)
   (and (assq op inline-arith-table)
-       (pair? args) (pair? (cdr args)) (null? (cddr args))
+       (pair? args)
+       (pair? (cdr args))
+       (null? (cddr args))
        (or (flo-src? (car args) fs) (flo-src? (cadr args) fs))))
 
 ;; A region-INTERNAL node: a binary arith primcall (%+ %- %*) that is itself
 ;; flonum-src (so it belongs to the region and is recursed into, not a leaf).
 (define (region-internal? e)
   (match e
-    [(primcall ,op . ,args)
-     (and (memq op '(%+ %- %*)) (pair? args) (pair? (cdr args)) (null? (cddr args))
-          (flo-src? e *fset*))]
+    [(primcall ,op . ,args) (and (memq op '(%+ %- %*))
+                                 (pair? args)
+                                 (pair? (cdr args))
+                                 (null? (cddr args))
+                                 (flo-src? e *fset*))]
     [,_ #f]))
 
 ;; Distinct non-literal leaves of a region, in left-to-right source order (each
@@ -820,9 +874,8 @@
       (unless (or (flonum-const? lf) (member lf acc)) (set! acc (cons lf acc))))
     (define (walk node)
       (match node
-        [(primcall ,op ,a ,b)
-         (if (region-internal? a) (walk a) (add! a))
-         (if (region-internal? b) (walk b) (add! b))]))
+        [(primcall ,op ,a ,b) (if (region-internal? a) (walk a) (add! a))
+                              (if (region-internal? b) (walk b) (add! b))]))
     (walk root)
     (reverse acc)))
 
@@ -841,14 +894,15 @@
 (define (region->f64 node leaf-map)
   (cond
     [(region-internal? node)
-     (match node
-       [(primcall ,op ,a ,b)
-        (let* ([da (region->f64 a leaf-map)]
-               [db (region->f64 b leaf-map)]
-               [instr (cond [(eq? op '%+) "fadd"] [(eq? op '%-) "fsub"] [else "fmul"])]
-               [t (fresh-temp)])
-          (emit! (string-append t " = " instr " double " da ", " db))
-          t)])]
+      (match node
+        [(primcall ,op ,a ,b)
+          (let* ([da (region->f64 a leaf-map)]
+                 [db (region->f64 b leaf-map)]
+                 [instr
+                   (cond [(eq? op '%+) "fadd"] [(eq? op '%-) "fsub"] [else "fmul"])]
+                 [t (fresh-temp)])
+            (emit! (string-append t " = " instr " double " da ", " db))
+            t)])]
     ;; An immediate double operand: canonical text, never the host printer's
     ;; (change: numeric-conformance, design D1 -- this is the site GitHub issue #24
     ;; reported, where `1e+02` was rejected as an integer constant).
@@ -860,18 +914,18 @@
 (define (region->i64-slow node leaf-map env cp tc?)
   (cond
     [(region-internal? node)
-     (match node
-       [(primcall ,op ,a ,b)
-        (let* ([oa (region->i64-slow a leaf-map env cp tc?)]
-               [ob (region->i64-slow b leaf-map env cp tc?)])
-          (emit-inline-arith (assq op inline-arith-table) oa ob))])]
+      (match node
+        [(primcall ,op ,a ,b)
+          (let* ([oa (region->i64-slow a leaf-map env cp tc?)]
+                 [ob (region->i64-slow b leaf-map env cp tc?)])
+            (emit-inline-arith (assq op inline-arith-table) oa ob))])]
     [(flonum-const? node) (ev node env cp tc?)]
     [else (cdr (assoc node leaf-map))]))
 
 ;; Emit a whole flonum region rooted at `root` (a binary numeric primcall).
 (define (emit-flonum-region root env cp tc?)
-  (let* ([op     (cadr root)]
-         [cmp?   (and (memq op '(%= %<)) #t)]
+  (let* ([op (cadr root)]
+         [cmp? (and (memq op '(%= %<)) #t)]
          [leaves (region-leaf-list root)]
          ;; pre-evaluate each distinct non-literal leaf ONCE, in source order
          [leaf-ops (map-lr (lambda (lf) (ev lf env cp tc?)) leaves)]
@@ -881,29 +935,36 @@
       (if cmp?
           (match root
             [(primcall ,op2 ,a ,b)
-             (let* ([da (region->f64 a leaf-map)] [db (region->f64 b leaf-map)]
-                    [pred (if (eq? op2 '%=) "oeq" "olt")]
-                    [c (fresh-temp)] [r (fresh-temp)])
-               (emit! (string-append c " = fcmp " pred " double " da ", " db))
-               (emit! (string-append r " = select i1 " c ", i64 257, i64 1"))
-               r)])
+              (let* ([da (region->f64 a leaf-map)]
+                     [db (region->f64 b leaf-map)]
+                     [pred (if (eq? op2 '%=) "oeq" "olt")]
+                     [c (fresh-temp)]
+                     [r (fresh-temp)])
+                (emit! (string-append c " = fcmp " pred " double " da ", " db))
+                (emit! (string-append r " = select i1 " c ", i64 257, i64 1"))
+                r)])
           (let* ([d (region->f64 root leaf-map)] [r (fresh-temp)])
             (emit! (string-append r " = call i64 @rt_make_flonum(double " d ")"))
             r)))
     (if (null? leaves)
-        (emit-fast)                              ; all-literal: always flonum, no guard
-        (let* ([conds (map-lr (lambda (lo)
-                             (let* ([p (fresh-temp)] [c (fresh-temp)])
-                               (emit! (string-append p " = call i64 @rt_flonum_p(i64 " lo ")"))
-                               (emit! (string-append c " = icmp ne i64 " p ", 1"))
-                               c))
-                           leaf-ops)]
+        (emit-fast) ; all-literal: always flonum, no guard
+        (let* ([conds
+                 (map-lr
+                   (lambda (lo)
+                     (let* ([p (fresh-temp)] [c (fresh-temp)])
+                       (emit! (string-append p " = call i64 @rt_flonum_p(i64 " lo ")"))
+                       (emit! (string-append c " = icmp ne i64 " p ", 1"))
+                       c))
+                   leaf-ops)]
                [allc (let loop ([acc (car conds)] [rest (cdr conds)])
-                       (if (null? rest) acc
+                       (if (null? rest)
+                           acc
                            (let ([t (fresh-temp)])
                              (emit! (string-append t " = and i1 " acc ", " (car rest)))
                              (loop t (cdr rest)))))]
-               [ff (fresh-bb "flofast")] [fs (fresh-bb "floslow")] [fm (fresh-bb "flomerge")])
+               [ff (fresh-bb "flofast")]
+               [fs (fresh-bb "floslow")]
+               [fm (fresh-bb "flomerge")])
           (emit! (string-append "br i1 " allc ", label %" ff ", label %" fs))
           (start-bb ff)
           (let* ([fv (emit-fast)] [fbb current-bb])
@@ -913,7 +974,16 @@
               (emit! (string-append "br label %" fm))
               (start-bb fm)
               (let ([r (fresh-temp)])
-                (emit! (string-append r " = phi i64 [ " fv ", %" fbb " ], [ " sv ", %" sbb " ]"))
+                (emit! (string-append r
+                                      " = phi i64 [ "
+                                      fv
+                                      ", %"
+                                      fbb
+                                      " ], [ "
+                                      sv
+                                      ", %"
+                                      sbb
+                                      " ]"))
                 r)))))))
 
 ;; Least-fixpoint over a code block's self-calls: which fixed params are
@@ -935,32 +1005,38 @@
         [(primcall ,op . ,args) (for-each S args)]
         [(make-closure ,l ,caps) (for-each S caps)]
         [(closure-block ,entries ,body2)
-         (for-each (lambda (en) (for-each S (caddr en))) entries) (S body2)]
+          (for-each (lambda (en) (for-each S (caddr en))) entries)
+          (S body2)]
         [(app ,f ,args) (S f) (for-each S args)]
         [(apply-app ,f ,args) (S f) (for-each S args)]
         [(self-app ,l ,args)
-         (when (or (equal? l label) (equal? l (minimum-entry-label label)))
-           (set! acc (cons args acc)))
-         (for-each S args)]
-        [(known-app ,l ,f ,args) (S f) (for-each S args)]))  ; not a back-edge
+          (when (or (equal? l label) (equal? l (minimum-entry-label label)))
+            (set! acc (cons args acc)))
+          (for-each S args)]
+        [(known-app ,l ,f ,args) (S f) (for-each S args)])) ; not a back-edge
     (S body)
     acc))
 
 (define (compute-flonum-params fixed body label)
   (let ([selfargs (collect-self-app-args body label)])
-    (if (null? selfargs)
-        '()
-        (letrec ([all-flo-at?
-                  (lambda (sas i f)
-                    (cond [(null? sas) #t]
-                          [(flo-src? (list-ref (car sas) i) f) (all-flo-at? (cdr sas) i f)]
-                          [else #f]))])
-          (let loop ([f '()])
-            (let ([f2 (let pos ([ps fixed] [i 0] [acc '()])
-                        (if (null? ps) (reverse acc)
-                            (pos (cdr ps) (+ i 1)
-                                 (if (all-flo-at? selfargs i f) (cons (car ps) acc) acc))))])
-              (if (= (length f2) (length f)) f2 (loop f2))))))))
+    (if
+      (null? selfargs)
+      '()
+      (letrec ([all-flo-at?
+                 (lambda (sas i f)
+                   (cond
+                     [(null? sas) #t]
+                     [(flo-src? (list-ref (car sas) i) f) (all-flo-at? (cdr sas) i f)]
+                     [else #f]))])
+        (let loop ([f '()])
+          (let ([f2 (let pos ([ps fixed] [i 0] [acc '()])
+                      (if (null? ps)
+                          (reverse acc)
+                          (pos
+                            (cdr ps)
+                            (+ i 1)
+                            (if (all-flo-at? selfargs i f) (cons (car ps) acc) acc))))])
+            (if (= (length f2) (length f)) f2 (loop f2))))))))
 
 (define (emit-primcall op ops)
   ;; %run-guarded is special: it passes the module's own ccc trampoline @__apply0
@@ -977,23 +1053,33 @@
   ;; prim-table entry.
   (if (eq? op '%unspec)
       (encode-const-unspec)
-  (if (eq? op '%run-guarded)
-      (let ([t (fresh-temp)])
-        (emit! (string-append t " = call i64 @rt_run_guarded(ptr @__apply0, i64 "
-                              (car ops) ")"))
-        t)
-  (if (eq? op '%set-trap-raiser!)
-      (let ([t (fresh-temp)])
-        (emit! (string-append t " = call i64 @rt_set_trap_raiser(ptr @__apply0, i64 "
-                              (car ops) ")"))
-        t)
-      (let ([inl (assq op inline-arith-table)])
-        (if (and inl (pair? ops) (pair? (cdr ops)) (null? (cddr ops)))  ; exactly 2 operands
-            (emit-inline-arith inl (car ops) (cadr ops))
-            (let ([entry (assq op prim-table)] [t (fresh-temp)])
-              (unless entry (error 'emit "unknown prim" op))
-              (emit! (string-append t " = call i64 @" (cadr entry) "(" (i64s ops) ")"))
-              t)))))))
+      (if
+        (eq? op '%run-guarded)
+        (let ([t (fresh-temp)])
+          (emit! (string-append t
+                                " = call i64 @rt_run_guarded(ptr @__apply0, i64 "
+                                (car ops)
+                                ")"))
+          t)
+        (if
+          (eq? op '%set-trap-raiser!)
+          (let ([t (fresh-temp)])
+            (emit! (string-append t
+                                  " = call i64 @rt_set_trap_raiser(ptr @__apply0, i64 "
+                                  (car ops)
+                                  ")"))
+            t)
+          (let ([inl (assq op inline-arith-table)])
+            (if (and inl
+                     (pair? ops)
+                     (pair? (cdr ops))
+                     (null? (cddr ops))) ; exactly 2 operands
+                (emit-inline-arith inl (car ops) (cadr ops))
+                (let ([entry (assq op prim-table)] [t (fresh-temp)])
+                  (unless entry (error 'emit "unknown prim" op))
+                  (emit!
+                    (string-append t " = call i64 @" (cadr entry) "(" (i64s ops) ")"))
+                  t)))))))
 
 ;; The ccc trampoline @__apply0(closure): load the closure's code pointer and do
 ;; the fastcc 0-arg call (self=closure, argc=0, K positional pads = undef,
@@ -1004,14 +1090,15 @@
   (let loop ([i 0] [pads ""])
     (if (< i k)
         (loop (+ i 1) (string-append pads ", i64 undef"))
-        (string-append
-         "define internal i64 @__apply0(i64 %clos) {\nentry:\n"
-         "  %b = and i64 %clos, -8\n"
-         "  %bp = inttoptr i64 %b to ptr\n"
-         "  %code = load i64, ptr %bp\n"
-         "  %fp = inttoptr i64 %code to ptr\n"
-         "  %r = call fastcc i64 %fp(i64 %clos, i64 0" pads ", ptr null)\n"
-         "  ret i64 %r\n}\n\n"))))
+        (string-append "define internal i64 @__apply0(i64 %clos) {\nentry:\n"
+                       "  %b = and i64 %clos, -8\n"
+                       "  %bp = inttoptr i64 %b to ptr\n"
+                       "  %code = load i64, ptr %bp\n"
+                       "  %fp = inttoptr i64 %code to ptr\n"
+                       "  %r = call fastcc i64 %fp(i64 %clos, i64 0"
+                       pads
+                       ", ptr null)\n"
+                       "  ret i64 %r\n}\n\n"))))
 
 ;; allocate {code_ptr, cap...}, tag TAG_CLOSURE (4)
 ;;
@@ -1025,9 +1112,15 @@
 ;; just-allocated closure stayed indirect.  Instruction count is unchanged.
 (define (emit-alloc-closure label caps-count)
   (let* ([p (fresh-temp)] [raw (fresh-temp)])
-    (emit! (string-append p " = call ptr @rt_alloc_words(i64 " (number->string (+ caps-count 1)) ")"))
+    (emit! (string-append p
+                          " = call ptr @rt_alloc_words(i64 "
+                          (number->string (+ caps-count 1))
+                          ")"))
     (emit! (string-append raw " = ptrtoint ptr " p " to i64"))
-    (emit! (string-append "store i64 ptrtoint (ptr " (label-operand label) " to i64), ptr " p))
+    (emit! (string-append "store i64 ptrtoint (ptr "
+                          (label-operand label)
+                          " to i64), ptr "
+                          p))
     (list raw p)))
 
 (define (store-cap p i op)
@@ -1037,28 +1130,31 @@
 
 (define (emit-make-closure label capops)
   (let* ([raw+p (emit-alloc-closure label (length capops))]
-         [raw (car raw+p)] [p (cadr raw+p)])
-    (let loop ([i 1] [cs capops]) (unless (null? cs) (store-cap p i (car cs)) (loop (+ i 1) (cdr cs))))
+         [raw (car raw+p)]
+         [p (cadr raw+p)])
+    (let loop ([i 1] [cs capops])
+      (unless (null? cs) (store-cap p i (car cs)) (loop (+ i 1) (cdr cs))))
     (let ([c (fresh-temp)]) (emit! (string-append c " = or i64 " raw ", 4")) c)))
 
 ;; two-phase: allocate + tag all, bind names, then fill env slots (may ref siblings)
 (define (emit-closure-block entries env cp tc?)
   (let* ([allocs
-          (map-lr (lambda (ent)
-                 (let* ([raw+p (emit-alloc-closure (cadr ent) (length (caddr ent)))]
-                        [raw (car raw+p)] [p (cadr raw+p)])
-                   (let ([c (fresh-temp)])
-                     (emit! (string-append c " = or i64 " raw ", 4"))
-                     (list (car ent) p (caddr ent) c))))   ; name, base-ptr, caps, tagged
-               entries)]
+           (map-lr
+             (lambda (ent)
+               (let* ([raw+p (emit-alloc-closure (cadr ent) (length (caddr ent)))]
+                      [raw (car raw+p)]
+                      [p (cadr raw+p)])
+                 (let ([c (fresh-temp)])
+                   (emit! (string-append c " = or i64 " raw ", 4"))
+                   (list (car ent) p (caddr ent) c)))) ; name, base-ptr, caps, tagged
+             entries)]
          [env2 (append (map (lambda (a) (cons (car a) (cadddr a))) allocs) env)])
-    (for-each
-      (lambda (a)
-        (let loop ([i 1] [cs (caddr a)])
-          (unless (null? cs)
-            (store-cap (cadr a) i (ev (car cs) env2 cp tc?))
-            (loop (+ i 1) (cdr cs)))))
-      allocs)
+    (for-each (lambda (a)
+                (let loop ([i 1] [cs (caddr a)])
+                  (unless (null? cs)
+                    (store-cap (cadr a) i (ev (car cs) env2 cp tc?))
+                    (loop (+ i 1) (cdr cs)))))
+              allocs)
     env2))
 
 ;; load the code pointer out of a (tagged) closure value; returns the fn operand
@@ -1085,21 +1181,31 @@
   (let ([r (fresh-temp)])
     (if tail?
         (begin
-          (emit! (string-append r " = " (if tc? "musttail " "") "call fastcc i64 " fp "(" callargs ")"))
+          (emit! (string-append r
+                                " = "
+                                (if tc? "musttail " "")
+                                "call fastcc i64 "
+                                fp
+                                "("
+                                callargs
+                                ")"))
           (emit! (string-append "ret i64 " r))
           #f)
-        (begin
-          (emit! (string-append r " = call fastcc i64" fp "(" callargs ")"))
-          r))))
+        (begin (emit! (string-append r " = call fastcc i64" fp "(" callargs ")")) r))))
 
 ;; spill i64 operands into a fresh GC-allocated array; returns a ptr operand.
 (define (emit-spill ops)
-  (let* ([p (fresh-temp)] [len (length ops)])     ; ptr result: no inttoptr needed
-    (emit! (string-append p " = call ptr @rt_alloc_words(i64 " (number->string len) ")"))
+  (let* ([p (fresh-temp)] [len (length ops)]) ; ptr result: no inttoptr needed
+    (emit!
+      (string-append p " = call ptr @rt_alloc_words(i64 " (number->string len) ")"))
     (let loop ([i 0] [os ops])
       (unless (null? os)
         (let ([g (fresh-temp)])
-          (emit! (string-append g " = getelementptr i64, ptr " p ", i64 " (number->string i)))
+          (emit! (string-append g
+                                " = getelementptr i64, ptr "
+                                p
+                                ", i64 "
+                                (number->string i)))
           (emit! (string-append "store i64 " (car os) ", ptr " g)))
         (loop (+ i 1) (cdr os))))
     p))
@@ -1111,15 +1217,13 @@
          [n (length aops)]
          [k *arity*]
          [slots (if (>= n k)
-                    (list-head aops k)                     ; excess -> overflow
+                    (list-head aops k) ; excess -> overflow
                     (append aops (make-list (- k n) "0")))] ; pad short calls
          [overflow (if (> n k) (emit-spill (list-tail aops k)) "null")]
-         [callargs (comma-join
-                     (append
-                       (list (string-append "i64 " fop)
-                             (string-append "i64 " (number->string n)))
-                       (map (lambda (o) (string-append "i64 " o)) slots)
-                       (list (string-append "ptr " overflow))))])
+         [callargs (comma-join (append (list (string-append "i64 " fop)
+                                             (string-append "i64 " (number->string n)))
+                                       (map (lambda (o) (string-append "i64 " o)) slots)
+                                       (list (string-append "ptr " overflow))))])
     (finish-call fp callargs tail? tc?)))
 
 ;; Direct call to a known code label, passing `selfop` as the callee's self.  Two
@@ -1140,25 +1244,32 @@
 (define (emit-direct-app label aops tail? tc? selfop)
   (let* ([n (length aops)]
          [k *arity*]
-         [slots (if (>= n k)
-                    (list-head aops k)
-                    (append aops (make-list (- k n) "0")))]
+         [slots (if (>= n k) (list-head aops k) (append aops (make-list (- k n) "0")))]
          [overflow (if (> n k) (emit-spill (list-tail aops k)) "null")]
-         [callargs (comma-join
-                     (append
-                       (list (string-append "i64 " selfop)
-                             (string-append "i64 " (number->string n)))
-                       (map (lambda (o) (string-append "i64 " o)) slots)
-                       (list (string-append "ptr " overflow))))]
+         [callargs (comma-join (append (list (string-append "i64 " selfop)
+                                             (string-append "i64 " (number->string n)))
+                                       (map (lambda (o) (string-append "i64 " o)) slots)
+                                       (list (string-append "ptr " overflow))))]
          [r (fresh-temp)])
     (if tail?
         (begin
-          (emit! (string-append r " = " (if tc? "musttail " "") "call fastcc i64 "
-                                (label-operand label) "(" callargs ")"))
+          (emit! (string-append r
+                                " = "
+                                (if tc? "musttail " "")
+                                "call fastcc i64 "
+                                (label-operand label)
+                                "("
+                                callargs
+                                ")"))
           (emit! (string-append "ret i64 " r))
           #f)
         (begin
-          (emit! (string-append r " = call fastcc i64 " (label-operand label) "(" callargs ")"))
+          (emit! (string-append r
+                                " = call fastcc i64 "
+                                (label-operand label)
+                                "("
+                                callargs
+                                ")"))
           r))))
 
 (define (emit-self-app label aops tail? tc? cp)
@@ -1172,221 +1283,248 @@
 (define (emit-apply fop aops tail? tc?)
   (let* ([fp (emit-load-code fop)]
          [k *arity*]
-         [n (- (length aops) 1)]                   ; leading (non-list) args
+         [n (- (length aops) 1)] ; leading (non-list) args
          [pre (list-head aops n)]
-         [lst (list-ref aops n)]                   ; the list to spread
+         [lst (list-ref aops n)] ; the list to spread
          [preptr (if (zero? n) "null" (emit-spill pre))]
-         [m (fresh-temp)] [argc (fresh-temp)] [argv (fresh-temp)]
-         [ovcmp (fresh-temp)] [ovg (fresh-temp)] [ov (fresh-temp)]
+         [m (fresh-temp)]
+         [argc (fresh-temp)]
+         [argv (fresh-temp)]
+         [ovcmp (fresh-temp)]
+         [ovg (fresh-temp)]
+         [ov (fresh-temp)]
          [slots (map-lr (lambda (i) (fresh-temp)) (iota k))])
     (emit! (string-append m " = call i64 @rt_list_length(i64 " lst ")"))
     (emit! (string-append argc " = add i64 " (number->string n) ", " m))
-    (emit! (string-append argv " = call ptr @rt_apply_argv(i64 " (number->string n)
-                          ", ptr " preptr ", i64 " lst ", i64 " (number->string k) ")"))
+    (emit! (string-append argv
+                          " = call ptr @rt_apply_argv(i64 "
+                          (number->string n)
+                          ", ptr "
+                          preptr
+                          ", i64 "
+                          lst
+                          ", i64 "
+                          (number->string k)
+                          ")"))
     (for-each (lambda (s i)
                 (let ([g (fresh-temp)])
-                  (emit! (string-append g " = getelementptr i64, ptr " argv ", i64 " (number->string i)))
+                  (emit! (string-append g
+                                        " = getelementptr i64, ptr "
+                                        argv
+                                        ", i64 "
+                                        (number->string i)))
                   (emit! (string-append s " = load i64, ptr " g))))
-              slots (iota k))
+              slots
+              (iota k))
     (emit! (string-append ovcmp " = icmp sgt i64 " argc ", " (number->string k)))
-    (emit! (string-append ovg " = getelementptr i64, ptr " argv ", i64 " (number->string k)))
+    (emit!
+      (string-append ovg " = getelementptr i64, ptr " argv ", i64 " (number->string k)))
     (emit! (string-append ov " = select i1 " ovcmp ", ptr " ovg ", ptr null"))
-    (finish-call fp
-      (comma-join
-        (append
-          (list (string-append "i64 " fop) (string-append "i64 " argc))
-          (map (lambda (s) (string-append "i64 " s)) slots)
-          (list (string-append "ptr " ov))))
-      tail? tc?)))
+    (finish-call
+      fp
+      (comma-join (append (list (string-append "i64 " fop) (string-append "i64 " argc))
+                          (map (lambda (s) (string-append "i64 " s)) slots)
+                          (list (string-append "ptr " ov))))
+      tail?
+      tc?)))
 
 ;; K = max fixed arity, set per program
 (define *arity* 0)
 
 ;; --- top-level assembly ---
-(define (max-arity defs)  ; K = max fixed-param count across all code defs
-  (fold-left (lambda (m d) (match d [(code ,l ,s ,fixed ,rest ,b) (max m (length fixed))])) 0 defs))
+(define (max-arity defs) ; K = max fixed-param count across all code defs
+  (fold-left
+    (lambda (m d) (match d [(code ,l ,s ,fixed ,rest ,b) (max m (length fixed))]))
+    0
+    defs))
 
 (define (rt-declarations)
   (string-append
-   "declare align 8 ptr @rt_alloc_words(i64)\n"   ; align: see emit-alloc-closure (P6-B)
-   "declare i64 @rt_cons(i64, i64)\n"
-   "declare i64 @rt_car(i64)\n"
-   "declare i64 @rt_cdr(i64)\n"
-   "declare i64 @rt_set_car(i64, i64)\n"
-   "declare i64 @rt_set_cdr(i64, i64)\n"
-   "declare i64 @rt_box(i64)\n"
-   "declare i64 @rt_unbox(i64)\n"
-   "declare i64 @rt_set_box(i64, i64)\n"
-   "declare i64 @rt_add(i64, i64)\n"
-   "declare i64 @rt_sub(i64, i64)\n"
-   "declare i64 @rt_mul(i64, i64)\n"
-   "declare i64 @rt_div(i64, i64)\n"
-   "declare i64 @rt_quotient(i64, i64)\n"
-   "declare i64 @rt_remainder(i64, i64)\n"
-   "declare i64 @rt_modulo(i64, i64)\n"
-   "declare i64 @rt_num_eq(i64, i64)\n"
-   "declare i64 @rt_lt(i64, i64)\n"
-   "declare i64 @rt_flonum_lit(ptr)\n"
-   "declare i64 @rt_make_flonum(double)\n"
-   "declare i64 @rt_string_to_flonum(i64)\n"
-   "declare i64 @rt_flonum_to_string(i64)\n"
-   "declare i64 @rt_flonum_p(i64)\n"
-   "declare i64 @rt_number_p(i64)\n"
-   "declare i64 @rt_real_p(i64)\n"
-   "declare i64 @rt_inexact_p(i64)\n"
-   "declare i64 @rt_exact_to_inexact(i64)\n"
-   "declare i64 @rt_inexact_to_exact(i64)\n"
-   ;; classification / rounding / libm (change: numeric-conformance)
-   "declare i64 @rt_finite_p(i64)\n"
-   "declare i64 @rt_nan_p(i64)\n"
-   "declare i64 @rt_flo_floor(i64)\n"
-   "declare i64 @rt_flo_ceiling(i64)\n"
-   "declare i64 @rt_flo_truncate(i64)\n"
-   "declare i64 @rt_flo_round(i64)\n"
-   "declare i64 @rt_sqrt(i64)\n"
-   "declare i64 @rt_exp(i64)\n"
-   "declare i64 @rt_log(i64)\n"
-   "declare i64 @rt_sin(i64)\n"
-   "declare i64 @rt_cos(i64)\n"
-   "declare i64 @rt_tan(i64)\n"
-   "declare i64 @rt_asin(i64)\n"
-   "declare i64 @rt_acos(i64)\n"
-   "declare i64 @rt_atan(i64)\n"
-   "declare i64 @rt_atan2(i64, i64)\n"
-   "declare i64 @rt_pow(i64, i64)\n"
-   "declare i64 @rt_write_char(i64)\n"
-   "declare i64 @rt_null_p(i64)\n"
-   "declare i64 @rt_pair_p(i64)\n"
-   "declare i64 @rt_procedure_p(i64)\n"
-   "declare i64 @rt_make_string_1(i64)\n"
-   "declare i64 @rt_make_vector_1(i64)\n"
-   "declare i64 @rt_string_copy_from(i64, i64)\n"
-   "declare i64 @rt_eq_p(i64, i64)\n"
-   "declare i64 @rt_eqv_p(i64, i64)\n"
-   "declare i64 @rt_equal(i64, i64)\n"
-   "declare i64 @rt_not(i64)\n"
-   "declare i64 @rt_intern(ptr)\n"
-   "declare i64 @rt_make_string(ptr, i64)\n"
-   "declare i64 @rt_char_to_integer(i64)\n"
-   "declare i64 @rt_integer_to_char(i64)\n"
-   "declare i64 @rt_string_length(i64)\n"
-   "declare i64 @rt_string_ref(i64, i64)\n"
-   "declare i64 @rt_substring(i64, i64, i64)\n"
-   "declare i64 @rt_string_to_symbol(i64)\n"
-   "declare i64 @rt_string_eq(i64, i64)\n"
-   "declare i64 @rt_string_append(i64, i64)\n"
-   "declare i64 @rt_symbol_to_string(i64)\n"
-   "declare i64 @rt_list_to_string(i64)\n"
-   "declare i64 @rt_make_string_fill(i64, i64)\n"
-   "declare i64 @rt_string_set(i64, i64, i64)\n"
-   "declare i64 @rt_string_copy(i64)\n"
-   "declare i64 @rt_make_vector(i64, i64)\n"
-   "declare i64 @rt_vector_ref(i64, i64)\n"
-   "declare i64 @rt_vector_set(i64, i64, i64)\n"
-   "declare i64 @rt_vector_length(i64)\n"
-   "declare i64 @rt_vector_p(i64)\n"
-   "declare i64 @rt_make_bytevector(i64, i64)\n"
-   "declare i64 @rt_bytevector_u8_ref(i64, i64)\n"
-   "declare i64 @rt_bytevector_u8_set(i64, i64, i64)\n"
-   "declare i64 @rt_bytevector_length(i64)\n"
-   "declare i64 @rt_bytevector_p(i64)\n"
-   "declare i64 @rt_hash(i64)\n"
-   "declare i64 @rt_eq_hash(i64)\n"
-   "declare i64 @rt_make_hash_table(i64)\n"
-   "declare i64 @rt_hash_table_p(i64)\n"
-   "declare i64 @rt_hash_table_spine(i64)\n"
-   "declare i64 @rt_make_record_type(i64)\n"
-   "declare i64 @rt_make_record(i64, i64)\n"
-   "declare i64 @rt_record_ref(i64, i64)\n"
-   "declare i64 @rt_record_set(i64, i64, i64)\n"
-   "declare i64 @rt_record_of_type_p(i64, i64)\n"
-   "declare i64 @rt_record_p(i64)\n"
-   "declare i64 @rt_list_to_mv(i64)\n"
-   "declare i64 @rt_mv_p(i64)\n"
-   "declare i64 @rt_mv_to_list(i64)\n"
-   "declare i64 @rt_symbol_p(i64)\n"
-   "declare i64 @rt_string_p(i64)\n"
-   "declare i64 @rt_char_p(i64)\n"
-   "declare i64 @rt_boolean_p(i64)\n"
-   "declare i64 @rt_integer_p(i64)\n"
-   "declare i64 @rt_exact_p(i64)\n"
-   "declare i64 @rt_read_all_stdin()\n"
-   "declare i64 @rt_no_prelude_p()\n"
-   "declare i64 @rt_dump_level()\n"
-   "declare i64 @rt_stderr_write(i64, i64)\n"
-   "declare i64 @rt_repl_mode()\n"
-   "declare i64 @rt_repl_input()\n"
-   "declare i64 @rt_repl_state_ref()\n"
-   "declare i64 @rt_repl_state_set(i64)\n"
-   "declare i64 @rt_root(i64)\n"
-   "declare i64 @rt_display(i64)\n"
-   "declare i64 @rt_write_val(i64)\n"
-   "declare i64 @rt_write_simple_val(i64)\n"
-   "declare i64 @rt_write_shared_val(i64)\n"
-   "declare i64 @rt_newline()\n"
-   "declare i64 @rt_eof_object()\n"
-   "declare i64 @rt_eof_object_p(i64)\n"
-   "declare i64 @rt_read_file(i64)\n"
-   "declare i64 @rt_port_open_output_file(i64)\n"
-   "declare i64 @rt_port_open_output_string()\n"
-   "declare i64 @rt_port_get_output_string(i64)\n"
-   "declare i64 @rt_port_flush(i64)\n"
-   "declare i64 @rt_port_close(i64)\n"
-   "declare i64 @rt_set_current_output(i64)\n"
-   "declare i64 @rt_write_string(i64)\n"
-   "declare i64 @rt_port_display(i64, i64)\n"
-   "declare i64 @rt_port_write(i64, i64)\n"
-   "declare i64 @rt_port_write_simple(i64, i64)\n"
-   "declare i64 @rt_port_write_shared(i64, i64)\n"
-   "declare i64 @rt_port_newline(i64)\n"
-   "declare i64 @rt_port_write_char(i64, i64)\n"
-   "declare i64 @rt_port_write_string(i64, i64)\n"
-   "declare i64 @rt_command_line()\n"
-   "declare i64 @rt_get_environment_variable(i64)\n"
-   "declare i64 @rt_get_environment_variables()\n"
-   "declare i64 @rt_process_exit(i64)\n"
-   "declare i64 @rt_process_emergency_exit(i64)\n"
-   "declare i64 @rt_list_length(i64)\n"
-   "declare i64 @rt_build_rest(i64, i64, i64, ptr, ptr)\n"
-   "declare ptr @rt_apply_argv(i64, ptr, i64, i64)\n"
-   "declare void @rt_arity_error(i64, i64)\n"
-   ;; the operator tag test, called before every INDIRECT call (design D6)
-   "declare void @rt_check_callable(i64)\n"
-   "declare i64 @rt_error(i64, i64)\n"
-   "declare i64 @rt_raise(i64)\n"
-   "declare i64 @rt_make_error_object(i64, i64)\n"
-   "declare i64 @rt_make_error_object_kind(i64, i64, i64)\n"
-   "declare i64 @rt_error_object_kind(i64)\n"
-   "declare i64 @rt_set_trap_raiser(ptr, i64)\n"
-   "declare i64 @rt_trap_object()\n"
-   "declare i64 @rt_file_exists_p(i64)\n"
-   "declare i64 @rt_delete_file(i64)\n"
-   "declare i64 @rt_filesystem_directory_list(i64)\n"
-   "declare i64 @rt_filesystem_directory_status(i64)\n"
-   "declare i64 @rt_filesystem_symlink_status(i64)\n"
-   "declare i64 @rt_filesystem_replace_file(i64, i64)\n"
-   "declare i64 @rt_escape_frame()\n"
-   "declare i64 @rt_escape_to(i64, i64)\n"
-   "declare i64 @rt_escape_live_p(i64)\n"
-   "declare i64 @rt_run_guarded(ptr, i64)\n"
-   "declare i64 @rt_error_object_p(i64)\n"
-   "declare i64 @rt_error_object_message(i64)\n"
-   "declare i64 @rt_error_object_irritants(i64)\n"
-   ;; LLVM overflow-checked arithmetic, used by the inline fixnum fast path
-   ;; (change: fixnum-overflow-trap).  Each returns { i64 result, i1 overflowed }.
-   "declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64)\n"
-   "declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64)\n"
-   "declare {i64, i1} @llvm.smul.with.overflow.i64(i64, i64)\n\n"))
+    "declare align 8 ptr @rt_alloc_words(i64)\n" ; align: see emit-alloc-closure (P6-B)
+    "declare i64 @rt_cons(i64, i64)\n"
+    "declare i64 @rt_car(i64)\n"
+    "declare i64 @rt_cdr(i64)\n"
+    "declare i64 @rt_set_car(i64, i64)\n"
+    "declare i64 @rt_set_cdr(i64, i64)\n"
+    "declare i64 @rt_box(i64)\n"
+    "declare i64 @rt_unbox(i64)\n"
+    "declare i64 @rt_set_box(i64, i64)\n"
+    "declare i64 @rt_add(i64, i64)\n"
+    "declare i64 @rt_sub(i64, i64)\n"
+    "declare i64 @rt_mul(i64, i64)\n"
+    "declare i64 @rt_div(i64, i64)\n"
+    "declare i64 @rt_quotient(i64, i64)\n"
+    "declare i64 @rt_remainder(i64, i64)\n"
+    "declare i64 @rt_modulo(i64, i64)\n"
+    "declare i64 @rt_num_eq(i64, i64)\n"
+    "declare i64 @rt_lt(i64, i64)\n"
+    "declare i64 @rt_flonum_lit(ptr)\n"
+    "declare i64 @rt_make_flonum(double)\n"
+    "declare i64 @rt_string_to_flonum(i64)\n"
+    "declare i64 @rt_flonum_to_string(i64)\n"
+    "declare i64 @rt_flonum_p(i64)\n"
+    "declare i64 @rt_number_p(i64)\n"
+    "declare i64 @rt_real_p(i64)\n"
+    "declare i64 @rt_inexact_p(i64)\n"
+    "declare i64 @rt_exact_to_inexact(i64)\n"
+    "declare i64 @rt_inexact_to_exact(i64)\n"
+    ;; classification / rounding / libm (change: numeric-conformance)
+    "declare i64 @rt_finite_p(i64)\n"
+    "declare i64 @rt_nan_p(i64)\n"
+    "declare i64 @rt_flo_floor(i64)\n"
+    "declare i64 @rt_flo_ceiling(i64)\n"
+    "declare i64 @rt_flo_truncate(i64)\n"
+    "declare i64 @rt_flo_round(i64)\n"
+    "declare i64 @rt_sqrt(i64)\n"
+    "declare i64 @rt_exp(i64)\n"
+    "declare i64 @rt_log(i64)\n"
+    "declare i64 @rt_sin(i64)\n"
+    "declare i64 @rt_cos(i64)\n"
+    "declare i64 @rt_tan(i64)\n"
+    "declare i64 @rt_asin(i64)\n"
+    "declare i64 @rt_acos(i64)\n"
+    "declare i64 @rt_atan(i64)\n"
+    "declare i64 @rt_atan2(i64, i64)\n"
+    "declare i64 @rt_pow(i64, i64)\n"
+    "declare i64 @rt_write_char(i64)\n"
+    "declare i64 @rt_null_p(i64)\n"
+    "declare i64 @rt_pair_p(i64)\n"
+    "declare i64 @rt_procedure_p(i64)\n"
+    "declare i64 @rt_make_string_1(i64)\n"
+    "declare i64 @rt_make_vector_1(i64)\n"
+    "declare i64 @rt_string_copy_from(i64, i64)\n"
+    "declare i64 @rt_eq_p(i64, i64)\n"
+    "declare i64 @rt_eqv_p(i64, i64)\n"
+    "declare i64 @rt_equal(i64, i64)\n"
+    "declare i64 @rt_not(i64)\n"
+    "declare i64 @rt_intern(ptr)\n"
+    "declare i64 @rt_make_string(ptr, i64)\n"
+    "declare i64 @rt_char_to_integer(i64)\n"
+    "declare i64 @rt_integer_to_char(i64)\n"
+    "declare i64 @rt_string_length(i64)\n"
+    "declare i64 @rt_string_ref(i64, i64)\n"
+    "declare i64 @rt_substring(i64, i64, i64)\n"
+    "declare i64 @rt_string_to_symbol(i64)\n"
+    "declare i64 @rt_string_eq(i64, i64)\n"
+    "declare i64 @rt_string_append(i64, i64)\n"
+    "declare i64 @rt_symbol_to_string(i64)\n"
+    "declare i64 @rt_list_to_string(i64)\n"
+    "declare i64 @rt_make_string_fill(i64, i64)\n"
+    "declare i64 @rt_string_set(i64, i64, i64)\n"
+    "declare i64 @rt_string_copy(i64)\n"
+    "declare i64 @rt_make_vector(i64, i64)\n"
+    "declare i64 @rt_vector_ref(i64, i64)\n"
+    "declare i64 @rt_vector_set(i64, i64, i64)\n"
+    "declare i64 @rt_vector_length(i64)\n"
+    "declare i64 @rt_vector_p(i64)\n"
+    "declare i64 @rt_make_bytevector(i64, i64)\n"
+    "declare i64 @rt_bytevector_u8_ref(i64, i64)\n"
+    "declare i64 @rt_bytevector_u8_set(i64, i64, i64)\n"
+    "declare i64 @rt_bytevector_length(i64)\n"
+    "declare i64 @rt_bytevector_p(i64)\n"
+    "declare i64 @rt_hash(i64)\n"
+    "declare i64 @rt_eq_hash(i64)\n"
+    "declare i64 @rt_make_hash_table(i64)\n"
+    "declare i64 @rt_hash_table_p(i64)\n"
+    "declare i64 @rt_hash_table_spine(i64)\n"
+    "declare i64 @rt_make_record_type(i64)\n"
+    "declare i64 @rt_make_record(i64, i64)\n"
+    "declare i64 @rt_record_ref(i64, i64)\n"
+    "declare i64 @rt_record_set(i64, i64, i64)\n"
+    "declare i64 @rt_record_of_type_p(i64, i64)\n"
+    "declare i64 @rt_record_p(i64)\n"
+    "declare i64 @rt_list_to_mv(i64)\n"
+    "declare i64 @rt_mv_p(i64)\n"
+    "declare i64 @rt_mv_to_list(i64)\n"
+    "declare i64 @rt_symbol_p(i64)\n"
+    "declare i64 @rt_string_p(i64)\n"
+    "declare i64 @rt_char_p(i64)\n"
+    "declare i64 @rt_boolean_p(i64)\n"
+    "declare i64 @rt_integer_p(i64)\n"
+    "declare i64 @rt_exact_p(i64)\n"
+    "declare i64 @rt_read_all_stdin()\n"
+    "declare i64 @rt_no_prelude_p()\n"
+    "declare i64 @rt_dump_level()\n"
+    "declare i64 @rt_stderr_write(i64, i64)\n"
+    "declare i64 @rt_repl_mode()\n"
+    "declare i64 @rt_repl_input()\n"
+    "declare i64 @rt_repl_state_ref()\n"
+    "declare i64 @rt_repl_state_set(i64)\n"
+    "declare i64 @rt_root(i64)\n"
+    "declare i64 @rt_display(i64)\n"
+    "declare i64 @rt_write_val(i64)\n"
+    "declare i64 @rt_write_simple_val(i64)\n"
+    "declare i64 @rt_write_shared_val(i64)\n"
+    "declare i64 @rt_newline()\n"
+    "declare i64 @rt_eof_object()\n"
+    "declare i64 @rt_eof_object_p(i64)\n"
+    "declare i64 @rt_read_file(i64)\n"
+    "declare i64 @rt_port_open_output_file(i64)\n"
+    "declare i64 @rt_port_open_output_string()\n"
+    "declare i64 @rt_port_get_output_string(i64)\n"
+    "declare i64 @rt_port_flush(i64)\n"
+    "declare i64 @rt_port_close(i64)\n"
+    "declare i64 @rt_set_current_output(i64)\n"
+    "declare i64 @rt_write_string(i64)\n"
+    "declare i64 @rt_port_display(i64, i64)\n"
+    "declare i64 @rt_port_write(i64, i64)\n"
+    "declare i64 @rt_port_write_simple(i64, i64)\n"
+    "declare i64 @rt_port_write_shared(i64, i64)\n"
+    "declare i64 @rt_port_newline(i64)\n"
+    "declare i64 @rt_port_write_char(i64, i64)\n"
+    "declare i64 @rt_port_write_string(i64, i64)\n"
+    "declare i64 @rt_command_line()\n"
+    "declare i64 @rt_get_environment_variable(i64)\n"
+    "declare i64 @rt_get_environment_variables()\n"
+    "declare i64 @rt_process_exit(i64)\n"
+    "declare i64 @rt_process_emergency_exit(i64)\n"
+    "declare i64 @rt_list_length(i64)\n"
+    "declare i64 @rt_build_rest(i64, i64, i64, ptr, ptr)\n"
+    "declare ptr @rt_apply_argv(i64, ptr, i64, i64)\n"
+    "declare void @rt_arity_error(i64, i64)\n"
+    ;; the operator tag test, called before every INDIRECT call (design D6)
+    "declare void @rt_check_callable(i64)\n"
+    "declare i64 @rt_error(i64, i64)\n"
+    "declare i64 @rt_raise(i64)\n"
+    "declare i64 @rt_make_error_object(i64, i64)\n"
+    "declare i64 @rt_make_error_object_kind(i64, i64, i64)\n"
+    "declare i64 @rt_error_object_kind(i64)\n"
+    "declare i64 @rt_set_trap_raiser(ptr, i64)\n"
+    "declare i64 @rt_trap_object()\n"
+    "declare i64 @rt_file_exists_p(i64)\n"
+    "declare i64 @rt_delete_file(i64)\n"
+    "declare i64 @rt_filesystem_directory_list(i64)\n"
+    "declare i64 @rt_filesystem_directory_status(i64)\n"
+    "declare i64 @rt_filesystem_symlink_status(i64)\n"
+    "declare i64 @rt_filesystem_replace_file(i64, i64)\n"
+    "declare i64 @rt_escape_frame()\n"
+    "declare i64 @rt_escape_to(i64, i64)\n"
+    "declare i64 @rt_escape_live_p(i64)\n"
+    "declare i64 @rt_run_guarded(ptr, i64)\n"
+    "declare i64 @rt_error_object_p(i64)\n"
+    "declare i64 @rt_error_object_message(i64)\n"
+    "declare i64 @rt_error_object_irritants(i64)\n"
+    ;; LLVM overflow-checked arithmetic, used by the inline fixnum fast path
+    ;; (change: fixnum-overflow-trap).  Each returns { i64 result, i1 overflowed }.
+    "declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64)\n"
+    "declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64)\n"
+    "declare {i64, i1} @llvm.smul.with.overflow.i64(i64, i64)\n\n"))
 
 ;; entry arity check: fixed callee requires argc == f, variadic requires
 ;; argc >= f; a mismatch calls rt_arity_error (which aborts).  Leaves emission
 ;; positioned in a fresh "ok" block.
 (define (emit-arity-check f rest?)
   (let* ([ok (fresh-temp)] [errbb (fresh-bb "arityerr")] [okbb (fresh-bb "argok")])
-    (emit! (string-append ok " = icmp " (if rest? "sge" "eq") " i64 %argc, " (number->string f)))
+    (emit! (string-append ok
+                          " = icmp "
+                          (if rest? "sge" "eq")
+                          " i64 %argc, "
+                          (number->string f)))
     (emit! (string-append "br i1 " ok ", label %" okbb ", label %" errbb))
     (start-bb errbb)
-    (emit! (string-append "call void @rt_arity_error(i64 " (number->string f) ", i64 %argc)"))
+    (emit! (string-append "call void @rt_arity_error(i64 "
+                          (number->string f)
+                          ", i64 %argc)"))
     (emit! "unreachable")
     (start-bb okbb)))
 
@@ -1400,10 +1538,17 @@
   ;; which numbered the spill and the result differently on the two doors and broke
   ;; the cross-door byte-identity of every unit exporting a variadic procedure
   ;; (issue #11; same rule as the global-set!/ev-if/et-if sites, fix-emit-eval-order).
-  (let* ([slots (emit-spill (map (lambda (i) (string-append "%a" (number->string i))) (iota k)))]
+  (let* ([slots (emit-spill (map (lambda (i) (string-append "%a" (number->string i)))
+                                 (iota k)))]
          [r (fresh-temp)])
-    (emit! (string-append r " = call i64 @rt_build_rest(i64 %argc, i64 " (number->string f)
-                          ", i64 " (number->string k) ", ptr " slots ", ptr %overflow)"))
+    (emit! (string-append r
+                          " = call i64 @rt_build_rest(i64 %argc, i64 "
+                          (number->string f)
+                          ", i64 "
+                          (number->string k)
+                          ", ptr "
+                          slots
+                          ", ptr %overflow)"))
     r))
 
 ;; Emit one callable entry for a lifted body.  MINIMUM? selects the exact-minimum
@@ -1415,13 +1560,15 @@
   (set! emit-lines '())
   (set! current-bb "entry")
   (let* ([f (length fixed)]
-         [argdecls (comma-join
-                     (append
-                       (list "i64 %self" "i64 %argc")
-                       (map (lambda (i) (string-append "i64 %a" (number->string i))) (iota k))
-                       (list "ptr %overflow")))]
+         [argdecls
+           (comma-join
+             (append
+               (list "i64 %self" "i64 %argc")
+               (map (lambda (i) (string-append "i64 %a" (number->string i))) (iota k))
+               (list "ptr %overflow")))]
          [env0 (map (lambda (p i) (cons p (string-append "%a" (number->string i))))
-                    fixed (iota f))])
+                    fixed
+                    (iota f))])
     (start-bb "entry")
     (unless minimum? (emit-arity-check f rest))
     (let ([env (if rest
@@ -1434,39 +1581,55 @@
       (set! *fset* (compute-flonum-params fixed body analysis-label))
       (et body env "%self" #t)
       (set! *fset* saved-fset))
-    (string-append "define fastcc i64 " (label-operand label) "(" argdecls ") {\n"
-                   (lines->string (reverse emit-lines)) "}\n\n")))
+    (string-append "define fastcc i64 "
+                   (label-operand label)
+                   "("
+                   argdecls
+                   ") {\n"
+                   (lines->string (reverse emit-lines))
+                   "}\n\n")))
 
 (define (emit-code-def def k)
   (match def
     [(code ,label ,self ,fixed ,rest ,body)
-     (let* ([ordinary (emit-code-entry label label fixed rest body k #f)]
-            [minimum (if rest
-                         (emit-code-entry (minimum-entry-label label) label
-                                          fixed rest body k #t)
-                         "")])
-       (string-append ordinary minimum))]))
+      (let* ([ordinary (emit-code-entry label label fixed rest body k #f)]
+             [minimum (if rest
+                          (emit-code-entry (minimum-entry-label label)
+                                           label
+                                           fixed
+                                           rest
+                                           body
+                                           k
+                                           #t)
+                          "")])
+        (string-append ordinary minimum))]))
 
 (define (emit-entry entry)
-  (set! emit-lines '()) (set! current-bb "entry")
+  (set! emit-lines '())
+  (set! current-bb "entry")
   (start-bb "entry")
-  (et entry '() #f #f)                    ; ccc, no closure, regular calls
-  (string-append "define i64 @scheme_entry() {\n" (lines->string (reverse emit-lines)) "}\n"))
+  (et entry '() #f #f) ; ccc, no closure, regular calls
+  (string-append "define i64 @scheme_entry() {\n"
+                 (lines->string (reverse emit-lines))
+                 "}\n"))
 
 (define (emit-program prog)
   (reset-emit!)
-  (set! *emit-unit* program-unit)          ; a program's own globals are unprefixed
+  (set! *emit-unit* program-unit) ; a program's own globals are unprefixed
   (match prog
     [(program ,defs ,entry)
-     (set! *arity* (max-arity defs))
-     (reset-symbols!)
-     ;; emit bodies first (populating the symbol-global accumulator), then
-     ;; assemble with the private string constants prepended to the module.
-     (let* ([body (apply string-append (map-lr (lambda (d) (emit-code-def d *arity*)) defs))]
-            [ent  (emit-entry entry)])
-       (string-append (rt-declarations)
-                      (symbol-globals)
-                      body ent (emit-apply0-trampoline *arity*)))]))
+      (set! *arity* (max-arity defs))
+      (reset-symbols!)
+      ;; emit bodies first (populating the symbol-global accumulator), then
+      ;; assemble with the private string constants prepended to the module.
+      (let* ([body (apply string-append
+                          (map-lr (lambda (d) (emit-code-def d *arity*)) defs))]
+             [ent (emit-entry entry)])
+        (string-append (rt-declarations)
+                       (symbol-globals)
+                       body
+                       ent
+                       (emit-apply0-trampoline *arity*)))]))
 
 ;; --- REPL emission: persistent globals + per-form entry thunks ------------
 ;; In a persistent session, closures built by one form's module are called from
@@ -1496,7 +1659,7 @@
 (define (global-operand s)
   (let ([str (if (symbol? s) (symbol->string s) s)])
     (if (label-has-colon? str)
-        (string-append "@\"" str "\"")                      ; imported: already qualified
+        (string-append "@\"" str "\"") ; imported: already qualified
         (string-append "@\"" (mangle *emit-unit* s) "\"")))) ; own: qualify to this unit
 
 ;; Scan an L-code program for the persistent globals it defines (global-set!
@@ -1510,22 +1673,25 @@
         [(free-ref ,i) (void)]
         [(global-ref ,s) (set! refd (union refd (list s)))]
         [(global-set! ,s ,e) (set! defd (union defd (list s)))
-                             (set! refd (union refd (list s))) (S e)]
+                             (set! refd (union refd (list s)))
+                             (S e)]
         [(if ,a ,b ,c) (S a) (S b) (S c)]
         [(seq ,a ,b) (S a) (S b)]
         [(primcall ,op . ,args) (for-each S args)]
         [(let ,binds ,body) (for-each (lambda (b) (S (cadr b))) binds) (S body)]
         [(make-closure ,label ,caps) (for-each S caps)]
         [(closure-block ,entries ,body)
-         (for-each (lambda (en) (for-each S (caddr en))) entries) (S body)]
+          (for-each (lambda (en) (for-each S (caddr en))) entries)
+          (S body)]
         [(app ,f ,args) (S f) (for-each S args)]
         [(apply-app ,f ,args) (S f) (for-each S args)]
-        [(self-app ,label ,args) (for-each S args)]     ; label is static; no callee to walk
+        [(self-app ,label ,args) (for-each S args)] ; label is static; no callee to walk
         [(known-app ,label ,f ,args) (S f) (for-each S args)]))
     (match prog
       [(program ,cdefs ,entry)
-       (for-each (lambda (d) (match d [(code ,l ,self ,fixed ,rest ,body) (S body)])) cdefs)
-       (S entry)])
+        (for-each (lambda (d) (match d [(code ,l ,self ,fixed ,rest ,body) (S body)]))
+                  cdefs)
+        (S entry)])
     (list defd refd)))
 
 ;; --- external code labels (change: cross-unit-direct-calls) ------------------
@@ -1543,9 +1709,7 @@
 ;; two different objects (one built by lower for the code def, one carried in the
 ;; import table).
 (define (label-mem? l ls)
-  (cond [(null? ls) #f]
-        [(string=? l (car ls)) #t]
-        [else (label-mem? l (cdr ls))]))
+  (cond [(null? ls) #f] [(string=? l (car ls)) #t] [else (label-mem? l (cdr ls))]))
 
 ;; -> the direct-called-but-not-defined labels across a LIST of lowered progs (a
 ;; library unit and the REPL batch are several progs; a program is one), in first-use
@@ -1566,24 +1730,26 @@
         [(let ,binds ,body) (for-each (lambda (b) (S (cadr b))) binds) (S body)]
         [(make-closure ,label ,caps) (for-each S caps)]
         [(closure-block ,entries ,body)
-         (for-each (lambda (en) (for-each S (caddr en))) entries) (S body)]
+          (for-each (lambda (en) (for-each S (caddr en))) entries)
+          (S body)]
         [(app ,f ,args) (S f) (for-each S args)]
         [(apply-app ,f ,args) (S f) (for-each S args)]
-        [(self-app ,label ,args) (for-each S args)]        ; always this module's own
+        [(self-app ,label ,args) (for-each S args)] ; always this module's own
         [(known-app ,label ,f ,args) (U label) (S f) (for-each S args)]))
     (for-each
       (lambda (prog)
         (match prog
           [(program ,cdefs ,entry)
-           (for-each (lambda (d)
-                       (match d [(code ,l ,self ,fixed ,rest ,body)
-                                 (set! defined
-                                       (if rest
-                                           (cons (minimum-entry-label l) (cons l defined))
-                                           (cons l defined)))
-                                 (S body)]))
-                     cdefs)
-           (S entry)]))
+            (for-each (lambda (d)
+                        (match d
+                          [(code ,l ,self ,fixed ,rest ,body)
+                            (set! defined
+                              (if rest
+                                  (cons (minimum-entry-label l) (cons l defined))
+                                  (cons l defined)))
+                            (S body)]))
+                      cdefs)
+            (S entry)]))
       progs)
     (filter (lambda (l) (not (label-mem? l defined))) (reverse used))))
 
@@ -1592,34 +1758,40 @@
 ;; type would not match the definition's.
 (define (external-label-decls labels k)
   (apply string-append
-    (map (lambda (l)
-           (string-append "declare fastcc i64 " (label-operand l) "("
-                          (comma-join (append (list "i64" "i64")
-                                              (map (lambda (i) "i64") (iota k))
-                                              (list "ptr")))
-                          ")\n"))
-         labels)))
+         (map (lambda (l)
+                (string-append "declare fastcc i64 "
+                               (label-operand l)
+                               "("
+                               (comma-join (append (list "i64" "i64")
+                                                   (map (lambda (i) "i64") (iota k))
+                                                   (list "ptr")))
+                               ")\n"))
+              labels)))
 
-(define (repl-check-arity prog)   ; enforce the pinned K (design D6)
+(define (repl-check-arity prog) ; enforce the pinned K (design D6)
   (match prog
     [(program ,cdefs ,entry)
-     (for-each
-       (lambda (d)
-         (match d
-           [(code ,l ,self ,fixed ,rest ,body)
-            (when (> (length fixed) repl-arity)
-              (error 'emit
-                     (string-append "definition arity exceeds REPL max ("
-                                    (number->string repl-arity) ")")
-                     l))]))
-       cdefs)]))
+      (for-each (lambda (d)
+                  (match d
+                    [(code ,l ,self ,fixed ,rest ,body)
+                      (when (> (length fixed) repl-arity)
+                        (error 'emit
+                               (string-append "definition arity exceeds REPL max ("
+                                              (number->string repl-arity)
+                                              ")")
+                               l))]))
+                cdefs)]))
 
-(define (emit-named-entry entry name)   ; ccc thunk @name returning the value
-  (set! emit-lines '()) (set! current-bb "entry")
+(define (emit-named-entry entry name) ; ccc thunk @name returning the value
+  (set! emit-lines '())
+  (set! current-bb "entry")
   (start-bb "entry")
   (et entry '() #f #f)
-  (string-append "define i64 @" name "() {\n"
-                 (lines->string (reverse emit-lines)) "}\n\n"))
+  (string-append "define i64 @"
+                 name
+                 "() {\n"
+                 (lines->string (reverse emit-lines))
+                 "}\n\n"))
 
 ;; Emit ONE module holding a whole session's worth of forms: every form's code
 ;; defs, one @__repl_N thunk per form, a single definition of each persistent
@@ -1634,39 +1806,60 @@
 ;; emit-repl-batch-named takes that name; emit-repl-batch keeps the old default.
 (define (emit-repl-batch progs) (emit-repl-batch-named progs "scheme_entry"))
 (define (emit-repl-batch-named progs entry-name)
-  (reset-emit!) (reset-symbols!)
+  (reset-emit!)
+  (reset-symbols!)
   (set! *arity* repl-arity)
   (for-each repl-check-arity progs)
-  (let loop ([ps progs] [n 1] [bodies '()] [thunks '()] [defd '()] [calls '()] [last #f])
+  (let loop ([ps progs]
+             [n 1]
+             [bodies '()]
+             [thunks '()]
+             [defd '()]
+             [calls '()]
+             [last #f])
     (if (null? ps)
-        (let* ([slots (apply string-append
-                        (map (lambda (s) (string-append (global-operand s)
-                                                        " = global i64 0\n"))
+        (let* ([slots (apply
+                        string-append
+                        (map (lambda (s)
+                               (string-append (global-operand s) " = global i64 0\n"))
                              defd))]
                ;; imported code labels the batch direct-calls (cross-unit-direct-calls)
                [ldecls (external-label-decls (scan-external-labels progs) repl-arity)]
-               [entry (string-append
-                        "define i64 @" entry-name "() {\nentry:\n"
-                        (apply string-append (reverse calls))
-                        "  ret i64 " (or last "2") "\n}\n")])
-          (string-append (rt-declarations) (symbol-globals) ldecls slots
+               [entry (string-append "define i64 @"
+                                     entry-name
+                                     "() {\nentry:\n"
+                                     (apply string-append (reverse calls))
+                                     "  ret i64 "
+                                     (or last "2")
+                                     "\n}\n")])
+          (string-append (rt-declarations)
+                         (symbol-globals)
+                         ldecls
+                         slots
                          (apply string-append (reverse bodies))
                          (apply string-append (reverse thunks))
-                         entry (emit-apply0-trampoline repl-arity)))
+                         entry
+                         (emit-apply0-trampoline repl-arity)))
         (let* ([prog (car ps)]
                [fd+rd (repl-scan-globals prog)]
-               [fd (car fd+rd)] [rd (cadr fd+rd)])
+               [fd (car fd+rd)]
+               [rd (cadr fd+rd)])
           (match prog
             [(program ,cdefs ,e)
-             (let* ([body (apply string-append
-                            (map-lr (lambda (d) (emit-code-def d repl-arity)) cdefs))]
-                    [name (string-append "__repl_" (number->string n))]
-                    [thunk (emit-named-entry e name)]
-                    [r (string-append "%r" (number->string n))]
-                    [call (string-append "  " r " = call i64 @" name "()\n")])
-               (loop (cdr ps) (+ n 1)
-                     (cons body bodies) (cons thunk thunks)
-                     (union defd fd) (cons call calls) r))])))))
+              (let* ([body (apply string-append
+                                  (map-lr (lambda (d) (emit-code-def d repl-arity))
+                                          cdefs))]
+                     [name (string-append "__repl_" (number->string n))]
+                     [thunk (emit-named-entry e name)]
+                     [r (string-append "%r" (number->string n))]
+                     [call (string-append "  " r " = call i64 @" name "()\n")])
+                (loop (cdr ps)
+                      (+ n 1)
+                      (cons body bodies)
+                      (cons thunk thunks)
+                      (union defd fd)
+                      (cons call calls)
+                      r))])))))
 
 ;; Emit ONE form as its own module for the persistent ORC/LLJIT host: globals it
 ;; defines get a slot definition, globals it only references (defined by earlier
@@ -1690,36 +1883,47 @@
 ;; JIT would reject the module with a duplicate-definition error.  Defaults to '()
 ;; (every scanned global is new), which is the old behaviour exactly.
 (define (emit-repl-module prog n . opt)
-  (reset-emit!) (reset-symbols!)
+  (reset-emit!)
+  (reset-symbols!)
   (set! *arity* repl-arity)
   (repl-check-arity prog)
   (let* ([prior (if (pair? opt) (car opt) '())]
          [defd+refd (repl-scan-globals prog)]
-         [defd (diff (car defd+refd) prior)]      ; slots THIS form introduces
+         [defd (diff (car defd+refd) prior)] ; slots THIS form introduces
          [refd (cadr defd+refd)])
     (let ([external (diff refd defd)]
           [name (string-append "__repl_" (number->string n))])
       (match prog
         [(program ,cdefs ,entry)
-         ;; emit bodies first so symbol-globals is populated before it is read
-         (let* ([body  (apply string-append
-                         (map-lr (lambda (d) (emit-code-def d repl-arity)) cdefs))]
-                [thunk (emit-named-entry entry name)]
-                [exts  (apply string-append
-                         (map (lambda (s) (string-append (global-operand s)
-                                            " = external global i64\n"))
-                              external))]
-                ;; imported code labels this form direct-calls (change:
-                ;; cross-unit-direct-calls) -- the JIT resolves them in the
-                ;; already-loaded unit's dylib, as it does the externals above.
-                [ldecls (external-label-decls (scan-external-labels (list prog)) repl-arity)]
-                [slots (apply string-append
-                         (map (lambda (s) (string-append (global-operand s)
-                                            " = global i64 0\n"))
-                              defd))])
-           (list (string-append (rt-declarations) exts ldecls slots (symbol-globals)
-                                body thunk (emit-apply0-trampoline repl-arity))
-                 name defd))]))))
+          ;; emit bodies first so symbol-globals is populated before it is read
+          (let* ([body (apply string-append
+                              (map-lr (lambda (d) (emit-code-def d repl-arity)) cdefs))]
+                 [thunk (emit-named-entry entry name)]
+                 [exts (apply string-append
+                              (map (lambda (s)
+                                     (string-append (global-operand s)
+                                                    " = external global i64\n"))
+                                   external))]
+                 ;; imported code labels this form direct-calls (change:
+                 ;; cross-unit-direct-calls) -- the JIT resolves them in the
+                 ;; already-loaded unit's dylib, as it does the externals above.
+                 [ldecls (external-label-decls (scan-external-labels (list prog))
+                                               repl-arity)]
+                 [slots (apply
+                          string-append
+                          (map (lambda (s)
+                                 (string-append (global-operand s) " = global i64 0\n"))
+                               defd))])
+            (list (string-append (rt-declarations)
+                                 exts
+                                 ldecls
+                                 slots
+                                 (symbol-globals)
+                                 body
+                                 thunk
+                                 (emit-apply0-trampoline repl-arity))
+                  name
+                  defd))]))))
 
 ;; ============================================================================
 ;; Module artifacts (change: module-artifacts-vertical-slice)
@@ -1733,13 +1937,16 @@
 ;; transitively-imported library is initialized before the dependent that uses it.
 ;; The one-shot @"L:__inited" guard makes a diamond's shared unit run once.
 (define (emit-entry/inits entry init-libs)
-  (set! emit-lines '()) (set! current-bb "entry")
+  (set! emit-lines '())
+  (set! current-bb "entry")
   (start-bb "entry")
   (for-each
     (lambda (lib) (emit! (string-append "call i64 @\"" (mangle lib "__init") "\"()")))
     init-libs)
   (et entry '() #f #f)
-  (string-append "define i64 @scheme_entry() {\n" (lines->string (reverse emit-lines)) "}\n"))
+  (string-append "define i64 @scheme_entry() {\n"
+                 (lines->string (reverse emit-lines))
+                 "}\n"))
 
 ;; A program module that imports libraries.  Like emit-program, but pins the
 ;; closure arity K to repl-arity (the shared cross-module closure ABI, matching
@@ -1751,26 +1958,37 @@
 ;;                   imports' exports; transitive exports are not visible to it)
 (define (emit-program-with-imports prog init-libs imported-syms)
   (reset-emit!)
-  (set! *emit-unit* program-unit)          ; the program's own globals are unprefixed
+  (set! *emit-unit* program-unit) ; the program's own globals are unprefixed
   (match prog
     [(program ,defs ,entry)
-     (set! *arity* repl-arity)
-     (reset-symbols!)
-     (let* ([body (apply string-append (map-lr (lambda (d) (emit-code-def d *arity*)) defs))]
-            [ent  (emit-entry/inits entry init-libs)]
-            [gdecls (apply string-append
-                      (map (lambda (s) (string-append (global-operand s) " = external global i64\n"))
-                           imported-syms))]
-            [idecls (apply string-append
-                      (map (lambda (lib)
-                             (string-append "declare i64 @\"" (mangle lib "__init") "\"()\n"))
-                           init-libs))]
-            ;; the imported code labels this program direct-calls (change:
-            ;; cross-unit-direct-calls); empty when it direct-calls none, so a
-            ;; program importing only values is byte-identical to before.
-            [ldecls (external-label-decls (scan-external-labels (list prog)) *arity*)])
-       (string-append (rt-declarations) gdecls idecls ldecls (symbol-globals)
-                      body ent (emit-apply0-trampoline *arity*)))]))
+      (set! *arity* repl-arity)
+      (reset-symbols!)
+      (let* ([body (apply string-append
+                          (map-lr (lambda (d) (emit-code-def d *arity*)) defs))]
+             [ent (emit-entry/inits entry init-libs)]
+             [gdecls (apply string-append
+                            (map (lambda (s)
+                                   (string-append (global-operand s)
+                                                  " = external global i64\n"))
+                                 imported-syms))]
+             [idecls (apply string-append
+                            (map (lambda (lib)
+                                   (string-append "declare i64 @\""
+                                                  (mangle lib "__init")
+                                                  "\"()\n"))
+                                 init-libs))]
+             ;; the imported code labels this program direct-calls (change:
+             ;; cross-unit-direct-calls); empty when it direct-calls none, so a
+             ;; program importing only values is byte-identical to before.
+             [ldecls (external-label-decls (scan-external-labels (list prog)) *arity*)])
+        (string-append (rt-declarations)
+                       gdecls
+                       idecls
+                       ldecls
+                       (symbol-globals)
+                       body
+                       ent
+                       (emit-apply0-trampoline *arity*)))]))
 
 ;; Emit a library UNIT module for `library-name` from its lowered form-progs.
 ;; Mirrors emit-repl-batch-named, but every unit-owned symbol is qualified via
@@ -1779,59 +1997,89 @@
 ;; one-shot @"L:__init" guarded by @"L:__inited"; and there is NO @scheme_entry.
 ;; Globals get default (external) linkage so importers resolve them by name.
 (define (emit-library-batch progs library-name)
-  (reset-emit!) (reset-symbols!)
+  (reset-emit!)
+  (reset-symbols!)
   (set! *emit-unit* library-name)
   (set! *arity* repl-arity)
   (for-each repl-check-arity progs)
-  (let ([qop (lambda (nm) (string-append "@\"" (mangle library-name nm) "\""))])  ; @-operand
-    (let loop ([ps progs] [n 1] [bodies '()] [thunks '()] [defd '()] [refd '()] [calls '()])
+  (let ([qop (lambda (nm)
+               (string-append "@\"" (mangle library-name nm) "\""))]) ; @-operand
+    (let loop ([ps progs]
+               [n 1]
+               [bodies '()]
+               [thunks '()]
+               [defd '()]
+               [refd '()]
+               [calls '()])
       (if (null? ps)
           ;; A transitively-imported global (change: module-generalize) is referenced
           ;; but not defined by this unit; declare it `external` so it resolves at
           ;; link/load time to the exporter.  For an import-free library `external`
           ;; is empty, so the emitted bytes are unchanged (Stage 1 byte-identity).
-          (let* ([flag    (qop "__inited")]
+          (let* ([flag (qop "__inited")]
                  [flagdef (string-append flag " = global i64 0\n")]
                  [external (diff refd defd)]
-                 [exts    (apply string-append
-                            (map (lambda (s) (string-append (global-operand s) " = external global i64\n"))
-                                 external))]
+                 [exts (apply string-append
+                              (map (lambda (s)
+                                     (string-append (global-operand s)
+                                                    " = external global i64\n"))
+                                   external))]
                  ;; a library may direct-call ANOTHER library's export (change:
                  ;; cross-unit-direct-calls); declare each such label, exactly as the
                  ;; transitively-imported globals above are declared.
-                 [ldecls  (external-label-decls (scan-external-labels progs) repl-arity)]
-                 [slots   (apply string-append
-                            (map (lambda (s) (string-append (global-operand s) " = global i64 0\n"))
-                                 defd))]
-                 [init    (string-append
-                            "define i64 " (qop "__init") "() {\n"
-                            "entry:\n"
-                            "  %f = load i64, ptr " flag "\n"
-                            "  %c = icmp ne i64 %f, 0\n"
-                            "  br i1 %c, label %already, label %run\n"
-                            "already:\n"
-                            "  ret i64 2\n"
-                            "run:\n"
-                            "  store i64 8, ptr " flag "\n"
-                            (apply string-append (reverse calls))
-                            "  ret i64 2\n}\n")])
-            (string-append (rt-declarations) (symbol-globals) exts ldecls flagdef slots
+                 [ldecls (external-label-decls (scan-external-labels progs) repl-arity)]
+                 [slots (apply
+                          string-append
+                          (map (lambda (s)
+                                 (string-append (global-operand s) " = global i64 0\n"))
+                               defd))]
+                 [init (string-append "define i64 "
+                                      (qop "__init")
+                                      "() {\n"
+                                      "entry:\n"
+                                      "  %f = load i64, ptr "
+                                      flag
+                                      "\n"
+                                      "  %c = icmp ne i64 %f, 0\n"
+                                      "  br i1 %c, label %already, label %run\n"
+                                      "already:\n"
+                                      "  ret i64 2\n"
+                                      "run:\n"
+                                      "  store i64 8, ptr "
+                                      flag
+                                      "\n"
+                                      (apply string-append (reverse calls))
+                                      "  ret i64 2\n}\n")])
+            (string-append (rt-declarations)
+                           (symbol-globals)
+                           exts
+                           ldecls
+                           flagdef
+                           slots
                            (apply string-append (reverse bodies))
                            (apply string-append (reverse thunks))
-                           init (emit-apply0-trampoline repl-arity)))
+                           init
+                           (emit-apply0-trampoline repl-arity)))
           (let* ([prog (car ps)]
                  [fd+rd (repl-scan-globals prog)]
                  [fd (car fd+rd)]
                  [rd (cadr fd+rd)])
             (match prog
               [(program ,cdefs ,e)
-               (let* ([body  (apply string-append
-                               (map-lr (lambda (d) (emit-code-def d repl-arity)) cdefs))]
-                      [tname (string-append "\""
-                               (mangle library-name (string-append "__init_" (number->string n)))
-                               "\"")]
-                      [thunk (emit-named-entry e tname)]
-                      [call  (string-append "  call i64 @" tname "()\n")])
-                 (loop (cdr ps) (+ n 1)
-                       (cons body bodies) (cons thunk thunks)
-                       (union defd fd) (union refd rd) (cons call calls)))]))))))
+                (let* ([body (apply string-append
+                                    (map-lr (lambda (d) (emit-code-def d repl-arity))
+                                            cdefs))]
+                       [tname (string-append
+                                "\""
+                                (mangle library-name
+                                        (string-append "__init_" (number->string n)))
+                                "\"")]
+                       [thunk (emit-named-entry e tname)]
+                       [call (string-append "  call i64 @" tname "()\n")])
+                  (loop (cdr ps)
+                        (+ n 1)
+                        (cons body bodies)
+                        (cons thunk thunks)
+                        (union defd fd)
+                        (union refd rd)
+                        (cons call calls)))]))))))

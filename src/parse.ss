@@ -21,63 +21,48 @@
 ;; `%no-prelude?`/`%dump-level`, the narration writer `%stderr-write`) and the
 ;; REPL state ops (`repl-mode`/`repl-input`/`repl-state-ref`/`repl-state-set!`) --
 ;; never used as values, and the raw %-ops staying internal is a Non-Goal to relax.
-(define *prims* '(%+ %- %* %/ %= %< %eq? %eqv?
-                  %cons %quotient %remainder %modulo %car %cdr %set-car! %set-cdr!
-                  %null? %pair? %equal? %not
-                  %char->integer %integer->char
-                  %string-length %string-ref %string->symbol %symbol->string %list->string
-                  %string-set! %substring %string=? %make-string %string-copy
-                  %make-string-1 %make-vector-1 %string-copy-from
-                  %string-append
-                  %vector-ref %vector-set! %vector-length %vector? %make-vector
-                  %bytevector-u8-ref %bytevector-u8-set! %bytevector-length %bytevector?
-                  %make-bytevector
-                  %symbol? %string? %char? %boolean? %integer? %exact? %procedure?
-                  %flonum? %number? %real? %inexact? %exact->inexact %inexact->exact
-                  %string->flonum %flonum->string
-                  ;; change: numeric-conformance -- classification, the flonum arm of
-                  ;; the rounding family, and the libm ops behind (scheme inexact).
-                  ;; Permanently internal: the prelude and the library wrap them, so
-                  ;; none of these enters *integrable* and none is user-visible.
-                  %finite? %nan?
-                  %flo-floor %flo-ceiling %flo-truncate %flo-round
-                  %sqrt %exp %log %sin %cos %tan %asin %acos %atan %atan2 %pow
-                  %read-all-stdin %display %write %write-simple %write-shared
-                  %write-char %newline
-                  ;; change: scheme-io-library -- the eof object, the file/handle
-                  ;; edge primitives the prelude's ports are built over, and the
-                  ;; port-directed (2-argument) forms of the output procedures.
-                  %eof-object %eof-object? %read-file
-                  %port-open-output-file %port-open-output-string
-                  %port-get-output-string %port-flush %port-close
-                  %set-current-output!
-                  %write-string
-                  %display-port %write-port %write-simple-port %write-shared-port
-                  %newline-port %write-char-port
-                  %write-string-port
-                  %hash %eq-hash %make-hash-table %hash-table? %hash-table-spine
-                  %make-record-type %make-record %record-ref %record-set! %record-of-type? %record?
-                  %list->mv %mv? %mv->list
-                  %no-prelude? %dump-level %stderr-write
-                  %command-line %get-environment-variable %get-environment-variables
-                  %process-exit %process-emergency-exit
-                  repl-mode repl-input repl-state-ref repl-state-set!
-                  %error-abort %raise %run-guarded
-                  %make-error-object %escape-frame %escape-to %escape-live?
-                  %error-object? %error-object-message %error-object-irritants
-                  ;; change: catchable-errors-with-kinds -- the error object's kind
-                  ;; (constructor and private accessor), the one-time installation of
-                  ;; the Scheme raiser a runtime trap is handed to plus the cell it
-                  ;; reads the pending object from, and the two file operations that
-                  ;; are not port constructors.
-                  %make-error-object/kind %error-object-kind
-                  %set-trap-raiser! %trap-object
-                  %file-exists? %delete-file
-                  ;; change: add-filesystem-access -- the private raw edge behind
-                  ;; the ordinary non-standard (emit filesystem) library.
-                  %filesystem-directory-list
-                  %filesystem-directory-status %filesystem-symlink-status
-                  %filesystem-replace-file))
+(define *prims*
+  '(%+ %- %* %/ %= %< %eq? %eqv? %cons %quotient %remainder %modulo %car %cdr %set-car!
+    %set-cdr! %null? %pair? %equal? %not %char->integer %integer->char %string-length
+    %string-ref %string->symbol %symbol->string %list->string %string-set! %substring
+    %string=? %make-string %string-copy %make-string-1 %make-vector-1 %string-copy-from
+    %string-append %vector-ref %vector-set! %vector-length %vector? %make-vector
+    %bytevector-u8-ref %bytevector-u8-set! %bytevector-length %bytevector?
+    %make-bytevector %symbol? %string? %char? %boolean? %integer? %exact? %procedure?
+    %flonum? %number? %real? %inexact? %exact->inexact %inexact->exact %string->flonum
+    %flonum->string
+    ;; change: numeric-conformance -- classification, the flonum arm of
+    ;; the rounding family, and the libm ops behind (scheme inexact).
+    ;; Permanently internal: the prelude and the library wrap them, so
+    ;; none of these enters *integrable* and none is user-visible.
+    %finite? %nan? %flo-floor %flo-ceiling %flo-truncate %flo-round %sqrt %exp %log %sin
+    %cos %tan %asin %acos %atan %atan2 %pow %read-all-stdin %display %write
+    %write-simple %write-shared %write-char %newline
+    ;; change: scheme-io-library -- the eof object, the file/handle
+    ;; edge primitives the prelude's ports are built over, and the
+    ;; port-directed (2-argument) forms of the output procedures.
+    %eof-object %eof-object? %read-file %port-open-output-file %port-open-output-string
+    %port-get-output-string %port-flush %port-close %set-current-output! %write-string
+    %display-port %write-port %write-simple-port %write-shared-port %newline-port
+    %write-char-port %write-string-port %hash %eq-hash %make-hash-table %hash-table?
+    %hash-table-spine %make-record-type %make-record %record-ref %record-set!
+    %record-of-type? %record? %list->mv %mv? %mv->list %no-prelude? %dump-level
+    %stderr-write %command-line %get-environment-variable %get-environment-variables
+    %process-exit %process-emergency-exit repl-mode repl-input repl-state-ref
+    repl-state-set! %error-abort %raise %run-guarded %make-error-object %escape-frame
+    %escape-to %escape-live? %error-object? %error-object-message
+    %error-object-irritants
+    ;; change: catchable-errors-with-kinds -- the error object's kind
+    ;; (constructor and private accessor), the one-time installation of
+    ;; the Scheme raiser a runtime trap is handed to plus the cell it
+    ;; reads the pending object from, and the two file operations that
+    ;; are not port constructors.
+    %make-error-object/kind %error-object-kind %set-trap-raiser! %trap-object
+    %file-exists? %delete-file
+    ;; change: add-filesystem-access -- the private raw edge behind
+    ;; the ordinary non-standard (emit filesystem) library.
+    %filesystem-directory-list %filesystem-directory-status %filesystem-symlink-status
+    %filesystem-replace-file))
 (define (prim? op) (and (memq op *prims*) #t))
 
 ;; ---- primitives as first-class values ----
@@ -119,38 +104,35 @@
     ;; BINDS them -- `(map car *integrable*)` feeds compute-known and *repl-known* --
     ;; so `(map > ...)` and `(apply >= ...)` resolve instead of reporting an unbound
     ;; variable.  The fold kind carries the operand order and the inclusivity.
-    (> %< #f cmp-rev) (<= %< #f cmp-le) (>= %< #f cmp-ge)
-    (eq? %eq? 2) (eqv? %eqv? 2)
-    (quotient %quotient 2) (remainder %remainder 2) (modulo %modulo 2)
-    (car %car 1) (cdr %cdr 1) (null? %null? 1) (pair? %pair? 1)
+    (> %< #f cmp-rev) (<= %< #f cmp-le) (>= %< #f cmp-ge) (eq? %eq? 2) (eqv? %eqv? 2)
+    (quotient %quotient 2) (remainder %remainder 2) (modulo %modulo 2) (car %car 1)
+    (cdr %cdr 1) (null? %null? 1) (pair? %pair? 1)
     ;; R7RS 6.4 pair mutation (change: checked-primitive-arguments / issue #82).
     ;; Integrable like every other accessor, so a direct call inlines to a bare
     ;; primcall and a value reference (`(apply set-car! ...)`) etas.
-    (set-car! %set-car! 2) (set-cdr! %set-cdr! 2)
-    (equal? %equal? 2) (not %not 1)
+    (set-car! %set-car! 2) (set-cdr! %set-cdr! 2) (equal? %equal? 2) (not %not 1)
     ;; inexact numbers (change: inexact-numbers): flonum predicates/conversions and
     ;; write-char.  integer?/exact? are unchanged here (only their runtime semantics
     ;; refine to distinguish flonums).
     (flonum? %flonum? 1) (number? %number? 1) (real? %real? 1) (inexact? %inexact? 1)
     (exact->inexact %exact->inexact 1) (inexact->exact %inexact->exact 1)
-    (write-char %write-char 1)
-    (char->integer %char->integer 1) (integer->char %integer->char 1)
-    (string-length %string-length 1) (string-ref %string-ref 2)
-    (string->symbol %string->symbol 1) (symbol->string %symbol->string 1)
-    (list->string %list->string 1) (string-set! %string-set! 3)
-    (vector-ref %vector-ref 2) (vector-set! %vector-set! 3)
+    (write-char %write-char 1) (char->integer %char->integer 1)
+    (integer->char %integer->char 1) (string-length %string-length 1)
+    (string-ref %string-ref 2) (string->symbol %string->symbol 1)
+    (symbol->string %symbol->string 1) (list->string %list->string 1)
+    (string-set! %string-set! 3) (vector-ref %vector-ref 2) (vector-set! %vector-set! 3)
     (vector-length %vector-length 1) (vector? %vector? 1)
     (bytevector-u8-ref %bytevector-u8-ref 2) (bytevector-u8-set! %bytevector-u8-set! 3)
     (bytevector-length %bytevector-length 1) (bytevector? %bytevector? 1)
     (symbol? %symbol? 1) (string? %string? 1) (char? %char? 1)
-    (procedure? %procedure? 1)
-    (boolean? %boolean? 1) (integer? %integer? 1) (exact? %exact? 1)
+    (procedure? %procedure? 1) (boolean? %boolean? 1) (integer? %integer? 1)
+    (exact? %exact? 1)
     ;; Batch B increment 2: remaining string/vector/bytevector construction+access
     ;; and I/O prims.  All fixed-arity in Emit (the runtime rt_* have fixed C
     ;; signatures -- e.g. make-vector REQUIRES the fill, substring is exactly 3).
-    (substring %substring 3) (string=? %string=? 2)
-    (make-string %make-string 2) (string-copy %string-copy 1)
-    (make-vector %make-vector 2) (make-bytevector %make-bytevector 2)
+    (substring %substring 3) (string=? %string=? 2) (make-string %make-string 2)
+    (string-copy %string-copy 1) (make-vector %make-vector 2)
+    (make-bytevector %make-bytevector 2)
     ;; The OPTIONAL-argument forms R7RS gives these three (6.7, 6.8).  They come AFTER
     ;; the base entries deliberately: value position etas the FIRST entry for a name, so
     ;; listing an added arity first would silently change what `(map make-string ks)`
@@ -162,8 +144,7 @@
     ;; `(make-string 3)` works, `(map make-string ks)` still passes 2 arguments and
     ;; reports an arity error.  Base-arity-first is what keeps that from being a silent
     ;; behaviour CHANGE for code that already passes these as values.
-    (make-string %make-string-1 1)
-    (make-vector %make-vector-1 1)
+    (make-string %make-string-1 1) (make-vector %make-vector-1 1)
     (string-copy %string-copy-from 2) (string-copy %substring 3)
     (read-all-stdin %read-all-stdin 0)
     ;; The four output procedures plus write-string carry an OPTIONAL port (change:
@@ -178,10 +159,9 @@
     ;; procedure.  A port-directed call therefore has to be a direct call, which is
     ;; how every existing fixed-arity primitive already behaves in Emit (cf.
     ;; substring, exactly 3 here where R7RS allows 2).
-    (display %display 1) (display %display-port 2)
-    (write %write 1) (write %write-port 2)
-    (newline %newline 0) (newline %newline-port 1)
-    (write-char %write-char-port 2)                 ; arity 1 entry is above, with the flonum ops
+    (display %display 1) (display %display-port 2) (write %write 1)
+    (write %write-port 2) (newline %newline 0) (newline %newline-port 1)
+    (write-char %write-char-port 2) ; arity 1 entry is above, with the flonum ops
     (write-string %write-string 1) (write-string %write-string-port 2)
     (eof-object %eof-object 0) (eof-object? %eof-object? 1)
     ;; string-append: expander folds n-ary operator calls to binary %string-append
@@ -207,11 +187,12 @@
 ;; is correct at any arity.
 (define (integrable-lookup/arity name n)
   (let loop ([es *integrable*])
-    (cond [(null? es) #f]
-          [(and (eq? (caar es) name) (caddr (car es)) (= (caddr (car es)) n)) (car es)]
-          [else (loop (cdr es))])))
+    (cond
+      [(null? es) #f]
+      [(and (eq? (caar es) name) (caddr (car es)) (= (caddr (car es)) n)) (car es)]
+      [else (loop (cdr es))])))
 
-(define (fresh-syms n)   ; n globally-unique param names for an eta lambda
+(define (fresh-syms n) ; n globally-unique param names for an eta lambda
   (let loop ([i n] [acc '()])
     (if (= i 0) acc (loop (- i 1) (cons (fresh-name 'p) acc)))))
 
@@ -221,7 +202,7 @@
 ;; needs no prelude helper and works identically under --no-prelude.  A rest-param
 ;; lambda `(lambda gs ...)` collects all call args into the list `gs`, which serves
 ;; BOTH `(map + xs ys)` (args passed individually) and `(apply + ns)` (a list).
-(define (eta-integrable entry)  ; (name raw arity [fold-kind]) -> value-position lambda
+(define (eta-integrable entry) ; (name raw arity [fold-kind]) -> value-position lambda
   (if (and (pair? (cdddr entry)) (cadddr entry))
       (fold-eta (cadr entry) (cadddr entry))
       (let ([ps (fresh-syms (caddr entry))])
@@ -233,14 +214,17 @@
   ;; let* (not let): four counter-bumping inits, so a parallel `let` would number
   ;; them in host order (issue #11) and the eta expansion's names would differ
   ;; between the Chez driver and the shipped doors.
-  (let* ([gs (fresh-name 'gs)] [loop (fresh-name 'loop)]
-         [acc (fresh-name 'acc)] [rest (fresh-name 'rest)])
+  (let* ([gs (fresh-name 'gs)]
+         [loop (fresh-name 'loop)]
+         [acc (fresh-name 'acc)]
+         [rest (fresh-name 'rest)])
     `(lambda ,gs
        (letrec ([,loop (lambda (,acc ,rest)
                          (if (primcall %null? ,rest)
                              ,acc
-                             (call ,loop (primcall ,raw ,acc (primcall %car ,rest))
-                                         (primcall %cdr ,rest))))])
+                             (call ,loop
+                                   (primcall ,raw ,acc (primcall %car ,rest))
+                                   (primcall %cdr ,rest))))])
          (call ,loop ,ident ,gs)))))
 
 ;; `-` as a value: `(- a)` negates, `(- a b ...)` subtracts left-to-right, `(- )`
@@ -249,18 +233,21 @@
   ;; let* (not let): four counter-bumping inits, so a parallel `let` would number
   ;; them in host order (issue #11) and the eta expansion's names would differ
   ;; between the Chez driver and the shipped doors.
-  (let* ([gs (fresh-name 'gs)] [loop (fresh-name 'loop)]
-         [acc (fresh-name 'acc)] [rest (fresh-name 'rest)])
+  (let* ([gs (fresh-name 'gs)]
+         [loop (fresh-name 'loop)]
+         [acc (fresh-name 'acc)]
+         [rest (fresh-name 'rest)])
     `(lambda ,gs
        (if (primcall %null? ,gs)
            (const 0)
            (if (primcall %null? (primcall %cdr ,gs))
-               (primcall ,raw (const 0) (primcall %car ,gs))          ; (- a) -> 0 - a
+               (primcall ,raw (const 0) (primcall %car ,gs)) ; (- a) -> 0 - a
                (letrec ([,loop (lambda (,acc ,rest)
                                  (if (primcall %null? ,rest)
                                      ,acc
-                                     (call ,loop (primcall ,raw ,acc (primcall %car ,rest))
-                                                 (primcall %cdr ,rest))))])
+                                     (call ,loop
+                                           (primcall ,raw ,acc (primcall %car ,rest))
+                                           (primcall %cdr ,rest))))])
                  (call ,loop (primcall %car ,gs) (primcall %cdr ,gs))))))))
 
 ;; `/` as a value: `(/ a)` -> `(/ 1 a)` (reciprocal), `(/ a b ...)` divides
@@ -269,18 +256,21 @@
   ;; let* (not let): four counter-bumping inits, so a parallel `let` would number
   ;; them in host order (issue #11) and the eta expansion's names would differ
   ;; between the Chez driver and the shipped doors.
-  (let* ([gs (fresh-name 'gs)] [loop (fresh-name 'loop)]
-         [acc (fresh-name 'acc)] [rest (fresh-name 'rest)])
+  (let* ([gs (fresh-name 'gs)]
+         [loop (fresh-name 'loop)]
+         [acc (fresh-name 'acc)]
+         [rest (fresh-name 'rest)])
     `(lambda ,gs
        (if (primcall %null? ,gs)
            (const 1)
            (if (primcall %null? (primcall %cdr ,gs))
-               (primcall ,raw (const 1) (primcall %car ,gs))          ; (/ a) -> 1 / a
+               (primcall ,raw (const 1) (primcall %car ,gs)) ; (/ a) -> 1 / a
                (letrec ([,loop (lambda (,acc ,rest)
                                  (if (primcall %null? ,rest)
                                      ,acc
-                                     (call ,loop (primcall ,raw ,acc (primcall %car ,rest))
-                                                 (primcall %cdr ,rest))))])
+                                     (call ,loop
+                                           (primcall ,raw ,acc (primcall %car ,rest))
+                                           (primcall %cdr ,rest))))])
                  (call ,loop (primcall %car ,gs) (primcall %cdr ,gs))))))))
 
 ;; THE pairwise comparison rule, in IL (change: numeric-conformance, design D2).
@@ -296,10 +286,10 @@
 ;; comparing in the other direction), which is why the two sites cross-reference.
 (define (cmp-pair-il kind raw x y)
   (case kind
-    [(cmp)     `(primcall ,raw ,x ,y)]                 ; `=` and `<`: the raw op
-    [(cmp-rev) `(primcall ,raw ,y ,x)]                 ; `>`: `<` with the operands swapped
-    [(cmp-le)  `(if (primcall ,raw ,x ,y) (const #t) (primcall %= ,x ,y))]
-    [(cmp-ge)  `(if (primcall ,raw ,y ,x) (const #t) (primcall %= ,x ,y))]
+    [(cmp) `(primcall ,raw ,x ,y)]     ; `=` and `<`: the raw op
+    [(cmp-rev) `(primcall ,raw ,y ,x)] ; `>`: `<` with the operands swapped
+    [(cmp-le) `(if (primcall ,raw ,x ,y) (const #t) (primcall %= ,x ,y))]
+    [(cmp-ge) `(if (primcall ,raw ,y ,x) (const #t) (primcall %= ,x ,y))]
     [else (error 'parse "unknown comparison kind" kind)]))
 
 ;; A comparison as a VALUE: a short-circuit pairwise chain; 0 or 1 operand -> #t.
@@ -308,8 +298,10 @@
   ;; let* (not let): five counter-bumping inits, so a parallel `let` would number
   ;; them in host order (issue #11) and the eta expansion's names would differ
   ;; between the Chez driver and the shipped doors.
-  (let* ([gs (fresh-name 'gs)] [loop (fresh-name 'loop)]
-         [prev (fresh-name 'prev)] [rest (fresh-name 'rest)]
+  (let* ([gs (fresh-name 'gs)]
+         [loop (fresh-name 'loop)]
+         [prev (fresh-name 'prev)]
+         [rest (fresh-name 'rest)]
          [cur (fresh-name 'cur)])
     `(lambda ,gs
        (if (primcall %null? ,gs)
@@ -329,11 +321,11 @@
 
 (define (fold-eta raw kind)
   (case kind
-    [(sum)     (left-fold-eta raw '(const 0))]
+    [(sum) (left-fold-eta raw '(const 0))]
     [(product) (left-fold-eta raw '(const 1))]
-    [(str)     (left-fold-eta raw '(const ""))]
-    [(diff)    (diff-eta raw)]
-    [(quot)    (div-eta raw)]
+    [(str) (left-fold-eta raw '(const ""))]
+    [(diff) (diff-eta raw)]
+    [(quot) (div-eta raw)]
     ;; the four comparison kinds share one chain; the kind picks the pairwise test
     [(cmp cmp-rev cmp-le cmp-ge) (cmp-chain-eta raw kind)]
     [else (error 'parse "unknown integrable fold kind" kind)]))
@@ -354,19 +346,20 @@
       [(primcall ,op . ,args) `(primcall ,op ,@(map I args))]
       [(apply ,f . ,args) `(apply ,(I f) ,@(map I args))]
       [(call ,f . ,args)
-       ;; Select the entry by ARGUMENT COUNT, not by name alone: a name with several
-       ;; entries (the optional-port output procedures) inlines to the raw op for the
-       ;; arity actually called.  A single-entry name is unaffected -- the lookup
-       ;; matches its one arity or returns #f exactly as the old `=` test did.
-       (let ([p (and (symbol? f) (integrable-lookup/arity f (length args)))])
-         (if p
-             `(primcall ,(cadr p) ,@(map I args))     ; direct unshadowed call -> bare op
-             `(call ,(I f) ,@(map I args))))]         ; value/wrong-arity -> eta (via symbol case)
+        ;; Select the entry by ARGUMENT COUNT, not by name alone: a name with several
+        ;; entries (the optional-port output procedures) inlines to the raw op for the
+        ;; arity actually called.  A single-entry name is unaffected -- the lookup
+        ;; matches its one arity or returns #f exactly as the old `=` test did.
+        (let ([p (and (symbol? f) (integrable-lookup/arity f (length args)))])
+          (if p
+              `(primcall ,(cadr p) ,@(map I args)) ; direct unshadowed call -> bare op
+              `(call ,(I f)
+                     ,@(map I args))))] ; value/wrong-arity -> eta (via symbol case)
       [(lambda ,params ,body) `(lambda ,params ,(I body))]
-      [(let ,binds ,body)
-       `(let ,(map (lambda (b) (list (car b) (I (cadr b)))) binds) ,(I body))]
+      [(let ,binds ,body) `(let ,(map (lambda (b) (list (car b) (I (cadr b)))) binds)
+                                ,(I body))]
       [(letrec ,binds ,body)
-       `(letrec ,(map (lambda (b) (list (car b) (I (cadr b)))) binds) ,(I body))]))
+        `(letrec ,(map (lambda (b) (list (car b) (I (cadr b)))) binds) ,(I body))]))
   (I e))
 
 ;; ---- variadic parameter lists ----
@@ -374,17 +367,15 @@
 ;; (dotted rest `(a b . r)`), or a bare symbol (all-args rest).  These helpers
 ;; decompose and rebuild that shape; every pass that touches params uses them so
 ;; the three cases are handled uniformly.
-(define (param-fixed p)             ; proper list of the fixed param names
-  (cond [(symbol? p) '()]
-        [(pair? p) (cons (car p) (param-fixed (cdr p)))]
-        [else '()]))                ; null
-(define (param-rest p)              ; the rest name, or #f if fixed arity
-  (cond [(symbol? p) p]
-        [(pair? p) (param-rest (cdr p))]
-        [else #f]))                 ; null
-(define (param-names p)             ; all bound names: fixed ++ (rest if any)
-  (let ([r (param-rest p)])
-    (if r (append (param-fixed p) (list r)) (param-fixed p))))
+(define (param-fixed p) ; proper list of the fixed param names
+  (cond
+    [(symbol? p) '()]
+    [(pair? p) (cons (car p) (param-fixed (cdr p)))]
+    [else '()])) ; null
+(define (param-rest p) ; the rest name, or #f if fixed arity
+  (cond [(symbol? p) p] [(pair? p) (param-rest (cdr p))] [else #f])) ; null
+(define (param-names p) ; all bound names: fixed ++ (rest if any)
+  (let ([r (param-rest p)]) (if r (append (param-fixed p) (list r)) (param-fixed p))))
 (define (rebuild-params fixed rest) ; proper `fixed` + (sym|#f) -> param field
   (if rest
       (let loop ([f fixed]) (if (null? f) rest (cons (car f) (loop (cdr f)))))
@@ -397,8 +388,8 @@
   (cond
     [(and (integer? e) (exact? e)) `(const ,e)]
     [(boolean? e) `(const ,e)]
-    [(string? e) `(const ,e)]              ; string literals are self-evaluating
-    [(char? e) `(const ,e)]                ; char literals are self-evaluating
+    [(string? e) `(const ,e)] ; string literals are self-evaluating
+    [(char? e) `(const ,e)]   ; char literals are self-evaluating
     ;; Vector and bytevector literals are self-evaluating too (R7RS 4.1.2: "vector
     ;; constants are self-evaluating, so they do not need to be quoted"; 4.1.1 says the
     ;; same for bytevectors).  GitHub issue #76: requiring the quote rejected 44 forms of
@@ -417,42 +408,42 @@
     ;; `+`/`string-append` need no parse-time special case anymore).
     [(symbol? e) e]
     [(pair? e)
-     (match e
-       [(quote ,d) `(const ,d)]
-       [(if ,a ,b ,c) `(if ,(parse-expr a) ,(parse-expr b) ,(parse-expr c))]
-       ;; two-armed `(if test then)`: a missing alternative is THE unspecified value
-       ;; (change: unspecified-value), synthesized as the reserved zero-arg primcall
-       ;; `%unspec`.  Not `(const ...)`: a const payload would have to be a host datum,
-       ;; and the host's own unspecified object prints differently under Chez than under
-       ;; a self-hosted Emit, which would break dump parity (test/dump-parity-tests.sh).
-       ;; A symbolic primcall head prints identically in both hosts.  `%unspec` is
-       ;; deliberately absent from *prims*, so source cannot call it -- the value is
-       ;; reachable only by evaluating a form that yields it.  Every pass matches
-       ;; `(primcall op . args)` generically, so a zero-arg op needs no pass changes;
-       ;; emit.ss lowers it to the bare immediate.  `when`/`unless` and the `case`
-       ;; no-match default all route here via `(if #f #f)`.  Distinct arities, so this
-       ;; never overlaps the three-armed clause above.
-       [(if ,a ,b) `(if ,(parse-expr a) ,(parse-expr b) (primcall %unspec))]
-       [(lambda ,params . ,body) `(lambda ,params ,(parse-body body))]
-       [(let ,binds . ,body) `(let ,(map parse-bind binds) ,(parse-body body))]
-       [(letrec ,binds . ,body) `(letrec ,(map parse-bind binds) ,(parse-body body))]
-       ;; `letrec*` collapses onto the same IL node.  The two differ only in
-       ;; initialization order -- letrec* is left to right, letrec leaves it
-       ;; unspecified -- and this compiler already gives the letrec* order:
-       ;; convert-assignments boxes every non-lambda binding and fills them in
-       ;; binding order (issue #9), while the lambdas that stay in the closure
-       ;; block are pure to create.  A left-to-right implementation satisfies
-       ;; `letrec` too, since any order does.
-       [(letrec* ,binds . ,body) `(letrec ,(map parse-bind binds) ,(parse-body body))]
-       [(begin . ,body) (parse-body body)]
-       [(define . ,rest) (error 'parse "'define' is only allowed at the top level" e)]
-       [(set! ,x ,rhs) `(set! ,x ,(parse-expr rhs))]
-       ;; (apply f a1 ... aN lst): N leading args then a list to spread.  The
-       ;; last operand is the list; there must be at least one operand.
-       [(apply ,f ,a . ,rest)
-        `(apply ,(parse-expr f) ,@(map parse-expr (cons a rest)))]
-       [(,op . ,args) (guard (prim? op)) `(primcall ,op ,@(map parse-expr args))]
-       [(,f . ,args) `(call ,(parse-expr f) ,@(map parse-expr args))])]
+      (match e
+        [(quote ,d) `(const ,d)]
+        [(if ,a ,b ,c) `(if ,(parse-expr a) ,(parse-expr b) ,(parse-expr c))]
+        ;; two-armed `(if test then)`: a missing alternative is THE unspecified value
+        ;; (change: unspecified-value), synthesized as the reserved zero-arg primcall
+        ;; `%unspec`.  Not `(const ...)`: a const payload would have to be a host datum,
+        ;; and the host's own unspecified object prints differently under Chez than under
+        ;; a self-hosted Emit, which would break dump parity (test/dump-parity-tests.sh).
+        ;; A symbolic primcall head prints identically in both hosts.  `%unspec` is
+        ;; deliberately absent from *prims*, so source cannot call it -- the value is
+        ;; reachable only by evaluating a form that yields it.  Every pass matches
+        ;; `(primcall op . args)` generically, so a zero-arg op needs no pass changes;
+        ;; emit.ss lowers it to the bare immediate.  `when`/`unless` and the `case`
+        ;; no-match default all route here via `(if #f #f)`.  Distinct arities, so this
+        ;; never overlaps the three-armed clause above.
+        [(if ,a ,b) `(if ,(parse-expr a) ,(parse-expr b) (primcall %unspec))]
+        [(lambda ,params . ,body) `(lambda ,params ,(parse-body body))]
+        [(let ,binds . ,body) `(let ,(map parse-bind binds) ,(parse-body body))]
+        [(letrec ,binds . ,body) `(letrec ,(map parse-bind binds) ,(parse-body body))]
+        ;; `letrec*` collapses onto the same IL node.  The two differ only in
+        ;; initialization order -- letrec* is left to right, letrec leaves it
+        ;; unspecified -- and this compiler already gives the letrec* order:
+        ;; convert-assignments boxes every non-lambda binding and fills them in
+        ;; binding order (issue #9), while the lambdas that stay in the closure
+        ;; block are pure to create.  A left-to-right implementation satisfies
+        ;; `letrec` too, since any order does.
+        [(letrec* ,binds . ,body) `(letrec ,(map parse-bind binds) ,(parse-body body))]
+        [(begin . ,body) (parse-body body)]
+        [(define . ,rest) (error 'parse "'define' is only allowed at the top level" e)]
+        [(set! ,x ,rhs) `(set! ,x ,(parse-expr rhs))]
+        ;; (apply f a1 ... aN lst): N leading args then a list to spread.  The
+        ;; last operand is the list; there must be at least one operand.
+        [(apply ,f ,a . ,rest)
+          `(apply ,(parse-expr f) ,@(map parse-expr (cons a rest)))]
+        [(,op . ,args) (guard (prim? op)) `(primcall ,op ,@(map parse-expr args))]
+        [(,f . ,args) `(call ,(parse-expr f) ,@(map parse-expr args))])]
     ;; inexact real (flonum) literal (change: inexact-numbers).  Placed after the
     ;; atom/pair clauses so `real?` is only evaluated for a genuine flonum datum --
     ;; the compiler/prelude sources carry no flonum literals, so this never runs
@@ -463,9 +454,9 @@
 
 (define (parse-bind b) (list (car b) (parse-expr (cadr b))))
 
-(define (parse-body body)  ; non-empty list of source forms -> one core expr
+(define (parse-body body) ; non-empty list of source forms -> one core expr
   (if (and (pair? body) (define-form? (car body)))
-      (parse-expr (build-body body))   ; leading internal defines -> letrec/let+set!
+      (parse-expr (build-body body)) ; leading internal defines -> letrec/let+set!
       (let loop ([es (map parse-expr body)])
         (cond
           [(null? es) `(const ())]
@@ -488,15 +479,15 @@
 (define (define-form? f) (and (pair? f) (eq? (car f) 'define)))
 (define (lambda-init? init) (and (pair? init) (eq? (car init) 'lambda)))
 
-(define (normalize-define f)  ; (define ...) -> (name init-sexpr)
+(define (normalize-define f) ; (define ...) -> (name init-sexpr)
   (let ([sig (cadr f)] [rest (cddr f)])
     (cond
-      [(pair? sig)                       ; (define (f arg ...) body ...)
-       (list (car sig) `(lambda ,(cdr sig) ,@rest))]
-      [(symbol? sig)                     ; (define x e)
-       (unless (and (pair? rest) (null? (cdr rest)))
-         (error 'collect-toplevel "malformed (define x e)" f))
-       (list sig (car rest))]
+      [(pair? sig) ; (define (f arg ...) body ...)
+        (list (car sig) `(lambda ,(cdr sig) ,@rest))]
+      [(symbol? sig) ; (define x e)
+        (unless (and (pair? rest) (null? (cdr rest)))
+          (error 'collect-toplevel "malformed (define x e)" f))
+        (list sig (car rest))]
       [else (error 'collect-toplevel "malformed define" f)])))
 
 ;; ---- define-record-type (openspec records) ------------------------------
@@ -523,14 +514,13 @@
 ;; whole shape here FIRST and raise a recoverable (error 'collect-toplevel ...)
 ;; -- the same channel the REPL catches, prints as an `error:` line, and returns
 ;; to the prompt from (mirroring normalize-define's existing validation).
-(define (rt-proper-list? x)   ; a proper (nil-terminated) list
-  (cond [(null? x) #t]
-        [(pair? x) (rt-proper-list? (cdr x))]
-        [else #f]))
-(define (rt-symbols? x)       ; a proper list whose every element is a symbol
-  (cond [(null? x) #t]
-        [(and (pair? x) (symbol? (car x))) (rt-symbols? (cdr x))]
-        [else #f]))
+(define (rt-proper-list? x) ; a proper (nil-terminated) list
+  (cond [(null? x) #t] [(pair? x) (rt-proper-list? (cdr x))] [else #f]))
+(define (rt-symbols? x) ; a proper list whose every element is a symbol
+  (cond
+    [(null? x) #t]
+    [(and (pair? x) (symbol? (car x))) (rt-symbols? (cdr x))]
+    [else #f]))
 (define (rt-field-spec? spec) ; (fld ACC) or (fld ACC MUT), all symbols
   (and (rt-proper-list? spec)
        (rt-symbols? spec)
@@ -539,25 +529,30 @@
 (define (check-record-type-form f)
   ;; f = (define-record-type NAME (CTOR cf ...) PRED (fld ACC [MUT]) ...)
   (unless (and (rt-proper-list? f) (>= (length f) 4))
-    (error 'collect-toplevel
-           "malformed define-record-type: expected (define-record-type NAME (CTOR field ...) PRED (field accessor [mutator]) ...)"
-           f))
-  (let ([tyname     (cadr f)]
-        [ctor-spec  (caddr f)]
-        [pred       (cadddr f)]
-        [field-specs (cdr (cdddr f))])   ; cddddr, spelled without cddddr (not exported)
+    (error
+      'collect-toplevel
+      "malformed define-record-type: expected (define-record-type NAME (CTOR field ...) PRED (field accessor [mutator]) ...)"
+      f))
+  (let ([tyname (cadr f)]
+        [ctor-spec (caddr f)]
+        [pred (cadddr f)]
+        [field-specs (cdr (cdddr f))]) ; cddddr, spelled without cddddr (not exported)
     (unless (symbol? tyname)
       (error 'collect-toplevel "define-record-type: type name must be a symbol" f))
     (unless (and (pair? ctor-spec) (rt-proper-list? ctor-spec) (rt-symbols? ctor-spec))
-      (error 'collect-toplevel
-             "define-record-type: constructor spec must be (constructor field ...) of symbols" f))
+      (error
+        'collect-toplevel
+        "define-record-type: constructor spec must be (constructor field ...) of symbols"
+        f))
     (unless (symbol? pred)
       (error 'collect-toplevel "define-record-type: predicate must be a symbol" f))
     (for-each
       (lambda (spec)
         (unless (rt-field-spec? spec)
-          (error 'collect-toplevel
-                 "define-record-type: field spec must be (field accessor [mutator]) of symbols" f)))
+          (error
+            'collect-toplevel
+            "define-record-type: field spec must be (field accessor [mutator]) of symbols"
+            f)))
       field-specs)
     ;; every constructor field tag must name a declared field
     (let ([field-names (map car field-specs)])
@@ -565,17 +560,18 @@
         (lambda (cf)
           (unless (memq cf field-names)
             (error 'collect-toplevel
-                   "define-record-type: constructor field is not a declared field" f)))
+                   "define-record-type: constructor field is not a declared field"
+                   f)))
         (cdr ctor-spec)))))
 
-(define (record-field-bindings specs i)   ; ((fld ACC [MUT]) ...) -> (name init) pairs
+(define (record-field-bindings specs i) ; ((fld ACC [MUT]) ...) -> (name init) pairs
   (if (null? specs)
       '()
       (let* ([spec (car specs)]
-             [acc  (cadr spec)]
-             [has-mut (pair? (cddr spec))]        ; a third element => mutator name
-             [o    (fresh-name 'r)]
-             [v    (fresh-name 'v)]
+             [acc (cadr spec)]
+             [has-mut (pair? (cddr spec))] ; a third element => mutator name
+             [o (fresh-name 'r)]
+             [v (fresh-name 'v)]
              [getter (list acc `(lambda (,o) (%record-ref ,o ,i)))]
              [rest (record-field-bindings (cdr specs) (+ i 1))])
         (if has-mut
@@ -602,49 +598,47 @@
 ;; record's constructor is referencing a real binding, and an identifier missing from that
 ;; set is renamed per expansion and then unbound (`unbound variable mk.4`).
 (define (record-type-binding-names f)
-  (check-record-type-form f)              ; same validation, same diagnostics
-  (let* ([rest1      (cddr f)]
-         [ctor-spec  (car rest1)]              ; (CTOR cf ...)
-         [rest2      (cdr rest1)]
-         [pred       (car rest2)]
-         [field-specs (cdr rest2)])            ; ((fld ACC [MUT]) ...)
+  (check-record-type-form f) ; same validation, same diagnostics
+  (let* ([rest1 (cddr f)]
+         [ctor-spec (car rest1)] ; (CTOR cf ...)
+         [rest2 (cdr rest1)]
+         [pred (car rest2)]
+         [field-specs (cdr rest2)]) ; ((fld ACC [MUT]) ...)
     (cons (car ctor-spec)
           (cons pred
                 (let loop ([specs field-specs])
                   (if (null? specs)
                       '()
-                      (let ([spec (car specs)]
-                            [rest (loop (cdr specs))])
-                        (if (pair? (cddr spec))         ; a third element => mutator name
+                      (let ([spec (car specs)] [rest (loop (cdr specs))])
+                        (if (pair? (cddr spec)) ; a third element => mutator name
                             (cons (cadr spec) (cons (caddr spec) rest))
                             (cons (cadr spec) rest)))))))))
 
 (define (record-type-bindings f)
-  (check-record-type-form f)              ; reject malformed shapes before destructuring
-  (let* ([tyname     (cadr f)]
-         [rest1      (cddr f)]
-         [ctor-spec  (car rest1)]              ; (CTOR cf ...)
-         [rest2      (cdr rest1)]
-         [pred       (car rest2)]
-         [field-specs (cdr rest2)]             ; ((fld ACC [MUT]) ...)
-         [ctor       (car ctor-spec)]
+  (check-record-type-form f) ; reject malformed shapes before destructuring
+  (let* ([tyname (cadr f)]
+         [rest1 (cddr f)]
+         [ctor-spec (car rest1)] ; (CTOR cf ...)
+         [rest2 (cdr rest1)]
+         [pred (car rest2)]
+         [field-specs (cdr rest2)] ; ((fld ACC [MUT]) ...)
+         [ctor (car ctor-spec)]
          [ctor-fields (cdr ctor-spec)]
          [field-names (map car field-specs)]
-         [rtd        (fresh-name 'rtd)]
-         [o          (fresh-name 'r)])
-    (cons
-      (list rtd `(%make-record-type ,(symbol->string tyname)))
-      (cons
-        (list ctor
-              `(lambda ,ctor-fields
-                 (%make-record ,rtd
-                   (list ,@(map (lambda (fn) (if (memq fn ctor-fields) fn '(quote ())))
-                                field-names)))))
-        (cons
-          (list pred `(lambda (,o) (%record-of-type? ,o ,rtd)))
-          (record-field-bindings field-specs 0))))))
+         [rtd (fresh-name 'rtd)]
+         [o (fresh-name 'r)])
+    (cons (list rtd `(%make-record-type ,(symbol->string tyname)))
+          (cons (list ctor
+                      `(lambda ,ctor-fields
+                         (%make-record
+                           ,rtd
+                           (list ,@(map (lambda (fn)
+                                          (if (memq fn ctor-fields) fn '(quote ())))
+                                        field-names)))))
+                (cons (list pred `(lambda (,o) (%record-of-type? ,o ,rtd)))
+                      (record-field-bindings field-specs 0))))))
 
-(define (seq-forms pre value)  ; non-final exprs + final -> one form
+(define (seq-forms pre value) ; non-final exprs + final -> one form
   (if (null? pre) value `(begin ,@pre ,value)))
 
 ;; how many of `binds` define `x`
@@ -682,11 +676,10 @@
 (define (build-program binds pre value)
   (cond
     [(null? binds) (seq-forms pre value)]
-    [(duplicate-name? binds)
-     `(let ,(map (lambda (b) (list (car b) '(quote ()))) binds)
-        ,@(map (lambda (b) `(set! ,(car b) ,(cadr b))) binds)
-        ,@pre
-        ,value)]
+    [(duplicate-name? binds) `(let ,(map (lambda (b) (list (car b) '(quote ()))) binds)
+                                   ,@(map (lambda (b) `(set! ,(car b) ,(cadr b))) binds)
+                                   ,@pre
+                                   ,value)]
     [else `(letrec ,binds ,(seq-forms pre value))]))
 
 ;; internal defines: a body whose leading forms are (define ...) desugars via the
@@ -694,39 +687,37 @@
 ;; form a prefix (no define after a body expression) and letrec* bindings are
 ;; visible across the whole run.  Returns a source form (re-parsed by parse-expr).
 (define (any-define? fs)
-  (and (pair? fs)
-       (or (define-form? (car fs)) (record-type-form? (car fs)) (any-define? (cdr fs)))))
+  (and
+    (pair? fs)
+    (or (define-form? (car fs)) (record-type-form? (car fs)) (any-define? (cdr fs)))))
 (define (build-body forms)
   (let loop ([fs forms] [binds '()])
     (cond
       [(and (pair? fs) (define-form? (car fs)))
-       (loop (cdr fs) (cons (normalize-define (car fs)) binds))]
+        (loop (cdr fs) (cons (normalize-define (car fs)) binds))]
       [(and (pair? fs) (record-type-form? (car fs)))
-       (loop (cdr fs) (append (reverse (record-type-bindings (car fs))) binds))]
+        (loop (cdr fs) (append (reverse (record-type-bindings (car fs))) binds))]
       [(null? fs)
-       (error 'parse "internal defines with no following body expression" forms)]
+        (error 'parse "internal defines with no following body expression" forms)]
       [(any-define? fs)
-       (error 'parse "internal 'define' must precede all body expressions" forms)]
-      [else
-       (let ([rev (reverse fs)])
-         (build-program (reverse binds) (reverse (cdr rev)) (car rev)))])))
+        (error 'parse "internal 'define' must precede all body expressions" forms)]
+      [else (let ([rev (reverse fs)])
+              (build-program (reverse binds) (reverse (cdr rev)) (car rev)))])))
 
 (define (collect-toplevel forms)
-  (when (null? forms)
-    (error 'collect-toplevel "empty program: no top-level forms"))
+  (when (null? forms) (error 'collect-toplevel "empty program: no top-level forms"))
   (let loop ([fs forms] [binds '()] [pre '()])
     (cond
-      [(null? fs)
-       (error 'collect-toplevel
-              "program must end in an expression, not a definition")]
+      [(null? fs) (error 'collect-toplevel
+                         "program must end in an expression, not a definition")]
       [(define-form? (car fs))
-       (loop (cdr fs) (cons (normalize-define (car fs)) binds) pre)]
+        (loop (cdr fs) (cons (normalize-define (car fs)) binds) pre)]
       [(record-type-form? (car fs))
-       (loop (cdr fs) (append (reverse (record-type-bindings (car fs))) binds) pre)]
-      [(null? (cdr fs))                  ; final form = the program's value
-       (build-program (reverse binds) (reverse pre) (car fs))]
-      [else                              ; a non-final top-level expression
-       (loop (cdr fs) binds (cons (car fs) pre))])))
+        (loop (cdr fs) (append (reverse (record-type-bindings (car fs))) binds) pre)]
+      [(null? (cdr fs)) ; final form = the program's value
+        (build-program (reverse binds) (reverse pre) (car fs))]
+      [else ; a non-final top-level expression
+        (loop (cdr fs) binds (cons (car fs) pre))])))
 
 ;; ---- REPL top-level model: persistent global definitions -----------------
 ;; Batch `collect-toplevel` folds a whole program into one letrec.  The REPL
@@ -742,13 +733,13 @@
 ;; binding while already-compiled forms keep the symbol they captured.  The
 ;; environment maps user names -> current mangled symbol.
 
-(define (make-repl-env) (vector '() 0))          ; #(name->sym alist, generation)
+(define (make-repl-env) (vector '() 0)) ; #(name->sym alist, generation)
 
-(define (repl-env-lookup env name)               ; -> mangled sym, or #f
+(define (repl-env-lookup env name) ; -> mangled sym, or #f
   (let ([p (assq name (vector-ref env 0))]) (and p (cdr p))))
 
-(define (repl-env-define! env name)              ; allocate a fresh generation
-  (let* ([g   (vector-ref env 1)]
+(define (repl-env-define! env name) ; allocate a fresh generation
+  (let* ([g (vector-ref env 1)]
          [sym (string->symbol
                 (string-append (symbol->string name) ".g" (number->string g)))])
     (vector-set! env 1 (+ g 1))
@@ -802,9 +793,10 @@
       ;; unaffected -- resolve-globals emits `(global-ref sym)` for local and
       ;; imported alike, exactly as before.
       [(and s (unit-qualified? s)) (make-binding 'imported s)]
-      [s           (make-binding 'local s)]
+      [s (make-binding 'local s)]
       [(prim? name) (make-binding 'primitive name)]
-      [(integrable? name) (make-binding 'primitive name)]  ; leave symbol; inline-primitives rewrites it
+      [(integrable? name)
+        (make-binding 'primitive name)] ; leave symbol; inline-primitives rewrites it
       [else #f])))
 
 ;; `(set! x e)` whose target is NOT lexically bound assigns a TOP-LEVEL binding
@@ -837,15 +829,15 @@
     (cond
       [(not b) (error 'repl "unbound variable" name)]
       [(eq? (binding-kind b) 'imported)
-       (error 'repl "cannot assign to an imported binding" name)]
+        (error 'repl "cannot assign to an imported binding" name)]
       [(eq? (binding-kind b) 'primitive)
-       (error 'repl "cannot assign to a primitive" name)]
+        (error 'repl "cannot assign to a primitive" name)]
       [else
-       ;; a unit's own top-level binding is spelled by its plain name; a session
-       ;; global is `n.gN` and is never advertised in an export table, so it needs
-       ;; no record.
-       (when (eq? (binding-sym b) name) (add-unit-assigned! name))
-       `(global-set! ,(binding-sym b) ,rhs)])))
+        ;; a unit's own top-level binding is spelled by its plain name; a session
+        ;; global is `n.gN` and is never advertised in an export table, so it needs
+        ;; no record.
+        (when (eq? (binding-sym b) name) (add-unit-assigned! name))
+        `(global-set! ,(binding-sym b) ,rhs)])))
 
 ;; Post-rename resolution: a bare symbol that is not bound by an enclosing
 ;; lambda/let/letrec is a top-level reference.  Map each through the typed scope
@@ -862,7 +854,7 @@
       [(global-set! ,s ,rhs) `(global-set! ,s ,(Rb rhs))]
       [,x (guard (symbol? x))
           (if (memq x bound)
-              x                                    ; a lexical local
+              x ; a lexical local
               (let ([b (scope-resolve env x)])
                 (cond
                   ;; A derived form that reached the resolver was never expanded, which
@@ -872,32 +864,32 @@
                   ;; for an import they had already written, because (scheme base)'s
                   ;; PROCEDURES did resolve and only its compile-time half was missing.
                   [(and (not b) (memq x *derived-form-macros*))
-                   (error 'repl "macro not in scope -- add (import (scheme base))" x)]
+                    (error 'repl "macro not in scope -- add (import (scheme base))" x)]
                   [(not b) (error 'repl "unbound variable" x)]
                   ;; local and imported both target a global slot; imported's slot
                   ;; is defined by another unit and resolves via external global.
-                  [(eq? (binding-kind b) 'local)    `(global-ref ,(binding-sym b))]
+                  [(eq? (binding-kind b) 'local) `(global-ref ,(binding-sym b))]
                   [(eq? (binding-kind b) 'imported) `(global-ref ,(binding-sym b))]
                   ;; primitive: a raw %-op or an unshadowed integrable -- leave the
                   ;; symbol for inline-primitives to rewrite post-rename.
                   [else x])))]
       [(if ,a ,b ,c) `(if ,(Rb a) ,(Rb b) ,(Rb c))]
       [(seq ,a ,b) `(seq ,(Rb a) ,(Rb b))]
-      [(set! ,x ,rhs)                              ; a renamed local, else a global
-       (if (memq x bound) `(set! ,x ,(Rb rhs)) (assign-global x (Rb rhs) env))]
+      [(set! ,x ,rhs) ; a renamed local, else a global
+        (if (memq x bound) `(set! ,x ,(Rb rhs)) (assign-global x (Rb rhs) env))]
       [(primcall ,op . ,args) `(primcall ,op ,@(map Rb args))]
       [(apply ,f . ,args) `(apply ,(Rb f) ,@(map Rb args))]
       [(call ,f . ,args) `(call ,(Rb f) ,@(map Rb args))]
       [(lambda ,params ,body)
-       `(lambda ,params ,(R body (append (param-names params) bound)))]
-      [(let ,binds ,body)                          ; rhs in the outer scope
-       (let ([bound2 (append (map car binds) bound)])
-         `(let ,(map (lambda (b) (list (car b) (Rb (cadr b)))) binds)
-            ,(R body bound2)))]
-      [(letrec ,binds ,body)                       ; rhs in the new (recursive) scope
-       (let ([bound2 (append (map car binds) bound)])
-         `(letrec ,(map (lambda (b) (list (car b) (R (cadr b) bound2))) binds)
-            ,(R body bound2)))]))
+        `(lambda ,params ,(R body (append (param-names params) bound)))]
+      [(let ,binds ,body) ; rhs in the outer scope
+        (let ([bound2 (append (map car binds) bound)])
+          `(let ,(map (lambda (b) (list (car b) (Rb (cadr b)))) binds)
+                ,(R body bound2)))]
+      [(letrec ,binds ,body) ; rhs in the new (recursive) scope
+        (let ([bound2 (append (map car binds) bound)])
+          `(letrec ,(map (lambda (b) (list (car b) (R (cadr b) bound2))) binds)
+                   ,(R body bound2)))]))
   (R e '()))
 
 ;; Lower one entered top-level form (an s-expr) against the REPL env, returning
@@ -915,30 +907,30 @@
 ;; pre-registered by `repl-register-define!`, so its current symbol is reused and
 ;; all sibling names in the group are visible to every body -- letrec* semantics.
 (define (repl-lower-form* env form register?)
-  (define (prep sexp) (inline-primitives (resolve-globals (rename-program (parse-program sexp)) env)))
+  (define (prep sexp)
+    (inline-primitives (resolve-globals (rename-program (parse-program sexp)) env)))
   (cond
     [(define-form? form)
-     (let* ([nd   (normalize-define form)]
-            [name (car nd)]
-            [init (cadr nd)])
-       (cond
-         [(not register?) `(global-set! ,(repl-env-lookup env name) ,(prep init))]
-         [(lambda-init? init)
-          (let ([sym (repl-env-define! env name)]) `(global-set! ,sym ,(prep init)))]
-         [else
-          (let ([init-il (prep init)]) `(global-set! ,(repl-env-define! env name) ,init-il))]))]
+      (let* ([nd (normalize-define form)] [name (car nd)] [init (cadr nd)])
+        (cond
+          [(not register?) `(global-set! ,(repl-env-lookup env name) ,(prep init))]
+          [(lambda-init? init) (let ([sym (repl-env-define! env name)])
+                                 `(global-set! ,sym ,(prep init)))]
+          [else (let ([init-il (prep init)])
+                  `(global-set! ,(repl-env-define! env name) ,init-il))]))]
     [(record-type-form? form)
-     ;; a define-record-type introduces several mutually-visible persistent
-     ;; globals (descriptor, constructor, predicate, accessors/mutators): register
-     ;; every name first (letrec* group), then emit a core-IL `seq` chain of
-     ;; group-load stores so the constructor lambda's descriptor reference resolves.
-     ;; (A raw `begin` would bypass parse-body's begin->seq desugaring, so build the
-     ;; seq chain directly over the already-prepped global-set! nodes.)
-     (let ([binds (record-type-bindings form)])
-       (for-each (lambda (b) (repl-env-define! env (car b))) binds)
-       (let loop ([bs binds])
-         (let ([node `(global-set! ,(repl-env-lookup env (car (car bs))) ,(prep (cadr (car bs))))])
-           (if (null? (cdr bs)) node `(seq ,node ,(loop (cdr bs)))))))]
+      ;; a define-record-type introduces several mutually-visible persistent
+      ;; globals (descriptor, constructor, predicate, accessors/mutators): register
+      ;; every name first (letrec* group), then emit a core-IL `seq` chain of
+      ;; group-load stores so the constructor lambda's descriptor reference resolves.
+      ;; (A raw `begin` would bypass parse-body's begin->seq desugaring, so build the
+      ;; seq chain directly over the already-prepped global-set! nodes.)
+      (let ([binds (record-type-bindings form)])
+        (for-each (lambda (b) (repl-env-define! env (car b))) binds)
+        (let loop ([bs binds])
+          (let ([node `(global-set! ,(repl-env-lookup env (car (car bs)))
+                                    ,(prep (cadr (car bs))))])
+            (if (null? (cdr bs)) node `(seq ,node ,(loop (cdr bs)))))))]
     [else (prep form)]))
 
 (define (repl-lower-form env form) (repl-lower-form* env form #t))
@@ -951,7 +943,7 @@
 ;; ---- alpha-rename: make every bound variable globally unique ----
 (define (rename-program e) (rename e '()))
 
-(define (rename e env)               ; env: alist old -> new
+(define (rename e env) ; env: alist old -> new
   (define (look x) (let ([p (assq x env)]) (if p (cdr p) x)))
   (define (R e) (rename e env))
   (match e
@@ -963,23 +955,23 @@
     [(primcall ,op . ,args) `(primcall ,op ,@(map R args))]
     [(apply ,f . ,args) `(apply ,(R f) ,@(map R args))]
     [(call ,f . ,args) `(call ,(R f) ,@(map R args))]
-    [(lambda ,params ,body)                        ; params may be variadic
-     (let* ([names (param-names params)]
-            [new   (map fresh-name names)]
-            [amap  (map cons names new)]
-            [env2  (append amap env)]
-            [nfixed (map (lambda (x) (cdr (assq x amap))) (param-fixed params))]
-            [nrest  (let ([r (param-rest params)]) (and r (cdr (assq r amap))))])
-       `(lambda ,(rebuild-params nfixed nrest) ,(rename body env2)))]
+    [(lambda ,params ,body) ; params may be variadic
+      (let* ([names (param-names params)]
+             [new (map fresh-name names)]
+             [amap (map cons names new)]
+             [env2 (append amap env)]
+             [nfixed (map (lambda (x) (cdr (assq x amap))) (param-fixed params))]
+             [nrest (let ([r (param-rest params)]) (and r (cdr (assq r amap))))])
+        `(lambda ,(rebuild-params nfixed nrest) ,(rename body env2)))]
     [(let ,binds ,body)
-     (let* ([xs (map car binds)]
-            [es (map (lambda (b) (R (cadr b))) binds)]     ; rhs in outer env
-            [new (map fresh-name xs)]
-            [env2 (append (map cons xs new) env)])
-       `(let ,(map list new es) ,(rename body env2)))]
+      (let* ([xs (map car binds)]
+             [es (map (lambda (b) (R (cadr b))) binds)] ; rhs in outer env
+             [new (map fresh-name xs)]
+             [env2 (append (map cons xs new) env)])
+        `(let ,(map list new es) ,(rename body env2)))]
     [(letrec ,binds ,body)
-     (let* ([xs (map car binds)]
-            [new (map fresh-name xs)]
-            [env2 (append (map cons xs new) env)]
-            [es (map (lambda (b) (rename (cadr b) env2)) binds)])  ; rhs in new env
-       `(letrec ,(map list new es) ,(rename body env2)))]))
+      (let* ([xs (map car binds)]
+             [new (map fresh-name xs)]
+             [env2 (append (map cons xs new) env)]
+             [es (map (lambda (b) (rename (cadr b) env2)) binds)]) ; rhs in new env
+        `(letrec ,(map list new es) ,(rename body env2)))]))

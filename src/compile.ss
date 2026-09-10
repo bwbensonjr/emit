@@ -53,10 +53,9 @@
 ;; Port-based reader (Chez I/O; the driver owns effects).  `core.ss` no longer
 ;; defines this -- the self-hostable core has no ports -- so the driver supplies
 ;; the port reader it needs to slurp source files and stdin.
-(define (read-forms port)   ; -> ordered list of all top-level forms in PORT
+(define (read-forms port) ; -> ordered list of all top-level forms in PORT
   (let loop ([forms '()])
-    (let ([e (read port)])
-      (if (eof-object? e) (reverse forms) (loop (cons e forms))))))
+    (let ([e (read port)]) (if (eof-object? e) (reverse forms) (loop (cons e forms))))))
 
 ;; The self-hostable core reads source via the in-language `read-all-from-string`
 ;; (provided by the prelude to a running program).  Under Chez the driver supplies
@@ -71,16 +70,18 @@
 ;; resolved values -- a bare `chez --script src/compile.ss ...` from the repo root thus
 ;; picks up any LLVM the shared layer can find.  An explicit env override still wins; if
 ;; the layer is unavailable, a legacy Homebrew keg is the last-resort fallback.
-(define (getenv-ne name)               ; getenv, but empty string counts as unset
+(define (getenv-ne name) ; getenv, but empty string counts as unset
   (let ([v (getenv name)]) (and v (> (string-length v) 0) v)))
-(define (shell-line cmd)               ; run CMD, return its first stdout line, or #f
+(define (shell-line cmd) ; run CMD, return its first stdout line, or #f
   (let* ([pipes (process cmd)] [from (car pipes)] [to (cadr pipes)])
     (close-port to)
-    (let ([ln (get-line from)]) (close-port from)
+    (let ([ln (get-line from)])
+      (close-port from)
       (and (not (eof-object? ln)) (> (string-length ln) 0) ln))))
-(define (ensure-slash s)               ; a bin dir path the `tool` helper can suffix
+(define (ensure-slash s) ; a bin dir path the `tool` helper can suffix
   (if (and (> (string-length s) 0) (char=? (string-ref s (- (string-length s) 1)) #\/))
-      s (string-append s "/")))
+      s
+      (string-append s "/")))
 (define (string-suffix? suf s)
   (let ([sl (string-length s)] [ul (string-length suf)])
     (and (>= sl ul) (string=? (substring s (- sl ul) sl) suf))))
@@ -92,16 +93,18 @@
   (guard (e [#t '()])
     (if (file-exists? "tools/llvm-env.sh")
         (let* ([pipes (process "tools/llvm-env.sh --print-env 2>/dev/null")]
-               [from (car pipes)] [to (cadr pipes)])
+               [from (car pipes)]
+               [to (cadr pipes)])
           (close-port to)
           (let loop ([acc '()])
             (let ([ln (get-line from)])
               (if (eof-object? ln)
                   (begin (close-port from) (reverse acc))
                   (let ([i (let scan ([k 0])
-                             (cond [(>= k (string-length ln)) #f]
-                                   [(char=? (string-ref ln k) #\=) k]
-                                   [else (scan (+ k 1))]))])
+                             (cond
+                               [(>= k (string-length ln)) #f]
+                               [(char=? (string-ref ln k) #\=) k]
+                               [else (scan (+ k 1))]))])
                     (loop (if i
                               (cons (cons (substring ln 0 i)
                                           (substring ln (+ i 1) (string-length ln)))
@@ -110,25 +113,31 @@
         '())))
 (define (from-layer name) (cond [(assoc name *llvm-env*) => cdr] [else #f]))
 
-(define gc-inc  (or (getenv-ne "EMIT_GC_INC")  (from-layer "EMIT_GC_INC")  "/opt/homebrew/include"))
-(define gc-lib  (or (getenv-ne "EMIT_GC_LIB")  (from-layer "EMIT_GC_LIB")  "/opt/homebrew/lib"))
+(define gc-inc
+  (or (getenv-ne "EMIT_GC_INC") (from-layer "EMIT_GC_INC") "/opt/homebrew/include"))
+(define gc-lib
+  (or (getenv-ne "EMIT_GC_LIB") (from-layer "EMIT_GC_LIB") "/opt/homebrew/lib"))
 ;; LLVM tool dir for the jit/bitcode backends (kept with a trailing slash for `tool`).
 (define llvm-bin
-  (ensure-slash (or (getenv-ne "EMIT_LLVM_BIN") (from-layer "EMIT_LLVM_BIN")
+  (ensure-slash (or (getenv-ne "EMIT_LLVM_BIN")
+                    (from-layer "EMIT_LLVM_BIN")
                     "/opt/homebrew/opt/llvm@22/bin")))
 ;; libgc shared object for `lli -load=`: .dylib on macOS, .so elsewhere (fixes the JIT
 ;; backend off macOS, where the old hardcoded libgc.dylib does not exist).
 (define gc-dylib
-  (or (getenv-ne "EMIT_GC_DYLIB") (from-layer "EMIT_GC_DYLIB")
+  (or (getenv-ne "EMIT_GC_DYLIB")
+      (from-layer "EMIT_GC_DYLIB")
       (string-append gc-lib "/libgc." (if (macos?) "dylib" "so"))))
 ;; AOT C compiler (D6): explicit CC wins, then the shared layer's resolved CC (a system
 ;; clang when present, else the discovered LLVM clang); the in-Scheme branch is the
 ;; last-resort fallback when the layer is unavailable.
 (define aot-cc
-  (or (getenv-ne "CC") (from-layer "CC")
+  (or (getenv-ne "CC")
+      (from-layer "CC")
       (if (getenv-ne "EMIT_LLVM_BIN")
           (string-append llvm-bin "clang")
-          (if (shell-line "command -v clang 2>/dev/null") "clang"
+          (if (shell-line "command -v clang 2>/dev/null")
+              "clang"
               (string-append llvm-bin "clang")))))
 
 ;; Module header: the `target datalayout`/`target triple` lines for the host.
@@ -137,26 +146,22 @@
 ;; empty translation unit -- the canonical, portable way to learn the host's
 ;; exact triple (which -print-target-triple does not report on macOS).
 (define (host-target-header)
-  (let* ([pipes (process (string-append aot-cc " -S -emit-llvm -x c -o - - 2>/dev/null"))]
+  (let* ([pipes (process (string-append aot-cc
+                                        " -S -emit-llvm -x c -o - - 2>/dev/null"))]
          [from (car pipes)]
-         [to   (cadr pipes)])
+         [to (cadr pipes)])
     (put-string to "int __scheme_llvm_probe;\n")
     (close-port to)
     (let loop ([acc '()])
       (let ([ln (get-line from)])
         (cond
-          [(eof-object? ln)
-           (close-port from)
-           (apply string-append (reverse acc))]
+          [(eof-object? ln) (close-port from) (apply string-append (reverse acc))]
           [(and (>= (string-length ln) 7) (string=? (substring ln 0 7) "target "))
-           (loop (cons (string-append ln "\n") acc))]
+            (loop (cons (string-append ln "\n") acc))]
           [else (loop acc)])))))
 
-(define (read-program path)   ; -> ordered list of all top-level forms (file I/O)
-  (let* ([p (open-input-file path)]
-         [forms (read-forms p)])
-    (close-port p)
-    forms))
+(define (read-program path) ; -> ordered list of all top-level forms (file I/O)
+  (let* ([p (open-input-file path)] [forms (read-forms p)]) (close-port p) forms))
 
 ;; --- the include reader this door installs (change: library-include-declarations,
 ;; design D2/D3/D5) ---------------------------------------------------------
@@ -191,8 +196,12 @@
 (define (driver-include-reader who filename base)
   (let ([path (resolve-include filename base)])
     (unless (file-exists? path)
-      (error who (string-append "cannot read " (render-datum filename)
-                                " (resolved to " path ")")))
+      (error who
+             (string-append "cannot read "
+                            (render-datum filename)
+                            " (resolved to "
+                            path
+                            ")")))
     (set! *includes-read* (cons path *includes-read*))
     ;; `include-ci` folds symbol case, and folds it AT READ TIME (change:
     ;; reader-token-path, issue #61) so that R7RS 7.1.1 survives it: the characters
@@ -212,9 +221,10 @@
     ;; Unicode (`ÉCOLE` -> `école`) and Emit's substrate fold is ASCII, so the two agree on
     ;; ASCII source and nowhere else.  `include-ci` exists for old case-folding Scheme,
     ;; which is ASCII; the limit is recorded in docs/MODULES.md.
-    (cons path (if (eq? who 'include-ci)
-                   (parameterize ([case-sensitive #f]) (read-program path))
-                   (read-program path)))))
+    (cons path
+          (if (eq? who 'include-ci)
+              (parameterize ([case-sensitive #f]) (read-program path))
+              (read-program path)))))
 
 ;; resolved paths served since the last reset
 (define *includes-read* '())
@@ -242,14 +252,12 @@
 
 ;; concise status line to stderr, suppressed at quiet.  fprintf-style.
 (define (note fmt . args)
-  (when (>= driver-verbosity 1)
-    (apply fprintf (current-error-port) fmt args)))
+  (when (>= driver-verbosity 1) (apply fprintf (current-error-port) fmt args)))
 
 ;; verbose-only per-pass stage announcement (concise; no full form dump).  Shares
 ;; core.ss's injected `dump` side-channel, so the pure core stays port-free.
 (define (announce-stage stage form)
-  (when (>= driver-verbosity 2)
-    (fprintf (current-error-port) "  stage ~a\n" stage)))
+  (when (>= driver-verbosity 2) (fprintf (current-error-port) "  stage ~a\n" stage)))
 
 ;; The dumper this run selected (`dump`, `announce-stage`, or `no-dump`), published so
 ;; the modular path -- which is reached through build-modular-artifacts*, several frames
@@ -264,11 +272,9 @@
 
 ;; Read source (+ prelude) and assemble the ordered form list the core compiles.
 (define (program-forms src prelude?)
-  (set-source-home! src)                ; includes resolve beside the source, not the CWD
+  (set-source-home! src) ; includes resolve beside the source, not the CWD
   (let ([user-forms (read-program src)])
-    (if prelude?
-        (with-prelude (read-program prelude-path) user-forms)
-        user-forms)))
+    (if prelude? (with-prelude (read-program prelude-path) user-forms) user-forms)))
 
 ;; --- optional self-hosted forms->IR via a compiled `schemec` (path C, D4) --
 ;; When enabled (env SCHEMEC=<path> or --via-schemec), the forms->IR step shells
@@ -290,22 +296,19 @@
   ;; corrupt the captured IR; send schemec's stderr to /dev/null (a compile error
   ;; there surfaces as empty IR and a downstream clang failure).
   (let* ([pipes (process (string-append (schemec-binary) " 2>/dev/null"))]
-         [from (car pipes)] [to (cadr pipes)])
+         [from (car pipes)]
+         [to (cadr pipes)])
     (for-each (lambda (f) (write f to) (newline to)) forms)
     (close-port to)
-    (let ([ir (get-string-all from)])
-      (close-port from)
-      ir)))
+    (let ([ir (get-string-all from)]) (close-port from) ir)))
 
 ;; Driver: assemble forms, run forms->IR (in-process core, or schemec when
 ;; via?), prepend the host target header, and write the .ll.  The header (a
 ;; clang subprocess) is an effect and stays here so the core stays host-agnostic.
 (define (compile-file src ll dumpf prelude? via?)
   (let* ([forms (program-forms src prelude?)]
-         [ir    (if via?
-                    (forms->ir-via-schemec forms)
-                    (compile-forms forms dumpf))]
-         [text  (string-append (host-target-header) ir)])
+         [ir (if via? (forms->ir-via-schemec forms) (compile-forms forms dumpf))]
+         [text (string-append (host-target-header) ir)])
     (let ([out (open-output-file ll 'replace)]) (display text out) (close-port out))))
 
 ;; --- backends -----------------------------------------------------------
@@ -341,14 +344,30 @@
     (lambda (t)
       (unless (file-exists? (tool t))
         (error 'compile
-               (string-append "required LLVM tool not found: " (tool t)
+               (string-append "required LLVM tool not found: "
+                              (tool t)
                               "  (install LLVM -- apt: 'llvm', brew: 'llvm' -- "
                               "or set EMIT_LLVM_BIN to your LLVM bin directory)"))))
     '("lli" "llvm-as" "llvm-link" "clang")))
 
 ;; AOT (default): textual IR -> native exe via the system clang.  Unchanged.
 (define (link ll exe)
-  (sh "clang" (string-append aot-cc " " ship-opt " " ship-lto " -I" gc-inc " -L" gc-lib " " runtime-c " " ll " -lgc -lm -o " exe)))
+  (sh "clang"
+      (string-append aot-cc
+                     " "
+                     ship-opt
+                     " "
+                     ship-lto
+                     " -I"
+                     gc-inc
+                     " -L"
+                     gc-lib
+                     " "
+                     runtime-c
+                     " "
+                     ll
+                     " -lgc -lm -o "
+                     exe)))
 
 ;; Bitcode: assemble OUT.ll -> OUT.bc (the inspectable/opt-able artifact),
 ;; then codegen the .bc + runtime to a native exe (LLVM 22 clang).
@@ -356,7 +375,19 @@
   (sh "llvm-as" (string-append (tool "llvm-as") " " ll " -o " bc)))
 (define (build-bitcode-exe bc exe)
   (sh "clang(bc)"
-      (string-append (tool "clang") " " ship-opt " -I" gc-inc " -L" gc-lib " " runtime-c " " bc " -lgc -lm -o " exe)))
+      (string-append (tool "clang")
+                     " "
+                     ship-opt
+                     " -I"
+                     gc-inc
+                     " -L"
+                     gc-lib
+                     " "
+                     runtime-c
+                     " "
+                     bc
+                     " -lgc -lm -o "
+                     exe)))
 
 ;; JIT: assemble the program, compile the runtime to bitcode, llvm-link them
 ;; (so the C main + rt_* join the module), and run in-process via lli with
@@ -365,14 +396,24 @@
   (let ([pbc (string-append base ".bc")]
         [rbc (string-append base ".rt.bc")]
         [cbc (string-append base ".combined.bc")])
-    (sh "llvm-as"    (string-append (tool "llvm-as") " " ll " -o " pbc))
-    (sh "clang-emit" (string-append (tool "clang") " -I" gc-inc " -emit-llvm -c " runtime-c " -o " rbc))
-    (sh "llvm-link"  (string-append (tool "llvm-link") " " pbc " " rbc " -o " cbc))
-    (sh "lli"        (string-append (tool "lli") " -load=" gc-dylib " " cbc))))
+    (sh "llvm-as" (string-append (tool "llvm-as") " " ll " -o " pbc))
+    (sh "clang-emit"
+        (string-append (tool "clang")
+                       " -I"
+                       gc-inc
+                       " -emit-llvm -c "
+                       runtime-c
+                       " -o "
+                       rbc))
+    (sh "llvm-link" (string-append (tool "llvm-link") " " pbc " " rbc " -o " cbc))
+    (sh "lli" (string-append (tool "lli") " -load=" gc-dylib " " cbc))))
 
 (define (strip-ext s)
   (let ([i (let loop ([i (- (string-length s) 1)])
-             (cond [(< i 0) #f] [(char=? (string-ref s i) #\.) i] [else (loop (- i 1))]))])
+             (cond
+               [(< i 0) #f]
+               [(char=? (string-ref s i) #\.) i]
+               [else (loop (- i 1))]))])
     (if i (substring s 0 i) s)))
 
 ;; --- interactive REPL: launch the embedded-compiler host ----------------
@@ -436,9 +477,10 @@
 ;; The directory part of a path ("" when it has none, i.e. the current directory).
 (define (dir-of path)
   (let loop ([i (- (string-length path) 1)])
-    (cond [(< i 0) ""]
-          [(char=? (string-ref path i) #\/) (substring path 0 i)]
-          [else (loop (- i 1))])))
+    (cond
+      [(< i 0) ""]
+      [(char=? (string-ref path i) #\/) (substring path 0 i)]
+      [else (loop (- i 1))])))
 
 ;; A path written INSIDE a manifest is relative to that manifest, not to the CWD, so
 ;; a manifest carries its library sources with it and resolves identically from any
@@ -446,9 +488,7 @@
 ;; are used as given.  Mirrors manifest_relative() in src/emit.cpp.
 (define (manifest-relative manifest p)
   (let ([d (dir-of manifest)])
-    (if (or (string=? p "")
-            (char=? (string-ref p 0) #\/)
-            (string=? d ""))
+    (if (or (string=? p "") (char=? (string-ref p 0) #\/) (string=? d ""))
         p
         (string-append d "/" p))))
 
@@ -459,28 +499,32 @@
 (define (read-manifest path)
   (unless (file-exists? path)
     (error 'build (string-append "library manifest not found: " path)))
-  (map (lambda (entry)                     ; (library NAME (source S) [(artifacts A)])
+  (map (lambda (entry) ; (library NAME (source S) [(artifacts A)])
          (let ([name (cadr entry)] [clauses (cddr entry)])
            (list name
                  (manifest-relative
-                  path
-                  (cond [(assq 'source clauses) => cadr]
-                        [else (error 'build "manifest entry missing (source ...)" name)]))
+                   path
+                   (cond
+                     [(assq 'source clauses) => cadr]
+                     [else (error 'build "manifest entry missing (source ...)" name)]))
                  ;; An explicit (artifacts A) is written in the manifest, so it follows
                  ;; the same rule; the "build/lib" DEFAULT is the driver's own and stays
                  ;; relative to the invocation.
-                 (cond [(assq 'artifacts clauses) => (lambda (c) (manifest-relative path (cadr c)))]
-                       [else "build/lib"]))))
+                 (cond
+                   [(assq 'artifacts clauses)
+                     =>
+                     (lambda (c) (manifest-relative path (cadr c)))]
+                   [else "build/lib"]))))
        (filter (lambda (entry) (and (pair? entry) (eq? (car entry) 'library)))
                (car (read-program path)))))
 
 (define (manifest-lookup manifest name)
-  (or (assoc name manifest)
-      (error 'build "library not found in manifest" name)))
+  (or (assoc name manifest) (error 'build "library not found in manifest" name)))
 
-(define (lib-basename name)                ; (foo bar) -> "foo.bar"
+(define (lib-basename name) ; (foo bar) -> "foo.bar"
   (let loop ([parts (cdr name)] [acc (symbol->string (car name))])
-    (if (null? parts) acc
+    (if (null? parts)
+        acc
         (loop (cdr parts) (string-append acc "." (symbol->string (car parts)))))))
 
 (define (program-imports src) (car (collect-imports (read-program src))))
@@ -526,8 +570,9 @@
       ;; -- at verbose only, since it is detail about an input rather than an outcome
       ;; (docs/OUTPUT.md).
       (when (and (>= driver-verbosity 2) (pair? (includes-read)))
-        (for-each (lambda (p) (fprintf (current-error-port) "  include ~a -> ~a\n" path p))
-                  (includes-read)))
+        (for-each
+          (lambda (p) (fprintf (current-error-port) "  include ~a -> ~a\n" path p))
+          (includes-read)))
       dl)))
 
 ;; (library-name . (included-path ...))
@@ -543,18 +588,20 @@
 (define (toposort-libs roots manifest)
   (let ([order '()] [visited '()] [cache '()])
     (define (get-dl name)
-      (cond [(assoc name cache) => cdr]
-            [else (let ([dl (read-define-library manifest name)])
-                    (set! cache (cons (cons name dl) cache)) dl)]))
+      (cond
+        [(assoc name cache) => cdr]
+        [else (let ([dl (read-define-library manifest name)])
+                (set! cache (cons (cons name dl) cache))
+                dl)]))
     (define (visit name path)
       (cond
-        [(member name visited) (if #f #f)]                    ; already finished (diamond)
+        [(member name visited) (if #f #f)] ; already finished (diamond)
         [(member name path)
-         (error 'build "import cycle among libraries" (reverse (cons name path)))]
+          (error 'build "import cycle among libraries" (reverse (cons name path)))]
         [else
-         (for-each (lambda (dep) (visit dep (cons name path))) (cadr (get-dl name)))
-         (set! visited (cons name visited))
-         (set! order (cons name order))]))                    ; finished after its deps
+          (for-each (lambda (dep) (visit dep (cons name path))) (cadr (get-dl name)))
+          (set! visited (cons name visited))
+          (set! order (cons name order))])) ; finished after its deps
     (for-each (lambda (r) (visit r '())) roots)
     (values (reverse order) cache)))
 
@@ -577,25 +624,15 @@
 ;; in a fixed order -- the sources that turn library source -> IR in this path.
 ;; KEEP IN SYNC with the include block near line 20 (change: artifact-compiler-stamp).
 (define compiler-source-files
-  '("src/match.scm"
-    "src/util.scm"
-    "src/parse.ss"
-    "src/passes/expand.ss"
-    "src/passes/recognize-let.ss"
-    "src/passes/convert-assignments.ss"
-    "src/passes/simplify.ss"
-    "src/passes/convert-closures.ss"
-    "src/passes/lower.ss"
-    "src/emit.ss"
-    "src/prelude-surface.scm"
-    "src/core.ss"
-    "src/compile.ss"))
+  '("src/match.scm" "src/util.scm" "src/parse.ss" "src/passes/expand.ss"
+    "src/passes/recognize-let.ss" "src/passes/convert-assignments.ss"
+    "src/passes/simplify.ss" "src/passes/convert-closures.ss" "src/passes/lower.ss"
+    "src/emit.ss" "src/prelude-surface.scm" "src/core.ss" "src/compile.ss"))
 
 ;; A file's raw bytes as a bytevector (binary; content-based, immune to touch /
 ;; checkout / clock skew -- the mtime fragility that just bit us on sources).
 (define (file-bytes path)
-  (let* ([p (open-file-input-port path)]
-         [bv (get-bytevector-all p)])
+  (let* ([p (open-file-input-port path)] [bv (get-bytevector-all p)])
     (close-port p)
     (if (eof-object? bv) (bytevector) bv)))
 
@@ -610,8 +647,7 @@
       (if (= i n)
           h
           (loop (+ i 1)
-                (bitwise-and (* (bitwise-xor h (bytevector-u8-ref bv i))
-                                fnv64-prime)
+                (bitwise-and (* (bitwise-xor h (bytevector-u8-ref bv i)) fnv64-prime)
                              fnv64-mask))))))
 
 ;; The compiler-identity stamp (D1): (emit-artifact-stamp VERSION HEX-DIGEST),
@@ -630,8 +666,7 @@
 ;; (a torn write fails safe toward rebuild -- D3).
 (define (read-stamp stampf)
   (and (file-exists? stampf)
-       (let ([forms (read-program stampf)])
-         (and (pair? forms) (car forms)))))
+       (let ([forms (read-program stampf)]) (and (pair? forms) (car forms)))))
 
 ;; The sidecar carries the compiler identity AND the files the source INCLUDED (change:
 ;; library-include-declarations, design D10): (emit-artifact-stamp V HEX (path ...)).
@@ -658,7 +693,8 @@
 ;; library-include-declarations).  file-modification-time returns a time-utc object;
 ;; compare with time<=? (src not newer than the artifact).
 (define (artifacts-fresh? src ll expf stampf stamp)
-  (and (file-exists? ll) (file-exists? expf)
+  (and (file-exists? ll)
+       (file-exists? expf)
        (let ([st (file-modification-time src)])
          (and (time<=? st (file-modification-time ll))
               (time<=? st (file-modification-time expf))))
@@ -675,11 +711,10 @@
     [(not (and (file-exists? ll) (file-exists? expf))) "missing"]
     [(let ([st (file-modification-time src)])
        (not (and (time<=? st (file-modification-time ll))
-                 (time<=? st (file-modification-time expf)))))
-     "source changed"]
+                 (time<=? st (file-modification-time expf))))) "source changed"]
     [(not (equal? (stamp-identity (read-stamp stampf)) stamp)) "compiler changed"]
     [(not (includes-fresh? (stamp-includes (read-stamp stampf)) ll expf))
-     "included source changed"]
+      "included source changed"]
     [else "stale"]))
 
 ;; Compile+link a program that imports libraries.  `exe` is the output path.
@@ -710,153 +745,206 @@
 ;; design D1).  The first cut shook only a direct import of the program that no other
 ;; unit imported -- sound, but it left the substrate whole once (scheme base) began
 ;; importing it.  Backward propagation is what retires that limit.
-(define (build-modular-artifacts src out prelude?) (build-modular-artifacts* src out prelude? #f))
+(define (build-modular-artifacts src out prelude?)
+  (build-modular-artifacts* src out prelude? #f))
 (define (build-modular-artifacts* src out prelude? shake?)
   (set-source-home! src)
-  (let* ([user-forms     (read-program src)]
+  (let* ([user-forms (read-program src)]
          ;; Stage 3: the prelude's procedures come from the auto-imported (scheme
          ;; base) library, not a prepend; only its derived-form macros are merged
          ;; as prelude-forms (compile-time).  --no-prelude adds neither.
          [direct-imports (with-scheme-base (car (collect-imports user-forms)) prelude?)]
-         [manifest       (read-manifest *manifest-path*)]
-         [prelude-forms  (if prelude? (prelude-macro-forms) '())]
-         [header         (host-target-header)]
+         [manifest (read-manifest *manifest-path*)]
+         [prelude-forms (if prelude? (prelude-macro-forms) '())]
+         [header (host-target-header)]
          ;; compiler identity, computed ONCE per build (D4) and compared to each
          ;; unit's recorded .stamp in artifacts-fresh? (change: artifact-compiler-stamp).
-         [stamp          (compiler-stamp header)])
+         [stamp (compiler-stamp header)])
     (let-values ([(order dl-cache) (toposort-libs direct-imports manifest)])
       ;; build/reuse each unit in topo order, accumulating (name . export-table)
       ;; and the .ll paths for linking.
       (let loop ([libs order] [tables '()] [lls '()])
-        (if (null? libs)
-            ;; every unit ready: compile the program against its DIRECT imports'
-            ;; tables, ordering the whole closure's inits by topo order.
-            (let* ([direct-tables (map (lambda (n) (cdr (assoc n tables))) direct-imports)]
-                   [prog-ll   (string-append out ".ll")]      ; beside the exe, not the source
-                   ;; The program is the unit under inspection; the library units above
-                   ;; keep no-dump, matching the shipped doors' default (design D7 --
-                   ;; the driver has no --dump-all).
-                   [prog-ir   (compile-program-with-imports
-                                prelude-forms user-forms direct-tables order *dumpf*)]
-                   ;; No name->ll map here any more: the shake produces a .ll for EVERY unit,
-                   ;; so nothing falls back to the full artifact (import-dag-tree-shaking).
-                   [prog-text (string-append header prog-ir)])
-              (write-text prog-ll prog-text)
-              (note "compile ~a -> ~a  [~a bytes]\n" src prog-ll (string-length prog-text))
-              (if (not shake?)
-                  (values (reverse lls) prog-ll)          ; unit .ll's in link order + program .ll
-                  ;; AOT tree-shake: rebuild EVERY unit to the roots imposed on it, in
-                  ;; REVERSE topological order (change: import-dag-tree-shaking, design D1).
-                  ;;
-                  ;; The old rule shook only a direct import of the program that no other unit
-                  ;; imports, with this justification: an importer kept full could reference a
-                  ;; binding a dependency dropped.  That hazard is entirely a property of
-                  ;; ORDER.  Finalize importers first and it cannot arise -- so both gates go,
-                  ;; and with them the reason `(emit internal)` shipped whole in every binary
-                  ;; ever built (`(scheme base)` imports it, so it was unprunable by
-                  ;; construction: 348,536 B and 161 symbols to support 1 standard-library
-                  ;; binding in a `car`-only program).
-                  ;;
-                  ;; `root-text` accumulates: the program's IR, then each unit's FINAL (pruned)
-                  ;; IR as it is produced.  Because we walk in reverse topo order, every unit
-                  ;; that could import NM is already in that string when NM is shaken.  Units
-                  ;; that do NOT import NM are in it too and cost nothing -- a unit emits
-                  ;; `ptr @"X:name"` only for a library it imports, so a non-importer mentions
-                  ;; none of NM's symbols.  See program-root-internals in src/core.ss.
-                  ;;
-                  ;; Historical note kept because it cost a debugging session: the retired
-                  ;; guard used `member`, not `memq`, because a library name is a LIST of
-                  ;; symbols read from different places (the toposort, the program's source,
-                  ;; each .sld's import clause) -- equal? but never eq?.  With `memq` it
-                  ;; silently never fired, which was unreachable until (scheme base) imported
-                  ;; the substrate and the fixed point failed to link (scheme-base-partition).
-                  (let shake ([rest (reverse order)] [root-text prog-text] [done (quote ())])
-                    (if (null? rest)
-                        ;; final list back in topo (link) order -- the linker's order is not
-                        ;; the shake's order and this change does not alter it.
-                        (values (map (lambda (nm) (cdr (assoc nm done))) order) prog-ll)
-                        (let* ([nm    (car rest)]
-                               [dl    (cdr (assoc nm dl-cache))]
-                               [exps  (caddr dl)]
-                               ;; the unit's exports plus what its exported macros' templates
-                               ;; reach (change: library-macro-export, design D6)
-                               [cands (append (map cdr exps)
-                                              (ct-own-refs
-                                                (table-ct-half (cdr (assoc nm tables)))))]
-                               [roots (program-root-internals root-text nm cands)]
-                               [imp-t (map (lambda (n) (cdr (assoc n tables))) (cadr dl))]
-                               [res   (compile-library (car dl) (cadr dl) (caddr dl)
-                                                       (cadddr dl) imp-t no-dump roots)]
-                               [txt   (string-append header (car res))]
-                               [pll   (string-append out "." (lib-basename nm) ".pruned.ll")])
-                          (write-text pll txt)
-                          ;; A unit the program does not import directly can only have been
-                          ;; rooted through an importer -- worth saying, because that is the
-                          ;; case that used to be impossible.
-                          (note "shake ~s -> ~a  [~a exports reached, ~a bytes~a]\n"
-                                nm pll (length roots) (string-length txt)
-                                (if (member nm direct-imports) "" ", via importers"))
-                          (shake (cdr rest)
-                                 (string-append root-text txt)
-                                 (cons (cons nm pll) done)))))))
-            ;; build or reuse one library
-            (let* ([name    (car libs)]
-                   [entry   (manifest-lookup manifest name)]
-                   [art-dir (caddr entry)]
-                   [dl      (cdr (assoc name dl-cache))]
-                   [base    (lib-basename name)]
-                   [ll      (string-append art-dir "/" base ".ll")]
-                   [expf    (string-append art-dir "/" base ".exports")]
-                   [stampf  (string-append art-dir "/" base ".stamp")])
-              (if (artifacts-fresh? (cadr entry) ll expf stampf stamp)
-                  ;; reuse: read the export table back from the artifact
-                  (let ([table (car (read-program expf))])
-                    (note "reuse ~s -> ~a  [fresh]\n" name ll)
-                    (loop (cdr libs) (cons (cons name table) tables) (cons ll lls)))
-                  ;; rebuild: import env comes from this lib's already-built deps.
-                  ;; Capture the reason BEFORE writing (the writes make it fresh again).
-                  (let* ([reason  (rebuild-reason (cadr entry) ll expf stampf stamp)]
-                         [imp-tables (map (lambda (n) (cdr (assoc n tables))) (cadr dl))]
-                         [res     (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl)
-                                                   imp-tables no-dump)]
-                         [ll-text (string-append header (car res))])
-                    (sh "mkdir" (string-append "mkdir -p " art-dir))
-                    (write-text ll ll-text)
-                    ;; `render-datum`, not `write`: the export datum now carries a
-                    ;; library's compile-time interface, whose templates may hold
-                    ;; characters that Chez's `write` and Emit's own reader spell
-                    ;; differently.  One renderer on every door is what makes `emit lib`'s
-                    ;; artifact byte-identical to the driver's (change:
-                    ;; library-macro-export) -- and it is byte-identical to `write` for
-                    ;; every table that exists today, which is measured, not assumed.
-                    (let ([o (open-output-file expf 'replace)])
-                      (display (render-datum (cadr res)) o) (newline o) (close-port o))
-                    ;; write the .stamp LAST so a torn write fails safe toward
-                    ;; rebuild (D3); `write` (not display) so the digest string
-                    ;; round-trips as a string, not a symbol.
-                    (let ([o (open-output-file stampf 'replace)])
-                      (write (stamp-datum stamp (library-includes name)) o)
-                      (newline o) (close-port o))
-                    ;; The macro count rides the existing metrics clause and only when
-                    ;; there is one, so a library that exports no macro narrates exactly
-                    ;; what it always did (change: library-macro-export; docs/OUTPUT.md).
-                    (note "compile ~s -> ~a  [~a bytes~a, recompile: ~a]\n"
-                          name ll (string-length ll-text)
-                          (let ([n (length (ct-macros (table-ct-half (cadr res))))])
-                            (if (= n 0) "" (string-append ", " (number->string n) " macros")))
-                          reason)
-                    (loop (cdr libs) (cons (cons name (cadr res)) tables) (cons ll lls))))))))))
+        (if
+          (null? libs)
+          ;; every unit ready: compile the program against its DIRECT imports'
+          ;; tables, ordering the whole closure's inits by topo order.
+          (let* ([direct-tables (map (lambda (n) (cdr (assoc n tables)))
+                                     direct-imports)]
+                 [prog-ll (string-append out ".ll")] ; beside the exe, not the source
+                 ;; The program is the unit under inspection; the library units above
+                 ;; keep no-dump, matching the shipped doors' default (design D7 --
+                 ;; the driver has no --dump-all).
+                 [prog-ir (compile-program-with-imports prelude-forms
+                                                        user-forms
+                                                        direct-tables
+                                                        order
+                                                        *dumpf*)]
+                 ;; No name->ll map here any more: the shake produces a .ll for EVERY unit,
+                 ;; so nothing falls back to the full artifact (import-dag-tree-shaking).
+                 [prog-text (string-append header prog-ir)])
+            (write-text prog-ll prog-text)
+            (note "compile ~a -> ~a  [~a bytes]\n"
+                  src
+                  prog-ll
+                  (string-length prog-text))
+            (if
+              (not shake?)
+              (values (reverse lls) prog-ll) ; unit .ll's in link order + program .ll
+              ;; AOT tree-shake: rebuild EVERY unit to the roots imposed on it, in
+              ;; REVERSE topological order (change: import-dag-tree-shaking, design D1).
+              ;;
+              ;; The old rule shook only a direct import of the program that no other unit
+              ;; imports, with this justification: an importer kept full could reference a
+              ;; binding a dependency dropped.  That hazard is entirely a property of
+              ;; ORDER.  Finalize importers first and it cannot arise -- so both gates go,
+              ;; and with them the reason `(emit internal)` shipped whole in every binary
+              ;; ever built (`(scheme base)` imports it, so it was unprunable by
+              ;; construction: 348,536 B and 161 symbols to support 1 standard-library
+              ;; binding in a `car`-only program).
+              ;;
+              ;; `root-text` accumulates: the program's IR, then each unit's FINAL (pruned)
+              ;; IR as it is produced.  Because we walk in reverse topo order, every unit
+              ;; that could import NM is already in that string when NM is shaken.  Units
+              ;; that do NOT import NM are in it too and cost nothing -- a unit emits
+              ;; `ptr @"X:name"` only for a library it imports, so a non-importer mentions
+              ;; none of NM's symbols.  See program-root-internals in src/core.ss.
+              ;;
+              ;; Historical note kept because it cost a debugging session: the retired
+              ;; guard used `member`, not `memq`, because a library name is a LIST of
+              ;; symbols read from different places (the toposort, the program's source,
+              ;; each .sld's import clause) -- equal? but never eq?.  With `memq` it
+              ;; silently never fired, which was unreachable until (scheme base) imported
+              ;; the substrate and the fixed point failed to link (scheme-base-partition).
+              (let shake ([rest (reverse order)]
+                          [root-text prog-text]
+                          [done (quote ())])
+                (if
+                  (null? rest)
+                  ;; final list back in topo (link) order -- the linker's order is not
+                  ;; the shake's order and this change does not alter it.
+                  (values (map (lambda (nm) (cdr (assoc nm done))) order) prog-ll)
+                  (let* ([nm (car rest)]
+                         [dl (cdr (assoc nm dl-cache))]
+                         [exps (caddr dl)]
+                         ;; the unit's exports plus what its exported macros' templates
+                         ;; reach (change: library-macro-export, design D6)
+                         [cands (append (map cdr exps)
+                                        (ct-own-refs (table-ct-half
+                                                       (cdr (assoc nm tables)))))]
+                         [roots (program-root-internals root-text nm cands)]
+                         [imp-t (map (lambda (n) (cdr (assoc n tables))) (cadr dl))]
+                         [res (compile-library (car dl)
+                                               (cadr dl)
+                                               (caddr dl)
+                                               (cadddr dl)
+                                               imp-t
+                                               no-dump
+                                               roots)]
+                         [txt (string-append header (car res))]
+                         [pll (string-append out "." (lib-basename nm) ".pruned.ll")])
+                    (write-text pll txt)
+                    ;; A unit the program does not import directly can only have been
+                    ;; rooted through an importer -- worth saying, because that is the
+                    ;; case that used to be impossible.
+                    (note "shake ~s -> ~a  [~a exports reached, ~a bytes~a]\n"
+                          nm
+                          pll
+                          (length roots)
+                          (string-length txt)
+                          (if (member nm direct-imports) "" ", via importers"))
+                    (shake (cdr rest)
+                           (string-append root-text txt)
+                           (cons (cons nm pll) done)))))))
+          ;; build or reuse one library
+          (let* ([name (car libs)]
+                 [entry (manifest-lookup manifest name)]
+                 [art-dir (caddr entry)]
+                 [dl (cdr (assoc name dl-cache))]
+                 [base (lib-basename name)]
+                 [ll (string-append art-dir "/" base ".ll")]
+                 [expf (string-append art-dir "/" base ".exports")]
+                 [stampf (string-append art-dir "/" base ".stamp")])
+            (if (artifacts-fresh? (cadr entry) ll expf stampf stamp)
+                ;; reuse: read the export table back from the artifact
+                (let ([table (car (read-program expf))])
+                  (note "reuse ~s -> ~a  [fresh]\n" name ll)
+                  (loop (cdr libs) (cons (cons name table) tables) (cons ll lls)))
+                ;; rebuild: import env comes from this lib's already-built deps.
+                ;; Capture the reason BEFORE writing (the writes make it fresh again).
+                (let* ([reason (rebuild-reason (cadr entry) ll expf stampf stamp)]
+                       [imp-tables (map (lambda (n) (cdr (assoc n tables))) (cadr dl))]
+                       [res (compile-library (car dl)
+                                             (cadr dl)
+                                             (caddr dl)
+                                             (cadddr dl)
+                                             imp-tables
+                                             no-dump)]
+                       [ll-text (string-append header (car res))])
+                  (sh "mkdir" (string-append "mkdir -p " art-dir))
+                  (write-text ll ll-text)
+                  ;; `render-datum`, not `write`: the export datum now carries a
+                  ;; library's compile-time interface, whose templates may hold
+                  ;; characters that Chez's `write` and Emit's own reader spell
+                  ;; differently.  One renderer on every door is what makes `emit lib`'s
+                  ;; artifact byte-identical to the driver's (change:
+                  ;; library-macro-export) -- and it is byte-identical to `write` for
+                  ;; every table that exists today, which is measured, not assumed.
+                  (let ([o (open-output-file expf 'replace)])
+                    (display (render-datum (cadr res)) o)
+                    (newline o)
+                    (close-port o))
+                  ;; write the .stamp LAST so a torn write fails safe toward
+                  ;; rebuild (D3); `write` (not display) so the digest string
+                  ;; round-trips as a string, not a symbol.
+                  (let ([o (open-output-file stampf 'replace)])
+                    (write (stamp-datum stamp (library-includes name)) o)
+                    (newline o)
+                    (close-port o))
+                  ;; The macro count rides the existing metrics clause and only when
+                  ;; there is one, so a library that exports no macro narrates exactly
+                  ;; what it always did (change: library-macro-export; docs/OUTPUT.md).
+                  (note
+                    "compile ~s -> ~a  [~a bytes~a, recompile: ~a]\n"
+                    name
+                    ll
+                    (string-length ll-text)
+                    (let ([n (length (ct-macros (table-ct-half (cadr res))))])
+                      (if (= n 0) "" (string-append ", " (number->string n) " macros")))
+                    reason)
+                  (loop (cdr libs)
+                        (cons (cons name (cadr res)) tables)
+                        (cons ll lls))))))))))
 
 ;; --- modular-set backend consumers (change: driver-backend-rehome) ---------
 ;; Each takes the unit .ll's (link order) + the program .ll and drives one exit.
-(define (lls->string lls) (apply string-append (map (lambda (l) (string-append l " ")) lls)))
+(define (lls->string lls)
+  (apply string-append (map (lambda (l) (string-append l " ")) lls)))
 
 ;; AOT: clang links runtime + every unit + program -> native exe.
 (define (link-modular-aot unit-lls prog-ll exe)
   (sh "clang"
-      (string-append aot-cc " " ship-opt " " ship-lto " -Wno-override-module -I" gc-inc " -L" gc-lib " " runtime-c " "
-                     (lls->string unit-lls) prog-ll " -lgc -lm -o " exe))
-  (note "link ~a + ~a unit(s) -> ~a  [aot ~a ~a, modules]\n" prog-ll (length unit-lls) exe ship-opt ship-lto))
+      (string-append aot-cc
+                     " "
+                     ship-opt
+                     " "
+                     ship-lto
+                     " -Wno-override-module -I"
+                     gc-inc
+                     " -L"
+                     gc-lib
+                     " "
+                     runtime-c
+                     " "
+                     (lls->string unit-lls)
+                     prog-ll
+                     " -lgc -lm -o "
+                     exe))
+  (note "link ~a + ~a unit(s) -> ~a  [aot ~a ~a, modules]\n"
+        prog-ll
+        (length unit-lls)
+        exe
+        ship-opt
+        ship-lto))
 
 ;; assemble each .ll in the set to a sibling .bc; return the .bc paths in order.
 (define (assemble-set lls)
@@ -873,90 +961,148 @@
   (let* ([rbc (string-append base ".rt.bc")]
          [cbc (string-append base ".combined.bc")]
          [bcs (assemble-set (append unit-lls (list prog-ll)))])
-    (sh "clang-emit" (string-append (tool "clang") " -I" gc-inc " -emit-llvm -c " runtime-c " -o " rbc))
-    (sh "llvm-link"  (string-append (tool "llvm-link") " " (lls->string bcs) rbc " -o " cbc))
-    (sh "lli"        (string-append (tool "lli") " -load=" gc-dylib " " cbc))))
+    (sh "clang-emit"
+        (string-append (tool "clang")
+                       " -I"
+                       gc-inc
+                       " -emit-llvm -c "
+                       runtime-c
+                       " -o "
+                       rbc))
+    (sh "llvm-link"
+        (string-append (tool "llvm-link") " " (lls->string bcs) rbc " -o " cbc))
+    (sh "lli" (string-append (tool "lli") " -load=" gc-dylib " " cbc))))
 
 ;; Bitcode: llvm-link the whole set into one program .bc (the inspectable/opt-able
 ;; artifact), then codegen that .bc + runtime to a native exe.
 (define (build-bitcode-modular unit-lls prog-ll exe base)
-  (let* ([bc  (string-append base ".bc")]
+  (let* ([bc (string-append base ".bc")]
          [bcs (assemble-set (append unit-lls (list prog-ll)))])
     (sh "llvm-link" (string-append (tool "llvm-link") " " (lls->string bcs) "-o " bc))
     (sh "clang(bc)"
-        (string-append (tool "clang") " " ship-opt " -Wno-override-module -I" gc-inc " -L" gc-lib " "
-                       runtime-c " " bc " -lgc -lm -o " exe))
-    (note "link ~a + ~a unit(s) -> ~a -> ~a  [bitcode, modules]\n" prog-ll (length unit-lls) bc exe)))
+        (string-append (tool "clang")
+                       " "
+                       ship-opt
+                       " -Wno-override-module -I"
+                       gc-inc
+                       " -L"
+                       gc-lib
+                       " "
+                       runtime-c
+                       " "
+                       bc
+                       " -lgc -lm -o "
+                       exe))
+    (note "link ~a + ~a unit(s) -> ~a -> ~a  [bitcode, modules]\n"
+          prog-ll
+          (length unit-lls)
+          bc
+          exe)))
 
 ;; --- argument handling ---
 ;; `via?` (env SCHEMEC=<path> or --via-schemec) routes the batch forms->IR step
 ;; through the compiled `schemec` (path C, D4) instead of the in-process core.
 (define (main args)
-  (let loop ([args args] [src #f] [out #f] [dump? #f] [backend "aot"] [prelude? #t]
-             [repl? #f] [emit-ir? #f] [via? (and (getenv "SCHEMEC") #t)])
+  (let loop ([args args]
+             [src #f]
+             [out #f]
+             [dump? #f]
+             [backend "aot"]
+             [prelude? #t]
+             [repl? #f]
+             [emit-ir? #f]
+             [via? (and (getenv "SCHEMEC") #t)])
     (cond
       [(null? args)
-       (cond
-         [repl? (run-repl prelude?)]
-         [emit-ir? (emit-ir-filter prelude?)]
-         [else
-          (unless src (error 'compile "usage: compile.ss SRC.scm [-o OUT] [--dump] [-q|-v] [--backend aot|jit|bitcode] [--no-prelude] [--via-schemec]\n   or: compile.ss --repl [--no-prelude]\n   or: compile.ss --emit-ir [--no-prelude] < SRC.scm  (IR text on stdout)\n   (-q/-v or env EMIT_VERBOSITY=quiet|verbose control status output; see docs/OUTPUT.md)\n   (--via-schemec / env SCHEMEC=<path>: run forms->IR through the compiled schemec)"))
-          (let* ([out (or out (strip-ext src))] [ll (string-append out ".ll")]
-                 ;; --dump = full per-pass form trace; -v = concise stage names; else silent
-                 [dumpf (cond [dump? dump] [(>= driver-verbosity 2) announce-stage] [else no-dump])])
-            ;; The modular path is reached through build-modular-artifacts*, which does
-            ;; not take a dumper, so publish it here (change: emit-dump-stages).  Before
-            ;; this, --dump on the DEFAULT path (prelude on, or any import) was silently
-            ;; ignored: only --no-prelude + no imports, the compile-file path below, ever
-            ;; dumped.  Wiring the existing dumper through is what lets the shipped
-            ;; binary's dump be checked against this one on the path every door takes
-            ;; (test/dump-parity-tests.sh).
-            (set! *dumpf* dumpf)
-            (cond
-              ;; Module-aware path for ALL backends (change: driver-backend-rehome):
-              ;; a program that imports libraries -- or, with the prelude enabled, any
-              ;; program (it auto-imports (scheme base), Stage 3) -- resolves its
-              ;; libraries once into the modular artifact set, which aot/jit/bitcode
-              ;; each consume.  This is what re-homes jit/bitcode (no prelude prepend,
-              ;; and they now handle imports) (changes: module-artifacts-vertical-slice,
-              ;; module-prelude-scheme-base, driver-backend-rehome).
-              [(or prelude? (pair? (program-imports src)))
-               ;; shake only the AOT ship path (closed-world); jit/bitcode consume full units.
-               (let-values ([(unit-lls prog-ll)
-                             (build-modular-artifacts* src out prelude? (string=? backend "aot"))])
-                 (case (string->symbol backend)
-                   [(aot) (link-modular-aot unit-lls prog-ll out)]
-                   [(bitcode) (require-llvm-tools) (build-bitcode-modular unit-lls prog-ll out out)]
-                   [(jit) (require-llvm-tools) (run-jit-modular unit-lls prog-ll out)]
-                   [else (error 'compile "unknown backend (want aot|jit|bitcode)" backend)]))]
-              [else
-            ;; --no-prelude + no imports: a single self-contained module (no (scheme
-            ;; base)), driven to any backend as before.
-            (compile-file src ll dumpf prelude? via?)
-            (case (string->symbol backend)
-              [(aot)
-               (link ll out)
-               (note "link ~a -> ~a~a  [aot]\n" ll out (if via? "  (via schemec)" ""))]
-              [(bitcode)
-               (require-llvm-tools)
-               (let ([bc (string-append out ".bc")])
-                 (emit-bitcode ll bc)
-                 (build-bitcode-exe bc out)
-                 (note "link ~a -> ~a -> ~a  [bitcode]\n" ll bc out))]
-              [(jit)
-               (require-llvm-tools)
-               (run-jit ll out)]
-              [else (error 'compile "unknown backend (want aot|jit|bitcode)" backend)])]))])]
-      [(string=? (car args) "--manifest") (set! *manifest-path* (cadr args)) (loop (cddr args) src out dump? backend prelude? repl? emit-ir? via?)]
-      [(string=? (car args) "-o") (loop (cddr args) src (cadr args) dump? backend prelude? repl? emit-ir? via?)]
-      [(string=? (car args) "-q") (set! driver-verbosity 0) (loop (cdr args) src out dump? backend prelude? repl? emit-ir? via?)]
-      [(string=? (car args) "-v") (set! driver-verbosity 2) (loop (cdr args) src out dump? backend prelude? repl? emit-ir? via?)]
-      [(string=? (car args) "--dump") (loop (cdr args) src out #t backend prelude? repl? emit-ir? via?)]
-      [(string=? (car args) "--backend") (loop (cddr args) src out dump? (cadr args) prelude? repl? emit-ir? via?)]
-      [(string=? (car args) "--no-prelude") (loop (cdr args) src out dump? backend #f repl? emit-ir? via?)]
-      [(string=? (car args) "--repl") (loop (cdr args) src out dump? backend prelude? #t emit-ir? via?)]
-      [(string=? (car args) "--emit-ir") (loop (cdr args) src out dump? backend prelude? repl? #t via?)]
-      [(string=? (car args) "--via-schemec") (loop (cdr args) src out dump? backend prelude? repl? emit-ir? #t)]
+        (cond
+          [repl? (run-repl prelude?)]
+          [emit-ir? (emit-ir-filter prelude?)]
+          [else
+            (unless src
+              (error
+                'compile
+                "usage: compile.ss SRC.scm [-o OUT] [--dump] [-q|-v] [--backend aot|jit|bitcode] [--no-prelude] [--via-schemec]\n   or: compile.ss --repl [--no-prelude]\n   or: compile.ss --emit-ir [--no-prelude] < SRC.scm  (IR text on stdout)\n   (-q/-v or env EMIT_VERBOSITY=quiet|verbose control status output; see docs/OUTPUT.md)\n   (--via-schemec / env SCHEMEC=<path>: run forms->IR through the compiled schemec)"))
+            (let* ([out (or out (strip-ext src))]
+                   [ll (string-append out ".ll")]
+                   ;; --dump = full per-pass form trace; -v = concise stage names; else silent
+                   [dumpf (cond
+                            [dump? dump]
+                            [(>= driver-verbosity 2) announce-stage]
+                            [else no-dump])])
+              ;; The modular path is reached through build-modular-artifacts*, which does
+              ;; not take a dumper, so publish it here (change: emit-dump-stages).  Before
+              ;; this, --dump on the DEFAULT path (prelude on, or any import) was silently
+              ;; ignored: only --no-prelude + no imports, the compile-file path below, ever
+              ;; dumped.  Wiring the existing dumper through is what lets the shipped
+              ;; binary's dump be checked against this one on the path every door takes
+              ;; (test/dump-parity-tests.sh).
+              (set! *dumpf* dumpf)
+              (cond
+                ;; Module-aware path for ALL backends (change: driver-backend-rehome):
+                ;; a program that imports libraries -- or, with the prelude enabled, any
+                ;; program (it auto-imports (scheme base), Stage 3) -- resolves its
+                ;; libraries once into the modular artifact set, which aot/jit/bitcode
+                ;; each consume.  This is what re-homes jit/bitcode (no prelude prepend,
+                ;; and they now handle imports) (changes: module-artifacts-vertical-slice,
+                ;; module-prelude-scheme-base, driver-backend-rehome).
+                [(or prelude? (pair? (program-imports src)))
+                  ;; shake only the AOT ship path (closed-world); jit/bitcode consume full units.
+                  (let-values ([(unit-lls prog-ll) (build-modular-artifacts*
+                                                     src
+                                                     out
+                                                     prelude?
+                                                     (string=? backend "aot"))])
+                    (case (string->symbol backend)
+                      [(aot) (link-modular-aot unit-lls prog-ll out)]
+                      [(bitcode) (require-llvm-tools)
+                                 (build-bitcode-modular unit-lls prog-ll out out)]
+                      [(jit) (require-llvm-tools)
+                             (run-jit-modular unit-lls prog-ll out)]
+                      [else (error 'compile
+                                   "unknown backend (want aot|jit|bitcode)"
+                                   backend)]))]
+                [else
+                  ;; --no-prelude + no imports: a single self-contained module (no (scheme
+                  ;; base)), driven to any backend as before.
+                  (compile-file src ll dumpf prelude? via?)
+                  (case (string->symbol backend)
+                    [(aot) (link ll out)
+                           (note "link ~a -> ~a~a  [aot]\n"
+                                 ll
+                                 out
+                                 (if via? "  (via schemec)" ""))]
+                    [(bitcode) (require-llvm-tools)
+                               (let ([bc (string-append out ".bc")])
+                                 (emit-bitcode ll bc)
+                                 (build-bitcode-exe bc out)
+                                 (note "link ~a -> ~a -> ~a  [bitcode]\n" ll bc out))]
+                    [(jit) (require-llvm-tools) (run-jit ll out)]
+                    [else (error 'compile
+                                 "unknown backend (want aot|jit|bitcode)"
+                                 backend)])]))])]
+      [(string=? (car args) "--manifest")
+        (set! *manifest-path* (cadr args))
+        (loop (cddr args) src out dump? backend prelude? repl? emit-ir? via?)]
+      [(string=? (car args) "-o")
+        (loop (cddr args) src (cadr args) dump? backend prelude? repl? emit-ir? via?)]
+      [(string=? (car args) "-q")
+        (set! driver-verbosity 0)
+        (loop (cdr args) src out dump? backend prelude? repl? emit-ir? via?)]
+      [(string=? (car args) "-v")
+        (set! driver-verbosity 2)
+        (loop (cdr args) src out dump? backend prelude? repl? emit-ir? via?)]
+      [(string=? (car args) "--dump")
+        (loop (cdr args) src out #t backend prelude? repl? emit-ir? via?)]
+      [(string=? (car args) "--backend")
+        (loop (cddr args) src out dump? (cadr args) prelude? repl? emit-ir? via?)]
+      [(string=? (car args) "--no-prelude")
+        (loop (cdr args) src out dump? backend #f repl? emit-ir? via?)]
+      [(string=? (car args) "--repl")
+        (loop (cdr args) src out dump? backend prelude? #t emit-ir? via?)]
+      [(string=? (car args) "--emit-ir")
+        (loop (cdr args) src out dump? backend prelude? repl? #t via?)]
+      [(string=? (car args) "--via-schemec")
+        (loop (cdr args) src out dump? backend prelude? repl? emit-ir? #t)]
       [else (loop (cdr args) (car args) out dump? backend prelude? repl? emit-ir? via?)])))
 
 (main (command-line-arguments))

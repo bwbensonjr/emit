@@ -48,11 +48,9 @@
 (define (next!) (let ([n counter]) (set! counter (+ n 1)) n))
 ;; fresh variable, e.g. (fresh-name 'x) => x.7
 (define (fresh-name base)
-  (string->symbol
-    (string-append (symbol->string base) "." (number->string (next!)))))
+  (string->symbol (string-append (symbol->string base) "." (number->string (next!)))))
 ;; fresh code label string, e.g. (fresh-label "code") => "code_3"
-(define (fresh-label base)
-  (string-append base "_" (number->string (next!))))
+(define (fresh-label base) (string-append base "_" (number->string (next!))))
 
 ;; ---- module-qualified symbol naming (change: module-resolution-scaffold) ----
 ;; A compilation unit's own emitted symbols -- top-level globals and lifted
@@ -75,21 +73,15 @@
 ;; `label-operand` key on the same encoding; this is the resolver-side reader of it
 ;; (issue #5, and the immutability argument cross-unit direct calls rest on).
 (define (unit-qualified? s)
-  (let* ([str (if (symbol? s) (symbol->string s) s)]
-         [n (string-length str)])
+  (let* ([str (if (symbol? s) (symbol->string s) s)] [n (string-length str)])
     (let loop ([i 0])
-      (cond [(= i n) #f]
-            [(char=? (string-ref str i) #\:) #t]
-            [else (loop (+ i 1))]))))
+      (cond [(= i n) #f] [(char=? (string-ref str i) #\:) #t] [else (loop (+ i 1))]))))
 
 (define (mangle library-name internal-name)
-  (let ([x (if (symbol? internal-name)
-               (symbol->string internal-name)
-               internal-name)])
+  (let ([x (if (symbol? internal-name) (symbol->string internal-name) internal-name)])
     (if (null? library-name)
-        x                                  ; empty prefix: round-trip unchanged
-        (let loop ([parts (cdr library-name)]
-                   [acc   (symbol->string (car library-name))])
+        x ; empty prefix: round-trip unchanged
+        (let loop ([parts (cdr library-name)] [acc (symbol->string (car library-name))])
           (if (null? parts)
               (string-append acc ":" x)
               (loop (cdr parts)

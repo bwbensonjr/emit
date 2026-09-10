@@ -24,15 +24,15 @@
 
 ;; name defined by a top-level (define ...) form, or #f for a non-define form
 (define (define-name f)
-  (and (pair? f) (eq? (car f) 'define)
+  (and (pair? f)
+       (eq? (car f) 'define)
        (let ([sig (cadr f)]) (if (pair? sig) (car sig) sig))))
 
 ;; keyword bound by a top-level (define-syntax NAME ...), or #f.  The partition needs
 ;; this because a transformer is a homed, exportable prelude binding like any other since
 ;; `library-body-macro-scope` -- `define-name` answering #f for one is exactly why the
 ;; surface declaration could not name a macro before.
-(define (define-syntax-name f)
-  (and (pair? f) (eq? (car f) 'define-syntax) (cadr f)))
+(define (define-syntax-name f) (and (pair? f) (eq? (car f) 'define-syntax) (cadr f)))
 
 ;; the name a top-level prelude form binds, by either form of definition
 (define (toplevel-binding-name f) (or (define-name f) (define-syntax-name f)))
@@ -43,9 +43,7 @@
 (define (with-prelude prelude-forms user-forms)
   (let ([user-names (filter (lambda (x) x) (map define-name user-forms))])
     (append
-      (filter (lambda (f)
-                (let ([n (define-name f)])
-                  (not (and n (memq n user-names)))))
+      (filter (lambda (f) (let ([n (define-name f)]) (not (and n (memq n user-names)))))
               prelude-forms)
       user-forms)))
 
@@ -62,17 +60,19 @@
 ;; all three paths at once, and `record-type-binding-names` allocates no fresh name, so a
 ;; path that lowers the form afterwards is unaffected (design D4).
 (define (compute-known macro-env runtime-forms)
-  (union* (list *core-keywords* *prims* *extra-op-keywords*
-                (map car *integrable*)     ; intrinsic integrable prims are universally known
-                (map car macro-env)
-                (toplevel-define-names runtime-forms))))
+  (union*
+    (list *core-keywords*
+          *prims*
+          *extra-op-keywords*
+          (map car *integrable*) ; intrinsic integrable prims are universally known
+          (map car macro-env)
+          (toplevel-define-names runtime-forms))))
 
 ;; every name the top-level DEFINITIONS in FORMS bind, by either definition form.  Also
 ;; what a keyword must be pruned against: a name defined here is a variable, so a
 ;; transformer of the same spelling is displaced (change: binding-aware-expander).
 (define (toplevel-define-names forms)
-  (append (filter (lambda (x) x) (map define-name forms))
-          (record-type-names-in forms)))
+  (append (filter (lambda (x) x) (map define-name forms)) (record-type-names-in forms)))
 
 ;; every name the record-type forms in FORMS bind, flattened
 (define (record-type-names-in forms)
@@ -80,7 +80,7 @@
     (cond
       [(null? fs) acc]
       [(record-type-form? (car fs))
-       (loop (cdr fs) (append (record-type-binding-names (car fs)) acc))]
+        (loop (cdr fs) (append (record-type-binding-names (car fs)) acc))]
       [else (loop (cdr fs) acc)])))
 
 ;; --- the pipeline: forms -> IR text (no target header) -------------------
@@ -95,7 +95,7 @@
   ;; places rather than at each entry point (change: module-frontend-diagnostics).
   (check-library-position forms)
   (reset-counter!)
-  (set-import-calls! '())            ; no imports on this path (change: cross-unit-direct-calls)
+  (set-import-calls! '()) ; no imports on this path (change: cross-unit-direct-calls)
   (let* ([me+rf (collect-define-syntax forms)]
          [runtime-forms (cadr me+rf)]
          ;; a top-level define displaces a keyword of the same name (change:
@@ -107,18 +107,22 @@
          [macro-env (prune-shadowed-macros (car me+rf)
                                            (toplevel-define-names runtime-forms))])
     (let* ([known (compute-known macro-env runtime-forms)]
-           [top   (collect-toplevel runtime-forms)]
-           [expd  (expand top macro-env known)]
-           [core  (inline-primitives (rename-program (parse-program expd)))]
-           [a     (recognize-let core)]
-           [b     (convert-assignments a)]
-           [s     (simplify b)]
-           [c     (convert-closures s)]
-           [d     (lower-program c program-unit)])
-      (dump "collect-toplevel" top) (dump "expand" expd)
-      (dump "parse+rename" core) (dump "recognize-let" a)
-      (dump "convert-assignments" b) (dump "simplify" s)
-      (dump "convert-closures" c) (dump "lower" d)
+           [top (collect-toplevel runtime-forms)]
+           [expd (expand top macro-env known)]
+           [core (inline-primitives (rename-program (parse-program expd)))]
+           [a (recognize-let core)]
+           [b (convert-assignments a)]
+           [s (simplify b)]
+           [c (convert-closures s)]
+           [d (lower-program c program-unit)])
+      (dump "collect-toplevel" top)
+      (dump "expand" expd)
+      (dump "parse+rename" core)
+      (dump "recognize-let" a)
+      (dump "convert-assignments" b)
+      (dump "simplify" s)
+      (dump "convert-closures" c)
+      (dump "lower" d)
       (emit-program d))))
 
 ;; a source whose only top-level form is a (define-library ...) is a library unit
@@ -126,7 +130,9 @@
 ;; program, through the SAME embedded --emit path programs use -- so a unit's bytes
 ;; are identical whether emitted for the AOT door or loaded into the REPL door.
 (define (single-define-library forms)
-  (and (pair? forms) (null? (cdr forms)) (define-library-form? (car forms))
+  (and (pair? forms)
+       (null? (cdr forms))
+       (define-library-form? (car forms))
        (car forms)))
 ;; Compile a lone define-library to its unit.  `tables` is optional and holds the export
 ;; tables of the libraries this one imports; it defaults to '() so that a caller with
@@ -143,8 +149,7 @@
 ;;                           libraries -- which is the only path that can resolve an
 ;;                           import of another MANIFEST library, since the core reads no files
 (define (compile-library-form form dump . opt)
-  (let ([dl     (parse-define-library form)]
-        [tables (if (pair? opt) (car opt) '())])
+  (let ([dl (parse-define-library form)] [tables (if (pair? opt) (car opt) '())])
     (car (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl) tables dump))))
 
 ;; convenience: source text -> IR text (no prelude, no header).  This is the
@@ -153,8 +158,7 @@
 ;; they build from the host-forwarded level, and every other caller -- including the
 ;; Chez driver, which never links dump.ss at all -- gets `no-dump` as before.
 (define (compile-source-string str . opt)
-  (let ([forms (read-forms-from-string str)]
-        [dump  (if (pair? opt) (car opt) no-dump)])
+  (let ([forms (read-forms-from-string str)] [dump (if (pair? opt) (car opt) no-dump)])
     (cond
       [(single-define-library forms) => (lambda (lib) (compile-library-form lib dump))]
       [else (compile-forms forms dump)])))
@@ -177,11 +181,10 @@
 (define (compile-source-with-prelude prelude-str user-str)
   (let ([forms (read-forms-from-string user-str)])
     (cond
-      [(single-define-library forms) => (lambda (lib) (compile-library-form lib no-dump))]
-      [else
-       (compile-forms
-         (with-prelude (read-forms-from-string prelude-str) forms)
-         no-dump)])))
+      [(single-define-library forms) =>
+                                     (lambda (lib) (compile-library-form lib no-dump))]
+      [else (compile-forms (with-prelude (read-forms-from-string prelude-str) forms)
+                           no-dump)])))
 
 ;; --- prelude re-homed as (scheme base) for the embedded runner (change:
 ;; embedded-runner-rehome) ---------------------------------------------------
@@ -225,10 +228,9 @@
 ;; gone: a member now receives the derived forms the same way user code does, by importing
 ;; the library that exports them.
 (define (library-body-forms lib prelude-forms)
-  (filter (lambda (f)
-            (let ((n (toplevel-binding-name f)))
-              (and n (prelude-defines? lib n))))
-          prelude-forms))
+  (filter
+    (lambda (f) (let ((n (toplevel-binding-name f))) (and n (prelude-defines? lib n))))
+    prelude-forms))
 
 ;; One partition member as a define-library form: its declared exports, the body forms
 ;; homed in it, and an import of each member it depends on.  Built with cons/list (not
@@ -236,8 +238,7 @@
 ;; tools/gen-scheme-base.ss, but in the portable core -- the baked-in prelude source is
 ;; the single source of truth, so no lib/scheme/*.sld read.
 (define (partition-library-form entry prelude-forms)
-  (let ((lib     (car entry))
-        (imports (caddr entry)))
+  (let ((lib (car entry)) (imports (caddr entry)))
     (cons 'define-library
           (cons lib
                 (cons (cons 'export (library-export-names lib prelude-forms))
@@ -245,30 +246,27 @@
                           (list (cons 'begin (library-body-forms lib prelude-forms)))
                           (cons (cons 'import imports)
                                 (list (cons 'begin
-                                            (library-body-forms lib prelude-forms))))))))))
+                                            (library-body-forms lib
+                                                                prelude-forms))))))))))
 
 ;; The baked members, in dependency order: the libraries compiled into the compiler
 ;; binaries from the baked-in prelude source, which therefore need no manifest.
-(define (baked-library-entries)
-  (filter (lambda (e) (cadr e)) *prelude-libraries*))
+(define (baked-library-entries) (filter (lambda (e) (cadr e)) *prelude-libraries*))
 
 ;; Is LIB a member of the baked set -- reachable with no manifest and no files?
 (define (baked-member? lib)
-  (let ([e (assoc lib *prelude-libraries*)])
-    (if (and e (cadr e)) #t #f)))
+  (let ([e (assoc lib *prelude-libraries*)]) (if (and e (cadr e)) #t #f)))
 
 ;; The libraries LIB imports, as declared by the partition ('() for an unknown name).
 (define (baked-entry-imports lib)
-  (let ([e (assoc lib *prelude-libraries*)])
-    (if e (caddr e) '())))
+  (let ([e (assoc lib *prelude-libraries*)]) (if e (caddr e) '())))
 
 ;; Every baked member's name in dependency order -- the init order a program's
 ;; @scheme_entry drives.  Each __init is one-shot guarded and every baked module is
 ;; linked regardless, so naming them all is correct rather than merely safe: a member the
 ;; program does not reach initializes to no observable effect (change:
 ;; scheme-base-partition).
-(define (baked-init-order)
-  (map car (baked-library-entries)))
+(define (baked-init-order) (map car (baked-library-entries)))
 
 ;; A program's OWN imports that name a baked member, other than the auto-imported
 ;; (scheme base).  This is how the compiler's flat source reaches (emit internal): the
@@ -286,8 +284,7 @@
 
 ;; the prelude's derived-form macros (its compile-time half), merged into a user
 ;; program's macro-env at expand time -- the same set the Chez driver merges.
-(define (prelude-macro-forms prelude-forms)
-  (filter define-syntax-form? prelude-forms))
+(define (prelude-macro-forms prelude-forms) (filter define-syntax-form? prelude-forms))
 
 ;; source text + prelude text -> two IR modules (no header) joined by the boundary
 ;; marker: the (scheme base) library IR, the marker, then the program IR (which
@@ -304,8 +301,8 @@
 ;; standard library's stages appear at all (design D7).
 (define (compile-source-rehomed prelude-str user-str . opt)
   (let ([user-forms (read-forms-from-string user-str)]
-        [dump       (if (pair? opt) (car opt) no-dump)]
-        [base-dump  (if (and (pair? opt) (pair? (cdr opt))) (cadr opt) no-dump)])
+        [dump (if (pair? opt) (car opt) no-dump)]
+        [base-dump (if (and (pair? opt) (pair? (cdr opt))) (cadr opt) no-dump)])
     (cond
       ;; A lone define-library: emit ONLY its own module, but resolve its imports against
       ;; the baked set first, so a library declaring `(import (scheme base))` compiles here
@@ -317,34 +314,37 @@
       ;; host-driven modes 7/11 resolve against the session instead and REPORT such an
       ;; import, which is the path `emit lib` and `emit run` actually take.
       [(single-define-library user-forms)
-       => (lambda (lib)
-            ;; Its DECLARED imports, from the parsed define-library -- not collect-imports,
-            ;; which scans top-level forms and would not see a declaration nested inside
-            ;; define-library; and not baked-imports-of, which drops (scheme base) because a
-            ;; PROGRAM auto-imports it while a library must name it.
-            (let ([imports (filter baked-member? (cadr (parse-define-library lib)))])
-              (if (null? imports)
-                  (compile-library-form lib dump)      ; nothing to resolve: as before
-                  (let ([baked (compile-baked-set (read-forms-from-string prelude-str)
-                                                  base-dump)])
-                    (compile-library-form
-                      lib dump
-                      (map (lambda (l) (baked-table l baked)) imports))))))]
+        =>
+        (lambda (lib)
+          ;; Its DECLARED imports, from the parsed define-library -- not collect-imports,
+          ;; which scans top-level forms and would not see a declaration nested inside
+          ;; define-library; and not baked-imports-of, which drops (scheme base) because a
+          ;; PROGRAM auto-imports it while a library must name it.
+          (let ([imports (filter baked-member? (cadr (parse-define-library lib)))])
+            (if (null? imports)
+                (compile-library-form lib dump) ; nothing to resolve: as before
+                (let ([baked (compile-baked-set (read-forms-from-string prelude-str)
+                                                base-dump)])
+                  (compile-library-form lib
+                                        dump
+                                        (map (lambda (l) (baked-table l baked))
+                                             imports))))))]
       [else
-       (let* ([prelude-forms (read-forms-from-string prelude-str)]
-              ;; Compile the baked set in dependency order, threading each member's
-              ;; export table forward so a later member can import an earlier one
-              ;; (change: scheme-base-partition).
-              [baked      (compile-baked-set prelude-forms base-dump)]
-              ;; What is in SCOPE for the program: the auto-imported (scheme base), plus
-              ;; whichever other baked members the program names itself.
-              [direct     (cons '(scheme base) (baked-imports-of user-forms))]
-              [prog-ir    (compile-program-with-imports
-                            (prelude-macro-forms prelude-forms)
-                            user-forms
-                            (map (lambda (l) (baked-table l baked)) direct)
-                            (baked-init-order) dump)])
-         (string-append (car baked) *emit-unit-boundary* prog-ir))])))
+        (let* ([prelude-forms (read-forms-from-string prelude-str)]
+               ;; Compile the baked set in dependency order, threading each member's
+               ;; export table forward so a later member can import an earlier one
+               ;; (change: scheme-base-partition).
+               [baked (compile-baked-set prelude-forms base-dump)]
+               ;; What is in SCOPE for the program: the auto-imported (scheme base), plus
+               ;; whichever other baked members the program names itself.
+               [direct (cons '(scheme base) (baked-imports-of user-forms))]
+               [prog-ir (compile-program-with-imports
+                          (prelude-macro-forms prelude-forms)
+                          user-forms
+                          (map (lambda (l) (baked-table l baked)) direct)
+                          (baked-init-order)
+                          dump)])
+          (string-append (car baked) *emit-unit-boundary* prog-ir))])))
 
 ;; Compile every baked partition member in dependency order.  Returns
 ;; (IR-TEXT (LIBRARY-NAME . EXPORT-TABLE) ...), where IR-TEXT is the members' modules
@@ -355,15 +355,17 @@
   (let loop ([entries (baked-library-entries)] [ir ""] [tables '()] [first? #t])
     (if (null? entries)
         (cons ir (reverse tables))
-        (let* ([entry   (car entries)]
-               [dl      (parse-define-library (partition-library-form entry prelude-forms))]
+        (let* ([entry (car entries)]
+               [dl (parse-define-library (partition-library-form entry prelude-forms))]
                [imports (map (lambda (l) (table-of l tables)) (cadr dl))]
-               [res     (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl)
-                                         imports base-dump)])
+               [res (compile-library (car dl)
+                                     (cadr dl)
+                                     (caddr dl)
+                                     (cadddr dl)
+                                     imports
+                                     base-dump)])
           (loop (cdr entries)
-                (if first?
-                    (car res)
-                    (string-append ir *emit-unit-boundary* (car res)))
+                (if first? (car res) (string-append ir *emit-unit-boundary* (car res)))
                 (cons (cons (car entry) (cadr res)) tables)
                 #f)))))
 
@@ -451,23 +453,22 @@
             (begin
               ;; #(count label printed?) -- label is assigned on first output so
               ;; numbering follows the written order rather than the scan order.
-              (set! *render-graph*
-                    (cons (cons x (vector 1 -1 #f)) *render-graph*))
+              (set! *render-graph* (cons (cons x (vector 1 -1 #f)) *render-graph*))
               (cond
                 [(pair? x) (render-scan! (car x)) (render-scan! (cdr x))]
                 [(vector? x)
-                 (let ([n (vector-length x)])
-                   (let loop ([i 0])
-                     (if (< i n)
-                         (begin (render-scan! (vector-ref x i)) (loop (+ i 1)))
-                         #f)))]
+                  (let ([n (vector-length x)])
+                    (let loop ([i 0])
+                      (if (< i n)
+                          (begin (render-scan! (vector-ref x i)) (loop (+ i 1)))
+                          #f)))]
                 [else #f]))))
       #f))
 (define (render-shared? x)
   (let ([e (and (render-labelable? x) (render-entry x))])
     (and e (> (vector-ref (cdr e) 0) 1))))
 
-(define (render-datum x)       (render-datum* x #f))
+(define (render-datum x) (render-datum* x #f))
 (define (render-datum-loose x) (render-datum* x #t))
 
 (define (render-datum* x loose)
@@ -486,8 +487,7 @@
                 (set! *render-next-label* (+ label 1))
                 (vector-set! cell 1 label)
                 (vector-set! cell 2 #t)
-                (string-append "#" (number->string label) "="
-                               (render-body* x loose)))))
+                (string-append "#" (number->string label) "=" (render-body* x loose)))))
         (render-body* x loose))))
 
 (define (render-body* x loose)
@@ -512,7 +512,8 @@
     ;; because encode-const refused the same literal first.  The spellings are the ones
     ;; core-language already requires BOTH readers to accept, so a table holding one
     ;; still round-trips through Chez's `read` and Emit's own reader.
-    [(vector? x) (string-append "#(" (render-seq* x 0 (vector-length x) vector-ref loose) ")")]
+    [(vector? x)
+      (string-append "#(" (render-seq* x 0 (vector-length x) vector-ref loose) ")")]
     ;; A BYTEVECTOR renders only in loose mode.  R7RS spells it `#u8(...)` and Emit's
     ;; reader reads that, but CHEZ's `read` rejects `#u8(` -- it spells bytevectors
     ;; `#vu8(` -- and the Chez driver reads export tables back with `read` on its
@@ -526,13 +527,16 @@
     ;; inside an EXPORTED MACRO TEMPLATE, which is where the table is the artifact.
     ;; A loud error there beats the silent `?` it used to write.
     [(bytevector? x)
-     (if loose
-         (string-append "#u8(" (render-seq* x 0 (bytevector-length x) bytevector-u8-ref loose) ")")
-         (error 'render-datum
-                (string-append
-                  "bytevector literal has no external representation both readers accept"
-                  " -- R7RS #u8(...) is rejected by Chez's read, which the driver uses to"
-                  " reuse an export table; move it out of the macro template")))]
+      (if loose
+          (string-append "#u8("
+                         (render-seq* x 0 (bytevector-length x) bytevector-u8-ref loose)
+                         ")")
+          (error
+            'render-datum
+            (string-append
+              "bytevector literal has no external representation both readers accept"
+              " -- R7RS #u8(...) is rejected by Chez's read, which the driver uses to"
+              " reuse an export table; move it out of the macro template")))]
     [else "?"]))
 
 ;; Elements of a vector/bytevector, space separated.  One walker over an accessor rather
@@ -564,16 +568,16 @@
       [(and (> k 32) (< k 127)) (string-append "#\\" (list->string (list c)))]
       [loose (string-append "#\\x" (number->string k 16))]
       [else (error 'render-datum
-                   "character has no portable external representation for an artifact" k)])))
+                   "character has no portable external representation for an artifact"
+                   k)])))
 (define (render-list-body p) (render-list-body* p #f))
 (define (render-list-body* p loose)
   (let ([a (render-node* (car p) loose)] [d (cdr p)])
     (cond
       [(null? d) a]
-      [(pair? d)
-       (if (render-shared? d)
-           (string-append a " . " (render-node* d loose))
-           (string-append a " " (render-list-body* d loose)))]
+      [(pair? d) (if (render-shared? d)
+                     (string-append a " . " (render-node* d loose))
+                     (string-append a " " (render-list-body* d loose)))]
       [else (string-append a " . " (render-node* d loose))])))
 
 ;; A short, BOUNDED name for a form in a diagnostic: its head keyword when it has one,
@@ -582,9 +586,7 @@
 ;; that reprints it is unreadable.  Import specs are named in full instead (see
 ;; check-import-spec): they are small by construction and the transform is the point.
 (define (form-label f)
-  (if (and (pair? f) (symbol? (car f)))
-      (symbol->string (car f))
-      (render-datum f)))
+  (if (and (pair? f) (symbol? (car f))) (symbol->string (car f)) (render-datum f)))
 
 ;; --- rejecting what the module front end does not implement ------------------
 ;; (change: module-frontend-diagnostics; issues #45, #18 item 3, #48, #49.)
@@ -604,8 +606,7 @@
 (define *import-set-keywords* (quote (only except prefix rename)))
 
 (define (import-set-spec? spec)
-  (and (pair? spec) (symbol? (car spec))
-       (memq (car spec) *import-set-keywords*) #t))
+  (and (pair? spec) (symbol? (car spec)) (memq (car spec) *import-set-keywords*) #t))
 
 ;; ONE validator, called by BOTH paths that turn an import spec into a library name --
 ;; the program path (collect-imports) and the library path (parse-define-library) -- so
@@ -614,8 +615,10 @@
 (define (check-import-spec spec)
   (when (import-set-spec? spec)
     (error 'import
-           (string-append "import sets are not supported: " (render-datum spec)
-                          " -- imports are whole-library, as (import (library name))"))))
+           (string-append
+             "import sets are not supported: "
+             (render-datum spec)
+             " -- imports are whole-library, as (import (library name))"))))
 
 ;; The `[else]` arm of parse-define-library's declaration `cond`.  It used to cons the
 ;; declaration onto the body, which is how `(cond-expand (else (begin (define (f x) x))))`
@@ -669,21 +672,21 @@
   (cond
     [(symbol? req) (mem? req *advertised-features*)]
     [(and (pair? req) (eq? (car req) 'and)) (features-all-met? (cdr req))]
-    [(and (pair? req) (eq? (car req) 'or))  (features-any-met? (cdr req))]
+    [(and (pair? req) (eq? (car req) 'or)) (features-any-met? (cdr req))]
     [(and (pair? req) (eq? (car req) 'not))
-     (if (and (pair? (cdr req)) (null? (cddr req)))
-         (not (feature-requirement-met? (cadr req)))
-         (error 'cond-expand
-                (string-append "(not ...) takes exactly one feature requirement: "
-                               (render-datum req))))]
+      (if (and (pair? (cdr req)) (null? (cddr req)))
+          (not (feature-requirement-met? (cadr req)))
+          (error 'cond-expand
+                 (string-append "(not ...) takes exactly one feature requirement: "
+                                (render-datum req))))]
     [(and (pair? req) (eq? (car req) 'library))
-     (error 'cond-expand
-            (string-append (render-datum req)
-                           " is an R7RS feature requirement this stage does not support"
-                           " -- library availability is not resolved here"))]
-    [else
-     (error 'cond-expand
-            (string-append "not a feature requirement: " (render-datum req)))]))
+      (error 'cond-expand
+             (string-append
+               (render-datum req)
+               " is an R7RS feature requirement this stage does not support"
+               " -- library availability is not resolved here"))]
+    [else (error 'cond-expand
+                 (string-append "not a feature requirement: " (render-datum req)))]))
 
 (define (features-all-met? reqs)
   (or (null? reqs)
@@ -700,13 +703,15 @@
   (cond
     [(null? clauses) (quote ())]
     [(not (pair? (car clauses)))
-     (error 'cond-expand
-            (string-append "not a clause: " (render-datum (car clauses))
-                           " -- a clause is (<feature requirement> <declaration> ...)"))]
+      (error 'cond-expand
+             (string-append
+               "not a clause: "
+               (render-datum (car clauses))
+               " -- a clause is (<feature requirement> <declaration> ...)"))]
     [(eq? (car (car clauses)) 'else)
-     (if (null? (cdr clauses))
-         (cdr (car clauses))
-         (error 'cond-expand "an else clause must be the last clause"))]
+      (if (null? (cdr clauses))
+          (cdr (car clauses))
+          (error 'cond-expand "an else clause must be the last clause"))]
     [(feature-requirement-met? (car (car clauses))) (cdr (car clauses))]
     [else (cond-expand-declarations (cdr clauses))]))
 
@@ -728,7 +733,8 @@
 ;;             below -- it is never interpreted here.
 (define (no-include-reader who filename base)
   (error who
-         (string-append "this door installed no source reader, so " (render-datum filename)
+         (string-append "this door installed no source reader, so "
+                        (render-datum filename)
                         " cannot be included")))
 
 (define *include-reader* no-include-reader)
@@ -743,7 +749,8 @@
       (let ([res (*include-reader* who filename base)])
         (if (mem-token? (car res) stack)
             (error who
-                   (string-append "include cycle: " (render-datum (car res))
+                   (string-append "include cycle: "
+                                  (render-datum (car res))
                                   " includes itself, through "
                                   (render-token-chain stack)))
             res))
@@ -751,15 +758,16 @@
              (string-append "a filename must be a string: " (render-datum filename)))))
 
 (define (mem-token? tok stack)
-  (and (pair? stack)
-       (or (string=? tok (car stack)) (mem-token? tok (cdr stack)))))
+  (and (pair? stack) (or (string=? tok (car stack)) (mem-token? tok (cdr stack)))))
 
 (define (render-token-chain stack)
   (if (null? stack)
       "the library source"
       (if (null? (cdr stack))
           (render-datum (car stack))
-          (string-append (render-datum (car stack)) " <- " (render-token-chain (cdr stack))))))
+          (string-append (render-datum (car stack))
+                         " <- "
+                         (render-token-chain (cdr stack))))))
 
 ;; --- include-ci: case folding is the READER's, not the core's -----------------
 ;; It used to be here: `fold-datum-case` walked the forms the reader had returned, so that
@@ -796,26 +804,27 @@
     [(not (and (pair? d) (symbol? (car d)))) (reject-library-declaration d)]
     [(memq (car d) (quote (export import begin))) (list d)]
     [(eq? (car d) 'cond-expand)
-     (expand-library-declarations (cond-expand-declarations (cdr d)) base stack)]
+      (expand-library-declarations (cond-expand-declarations (cdr d)) base stack)]
     ;; Declarations, so the splice is re-expanded -- an included file may itself include,
     ;; cond-expand, export, or import.  This is the only arm that recurses through a file,
     ;; and so the only one that can build a cycle.
     [(eq? (car d) 'include-library-declarations)
-     (expand-included-declarations (cdr d) base stack)]
+      (expand-included-declarations (cdr d) base stack)]
     ;; Body forms, spliced as if written in a `begin` here.  An `include` INSIDE an
     ;; included body file is program-position `include` (R7RS 4.1.7), which this stage does
     ;; not implement, so nothing recurses.
     [(eq? (car d) 'include)
-     (list (cons 'begin (included-body-forms 'include (cdr d) base stack)))]
+      (list (cons 'begin (included-body-forms 'include (cdr d) base stack)))]
     ;; No fold flag: `who` travels to the door, which reads case-insensitively itself.
     [(eq? (car d) 'include-ci)
-     (list (cons 'begin (included-body-forms 'include-ci (cdr d) base stack)))]
+      (list (cons 'begin (included-body-forms 'include-ci (cdr d) base stack)))]
     [else (reject-library-declaration d)]))
 
 (define (expand-included-declarations filenames base stack)
   (if (null? filenames)
       (quote ())
-      (let ([res (read-included 'include-library-declarations (car filenames) base stack)])
+      (let ([res
+              (read-included 'include-library-declarations (car filenames) base stack)])
         (append (expand-library-declarations (cdr res) (car res) (cons (car res) stack))
                 (expand-included-declarations (cdr filenames) base stack)))))
 
@@ -825,8 +834,7 @@
   (if (null? filenames)
       (quote ())
       (let ([res (read-included who (car filenames) base stack)])
-        (append (cdr res)
-                (included-body-forms who (cdr filenames) base stack)))))
+        (append (cdr res) (included-body-forms who (cdr filenames) base stack)))))
 
 ;; Does any of FORMS declare a library?  Used only to tell a MISPLACED define-library
 ;; from a source that has none.
@@ -862,9 +870,9 @@
 ;; (n . n).  The symbol is ALWAYS the internal name, so rename is pure table
 ;; indirection with no new emission logic.
 (define (normalize-export spec)
-  (if (pair? spec)                          ; (rename internal external)
-      (cons (caddr spec) (cadr spec))       ; (external . internal)
-      (cons spec spec)))                    ; bare: external == internal
+  (if (pair? spec)                    ; (rename internal external)
+      (cons (caddr spec) (cadr spec)) ; (external . internal)
+      (cons spec spec)))              ; bare: external == internal
 
 ;; (define-library (name ...) decl ...) -> (list name imports exports body-forms).
 ;; decls: (export spec ...) | (import (L) ...) | (begin form ...).  Anything else is
@@ -882,18 +890,23 @@
 (define (parse-define-library form)
   (let ([name (cadr form)])
     (let loop ([ds (expand-library-declarations (cddr form) #f (quote ()))]
-               [imps '()] [exps '()] [body '()])
+               [imps '()]
+               [exps '()]
+               [body '()])
       (if (null? ds)
           (list name (reverse imps) (reverse exps) (reverse body))
           (let ([d (car ds)])
             (cond
               [(and (pair? d) (eq? (car d) 'export))
-               (loop (cdr ds) imps (append (reverse (map normalize-export (cdr d))) exps) body)]
+                (loop (cdr ds)
+                      imps
+                      (append (reverse (map normalize-export (cdr d))) exps)
+                      body)]
               [(and (pair? d) (eq? (car d) 'import))
-               (for-each check-import-spec (cdr d))
-               (loop (cdr ds) (append (reverse (cdr d)) imps) exps body)]
+                (for-each check-import-spec (cdr d))
+                (loop (cdr ds) (append (reverse (cdr d)) imps) exps body)]
               [(and (pair? d) (eq? (car d) 'begin))
-               (loop (cdr ds) imps exps (append (reverse (cdr d)) body))]
+                (loop (cdr ds) imps exps (append (reverse (cdr d)) body))]
               [else (reject-library-declaration d)]))))))
 
 ;; Split a program's top-level forms into (list imported-libs runtime-forms);
@@ -905,8 +918,8 @@
     (cond
       [(null? fs) (list (reverse imps) (reverse rt))]
       [(import-form? (car fs))
-       (for-each check-import-spec (cdr (car fs)))
-       (loop (cdr fs) (append (reverse (cdr (car fs))) imps) rt)]
+        (for-each check-import-spec (cdr (car fs)))
+        (loop (cdr fs) (append (reverse (cdr (car fs))) imps) rt)]
       [else (loop (cdr fs) imps (cons (car fs) rt))])))
 
 ;; Normalize a library body: replace each `(define-record-type ...)` with the
@@ -928,9 +941,10 @@
     (cond
       [(null? fs) (reverse acc)]
       [(record-type-form? (car fs))
-       (loop (cdr fs)
-             (fold-left (lambda (a b) (cons (list 'define (car b) (cadr b)) a))
-                        acc (record-type-bindings (car fs))))]
+        (loop (cdr fs)
+              (fold-left (lambda (a b) (cons (list 'define (car b) (cadr b)) a))
+                         acc
+                         (record-type-bindings (car fs))))]
       [else (loop (cdr fs) (cons (car fs) acc))])))
 
 ;; A body form's defined name, or #f when it defines none -- a COMMAND (change:
@@ -948,14 +962,17 @@
 ;; `dump` but never used it, so libraries dumped nothing on any host).  Order of effects
 ;; is unchanged: expand, then lower, then narrate.
 (define (unit-def-lcode env f macro-env known unit dump i)
-  (unit-lcode-tagged env (expand-unit-form f macro-env known) unit dump
+  (unit-lcode-tagged env
+                     (expand-unit-form f macro-env known)
+                     unit
+                     dump
                      (body-form-tag (body-form-name f) i)
                      (and (define-form? f) #t)))
 
 ;; The shared tail: lower one already-expanded unit form, narrating its parse+rename
 ;; result and each mid-pipeline stage under a `define <name>` tag.
 (define (unit-lcode-tagged env form unit dump name definition?)
-  (let* ([d  (dump-tagged dump (string-append (if definition? "define " "") name))]
+  (let* ([d (dump-tagged dump (string-append (if definition? "define " "") name))]
          [il (repl-lower-form* env form #f)])
     (d "parse+rename" il)
     (unit-lcode il unit d definition?)))
@@ -972,7 +989,8 @@
 ;; from a COMMAND; only the former's `global-set!` is an initializer entitled to the
 ;; stable, name-derived code label (change: library-body-declarations).
 (define (unit-lcode il unit . opt)
-  (lcode-passes il unit
+  (lcode-passes il
+                unit
                 (if (pair? opt) (car opt) no-dump)
                 (or (null? opt) (null? (cdr opt)) (cadr opt))))
 
@@ -984,7 +1002,7 @@
 ;; with no %-ops, so this stays host-agnostic (change: emit-dump-stages).
 (define (dump-tagged dump tag)
   (if (eq? dump no-dump)
-      no-dump                                    ; nothing to narrate: no allocation
+      no-dump ; nothing to narrate: no allocation
       (lambda (stage form) (dump (string-append stage " [" tag "]") form))))
 
 ;; The mid-pipeline pass sequence shared by both per-form back halves, with each stage
@@ -997,8 +1015,11 @@
          [s (simplify b)]
          [c (convert-closures s)]
          [d (lower-program c unit definition?)])
-    (dump "recognize-let" a) (dump "convert-assignments" b)
-    (dump "simplify" s) (dump "convert-closures" c) (dump "lower" d)
+    (dump "recognize-let" a)
+    (dump "convert-assignments" b)
+    (dump "simplify" s)
+    (dump "convert-closures" c)
+    (dump "lower" d)
     d))
 
 ;; An import environment is an alist external-name -> mangled-symbol, built from a
@@ -1044,11 +1065,8 @@
 ;; so every `.exports` in an existing build tree is byte-identical after this change and
 ;; the format's two shapes are the same tolerance the stale-artifact case needs anyway.
 (define (export-table-datum name rows calls ct-half)
-  (if (ct-half-empty? ct-half)
-      (list name rows calls)
-      (list name rows calls ct-half)))
-(define (table-ct-half t)
-  (if (null? (cdddr t)) (make-ct-half '() '() '()) (cadddr t)))
+  (if (ct-half-empty? ct-half) (list name rows calls) (list name rows calls ct-half)))
+(define (table-ct-half t) (if (null? (cdddr t)) (make-ct-half '() '() '()) (cadddr t)))
 (define (ct-macros h) (car h))
 (define (ct-own-refs h) (cadr h))
 (define (ct-foreign-refs h) (caddr h))
@@ -1063,11 +1081,12 @@
 ;; to rename a unit-qualified identifier structurally, so this is belt to that braces.
 (define (import-tables->macro-refs import-tables)
   (apply append
-    (map (lambda (t)
-           (let ([h (table-ct-half t)])
-             (append (map (lambda (n) (string->symbol (mangle (car t) n))) (ct-own-refs h))
-                     (map string->symbol (ct-foreign-refs h)))))
-         import-tables)))
+         (map (lambda (t)
+                (let ([h (table-ct-half t)])
+                  (append (map (lambda (n) (string->symbol (mangle (car t) n)))
+                               (ct-own-refs h))
+                          (map string->symbol (ct-foreign-refs h)))))
+              import-tables)))
 
 ;; The macro KEYWORDS an import brings into scope -- external names for the library's
 ;; exported macros, unit-qualified spellings for the private ones carried alongside them.
@@ -1104,8 +1123,7 @@
     (define (copy! tbl out key)
       (unless (memq out seen)
         (set! seen (cons out seen))
-        (let* ([h (table-ct-half tbl)]
-               [e (assq key (ct-macros h))])
+        (let* ([h (table-ct-half tbl)] [e (assq key (ct-macros h))])
           (when e
             (set! entries (cons (cons out (cdr e)) entries))
             (for-each (lambda (s) (when (assq s (ct-macros h)) (copy! tbl s s)))
@@ -1113,15 +1131,14 @@
     (for-each
       (lambda (e)
         (unless (assq (cdr e) own-macro-env)
-          (for-each
-            (lambda (tbl)
-              (let ([h (table-ct-half tbl)])
-                (when (assq (cdr e) (ct-macros h))
-                  (copy! tbl (car e) (cdr e))
-                  (for-each (lambda (n) (note-foreign! (mangle (car tbl) n)))
-                            (ct-own-refs h))
-                  (for-each note-foreign! (ct-foreign-refs h)))))
-            import-tables)))
+          (for-each (lambda (tbl)
+                      (let ([h (table-ct-half tbl)])
+                        (when (assq (cdr e) (ct-macros h))
+                          (copy! tbl (car e) (cdr e))
+                          (for-each (lambda (n) (note-foreign! (mangle (car tbl) n)))
+                                    (ct-own-refs h))
+                          (for-each note-foreign! (ct-foreign-refs h)))))
+                    import-tables)))
       exports)
     (make-ct-half (reverse entries) (quote ()) (reverse foreign))))
 
@@ -1135,22 +1152,29 @@
 ;; with no call rows contributes nothing, so importing only values lowers exactly
 ;; as before.
 (define (import-tables->call-alist import-tables)
-  (apply append
+  (apply
+    append
     (map (lambda (t)
            (let ([exports (cadr t)])
              (map (lambda (c)
                     (let* ([tail (cdddr c)]
-                           [shape (cond
-                                    [(null? tail) (list #f #f)]
-                                    [(and (pair? tail) (eq? (car tail) 'rest)
-                                          (null? (cdr tail))) (list #t #f)]
-                                    [(and (pair? tail) (eq? (car tail) 'rest)
-                                          (pair? (cdr tail)) (string? (cadr tail))
-                                          (null? (cddr tail)))
-                                     (list #t (cadr tail))]
-                                    [else (error 'compile "malformed library call row" c)])])
+                           [shape
+                             (cond
+                               [(null? tail) (list #f #f)]
+                               [(and (pair? tail)
+                                     (eq? (car tail) 'rest)
+                                     (null? (cdr tail))) (list #t #f)]
+                               [(and (pair? tail)
+                                     (eq? (car tail) 'rest)
+                                     (pair? (cdr tail))
+                                     (string? (cadr tail))
+                                     (null? (cddr tail))) (list #t (cadr tail))]
+                               [else (error 'compile "malformed library call row" c)])])
                       (list (string->symbol (cdr (assq (car c) exports)))
-                            (cadr c) (caddr c) (car shape) (cadr shape))))
+                            (cadr c)
+                            (caddr c)
+                            (car shape)
+                            (cadr shape))))
                   (caddr t))))
          import-tables)))
 
@@ -1170,8 +1194,7 @@
                  (let ([p (assq (cdr e) procs)])
                    (and p
                         (if (and (pair? (cdddr p)) (eq? (cadddr p) 'rest))
-                            (list (car e) (cadr p) (caddr p) 'rest
-                                  (cadr (cdddr p)))
+                            (list (car e) (cadr p) (caddr p) 'rest (cadr (cdddr p)))
                             (list (car e) (cadr p) (caddr p))))))
                exports)))
 
@@ -1199,26 +1222,25 @@
 ;; binding, never drop a needed one.  Computed post-expansion so macro-introduced
 ;; references are visible.  Unit-general: it walks any define->define reference
 ;; graph from an explicit root set.
-(define (all-symbols form)                 ; every symbol appearing in an s-expr
+(define (all-symbols form) ; every symbol appearing in an s-expr
   (let ([seen (quote ())])
     (let walk ([form form])
       (cond
         [(symbol? form) (list form)]
-        [(pair? form)
-         (if (memq form seen)
-             (quote ())
-             (begin
-               (set! seen (cons form seen))
-               (append (walk (car form)) (walk (cdr form)))))]
+        [(pair? form) (if (memq form seen)
+                          (quote ())
+                          (begin
+                            (set! seen (cons form seen))
+                            (append (walk (car form)) (walk (cdr form)))))]
         [else (quote ())]))))
 
-(define (reachable-names roots dep-alist)  ; transitive closure of roots over deps
+(define (reachable-names roots dep-alist) ; transitive closure of roots over deps
   (let loop ([work roots] [seen '()])
-    (cond [(null? work) seen]
-          [(memq (car work) seen) (loop (cdr work) seen)]
-          [else
-           (let ([deps (cond [(assq (car work) dep-alist) => cdr] [else '()])])
-             (loop (append deps (cdr work)) (cons (car work) seen)))])))
+    (cond
+      [(null? work) seen]
+      [(memq (car work) seen) (loop (cdr work) seen)]
+      [else (let ([deps (cond [(assq (car work) dep-alist) => cdr] [else '()])])
+              (loop (append deps (cdr work)) (cons (car work) seen)))])))
 
 ;; --- the root set already-emitted IR imposes on a unit -----------------------
 ;; Moved here from src/compile.ss (change: chez-free-unit-pipeline, design D8) so that both
@@ -1276,10 +1298,10 @@
       (cond
         [(> (+ i nl) hl) -1]
         [(let match ([j 0])
-           (cond [(>= j nl) #t]
-                 [(char=? (string-ref hay (+ i j)) (string-ref needle j)) (match (+ j 1))]
-                 [else #f]))
-         i]
+           (cond
+             [(>= j nl) #t]
+             [(char=? (string-ref hay (+ i j)) (string-ref needle j)) (match (+ j 1))]
+             [else #f])) i]
         [else (loop (+ i 1))]))))
 
 (define (str-contains? hay needle) (>= (str-search hay needle) 0))
@@ -1290,27 +1312,37 @@
 ;; leave the expansion's reference as a link-time undefined symbol.  The reachability GATE
 ;; does not move: a candidate is kept only when the program's emitted IR actually mentions
 ;; it, so a program that imports the library without using the macro still loses it.
-(define (program-root-internals root-text unit-name candidates)  ; candidates: internal names
+(define (program-root-internals root-text unit-name
+         candidates) ; candidates: internal names
   (fold-left
     (lambda (acc n)
       (if (and (not (memq n acc))
-               (str-contains? root-text (string-append "ptr @\"" (mangle unit-name n) "\"")))
-          (cons n acc) acc))
-    '() candidates))
+               (str-contains? root-text
+                              (string-append "ptr @\"" (mangle unit-name n) "\"")))
+          (cons n acc)
+          acc))
+    '()
+    candidates))
 
 ;; `keep-roots` (optional): when #f (default), compile the WHOLE library unchanged
 ;; -- byte-identical to before, so the REPL/JIT door and committed artifacts are
 ;; unaffected.  When a list of internal names, emit ONLY the bindings transitively
 ;; reachable from those roots (the closed-world AOT tree-shake).
 (define (compile-library name imports exports body-forms import-tables dump . opt)
-  (compile-library* name imports exports body-forms import-tables dump
+  (compile-library* name
+                    imports
+                    exports
+                    body-forms
+                    import-tables
+                    dump
                     (if (pair? opt) (car opt) #f)))
 
 (define (compile-library* name imports exports body-forms import-tables dump keep-roots)
   (reset-counter!)
-  (reset-unit-procs!)                ; this unit's own call interface (cross-unit-direct-calls)
-  (reset-unit-assigned!)             ; ...minus what it assigns (library-toplevel-set)
-  (set-import-calls! (import-tables->call-alist import-tables))   ; calls INTO its dependencies
+  (reset-unit-procs!)    ; this unit's own call interface (cross-unit-direct-calls)
+  (reset-unit-assigned!) ; ...minus what it assigns (library-toplevel-set)
+  (set-import-calls! (import-tables->call-alist
+                       import-tables)) ; calls INTO its dependencies
   (let* ([me+rf (collect-define-syntax body-forms)]
          ;; the library's OWN transformers, plus every macro its imports export
          ;; (change: library-macro-export, design D7).  Its own come FIRST, and
@@ -1337,7 +1369,7 @@
          ;; splice-record-types the body holds only defines and commands -- and it is
          ;; computed BEFORE `known`, so a record's binding names count as known
          ;; identifiers and hygiene does not rename references to them away.
-         [body  (splice-record-types runtime)]
+         [body (splice-record-types runtime)]
          [known (union (compute-known macro-env body) (map car import-env-alist))]
          [defined-names (map (lambda (p) (car (normalize-define p)))
                              (filter define-form? body))]
@@ -1346,7 +1378,7 @@
          ;; entirely in the compile-time interface below.  Everything downstream of here
          ;; that builds the runtime table reads `runtime-exports`, never `exports`.
          [runtime-exports (filter (lambda (e) (memq (cdr e) defined-names)) exports)]
-         [env   (make-repl-env)])
+         [env (make-repl-env)])
     ;; A name bound at the library's top level by EITHER `define` or `define-syntax` is a
     ;; name the library defines, and either may be exported (change: library-macro-export,
     ;; issue #48).  `collect-define-syntax` lifted the transformers out before
@@ -1359,24 +1391,23 @@
     ;; transformer was discarded without a word.  It cannot be tolerated now, because a
     ;; private macro's keyword and a top-level binding both mangle to `unit:name` and the
     ;; compile-time interface could not tell them apart.
-    (for-each
-      (lambda (m)
-        (when (memq (car m) defined-names)
-          (error 'compile-library
-                 "a library binds one name with both define and define-syntax"
-                 (car m))))
-      own-macro-env)
+    (for-each (lambda (m)
+                (when (memq (car m) defined-names)
+                  (error 'compile-library
+                         "a library binds one name with both define and define-syntax"
+                         (car m))))
+              own-macro-env)
     ;; A name bound as a macro in the MERGED environment counts, so a library may
     ;; re-export a macro it imports (change: library-body-macro-scope).  `macro-env` is
     ;; own-first plus every import's exported transformers, which is exactly the set of
     ;; keywords this body could use -- and re-exporting is the ordinary R7RS act of
     ;; passing one on.  A name in neither half is still the same error it always was.
-    (for-each
-      (lambda (e)
-        (unless (or (memq (cdr e) defined-names) (assq (cdr e) macro-env))
-          (error 'compile-library
-                 "export of a name the library does not define" (cdr e))))
-      exports)
+    (for-each (lambda (e)
+                (unless (or (memq (cdr e) defined-names) (assq (cdr e) macro-env))
+                  (error 'compile-library
+                         "export of a name the library does not define"
+                         (cdr e))))
+              exports)
     ;; seed the import environment FIRST, so the unit's own defines (registered
     ;; next, consed on top) shadow an imported name of the same spelling.
     (vector-set! env 0 import-env-alist)
@@ -1388,91 +1419,107 @@
     ;; mutated per form, and Chez's map vs the prelude's map apply in different
     ;; orders -- which would diverge the AOT-door and REPL-door units.  fold-left
     ;; keeps a library's emitted bytes identical across doors (dev->ship fidelity).
-    (if (not keep-roots)
-        ;; DEFAULT PATH (dev/REPL/JIT + committed artifacts): whole unit, unchanged.
-        ;; The fold carries the form's 1-based position alongside the accumulator, so a
-        ;; command (which has no name) can be tagged positionally in the dump.
-        (let ([progs (reverse
-                       (cadr
-                         (fold-left
-                           (lambda (st f)
-                             (list (+ (car st) 1)
-                                   (cons (unit-def-lcode env f macro-env known name dump
-                                                         (car st))
-                                         (cadr st))))
-                           (list 1 (quote ())) body)))]
-              ;; export table keys on the EXTERNAL name; the symbol is the INTERNAL name
-              ;; mangled to this unit (rename is pure indirection).
-              [export-table (map (lambda (e) (cons (car e) (mangle name (cdr e))))
-                                 runtime-exports)])
-          (list (emit-library-batch progs name)
-                (export-table-datum name export-table
-                                    (export-call-rows runtime-exports (unit-procs))
-                                    (ct-half-union
-                                      (resolve-exported-macros name exports own-macro-env
-                                                               defined-names import-env-alist)
-                                      (reexported-macros exports own-macro-env
-                                                         import-tables)))))
-        ;; PRUNED PATH (closed-world AOT tree-shake): expand each body form ONCE,
-        ;; compute the define->define reference graph, keep only what's reachable from
-        ;; the roots, and lower/emit just those (in original order, so __init order is
-        ;; preserved).  fold-left = left-to-right in both hosts (deterministic).
-        ;;
-        ;; Each entry is (name-or-#f position expanded-form); #f marks a COMMAND, which
-        ;; defines no name and so cannot be reached BY one (change:
-        ;; library-body-declarations, design D3).
-        (let* ([expanded (reverse
-                           (cadr
-                             (fold-left
-                               (lambda (st f)
-                                 (list (+ (car st) 1)
-                                       (cons (list (body-form-name f) (car st)
-                                                   (expand-unit-form f macro-env known))
-                                             (cadr st))))
-                               (list 1 (quote ())) body)))]
-               [unit-refs (lambda (ne)          ; this unit's own names the form mentions
-                            (filter (lambda (s) (memq s defined-names))
-                                    (all-symbols (caddr ne))))]
-               [dep-alist (map (lambda (ne) (cons (car ne) (unit-refs ne)))
-                               (filter car expanded))]
-               ;; A command's effects are not modelled by reachability, so it is ALWAYS
-               ;; kept -- and whatever it references must become a root, or the shake
-               ;; could prune a binding a surviving command calls into a link-time
-               ;; undefined symbol.
-               [cmd-roots (apply append (map unit-refs (filter (lambda (ne) (not (car ne)))
-                                                               expanded)))]
-               [reachable (reachable-names (append keep-roots cmd-roots) dep-alist)]
-               [kept    (filter (lambda (ne)
-                                  (or (not (car ne)) (memq (car ne) reachable)))
-                                expanded)]
-               [progs   (reverse
-                          (fold-left
-                            (lambda (acc ne)
-                              (cons (unit-lcode-tagged env (caddr ne) name dump
-                                                       (body-form-tag (car ne) (cadr ne))
-                                                       (and (car ne) #t))
-                                    acc))
-                            (quote ()) kept))]
-               ;; the KEPT exports; both the symbol rows and the call rows are drawn
-               ;; from this one list, so the pruned table is exactly the full table
-               ;; restricted to what survived -- same names, same mangled symbols, and
-               ;; (because the labels are name-derived) the same labels.
-               [kept-exports (filter (lambda (e) (memq (cdr e) reachable)) runtime-exports)]
-               [export-table (map (lambda (e) (cons (car e) (mangle name (cdr e))))
-                                  kept-exports)])
-          ;; The compile-time interface is NOT pruned: a transformer is not a binding the
-          ;; reachability graph models, and an importer that reached the macro is exactly
-          ;; what put its referenced bindings in `keep-roots` (design D6).  So the pruned
-          ;; table carries the same interface the whole table does.
-          (list (emit-library-batch progs name)
-                (export-table-datum name export-table
-                                    (export-call-rows kept-exports (unit-procs))
-                                    (ct-half-union
-                                      (resolve-exported-macros name exports own-macro-env
-                                                               defined-names
-                                                               import-env-alist)
-                                      (reexported-macros exports own-macro-env
-                                                         import-tables))))))))
+    (if
+      (not keep-roots)
+      ;; DEFAULT PATH (dev/REPL/JIT + committed artifacts): whole unit, unchanged.
+      ;; The fold carries the form's 1-based position alongside the accumulator, so a
+      ;; command (which has no name) can be tagged positionally in the dump.
+      (let ([progs
+              (reverse
+                (cadr
+                  (fold-left
+                    (lambda (st f)
+                      (list (+ (car st) 1)
+                            (cons
+                              (unit-def-lcode env f macro-env known name dump (car st))
+                              (cadr st))))
+                    (list 1 (quote ()))
+                    body)))]
+            ;; export table keys on the EXTERNAL name; the symbol is the INTERNAL name
+            ;; mangled to this unit (rename is pure indirection).
+            [export-table (map (lambda (e) (cons (car e) (mangle name (cdr e))))
+                               runtime-exports)])
+        (list (emit-library-batch progs name)
+              (export-table-datum
+                name
+                export-table
+                (export-call-rows runtime-exports (unit-procs))
+                (ct-half-union
+                  (resolve-exported-macros name
+                                           exports
+                                           own-macro-env
+                                           defined-names
+                                           import-env-alist)
+                  (reexported-macros exports own-macro-env import-tables)))))
+      ;; PRUNED PATH (closed-world AOT tree-shake): expand each body form ONCE,
+      ;; compute the define->define reference graph, keep only what's reachable from
+      ;; the roots, and lower/emit just those (in original order, so __init order is
+      ;; preserved).  fold-left = left-to-right in both hosts (deterministic).
+      ;;
+      ;; Each entry is (name-or-#f position expanded-form); #f marks a COMMAND, which
+      ;; defines no name and so cannot be reached BY one (change:
+      ;; library-body-declarations, design D3).
+      (let* ([expanded
+               (reverse
+                 (cadr (fold-left
+                         (lambda (st f)
+                           (list (+ (car st) 1)
+                                 (cons (list (body-form-name f)
+                                             (car st)
+                                             (expand-unit-form f macro-env known))
+                                       (cadr st))))
+                         (list 1 (quote ()))
+                         body)))]
+             [unit-refs (lambda (ne) ; this unit's own names the form mentions
+                          (filter (lambda (s) (memq s defined-names))
+                                  (all-symbols (caddr ne))))]
+             [dep-alist (map (lambda (ne) (cons (car ne) (unit-refs ne)))
+                             (filter car expanded))]
+             ;; A command's effects are not modelled by reachability, so it is ALWAYS
+             ;; kept -- and whatever it references must become a root, or the shake
+             ;; could prune a binding a surviving command calls into a link-time
+             ;; undefined symbol.
+             [cmd-roots (apply append
+                               (map unit-refs
+                                    (filter (lambda (ne) (not (car ne))) expanded)))]
+             [reachable (reachable-names (append keep-roots cmd-roots) dep-alist)]
+             [kept (filter (lambda (ne) (or (not (car ne)) (memq (car ne) reachable)))
+                           expanded)]
+             [progs (reverse (fold-left (lambda (acc ne)
+                                          (cons (unit-lcode-tagged
+                                                  env
+                                                  (caddr ne)
+                                                  name
+                                                  dump
+                                                  (body-form-tag (car ne) (cadr ne))
+                                                  (and (car ne) #t))
+                                                acc))
+                                        (quote ())
+                                        kept))]
+             ;; the KEPT exports; both the symbol rows and the call rows are drawn
+             ;; from this one list, so the pruned table is exactly the full table
+             ;; restricted to what survived -- same names, same mangled symbols, and
+             ;; (because the labels are name-derived) the same labels.
+             [kept-exports (filter (lambda (e) (memq (cdr e) reachable))
+                                   runtime-exports)]
+             [export-table (map (lambda (e) (cons (car e) (mangle name (cdr e))))
+                                kept-exports)])
+        ;; The compile-time interface is NOT pruned: a transformer is not a binding the
+        ;; reachability graph models, and an importer that reached the macro is exactly
+        ;; what put its referenced bindings in `keep-roots` (design D6).  So the pruned
+        ;; table carries the same interface the whole table does.
+        (list (emit-library-batch progs name)
+              (export-table-datum
+                name
+                export-table
+                (export-call-rows kept-exports (unit-procs))
+                (ct-half-union
+                  (resolve-exported-macros name
+                                           exports
+                                           own-macro-env
+                                           defined-names
+                                           import-env-alist)
+                  (reexported-macros exports own-macro-env import-tables))))))))
 
 ;; Compile a program that imports libraries.  import-tables is a list of the
 ;; program's DIRECT imports' export tables (as returned by compile-library); the
@@ -1482,12 +1529,14 @@
 ;; program's @scheme_entry runs, deepest dependency first, before the body.  When
 ;; init-libs is #f the program's direct imports are used (single-stage callers).
 ;; Returns IR text.
-(define (compile-program-with-imports prelude-forms user-forms import-tables init-libs dump)
-  (check-library-position user-forms)   ; the importing half of compile-forms' guard
+(define (compile-program-with-imports prelude-forms user-forms import-tables init-libs
+         dump)
+  (check-library-position user-forms) ; the importing half of compile-forms' guard
   (let* ([imp+rt (collect-imports user-forms)]
          [imported-libs (car imp+rt)]
          [runtime-user (cadr imp+rt)]
-         [import-env-alist (import-tables->env-alist import-tables)] ; (ext . mangled-sym)
+         [import-env-alist (import-tables->env-alist
+                             import-tables)] ; (ext . mangled-sym)
          [forms (with-prelude prelude-forms runtime-user)])
     (reset-counter!)
     ;; a call matching one of these imports' exact/minimum arities lowers to a direct
@@ -1515,13 +1564,13 @@
            ;; macro (e.g. `case`) may introduce a reference to one (e.g. `memv`)
            ;; without hygiene renaming it away (change: module-prelude-scheme-base).
            [known (union (compute-known macro-env runtime) (map car import-env-alist))]
-           [top   (collect-toplevel runtime)]
-           [expd  (expand top macro-env known)]
+           [top (collect-toplevel runtime)]
+           [expd (expand top macro-env known)]
            [core0 (rename-program (parse-program expd))]
-           [core  (inline-primitives
-                    (if (null? import-env-alist)
-                        core0
-                        (resolve-globals core0 (vector import-env-alist 0))))]
+           [core (inline-primitives
+                   (if (null? import-env-alist)
+                       core0
+                       (resolve-globals core0 (vector import-env-alist 0))))]
            [a (recognize-let core)]
            [b (convert-assignments a)]
            [s (simplify b)]
@@ -1531,10 +1580,14 @@
       ;; recognize-let/convert-assignments/simplify/convert-closures ladder as
       ;; compile-forms, and this is the path EVERY door takes once (scheme base) is
       ;; auto-imported (change: emit-dump-stages).
-      (dump "collect-toplevel" top) (dump "expand" expd)
-      (dump "parse+rename+imports" core) (dump "recognize-let" a)
-      (dump "convert-assignments" b) (dump "simplify" s)
-      (dump "convert-closures" c) (dump "lower" d)
+      (dump "collect-toplevel" top)
+      (dump "expand" expd)
+      (dump "parse+rename+imports" core)
+      (dump "recognize-let" a)
+      (dump "convert-assignments" b)
+      (dump "simplify" s)
+      (dump "convert-closures" c)
+      (dump "lower" d)
       ;; DEDUPED by symbol (change: library-body-macro-scope).  One mangled symbol can
       ;; now reach the alist under two different keys: its external name, because the
       ;; library exports it, and its own already-resolved spelling, because an imported
@@ -1542,5 +1595,6 @@
       ;; AND `case`'s template calls it -- and emitting the declaration twice is a hard
       ;; clang error, `redefinition of global '@scheme.base:memv'`.  `union` preserves
       ;; first-occurrence order, so a program with no such overlap emits the same bytes.
-      (emit-program-with-imports d (or init-libs imported-libs)
+      (emit-program-with-imports d
+                                 (or init-libs imported-libs)
                                  (union (quote ()) (map cdr import-env-alist))))))

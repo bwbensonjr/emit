@@ -21,7 +21,7 @@
 ;; Two spellings of the one narration primitive: raw bytes for the dumper's own
 ;; punctuation/indentation, and the runtime's WRITE style for a datum (so a string
 ;; inside the IL shows quoted, as Chez's pretty-print renders it).
-(define (pp-emit s)  (%stderr-write s #t))
+(define (pp-emit s) (%stderr-write s #t))
 (define (pp-write d) (%stderr-write d #f))
 (define (pp-indent n) (if (> n 0) (pp-emit (make-string n #\space)) #f))
 
@@ -75,41 +75,41 @@
           k
           (let ([c (string-ref s i)])
             (loop (+ i 1)
-                  (if (or (eq? c #\") (eq? c #\\)
+                  (if (or (eq? c #\")
+                          (eq? c #\\)
                           (eq? c #\newline)
-                          (eq? c (integer->char 9))     ; tab
-                          (eq? c (integer->char 13)))   ; return
+                          (eq? c (integer->char 9))   ; tab
+                          (eq? c (integer->char 13))) ; return
                       (+ k 1)
                       k)))))))
 
 (define (char-write-width c)
-  (cond [(eq? c #\space)   7]        ; #\space
-        [(eq? c #\newline) 9]        ; #\newline
-        [else              3]))      ; #\x -- one column for any single character
+  (cond
+    [(eq? c #\space) 7]   ; #\space
+    [(eq? c #\newline) 9] ; #\newline
+    [else 3]))            ; #\x -- one column for any single character
 
 (define (datum-width d)
   (cond
-    [(pair? d)    (+ 2 (elems-width d))]
-    [(null? d)    2]
-    [(symbol? d)  (string-length (symbol->string d))]
-    [(string? d)  (+ 2 (string-length d) (string-escape-count d))]
-    [(char? d)    (char-write-width d)]
+    [(pair? d) (+ 2 (elems-width d))]
+    [(null? d) 2]
+    [(symbol? d) (string-length (symbol->string d))]
+    [(string? d) (+ 2 (string-length d) (string-escape-count d))]
+    [(char? d) (char-write-width d)]
     [(boolean? d) 2]
-    [(vector? d)  (+ 3 (vector-elems-width d))]
-    [(flonum? d)  (string-length (%flonum->string d))]
-    [(number? d)  (string-length (number->string d))]
-    [else         12]))
+    [(vector? d) (+ 3 (vector-elems-width d))]
+    [(flonum? d) (string-length (%flonum->string d))]
+    [(number? d) (string-length (number->string d))]
+    [else 12]))
 
 ;; elements of a (possibly improper) list: widths + one space between each, plus
 ;; " . " and the tail when the list is dotted.
 (define (elems-width d)
   (let loop ([cur d] [w 0] [first #t])
     (cond
-      [(pair? cur) (loop (cdr cur)
-                         (+ w (if first 0 1) (datum-width (car cur)))
-                         #f)]
+      [(pair? cur) (loop (cdr cur) (+ w (if first 0 1) (datum-width (car cur))) #f)]
       [(null? cur) w]
-      [else        (+ w 3 (datum-width cur))])))
+      [else (+ w 3 (datum-width cur))])))
 
 (define (vector-elems-width v)
   (let ([n (vector-length v)])
@@ -131,15 +131,12 @@
 ;; reference keeps them together.  Filling reads much closer to that reference
 ;; without adopting its form-specific (let/lambda/if) rules.
 (define (pp-datum d col)
-  (if (or (pp-shared-graph? d)
-          (<= (+ col (datum-width d)) *pp-width*)
-          (not (pair? d)))
-      (pp-write d)                      ; fits, or has no break rule: one line
+  (if (or (pp-shared-graph? d) (<= (+ col (datum-width d)) *pp-width*) (not (pair? d)))
+      (pp-write d) ; fits, or has no break rule: one line
       (pp-list d col)))
 
 (define (pp-list d col)
-  (let* ([ind  (+ col 2)]
-         [hcol (+ col 1 (datum-width (car d)))])   ; column after the head
+  (let* ([ind (+ col 2)] [hcol (+ col 1 (datum-width (car d)))]) ; column after the head
     (pp-emit "(")
     (pp-datum (car d) (+ col 1))
     ;; A head too wide to fit was itself broken across lines, so its end column is
@@ -150,16 +147,17 @@
       (cond
         [(null? cur) (pp-emit ")")]
         [(pair? cur)
-         (let* ([w    (datum-width (car cur))]
-                [fits (<= (+ cc 1 w) *pp-width*)])
-           (if fits
-               (begin (pp-emit " ") (pp-datum (car cur) (+ cc 1)))
-               (begin (pp-emit "\n") (pp-indent ind) (pp-datum (car cur) ind)))
-           (loop (cdr cur) (if fits (+ cc 1 w) (+ ind w))))]
-        [else                            ; dotted tail
-         (pp-emit "\n") (pp-indent ind) (pp-emit ". ")
-         (pp-datum cur (+ ind 2))
-         (pp-emit ")")]))))
+          (let* ([w (datum-width (car cur))] [fits (<= (+ cc 1 w) *pp-width*)])
+            (if fits
+                (begin (pp-emit " ") (pp-datum (car cur) (+ cc 1)))
+                (begin (pp-emit "\n") (pp-indent ind) (pp-datum (car cur) ind)))
+            (loop (cdr cur) (if fits (+ cc 1 w) (+ ind w))))]
+        [else ; dotted tail
+          (pp-emit "\n")
+          (pp-indent ind)
+          (pp-emit ". ")
+          (pp-datum cur (+ ind 2))
+          (pp-emit ")")]))))
 
 ;; --- the dumpers ----------------------------------------------------------
 ;; Level 1: the concise trace, byte-identical to the Chez driver's announce-stage.
@@ -167,7 +165,9 @@
 ;; called for effect in a form sequence, and nothing downstream should be able to
 ;; observe a narration byte-count as a value.
 (define (dump-stage-name stage)
-  (pp-emit "  stage ") (pp-emit stage) (pp-emit "\n")
+  (pp-emit "  stage ")
+  (pp-emit stage)
+  (pp-emit "\n")
   (if #f #f))
 
 ;; Level 2/3: the header the Chez driver's `dump` writes, then the form, then a
@@ -177,7 +177,8 @@
 ;; A per-form tag (design D8) needs nothing here: core.ss's `dump-tagged` puts it in
 ;; the stage NAME, so it works with any dumper -- including the Chez driver's.
 (define (dump-stage-form unit stage form)
-  (pp-emit ";; ==== after ") (pp-emit stage)
+  (pp-emit ";; ==== after ")
+  (pp-emit stage)
   (if unit (begin (pp-emit " [unit ") (pp-write unit) (pp-emit "]")) #f)
   (pp-emit " ====\n")
   (pp-datum form 0)
@@ -193,7 +194,7 @@
 (define (make-dumper unit)
   (let ([lvl (%dump-level)])
     (cond
-      [(= lvl 0)              no-dump]
-      [(and unit (< lvl 3))   no-dump]
-      [(= lvl 1)              (lambda (stage form) (dump-stage-name stage))]
-      [else                   (lambda (stage form) (dump-stage-form unit stage form))])))
+      [(= lvl 0) no-dump]
+      [(and unit (< lvl 3)) no-dump]
+      [(= lvl 1) (lambda (stage form) (dump-stage-name stage))]
+      [else (lambda (stage form) (dump-stage-form unit stage form))])))

@@ -44,7 +44,5 @@
     ;; 6.2.6 specifies directly.  `atan` takes an optional second argument, and the
     ;; two-argument form is NOT (atan (/ y x)) -- that loses the quadrant, so it
     ;; routes to atan2, which takes both signs into account.
-    (define (log z . rest)
-      (if (null? rest) (%log z) (%/ (%log z) (%log (%car rest)))))
-    (define (atan y . rest)
-      (if (null? rest) (%atan y) (%atan2 y (%car rest))))))
+    (define (log z . rest) (if (null? rest) (%log z) (%/ (%log z) (%log (%car rest)))))
+    (define (atan y . rest) (if (null? rest) (%atan y) (%atan2 y (%car rest))))))

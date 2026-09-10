@@ -15,10 +15,7 @@
 ;;; hygienically per expansion, so it cannot capture user identifiers.
 
 (define-syntax and
-  (syntax-rules ()
-    ((_) #t)
-    ((_ e) e)
-    ((_ e1 e2 ...) (if e1 (and e2 ...) #f))))
+  (syntax-rules () ((_) #t) ((_ e) e) ((_ e1 e2 ...) (if e1 (and e2 ...) #f))))
 
 (define-syntax or
   (syntax-rules ()
@@ -35,13 +32,10 @@
 ;; same cost `case`/`do` already pay for the idiom.  It costs nothing in the binary:
 ;; `icmp ne i64 1, 1` is constant-folded, and clang -O2 collapses the whole diamond
 ;; (verified against the emitted IR), so the standalone-executable size goal is unaffected.
-(define-syntax when
-  (syntax-rules ()
-    ((_ test e ...) (if test (begin e ...)))))
+(define-syntax when (syntax-rules () ((_ test e ...) (if test (begin e ...)))))
 
 (define-syntax unless
-  (syntax-rules ()
-    ((_ test e ...) (if test (if #f #f) (begin e ...)))))
+  (syntax-rules () ((_ test e ...) (if test (if #f #f) (begin e ...)))))
 
 (define-syntax let*
   (syntax-rules ()
@@ -82,9 +76,9 @@
     ((_ k (else => f)) (f k))
     ((_ k (else e ...)) (begin e ...))
     ((_ k ((d ...) => f) clause ...)
-     (if (memv k (quote (d ...))) (f k) (case k clause ...)))
+      (if (memv k (quote (d ...))) (f k) (case k clause ...)))
     ((_ k ((d ...) e ...) clause ...)
-     (if (memv k (quote (d ...))) (begin e ...) (case k clause ...)))))
+      (if (memv k (quote (d ...))) (begin e ...) (case k clause ...)))))
 
 ;; R7RS `do`: iterate with parallel-updated bindings.  Each binding is
 ;; (var init step) or (var init) [step defaults to var, i.e. unchanged].  On each
@@ -92,21 +86,15 @@
 ;; otherwise the commands run and every var is rebound to its step -- all steps
 ;; are evaluated before any rebind because they are the arguments of the loop
 ;; call.  %do-step supplies the default step.  (change: inexact-numbers)
-(define-syntax %do-step
-  (syntax-rules ()
-    ((_ x) x)
-    ((_ x s) s)))
+(define-syntax %do-step (syntax-rules () ((_ x) x) ((_ x s) s)))
 (define-syntax do
   (syntax-rules ()
-    ((_ ((var init step ...) ...)
-        (test result ...)
-        command ...)
-     (letrec ((loop (lambda (var ...)
-                      (if test
-                          (begin (if #f #f) result ...)
-                          (begin command ...
-                                 (loop (%do-step var step ...) ...))))))
-       (loop init ...)))))
+    ((_ ((var init step ...) ...) (test result ...) command ...)
+      (letrec ((loop (lambda (var ...)
+                       (if test
+                           (begin (if #f #f) result ...)
+                           (begin command ... (loop (%do-step var step ...) ...))))))
+        (loop init ...)))))
 
 (define (list . xs) xs)
 
@@ -152,8 +140,7 @@
 (define (cddddr x) (cdr (cdddr x)))
 
 (define (length xs)
-  (let loop ([xs xs] [n 0])
-    (if (null? xs) n (loop (cdr xs) (+ n 1)))))
+  (let loop ([xs xs] [n 0]) (if (null? xs) n (loop (cdr xs) (+ n 1)))))
 
 (define (reverse xs)
   (let loop ([xs xs] [acc (quote ())])
@@ -162,8 +149,7 @@
 ;; append is variadic (R7RS): zero or more lists.  The compiler core uses 3-arg
 ;; append (e.g. emit-code-def's argdecls), and Chez's append is variadic, so
 ;; this must be too for the core to self-compile (fix-closure-self-compilation).
-(define (%append2 a b)
-  (if (null? a) b (cons (car a) (%append2 (cdr a) b))))
+(define (%append2 a b) (if (null? a) b (cons (car a) (%append2 (cdr a) b))))
 (define (append . lists)
   (if (null? lists)
       (quote ())
@@ -177,23 +163,19 @@
 ;; (map cons names new) and emit's (for-each ... slots (iota k))) applies f to
 ;; the i-th element of every list.  Chez's map/for-each are variadic, so these
 ;; match and the core self-compiles (fix-closure-self-compilation).
-(define (%map1 f xs)
-  (if (null? xs) (quote ()) (cons (f (car xs)) (%map1 f (cdr xs)))))
+(define (%map1 f xs) (if (null? xs) (quote ()) (cons (f (car xs)) (%map1 f (cdr xs)))))
 (define (%any-null? ls)
   (if (null? ls) #f (if (null? (car ls)) #t (%any-null? (cdr ls)))))
 (define (%mapn f ls)
   (if (%any-null? ls)
       (quote ())
       (cons (apply f (%map1 car ls)) (%mapn f (%map1 cdr ls)))))
-(define (map f xs . more)
-  (if (null? more) (%map1 f xs) (%mapn f (cons xs more))))
+(define (map f xs . more) (if (null? more) (%map1 f xs) (%mapn f (cons xs more))))
 
-(define (memq x xs)
-  (if (null? xs) #f (if (eq? x (car xs)) xs (memq x (cdr xs)))))
+(define (memq x xs) (if (null? xs) #f (if (eq? x (car xs)) xs (memq x (cdr xs)))))
 
 ;; memv: like memq but compares with eqv? (used by the `case` macro).
-(define (memv x xs)
-  (if (null? xs) #f (if (eqv? x (car xs)) xs (memv x (cdr xs)))))
+(define (memv x xs) (if (null? xs) #f (if (eqv? x (car xs)) xs (memv x (cdr xs)))))
 
 (define (assq k xs)
   (if (null? xs) #f (if (eq? k (car (car xs))) (car xs) (assq k (cdr xs)))))
@@ -220,9 +202,7 @@
 (define (filter p xs)
   (if (null? xs)
       (quote ())
-      (if (p (car xs))
-          (cons (car xs) (filter p (cdr xs)))
-          (filter p (cdr xs)))))
+      (if (p (car xs)) (cons (car xs) (filter p (cdr xs))) (filter p (cdr xs)))))
 
 ;; fold-left: tail-recursive, f receives (acc elem), left-to-right (R6RS order).
 (define (fold-left f acc xs)
@@ -247,12 +227,10 @@
   (if (null? more) (%for-each1 f xs) (%for-eachn f (cons xs more))))
 
 ;; #t iff the predicate holds for every element (short-circuits on #f).
-(define (andmap p xs)
-  (if (null? xs) #t (if (p (car xs)) (andmap p (cdr xs)) #f)))
+(define (andmap p xs) (if (null? xs) #t (if (p (car xs)) (andmap p (cdr xs)) #f)))
 
 ;; first tail whose head satisfies the predicate, else #f.
-(define (memp p xs)
-  (if (null? xs) #f (if (p (car xs)) xs (memp p (cdr xs)))))
+(define (memp p xs) (if (null? xs) #f (if (p (car xs)) xs (memp p (cdr xs)))))
 
 ;; fourth-element accessor (extends the cxr set one deeper).
 (define (cadddr x) (car (cdddr x)))
@@ -266,14 +244,12 @@
     (cond
       [(null? fast) #t]
       [(not (pair? fast)) #f]
-      [else
-       (let ([fast1 (cdr fast)])
-         (cond
-           [(null? fast1) #t]
-           [(not (pair? fast1)) #f]
-           [else
-            (let ([slow1 (cdr slow)] [fast2 (cdr fast1)])
-              (if (eq? slow1 fast2) #f (loop slow1 fast2)))]))])))
+      [else (let ([fast1 (cdr fast)])
+              (cond
+                [(null? fast1) #t]
+                [(not (pair? fast1)) #f]
+                [else (let ([slow1 (cdr slow)] [fast2 (cdr fast1)])
+                        (if (eq? slow1 fast2) #f (loop slow1 fast2)))]))])))
 
 (define (zero? n) (= n 0))
 
@@ -310,12 +286,11 @@
 ;;; The flag is `inex`, NOT `inexact?`: naming it after the predicate would shadow
 ;;; the predicate this very fold calls, and the shadowed call would ask a boolean.
 (define (%minmax-fold pick xs best inex)
-  (if (null? xs)
-      (if inex (exact->inexact best) best)
-      (%minmax-fold pick (cdr xs) (pick best (car xs))
-                    (if inex #t (inexact? (car xs))))))
-(define (%minmax pick a rest)
-  (%minmax-fold pick rest a (inexact? a)))
+  (if
+    (null? xs)
+    (if inex (exact->inexact best) best)
+    (%minmax-fold pick (cdr xs) (pick best (car xs)) (if inex #t (inexact? (car xs))))))
+(define (%minmax pick a rest) (%minmax-fold pick rest a (inexact? a)))
 (define (max a . rest) (%minmax (lambda (x y) (if (< x y) y x)) a rest))
 (define (min a . rest) (%minmax (lambda (x y) (if (< y x) y x)) a rest))
 
@@ -372,14 +347,10 @@
 ;;; licence `/` already uses for a non-integral exact quotient.  Any inexact
 ;;; operand routes to %pow (libm).  (expt 0 0) is 1, per 6.2.6.
 (define (%expt-exact b e acc)
-  (if (= e 0)
-      acc
-      (%expt-exact (* b b) (quotient e 2) (if (odd? e) (* acc b) acc))))
+  (if (= e 0) acc (%expt-exact (* b b) (quotient e 2) (if (odd? e) (* acc b) acc))))
 (define (expt b e)
   (if (exact? e)
-      (if (< e 0)
-          (%pow b e)
-          (if (exact? b) (%expt-exact b e 1) (%expt-exact b e 1.0)))
+      (if (< e 0) (%pow b e) (if (exact? b) (%expt-exact b e 1) (%expt-exact b e 1.0)))
       (%pow b e)))
 
 ;;; exact-integer-sqrt: Newton's method on exact integers, returning TWO values --
@@ -387,20 +358,18 @@
 ;;; uses.  Stays exact end to end, which is the point of it existing alongside
 ;;; (scheme inexact)'s `sqrt`.
 (define (%isqrt-loop n g)
-  (let ([g2 (quotient (+ g (quotient n g)) 2)])
-    (if (< g2 g) (%isqrt-loop n g2) g)))
+  (let ([g2 (quotient (+ g (quotient n g)) 2)]) (if (< g2 g) (%isqrt-loop n g2) g)))
 (define (%isqrt n) (if (= n 0) 0 (%isqrt-loop n n)))
-(define (exact-integer-sqrt n)
-  (let ([s (%isqrt n)]) (values s (- n (* s s)))))
+(define (exact-integer-sqrt n) (let ([s (%isqrt n)]) (values s (- n (* s s)))))
 
 ;;; Rounding.  An exact integer is already rounded, so it is returned UNCHANGED --
 ;;; which is both the R7RS exactness rule and the reason a large-magnitude flonum
 ;;; never routes through the fixnum range: the inexact arm stays in double.
 ;;; `round` is round-half-to-EVEN (%flo-round is rint), so 2.5 -> 2.0 and 3.5 -> 4.0.
-(define (floor n)    (if (exact? n) n (%flo-floor n)))
-(define (ceiling n)  (if (exact? n) n (%flo-ceiling n)))
+(define (floor n) (if (exact? n) n (%flo-floor n)))
+(define (ceiling n) (if (exact? n) n (%flo-ceiling n)))
 (define (truncate n) (if (exact? n) n (%flo-truncate n)))
-(define (round n)    (if (exact? n) n (%flo-round n)))
+(define (round n) (if (exact? n) n (%flo-round n)))
 
 ;;; The R7RS 6.2.6 division operators, over the truncating and flooring primitives
 ;;; that already exist -- so all six inherit their argument-domain rules (an
@@ -420,8 +389,7 @@
 ;;; integer and n/1.0 for an integral flonum.  R7RS defines them over rationals,
 ;;; which Emit does not represent, and 6.2.3 sanctions restricting the domain -- a
 ;;; best-effort rational reconstruction of a double would be misleading, not useful.
-(define (numerator n)
-  (if (integer? n) n (error "numerator: not an integer" n)))
+(define (numerator n) (if (integer? n) n (error "numerator: not an integer" n)))
 (define (denominator n)
   (if (integer? n) (if (exact? n) 1 1.0) (error "denominator: not an integer" n)))
 
@@ -462,9 +430,9 @@
   (if (op (char->integer a) (char->integer b))
       (if (null? rest) #t (chr-cmp op b (car rest) (cdr rest)))
       #f))
-(define (char=?  a b . rest) (chr-cmp (lambda (x y) (=  x y)) a b rest))
-(define (char<?  a b . rest) (chr-cmp (lambda (x y) (<  x y)) a b rest))
-(define (char>?  a b . rest) (chr-cmp (lambda (x y) (>  x y)) a b rest))
+(define (char=? a b . rest) (chr-cmp (lambda (x y) (= x y)) a b rest))
+(define (char<? a b . rest) (chr-cmp (lambda (x y) (< x y)) a b rest))
+(define (char>? a b . rest) (chr-cmp (lambda (x y) (> x y)) a b rest))
 (define (char<=? a b . rest) (chr-cmp (lambda (x y) (<= x y)) a b rest))
 (define (char>=? a b . rest) (chr-cmp (lambda (x y) (>= x y)) a b rest))
 
@@ -483,19 +451,16 @@
 ;;; negative side (never negating the whole value) means the full fixnum range is
 ;;; handled exactly, INCLUDING the most-negative fixnum -- whose magnitude has no
 ;;; positive fixnum representation, so a negate-first approach would overflow.
-(define (ns-digits m acc)                ; m <= 0 -> chars of |m|, prepended to acc
+(define (ns-digits m acc) ; m <= 0 -> chars of |m|, prepended to acc
   (ns-digits-radix m 10 acc))
 ;;; The same peel, in any supported radix (change: numeric-conformance).  Digits
 ;;; above 9 are lowercase, which is what the reader's rd-hex-digit accepts, so the
 ;;; radix forms round-trip too.
 (define (%ns-digit-char d)
-  (if (< d 10) (integer->char (+ 48 d)) (integer->char (+ 87 d))))   ; 87 + 10 = #\a
-(define (ns-digits-radix m r acc)        ; m <= 0 -> chars of |m| in radix r
-  (let ([ch (%ns-digit-char (- 0 (remainder m r)))]
-        [rest (quotient m r)])
-    (if (= rest 0)
-        (cons ch acc)
-        (ns-digits-radix rest r (cons ch acc)))))
+  (if (< d 10) (integer->char (+ 48 d)) (integer->char (+ 87 d)))) ; 87 + 10 = #\a
+(define (ns-digits-radix m r acc) ; m <= 0 -> chars of |m| in radix r
+  (let ([ch (%ns-digit-char (- 0 (remainder m r)))] [rest (quotient m r)])
+    (if (= rest 0) (cons ch acc) (ns-digits-radix rest r (cons ch acc)))))
 ;;; Flonums route to the runtime formatter (%flonum->string: shortest round-
 ;;; trippable decimal, always with a '.').  `exact?` gates it -- exact? is true
 ;;; only for fixnums, so the integer path is unchanged; the flonum branch is
@@ -505,8 +470,7 @@
 ;;; for an exact integer.  An inexact number requires radix 10: R7RS 6.2.6 permits
 ;;; an error for the other radices, which is better than inventing a rendering the
 ;;; reader could not read back.
-(define (%radix-ok? r)
-  (if (= r 10) #t (if (= r 16) #t (if (= r 8) #t (= r 2)))))
+(define (%radix-ok? r) (if (= r 10) #t (if (= r 16) #t (if (= r 8) #t (= r 2)))))
 (define (number->string n . rest)
   (let ([r (if (null? rest) 10 (car rest))])
     (if (%radix-ok? r)
@@ -514,7 +478,7 @@
             (cond
               [(= n 0) "0"]
               [(< n 0) (list->string (cons #\- (ns-digits-radix n r (quote ()))))]
-              [else    (list->string (ns-digits-radix (- 0 n) r (quote ())))])
+              [else (list->string (ns-digits-radix (- 0 n) r (quote ())))])
             (if (= r 10)
                 (%flonum->string n)
                 (error "number->string: radix must be 10 for an inexact number" r)))
@@ -525,30 +489,29 @@
 ;;; grammar that could drift from the one the reader accepts.  Returns #f -- not an
 ;;; error -- for text that is not a number, per R7RS 6.2.6.  When the radix
 ;;; prefixes (#x/#b/#o/#e/#i) land in the reader, this inherits them for free.
-(define (%digit-in-radix c r)            ; digit value, or #f if not a digit in r
+(define (%digit-in-radix c r) ; digit value, or #f if not a digit in r
   (let ([v (let ([k (char->integer c)])
              (cond
-               [(and (< 47 k) (< k 58)) (- k 48)]      ; 0-9
-               [(and (< 96 k) (< k 123)) (- k 87)]     ; a-z
-               [(and (< 64 k) (< k 91)) (- k 55)]      ; A-Z
+               [(and (< 47 k) (< k 58)) (- k 48)]  ; 0-9
+               [(and (< 96 k) (< k 123)) (- k 87)] ; a-z
+               [(and (< 64 k) (< k 91)) (- k 55)]  ; A-Z
                [else 99]))])
     (if (< v r) v #f)))
-(define (%radix-digits s i m r acc)      ; accumulate DOWNWARD (see rd-digits-neg)
+(define (%radix-digits s i m r acc) ; accumulate DOWNWARD (see rd-digits-neg)
   (if (< i m)
       (let ([d (%digit-in-radix (string-ref s i) r)])
         (if d (%radix-digits s (+ i 1) m r (- (* acc r) d)) #f))
       acc))
-(define (%string->int s r)               ; signed integer in radix r, or #f
+(define (%string->int s r) ; signed integer in radix r, or #f
   (let ([m (string-length s)])
     (if (= m 0)
         #f
         (let ([c0 (char->integer (string-ref s 0))])
-          (if (= c0 45)                                  ; leading '-'
+          (if (= c0 45) ; leading '-'
               (if (< 1 m) (%radix-digits s 1 m r 0) #f)
-              (let ([start (if (= c0 43) 1 0)])           ; optional leading '+'
+              (let ([start (if (= c0 43) 1 0)]) ; optional leading '+'
                 (if (< start m)
-                    (let ([neg (%radix-digits s start m r 0)])
-                      (if neg (- 0 neg) #f))
+                    (let ([neg (%radix-digits s start m r 0)]) (if neg (- 0 neg) #f))
                     #f)))))))
 ;;; `rd-number` IS the reader's number grammar, prefixes and all (change:
 ;;; reader-lexical-conformance, design D3), so this shares one grammar with the reader
@@ -560,8 +523,7 @@
 (define (string->number s . rest)
   (let ([r (if (null? rest) 10 (car rest))])
     (if (%radix-ok? r)
-        (let ([v (rd-number s r)])
-          (if (symbol? v) #f v))
+        (let ([v (rd-number s r)]) (if (symbol? v) #f v))
         (error "string->number: unsupported radix" r))))
 
 ;;; --- exceptions: error objects, raise, guard (r7rs-exceptions-subset) ------
@@ -579,10 +541,11 @@
 ;;; differs between them; every message is byte-identical to what it was.
 (define (%raise-kinded kind a rest)
   (if (string? a)
-      (raise (%make-error-object/kind a rest kind))   ; R7RS: (error message irritant ...)
+      (raise (%make-error-object/kind a rest kind)) ; R7RS: (error message irritant ...)
       (raise (%make-error-object/kind
                (string-append (symbol->string a) (string-append ": " (car rest)))
-               (cdr rest) kind))))                    ; superset: (error who message ...)
+               (cdr rest)
+               kind)))) ; superset: (error who message ...)
 
 (define (error a . rest) (%raise-kinded (quote error) a rest))
 
@@ -621,8 +584,7 @@
 ;;; -- a trap takes the runtime's own print-and-abort path.  That is the correct
 ;;; behaviour there, not a degraded one.
 (define *handlers*
-  (begin (%set-trap-raiser! (lambda () (raise (%trap-object))))
-         (quote ())))
+  (begin (%set-trap-raiser! (lambda () (raise (%trap-object)))) (quote ())))
 
 ;;; Pop entries off the wind list until it is the captured TARGET, running each
 ;;; `after`.  The entry is popped BEFORE its `after` runs, so a raise or escape from
@@ -632,7 +594,7 @@
   (if (eq? *winds* target)
       #t
       (if (null? *winds*)
-          #t                                  ; target is not on this chain
+          #t ; target is not on this chain
           (let ((entry (car *winds*)))
             (set! *winds* (cdr *winds*))
             ((cdr entry))
@@ -650,10 +612,7 @@
   (set! *winds* (cons (cons before after) *winds*))
   (call-with-values
     thunk
-    (lambda results
-      (set! *winds* (cdr *winds*))
-      (after)
-      (apply values results))))
+    (lambda results (set! *winds* (cdr *winds*)) (after) (apply values results))))
 
 ;;; call/cc, restricted to ESCAPE continuations (design D1).  %run-guarded pushes a
 ;;; runtime escape frame and runs the thunk; %escape-frame reads that frame's id
@@ -664,18 +623,17 @@
 (define (call-with-current-continuation f)
   (let ((saved-winds *winds*))
     (cdr (%run-guarded
-          (lambda ()
-            (let ((id (%escape-frame)))
-              (f (lambda (v)
-                   ;; Liveness FIRST.  Unwinding to a dead continuation's depth would
-                   ;; run the `after` thunks -- including the one that pops the very
-                   ;; handler meant to report this error -- for a transfer that cannot
-                   ;; happen.  When live, %escape-to does not return.
-                   (if (%escape-live? id)
-                       (begin (%unwind-to saved-winds) (%escape-to id v))
-                       #f)
-                   (error 'call/cc
-                          "continuation invoked outside its extent")))))))))
+           (lambda ()
+             (let ((id (%escape-frame)))
+               (f (lambda (v)
+                    ;; Liveness FIRST.  Unwinding to a dead continuation's depth would
+                    ;; run the `after` thunks -- including the one that pops the very
+                    ;; handler meant to report this error -- for a transfer that cannot
+                    ;; happen.  When live, %escape-to does not return.
+                    (if (%escape-live? id)
+                        (begin (%unwind-to saved-winds) (%escape-to id v))
+                        #f)
+                    (error 'call/cc "continuation invoked outside its extent")))))))))
 
 (define (call/cc f) (call-with-current-continuation f))
 
@@ -688,10 +646,9 @@
 ;;; is a conformance gain instead of an internal leak.
 (define (with-exception-handler handler thunk)
   (let ((saved *handlers*))
-    (dynamic-wind
-      (lambda () (set! *handlers* (cons handler saved)))
-      thunk
-      (lambda () (set! *handlers* saved)))))
+    (dynamic-wind (lambda () (set! *handlers* (cons handler saved)))
+                  thunk
+                  (lambda () (set! *handlers* saved)))))
 
 ;;; raise any object: call the current handler with the chain popped to the outer
 ;;; one, per R7RS.  A handler for `raise` must not return -- `guard`'s escapes -- so
@@ -714,10 +671,9 @@
   (if (null? *handlers*)
       (%raise obj)
       (let ((handler (car *handlers*)) (saved *handlers*))
-        (dynamic-wind
-          (lambda () (set! *handlers* (cdr saved)))
-          (lambda () (handler obj))
-          (lambda () (set! *handlers* saved))))))
+        (dynamic-wind (lambda () (set! *handlers* (cdr saved)))
+                      (lambda () (handler obj))
+                      (lambda () (set! *handlers* saved))))))
 
 ;;; R7RS error-object accessors over the runtime error-object representation.
 (define (error-object? x) (%error-object? x))
@@ -729,8 +685,10 @@
 ;;; encoding an internal detail a later change may replace (design D1).  The
 ;;; %error-object? test comes first because %error-object-kind is a checked accessor:
 ;;; these must answer #f for a non-error object, not report on one.
-(define (read-error? x) (and (%error-object? x) (eq? (%error-object-kind x) (quote read))))
-(define (file-error? x) (and (%error-object? x) (eq? (%error-object-kind x) (quote file))))
+(define (read-error? x)
+  (and (%error-object? x) (eq? (%error-object-kind x) (quote read))))
+(define (file-error? x)
+  (and (%error-object? x) (eq? (%error-object-kind x) (quote file))))
 
 ;;; guard: evaluate BODY; if it raises, bind the object to VAR and run the clauses
 ;;; as a `cond` in the guard's continuation.  No matching clause (and no else)
@@ -747,21 +705,21 @@
 (define-syntax guard
   (syntax-rules ()
     ((_ (var clause ...) body ...)
-     (let ((%gres
-            (call-with-current-continuation
-              (lambda (%gk)
-                (with-exception-handler
-                  (lambda (%gobj) (%gk (cons #t %gobj)))
-                  (lambda () (cons #f (begin body ...))))))))
-       (if (car %gres)
-           (let ((var (cdr %gres))) (%guard-clauses var clause ...))
-           (cdr %gres))))))
+      (let ((%gres (call-with-current-continuation
+                     (lambda (%gk)
+                       (with-exception-handler
+                         (lambda (%gobj) (%gk (cons #t %gobj)))
+                         (lambda () (cons #f (begin body ...))))))))
+        (if (car %gres)
+            (let ((var (cdr %gres))) (%guard-clauses var clause ...))
+            (cdr %gres))))))
 
 (define-syntax %guard-clauses
   (syntax-rules (else =>)
-    ((_ v) (raise v))                                              ; no clause matched
+    ((_ v) (raise v)) ; no clause matched
     ((_ v (else e ...)) (begin e ...))
-    ((_ v (test => proc) rest ...) (let ((gt test)) (if gt (proc gt) (%guard-clauses v rest ...))))
+    ((_ v (test => proc) rest ...)
+      (let ((gt test)) (if gt (proc gt) (%guard-clauses v rest ...))))
     ((_ v (test) rest ...) (let ((gt test)) (if gt gt (%guard-clauses v rest ...))))
     ((_ v (test e ...) rest ...) (if test (begin e ...) (%guard-clauses v rest ...)))))
 
@@ -772,8 +730,7 @@
 ;;; two-argument forms are internal to `parameterize`: one argument converts and
 ;;; sets (a new binding), two restore a previously converted value unconverted.
 (define (make-parameter init . conv)
-  (let ((convert (if (null? conv) (lambda (x) x) (car conv)))
-        (cell (%make-vector 1 0)))
+  (let ((convert (if (null? conv) (lambda (x) x) (car conv))) (cell (%make-vector 1 0)))
     (%vector-set! cell 0 ((if (null? conv) (lambda (x) x) (car conv)) init))
     (lambda args
       (if (null? args)
@@ -790,15 +747,14 @@
 ;;; (params vals thunk) is better than a `%`-name that pretends to be private.
 (define (with-parameters params vals thunk)
   (let ((olds (map (lambda (p) (p)) params)))
-    (dynamic-wind
-      (lambda () (for-each (lambda (p v) (p v)) params vals))
-      thunk
-      (lambda () (for-each (lambda (p v) (p v #f)) params olds)))))
+    (dynamic-wind (lambda () (for-each (lambda (p v) (p v)) params vals))
+                  thunk
+                  (lambda () (for-each (lambda (p v) (p v #f)) params olds)))))
 
 (define-syntax parameterize
   (syntax-rules ()
     ((_ ((p v) ...) body ...)
-     (with-parameters (list p ...) (list v ...) (lambda () body ...)))))
+      (with-parameters (list p ...) (list v ...) (lambda () body ...)))))
 
 ;;; --- vector constructors (vectors change) ---------------------------------
 ;;; make-vector/vector-ref/vector-set!/vector-length/vector? are primitives;
@@ -806,9 +762,7 @@
 (define (list->vector xs)
   (let ([v (make-vector (length xs) 0)])
     (let loop ([xs xs] [i 0])
-      (if (null? xs)
-          v
-          (begin (vector-set! v i (car xs)) (loop (cdr xs) (+ i 1)))))))
+      (if (null? xs) v (begin (vector-set! v i (car xs)) (loop (cdr xs) (+ i 1)))))))
 (define (vector . xs) (list->vector xs))
 
 (define (list->bytevector bs)
@@ -839,23 +793,19 @@
 
 ;; Optional-range plumbing.  `rest` is the tail after the required arguments.
 (define (rng-start rest) (if (pair? rest) (car rest) 0))
-(define (rng-end rest len) (if (and (pair? rest) (pair? (cdr rest))) (car (cdr rest)) len))
+(define (rng-end rest len)
+  (if (and (pair? rest) (pair? (cdr rest))) (car (cdr rest)) len))
 (define (rng-check who s e len)
-  (if (and (<= 0 s) (<= s e) (<= e len))
-      #t
-      (error "range out of bounds" who s e len)))
+  (if (and (<= 0 s) (<= s e) (<= e len)) #t (error "range out of bounds" who s e len)))
 
 ;;; --- lists -------------------------------------------------------------------
 ;; assv completes the assq/assv/assoc family: eqv? rather than eq? or equal?.
 (define (assv key al)
-  (if (null? al)
-      #f
-      (if (eqv? key (car (car al))) (car al) (assv key (cdr al)))))
+  (if (null? al) #f (if (eqv? key (car (car al))) (car al) (assv key (cdr al)))))
 
 ;; R7RS 6.4: a non-pair is returned as itself, and an improper tail is preserved --
 ;; list-copy is defined on "obj", not only on proper lists.
-(define (list-copy obj)
-  (if (pair? obj) (cons (car obj) (list-copy (cdr obj))) obj))
+(define (list-copy obj) (if (pair? obj) (cons (car obj) (list-copy (cdr obj))) obj))
 
 ;; list-set! is NOT here: it mutates a pair, and Emit has no set-car!/set-cdr!
 ;; (GitHub issue #82).  It arrives with them, not before -- there is no way to write it
@@ -867,9 +817,7 @@
 (define (boolean=? a b . rest) (eqv-chain? a (cons b rest)))
 (define (symbol=? a b . rest) (eqv-chain? a (cons b rest)))
 (define (eqv-chain? a rest)
-  (if (null? rest)
-      #t
-      (if (eqv? a (car rest)) (eqv-chain? (car rest) (cdr rest)) #f)))
+  (if (null? rest) #t (if (eqv? a (car rest)) (eqv-chain? (car rest) (cdr rest)) #f)))
 
 ;;; --- string ordering (R7RS 6.7), n-ary and chained ----------------------------
 ;; Codepoint order, position by position; a proper prefix precedes what extends it.
@@ -881,10 +829,9 @@
         [(and (= i la) (= i lb)) 0]
         [(= i la) -1]
         [(= i lb) 1]
-        [else
-         (let ([ca (char->integer (string-ref a i))]
-               [cb (char->integer (string-ref b i))])
-           (cond [(< ca cb) -1] [(< cb ca) 1] [else (loop (+ i 1))]))]))))
+        [else (let ([ca (char->integer (string-ref a i))]
+                    [cb (char->integer (string-ref b i))])
+                (cond [(< ca cb) -1] [(< cb ca) 1] [else (loop (+ i 1))]))]))))
 (define (str-chain? ok? a rest)
   (if (null? rest)
       #t
@@ -910,7 +857,9 @@
     (rng-check 'vector-copy s e len)
     (let ([out (make-vector (- e s) 0)])
       (let loop ([i s])
-        (if (= i e) out (begin (vector-set! out (- i s) (vector-ref v i)) (loop (+ i 1))))))))
+        (if (= i e)
+            out
+            (begin (vector-set! out (- i s) (vector-ref v i)) (loop (+ i 1))))))))
 
 (define (vector-append . vs)
   (let ([out (make-vector (vec-total vs) 0)])
@@ -921,7 +870,9 @@
             (let inner ([i 0])
               (if (= i n)
                   (loop (cdr vs) (+ at n))
-                  (begin (vector-set! out (+ at i) (vector-ref v i)) (inner (+ i 1))))))))))
+                  (begin
+                    (vector-set! out (+ at i) (vector-ref v i))
+                    (inner (+ i 1))))))))))
 (define (vec-total vs)
   (if (null? vs) 0 (+ (vector-length (car vs)) (vec-total (cdr vs)))))
 
@@ -938,22 +889,27 @@
   (let* ([len (vector-length from)] [s (rng-start rest)] [e (rng-end rest len)])
     (rng-check 'vector-copy! s e len)
     (rng-check 'vector-copy! at (+ at (- e s)) (vector-length to))
-    (if (< s at)
-        (let loop ([k (- (- e s) 1)])
-          (if (< k 0)
-              (void)
-              (begin (vector-set! to (+ at k) (vector-ref from (+ s k))) (loop (- k 1)))))
-        (let loop ([k 0])
-          (if (= k (- e s))
-              (void)
-              (begin (vector-set! to (+ at k) (vector-ref from (+ s k))) (loop (+ k 1))))))))
+    (if
+      (< s at)
+      (let loop ([k (- (- e s) 1)])
+        (if (< k 0)
+            (void)
+            (begin (vector-set! to (+ at k) (vector-ref from (+ s k))) (loop (- k 1)))))
+      (let loop ([k 0])
+        (if (= k (- e s))
+            (void)
+            (begin
+              (vector-set! to (+ at k) (vector-ref from (+ s k)))
+              (loop (+ k 1))))))))
 
 ;; map/for-each over one or more vectors, stopping at the shortest (R7RS 6.8).
 (define (vector-map f v . vs)
   (if (null? vs)
       (let* ([n (vector-length v)] [out (make-vector n 0)])
         (let loop ([i 0])
-          (if (= i n) out (begin (vector-set! out i (f (vector-ref v i))) (loop (+ i 1))))))
+          (if (= i n)
+              out
+              (begin (vector-set! out i (f (vector-ref v i))) (loop (+ i 1))))))
       (let* ([all (cons v vs)] [n (vec-min-len all)] [out (make-vector n 0)])
         (let loop ([i 0])
           (if (= i n)
@@ -972,8 +928,7 @@
 (define (vec-min-len vs)
   (if (null? (cdr vs))
       (vector-length (car vs))
-      (let ([a (vector-length (car vs))] [b (vec-min-len (cdr vs))])
-        (if (< a b) a b))))
+      (let ([a (vector-length (car vs))] [b (vec-min-len (cdr vs))]) (if (< a b) a b))))
 (define (vec-nth vs i)
   (if (null? vs) (quote ()) (cons (vector-ref (car vs) i) (vec-nth (cdr vs) i))))
 
@@ -983,7 +938,9 @@
     (rng-check 'string->vector a e len)
     (let ([out (make-vector (- e a) 0)])
       (let loop ([i a])
-        (if (= i e) out (begin (vector-set! out (- i a) (string-ref s i)) (loop (+ i 1))))))))
+        (if (= i e)
+            out
+            (begin (vector-set! out (- i a) (string-ref s i)) (loop (+ i 1))))))))
 
 (define (vector->string v . rest)
   (let* ([len (vector-length v)] [a (rng-start rest)] [e (rng-end rest len)])
@@ -1013,8 +970,7 @@
 (define (str-min-len ss)
   (if (null? (cdr ss))
       (string-length (car ss))
-      (let ([a (string-length (car ss))] [b (str-min-len (cdr ss))])
-        (if (< a b) a b))))
+      (let ([a (string-length (car ss))] [b (str-min-len (cdr ss))]) (if (< a b) a b))))
 (define (str-nth ss i)
   (if (null? ss) (quote ()) (cons (string-ref (car ss) i) (str-nth (cdr ss) i))))
 
@@ -1028,15 +984,18 @@
   (let* ([len (string-length from)] [s (rng-start rest)] [e (rng-end rest len)])
     (rng-check 'string-copy! s e len)
     (rng-check 'string-copy! at (+ at (- e s)) (string-length to))
-    (if (< s at)
-        (let loop ([k (- (- e s) 1)])
-          (if (< k 0)
-              (void)
-              (begin (string-set! to (+ at k) (string-ref from (+ s k))) (loop (- k 1)))))
-        (let loop ([k 0])
-          (if (= k (- e s))
-              (void)
-              (begin (string-set! to (+ at k) (string-ref from (+ s k))) (loop (+ k 1))))))))
+    (if
+      (< s at)
+      (let loop ([k (- (- e s) 1)])
+        (if (< k 0)
+            (void)
+            (begin (string-set! to (+ at k) (string-ref from (+ s k))) (loop (- k 1)))))
+      (let loop ([k 0])
+        (if (= k (- e s))
+            (void)
+            (begin
+              (string-set! to (+ at k) (string-ref from (+ s k)))
+              (loop (+ k 1))))))))
 
 ;;; --- bytevectors -------------------------------------------------------------
 (define (bytevector-copy bv . rest)
@@ -1046,7 +1005,9 @@
       (let loop ([i s])
         (if (= i e)
             out
-            (begin (bytevector-u8-set! out (- i s) (bytevector-u8-ref bv i)) (loop (+ i 1))))))))
+            (begin
+              (bytevector-u8-set! out (- i s) (bytevector-u8-ref bv i))
+              (loop (+ i 1))))))))
 
 (define (bytevector-copy! to at from . rest)
   (let* ([len (bytevector-length from)] [s (rng-start rest)] [e (rng-end rest len)])
@@ -1056,13 +1017,15 @@
         (let loop ([k (- (- e s) 1)])
           (if (< k 0)
               (void)
-              (begin (bytevector-u8-set! to (+ at k) (bytevector-u8-ref from (+ s k)))
-                     (loop (- k 1)))))
+              (begin
+                (bytevector-u8-set! to (+ at k) (bytevector-u8-ref from (+ s k)))
+                (loop (- k 1)))))
         (let loop ([k 0])
           (if (= k (- e s))
               (void)
-              (begin (bytevector-u8-set! to (+ at k) (bytevector-u8-ref from (+ s k)))
-                     (loop (+ k 1))))))))
+              (begin
+                (bytevector-u8-set! to (+ at k) (bytevector-u8-ref from (+ s k)))
+                (loop (+ k 1))))))))
 
 (define (bytevector-append . bvs)
   (let ([out (make-bytevector (bv-total bvs) 0)])
@@ -1073,8 +1036,9 @@
             (let inner ([i 0])
               (if (= i n)
                   (loop (cdr bvs) (+ at n))
-                  (begin (bytevector-u8-set! out (+ at i) (bytevector-u8-ref bv i))
-                         (inner (+ i 1))))))))))
+                  (begin
+                    (bytevector-u8-set! out (+ at i) (bytevector-u8-ref bv i))
+                    (inner (+ i 1))))))))))
 (define (bv-total bvs)
   (if (null? bvs) 0 (+ (bytevector-length (car bvs)) (bv-total (cdr bvs)))))
 
@@ -1100,13 +1064,19 @@
         (rat-inexact (exact->inexact lo) (exact->inexact hi)))))
 (define (rat-exact lo hi)
   (cond
-    [(and (<= lo 0) (<= 0 hi)) 0]                  ; 0 is simplest whenever it is in range
-    [(< 0 lo) (if (<= (rat-ceil lo) hi)
-                  (rat-ceil lo)
-                  (error "rationalize: no exact rational in range (Emit has no exact rationals)" lo hi))]
+    [(and (<= lo 0) (<= 0 hi)) 0] ; 0 is simplest whenever it is in range
+    [(< 0 lo)
+      (if (<= (rat-ceil lo) hi)
+          (rat-ceil lo)
+          (error "rationalize: no exact rational in range (Emit has no exact rationals)"
+                 lo
+                 hi))]
     [else (if (<= lo (rat-floor hi))
               (rat-floor hi)
-              (error "rationalize: no exact rational in range (Emit has no exact rationals)" lo hi))]))
+              (error
+                "rationalize: no exact rational in range (Emit has no exact rationals)"
+                lo
+                hi))]))
 ;; lo/hi are exact integers here (an exact non-integer cannot exist), so ceiling and
 ;; floor are the identity -- kept named so the intent survives if rationals ever land.
 (define (rat-ceil x) x)
@@ -1121,11 +1091,9 @@
               (if n (/ (exact->inexact n) (exact->inexact d)) (loop (+ d 1))))))))
 ;; the integer of smallest magnitude in [a, b], or #f when the interval holds none
 (define (rat-num-in a b)
-  (let ([c (rat-ceil-flo a)])
-    (if (<= (exact->inexact c) b) c #f)))
+  (let ([c (rat-ceil-flo a)]) (if (<= (exact->inexact c) b) c #f)))
 (define (rat-ceil-flo x)
-  (let ([f (inexact->exact (floor x))])
-    (if (< (exact->inexact f) x) (+ f 1) f)))
+  (let ([f (inexact->exact (floor x))]) (if (< (exact->inexact f) x) (+ f 1) f)))
 
 ;; --- multiple values (openspec multiple-values): values / call-with-values ---
 ;; A distinguished bundle carries 0 or >=2 values; exactly one value is returned
@@ -1135,13 +1103,10 @@
 ;; `(apply consumer ...)` both work with no calling-convention change.
 (define (values . vs)
   (if (and (pair? vs) (null? (cdr vs)))
-      (car vs)                 ; exactly one value -> identity
-      (%list->mv vs)))         ; zero or >=2 values -> a bundle carrying the list
+      (car vs)         ; exactly one value -> identity
+      (%list->mv vs))) ; zero or >=2 values -> a bundle carrying the list
 (define (call-with-values producer consumer)
-  (let ([r (producer)])
-    (if (%mv? r)
-        (apply consumer (%mv->list r))
-        (consumer r))))
+  (let ([r (producer)]) (if (%mv? r) (apply consumer (%mv->list r)) (consumer r))))
 
 ;; --- hash tables (openspec eq-keyed-hash-tables): equal? or eq? keyed -------
 ;; Built on vectors plus %hash/%eq-hash.  A table is an opaque HDR_HASHTABLE
@@ -1162,9 +1127,9 @@
   (%make-hash-table (vector 0 (make-vector %ht-initial-buckets (quote ())) #t)))
 (define (hash-table? x) (%hash-table? x))
 
-(define (%ht-count ht)        (vector-ref (%hash-table-spine ht) 0))
-(define (%ht-buckets ht)      (vector-ref (%hash-table-spine ht) 1))
-(define (%ht-identity? ht)    (vector-ref (%hash-table-spine ht) 2))
+(define (%ht-count ht) (vector-ref (%hash-table-spine ht) 0))
+(define (%ht-buckets ht) (vector-ref (%hash-table-spine ht) 1))
+(define (%ht-identity? ht) (vector-ref (%hash-table-spine ht) 2))
 (define (%ht-set-count! ht n) (vector-set! (%hash-table-spine ht) 0 n))
 (define (%ht-set-buckets! ht b) (vector-set! (%hash-table-spine ht) 1 b))
 
@@ -1175,32 +1140,31 @@
 
 ;; The (key . val) pair for an equivalent key in an alist, or #f.
 (define (%ht-assoc ht key al)
-  (if (null? al) #f
-      (if (%ht-key=? ht key (car (car al)))
-          (car al)
-          (%ht-assoc ht key (cdr al)))))
+  (if (null? al)
+      #f
+      (if (%ht-key=? ht key (car (car al))) (car al) (%ht-assoc ht key (cdr al)))))
 ;; The alist with the first equivalent key removed.
 (define (%ht-remove ht key al)
-  (if (null? al) (quote ())
+  (if (null? al)
+      (quote ())
       (if (%ht-key=? ht key (car (car al)))
           (cdr al)
           (cons (car al) (%ht-remove ht key (cdr al))))))
 
 (define (hash-table-ref/default ht key default)
   (let* ((bs (%ht-buckets ht))
-         (p (%ht-assoc ht key
-              (vector-ref bs (%ht-index ht key (vector-length bs))))))
+         (p (%ht-assoc ht key (vector-ref bs (%ht-index ht key (vector-length bs))))))
     (if p (cdr p) default)))
 
 (define (hash-table-contains? ht key)
   (let ((bs (%ht-buckets ht)))
-    (if (%ht-assoc ht key
-          (vector-ref bs (%ht-index ht key (vector-length bs)))) #t #f)))
+    (if (%ht-assoc ht key (vector-ref bs (%ht-index ht key (vector-length bs))))
+        #t
+        #f)))
 
 (define (hash-table-ref ht key)
   (let* ((bs (%ht-buckets ht))
-         (p (%ht-assoc ht key
-              (vector-ref bs (%ht-index ht key (vector-length bs))))))
+         (p (%ht-assoc ht key (vector-ref bs (%ht-index ht key (vector-length bs))))))
     (if p (cdr p) (error "hash-table-ref: key not found" key))))
 
 (define (hash-table-set! ht key val)
@@ -1209,8 +1173,7 @@
          (i (%ht-index ht key n))
          (al (vector-ref bs i))
          (existed (%ht-assoc ht key al)))
-    (vector-set! bs i
-      (cons (cons key val) (if existed (%ht-remove ht key al) al)))
+    (vector-set! bs i (cons (cons key val) (if existed (%ht-remove ht key al) al)))
     (if existed
         #f
         (begin
@@ -1222,8 +1185,9 @@
          (i (%ht-index ht key (vector-length bs)))
          (al (vector-ref bs i)))
     (if (%ht-assoc ht key al)
-        (begin (vector-set! bs i (%ht-remove ht key al))
-               (%ht-set-count! ht (- (%ht-count ht) 1)))
+        (begin
+          (vector-set! bs i (%ht-remove ht key al))
+          (%ht-set-count! ht (- (%ht-count ht) 1)))
         #f)))
 
 ;; reinsert every entry into a ~2x bucket vector, recomputing each index
@@ -1235,7 +1199,8 @@
       (if (< i (vector-length old))
           (begin
             (let bloop ((al (vector-ref old i)))
-              (if (null? al) #f
+              (if (null? al)
+                  #f
                   (let* ((kv (car al)) (j (%ht-index ht (car kv) newn)))
                     (vector-set! newb j (cons kv (vector-ref newb j)))
                     (bloop (cdr al)))))
@@ -1246,7 +1211,8 @@
 (define (hash-table-size ht) (%ht-count ht))
 
 (define (%ht-fold-buckets al acc)
-  (if (null? al) acc
+  (if (null? al)
+      acc
       (cons (cons (car (car al)) (cdr (car al))) (%ht-fold-buckets (cdr al) acc))))
 (define (hash-table->alist ht)
   (let ((bs (%ht-buckets ht)))
@@ -1265,16 +1231,14 @@
 ;;; (no escapes), 'quote and `/,/,@ quasiquote sugar, skipping whitespace and
 ;;; ; line comments.
 
-(define (rd-ws? c)                       ; space, tab, newline, return
-  (let ([k (char->integer c)])
-    (or (= k 32) (or (= k 9) (or (= k 10) (= k 13))))))
-(define (rd-digit? c)
-  (let ([k (char->integer c)]) (and (< 47 k) (< k 58))))   ; '0'..'9'
-(define (rd-delim? c)                    ; ends a token: ws or ( ) [ ] " ;
+(define (rd-ws? c) ; space, tab, newline, return
+  (let ([k (char->integer c)]) (or (= k 32) (or (= k 9) (or (= k 10) (= k 13))))))
+(define (rd-digit? c) (let ([k (char->integer c)]) (and (< 47 k) (< k 58)))) ; '0'..'9'
+(define (rd-delim? c) ; ends a token: ws or ( ) [ ] " ;
   (let ([k (char->integer c)])
     (or (rd-ws? c)
-        (or (= k 40) (or (= k 41) (or (= k 91) (or (= k 93)
-        (or (= k 34) (= k 59)))))))))
+        (or (= k 40)
+            (or (= k 41) (or (= k 91) (or (= k 93) (or (= k 34) (= k 59)))))))))
 
 ;;; --- how the reader reports (change: reader-lexical-conformance, design D2) --
 ;;; An rd-* procedure cannot RAISE.  The whole reader is homed in (emit internal),
@@ -1296,9 +1260,9 @@
 ;;; fc-incomplete/fc-malformed codes in the same integer channel (src/repl-core.ss).
 ;;; A failing rd-* result is (REASON . sentinel) -- the pair shape every rd-* returns,
 ;;; with a symbol in place of the datum saying what went wrong.
-(define (rd-fail-code p) (- -3 p))       ; opened at p -> the sentinel index
+(define (rd-fail-code p) (- -3 p)) ; opened at p -> the sentinel index
 (define (rd-fail? i) (< i 0))
-(define (rd-fail-pos i) (- (- 0 i) 3))   ; the sentinel index -> the position
+(define (rd-fail-pos i) (- (- 0 i) 3)) ; the sentinel index -> the position
 (define (rd-fail why p) (cons why (rd-fail-code p)))
 
 ;;; Reader state has two deliberately different lifetimes.  Slot 0 is a mutable
@@ -1306,9 +1270,7 @@
 ;;; 1 and 2 are a label environment and its unforgeable placeholder marker,
 ;;; fresh for each outermost datum (and for a datum discarded by #;).
 (define (rd-state ci)
-  (list->vector (list (list->vector (list ci))
-                      (quote ())
-                      (list->vector (list #f)))))
+  (list->vector (list (list->vector (list ci)) (quote ()) (list->vector (list #f)))))
 (define (rd-state-from-cell cell)
   (list->vector (list cell (quote ()) (list->vector (list #f)))))
 (define (rd-state-child st) (rd-state-from-cell (vector-ref st 0)))
@@ -1326,60 +1288,57 @@
                     (loop (+ k 1))))))))
 (define (rd-directive-end s n i text)
   (let ([j (+ i (string-length text))])
-    (and (rd-match-at? s n i text)
-         (or (= j n) (rd-delim? (string-ref s j)))
-         j)))
+    (and (rd-match-at? s n i text) (or (= j n) (rd-delim? (string-ref s j))) j)))
 
-(define (rd-skip-line s n i)             ; index just past the next newline (or n)
+(define (rd-skip-line s n i) ; index just past the next newline (or n)
   (if (< i n)
       (if (= (char->integer (string-ref s i)) 10) (+ i 1) (rd-skip-line s n (+ i 1)))
       i))
 ;;; #| ... |# NESTS (R7RS 7.1.2): the first |# closes only the innermost open block, so
 ;;; this counts depth rather than scanning for the first close.  p is where the OUTERMOST
 ;;; #| opened, and is what an unterminated comment reports.
-(define (rd-block-open? s n i)           ; "#|" begins at i
+(define (rd-block-open? s n i) ; "#|" begins at i
   (and (= (char->integer (string-ref s i)) 35)
        (< (+ i 1) n)
        (= (char->integer (string-ref s (+ i 1))) 124)))
-(define (rd-skip-block s n i d p)        ; inside a block comment at depth d
+(define (rd-skip-block s n i d p) ; inside a block comment at depth d
   (if (< (+ i 1) n)
       (let ([a (char->integer (string-ref s i))]
             [b (char->integer (string-ref s (+ i 1)))])
         (cond
-          [(and (= a 124) (= b 35))                         ; |#  closes one level
-           (if (= d 1) (+ i 2) (rd-skip-block s n (+ i 2) (- d 1) p))]
-          [(and (= a 35) (= b 124))                         ; #|  opens another
-           (rd-skip-block s n (+ i 2) (+ d 1) p)]
+          [(and (= a 124) (= b 35)) ; |#  closes one level
+            (if (= d 1) (+ i 2) (rd-skip-block s n (+ i 2) (- d 1) p))]
+          [(and (= a 35) (= b 124)) ; #|  opens another
+            (rd-skip-block s n (+ i 2) (+ d 1) p)]
           [else (rd-skip-block s n (+ i 1) d p)]))
       (rd-fail-code p)))
 ;;; A block comment is WHITESPACE (design D1), so it is skipped here rather than
 ;;; dispatched as a datum -- which makes it work everywhere whitespace already works
 ;;; and gives the REPL probe the same answer for free, since the probe shares this
 ;;; helper.  (`#;` cannot live here: discarding a datum needs a full recursive read.)
-(define (rd-skip-ws s n i st)            ; next non-space token; directives mutate ST
+(define (rd-skip-ws s n i st) ; next non-space token; directives mutate ST
   (if (and (<= 0 i) (< i n))
       (let ([c (string-ref s i)])
         (cond
           [(rd-ws? c) (rd-skip-ws s n (+ i 1) st)]
           [(= (char->integer c) 59) (rd-skip-ws s n (rd-skip-line s n (+ i 1)) st)]
-          [(rd-block-open? s n i)
-           (let ([j (rd-skip-block s n (+ i 2) 1 i)])
-             (if (rd-fail? j) j (rd-skip-ws s n j st)))]
-          [(rd-directive-end s n i "#!fold-case") =>
-           (lambda (j) (rd-set-fold! st #t) (rd-skip-ws s n j st))]
-          [(rd-directive-end s n i "#!no-fold-case") =>
-           (lambda (j) (rd-set-fold! st #f) (rd-skip-ws s n j st))]
+          [(rd-block-open? s n i) (let ([j (rd-skip-block s n (+ i 2) 1 i)])
+                                    (if (rd-fail? j) j (rd-skip-ws s n j st)))]
+          [(rd-directive-end s n i "#!fold-case")
+            =>
+            (lambda (j) (rd-set-fold! st #t) (rd-skip-ws s n j st))]
+          [(rd-directive-end s n i "#!no-fold-case")
+            =>
+            (lambda (j) (rd-set-fold! st #f) (rd-skip-ws s n j st))]
           [else i]))
       i))
 
-(define (rd-token-end s n i)             ; first delimiter index >= i (or n)
-  (if (< i n)
-      (if (rd-delim? (string-ref s i)) i (rd-token-end s n (+ i 1)))
-      i))
+(define (rd-token-end s n i) ; first delimiter index >= i (or n)
+  (if (< i n) (if (rd-delim? (string-ref s i)) i (rd-token-end s n (+ i 1))) i))
 
 (define (rd-all-digits? tok a m)
   (if (< a m) (if (rd-digit? (string-ref tok a)) (rd-all-digits? tok (+ a 1) m) #f) #t))
-(define (rd-numeric? tok)                ; optional +/- then >=1 digits
+(define (rd-numeric? tok) ; optional +/- then >=1 digits
   (let ([m (string-length tok)])
     (and (< 0 m)
          (let ([c0 (char->integer (string-ref tok 0))])
@@ -1402,7 +1361,10 @@
 ;;; (src/emit.ss) already avoid negating for exactly this reason.
 (define (rd-digits-neg tok a m acc)
   (if (< a m)
-      (rd-digits-neg tok (+ a 1) m (- (* acc 10) (- (char->integer (string-ref tok a)) 48)))
+      (rd-digits-neg tok
+                     (+ a 1)
+                     m
+                     (- (* acc 10) (- (char->integer (string-ref tok a)) 48)))
       acc))
 (define (rd-parse-int tok)
   (let ([m (string-length tok)] [c0 (char->integer (string-ref tok 0))])
@@ -1417,30 +1379,33 @@
 ;;; is an integer, matched by rd-numeric?).  exp = (e|E) [sign] >=1 digits.  This
 ;;; only CLASSIFIES the token; the value parse is the runtime strtod (correctly
 ;;; rounded, so it round-trips with the flonum printer) via %string->flonum.
-(define (rd-dotchar? c) (= (char->integer c) 46))                         ; the char .
-(define (rd-exp-char? c) (let ([k (char->integer c)]) (or (= k 101) (= k 69))))  ; e E
-(define (rd-sign-char? c) (let ([k (char->integer c)]) (or (= k 43) (= k 45))))  ; + -
-(define (rd-scan-digits tok a m)         ; index just past a run of >=0 digits
+(define (rd-dotchar? c) (= (char->integer c) 46)) ; the char .
+(define (rd-exp-char? c) (let ([k (char->integer c)]) (or (= k 101) (= k 69)))) ; e E
+(define (rd-sign-char? c) (let ([k (char->integer c)]) (or (= k 43) (= k 45)))) ; + -
+(define (rd-scan-digits tok a m) ; index just past a run of >=0 digits
   (if (and (< a m) (rd-digit? (string-ref tok a))) (rd-scan-digits tok (+ a 1) m) a))
 (define (rd-flonum? tok)
   (let ([m (string-length tok)])
-    (and (< 0 m)
+    (and
+      (< 0 m)
       (let ([i0 (if (rd-sign-char? (string-ref tok 0)) 1 0)])
-        (let ([i1 (rd-scan-digits tok i0 m)])            ; past integer digits
+        (let ([i1 (rd-scan-digits tok i0 m)]) ; past integer digits
           (let ([i2 (if (and (< i1 m) (rd-dotchar? (string-ref tok i1))) (+ i1 1) i1)])
             (let ([had-dot (< i1 i2)])
-              (let ([i3 (rd-scan-digits tok i2 m)])       ; past fraction digits
-                (and (or (< i0 i1) (< i2 i3))             ; at least one digit
+              (let ([i3 (rd-scan-digits tok i2 m)]) ; past fraction digits
+                (and (or (< i0 i1) (< i2 i3))       ; at least one digit
                      (let ([i4 (if (and (< i3 m) (rd-exp-char? (string-ref tok i3)))
                                    (let ([i5 (if (and (< (+ i3 1) m)
-                                                      (rd-sign-char? (string-ref tok (+ i3 1))))
-                                                 (+ i3 2) (+ i3 1))])
+                                                      (rd-sign-char?
+                                                        (string-ref tok (+ i3 1))))
+                                                 (+ i3 2)
+                                                 (+ i3 1))])
                                      (let ([i6 (rd-scan-digits tok i5 m)])
-                                       (if (< i5 i6) i6 -1)))   ; exponent needs >=1 digit
+                                       (if (< i5 i6) i6 -1))) ; exponent needs >=1 digit
                                    i3)])
-                       (and (< -1 i4)                     ; valid (or no) exponent
-                            (= i4 m)                      ; consumed the whole token
-                            (or had-dot (< i3 i4)))))))))))))   ; a dot OR an exponent
+                       (and (< -1 i4) ; valid (or no) exponent
+                            (= i4 m)  ; consumed the whole token
+                            (or had-dot (< i3 i4))))))))))))) ; a dot OR an exponent
 
 ;;; The three non-finite tokens (change: numeric-conformance, design D8 / GitHub
 ;;; issue #25).  The PRINTER has always emitted these -- (/ 1.0 0.0) prints as
@@ -1478,11 +1443,12 @@
 ;;; identifier, which is the same round-trip break these three tokens were added to close.
 ;;; The fold is on the COMPARISON, not the table: the three lowercase literals stay what is
 ;;; compared against, and the printer keeps emitting them, so no existing output moves.
-(define (rd-nonfinite tok)               ; the value, or #f if not one of the three
-  (cond [(rd-ci=? tok "+inf.0") (%string->flonum "inf")]
-        [(rd-ci=? tok "-inf.0") (%string->flonum "-inf")]
-        [(rd-ci=? tok "+nan.0") (%string->flonum "nan")]
-        [else #f]))
+(define (rd-nonfinite tok) ; the value, or #f if not one of the three
+  (cond
+    [(rd-ci=? tok "+inf.0") (%string->flonum "inf")]
+    [(rd-ci=? tok "-inf.0") (%string->flonum "-inf")]
+    [(rd-ci=? tok "+nan.0") (%string->flonum "nan")]
+    [else #f]))
 
 ;;; --- one numeric grammar, entered from two places (design D3) --------------
 ;;; R7RS 6.2.5 lets a number literal carry at most one RADIX prefix (#b #o #d #x) and
@@ -1501,19 +1467,19 @@
 ;;;   rd-not-a-number  not numeric syntax -- the reader interns it as a symbol
 ;;;   rd-rational      n/m rational literal syntax, which Emit does not represent (D4)
 ;;;   rd-bad-number    prefixed, but the body does not fit the prefix (#x1.8, #b2, #foo)
-(define (rd-radix-letter c)              ; #b #o #d #x -> the radix, else #f
+(define (rd-radix-letter c) ; #b #o #d #x -> the radix, else #f
   (let ([k (char->integer c)])
     (cond
-      [(or (= k 98) (= k 66)) 2]         ; b B
-      [(or (= k 111) (= k 79)) 8]        ; o O
-      [(or (= k 100) (= k 68)) 10]       ; d D
-      [(or (= k 120) (= k 88)) 16]       ; x X
+      [(or (= k 98) (= k 66)) 2]   ; b B
+      [(or (= k 111) (= k 79)) 8]  ; o O
+      [(or (= k 100) (= k 68)) 10] ; d D
+      [(or (= k 120) (= k 88)) 16] ; x X
       [else #f])))
-(define (rd-exactness-letter c)          ; #e -> 1 (exact), #i -> 2 (inexact), else #f
+(define (rd-exactness-letter c) ; #e -> 1 (exact), #i -> 2 (inexact), else #f
   (let ([k (char->integer c)])
     (cond
-      [(or (= k 101) (= k 69)) 1]        ; e E
-      [(or (= k 105) (= k 73)) 2]        ; i I
+      [(or (= k 101) (= k 69)) 1] ; e E
+      [(or (= k 105) (= k 73)) 2] ; i I
       [else #f])))
 ;;; -> (RADIX EXACTNESS . BODY-INDEX), with #f for an absent prefix; or #f overall when
 ;;; a prefix is malformed or repeated (#x#x1, #q1, a token that is only "#").
@@ -1524,12 +1490,10 @@
             (if nr
                 (if r #f (rd-scan-prefixes t m (+ i 2) nr x))
                 (let ([nx (rd-exactness-letter (string-ref t (+ i 1)))])
-                  (if nx
-                      (if x #f (rd-scan-prefixes t m (+ i 2) r nx))
-                      #f))))
+                  (if nx (if x #f (rd-scan-prefixes t m (+ i 2) r nx)) #f))))
           #f)
       (cons r (cons x i))))
-(define (rd-radix-scan t m i r)          ; index past a run of >=0 radix-r digits
+(define (rd-radix-scan t m i r) ; index past a run of >=0 radix-r digits
   (if (and (< i m) (%digit-in-radix (string-ref t i) r))
       (rd-radix-scan t m (+ i 1) r)
       i))
@@ -1542,13 +1506,13 @@
     (let ([i1 (rd-radix-scan t m i0 r)])
       (and (< i0 i1)
            (< i1 m)
-           (= (char->integer (string-ref t i1)) 47)                    ; /
+           (= (char->integer (string-ref t i1)) 47) ; /
            (let ([i2 (rd-radix-scan t m (+ i1 1) r)])
              (and (< (+ i1 1) i2) (= i2 m)))))))
 ;;; #i is total -- every value this reader produces has an inexact image.  #e is not: it
 ;;; is exact only where the value is integral, so `#e0.5` names an exact number Emit does
 ;;; not represent and is reported on the same grounds as `1/2` (design D4).
-(define (rd-exactness-apply v x)         ; x: #f none, 1 exact, 2 inexact
+(define (rd-exactness-apply v x) ; x: #f none, 1 exact, 2 inexact
   (cond
     [(not x) v]
     [(= x 2) (exact->inexact v)]
@@ -1556,25 +1520,25 @@
     [(= v (%flo-truncate v)) (inexact->exact v)]
     [else (quote rd-rational)]))
 (define (rd-body-number body r x)
-  (if (= r 10)
-      ;; radix 10 is the reader's own classifier chain.  The two cheap classifiers run
-      ;; first and rd-nonfinite's three string comparisons last, so an ordinary integer
-      ;; or decimal pays nothing for them; a non-finite token matches neither classifier
-      ;; (rd-flonum? needs a digit), so the order is safe as well as cheaper.
-      (cond
-        [(rd-numeric? body) (rd-exactness-apply (rd-parse-int body) x)]
-        [(rd-flonum? body) (rd-exactness-apply (%string->flonum body) x)]
-        [else
-         (let ([nf (rd-nonfinite body)])
-           (cond
-             [(not nf) (quote rd-not-a-number)]
-             ;; #e+inf.0 names no exact number; #i+inf.0 and a bare +inf.0 are fine.
-             [(and x (= x 1)) (quote rd-bad-number)]
-             [else (rd-exactness-apply nf x)]))])
-      ;; every other radix is integers only: a decimal point or an exponent is radix-10
-      ;; syntax, so `#x1.8` is invalid number syntax rather than an identifier.
-      (let ([v (%string->int body r)])
-        (if v (rd-exactness-apply v x) (quote rd-not-a-number)))))
+  (if
+    (= r 10)
+    ;; radix 10 is the reader's own classifier chain.  The two cheap classifiers run
+    ;; first and rd-nonfinite's three string comparisons last, so an ordinary integer
+    ;; or decimal pays nothing for them; a non-finite token matches neither classifier
+    ;; (rd-flonum? needs a digit), so the order is safe as well as cheaper.
+    (cond
+      [(rd-numeric? body) (rd-exactness-apply (rd-parse-int body) x)]
+      [(rd-flonum? body) (rd-exactness-apply (%string->flonum body) x)]
+      [else (let ([nf (rd-nonfinite body)])
+              (cond
+                [(not nf) (quote rd-not-a-number)]
+                ;; #e+inf.0 names no exact number; #i+inf.0 and a bare +inf.0 are fine.
+                [(and x (= x 1)) (quote rd-bad-number)]
+                [else (rd-exactness-apply nf x)]))])
+    ;; every other radix is integers only: a decimal point or an exponent is radix-10
+    ;; syntax, so `#x1.8` is invalid number syntax rather than an identifier.
+    (let ([v (%string->int body r)])
+      (if v (rd-exactness-apply v x) (quote rd-not-a-number)))))
 ;;; The CLASSIFIERS run first and the rational-syntax scan only on their failure.  A token
 ;;; any classifier accepts holds no slash, so asking about rational syntax first cannot
 ;;; change the answer -- it only puts a redundant digit scan in front of every integer the
@@ -1582,7 +1546,7 @@
 ;;; time under the Chez-hosted host and is inside the noise on the self-hosted one, where
 ;;; per-call overhead dominates a short scan -- PERFORMANCE.md P5.  It is kept for the
 ;;; argument above rather than for the measurement.)
-(define (rd-number t r0)                 ; token text (prefixes included) -> value/reason
+(define (rd-number t r0) ; token text (prefixes included) -> value/reason
   (let ([m (string-length t)])
     (if (and (< 0 m) (= (char->integer (string-ref t 0)) 35))
         ;; PREFIXED.  Only this path scans and allocates, and the token dispatch already
@@ -1624,9 +1588,8 @@
 ;;; in this file).  The Chez driver's door folds with Chez's own `case-sensitive`, which
 ;;; DOES fold Unicode, so the two hosts agree on ASCII and diverge above it -- a recorded
 ;;; limit (design D4), pinned by an ASCII fixture rather than by construction.
-(define (rd-fold-char c)                 ; ASCII A-Z -> a-z, everything else unchanged
-  (let ([k (char->integer c)])
-    (if (and (< 64 k) (< k 91)) (integer->char (+ k 32)) c)))
+(define (rd-fold-char c) ; ASCII A-Z -> a-z, everything else unchanged
+  (let ([k (char->integer c)]) (if (and (< 64 k) (< k 91)) (integer->char (+ k 32)) c)))
 (define (rd-fold-token tok)
   (let ([m (string-length tok)])
     (let loop ([i 0] [acc (quote ())])
@@ -1634,7 +1597,7 @@
           (list->string (reverse acc))
           (loop (+ i 1) (cons (rd-fold-char (string-ref tok i)) acc))))))
 
-(define (rd-atom s n i st)               ; token -> number, interned symbol, or a report
+(define (rd-atom s n i st) ; token -> number, interned symbol, or a report
   (let ([j (rd-token-end s n i)])
     (if (= i j)
         ;; An EMPTY token: the character here is a delimiter no datum arm claimed.  It
@@ -1645,7 +1608,7 @@
           (let ([v (rd-number tok 10)])
             (cond
               [(eq? v (quote rd-not-a-number))
-               (cons (string->symbol (if (rd-fold? st) (rd-fold-token tok) tok)) j)]
+                (cons (string->symbol (if (rd-fold? st) (rd-fold-token tok) tok)) j)]
               [(rd-number-reason? v) (rd-fail v i)]
               [else (cons v j)]))))))
 
@@ -1653,12 +1616,12 @@
 (define (rd-token-at s n p)
   (if (and (<= 0 p) (< p n)) (substring s p (rd-token-end s n (+ p 1))) ""))
 
-(define (rd-hex-digit c)                 ; hex char -> value (0 for non-hex)
+(define (rd-hex-digit c) ; hex char -> value (0 for non-hex)
   (let ([k (char->integer c)])
     (cond
-      [(and (< 47 k) (< k 58)) (- k 48)]      ; 0-9
-      [(and (< 96 k) (< k 103)) (- k 87)]     ; a-f
-      [(and (< 64 k) (< k 71)) (- k 55)]      ; A-F
+      [(and (< 47 k) (< k 58)) (- k 48)]  ; 0-9
+      [(and (< 96 k) (< k 103)) (- k 87)] ; a-f
+      [(and (< 64 k) (< k 71)) (- k 55)]  ; A-F
       [else 0])))
 ;;; Whether C is a hex digit at all.  rd-hex-digit answers 0 for a non-digit, which the
 ;;; string escape can live with (it stops at the `;`) but #\xHH cannot: there the digits
@@ -1667,29 +1630,29 @@
 (define (rd-hex-digit? c)
   (let ([k (char->integer c)])
     (cond
-      [(and (< 47 k) (< k 58)) #t]            ; 0-9
-      [(and (< 96 k) (< k 103)) #t]           ; a-f
-      [(and (< 64 k) (< k 71)) #t]            ; A-F
+      [(and (< 47 k) (< k 58)) #t]  ; 0-9
+      [(and (< 96 k) (< k 103)) #t] ; a-f
+      [(and (< 64 k) (< k 71)) #t]  ; A-F
       [else #f])))
-(define (rd-hex s n i acc)               ; \xHH...; -> (codepoint . index-past-;)
+(define (rd-hex s n i acc) ; \xHH...; -> (codepoint . index-past-;)
   (if (< i n)
-      (if (= (char->integer (string-ref s i)) 59)     ; ;
+      (if (= (char->integer (string-ref s i)) 59) ; ;
           (cons acc (+ i 1))
           (rd-hex s n (+ i 1) (+ (* acc 16) (rd-hex-digit (string-ref s i)))))
       (cons acc i)))
-(define (rd-str-esc c)                   ; escape letter -> the character it denotes
+(define (rd-str-esc c) ; escape letter -> the character it denotes
   (let ([k (char->integer c)])
     (cond
-      [(= k 97)  (integer->char 7)]      ; \a  alarm     (change: r7rs-lexical-conformance)
-      [(= k 98)  (integer->char 8)]      ; \b  backspace (change: r7rs-lexical-conformance)
-      [(= k 110) (integer->char 10)]     ; \n
-      [(= k 116) (integer->char 9)]      ; \t
-      [(= k 114) (integer->char 13)]     ; \r
-      [else c])))                        ; \\ \" and any other: the char itself
+      [(= k 97) (integer->char 7)]   ; \a  alarm     (change: r7rs-lexical-conformance)
+      [(= k 98) (integer->char 8)]   ; \b  backspace (change: r7rs-lexical-conformance)
+      [(= k 110) (integer->char 10)] ; \n
+      [(= k 116) (integer->char 9)]  ; \t
+      [(= k 114) (integer->char 13)] ; \r
+      [else c])))                    ; \\ \" and any other: the char itself
 ;;; R7RS 6.7 <intraline whitespace>: space or tab, and nothing else -- a newline ENDS a
 ;;; run of it rather than belonging to one, which is what makes the line continuation
 ;;; below decomposable into "whitespace, ending, whitespace".
-(define (rd-intraline s n i)             ; index just past a run of spaces/tabs
+(define (rd-intraline s n i) ; index just past a run of spaces/tabs
   (if (< i n)
       (let ([k (char->integer (string-ref s i))])
         (if (if (= k 32) #t (= k 9)) (rd-intraline s n (+ i 1)) i))
@@ -1709,45 +1672,48 @@
           (cond
             [(= k 10) (rd-intraline s n (+ w 1))]
             [(= k 13)
-             (rd-intraline s n
-                           (if (< (+ w 1) n)
-                               (if (= (char->integer (string-ref s (+ w 1))) 10)
-                                   (+ w 2)
-                                   (+ w 1))
-                               (+ w 1)))]
+              (rd-intraline
+                s
+                n
+                (if (< (+ w 1) n)
+                    (if (= (char->integer (string-ref s (+ w 1))) 10) (+ w 2) (+ w 1))
+                    (+ w 1)))]
             [else #f]))
         #f)))
 
 ;; `open` is the index of the opening " -- carried so the report can name where the string
 ;; STARTED, which is where the missing delimiter belongs (change: reader-input-termination).
-(define (rd-string s n i open)           ; i just past opening "; decodes escapes
+(define (rd-string s n i open) ; i just past opening "; decodes escapes
   (let loop ([i i] [acc (quote ())])
-    (if (< i n)
-        (let* ([c (string-ref s i)] [k (char->integer c)])
-          (cond
-            [(= k 34) (cons (list->string (reverse acc)) (+ i 1))]        ; closing "
-            [(= k 92)                                                     ; backslash escape
-             ;; The escaped character must EXIST.  A source ending in a dangling backslash
-             ;; used to read s[n] -- past the end of the input, and silently, because
-             ;; indexed access is unchecked (issue #70).  A dangling \xHH needs no arm of
-             ;; its own: rd-hex stops at n, so the loop re-enters and ends below.
-             (if (<= n (+ i 1))
-                 (rd-fail (quote rd-unterminated-string) open)
-                 (let ([e (string-ref s (+ i 1))]
-                       ;; Tested BEFORE \xHH; and before the escape table: a backslash that
-                       ;; begins a continuation is not naming a character at all, so it must
-                       ;; not reach rd-str-esc (which would answer the whitespace itself).
-                       [cont (rd-line-continuation s n (+ i 1))])
-                   (cond
-                     [cont (loop cont acc)]                              ; contributes nothing
-                     [(= (char->integer e) 120)                          ; \xHH;
-                      (let ([hx (rd-hex s n (+ i 2) 0)])
-                        (loop (cdr hx) (cons (integer->char (car hx)) acc)))]
-                     [else (loop (+ i 2) (cons (rd-str-esc e) acc))])))] ; \a \b \n \t \r \\ \"
-            [else (loop (+ i 1) (cons c acc))]))
-        ;; NOT end of input: closing the string here fabricates a datum the source does not
-        ;; contain, so a truncated file compiled as though complete (issue #66).
-        (rd-fail (quote rd-unterminated-string) open))))
+    (if
+      (< i n)
+      (let* ([c (string-ref s i)] [k (char->integer c)])
+        (cond
+          [(= k 34) (cons (list->string (reverse acc)) (+ i 1))] ; closing "
+          [(= k 92)                                              ; backslash escape
+            ;; The escaped character must EXIST.  A source ending in a dangling backslash
+            ;; used to read s[n] -- past the end of the input, and silently, because
+            ;; indexed access is unchecked (issue #70).  A dangling \xHH needs no arm of
+            ;; its own: rd-hex stops at n, so the loop re-enters and ends below.
+            (if
+              (<= n (+ i 1))
+              (rd-fail (quote rd-unterminated-string) open)
+              (let ([e (string-ref s (+ i 1))]
+                    ;; Tested BEFORE \xHH; and before the escape table: a backslash that
+                    ;; begins a continuation is not naming a character at all, so it must
+                    ;; not reach rd-str-esc (which would answer the whitespace itself).
+                    [cont (rd-line-continuation s n (+ i 1))])
+                (cond
+                  [cont (loop cont acc)]     ; contributes nothing
+                  [(= (char->integer e) 120) ; \xHH;
+                    (let ([hx (rd-hex s n (+ i 2) 0)])
+                      (loop (cdr hx) (cons (integer->char (car hx)) acc)))]
+                  [else (loop (+ i 2)
+                              (cons (rd-str-esc e) acc))])))] ; \a \b \n \t \r \\ \"
+          [else (loop (+ i 1) (cons c acc))]))
+      ;; NOT end of input: closing the string here fabricates a datum the source does not
+      ;; contain, so a truncated file compiled as though complete (issue #66).
+      (rd-fail (quote rd-unterminated-string) open))))
 
 ;;; Datum labels.  Each entry is (number . #(state value)); `state` is pending
 ;;; while the labelled datum is being parsed and done afterward.  A reference to
@@ -1755,57 +1721,45 @@
 ;;; through mutable pair/vector edges once the whole graph exists.
 (define (rd-label-find st label)
   (let loop ([xs (vector-ref st 1)])
-    (if (null? xs)
-        #f
-        (if (= label (car (car xs))) (car xs) (loop (cdr xs))))))
+    (if (null? xs) #f (if (= label (car (car xs))) (car xs) (loop (cdr xs))))))
 (define (rd-label-add! st label)
   (let ([entry (cons label (list->vector (list (quote pending) #f)))])
     (vector-set! st 1 (cons entry (vector-ref st 1)))
     entry))
-(define (rd-placeholder st entry)
-  (list->vector (list (vector-ref st 2) entry)))
+(define (rd-placeholder st entry) (list->vector (list (vector-ref st 2) entry)))
 (define (rd-placeholder? st x)
-  (and (vector? x)
-       (= (vector-length x) 2)
-       (eq? (vector-ref x 0) (vector-ref st 2))))
+  (and (vector? x) (= (vector-length x) 2) (eq? (vector-ref x 0) (vector-ref st 2))))
 (define (rd-placeholder-entry x) (vector-ref x 1))
 (define (rd-seen? x seen)
-  (if (null? seen)
-      #f
-      (if (eq? x (car seen)) #t (rd-seen? x (cdr seen)))))
+  (if (null? seen) #f (if (eq? x (car seen)) #t (rd-seen? x (cdr seen)))))
 (define (rd-label-scan s n i)
-  (if (and (< i n) (rd-digit? (string-ref s i)))
-      (rd-label-scan s n (+ i 1))
-      i))
+  (if (and (< i n) (rd-digit? (string-ref s i))) (rd-label-scan s n (+ i 1)) i))
 
 (define (rd-resolve st x seen)
   (cond
-    [(rd-placeholder? st x)
-     (let ([cell (cdr (rd-placeholder-entry x))])
-       (rd-resolve st (vector-ref cell 1) seen))]
-    [(pair? x)
-     (if (rd-seen? x seen)
-         x
-         (let ([next (cons x seen)])
-           (set-car! x (rd-resolve st (car x) next))
-           (set-cdr! x (rd-resolve st (cdr x) next))
-           x))]
-    [(vector? x)
-     (if (rd-seen? x seen)
-         x
-         (let ([next (cons x seen)] [m (vector-length x)])
-           (let loop ([i 0])
-             (if (< i m)
-                 (begin
-                   (vector-set! x i (rd-resolve st (vector-ref x i) next))
-                   (loop (+ i 1)))
-                 x))))]
+    [(rd-placeholder? st x) (let ([cell (cdr (rd-placeholder-entry x))])
+                              (rd-resolve st (vector-ref cell 1) seen))]
+    [(pair? x) (if (rd-seen? x seen)
+                   x
+                   (let ([next (cons x seen)])
+                     (set-car! x (rd-resolve st (car x) next))
+                     (set-cdr! x (rd-resolve st (cdr x) next))
+                     x))]
+    [(vector? x) (if (rd-seen? x seen)
+                     x
+                     (let ([next (cons x seen)] [m (vector-length x)])
+                       (let loop ([i 0])
+                         (if (< i m)
+                             (begin
+                               (vector-set! x i (rd-resolve st (vector-ref x i) next))
+                               (loop (+ i 1)))
+                             x))))]
     [else x]))
 
 (define (rd-finish st r)
   (if (rd-fail? (cdr r)) r (cons (rd-resolve st (car r) (quote ())) (cdr r))))
 
-(define (rd-label s n i st)              ; i at first digit after #
+(define (rd-label s n i st) ; i at first digit after #
   (let ([j (rd-label-scan s n i)])
     (if (>= j n)
         (rd-fail (quote rd-label) (- i 1))
@@ -1813,85 +1767,89 @@
                [kind (char->integer (string-ref s j))]
                [old (rd-label-find st label)])
           (cond
-            [(= kind 61)                                       ; #N=
-             (if old
-                 (rd-fail (quote rd-label-duplicate) (- i 1))
-                 (let* ([entry (rd-label-add! st label)]
-                        [k (rd-skip-ws s n (+ j 1) st)]
-                        [r (rd-datum s n k st)])
-                   (if (rd-fail? (cdr r))
-                       r
-                       (let ([v (car r)] [cell (cdr entry)])
-                         (if (and (rd-placeholder? st v)
-                                  (eq? (rd-placeholder-entry v) entry))
-                             (rd-fail (quote rd-label-self) (- i 1))
-                             (begin
-                               (vector-set! cell 0 (quote done))
-                               (vector-set! cell 1 v)
-                               r))))))]
-            [(= kind 35)                                       ; #N#
-             (if (and (< (+ j 1) n) (not (rd-delim? (string-ref s (+ j 1)))))
-                 (rd-fail (quote rd-label) (- i 1))
-                 (if old
-                     (let ([cell (cdr old)])
-                       (if (eq? (vector-ref cell 0) (quote pending))
-                           (cons (rd-placeholder st old) (+ j 1))
-                           (cons (vector-ref cell 1) (+ j 1))))
-                     (rd-fail (quote rd-label-unresolved) (- i 1))))]
+            [(= kind 61) ; #N=
+              (if old
+                  (rd-fail (quote rd-label-duplicate) (- i 1))
+                  (let* ([entry (rd-label-add! st label)]
+                         [k (rd-skip-ws s n (+ j 1) st)]
+                         [r (rd-datum s n k st)])
+                    (if (rd-fail? (cdr r))
+                        r
+                        (let ([v (car r)] [cell (cdr entry)])
+                          (if (and (rd-placeholder? st v)
+                                   (eq? (rd-placeholder-entry v) entry))
+                              (rd-fail (quote rd-label-self) (- i 1))
+                              (begin
+                                (vector-set! cell 0 (quote done))
+                                (vector-set! cell 1 v)
+                                r))))))]
+            [(= kind 35) ; #N#
+              (if (and (< (+ j 1) n) (not (rd-delim? (string-ref s (+ j 1)))))
+                  (rd-fail (quote rd-label) (- i 1))
+                  (if old
+                      (let ([cell (cdr old)])
+                        (if (eq? (vector-ref cell 0) (quote pending))
+                            (cons (rd-placeholder st old) (+ j 1))
+                            (cons (vector-ref cell 1) (+ j 1))))
+                      (rd-fail (quote rd-label-unresolved) (- i 1))))]
             [else (rd-fail (quote rd-label) (- i 1))])))))
 
-(define (rd-hash s n i st)               ; i just past #
-  (if (<= n i)
-      (rd-fail (quote rd-eof) (- i 1))                     ; a lone trailing #
-      (let ([k (char->integer (string-ref s i))])
-        (cond
-          ;; #t / #true / #f / #false -- R7RS 7.1.1 gives each boolean two spellings, and the
-          ;; whole token has to be consumed.  Dispatching on the single character `t` and
-          ;; returning left `rue` behind for the next read, which is how `(list #true #false)`
-          ;; came to report `unbound variable rue` (issue #74).  A token that is neither
-          ;; spelling (`#tfoo`) is REPORTED rather than read as #t with a tail, because R7RS
-          ;; requires a delimiter here and the tail is exactly the silent misread being fixed.
-          [(if (= k 116) #t (= k 102))
-           (let ([tok (substring s i (rd-token-end s n i))])
-             (cond
-               [(string=? tok "t") (cons #t (+ i 1))]
-               [(string=? tok "true") (cons #t (+ i 4))]
-               [(string=? tok "f") (cons #f (+ i 1))]
-               [(string=? tok "false") (cons #f (+ i 5))]
-               [else (rd-fail (quote rd-hash-token) (- i 1))]))]
-          [(rd-digit? (string-ref s i)) (rd-label s n i st)]   ; #N= / #N#
-          [(= k 92) (rd-char s n i st)]                        ; #\<char> or #\<name>
-          ;; reader state travels INTO a vector literal: a symbol inside #( ... ) is a symbol the
-          ;; read produces, and the old shape-walking fold missed it (design D3).
-          ;; `(- i 1)` is the `#`, not the `(`: the construct the author opened is `#(`, so
-          ;; that is what the unterminated report has to name.
-          [(= k 40) (let ([r (rd-list s n (+ i 1) (quote ()) st (- i 1))])  ; #( -> vector
-                      (if (rd-fail? (cdr r)) r (cons (list->vector (car r)) (cdr r))))]
-          ;; #; -- DISCARD the next datum and read the one after it (design D1).  It
-          ;; cannot be skipped as whitespace: throwing a datum away needs a full
-          ;; recursive read, which rd-skip-ws neither does nor is allowed to fail at.
-          ;; Stacking (#;#;a b c -> c) falls out of the recursion.
-          [(= k 59)
-           (let* ([child (rd-state-child st)]
-                  [r (rd-finish child
-                                (rd-datum s n (rd-skip-ws s n (+ i 1) child) child))])
-             (if (rd-fail? (cdr r))
-                 r
-                 (rd-datum s n (rd-skip-ws s n (cdr r) st) st)))]
-          [(and (= k 117)                                        ; #u8( ... ) -> bytevector
-                (< (+ i 2) n)
-                (= (char->integer (string-ref s (+ i 1))) 56)    ; 8
-                (= (char->integer (string-ref s (+ i 2))) 40))   ; (
-           (let ([r (rd-list s n (+ i 3) (quote ()) st (- i 1))])   ; open at the #, as above
-             (if (rd-fail? (cdr r)) r (cons (list->bytevector (car r)) (cdr r))))]
-          ;; Everything else that begins with # is a PREFIXED NUMBER or nothing at all.
-          ;; This arm used to fall through to string->symbol, which is what produced
-          ;; `unbound variable x1f` for #x1f and `unbound variable |` for a block
-          ;; comment (issues #25, #59); a # token that is not a recognized datum is now
-          ;; reported, naming itself.
-          [else (let ([j (rd-token-end s n i)])
-                  (let ([v (rd-number (substring s (- i 1) j) 10)])
-                    (if (rd-number-reason? v) (rd-fail v (- i 1)) (cons v j))))]))))
+(define (rd-hash s n i st) ; i just past #
+  (if
+    (<= n i)
+    (rd-fail (quote rd-eof) (- i 1)) ; a lone trailing #
+    (let ([k (char->integer (string-ref s i))])
+      (cond
+        ;; #t / #true / #f / #false -- R7RS 7.1.1 gives each boolean two spellings, and the
+        ;; whole token has to be consumed.  Dispatching on the single character `t` and
+        ;; returning left `rue` behind for the next read, which is how `(list #true #false)`
+        ;; came to report `unbound variable rue` (issue #74).  A token that is neither
+        ;; spelling (`#tfoo`) is REPORTED rather than read as #t with a tail, because R7RS
+        ;; requires a delimiter here and the tail is exactly the silent misread being fixed.
+        [(if (= k 116) #t (= k 102))
+          (let ([tok (substring s i (rd-token-end s n i))])
+            (cond
+              [(string=? tok "t") (cons #t (+ i 1))]
+              [(string=? tok "true") (cons #t (+ i 4))]
+              [(string=? tok "f") (cons #f (+ i 1))]
+              [(string=? tok "false") (cons #f (+ i 5))]
+              [else (rd-fail (quote rd-hash-token) (- i 1))]))]
+        [(rd-digit? (string-ref s i)) (rd-label s n i st)] ; #N= / #N#
+        [(= k 92) (rd-char s n i st)]                      ; #\<char> or #\<name>
+        ;; reader state travels INTO a vector literal: a symbol inside #( ... ) is a symbol the
+        ;; read produces, and the old shape-walking fold missed it (design D3).
+        ;; `(- i 1)` is the `#`, not the `(`: the construct the author opened is `#(`, so
+        ;; that is what the unterminated report has to name.
+        [(= k 40) (let ([r (rd-list s n (+ i 1) (quote ()) st (- i 1))]) ; #( -> vector
+                    (if (rd-fail? (cdr r)) r (cons (list->vector (car r)) (cdr r))))]
+        ;; #; -- DISCARD the next datum and read the one after it (design D1).  It
+        ;; cannot be skipped as whitespace: throwing a datum away needs a full
+        ;; recursive read, which rd-skip-ws neither does nor is allowed to fail at.
+        ;; Stacking (#;#;a b c -> c) falls out of the recursion.
+        [(= k 59)
+          (let* ([child (rd-state-child st)]
+                 [r (rd-finish child
+                               (rd-datum s n (rd-skip-ws s n (+ i 1) child) child))])
+            (if (rd-fail? (cdr r)) r (rd-datum s n (rd-skip-ws s n (cdr r) st) st)))]
+        [(and (= k 117) ; #u8( ... ) -> bytevector
+              (< (+ i 2) n)
+              (= (char->integer (string-ref s (+ i 1))) 56)  ; 8
+              (= (char->integer (string-ref s (+ i 2))) 40)) ; (
+          (let ([r (rd-list s
+                            n
+                            (+ i 3)
+                            (quote ())
+                            st
+                            (- i 1))]) ; open at the #, as above
+            (if (rd-fail? (cdr r)) r (cons (list->bytevector (car r)) (cdr r))))]
+        ;; Everything else that begins with # is a PREFIXED NUMBER or nothing at all.
+        ;; This arm used to fall through to string->symbol, which is what produced
+        ;; `unbound variable x1f` for #x1f and `unbound variable |` for a block
+        ;; comment (issues #25, #59); a # token that is not a recognized datum is now
+        ;; reported, naming itself.
+        [else (let ([j (rd-token-end s n i)])
+                (let ([v (rd-number (substring s (- i 1) j) 10)])
+                  (if (rd-number-reason? v) (rd-fail v (- i 1)) (cons v j))))]))))
 
 ;;; A multi-character #\ name -> the character it denotes, or #f when the name is not one
 ;;; this reader knows.  #f rather than a fallback character: the old `(string-ref tok 0)`
@@ -1903,96 +1861,95 @@
 ;;; -- a name Emit refused would be a two-host divergence, design D8).
 (define (rd-char-name tok)
   (cond
-    [(string=? tok "alarm")     (integer->char 7)]
+    [(string=? tok "alarm") (integer->char 7)]
     [(string=? tok "backspace") (integer->char 8)]
-    [(string=? tok "delete")    (integer->char 127)]
-    [(string=? tok "escape")    (integer->char 27)]
-    [(string=? tok "newline")   (integer->char 10)]
-    [(string=? tok "null")      (integer->char 0)]
-    [(string=? tok "return")    (integer->char 13)]
-    [(string=? tok "space")     (integer->char 32)]
-    [(string=? tok "tab")       (integer->char 9)]
-    [(string=? tok "nul")       (integer->char 0)]      ; extension
-    [(string=? tok "altmode")   (integer->char 27)]     ; extension
-    [(string=? tok "esc")       (integer->char 27)]     ; extension
-    [(string=? tok "page")      (integer->char 12)]     ; extension
+    [(string=? tok "delete") (integer->char 127)]
+    [(string=? tok "escape") (integer->char 27)]
+    [(string=? tok "newline") (integer->char 10)]
+    [(string=? tok "null") (integer->char 0)]
+    [(string=? tok "return") (integer->char 13)]
+    [(string=? tok "space") (integer->char 32)]
+    [(string=? tok "tab") (integer->char 9)]
+    [(string=? tok "nul") (integer->char 0)]      ; extension
+    [(string=? tok "altmode") (integer->char 27)] ; extension
+    [(string=? tok "esc") (integer->char 27)]     ; extension
+    [(string=? tok "page") (integer->char 12)]    ; extension
     [else #f]))
 
 ;;; #\x<hex digits> (R7RS 6.6) -> the codepoint, or #f when TOK is not that shape and is
 ;;; therefore a character NAME.  Bare `#\x` never reaches here -- rd-char takes the
 ;;; single-character path first -- so the letter x keeps its meaning (design D2).
 (define (rd-char-hex tok)
-  (if (= (char->integer (string-ref tok 0)) 120)        ; x
+  (if (= (char->integer (string-ref tok 0)) 120) ; x
       (let ([len (string-length tok)])
         (let loop ([i 1] [acc 0])
           (if (< i len)
               (let ([c (string-ref tok i)])
                 (if (rd-hex-digit? c)
                     (loop (+ i 1) (+ (* acc 16) (rd-hex-digit c)))
-                    #f))                                ; not hex: a name, not a codepoint
+                    #f)) ; not hex: a name, not a codepoint
               acc)))
       #f))
 
-(define (rd-char s n i st)               ; i at '\' of #\ ; content at i+1
+(define (rd-char s n i st) ; i at '\' of #\ ; content at i+1
   (let* ([cs (+ i 1)]
-         [end (rd-token-end s n (+ cs 1))]   ; force the first content char in
+         [end (rd-token-end s n (+ cs 1))] ; force the first content char in
          [tok (substring s cs end)])
-    (if (= (string-length tok) 1)
-        (cons (string-ref s cs) end)         ; single-character literal
-        (let* ([name (if (rd-fold? st) (rd-fold-token tok) tok)]
-               [hx (rd-char-hex name)])
-          (if hx
-              (cons (integer->char hx) end)  ; #\xHH
-              ;; `(- i 1)` is the `#`, so the report names the whole `#\name` token.
-              (let ([c (rd-char-name name)])
-                (if c
-                    (cons c end)             ; named character
-                    (rd-fail (quote rd-char-name) (- i 1)))))))))
+    (if
+      (= (string-length tok) 1)
+      (cons (string-ref s cs) end) ; single-character literal
+      (let* ([name (if (rd-fold? st) (rd-fold-token tok) tok)] [hx (rd-char-hex name)])
+        (if hx
+            (cons (integer->char hx) end) ; #\xHH
+            ;; `(- i 1)` is the `#`, so the report names the whole `#\name` token.
+            (let ([c (rd-char-name name)])
+              (if c
+                  (cons c end) ; named character
+                  (rd-fail (quote rd-char-name) (- i 1)))))))))
 
 ;;; R7RS 7.1.1 bar-quoted identifier: | opens a name that runs to the matching |, with
 ;;; the \| and \xHH; escapes the standard gives it.  The result is an ORDINARY interned
 ;;; symbol -- R7RS says there is no distinct type, so (eq? '|foo| 'foo) is #t -- which
 ;;; makes this a new LEXEME, not a new value.  ( `|` is deliberately NOT added to
 ;;; rd-delim?: only a LEADING bar opens one, so a symbol like `a|b` still reads whole.)
-(define (rd-bar s n i p)                 ; i just past the opening |, which was at p
+(define (rd-bar s n i p) ; i just past the opening |, which was at p
   (let loop ([i i] [acc (quote ())])
     (if (< i n)
         (let ([c (string-ref s i)])
           (let ([k (char->integer c)])
             (cond
               [(= k 124) (cons (string->symbol (list->string (reverse acc))) (+ i 1))]
-              [(and (= k 92) (< (+ i 1) n))                       ; backslash escape
-               (let ([e (string-ref s (+ i 1))])
-                 (if (= (char->integer e) 120)                    ; \xHH;
-                     (let ([hx (rd-hex s n (+ i 2) 0)])
-                       (loop (cdr hx) (cons (integer->char (car hx)) acc)))
-                     (loop (+ i 2) (cons (rd-str-esc e) acc))))]  ; \| \\ and the rest
+              [(and (= k 92) (< (+ i 1) n)) ; backslash escape
+                (let ([e (string-ref s (+ i 1))])
+                  (if (= (char->integer e) 120) ; \xHH;
+                      (let ([hx (rd-hex s n (+ i 2) 0)])
+                        (loop (cdr hx) (cons (integer->char (car hx)) acc)))
+                      (loop (+ i 2) (cons (rd-str-esc e) acc))))] ; \| \\ and the rest
               [else (loop (+ i 1) (cons c acc))])))
         (rd-fail (quote rd-bar) p))))
 
-(define (rd-quote s n i st)              ; 'x -> (quote x)
+(define (rd-quote s n i st) ; 'x -> (quote x)
   (let ([r (rd-datum s n (rd-skip-ws s n i st) st)])
     (if (rd-fail? (cdr r)) r (cons (list (quote quote) (car r)) (cdr r)))))
 
-(define (rd-quasi s n i st)              ; `x -> (quasiquote x)
+(define (rd-quasi s n i st) ; `x -> (quasiquote x)
   (let ([r (rd-datum s n (rd-skip-ws s n i st) st)])
     (if (rd-fail? (cdr r)) r (cons (list (quote quasiquote) (car r)) (cdr r)))))
 
-(define (rd-unquote s n i st)            ; ,x -> (unquote x); ,@x -> (unquote-splicing x)
-  (if (and (< i n) (= (char->integer (string-ref s i)) 64))     ; @  -> splicing
-      (let ([r (rd-datum s n (rd-skip-ws s n (+ i 1) st) st)])
-        (if (rd-fail? (cdr r))
-            r
-            (cons (list (quote unquote-splicing) (car r)) (cdr r))))
-      (let ([r (rd-datum s n (rd-skip-ws s n i st) st)])
-        (if (rd-fail? (cdr r)) r (cons (list (quote unquote) (car r)) (cdr r))))))
+(define (rd-unquote s n i st) ; ,x -> (unquote x); ,@x -> (unquote-splicing x)
+  (if
+    (and (< i n) (= (char->integer (string-ref s i)) 64)) ; @  -> splicing
+    (let ([r (rd-datum s n (rd-skip-ws s n (+ i 1) st) st)])
+      (if (rd-fail? (cdr r)) r (cons (list (quote unquote-splicing) (car r)) (cdr r))))
+    (let ([r (rd-datum s n (rd-skip-ws s n i st) st)])
+      (if (rd-fail? (cdr r)) r (cons (list (quote unquote) (car r)) (cdr r))))))
 
-(define (rd-dot? s n j)                  ; a standalone `.` token at j (dotted-pair marker)
-  (and (= (char->integer (string-ref s j)) 46)      ; .
-       (= (rd-token-end s n (+ j 1)) (+ j 1))))      ; next char is a delimiter -> lone .
-(define (rd-append-reverse acc tail)     ; (reverse acc) terminated by tail (improper list)
+(define (rd-dot? s n j) ; a standalone `.` token at j (dotted-pair marker)
+  (and (= (char->integer (string-ref s j)) 46) ; .
+       (= (rd-token-end s n (+ j 1)) (+ j 1)))) ; next char is a delimiter -> lone .
+(define (rd-append-reverse acc tail) ; (reverse acc) terminated by tail (improper list)
   (if (null? acc) tail (rd-append-reverse (cdr acc) (cons (car acc) tail))))
-(define (rd-datum-comment? s n i)        ; "#;" begins at i
+(define (rd-datum-comment? s n i) ; "#;" begins at i
   (and (= (char->integer (string-ref s i)) 35)
        (< (+ i 1) n)
        (= (char->integer (string-ref s (+ i 1))) 59)))
@@ -2008,54 +1965,56 @@
 ;; the same text.  That is deliberate and directional, not a duplication to be unified: a
 ;; host reading a stream can supply another line, a source file cannot.  Unifying the two
 ;; would destroy multi-line entry at the prompt.
-(define (rd-list s n i acc st open)      ; i after (; read until ) (supports . tail)
+(define (rd-list s n i acc st open) ; i after (; read until ) (supports . tail)
   (let ([j (rd-skip-ws s n i st)])
     (cond
       [(rd-fail? j) (cons (quote rd-block-comment) j)]
       [(< j n)
-       (cond
-         [(let ([c (char->integer (string-ref s j))]) (or (= c 41) (= c 93)))
-          (cons (reverse acc) (+ j 1))]                                            ; ) or ]
-         ;; #; between elements -- including immediately before the closing paren,
-         ;; where there is no following element for rd-datum's arm to return.
-         [(rd-datum-comment? s n j)
-          (let* ([child (rd-state-child st)]
-                 [r (rd-finish child
-                               (rd-datum s n (rd-skip-ws s n (+ j 2) child) child))])
-            (if (rd-fail? (cdr r)) r (rd-list s n (cdr r) acc st open)))]
-         [(rd-dot? s n j)                                                          ; . tail
-          (let ([r (rd-datum s n (rd-skip-ws s n (+ j 1) st) st)])
-            (if (rd-fail? (cdr r))
-                r
-                (let ([j2 (rd-skip-ws s n (cdr r) st)])
-                  (cond
-                    [(rd-fail? j2) (cons (quote rd-block-comment) j2)]
-                    ;; the close paren this arm steps past must actually BE there
-                    [(<= n j2) (rd-fail (quote rd-unterminated-list) open)]
-                    [else (cons (rd-append-reverse acc (car r)) (+ j2 1))]))))]     ; past )
-         [else (let ([r (rd-datum s n j st)])
-                 (if (rd-fail? (cdr r))
-                     r
-                     (rd-list s n (cdr r) (cons (car r) acc) st open)))])]
+        (cond
+          [(let ([c (char->integer (string-ref s j))]) (or (= c 41) (= c 93)))
+            (cons (reverse acc) (+ j 1))] ; ) or ]
+          ;; #; between elements -- including immediately before the closing paren,
+          ;; where there is no following element for rd-datum's arm to return.
+          [(rd-datum-comment? s n j)
+            (let* ([child (rd-state-child st)]
+                   [r (rd-finish child
+                                 (rd-datum s n (rd-skip-ws s n (+ j 2) child) child))])
+              (if (rd-fail? (cdr r)) r (rd-list s n (cdr r) acc st open)))]
+          [(rd-dot? s n j) ; . tail
+            (let ([r (rd-datum s n (rd-skip-ws s n (+ j 1) st) st)])
+              (if (rd-fail? (cdr r))
+                  r
+                  (let ([j2 (rd-skip-ws s n (cdr r) st)])
+                    (cond
+                      [(rd-fail? j2) (cons (quote rd-block-comment) j2)]
+                      ;; the close paren this arm steps past must actually BE there
+                      [(<= n j2) (rd-fail (quote rd-unterminated-list) open)]
+                      [else (cons (rd-append-reverse acc (car r))
+                                  (+ j2 1))]))))] ; past )
+          [else (let ([r (rd-datum s n j st)])
+                  (if (rd-fail? (cdr r))
+                      r
+                      (rd-list s n (cdr r) (cons (car r) acc) st open)))])]
       ;; NOT end of input: closing the list here fabricates a datum the source does not
       ;; contain, so a truncated file compiled as though complete (issue #66).
       [else (rd-fail (quote rd-unterminated-list) open)])))
 
-(define (rd-datum s n i st)              ; i at a non-ws char -> (datum . next)
+(define (rd-datum s n i st) ; i at a non-ws char -> (datum . next)
   (if (and (<= 0 i) (< i n))
       (let ([k (char->integer (string-ref s i))])
         (cond
-          [(= k 40) (rd-list s n (+ i 1) (quote ()) st i)]     ; (
-          [(= k 91) (rd-list s n (+ i 1) (quote ()) st i)]     ; [ (brackets = parens)
-          [(= k 39) (rd-quote s n (+ i 1) st)]                 ; '
-          [(= k 96) (rd-quasi s n (+ i 1) st)]                 ; `
-          [(= k 44) (rd-unquote s n (+ i 1) st)]               ; ,
-          [(= k 34) (rd-string s n (+ i 1) i)]                 ; "
-          [(= k 35) (rd-hash s n (+ i 1) st)]                  ; #
+          [(= k 40) (rd-list s n (+ i 1) (quote ()) st i)] ; (
+          [(= k 91) (rd-list s n (+ i 1) (quote ()) st i)] ; [ (brackets = parens)
+          [(= k 39) (rd-quote s n (+ i 1) st)]             ; '
+          [(= k 96) (rd-quasi s n (+ i 1) st)]             ; `
+          [(= k 44) (rd-unquote s n (+ i 1) st)]           ; ,
+          [(= k 34) (rd-string s n (+ i 1) i)]             ; "
+          [(= k 35) (rd-hash s n (+ i 1) st)]              ; #
           ;; NOT given ci: R7RS 7.1.1 makes the characters between the bars the symbol's
           ;; name literally, so a bar-quoted identifier is never folded (issue #61).
-          [(= k 124) (rd-bar s n (+ i 1) i)]                   ; |bar quoted identifier|
-          [(or (= k 41) (= k 93)) (rd-fail (quote rd-unexpected) i)]   ; a close with no open
+          [(= k 124) (rd-bar s n (+ i 1) i)] ; |bar quoted identifier|
+          [(or (= k 41) (= k 93)) (rd-fail (quote rd-unexpected)
+                                           i)] ; a close with no open
           [else (rd-atom s n i st)]))
       ;; A sentinel travelling outward (an unterminated block comment upstream), or a
       ;; datum the input ended before -- `#;` with nothing after it, say.  Neither is
@@ -2073,55 +2032,63 @@
   (let ([why (car r)] [p (rd-fail-pos (cdr r))])
     (cond
       [(eq? why (quote rd-block-comment))
-       (%read-error (quote read) "unterminated block comment #| opened at index" p)]
+        (%read-error (quote read) "unterminated block comment #| opened at index" p)]
       [(eq? why (quote rd-bar))
-       (%read-error (quote read) "unterminated |identifier| opened at index" p)]
+        (%read-error (quote read) "unterminated |identifier| opened at index" p)]
       ;; ONE reason covers (, [, #( and #u8(: the source at p still says which delimiter it
       ;; was, so the message names the construct the author actually opened without four
       ;; reasons carrying identical handling.  Decoded INLINE rather than through a helper
       ;; because rd-report is duplicated into (scheme read) -- a helper would have to join
       ;; *reader-report-shared-with-read* (src/prelude-surface.scm) to travel with it.
       [(eq? why (quote rd-unterminated-list))
-       (%read-error (quote read)
-              (string-append
-               "unterminated "
-               (let ([k (char->integer (string-ref s p))])
-                 (cond
-                   [(= k 91) "list ["]
-                   [(and (= k 35) (< (+ p 1) n)
-                         (= (char->integer (string-ref s (+ p 1))) 117))   ; #u8(
-                    "bytevector #u8("]
-                   [(= k 35) "vector #("]
-                   [else "list ("]))
-               " opened at index")
-              p)]
+        (%read-error (quote read)
+                     (string-append
+                       "unterminated "
+                       (let ([k (char->integer (string-ref s p))])
+                         (cond
+                           [(= k 91) "list ["]
+                           [(and (= k 35)
+                                 (< (+ p 1) n)
+                                 (= (char->integer (string-ref s (+ p 1))) 117)) ; #u8(
+                             "bytevector #u8("]
+                           [(= k 35) "vector #("]
+                           [else "list ("]))
+                       " opened at index")
+                     p)]
       [(eq? why (quote rd-unterminated-string))
-       (%read-error (quote read) "unterminated string \" opened at index" p)]
+        (%read-error (quote read) "unterminated string \" opened at index" p)]
       ;; The name is NAMED.  This arm exists because the alternative -- answering the first
       ;; character of the name -- made #\alarm read as #\a with nothing to notice (design D1).
       [(eq? why (quote rd-char-name))
-       (%read-error (quote read) "unknown character name" (rd-token-at s n p))]
+        (%read-error (quote read) "unknown character name" (rd-token-at s n p))]
       [(eq? why (quote rd-hash-token))
-       (%read-error (quote read) "not a boolean; write #t, #true, #f or #false" (rd-token-at s n p))]
+        (%read-error (quote read)
+                     "not a boolean; write #t, #true, #f or #false"
+                     (rd-token-at s n p))]
       [(eq? why (quote rd-label-duplicate))
-       (%read-error (quote read) "duplicate datum label" (rd-token-at s n p))]
+        (%read-error (quote read) "duplicate datum label" (rd-token-at s n p))]
       [(eq? why (quote rd-label-unresolved))
-       (%read-error (quote read) "datum label reference has no earlier definition"
-                    (rd-token-at s n p))]
+        (%read-error (quote read)
+                     "datum label reference has no earlier definition"
+                     (rd-token-at s n p))]
       [(eq? why (quote rd-label-self))
-       (%read-error (quote read) "datum label cannot be defined as only its own reference"
-                    (rd-token-at s n p))]
+        (%read-error (quote read)
+                     "datum label cannot be defined as only its own reference"
+                     (rd-token-at s n p))]
       [(eq? why (quote rd-label))
-       (%read-error (quote read) "malformed datum label" (rd-token-at s n p))]
+        (%read-error (quote read) "malformed datum label" (rd-token-at s n p))]
       [(eq? why (quote rd-eof))
-       (%read-error (quote read) "end of input where a datum was expected, at index" p)]
+        (%read-error (quote read)
+                     "end of input where a datum was expected, at index"
+                     p)]
       [(eq? why (quote rd-unexpected))
-       (%read-error (quote read) "no datum here, at index" p)]
+        (%read-error (quote read) "no datum here, at index" p)]
       [(eq? why (quote rd-rational))
-       (%read-error (quote read)
-              (string-append "rational literal syntax is not supported -- Emit has no "
-                             "exact rationals; write 0.5, or (/ 1 2)")
-              (rd-token-at s n p))]
+        (%read-error
+          (quote read)
+          (string-append "rational literal syntax is not supported -- Emit has no "
+                         "exact rationals; write 0.5, or (/ 1 2)")
+          (rd-token-at s n p))]
       [else (%read-error (quote read) "unrecognized syntax" (rd-token-at s n p))])))
 
 (define (read-from-string s)
@@ -2154,11 +2121,10 @@
         ;; after the opening delimiter vanish with no diagnostic (issue #59).
         [(rd-fail? i) (rd-report s n (cons (quote rd-block-comment) i))]
         [(< i n)
-         (let* ([st (rd-state-child base)]
-                [r (rd-finish st (rd-datum s n i st))])
-           (if (rd-fail? (cdr r))
-               (rd-report s n r)
-               (loop (rd-skip-ws s n (cdr r) base) (cons (car r) acc))))]
+          (let* ([st (rd-state-child base)] [r (rd-finish st (rd-datum s n i st))])
+            (if (rd-fail? (cdr r))
+                (rd-report s n r)
+                (loop (rd-skip-ws s n (cdr r) base) (cons (car r) acc))))]
         [else (reverse acc)]))))
 
 ;;; --- ports (change: scheme-io-library, design D1/D2) -----------------------
@@ -2194,13 +2160,11 @@
 (define (%port-rtd)
   (if %port-rtd-cell
       %port-rtd-cell
-      (begin (set! %port-rtd-cell (%make-record-type "port"))
-             %port-rtd-cell)))
+      (begin (set! %port-rtd-cell (%make-record-type "port")) %port-rtd-cell)))
 
 (define (%make-port handle input? buf pos string? closed?)
   (%make-record (%port-rtd)
-                (list handle input? buf pos string? closed?
-                      (list->vector (list #f)))))
+                (list handle input? buf pos string? closed? (list->vector (list #f)))))
 
 (define (port? p) (%record-of-type? p (%port-rtd)))
 (define (input-port? p) (and (port? p) (%record-ref p 1)))
@@ -2232,11 +2196,7 @@
 ;;; so it starts with #f here and pulls the stream in on the first actual read.
 (define (%port-buf p)
   (let ((b (%record-ref p 2)))
-    (if b
-        b
-        (let ((s (%read-all-stdin)))
-          (%record-set! p 2 s)
-          s))))
+    (if b b (let ((s (%read-all-stdin))) (%record-set! p 2 s) s))))
 
 ;;; --- input ports ----------------------------------------------------------
 ;;; open-input-file SLURPS (design D2), which is precisely what makes a file port
@@ -2264,9 +2224,7 @@
 
 (define (peek-char p)
   (%check-input-port p 'peek-char)
-  (if (%port-at-eof? p)
-      (eof-object)
-      (string-ref (%port-buf p) (%record-ref p 3))))
+  (if (%port-at-eof? p) (eof-object) (string-ref (%port-buf p) (%record-ref p 3))))
 
 ;;; read-line: up to but NOT including the next line feed, which is consumed; a
 ;;; final line with no terminator is returned as-is.
@@ -2274,16 +2232,15 @@
   (%check-input-port p 'read-line)
   (if (%port-at-eof? p)
       (eof-object)
-      (let* ((s (%port-buf p))
-             (n (string-length s)))
+      (let* ((s (%port-buf p)) (n (string-length s)))
         (let loop ((i (%record-ref p 3)))
           (if (>= i n)
-              (let ((start (%record-ref p 3)))          ; unterminated final line
+              (let ((start (%record-ref p 3))) ; unterminated final line
                 (%record-set! p 3 n)
                 (substring s start n))
               (if (char=? (string-ref s i) #\newline)
                   (let ((start (%record-ref p 3)))
-                    (%record-set! p 3 (+ i 1))          ; consume the line feed
+                    (%record-set! p 3 (+ i 1)) ; consume the line feed
                     (substring s start i))
                   (loop (+ i 1))))))))
 
@@ -2359,7 +2316,7 @@
   (if (not (port? p))
       (error 'close-port "not a port" p)
       (if (%record-ref p 5)
-          (if #f #f)                                  ; already closed: no effect
+          (if #f #f) ; already closed: no effect
           (begin
             (if (not (%record-ref p 1)) (%port-close (%record-ref p 0)))
             (%record-set! p 5 #t)
@@ -2367,7 +2324,9 @@
 (define (close-input-port p)
   (if (input-port? p) (close-port p) (error 'close-input-port "not an input port" p)))
 (define (close-output-port p)
-  (if (output-port? p) (close-port p) (error 'close-output-port "not an output port" p)))
+  (if (output-port? p)
+      (close-port p)
+      (error 'close-output-port "not an output port" p)))
 
 ;;; --- the current ports, as parameter objects ------------------------------
 ;;; R7RS makes these PARAMETER objects so that with-output-to-file can rebind them
@@ -2396,14 +2355,15 @@
 ;;; plain accessor procedures.
 (define %stdout-port #f)
 (define %stderr-port #f)
-(define %stdin-port  #f)
+(define %stdin-port #f)
 
 (define (current-output-port . args)
   (if (null? args)
       (begin
         (if (not %stdout-port)
-            (begin (set! %stdout-port (%make-port 0 #f #f 0 #f #f))
-                   (%set-current-output! 0)))
+            (begin
+              (set! %stdout-port (%make-port 0 #f #f 0 #f #f))
+              (%set-current-output! 0)))
         %stdout-port)
       (let ((p (car args)))
         (set! %stdout-port p)
@@ -2432,34 +2392,25 @@
 ;;; the escaping cases work; a version that just closed after the call would leak
 ;;; the port exactly when it matters most.
 (define (call-with-port p proc)
-  (dynamic-wind
-    (lambda () (if #f #f))
-    (lambda () (proc p))
-    (lambda () (close-port p))))
+  (dynamic-wind (lambda () (if #f #f)) (lambda () (proc p)) (lambda () (close-port p))))
 
 ;;; with-output-to-file / with-input-from-file: rebind the corresponding parameter
 ;;; for the dynamic extent of THUNK, then close the port and restore the parameter.
 ;;; Both ride dynamic-wind for the same reason call-with-port does.
 (define (with-output-to-file path thunk)
-  (let ((p (open-output-file path))
-        (saved (current-output-port)))
-    (dynamic-wind
-      (lambda () (current-output-port p))
-      thunk
-      (lambda () (current-output-port saved #f) (close-port p)))))
+  (let ((p (open-output-file path)) (saved (current-output-port)))
+    (dynamic-wind (lambda () (current-output-port p))
+                  thunk
+                  (lambda () (current-output-port saved #f) (close-port p)))))
 
 (define (with-input-from-file path thunk)
-  (let ((p (open-input-file path))
-        (saved (current-input-port)))
-    (dynamic-wind
-      (lambda () (current-input-port p))
-      thunk
-      (lambda () (current-input-port saved #f) (close-port p)))))
+  (let ((p (open-input-file path)) (saved (current-input-port)))
+    (dynamic-wind (lambda () (current-input-port p))
+                  thunk
+                  (lambda () (current-input-port saved #f) (close-port p)))))
 
-(define (call-with-output-file path proc)
-  (call-with-port (open-output-file path) proc))
-(define (call-with-input-file path proc)
-  (call-with-port (open-input-file path) proc))
+(define (call-with-output-file path proc) (call-with-port (open-output-file path) proc))
+(define (call-with-input-file path proc) (call-with-port (open-input-file path) proc))
 
 ;;; --- the file operations that are not port constructors (change:
 ;;; catchable-errors-with-kinds, design D8).  R7RS puts both in (scheme file), and they

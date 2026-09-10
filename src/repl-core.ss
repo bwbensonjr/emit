@@ -61,11 +61,10 @@
 ;; per form here.  Both are session state, restored with the rest of the snapshot when a
 ;; form's compile fails.
 (define (repl-note-defines! names)
-  (for-each
-    (lambda (n)
-      (set! *repl-known* (cons n *repl-known*))
-      (set! *repl-macro-env* (prune-shadowed-macros *repl-macro-env* (list n))))
-    names))
+  (for-each (lambda (n)
+              (set! *repl-known* (cons n *repl-known*))
+              (set! *repl-macro-env* (prune-shadowed-macros *repl-macro-env* (list n))))
+            names))
 
 ;; expand a define's INIT (not its raw signature -- expanding the raw form would
 ;; treat a dotted param list like `(f . xs)` as an application), then rebuild a
@@ -109,8 +108,8 @@
   (if (null? xs)
       ""
       (string-append " "
-        (string-append (repl-irritant->string (car xs))
-                       (repl-irritants->string (cdr xs))))))
+                     (string-append (repl-irritant->string (car xs))
+                                    (repl-irritants->string (cdr xs))))))
 (define (repl-error->string e)
   (if (error-object? e)
       (string-append (error-object-message e)
@@ -145,60 +144,60 @@
         ;; the session snapshot and the host returns to the prompt (design D6).  Whether
         ;; the prompt SHOULD accept one is #49's own question; this states what it does.
         [(define-library-form? form)
-         (error 'define-library
-                (string-append "libraries are not defined at the prompt: "
-                               (render-datum (cadr form))
-                               " -- a library is imported, named in the manifest"))]
-        [(define-syntax-form? form)
-         (repl-note-syntax! form)
-         (cons (quote syntax) (symbol->string (cadr form)))]
+          (error 'define-library
+                 (string-append "libraries are not defined at the prompt: "
+                                (render-datum (cadr form))
+                                " -- a library is imported, named in the manifest"))]
+        [(define-syntax-form? form) (repl-note-syntax! form)
+                                    (cons (quote syntax) (symbol->string (cadr form)))]
         [(import-form? form)
-         ;; (import (L) ...): merge each library's exports into the session scope
-         ;; as imported bindings; the unit is already loaded (mode 4) so no module
-         ;; is emitted here (change: module-artifacts-vertical-slice).
-         (for-each
-           (lambda (lib)
-             (unless (repl-import! lib)
-               (error 'repl "imported library not loaded" lib)))
-           (cdr form))
-         (cons (quote import) "")]
+          ;; (import (L) ...): merge each library's exports into the session scope
+          ;; as imported bindings; the unit is already loaded (mode 4) so no module
+          ;; is emitted here (change: module-artifacts-vertical-slice).
+          (for-each (lambda (lib)
+                      (unless (repl-import! lib)
+                        (error 'repl "imported library not loaded" lib)))
+                    (cdr form))
+          (cons (quote import) "")]
         [else
-         (let ([dn (define-name form)])
-           ;; Every name this form binds: one define, or a record's whole family.  Both
-           ;; halves matter (change: binding-aware-expander).  #79: `define-name` answers
-           ;; #f for define-record-type, so a template mentioning the constructor was
-           ;; renamed per expansion and then unbound -- `compute-known` does the same for
-           ;; the batch paths, and the two must agree or dev->ship fidelity fails on a
-           ;; macro over a record.  #103: a define at the prompt DISPLACES a keyword of
-           ;; that name, and each REPL form is expanded on its own with no enclosing
-           ;; letrec to make the name a lexical binding, so the session's macro
-           ;; environment is where that shadowing has to happen (design D3).
-           (repl-note-defines!
-             (cond [dn (list dn)]
-                   [(record-type-form? form) (record-type-binding-names form)]
-                   [else (quote ())]))
-           ;; --dump in the REPL: the entered form IS the unit under inspection, and
-           ;; every stage is tagged with the form's identity -- its define name, else
-           ;; its session index -- since these passes run once per form (design D8,
-           ;; change: emit-dump-stages).
-           (let* ([d  (dump-tagged (make-dumper #f)
-                                   (if dn
-                                       (string-append "define " (symbol->string dn))
-                                       (string-append "form " (number->string (+ *repl-n* 1)))))]
-                  ;; the slots the session already has, snapshotted BEFORE this form
-                  ;; registers its own define -- so a `set!` of an existing global
-                  ;; references its slot instead of re-defining it (issue #5).
-                  [prior (map cdr (vector-ref *repl-env* 0))]
-                  [il (repl-lower-form *repl-env* (repl-expand-form form))])
-             (d "parse+rename" il)
-             ;; the session's imported procedures are direct-callable from this form
-             ;; (change: cross-unit-direct-calls); set per form, so nothing an earlier
-             ;; library load left behind can leak into a session with no imports.
-             (set-import-calls! *repl-calls*)
-             (let ([lc (repl-lcode il d)])
-               (let ([m (emit-repl-module lc (+ *repl-n* 1) prior)])
-                 (set! *repl-n* (+ *repl-n* 1))
-                 (cons (quote ok) (cons (car m) (cadr m)))))))]))))
+          (let ([dn (define-name form)])
+            ;; Every name this form binds: one define, or a record's whole family.  Both
+            ;; halves matter (change: binding-aware-expander).  #79: `define-name` answers
+            ;; #f for define-record-type, so a template mentioning the constructor was
+            ;; renamed per expansion and then unbound -- `compute-known` does the same for
+            ;; the batch paths, and the two must agree or dev->ship fidelity fails on a
+            ;; macro over a record.  #103: a define at the prompt DISPLACES a keyword of
+            ;; that name, and each REPL form is expanded on its own with no enclosing
+            ;; letrec to make the name a lexical binding, so the session's macro
+            ;; environment is where that shadowing has to happen (design D3).
+            (repl-note-defines!
+              (cond
+                [dn (list dn)]
+                [(record-type-form? form) (record-type-binding-names form)]
+                [else (quote ())]))
+            ;; --dump in the REPL: the entered form IS the unit under inspection, and
+            ;; every stage is tagged with the form's identity -- its define name, else
+            ;; its session index -- since these passes run once per form (design D8,
+            ;; change: emit-dump-stages).
+            (let* ([d (dump-tagged
+                        (make-dumper #f)
+                        (if dn
+                            (string-append "define " (symbol->string dn))
+                            (string-append "form " (number->string (+ *repl-n* 1)))))]
+                   ;; the slots the session already has, snapshotted BEFORE this form
+                   ;; registers its own define -- so a `set!` of an existing global
+                   ;; references its slot instead of re-defining it (issue #5).
+                   [prior (map cdr (vector-ref *repl-env* 0))]
+                   [il (repl-lower-form *repl-env* (repl-expand-form form))])
+              (d "parse+rename" il)
+              ;; the session's imported procedures are direct-callable from this form
+              ;; (change: cross-unit-direct-calls); set per form, so nothing an earlier
+              ;; library load left behind can leak into a session with no imports.
+              (set-import-calls! *repl-calls*)
+              (let ([lc (repl-lcode il d)])
+                (let ([m (emit-repl-module lc (+ *repl-n* 1) prior)])
+                  (set! *repl-n* (+ *repl-n* 1))
+                  (cons (quote ok) (cons (car m) (cadr m)))))))]))))
 
 ;; text -> (status . payload).  Read exactly one form from the host-supplied text
 ;; (the host already sliced it to one complete form via form-complete?), then
@@ -211,9 +210,7 @@
     ;; directives in TEXT still override it at their lexical position.  Mode 2's
     ;; completeness scan has already recorded the mode to carry into the next form.
     (let ([forms (read-all-from-string
-                   (if *repl-reader-fold?*
-                       (string-append "#!fold-case " text)
-                       text))])
+                   (if *repl-reader-fold?* (string-append "#!fold-case " text) text))])
       (if (null? forms)
           (cons (quote error) "empty form")
           (begin
@@ -231,31 +228,35 @@
 (define (repl-load-prelude! forms)
   (for-each
     (lambda (f)
-      (cond [(define-syntax-form? f) (repl-note-syntax! f)]
-            [(define-form? f)
-             ;; through repl-note-defines! so the batch states the shadowing rule the same
-             ;; way an interactive form does.  A no-op for the prelude as it stands -- no
-             ;; prelude name is both a define and a keyword, which
-             ;; test/macro-shadow-check.sh keeps true -- and the point is that it stays a
-             ;; checked property rather than an assumption buried in this loop.
-             (repl-note-defines! (list (define-name f)))
-             (repl-register-define! *repl-env* f)]
-            [else (if #f #f)]))
+      (cond
+        [(define-syntax-form? f) (repl-note-syntax! f)]
+        [(define-form? f)
+          ;; through repl-note-defines! so the batch states the shadowing rule the same
+          ;; way an interactive form does.  A no-op for the prelude as it stands -- no
+          ;; prelude name is both a define and a keyword, which
+          ;; test/macro-shadow-check.sh keeps true -- and the point is that it stays a
+          ;; checked property rather than an assumption buried in this loop.
+          (repl-note-defines! (list (define-name f)))
+          (repl-register-define! *repl-env* f)]
+        [else (if #f #f)]))
     forms)
   ;; The prelude batch is not the unit under inspection, so its stages appear only at
   ;; the all-units dump level (design D7) -- otherwise every REPL start would bury the
   ;; session under the standard library's lowering.
-  (let ([progs (fold-left
-                 (lambda (acc f)
-                   (if (define-form? f)
-                       (let* ([d  (dump-tagged (make-dumper (quote (scheme base)))
-                                               (string-append "define "
-                                                              (symbol->string (define-name f))))]
-                              [il (repl-lower-form* *repl-env* (repl-expand-form f) #f)])
-                         (d "parse+rename" il)
-                         (cons (repl-lcode il d) acc))
-                       acc))
-                 (quote ()) forms)])
+  (let ([progs
+          (fold-left
+            (lambda (acc f)
+              (if
+                (define-form? f)
+                (let* ([d (dump-tagged
+                            (make-dumper (quote (scheme base)))
+                            (string-append "define " (symbol->string (define-name f))))]
+                       [il (repl-lower-form* *repl-env* (repl-expand-form f) #f)])
+                  (d "parse+rename" il)
+                  (cons (repl-lcode il d) acc))
+                acc))
+            (quote ())
+            forms)])
     (set! *repl-n* (length progs))
     ;; A DISTINCT entry name (not scheme_entry): the host links the compiler's own
     ;; @scheme_entry, so the prelude batch's entry must be uniquely named for the
@@ -266,14 +267,14 @@
 ;; PRELUDE-SRC is empty, i.e. --no-prelude).  Seeds the base known-names set
 ;; exactly as run-repl did.  Called once by the host at startup.
 (define (init-session prelude-src)
-  (reset-counter!)                             ; monotonic gensym for @code_N labels
+  (reset-counter!) ; monotonic gensym for @code_N labels
   (set! *repl-env* (make-repl-env))
   (set! *repl-macro-env* (quote ()))
   ;; include the intrinsic integrable prims (cons, +, car, …) so a macro template
   ;; that mentions one is treated as a known binding and not hygiene-renamed --
   ;; mirrors compute-known on the batch path (change: first-class-primitives).
-  (set! *repl-known* (union* (list *core-keywords* *prims* *extra-op-keywords*
-                                   (map car *integrable*))))
+  (set! *repl-known*
+    (union* (list *core-keywords* *prims* *extra-op-keywords* (map car *integrable*))))
   (set! *repl-n* 0)
   (set! *repl-libs* (quote ()))
   (set! *repl-calls* (quote ()))
@@ -305,47 +306,48 @@
 ;; #f if the named library was not loaded (mode 4) first.
 (define (repl-import! lib-name)
   (let ([entry (assoc lib-name *repl-libs*)])
-    (and entry
-         (begin
-           (for-each
-             (lambda (e)                     ; e = (external-name . mangled-string)
-               (vector-set! *repl-env* 0
-                 (cons (cons (car e) (string->symbol (cdr e)))
-                       (vector-ref *repl-env* 0)))
-               ;; the imported name is a "known" binding, so a derived-form macro
-               ;; may introduce a reference to it (e.g. `case` -> `memv`) without
-               ;; hygiene renaming it away (change: module-prelude-scheme-base).
-               (set! *repl-known* (cons (car e) *repl-known*)))
-             (cadr entry))
-           ;; and its direct-callable procedures, keyed by the same mangled symbol a
-           ;; later form will resolve to (change: cross-unit-direct-calls).  A
-           ;; redefinition does not disturb these: it binds the NAME to a fresh
-           ;; program global (x.gN), which is not in this table, so the redefined
-           ;; name goes back to an indirect call while forms compiled earlier keep
-           ;; direct-calling the library slot they captured.
-           (set! *repl-calls*
-                 (append (import-tables->call-alist (list entry)) *repl-calls*))
-           ;; ...and its compile-time interface (change: library-macro-export, design D7):
-           ;; the exported transformers join the session's macro environment so a LATER
-           ;; form may use an imported macro, and the mangled bindings their templates
-           ;; reference join the environment (mapping to themselves, so they lower as
-           ;; external globals) and the known set.  All three are session state, so an
-           ;; imported macro persists across forms exactly as an imported procedure does,
-           ;; and is restored with the rest of the state when a form's compile fails.
-           (let ([refs (import-tables->macro-refs (list entry))])
-             ;; appended, not consed: a `define-syntax` entered at the prompt goes on the
-             ;; FRONT (repl-note-syntax!), so the session's own macro shadows an imported
-             ;; keyword of the same spelling.
-             (set! *repl-macro-env*
-                   (append *repl-macro-env* (import-tables->macro-env (list entry))))
-             (for-each (lambda (k) (set! *repl-known* (cons k *repl-known*)))
-                       (import-tables->macro-keywords (list entry)))
-             (for-each
-               (lambda (s)
-                 (vector-set! *repl-env* 0 (cons (cons s s) (vector-ref *repl-env* 0)))
-                 (set! *repl-known* (cons s *repl-known*)))
-               refs))
-           #t))))
+    (and
+      entry
+      (begin
+        (for-each (lambda (e) ; e = (external-name . mangled-string)
+                    (vector-set! *repl-env*
+                                 0
+                                 (cons (cons (car e) (string->symbol (cdr e)))
+                                       (vector-ref *repl-env* 0)))
+                    ;; the imported name is a "known" binding, so a derived-form macro
+                    ;; may introduce a reference to it (e.g. `case` -> `memv`) without
+                    ;; hygiene renaming it away (change: module-prelude-scheme-base).
+                    (set! *repl-known* (cons (car e) *repl-known*)))
+                  (cadr entry))
+        ;; and its direct-callable procedures, keyed by the same mangled symbol a
+        ;; later form will resolve to (change: cross-unit-direct-calls).  A
+        ;; redefinition does not disturb these: it binds the NAME to a fresh
+        ;; program global (x.gN), which is not in this table, so the redefined
+        ;; name goes back to an indirect call while forms compiled earlier keep
+        ;; direct-calling the library slot they captured.
+        (set! *repl-calls*
+          (append (import-tables->call-alist (list entry)) *repl-calls*))
+        ;; ...and its compile-time interface (change: library-macro-export, design D7):
+        ;; the exported transformers join the session's macro environment so a LATER
+        ;; form may use an imported macro, and the mangled bindings their templates
+        ;; reference join the environment (mapping to themselves, so they lower as
+        ;; external globals) and the known set.  All three are session state, so an
+        ;; imported macro persists across forms exactly as an imported procedure does,
+        ;; and is restored with the rest of the state when a form's compile fails.
+        (let ([refs (import-tables->macro-refs (list entry))])
+          ;; appended, not consed: a `define-syntax` entered at the prompt goes on the
+          ;; FRONT (repl-note-syntax!), so the session's own macro shadows an imported
+          ;; keyword of the same spelling.
+          (set! *repl-macro-env*
+            (append *repl-macro-env* (import-tables->macro-env (list entry))))
+          (for-each (lambda (k) (set! *repl-known* (cons k *repl-known*)))
+                    (import-tables->macro-keywords (list entry)))
+          (for-each
+            (lambda (s)
+              (vector-set! *repl-env* 0 (cons (cons s s) (vector-ref *repl-env* 0)))
+              (set! *repl-known* (cons s *repl-known*)))
+            refs))
+        #t))))
 
 ;; Assemble the import tables (list (name export-alist call-rows) ...) for a library's
 ;; direct imports from the already-loaded units in *repl-libs* (change:
@@ -396,9 +398,7 @@
         (string-append "unresolved import (not baked, not in the manifest): "
                        (join-rendered (reverse missing)))
         (loop (cdr imps)
-              (if (assoc (car imps) *repl-libs*)
-                  missing
-                  (cons (car imps) missing))))))
+              (if (assoc (car imps) *repl-libs*) missing (cons (car imps) missing))))))
 (define (lone-library-unresolved-msg lib)
   (unresolved-imports-msg (cadr (parse-define-library lib))))
 
@@ -437,39 +437,43 @@
            ;; empty read into "cannot read library source"), but a comment-only one does.
            ;; Unlike an entryless MANIFEST, which is benign, this is an error: see
            ;; manifest-entries.
-           [dl    (if (null? forms)
-                      (error 'library "source holds no define-library form")
-                      (parse-define-library (car forms)))]
-           [name  (car dl)]
-           [tables (repl-import-tables (cadr dl))])   ; #f if a dep is not loaded yet
+           [dl (if (null? forms)
+                   (error 'library "source holds no define-library form")
+                   (parse-define-library (car forms)))]
+           [name (car dl)]
+           [tables (repl-import-tables (cadr dl))]) ; #f if a dep is not loaded yet
       (cond
-       ;; Already loaded -> skip (no module).  EVERY door registers the baked set (mode 8)
-       ;; before preloading the manifest, and a manifest may name a baked member -- the
-       ;; repository's own emit-libs.scm names both, because the Chez driver resolves them
-       ;; from there.  This guard is what makes such an entry a no-op rather than a
-       ;; duplicate module (changes: run-door-user-libraries, baked-set-on-every-door).
-       ;;
-       ;; The test is by library NAME, so it covers whatever the partition holds rather
-       ;; than an enumerated subset.  It is now a BACKSTOP rather than the mechanism: mode 9
-       ;; omits every baked member from the preload list in the first place (change:
-       ;; chez-free-unit-pipeline), so a manifest entry for one no longer reaches this at
-       ;; all through a door's preload.  It still fires for an interactive `(import ...)`
-       ;; of a baked member, and it is what keeps a stale cache entry or a hand-driven mode
-       ;; 4 from adding a duplicate module.
-       [(assoc name *repl-libs*) (cons (quote already) name)]
-       [(not tables) (cons (quote deferred) name)]    ; retry after dependencies load
-       [else
-        (let ([saved counter])
-          ;; A manifest library loaded to satisfy an import is not the unit under
-          ;; inspection: level 3 (--dump-all) only, and named in its headers.
-          (let ([res (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl) tables
-                                     (make-dumper name))])
-            (set! counter saved)                      ; undo compile-library's reset-counter!
-            (set! *repl-libs* (cons (cadr res) *repl-libs*))   ; the export table itself
-            ;; record this unit's DIRECT imports for the run door's init-closure
-            ;; topological sort (change: run-door-user-libraries).
-            (set! *repl-lib-imports* (cons (cons name (cadr dl)) *repl-lib-imports*))
-            (cons (quote ok) (cons (car res) (mangle name "__init")))))]))))
+        ;; Already loaded -> skip (no module).  EVERY door registers the baked set (mode 8)
+        ;; before preloading the manifest, and a manifest may name a baked member -- the
+        ;; repository's own emit-libs.scm names both, because the Chez driver resolves them
+        ;; from there.  This guard is what makes such an entry a no-op rather than a
+        ;; duplicate module (changes: run-door-user-libraries, baked-set-on-every-door).
+        ;;
+        ;; The test is by library NAME, so it covers whatever the partition holds rather
+        ;; than an enumerated subset.  It is now a BACKSTOP rather than the mechanism: mode 9
+        ;; omits every baked member from the preload list in the first place (change:
+        ;; chez-free-unit-pipeline), so a manifest entry for one no longer reaches this at
+        ;; all through a door's preload.  It still fires for an interactive `(import ...)`
+        ;; of a baked member, and it is what keeps a stale cache entry or a hand-driven mode
+        ;; 4 from adding a duplicate module.
+        [(assoc name *repl-libs*) (cons (quote already) name)]
+        [(not tables) (cons (quote deferred) name)] ; retry after dependencies load
+        [else
+          (let ([saved counter])
+            ;; A manifest library loaded to satisfy an import is not the unit under
+            ;; inspection: level 3 (--dump-all) only, and named in its headers.
+            (let ([res (compile-library (car dl)
+                                        (cadr dl)
+                                        (caddr dl)
+                                        (cadddr dl)
+                                        tables
+                                        (make-dumper name))])
+              (set! counter saved) ; undo compile-library's reset-counter!
+              (set! *repl-libs* (cons (cadr res) *repl-libs*)) ; the export table itself
+              ;; record this unit's DIRECT imports for the run door's init-closure
+              ;; topological sort (change: run-door-user-libraries).
+              (set! *repl-lib-imports* (cons (cons name (cadr dl)) *repl-lib-imports*))
+              (cons (quote ok) (cons (car res) (mangle name "__init")))))]))))
 
 ;; The manifest's ENTRY LIST: its single top-level form, or () when the text holds no
 ;; datum -- a zero-byte file, whitespace only, or comments only (change:
@@ -516,16 +520,18 @@
 
 (define (manifest-entries text)
   (let ([forms (read-all-from-string text)])
-    (if (pair? forms)
-        (let ([k (manifest-extra-forms forms)])
-          ;; Modes 5 and 9 return a bare string and have nowhere to put a status, so this
-          ;; RAISES; mode 10 carries an (ok . _) / (error . MSG) pair and reports through it.
-          (if k
-              (error (quote manifest)
-                     "a manifest is one top-level form (the list of entries); this one holds"
-                     k)
-              (car forms)))
-        (quote ()))))                             ; no datum: an empty manifest, as above
+    (if
+      (pair? forms)
+      (let ([k (manifest-extra-forms forms)])
+        ;; Modes 5 and 9 return a bare string and have nowhere to put a status, so this
+        ;; RAISES; mode 10 carries an (ok . _) / (error . MSG) pair and reports through it.
+        (if k
+            (error
+              (quote manifest)
+              "a manifest is one top-level form (the list of entries); this one holds"
+              k)
+            (car forms)))
+      (quote ())))) ; no datum: an empty manifest, as above
 
 ;; Mode 5 -- `repl-manifest-paths`, every (library ...) entry's source path including the
 ;; baked members -- is RETIRED (change: chez-free-unit-pipeline, design D3).  The REPL host
@@ -561,17 +567,19 @@
 ;; program's transitive import closure, rather than every entry in the manifest.
 (define (repl-manifest-user-paths text)
   (let loop ([es (manifest-entries text)] [acc ""])
-    (if (not (pair? es))                    ; total: (), an improper tail, or a non-list manifest
-        acc
-        (let* ([entry  (car es)]
-               [is-lib (and (pair? entry) (eq? (car entry) (quote library)))]  ; skip (program ...)
-               [name   (and is-lib (cadr entry))]
-               [src    (and is-lib
-                            (cond [(assq (quote source) (cddr entry)) => cadr] [else #f]))])
-          (loop (cdr es)
-                (if (and src (not (baked-member? name)))
-                    (string-append acc (mangle name "") "\t" src "\n")
-                    acc))))))
+    (if
+      (not (pair? es)) ; total: (), an improper tail, or a non-list manifest
+      acc
+      (let* ([entry (car es)]
+             [is-lib (and (pair? entry)
+                          (eq? (car entry) (quote library)))] ; skip (program ...)
+             [name (and is-lib (cadr entry))]
+             [src (and is-lib
+                       (cond [(assq (quote source) (cddr entry)) => cadr] [else #f]))])
+        (loop (cdr es)
+              (if (and src (not (baked-member? name)))
+                  (string-append acc (mangle name "") "\t" src "\n")
+                  acc))))))
 
 ;; A SOURCE TEXT's direct imports, one canonical key per line (change:
 ;; numeric-conformance).  Serves both shapes the run door's lazy preload walks:
@@ -594,8 +602,9 @@
 (define (repl-source-imports text)
   (guard (e (#t ""))
     (let* ([forms (read-all-from-string text)]
-           [lib?  (and (pair? forms) (pair? (car forms))
-                       (eq? (car (car forms)) (quote define-library)))]
+           [lib? (and (pair? forms)
+                      (pair? (car forms))
+                      (eq? (car (car forms)) (quote define-library)))]
            [names (if lib?
                       (cadr (parse-define-library (car forms)))
                       (car (collect-imports forms)))])
@@ -615,9 +624,7 @@
 ;; It is a MODE rather than an environment variable because it is per-source state in a
 ;; persistent session, not a process-wide flag like EMIT_DUMP_LEVEL: a home left in the
 ;; environment would silently outlive the compile that set it.
-(define (repl-set-source-home path)
-  (set-source-home! path)
-  (cons (quote ok) ""))
+(define (repl-set-source-home path) (set-source-home! path) (cons (quote ok) ""))
 
 ;; List the manifest's PROGRAM entries for the emit build door (Chez-free; change:
 ;; emit-build-bin-entry).  Each `(program NAME (source S) [(output O)])` entry yields
@@ -645,23 +652,31 @@
 ;; raise with no file attached, and every door's narration had already listed the candidates.
 (define (repl-manifest-programs text)
   (guard (e (#t (cons (quote error) (repl-error->string e))))
-   (let ([forms (read-all-from-string text)])
-    (if (null? forms)
+    (let ([forms (read-all-from-string text)])
+      (if
+        (null? forms)
         (cons (quote error) "declares no entries")
-      (let ([k (manifest-extra-forms forms)])
-       (if k
-        (cons (quote error)
-              (string-append "holds " (number->string k)
-                             " top-level forms; a manifest is one form (the list of entries)"))
-        (let loop ([es (car forms)] [acc ""])
-          (if (not (pair? es))              ; total: (), an improper tail, or a non-list manifest
-              (cons (quote ok) acc)
-              (let ([e (car es)])
-                (if (and (pair? e) (eq? (car e) (quote program)))
-                    (let* ([name    (symbol->string (cadr e))]
+        (let ([k (manifest-extra-forms forms)])
+          (if
+            k
+            (cons (quote error)
+                  (string-append
+                    "holds "
+                    (number->string k)
+                    " top-level forms; a manifest is one form (the list of entries)"))
+            (let loop ([es (car forms)] [acc ""])
+              (if
+                (not (pair? es)) ; total: (), an improper tail, or a non-list manifest
+                (cons (quote ok) acc)
+                (let ([e (car es)])
+                  (if
+                    (and (pair? e) (eq? (car e) (quote program)))
+                    (let* ([name (symbol->string (cadr e))]
                            [clauses (cddr e)]
-                           [src     (cond [(assq (quote source) clauses) => cadr] [else ""])]
-                           [out     (cond [(assq (quote output) clauses) => cadr] [else ""])])
+                           [src
+                             (cond [(assq (quote source) clauses) => cadr] [else ""])]
+                           [out
+                             (cond [(assq (quote output) clauses) => cadr] [else ""])])
                       (loop (cdr es) (string-append acc name "\n" src "\n" out "\n")))
                     (loop (cdr es) acc)))))))))))
 
@@ -691,8 +706,8 @@
     [(member name seen) seen]
     [(member name path) (error 'run "import cycle among libraries" name)]
     [else
-     (let ([imps (cond [(assoc name *repl-lib-imports*) => cdr] [else (quote ())])])
-       (cons name (run-visit-libs imps (cons name path) seen)))]))
+      (let ([imps (cond [(assoc name *repl-lib-imports*) => cdr] [else (quote ())])])
+        (cons name (run-visit-libs imps (cons name path) seen)))]))
 (define (run-visit-libs names path seen)
   (if (null? names)
       seen
@@ -723,18 +738,17 @@
   (guard (e (#t (cons (quote error) (repl-error->string e))))
     (let* ([prelude-forms (read-forms-from-string *prelude-source*)]
            ;; the auto-imported standard library: incidental to the program, level 3 only.
-           [baked (compile-baked-set prelude-forms (make-dumper (quote (scheme base))))])
+           [baked (compile-baked-set prelude-forms
+                                     (make-dumper (quote (scheme base))))])
       (for-each
-        (lambda (p)                                  ; p = (LIBRARY-NAME . EXPORT-TABLE)
-          (set! *repl-libs* (cons (cdr p) *repl-libs*))          ; the export table itself
+        (lambda (p) ; p = (LIBRARY-NAME . EXPORT-TABLE)
+          (set! *repl-libs* (cons (cdr p) *repl-libs*)) ; the export table itself
           ;; the run door's init-closure topological sort reads these (run-closure-order),
           ;; so a baked member that imports another must declare it here too.
           (set! *repl-lib-imports*
-                (cons (cons (car p) (baked-entry-imports (car p))) *repl-lib-imports*)))
+            (cons (cons (car p) (baked-entry-imports (car p))) *repl-lib-imports*)))
         (cdr baked))
-      (cons (quote ok)
-            (cons (car baked)
-                  (baked-init-symbols (map car (cdr baked))))))))
+      (cons (quote ok) (cons (car baked) (baked-init-symbols (map car (cdr baked))))))))
 
 ;; Every baked member's __init symbol, newline-joined in the order given -- one line per
 ;; module the host is about to add, so the host can pair them positionally.
@@ -785,7 +799,7 @@
       (if (null? data)
           (error 'cache "cache metadata holds no datum")
           (let* ([rows (car data)]
-                 [_    (check-cached-rows rows)]
+                 [_ (check-cached-rows rows)]
                  [unmet (rows-unmet-import rows)])
             (if unmet
                 (cons (quote deferred) unmet)
@@ -799,33 +813,31 @@
   (let loop ([rs rows] [have (quote ())])
     (if (null? rs)
         #f
-        (let* ([row  (car rs)]
-               [name (car row)]
-               [have (cons name have)])
-          (if (imports-satisfied? (cadr row) have)
-              (loop (cdr rs) have)
-              name)))))
+        (let* ([row (car rs)] [name (car row)] [have (cons name have)])
+          (if (imports-satisfied? (cadr row) have) (loop (cdr rs) have) name)))))
 
 (define (imports-satisfied? imports have)
-  (cond [(null? imports) #t]
-        [(or (member (car imports) have) (assoc (car imports) *repl-libs*))
-         (imports-satisfied? (cdr imports) have)]
-        [else #f]))
+  (cond
+    [(null? imports) #t]
+    [(or (member (car imports) have) (assoc (car imports) *repl-libs*))
+      (imports-satisfied? (cdr imports) have)]
+    [else #f]))
 
 ;; Every row is (NAME IMPORTS TABLE INIT), and the table's own car must be the name it is
 ;; filed under -- a table paired with the wrong name would resolve imports to another
 ;; library's symbols, which is the one corruption that would not announce itself.
 (define (check-cached-rows rows)
-  (if (null? rows)
-      #t
-      (let ([row (car rows)])
-        (if (not (and (pair? row) (pair? (cdr row))
-                      (pair? (cddr row)) (pair? (cdddr row))))
-            (error 'cache "malformed cache metadata row" row)
-            (let ([name (car row)] [table (caddr row)])
-              (if (not (and (pair? table) (equal? (car table) name)))
-                  (error 'cache "cache metadata row's table does not match its name" name)
-                  (check-cached-rows (cdr rows))))))))
+  (if
+    (null? rows)
+    #t
+    (let ([row (car rows)])
+      (if
+        (not (and (pair? row) (pair? (cdr row)) (pair? (cddr row)) (pair? (cdddr row))))
+        (error 'cache "malformed cache metadata row" row)
+        (let ([name (car row)] [table (caddr row)])
+          (if (not (and (pair? table) (equal? (car table) name)))
+              (error 'cache "cache metadata row's table does not match its name" name)
+              (check-cached-rows (cdr rows))))))))
 
 ;; Publish each row.  An already-registered library is left alone rather than duplicated,
 ;; the same tolerance mode 4's `already` status provides: every door registers the baked
@@ -833,16 +845,15 @@
 ;; is still reported, because every baked module is linked regardless and each `__init` is
 ;; one-shot guarded -- the same reason `run-register-baked-set` names them all.
 (define (register-cached-rows rows)
-  (if (null? rows)
-      #t
-      (let* ([row  (car rows)]
-             [name (car row)])
-        (if (not (assoc name *repl-libs*))
-            (begin
-              (set! *repl-libs* (cons (caddr row) *repl-libs*))
-              (set! *repl-lib-imports*
-                    (cons (cons name (cadr row)) *repl-lib-imports*))))
-        (register-cached-rows (cdr rows)))))
+  (if
+    (null? rows)
+    #t
+    (let* ([row (car rows)] [name (car row)])
+      (if (not (assoc name *repl-libs*))
+          (begin
+            (set! *repl-libs* (cons (caddr row) *repl-libs*))
+            (set! *repl-lib-imports* (cons (cons name (cadr row)) *repl-lib-imports*))))
+      (register-cached-rows (cdr rows)))))
 
 ;; Mode 15: the metadata datum for libraries already registered in THIS session, ready for
 ;; the host to persist beside their IR.  NAMES-TEXT is "" for the whole baked set, in the
@@ -882,10 +893,9 @@
   (let loop ([i 0] [start 0] [acc (quote ())])
     (cond
       [(>= i (string-length text))
-       (reverse (if (> i start) (cons (substring text start i) acc) acc))]
+        (reverse (if (> i start) (cons (substring text start i) acc) acc))]
       [(char=? (string-ref text i) #\newline)
-       (loop (+ i 1) (+ i 1)
-             (if (> i start) (cons (substring text start i) acc) acc))]
+        (loop (+ i 1) (+ i 1) (if (> i start) (cons (substring text start i) acc) acc))]
       [else (loop (+ i 1) start acc)])))
 
 (define (cached-lib-row name)
@@ -897,8 +907,7 @@
 ;; A registered library's direct imports, read from the session rather than from the
 ;; partition declaration, so this serves a user library and a baked member identically.
 (define (cached-lib-imports name)
-  (cond [(assoc name *repl-lib-imports*) => cdr]
-        [else (quote ())]))
+  (cond [(assoc name *repl-lib-imports*) => cdr] [else (quote ())]))
 
 ;; Mode 16: the SOURCE FILES the most recent library registration read -- the library's own
 ;; source (the path the door named through mode 13) followed by every file the include
@@ -971,36 +980,41 @@
 (define (repl-shake-library input)
   (shake-at! "start")
   (guard (e (#t (cons (quote error)
-                      (string-append "shaking " (shake-input-key input)
-                                     " [" *shake-step* "]: "
+                      (string-append "shaking "
+                                     (shake-input-key input)
+                                     " ["
+                                     *shake-step*
+                                     "]: "
                                      (repl-error->string e)))))
-    (let* ([nl   (str-index input #\newline)]
-           [key  (if (>= nl 0) (substring input 0 nl) "")]
+    (let* ([nl (str-index input #\newline)]
+           [key (if (>= nl 0) (substring input 0 nl) "")]
            [rest (if (>= nl 0) (substring input (+ nl 1) (string-length input)) "")]
            [bpos (str-search rest *emit-unit-boundary*)]
-           [src  (if (>= bpos 0) (substring rest 0 bpos) "")]
+           [src (if (>= bpos 0) (substring rest 0 bpos) "")]
            [root (if (>= bpos 0)
-                     (substring rest (+ bpos (string-length *emit-unit-boundary*))
+                     (substring rest
+                                (+ bpos (string-length *emit-unit-boundary*))
                                 (string-length rest))
                      rest)]
            [name (begin (shake-at! "resolve") (registered-name-of-key key))])
       (cond
-        [(not name) (cons (quote error) (string-append "no registered library keyed " key))]
+        [(not name) (cons (quote error)
+                          (string-append "no registered library keyed " key))]
         [else (shake-registered-library name src root)]))))
 
 ;; The key line of mode 17's input, for a diagnostic that must not itself raise.
 (define (shake-input-key input)
-  (let ([nl (str-index input #\newline)])
-    (if (>= nl 0) (substring input 0 nl) "?")))
+  (let ([nl (str-index input #\newline)]) (if (>= nl 0) (substring input 0 nl) "?")))
 
 ;; The registered library whose canonical unit prefix is KEY, or #f.  Matching on the
 ;; mangled key rather than on a library name datum keeps library-name equality in the core,
 ;; where mode 9 already put it, instead of in the host.
 (define (registered-name-of-key key)
   (let loop ([ls *repl-lib-imports*])
-    (cond [(null? ls) #f]
-          [(string=? (mangle (car (car ls)) "") key) (car (car ls))]
-          [else (loop (cdr ls))])))
+    (cond
+      [(null? ls) #f]
+      [(string=? (mangle (car (car ls)) "") key) (car (car ls))]
+      [else (loop (cdr ls))])))
 
 ;; `imported-by-another?` used to live here and gated the shake: a unit another registered
 ;; library imports was answered `keep`.  It is GONE (change: import-dag-tree-shaking, design
@@ -1037,27 +1051,31 @@
   ;; reports must describe THIS read and not the preload's -- the door caches the pruned
   ;; unit against the same source closure a full unit entry is keyed on.
   (reset-includes-read!)
-  (let* ([_       (shake-at! "parse")]
-         [dl      (if (baked-member? name)
-                      (parse-define-library
-                        (partition-library-form
-                          (assoc name *prelude-libraries*)
-                          (read-forms-from-string *prelude-source*)))
-                      (if (string=? src "")
-                          (error "no source text for library" name)
-                          (parse-define-library (car (read-all-from-string src)))))]
-         [_       (shake-at! "imports")]
-         [tables  (repl-import-tables (cadr dl))]
-         [_       (shake-at! "candidates")]
-         [cands   (append (map cdr (caddr dl))
-                          (ct-own-refs (table-ct-half (assoc name *repl-libs*))))]
-         [_       (shake-at! "roots")]
-         [roots   (program-root-internals root-ir name cands)]
-         [saved   counter]
-         [_       (shake-at! "compile")]
-         [res     (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl)
-                                   (if tables tables (quote ())) no-dump roots)])
-    (set! counter saved)                        ; undo compile-library's reset-counter!
+  (let* ([_ (shake-at! "parse")]
+         [dl (if (baked-member? name)
+                 (parse-define-library (partition-library-form
+                                         (assoc name *prelude-libraries*)
+                                         (read-forms-from-string *prelude-source*)))
+                 (if (string=? src "")
+                     (error "no source text for library" name)
+                     (parse-define-library (car (read-all-from-string src)))))]
+         [_ (shake-at! "imports")]
+         [tables (repl-import-tables (cadr dl))]
+         [_ (shake-at! "candidates")]
+         [cands (append (map cdr (caddr dl))
+                        (ct-own-refs (table-ct-half (assoc name *repl-libs*))))]
+         [_ (shake-at! "roots")]
+         [roots (program-root-internals root-ir name cands)]
+         [saved counter]
+         [_ (shake-at! "compile")]
+         [res (compile-library (car dl)
+                               (cadr dl)
+                               (caddr dl)
+                               (cadddr dl)
+                               (if tables tables (quote ()))
+                               no-dump
+                               roots)])
+    (set! counter saved) ; undo compile-library's reset-counter!
     (shake-at! "")
     (cons (quote ok) (cons (car res) (mangle name "__init")))))
 
@@ -1071,37 +1089,42 @@
   (guard (e (#t (cons (quote error) (repl-error->string e))))
     (let ([user-forms (read-all-from-string text)])
       (cond
-       ;; A lone define-library is compiled as a single unit -- no baked (scheme base),
-       ;; no program entry (matches compile-source-rehomed).  The host emits/JITs just
-       ;; this module; the 'library status tells it to drop the baked base + preloaded
-       ;; units it set up for the program case.  (Used by `emit run --emit < lib.sld`.)
-       ;; A lone define-library IS the unit under inspection here (this is `emit lib`'s
-       ;; and `emit run --emit < lib.sld`'s path), so it dumps at the ordinary level.
-       ;;
-       ;; Its imports resolve against the SESSION (mode 8's baked members plus the
-       ;; manifest units the host preloaded), which is what lets a library importing
-       ;; (scheme base) or another manifest library compile here at all
-       ;; (change: baked-set-on-every-door).
-       [(single-define-library user-forms)
-        => (lambda (lib)
-             (let ([tables (lone-library-tables lib)])
-               (if (not tables)
-                   (cons (quote error) (lone-library-unresolved-msg lib))
-                   (cons (quote library)
-                         (cons (compile-library-form lib (make-dumper #f) tables)
-                               "scheme_entry")))))]
-       [else
-        (let ([direct (run-with-scheme-base (car (collect-imports user-forms)))])
-          (let ([tables (repl-import-tables direct)])
-            (if (not tables)
+        ;; A lone define-library is compiled as a single unit -- no baked (scheme base),
+        ;; no program entry (matches compile-source-rehomed).  The host emits/JITs just
+        ;; this module; the 'library status tells it to drop the baked base + preloaded
+        ;; units it set up for the program case.  (Used by `emit run --emit < lib.sld`.)
+        ;; A lone define-library IS the unit under inspection here (this is `emit lib`'s
+        ;; and `emit run --emit < lib.sld`'s path), so it dumps at the ordinary level.
+        ;;
+        ;; Its imports resolve against the SESSION (mode 8's baked members plus the
+        ;; manifest units the host preloaded), which is what lets a library importing
+        ;; (scheme base) or another manifest library compile here at all
+        ;; (change: baked-set-on-every-door).
+        [(single-define-library user-forms)
+          =>
+          (lambda (lib)
+            (let ([tables (lone-library-tables lib)])
+              (if (not tables)
+                  (cons (quote error) (lone-library-unresolved-msg lib))
+                  (cons (quote library)
+                        (cons (compile-library-form lib (make-dumper #f) tables)
+                              "scheme_entry")))))]
+        [else
+          (let ([direct (run-with-scheme-base (car (collect-imports user-forms)))])
+            (let ([tables (repl-import-tables direct)])
+              (if
+                (not tables)
                 ;; `direct` already holds the import names -- name them, as the lone-library
                 ;; path does (change: manifest-empty-guards; issue #63).
                 (cons (quote error) (unresolved-imports-msg direct))
                 (cons (quote ok)
                       (cons (compile-program-with-imports
-                              (prelude-macro-forms (read-forms-from-string *prelude-source*))
-                              user-forms tables (run-closure-order direct)
-                              (make-dumper #f))     ; the program: the unit under inspection
+                              (prelude-macro-forms (read-forms-from-string
+                                                     *prelude-source*))
+                              user-forms
+                              tables
+                              (run-closure-order direct)
+                              (make-dumper #f)) ; the program: the unit under inspection
                             "scheme_entry")))))]))))
 
 ;; --- emit lib door: a library's export table as readable text (mode 11) ------
@@ -1137,38 +1160,43 @@
 ;; unit (compile-library is deterministic).
 (define (repl-library-exports-text text)
   (guard (e (#t (cons (quote error) (repl-error->string e))))
-    (let* ([forms (read-all-from-string text)]
-           [lib   (single-define-library forms)])
+    (let* ([forms (read-all-from-string text)] [lib (single-define-library forms)])
       ;; A define-library that is not alone gets the SAME diagnostic mode 7 gives it,
       ;; rather than this mode's blunter "not a single define-library"
       ;; (change: module-frontend-diagnostics).
       (check-library-position forms)
-      (if (not lib)
-          (cons (quote error) "source is not a single define-library")
-          ;; The SAME import tables mode 7 resolves for this library (lone-library-tables),
-          ;; not '(): the export table must describe the resolution the emitted unit has,
-          ;; and a library importing (scheme base) could not be compiled here at all while
-          ;; this passed '() (change: baked-set-on-every-door).
-          (let ([tables (lone-library-tables lib)])
-            (if (not tables)
-                (cons (quote error) (lone-library-unresolved-msg lib))
-                ;; no-dump deliberately: this mode recompiles the SAME library mode 7 just
-                ;; compiled, purely to recover its export table, so narrating here would
-                ;; print every stage of `emit lib --dump` a second time.
-                (let* ([dl   (parse-define-library lib)]
-                       [res  (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl)
-                                              tables no-dump)]
-                       ;; (name export-table call-rows [compile-time-interface]) -- the
-                       ;; fourth field appears only for a library that exports a macro
-                       ;; (change: library-macro-export).  `render-datum` renders whatever
-                       ;; compile-library returns, and the Chez driver writes its artifact
-                       ;; through the SAME renderer, so the two doors' bytes agree by
-                       ;; construction rather than by two implementations agreeing.
-                       [nt   (cadr res)]
-                       [name (car nt)])
-                  (cons (quote ok)
-                        (string-append (lib-name->basename name) "\n"
-                                       (render-datum nt))))))))))
+      (if
+        (not lib)
+        (cons (quote error) "source is not a single define-library")
+        ;; The SAME import tables mode 7 resolves for this library (lone-library-tables),
+        ;; not '(): the export table must describe the resolution the emitted unit has,
+        ;; and a library importing (scheme base) could not be compiled here at all while
+        ;; this passed '() (change: baked-set-on-every-door).
+        (let ([tables (lone-library-tables lib)])
+          (if (not tables)
+              (cons (quote error) (lone-library-unresolved-msg lib))
+              ;; no-dump deliberately: this mode recompiles the SAME library mode 7 just
+              ;; compiled, purely to recover its export table, so narrating here would
+              ;; print every stage of `emit lib --dump` a second time.
+              (let* ([dl (parse-define-library lib)]
+                     [res (compile-library (car dl)
+                                           (cadr dl)
+                                           (caddr dl)
+                                           (cadddr dl)
+                                           tables
+                                           no-dump)]
+                     ;; (name export-table call-rows [compile-time-interface]) -- the
+                     ;; fourth field appears only for a library that exports a macro
+                     ;; (change: library-macro-export).  `render-datum` renders whatever
+                     ;; compile-library returns, and the Chez driver writes its artifact
+                     ;; through the SAME renderer, so the two doors' bytes agree by
+                     ;; construction rather than by two implementations agreeing.
+                     [nt (cadr res)]
+                     [name (car nt)])
+                (cons (quote ok)
+                      (string-append (lib-name->basename name)
+                                     "\n"
+                                     (render-datum nt))))))))))
 
 ;; --- the input-completeness probe (design D4(b); archived OpenSpec change
 ;;     repl-embedded-incremental) ---------------------------------------------
@@ -1185,16 +1213,16 @@
 (define *repl-reader-fold?* #f)
 (define *repl-reader-next-fold?* #f)
 
-(define (fc-string s n i)                     ; scan "..." past the opening quote
+(define (fc-string s n i) ; scan "..." past the opening quote
   (if (< i n)
       (let ([k (char->integer (string-ref s i))])
         (cond
-          [(= k 34) (+ i 1)]                                  ; closing "
+          [(= k 34) (+ i 1)] ; closing "
           [(= k 92) (if (< (+ i 1) n) (fc-string s n (+ i 2)) fc-incomplete)]
           [else (fc-string s n (+ i 1))]))
       fc-incomplete))
 
-(define (fc-char s n i)                        ; scan #\<char|name>; force 1 char in
+(define (fc-char s n i) ; scan #\<char|name>; force 1 char in
   (if (< i n) (rd-token-end s n (+ i 1)) fc-incomplete))
 
 ;; The shared `rd-skip-ws` reports an unterminated block comment with a NEGATIVE index
@@ -1203,8 +1231,7 @@
 ;; block comment be typed across lines at the prompt.  Every place the probe skips
 ;; whitespace goes through this so the mapping happens exactly once.
 (define (fc-skip-ws s n i)
-  (let ([j (rd-skip-ws s n i *fc-reader-state*)])
-    (if (< j 0) fc-incomplete j)))
+  (let ([j (rd-skip-ws s n i *fc-reader-state*)]) (if (< j 0) fc-incomplete j)))
 
 ;; |bar quoted identifier| -- a datum EXTENT like a string, with the same two escapes,
 ;; and unterminated the same way (design D7).
@@ -1212,7 +1239,7 @@
   (if (< i n)
       (let ([k (char->integer (string-ref s i))])
         (cond
-          [(= k 124) (+ i 1)]                                 ; closing |
+          [(= k 124) (+ i 1)] ; closing |
           [(= k 92) (if (< (+ i 1) n) (fc-bar s n (+ i 2)) fc-incomplete)]
           [else (fc-bar s n (+ i 1))]))
       fc-incomplete))
@@ -1223,15 +1250,14 @@
   (let ([j (fc-skip-ws s n i)])
     (if (fc-bad? j)
         j
-        (if (< j n)
-            (let ([r (fc-datum s n j)])
-              (if (fc-bad? r)
-                  r
-                  (let ([j2 (fc-skip-ws s n r)])
-                    (if (fc-bad? j2)
-                        j2
-                        (if (< j2 n) (fc-datum s n j2) fc-incomplete)))))
-            fc-incomplete))))
+        (if
+          (< j n)
+          (let ([r (fc-datum s n j)])
+            (if (fc-bad? r)
+                r
+                (let ([j2 (fc-skip-ws s n r)])
+                  (if (fc-bad? j2) j2 (if (< j2 n) (fc-datum s n j2) fc-incomplete)))))
+          fc-incomplete))))
 
 ;; #N= is a prefix whose following datum determines the extent; #N# is an
 ;; atomic reference.  Semantic checks (scope, duplicates, direct self-reference)
@@ -1242,37 +1268,36 @@
         fc-incomplete
         (let ([k (char->integer (string-ref s j))])
           (cond
-            [(= k 61) (fc-prefix s n (+ j 1))]                ; #N=datum
-            [(= k 35)
-             (if (or (= (+ j 1) n) (rd-delim? (string-ref s (+ j 1))))
-                 (+ j 1)
-                 fc-malformed)]
+            [(= k 61) (fc-prefix s n (+ j 1))] ; #N=datum
+            [(= k 35) (if (or (= (+ j 1) n) (rd-delim? (string-ref s (+ j 1))))
+                          (+ j 1)
+                          fc-malformed)]
             [else fc-malformed])))))
 
-(define (fc-hash s n i)                         ; scan after '#'
+(define (fc-hash s n i) ; scan after '#'
   (if (< i n)
       (let ([k (char->integer (string-ref s i))])
         (cond
-          [(= k 40) (fc-list s n (+ i 1))]                    ; #( vector
-          [(= k 92) (fc-char s n (+ i 1))]                    ; #\ char literal
-          [(rd-digit? (string-ref s i)) (fc-label s n i)]     ; #N= / #N#
+          [(= k 40) (fc-list s n (+ i 1))]                ; #( vector
+          [(= k 92) (fc-char s n (+ i 1))]                ; #\ char literal
+          [(rd-digit? (string-ref s i)) (fc-label s n i)] ; #N= / #N#
           ;; Both comment forms must be mirrored HERE, not only in rd-skip-ws (design
           ;; D5): the shared skipper covers a comment in LEADING position, but the probe
           ;; walks the rest of the form itself.  Without this, `(list 1 #;2` would be
           ;; reported malformed where the reader calls it incomplete -- the two
           ;; disagreeing about the same text, which is the failure the sharing prevents.
-          [(= k 59) (fc-discard s n (+ i 1))]                 ; #; datum comment
-          [(= k 124)                                          ; #| block comment
-           (let ([j (fc-skip-ws s n (- i 1))])
-             (if (fc-bad? j) j (if (< j n) (fc-datum s n j) fc-incomplete)))]
-          [else (rd-token-end s n i)]))                       ; #t #f #xNN ...
+          [(= k 59) (fc-discard s n (+ i 1))] ; #; datum comment
+          [(= k 124)                          ; #| block comment
+            (let ([j (fc-skip-ws s n (- i 1))])
+              (if (fc-bad? j) j (if (< j n) (fc-datum s n j) fc-incomplete)))]
+          [else (rd-token-end s n i)])) ; #t #f #xNN ...
       fc-incomplete))
 
-(define (fc-prefix s n i)                       ; scan after ' or ` : a datum follows
+(define (fc-prefix s n i) ; scan after ' or ` : a datum follows
   (let ([j (fc-skip-ws s n i)])
     (if (fc-bad? j) j (if (< j n) (fc-datum s n j) fc-incomplete))))
 
-(define (fc-unquote s n i)                       ; scan after , or ,@ : a datum follows
+(define (fc-unquote s n i) ; scan after , or ,@ : a datum follows
   (let ([i2 (if (and (< i n) (= (char->integer (string-ref s i)) 64)) (+ i 1) i)])
     (let ([j (fc-skip-ws s n i2)])
       (if (fc-bad? j) j (if (< j n) (fc-datum s n j) fc-incomplete)))))
@@ -1283,40 +1308,39 @@
 ;; line, so "keep typing" is the useful answer; a source file cannot, so a diagnostic naming
 ;; what was left open is.  Unify them and multi-line entry at the prompt stops working --
 ;; test/repl-interactive-tests.sh `list-across-lines` is the case that catches it.
-(define (fc-list s n i)                          ; scan (...) past the open paren
+(define (fc-list s n i) ; scan (...) past the open paren
   (let ([j (fc-skip-ws s n i)])
-    (if (fc-bad? j)
-        j
-        (if (< j n)
-            (let ([k (char->integer (string-ref s j))])
-              (cond
-                [(or (= k 41) (= k 93)) (+ j 1)]              ; ) or ] closes
-                ;; #; between elements, including right before the close, where there
-                ;; is no following element for fc-hash's arm to scan.
-                [(and (= k 35) (< (+ j 1) n)
-                      (= (char->integer (string-ref s (+ j 1))) 59))
-                 (let ([j2 (fc-skip-ws s n (+ j 2))])
-                   (if (fc-bad? j2)
-                       j2
-                       (if (< j2 n)
-                           (let ([r (fc-datum s n j2)])
-                             (if (fc-bad? r) r (fc-list s n r)))
-                           fc-incomplete)))]
-                [else (let ([r (fc-datum s n j)])
-                        (if (fc-bad? r) r (fc-list s n r)))]))
-            fc-incomplete))))
+    (if
+      (fc-bad? j)
+      j
+      (if
+        (< j n)
+        (let ([k (char->integer (string-ref s j))])
+          (cond
+            [(or (= k 41) (= k 93)) (+ j 1)] ; ) or ] closes
+            ;; #; between elements, including right before the close, where there
+            ;; is no following element for fc-hash's arm to scan.
+            [(and (= k 35) (< (+ j 1) n) (= (char->integer (string-ref s (+ j 1))) 59))
+              (let ([j2 (fc-skip-ws s n (+ j 2))])
+                (if (fc-bad? j2)
+                    j2
+                    (if (< j2 n)
+                        (let ([r (fc-datum s n j2)]) (if (fc-bad? r) r (fc-list s n r)))
+                        fc-incomplete)))]
+            [else (let ([r (fc-datum s n j)]) (if (fc-bad? r) r (fc-list s n r)))]))
+        fc-incomplete))))
 
-(define (fc-datum s n i)                         ; scan one datum at i (i < n, past ws)
+(define (fc-datum s n i) ; scan one datum at i (i < n, past ws)
   (let ([k (char->integer (string-ref s i))])
     (cond
-      [(or (= k 40) (= k 91)) (fc-list s n (+ i 1))]          ; ( or [
-      [(or (= k 41) (= k 93)) fc-malformed]                   ; unbalanced ) or ]
-      [(= k 34) (fc-string s n (+ i 1))]                      ; "
-      [(or (= k 39) (= k 96)) (fc-prefix s n (+ i 1))]        ; ' or `
-      [(= k 44) (fc-unquote s n (+ i 1))]                     ; ,
-      [(= k 35) (fc-hash s n (+ i 1))]                        ; #
-      [(= k 124) (fc-bar s n (+ i 1))]                        ; |bar quoted identifier|
-      [else (rd-token-end s n i)])))                          ; atom -> to delimiter
+      [(or (= k 40) (= k 91)) (fc-list s n (+ i 1))]   ; ( or [
+      [(or (= k 41) (= k 93)) fc-malformed]            ; unbalanced ) or ]
+      [(= k 34) (fc-string s n (+ i 1))]               ; "
+      [(or (= k 39) (= k 96)) (fc-prefix s n (+ i 1))] ; ' or `
+      [(= k 44) (fc-unquote s n (+ i 1))]              ; ,
+      [(= k 35) (fc-hash s n (+ i 1))]                 ; #
+      [(= k 124) (fc-bar s n (+ i 1))]                 ; |bar quoted identifier|
+      [else (rd-token-end s n i)])))                   ; atom -> to delimiter
 
 ;; Host-facing result is a plain integer the host decodes via rt_fixnum_value:
 ;;   >= 0  complete -- that many leading bytes are the first datum
@@ -1327,9 +1351,7 @@
   (set! *fc-reader-state* (rd-state *repl-reader-fold?*))
   (let ([n (string-length s)])
     (let ([i (fc-skip-ws s n 0)])
-      (let ([result (if (fc-bad? i)
-                        i
-                        (if (< i n) (fc-datum s n i) fc-incomplete))])
+      (let ([result (if (fc-bad? i) i (if (< i n) (fc-datum s n i) fc-incomplete))])
         (if (fc-bad? result)
             result
             (begin
@@ -1373,9 +1395,17 @@
       (set! *repl-reader-fold?* (vector-ref s 10))
       (set! *repl-reader-next-fold?* (vector-ref s 11)))))
 (define (repl-save-state!)
-  (repl-state-set! (vector *repl-env* *repl-macro-env* *repl-known* *repl-n* counter
-                           *repl-libs* *repl-lib-imports* *repl-calls* (source-home)
-                           (includes-read) *repl-reader-fold?*
+  (repl-state-set! (vector *repl-env*
+                           *repl-macro-env*
+                           *repl-known*
+                           *repl-n*
+                           counter
+                           *repl-libs*
+                           *repl-lib-imports*
+                           *repl-calls*
+                           (source-home)
+                           (includes-read)
+                           *repl-reader-fold?*
                            *repl-reader-next-fold?*)))
 
 ;; --- the dispatched embedded entry (design D2) -------------------------------
@@ -1399,24 +1429,33 @@
   (repl-restore-state!)
   (let ([mode (repl-mode)])
     (let ([result
-           (cond
-             [(= mode 0) (init-session "")]
-             [(= mode 1) (init-session *prelude-source*)]
-             [(= mode 2) (form-complete-code (repl-input))]
-             [(= mode 4) (repl-load-library-text (repl-input))]  ; load a library unit
-             ;; 5 is RETIRED (chez-free-unit-pipeline): every door uses mode 9.
-             [(= mode 6) (repl-autoimport-scheme-base)]          ; auto-import (scheme base)
-             [(= mode 7) (compile-program-text (repl-input))]    ; run door: whole program
-             [(= mode 8) (run-register-baked-set)]               ; run door: the baked set
-             [(= mode 9) (repl-manifest-user-paths (repl-input))] ; every door: manifest's user libraries
-             [(= mode 10) (repl-manifest-programs (repl-input))]  ; emit build door: program entries
-             [(= mode 11) (repl-library-exports-text (repl-input))] ; emit lib door: export table
-             [(= mode 12) (repl-source-imports (repl-input))]     ; run door: a source's imports
-             [(= mode 13) (repl-set-source-home (repl-input))]    ; every door: the next source's path
-             [(= mode 14) (repl-register-cached-libs (repl-input))] ; cache: register prebuilt units
-             [(= mode 15) (repl-cached-libs-text (repl-input))]   ; cache: metadata to persist
-             [(= mode 16) (repl-library-sources-text)]           ; cache: a library's source files
-             [(= mode 17) (repl-shake-library (repl-input))]     ; emit build door: prune a unit
-             [else       (compile-one-form-text (repl-input))])])
+            (cond
+              [(= mode 0) (init-session "")]
+              [(= mode 1) (init-session *prelude-source*)]
+              [(= mode 2) (form-complete-code (repl-input))]
+              [(= mode 4) (repl-load-library-text (repl-input))] ; load a library unit
+              ;; 5 is RETIRED (chez-free-unit-pipeline): every door uses mode 9.
+              [(= mode 6) (repl-autoimport-scheme-base)] ; auto-import (scheme base)
+              [(= mode 7) (compile-program-text (repl-input))] ; run door: whole program
+              [(= mode 8) (run-register-baked-set)] ; run door: the baked set
+              [(= mode 9) (repl-manifest-user-paths
+                            (repl-input))] ; every door: manifest's user libraries
+              [(= mode 10) (repl-manifest-programs
+                             (repl-input))] ; emit build door: program entries
+              [(= mode 11) (repl-library-exports-text
+                             (repl-input))] ; emit lib door: export table
+              [(= mode 12) (repl-source-imports
+                             (repl-input))] ; run door: a source's imports
+              [(= mode 13) (repl-set-source-home
+                             (repl-input))] ; every door: the next source's path
+              [(= mode 14) (repl-register-cached-libs
+                             (repl-input))] ; cache: register prebuilt units
+              [(= mode 15) (repl-cached-libs-text
+                             (repl-input))] ; cache: metadata to persist
+              [(= mode 16)
+                (repl-library-sources-text)] ; cache: a library's source files
+              [(= mode 17) (repl-shake-library
+                             (repl-input))] ; emit build door: prune a unit
+              [else (compile-one-form-text (repl-input))])])
       (repl-save-state!)
       result)))

@@ -54,12 +54,10 @@
 ;; boundary test, it needs no fixnum-boundary literal anywhere in this file.  That
 ;; independence is worth keeping even now that issue #7 is fixed: it is what let
 ;; this pass stay correct while the emitter could not represent its own bounds.
-(define sfy-fold-limit 1073741823)              ; 2^30 - 1
+(define sfy-fold-limit 1073741823) ; 2^30 - 1
 
 (define (sfy-foldable? d)
-  (and (integer? d) (exact? d)
-       (<= d sfy-fold-limit)
-       (>= d (- 0 sfy-fold-limit))))
+  (and (integer? d) (exact? d) (<= d sfy-fold-limit) (>= d (- 0 sfy-fold-limit))))
 
 ;; ---- which constants may be duplicated ---------------------------------
 ;; Propagating a constant copies it to every use site, so it is restricted to the
@@ -72,12 +70,9 @@
 ;; question from the folding window above: a propagated constant is COPIED, never
 ;; computed, so any exact integer the program already contains is fine here.
 (define (sfy-immediate? d)
-  (or (and (integer? d) (exact? d))
-      (boolean? d)
-      (char? d)
-      (null? d)))
+  (or (and (integer? d) (exact? d)) (boolean? d) (char? d) (null? d)))
 
-(define (sfy-const-foldable? e)                ; an IL node holding a foldable int
+(define (sfy-const-foldable? e) ; an IL node holding a foldable int
   (and (pair? e) (eq? (car e) 'const) (sfy-foldable? (cadr e))))
 
 ;; ---- constant folding --------------------------------------------------
@@ -88,8 +83,11 @@
 ;; single definition of numeric semantics.
 (define (sfy-fold op args)
   (let ([node `(primcall ,op ,@args)])
-    (if (and (pair? args) (pair? (cdr args)) (null? (cddr args))
-             (sfy-const-foldable? (car args)) (sfy-const-foldable? (cadr args)))
+    (if (and (pair? args)
+             (pair? (cdr args))
+             (null? (cddr args))
+             (sfy-const-foldable? (car args))
+             (sfy-const-foldable? (cadr args)))
         (let ([a (cadr (car args))] [b (cadr (cadr args))])
           (cond
             [(eq? op '%+) `(const ,(+ a b))]
@@ -117,16 +115,12 @@
     [(seq ,a ,b) (u* (list a b))]
     [(primcall ,op . ,args) (u* args)]
     [(lambda ,params ,body) (if (hides? (param-names params)) '() (u body))]
-    [(let ,binds ,body)                        ; rhs's are in the OUTER scope
-     (append (u* (map cadr binds))
-             (if (hides? (map car binds)) '() (u body)))]
-    [(letrec ,binds ,body)                     ; rhs's are in the letrec's scope
-     (if (hides? (map car binds))
-         '()
-         (append (u* (map cadr binds)) (u body)))]
+    [(let ,binds ,body) ; rhs's are in the OUTER scope
+      (append (u* (map cadr binds)) (if (hides? (map car binds)) '() (u body)))]
+    [(letrec ,binds ,body) ; rhs's are in the letrec's scope
+      (if (hides? (map car binds)) '() (append (u* (map cadr binds)) (u body)))]
     [(apply ,f . ,args) (u* (cons f args))]
-    [(call ,f . ,args)
-     (append (if (eq? f x) (list (length args)) (u f)) (u* args))]))
+    [(call ,f . ,args) (append (if (eq? f x) (list (length args)) (u f)) (u* args))]))
 
 ;; ---- rewriting one name ------------------------------------------------
 ;; Rewrite every VISIBLE occurrence of `x` in `e`.  `on-ref` returns the
@@ -147,29 +141,26 @@
     [(seq ,a ,b) `(seq ,(r a) ,(r b))]
     [(primcall ,op . ,args) `(primcall ,op ,@(map r args))]
     [(lambda ,params ,body)
-     (if (hides? (param-names params)) e `(lambda ,params ,(r body)))]
+      (if (hides? (param-names params)) e `(lambda ,params ,(r body)))]
     [(let ,binds ,body)
-     `(let ,(r-binds binds)
-        ,(if (hides? (map car binds)) body (r body)))]
+      `(let ,(r-binds binds) ,(if (hides? (map car binds)) body (r body)))]
     [(letrec ,binds ,body)
-     (if (hides? (map car binds))
-         e
-         `(letrec ,(r-binds binds) ,(r body)))]
+      (if (hides? (map car binds)) e `(letrec ,(r-binds binds) ,(r body)))]
     [(apply ,f . ,args) `(apply ,(r f) ,@(map r args))]
     [(call ,f . ,args)
-     (let ([as (map r args)])
-       (if (eq? f x)
-           (let ([rep (on-app as)]) (if rep rep `(call ,(on-ref) ,@as)))
-           `(call ,(r f) ,@as)))]))
+      (let ([as (map r args)])
+        (if (eq? f x)
+            (let ([rep (on-app as)]) (if rep rep `(call ,(on-ref) ,@as)))
+            `(call ,(r f) ,@as)))]))
 
 ;; ---- binding groups ----------------------------------------------------
-(define (sfy-let kind binds body)              ; a group with no bindings is its body
+(define (sfy-let kind binds body) ; a group with no bindings is its body
   (if (null? binds) body (list kind binds body)))
 
-(define (sfy-effect-free? rhs)                 ; safe to drop unreferenced
+(define (sfy-effect-free? rhs) ; safe to drop unreferenced
   (and (pair? rhs) (or (eq? (car rhs) 'lambda) (eq? (car rhs) 'const))))
 
-(define (sfy-fixed-params? params)             ; proper list => fixed arity
+(define (sfy-fixed-params? params) ; proper list => fixed arity
   (and (list? params) (not (param-rest params))))
 
 ;; Rules 1-3 over one `let`/`letrec` group, whose parts have already been
@@ -178,53 +169,59 @@
 ;; are not visible in them; a letrec's are visible throughout the group.
 (define (sfy-bind kind binds body)
   (let loop ([todo binds] [kept '()] [body body])
-    (if (null? todo)
-        (sfy-let kind (reverse kept) body)
-        (let* ([b    (car todo)]
-               [x    (car b)]
-               [rhs  (cadr b)]
-               [rest (cdr todo)]
-               [rec? (eq? kind 'letrec)]
-               ;; where x is visible, EXCLUDING its own right-hand side: a
-               ;; letrec binding referenced only from inside itself is dead.
-               [sibs (if rec? (map cadr (append (reverse kept) rest)) '())]
-               [uses (fold-left append '()
-                       (map (lambda (n) (sfy-uses x n)) (append sibs (list body))))]
-               [self (if rec? (sfy-uses x rhs) '())])
-          (cond
-            ;; RULE 1 -- inline a known, singly-referenced lambda.  The single
-            ;; occurrence must be an operator of matching fixed arity, and there
-            ;; must be no self-reference (which is what excludes every recursive
-            ;; function, with no separate recursion test).  Single-use means the
-            ;; body MOVES rather than being copied, so this can never duplicate
-            ;; code or grow the output.
-            [(and (pair? rhs) (eq? (car rhs) 'lambda)
-                  (sfy-fixed-params? (cadr rhs))
-                  (null? self)
-                  (pair? uses) (null? (cdr uses))
-                  (equal? (car uses) (length (cadr rhs))))
-             (let* ([params (cadr rhs)]
-                    [lbody  (caddr rhs)]
-                    [on-ref (lambda () x)]     ; unreachable: the one use is the call
-                    [on-app (lambda (as) (sfy-let 'let (map list params as) lbody))]
-                    [sub    (lambda (n) (sfy-rewrite x on-ref on-app n))])
-               (loop (if rec? (map (lambda (bb) (list (car bb) (sub (cadr bb)))) rest) rest)
-                     (if rec? (map (lambda (bb) (list (car bb) (sub (cadr bb)))) kept) kept)
-                     (sub body)))]
-            ;; RULE 2a -- propagate an immediate constant to its use sites.
-            [(and (pair? rhs) (eq? (car rhs) 'const) (sfy-immediate? (cadr rhs)))
-             (let* ([on-ref (lambda () rhs)]
-                    [on-app (lambda (as) #f)]  ; keep the (erroneous) call shape
-                    [sub    (lambda (n) (sfy-rewrite x on-ref on-app n))])
-               (loop (if rec? (map (lambda (bb) (list (car bb) (sub (cadr bb)))) rest) rest)
-                     (if rec? (map (lambda (bb) (list (car bb) (sub (cadr bb)))) kept) kept)
-                     (sub body)))]
-            ;; RULE 3 -- drop an unreferenced binding whose right-hand side is
-            ;; syntactically effect-free.  This is what removes the closure
-            ;; allocation, not merely the work the closure guarded.
-            [(and (null? uses) (sfy-effect-free? rhs))
-             (loop rest kept body)]
-            [else (loop rest (cons b kept) body)])))))
+    (if
+      (null? todo)
+      (sfy-let kind (reverse kept) body)
+      (let* ([b (car todo)]
+             [x (car b)]
+             [rhs (cadr b)]
+             [rest (cdr todo)]
+             [rec? (eq? kind 'letrec)]
+             ;; where x is visible, EXCLUDING its own right-hand side: a
+             ;; letrec binding referenced only from inside itself is dead.
+             [sibs (if rec? (map cadr (append (reverse kept) rest)) '())]
+             [uses (fold-left append
+                              '()
+                              (map (lambda (n) (sfy-uses x n))
+                                   (append sibs (list body))))]
+             [self (if rec? (sfy-uses x rhs) '())])
+        (cond
+          ;; RULE 1 -- inline a known, singly-referenced lambda.  The single
+          ;; occurrence must be an operator of matching fixed arity, and there
+          ;; must be no self-reference (which is what excludes every recursive
+          ;; function, with no separate recursion test).  Single-use means the
+          ;; body MOVES rather than being copied, so this can never duplicate
+          ;; code or grow the output.
+          [(and (pair? rhs)
+                (eq? (car rhs) 'lambda)
+                (sfy-fixed-params? (cadr rhs))
+                (null? self)
+                (pair? uses)
+                (null? (cdr uses))
+                (equal? (car uses) (length (cadr rhs))))
+            (let* ([params (cadr rhs)]
+                   [lbody (caddr rhs)]
+                   [on-ref (lambda () x)] ; unreachable: the one use is the call
+                   [on-app (lambda (as) (sfy-let 'let (map list params as) lbody))]
+                   [sub (lambda (n) (sfy-rewrite x on-ref on-app n))])
+              (loop
+                (if rec? (map (lambda (bb) (list (car bb) (sub (cadr bb)))) rest) rest)
+                (if rec? (map (lambda (bb) (list (car bb) (sub (cadr bb)))) kept) kept)
+                (sub body)))]
+          ;; RULE 2a -- propagate an immediate constant to its use sites.
+          [(and (pair? rhs) (eq? (car rhs) 'const) (sfy-immediate? (cadr rhs)))
+            (let* ([on-ref (lambda () rhs)]
+                   [on-app (lambda (as) #f)] ; keep the (erroneous) call shape
+                   [sub (lambda (n) (sfy-rewrite x on-ref on-app n))])
+              (loop
+                (if rec? (map (lambda (bb) (list (car bb) (sub (cadr bb)))) rest) rest)
+                (if rec? (map (lambda (bb) (list (car bb) (sub (cadr bb)))) kept) kept)
+                (sub body)))]
+          ;; RULE 3 -- drop an unreferenced binding whose right-hand side is
+          ;; syntactically effect-free.  This is what removes the closure
+          ;; allocation, not merely the work the closure guarded.
+          [(and (null? uses) (sfy-effect-free? rhs)) (loop rest kept body)]
+          [else (loop rest (cons b kept) body)])))))
 
 ;; ---- the pass ----------------------------------------------------------
 ;; One bottom-up rewrite: simplify the children, then apply the rules at this
@@ -240,9 +237,11 @@
     [(primcall ,op . ,args) (sfy-fold op (map sfy args))]
     [(lambda ,params ,body) `(lambda ,params ,(sfy body))]
     [(let ,binds ,body)
-     (sfy-bind 'let (map (lambda (b) (list (car b) (sfy (cadr b)))) binds) (sfy body))]
+      (sfy-bind 'let (map (lambda (b) (list (car b) (sfy (cadr b)))) binds) (sfy body))]
     [(letrec ,binds ,body)
-     (sfy-bind 'letrec (map (lambda (b) (list (car b) (sfy (cadr b)))) binds) (sfy body))]
+      (sfy-bind 'letrec
+                (map (lambda (b) (list (car b) (sfy (cadr b)))) binds)
+                (sfy body))]
     [(apply ,f . ,args) `(apply ,(sfy f) ,@(map sfy args))]
     [(call ,f . ,args) `(call ,(sfy f) ,@(map sfy args))]))
 
@@ -258,7 +257,4 @@
 (define (simplify e)
   (let loop ([e e] [n 0])
     (let ([e2 (sfy e)])
-      (cond
-        [(equal? e2 e) e2]
-        [(>= n sfy-max-rounds) e2]
-        [else (loop e2 (+ n 1))]))))
+      (cond [(equal? e2 e) e2] [(>= n sfy-max-rounds) e2] [else (loop e2 (+ n 1))]))))

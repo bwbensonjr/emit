@@ -13,11 +13,10 @@
   (syntax-rules (unquote)
     ((_ (unquote v) subj sk fk) (let ((v subj)) sk))
     ((_ () subj sk fk) (if (null? subj) sk fk))
-    ((_ (pa . pd) subj sk fk)
-     (if (pair? subj)
-         (let ((h (car subj)) (t (cdr subj)))
-           (%match-pat pa h (%match-pat pd t sk fk) fk))
-         fk))
+    ((_ (pa . pd) subj sk fk) (if (pair? subj)
+                                  (let ((h (car subj)) (t (cdr subj)))
+                                    (%match-pat pa h (%match-pat pd t sk fk) fk))
+                                  fk))
     ((_ lit subj sk fk) (if (eq? (quote lit) subj) sk fk))))
 
 ;; Try clauses in order.  Each clause's "try the next clause" continuation is a
@@ -27,15 +26,12 @@
     ((_ subj) (error 'match "no matching clause" subj))
     ((_ subj (else body0 body ...)) (begin body0 body ...))
     ((_ subj (pat (guard g0 g ...) body0 body ...) clause ...)
-     (let ((fk (lambda () (%match-clauses subj clause ...))))
-       (%match-pat pat subj
-         (if (and g0 g ...) (begin body0 body ...) (fk))
-         (fk))))
+      (let ((fk (lambda () (%match-clauses subj clause ...))))
+        (%match-pat pat subj (if (and g0 g ...) (begin body0 body ...) (fk)) (fk))))
     ((_ subj (pat body0 body ...) clause ...)
-     (let ((fk (lambda () (%match-clauses subj clause ...))))
-       (%match-pat pat subj (begin body0 body ...) (fk))))))
+      (let ((fk (lambda () (%match-clauses subj clause ...))))
+        (%match-pat pat subj (begin body0 body ...) (fk))))))
 
 (define-syntax match
   (syntax-rules ()
-    ((_ e clause ...)
-     (let ((subj e)) (%match-clauses subj clause ...)))))
+    ((_ e clause ...) (let ((subj e)) (%match-clauses subj clause ...)))))
