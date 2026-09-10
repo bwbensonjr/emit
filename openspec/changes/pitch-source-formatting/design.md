@@ -393,6 +393,16 @@ splitting the reformat into non-regen files first and `CORE_FLAT` second — two
 crossings, two regens (~44 min), and it forfeits the single clean before/after IR
 comparison that makes the whole thing verifiable.
 
+**D11 — The script carries the exit statuses; the Makefile targets are the human doors.**
+`tools/format.sh --check` exits 1 for "a covered file would change" and 2 for "the
+environment or the invocation is wrong", which is the distinction an automated caller
+needs. `make format-check` cannot reproduce it: GNU make exits 2 on any recipe failure,
+whatever the recipe returned (measured on GNU Make 3.81 — both cases arrive as 2). Rather
+than pretend the make door carries the distinction, the requirement names the script as
+the automated-caller door and the make targets as wrappers that narrate the outcome for a
+human. *Alternative rejected:* dropping the make doors to keep one door with honest
+statuses — they are a stated deliverable and are how the rule will actually be run.
+
 ## Risks / Trade-offs
 
 - **The upstream fixes may not land, leaving this change half-applied indefinitely.** →

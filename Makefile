@@ -161,6 +161,54 @@ catalogue:
 	tools/complexity.sh --write
 
 # ===========================================================================
+# format: the covered set of hand-authored Scheme sources (change:
+# pitch-source-formatting)
+# ===========================================================================
+# Two doors over one policy.  tools/format.sh holds the covered-set resolution,
+# the dialect groups, and the pinned formatter identity, so the doors and the
+# commit gate cannot disagree about what is covered.
+#
+# The formatter is an OPTIONAL DEVELOPER TOOL.  Emit compiles pitch, so nothing
+# in the build or test path may require it: neither run-all-tests.sh nor
+# run-dev-tests.sh calls these targets, and a clean environment builds Emit
+# without pitch installed.
+#
+# Exit status is the script's: 1 means a covered file would change, 2 means the
+# invocation or the environment is wrong.  The presence check below is the
+# door's own, and exists only to add the install hint; tools/format.sh holds the
+# authoritative check, so calling it directly is equally protected.
+.PHONY: format format-check
+format:
+	@. tools/log.sh; command -v pitch >/dev/null 2>&1 || { \
+	  say "format pitch is not on PATH -- the formatter is an optional developer tool"; \
+	  say "format install bwbensonjr/scheme-pitch and re-run; the build and test path do not need it"; \
+	  exit 2; }
+	@tools/format.sh
+
+format-check:
+	@. tools/log.sh; command -v pitch >/dev/null 2>&1 || { \
+	  say "format-check pitch is not on PATH -- the formatter is an optional developer tool"; \
+	  say "format-check install bwbensonjr/scheme-pitch and re-run; the build and test path do not need it"; \
+	  exit 2; }
+	@tools/format.sh --check
+
+# The gate is OPT-IN: installed by this explicit action, never by cloning.  It
+# refuses to replace a pre-commit hook it did not write -- the marker line in
+# tools/hooks/pre-commit is how it recognizes its own -- so an existing hook is
+# a thing to merge by hand, not something a make target silently discards.
+.PHONY: install-hooks
+install-hooks:
+	@. tools/log.sh; \
+	  dst="$$(git rev-parse --git-dir)/hooks/pre-commit"; \
+	  if [ -e "$$dst" ] && ! grep -q 'emit-format-gate' "$$dst"; then \
+	    say "install-hooks refusing to clobber an existing hook -> $$dst"; \
+	    say "install-hooks merge tools/hooks/pre-commit into it by hand, or move it aside and re-run"; \
+	    exit 2; \
+	  fi; \
+	  install -m 755 tools/hooks/pre-commit "$$dst"; \
+	  say "install-hooks tools/hooks/pre-commit -> $$dst  [staged covered files, skips without pitch]"
+
+# ===========================================================================
 # install: the binary PLUS everything the doors need beside it -- the libraries
 # (change: manifest-search-path, issue #35) and the support files (change:
 # installed-emit-completeness, issue #36).

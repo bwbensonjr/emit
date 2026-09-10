@@ -48,6 +48,37 @@
 
 - Most comments should occur before the code they are describing,
   rather than on the same line except for exceptionally brief notes.
+- **Layout is mechanical.** The hand-authored Scheme sources are formatted by
+  [pitch](https://github.com/bwbensonjr/scheme-pitch), which Emit itself compiles.
+  Run `make format` before committing, or install the gate once with
+  `make install-hooks` and let it check the files you stage. `make format-check`
+  answers the same question without writing.
+- **The covered set** is `src/*.{scm,ss}`, `src/passes/*.ss`, the hand-authored
+  `lib/**/*.sld`, `tools/*.ss`, and `emit-libs.scm` — resolved by `tools/format.sh`,
+  which is the one place the policy lives. A Scheme file announcing `GENERATED` in
+  its first two lines is excluded: its generator owns its bytes, pinned by a
+  byte-identical guard. `demos/`, `test/`, and `historical/` are outside the set.
+- **The formatter is an optional developer tool.** Emit compiles pitch, so neither
+  `run-all-tests.sh` nor `run-dev-tests.sh` calls it and a clean environment builds
+  Emit without it. The gate skips and permits the commit when `pitch` is not on
+  `PATH`, saying so.
+- **The formatter is pinned**, in `tools/format.sh`: pitch `0.1.0` at scheme-pitch
+  commit `9f57119`. The version string alone cannot identify a build — it has not
+  moved across two layout changes (scheme-pitch #19) — so the pin is enforced by a
+  layout probe, `tools/pitch-probe.scm` against `tools/pitch-probe.expected`.
+  Moving the pin means regenerating that expectation in the same commit and
+  reformatting the tree.
+- **A whole-set reformat is a `make regen` barrier crossing.** The covered set
+  includes `CORE_FLAT` and `src/prelude.scm`, so a reformat is a compiler-source
+  edit in the sense the Build Workflow section defines: it lands as its own commit
+  with nothing else in it, then `make regen`, then both suites. Never interleave a
+  reformat with another compiler-source edit — a mixed commit makes the IR
+  comparison that proves the reformat harmless unreadable.
+- **Two things formatting does not promise.** Comment *contents* are never
+  reflowed, so a formatted tree still has 529 whole-line comments past 88 columns;
+  formatting buys consistent code layout, not a width-clean file. And generated
+  Scheme is out of scope entirely — reformatting `src/prelude.scm` leaves every
+  generated `.sld` byte-identical, because the generator writes from the datum.
 
 ## Build Workflow
 

@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# pre-commit -- the formatting gate (change: pitch-source-formatting, D7/D8).
+# emit-format-gate: this marker is how `make install-hooks` recognizes its own
+# hook, so it can refuse to clobber one it did not write.
+#
+# Checks only the COVERED files STAGED for this commit.  A commit gate judges
+# what is being committed; a whole-set gate would block a commit on drift
+# elsewhere in the tree that the committer did not introduce.
+#
+# Membership and dialect come from tools/format.sh, never from a second list
+# here, so a file cannot be gated under one policy and formatted under another.
+#
+# Note the gate reads the WORKING-TREE content of each staged path, not the
+# staged blob -- the intersection the design specifies is over the file list.
+# A partially staged file is therefore judged by what is on disk.
+set -uo pipefail
+
+root=$(git rev-parse --show-toplevel) || exit 0
+cd "$root" || exit 0
+. tools/log.sh
+
+# D8: the formatter is optional.  Emit COMPILES pitch, so requiring pitch to
+# commit to Emit would make the project unbuildable from a clean environment.
+# A gate that is quiet when it does nothing is indistinguishable from a gate
+# that is quiet because everything passed, so the skip announces itself.
+if ! command -v pitch >/dev/null 2>&1; then
+  say "pre-commit: skipping the formatting gate -- no 'pitch' on PATH"
+  say "pre-commit: looked for: pitch (bwbensonjr/scheme-pitch); the commit is permitted"
+  exit 0
+fi
+
+staged=()
+while IFS= read -r f; do [ -n "$f" ] && staged+=("$f"); done < <(
+  git diff --cached --name-only --diff-filter=ACM
+)
+[ "${#staged[@]}" -gt 0 ] || exit 0
+
+report=$(tools/format.sh --check --files ${staged[@]+"${staged[@]}"} 2>&1)
+status=$?
+
+case "$status" in
+  0) exit 0 ;;
+  1)
+    printf '%s\n' "$report" >&2
+    printf '%s\n' "pre-commit: rejected -- the staged files above are not formatted." >&2
+    printf '%s\n' "pre-commit: fix with:  make format    (or: tools/format.sh --files <path>...)" >&2
+    printf '%s\n' "pre-commit: then re-stage them and commit again." >&2
+    exit 1
+    ;;
+  *)
+    printf '%s\n' "$report" >&2
+    printf '%s\n' "pre-commit: the formatting gate could not run (status $status); the commit is refused." >&2
+    exit 1
+    ;;
+esac

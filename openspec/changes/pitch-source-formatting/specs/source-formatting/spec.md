@@ -109,6 +109,13 @@ non-zero when any covered file would change, and SHALL distinguish that outcome 
 usage or I/O failure, so an automated caller can tell "this tree is unformatted" from
 "this invocation is wrong".
 
+The two statuses SHALL be carried by the formatting *script*, which is the door an
+automated caller invokes. The project's build-system targets SHALL wrap that script for
+human use and SHALL NOT be required to reproduce its statuses: GNU make exits 2 for any
+recipe failure, so a make target cannot distinguish the two outcomes, and requiring it to
+would be requiring something the build system cannot express. A make target SHALL still
+narrate the outcome, so a human reading the terminal sees which case occurred.
+
 Both doors SHALL conform to the project's tooling-observability conventions: each SHALL
 announce the action it performs, name the covered set it resolved, and report the counts
 and elapsed time that make the run observable. Narration SHALL go to standard error.
@@ -124,10 +131,16 @@ modification times SHALL change — so that formatting never provokes a rebuild.
 
 #### Scenario: The checking door distinguishes a broken invocation
 
-- **WHEN** the checking door cannot run — the formatter is absent, the configuration is
-  malformed, or a covered path cannot be read
+- **WHEN** the formatting script is run with `--check` and cannot run — the formatter is
+  absent, the configuration is malformed, or a covered path cannot be read
 - **THEN** its exit status differs from the status it uses for "a file would change"
 - **AND** the reported message names the cause
+
+#### Scenario: The build-system wrapper narrates what its status cannot carry
+
+- **WHEN** a make target wrapping the checking door fails, in either case
+- **THEN** the narration on standard error names which case occurred, even though the
+  target's own exit status is the build system's generic failure status
 
 #### Scenario: A run reports what it did
 

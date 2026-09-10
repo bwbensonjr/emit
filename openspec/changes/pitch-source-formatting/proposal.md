@@ -41,7 +41,9 @@ columns to get formatting sooner.
 - **Two Makefile doors**, `make format` and `make format-check`, wrapping a single
   `tools/format.sh` that holds the covered-set policy and the per-group dialect
   selection. Both narrate per `docs/OUTPUT.md`: files considered, files that would
-  change, elapsed time.
+  change, elapsed time. The script is the door an automated caller uses, because it is
+  the one that can carry the two exit statuses; a make target collapses them to the build
+  system's generic failure (design D11).
 - **An opt-in pre-commit hook**, installed by a Makefile target, checking only the
   *staged* covered files. Full-tree checking is too slow for a hook — the covered set
   costs ~7.4 min single-threaded, and `src/prelude.scm` alone is 112 s — while a typical

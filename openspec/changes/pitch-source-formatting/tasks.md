@@ -1,25 +1,25 @@
 ## 1. Covered set and configuration
 
-- [ ] 1.1 Write `pitch.scm` at the repo root with the two entries design D4 specifies:
+- [x] 1.1 Write `pitch.scm` at the repo root with the two entries design D4 specifies:
       `(styles common ((match) (_ e . dc*)))` and
       `(styles r7rs ((define-library) (_ d . body)))`, at `(width 88)`.
-- [ ] 1.2 Verify both entries take effect, not just parse. For `match`, run
+- [x] 1.2 Verify both entries take effect, not just parse. For `match`, run
       `pitch --config pitch.scm --stdout src/passes/simplify.ss` and confirm the clauses
       indent by 2 rather than aligning under `match e`. For `define-library`, test at a
       width narrow enough to force a break — at 88 a short library fits on one line and the
       override looks inert, which is how this collision was nearly misdiagnosed as an
       upstream defect.
-- [ ] 1.3 Write `tools/format.sh` holding the covered-set policy in one place: resolve
+- [x] 1.3 Write `tools/format.sh` holding the covered-set policy in one place: resolve
       candidates from `git ls-files` over `src/*.{scm,ss}`, `src/passes/*.ss`,
       `lib/**/*.sld`, `tools/*.ss`, `emit-libs.scm`; drop any file whose first two lines
       carry a `GENERATED` marker (the same signal `test/scheme-base-gen-check.sh` scans
       for). Support `--check`, an explicit file-list mode for the hook, and
       `EMIT_VERBOSITY` per `docs/OUTPUT.md`.
-- [ ] 1.4 In `tools/format.sh`, split the resolved set into two dialect groups — the
+- [x] 1.4 In `tools/format.sh`, split the resolved set into two dialect groups — the
       hand-authored `lib/**/*.sld` under `--dialect r7rs`, everything else under
       `--dialect common` — and invoke pitch once per group with `--config pitch.scm`.
       Selection is by group membership, never by file extension (design D3).
-- [ ] 1.5 Record the pinned formatter identity in `tools/format.sh` and check the
+- [x] 1.5 Record the pinned formatter identity in `tools/format.sh` and check the
       installed pitch against it in two layers (design D6). `pitch --version` reports
       `0.1.0` for every build shipped so far, including ones on either side of both layout
       fixes this change waited on, so the string is a floor and not an identity
@@ -28,53 +28,53 @@
       Report a mismatch naming the pinned and the found identity, and saying which layer
       failed. When #19 lands, the stamped version becomes the pin and the probe narrows to
       a backstop.
-- [ ] 1.6 Add the layout probe 1.5 checks against: a fixture holding a quoted list that
+- [x] 1.6 Add the layout probe 1.5 checks against: a fixture holding a quoted list that
       overflows the width (#13's fix) and two trailing comments sharing a column (#14's
       fix), plus its formatted expectation as produced by the pinned pitch — scheme-pitch
       `9f57119` today. Those two features are what separate the builds this change has been
       measured against, so the probe fails exactly when layout moves and stays quiet when a
       teammate's binary merely differs. Regenerate the expectation in the same commit that
       moves the pin, never separately.
-- [ ] 1.7 Verify the resolver: assert it yields exactly the 32 files in `design.md`'s table
+- [x] 1.7 Verify the resolver: assert it yields exactly the 32 files in `design.md`'s table
       and excludes `lib/scheme/base.sld`, `cxr.sld`, `read.sld`, `file.sld`,
       `lib/emit/internal.sld`, and `lib/scheme/char-data.scm`.
-- [ ] 1.8 Verify the exclusion is self-maintaining: add a throwaway `GENERATED`-marked file
+- [x] 1.8 Verify the exclusion is self-maintaining: add a throwaway `GENERATED`-marked file
       under `lib/scheme/`, confirm the resolver skips it, and remove it.
 
 ## 2. Doors and narration
 
-- [ ] 2.1 Add `make format` and `make format-check` delegating to `tools/format.sh`, with a
+- [x] 2.1 Add `make format` and `make format-check` delegating to `tools/format.sh`, with a
       `pitch` presence check that reports a clear message rather than a shell error.
-- [ ] 2.2 Make both doors narrate per `docs/OUTPUT.md`: a `format` verb line naming the
+- [x] 2.2 Make both doors narrate per `docs/OUTPUT.md`: a `format` verb line naming the
       resolved set, per-group counts, files changed or that would change, and elapsed time
       — on stderr, silent at `quiet`, per-file at `verbose`.
-- [ ] 2.3 Give `format-check` distinct exit statuses for "a file would change" and "the
+- [x] 2.3 Give `format-check` distinct exit statuses for "a file would change" and "the
       invocation or environment is wrong", and confirm each is reachable (an unformatted
       file; a bad `--config` path).
-- [ ] 2.4 Verify the no-write property: run `make format` twice over a scratch copy of the
+- [x] 2.4 Verify the no-write property: run `make format` twice over a scratch copy of the
       tree and confirm the second run rewrites nothing and changes no modification times.
 
 ## 3. Commit gate
 
-- [ ] 3.1 Write the pre-commit hook template: intersect the staged file list with the
+- [x] 3.1 Write the pre-commit hook template: intersect the staged file list with the
       covered set via `tools/format.sh`'s file-list mode, and reject the commit naming each
       offending file and the command that fixes it.
-- [ ] 3.2 Make the hook skip and permit the commit when `pitch` is not on `PATH`, reporting
+- [x] 3.2 Make the hook skip and permit the commit when `pitch` is not on `PATH`, reporting
       the skip and what it looked for (design D8).
-- [ ] 3.3 Add `make install-hooks` to install it into `.git/hooks/pre-commit`, refusing to
+- [x] 3.3 Add `make install-hooks` to install it into `.git/hooks/pre-commit`, refusing to
       clobber an existing unrelated hook.
-- [ ] 3.4 Verify the gate's four behaviors: a staged unformatted covered file blocks; a
+- [x] 3.4 Verify the gate's four behaviors: a staged unformatted covered file blocks; a
       staged generated/demo/test file is ignored; an unstaged unformatted file does not
       block; an absent `pitch` skips.
 
 ## 4. Documentation
 
-- [ ] 4.1 Add the formatting rule to `CLAUDE.md`: the covered set, `make format` before
+- [x] 4.1 Add the formatting rule to `CLAUDE.md`: the covered set, `make format` before
       committing, the pinned pitch version, and — explicitly — that the formatter is a
       developer tool that neither test runner requires.
-- [ ] 4.2 Record in `CLAUDE.md` that a whole-set reformat is a `make regen` barrier
+- [x] 4.2 Record in `CLAUDE.md` that a whole-set reformat is a `make regen` barrier
       crossing, so it is never interleaved with a compiler-source edit.
-- [ ] 4.3 Document the two things formatting does *not* promise: comment contents are never
+- [x] 4.3 Document the two things formatting does *not* promise: comment contents are never
       reflowed (529 covered lines already exceed 88 columns), and generated Scheme is out of
       scope because its generator owns its bytes.
 
