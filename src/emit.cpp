@@ -1887,6 +1887,22 @@ static void run_thunk(const std::string &name) {
   rt_trap = nullptr;
 }
 
+// The library `__init` thunks this PROCESS has already run (change:
+// defer-manifest-library-init, design D3).  Deliberately host state and not session state:
+// the core's session snapshot is restored when a form's compile fails, and an `__init` is
+// irreversible -- it has already mutated the JIT'd heap -- so a snapshot that said "not yet
+// initialized" would re-run a body that ran, breaking the once-only guarantee by way of the
+// mechanism meant to protect the session.  The core answers what the import graph implies;
+// this answers what actually happened.
+static std::set<std::string> g_inits_run;
+
+// "scheme.char:__init" -> "scheme.char", the canonical unit prefix, for narration and
+// diagnostics.  The whole symbol when it carries no prefix.
+static std::string unit_of_init(const std::string &sym) {
+  size_t colon = sym.find(':');
+  return colon == std::string::npos ? sym : sym.substr(0, colon);
+}
+
 // Run a named entry thunk once for effect (no value print), under trap isolation.
 // Used for the one-shot library @"L:__init" populators.
 static bool run_init(const std::string &name) {
@@ -1903,6 +1919,32 @@ static bool run_init(const std::string &name) {
   else { rt_guard_reset(); std::cerr << "error: library init trap: " << rt_trap_msg << "\n"; ok = false; }
   rt_trap = nullptr;
   return ok;
+}
+
+// Run a newline-joined list of `__init` symbols in the order given, skipping the ones this
+// process already ran (change: defer-manifest-library-init).  The list is an import
+// closure in dependency order -- deepest first -- so a member's initializer finds the
+// globals of the members it imports already populated.  Returns false on the first failure,
+// naming the library: the caller must then NOT merge the import, so a library whose body
+// raised leaves no name bound.
+//
+// A symbol is recorded as run before the thunk executes, not after: a body that raised
+// partway has already had its effects, and re-running it on a later import would repeat
+// them.  Failure is reported to the user; it is not an invitation to try again.
+static bool run_init_list(const std::string &list) {
+  std::istringstream syms(list);
+  std::string sym;
+  while (std::getline(syms, sym)) {
+    if (sym.empty() || g_inits_run.count(sym)) continue;
+    g_inits_run.insert(sym);
+    std::string who = unit_of_init(sym);
+    if (!run_init(sym)) {
+      std::cerr << "error: library init: " << who << "\n";
+      return false;
+    }
+    vsay("initialize library " + who);
+  }
+  return true;
 }
 
 // Preload every USER library named in the manifest CHAIN into the shared JITDylib (change:
@@ -1927,11 +1969,22 @@ static bool run_init(const std::string &name) {
 // `(scheme base)`: the substrate leaked through the same hole), which is what the run door
 // has always used, so the two doors now seed identically.
 //
-// The preload stays EAGER -- what changed is which entries are preloaded, not when.  Under
-// `--no-prelude` a manifest library that imports a baked member therefore no longer
-// resolves; that is the run door's behaviour since run-door-user-libraries, and it is
-// reported below as an unresolved import rather than silently satisfied by a standard
-// library the session deliberately does not have (design D4).
+// Under `--no-prelude` a manifest library that imports a baked member does not resolve;
+// that is the run door's behaviour since run-door-user-libraries, and it is reported below
+// as an unresolved import rather than silently satisfied by a standard library the session
+// deliberately does not have (design D4).
+//
+// REGISTRATION IS EAGER; INITIALIZATION IS NOT (change: defer-manifest-library-init).  This
+// loop still reads, cache-loads, compiles and `add_ir`s every entry before the first prompt,
+// so the set of importable libraries -- and the set that failed to load -- is fixed there,
+// and the session stays the open world the eagerness was protecting.  What it no longer does
+// is call `run_init`.  That call was the whole cost: ORC materializes lazily at lookup, so an
+// added module is free until something looks a symbol up, and `run_init`'s lookup of
+// `L:__init` forced transform and codegen for every manifest library at startup whether or
+// not the session ever imported it.  Against this repository's own manifest that was 1.82 s
+// of a 2.21 s start, nearly all of it `(scheme char)`'s 4 MB of Unicode tables
+// (docs/PERFORMANCE.md P23).  The `__init` now runs at the import that needs it, driven by
+// the order mode 3's import arm returns.
 static void preload_libraries(const std::vector<std::string> &manifests, bool have_baked) {
   if (manifests.empty()) return;             // no manifest: no libraries this session
 
@@ -1970,8 +2023,8 @@ static void preload_libraries(const std::vector<std::string> &manifests, bool ha
         std::string err;
         if (!add_ir(cached_ir, "<repl>", err))
           std::cerr << "error: library add " << p << ": " << err << "\n";
-        else
-          run_init(cached_init);
+        // NO run_init here: see the note above the loop.  add_ir alone costs nothing in
+        // the JIT, because ORC materializes at lookup and nothing has looked this up yet.
         progress = true;
         continue;
       }
@@ -2002,12 +2055,14 @@ static void preload_libraries(const std::vector<std::string> &manifests, bool ha
         progress = true;                     // drop it; do not retry a hard error
         continue;
       }
-      intptr_t payload = rt_cdr(r);          // (ir . init-symbol)
+      // (ir . init-symbol).  The init symbol is deliberately dropped: nothing runs it here
+      // any more, and at the import that does run it the core re-derives it from the
+      // library's name (change: defer-manifest-library-init).
+      intptr_t payload = rt_cdr(r);
       std::string ir = scm_str(rt_car(payload));
-      std::string init = scm_str(rt_cdr(payload));
       std::string err;
       if (!add_ir(ir, "<repl>", err)) { std::cerr << "error: library add " << p << ": " << err << "\n"; }
-      else run_init(init);
+      // NO run_init here either -- the unit's `__init` waits for an import (see above).
       // While mode 16 still describes THIS library's read.
       cache_store_unit(key, p, ir);
       progress = true;
@@ -2089,8 +2144,20 @@ static void process_form(const std::string &form) {
     run_thunk(name);                        // entry-name handshake: run what the compiler chose
   } else if (st == "syntax") {
     std::cerr << ";; syntax " << scm_str(rt_cdr(r)) << "\n";
-  } else if (st == "import") {              // (import (L)): exports merged; no module
-    // nothing to JIT -- the unit was preloaded; the session scope now sees it.
+  } else if (st == "import") {              // (import (L)): initialize, then merge
+    // Nothing to JIT -- the units were registered at startup.  What IS left is the work
+    // the startup preload no longer does: the payload is the import closure's `__init`
+    // symbols in dependency order, and running them is what gives the libraries' globals
+    // their values (change: defer-manifest-library-init).
+    //
+    // The merge follows, and only on success (design D2).  The core deliberately did not
+    // merge in mode 3, so a library whose body raises never binds a name -- the arm below
+    // is simply not reached.
+    if (run_init_list(scm_str(rt_cdr(r)))) {
+      rt_repl_set(6, form.data(), (intptr_t)form.size());
+      intptr_t m = scheme_entry();
+      if (status_of(m) != "ok") std::cerr << "error: " << scm_str(rt_cdr(m)) << "\n";
+    }
   } else {                                  // "error": compile-time; session continues
     std::cerr << "error: " << scm_str(rt_cdr(r)) << "\n";
   }
@@ -2204,8 +2271,11 @@ static int emit_repl(int argc, char **argv) {
       }
     }
     for (const std::string &sym : baked_inits) {
-      // "scheme.base:__init" -> "scheme.base", the canonical unit prefix, for narration.
-      std::string who = sym.substr(0, sym.find(':'));
+      std::string who = unit_of_init(sym);
+      // Recorded as run, so a later `(import (scheme base))` at the prompt -- whose
+      // closure names these -- does not initialize the standard library a second time
+      // (change: defer-manifest-library-init).
+      g_inits_run.insert(sym);
       if (!run_init(sym)) {
         std::cerr << "fatal: baked library init: " << who << "\n";
         return 1;

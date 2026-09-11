@@ -84,6 +84,159 @@ else
   echo "  [FAIL] unbound-then-continue"; fail=$((fail+1))
 fi
 
+
+# ---------------------------------------------------------------------------
+# Deferred library initialization (change: defer-manifest-library-init).
+# A manifest library's __init runs at the first import that needs it, not at
+# session startup, so a library the session never imports costs it no codegen.
+# ---------------------------------------------------------------------------
+IHOST="build/emit repl --no-manifest-chain --manifest test/modules/emit-libs-init.scm"
+irun_last () { printf '%s' "$1" | $IHOST 2>/dev/null | awk 'NF{v=$0} END{print v}'; }
+icheck () {  # <name> <input> <expected-last-value>
+  local got; got="$(irun_last "$2")"
+  if [ "$got" = "$3" ]; then echo "  [OK  ] $1 => $got"; pass=$((pass+1))
+  else echo "  [FAIL] $1 => $got  (expected $3)"; fail=$((fail+1)); fi
+}
+
+echo "deferred initialization (REPL door)"
+
+# A library the session never imports is registered but NOT initialized.  The absence
+# of its narration IS the observable: the spec's "has not run", checked without
+# importing it (which would be the thing that makes it run).
+nover="$(printf '(+ 1 2)\n' | EMIT_VERBOSITY=verbose $IHOST 2>&1 >/dev/null)"
+if echo "$nover" | grep -q "init-count" \
+   && ! echo "$nover" | grep -q "initialize library init-count"; then
+  echo "  [OK  ] unimported-not-initialized  (registered, never initialized)"; pass=$((pass+1))
+else
+  echo "  [FAIL] unimported-not-initialized"; fail=$((fail+1))
+fi
+
+# Registration stays eager, so a manifest entry whose SOURCE cannot be read is still
+# reported before the first prompt -- not deferred to the import that would have used it.
+# This is what the narrow deferral buys and the fuller one would give up (spec scenario).
+UTMP="$(mktemp -d)"
+cat > "$UTMP/m.scm" <<EOF
+((library (ghost) (source "$PWD/test/modules/no-such-library.sld")))
+EOF
+uout="$(printf '(+ 1 2)\n' | build/emit repl --no-manifest-chain --manifest "$UTMP/m.scm" 2>&1 >/dev/null)"
+if echo "$uout" | grep -q "cannot read library source"; then
+  echo "  [OK  ] unreadable-library-reported-at-startup"; pass=$((pass+1))
+else
+  echo "  [FAIL] unreadable-library-reported-at-startup  (got: $(echo $uout | head -c 100))"; fail=$((fail+1))
+fi
+rm -rf "$UTMP"      # inline, not a trap: the startup-cost case below installs its own
+
+# Importing it runs the body exactly once, and the names work afterwards.
+icheck init-on-import      $'(import (init-count))\n(ticks)\n'                      1
+icheck init-once-two-forms $'(import (init-count))\n(import (init-count))\n(ticks)\n' 1
+
+# The closure, in dependency order: (init-outer) imports (init-count) and reads its
+# counter AT ITS OWN INIT TIME, so 1 here means init-count was initialized first.
+icheck init-closure-order  $'(import (init-outer))\n(outer-ticks)\n'                 1
+
+# ...and the narration reports the same order.
+oord="$(printf '(import (init-outer))\n' | EMIT_VERBOSITY=verbose $IHOST 2>&1 >/dev/null \
+        | grep -o 'initialize library init-[a-z]*' | head -2 | tr '\n' ',')"
+if [ "$oord" = "initialize library init-count,initialize library init-outer," ]; then
+  echo "  [OK  ] init-order-narrated  (init-count before init-outer)"; pass=$((pass+1))
+else
+  echo "  [FAIL] init-order-narrated  (got: $oord)"; fail=$((fail+1))
+fi
+
+# A library whose body raises: the error names it, and its export stays UNBOUND,
+# because the host runs the __init before asking the core to merge.
+rerr2="$(printf '(import (init-raise))\n(boom)\n(+ 40 2)\n' | $IHOST 2>&1 >/dev/null)"
+rval2="$(printf '(import (init-raise))\n(boom)\n(+ 40 2)\n' | $IHOST 2>/dev/null | awk 'NF{v=$0}END{print v}')"
+if echo "$rerr2" | grep -q "init-raise" \
+   && echo "$rerr2" | grep -q "unbound variable boom" \
+   && [ "$rval2" = "42" ]; then
+  echo "  [OK  ] failed-init-binds-nothing  (named, boom unbound, session continues)"; pass=$((pass+1))
+else
+  echo "  [FAIL] failed-init-binds-nothing  (err: $(echo $rerr2 | head -c 120); val: $rval2)"; fail=$((fail+1))
+fi
+
+# The deferred-init narration is verbose-only and never on stdout (docs/OUTPUT.md).
+dq="$(printf '(import (init-count))\n(ticks)\n' | EMIT_VERBOSITY=quiet   $IHOST 2>&1 >/dev/null)"
+dd="$(printf '(import (init-count))\n(ticks)\n' | $IHOST 2>&1 >/dev/null)"
+dso="$(printf '(import (init-count))\n(ticks)\n' | EMIT_VERBOSITY=verbose $IHOST 2>/dev/null)"
+if ! echo "$dq" | grep -q "initialize library" \
+   && ! echo "$dd" | grep -q "initialize library" \
+   && ! echo "$dso" | grep -q "initialize library"; then
+  echo "  [OK  ] init-narration-verbose-only"; pass=$((pass+1))
+else
+  echo "  [FAIL] init-narration-verbose-only  (leaked to default/quiet/stdout)"; fail=$((fail+1))
+fi
+
+# DOOR AGREEMENT (design D4): the run door and the REPL door initialize one closure in
+# the same order.  Both print 1 only if (init-count) ran before (init-outer); the
+# observable is a value, not narration, so it holds for a delivered program too.
+echo "the two doors initialize a closure alike"
+progout="$(build/emit run --no-manifest-chain --manifest test/modules/emit-libs-init.scm \
+             test/modules/prog-init-outer.scm 2>/dev/null)"
+replout="$(irun_last $'(import (init-outer))\n(outer-ticks)\n')"
+if [ "$progout" = "1" ] && [ "$replout" = "1" ]; then
+  echo "  [OK  ] door-agreement-init-order  (run => $progout, repl => $replout)"; pass=$((pass+1))
+else
+  echo "  [FAIL] door-agreement-init-order  (run => $progout, repl => $replout)"; fail=$((fail+1))
+fi
+
+# STARTUP COST (spec scenario): the same manifest, plus one outsized library the session
+# never imports, starts in the same ORDER of time.
+echo "startup does not scale with an unimported library"
+# The two manifests are generated side by side with ABSOLUTE source paths.  A manifest's
+# (source ...) entries resolve relative to the manifest, so a copy placed elsewhere with
+# relative paths loads nothing and then times a session that is not the one under test --
+# which reads as a spectacular win.  Absolute paths, plus the load-error check below,
+# rule that out.
+TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
+ROOT="$PWD"
+cat > "$TMP/small.scm" <<EOF
+((library (emit internal) (source "$ROOT/lib/emit/internal.sld"))
+ (library (scheme base)   (source "$ROOT/lib/scheme/base.sld"))
+ (library (init-count)    (source "$ROOT/test/modules/init-count.sld"))
+ (library (init-outer)    (source "$ROOT/test/modules/init-outer.sld")))
+EOF
+sed 's|^ (library (init-outer).*)))$| (library (init-outer)    (source "INIT_OUTER"))\n (library (scheme char)   (source "SCHEME_CHAR")))|' \
+    "$TMP/small.scm" \
+  | sed "s|INIT_OUTER|$ROOT/test/modules/init-outer.sld|; s|SCHEME_CHAR|$ROOT/lib/scheme/char.sld|" \
+  > "$TMP/big.scm"
+
+manifest_loads_cleanly () {   # <manifest> -- no "error:" on stderr at session start
+  ! printf '(+ 1 2)\n' \
+    | build/emit repl --no-manifest-chain --manifest "$1" 2>&1 >/dev/null \
+    | grep -q "^error:"
+}
+
+tmin () {   # <command> -- best-of-three wall clock, in whole milliseconds
+  local b=999999 s i
+  for i in 1 2 3; do
+    s=$( { /usr/bin/time -p sh -c "printf '(+ 1 2)\n' | $1 >/dev/null 2>&1"; } 2>&1 \
+         | awk '/^real/{printf "%d", $2*1000}' )
+    [ "$s" -lt "$b" ] && b="$s"
+  done
+  echo "$b"
+}
+
+if ! manifest_loads_cleanly "$TMP/small.scm" || ! manifest_loads_cleanly "$TMP/big.scm"; then
+  echo "  [FAIL] startup-independent-of-unimported  (a generated manifest does not load)"
+  fail=$((fail+1))
+else
+  t_small=$(tmin "build/emit repl --no-manifest-chain --manifest $TMP/small.scm")
+  t_big=$(tmin "build/emit repl --no-manifest-chain --manifest $TMP/big.scm")
+  # An ORDER-OF-MAGNITUDE assertion, not a threshold.  Initialized eagerly, (scheme char)
+  # alone put ~1.8 s on a ~0.4 s start -- several times over, on any machine.  Deferred, it
+  # costs a read and an IR parse.  The slack term keeps a fast small-manifest start from
+  # making the ratio brittle; the point is to catch a return to eager init, not to police
+  # milliseconds.
+  if [ "$t_big" -lt $((t_small * 3 + 300)) ]; then
+    echo "  [OK  ] startup-independent-of-unimported  (${t_small}ms vs ${t_big}ms)"
+    pass=$((pass+1))
+  else
+    echo "  [FAIL] startup-independent-of-unimported  (${t_small}ms vs ${t_big}ms: still scaling)"
+    fail=$((fail+1))
+  fi
+fi
+
 echo "-------------------------------------------"
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

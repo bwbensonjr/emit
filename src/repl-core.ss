@@ -151,14 +151,28 @@
         [(define-syntax-form? form) (repl-note-syntax! form)
                                     (cons (quote syntax) (symbol->string (cadr form)))]
         [(import-form? form)
-          ;; (import (L) ...): merge each library's exports into the session scope
-          ;; as imported bindings; the unit is already loaded (mode 4) so no module
-          ;; is emitted here (change: module-artifacts-vertical-slice).
+          ;; (import (L) ...): the unit is already registered (mode 4) so no module is
+          ;; emitted here (change: module-artifacts-vertical-slice).  What IS emitted is
+          ;; the closure's initialization order: a manifest library's `__init` no longer
+          ;; runs at startup, so the prompt is where it runs (change:
+          ;; defer-manifest-library-init).
+          ;;
+          ;; The MERGE deliberately does not happen here -- the host runs those `__init`
+          ;; thunks first and then calls mode 6 to merge (design D2).  Ordering it the
+          ;; other way would bind a library's names and only then discover that its body
+          ;; raises.  The libraries are all checked for registration before any symbol is
+          ;; returned, so an unresolved import is still reported from this arm.
           (for-each (lambda (lib)
-                      (unless (repl-import! lib)
+                      (unless (assoc lib *repl-libs*)
                         (error 'repl "imported library not loaded" lib)))
                     (cdr form))
-          (cons (quote import) "")]
+          ;; run-closure-order, not the named libraries: an `__init` reads globals the
+          ;; libraries it imports define, and this is the run door's own ordering (design
+          ;; D4), so a session and a delivered program initialize a closure alike.  Members
+          ;; the host already initialized -- the baked set, and anything an earlier import
+          ;; reached -- are filtered by the host, which is the only party that knows what
+          ;; actually ran in this process (design D3).
+          (cons (quote import) (baked-init-symbols (run-closure-order (cdr form))))]
         [else
           (let ([dn (define-name form)])
             ;; Every name this form binds: one define, or a record's whole family.  Both
@@ -290,14 +304,33 @@
     (for-each (lambda (f) (when (define-syntax-form? f) (repl-note-syntax! f))) forms)
     ""))
 
-;; Auto-import (scheme base) into the session scope after the host has preloaded it
-;; (mode 6).  Merges its exports so later forms resolve prelude procedures to the
-;; loaded library's external globals.  Returns (ok . "") or (error . msg) so the host
-;; can warn if the standard library was not on the manifest.
-(define (repl-autoimport-scheme-base)
-  (if (repl-import! (quote (scheme base)))
-      (cons (quote ok) "")
-      (cons (quote error) "(scheme base) not loaded (missing from manifest?)")))
+;; Mode 6 -- merge a registered library's exports into the session scope, so later forms
+;; resolve its names to the loaded unit's external globals.  Two callers, told apart by
+;; whether the input string is empty.
+;;
+;; An EMPTY string is the startup auto-import of (scheme base), after the host has
+;; registered it.  That was this mode's only job.
+;;
+;; A NON-EMPTY string is an import form's own text, and this is the COMMIT half of a
+;; prompt's `(import (L) ...)` (change: defer-manifest-library-init, design D2).  The host
+;; calls it only after running the `__init` thunks that form's arm returned, so a library
+;; whose body raised never reaches here and never binds a name.  The form's text is the
+;; channel because the host already holds it and the core already knows how to read it,
+;; which leaves no second encoding of a library name for the two to agree on.
+;;
+;; Returns (ok . "") or (error . msg) so the host can warn if a library was not registered.
+(define (repl-autoimport text)
+  (if (string=? text "")
+      (if (repl-import! (quote (scheme base)))
+          (cons (quote ok) "")
+          (cons (quote error) "(scheme base) not loaded (missing from manifest?)"))
+      (let loop ([libs (cdr (car (read-all-from-string text)))])
+        (cond
+          [(null? libs) (cons (quote ok) "")]
+          [(repl-import! (car libs)) (loop (cdr libs))]
+          [else (cons (quote error)
+                      (string-append "imported library not loaded: "
+                                     (render-datum (car libs))))]))))
 
 ;; --- library import (both-doors REPL half; change: module-artifacts-vertical-slice)
 ;; Merge a loaded library's exports into the session scope: each external name
@@ -1415,7 +1448,8 @@
 ;;   0 init-session no prelude   1 init-session with the baked-in *prelude-source*
 ;;   2 form-complete?            3 compile-one-form
 ;;   4 load-library (source text -> unit IR + __init)   5 manifest text -> source paths
-;;   6 auto-import (scheme base) into the session (after the host preloads it, Stage 3)
+;;   6 merge a library into the session: "" = (scheme base) at startup, else an import
+;;     form's text, the commit half of a prompt's import (defer-manifest-library-init)
 ;;   7 run door: compile a whole program with imports  8 run door: register baked (scheme base)
 ;;   9 run door: manifest text -> "KEY\tPATH" per user library (omitting (scheme base))
 ;;  10 emit build door: manifest text -> program entries (NAME/source/output triples)
@@ -1435,7 +1469,8 @@
               [(= mode 2) (form-complete-code (repl-input))]
               [(= mode 4) (repl-load-library-text (repl-input))] ; load a library unit
               ;; 5 is RETIRED (chez-free-unit-pipeline): every door uses mode 9.
-              [(= mode 6) (repl-autoimport-scheme-base)] ; auto-import (scheme base)
+              [(= mode 6) (repl-autoimport
+                            (repl-input))] ; merge a library: "" = (scheme base)
               [(= mode 7) (compile-program-text (repl-input))] ; run door: whole program
               [(= mode 8) (run-register-baked-set)] ; run door: the baked set
               [(= mode 9) (repl-manifest-user-paths

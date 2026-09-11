@@ -37,7 +37,7 @@ speed items in this list.
 | [P20](#p20--string-set-reallocated-and-copied-the-whole-string) | `string-set!` reallocated and copied the whole string | speed + memory | **high** | low | — | ☑ |
 | [P21](#p21--an-output-string-port-is-a-libc-file-and-an-unclosed-one-costs-every-later-port) | An output string port is a libc `FILE`, and an unclosed one costs every later port | speed | med | med–high | `buffer-backed-string-ports` | ☑ |
 | [P22](#p22--a-string-ports-buffer-is-retained-for-the-life-of-the-process) | A string port's buffer is retained for the life of the process | memory | low–med | med | — | ☐ |
-| [P23](#p23--the-repl-materializes-every-manifest-library-at-startup-imported-or-not) | The REPL materializes every manifest library at startup, imported or not | startup speed | **high** | low–med | — | ☐ |
+| [P23](#p23--the-repl-materializes-every-manifest-library-at-startup-imported-or-not) | The REPL materializes every manifest library at startup, imported or not | startup speed | **high** | low–med | `defer-manifest-library-init` (fix 1) | ☐ |
 
 Legend — **Value**: benefit if fixed. **Cost**: rough implementation effort/risk. These are
 estimates to aid sequencing, not commitments.
@@ -2163,7 +2163,9 @@ behind or alongside A: hanging storage off the record is the same prelude change
 
 ## P23 — The REPL materializes every manifest library at startup, imported or not
 
-**Kind:** startup speed · **Value:** **high** · **Cost:** low–med · **OpenSpec change:** none · ☐
+**Kind:** startup speed · **Value:** **high** · **Cost:** low–med · **OpenSpec change:**
+`defer-manifest-library-init` (fix 1, landed) · ☐ — **fix 1 is done and measured below**; the
+item stays open on fixes 2 and 3, which are what remains of REPL startup.
 
 **Symptom.** `emit repl` in this repository takes **2.21 s** to reach a usable prompt, and
 **1.82 s** of that is a single library the session never imports. Measured arm64 darwin, best of
@@ -2183,10 +2185,10 @@ does not `(import (scheme char))`. The other eight preloaded libraries cost 0.05
 (row 2 against row 3), so this is not "the manifest is big" — it is one library.
 
 **Cause — eager `__init`, which defeats ORC's laziness.** `preload_libraries`
-(`src/emit.cpp:1935`, called from the REPL door at `src/emit.cpp:2219`) walks every manifest entry
+(`src/emit.cpp:1988`, called from the REPL door at `src/emit.cpp:2289`) walks every manifest entry
 and, for each, calls `add_ir` then `run_init`. `add_ir` alone would be nearly free in JIT terms:
 ORC materializes lazily at lookup, so a module that is added and never referenced is never
-code-generated. `run_init` (`src/emit.cpp:1892`) is the lookup — it resolves the unit's `__init`
+code-generated. `run_init` (`src/emit.cpp:1908`) is the lookup — it resolves the unit's `__init`
 symbol through `jit_lookup` (`src/emit.cpp:227`), which forces the whole module through the
 transform and codegen layers *now*, at startup, for a library the session may never touch. The
 comment at the call site names the eagerness ("The REPL preloads EAGERLY, so a manifest entry
@@ -2219,17 +2221,55 @@ Removing `(scheme char)` takes the materialize bucket from 1952 ms to 259 ms in 
 measurement, so ~1.69 s of the 1.82 s is ORC object generation and the remaining ~0.13 s is
 LLVM's parse of the 4 MB of IR text in `add_ir`.
 
+### Outcome of fix 1 (change: `defer-manifest-library-init`)
+
+A manifest library's `__init` now runs at the first import that needs it. Registration stays
+eager, so the set of importable libraries — and of libraries that failed to load — is still
+fixed before the first prompt, and the session is the same open world it was. Measured the
+same way as above, best of five, warm cache:
+
+| invocation | before | after | delta |
+|---|---|---|---|
+| `emit repl`, repo manifest | 2.20 s | **0.42 s** | **−81%** |
+| `emit repl`, no manifest | 0.33 s | 0.36 s | unchanged |
+| `emit repl --no-prelude` | 0.07 s | 0.06 s | unchanged |
+
+The session metric line says it more precisely than the clock: `12/12 modules` became
+**`3/12 modules`**. Twelve modules are still added to the JIT; three are materialized. ORC was
+always willing to defer the other nine — `run_init`'s symbol lookup was the only thing forcing
+them, which is why the fix is a deletion rather than a mechanism.
+
+**The work moved; it did not disappear.** A session that does `(import (scheme char))` pays the
+same ~1.8 s at that import (`4/12 modules, materialize 2036ms`). That is the honest shape of
+this fix: it removes work the session never asked for and does nothing for work it did. Fix 3
+below is now the more interesting of the two that remain, because `(scheme char)`'s 20x
+source→IR expansion *is* that remaining 1.8 s, and shrinking it would help the AOT door and P8's
+size axis at the same time.
+
+**What did not change, checked rather than assumed.** stdout is byte-identical at every
+verbosity and under both dump flags, and `--dump-all`'s 2,686,855 bytes of library stage dumps
+are unchanged — the surface P3's cache regression broke, and the reason that comparison was made
+at all. The verbose narration gains one `initialize library <name>` line per initialization, and
+the module counter now reports materialization truthfully; nothing else moved.
+
+**One thing the change taught about the regen budget.** `src/repl-core.ss` is a compiler source
+but sits *outside* the fixed point — it enters only `embed-repl.scm`, emitted in stage 3 — so
+editing it converges at iteration 1 and rewrites only `bootstrap/embed-repl.ll`. Two runs took
+216 s and 217 s, not the ~5 min `CLAUDE.md`'s post-edit row predicts for a `CORE_FLAT` edit. The
+second of those runs also confirmed, by byte-comparison, that a layout-only reformat of that file
+emits identical IR.
+
 **Fix sketch, in the order they should be considered.**
 
-1. **Defer the `__init` to first import.** Add every manifest module at startup — which is what
-   makes an interactive `(import (L))` resolvable at all — but run its `__init` when a form first
-   imports it, not before. Startup then stops scaling with the manifest, which is the property
-   worth having: this repository's 6x is a lower bound on what a project with a large library set
-   pays. The hazard is **initialization order**: a member's initializer reads globals defined by
-   the members it imports, and today the REPL runs the baked set's `__init`s in the dependency
-   order mode 8 returned (`src/emit.cpp:2194`) precisely because a session has no program
-   `@scheme_entry` to drive them. Deferring means computing that order per import closure at
-   import time instead of once at startup.
+1. **Defer the `__init` to first import.** ☑ **Landed** (change:
+   `defer-manifest-library-init`) — see the outcome above for what it measured. Every manifest
+   module is still added at startup, which is what makes an interactive `(import (L))`
+   resolvable at all; only the `__init` waits. The hazard was **initialization order** — a
+   member's initializer reads globals defined by the members it imports — and it was settled by
+   reusing `run-closure-order`, the topological closure the run door already orders a program's
+   inits with, so the two doors cannot drift. The prompt's import also had to be split into
+   resolve-then-commit (`src/repl-core.ss`, mode 3's import arm and mode 6), so that a library
+   whose body raises binds none of its names.
 2. **Cache object code, not IR text.** This is the `.bc`/`.o` half P3 named and deferred as worth
    only ~0.30 s. It is worth more than that now and it is what is left after (1): the residual
    0.34 s no-manifest start is 0.27 s of baked-set materialization (the two `register baked
@@ -2262,7 +2302,7 @@ echo '(+ 1 2)' | EMIT_VERBOSITY=verbose build/emit repl 2>&1 >/dev/null \
 Each delta is the work *between* two narration lines, so a library's cost is charged to the line
 after it. `EMIT_VERBOSITY=verbose`'s closing `repl -> session` line gives the aggregate
 (transform / materialize / execute, plus `added`/`transformed` module counts from
-`src/emit.cpp:2260`), and `-O0`/`-O1`/`-O2` separate the optimizer from codegen. What the
+`src/emit.cpp:2330`), and `-O0`/`-O1`/`-O2` separate the optimizer from codegen. What the
 narration does *not* time is the pre-JIT phases — manifest resolution, cache reads, `add_ir`'s IR
 parse — which is why the parse figure above is a subtraction rather than a reading; `samply` is
 the tool if that ever needs attribution.
