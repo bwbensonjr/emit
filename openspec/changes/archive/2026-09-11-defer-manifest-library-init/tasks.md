@@ -81,6 +81,8 @@
 - [x] 6.2 Update `docs/PERFORMANCE.md` P23: tick fix 1 with the measured before/after, and
       re-rate what remains (fix 2, the object-code cache, and fix 3, shrinking `(scheme char)`'s
       IR) now that the eager init is gone. Verify the entry names its OpenSpec change.
-- [~] 6.3 Sync the delta into `openspec/specs/interactive-repl/spec.md` and archive the change.
-      SYNCED and validated (27 specs pass, full requirement text preserved). ARCHIVE and the
-      `trust-check` half of 5.3 both wait on a commit, which is the user's call.
+- [x] 6.3 Sync the delta into `openspec/specs/interactive-repl/spec.md` and archive the change.
+      Synced and verified: the two ADDED requirements and the MODIFIED one are present with all
+      their scenarios, and `openspec validate --specs` passes 27/27. Committed as 2f7bcdd, after
+      which `test/trust-check.sh` reported "committed IR is exactly what the current source
+      regenerates".
