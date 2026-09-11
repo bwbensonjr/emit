@@ -37,6 +37,7 @@ speed items in this list.
 | [P20](#p20--string-set-reallocated-and-copied-the-whole-string) | `string-set!` reallocated and copied the whole string | speed + memory | **high** | low | — | ☑ |
 | [P21](#p21--an-output-string-port-is-a-libc-file-and-an-unclosed-one-costs-every-later-port) | An output string port is a libc `FILE`, and an unclosed one costs every later port | speed | med | med–high | `buffer-backed-string-ports` | ☑ |
 | [P22](#p22--a-string-ports-buffer-is-retained-for-the-life-of-the-process) | A string port's buffer is retained for the life of the process | memory | low–med | med | — | ☐ |
+| [P23](#p23--the-repl-materializes-every-manifest-library-at-startup-imported-or-not) | The REPL materializes every manifest library at startup, imported or not | startup speed | **high** | low–med | — | ☐ |
 
 Legend — **Value**: benefit if fixed. **Cost**: rough implementation effort/risk. These are
 estimates to aid sequencing, not commitments.
@@ -189,10 +190,12 @@ literals now emit an inline immediate constant instead of an `rt_make_char` call
 
 ## P3 — The Chez-free doors recompile the standard library at every invocation
 
-**Status:** ☑ done for the baked standard library (change: `baked-set-artifact-cache`); the
-user-library half and the `.bc`/`.o` half remain open — see "Outcome" immediately below. The
-re-measurement that re-rated this item low → high is kept after it, and the original entry, whose
-framing was "mostly done", after that.
+**Status:** ☑ done for the baked standard library (change: `baked-set-artifact-cache`), and the
+user-library half has since landed too (change: `chez-free-unit-pipeline`); only the `.bc`/`.o`
+half remains open, and it is re-rated under **P23**, which owns what is left of REPL startup. See
+"Outcome" immediately below, then the 2026-08-13 re-measurement that re-rated this item low →
+high, then the 2026-09-10 one that records the outcome and hands the residue to P23, and the
+original entry, whose framing was "mostly done", after that.
 
 ### Outcome (change: `baked-set-artifact-cache`)
 
@@ -370,6 +373,36 @@ med — one new core mode plus a cache-key decision and a writable cache locatio
 `emit`; the export-table format and the stamp both already exist.
 
 **OpenSpec change:** _none yet._
+
+### Re-measured again (2026-09-10) — the cache landed, and what is left is not compilation
+
+Three statements above are now stale, all in the direction of the cache having worked. Measured on
+the same machine, `HEAD` = a68046e, warm cache, best of five:
+
+| case | 2026-08-13 | now |
+|---|---|---|
+| `emit repl`, manifest, prelude | 2.05 s | 2.21 s |
+| `emit repl`, manifest, `--no-prelude` | 1.69 s | **0.07 s** |
+| `emit repl`, no manifest, prelude | 1.87 s | **0.34 s** |
+| `emit repl`, no manifest, `--no-prelude` | 0.05 s | 0.01 s |
+
+- **The `--no-prelude` defect this section filed as issue #101 is fixed** — closed 2026-08-14 by
+  `6a235ce` ("one seeding path, cached user libraries, a shaking build door"), and confirmed here
+  at 0.07 s against the 1.69 s the issue recorded. The REPL no longer loads `(scheme base)` from
+  the manifest, and the eight manifest libraries that import it now report themselves as not
+  loaded rather than being compiled and discarded.
+- **"User-library caching was also deferred"** (in Outcome, above) no longer holds either:
+  `chez-free-unit-pipeline` gave the preload the same cache, and a warm session reuses a
+  `unit-*.ll` for every manifest library.
+- **The prelude-from-source cost is gone from the REPL door.** The 1.87 → 0.34 s row is the whole
+  of it; a warm REPL start now reads `baked-v2-*.ll` instead of compiling `*prelude-source*`.
+
+What the row-1 2.21 s is made of has therefore changed character completely: it is **no longer
+compilation at all**, but LLVM materialization of already-cached IR, and 1.82 s of it is one
+manifest library the session never imports. That is a different defect with a different fix, so it
+is filed as **P23** rather than reopening this item. The `.bc`/`.o` half this entry deferred as
+worth "only 0.30 s" is also re-rated there: it is now the larger share of what remains after P23's
+first fix.
 
 ### Original entry (framing superseded by the re-measurement above)
 
@@ -2125,6 +2158,122 @@ nothing about it is quadratic — this is the flat-cost half of what P21 was. It
 paying for if a long-running process (the REPL host, a server) accumulates string-port text
 across a session, since that is the shape where "until exit" stops being a bound. Sequence it
 behind or alongside A: hanging storage off the record is the same prelude change either way.
+
+---
+
+## P23 — The REPL materializes every manifest library at startup, imported or not
+
+**Kind:** startup speed · **Value:** **high** · **Cost:** low–med · **OpenSpec change:** none · ☐
+
+**Symptom.** `emit repl` in this repository takes **2.21 s** to reach a usable prompt, and
+**1.82 s** of that is a single library the session never imports. Measured arm64 darwin, best of
+five, `HEAD` = a68046e, one trivial form on stdin, warm cache throughout:
+
+| case | wall | `map` bound? |
+|---|---|---|
+| `emit repl`, manifest, prelude | **2.21 s** | yes |
+| `emit repl`, manifest minus `(scheme char)`, prelude | **0.39 s** | yes |
+| `emit repl`, no manifest, prelude | 0.34 s | yes |
+| `emit repl`, manifest, `--no-prelude` | 0.07 s | no |
+| `emit repl`, no manifest, `--no-prelude` | 0.01 s | no |
+
+Row 1 against row 2 is the item: **deleting one manifest entry a session never mentions is worth
+1.82 s, an 82% cut**, and the session it leaves behind is observably identical for any form that
+does not `(import (scheme char))`. The other eight preloaded libraries cost 0.05 s *together*
+(row 2 against row 3), so this is not "the manifest is big" — it is one library.
+
+**Cause — eager `__init`, which defeats ORC's laziness.** `preload_libraries`
+(`src/emit.cpp:1935`, called from the REPL door at `src/emit.cpp:2219`) walks every manifest entry
+and, for each, calls `add_ir` then `run_init`. `add_ir` alone would be nearly free in JIT terms:
+ORC materializes lazily at lookup, so a module that is added and never referenced is never
+code-generated. `run_init` (`src/emit.cpp:1892`) is the lookup — it resolves the unit's `__init`
+symbol through `jit_lookup` (`src/emit.cpp:227`), which forces the whole module through the
+transform and codegen layers *now*, at startup, for a library the session may never touch. The
+comment at the call site names the eagerness ("The REPL preloads EAGERLY, so a manifest entry
+the session never imports still reaches this") in the context of a typo'd path aborting startup;
+the cost is the same mechanism seen on the clock instead of on an error path.
+
+**Why `(scheme char)` and nothing else.** It is the Unicode tables, and it is an outlier by two
+orders of magnitude — 198,981 B of source (`lib/scheme/char.sld` plus the generated
+`lib/scheme/char-data.scm`) lowering to **4,061,923 B** of IR:
+
+| unit | cached IR |
+|---|---|
+| `scheme.char` | **4,061,923 B** |
+| the whole baked set (`emit.internal` + `scheme.base`) | 1,117,015 B |
+| `scheme.read` — the largest of the rest | 38,678 B |
+
+So one manifest entry is 3.6x the entire standard library and 105x the next-largest unit. The
+`__init` that eager preload forces is codegen over all of it.
+
+**It is codegen, not the optimizer.** The JIT profile barely moves it, which rules out P13's
+transform as the lever:
+
+| profile | wall | transform | materialize |
+|---|---|---|---|
+| `-O0` | 2.09 s | 0.0 ms | 1963 ms |
+| `-O1` (default) | 2.23 s | 137 ms | 1986 ms |
+| `-O2` | 2.32 s | 207 ms | 2036 ms |
+
+Removing `(scheme char)` takes the materialize bucket from 1952 ms to 259 ms in the same
+measurement, so ~1.69 s of the 1.82 s is ORC object generation and the remaining ~0.13 s is
+LLVM's parse of the 4 MB of IR text in `add_ir`.
+
+**Fix sketch, in the order they should be considered.**
+
+1. **Defer the `__init` to first import.** Add every manifest module at startup — which is what
+   makes an interactive `(import (L))` resolvable at all — but run its `__init` when a form first
+   imports it, not before. Startup then stops scaling with the manifest, which is the property
+   worth having: this repository's 6x is a lower bound on what a project with a large library set
+   pays. The hazard is **initialization order**: a member's initializer reads globals defined by
+   the members it imports, and today the REPL runs the baked set's `__init`s in the dependency
+   order mode 8 returned (`src/emit.cpp:2194`) precisely because a session has no program
+   `@scheme_entry` to drive them. Deferring means computing that order per import closure at
+   import time instead of once at startup.
+2. **Cache object code, not IR text.** This is the `.bc`/`.o` half P3 named and deferred as worth
+   only ~0.30 s. It is worth more than that now and it is what is left after (1): the residual
+   0.34 s no-manifest start is 0.27 s of baked-set materialization (the two `register baked
+   library` lines, ~200 ms and ~180 ms across per-phase profiles) above a 0.07 s floor. (1) makes
+   startup independent of the manifest; (2) is what shortens the part no session can avoid.
+3. **Shrink `(scheme char)`'s IR.** A 20x source→IR expansion on what is fundamentally static
+   table data suggests the tables are emitted as initialization *code* rather than as constant
+   data. This is P14's shape (an aggregate constant rebuilt at every evaluation) at an unusual
+   size, it would help the AOT door and P8's binary-size axis as well as this one, and it is the
+   only one of the three that reduces the work rather than moving it.
+
+(1) and (3) are independent and compose; (2) should follow (1), since deferring changes which
+modules a typical session materializes at all.
+
+**One hazard, from P3's own lesson.** A deferred `__init` is exactly the kind of change that
+preserves every value while altering an observable — narration order, `--dump-all`'s stage
+headers, the `[N/M modules]` session line. P3's cache regression was caught only by a pre-existing
+dump test; test this one on "every observable is the same", not on "the answer is the same".
+
+**How to measure it.** There is no dedicated profiler and none is needed: the door's narration is
+already per-phase, and it is emitted as the work happens, so timestamping stderr turns it into a
+profile with no code change —
+
+```sh
+echo '(+ 1 2)' | EMIT_VERBOSITY=verbose build/emit repl 2>&1 >/dev/null \
+  | awk '{ cmd="date +%s.%N"; cmd | getline now; close(cmd);
+           if (prev) printf "%7.0f ms  %s\n", (now-prev)*1000, $0; prev=now }'
+```
+
+Each delta is the work *between* two narration lines, so a library's cost is charged to the line
+after it. `EMIT_VERBOSITY=verbose`'s closing `repl -> session` line gives the aggregate
+(transform / materialize / execute, plus `added`/`transformed` module counts from
+`src/emit.cpp:2260`), and `-O0`/`-O1`/`-O2` separate the optimizer from codegen. What the
+narration does *not* time is the pre-JIT phases — manifest resolution, cache reads, `add_ir`'s IR
+parse — which is why the parse figure above is a subtraction rather than a reading; `samply` is
+the tool if that ever needs attribution.
+
+**A measurement trap worth recording, since P3 fell into the sibling of it.** The obvious way to
+run the row-2 experiment — copy the manifest somewhere and delete a line — is wrong: a manifest's
+`(source ...)` paths resolve relative to the manifest, so a copy in a scratch directory fails to
+read every library and produces a *fast* session with no libraries at all, which looks exactly
+like the win being measured. It reported 0.34 s, 0.05 s off the true answer, with eight
+`error: cannot read library source` lines scrolling past above the number. Rewrite the paths to
+absolute, and check the run is clean of `error:` before believing its clock.
 
 ---
 
