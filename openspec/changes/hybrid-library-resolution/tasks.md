@@ -122,6 +122,6 @@
 - [x] 9.3 Run `./run-all-tests.sh` after regeneration and verify every default suite passes,
   including hybrid resolver, project-door, module, REPL, installation, cache, output, and
   byte-identity coverage.
-- [ ] 9.4 Run the independent `./run-dev-tests.sh` suites after regeneration and verify each passes;
+- [x] 9.4 Run the independent `./run-dev-tests.sh` suites after regeneration and verify each passes;
   after the implementation and regenerated IR are committed, rerun `test/trust-check.sh` and verify
   committed bootstrap IR is reproduced byte-for-byte.
