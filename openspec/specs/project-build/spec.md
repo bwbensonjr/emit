@@ -51,48 +51,34 @@ otherwise the default `emit-libs.scm`.
 
 ### Requirement: emit build distinguishes why no program entry could be resolved
 
-When `emit build` cannot resolve a program entry, it SHALL report which of the distinguishable
-causes applies and exit non-zero. It SHALL NOT terminate on a signal, and SHALL NOT exit without a
-diagnostic, for any manifest text.
+When `emit build` is asked to build a named manifest target and cannot resolve its program entry, it
+SHALL report whether no manifest was found, a found manifest declares no entries, or a found
+manifest declares no program entry, and SHALL exit nonzero without terminating on a signal.
 
-The causes SHALL be reported distinguishably:
-
-1. **No manifest was found.** The message SHALL say so, and SHALL name the manifest filename the
-   door searched for, rather than naming an empty path.
-2. **A manifest was found but declares no entries** (empty, whitespace-only, or comment-only). The
-   message SHALL name the located manifest and say it declares no entries.
-3. **A manifest was found and declares entries, but none is a `program` entry.** This is the
-   existing `no program entry in manifest <path>` case and SHALL keep naming the manifest.
-
-Because a program entry is what `emit build` builds, cases 1 and 2 SHALL be errors for this door
-even though "Finding no manifest at all SHALL remain non-fatal" holds for doors that only resolve
-imports.
+These manifest-entry diagnostics SHALL apply only to a bare target name. A path-shaped or
+`.scm`-suffixed operand SHALL use direct-source mode and SHALL report source-read or compilation
+errors instead of a missing-program-entry diagnostic.
 
 #### Scenario: emit build with no manifest reports the filename it looked for
 
-- **WHEN** `emit build` is run in a directory with no `emit-libs.scm` and no manifest is found on
-  any searched candidate
-- **THEN** it reports that no manifest was found, naming `emit-libs.scm`, and exits non-zero
-  without crashing
+- **WHEN** `emit build my-app` runs with no manifest available
+- **THEN** it reports that no manifest was found, names `emit-libs.scm`, and exits nonzero
 
 #### Scenario: emit build with an entryless manifest names it
 
-- **WHEN** `emit build` is run with an `emit-libs.scm` that is empty, whitespace-only, or
-  comment-only
-- **THEN** it reports that the located manifest declares no entries, naming that manifest, and
-  exits non-zero without crashing
+- **WHEN** `emit build my-app` runs with an empty, whitespace-only, or comment-only manifest
+- **THEN** it names that manifest and says it declares no entries
 
 #### Scenario: emit build with a library-only manifest is unchanged
 
-- **WHEN** `emit build` is run with a manifest declaring libraries but no `program` entry
-- **THEN** it reports `no program entry in manifest <path>` as before and exits non-zero
+- **WHEN** `emit build my-app` runs with a manifest containing libraries but no program entry
+- **THEN** it reports `no program entry in manifest <path>`
 
 #### Scenario: A source path given where an entry name belongs does not crash
 
-- **WHEN** the user runs `emit build hello.scm` in a directory whose manifest is absent or
-  entryless
-- **THEN** the door reports the applicable cause above and exits non-zero, rather than terminating
-  on a signal
+- **WHEN** `emit build hello.scm` runs with no manifest or with an entryless manifest
+- **THEN** it treats `hello.scm` as source, does not request a program entry, and either delivers it
+  or reports a source-specific error
 
 ### Requirement: Delivered executable defaults its output path from the program name
 
@@ -155,3 +141,37 @@ binary size), with narration on stderr and controllable via `EMIT_VERBOSITY`.
 - **THEN** the tool announces the program name, the resolved source, and the delivered
   executable path with its size on stderr
 
+### Requirement: emit build delivers a direct source program without a manifest entry
+
+`emit build` SHALL accept a source operand ending in `.scm` or containing a path separator as an
+application source rather than a manifest program name. It SHALL build that source through the same
+Chez-free AOT pipeline and shared hybrid library resolver as a named program. `-o OUTPUT` SHALL
+override the delivered path; otherwise the output SHALL default beneath `build/` from the source
+basename with its final `.scm` suffix removed.
+
+Named manifest program entries SHALL remain supported and unchanged. A bare operand that is neither
+path-shaped nor `.scm`-suffixed SHALL continue to mean a manifest program name, preserving existing
+targets without filesystem-dependent ambiguity.
+
+#### Scenario: A one-file application builds without a manifest
+
+- **WHEN** the user runs `emit build main.scm` in a directory with no manifest and `main.scm`
+  imports only baked libraries
+- **THEN** Emit delivers `build/main` through the normal AOT pipeline
+
+#### Scenario: A direct application imports conventional project and shipped libraries
+
+- **WHEN** `main.scm` imports a project library beneath `./lib` and a non-baked standard library
+  beneath the installed root
+- **THEN** `emit build main.scm` resolves both through the shared provider order and delivers a
+  working executable without library mappings or a program entry
+
+#### Scenario: Output can be selected directly
+
+- **WHEN** the user runs `emit build app/main.scm -o dist/my-app`
+- **THEN** the executable is delivered at `dist/my-app`
+
+#### Scenario: A bare target still resolves through the manifest
+
+- **WHEN** the user runs `emit build my-app`
+- **THEN** `my-app` is interpreted as a manifest program name exactly as before

@@ -13,46 +13,45 @@ from-source developer workflow untouched.
 
 ### Requirement: An installed Emit is self-sufficient for the standard libraries
 
-An installed Emit SHALL be able to resolve every library it ships without the user's current
-working directory containing anything, **and SHALL do so whether or not the user's own project
-carries a manifest of its own**. A library that is *not* baked into the binary is reachable only
-through a manifest, so installation SHALL place the manifest and the library sources it names where
-the binary's own manifest lookup will find them.
+An installed Emit SHALL resolve every shipped library from an arbitrary working directory, whether
+or not the user's project carries a manifest. Non-baked shipped `.sld` sources SHALL be installed in
+the conventional hierarchy beneath `<prefix>/share/emit/lib`, so `(scheme inexact)` is available as
+`<prefix>/share/emit/lib/scheme/inexact.sld` without a per-library mapping.
 
-Concretely, an installation SHALL satisfy the executable-relative candidate of the manifest lookup
-procedure: for a binary installed at `<prefix>/bin/emit`, the manifest SHALL be installed at
-`<prefix>/share/emit/emit-libs.scm`, and every relative `(source …)` it names SHALL exist relative
-to that manifest — so `lib/scheme/base.sld` in the installed manifest means
-`<prefix>/share/emit/lib/scheme/base.sld`.
+The installed manifest SHALL remain at `<prefix>/share/emit/emit-libs.scm` and MAY contain exact
+library entries for compatibility, generated libraries, or exceptional layouts. Its relative paths
+SHALL resolve against the manifest as before. The executable-relative and compiled-prefix resolver
+tiers SHALL each pair that manifest candidate with its sibling `lib` root, resolving the running
+executable through symbolic links before deriving the executable-relative location.
 
-Because the searched manifest candidates chain (`module-system`, "Locating the manifest"), a
-project's own `./emit-libs.scm` SHALL NOT hide the installed one: a project SHALL be able to import
-any shipped library without naming it, and in particular SHALL NOT need an absolute path into the
-installation prefix — a path that is not stable across upgrades for a package-manager install.
-
-Library **source** (`.sld`) is what ships. Compiled library artifacts are not part of the install
-contract; an installed door compiles a needed library on demand exactly as an in-repo door does.
+A project's providers SHALL precede installed providers, so a project can override a non-baked
+shipped library without embedding an unstable package-manager prefix. Library source SHALL remain
+the installed contract; compiled library artifacts SHALL be produced locally on demand and SHALL
+not be installed.
 
 #### Scenario: A non-baked-in standard library imports from an arbitrary directory
 
-- **WHEN** Emit is installed under a prefix and a program importing `(scheme inexact)` is run from
-  a directory containing no `emit-libs.scm` and no `lib/`
-- **THEN** the program compiles and runs, producing the same value it produces when run from the
-  source tree
+- **WHEN** Emit is installed and a program imports `(scheme inexact)` from a directory containing no
+  project manifest or library root
+- **THEN** the source resolves conventionally from the installed `scheme/inexact.sld` and the
+  program produces its expected value
 
 #### Scenario: A project with its own manifest keeps the shipped libraries
 
-- **WHEN** Emit is installed under a prefix and a program importing `(scheme inexact)` is run from a
-  project directory whose `./emit-libs.scm` names only that project's own program and libraries
-- **THEN** the program compiles and runs, and the project's manifest contains no entry for
-  `(scheme inexact)` and no path into the installation prefix
+- **WHEN** a project supplies only its own conventional libraries and imports `(scheme inexact)`
+- **THEN** the project library resolves from the project root, the standard library resolves from
+  the installed root, and no project file names the installation prefix
 
 #### Scenario: Nothing in the installed tree depends on the build directory
 
-- **WHEN** the installation prefix is inspected after the source tree it was built from has been
-  removed
-- **THEN** the installed `emit` still resolves and runs a program importing a shipped library, so
-  no installed path refers back into the build tree
+- **WHEN** the source tree is removed after installation
+- **THEN** the installed binary still resolves every shipped library through its executable-relative
+  or compiled-prefix providers
+
+#### Scenario: A symlinked executable finds its conventional root
+
+- **WHEN** `emit` is invoked through a symlink outside the prefix
+- **THEN** resolving the real executable locates the sibling installed manifest and `lib` root
 
 ### Requirement: `make install` produces the installed layout
 

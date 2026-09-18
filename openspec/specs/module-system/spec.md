@@ -1022,171 +1022,161 @@ A program that imports libraries SHALL, in its `@scheme_entry`, call the importe
 
 ### Requirement: AOT door — build and link an importing program
 
-An import-aware build path SHALL resolve a program's imports (and each library's imports)
-through the manifest to their sources, build the transitive dependency graph, reject import
-cycles with a compile-time error, compile each unit against the import environment built from
-its dependencies' export tables, and link the program module, every unit in the transitive
-closure, and the runtime into a single working executable in dependency order. A library that
-is not in the program's transitive import closure SHALL NOT be linked.
+An import-aware build path SHALL resolve a program's imports and each library's imports through the
+shared hybrid resolver, build the transitive dependency graph, reject import cycles with a
+compile-time error, compile each unit against the import environment built from its dependencies'
+export tables, and link the program module, every unit in the transitive closure, and the runtime
+into a single working executable in dependency order. A library that is not in the program's
+transitive import closure SHALL NOT be linked.
 
 #### Scenario: A program importing a library builds and runs
 
-- **WHEN** the build path is run on a program that imports `(mylib)` and prints the result of
-  `greet`
-- **THEN** it produces an executable that, when run, prints the value `greet` returns
+- **WHEN** the build path is run on a program that imports `(mylib)`, resolved through either an
+  exact manifest entry or a conventional library root, and prints the result of `greet`
+- **THEN** it produces an executable that prints the value `greet` returns
 
 #### Scenario: A transitive import chain builds and runs
 
-- **WHEN** the build path is run on a program that imports `(a)` where `(a)` imports `(b)`
-- **THEN** it compiles `(b)`, `(a)`, and the program, links all three plus the runtime, and
-  the resulting executable runs correctly
+- **WHEN** the build path runs a program importing `(a)`, where `(a)` imports `(b)` and the two
+  libraries are resolved by any supported providers
+- **THEN** it compiles `(b)`, `(a)`, and the program, links all three plus the runtime, and the
+  executable runs correctly
 
 #### Scenario: An import cycle is reported
 
-- **WHEN** the build path resolves a graph in which `(a)` imports `(b)` and `(b)` imports `(a)`
-- **THEN** it reports a compile-time error naming the cycle rather than looping or linking
+- **WHEN** the resolved graph has `(a)` importing `(b)` and `(b)` importing `(a)`
+- **THEN** the build reports a compile-time error naming the cycle rather than looping or linking
 
 ### Requirement: REPL door — import a library interactively
 
-The interactive REPL SHALL obtain the standard library by registering the **baked set** at session
-startup — not from the manifest — and SHALL run each registered member's initializer once, in
-dependency order, before evaluating any user form. The manifest SHALL be consulted only for libraries
-outside the baked set. A session started in a directory whose manifest names no member of the baked
-set SHALL therefore have the standard library and the derived-form macros, and SHALL be able to load
-a library that imports `(scheme base)`.
+The interactive REPL SHALL obtain the standard library by registering the baked set at startup. It
+SHALL eagerly register libraries enumerated by resolved manifests, preserving startup validation of
+those exact entries. A library available only through a conventional root SHALL instead be resolved
+and registered when a prompt first imports it; its transitive dependencies SHALL be resolved and
+registered dependency-first before the import is committed.
 
-The REPL SHALL, on evaluating `(import (<lib>))`, resolve the library and its
-transitive dependencies through the manifest, load each unit module into the running session
-in dependency order, invoke each unit's `@"L:__init"` exactly once, and merge the imported
-library's export table into the session scope so subsequent forms may reference the imported
-names. A dependency that is a member of the baked set SHALL be satisfied by the registered member
-rather than requiring a manifest entry.
+On evaluating `(import (<lib>))`, the REPL SHALL ensure the selected library and its dependency
+closure are registered, initialize every not-yet-initialized member in dependency order, and merge
+the imported library's runtime exports and compile-time interface into the session scope. A baked
+dependency SHALL be satisfied by the registered baked member. Every library initializer SHALL run
+at most once, and a failed resolution, registration, compilation, or initialization SHALL leave the
+requested library's names out of scope while the session remains usable.
 
-The merge SHALL include the library's **compile-time interface**: its exported transformers SHALL
-join the session's macro environment, and the names they reference SHALL join the session's known
-bindings and environment, so that a form entered later may use an imported macro. Both SHALL persist
-across forms for the life of the session, as an imported procedure does, and SHALL be restored with
-the rest of the session state when a form's compilation fails and the session rolls back.
+#### Scenario: A conventional library is registered on first import
 
-The REPL door SHALL remain **eager** over the manifest's remaining libraries: a session is an open
-world in which any prompt may import anything, so the laziness of the run door does not apply.
+- **WHEN** a session has a library root containing `my/tools.sld`, no manifest names `(my tools)`,
+  and the user enters `(import (my tools))`
+- **THEN** the REPL resolves, compiles or cache-loads, registers, initializes, and imports `(my
+  tools)`, after which its procedures and macros are available
+
+#### Scenario: An unimported conventional library is untouched
+
+- **WHEN** a configured root contains a malformed or unreadable library that no prompt imports
+- **THEN** the REPL reaches and retains its prompt without reading or reporting that source
+
+#### Scenario: A manifest library retains startup validation
+
+- **WHEN** a manifest explicitly names an unreadable or invalid library source
+- **THEN** the REPL reports that entry during eager startup registration as before
+
+#### Scenario: A transitive path dependency initializes first
+
+- **WHEN** a prompt imports a conventional-path `(a)` whose source imports conventional-path `(b)`
+- **THEN** both are registered, `(b)` initializes before `(a)`, each initializes once, and `(a)`'s
+  exports observe `(b)`'s populated bindings
 
 #### Scenario: Imported procedure is callable in the REPL
 
-- **WHEN** the user evaluates `(import (mylib))` and then calls `greet` in a later form
-- **THEN** the REPL loads `mylib`, initializes it once, and the later form returns the value
-  `greet` produces
+- **WHEN** the user imports `(mylib)` through any provider and calls `greet` in a later form
+- **THEN** the REPL initializes the library once and returns the value `greet` produces
 
 #### Scenario: Imported macro is usable in a later form
 
-- **WHEN** the user evaluates `(import (mymac))` and then, in a later form, uses the exported macro
-  `swap!`
-- **THEN** the form expands and evaluates, and the macro remains usable in every subsequent form
+- **WHEN** the user imports a macro-exporting library through any provider and uses its macro later
+- **THEN** the macro expands and remains available for subsequent forms
 
 #### Scenario: A failed form does not lose an imported macro
 
-- **WHEN** the user imports a macro-exporting library, then enters a form that fails to compile, then
-  uses the macro again
-- **THEN** the session rolls the failed form back and the macro still expands
+- **WHEN** a macro is imported, a later form fails to compile, and another form uses the macro
+- **THEN** rollback of the failed form retains the imported transformer
 
 #### Scenario: A transitive dependency is loaded and initialized in the REPL
 
-- **WHEN** the user evaluates `(import (a))` where `(a)` imports `(b)`
-- **THEN** the REPL loads both `b` and `a` in dependency order, initializes each once, and a
-  later form calling an export of `(a)` that relies on `(b)` returns the expected value
+- **WHEN** the user imports `(a)` where `(a)` imports `(b)`, with either library resolved by any
+  enabled provider
+- **THEN** both register and initialize dependency-first and `(a)` observes `(b)`'s values
 
 #### Scenario: A session in a project directory has the standard library
 
-- **WHEN** `emit repl` starts in a directory whose manifest names only that project's own libraries
-- **THEN** a form calling a `(scheme base)` procedure such as `map` returns its value, and a
-  derived form such as `cond` expands, with no warning that the standard library is unloaded
+- **WHEN** a REPL starts in a project whose providers name no baked member
+- **THEN** `(scheme base)` procedures and macros remain available from the baked set
 
 #### Scenario: A project library importing (scheme base) loads in the REPL
 
-- **WHEN** a manifest names one project library whose source declares `(import (scheme base))`, and
-  the user evaluates `(import (thatlib))`
-- **THEN** the library's import of `(scheme base)` resolves against the registered baked member, the
-  unit loads and initializes, and calling its export returns the expected value
+- **WHEN** a project library resolved through a manifest or root imports `(scheme base)`
+- **THEN** its dependency resolves from the baked set and its export works after interactive import
 
 #### Scenario: A substrate name stays out of scope in a session
 
-- **WHEN** a REPL session starts with the prelude enabled and the user references an internal
-  substrate name such as `rd-atom` without importing the substrate
-- **THEN** the form reports an unbound variable, because registering a baked member does not
-  auto-import one that nothing auto-imports
+- **WHEN** a session references an internal substrate name without explicitly importing it
+- **THEN** the name remains unbound regardless of library providers
 
 ### Requirement: Run door — run an importing program in-process (Chez-free)
 
-The in-process runner (`emit run`) SHALL resolve a program's imports (and each
-library's imports) through the manifest to their sources, build the transitive dependency
-graph, reject import cycles with an error, load each unit in the transitive closure into the
-running JIT session in dependency order, invoke each unit's initializer exactly once, and
-then compile and run the program against the import environment built from its dependencies'
-export tables — all without Chez and without a second library-resolution path (it drives the
-same manifest resolution and compile-unit core the AOT and REPL doors use).
+The in-process runner (`emit run`) SHALL resolve a program's imports and each library's imports
+through the shared hybrid resolver, build the transitive dependency graph, reject cycles, load each
+unit in dependency order, invoke each initializer exactly once, and compile and run the program
+against its dependencies' export tables, all without Chez or a second resolution path.
 
-The manifest SHALL be located by the ordered procedure specified in the **Library manifest**
-requirement — `--manifest FILE` first, then `EMIT_MANIFEST`, then `./emit-libs.scm`, then the
-executable-relative and installed-prefix candidates — identically to every other door. When no
-manifest is found and the program imports only `(scheme base)` (or imports nothing), the runner
-SHALL behave exactly as before (no regression), since the manifest is consulted only to resolve a
-non-baked-in imported library.
-
-A library that is not in the program's transitive import closure SHALL NOT be initialized
-or linked into the program's initialization sequence, so it can have no observable effect on
-the run (the in-process JIT may inertly hold a unit's module without ever running its
-initializer).
+A program importing only baked libraries SHALL require neither a manifest nor a library root. A
+non-baked library absent from every enabled provider SHALL be reported by name. A library outside
+the program's transitive closure SHALL NOT be loaded into the program's initialization sequence and
+SHALL have no observable effect.
 
 #### Scenario: A program importing a library runs in-process
 
-- **WHEN** `emit run` runs a program that imports `(mylib)` and evaluates `greet`,
-  with `(mylib)` listed in the manifest
-- **THEN** it loads and initializes `mylib`, runs the program, and prints the value `greet`
-  returns
+- **WHEN** `emit run` executes a program importing `(mylib)` and an enabled root contains a matching
+  `mylib.sld`
+- **THEN** it loads and initializes the library and prints the program's value
 
 #### Scenario: A transitive import chain runs in-process
 
-- **WHEN** `emit run` runs a program that imports `(a)` where `(a)` imports `(b)`
-- **THEN** it loads `(b)` and `(a)` in dependency order, initializes each once, and the
-  program's value is printed correctly
+- **WHEN** a project path library imports a shipped library resolved from an installed provider
+- **THEN** the runner loads both dependency-first and produces the expected value
 
 #### Scenario: An import cycle is reported
 
-- **WHEN** `emit run` runs a program whose import graph has `(a)` importing `(b)` and
-  `(b)` importing `(a)`
-- **THEN** it reports an error naming the cycle (or an unresolved/missing-from-manifest
-  import) rather than looping, and exits non-zero
+- **WHEN** the resolved import graph contains a cycle
+- **THEN** `emit run` reports the cycle rather than looping and exits nonzero
 
 #### Scenario: A program with no user imports is unaffected
 
-- **WHEN** `emit run` runs a program that imports only `(scheme base)` or imports
-  nothing, with no manifest present
-- **THEN** it behaves exactly as before this change — the value is identical and no manifest
-  is required
+- **WHEN** a program imports only baked libraries or nothing, with no manifest or project library
+  root present
+- **THEN** it behaves as before and requires no discovery configuration
 
 #### Scenario: `--manifest` outranks the environment variable
 
-- **WHEN** `emit run` is given `--manifest FILE` while `EMIT_MANIFEST` is also set to a
-  different, existing manifest
-- **THEN** the manifest named by `--manifest` is the one used
+- **WHEN** `emit run` receives `--manifest FILE` while `EMIT_MANIFEST` names another manifest
+- **THEN** `FILE` supplies the first exact manifest provider, as before
 
 ### Requirement: Run door matches the AOT door (dev→ship fidelity)
 
-A program run through `emit run` with a given manifest SHALL produce the same value
-as the same program built and run through the AOT door (`emit build`) with the same
-manifest. The emitted program module and each imported unit's module SHALL be
-byte-for-byte identical across the run and AOT doors, because all doors drive the same
-compile-unit core.
+A program run through `emit run` with a given resolver configuration SHALL produce the same value as
+the same program built and run through `emit build` with that configuration. The emitted program
+module and each imported unit's module SHALL be byte-for-byte identical across the run and AOT
+doors because all providers feed the same compile-unit core.
 
 #### Scenario: Run-door value matches AOT-door value
 
-- **WHEN** an importing program is run via `emit run` and also built+run via the AOT
-  door (`emit build`), with the same manifest
+- **WHEN** an importing program is run and built with the same manifests, library roots, and
+  conventional-lookup policy
 - **THEN** the two printed values are identical
 
 #### Scenario: A unit's module bytes match across the run and AOT doors
 
-- **WHEN** `(mylib)` is loaded by the run door and compiled for the AOT link
+- **WHEN** a library is loaded by the run door and compiled for the AOT link from the same resolved
+  source
 - **THEN** the two unit modules are byte-for-byte identical
 
 ### Requirement: Dev→ship fidelity for library units
@@ -1212,202 +1202,193 @@ Two libraries compiled independently, each with an internal helper and lifted co
 
 ### Requirement: Library manifest
 
-Library discovery SHALL be driven by a readable s-expression manifest mapping each library name
-to its source file and an optional artifact directory; compiled artifacts SHALL default under a
-build directory rather than the source tree. The manifest MAY list any number of libraries.
-Resolving an imported library that has no manifest entry and that is not a member of the baked set
-SHALL be a compile-time error naming the missing library. The standard library `(scheme base)` SHALL
-remain **listable** in a manifest, so the Chez-hosted driver can resolve it from the committed
-`.sld` like any other library — but a door that has registered the baked set SHALL treat such an
-entry as already satisfied (see "The baked library set is a partition emitted in dependency order"),
-so no door depends on the entry's presence and no door loads a second copy because of it.
+A manifest SHALL remain a readable s-expression configuration file containing exact library entries
+of the form `(library NAME (source S) [(artifacts DIR)])` and optional program entries. An exact
+library entry SHALL override conventional lookup for that name within the same resolution tier and
+SHALL support names or layouts that conventional derivation cannot represent. Compiled artifacts
+SHALL continue to default under the build directory.
 
-**Locating the manifests.** Every door SHALL use the same ordered candidates:
+Every door SHALL locate manifests using the existing precedence: `--manifest FILE`, then
+`EMIT_MANIFEST`, then `./emit-libs.scm`, then executable-relative and compiled-prefix installed
+candidates. Explicit missing manifests SHALL remain errors; searched missing candidates SHALL remain
+nonfatal. Explicit selection SHALL skip an unrelated `./emit-libs.scm`, and readable installed
+manifests SHALL extend the selected project unless `--no-manifest-chain` is given. Program lookup
+SHALL remain confined to the first manifest.
 
-1. the `--manifest FILE` argument, when the door accepts one and it is given;
-2. the `EMIT_MANIFEST` environment variable, when set;
-3. `./emit-libs.scm`, relative to the current working directory;
-4. `<dir of the resolved real path of the running executable>/../share/emit/emit-libs.scm`,
-   where the executable's path SHALL be resolved through symbolic links so that a symlinked
-   launcher locates the manifest installed beside the real binary;
-5. a compiled-in installation default, `<install prefix>/share/emit/emit-libs.scm`.
+Library providers SHALL be ordered by tier: baked members; the first project manifest's exact
+entries; explicit `-L` roots in command-line order; `EMIT_LIBRARY_PATH` roots in listed order; the
+project conventional root; and then each installed manifest followed by the conventional root
+beside it. Within any provider, the first answer wins. This ordering SHALL let project configuration
+override a non-baked shipped library while installed providers fill names absent from the project.
+A baked member SHALL always win by name and SHALL never be loaded a second time.
 
-Candidates 1 and 2 are **explicit requests**. `--manifest FILE` SHALL outrank
-`EMIT_MANIFEST`. When the selected explicit request names a file that does not exist, the door
-SHALL report that named file as missing rather than silently falling through. When it is readable,
-it SHALL be the first manifest and candidate 3 SHALL be skipped: an unrelated working directory's
-project manifest is not part of an explicitly selected project's resolution. Every distinct,
-readable installed candidate 4–5 SHALL then extend the explicit manifest for **library** lookup.
+The project conventional root SHALL be `lib` beside the first project manifest when one is selected
+or discovered, and `./lib` otherwise. Installed conventional roots SHALL be `lib` beside each
+installed manifest candidate, including the executable-relative and compiled-prefix locations.
+Duplicate physical manifests and roots SHALL be used once at their first position.
 
-Without an explicit request, candidates 3–5 are **searched, and they chain**: every distinct
-candidate that exists and is readable SHALL be used in order. Under either selection mode, a
-library name SHALL resolve from the first manifest in the chain that names it, so the first
-manifest extends rather than replaces the installed manifest and MAY override a shipped library.
-A missing searched candidate is not an error. Finding no manifest at all SHALL remain non-fatal —
-a program that imports only baked-in libraries runs unaffected — and the resulting failure SHALL
-be reported by import resolution, naming the unresolved library.
+`--no-manifest-chain` SHALL retain its existing meaning of suppressing later manifests and SHALL not
+silently disable explicit or project library roots. A new `--no-library-paths` option SHALL disable
+all conventional-root providers while leaving baked and manifest resolution intact; combining it
+with `--manifest FILE --no-manifest-chain` SHALL provide exact single-manifest library resolution.
 
-Every user-facing `emit` door SHALL accept `--no-manifest-chain`. When present, only the
-highest-priority manifest selected by the procedure above SHALL be used and no later readable
-candidate SHALL extend it. Thus `--manifest FILE --no-manifest-chain` SHALL provide the
-single-manifest behavior formerly implied by `--manifest FILE`. The missing-explicit-manifest rule
-SHALL remain unchanged when chaining is disabled.
+Relative paths in each manifest SHALL continue to resolve against that manifest's directory. A
+relative explicit library root SHALL resolve against the invocation's current directory, while
+environment roots SHALL follow the same rule. Every selected provider and successful non-baked
+resolution SHALL be narrated on standard error according to `EMIT_VERBOSITY`, naming whether the
+source came from a manifest or a conventional root; narration SHALL never alter standard output.
 
-**Paths inside a manifest.** A relative path appearing in a manifest entry — a library's
-`(source …)`, a program entry's `(source …)`, and a program entry's `(output …)` — SHALL be
-resolved against the directory containing the manifest in which it appears, not against the
-current working directory. An absolute path SHALL be used as given. A manifest therefore carries
-its own library sources with it and resolves identically no matter which directory the door is
-invoked from. When manifests chain, each entry SHALL be resolved against **its own** manifest's
-directory, so entries inherited from a later candidate continue to name that candidate's sources.
+#### Scenario: An exact manifest entry overrides a conventional file
 
-**Narration.** Each door SHALL narrate which manifest or manifests it resolved, on standard error,
-in the project's tool-output format, suppressed at `EMIT_VERBOSITY=quiet` and never altering
-standard output. When more than one candidate is in use, the narration SHALL name each in
-resolution order, whether the first manifest was discovered or explicit, so which libraries are in
-scope is answerable without tracing the lookup.
+- **WHEN** the project manifest maps `(mylib)` to `vendor/mylib.sld` while the project root also
+  contains `mylib.sld`
+- **THEN** the manifest source is selected
 
-The manifest MAY additionally contain **program entries** of the form
-`(program NAME (source S) [(output O)])`, where `NAME` is a bare symbol naming a
-deliverable program, `source` names its top-level source file, and the optional
-`output` names the delivered executable path. A program entry names a build target,
-not a library: it is never a target of `import`, and reading the manifest to resolve
-library imports SHALL ignore program entries (library resolution is unchanged by
-their presence). Manifest reading SHALL accept a manifest that mixes library and
-program entries in any order. **Program-entry lookup SHALL NOT chain**: a program name is resolved
-against the first resolved manifest only, so a name that manifest does not define is reported
-against that file rather than searched for in an installed one.
+#### Scenario: A conventional project library overrides an installed library
+
+- **WHEN** no project manifest entry names `(mylib)`, the project root and an installed provider
+  both supply it
+- **THEN** the project-root source is selected
+
+#### Scenario: An installed shipped library needs no project mapping
+
+- **WHEN** a project imports `(scheme inexact)` without naming it and the installed conventional
+  root contains `scheme/inexact.sld`
+- **THEN** the installed source resolves and the project manifest, if any, contains no mapping or
+  installation path
+
+#### Scenario: Explicit roots preserve their order
+
+- **WHEN** repeated `-L` options provide the same library in two directories
+- **THEN** the first option's source wins
+
+#### Scenario: Manifest-only mode disables conventional files
+
+- **WHEN** `--no-library-paths` is present and an imported non-baked library exists only beneath a
+  conventional root
+- **THEN** the import is unresolved, while exact manifest entries continue to work
+
+#### Scenario: Single-manifest mode remains available
+
+- **WHEN** `--manifest FILE --no-manifest-chain --no-library-paths` is used
+- **THEN** non-baked imports resolve only from exact entries in `FILE`
+
+#### Scenario: Program entries remain distinct from libraries
+
+- **WHEN** a manifest mixes library and program entries
+- **THEN** import resolution ignores program entries, and named program lookup consults only the
+  first manifest
+
+#### Scenario: Relative manifest paths retain their base
+
+- **WHEN** a manifest maps a library to a relative source and the door runs from another directory
+- **THEN** the source resolves relative to that manifest
+
+#### Scenario: The selected provider is narrated
+
+- **WHEN** a non-baked library resolves at default verbosity
+- **THEN** stderr names the library, source, and provider kind, quiet verbosity omits the narration,
+  and stdout is unchanged
 
 #### Scenario: Manifest resolves a library name to its source
 
-- **WHEN** the manifest contains an entry mapping `(mylib)` to a source file and the build
-  path resolves `(import (mylib))`
-- **THEN** the library's source is located via the manifest and its artifacts are written
-  under the configured (default `build/`) directory
+- **WHEN** an exact manifest entry maps `(mylib)` to a source and a build imports it
+- **THEN** that source is selected and artifacts use the entry's configured or default directory
 
 #### Scenario: An unresolved import is reported
 
-- **WHEN** a program (or library) imports `(nope)` and no manifest in the resolved chain has an
-  entry for `(nope)`
-- **THEN** the build path reports a compile-time error naming the missing library
+- **WHEN** an imported non-baked library is absent from every enabled manifest and root
+- **THEN** resolution reports a compile-time error naming the library
 
 #### Scenario: A project manifest keeps the installed standard libraries
 
-- **WHEN** Emit is installed under a prefix, and a program importing `(scheme inexact)` is run from
-  a project directory whose own `./emit-libs.scm` names only that project's own entries
-- **THEN** `(scheme inexact)` resolves through the installed manifest reached by a later searched
-  candidate, and the project's manifest needs no entry and no absolute path for it
+- **WHEN** a project manifest omits `(scheme inexact)` and an installed provider supplies it
+- **THEN** the import resolves without an installation path in the project manifest
 
 #### Scenario: An explicit project manifest keeps the installed standard libraries
 
-- **WHEN** `emit run` is invoked from an unrelated working directory with `--manifest FILE`, where
-  `FILE` is a project manifest that names only project entries and the program imports a non-baked
-  standard library
-- **THEN** the project manifest is first, the installed manifest is chained after it, and the
-  standard library resolves without an installed path in `FILE`
+- **WHEN** `--manifest FILE` selects an out-of-tree project and an installed provider supplies an
+  omitted standard library
+- **THEN** the project remains first and the standard library resolves from the installed tier
 
 #### Scenario: An explicit project build resolves its own program and installed imports
 
-- **WHEN** `emit build NAME --manifest FILE` is invoked from outside the project, `FILE` defines
-  program `NAME` with manifest-relative source and output paths, and that program imports
-  `(scheme file)` and `(scheme process-context)`
-- **THEN** the program and paths resolve only from `FILE`, the standard libraries resolve from the
-  installed manifest, and the standalone executable is delivered successfully
+- **WHEN** a named program comes from an explicit project manifest and imports installed libraries
+- **THEN** program paths come only from that first manifest and imports may fall through to installed
+  providers
 
 #### Scenario: EMIT_MANIFEST chains installed libraries
 
-- **WHEN** `EMIT_MANIFEST` names a readable project manifest, no `--manifest` flag is present, and
-  a project source imports a non-baked standard library absent from that project manifest
-- **THEN** the environment-selected manifest is first and the import resolves from a later
-  installed manifest
+- **WHEN** `EMIT_MANIFEST` selects a project manifest that omits an installed standard library
+- **THEN** later installed manifest and root providers remain available unless disabled
 
 #### Scenario: An explicit manifest excludes the unrelated working directory manifest
 
-- **WHEN** `--manifest FILE` selects one project's manifest while the current working directory
-  contains a different `./emit-libs.scm`
-- **THEN** the current working directory manifest is not consulted for either libraries or programs
+- **WHEN** `--manifest FILE` is used while the current directory contains another manifest
+- **THEN** the unrelated current-directory manifest is not a provider
 
 #### Scenario: A project entry overrides a shipped library of the same name
 
-- **WHEN** the first project manifest names a library that the installed manifest also names
-- **THEN** the project's entry is the one used, and its relative `(source …)` resolves against the
-  project's manifest directory
+- **WHEN** the first project manifest names a non-baked library also supplied by an installed tier
+- **THEN** the project entry wins and its relative source resolves from its own manifest directory
 
 #### Scenario: An explicitly named manifest is not extended
 
-- **WHEN** `--manifest FILE --no-manifest-chain` selects a readable project manifest and a program
-  imports a library absent from `FILE` but present in the installed manifest
-- **THEN** the import is reported as unresolved because only `FILE` is used
+- **WHEN** `--manifest FILE --no-manifest-chain --no-library-paths` is used and an omitted library
+  exists only in installed providers
+- **THEN** the import is unresolved
 
 #### Scenario: A program name is resolved against the first manifest only
 
-- **WHEN** `emit build NAME --manifest FILE` selects a project manifest with no program `NAME`,
-  while a later installed manifest contains a program entry with that name
-- **THEN** the door reports no program entry in `FILE` and does not search the installed manifest
+- **WHEN** the first manifest lacks a requested program name but an installed manifest has it
+- **THEN** named program lookup reports the first manifest and does not fall through
 
 #### Scenario: (scheme base) needs no manifest entry on any door
 
-- **WHEN** the auto-import of `(scheme base)` (or an explicit `(import (scheme base))`) is
-  resolved on any door against a manifest that does not name it
-- **THEN** it resolves against the registered baked member and the compile proceeds, with no
-  error naming `(scheme base)` as missing from the manifest
+- **WHEN** any door auto-imports or explicitly imports `(scheme base)` with no exact entry
+- **THEN** the baked member satisfies it without filesystem lookup
 
 #### Scenario: (scheme base) resolves through the manifest
 
-- **WHEN** the repository's own manifest names `(scheme base)` and the internal substrate, and the
-  Chez-hosted driver resolves them from it
-- **THEN** the driver locates them through the manifest and builds them from the committed `.sld`
-  sources, compiled and loaded like any other library unit, as before
-- **AND** a Chez-free door reading the same manifest resolves those two entries to the baked members
-  it already registered, so neither is loaded a second time
+- **WHEN** the Chez bootstrap driver uses a repository manifest entry for `(scheme base)` while a
+  Chez-free door has already registered the baked member
+- **THEN** the driver can compile the committed source and the Chez-free door admits no second copy
 
 #### Scenario: A program entry is parsed and does not affect library resolution
 
-- **WHEN** the manifest mixes `(library (mylib) (source …))` and
-  `(program my-app (source "app.scm"))` entries and a build resolves `(import (mylib))`
-- **THEN** `(mylib)` resolves through the manifest exactly as before and the program
-  entry is ignored during library resolution
+- **WHEN** a manifest mixes library and program entries
+- **THEN** imports ignore program entries and exact library mappings retain their precedence
 
 #### Scenario: A program entry is resolvable by name
 
-- **WHEN** the manifest contains `(program my-app (source "app.scm") (output "build/app"))`
-  and the program `my-app` is looked up
-- **THEN** the manifest yields its source (`app.scm`) and output (`build/app`), each resolved
-  against the directory containing that manifest
+- **WHEN** the first manifest contains `(program my-app (source "app.scm") (output "build/app"))`
+- **THEN** named lookup returns both paths resolved against that manifest
 
 #### Scenario: An installed manifest is found from an unrelated directory
 
-- **WHEN** a door is invoked from a directory containing no `emit-libs.scm`, and a manifest is
-  installed at `<prefix>/share/emit/emit-libs.scm` beside the running executable
-- **THEN** the installed manifest is located through the executable-relative candidate and its
-  libraries resolve, so a program importing a non-baked-in standard library runs successfully
+- **WHEN** no project manifest exists and an installed manifest and root sit beside the real binary
+- **THEN** shipped libraries resolve from that installed tier
 
 #### Scenario: A symlinked executable locates its installed manifest
 
-- **WHEN** the running executable is reached through a symbolic link whose own directory has no
-  `../share/emit/emit-libs.scm`, while the link's target directory does
-- **THEN** the executable's real path is resolved first, so the manifest beside the real binary
-  is the one found
+- **WHEN** the running executable is reached through a symlink outside its installation
+- **THEN** the real executable path determines its installed manifest and conventional root
 
 #### Scenario: Manifest sources resolve against the manifest's own directory
 
-- **WHEN** a manifest at `<dir>/emit-libs.scm` maps `(mylib)` to the relative source
-  `"mylib.sld"`, and a door is invoked from a different current working directory
-- **THEN** the source is read from `<dir>/mylib.sld`, and the same manifest resolves identically
-  regardless of the directory the door was invoked from
+- **WHEN** an exact entry uses a relative source and the door runs elsewhere
+- **THEN** the source resolves against the entry's manifest directory
 
 #### Scenario: An explicitly named manifest that is missing is reported
 
-- **WHEN** `--manifest FILE` (or `EMIT_MANIFEST`) names a file that does not exist
-- **THEN** the door reports that named file as missing and does not fall through to
-  `./emit-libs.scm` or to an installed manifest
+- **WHEN** `--manifest FILE` or `EMIT_MANIFEST` explicitly names a missing file
+- **THEN** that file is reported rather than silently replaced by current-directory configuration
 
 #### Scenario: The resolved manifest is narrated
 
-- **WHEN** a door resolves one or more manifests at default verbosity
-- **THEN** it names each resolved manifest path in resolution order on standard error, including
-  `[chained]` and supplying-manifest narration for an installed fallback, and at
-  `EMIT_VERBOSITY=quiet` those lines are absent while standard output is byte-identical either way
+- **WHEN** one or more manifests participate at default verbosity
+- **THEN** stderr names them in order, including chained suppliers, while quiet mode omits the lines
+  and stdout remains unchanged
 ### Requirement: A manifest containing no datum is an empty manifest
 
 A manifest file that exists and is readable but contains no datum — a zero-byte file, a file of
@@ -2106,3 +2087,81 @@ SHALL be the same on every door.
 - **WHEN** a `define-library` with no `(import (scheme base))` uses `(when …)` in its body
 - **THEN** the diagnostic names `when` as a macro that is not in scope and names `(scheme base)` as
   the library that exports it, and does not say `unbound variable when`
+
+### Requirement: Conventional library names resolve beneath ordered library roots
+
+For a library name whose components can be represented safely as path components, the shared
+resolver SHALL derive a relative source path by rendering each component, joining the components
+with the host path separator, and appending `.sld` to the final component. Symbol components SHALL
+be rejected from conventional lookup when their names are empty, `.`, `..`, contain a path
+separator, or contain a NUL; exact nonnegative integer components SHALL be rendered in decimal.
+Names ineligible for conventional lookup SHALL remain resolvable through an exact manifest entry.
+
+For example, `(my stats)` SHALL derive `my/stats.sld`, and `(example net 2)` SHALL derive
+`example/net/2.sld`. The resolver SHALL test the derived relative path beneath each configured root
+in order and SHALL use the first readable regular file. It SHALL parse the selected source and
+require its sole `define-library` form to declare the requested library name before admitting any
+artifact or binding from it.
+
+Library discovery SHALL be a host responsibility. The compiler core SHALL continue to perform no
+filesystem access and SHALL receive the selected source, source-home, imports, and compile-time
+interfaces through the existing door protocol.
+
+#### Scenario: A conventional project library resolves without a mapping
+
+- **WHEN** a configured root contains `my/stats.sld`, that file declares `(define-library (my stats)
+  ...)`, and a program imports `(my stats)` with no manifest entry for it
+- **THEN** the shared resolver selects that file and the program compiles without a manual
+  name-to-source mapping
+
+#### Scenario: Roots are searched in order
+
+- **WHEN** two configured roots both contain a valid `my/stats.sld`
+- **THEN** the file beneath the earlier root is selected and the later file is not read
+
+#### Scenario: A declared name mismatch is rejected
+
+- **WHEN** conventional lookup for `(my stats)` selects `my/stats.sld` but that source declares
+  `(define-library (other stats) ...)`
+- **THEN** resolution fails with a diagnostic naming the requested name, declared name, and selected
+  source path, and no artifact from that source is used
+
+#### Scenario: A path-unsafe name requires an exact mapping
+
+- **WHEN** an imported library name contains a component that conventional lookup cannot represent
+  safely and no manifest entry names it
+- **THEN** resolution reports the library as unresolved without probing a path outside a configured
+  root
+
+### Requirement: Every door uses one resolved library identity
+
+The Chez driver and the `run`, `build`, `lib`, and `repl` doors SHALL apply the same provider
+precedence, conventional path derivation, declaration-name validation, import-closure ordering, and
+source-home rules. Once a provider resolves a library, every door SHALL compile that source through
+the existing shared compile-unit core, preserving deterministic unit-qualified symbols, compile-time
+export interfaces, artifact freshness, tree shaking, and byte-identical full unit IR.
+
+An artifact SHALL continue to be identified by the declared library name, compiler identity, source
+content and included-source content, and any existing root-set input for a pruned unit. The provider
+kind or spelling by which the same source was reached SHALL NOT create semantically different
+artifacts.
+
+#### Scenario: Manifest and path resolution produce the same unit
+
+- **WHEN** one invocation resolves a library through an exact manifest entry and another resolves
+  the same source through a conventional root under otherwise identical inputs
+- **THEN** both produce byte-identical full unit IR and compile-time interfaces
+
+#### Scenario: REPL and delivered program agree for a path library
+
+- **WHEN** a conventional-path library is imported and exercised in `emit repl`, then the same
+  program and resolver configuration are used by `emit build`
+- **THEN** both observe identical values, macro expansion, dependency initialization order, and
+  once-only initialization
+
+#### Scenario: A warm cache does not change provider precedence
+
+- **WHEN** a cache contains a unit previously reached through one provider but the current resolver
+  selects a different source for the same non-baked name
+- **THEN** the cache entry is reused only if its recorded source identity matches the selected
+  source; otherwise the selected source is compiled
