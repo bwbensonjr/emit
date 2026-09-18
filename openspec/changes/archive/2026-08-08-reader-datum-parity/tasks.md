@@ -55,8 +55,8 @@
 
 - [x] 5.1 Confirm the library-body and exported-macro-template cases both work end to end: `emit lib`
       writes a faithful table, and an importer expands the macro to the real vector
-- [x] 5.2 Confirm the run door and the AOT door agree on a program containing a vector constant (the
-      byte-identity check `test/prelude-base-run-tests.sh` style, per the existing door-parity suites)
+- [x] 5.2 Confirm the `emit run` command and the AOT path agree on a program containing a vector constant (the
+      byte-identity check `test/prelude-base-run-tests.sh` style, per the existing path-parity suites)
 - [x] 5.3 Confirm the REPL survives the improved diagnostic — session snapshot restored, next form
       still evaluates
 - [x] 5.4 Finish every source edit, then run `make regen` to convergence (barrier: no further

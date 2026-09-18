@@ -10,12 +10,12 @@
       `src/core.ss:261`), so `(import (only …))` inside a `define-library` stops reporting
       "unresolved or cyclic import"
       → called from `parse-define-library`'s `import` arm rather than from the one call site at
-      `:261`, so every consumer of the parser (the batch doors, the REPL's library loader, the
+      `:261`, so every consumer of the parser (the batch paths, the REPL's library loader, the
       Chez driver) rejects an import set identically.
 - [x] 1.4 Confirm the two paths produce the **same** message for the same form — the property that
       makes the fix verifiable, and the one today's code does not have
       → measured: `import: import sets are not supported: (only (scheme inexact) sqrt) -- imports
-      are whole-library, as (import (library name))` on both, differing only in the door prefix
+      are whole-library, as (import (library name))` on both, differing only in the path prefix
       (`emit:` vs `emit lib:`). Pinned by `import-set-same-message`.
 - [x] 1.5 Confirm `(rename …)` in an `export` declaration is untouched (design D4):
       `test/modules/rename-lib.sld` and the spec's renamed-export scenario stay green
@@ -62,7 +62,7 @@
       `compile-forms` (`compile-source-string` / `compile-source-rehomed`, `src/core.ss`)
       → `check-library-position`, called from the TWO pipelines a program reaches —
       `compile-forms` and `compile-program-with-imports` — rather than from each entry point.
-      That is one call per pipeline instead of five per door, and it covers the Chez driver's
+      That is one call per pipeline instead of five per path, and it covers the Chez driver's
       `compile-file` and `schemec`'s filter mode as well.
 - [x] 4.2 On the REPL's per-form path, report a `define-library` at the prompt as not supported
       there, naming the manifest as where libraries come from
@@ -73,25 +73,25 @@
       → raised (not returned), so it takes the guard that restores the session snapshot; the
       following `(+ 1 2)` still evaluates to 3. Pinned by `repl-session-survives`.
 
-## 5. Error channel and door agreement
+## 5. Error channel and path agreement
 
 - [x] 5.1 Confirm every new guard raises through the recoverable compile-time error channel the
       existing export error uses, not an abort — the REPL catches it, reports it, and returns to
       the prompt (design D6)
       → every guard uses `(error 'who "message" …)`. One gap had to be closed to make this true:
-      mode 12 (`repl-source-imports`, the run door's lazy-preload query) borrows both parsers but
-      returns a plain string, so a raise there escaped uncaught and **aborted** the door before
-      the compile that owns the diagnostic ran — the message printed with no door prefix and the
+      mode 12 (`repl-source-imports`, the `emit run` command's lazy-preload query) borrows both parsers but
+      returns a plain string, so a raise there escaped uncaught and **aborted** the path before
+      the compile that owns the diagnostic ran — the message printed with no path prefix and the
       process died. It is now guarded: a source whose imports cannot be read has none to preload,
-      and the guarded compile reports it once, through its door.
+      and the guarded compile reports it once, through its path.
 - [x] 5.2 Confirm each message reads `emit <verb>: <message>` on `emit run` / `emit build` /
-      `emit lib` with no interior `repl:` segment, per `emit-cli`'s "a door's diagnostics name that
-      door" requirement
-      → no interior `repl:` segment on any door; `emit lib:` on the lib door, `error:` at the
+      `emit lib` with no interior `repl:` segment, per `emit-cli`'s "a path's diagnostics name that
+      path" requirement
+      → no interior `repl:` segment on any path; `emit lib:` on the `emit lib` command, `error:` at the
       prompt. **Finding:** `emit run` and `emit build` both prefix `emit:`, not `emit run:` /
       `emit build:` — that is pre-existing (their shared compile front half), identical for
       `program imports a library not found in the manifest` today, and not something this change
-      introduces or can fix without touching the door prefixes themselves. Left to
+      introduces or can fix without touching the path prefixes themselves. Left to
       `emit-cli-front-door`.
 - [x] 5.3 Check the messages against `docs/OUTPUT.md`: diagnostics on stderr, no stdout change,
       quiet-mode behaviour unaffected
@@ -109,8 +109,8 @@
       same form inside a `define-library`, and an assertion that the two messages match
       → added to `test/modules-run-tests.sh` instead. **Deviation, with reason:**
       `modules-tests.sh` is Chez-GATED (it `exit 0`s when `chez` is absent), so cases placed there
-      would not run on the Chez-free path these doors take — which contradicts 6.4. The run-door
-      suite is Chez-free, already has a `check_fail` helper, and reaches all four doors.
+      would not run on the Chez-free path these paths take — which contradicts 6.4. The run-path
+      suite is Chez-free, already has a `check_fail` helper, and reaches all four commands.
 - [x] 6.3 Add the misplaced-`define-library` cases: a second top-level form in the same source, and
       a `define-library` at the prompt followed by a form proving the session is alive
       → same suite, for the same reason.
@@ -126,7 +126,7 @@
 - [x] 7.1 `docs/MODULES.md`: state what happens when the whole-library-imports-only rule is broken,
       and what an unsupported declaration reports
       → new **When you break a rule** section: the six diagnostics as a table, the two deliberate
-      distinctions (recognized-vs-unrecognized, `rename` by position), and the door-agreement and
+      distinctions (recognized-vs-unrecognized, `rename` by position), and the path-agreement and
       recoverability properties. Also corrected "Bare forms outside a `begin` are also accepted",
       which this change makes false, and cross-linked from `Writing a library`, `Semantics`, and
       `Scope & limits`.

@@ -1,6 +1,6 @@
 ## Context
 
-Two ship doors tree-shake, and both compute a unit's root set the same way, through one shared
+Two shipping paths tree-shake, and both compute a unit's root set the same way, through one shared
 rule in `src/core.ss`:
 
 ```scheme
@@ -18,7 +18,7 @@ That is the fact this whole design turns on: roots are a property of *text*, so 
 with what its importers still reference" needs no new representation — it is the same search over a
 longer string.
 
-Both doors then refuse to shake a unit that another unit imports. The Chez driver
+both paths then refuse to shake a unit that another unit imports. The Chez driver
 (`build-modular-artifacts*`, `src/compile.ss`) says so in its own comment — *"A unit is prunable
 only if NO OTHER unit in the closure imports it (else that importer — kept full — could reference a
 dropped binding); this keeps the first cut sound without full backward DAG propagation."* Mode 17
@@ -46,9 +46,9 @@ any of it is built.
 
 - A library another unit imports is shaken against its importers' **retained** set, not kept whole.
 - Any unit in the import closure is shakeable, not only a direct import of the program.
-- Both ship doors keep one root rule and produce the same retained set for the same program, which
+- Both shipping paths keep one root rule and produce the same retained set for the same program, which
   is already a spec requirement (`aot-codegen`: "A delivered executable's size SHALL NOT depend on
-  which door produced it").
+  which path produced it").
 - A delivered library (`emit lib`) can be shaken to its own exported interface — the second root set
   the `aot-codegen` requirement was written to anticipate.
 - An under-approximated root set must fail **loudly and in CI**, not silently ship a broken binary.
@@ -57,7 +57,7 @@ any of it is built.
 
 - Changing what reachability *means* inside a unit. `compile-library*`'s `keep-roots` walk is
   untouched; only the roots handed to it change.
-- Shaking on the open-world doors (`emit run`, `emit repl`). They keep full units, unchanged.
+- Shaking on the open-world paths (`emit run`, `emit repl`). They keep full units, unchanged.
 - A symbol-table- or bitcode-level reachability analysis to replace the IR text search. The text
   rule is the shared, tested one; replacing it is a separate change with its own risk (see D3).
 - LLVM `internalize`/`globaldce`. `aot-release-profile` already measured this: it removes 0 of 249
@@ -77,9 +77,9 @@ is the concatenation of the program IR and every already-finalized unit's IR.
 not even an over-approximation: a unit emits `ptr @"X:name"` only for a library it imports, so a
 non-importer's IR contains none of `N`'s mangled symbols and contributes nothing to the search. The
 importer set is therefore an optimization of the search string, not a correctness condition. Doing
-it the simple way also means neither door needs the reverse-import map — the Chez driver has
+it the simple way also means neither path needs the reverse-import map — the Chez driver has
 `dl-cache` and could build one, but `emit build` reaches mode 17 one unit at a time and would have
-to ship the map through the door protocol to get the same answer.
+to ship the map through the path protocol to get the same answer.
 
 *Alternative considered:* keep the forward order and iterate to a fixed point (shake, re-shake
 anything whose importer shrank, repeat). Correct, but it pays repeated recompiles of the same unit
@@ -144,7 +144,7 @@ symbols (`rd-datum`, `rd-token-at`) are absent from the delivered binary. Pair i
 that *does* read, asserting they are present — so the test fails if propagation over-prunes as well
 as if it under-prunes.
 
-The existing cross-door requirement gives the second assertion for free: build the same program both
+The existing cross-path requirement gives the second assertion for free: build the same program both
 ways and compare retained sets.
 
 ### D6 — `emit lib --shake` is opt-in, and the default stays byte-identical — **WITHDRAWN by D7's gate**
@@ -159,7 +159,7 @@ ways and compare retained sets.
 
 
 `emit-cli` requires the `emit lib` unit IR to be "byte-for-byte identical to the unit the AOT and
-REPL doors produce for the same source (one compile-unit core)", and tests pin it. An
+REPLs produce for the same source (one compile-unit core)", and tests pin it. An
 interface-shaken artifact is by definition not that unit. Rather than weaken the guarantee, add the
 shake behind an explicit flag: the default artifact is unchanged and the guarantee holds verbatim
 for it; the flag delivers a different, deliberately-asked-for artifact.
@@ -193,7 +193,7 @@ to record it in `docs/PERFORMANCE.md` and not do the work."* A well-kept library
 its internals exist because its exports use them.
 
 The measurement is cheap and comes first (tasks 1.x), because it is the same `compile-library*` call
-with a different `keep-roots`, runnable before any of D6's door work exists. The threshold is stated
+with a different `keep-roots`, runnable before any of D6's path work exists. The threshold is stated
 in advance so the decision is not made by whoever is already invested: **under 10%** on both
 libraries and the `emit lib` half is dropped, the number is recorded, and #104 closes with the
 measurement as its answer.
@@ -214,14 +214,14 @@ this widens it from the program's direct imports to the whole closure. `shake-` 
 small ones (5–8 KB; 48 of them total under 400 KB per P17's measurement), and P17 remains the place
 where eviction is decided — this change adds entries, not a new kind of unboundedness.
 
-**Both ship doors must stay in agreement.** → They share `program-root-internals` by design (D8 of
+**Both shipping paths must stay in agreement.** → They share `program-root-internals` by design (D8 of
 `chez-free-unit-pipeline`, which moved it into `src/core.ss` for exactly this reason). The new
-parameter goes into that shared function; the per-door work is only *assembling* the root text. The
-cross-door size comparison in D5 is what detects a drift.
+parameter goes into that shared function; the per-path work is only *assembling* the root text. The
+cross-path size comparison in D5 is what detects a drift.
 
-**`emit build`'s per-unit door protocol carries more text.** → Mode 17's third section grows from the
+**`emit build`'s per-unit path protocol carries more text.** → Mode 17's third section grows from the
 program IR to the program IR plus finalized units — for a full closure that is the whole shaken
-program's IR, tens to low hundreds of KB, handed across the door once per unit. Measure it; if it
+program's IR, tens to low hundreds of KB, handed across the path once per unit. Measure it; if it
 costs, the importer-only search string from D1 is the available optimization, and it is a pure
 narrowing with the same answer.
 

@@ -3,7 +3,7 @@
 The prelude (`src/prelude.scm`) is prepended, as source text, to every program the compiler
 compiles — the one piece of "library zero" that is not yet a module. Stages 1–2 built a real
 separate-compilation system (`define-library`, export/rename, transitive imports, both
-doors); Stage 3 of the Modules v0 design
+paths); Stage 3 of the Modules v0 design
 (`openspec/explorations/modules-v0-design.md`, D6) finishes v0 by re-homing the
 prelude as the library **`(scheme base)`**: its procedures become a real linked/loaded
 library artifact, its derived-form macros become a compile-time set auto-merged into every
@@ -36,13 +36,13 @@ full re-home would concentrate here, and leaves that as a clean follow-on.
 - **`--no-prelude` skips both halves** (no auto-import, no macro merge), exactly as it skips
   the prepended prelude today.
 - **Add `(scheme base)` to the default manifest** with a source under `lib/scheme/base.sld`,
-  so both doors resolve it through the Stage-2 manifest/graph machinery.
+  so both paths resolve it through the Stage-2 manifest/graph machinery.
 - **Regenerate the Stage-0 byte-identity baseline**: re-homing intentionally changes the
   emitted IR of prelude-using programs (prelude procedures become imported externals + a
   linked `scheme.base.ll`), so `test/module-scaffold-baseline.sha256` is regenerated; the
   demos' **values** must stay identical (behavior preserved).
 - **Tests**: a program that uses only prelude procedures builds/runs via `(scheme base)` on
-  both doors; the derived-form macros work without a prepended prelude; `--no-prelude` leaves
+  both paths; the derived-form macros work without a prepended prelude; `--no-prelude` leaves
   prelude names unbound; `(scheme base)` links exactly once; demo values unchanged.
 
 ## Capabilities
@@ -76,7 +76,7 @@ full re-home would concentrate here, and leaves that as a clean follow-on.
   re-establishes cleanly. The anti-stale **trust-check is the gate** (`make regen` reproduces
   the new committed IR byte-for-byte).
 - **Tests:** the Stage-0 baseline reference is regenerated; new `test/modules-*` cases on both
-  doors; the demo-values and self-hosting/trust-check suites must stay green.
+  paths; the demo-values and self-hosting/trust-check suites must stay green.
 - **Dependencies:** builds on the archived `module-generalize` (Stage 2).
 - **Out of scope / v0 non-goals:** the compiler's OWN re-home onto `(scheme base)` (deferred
   follow-on); macro phase-separation / macros travelling in `.exports`; `only`/`except`/

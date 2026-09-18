@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# unit-pipeline-tests.sh -- the Chez-free doors' library-unit pipeline
+# unit-pipeline-tests.sh -- the Chez-free paths' library-unit pipeline
 # (change: chez-free-unit-pipeline).  Three claims, one seam:
 #
-#   SEEDING     every door takes its standard library from the baked set and its user
+#   SEEDING     every compiler host takes its standard library from the baked set and its user
 #               libraries from the manifest, and `--no-prelude` means the standard library
 #               is not COMPILED, not merely unbound (issue #101).
 #   CACHING     a user library is compiled once per (compiler, source content) and reused,
 #               with the include closure part of "source" -- and every entry stays a pure
 #               accelerator, so a corrupt or unreadable one is a miss and not an error.
-#   SHAKING     `emit build` links units pruned to what the program reaches, the pruned
+#   SHAKING     emit build links units pruned to what the program reaches, the pruned
 #               unit is cached against the program that produced it, and a pruned unit is
-#               never served to an open-world door.
+#               never served to an open-world path.
 #
 # EMIT_CACHE points every case at a scratch directory, so nothing here touches the
 # developer's real cache and no case can be polluted by another.
@@ -56,7 +56,7 @@ cat > "$P/emit-libs.scm" <<EOF
  (program uses-lib (source "uses-lib.scm") (output "uses-lib")))
 EOF
 
-echo "unit pipeline: seeding parity, user-library caching, ship-door tree-shaking"
+echo "unit pipeline: seeding parity, user-library caching, shipping-path tree-shaking"
 
 # --- seeding: --no-prelude compiles no standard library (issue #101) ----------------
 # The observable is WORK, not bindings: the bindings were already right, which is why no
@@ -102,16 +102,16 @@ printf '%s' "$out" | grep -q "(2 4)" \
   && ok "emit repl (prelude) resolves standard-library names in a project directory" \
   || bad "emit repl (prelude) lost the standard library: $out"
 
-# Door parity: a manifest library that imports (scheme base) is unresolved under
-# --no-prelude on BOTH doors, rather than silently satisfied on one of them.
+# Path parity: a manifest library that imports (scheme base) is unresolved under
+# --no-prelude on both paths, rather than silently satisfied on one of them.
 repl_out=$(cd "$P" && printf '(display 1)\n' \
   | EMIT_CACHE="$C" "$EMIT_ABS" repl --no-prelude 2>&1)
 run_out=$(cd "$P" && EMIT_CACHE="$C" "$EMIT_ABS" run --no-prelude uses-lib.scm 2>&1)
 if printf '%s' "$repl_out" | grep -q "not loaded under --no-prelude" \
    && ! printf '%s' "$run_out" | grep -q "^42$"; then
-  ok "--no-prelude: a library importing the standard library loads on neither door"
+  ok "--no-prelude: a library importing the standard library loads on neither path"
 else
-  bad "--no-prelude door parity: repl=[$repl_out] run=[$run_out]"
+  bad "--no-prelude path parity: repl=[$repl_out] run=[$run_out]"
 fi
 
 # --- caching: a user library is compiled once ---------------------------------------
@@ -262,7 +262,7 @@ grep -q "pruned emit.internal.* reused" "$TMP/build5.log" \
   && ok "rebuilding reuses the substrate entry (the root-text key is stable)" \
   || bad "the substrate was pruned again on rebuild: $(grep -i shake "$TMP/build5.log" | head -2)"
 
-# --- shaking: a pruned unit is never served to an open-world door --------------------
+# --- shaking: a pruned unit is never served to an open-world path --------------------
 # The cache now holds `shake-` entries for this compiler.  A REPL session must still get
 # whole units: every binding stays available regardless of what any program referenced.
 # The probe must use bindings the BUILT program did not reach -- `hello` reaches display and

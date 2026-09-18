@@ -14,7 +14,7 @@ to that manifest — so `lib/scheme/base.sld` in the installed manifest means
 `<prefix>/share/emit/lib/scheme/base.sld`.
 
 Library **source** (`.sld`) is what ships. Compiled library artifacts are not part of the install
-contract; an installed door compiles a needed library on demand exactly as an in-repo door does.
+contract; an installed command compiles a needed library on demand exactly as an in-repo command does.
 
 #### Scenario: A non-baked-in standard library imports from an arbitrary directory
 
@@ -61,13 +61,13 @@ be idempotent — running it twice over the same prefix leaves the same tree and
 
 ### Requirement: The from-source developer workflow is unaffected by installation
 
-Installation SHALL be additive: an in-repo invocation of any door SHALL continue to resolve the
+Installation SHALL be additive: an in-repo invocation of any path SHALL continue to resolve the
 repository's own `./emit-libs.scm` even when a different Emit is installed on the system, because
 the working-directory candidate is searched before the executable-relative and installed-prefix
 candidates.
 
 #### Scenario: The repo manifest wins over an installed one
 
-- **WHEN** a door is invoked from the repository root while an Emit is also installed under a
+- **WHEN** a path is invoked from the repository root while an Emit is also installed under a
   prefix carrying its own manifest
 - **THEN** the repository's `./emit-libs.scm` and its `lib/` sources are the ones used

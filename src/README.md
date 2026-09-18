@@ -9,7 +9,7 @@ For everything outside that scope, see:
 
 - **Usage, current status, and the language feature set** — the root `README.md`.
 - **The pass framework** (how stages are structured and dumped) — `../docs/PIPELINE.md`.
-- **Modules, artifacts, and the four doors** — `../docs/MODULES.md`.
+- **Modules, artifacts, and the four commands** — `../docs/MODULES.md`.
 - **IR conventions** (opaque pointers, calling convention, `musttail`) — `../LLVM.md`.
 - **Toolchain dependencies** (LLVM, libgc; Chez only for verification) — `TOOLCHAIN.md`.
 
@@ -36,7 +36,7 @@ read source text                                             (driver)
 ```
 
 The `--dump` stages, in order, are `collect-toplevel`, `expand`, `parse+rename`
-(`parse+rename+imports` on the modular path — the one every shipped door takes),
+(`parse+rename+imports` on the modular path — the one every shipped command takes),
 `recognize-let`, `convert-assignments`, `simplify`, `convert-closures`, and `lower`.
 
 There is **no prelude prepend**: the standard library is the auto-imported module
@@ -140,7 +140,7 @@ caller's live arguments, while `fastcc` does — and `fastcc` still guarantees
 
 `K` is the shared closure arity. On the single-module path it is the
 whole-program maximum fixed arity; on the **modular** path — the one every
-shipped door takes, where closures built by one unit are called from another —
+shipped command takes, where closures built by one unit are called from another —
 it is pinned to a fixed 8, so the prototype agrees across separately-emitted
 modules. `self` is the called closure
 (arg 0), from which free variables are loaded. `argc` is the actual argument

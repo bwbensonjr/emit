@@ -25,14 +25,14 @@
 
 ## 3. Observability
 
-- [x] 3.1 Confirm `--dump` prints the `simplify` stage in ladder order on every door (`emit run`, `emit lib`, `emit repl`), following `docs/OUTPUT.md`
+- [x] 3.1 Confirm `--dump` prints the `simplify` stage in ladder order on every path (`emit run`, `emit lib`, `emit repl`), following `docs/OUTPUT.md`
 - [x] 3.2 `test/dump-stages-tests.sh:47` — update the hard-coded expected stage list (currently "seven stages in ladder order") to include `simplify`, and update the assertion text
 - [x] 3.3 `test/dump-parity-tests.sh` — confirm the Chez driver and the shipped binary still agree stage-for-stage with the new stage present — 9/9; this suite is what caught the self-hosting guard failure in 1.6
 
 ## 4. Documentation
 
 - [x] 4.1 `docs/PIPELINE.md` — add `simplify` to the ladder diagram (`:66`) and to the per-stage IL table (`:122-131`) with its input/output IL shape; note that it is the first pass that removes work rather than translating it — also added to the Chez pass-mapping table as a `cp0`-style optimizer subset
-- [x] 4.2 `docs/PIPELINE.md` — record the accepted asymmetry: the inlining rule fires on program files (whose top-level defines are `letrec`-bound) and not in the REPL or across library units (whose top-level defines are globals); values are identical on every door — plus the sharper limit found during implementation: `build-program` only emits a `letrec` when *every* top-level define has a lambda initializer
+- [x] 4.2 `docs/PIPELINE.md` — record the accepted asymmetry: the inlining rule fires on program files (whose top-level defines are `letrec`-bound) and not in the REPL or across library units (whose top-level defines are globals); values are identical on every path — plus the sharper limit found during implementation: `build-program` only emits a `letrec` when *every* top-level define has a lambda initializer
 - [x] 4.3 `src/README.md:27,36,48` — add the pass to the ladder listing
 - [x] 4.4 `docs/PERFORMANCE.md` — tick P6-A in the item heading and the status table; add the outcome paragraph (measured sizes and timings from task 5), and confirm P6-B is still recorded as unscheduled
 
@@ -55,7 +55,7 @@
 ## 7. Follow-ups raised by this change (not in scope)
 
 - [x] 7.1 File the `encode-const` overflow defect as a GitHub issue — filed as [#7](https://github.com/bwbensonjr/emit/issues/7)
-- [x] 7.3 **Clamp the fold window from ±(2^30 − 1) to ±(2^28 − 1)** — the original window bounded the arithmetic but not the *encoding*: `encode-const` mis-emits any literal at or above 2^57 (issue #7), so a folded result in [2^57, 2^60) came out wrong on the self-hosted door. This shipped briefly as a value-changing regression (`(* 1073741823 1073741823)`). Added `demos/fold-boundary.scm`, which evaluates each folded expression alongside the same expression computed at run time and asserts they agree — it reproduces the bug on the unclamped compiler and passes on the clamped one. Verified no existing demo's IR changed
+- [x] 7.3 **Clamp the fold window from ±(2^30 − 1) to ±(2^28 − 1)** — the original window bounded the arithmetic but not the *encoding*: `encode-const` mis-emits any literal at or above 2^57 (issue #7), so a folded result in [2^57, 2^60) came out wrong on the self-hosted path. This shipped briefly as a value-changing regression (`(* 1073741823 1073741823)`). Added `demos/fold-boundary.scm`, which evaluates each folded expression alongside the same expression computed at run time and asserts they agree — it reproduces the bug on the unclamped compiler and passes on the clamped one. Verified no existing demo's IR changed
 - [x] 7.4 **Fix issue #7 and widen the window back** — `encode-const` now multiplies in decimal on the digit string instead of computing `(* d 8)` in the compiler's own fixnums, so literals across the whole fixnum range round-trip on both hosts. With the encoding ceiling gone, `sfy-fold-limit` returns to ±(2^30 − 1), its arithmetic ceiling. Added `demos/fixnum-literals.scm`; the decimal routine was checked against exact arithmetic on every boundary, 2^0..2^60, and 200000 random values (0 mismatches)
 - [x] 7.2 Widen `build-program` to emit a `letrec` for the lambda-initialized subset of top-level defines, so a program with one non-lambda define does not lose top-level inlining entirely — done. Boxed defines go in an enclosing `let`, lambda-initialized ones in a `letrec` between it and the `set!`s. 9 of 75 demos' IR changed, all smaller (up to −22.4%), none larger, all stdout-identical; the compiler's own IR −10.3% and `build/emit` −4.7%, repaying the pass's own cost
 - [x] 7.5 Prerequisite for 7.2: fix `set!` on a `letrec`-bound name compiling to a crash — filed as [#8](https://github.com/bwbensonjr/emit/issues/8) and fixed; assigned letrec bindings now split out into an enclosing boxed `let`

@@ -19,7 +19,7 @@ the full change.
   ordinary variadic entry for additional arguments, `apply`, value-position calls, and older
   artifacts. Generate that label in a disjoint compiler namespace so it cannot alias an ordinary
   entry derived from a legal Scheme identifier.
-- Preserve the uniform closure ABI, guaranteed tail calls, cross-door behavior, tree-shaking roots,
+- Preserve the uniform closure ABI, guaranteed tail calls, cross-path behavior, tree-shaking roots,
   assignment safety, and compatibility with existing fixed and variadic call rows.
 - Measure the delivered speed and code-size trade-off, update P9 with the result, and complete the
   regeneration and test barrier only for the retained production change.

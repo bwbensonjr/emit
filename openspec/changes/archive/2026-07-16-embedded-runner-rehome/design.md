@@ -2,7 +2,7 @@
 
 Modules v0 Stage 3 (`module-prelude-scheme-base`) re-homed the prelude as the R7RS library
 `(scheme base)`, auto-imported into every prelude-enabled compile. That re-homing landed on two
-of the three compile doors:
+of the three compile paths:
 
 - **Chez batch driver** (`src/compile.ss`): reads `emit-libs.scm`, compiles `lib/scheme/base.sld`
   to `scheme.base.ll` (cached under `build/lib`), auto-imports it, and threads the import table
@@ -10,7 +10,7 @@ of the three compile doors:
 - **REPL** (`src/repl-core.ss` + `src/repl/host.cpp`): preloads `(scheme base)`, auto-imports it
   (host "mode 6"), merges the derived-form macros into the session.
 
-The **third door — the Chez-free embedded runner** — was explicitly deferred. Today
+The **third path — the Chez-free embedded runner** — was explicitly deferred. Today
 `build/scheme-run` (`src/run.cpp` + `bootstrap/embed.ll`) and `bin/scheme-compile --emit` drive
 the embedded entry `src/entry-embed.scm`, which is a single line:
 

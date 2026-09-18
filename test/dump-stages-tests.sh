@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # dump-stages-tests.sh -- `--dump` on the SHIPPED binary, Chez-free (change:
 # emit-dump-stages).  Per-pass IL inspection used to live only in the Chez driver, so
-# this suite is the regression guard for the capability that replaced it: every door
-# dumps, every path's stages are covered, and turning dumping on changes nothing a
-# door writes to stdout or to an artifact.
+# this suite is the regression guard for the capability that replaced it: every command
+# dumps, every command's stages are covered, and turning dumping on changes nothing a
+# path writes to stdout or to an artifact.
 #
 # The dump-vs-Chez-driver PARITY check is the Chez-gated other half, in
 # test/dump-parity-tests.sh (run by run-dev-tests.sh).
@@ -39,7 +39,7 @@ headers () { grep -o ';; ==== after [^=]*====' "$1" | sed 's/;; ==== after //; s
 
 echo "stage coverage"
 
-# 1. The modular path (every door takes it once (scheme base) is auto-imported) must
+# 1. The modular path (every command takes it once (scheme base) is auto-imported) must
 #    show all eight stages, in ladder order -- three of them were run but never
 #    dumped before this change, and `simplify` joined the ladder with change
 #    simplify-known-calls.
@@ -111,7 +111,7 @@ if cmp -s "$TMP/lib/mylib.ll" "$TMP/lib2/mylib.ll" &&
 else bad "emit lib: --dump perturbed an artifact"; fi
 
 # 11. emit build: compare the emitted IR and the delivered exe's BEHAVIOR, not the
-#     exe bytes -- two identical `emit build` runs already differ (Mach-O LC_UUID,
+#     exe bytes -- two identical emit build runs already differ (Mach-O LC_UUID,
 #     and even in size), so exe byte-identity is not a property the linker provides.
 # Absolute source path: a manifest's relative paths resolve against its own directory
 # (change: manifest-search-path), and this manifest lives in $TMP.

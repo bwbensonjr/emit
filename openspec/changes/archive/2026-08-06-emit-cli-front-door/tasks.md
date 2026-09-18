@@ -17,7 +17,7 @@
 - [x] 2.3 Add the missing unknown-option rejection to `emit_repl`'s loop, and accept `--help` there
       too — `emit repl --bogus-flag` currently starts a session and exits 0 (design D3)
 - [x] 2.4 Verify all four verbs by hand: `--help` exits 0 and writes to stdout; an unknown option
-      exits non-zero and writes to stderr naming the door
+      exits non-zero and writes to stderr naming the path
 - [x] 2.5 Verify `emit --help | head` works without redirection — the point of D1
 
 ## 3. Suppress the unspecified final value (#42)
@@ -51,7 +51,7 @@
       `--help` exits 0 on stdout; no-verb and unknown-verb still exit 1 / 2 on stderr
 - [x] 5.2 Add the unknown-option case for all four verbs, `emit repl` included — the one that
       regresses silently today
-- [x] 5.3 Add a door-agreement case: a program ending in output, run through `emit run` and through
+- [x] 5.3 Add a path-agreement case: a program ending in output, run through `emit run` and through
       a delivered executable, with byte-identical stdout asserted
 - [x] 5.4 Add the negative cases for D4: `#f` and `()` as final values still print; an explicit
       write of the unspecified value still renders
@@ -68,5 +68,5 @@
 - [x] 6.3 Reference the issues from the implementing commits (`Fixes #42`, `Fixes #43`)
 - [x] 6.4 Note on #42 that the "delivered executable prints no final value at all" half was
       considered and deliberately not taken, with the reason (the `core-language` observation
-      channel, and door agreement) and the landing site if it is ever wanted (`RT_FILTER_MAIN`,
+      channel, and path agreement) and the landing site if it is ever wanted (`RT_FILTER_MAIN`,
       per-program opt-in)

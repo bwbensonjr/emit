@@ -17,7 +17,7 @@ consumers to keep compatible).
 ## What Changes
 
 - **A single compiled `emit` binary** (`build/emit`) with C++ verb dispatch over four
-  verbs. The run door (`src/run.cpp`) and the REPL door (`src/repl/host.cpp`) are
+  verbs. the `emit run` command (`src/run.cpp`) and the REPL (`src/repl/host.cpp`) are
   merged into one binary — they already link the *same* embedded compiler IR
   (`embed-repl.ll` + `scheme.base.ll`), differing only in their `main`.
   - `emit run [FILE] [--manifest F] [--no-prelude]` — run a program in-process
@@ -26,7 +26,7 @@ consumers to keep compatible).
   - `emit build [NAME] [--manifest F] [-o OUT]` — deliver a standalone executable
     from a manifest program entry. Was `bin/emit build` / `bin/scheme-compile`; the
     binary now emits the IR in-process and invokes `clang` to link.
-  - `emit lib SRC [-o DIR] [--manifest F]` — **NEW**: the compile-unit door. Compile
+  - `emit lib SRC [-o DIR] [--manifest F]` — **NEW**: the compile-unit path. Compile
     one `define-library` source to its artifact (`<name>.ll` + `<name>.exports`),
     Chez-free. Needs a new embedded-compiler mode to emit the export table.
 - **`--emit` / `--resolve-program`** stay available (as `emit run --emit`, used by the
@@ -36,14 +36,14 @@ consumers to keep compatible).
   callers migrate to `emit <verb>`: the `Makefile`, `tools/regen.sh`, `tools/log.sh`,
   every `test/*.sh`, the `demos/`, and the docs.
 - **`schemec` is out of scope** — it is the batch text→IR *bootstrap seed* filter, not
-  one of the four user-facing doors; it stays as an internal bootstrap tool.
+  one of the four user-facing commands; it stays as an internal bootstrap tool.
 
 ## Capabilities
 
 ### New Capabilities
 - `emit-cli`: The unified `emit` command — a single binary that dispatches the
   `lib` / `build` / `run` / `repl` verbs to one shared compiler core, as the sole
-  user-facing entry point. Includes the new **compile-unit door** (`emit lib`).
+  user-facing entry point. Includes the new **compile-unit path** (`emit lib`).
 
 ### Modified Capabilities
 - `project-build`: `emit build` becomes a verb of the unified `emit` binary (compiled,
@@ -51,9 +51,9 @@ consumers to keep compatible).
   `bin/scheme-compile`. Observable build behavior is unchanged.
 - `interactive-repl`: the REPL is invoked as `emit repl` (was `build/repl-host`); the
   persistent-host behavior is unchanged.
-- `module-system`: the run door is invoked as `emit run` and the AOT/compile-unit
+- `module-system`: the `emit run` command is invoked as `emit run` and the AOT/compile-unit
   artifacts are produced via `emit build` / `emit lib` (was `scheme-run` /
-  `bin/scheme-compile`); door semantics are unchanged.
+  `bin/scheme-compile`); path semantics are unchanged.
 
 ## Impact
 

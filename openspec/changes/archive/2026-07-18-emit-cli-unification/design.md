@@ -18,7 +18,7 @@ C++ `main` (`run.o` vs `host.o`). Both drive the compiler through the `rt_repl_s
 
 `schemec` is different in kind — `runtime.c` compiled with `-DRT_FILTER_MAIN` linked with
 `schemec.ll`. It is the batch text→IR *bootstrap seed* used by `tools/regen.sh`, not a
-user door, and stays as-is.
+user path, and stays as-is.
 
 User decisions: **single merged binary** (not a bash dispatcher over sub-binaries), and
 **rename now** (old names removed, no external shims).
@@ -31,7 +31,7 @@ User decisions: **single merged binary** (not a bash dispatcher over sub-binarie
   `lib` / `build` / `run` / `repl`.
 - `emit run` / `emit repl` behavior identical to today's `scheme-run` / `repl-host`.
 - `emit build` behavior identical to slice #2, now self-contained (the binary forks
-  `clang`); `emit lib` a new Chez-free compile-unit door.
+  `clang`); `emit lib` a new Chez-free compile-unit path.
 - The self-hosting bootstrap (`tools/regen.sh`) runs through `emit`, byte-stable.
 - Every test/demo/doc migrated; no dangling references to the removed names.
 
@@ -40,7 +40,7 @@ User decisions: **single merged binary** (not a bash dispatcher over sub-binarie
 - No change to compiler/runtime *semantics* — this is a CLI/packaging + host-merge
   change. Emitted IR and program values are unchanged.
 - `schemec` (bootstrap seed filter) is not renamed or absorbed.
-- No tree-shaking on the Chez-free door (still deferred).
+- No tree-shaking on the Chez-free path (still deferred).
 - No dependency model (registry/lockfile) — deferred.
 
 ## Decisions
@@ -58,8 +58,8 @@ across the two files today.
 - **Why a single binary** (per the user's choice): one artifact to ship; the two hosts
   already share all their IR and most of their helpers, so the merge is mostly at the
   `main`/dispatch layer, not a semantic rewrite.
-- **Trade-off**: one binary is larger than either door alone, and couples the run/REPL
-  link. Accepted — it is still one clean self-contained executable, and both doors
+- **Trade-off**: one binary is larger than either path alone, and couples the run/REPL
+  link. Accepted — it is still one clean self-contained executable, and both paths
   already carry the same embedded compiler.
 
 ### D2: `emit build` / `emit lib` fork `clang` from the binary
@@ -137,5 +137,5 @@ source + regenerated IR together.
 - **`schemec` long-term**: kept as the bootstrap seed here; whether it eventually becomes
   `emit --emit`-only (dropping the standalone filter) is a separate future question.
 - **`emit lib` `.stamp`**: whether to also write the compiler-identity `.stamp` sidecar
-  (as the Chez driver does) or leave staleness to the build door; lean toward writing it
+  (as the Chez driver does) or leave staleness to the `emit build` command; lean toward writing it
   for artifact-cache consistency.

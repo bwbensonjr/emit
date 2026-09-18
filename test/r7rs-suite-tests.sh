@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# r7rs-suite-tests.sh -- run the vendored R7RS-small conformance suite against `emit run`
+# r7rs-suite-tests.sh -- run the vendored R7RS-small conformance suite against emit run
 # (change: r7rs-conformance-suite).
 #
 # Chez-FREE: consumes only the vendored suite and the committed manifests
@@ -42,7 +42,7 @@ JOBS="${EMIT_JOBS:-$(sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo 
 
 # The staleness pass runs forms that are excluded PRECISELY BECAUSE they misbehave, so
 # one of them not terminating is an ordinary outcome, not a surprise -- and an unbounded
-# `emit run` there wedges the whole pass.  That is how a circular-structure form behaved
+# emit run there wedges the whole pass.  That is how a circular-structure form behaved
 # the moment `set-cdr!` existed (GitHub issue #90: the printer has no cycle detection).
 #
 # TWO THINGS ABOUT THIS BOUND, both learned the hard way:
@@ -72,7 +72,7 @@ case "${1:-}" in
     cat <<'USAGE'
 usage: test/r7rs-suite-tests.sh [--sections-only | --discover]
 
-Run the vendored R7RS-small suite against `emit run`, one program per section.
+Run the vendored R7RS-small suite against emit run, one program per section.
 
   (no flag)        run every section, then check the exclusion manifest for staleness
   --sections-only  run the sections only -- catches regressions, not stale exclusions
@@ -170,7 +170,7 @@ bad () { echo "  [FAIL] $1"; fail=$((fail+1)); }
 # --- discovery mode ---------------------------------------------------------------
 # Rewrites exclusions.tsv from scratch by growing each section form by form and isolating
 # every form that will not compile or run.  This is how the manifest was first populated;
-# it is slow (about one `emit run` per form) and is never part of a normal run.
+# it is slow (about one emit run per form) and is never part of a normal run.
 if [ "$mode" = discover ]; then
   say "r7rs-suite: discovery over $nforms forms, $JOBS jobs -- this takes minutes"
   : > "$TMP/discovered"
@@ -257,7 +257,7 @@ done < "$TMP/sections"
 # --- pass 2: is any exclusion stale? ----------------------------------------------
 # Each excluded form is re-included on its own, on top of its section's accepted forms
 # (which supply the helpers it may need).  If that program compiles, runs and reports no
-# failure, the exclusion is stale.  One `emit run` per excluded form, run JOBS-wide.
+# failure, the exclusion is stale.  One emit run per excluded form, run JOBS-wide.
 stale=0
 if [ "$mode" = default ] && [ "$nexcl" -gt 0 ]; then
   say "r7rs-suite: checking $nexcl exclusions for staleness ($JOBS jobs)"

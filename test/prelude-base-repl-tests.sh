@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# prelude-base-repl-tests.sh -- Stage 3 (scheme base) auto-import, REPL door
+# prelude-base-repl-tests.sh -- Stage 3 (scheme base) auto-import, REPL
 # (change: module-prelude-scheme-base).  Chez-FREE: drives the shipped
-# `emit repl`, which preloads (scheme base), auto-imports it into the session
+# emit repl, which preloads (scheme base), auto-imports it into the session
 # scope, and merges the derived-form macros -- so prelude procedures and macros work
 # interactively with no prepended prelude.  --no-prelude yields an empty session.
 #
@@ -23,7 +23,7 @@ check () {  # <name> <input> <expected>
   else echo "  [FAIL] $1 => $got  (expected $3)"; fail=$((fail+1)); fi
 }
 
-echo "(scheme base) auto-import (REPL door)"
+echo "(scheme base) auto-import (REPL)"
 check repl-procs  $'(map (lambda (x) (* x x)) (filter (lambda (x) (> x 0)) (list -1 2 -3 4)))\n' "(4 16)"
 check repl-case   $'(case 2 ((1) (quote one)) ((2) 2) (else (quote x)))\n'                       2
 check repl-cond   $'(cond ((zero? 0) (quote z)) (else (quote n)))\n'                              z

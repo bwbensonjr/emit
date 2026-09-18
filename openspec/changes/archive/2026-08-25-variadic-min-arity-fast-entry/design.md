@@ -77,7 +77,7 @@ be re-benchmarked and still pass the same speed gate.
 
 Alternative considered: branch inside the ordinary entry when `argc = fixed`. This is simpler and
 also helps dynamic calls, but it does not test the full proposed win because it retains a runtime
-branch and cannot remove the arity check on non-LTO doors. It remains a fallback worth measuring if
+branch and cannot remove the arity check on non-LTO paths. It remains a fallback worth measuring if
 body duplication is the only unacceptable cost.
 
 ### D3 — Fast entries preserve the uniform ABI and original `self`

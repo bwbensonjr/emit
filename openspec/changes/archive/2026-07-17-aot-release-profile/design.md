@@ -16,8 +16,8 @@ Grounded in experiments run during exploration (see `docs/PERFORMANCE.md` P1/P5)
   in the compiled surface, so a sealed program cannot reach a binding by a dynamically-computed
   name.
 
-The two doors already exist (one compiler core → REPL door + AOT door). This change makes the AOT
-door a **release profile**: closed-world, optimized, tree-shaken. It is framed as the first slice
+The two paths already exist (one compiler core → REPL + AOT path). This change makes the AOT
+path a **release profile**: closed-world, optimized, tree-shaken. It is framed as the first slice
 of a future `emit build` (the "compile the project and deliver it" half of a `cargo`/`uv`-style
 tool), so its factoring must generalize.
 
@@ -28,7 +28,7 @@ tool), so its factoring must generalize.
   dev-beats-ship inversion. Behavior-preserving; emitted/committed IR unchanged.
 - Tree-shake unreachable library bindings from AOT builds via a **root-set-driven, unit-general**
   reachability pass, so a `car`-only program does not ship all 196 `scheme.base` functions.
-- Keep the dev/REPL door identical (full units, one compiler core, dev→ship fidelity).
+- Keep the dev/REPL identical (full units, one compiler core, dev→ship fidelity).
 - Factor the work so a future manifest can supply richer roots (bin entry, or a delivered
   library's exports) with no change to the pass.
 
@@ -42,7 +42,7 @@ tool), so its factoring must generalize.
 
 ## Decisions
 
-**Decision: optimize at link with an opt pipeline gated to the AOT door.** Run `-O2`/`opt` over the
+**Decision: optimize at link with an opt pipeline gated to the AOT path.** Run `-O2`/`opt` over the
 AOT module set (the JIT already optimizes; the bitcode path should be consistent). This is a
 link/codegen-time step: the emitted `.ll` and committed `bootstrap/*.ll` are unchanged, so IR
 byte-identity and self-hosting fixed-point checks are unaffected. *Alternative* (bump only clang's
@@ -66,7 +66,7 @@ entry or a library's exports as roots without reworking the pass. This is a *fac
 it does not add near-term scope, it constrains where the seams go.
 
 **Decision: dev keeps cached full units; AOT builds a pruned init per program.** The cached full
-unit `.ll` (P3) stays for the REPL/JIT door (open world — everything must be available). The AOT
+unit `.ll` (P3) stays for the REPL/JIT execution path (open world — everything must be available). The AOT
 ship path builds a program-specific pruned `__init`, trading per-program unit reuse for a smaller
 binary. That is the correct trade for a ship step and mirrors `cargo`'s separate-compile +
 final-link strip. To record as the P3 interaction.
@@ -104,7 +104,7 @@ no `make regen` is needed; otherwise regen + trust-check.
 - **`-O2` mechanism** — a centralized `ship-opt = "-O2"` added to the AOT and bitcode ship-path
   clang invocations (`src/compile.ss`). Per-module clang `-O2` (no `llvm-link`/LTO) already yields
   the measured win (ack 4.52s→3.02s, 125KB→108KB), and keeps the AOT path clang-only. The JIT/REPL
-  door is untouched.
+  path is untouched.
 - **Pruned unit mechanism → recompile the unit with a keep-set (Approach 1).** Rather than IR-level
   `__init` surgery + `globaldce` (which would require `llvm-link`/`opt` on the AOT path), the AOT
   build recompiles each unit emitting ONLY the reachable bindings and a `__init` over just those.

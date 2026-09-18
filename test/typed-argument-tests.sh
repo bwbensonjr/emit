@@ -15,7 +15,7 @@
 #   * wrong-typed WRITES do not reach memory, with a NEIGHBOURING object checked --
 #     a store that trapped after landing is indistinguishable from one that never
 #     happened unless something else's contents are read afterwards, which is why
-#     that case runs in the REPL (the one door that survives a trap);
+#     that case runs in the REPL (the one path that survives a trap);
 #   * calling a NON-PROCEDURE reports rather than loading a code pointer out of a
 #     value that is not a closure -- `((quote not-a-proc) 1)` used to exit 138;
 #   * `apply` rejects a final argument that is not a proper list.  These three are
@@ -29,7 +29,7 @@
 #     traps catchable is GitHub issue #89, and it would change every existing trap;
 #   * RIGHT-TYPED access is unchanged, checked first: an over-tight guard breaks
 #     these before it breaks any trap;
-#   * both doors agree -- the in-process runner and a standalone executable report
+#   * both execution paths agree -- the in-process runner and a standalone executable report
 #     the same diagnostic -- and the runner's host survives the trap.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.
@@ -298,10 +298,10 @@ trap_msg "guard does not catch a range trap either (unchanged behaviour)" \
   '(display (guard (e (#t (quote caught))) (vector-ref (vector 1 2) 9)))' \
   "vector-ref: index out of range: 9 (length 2)"
 
-# --- the REPL door: the host survives, and the NEIGHBOUR is unmodified -------
+# --- the REPL: the host survives, and the NEIGHBOUR is unmodified -------
 # The case that distinguishes a real fix from one that traps after the store has
-# landed.  The REPL is the only door that can be asked what `b` holds afterwards --
-# under `emit run` the trap ends the program, so the store's effect is unobservable.
+# landed.  The REPL is the only path that can be asked what `b` holds afterwards --
+# under emit run the trap ends the program, so the store's effect is unobservable.
 repl "a wrong-typed write leaves a neighbouring object untouched" \
   "$(printf '#(7 8 9)\n!trap: vector-set!: not a vector: got a string\n#(7 8 9)\n3')" <<'EOF'
 (define a "abc")
@@ -324,7 +324,7 @@ repl "the session survives each type trap in turn" \
 EOF
 
 # --- a standalone executable reports the same thing and exits non-zero -------
-# `emit build` delivers a named program from a manifest, so the case needs one.
+# emit build delivers a named program from a manifest, so the case needs one.
 # Absolute source paths: a manifest's relative paths resolve against its own
 # directory (change: manifest-search-path), and this manifest lives in $TMP.
 cat > "$TMP/exe.scm" <<'EOF'

@@ -4,9 +4,9 @@ Every pass in the ladder is a *translation* — `expand`, `recognize-let`, `conv
 `convert-closures`, `lower-program` change representation, and none of them removes work. So a
 program as small as `demos/square.scm` (`(define (square n) (* n n))` / `(square 34)`) compiles to
 a heap-allocated closure record plus an indirect call plus a guarded fixnum multiply, in order to
-recompute a whole-program constant on every run. Neither door recovers it: the dev door
+recompute a whole-program constant on every run. Neither path recovers it: the development path
 (`emit run`, REPL) runs a bare `LLJITBuilder` with no IR transform layer at all
-(`src/emit.cpp:404`), and the ship door's `-O2` cannot see through the closure representation
+(`src/emit.cpp:404`), and the shipping path's `-O2` cannot see through the closure representation
 (measured — see `docs/PERFORMANCE.md` P6).
 
 Half the machinery already exists. `recognize-let` (`src/passes/recognize-let.ss:23`) performs

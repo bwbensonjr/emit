@@ -39,8 +39,8 @@ both narrow the change to plumbing plus one resolution pass:
 
 - **A library can export a macro.** A name bound by a `define-syntax` in a library body may appear
   in an `export` declaration. An importing program, library, or REPL session may then use that macro
-  under its external name. This holds identically on all three doors — the Chez batch driver, the
-  REPL, and the Chez-free embedded run door — per dev→ship fidelity.
+  under its external name. This holds identically on all three paths — the Chez batch driver, the
+  REPL, and the Chez-free embedded `emit run` command — per dev→ship fidelity.
 - **The export artifact grows a compile-time half.** The `.exports` datum becomes four fields:
   `(NAME <runtime-table> <call-rows> <compile-time-half>)`. The fourth carries the exported
   transformers and the mangled symbols their templates reference. A three-field datum is still read
@@ -85,7 +85,7 @@ both narrow the change to plumbing plus one resolution pass:
 
 - `module-system`: the export surface changes from "exports are procedures, and a macro export SHALL
   be rejected as one" to a macro export being accepted and carried; the export-artifact format gains
-  its compile-time half; the whole-module import surface gains the macro merge; the REPL door's
+  its compile-time half; the whole-module import surface gains the macro merge; the REPL's
   import gains that merge and its persistence across forms; two requirements are added (an exported
   macro's availability in an importer, and its resolution in the defining library) along with a
   tree-shake requirement for macro-reached bindings; and the requirement "a name an exported macro
@@ -112,7 +112,7 @@ both narrow the change to plumbing plus one resolution pass:
   referenced symbols into `*repl-known*` / `*repl-env*`; `repl-library-exports-text` (mode 11) so
   `emit lib` writes the same four-field datum the driver does.
 - `src/emit.cpp`: the mode-11 sidecar writer (`:1538`) is format-agnostic and should stay so; the run
-  door's `preload_user_libraries` needs no new mode — a program that uses only a macro from a library
+  path's `preload_user_libraries` needs no new mode — a program that uses only a macro from a library
   still imports it, so the existing closure walk (mode 12) already links the unit whose globals the
   expansion references.
 - **Artifact format**: a new field in a committed, cache-checked file. `artifacts-fresh?` compares
@@ -120,7 +120,7 @@ both narrow the change to plumbing plus one resolution pass:
   `test/module-scaffold-baseline.sha256` pins emitted IR, not `.exports`, and no program that
   compiles today changes by a byte — but this must be verified, not assumed.
 - Tests: `test/modules-tests.sh`, `test/modules-run-tests.sh`, `test/modules-repl-tests.sh` (one
-  fixture library exporting a macro, exercised on all three doors),
+  fixture library exporting a macro, exercised on all three paths),
   `test/aot-tree-shaking-tests.sh` (a private helper reached only through an exported template
   survives the shake), and `test/expander-tests.ss` for the resolution pass in isolation.
 - Docs: `docs/MODULES.md` (the export surface, the artifact format, the diagnostics table at `:530`

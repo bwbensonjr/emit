@@ -68,5 +68,5 @@ _None._ This extends existing module-system and codegen surfaces.
 - **Artifacts** — `.exports` format; every committed `bootstrap/*.ll` regenerates (labels rename).
 - **Risk concentrated in three places:** label stability across the full/pruned pair (a mismatch
   is a link error, which is the safe direction); the closed-world assumption that a library global
-  is never reassigned after `__init` (see design D4 — it appears to hold on *both* doors today,
+  is never reassigned after `__init` (see design D4 — it appears to hold on *both* paths today,
   which would avoid a dev→ship carve-out entirely); and LTO's effect on build time and binary size.

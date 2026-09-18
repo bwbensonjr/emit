@@ -11,8 +11,8 @@ library: a library that imports `(scheme base)` SHALL be able to use `cond`, `ca
 A library's own `define-syntax` SHALL take precedence over an imported keyword of the same spelling,
 matching the user-wins shadowing the runtime environment already gives a `define`.
 
-This SHALL hold identically on all three doors — the Chez batch driver, the REPL, and the Chez-free
-embedded run door — per dev→ship fidelity.
+This SHALL hold identically on all three paths — the Chez batch driver, the REPL, and the Chez-free
+embedded `emit run` command — per dev→ship fidelity.
 
 #### Scenario: A library body uses a derived form
 
@@ -26,10 +26,10 @@ embedded run door — per dev→ship fidelity.
 - **WHEN** a `define-library` importing `(scheme base)` defines `(define (f x) (and x 7))`
 - **THEN** the library compiles and `(f 1)` is `7`
 
-#### Scenario: The three doors agree on a library body's derived forms
+#### Scenario: The three paths agree on a library body's derived forms
 
 - **WHEN** the same library using a derived form in its body is compiled by the Chez driver, loaded
-  by the REPL, and linked by the Chez-free run door
+  by the REPL, and linked by the Chez-free `emit run` command
 - **THEN** all three compile it without error and a program using it produces the same value on each
 
 #### Scenario: A library's own macro shadows an imported one
@@ -81,7 +81,7 @@ particular library name would reintroduce the two-tier privilege this capability
 When a form's head names a macro the compiler knows about but that is not in the compiling unit's
 macro environment, the diagnostic SHALL report a macro that is not in scope and SHALL name the
 library whose import would bring it in, rather than reporting an unbound variable. The message
-SHALL be the same on every door.
+SHALL be the same on every path.
 
 #### Scenario: A derived form used in a library that does not import (scheme base)
 

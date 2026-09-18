@@ -30,7 +30,7 @@ Two constraints the fix inherits and must not break:
 
 - **Cross-host determinism.** Phase 2 uses `fold-left`, not `map`, because the gensym counter is
   mutated per form and Chez's `map` and the prelude's `map` apply in different orders — which would
-  diverge the AOT-door and REPL-door bytes for the same unit. Any new traversal over the body has the
+  diverge the AOT-path and REPL-path bytes for the same unit. Any new traversal over the body has the
   same requirement.
 - **`(scheme base)` must not move.** Its body is 120 `define` plus 11 `define-syntax` and nothing
   else, so this change must leave `bootstrap/scheme.base.ll` byte-identical. That is the regression
@@ -51,7 +51,7 @@ Two constraints the fix inherits and must not break:
 
 - The other R7RS library declarations — `include`, `include-ci`, `include-library-declarations`,
   `cond-expand`. Each is its own reader/splicer question and none is blocked on this one.
-- `define-values`, which no door implements.
+- `define-values`, which no path implements.
 - **Making a command's effects visible to reachability analysis.** The shake will keep every command
   unconditionally (D3); teaching it which commands are dead is a separate optimization with no
   current payer.

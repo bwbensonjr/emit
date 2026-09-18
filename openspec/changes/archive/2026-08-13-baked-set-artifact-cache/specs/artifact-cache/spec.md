@@ -1,6 +1,6 @@
 ## Purpose
 
-Lets the Chez-free doors reuse the already-compiled standard library instead of recompiling it from
+Lets the Chez-free paths reuse the already-compiled standard library instead of recompiling it from
 source at every process start. The cache is a pure accelerator: it is keyed so a stale entry cannot
 be used, and every failure path falls back to compiling from source.
 
@@ -8,7 +8,7 @@ be used, and every failure path falls back to compiling from source.
 
 ### Requirement: The baked standard library is compiled once and reused across processes
 
-The Chez-free doors (`emit run`, `emit build`, `emit lib`, `emit repl`) SHALL reuse an
+The Chez-free paths (`emit run`, `emit build`, `emit lib`, `emit repl`) SHALL reuse an
 already-compiled baked standard library rather than recompiling it from the binary's baked-in source
 at every process start. Reuse SHALL require no access to any library source, resting on the compiled
 unit modules plus the compile-time interface each publishes.
@@ -25,10 +25,10 @@ inconsistent would be unusable.
 
 #### Scenario: The first invocation populates the cache
 
-- **WHEN** a door runs with an empty cache
+- **WHEN** a path runs with an empty cache
 - **THEN** it compiles from source, succeeds, and leaves an entry that a later process reuses
 
-#### Scenario: Every door benefits
+#### Scenario: every path benefits
 
 - **WHEN** each of `emit run`, `emit build`, `emit lib`, and `emit repl` is invoked twice
 - **THEN** each one's second invocation reuses the cached set
@@ -43,7 +43,7 @@ layout can be invalidated deliberately.
 
 #### Scenario: A rebuilt compiler is not served a stale entry
 
-- **WHEN** the compiler binary is rebuilt and a door is run again
+- **WHEN** the compiler binary is rebuilt and a path is run again
 - **THEN** no entry written by the previous binary is reused, and the baked set is recompiled
 
 #### Scenario: A different binary does not share an entry
@@ -51,9 +51,9 @@ layout can be invalidated deliberately.
 - **WHEN** two different `emit` binaries run against the same cache location
 - **THEN** neither reuses the other's entry
 
-### Requirement: The cache never changes what a door produces
+### Requirement: The cache never changes what a path produces
 
-A door's observable result SHALL NOT depend on whether the cache was warm, cold, or absent. For the
+A path's observable result SHALL NOT depend on whether the cache was warm, cold, or absent. For the
 same inputs, the emitted IR, the delivered executable's behavior, the session environment imports
 resolve against, and every diagnostic SHALL be identical in all three states.
 
@@ -76,33 +76,33 @@ resolve against, and every diagnostic SHALL be identical in all three states.
 ### Requirement: Every cache failure degrades to compiling from source
 
 A cache miss, a stale entry, a corrupt or unreadable entry, a missing cache directory, or a cache
-location that cannot be created or written SHALL cause the door to compile from source and complete
-normally. No door SHALL acquire a failure mode it did not have before the cache existed, and the
+location that cannot be created or written SHALL cause the path to compile from source and complete
+normally. No path SHALL acquire a failure mode it did not have before the cache existed, and the
 cache SHALL NOT be required for correctness on any path.
 
 A metadata entry that cannot be read, or that is inconsistent with the units stored beside it, SHALL
 be refused whole rather than partially applied, so that falling back to a from-source compile always
 begins from an unmodified session.
 
-#### Scenario: An unwritable cache location still permits every door to work
+#### Scenario: An unwritable cache location still permits every path to work
 
 - **WHEN** the cache location cannot be created or written
-- **THEN** each door compiles from source and completes normally, reporting no error
+- **THEN** each path compiles from source and completes normally, reporting no error
 
 #### Scenario: A corrupt entry is not trusted
 
 - **WHEN** a cache entry is truncated or otherwise unreadable
-- **THEN** the door ignores it, recompiles from source, and completes normally
+- **THEN** the path ignores it, recompiles from source, and completes normally
 
 #### Scenario: A partially applicable entry leaves the session unchanged
 
 - **WHEN** an entry's metadata is readable but inconsistent with the units stored beside it
-- **THEN** nothing from that entry is registered, and the door compiles from source
+- **THEN** nothing from that entry is registered, and the path compiles from source
 
 #### Scenario: A read-only installation works
 
 - **WHEN** `emit` runs from a read-only installation with no writable cache location available
-- **THEN** every door behaves exactly as it does today
+- **THEN** every path behaves exactly as it does today
 
 ### Requirement: The cache is available from an installed emit, not only a checkout
 
@@ -121,21 +121,21 @@ demand, and regenerable from source.
 
 - **WHEN** `emit` is installed
 - **THEN** the installed tree contains no compiled library unit, and a cache entry exists only after
-  a door has run
+  a path has run
 
 ### Requirement: Cache reuse is narrated
 
-Each door SHALL report whether the baked set was reused or recompiled, and name the reason when it
+Each path SHALL report whether the baked set was reused or recompiled, and name the reason when it
 recompiles, following the project's narration convention: narration on stderr, controllable through
 verbosity, concise by default.
 
 #### Scenario: Reuse and rebuild are distinguishable
 
-- **WHEN** a door runs with a warm cache, and again after the entry is invalidated
+- **WHEN** a path runs with a warm cache, and again after the entry is invalidated
 - **THEN** the narration reports the reused set as reused, and the invalidated one as recompiled
   together with the reason
 
 #### Scenario: Narration stays on stderr
 
-- **WHEN** a door that emits data on stdout runs with narration enabled
+- **WHEN** a path that emits data on stdout runs with narration enabled
 - **THEN** cache narration appears on stderr and does not contaminate stdout

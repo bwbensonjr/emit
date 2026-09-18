@@ -5,18 +5,18 @@
 The `emit` binary SHALL provide a `build` verb that builds a standalone executable
 from a program named in the manifest. Invoked as `emit build [NAME]`, it SHALL
 resolve the manifest's `(program NAME …)` entry to its source file, build that
-source through the shipped Chez-free AOT door (`bin/scheme-compile`: `scheme-run
+source through the shipped Chez-free AOT path (`bin/scheme-compile`: `scheme-run
 --emit` + clang), and deliver the resulting native executable to the entry's
 configured output path. The resolution of the program entry SHALL itself be
 Chez-free. This slice does not tree-shake: full library units are linked, as the
-Chez-free AOT door does today.
+Chez-free AOT path does today.
 
 When the manifest contains exactly one program entry, `NAME` MAY be omitted and that
 entry SHALL be selected. When `NAME` is omitted and the manifest has zero or more
 than one program entry, `emit build` SHALL report an error naming the available
 program entries.
 
-The manifest SHALL be located the same way the other doors locate it: the
+The manifest SHALL be located the same way the other paths locate it: the
 `EMIT_MANIFEST` environment variable if set, otherwise `--manifest FILE` if given,
 otherwise the default `emit-libs.scm`.
 
@@ -59,7 +59,7 @@ buildable.
   `output` clause and the user runs `emit build my-app`
 - **THEN** the executable is delivered to a default path derived from `my-app`
 
-### Requirement: emit build matches the AOT door
+### Requirement: emit build matches the AOT path
 
 A program built through `emit build` SHALL produce a standalone executable whose
 observable behavior is identical to building that same source directly through
@@ -67,7 +67,7 @@ observable behavior is identical to building that same source directly through
 proven ship path — it resolves the program entry and then invokes
 `bin/scheme-compile`; it introduces no second compilation path.
 
-#### Scenario: emit build and the AOT door agree
+#### Scenario: emit build and the AOT path agree
 
 - **WHEN** a program with library imports is built once via `emit build NAME` and
   once via `bin/scheme-compile` on the same resolved source with the same manifest
@@ -77,7 +77,7 @@ proven ship path — it resolves the program entry and then invokes
 
 Resolving a `(program NAME …)` entry to its source and output SHALL be performed by
 the embedded compiler with no dependency on Chez, reusing the same manifest
-machinery the run door uses. `scheme-run` SHALL expose this via a
+machinery the `emit run` command uses. `scheme-run` SHALL expose this via a
 `--resolve-program NAME` mode that reads the manifest (`--manifest` > `EMIT_MANIFEST`
 > default `emit-libs.scm`) and prints the resolved source and output, without
 JIT-compiling or running any program.
@@ -111,8 +111,8 @@ binary size), with narration on stderr and controllable via `EMIT_VERBOSITY`.
 ### Requirement: emit is additive and renames nothing
 
 Introducing the `emit` binary SHALL NOT rename or remove any existing tool.
-`bin/scheme-compile` (the AOT door), `scheme-run` (the run door), and `repl-host`
-(the REPL door) SHALL continue to work exactly as before. The `emit` binary SHALL
+`bin/scheme-compile` (the AOT path), `scheme-run` (the `emit run` command), and `repl-host`
+(the REPL) SHALL continue to work exactly as before. The `emit` binary SHALL
 expose only the `build` verb in this change; the other verbs and any deprecation of
 the existing names remain future work.
 

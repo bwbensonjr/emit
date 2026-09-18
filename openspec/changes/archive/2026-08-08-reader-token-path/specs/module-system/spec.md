@@ -16,8 +16,8 @@ vector and bytevector literals and inside quoted structure. (The vector case is 
 reader rather than through a library, because a quoted vector cannot currently be lowered as a
 constant at all — an unrelated gap, GitHub issue #64.)
 
-Both doors SHALL implement this rule and SHALL agree on it for ASCII source. Case folding outside
-ASCII is **not** guaranteed to agree between doors and is a recorded limit, not a promise.
+both paths SHALL implement this rule and SHALL agree on it for ASCII source. Case folding outside
+ASCII is **not** guaranteed to agree between paths and is a recorded limit, not a promise.
 
 An included form SHALL be subject to every rule a directly written body form is subject to —
 definitions, `define-syntax`, `define-record-type`, and commands all behave identically, and source
@@ -55,16 +55,16 @@ order across the splice is preserved.
 - **THEN** the library defines `KeepCase` and calling it yields the symbol `kept` — the name is
   left literal and the unquoted identifiers around it are folded
 
-#### Scenario: Both doors fold an included file identically
+#### Scenario: both paths fold an included file identically
 
 - **WHEN** a library whose `include-ci` file mixes unquoted mixed-case and bar-quoted ASCII
   identifiers is compiled by the Chez driver and by the shipped compiler
 - **THEN** both produce the same names, and the emitted IR agrees byte for byte where the existing
-  cross-door equivalence checks compare it
+  cross-path equivalence checks compare it
 
-#### Scenario: The same source includes identically on every door
+#### Scenario: The same source includes identically on every path
 
 - **WHEN** a library using `include` is compiled by the Chez driver, by `emit lib`, by `emit run`
   through the manifest, and by the REPL's library loader
-- **THEN** all doors produce the same unit, and the emitted IR agrees byte for byte where the
-  existing cross-door equivalence checks compare it
+- **THEN** all paths produce the same unit, and the emitted IR agrees byte for byte where the
+  existing cross-path equivalence checks compare it

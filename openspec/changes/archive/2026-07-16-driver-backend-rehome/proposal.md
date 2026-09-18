@@ -20,7 +20,7 @@ modular program — the last prepend paths in the driver.
   - **jit**: `llvm-link` all units + program + runtime bitcode → `lli` (was: single module).
   - **bitcode**: assemble/`llvm-link` all units + program → `.bc`, linked with the runtime → exe.
 - **jit/bitcode gain module-import support** as a direct consequence (they route through the same
-  manifest-driven resolution the aot door uses).
+  manifest-driven resolution the AOT path uses).
 - **`--emit-ir` is unchanged** — it stays the single-module, raw core-IR filter (its
   self-hosting/piping contract, mirroring `schemec`), documented as the intentional
   non-re-homed exception. `(scheme base)` is reached only via the aot/jit/bitcode backends.

@@ -20,9 +20,9 @@
 ;; while the prelude's `map` is strictly left-to-right.  So any `map` over a
 ;; SIDE-EFFECTING procedure (one that allocates a temp, emits an instruction, or
 ;; bumps the gensym counter) produces different output on the Chez-hosted driver
-;; than on the shipped self-hosted doors, for any list of more than three elements.
+;; than on the shipped self-hosted paths, for any list of more than three elements.
 ;;
-;; That broke the cross-door byte-identity of library units (issue #11: `apply`
+;; That broke the cross-path byte-identity of library units (issue #11: `apply`
 ;; spills K=8 slots through exactly such a map) and is the mechanism behind the
 ;; operand-order divergence in issue #6 (a call with more than three arguments has
 ;; its operands EMITTED, and therefore evaluated, in a different order per host).

@@ -32,7 +32,7 @@ $ emit build hello && ./hello  → hi\n#<unspecified>\n
 
 The REPL already solved this: `run_thunk` suppresses the unspecified result (`rt_is_unspec`,
 `src/emit.cpp:708`) so side-effecting forms stay quiet, exactly as Chez's waiter and Racket's REPL
-do. The program path does not, so **the two doors disagree about the same value**. A standalone
+do. The program path does not, so **the two paths disagree about the same value**. A standalone
 executable is a first-class deliverable (`CLAUDE.md`), and this makes every one of them need its
 last line trimmed before use in a pipeline.
 
@@ -62,7 +62,7 @@ final-value print because for a text filter "printing the entry's value afterwar
   printed, not even a newline, when the final value is the unspecified value. Any other value —
   including `#f` and `()` — still prints, which is what makes the distinguished unspecified value
   worth having. This applies on every exit (`emit run`, the AOT executable, JIT, bitcode), so the
-  doors continue to agree.
+  paths continue to agree.
 - **Explicit non-goal: a delivered executable that prints no final value at all.** #42 raises it
   and it is a reasonable end state, but it would break the observation channel a large part of the
   `core-language` spec is written against ("a program's value is a symbol → the executable prints
@@ -79,8 +79,8 @@ final-value print because for a text filter "printing the entry's value afterwar
 
 ### Modified Capabilities
 
-- `emit-cli`: gains the requirement that every door answers `--help`/`-h` with its own usage and a
-  success exit, and that every door rejects an unknown option — which `emit repl` currently does
+- `emit-cli`: gains the requirement that every path answers `--help`/`-h` with its own usage and a
+  success exit, and that every path rejects an unknown option — which `emit repl` currently does
   not.
 - `core-language`: gains the requirement that a program's reported final value is suppressed when
   it is the unspecified value, on every exit — the program-level counterpart of the REPL's existing

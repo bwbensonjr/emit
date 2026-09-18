@@ -38,13 +38,13 @@
       Chez-gated harnesses that link a stage runner — `tools/regen.sh` and
       `test/self-host-fixpoint.sh` — to use the batch `run-boot.o` (was `run.o`).
 - [x] 4.2 `build/scheme-run` relinked from the dispatched entry: **~806 KB → ~894 KB** (+~88 KB,
-      the D2 tradeoff for the module-aware door).
+      the D2 tradeoff for the module-aware path).
 
 ## 5. Tests and fidelity
 
 - [x] 5.1 `test/modules-run-tests.sh`: import (142), transitive chain (15), diamond (35), rename
       (77), and a no-manifest plain program ((1 4 9)). Registered in `run-all-tests.sh`.
-- [x] 5.2 Fidelity: run-door value == AOT-door value (142==142); run-door program module
+- [x] 5.2 Fidelity: run-path value == AOT-path value (142==142); run-path program module
       byte-identical to the AOT `prog.ll` (modulo the driver's target header, which the embedded
       `--emit` omits by convention). Chez-gated section of the new suite.
 - [x] 5.3 Negative tests: import cycle and missing-from-manifest each report a diagnostic and
@@ -62,7 +62,7 @@
 
 ## 7. Docs
 
-- [x] 7.1 `docs/MODULES.md` updated: the "future work" caveat is replaced with the run-door
+- [x] 7.1 `docs/MODULES.md` updated: the "future work" caveat is replaced with the run-path
       documentation (`scheme-run --manifest`, baked `(scheme base)`, byte-identity).
 
 ## 8. Spec sync

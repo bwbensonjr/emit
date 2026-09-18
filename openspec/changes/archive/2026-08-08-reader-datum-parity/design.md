@@ -7,7 +7,7 @@ separately, and the third — `render-datum`'s missing vector arm — is named i
 
 **What binds them into one change.** `render-datum` stopped being diagnostics-only when
 `library-macro-export` made it the writer of the export table, and its own comment states the
-consequence: "This renderer WRITES the export artifact on every door now, not just diagnostics, so a
+consequence: "This renderer WRITES the export artifact on every path now, not just diagnostics, so a
 datum it renders as `?` would corrupt a table rather than merely read poorly in a message — hence
 `render-char` errors instead of guessing a spelling." A vector literal is the case where that warning
 has already come true. Verified at 562ae62:
@@ -31,7 +31,7 @@ together, and it dictates the sequence in D5.
 - A vector or bytevector literal compiles as a constant wherever any other quoted datum may appear.
 - `render-datum` represents both, in the `#(...)` / `#u8(...)` spellings both readers accept, so
   export tables round-trip.
-- A door's diagnostics never print `?` for a datum they are reporting — fixed once, in the shared
+- A path's diagnostics never print `?` for a datum they are reporting — fixed once, in the shared
   path, rather than at the one call site #52 names.
 - No commit in this change leaves the export-table corruption unmasked.
 
@@ -93,7 +93,7 @@ Found while testing D3: **Chez's `read` rejects `#u8(1 2)`.** Chez spells a byte
 That matters because `src/compile.ss` reads export tables *back* with Chez's `read` on its
 artifact-reuse path (`(car (read-program expf))`). A table containing `#u8(...)` would therefore be
 unreadable by the driver — precisely the failure `render-char`'s rule already names: "an error
-rather than a rendering the other door cannot read back". Writing `#vu8(` instead only moves the
+rather than a rendering the other path cannot read back". Writing `#vu8(` instead only moves the
 breakage to Emit's reader.
 
 So the bytevector arm is **mode-dependent**, and it is the only arm besides `render-char` that is:

@@ -38,10 +38,10 @@ columns to get formatting sooner.
   and `((define-library) (_ d . body))` so the authored R7RS libraries keep their indented
   bodies. Measured, the two together remove 576 of the 9,795 changed lines and account for
   every improvement in the six authored `.sld` files.
-- **Two Makefile doors**, `make format` and `make format-check`, wrapping a single
+- **Two Makefile paths**, `make format` and `make format-check`, wrapping a single
   `tools/format.sh` that holds the covered-set policy and the per-group dialect
   selection. Both narrate per `docs/OUTPUT.md`: files considered, files that would
-  change, elapsed time. The script is the door an automated caller uses, because it is
+  change, elapsed time. The script is the path an automated caller uses, because it is
   the one that can carry the two exit statuses; a make target collapses them to the build
   system's generic failure (design D11).
 - **An opt-in pre-commit hook**, installed by a Makefile target, checking only the
@@ -83,14 +83,14 @@ compiles Pitch, so Emit's own build and test path must never require it.
 ### New Capabilities
 
 - `source-formatting`: The covered set of hand-authored Scheme sources, the resolved
-  Pitch configuration and dialect assignment, the two invocation doors and their
+  Pitch configuration and dialect assignment, the two invocation paths and their
   narration, the staged-file pre-commit gate and its skip behavior when Pitch is absent,
   and the semantics-preservation evidence the one-time reformat must produce.
 
 ### Modified Capabilities
 
 - `tooling-observability`: the enumerated list of project tools required to conform to
-  the observability principle gains the formatting tool and its Makefile doors.
+  the observability principle gains the formatting tool and its Makefile paths.
 
 ## Impact
 

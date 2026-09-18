@@ -27,13 +27,13 @@
 - [x] 5.3 Produce the `<unit>.exports` table data (external-name -> mangled-symbol; reserved unused macro slot) returned from `compile-unit`
 - [x] 5.4 Generalize the program unit's `@scheme_entry` to call each imported library's `@"L:__init"` (declared external) before the program body
 
-## 6. AOT door — build-program (src/compile.ss / bin/scheme-compile)
+## 6. AOT path — build-program (src/compile.ss / bin/scheme-compile)
 
 - [x] 6.1 Add a manifest reader for `emit-libs.scm` (default path, `--manifest` override) mapping a library name to source (+ optional artifact dir, defaulting under `build/lib/`)
 - [x] 6.2 Add an import-aware build path: resolve the program's imports via the manifest, `compile-unit` each library (writing `L.ll` + `L.exports`), compile the program against the import env, and link `clang runtime.c L.ll prog.ll -lgc -o exe`; do not link unimported libraries
 - [x] 6.3 Narrate unit compiles/links per `docs/OUTPUT.md` (`compile (mylib) -> build/lib/mylib.ll [N bytes]`, `link … -> exe`), honoring `EMIT_VERBOSITY`
 
-## 7. REPL door — import (src/repl/host.cpp + src/repl-core.ss)
+## 7. REPL — import (src/repl/host.cpp + src/repl-core.ss)
 
 - [x] 7.1 Handle `(import (<lib>))` in the REPL front-end: resolve via manifest, `compile-unit` the library, `addIRModule` `L.ll` into the shared JITDylib
 - [x] 7.2 Look up and call `@"L:__init"` exactly once on import; merge `L.exports` into the session scope as imported bindings so later forms reference them via external globals
@@ -44,10 +44,10 @@
 - [x] 8.1 AOT: build the importing program via build-program, run it, assert the printed value
 - [x] 8.2 REPL: import `(mylib)` interactively and assert calling the export returns the expected value
 - [x] 8.3 Shadowing: a program defining its own `greet` while importing `(mylib)` uses its own definition
-- [x] 8.4 Cross-door byte-identity: the `mylib.ll` produced for AOT equals the one produced for the REPL, byte-for-byte (extend self-emission-equivalence to the unit)
+- [x] 8.4 cross-path byte-identity: the `mylib.ll` produced for AOT equals the one produced for the REPL, byte-for-byte (extend self-emission-equivalence to the unit)
 - [x] 8.5 No-collision blocker: a program importing both `(liba)` and `(libb)` (same-named internal `helper` + lifted code) links and runs with no symbol conflict
 - [x] 8.6 Init-once: calling `@"mylib:__init"` twice runs the body once (guard works)
-- [x] 8.7 Wire the new suite into `run-all-tests.sh` (Chez-free doors) and `run-dev-tests.sh` (Chez-gated pieces)
+- [x] 8.7 Wire the new suite into `run-all-tests.sh` (Chez-free paths) and `run-dev-tests.sh` (Chez-gated pieces)
 
 ## 9. Regen and verification
 

@@ -8,8 +8,8 @@
 - [x] 1.3 Add whole-source cases asserting a truncated file does not run: `(display (list 1 2 3)`
       and `(display "abc` each exit non-zero **and below 128** with a diagnostic on stderr —
       currently they print `(1 2 3)` / `abc` and exit 0
-- [x] 1.4 Add `test/project-door-tests.sh` fixtures for a **truncated** manifest (one paren short) on
-      the `build` and `run` doors, and for a **two-form** manifest where the second form declares the
+- [x] 1.4 Add `test/project-command-tests.sh` fixtures for a **truncated** manifest (one paren short) on
+      the `build` and `run` paths, and for a **two-form** manifest where the second form declares the
       library a program imports — asserting the diagnostic names the manifest, not the import
 - [x] 1.5 Add a chained-manifest fixture where the *second* manifest in the chain is the malformed
       one, asserting the report identifies which file (design D5)
@@ -70,7 +70,7 @@
 - [x] 5.1b **Found while verifying**: there are TWO manifest parsers, not one.
       `repl-manifest-programs` (mode 10) kept its own `(car forms)` because it returns an
       `(ok . _)` / `(error . MSG)` pair rather than raising, so fixing `manifest-entries` alone left
-      the **build door** resolving the program from form one and narrating a build it then abandoned.
+      the **`emit build` command** resolving the program from form one and narrating a build it then abandoned.
       Factor the rule into `manifest-extra-forms`, apply it at both sites, and `guard`
       `repl-manifest-programs` so a reader raise also returns through its pair — which is what lets
       the host name the manifest path for `emit build` with no host change

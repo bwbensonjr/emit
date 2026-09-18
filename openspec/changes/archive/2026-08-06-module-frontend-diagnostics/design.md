@@ -10,7 +10,7 @@ first hurts.
 
 Six measurements, one root (see the proposal's table). The most instructive pair: an import set in
 a program reports a missing *manifest entry*, while the same import set inside a `define-library`
-reports an *unresolved or cyclic import*. Same form, two doors, two unrelated stories — because
+reports an *unresolved or cyclic import*. Same form, two paths, two unrelated stories — because
 nothing in either path knows the form exists.
 
 The precedent is close at hand. `validate-record-type-syntax` fixed exactly this shape for
@@ -32,7 +32,7 @@ break an existing build.
   definition that is already there.
 - Recognized-but-unsupported and never-heard-of are distinguishable, because they call for
   different responses.
-- The four doors agree: one form, one message, whichever door compiled it.
+- the four commands agree: one form, one message, whichever path compiled it.
 
 **Non-Goals:**
 
@@ -93,7 +93,7 @@ taken from `parse-define-library`, `:261`) are the two places an import spec bec
 name, and today they fail differently. Both call one validator, so the message for
 `(only (scheme inexact) sqrt)` cannot depend on where it was written.
 
-That single message is also what makes the fix verifiable: the two doors' outputs for the same
+That single message is also what makes the fix verifiable: the two paths' outputs for the same
 input become comparable, which is how the tests are written.
 
 ### D6 — Recoverable compile-time errors, not aborts
@@ -104,8 +104,8 @@ recoverable error the REPL catches and reports before returning to the prompt. V
 that. A mistyped declaration taking down a session would trade one defect for a worse one, and the
 REPL-as-primary-development-loop goal is what makes that unacceptable rather than merely untidy.
 
-Messages carry no door prefix of their own; each door adds its own, per `emit-cli`'s "a door's
-diagnostics name that door" requirement.
+Messages carry no path prefix of their own; each path adds its own, per `emit-cli`'s "a path's
+diagnostics name that path" requirement.
 
 ### D7 — Say what is wrong and what is accepted, and nothing else
 

@@ -107,7 +107,7 @@ before first use.
 - **THEN** `@scheme_entry` calls `@"mylib:__init"` before the body runs, and the call to
   `greet` observes the populated global
 
-### Requirement: AOT door — build and link an importing program
+### Requirement: AOT path — build and link an importing program
 
 An import-aware build path SHALL resolve a program's `(import (<lib>))` through a manifest to
 the library's source, compile the library to its unit module and export table, compile the
@@ -121,7 +121,7 @@ does not import SHALL NOT be linked.
   `greet`
 - **THEN** it produces an executable that, when run, prints the value `greet` returns
 
-### Requirement: REPL door — import a library interactively
+### Requirement: REPL — import a library interactively
 
 The interactive REPL SHALL, on evaluating `(import (<lib>))`, resolve the library through the
 manifest, load its unit module into the running session, invoke its `@"L:__init"` exactly
@@ -137,9 +137,9 @@ imported names.
 ### Requirement: Dev→ship fidelity for library units
 
 A library unit's emitted module SHALL be byte-for-byte identical whether it is produced for
-the AOT door or the REPL door, because both doors drive the same compile-unit core entry.
+the AOT path or the REPL, because both paths drive the same compile-unit core entry.
 
-#### Scenario: A unit's module bytes match across doors
+#### Scenario: A unit's module bytes match across paths
 
 - **WHEN** `(mylib)` is compiled for the AOT link and for REPL loading
 - **THEN** the two unit modules are byte-for-byte identical

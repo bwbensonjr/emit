@@ -70,7 +70,7 @@ Under the hood the AOT link is (paths come from discovery — `$CC`, `$GC_INC`,
 `-O2 -flto` is the **release profile** (changes: `aot-release-profile`,
 `cross-unit-direct-calls`): LTO is what lets the optimizer act across unit
 boundaries, which is what makes the emitter's cross-unit direct calls worth
-emitting. The JIT/REPL door stays unoptimized. See `../docs/PERFORMANCE.md` P5.
+emitting. The JIT/REPL execution path stays unoptimized. See `../docs/PERFORMANCE.md` P5.
 
 The 3-way equivalence harness (`demos/run-backends.sh`) runs every demo through all
 three backends and asserts identical results.

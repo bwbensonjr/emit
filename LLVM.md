@@ -320,7 +320,7 @@ with `0`. That was fixed-arity only: it could not express dotted rest params, va
   (non-zero exit) instead of miscomputing. A compiler-proven exact-minimum variadic direct call may
   target the same-prototype minimum entry, where the static proof makes that check redundant.
 - `a0..a{K-1}` — positional slots. `K` is the whole-program max fixed arity on the
-  single-module path; on the **modular** path — the one every shipped door takes, where a
+  single-module path; on the **modular** path — the one every shipped command takes, where a
   closure built in one unit is called from another — it is pinned to a fixed **8**, so the
   prototype agrees across separately-emitted modules.
 - `overflow` — pointer to a heap vector of args beyond `K` (or null). An ordinary variadic entry

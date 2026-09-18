@@ -127,12 +127,12 @@ order across the splice is preserved.
 - **WHEN** an included file names `(DEFINE (Greet) ...)` and the declaration is `(include-ci …)`
 - **THEN** the form is read as `(define (greet) …)` and the library defines `greet`
 
-#### Scenario: The same source includes identically on every door
+#### Scenario: The same source includes identically on every path
 
 - **WHEN** a library using `include` is compiled by the Chez driver, by `emit lib`, by `emit run`
   through the manifest, and by the REPL's library loader
-- **THEN** all doors produce the same unit, and the emitted IR agrees byte for byte where the
-  existing cross-door equivalence checks compare it
+- **THEN** all paths produce the same unit, and the emitted IR agrees byte for byte where the
+  existing cross-path equivalence checks compare it
 
 ### Requirement: Library declarations may be included from another file
 
@@ -153,7 +153,7 @@ inclusion is expanded on the same terms as one written in the `define-library`.
 - **WHEN** an included declarations file contains `(import (scheme inexact))` and the library body
   calls `sqrt`
 - **THEN** the import resolves as though written in the `define-library`, and the library's imports
-  as reported to the doors' dependency resolution include `(scheme inexact)`
+  as reported to the paths' dependency resolution include `(scheme inexact)`
 
 #### Scenario: An included import set is rejected identically
 
@@ -172,7 +172,7 @@ SHALL have no effect. If no clause is satisfied and there is no `else`, the `con
 contribute nothing.
 
 The set of advertised feature identifiers SHALL be a single declaration in the compiler, so that
-every door answers a feature requirement identically. A feature identifier SHALL NOT be advertised
+every path answers a feature requirement identically. A feature identifier SHALL NOT be advertised
 unless Emit provides the corresponding feature.
 
 A `(library ⟨name⟩)` feature requirement SHALL be reported as a recognized R7RS form this stage does
@@ -207,7 +207,7 @@ A malformed clause SHALL be a compile-time error naming the clause.
 
 - **WHEN** a `cond-expand` clause contains `(import (scheme inexact))` and `(export root)`
 - **THEN** the selected clause's `import` and `export` are treated exactly as declarations written in
-  place, and the import participates in dependency resolution on every door
+  place, and the import participates in dependency resolution on every path
 
 ### Requirement: An included filename resolves relative to the file that named it
 
@@ -218,8 +218,8 @@ to a library's `(source …)`. An absolute filename SHALL be used as written. Wh
 filename (it was read from standard input), a relative filename SHALL resolve against the current
 directory.
 
-Reading files is the door's responsibility, not the compiler core's: the core SHALL obtain forms
-through a reader the door installs, and SHALL perform no file access itself.
+Reading files is the path's responsibility, not the compiler core's: the core SHALL obtain forms
+through a reader the path installs, and SHALL perform no file access itself.
 
 #### Scenario: A library finds its pieces from any working directory
 

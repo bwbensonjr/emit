@@ -111,7 +111,7 @@
 #     +/-(2^30 - 1) to +/-(2^28 - 1).  The first value bounded the ARITHMETIC (no + - *
 #     escapes the fixnum range) but not the ENCODING: `encode-const` mis-emits any literal
 #     at or above 2^57 (issue #7), so a folded result in [2^57, 2^60) came out wrong on the
-#     self-hosted door -- `(* 1073741823 1073741823)` printed correctly before the pass and
+#     self-hosted path -- `(* 1073741823 1073741823)` printed correctly before the pass and
 #     wrongly after.  The clamp puts the largest foldable product (2^56 - 2^29 + 1) below the
 #     encoding cliff.  Verified: no demo's IR changed as a result (none folds an operand
 #     between 2^28 and 2^30), so the only manifest delta is +1 new entry (fold-boundary),
@@ -195,7 +195,7 @@
 #     is in every module and every allocation site swaps inttoptr for ptrtoint -- and NONE
 #     grew; the committed IR shrank (embed-repl -2062, schemec -1862, scheme.base -524)
 #     because emit-spill no longer needs its conversion at all.  All 77 stdout identical.
-#     Ship-door effect, indirect calls surviving -O2 in the program module: derived 4 -> 0,
+#     shipping-path effect, indirect calls surviving -O2 in the program module: derived 4 -> 0,
 #     mandelbrot 3 -> 1, counter 2 -> 1, case-cxr 11 -> 10.  No new entries.
 #   P5-B-general -- direct calls to statically-known closures.  A call whose operator is a
 #     closure-block binding now goes straight to its code label, passing the callee's own
@@ -228,7 +228,7 @@
 #         forces.  157 call sites converted across the suite; 40 declares emitted.
 #         PROGRAM-unit code labels are untouched: no program module defines a
 #         name-derived label, they are all still code_N.
-#     All 77 demos' stdout is byte-identical, through `emit run` and through the Chez
+#     All 77 demos' stdout is byte-identical, through emit run and through the Chez
 #     AOT path.  Total demo IR grew 0.48% -- the declares and the longer label text,
 #     against the 4 instructions removed per site.  That is a pre-optimizer number, and
 #     what the change exists for is what `-O2 -flto` then does with it: the delivered
@@ -240,7 +240,7 @@
 #     why: `emit run --emit` writes the declare block into each module it emits, so a new
 #     declare touches all of them without changing a single instruction.  Verified: the
 #     new IR carries exactly those four declares per module and nothing else new, and
-#     every demo's stdout is byte-identical (the demo suite passes on both doors).  One
+#     every demo's stdout is byte-identical (the demo suite passes on both paths).  One
 #     demo additionally gains expander temps, since n-ary `string=?` now routes through
 #     the comparison chain -- the only demo that uses it in operator position.  No new
 #     entries and none removed.
@@ -279,7 +279,7 @@
 #   numeric-conformance, group 1 (GitHub issue #24) -- a flonum literal's IR text now
 #     comes from the emitter's own canonical formatter instead of the host's
 #     number->string, so it is valid LLVM in a `double` position and byte-identical on
-#     every door.  Verified against an 80-demo before/after capture (build/emit built in
+#     every path.  Verified against an 80-demo before/after capture (build/emit built in
 #     a detached-HEAD worktree at 5d38be0 vs the regenerated tree): EXACTLY ONE demo
 #     differs, by EXACTLY ONE line --
 #       exact-range.ll: @.flo.lit.0 `"1e+18"` -> `"1.0e18"` (6 -> 7 byte array).
@@ -291,7 +291,7 @@
 #     (2.0, 2.5, 0.5, 1.0, ...) already printed with a '.', so its canonical form is the
 #     text it already had.  All 80 demos' stdout is byte-identical.  No new entries --
 #     the regression coverage is test/numeric-conformance-tests.sh (values, all four
-#     doors) plus 10 flonum cases in test/self-emit-equiv.sh (IR byte-equality between
+#     paths) plus 10 flonum cases in test/self-emit-equiv.sh (IR byte-equality between
 #     the Chez-hosted and self-hosted emitters); 8 of those 10 FAIL on the pre-change
 #     tree, which is what gives them teeth.
 #   numeric-conformance, group 3 (GitHub issue #26) -- `> <= >=` became value-position
@@ -353,10 +353,10 @@
 #           call).  Measured at +22% on a number->string-dominated loop; filed as
 #           docs/PERFORMANCE.md P9 rather than worked around here, since the right fix
 #           covers every variadic callee.
-#     All 80 demos' stdout byte-identical.  Size: the shaken Chez AOT door is BYTE-IDENTICAL
+#     All 80 demos' stdout byte-identical.  Size: the shaken Chez AOT path is BYTE-IDENTICAL
 #     for a program using none of the new procedures (34,968 B at 5d38be0, at the staging
-#     commit, and here), while `emit build` grew +19,808 B (+14.7%) -- the shake removes
-#     100% of the growth and the unshaken door pays all of it, which is P8, now quantified
+#     commit, and here), while emit build grew +19,808 B (+14.7%) -- the shake removes
+#     100% of the growth and the unshaken path pays all of it, which is P8, now quantified
 #     in that item.  No new entries.
 #   numeric-conformance, groups 6+7 (GitHub issue #25; (scheme inexact)) -- the reader
 #     learned the three non-finite tokens (+inf.0/-inf.0/+nan.0), and (scheme inexact)
@@ -370,10 +370,10 @@
 #         deletions, 0 non-declare changes -- one per new export.
 #     Each demo's IR still holds exactly TWO units (one boundary marker), which is the
 #     part worth recording.  Adding a second library to the default manifest first made
-#     it THREE, because the run door preloaded every manifest entry whether the program
+#     it THREE, because the emit run command preloaded every manifest entry whether the program
 #     imported it or not -- which also made `--no-prelude` emit a unit it had promised
-#     not to, and broke the run-door/Chez-driver program-IR parity this suite's sibling
-#     (test/prelude-base-run-tests.sh) pins.  The preload is now LAZY: the run door walks
+#     not to, and broke the run-path/Chez-driver program-IR parity this suite's sibling
+#     (test/prelude-base-run-tests.sh) pins.  The preload is now LAZY: the emit run command walks
 #     the transitive closure of the program's imports over the manifest and loads only
 #     that (src/emit.cpp preload_user_libraries, compiler modes 9 + 12).  The REPL host
 #     stays eager on purpose -- an interactive session is an open world.  So a program
@@ -391,7 +391,7 @@
 #       LIBRARY half: bootstrap/scheme.base.ll BYTE-IDENTICAL.  Library emission and code
 #         labels key on binding names, not export status (emit-library-batch; the
 #         stable-code-label mangle), so de-exporting a helper is inert for the unit.
-#     Sizes, measured: the shaken Chez AOT door is byte-identical (34,664 / 35,640 / 36,280 B
+#     Sizes, measured: the shaken Chez AOT path is byte-identical (34,664 / 35,640 / 36,280 B
 #       for the three tree-shaking programs, unchanged), because an unreferenced `external
 #       global` declaration creates no relocation and program-root-internals is
 #       reference-driven, not export-driven.  So this is a namespace/API-commitment change,
@@ -511,7 +511,7 @@
 #         scheme-base-partition D10 keeps rd-report out of (emit internal).
 #     All 80 demos' stdout is byte-identical before and after, and the cross-host suites
 #     still pass -- including library-include-tests.sh, whose driver section now compares
-#     an include-ci fixture's geom.ll across the two doors byte for byte, which is what
+#     an include-ci fixture's geom.ll across the two paths byte for byte, which is what
 #     replaces the single shared fold this change deleted.  No new entries.
 #   r7rs-lexical-conformance (issues #74, #80, #81, #86) -- the whole manifest again, and
 #     again because the reader is baked; but the PROGRAM-module delta is EXACTLY ZERO,

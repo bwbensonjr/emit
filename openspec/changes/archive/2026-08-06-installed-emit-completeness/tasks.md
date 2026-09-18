@@ -65,7 +65,7 @@
       entries still resolves `(scheme inexact)`; a project entry of the same name as a shipped
       library wins; `--manifest FILE` does **not** chain; `emit build` with an unknown program name
       names the project's manifest and does not search the installed one
-- [x] 4.3 Add a from-source guard: with an Emit installed under a temp prefix, an in-repo door
+- [x] 4.3 Add a from-source guard: with an Emit installed under a temp prefix, an in-repo command
       still resolves the repository's own manifest and support files for everything the repository
       provides
 - [x] 4.4 Confirm the suite stays Chez-free and keeps its place in `run-all-tests.sh:71`; widen its
@@ -91,7 +91,7 @@
       and update the Finding 1 AMENDED note, whose closing sentence describes the #44 symptom this
       change removes
 - [x] 5.6 Comment on #36 recording the correction this change is built on: `emit lib` is **not**
-      affected (`repo_root()` has one caller, the build door; `emit lib` emits `.ll` and never
+      affected (`repo_root()` has one caller, the `emit build` command; `emit lib` emits `.ll` and never
       links), verified from an install prefix
 - [x] 5.7 Reference both issues from the implementing commits (`Fixes #36`, `Fixes #44`); keep the
       negated-keyword trap in mind for the PR body if any part is left open

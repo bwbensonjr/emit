@@ -86,12 +86,12 @@ library, and `homebrew-tap-distribution` is about to make first users more commo
 - Error channel: these are compile-time errors on the path the REPL already catches and reports
   before returning to the prompt (the mechanism `validate-record-type-syntax` relies on), so a bad
   declaration must not take down a session — dev→ship fidelity applies to the diagnostic too.
-- Diagnostics reach the user through each door's prefix, so the messages must satisfy `emit-cli`'s
-  "a door's diagnostics name that door" requirement on `emit lib`, `emit run`, `emit build`, and
+- Diagnostics reach the user through each path's prefix, so the messages must satisfy `emit-cli`'s
+  "a path's diagnostics name that path" requirement on `emit lib`, `emit run`, `emit build`, and
   the REPL.
 - Tests: `test/library-body-declarations-tests.sh` and `test/modules-tests.sh` are where the
   negative cases belong; both are Chez-free.
 - Docs: `docs/MODULES.md` states the whole-library-imports-only rule and can now say what happens
   when you break it.
-- No IR change. No door's output moves by a byte for any program that compiles today, so
+- No IR change. No path's output moves by a byte for any program that compiles today, so
   `test/module-scaffold-baseline.sha256` is untouched.

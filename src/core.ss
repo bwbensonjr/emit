@@ -57,7 +57,7 @@
 ;; renamed spelling was unbound (`unbound variable mk.4`).  The library path already got
 ;; this right by accident of ordering -- it splices record types before calling this -- so
 ;; the same source compiled as a library and failed as a program.  Computing it here fixes
-;; all three paths at once, and `record-type-binding-names` allocates no fresh name, so a
+;; all three compilation paths at once, and `record-type-binding-names` allocates no fresh name, so a
 ;; path that lowers the form afterwards is unaffected (design D4).
 (define (compute-known macro-env runtime-forms)
   (union*
@@ -91,7 +91,7 @@
 
 (define (compile-forms forms dump)
   ;; This and compile-program-with-imports are the TWO pipelines a program reaches, on
-  ;; every door, so a misplaced define-library is caught for all of them in exactly two
+  ;; every compilation path, so a misplaced define-library is caught for all of them in exactly two
   ;; places rather than at each entry point (change: module-frontend-diagnostics).
   (check-library-position forms)
   (reset-counter!)
@@ -101,7 +101,7 @@
          ;; a top-level define displaces a keyword of the same name (change:
          ;; binding-aware-expander, issue #103).  On THIS path `collect-toplevel` folds the
          ;; top level into a letrec first, so `exp` would shadow the keyword anyway; the
-         ;; prune is here so all three paths state the rule the same way rather than one of
+         ;; prune is here so all three compilation paths state the rule the same way rather than one of
          ;; them relying on a downstream form.  `known` is computed from the pruned env, so
          ;; a displaced keyword is not also announced as a macro to hygiene.
          [macro-env (prune-shadowed-macros (car me+rf)
@@ -128,7 +128,7 @@
 ;; a source whose only top-level form is a (define-library ...) is a library unit
 ;; (change: module-artifacts-vertical-slice); it compiles to a unit module, not a
 ;; program, through the SAME embedded --emit path programs use -- so a unit's bytes
-;; are identical whether emitted for the AOT door or loaded into the REPL door.
+;; are identical whether emitted for the AOT path or loaded into the REPL.
 (define (single-define-library forms)
   (and (pair? forms)
        (null? (cdr forms))
@@ -140,7 +140,7 @@
 ;;
 ;; It did NOT used to be a parameter, and hardcoding '() was the bug: EVERY lone-library
 ;; path resolved no imports, so a library declaring `(import (scheme base))` failed with
-;; `unbound variable map` on `emit lib` AND on `emit run --emit < lib.sld` -- while the
+;; `unbound variable map` on emit lib AND on `emit run --emit < lib.sld` -- while the
 ;; same library compiled fine as a dependency of a program, which is the path that
 ;; supplies tables (change: baked-set-on-every-door).  Who can resolve what differs by
 ;; caller, which is why this takes them rather than resolving them itself:
@@ -168,7 +168,7 @@
 ;; driver does (with-prelude), but takes the prelude as *text* rather than
 ;; reading a file, so it stays free of filesystem/subprocess I/O.
 ;;
-;; NOTE, and the reason this is not the shape the doors use: it folds the prelude's
+;; NOTE, and the reason this is not the shape the paths use: it folds the prelude's
 ;; PROCEDURES into the program's form list, so the two share one top level.  A program
 ;; that defines `when` as a variable therefore displaces the keyword for the prelude's
 ;; bodies too (change: binding-aware-expander, design D3) -- where the live path
@@ -207,7 +207,7 @@
 ;; derived; change: scheme-base-declared-surface, issue #29, partitioned by
 ;; scheme-base-partition).  Order comes from the prelude, so this and
 ;; tools/gen-scheme-base.ss produce the same list in the same order from the same two
-;; files -- which is what keeps the run door's program module byte-identical to the
+;; files -- which is what keeps the emit run command's program module byte-identical to the
 ;; driver's prog.ll -- and the declaration's own arrangement cannot move emitted IR.
 ;; Macros included (change: library-body-macro-scope): a transformer the partition homes
 ;; here is exported like any other binding, and a name carrying a `reexport` home appears
@@ -273,9 +273,9 @@
 ;; substrate holds the compositional accessors its passes call and the lexeme helpers the
 ;; REPL's input-completeness probe reuses, and one `import` beats editing 48 call sites
 ;; under the self-hosting fixed point (design D6).
-;; A named library that is NOT a baked member cannot be resolved on this door -- it has no
+;; A named library that is NOT a baked member cannot be resolved on this path -- it has no
 ;; manifest and no filesystem -- so it is dropped here and its names fail as unbound
-;; variables, which is what this door did with every import before.
+;; variables, which is what this path did with every import before.
 (define (baked-imports-of user-forms)
   (filter (lambda (l)
             (let ([e (assoc l *prelude-libraries*)])
@@ -309,10 +309,10 @@
       ;; the way it does as a program's dependency (change: baked-set-on-every-door).  The
       ;; unit RESOLVES against (scheme base) without EMITTING it -- that is what "a lone
       ;; define-library compiles to a single unit with no baked base" has always meant.
-      ;; An import this door cannot resolve (a manifest library) is filtered out below and
-      ;; its names then fail as unbound, exactly as they do for a program on this door.  The
+      ;; An import this path cannot resolve (a manifest library) is filtered out below and
+      ;; its names then fail as unbound, exactly as they do for a program on this path.  The
       ;; host-driven modes 7/11 resolve against the session instead and REPORT such an
-      ;; import, which is the path `emit lib` and `emit run` actually take.
+      ;; import, which is the path emit lib and emit run actually take.
       [(single-define-library user-forms)
         =>
         (lambda (lib)
@@ -412,7 +412,7 @@
 ;; table and for naming a form the front end rejects; anything else renders "?".
 ;;
 ;; It lives HERE, ahead of both consumers, because a diagnostic must name the form on
-;; EVERY door: an error's irritants reach the Chez-free doors through
+;; every compilation path: an error's irritants reach the Chez-free paths through
 ;; repl-error->string, which renders a LIST irritant as "?", so a form the user wrote
 ;; has to be rendered INTO the message rather than passed beside it.
 ;; A SYMBOL renders as its bare name, deliberately, even though `write` now bar-quotes a
@@ -500,7 +500,7 @@
     ;; cross-unit-variadic-direct-calls)
     [(number? x) (number->string x)]
     ;; A macro template may hold a boolean or a character (change: library-macro-export).
-    ;; This renderer WRITES the export artifact on every door now, not just diagnostics,
+    ;; This renderer WRITES the export artifact on every compilation path now, not just diagnostics,
     ;; so a datum it renders as "?" would corrupt a table rather than merely read poorly
     ;; in a message -- hence render-char errors instead of guessing a spelling.
     [(boolean? x) (if x "#t" "#f")]
@@ -508,7 +508,7 @@
     ;; The reader READS #(...) and #u8(...) and core-language requires that it SHALL, so
     ;; every datum it can produce has to render here too (change: reader-datum-parity;
     ;; issue #64).  Without these arms a vector in a macro template became `?` in the
-    ;; export table and `emit lib` still exited 0 -- a silent miscompile, masked only
+    ;; export table and emit lib still exited 0 -- a silent miscompile, masked only
     ;; because encode-const refused the same literal first.  The spellings are the ones
     ;; core-language already requires BOTH readers to accept, so a table holding one
     ;; still round-trips through Chez's `read` and Emit's own reader.
@@ -518,7 +518,7 @@
     ;; reader reads that, but CHEZ's `read` rejects `#u8(` -- it spells bytevectors
     ;; `#vu8(` -- and the Chez driver reads export tables back with `read` on its
     ;; artifact-reuse path (src/compile.ss, `read-program expf`).  So `#u8(...)` in a
-    ;; TABLE is exactly what render-char's rule forbids: "a rendering the other door
+    ;; TABLE is exactly what render-char's rule forbids: "a rendering the other path
     ;; cannot read back".  Writing `#vu8(` instead only moves the failure to Emit's own
     ;; reader, so strict mode refuses and says why.
     ;;
@@ -550,7 +550,7 @@
 ;; A character as BOTH readers accept it: Chez's `read` (the driver's artifact-reuse
 ;; path) and Emit's in-language reader (`rd-char`, lib/emit/internal.sld).  Printable
 ;; ASCII goes literally; the five names both spell identically are named; anything else
-;; is an error rather than a rendering the other door cannot read back.
+;; is an error rather than a rendering the other path cannot read back.
 (define (render-char c) (render-char* c #f))
 
 ;; The ONE place the two modes diverge (design D4).  Strict mode raises, as it always
@@ -659,7 +659,7 @@
 ;;                    resolving them against the host would be a lie the moment cross
 ;;                    compilation exists.  They want deriving from the target header.
 ;;   emit-<version> -- NOT YET: there is no version to name until the first tag.
-;; One declaration, consulted by every door, so a feature requirement cannot answer
+;; One declaration, consulted by every compilation path, so a feature requirement cannot answer
 ;; differently depending on who is compiling.
 (define *advertised-features* (quote (r7rs emit ieee-float)))
 
@@ -716,24 +716,24 @@
     [else (cond-expand-declarations (cdr clauses))]))
 
 ;; --- the injected source reader (design D2, D3) ------------------------------
-;; The core performs NO I/O.  A door installs a reader and the core splices what it is
+;; The core performs NO I/O.  A host installs a reader and the core splices what it is
 ;; handed -- the same shape the `dump` side-channel uses, and the only shape that keeps
 ;; the Chez driver, which cannot EVALUATE the `%`-ops a file read needs (see src/dump.ss
 ;; for the same argument about the stage dumper).
 ;;
 ;; The protocol is  (reader WHO FILENAME BASE) -> (TOKEN . FORMS):
-;;   WHO       the declaration that named the file, for the door's diagnostic
+;;   WHO       the declaration that named the file, for the host's diagnostic
 ;;   FILENAME  the string as written in the source; the core never joins, splits, or
-;;             normalizes it -- resolution belongs to the door (design D3)
+;;             normalizes it -- resolution belongs to the path (design D3)
 ;;   BASE      the TOKEN of the file the declaration appeared in, or #f for the source the
-;;             door itself submitted; this is what makes a nested include resolve beside
+;;             host itself submitted; this is what makes a nested include resolve beside
 ;;             ITS OWN file (design D5)
-;;   TOKEN     the door's opaque identity for the file it read (its resolved path).  The
+;;   TOKEN     the path's opaque identity for the file it read (its resolved path).  The
 ;;             core only passes it back as a BASE and compares it for the cycle check
 ;;             below -- it is never interpreted here.
 (define (no-include-reader who filename base)
   (error who
-         (string-append "this door installed no source reader, so "
+         (string-append "this compiler host installed no source reader, so "
                         (render-datum filename)
                         " cannot be included")))
 
@@ -778,9 +778,9 @@
 ;; hit both, and no walk over returned forms can be made right (GitHub issue #61).
 ;;
 ;; Folding therefore moved into tokenization, where the bars are still visible, and each
-;; door asks for it with what it already has (change: reader-token-path, design D3): the
+;; host asks for it with what it already has (change: reader-token-path, design D3): the
 ;; core hands the include reader the declaration that asked, so `include-ci` is
-;; distinguishable at the door with no protocol change.  src/include-reader.ss calls
+;; distinguishable at the host with no protocol change.  src/include-reader.ss calls
 ;; `read-all-from-string-ci`; src/compile.ss reads under Chez's `case-sensitive`.
 ;;
 ;; What replaces D6's by-construction guarantee is a fixture, which is the regime path
@@ -791,7 +791,7 @@
 ;;
 ;; --- the pre-pass itself (design D1) -----------------------------------------
 ;; DS -> a list of declarations that are only (export ...), (import ...), (begin ...).
-;; BASE is the token of the file DS was read from (#f for the door's own source), STACK the
+;; BASE is the token of the file DS was read from (#f for the path's own source), STACK the
 ;; tokens of the files currently being expanded.
 (define (expand-library-declarations ds base stack)
   (if (null? ds)
@@ -815,7 +815,7 @@
     ;; not implement, so nothing recurses.
     [(eq? (car d) 'include)
       (list (cons 'begin (included-body-forms 'include (cdr d) base stack)))]
-    ;; No fold flag: `who` travels to the door, which reads case-insensitively itself.
+    ;; No fold flag: `who` travels to the path, which reads case-insensitively itself.
     [(eq? (car d) 'include-ci)
       (list (cons 'begin (included-body-forms 'include-ci (cdr d) base stack)))]
     [else (reject-library-declaration d)]))
@@ -828,8 +828,8 @@
         (append (expand-library-declarations (cdr res) (car res) (cons (car res) stack))
                 (expand-included-declarations (cdr filenames) base stack)))))
 
-;; The forms of each named file, in the order the filenames appear.  WHO reaches the door
-;; through read-included, and the door is what folds for include-ci.
+;; The forms of each named file, in the order the filenames appear.  WHO reaches the path
+;; through read-included, and the path is what folds for include-ci.
 (define (included-body-forms who filenames base stack)
   (if (null? filenames)
       (quote ())
@@ -845,7 +845,7 @@
     [else (any-define-library-form? (cdr forms))]))
 
 ;; A define-library is compiled as a library unit only where a library unit is what the
-;; door produces: as the sole top-level form of a source (single-define-library).  Where
+;; path produces: as the sole top-level form of a source (single-define-library).  Where
 ;; that does not hold, say so -- ordinary expression parsing knows no `define-library`
 ;; form, so it reads one as an application whose operands are internal defines and
 ;; reports `internal defines with no following body expression ?`, a message about an
@@ -880,7 +880,7 @@
 ;; the `[else]` arm used to cons it on, which is what made an unsupported declaration
 ;; surface as somebody else's error (change: module-frontend-diagnostics, #18 item 3).
 ;; Each export is normalized to an (external . internal) pair (see normalize-export).
-;; Each import spec is checked here, so EVERY caller of this parser -- the batch doors,
+;; Each import spec is checked here, so EVERY caller of this parser -- the batch paths,
 ;; the REPL's library loader, the driver -- rejects an import set identically (design D5).
 ;;
 ;; The four SPLICING declarations are expanded away first (change:
@@ -1244,7 +1244,7 @@
 
 ;; --- the root set already-emitted IR imposes on a unit -----------------------
 ;; Moved here from src/compile.ss (change: chez-free-unit-pipeline, design D8) so that both
-;; shipping doors -- the Chez driver and `emit build` -- compute a unit's roots with one
+;; shipping paths -- the Chez driver and emit build -- compute a unit's roots with one
 ;; implementation rather than two that can drift apart.
 ;;
 ;; A used import is LOADED in the referring IR as `ptr @"<mangled>"`; a merely declared
@@ -1253,7 +1253,7 @@
 ;; INTERNAL names to seed reachability.
 ;;
 ;; ROOT-TEXT IS NOT ONLY THE PROGRAM (change: import-dag-tree-shaking, design D1).  It is the
-;; program's IR *plus* the final IR of every unit already shaken -- which, because the doors
+;; program's IR *plus* the final IR of every unit already shaken -- which, because the paths
 ;; finalize units in reverse topological order, is every unit that could import this one.  That
 ;; is the whole of the backward propagation: roots are a property of TEXT, so "seed a unit with
 ;; what its importers still reference" is this same search over a longer string, with no new
@@ -1263,7 +1263,7 @@
 ;; over-approximation: a unit emits `ptr @"X:name"` only for a library it imports, so a
 ;; non-importer's IR contains none of this unit's mangled symbols and contributes nothing.
 ;; Narrowing the string to actual importers is therefore an optimization of the SEARCH, never a
-;; correctness condition -- and it would cost the `emit build` door the reverse-import map,
+;; correctness condition -- and it would cost the emit build path the reverse-import map,
 ;; which it would have to ship through the mode-17 protocol to obtain.
 ;;
 ;; The name still says `program-` because a program is what ultimately imposes every root here;
@@ -1280,7 +1280,7 @@
 ;; than discovered as an undefined symbol.
 ;; Index of NEEDLE in HAY, or -1.  Character-by-character rather than
 ;; `(string=? (substring hay i (+ i nl)) needle)`, which is what this was while only the
-;; Chez driver ran it: that allocates a fresh string at EVERY position, and `emit build`
+;; Chez driver ran it: that allocates a fresh string at EVERY position, and emit build
 ;; runs the search once per candidate name over a whole program's IR -- hundreds of
 ;; candidates against tens of KB, so the allocating form spent more time making garbage than
 ;; the shake saves.  Behaviour is identical.
@@ -1325,7 +1325,7 @@
     candidates))
 
 ;; `keep-roots` (optional): when #f (default), compile the WHOLE library unchanged
-;; -- byte-identical to before, so the REPL/JIT door and committed artifacts are
+;; -- byte-identical to before, so the REPL/JIT execution path and committed artifacts are
 ;; unaffected.  When a list of internal names, emit ONLY the bindings transitively
 ;; reachable from those roots (the closed-world AOT tree-shake).
 (define (compile-library name imports exports body-forms import-tables dump . opt)
@@ -1417,8 +1417,8 @@
     ;; phase 2: lower each define body as one mutually-recursive group (register? #f).
     ;; Use fold-left (left-to-right in BOTH hosts), not map: the gensym counter is
     ;; mutated per form, and Chez's map vs the prelude's map apply in different
-    ;; orders -- which would diverge the AOT-door and REPL-door units.  fold-left
-    ;; keeps a library's emitted bytes identical across doors (dev->ship fidelity).
+    ;; orders -- which would diverge the AOT-path and REPL-path units.  fold-left
+    ;; keeps a library's emitted bytes identical across paths (dev->ship fidelity).
     (if
       (not keep-roots)
       ;; DEFAULT PATH (dev/REPL/JIT + committed artifacts): whole unit, unchanged.
@@ -1551,7 +1551,7 @@
            ;; imported keyword of the same spelling.
            ;;
            ;; ...and a top-level `define` displaces one entirely, own or imported (change:
-           ;; binding-aware-expander, issue #103).  This is the path EVERY door takes, and
+           ;; binding-aware-expander, issue #103).  This is the shared path every compilation path takes, and
            ;; the keyword being pruned is usually the baked prelude's -- `when`, `cond` --
            ;; which is safe precisely because only the prelude's TRANSFORMERS are prepended
            ;; here: its procedures were compiled in the baked unit, with their own macro
@@ -1578,7 +1578,7 @@
            [d (lower-program c program-unit)])
       ;; every stage, not just the four this path used to show: it runs the same
       ;; recognize-let/convert-assignments/simplify/convert-closures ladder as
-      ;; compile-forms, and this is the path EVERY door takes once (scheme base) is
+      ;; compile-forms, and this is the shared path every compilation path takes once (scheme base) is
       ;; auto-imported (change: emit-dump-stages).
       (dump "collect-toplevel" top)
       (dump "expand" expd)

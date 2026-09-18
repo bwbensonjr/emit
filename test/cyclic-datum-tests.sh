@@ -124,7 +124,7 @@ check port-label-scope \
      (write (guard (e (else (read-error? e))) (read p) #f)))' \
   '#t'
 
-echo "compiler, REPL, and standalone doors"
+echo "compiler, REPL, and standalone paths"
 got="$($TO build/emit run --dump test/cyclic-datum-source.scm 2>"$TMP/dump.err")"
 if [ "$got" = '(#f #t #f #t #t #t #t #t #t #t #f #f #f #f #t #t #t #t #t #t)' ]; then
   ok "compiler stage dumping terminates on cyclic constants"

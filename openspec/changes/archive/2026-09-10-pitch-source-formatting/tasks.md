@@ -41,11 +41,11 @@
 - [x] 1.8 Verify the exclusion is self-maintaining: add a throwaway `GENERATED`-marked file
       under `lib/scheme/`, confirm the resolver skips it, and remove it.
 
-## 2. Doors and narration
+## 2. Paths and narration
 
 - [x] 2.1 Add `make format` and `make format-check` delegating to `tools/format.sh`, with a
       `pitch` presence check that reports a clear message rather than a shell error.
-- [x] 2.2 Make both doors narrate per `docs/OUTPUT.md`: a `format` verb line naming the
+- [x] 2.2 Make both paths narrate per `docs/OUTPUT.md`: a `format` verb line naming the
       resolved set, per-group counts, files changed or that would change, and elapsed time
       — on stderr, silent at `quiet`, per-file at `verbose`.
 - [x] 2.3 Give `format-check` distinct exit statuses for "a file would change" and "the

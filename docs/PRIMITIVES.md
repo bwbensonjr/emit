@@ -80,7 +80,7 @@ primitives. The intrinsic floor avoids that entirely.
 ## How it's reflected in the compiler
 
 Everything lives in three places: the two tables in `src/parse.ss`, the lowering table in
-`src/emit.ss`, and the `inline-primitives` pass wired into every compile door in `src/core.ss`.
+`src/emit.ss`, and the `inline-primitives` pass wired into every compile path in `src/core.ss`.
 
 ### 1. The tables — `src/parse.ss`
 
@@ -256,15 +256,15 @@ other; keep them in step.
 Universality is achieved by making the integrable names **compiler-intrinsic knowledge**, not
 imports:
 
-- **Batch/AOT door** — `compute-known` in `src/core.ss` unions `(map car *integrable*)` into
+- **Batch/AOT path** — `compute-known` in `src/core.ss` unions `(map car *integrable*)` into
   the set of known bindings, so the names are present in every program, every user library,
   and every `--no-prelude` build.
-- **REPL door** — `init-session` in `src/repl-core.ss` unions the same `(map car *integrable*)`
+- **REPL** — `init-session` in `src/repl-core.ss` unions the same `(map car *integrable*)`
   into `*repl-known*`. This mirrors the batch path and also serves macro hygiene: a macro
   template that mentions an integrable (e.g. `(syntax-rules () ((_ e) (+ e e)))`) must treat
   `+` as a *known* binding, or hygiene would rename it to `+.0` and leave it unbound.
 
-`inline-primitives` itself runs in **every** door — `compile-forms`,
+`inline-primitives` itself runs in **every** path — `compile-forms`,
 `compile-program-with-imports`, and `repl-lower-form` — right after rename/resolve. One pass,
 every path: that is the mechanical reason dev and ship inline identically.
 

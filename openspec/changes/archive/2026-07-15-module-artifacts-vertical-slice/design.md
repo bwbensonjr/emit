@@ -12,14 +12,14 @@ Today the whole pipeline emits exactly one module with one `@scheme_entry`
 (`src/emit.ss` `emit-program`/`emit-entry`), links program+runtime via `clang`
 (`src/compile.ss`), and the REPL emits per-form modules whose referenced-but-undefined
 globals become `external global i64` (`src/emit.ss` `emit-repl-module`). The task is to
-produce a **library artifact** and consume it through **both doors** (AOT link, REPL
+produce a **library artifact** and consume it through **both paths** (AOT link, REPL
 `addIRModule`) off one compiler core — the smallest slice that exercises the full path:
 one `(mylib)` exporting one procedure, imported by a program that both links into an exe and
 loads in the REPL.
 
 The dominating constraints: the pure core (`src/core.ss`) must stay free of
 filesystem/subprocess I/O (self-hosting invariant); a unit's `.ll` must be byte-identical
-across both doors (dev→ship fidelity, guarded by self-emission-equivalence); and
+across both paths (dev→ship fidelity, guarded by self-emission-equivalence); and
 library-free programs must keep emitting byte-identical IR (Stage 0's guarantee is not
 weakened).
 
@@ -33,11 +33,11 @@ weakened).
   `@scheme_entry`, mangled internals) and a readable `<unit>.exports`.
 - The resolver **produces** `imported` bindings from the import environment → `external
   global i64`.
-- Both doors from the same entry: AOT `build-program` (manifest → compile lib+program →
+- both paths from the same entry: AOT `build-program` (manifest → compile lib+program →
   link, with `@scheme_entry` calling imported `__init`s first) and REPL `import`
   (`addIRModule` + `__init` once + merge exports into session scope).
 - A minimal readable manifest (`./emit-libs.scm`).
-- A `test/modules-*` suite covering both doors, cross-door byte-identity, and the
+- A `test/modules-*` suite covering both paths, cross-path byte-identity, and the
   no-collision blocker.
 
 **Non-Goals:**
@@ -83,7 +83,7 @@ imported library's `@"L:__init"` (declared `external`) before the program body �
 extension of how `emit-repl-batch` already runs ordered thunks (`src/emit.ss`).
 
 *Alternative rejected:* a constructor-attribute auto-init. Rejected — explicit `__init`
-calls from `@scheme_entry` keep ordering visible and portable across both doors.
+calls from `@scheme_entry` keep ordering visible and portable across both paths.
 
 ### D3 — Resolution: populate `imported` from the import environment
 
@@ -92,9 +92,9 @@ source between "own top-level" and "primitive" (the order Stage 0 documented). A
 hit yields `(make-binding 'imported @"L:x")`; the existing `imported`→`(global-ref sym)`
 arm already routes it to the `external global i64` hook. A unit is a **closed** scope
 (exports a chosen subset of its own defines); a REPL session stays **open**. The resolution
-logic is identical across doors — only who populates the import environment differs (D4).
+logic is identical across paths — only who populates the import environment differs (D4).
 
-### D4 — Two doors, one export environment
+### D4 — two paths, one export environment
 
 - **AOT (`build-program`, generalizing `bin/scheme-compile`/`src/compile.ss`):** read the
   program's `(import (L))`, resolve `L` via the manifest to its source, `compile-unit` the
@@ -107,7 +107,7 @@ logic is identical across doors — only who populates the import environment di
   merge `L.exports` into the session scope as imported bindings so later forms emit
   `external global` references resolved across the dylib.
 
-Both call the same `compile-unit`, so `L.ll` is identical across doors — verified by
+Both call the same `compile-unit`, so `L.ll` is identical across paths — verified by
 extending self-emission-equivalence to the unit.
 
 ### D5 — Manifest
@@ -130,8 +130,8 @@ unchanged.
 - **[Library emission accidentally changes library-free program IR]** → library mode is a
   distinct emit path keyed off a non-empty unit; the program unit stays empty-prefix.
   Mitigation: keep Stage 0's demo byte-identity check green (`test/module-scaffold-baseline.sh`).
-- **[A unit's `.ll` differs between the AOT and REPL doors]** → both doors call one
-  `compile-unit`. Mitigation: a cross-door byte-identity test (self-emission-equivalence
+- **[A unit's `.ll` differs between the AOT and REPLs]** → both paths call one
+  `compile-unit`. Mitigation: a cross-path byte-identity test (self-emission-equivalence
   extended to the unit) is a Stage-1 gate.
 - **[`__init` ordering / double-run]** → the one-shot `@"L:__inited"` guard makes `__init`
   idempotent now; Stage 1's single import needs no ordering, and the guard is ready for
@@ -154,7 +154,7 @@ unchanged.
 5. AOT `build-program` (manifest read, unit compile, multi-`.ll` link) + REPL `import`
    (`addIRModule` + `__init` + export merge).
 6. Manifest reader; `build/lib/` artifact layout; observability narration.
-7. `test/modules-*` suite (both doors, cross-door byte-identity, no-collision blocker);
+7. `test/modules-*` suite (both paths, cross-path byte-identity, no-collision blocker);
    `make regen` if `CORE_FLAT` changed; both suites green.
 
 Rollback is a single revert per step; the change is additive (new surface, a new emit mode

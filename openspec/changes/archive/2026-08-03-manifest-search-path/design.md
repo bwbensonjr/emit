@@ -15,8 +15,8 @@ while `(scheme inexact)` — deliberately an *ordinary* manifest library — wor
 
 Two constraints shape the design:
 
-- **Door parity is load-bearing.** `test/self-emit-equiv.sh`, `test/dump-parity-tests.sh`, and
-  `test/prelude-base-run-tests.sh` pin that the Chez driver and the three Chez-free doors emit
+- **Path parity is load-bearing.** `test/self-emit-equiv.sh`, `test/dump-parity-tests.sh`, and
+  `test/prelude-base-run-tests.sh` pin that the Chez driver and the three Chez-free paths emit
   byte-identical IR for the same manifest. Any resolution rule must land on both sides or the
   guards break.
 - **The core performs no I/O by design.** Modes 5/9/10 hand the host manifest *text* and get back
@@ -52,13 +52,13 @@ divergence becomes visible, so it is settled here.
 ### D1 — One resolution helper, five call sites collapse into it
 
 Add a single `resolve_manifest(const std::string &flag)` in `src/emit.cpp` returning the found path
-(or empty), replacing the four duplicated ternaries. The doors differ only in whether they have a
+(or empty), replacing the four duplicated ternaries. The paths differ only in whether they have a
 `--manifest` flag to pass in. Rationale: the four sites are already identical and drifted once
 (the spec text records a different precedence than the code); collapsing them makes a future
 divergence impossible rather than merely unlikely.
 
-*Alternative rejected:* resolve once in `main()` and stash it globally. The doors parse their own
-argv, so the flag is not known until the door is well underway; a global would have to be
+*Alternative rejected:* resolve once in `main()` and stash it globally. The paths parse their own
+argv, so the flag is not known until the path is well underway; a global would have to be
 back-patched, which is how `EMIT_MANIFEST` already gets set at `:659` and is exactly the pattern
 worth not extending.
 
@@ -114,7 +114,7 @@ already uses — so Homebrew's `/opt/homebrew/bin/emit` symlink lands in the keg
 
 ### D6 — Narration names the resolved manifest
 
-One stderr line per door in `docs/OUTPUT.md` form, e.g.
+One stderr line per path in `docs/OUTPUT.md` form, e.g.
 `resolve manifest -> /opt/homebrew/.../share/emit/emit-libs.scm  [2 libraries]`, absent at
 `EMIT_VERBOSITY=quiet`. This is the difference between "which `emit-libs.scm` am I getting?" being
 a one-line answer and being an strace session. Stdout is untouched, so the byte-identity guards are
@@ -141,7 +141,7 @@ they should exercise it.
   and no tags, so the only manifests in existence are this repo's. It is called out as BREAKING in
   the proposal, `docs/MODULES.md` gains the rule, and this is precisely the moment to change it —
   before `0.1.0` and before `homebrew-tap-distribution` ships a manifest to anyone.
-- **Door parity regression if only one side lands D3.** → The parity guards fail loudly rather than
+- **Path parity regression if only one side lands D3.** → The parity guards fail loudly rather than
   silently, and the task order lands host and driver together before the fixtures are rewritten, so
   a half-applied rule cannot pass.
 - **New narration perturbing a test that captures stderr.** → Most suites redirect stderr to

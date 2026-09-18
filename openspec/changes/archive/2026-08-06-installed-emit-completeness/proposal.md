@@ -1,7 +1,7 @@
 ## Why
 
 `manifest-search-path` (#35) made an installed Emit self-sufficient **for the standard libraries**,
-and the `distribution` spec says so in those words. Two doors were left outside that guarantee, and
+and the `distribution` spec says so in those words. two paths were left outside that guarantee, and
 both are reachable from one ordinary project directory. Measured against a real `make install`
 prefix, in a project holding nothing but a program and the manifest that names it:
 
@@ -22,7 +22,7 @@ emit: program imports a library not found in the manifest                       
 Neither is a crash and neither is a regression — `emit build` has never worked from an install
 because until #35 there was no install. But together they say an installed Emit is not yet a
 product. **Standalone executables are a first-class deliverable** (`CLAUDE.md`), and `emit build`
-is the door that produces them; it is the one door that does not work when installed.
+is the path that produces them; it is the one path that does not work when installed.
 
 The second failure is the sharper one. Without a project manifest the installed manifest is found
 and `(scheme inexact)` resolves. The moment a project has its own `emit-libs.scm` — which it must,
@@ -45,7 +45,7 @@ twice."
   *extends* the installed one instead of replacing it. The project's own entry wins for a name both
   define. **An explicit request stays a single file**: `--manifest FILE` and `EMIT_MANIFEST` name
   exactly one manifest and do not chain, so a hermetic build remains expressible.
-- **`make install` ships the two support files the build door needs**, at their repo-relative
+- **`make install` ships the two support files the `emit build` command needs**, at their repo-relative
   subpaths under `<prefix>/share/emit/` — `tools/llvm-env.sh` (with `tools/log.sh`, which it
   sources) and `src/runtime/runtime.c`. The installed tree already mirrors the repo's `lib/` layout
   rather than flattening it; support files follow the same rule, so one lookup serves both layouts.
@@ -60,7 +60,7 @@ twice."
   `llvm-config` on `PATH`). This is the mechanism `homebrew-tap-distribution` task 3.2 needs; that
   change consumes it rather than designing it again.
 - **The `distribution` capability's self-sufficiency requirement broadens from "the standard
-  libraries" to "every door"** — `emit build` from an install produces a working executable with no
+  libraries" to "every path"** — `emit build` from an install produces a working executable with no
   files beside it and no environment set.
 - **Explicit non-goal: shipping a prebuilt `runtime.o` / `libemitrt.a`.** It would drop a C compile
   from every `emit build`, but the install contract deliberately excludes compiled artifacts
@@ -79,7 +79,7 @@ twice."
 ### Modified Capabilities
 
 - `distribution`: "An installed Emit is self-sufficient for the standard libraries" broadens to
-  cover every door, including `emit build`'s toolchain and C runtime source; the `make install`
+  cover every path, including `emit build`'s toolchain and C runtime source; the `make install`
   layout requirement gains the support files.
 - `module-system`: "Locating the manifest" changes from first-match-wins to a chain over the
   searched candidates, with explicit requests still naming exactly one file.
@@ -91,7 +91,7 @@ twice."
 - `src/emit.cpp`: `repo_root()` (`:219`) replaced by a support-file resolver at its two consumers,
   `discover_toolchain()` (`:980`, the `llvm-env.sh` path) and the `runtime.c` path (`:1142`);
   `resolve_manifest()` (`:255`) returns an ordered list rather than one path, which touches every
-  door that calls it and `say_manifest()`'s narration (`docs/OUTPUT.md` form — narrating a chain,
+  path that calls it and `say_manifest()`'s narration (`docs/OUTPUT.md` form — narrating a chain,
   not a file); `discover_toolchain()` gains the compiled-in fallback.
 - `Makefile`: the `install` target installs two more files (three, counting `tools/log.sh`); the
   build records the resolved `CC`/`GC_INC`/`GC_LIB` as compiled-in defaults alongside the existing

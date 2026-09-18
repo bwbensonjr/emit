@@ -44,6 +44,19 @@
   stdout. Follow the convention in `docs/OUTPUT.md` when adding or editing a
   tool.
 
+## Terminology
+
+- Prefer the concrete command or component name. Use **command** for `emit run`,
+  `emit repl`, `emit build`, or `emit lib`, and **verb** only for the selector
+  (`run`, `repl`, `build`, or `lib`).
+- Use **compilation path** for a way source reaches the shared compiler core,
+  **execution path** for a way compiled code runs, **host** for the component
+  supplying I/O or process integration, and **workflow** for a broader developer
+  activity.
+- Do not use **door** as a generic metaphor. Preserve it only inside an exact
+  historical identifier such as `run-door-user-libraries` or an accurate
+  quotation.
+
 ## Scheme code formatting 
 
 - Most comments should occur before the code they are describing,

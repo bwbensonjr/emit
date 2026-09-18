@@ -13,9 +13,9 @@ is: the guarantee that a program importing only `(scheme base)` (or importing no
 manifest present SHALL extend to whatever `(scheme base)` itself imports. A library the baked set
 depends on SHALL NOT be resolved through the manifest.
 
-A baked library MAY import another baked library. All doors — the AOT door, the REPL door's eager
-preload, the run door's lazy import closure, and the auto-import — SHALL handle a baked library that
-has imports, and SHALL continue to emit byte-identical modules across doors for the same program.
+A baked library MAY import another baked library. all paths — the AOT path, the REPL's eager
+preload, the `emit run` command's lazy import closure, and the auto-import — SHALL handle a baked library that
+has imports, and SHALL continue to emit byte-identical modules across paths for the same program.
 
 #### Scenario: A program with no imports needs no manifest, still
 
@@ -30,9 +30,9 @@ has imports, and SHALL continue to emit byte-identical modules across doors for 
 - **THEN** that library's module is emitted before `(scheme base)`, its initializer runs before
   `(scheme base)`'s, and each initializer runs exactly once
 
-#### Scenario: Door parity survives partitioning
+#### Scenario: Path parity survives partitioning
 
-- **WHEN** the same program is compiled through the AOT door, the run door, and the Chez-hosted
+- **WHEN** the same program is compiled through the AOT path, the `emit run` command, and the Chez-hosted
   driver against the same partition
 - **THEN** the emitted program module is byte-identical across all three, as it was before the
   prelude was partitioned
@@ -103,8 +103,8 @@ would split the state. Consequently the substrate SHALL NOT contain the exceptio
 machinery that raises errors SHALL be assigned to the libraries that consume it rather than to the
 substrate.
 
-Its resolution SHALL be identical on every door: the doors that build the baked set from the
-compiler's baked-in prelude source SHALL resolve it baked, and the doors that resolve `(scheme base)`
+Its resolution SHALL be identical on every path: the paths that build the baked set from the
+compiler's baked-in prelude source SHALL resolve it baked, and the paths that resolve `(scheme base)`
 through the manifest SHALL find the substrate through the manifest too, so `(scheme base)`'s import of
 it resolves on either path. It SHALL be installed alongside the other shipped library sources.
 
@@ -129,9 +129,9 @@ it resolves on either path. It SHALL be installed alongside the other shipped li
 - **THEN** the guard catches it, exactly as it did before the relocation, because the exception-handler
   chain is a single binding rather than one copy per library
 
-#### Scenario: The substrate resolves on the manifest-driven doors too
+#### Scenario: The substrate resolves on the manifest-driven paths too
 
-- **WHEN** a door that resolves `(scheme base)` from the manifest starts up, and `(scheme base)`'s
+- **WHEN** a path that resolves `(scheme base)` from the manifest starts up, and `(scheme base)`'s
   source imports the substrate
 - **THEN** the substrate resolves through the same manifest and `(scheme base)` loads, rather than
   failing because an internal library was reachable only when baked
@@ -193,7 +193,7 @@ reaching internals through `(scheme base)`.
 #### Scenario: An internal helper is not in scope in a user program
 
 - **WHEN** a program with no explicit import references a prelude-internal name such as `rd-atom`
-  or `%map1`, and is compiled on any door
+  or `%map1`, and is compiled on any path
 - **THEN** compilation fails with an unbound-variable error, while a program referencing a public
   name such as `map` in the same position still compiles and runs
 
@@ -215,7 +215,7 @@ reaching internals through `(scheme base)`.
 - **WHEN** the same program is compiled by the Chez-hosted driver and by the Chez-free portable
   derivation
 - **THEN** both resolve each shipped library against the same export list in the same order, and the
-  emitted program module is byte-identical between the two doors
+  emitted program module is byte-identical between the two paths
 
 #### Scenario: A private binding still serves the procedures that call it
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# emit-cli-tests.sh -- the CLI front door (change: emit-cli-front-door; issues #42, #43).
+# emit-cli-tests.sh -- the CLI interface (change: emit-cli-front-door; issues #42, #43).
 #
 # Two properties, both about what a user meets in their first five minutes:
 #
@@ -7,14 +7,14 @@
 #      level and by every verb, prints usage, and exits 0 -- and because the text was
 #      REQUESTED it goes to stdout, so `emit --help | head` works without redirection.
 #      Usage printed as part of an error stays on stderr with a non-zero exit (design
-#      D1).  Every door also REJECTS an unknown option; `emit repl` used to ignore one
+#      D1).  Every command also REJECTS an unknown option; emit repl used to ignore one
 #      silently and exit 0 (design D3).
 #
 #   2. A program's final value is suppressed when it is THE unspecified value -- no
 #      written form, no newline -- so a program ending in output delivers exactly its
 #      own bytes (design D4).  It is a reporting policy, not a property of the value:
 #      an explicit (write (if #f #f)) still renders, and #f and () still print.  The
-#      in-process door and a delivered executable carry the same guard, so their
+#      in-process path and a delivered executable carry the same guard, so their
 #      stdout is byte-identical (design D5) -- asserted directly below.
 #
 # Chez-FREE: everything here drives the compiled `build/emit` binary.
@@ -73,7 +73,7 @@ for v in run repl build lib; do
     && ok "emit $v --help names the verb" \
     || bad "emit $v --help => [$first]"
 
-  # --no-manifest-chain is a shared valueless option, parsed by every door.  Put it
+  # --no-manifest-chain is a shared valueless option, parsed by every command.  Put it
   # before --help so an unimplemented/typo'd branch fails before help can short-circuit.
   help_ok "emit $v accepts --no-manifest-chain" "$v" --no-manifest-chain --help
   "$EMIT" "$v" --help 2>/dev/null | grep -q -- '--no-manifest-chain' \
@@ -81,7 +81,7 @@ for v in run repl build lib; do
     || bad "emit $v help omits --no-manifest-chain"
 done
 
-# The two JIT doors document the exact profile set and its default.  Check both help
+# The two JIT execution paths document the exact profile set and its default.  Check both help
 # spellings because `emit help VERB` is routed separately from `emit VERB --help`.
 for v in run repl; do
   for spelling in direct routed; do
@@ -131,22 +131,22 @@ err_case "no verb"                1
 err_case "unknown verb"           2 bogus
 err_case "emit help <unknown>"    2 help bogus
 
-# Every door rejects an unknown option -- `repl` included, which is the one that
+# Every command rejects an unknown option -- `repl` included, which is the one that
 # regressed silently: `emit repl --bogus-flag` used to start a session and exit 0.
 for v in run repl build lib; do
   err_case "emit $v --bogus-flag rejected" 2 "$v" --bogus-flag
   "$EMIT" "$v" --bogus-flag 2>&1 >/dev/null </dev/null | grep -q "^emit $v: unknown option --bogus-flag" \
-    && ok "emit $v names the door and the option" \
+    && ok "emit $v names the command and the option" \
     || bad "emit $v diagnostic wording"
 done
 
-# JIT profile parsing is shared by run/repl and stops before either door compiles input.
-# Unsupported, repeated, and conflicting levels name the door/options on stderr only.
+# JIT profile parsing is shared by run/repl and stops before either path compiles input.
+# Unsupported, repeated, and conflicting levels name the command/options on stderr only.
 for v in run repl; do
   err_case "emit $v rejects -O3" 2 "$v" -O3
   "$EMIT" "$v" -O3 </dev/null >"$TMP/o" 2>"$TMP/e"
   grep -q "^emit $v:.*-O3" "$TMP/e" \
-    && ok "emit $v unsupported-level diagnostic names the door and -O3" \
+    && ok "emit $v unsupported-level diagnostic names the command and -O3" \
     || bad "emit $v unsupported-level diagnostic wording"
 
   for pair in '-O0 -O0' '-O0 -O1' '-O1 -O2'; do
@@ -163,7 +163,7 @@ for v in run repl; do
   done
 done
 
-# These doors retain their existing backend policy: a JIT-only flag is unknown here.
+# These paths retain their existing backend policy: a JIT-only flag is unknown here.
 for v in build lib; do
   for level in -O0 -O1 -O2; do
     err_case "emit $v rejects JIT profile $level" 2 "$v" "$level"
@@ -208,7 +208,7 @@ for level in -O0 -O1 -O2; do
     || bad "emit repl $level (exit $rc, stdout [$(cat "$TMP/o")])"
 done
 
-# `emit lib` with no SRC: an arity error, so usage goes to stderr and the exit is 1.
+# emit lib with no SRC: an arity error, so usage goes to stderr and the exit is 1.
 err_case "emit lib (missing SRC)" 1 lib
 
 # ---------------------------------------------------------------------------
@@ -241,7 +241,7 @@ run_is explicit-write    '(write (if #f #f))'       '#<unspecified>'
 run_is explicit-display  '(display (if #f #f))'     '#<unspecified>'
 
 # ---------------------------------------------------------------------------
-# 4. the two doors agree, byte for byte.
+# 4. the two paths agree, byte for byte.
 # ---------------------------------------------------------------------------
 echo
 echo "emit run and a delivered executable agree on stdout"
@@ -264,7 +264,7 @@ else
   b="$("$TMP/agree" 2>/dev/null </dev/null)"
   [ "$a" = "$b" ] && [ "$a" = "$(printf 'alpha\nbeta')" ] \
     && ok "byte-identical stdout, no trailing value ($(printf '%q' "$a"))" \
-    || bad "doors disagree: run=$(printf '%q' "$a")  exe=$(printf '%q' "$b")"
+    || bad "paths disagree: run=$(printf '%q' "$a")  exe=$(printf '%q' "$b")"
 fi
 
 # The same agreement for a program whose final value DOES print -- so the check above
@@ -283,7 +283,7 @@ else
   b="$("$TMP/agree2" 2>/dev/null </dev/null)"
   [ "$a" = "$b" ] && [ "$a" = "$(printf 'x\n(1 2 3)')" ] \
     && ok "byte-identical stdout, final value printed ($(printf '%q' "$a"))" \
-    || bad "doors disagree: run=$(printf '%q' "$a")  exe=$(printf '%q' "$b")"
+    || bad "paths disagree: run=$(printf '%q' "$a")  exe=$(printf '%q' "$b")"
 fi
 
 # ---------------------------------------------------------------------------

@@ -37,7 +37,7 @@ but to a new, cleanly reproducible fixed point — the anti-stale trust-check is
   externals + linked/loaded `scheme.base.ll`; macros merged into `macro-env`); `--no-prelude`
   skips both halves; user defines shadow imports.
 - One prelude source of truth (`src/prelude.scm`); the two halves are derived from it.
-- Both doors reuse the Stage-2 manifest/graph/link/preload machinery; `(scheme base)` links
+- both paths reuse the Stage-2 manifest/graph/link/preload machinery; `(scheme base)` links
   and initializes exactly once.
 - Behavior preserved: demo **values** unchanged; suites + self-hosting + trust-check green
   after `make regen`.
@@ -82,7 +82,7 @@ forgotten regenerate.
 
 ### D2 — Auto-import reuses `compile-program-with-imports` with a macro-only prelude
 
-The core needs **no change** for the Chez batch door. `compile-program-with-imports` already
+The core needs **no change** for the Chez batch path. `compile-program-with-imports` already
 takes `prelude-forms` (merged for macro collection) and `import-tables`/`init-libs` (resolved
 as external globals + ordered inits). Stage 3 wires the driver to call it with:
 - `prelude-forms` = the derived-form **macros only** (not the procedures);
@@ -95,7 +95,7 @@ compile-time via `prelude-forms`, and user-wins shadowing is the existing resolu
 already separates the macro-carry channel (`prelude-forms`) from the runtime-import channel
 (`import-tables`); Stage 3 only chooses what flows through each.
 
-### D3 — The embedded/REPL doors switch prepend → import+macros (this is what moves bootstrap)
+### D3 — The embedded/REPLs switch prepend → import+macros (this is what moves bootstrap)
 
 The batch Chez driver can re-home with no bootstrap change (D2), but the shipped **user-facing**
 binaries embed the compiler, so re-homing them edits embedded source and regenerates
@@ -117,20 +117,20 @@ compiler's self-compilation still runs on the prepend path and `(scheme base)` i
 into the compiler for its own use.
 
 *Alternative rejected:* keep the embedded binaries prepending and re-home only the Chez batch
-door. Rejected — the REPL is explicitly in scope, and `scheme-run`/`scheme-compile` are the
+path. Rejected — the REPL is explicitly in scope, and `scheme-run`/`scheme-compile` are the
 primary standalone-executable path; leaving them on prepend would ship two visibly different
 prelude behaviors.
 
 ### D4 — `(scheme base)` in the default manifest; artifacts committed and kept fresh
 
 Add `(library (scheme base) (source "lib/scheme/base.sld"))` to the default `emit-libs.scm`.
-Both doors resolve and build it through Stage 2's manifest/graph/stale-rebuild path. The
+both paths resolve and build it through Stage 2's manifest/graph/stale-rebuild path. The
 REPL preloads it (already its behavior for manifest libraries).
 
 **Resolved (artifacts) — revised during apply:** build `scheme.base.{ll,exports}` **on
 demand**, cached by Stage-2 stale-rebuild in `build/lib`, rather than committing the compiled
 artifacts. The compiled `.ll` embeds a host-specific `target datalayout`/`triple` header, so a
-committed copy would not be portable across dev machines; both re-homed doors already build the
+committed copy would not be portable across dev machines; both re-homed paths already build the
 unit once (~1s) and reuse it, and the byte-identity baseline is untouched. The **source**
 `lib/scheme/base.sld` is committed and kept in sync with `src/prelude.scm` by the
 regenerate-and-diff guard (D1), so "edit `src/prelude.scm` → regenerate → commit" is still one
@@ -161,13 +161,13 @@ invariant) is clearer than a growing exemption list.
   procedures use `cond`/`case`/… Mitigation: compile the `(scheme base)` unit with the
   derived-form macro set in scope (the compiler carries it); a task compiles `scheme.base.sld`
   first, in isolation, and asserts success.
-- **[Double-provided prelude: prepended AND imported]** → if any door still prepends while also
-  importing, procedures would be multiply-defined. Mitigation: each re-homed door switches
+- **[Double-provided prelude: prepended AND imported]** → if any path still prepends while also
+  importing, procedures would be multiply-defined. Mitigation: each re-homed path switches
   fully from prepend to import+macros; a test asserts `scheme.base.ll` links exactly once.
 - **[Macro expansions reference procedures not yet resolvable]** → a derived-form macro expands
   to calls (`memv`, etc.) that must resolve to `(scheme base)` exports. Mitigation: auto-import
   makes them imported bindings; a test uses `cond`/`case` in a prelude-only program on both
-  doors.
+  paths.
 - **[Prelude split drifts from source]** → two hand-maintained halves. Mitigation: derive both
   from `src/prelude.scm` (D1) with a regenerate-and-diff guard.
 - **[Baseline/demos churn hides a real regression]** → regenerating the byte-identity baseline
@@ -184,20 +184,20 @@ invariant) is clearer than a growing exemption list.
 2. Add `(scheme base)` to the default `emit-libs.scm`; compile it in isolation with the macro
    set in scope and confirm `scheme.base.{ll,exports}` are well-formed (guarded init, exports
    all procedures, no `@scheme_entry`).
-3. Chez batch door (D2): route a prelude-enabled compile through
+3. Chez batch path (D2): route a prelude-enabled compile through
    `compile-program-with-imports` with macro-only `prelude-forms` + implicit `(scheme base)`
    import; `--no-prelude` bypasses both.
-4. AOT embedded door (D3): `entry-embed.scm` import+macro mode; `run.cpp` preloads
+4. AOT embedded path (D3): `entry-embed.scm` import+macro mode; `run.cpp` preloads
    `scheme.base.ll`; `bin/scheme-compile` links it.
-5. REPL door (D3): `init-session` merges derived-form macros and auto-imports the preloaded
+5. REPL (D3): `init-session` merges derived-form macros and auto-imports the preloaded
    `(scheme base)`; `--no-prelude` yields an empty session.
 6. `make regen` (embed/embed-repl change); confirm the new fixed point and the trust-check.
 7. Regenerate the Stage-0 byte-identity baseline (D5); confirm demo **values** unchanged.
-8. Tests: prelude-only program on both doors; derived-form macros without prepend;
+8. Tests: prelude-only program on both paths; derived-form macros without prepend;
    `--no-prelude` leaves prelude names unbound; `(scheme base)` links once; user-shadow.
    Wire into `run-all-tests.sh` / `run-dev-tests.sh`.
 
-Rollback is per-step; each door is independently revertible to prepend, and the change is
+Rollback is per-step; each path is independently revertible to prepend, and the change is
 additive (new library artifact + a compile-mode switch behind the prelude flag).
 
 ## Open Questions

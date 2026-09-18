@@ -1380,7 +1380,7 @@ val rt_filesystem_replace_file(val source, val destination) {
 }
 
 /* --no-prelude channel for the embedded batch entry (change:
- * embedded-runner-rehome).  The Chez-free runner (`emit run` / `emit build`)
+ * embedded-runner-rehome).  The Chez-free runner (emit run / emit build)
  * forwards --no-prelude by setting EMIT_NO_PRELUDE in the environment; the
  * embedded entry reads it back through this nullary primitive to decide whether
  * to auto-import (scheme base).  A nullary env probe (mirroring rt_read_all_stdin's
@@ -1394,7 +1394,7 @@ val rt_no_prelude_p(void) {
 /* --dump channel for the embedded compiler (change: emit-dump-stages, design
  * D1).  The same shape as rt_no_prelude_p above -- a nullary env probe, so the
  * flag stays off the stdin source channel -- but it carries a LEVEL rather than
- * a boolean, because the doors have two observability modes over this one
+ * a boolean, because the paths have two observability modes over this one
  * channel: 0 = off, 1 = stage names only (the concise trace the Chez driver
  * emits at EMIT_VERBOSITY=verbose), 2 = the full per-pass IL dump, 3 = the full
  * dump including library units (--dump-all).  The host computes the level and
@@ -1699,7 +1699,7 @@ val rt_write_shared_val(val v) {
 
 /* write ANY datum to STANDARD ERROR, in write style (display? = #f) or display
  * style (any other value) -- the embedded compiler's narration channel (change:
- * emit-dump-stages, design D2).  stdout is reserved for a door's data payload
+ * emit-dump-stages, design D2).  stdout is reserved for a command's data payload
  * (the IR that `emit run --emit` and `schemec` write), so narration must not go
  * there; this is the SAME tag-walking printer as rt_display/rt_write_val, merely
  * pointed at another stream, so there is no second printer to keep in sync.
@@ -3269,8 +3269,8 @@ int main(int argc, char **argv) {
   /* Suppress THE unspecified value -- no written form, no newline -- so a program
    * ending in output delivers exactly its own bytes (change: emit-cli-front-door,
    * design D4).  This is the REPL's echo-suppression rule stated for programs, and
-   * `emit run`'s in-process path carries the identical guard, so a delivered
-   * executable and the development door stay byte-identical on stdout (design D5).
+   * emit run's in-process path carries the identical guard, so a delivered
+   * executable and the development path stay byte-identical on stdout (design D5).
    * A reporting policy, not a property of the value: an explicit (write (if #f #f))
    * goes through print_val and still renders #<unspecified>.  #f and () are
    * legitimate final values and still print. */

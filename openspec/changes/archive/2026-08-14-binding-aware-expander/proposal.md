@@ -26,7 +26,7 @@ spelling. Three open issues are that one defect, seen from three sides:
 `match` inside `src/core.ss` expanded the compiler's own `match` macro, and every call failed at run
 time. Chez expands the identical source correctly, so **no Chez-gated suite can catch this**: the
 divergence is invisible to `src/compile.ss` and surfaces only in the self-hosted compiler, as a
-runtime error naming the macro rather than the shadowing. Now that the Chez-free doors are the
+runtime error naming the macro rather than the shadowing. Now that the Chez-free paths are the
 primary path, the compiler's own sources carry a standing hazard whose blast radius is every keyword
 in scope. Separately, this tightens *the accepted language*, which SemVer 0.1.0 will put a
 compatibility contract around — cheap before the tag, breaking after it.

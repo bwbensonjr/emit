@@ -20,7 +20,7 @@
       that character (design D4)
 - [x] 1.7 Add the in-range regression guard: index every element of a vector, string, and bytevector
       from `0` to `length - 1` and assert the values are unchanged
-- [x] 1.8 Add the door-agreement and session-survival cases: the same out-of-range program under the
+- [x] 1.8 Add the path-agreement and session-survival cases: the same out-of-range program under the
       in-process runner and as a standalone executable, and a REPL session that traps and then
       evaluates `(+ 1 2)` to `3`
 - [x] 1.9 Confirm 1.1-1.5 fail against the current `build/emit` in the way #70 describes, and that

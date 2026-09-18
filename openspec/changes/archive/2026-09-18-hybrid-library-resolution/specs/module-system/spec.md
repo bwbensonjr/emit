@@ -19,7 +19,7 @@ artifact or binding from it.
 
 Library discovery SHALL be a host responsibility. The compiler core SHALL continue to perform no
 filesystem access and SHALL receive the selected source, source-home, imports, and compile-time
-interfaces through the existing door protocol.
+interfaces through the existing path protocol.
 
 #### Scenario: A conventional project library resolves without a mapping
 
@@ -47,11 +47,11 @@ interfaces through the existing door protocol.
 - **THEN** resolution reports the library as unresolved without probing a path outside a configured
   root
 
-### Requirement: Every door uses one resolved library identity
+### Requirement: every path uses one resolved library identity
 
-The Chez driver and the `run`, `build`, `lib`, and `repl` doors SHALL apply the same provider
+The Chez driver and the `run`, `build`, `lib`, and `repl` paths SHALL apply the same provider
 precedence, conventional path derivation, declaration-name validation, import-closure ordering, and
-source-home rules. Once a provider resolves a library, every door SHALL compile that source through
+source-home rules. Once a provider resolves a library, every path SHALL compile that source through
 the existing shared compile-unit core, preserving deterministic unit-qualified symbols, compile-time
 export interfaces, artifact freshness, tree shaking, and byte-identical full unit IR.
 
@@ -82,7 +82,7 @@ artifacts.
 
 ## MODIFIED Requirements
 
-### Requirement: AOT door — build and link an importing program
+### Requirement: AOT path — build and link an importing program
 
 An import-aware build path SHALL resolve a program's imports and each library's imports through the
 shared hybrid resolver, build the transitive dependency graph, reject import cycles with a
@@ -109,7 +109,7 @@ transitive import closure SHALL NOT be linked.
 - **WHEN** the resolved graph has `(a)` importing `(b)` and `(b)` importing `(a)`
 - **THEN** the build reports a compile-time error naming the cycle rather than looping or linking
 
-### Requirement: REPL door — import a library interactively
+### Requirement: REPL — import a library interactively
 
 The interactive REPL SHALL obtain the standard library by registering the baked set at startup. It
 SHALL eagerly register libraries enumerated by resolved manifests, preserving startup validation of
@@ -183,7 +183,7 @@ requested library's names out of scope while the session remains usable.
 - **WHEN** a session references an internal substrate name without explicitly importing it
 - **THEN** the name remains unbound regardless of library providers
 
-### Requirement: Run door — run an importing program in-process (Chez-free)
+### Requirement: `emit run` command — run an importing program in-process (Chez-free)
 
 The in-process runner (`emit run`) SHALL resolve a program's imports and each library's imports
 through the shared hybrid resolver, build the transitive dependency graph, reject cycles, load each
@@ -222,22 +222,22 @@ SHALL have no observable effect.
 - **WHEN** `emit run` receives `--manifest FILE` while `EMIT_MANIFEST` names another manifest
 - **THEN** `FILE` supplies the first exact manifest provider, as before
 
-### Requirement: Run door matches the AOT door (dev→ship fidelity)
+### Requirement: `emit run` command matches the AOT path (dev→ship fidelity)
 
 A program run through `emit run` with a given resolver configuration SHALL produce the same value as
 the same program built and run through `emit build` with that configuration. The emitted program
 module and each imported unit's module SHALL be byte-for-byte identical across the run and AOT
-doors because all providers feed the same compile-unit core.
+paths because all providers feed the same compile-unit core.
 
-#### Scenario: Run-door value matches AOT-door value
+#### Scenario: run-path value matches AOT-path value
 
 - **WHEN** an importing program is run and built with the same manifests, library roots, and
   conventional-lookup policy
 - **THEN** the two printed values are identical
 
-#### Scenario: A unit's module bytes match across the run and AOT doors
+#### Scenario: A unit's module bytes match across the run and AOT paths
 
-- **WHEN** a library is loaded by the run door and compiled for the AOT link from the same resolved
+- **WHEN** a library is loaded by the `emit run` command and compiled for the AOT link from the same resolved
   source
 - **THEN** the two unit modules are byte-for-byte identical
 
@@ -249,7 +249,7 @@ library entry SHALL override conventional lookup for that name within the same r
 SHALL support names or layouts that conventional derivation cannot represent. Compiled artifacts
 SHALL continue to default under the build directory.
 
-Every door SHALL locate manifests using the existing precedence: `--manifest FILE`, then
+every path SHALL locate manifests using the existing precedence: `--manifest FILE`, then
 `EMIT_MANIFEST`, then `./emit-libs.scm`, then executable-relative and compiled-prefix installed
 candidates. Explicit missing manifests SHALL remain errors; searched missing candidates SHALL remain
 nonfatal. Explicit selection SHALL skip an unrelated `./emit-libs.scm`, and readable installed
@@ -322,7 +322,7 @@ source came from a manifest or a conventional root; narration SHALL never alter 
 
 #### Scenario: Relative manifest paths retain their base
 
-- **WHEN** a manifest maps a library to a relative source and the door runs from another directory
+- **WHEN** a manifest maps a library to a relative source and the path runs from another directory
 - **THEN** the source resolves relative to that manifest
 
 #### Scenario: The selected provider is narrated
@@ -384,16 +384,16 @@ source came from a manifest or a conventional root; narration SHALL never alter 
 - **WHEN** the first manifest lacks a requested program name but an installed manifest has it
 - **THEN** named program lookup reports the first manifest and does not fall through
 
-#### Scenario: (scheme base) needs no manifest entry on any door
+#### Scenario: (scheme base) needs no manifest entry on any path
 
-- **WHEN** any door auto-imports or explicitly imports `(scheme base)` with no exact entry
+- **WHEN** any path auto-imports or explicitly imports `(scheme base)` with no exact entry
 - **THEN** the baked member satisfies it without filesystem lookup
 
 #### Scenario: (scheme base) resolves through the manifest
 
 - **WHEN** the Chez bootstrap driver uses a repository manifest entry for `(scheme base)` while a
-  Chez-free door has already registered the baked member
-- **THEN** the driver can compile the committed source and the Chez-free door admits no second copy
+  Chez-free path has already registered the baked member
+- **THEN** the driver can compile the committed source and the Chez-free path admits no second copy
 
 #### Scenario: A program entry is parsed and does not affect library resolution
 
@@ -417,7 +417,7 @@ source came from a manifest or a conventional root; narration SHALL never alter 
 
 #### Scenario: Manifest sources resolve against the manifest's own directory
 
-- **WHEN** an exact entry uses a relative source and the door runs elsewhere
+- **WHEN** an exact entry uses a relative source and the path runs elsewhere
 - **THEN** the source resolves against the entry's manifest directory
 
 #### Scenario: An explicitly named manifest that is missing is reported

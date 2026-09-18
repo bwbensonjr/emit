@@ -79,7 +79,7 @@ Atomic replacement is guaranteed when the source and destination are on the same
 
 For the same host filesystem state and operation sequence, `(emit filesystem)` SHALL produce the same Scheme results, file-error classifications, and filesystem effects under `emit run` and a standalone executable produced by `emit build`.
 
-#### Scenario: A Pitch-style filesystem probe agrees across doors
+#### Scenario: A Pitch-style filesystem probe agrees across paths
 
 - **WHEN** the same probe lists a directory, classifies an ordinary directory and a linked directory, and atomically replaces a same-directory target once through `emit run` and once through a standalone executable
 - **THEN** both executions report equivalent results and leave equivalent filesystem state

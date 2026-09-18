@@ -2,14 +2,14 @@
 
 ## Purpose
 
-Lets the Chez-free doors reuse an already-compiled library unit instead of recompiling it from
+Lets the Chez-free commands reuse an already-compiled library unit instead of recompiling it from
 source at every process start — the baked standard library, a library read from disk, and a unit
 pruned to one program's root set alike. The cache is a pure accelerator: it is keyed so a stale
 entry cannot be used, and every failure path falls back to compiling from source.
 ## Requirements
 ### Requirement: The baked standard library is compiled once and reused across processes
 
-The Chez-free doors (`emit run`, `emit build`, `emit lib`, `emit repl`) SHALL reuse an
+The Chez-free commands (`emit run`, `emit build`, `emit lib`, `emit repl`) SHALL reuse an
 already-compiled baked standard library rather than recompiling it from the binary's baked-in source
 at every process start. Reuse SHALL require no access to any library source, resting on the compiled
 unit modules plus the compile-time interface each publishes.
@@ -26,10 +26,10 @@ inconsistent would be unusable.
 
 #### Scenario: The first invocation populates the cache
 
-- **WHEN** a door runs with an empty cache
+- **WHEN** a command runs with an empty cache
 - **THEN** it compiles from source, succeeds, and leaves an entry that a later process reuses
 
-#### Scenario: Every door benefits
+#### Scenario: every command benefits
 
 - **WHEN** each of `emit run`, `emit build`, `emit lib`, and `emit repl` is invoked twice
 - **THEN** each one's second invocation reuses the cached set
@@ -92,7 +92,7 @@ SHALL therefore be served a different entry, even when the program is unchanged.
 - **WHEN** two programs reaching different subsets of a library are built in turn
 - **THEN** each is served the unit pruned to its own root set, and neither is served the other's
 
-#### Scenario: An open-world door never reads a shaken entry
+#### Scenario: An open-world path never reads a shaken entry
 
 - **WHEN** `emit repl` or `emit run` seeds a session after `emit build` has populated shaken entries
   for the same library and compiler
@@ -123,7 +123,7 @@ switches, where content is stable and modification times are not.
 
 #### Scenario: A rebuilt compiler is not served a stale entry
 
-- **WHEN** the compiler binary is rebuilt and a door is run again
+- **WHEN** the compiler binary is rebuilt and a command is run again
 - **THEN** no entry written by the previous binary is reused, and the baked set is recompiled
 
 #### Scenario: A different binary does not share an entry
@@ -142,9 +142,9 @@ switches, where content is stable and modification times are not.
   unchanged, and a program importing it is run again
 - **THEN** the entry is still reused
 
-### Requirement: The cache never changes what a door produces
+### Requirement: The cache never changes what a command produces
 
-A door's observable result SHALL NOT depend on whether the cache was warm, cold, or absent. For the
+A command's observable result SHALL NOT depend on whether the cache was warm, cold, or absent. For the
 same inputs, the emitted IR, the delivered executable's behavior, the session environment imports
 resolve against, and every diagnostic SHALL be identical in all three states. This SHALL hold for
 every kind of entry — the baked set, a unit compiled from disk, and a unit pruned to a root set.
@@ -178,33 +178,33 @@ every kind of entry — the baked set, a unit compiled from disk, and a unit pru
 ### Requirement: Every cache failure degrades to compiling from source
 
 A cache miss, a stale entry, a corrupt or unreadable entry, a missing cache directory, or a cache
-location that cannot be created or written SHALL cause the door to compile from source and complete
-normally. No door SHALL acquire a failure mode it did not have before the cache existed, and the
-cache SHALL NOT be required for correctness on any path.
+location that cannot be created or written SHALL cause the command to compile from source and complete
+normally. No command SHALL acquire a failure mode it did not have before the cache existed, and the
+cache SHALL NOT be required for correctness on any command.
 
 A metadata entry that cannot be read, or that is inconsistent with the units stored beside it, SHALL
 be refused whole rather than partially applied, so that falling back to a from-source compile always
 begins from an unmodified session.
 
-#### Scenario: An unwritable cache location still permits every door to work
+#### Scenario: An unwritable cache location still permits every command to work
 
 - **WHEN** the cache location cannot be created or written
-- **THEN** each door compiles from source and completes normally, reporting no error
+- **THEN** each command compiles from source and completes normally, reporting no error
 
 #### Scenario: A corrupt entry is not trusted
 
 - **WHEN** a cache entry is truncated or otherwise unreadable
-- **THEN** the door ignores it, recompiles from source, and completes normally
+- **THEN** the command ignores it, recompiles from source, and completes normally
 
 #### Scenario: A partially applicable entry leaves the session unchanged
 
 - **WHEN** an entry's metadata is readable but inconsistent with the units stored beside it
-- **THEN** nothing from that entry is registered, and the door compiles from source
+- **THEN** nothing from that entry is registered, and the command compiles from source
 
 #### Scenario: A read-only installation works
 
 - **WHEN** `emit` runs from a read-only installation with no writable cache location available
-- **THEN** every door behaves exactly as it does today
+- **THEN** every command behaves exactly as it does today
 
 ### Requirement: The cache is available from an installed emit, not only a checkout
 
@@ -223,20 +223,20 @@ demand, and regenerable from source.
 
 - **WHEN** `emit` is installed
 - **THEN** the installed tree contains no compiled library unit, and a cache entry exists only after
-  a door has run
+  a command has run
 
 ### Requirement: Cache reuse is narrated
 
-Each door SHALL report whether each unit it needed was reused or recompiled, and name the reason when
+Each command SHALL report whether each unit it needed was reused or recompiled, and name the reason when
 it recompiles, following the project's narration convention: narration on stderr, controllable
 through verbosity, concise by default.
 
 Narration SHALL name the library a message concerns and distinguish a full unit from one pruned to a
-root set, so that a door reusing several entries and rebuilding one reports which is which.
+root set, so that a command reusing several entries and rebuilding one reports which is which.
 
 #### Scenario: Reuse and rebuild are distinguishable
 
-- **WHEN** a door runs with a warm cache, and again after the entry is invalidated
+- **WHEN** a command runs with a warm cache, and again after the entry is invalidated
 - **THEN** the narration reports the reused set as reused, and the invalidated one as recompiled
   together with the reason
 
@@ -247,5 +247,5 @@ root set, so that a door reusing several entries and rebuilding one reports whic
 
 #### Scenario: Narration stays on stderr
 
-- **WHEN** a door that emits data on stdout runs with narration enabled
+- **WHEN** a command that emits data on stdout runs with narration enabled
 - **THEN** cache narration appears on stderr and does not contaminate stdout

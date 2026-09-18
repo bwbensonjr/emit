@@ -4,15 +4,15 @@
 #
 # Sixteen names that `(scheme base)` used to export live in the libraries R7RS-small
 # assigns them to.  The relocation is only correct if BOTH directions hold, on EVERY
-# door -- a name that is merely still reachable proves nothing, and a name that is
+# path -- a name that is merely still reachable proves nothing, and a name that is
 # unbound everywhere is a regression, not a conformance gain.  So each one is checked
 # twice:
 #
 #   * UNBOUND in a bare program -- the breaking half.  This is the assertion that would
 #     silently rot if a future change re-published a name from `(scheme base)`.
-#   * BOUND AND CORRECT after importing its library, on the run door, the AOT door
-#     (`emit build`, which links units with clang) and the REPL door (which resolves
-#     through the manifest rather than from the baked prelude).  Three doors because they
+#   * BOUND AND CORRECT after importing its library, on the emit run command, the AOT path
+#     (emit build, which links units with clang) and the REPL (which resolves
+#     through the manifest rather than from the baked prelude).  Three execution paths because they
 #     resolve libraries by three different mechanisms; a partition that worked on one and
 #     not another is exactly the dev->ship fidelity break the module design exists to
 #     prevent.
@@ -49,18 +49,18 @@ ok  () { echo "  [OK  ] $1"; pass=$((pass+1)); }
 bad () { echo "  [FAIL] $1"; fail=$((fail+1)); }
 
 # ---------------------------------------------------------------------------
-# the three doors, each given a program's TEXT and compared on stdout
+# the three execution paths, each given a program's TEXT and compared on stdout
 # ---------------------------------------------------------------------------
 
-run_door () {  # <program-text> -> stdout
+run_program () {  # <program-text> -> stdout
   printf '%s\n' "$1" > "$TMP/p.scm"
   timeout 60 build/emit run < "$TMP/p.scm" 2>"$TMP/run.err"
 }
 
-# The AOT door is manifest-ENTRY driven, so each program needs a `program` entry.  The
+# the AOT path is manifest-ENTRY driven, so each program needs a `program` entry.  The
 # manifest lives in $TMP and a manifest's relative paths resolve against its own
 # directory (change: manifest-search-path), so the repo's libraries are named absolutely.
-aot_door () {  # <program-text> -> stdout
+build_and_run_program () {  # <program-text> -> stdout
   printf '%s\n' "$1" > "$TMP/a.scm"
   { printf '((library (emit internal)  (source "%s/lib/emit/internal.sld"))\n' "$REPO"
     printf ' (library (scheme base)    (source "%s/lib/scheme/base.sld"))\n'   "$REPO"
@@ -77,18 +77,18 @@ aot_door () {  # <program-text> -> stdout
   fi
 }
 
-# The REPL door echoes each form's value; take the LAST non-empty line of STDOUT.  The
+# the REPL echoes each form's value; take the LAST non-empty line of STDOUT.  The
 # prompts and the banner go to stderr, so nothing has to be stripped -- and nothing may be:
 # the sibling suites' `tr -d ' >'` would delete the spaces inside a value like (1 2 3).
-repl_door () {  # <program-text> -> the final value
+eval_repl_program () {  # <program-text> -> the final value
   printf '%s\n' "$1" | timeout 60 build/emit repl 2>"$TMP/repl.err" | grep -v '^$' | tail -1
 }
 
 # ---------------------------------------------------------------------------
-# 1. each relocated name: unbound bare, correct with its library, on all three doors
+# 1. each relocated name: unbound bare, correct with its library, on all three execution paths
 # ---------------------------------------------------------------------------
-# The expression is written to read the same on every door: a single value-producing
-# form, so the run door's final-value print, the AOT exe's stdout and the REPL's echo all
+# The expression is written to read the same on every execution path: a single value-producing
+# form, so the emit run command's final-value print, the AOT exe's stdout and the REPL's echo all
 # yield the same text.  `display` is avoided for exactly that reason.
 
 echo "the relocated sixteen: unbound bare, then correct via their library"
@@ -106,19 +106,19 @@ relocated_case () {
     bad "$name: expected an unbound-variable error without $lib (rc=$rc, out=$out)"
   fi
 
-  # (b) bound and correct on each door, with the import
+  # (b) bound and correct on each path, with the import
   local prog="(import $lib)
 $expr"
   local g
-  g="$(run_door "$prog")"
-  [ "$g" = "$want" ] && ok "$name: run door => $g" \
-    || { bad "$name: run door => [$g] (expected [$want])"; sed 's/^/         /' "$TMP/run.err"; }
-  g="$(aot_door "$prog")"
-  [ "$g" = "$want" ] && ok "$name: AOT door => $g" \
-    || { bad "$name: AOT door => [$g] (expected [$want])"; sed 's/^/         /' "$TMP/aot.err"; }
-  g="$(repl_door "$prog")"
-  [ "$g" = "$want" ] && ok "$name: REPL door => $g" \
-    || { bad "$name: REPL door => [$g] (expected [$want])"; sed 's/^/         /' "$TMP/repl.err"; }
+  g="$(run_program "$prog")"
+  [ "$g" = "$want" ] && ok "$name: emit run command => $g" \
+    || { bad "$name: emit run command => [$g] (expected [$want])"; sed 's/^/         /' "$TMP/run.err"; }
+  g="$(build_and_run_program "$prog")"
+  [ "$g" = "$want" ] && ok "$name: AOT path => $g" \
+    || { bad "$name: AOT path => [$g] (expected [$want])"; sed 's/^/         /' "$TMP/aot.err"; }
+  g="$(eval_repl_program "$prog")"
+  [ "$g" = "$want" ] && ok "$name: REPL => $g" \
+    || { bad "$name: REPL => [$g] (expected [$want])"; sed 's/^/         /' "$TMP/repl.err"; }
 }
 
 # --- (scheme cxr): the nine that moved ------------------------------------------
@@ -139,7 +139,7 @@ relocated_case read '(scheme read)' \
   '(read (open-input-string "(alpha 2 #t)"))' '(alpha 2 #t)'
 
 # --- (scheme file) --------------------------------------------------------------
-# Each case writes and reads under $TMP so the doors do not share state.
+# Each case writes and reads under $TMP so the paths do not share state.
 printf '(gamma delta)\n' > "$TMP/in.txt"
 relocated_case open-input-file '(scheme file)' \
   "(read-line (open-input-file \"$TMP/in.txt\"))" '"(gamma delta)"'
@@ -159,7 +159,7 @@ relocated_case call-with-input-file '(scheme file)' \
 # ---------------------------------------------------------------------------
 echo
 echo "the depth-2 accessors stay in (scheme base)"
-g="$(run_door '(list (caar (quote ((1 2)))) (cadr (quote (1 2))) (cdar (quote ((1 2)))) (cddr (quote (1 2 3))))')"
+g="$(run_program '(list (caar (quote ((1 2)))) (cadr (quote (1 2))) (cdar (quote ((1 2)))) (cddr (quote (1 2 3))))')"
 [ "$g" = "(1 2 (2) (3))" ] \
   && ok "caar/cadr/cdar/cddr need no import => $g" \
   || bad "depth-2 accessors with no import => [$g] (expected (1 2 (2) (3)))"
@@ -174,7 +174,7 @@ echo "(scheme cxr) ships complete (design D9)"
 # A FULLY NESTED pair tree of depth 4, so every one of the 24 paths lands on a pair (at
 # depth 3) or a leaf (at depth 4).  A proper list will not do: (caddar T) on a list-shaped
 # tree walks off the end and traps, which is how this check first failed.
-g="$(run_door '(import (scheme cxr))
+g="$(run_program '(import (scheme cxr))
 (define d (quote ((((1 . 2) . (3 . 4)) . ((5 . 6) . (7 . 8))) . (((9 . 10) . (11 . 12)) . ((13 . 14) . (15 . 16))))))
 (define (same? a b) (if (equal? a b) 1 0))
 (apply + (list
@@ -229,7 +229,7 @@ echo "the substrate's single-homed state (design D10)"
 # A port made by (scheme file) crosses into (scheme base) procedures.  If the port type
 # descriptor were duplicated per library these would all be #f: record types compare by
 # object identity.
-g="$(run_door "(import (scheme file))
+g="$(run_program "(import (scheme file))
 (define p (open-input-file \"$TMP/in.txt\"))
 (define r (list (port? p) (input-port? p) (textual-port? p) (port-closed? p)))
 (close-port p)
@@ -241,13 +241,13 @@ g="$(run_door "(import (scheme file))
 # The exception handler chain is ONE binding: (scheme read)'s own copy of the port guard
 # raises through the same chain a program's `guard` installs.  With *handlers* duplicated
 # into a library this would abort instead of returning 'caught.
-g="$(run_door '(import (scheme read))
+g="$(run_program '(import (scheme read))
 (guard (e (#t (list (quote caught) (error-object? e)))) (read 5))')"
 [ "$g" = "(caught #t)" ] \
   && ok "an error from relocated machinery is catchable by guard => $g" \
   || bad "guard across the library boundary => [$g] (expected (caught #t))"
 
-g="$(run_door '(import (scheme file))
+g="$(run_program '(import (scheme file))
 (guard (e (#t (quote caught))) (open-input-file "/nonexistent/emit/partition/test"))')"
 [ "$g" = "caught" ] \
   && ok "(scheme file) reports a missing file as a catchable error => $g" \

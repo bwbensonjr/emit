@@ -16,7 +16,7 @@ Three constraints shape every decision below.
    evaluated by Chez) and the driver supplies its own independent implementation.
    Exploration `library-sources-and-artifacts.md` Finding 3 reached the same conclusion for
    `include` before any of this was written.
-3. **The core is handed source *text*, never a path.** Every Chez-free door reads the file in C++
+3. **The core is handed source *text*, never a path.** Every Chez-free path reads the file in C++
    (`read_file`) and pushes the text through `rt_repl_set`. Nothing downstream knows where the text
    came from — and `include` needs to, because a filename in a `.sld` means "beside this `.sld`".
 
@@ -24,7 +24,7 @@ Three constraints shape every decision below.
 
 **Goals:**
 
-- All four declarations work, identically, on every door: the Chez driver, `emit run`, `emit build`,
+- All four declarations work, identically, on every path: the Chez driver, `emit run`, `emit build`,
   `emit lib`, and the REPL's library loader.
 - The core keeps its I/O-free property, and the Chez driver keeps `include` (a `%`-op read in
   `src/core.ss` would cost it).
@@ -64,37 +64,37 @@ the reason the expansion must run *before* the loop rather than inside it.
 splice body forms, so the loop would recurse into itself with two different accumulators, and the
 import validator would need calling from three places instead of one.
 
-### D2 — The reader is a door-installed side-channel, not a threaded parameter
+### D2 — The reader is a path-installed side-channel, not a threaded parameter
 
 `src/core.ss` gains `*include-reader*` plus `set-include-reader!`, and calls
 `(*include-reader* who filename base)` to obtain a file's forms. Default: a stub that raises
-`include: this door installed no source reader ("f.scm")` — a named, recoverable error, not a crash.
+`include: this path installed no source reader ("f.scm")` — a named, recoverable error, not a crash.
 
 `dump` is threaded as a parameter, and this is not, deliberately. `parse-define-library` is called
-from the batch doors, the REPL's library loader, the baked-set builder, the driver's toposort, and
-`emit lib`'s export-table mode; threading a reader through all of them touches every door for the
+from the batch paths, the REPL's library loader, the baked-set builder, the driver's toposort, and
+`emit lib`'s export-table mode; threading a reader through all of them touches every path for the
 benefit of one declaration, and the baked path would have to invent a reader it never uses. A
-door-installed global is the same shape as `*dumpf*` in `src/compile.ss` and keeps the core's
-property intact: **the core still performs no I/O — it calls a procedure a door gave it.**
+path-installed global is the same shape as `*dumpf*` in `src/compile.ss` and keeps the core's
+property intact: **the core still performs no I/O — it calls a procedure a path gave it.**
 
-### D3 — The reader takes the filename *as written*; the door owns resolution
+### D3 — The reader takes the filename *as written*; the path owns resolution
 
 The core passes the literal string from the source and receives back `(TOKEN . FORMS)`. It never
 joins, splits, or normalizes a path — it has no path type and no business acquiring one. Path
-resolution, "is this absolute", and the base directory all live in the door's closure. This is what
+resolution, "is this absolute", and the base directory all live in the path's closure. This is what
 keeps D1 portable across a Chez `input-port` and a `%read-file` slurp with no shared notion of a
 filesystem.
 
-TOKEN is the door's identity for the file it read — its resolved path — and is **opaque** to the
+TOKEN is the path's identity for the file it read — its resolved path — and is **opaque** to the
 core, which only passes it back as the next call's base and compares it for the cycle check. The
 core needs it because expansion of an included file happens *after* the reader returned: the
-reader's dynamic extent is not the file's, so a door-side "current file" variable would already be
+reader's dynamic extent is not the file's, so a path-side "current file" variable would already be
 wrong by the time a nested `include` is reached.
 
-### D4 — A door tells the compiler where the source came from via a new mode
+### D4 — A path tells the compiler where the source came from via a new mode
 
 New `rt_repl_set` mode: **set source home**, taking the directory of the source about to be
-compiled. The Chez-free doors call it before modes 4 (load a library unit), 7 (compile a program),
+compiled. The Chez-free paths call it before modes 4 (load a library unit), 7 (compile a program),
 11 (`emit lib`'s export table), and 12 (a source's imports). The Chez driver sets the same state
 directly. `src/include-reader.ss` builds its reader over that state and `%read-file`.
 
@@ -148,7 +148,7 @@ flags — a non-goal above. A version identifier (`emit-0.1.0`) becomes availabl
 
 R7RS lets a feature requirement be `(library (scheme base))`, meaning "this library is available".
 Answering it truthfully requires the manifest chain — which the parser does not see, and which
-differs per door — and a *wrong* answer is the worst failure this change could introduce, because it
+differs per path — and a *wrong* answer is the worst failure this change could introduce, because it
 silently selects the other clause and reports nothing. So it is named and refused, taking over the
 "a recognized R7RS form this stage does not support" message that `include` and `cond-expand` are
 vacating. Everything else — feature identifiers, `and`, `or`, `not`, `else` — is supported.
@@ -179,7 +179,7 @@ replaces the mtime rule the cache already uses with a second one.
 
 ### D11 — The imports query splices before answering
 
-Mode 12 answers "which libraries does this source import" and drives the run door's lazy preload
+Mode 12 answers "which libraries does this source import" and drives the `emit run` command's lazy preload
 closure. An `import` can now arrive through `include-library-declarations` or a `cond-expand` clause,
 so the query must run the D1 expansion — otherwise the closure walk misses a dependency and the
 program fails with `unresolved or cyclic import (dependency missing from manifest?)`, blaming the
@@ -203,10 +203,10 @@ question 4 of `library-sources-and-artifacts.md`.
   rather than a parse error → the equivalence suites already diff the two hosts' output; add an
   included file that deliberately exercises brackets, `#| |#`, quasiquote, and characters, so the
   suites are actually looking at this.
-- **A door that forgets to set the source home resolves against the current directory.** Silent and
+- **A path that forgets to set the source home resolves against the current directory.** Silent and
   correct-looking from the repo root, wrong from anywhere else — the exact failure mode
   `manifest-search-path` and `baked-set-on-every-door` each had to fix once → the new suite runs from
-  a temporary directory outside the repo, the way `test/project-door-tests.sh` does, on every door.
+  a temporary directory outside the repo, the way `test/project-command-tests.sh` does, on every path.
 - **"The source" is no longer one file**, so anything keyed on the source path — narration lines,
   dump tags, the stamp — is now describing a set → narration names the included files at verbose
   level, and the stamp holds the list (D10).

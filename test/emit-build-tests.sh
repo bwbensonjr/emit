@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# emit-build-tests.sh -- the `emit build` door + Chez-free program-entry resolver
+# emit-build-tests.sh -- the emit build path + Chez-free program-entry resolver
 # (change: emit-build-bin-entry; unified under one binary by emit-cli-unification).
 # Chez-FREE: drives `emit run --resolve-program` (mode 10) to resolve a manifest
-# `(program NAME (source S) [(output O)])` entry, and `emit build` to deliver a
-# standalone native executable through the Chez-free AOT door -- now entirely within
+# `(program NAME (source S) [(output O)])` entry, and emit build to deliver a
+# standalone native executable through the Chez-free AOT path -- now entirely within
 # the compiled `build/emit` binary (it emits the IR in-process and forks clang).
 # Parity is against emitting the resolved source's IR and linking it directly -- one
 # compile-unit core, no second compilation path.

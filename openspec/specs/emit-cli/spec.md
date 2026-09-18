@@ -3,25 +3,25 @@
 ## Purpose
 
 Defines the single compiled `emit` binary as the sole user-facing entry point to the
-compiler's four doors — `lib`, `build`, `run`, and `repl` — dispatched by verb. It
+compiler's four commands — `lib`, `build`, `run`, and `repl` — dispatched by verb. It
 covers verb dispatch and usage errors, the Chez-free in-process runner (`emit run`), the
-interactive REPL (`emit repl`), the compile-unit door (`emit lib`), the self-contained
+interactive REPL (`emit repl`), the compile-unit command (`emit lib`), the self-contained
 build/lib pipeline (no external bash wrapper), and the self-hosting bootstrap driven
 through `emit`.
 ## Requirements
 ### Requirement: Single `emit` binary is the sole user-facing entry point
 
 The project SHALL ship one compiled `emit` binary that is the sole user-facing entry
-point to the compiler's four doors. It SHALL dispatch on its first argument (the
+point to the compiler's four commands. It SHALL dispatch on its first argument (the
 *verb*) to `lib`, `build`, `run`, or `repl`, and SHALL report a usage error naming the
 known verbs when given an unknown or missing verb. The previously separate entry
 points (`build/scheme-run`, `build/repl-host`, `bin/scheme-compile`, and the `bin/emit`
 bash wrapper) SHALL be removed; no user-facing invocation depends on them.
 
-#### Scenario: A verb dispatches to its door
+#### Scenario: A verb dispatches to its command
 
 - **WHEN** the user runs `emit run`, `emit repl`, `emit build`, or `emit lib`
-- **THEN** the corresponding door executes
+- **THEN** the corresponding command executes
 
 #### Scenario: An unknown verb is an error
 
@@ -33,7 +33,7 @@ bash wrapper) SHALL be removed; no user-facing invocation depends on them.
 
 - **WHEN** the repository is built
 - **THEN** no `build/scheme-run`, `build/repl-host`, `bin/scheme-compile`, or
-  `bin/emit` is produced or required; every door is reached through `emit <verb>`
+  `bin/emit` is produced or required; every command is reached through `emit <verb>`
 
 ### Requirement: `emit run` runs a program in-process (Chez-free)
 
@@ -69,14 +69,14 @@ compilation, and manifest-driven `import`.
   evaluates an expression using its export
 - **THEN** the session behaves exactly as the prior `repl-host` did
 
-### Requirement: `emit lib` compiles one library to an artifact (compile-unit door)
+### Requirement: `emit lib` compiles one library to an artifact (compile-unit command)
 
 `emit lib SRC [-o DIR] [--manifest F]` SHALL compile a single `define-library` source
 to its artifact — the unit IR (`<name>.ll`) and the readable export table
 (`<name>.exports`) — Chez-free, where `<name>` is derived from the library's
 `define-library` name. Artifacts SHALL default under `build/lib` and be written under
 `DIR` when `-o` is given. The emitted unit IR SHALL be byte-for-byte identical to the
-unit the AOT and REPL doors produce for the same source (one compile-unit core).
+unit the AOT and REPLs produce for the same source (one compile-unit core).
 
 `emit lib` SHALL compile a library whose body resolves names through the library's **imports**, not
 only an import-free library. It SHALL therefore register the baked library set and resolve the
@@ -85,7 +85,7 @@ importing another manifest-resolvable library, or both, compiles successfully. B
 be derived from **one** compile session with one import environment, so the export table cannot
 describe a different resolution than the unit IR does.
 
-An import the door cannot resolve — a library that is neither a member of the baked set nor named in
+An import the command cannot resolve — a library that is neither a member of the baked set nor named in
 the manifest — SHALL be reported as an error naming the unresolved library, and no artifact SHALL be
 written.
 
@@ -93,7 +93,7 @@ written.
 
 - **WHEN** `emit lib test/modules/mylib.sld -o build/lib` is run
 - **THEN** it writes `build/lib/mylib.ll` and `build/lib/mylib.exports`, with the `.ll`
-  byte-identical to the unit the other doors emit for `mylib`
+  byte-identical to the unit the other compilation paths emit for `mylib`
 
 #### Scenario: The export table lists the library's exports
 
@@ -148,16 +148,16 @@ the removed `scheme-run`, and SHALL still reach a byte-stable fixed point (a cle
 - **WHEN** `make regen` runs from a clean tree using `emit`
 - **THEN** the regenerated `bootstrap/*.ll` are byte-identical to the committed ones
 
-### Requirement: Every door accepts `--dump` for per-pass stage inspection
+### Requirement: every command accepts `--dump` for per-pass stage inspection
 
 `emit run`, `emit build`, `emit lib`, and `emit repl` SHALL accept a `--dump` flag that
 prints the intermediate language after each named compiler pass. The flag SHALL also be
 settable through the environment so that tools and scripts can enable it without editing a
 command line. All dump output SHALL be written to standard error; the flag SHALL NOT alter
-what any door writes to standard output, and SHALL NOT alter the delivered executable, the
+what any command writes to standard output, and SHALL NOT alter the delivered executable, the
 library artifact, or the value a program computes.
 
-#### Scenario: `--dump` on the run door
+#### Scenario: `--dump` on the `emit run` command
 
 - **WHEN** `emit run --dump FILE` is run
 - **THEN** the IL after each named pass is printed to standard error, and the program's
@@ -169,14 +169,14 @@ library artifact, or the value a program computes.
   `emit run --emit --dump`
 - **THEN** the bytes written to standard output are byte-for-byte identical
 
-#### Scenario: `--dump` on the lib door
+#### Scenario: `--dump` on the `emit lib` command
 
 - **WHEN** `emit lib SRC --dump` compiles a library
 - **THEN** the stages of that library's unit compilation are printed to standard error, and
   the written `.ll` and `.exports` artifacts are byte-identical to those written without
   `--dump`
 
-#### Scenario: `--dump` on the build door
+#### Scenario: `--dump` on the `emit build` command
 
 - **WHEN** `emit build NAME --dump` delivers a native executable
 - **THEN** the stages are printed to standard error and the delivered executable behaves
@@ -190,7 +190,7 @@ library artifact, or the value a program computes.
 
 #### Scenario: The environment enables dumping
 
-- **WHEN** a door is run with the dump environment variable set and no `--dump` on the
+- **WHEN** a command is run with the dump environment variable set and no `--dump` on the
   command line
 - **THEN** it dumps as if `--dump` had been passed
 
@@ -213,9 +213,9 @@ any preloaded manifest libraries.
 - **THEN** the dump additionally contains the stages of `(scheme base)` and of each
   preloaded manifest library, each identified by its library name
 
-### Requirement: A door's diagnostics name that door, not the compiler's internal mode
+### Requirement: A command's diagnostics name that command, not the compiler's internal mode
 
-A diagnostic a door prints SHALL be prefixed by the invoked door's name and SHALL NOT carry the
+A diagnostic a command prints SHALL be prefixed by the invoked command's name and SHALL NOT carry the
 name of the embedded compiler's internal REPL orchestration. A compile error surfaced by `emit lib`,
 `emit run`, or `emit build` SHALL therefore read `emit <verb>: <message>` with no interior `repl:`
 segment, so the message names the tool the user ran.
@@ -230,18 +230,18 @@ segment, so the message names the tool the user ran.
 
 - **WHEN** an interactive form in `emit repl` fails to compile
 - **THEN** the session reports the error and continues exactly as before, since the prefix removal
-  applies to the diagnostics the non-REPL doors print
+  applies to the diagnostics the non-REPLs print
 
 ### Requirement: A diagnostic that names a datum renders that datum
 
-When a door's diagnostic reports a value the user wrote — a library name, a form, a literal — it
+When a command's diagnostic reports a value the user wrote — a library name, a form, a literal — it
 SHALL render that value's external representation rather than a placeholder. A diagnostic SHALL NOT
 print `?` in place of a datum it is reporting.
 
-This applies to error irritants on every door, not only the interactive one: the doors share one
+This applies to error irritants on every command, not only the interactive one: the commands share one
 error-rendering path, so an irritant that renders as a placeholder loses the same information
 wherever it surfaces. The renderer SHALL handle at minimum symbols, strings, numbers, booleans,
-characters, the empty list, pairs and proper lists, vectors, and bytevectors — the data a door's
+characters, the empty list, pairs and proper lists, vectors, and bytevectors — the data a path's
 diagnostics can be handed.
 
 Where the rendering is genuinely impossible for a datum, the diagnostic SHALL say so rather than
@@ -253,14 +253,14 @@ substituting a placeholder that reads as if it were the value.
 - **THEN** the diagnostic names `(bad)` — the library name the user typed — rather than reporting
   `imported library not loaded ?`
 
-#### Scenario: A list irritant renders on a non-interactive door
+#### Scenario: A list irritant renders on a non-interactive execution path
 
-- **WHEN** any door reports an error whose irritant is a list
+- **WHEN** any command reports an error whose irritant is a list
 - **THEN** the diagnostic renders that list's external representation
 
 #### Scenario: A vector irritant renders
 
-- **WHEN** a door reports an error whose irritant is a vector or bytevector
+- **WHEN** a command reports an error whose irritant is a vector or bytevector
 - **THEN** the diagnostic renders it as `#(...)` or `#u8(...)` rather than `?`
 
 #### Scenario: The session survives the improved diagnostic
@@ -268,7 +268,7 @@ substituting a placeholder that reads as if it were the value.
 - **WHEN** an interactive form fails with a rendered diagnostic
 - **THEN** the session restores its snapshot and the next form still evaluates, as it does today
 
-### Requirement: Every door answers `--help` and rejects an unknown option
+### Requirement: every command answers `--help` and rejects an unknown option
 
 Asking `emit` what it does SHALL succeed. `--help` and `-h` SHALL be accepted at the top level and
 in every verb's option loop, SHALL print usage, and SHALL exit with a success status. They SHALL NOT
@@ -289,8 +289,8 @@ redirection. Usage printed *as part of an error* SHALL remain on standard error 
 diagnostic, and the process SHALL exit non-zero as it does today (missing verb, unknown verb,
 unknown option).
 
-**Every door SHALL reject an unknown option**, naming the door and the option, and exit non-zero. No
-door SHALL silently ignore an option it does not recognize — a mistyped flag that changes nothing
+**Every command SHALL reject an unknown option**, naming the command and the option, and exit non-zero. No
+command SHALL silently ignore an option it does not recognize — a mistyped flag that changes nothing
 and reports nothing is indistinguishable from one that worked.
 
 #### Scenario: Top-level help succeeds
@@ -318,14 +318,14 @@ and reports nothing is indistinguishable from one that worked.
 - **THEN** the diagnostic and the usage summary are printed on standard error and the process exits
   non-zero, as before
 
-#### Scenario: An unknown option is rejected by every door
+#### Scenario: An unknown option is rejected by every command
 
 - **WHEN** any of `emit run`, `emit repl`, `emit build`, or `emit lib` is given an option it does not
   recognize
-- **THEN** it reports the door and the offending option and exits non-zero, rather than ignoring the
+- **THEN** it reports the command and the offending option and exits non-zero, rather than ignoring the
   option and proceeding
 
-### Requirement: The shipped JIT doors expose an optimization profile
+### Requirement: The shipped JIT commands expose an optimization profile
 
 `emit run` and `emit repl` SHALL accept exactly the optimization options `-O0`, `-O1`, and
 `-O2`.  With no explicit option they SHALL use `-O1`.  `-O0` SHALL preserve the unoptimized JIT
@@ -333,8 +333,8 @@ backend behavior for diagnosis and measurement, while `-O1` and `-O2` SHALL sele
 stronger standard LLVM optimization profiles before JIT execution.
 
 At most one optimization option SHALL be accepted per invocation.  An unsupported level or
-conflicting levels SHALL be a usage error naming the invoked door and offending options.  The
-`build` and `lib` doors SHALL continue to reject these JIT-only options as unknown.  The `run` and
+conflicting levels SHALL be a usage error naming the invoked command and offending options.  The
+`build` and `lib` commands SHALL continue to reject these JIT-only options as unknown.  The `run` and
 `repl` help text SHALL list the options and identify `-O1` as the default.
 
 #### Scenario: Run defaults to the development profile
@@ -357,12 +357,12 @@ conflicting levels SHALL be a usage error naming the invoked door and offending 
 
 #### Scenario: Unsupported and conflicting profiles are usage errors
 
-- **WHEN** a JIT door is passed an unsupported level such as `-O3`, or more than one of
+- **WHEN** a JIT execution path is passed an unsupported level such as `-O3`, or more than one of
   `-O0`, `-O1`, and `-O2`
-- **THEN** it names the door and options on standard error and exits non-zero without compiling
+- **THEN** it names the command and options on standard error and exits non-zero without compiling
   or running user source
 
-#### Scenario: Non-JIT doors reject a JIT profile
+#### Scenario: Non-JIT commands reject a JIT profile
 
 - **WHEN** `emit build` or `emit lib` is passed `-O0`, `-O1`, or `-O2`
 - **THEN** it rejects the option as unknown rather than changing its existing backend profile
@@ -400,7 +400,7 @@ option SHALL be a usage error rather than a successful invocation that ignored t
 
 ### Requirement: emit run separates tool options from program arguments
 
-The executing form of the run door SHALL accept `emit run [OPTIONS] [FILE] [-- ARG ...]`. Before
+The executing form of the `emit run` command SHALL accept `emit run [OPTIONS] [FILE] [-- ARG ...]`. Before
 `--`, existing Emit options SHALL retain their meanings, at most one positional source file SHALL be
 accepted, and unknown options SHALL still be rejected. After `--`, every token SHALL be forwarded to
 the Scheme program unchanged and SHALL NOT be interpreted by Emit. Program arguments SHALL be a
@@ -415,19 +415,19 @@ usage error with a non-executing mode such as `--emit` or `--resolve-program`.
 #### Scenario: An unknown tool option remains an error
 
 - **WHEN** `emit run --bogus cli.scm` is invoked without a separator
-- **THEN** the door reports `--bogus` as an unknown Emit option and exits non-zero
+- **THEN** the command reports `--bogus` as an unknown Emit option and exits non-zero
 
 #### Scenario: Multiple source files are rejected
 
 - **WHEN** two positional source files appear before `--`
-- **THEN** the door reports a usage error rather than silently using the last file
+- **THEN** the command reports a usage error rather than silently using the last file
 
 #### Scenario: Arguments conflict with emit-only mode
 
 - **WHEN** `emit run --emit cli.scm -- value` is invoked
-- **THEN** the door reports that program arguments require execution and emits no IR
+- **THEN** the command reports that program arguments require execution and emits no IR
 
-### Requirement: Every library-aware door accepts conventional library roots
+### Requirement: Every library-aware command accepts conventional library roots
 
 `emit run`, `emit repl`, `emit build`, and `emit lib` SHALL accept repeatable `-L DIR` and
 `--library-path DIR` options, preserving their command-line order. They SHALL also read a
@@ -435,14 +435,14 @@ host-path-list from `EMIT_LIBRARY_PATH` after explicit roots and before default 
 roots. An empty path-list element SHALL be rejected rather than interpreted as the current
 directory.
 
-Each door SHALL accept `--no-library-paths`, which disables explicit, environment, project-default,
+Each command SHALL accept `--no-library-paths`, which disables explicit, environment, project-default,
 and installed conventional roots while retaining baked and manifest providers. All verb help SHALL
 document the options, environment variable, precedence, path derivation example, and relationship to
 `--no-manifest-chain`.
 
-#### Scenario: Repeated explicit roots are accepted by every door
+#### Scenario: Repeated explicit roots are accepted by every command
 
-- **WHEN** any library-aware door receives `-L first --library-path second`
+- **WHEN** any library-aware command receives `-L first --library-path second`
 - **THEN** both roots participate in that order and the first matching library wins
 
 #### Scenario: Environment roots follow explicit roots
@@ -453,15 +453,15 @@ document the options, environment variable, precedence, path derivation example,
 #### Scenario: Empty environment elements are rejected
 
 - **WHEN** `EMIT_LIBRARY_PATH` contains an empty element
-- **THEN** the invoked door reports a configuration error rather than adding the current directory
+- **THEN** the invoked command reports a configuration error rather than adding the current directory
 
 #### Scenario: Conventional lookup can be disabled
 
-- **WHEN** a door is invoked with `--no-library-paths`
+- **WHEN** a command is invoked with `--no-library-paths`
 - **THEN** it probes no conventional root and continues to resolve baked and exact manifest entries
 
 #### Scenario: Help explains zero-mapping project layout
 
-- **WHEN** help is requested for a library-aware door
+- **WHEN** help is requested for a library-aware command
 - **THEN** it shows how `(my stats)` maps to `my/stats.sld` beneath a root and names the available
   root configuration and opt-out controls

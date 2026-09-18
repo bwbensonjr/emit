@@ -21,7 +21,7 @@ baseline measurement retired that half.** P12 records the reader as ~20% slower 
 `reader-lexical-conformance`. Measured against the pre-regression tree (b102070, built in a
 worktree) on one reproducible 200k-token input:
 
-| door | pre-regression | HEAD | delta |
+| path | pre-regression | HEAD | delta |
 |---|---|---|---|
 | `emit run`, total wall clock | 3.72 s | 4.47 s | +20.2% |
 | — of which fixed compile + JIT | 0.61 s | 0.83 s | +0.22 s |
@@ -29,7 +29,7 @@ worktree) on one reproducible 200k-token input:
 | `emit build` binary (AOT `-O2 -flto`) | 2.84 s | 2.84 s | **none** |
 | Chez-hosted (min of 20) | 33.0 ms | 36.5 ms | +10.6% |
 
-Medians of five interleaved runs on an idle machine. The fixed row is easy to miss and matters: `emit run` JIT-compiles the baked set first, and `reader-lexical-conformance` grew `(emit internal)` 170,716 → 289,754 B, so 0.22 s of the 0.75 s delta is compiling a larger substrate rather than reading. The regression is real on the **unoptimized dev door** and absent
+Medians of five interleaved runs on an idle machine. The fixed row is easy to miss and matters: `emit run` JIT-compiles the baked set first, and `reader-lexical-conformance` grew `(emit internal)` 170,716 → 289,754 B, so 0.22 s of the 0.75 s delta is compiling a larger substrate rather than reading. The regression is real on the **unoptimized development path** and absent
 from the shipped artifact: `emit run` builds a plain `LLJITBuilder().create()` with no IR
 optimization pipeline (`src/emit.cpp:839`), while the AOT link passes `-O2 -flto`
 (`src/emit.cpp:1337`; `ship-opt`/`ship-lto` at `src/compile.ss:299`). P12 measured `emit run` and
@@ -49,22 +49,22 @@ redirected at the item it actually found.
   Reading is unchanged in every other respect, and the fold applies on the symbol arm only, so it
   cannot reach a number's text.
 
-- **`include-ci` folds at read time, on both hosts.** The Emit door (`src/include-reader.ss`) calls
-  the fold-aware entry; the Chez driver door (`src/compile.ss`) reads under Chez's `case-sensitive`
-  parameter, which already leaves `|MixedCase|` alone. Neither door needs a protocol change — the
-  core already passes `who` to the reader, so `include-ci` is distinguishable at the door.
+- **`include-ci` folds at read time, on both hosts.** The Emit path (`src/include-reader.ss`) calls
+  the fold-aware entry; the Chez driver path (`src/compile.ss`) reads under Chez's `case-sensitive`
+  parameter, which already leaves `|MixedCase|` alone. Neither path needs a protocol change — the
+  core already passes `who` to the reader, so `include-ci` is distinguishable at the path.
 
 - **`fold-datum-case` and its helpers are deleted from `src/core.ss`.** The post-read fold has no
-  remaining caller once both doors fold at read time. This also closes a second defect in passing:
+  remaining caller once both paths fold at read time. This also closes a second defect in passing:
   `fold-datum-case` walks symbols and pairs with `else x`, so a symbol inside a `#(...)` vector
   literal is not folded today.
 
-- **P12 is rewritten, not ticked**: the corrected measurement, the corrected scope (dev door only),
+- **P12 is rewritten, not ticked**: the corrected measurement, the corrected scope (development path only),
   and a reproducible benchmark generator committed so the next measurement compares against the same
-  bytes rather than a similar-sounding file. Its remaining value is re-rated against the door it
+  bytes rather than a similar-sounding file. Its remaining value is re-rated against the path it
   actually affects.
 
-- **A new `docs/PERFORMANCE.md` item** for what the measurement found: the JIT/REPL door runs no IR
+- **A new `docs/PERFORMANCE.md` item** for what the measurement found: the JIT/REPL runs no IR
   optimization pipeline, so every JITted program pays full per-call overhead. That is a far larger
   lever than one hand-folded classifier chain, and it is what P12's numbers were really measuring.
 
@@ -100,8 +100,8 @@ None. The change modifies behavior already specified.
 - `src/prelude-surface.scm` — homing and the exported-name classification for the new entry.
 - `src/core.ss` — `fold-datum-case`, `fold-string-case`, `fold-char-case` deleted; the `fold?`
   parameter drops out of `included-body-forms`.
-- `src/include-reader.ss` — the Emit door dispatches on `who`.
-- `src/compile.ss` — the Chez door reads `include-ci` under `case-sensitive`.
+- `src/include-reader.ss` — the Emit path dispatches on `who`.
+- `src/compile.ss` — the Chez path reads `include-ci` under `case-sensitive`.
 - `tools/gen-reader-bench.ss` — new; the benchmark generator P12 lacked.
 - `docs/PERFORMANCE.md` (P12 rewritten, one item added), `docs/MODULES.md` (the `include-ci` bullet
   naming the gap).

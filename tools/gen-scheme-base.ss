@@ -16,7 +16,7 @@
 ;;; constant).
 ;;;
 ;;; The portable derivation (scheme-base-export-names, src/core.ss) reads the SAME two
-;;; files, so the driver's and the run door's export lists cannot disagree.
+;;; files, so the driver's and the emit run command's export lists cannot disagree.
 ;;;
 ;;; This file is GENERATED.  Edit src/prelude.scm (or the surface declaration), then:
 ;;;   chez --script tools/gen-scheme-base.ss

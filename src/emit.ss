@@ -167,10 +167,10 @@
 ;;   1. LLVM rejects a `double` constant carrying neither '.' nor the 0x form, so
 ;;      `(* 100.0 2.0)` emitted `fmul double 1e+02, 2.0` and the module would not
 ;;      parse -- self-hosted only, because Chez prints `100.0`.
-;;   2. Even where it parsed, the emitted TEXT differed by door: Chez prints
+;;   2. Even where it parsed, the emitted TEXT differed by path: Chez prints
 ;;      `1e15`/`1.23e-4`/`5e-324|1` where Emit's %g loop prints
 ;;      `1e+15`/`0.000123`/`5e-324`.  Same value, same digits, different framing --
-;;      and IR text that depends on which door compiled it is a fidelity break
+;;      and IR text that depends on which path compiled it is a fidelity break
 ;;      whether or not it parses.
 ;;
 ;; Both printers produce the SHORTEST ROUND-TRIPPABLE DIGITS (which are unique);
@@ -216,7 +216,7 @@
 
 ;; A printed flonum -> (SIGN DIGITS POINT), where the value is
 ;; SIGN 0.DIGITS x 10^POINT, DIGITS has no leading or trailing zero, and DIGITS is
-;; "" exactly for zero.  Handles both doors' framing and Chez's `|BITS` suffix.
+;; "" exactly for zero.  Handles both paths' framing and Chez's `|BITS` suffix.
 (define (flonum-parts s0)
   (let* ([bar (str-index s0 #\|)] ; Chez subnormal annotation
          [s1 (if (< bar 0) s0 (substring s0 0 bar))]
@@ -275,7 +275,7 @@
           (string-append sign
                          (if (<= (string-length pos) (string-length sci)) pos sci))))))
 
-;; The non-finite values, classified off the PRINTED text: both doors print
+;; The non-finite values, classified off the PRINTED text: both paths print
 ;; +inf.0/-inf.0/+nan.0, so this needs no float comparison (and no primitive that
 ;; the Chez host, which EVALUATES this file, would not have).
 (define (flonum-inf+nan-text s)
@@ -427,7 +427,7 @@
         ;; inexact real (flonum) literal (change: inexact-numbers): emit its canonical
         ;; decimal as a C string constant and rebuild the flonum at runtime with
         ;; rt_flonum_lit (strtod, correctly rounded -> the same double).  The text comes
-        ;; from flonum-lit-text, NOT the host printer, so it is identical on every door
+        ;; from flonum-lit-text, NOT the host printer, so it is identical on every compilation path
         ;; (change: numeric-conformance, design D1).  Placed after the
         ;; exact/char/symbol/string/pair clauses; an integral flonum (3.0) reaches here
         ;; because it fails clause 1's exact? test.
@@ -565,7 +565,7 @@
       ;; slot would be collected (change: repl-embedded-incremental).
       ;; let* (not let): `op` (which emits and allocates temps) MUST evaluate before
       ;; the result temp, so temp numbering is identical under Chez (right-to-left
-      ;; let) and the embedded compiler (left-to-right) -- the cross-door unit
+      ;; let) and the embedded compiler (left-to-right) -- the cross-path unit
       ;; byte-identity guarantee (change: module-artifacts-vertical-slice).
       ;;
       ;; The node's VALUE is the unspecified immediate, not the stored value (change:
@@ -575,7 +575,7 @@
       ;; disagree, and made a top-level `(define f (lambda ...))` echo `#<procedure>` at
       ;; the REPL as though the definition evaluated TO the procedure.  `t` is still bound:
       ;; the rt_root call and the store are unchanged, so temp numbering (and the
-      ;; cross-door byte-identity guarantee above) is unaffected -- only the operand a
+      ;; cross-path byte-identity guarantee above) is unaffected -- only the operand a
       ;; consumer sees changes, and in statement position there is no consumer at all.
       (let* ([op (ev e env cp tc?)] [t (fresh-temp)])
         (emit! (string-append t " = call i64 @rt_root(i64 " op ")"))
@@ -764,7 +764,7 @@
 
 (define (emit-inline-arith entry a b) ; guard -> fast op | slow rt_* call, joined by phi
   ;; let* throughout so temp/label numbering is fixed regardless of host
-  ;; argument-evaluation order (the cross-door byte-identity guarantee; see ev-if).
+  ;; argument-evaluation order (the cross-path byte-identity guarantee; see ev-if).
   (let* ([rt (cadr entry)]
          [kind (caddr entry)]
          [instr (cadddr entry)]
@@ -1535,8 +1535,8 @@
   ;; let* (not let): `emit-spill` both emits instructions and allocates temps, so it
   ;; MUST evaluate before the result temp -- a parallel `let` evaluates these two
   ;; side-effecting inits in host order (Chez right-to-left vs Emit left-to-right),
-  ;; which numbered the spill and the result differently on the two doors and broke
-  ;; the cross-door byte-identity of every unit exporting a variadic procedure
+  ;; which numbered the spill and the result differently on the two paths and broke
+  ;; the cross-path byte-identity of every unit exporting a variadic procedure
   ;; (issue #11; same rule as the global-set!/ev-if/et-if sites, fix-emit-eval-order).
   (let* ([slots (emit-spill (map (lambda (i) (string-append "%a" (number->string i)))
                                  (iota k)))]
@@ -1697,8 +1697,8 @@
 ;; --- external code labels (change: cross-unit-direct-calls) ------------------
 ;; A cross-unit direct call names a code label another unit defines, so the calling
 ;; module must `declare` it -- the same treatment an imported global gets, and it
-;; resolves the same way (at link time for the AOT door, in the JIT's dylib for the
-;; dev door).  No linkage change is needed on the defining side: a library's code
+;; resolves the same way (at link time for the AOT path, in the JIT's dylib for the
+;; development path).  No linkage change is needed on the defining side: a library's code
 ;; labels are already emitted with default (external) linkage.
 ;;
 ;; The set is recovered from the lowered form rather than threaded down, so one

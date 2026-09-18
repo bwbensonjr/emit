@@ -36,7 +36,7 @@ the riskiest emission and resolution changes independently of any new user-facin
   **foundational** requirements only — the typed binding-resolution model, the deterministic
   module-qualified symbol-naming ABI, and the guarantee that introducing this scaffolding
   preserves emitted IR for library-free programs. Later stages (define-library, export/import,
-  the two doors, prelude-as-`(scheme base)`) extend this same capability.
+  the two paths, prelude-as-`(scheme base)`) extend this same capability.
 
 ### Modified Capabilities
 <!-- None. The scaffolding is behavior-preserving: no existing capability's REQUIREMENTS

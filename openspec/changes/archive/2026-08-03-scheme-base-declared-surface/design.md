@@ -11,11 +11,11 @@ the source of truth for what it **exports** — the export list is derived twice
 2. **`scheme-base-library-form` (`src/core.ss:143-147`)** — the portable derivation, in the
    self-hosted compiler, working from the baked `*prelude-source*` string
    (`tools/regen.sh:66-73`) with no filesystem. It serves `emit run` / `emit build`
-   (`src/core.ss:167-183`, `src/entry-embed.scm:17`) and the run door's mode 8
+   (`src/core.ss:167-183`, `src/entry-embed.scm:17`) and the `emit run` command's mode 8
    (`src/repl-core.ss:421-431`).
 
 The two must agree in **content and order**: `test/prelude-base-run-tests.sh` pins that the run
-door's program module is byte-identical to the driver's `prog.ll`, and `run-with-scheme-base`
+path's program module is byte-identical to the driver's `prog.ll`, and `run-with-scheme-base`
 (`src/repl-core.ss:387-395`) exists only to keep the two compilation orders identical. Any fix has
 to be visible to both, and the portable one has no filesystem.
 
@@ -168,7 +168,7 @@ binary — to save two names.
 Baking the generated `.sld` would delete the dual derivation outright and shrink the baked string
 from ~65.6 KB to ~32.1 KB (the `.sld` has no comments), removing ~33 KB from each of `embed.ll` and
 `embed-repl.ll`. Rejected here because it makes a **Chez-generated** file load-bearing for the
-Chez-free build: a stale `base.sld` would silently give the run door a different surface, and
+Chez-free build: a stale `base.sld` would silently give the `emit run` command a different surface, and
 `run-all-tests.sh` is Chez-free by design. Revisit once `tools/gen-scheme-base.ss` can run under
 `build/emit run`; file as an issue.
 
@@ -194,7 +194,7 @@ identical `external global` lines and fail LLVM).
   Chez-free guard so it runs in the default suite.
 - **The three committed artifacts must land together** — `src/prelude-surface.scm`,
   `lib/scheme/base.sld`, `bootstrap/*.ll`. If `base.sld` shrinks while the baked compiler still
-  exports 213, the driver and the run door disagree and `test/prelude-base-run-tests.sh`'s
+  exports 213, the driver and the `emit run` command disagree and `test/prelude-base-run-tests.sh`'s
   byte-identity check goes red; `run-all-tests.sh` links `build/emit` from committed IR, so a stale
   `bootstrap/` tests the old policy → the task list keeps them in one commit each time.
 - **The compiler stamp changes** (a new entry in `compiler-source-files`), invalidating every cached

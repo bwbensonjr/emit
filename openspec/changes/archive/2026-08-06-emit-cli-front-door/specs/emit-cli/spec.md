@@ -1,6 +1,6 @@
 ## ADDED Requirements
 
-### Requirement: Every door answers `--help` and rejects an unknown option
+### Requirement: every path answers `--help` and rejects an unknown option
 
 Asking `emit` what it does SHALL succeed. `--help` and `-h` SHALL be accepted at the top level and
 in every verb's option loop, SHALL print usage, and SHALL exit with a success status. They SHALL NOT
@@ -21,8 +21,8 @@ redirection. Usage printed *as part of an error* SHALL remain on standard error 
 diagnostic, and the process SHALL exit non-zero as it does today (missing verb, unknown verb,
 unknown option).
 
-**Every door SHALL reject an unknown option**, naming the door and the option, and exit non-zero. No
-door SHALL silently ignore an option it does not recognize — a mistyped flag that changes nothing
+**every path SHALL reject an unknown option**, naming the path and the option, and exit non-zero. No
+path SHALL silently ignore an option it does not recognize — a mistyped flag that changes nothing
 and reports nothing is indistinguishable from one that worked.
 
 #### Scenario: Top-level help succeeds
@@ -50,9 +50,9 @@ and reports nothing is indistinguishable from one that worked.
 - **THEN** the diagnostic and the usage summary are printed on standard error and the process exits
   non-zero, as before
 
-#### Scenario: An unknown option is rejected by every door
+#### Scenario: An unknown option is rejected by every path
 
 - **WHEN** any of `emit run`, `emit repl`, `emit build`, or `emit lib` is given an option it does not
   recognize
-- **THEN** it reports the door and the offending option and exits non-zero, rather than ignoring the
+- **THEN** it reports the path and the offending option and exits non-zero, rather than ignoring the
   option and proceeding

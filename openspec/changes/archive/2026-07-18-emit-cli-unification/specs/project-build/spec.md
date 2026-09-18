@@ -1,6 +1,6 @@
 ## MODIFIED Requirements
 
-### Requirement: emit build matches the AOT door
+### Requirement: emit build matches the AOT path
 
 A program built through `emit build` SHALL produce a standalone executable whose
 observable behavior is identical to building that same source directly through the
@@ -18,7 +18,7 @@ runs that pipeline within the `emit` binary; it introduces no second compilation
 
 Resolving a `(program NAME …)` entry to its source and output SHALL be performed by
 the embedded compiler with no dependency on Chez, reusing the same manifest machinery
-the run door uses. `emit run` SHALL expose this via a `--resolve-program NAME` mode
+the `emit run` command uses. `emit run` SHALL expose this via a `--resolve-program NAME` mode
 that reads the manifest (`--manifest` > `EMIT_MANIFEST` > default `emit-libs.scm`) and
 prints the resolved source and output, without JIT-compiling or running any program.
 

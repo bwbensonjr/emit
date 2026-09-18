@@ -5,7 +5,7 @@
 Unless `--no-prelude` is given, the compiler SHALL make the prelude available to a user
 program (and REPL session) without an explicit import, as though it began with `(import
 (scheme base))`: the prelude procedures resolve to `(scheme base)` and the derived-form macro
-set is merged into the compile's `macro-env`. This SHALL hold identically on all three doors —
+set is merged into the compile's `macro-env`. This SHALL hold identically on all three paths —
 the Chez batch driver, the REPL, and the Chez-free embedded runner (`scheme-run` /
 `scheme-compile`): on each, the procedures resolve as imported bindings referencing `scheme.base`
 external globals and `scheme.base.ll` is linked/loaded/concatenated into the result. On the
@@ -18,12 +18,12 @@ the Stage 0 resolution order).
 
 - **WHEN** a program that references only prelude procedures (e.g. `(map (lambda (x) (+ x 1))
   '(1 2 3))`) is compiled without `--no-prelude` and without any `import`
-- **THEN** it builds and runs; on every door the prelude procedures resolve to
+- **THEN** it builds and runs; on every path the prelude procedures resolve to
   `(scheme base)` exports and `scheme.base.ll` is linked/loaded/concatenated into the result
 
 #### Scenario: A derived-form macro works without a prepended prelude
 
-- **WHEN** a program uses `cond`/`case`/`when` without `--no-prelude` on any door
+- **WHEN** a program uses `cond`/`case`/`when` without `--no-prelude` on any path
 - **THEN** the derived-form macro expands correctly (its expansion's procedure calls resolve
   to `(scheme base)` exports) and the program produces the expected value
 
@@ -35,7 +35,7 @@ the Stage 0 resolution order).
 
 #### Scenario: --no-prelude skips both halves
 
-- **WHEN** a program is compiled `--no-prelude` (on any door, including the embedded runner)
+- **WHEN** a program is compiled `--no-prelude` (on any path, including the embedded runner)
 - **THEN** `(scheme base)` is not auto-imported, the derived-form macros are not merged, and a
   reference to a prelude name (procedure or macro) is an unbound/undefined error
 

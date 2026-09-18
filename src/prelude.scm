@@ -1585,7 +1585,7 @@
 ;;; text a number is parsed from.
 ;;;
 ;;; ASCII only: the substrate carries no Unicode case tables (there is no char-downcase
-;;; in this file).  The Chez driver's door folds with Chez's own `case-sensitive`, which
+;;; in this file).  The Chez driver path folds with Chez's own `case-sensitive`, which
 ;;; DOES fold Unicode, so the two hosts agree on ASCII and diverge above it -- a recorded
 ;;; limit (design D4), pinned by an ASCII fixture rather than by construction.
 (define (rd-fold-char c) ; ASCII A-Z -> a-z, everything else unchanged

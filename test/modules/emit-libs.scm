@@ -40,6 +40,6 @@
  ;; (change: emit-build-bin-entry).  Ignored by library import resolution.
  (program mylib-app    (source "prog-mylib.scm") (output "../../build/mylib-app"))
  (program greet-app    (source "prog-mylib.scm"))
- ;; a program using an imported MACRO, for the emit build door (change:
+ ;; a program using an imported MACRO, for the emit build command (change:
  ;; library-macro-export)
  (program macro-app    (source "prog-macro-helper.scm")))

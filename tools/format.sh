@@ -2,7 +2,7 @@
 # format.sh -- format, or check, the covered set of hand-authored Scheme sources.
 #
 # The single place the covered-set policy lives (openspec change
-# pitch-source-formatting, decisions D1 and D3): the doors `make format` and
+# pitch-source-formatting, decisions D1 and D3): the paths `make format` and
 # `make format-check` and the pre-commit gate all resolve membership and
 # dialect here, so a file cannot be gated under one policy and formatted under
 # another.

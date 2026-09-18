@@ -3,7 +3,7 @@
 // embedded compiler (bootstrap/embed.ll) whose `scheme_entry` reads the program
 // from stdin and returns emitted IR.  It exists ONLY so `tools/regen.sh` can drive
 // the self-hosting fixed point with a minimal batch compiler (build/emit-boot);
-// the SHIPPED runner is the mode-dispatched, module-aware run door -- `emit run`
+// the SHIPPED runner is the mode-dispatched, module-aware emit run command -- emit run
 // (build/emit, src/emit.cpp).  Keeping this batch runner separate leaves the proven
 // bootstrap fixed point byte-for-byte unchanged.  (Originally change: path-a-embedding.)
 //
@@ -21,7 +21,7 @@
 // With --emit (change: self-hosting-completion, design D7) the runner does NOT
 // JIT: it writes the embedded compiler's emitted IR to stdout and exits.  Piped
 // to clang with the runtime, this is a fully Chez-free source->native path
-// (see `emit build`), honoring standalone executables as a first-class
+// (see emit build), honoring standalone executables as a first-class
 // deliverable.  The IR is the SAME bytes the JIT path runs, so what you emit is
 // what you'd run in-process -- dev->ship fidelity.
 

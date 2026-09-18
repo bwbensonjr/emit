@@ -3,7 +3,7 @@
 See `proposal.md` for the performance motivation.  The shipped host currently creates two bare
 `LLJIT` instances in `src/emit.cpp`, one for `emit run` and one for `emit repl`.  Both feed modules
 through the shared `add_ir`: parse one IR string into its own `LLVMContext`, set the JIT data
-layout, and call `addIRModule`.  Library modules, the run door's program module, and each REPL form
+layout, and call `addIRModule`.  Library modules, the `emit run` command's program module, and each REPL form
 therefore remain separate; there is no merged module at the point where P13 originally suggested
 installing a pipeline.
 
@@ -21,7 +21,7 @@ flags used to build `src/emit.cpp`; no additional runtime or installed artifact 
 
 **Goals:**
 
-- Put one implementation of LLVM optimization behind both shipped ORC doors.
+- Put one implementation of LLVM optimization behind both shipped ORC paths.
 - Optimize each independently added module without weakening external linkage or incremental
   session semantics.
 - Make the development trade-off explicit and reproducible through `-O0`/`-O1`/`-O2`, with a
@@ -113,7 +113,7 @@ two hand-curated pass lists.
 
 ### D6 — Measurement separates compiler, transform, materialization, and execution
 
-Use a warm artifact cache and record at least these components where the door exposes them:
+Use a warm artifact cache and record at least these components where the path exposes them:
 
 1. Scheme compile/cache time before LLJIT construction;
 2. LLVM transform time accumulated by the transform callback;
@@ -162,5 +162,5 @@ The implementation belongs in `src/emit.cpp`, its host tests, and documentation.
 There is no data or artifact migration.  Add the shared transform and option parser, run the
 deterministic suites, then record interleaved O0/O1/O2 measurements before enabling O1 as the
 default in the final patch.  `-O0` is the immediate operational rollback for users.  Code rollback
-removes the transform installation and the two doors' new options; because emitted compiler IR is
+removes the transform installation and the two paths' new options; because emitted compiler IR is
 unchanged, no cache format bump or bootstrap regeneration is involved.

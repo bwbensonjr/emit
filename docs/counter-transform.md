@@ -7,7 +7,7 @@ the full pass chain at once:
 - a closure returned from a closure (nested `lambda`, free-variable capture)
 - `letrec` / `let` binding forms and a primitive call at the top level
 
-Regenerate the IL stages with either door — they agree:
+Regenerate the IL stages with either path — they agree:
 
 ```sh
 build/emit run --dump demos/counter.scm                                   # shipped

@@ -7,7 +7,7 @@ library units + program) SHALL be compiled with an optimizing pipeline (e.g. `-O
 rather than at the default `-O0`. This optimization SHALL preserve observable behavior — the
 executable SHALL produce the same values and errors as the unoptimized build for every program —
 and SHALL NOT change the emitter's textual IR output or the committed bootstrap IR (only the
-link/codegen step optimizes). The interactive/JIT door is unaffected.
+link/codegen step optimizes). The interactive/JIT execution path is unaffected.
 
 #### Scenario: AOT executable is optimized
 
@@ -36,9 +36,9 @@ The root set SHALL be a parameter of the reachability computation (for an execut
 entry and top-level references), so the same mechanism can later serve other roots (e.g. a
 delivered library's exported interface) without change.
 
-This transform SHALL apply ONLY to the AOT/build door. The interactive/REPL door SHALL continue to
+This transform SHALL apply ONLY to the AOT/`emit build` command. The interactive/REPL SHALL continue to
 provide the full library units (open world — any binding may be referenced by a later form), and
-both doors SHALL share one compiler core. Tree-shaking SHALL preserve observable behavior: a
+both paths SHALL share one compiler core. Tree-shaking SHALL preserve observable behavior: a
 program's result SHALL be identical to a non-shaken build.
 
 #### Scenario: Unused library bindings are dropped from the executable
@@ -54,9 +54,9 @@ program's result SHALL be identical to a non-shaken build.
   binding) is built for AOT
 - **THEN** that binding is retained and the program produces the same result as a non-shaken build
 
-#### Scenario: The REPL door keeps the full library
+#### Scenario: the REPL keeps the full library
 
-- **WHEN** the same library is loaded through the interactive/REPL door
+- **WHEN** the same library is loaded through the interactive/REPL
 - **THEN** every binding remains available regardless of what any single form references (open
   world), and behavior matches the AOT build for programs that use the same bindings
 

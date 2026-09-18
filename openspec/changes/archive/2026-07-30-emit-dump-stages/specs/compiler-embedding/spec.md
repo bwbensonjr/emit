@@ -10,8 +10,8 @@ embedded compiler's data payload (emitted IR), so narration SHALL NOT be written
 
 #### Scenario: Narration reaches stderr, not stdout
 
-- **WHEN** the embedded compiler narrates while a door compiles a program
-- **THEN** the narration appears on standard error and the door's standard output is
+- **WHEN** the embedded compiler narrates while a path compiles a program
+- **THEN** the narration appears on standard error and the path's standard output is
   unchanged
 
 #### Scenario: Write style matches the runtime's printer
@@ -32,14 +32,14 @@ read the level and construct the dumper, which is then passed through the core's
 
 #### Scenario: The host forwards the dump level
 
-- **WHEN** a door is invoked with `--dump` and sets the dump-level variable before the
+- **WHEN** a path is invoked with `--dump` and sets the dump-level variable before the
   first entry call
 - **THEN** the embedded compiler dumps each pass, and with the variable unset it dumps
   nothing
 
 #### Scenario: Stage names only at the intermediate level
 
-- **WHEN** a door runs at the stage-names level rather than the full-dump level
+- **WHEN** a path runs at the stage-names level rather than the full-dump level
 - **THEN** the embedded compiler announces each pass by name in the order it runs, without
   printing the IL
 

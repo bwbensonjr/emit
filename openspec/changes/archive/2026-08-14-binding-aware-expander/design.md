@@ -15,7 +15,7 @@ much as an unfinished promise: the hygiene half of the pass already reasons abou
 Three facts about the current pipeline shape the design, and all three were checked in the tree
 rather than assumed:
 
-1. **Every door compiles a program through `compile-program-with-imports` with `(scheme base)`
+1. **every path compiles a program through `compile-program-with-imports` with `(scheme base)`
    auto-imported** (`src/core.ss:293-305`, and the comment at `:1363` says so). The `prelude-forms`
    argument it receives is `(prelude-macro-forms prelude-forms)` — **the prelude's `define-syntax`
    forms only**. The prelude's *procedures* are compiled separately as the baked library unit, in

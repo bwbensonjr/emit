@@ -8,7 +8,7 @@ a constant — under `quote`, under the `'` abbreviation, and nested to any dept
 quoted datum — and SHALL evaluate to a value `equal?` to the one the same elements produce when
 built at runtime with `vector` or `bytevector`.
 
-This SHALL hold on every door and in every position a constant may appear: a program's top level, a
+This SHALL hold on every path and in every position a constant may appear: a program's top level, a
 procedure body, a library body, and a macro template.
 
 Elements SHALL be lowered by the same constant encoding as any other quoted datum, so a vector may

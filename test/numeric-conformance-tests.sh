@@ -8,9 +8,9 @@
 #     interpolate the HOST's number->string into IR text, so a literal whose
 #     shortest decimal carries an exponent emitted `fmul double 1e+02, 2.0` --
 #     which LLVM rejects, an integer constant in a `double` position -- and the
-#     failure was DOOR-SPECIFIC: Chez prints `100.0`, so the Chez-hosted path
+#     failure was path-specific: Chez prints `100.0`, so the Chez-hosted path
 #     compiled the same program fine.  Here we pin the values on every shipped
-#     door; the byte-equality of the emitted IR TEXT between doors is pinned in
+#     path; the byte-equality of the emitted IR TEXT between paths is pinned in
 #     test/self-emit-equiv.sh, which is where IR equivalence lives.
 #
 #   * VALUE FIDELITY.  A literal must survive source -> IR text -> runtime double
@@ -42,9 +42,9 @@ check () {  # <name> <expression-text> <expected stdout>
   else bad "$1 => $got (expected $3)"; sed 's/^/         /' "$TMP/e"; fi
 }
 
-# The same program through `emit build` -- a standalone executable rather than the
+# The same program through emit build -- a standalone executable rather than the
 # in-process runner -- so a literal that only the JIT path got right is caught.
-# `emit build` delivers a manifest PROGRAM entry (not a bare file), so the case
+# emit build delivers a manifest PROGRAM entry (not a bare file), so the case
 # writes a one-entry manifest alongside its source.  A built executable prints its
 # program's final value just as the runner does, so these are expressions too.
 check_built () {  # <name> <program-text> <expected stdout>
@@ -75,7 +75,7 @@ trap_msg () {  # <name> <program-text> <substring the diagnostic must contain>
   fi
 }
 
-# The same program in the interactive REPL door.
+# The same program in the interactive REPL.
 check_repl () {  # <name> <expression-text> <expected substring of the output>
   local got
   got="$(printf '%s\n' "$2" | build/emit repl 2>"$TMP/re")"
@@ -121,8 +121,8 @@ check "a literal equals the arithmetic that produces it" \
   '(list (= 0.1 (/ 1.0 10.0)) (= 100.0 (* 10.0 10.0)))' '(#t #t)'
 check "negative zero keeps its sign" '-0.0' '-0.0'
 
-# --- the other doors ----------------------------------------------------------
-# The whole point of #24 was that the doors disagreed, so the symptom case is
+# --- the other paths ----------------------------------------------------------
+# The whole point of #24 was that the paths disagreed, so the symptom case is
 # re-run as a standalone executable and in the REPL.
 check_built "exponent-framed literal" '(* 100.0 2.0)' '200.0'
 check_built "17 significant digits"   '1.4142135623730951' '1.4142135623730951'
@@ -501,7 +501,7 @@ check "the escapes inside bars" \
 # The printer picked the shortest ROUND-TRIPPING decimal and stopped there, which for
 # 100.0 is "1e+02": correct digits, wrong notation.  Note the file header above already
 # names this divergence from the other direction -- Chez prints 100.0, so a program
-# could print one thing on one door and another on the other.  The range is Chez's,
+# could print one thing on one path and another on the other.  The range is Chez's,
 # measured: positional for a decimal exponent in [-3, 9], exponent form outside it.
 check "a round flonum prints positionally, not in exponent form" \
   "(list (number->string 100.0) (number->string 1000.0) (number->string 0.001))" \

@@ -71,7 +71,7 @@ manifests (exploration open question 3); import sets; anything in #18, #31, or #
 ### Modified Capabilities
 - `module-system`: the **Library manifest** requirement gains an ordered location procedure (today
   it says only "default `./emit-libs.scm`, overridable") and, breaking, specifies that a manifest's
-  `(source …)`/`(output …)` paths resolve against the manifest's own directory. The run-door
+  `(source …)`/`(output …)` paths resolve against the manifest's own directory. The run-path
   manifest-location paragraph is corrected so `--manifest` outranks `EMIT_MANIFEST`.
 
 ## Impact
@@ -80,8 +80,8 @@ manifests (exploration open question 3); import sets; anything in #18, #31, or #
   `mp ? … : "emit-libs.scm"` sites; library and program paths joined against the manifest's
   directory before `read_file`/`ifstream`. The compiled-in `$PREFIX` needs a build-time define.
 - **`src/compile.ss`** — `*manifest-path*` (`:362`) and `read-manifest` (`:368`) get the same
-  lookup and the same relative-path rule, so the Chez driver and the Chez-free doors stay in
-  parity. The door-parity guards (`test/self-emit-equiv.sh`, `test/prelude-base-run-tests.sh`)
+  lookup and the same relative-path rule, so the Chez driver and the Chez-free paths stay in
+  parity. The path-parity guards (`test/self-emit-equiv.sh`, `test/prelude-base-run-tests.sh`)
   depend on this agreeing.
 - **`Makefile`** — a new `install` target (no `PREFIX`/`DESTDIR` notion exists today).
 - **Test fixtures (breaking)** — `test/modules/emit-libs*.scm` (4 manifests) plus the manifests

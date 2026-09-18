@@ -14,7 +14,7 @@ Everything here runs without a regen. Sections 1.1–1.2 are done and are what r
       self-hosted and Chez-hosted. — **The expectation was wrong, and that is the finding.**
       Measured the pre-regression tree (b102070, built in a worktree) against HEAD:
 
-      | door | pre-regression | HEAD | delta |
+      | path | pre-regression | HEAD | delta |
       |---|---|---|---|
       | `emit run` (JIT, no opt pipeline) | 4.36 s | 5.04 s | +15.6% |
       | `emit build` binary (AOT, `-O2 -flto`) | 3.20 s | 3.08 s | none |
@@ -25,7 +25,7 @@ Everything here runs without a regen. Sections 1.1–1.2 are done and are what r
       re-scoped the change.
 
       Medians of five interleaved runs. The regression P12 records is **real on the unoptimized
-      dev door and absent from the shipped artifact**. `emit run` builds a plain
+      development path and absent from the shipped artifact**. `emit run` builds a plain
       `LLJITBuilder().create()` with no IR optimization (`src/emit.cpp:839`); the AOT link passes
       `-O2 -flto` (`src/emit.cpp:1337`, `ship-opt`/`ship-lto` in `src/compile.ss:299`). P12
       measured `emit run` and recorded the result as a property of the reader.
@@ -57,7 +57,7 @@ Iterate with `chez --libdirs src` and `test/read-all-tests.ss`; no regen until s
       bars stay literal, `(A |A|)` stays two symbols, folding reaches quoted and vector structure,
       strings/characters/numbers untouched, and `read-all-from-string` itself still does not fold.
 
-## 3. Both doors fold at read time (design D3)
+## 3. both paths fold at read time (design D3)
 
 - [x] 3.1 `src/include-reader.ss` — dispatch on the `who` the core already passes: `include-ci`
       reads with `read-all-from-string-ci`, everything else with `read-forms-from-string`. No change
@@ -78,16 +78,16 @@ Iterate with `chez --libdirs src` and `test/read-all-tests.ss`; no regen until s
 - [x] 4.1 Extend the `include-ci` fixture in `test/library-include-tests.sh` with mixed-case **and**
       bar-quoted ASCII identifiers, plus a symbol inside a vector literal, asserting the names the
       module-system spec scenarios name. — Mixed-case and bar-quoted done (`LEGACY` → `legacy`,
-      `|KeepCase|` kept, its body still folded). **The vector case could not go through a door**: a
+      `|KeepCase|` kept, its body still folded). **The vector case could not go through a path**: a
       quoted vector cannot be lowered as a constant at all (`bad const ?`, filed as issue #64), so
       it is pinned at the reader in `test/read-all-tests.ss` instead, and the fixture comment says
       why it is not here.
-- [x] 4.2 Confirm the fixture is on a path `test/self-emit-equiv.sh` compares across the two doors;
+- [x] 4.2 Confirm the fixture is on a path `test/self-emit-equiv.sh` compares across the two paths;
       if it is not, add the cross-host assertion explicitly rather than assuming coverage. — **It is
       not**: `self-emit-equiv.sh` compiles inline source strings with `--emit-ir --no-prelude`, so it
       never reads an included file. The equivalent assertion already exists one suite over —
-      `library-include-tests.sh`'s driver section builds `geom.ll` through the Chez door and `cmp`s
-      it byte-for-byte against the Emit door's. That is the check a folding disagreement fails, so
+      `library-include-tests.sh`'s driver section builds `geom.ll` through the Chez path and `cmp`s
+      it byte-for-byte against the Emit path's. That is the check a folding disagreement fails, so
       no new assertion was added; the fixture comment now names it.
 - [x] 4.3 Keep the fixture ASCII. Record in the fixture's own header comment that non-ASCII folding
       is a known divergence (Chez folds Unicode, Emit does not) and is deliberately untested here.
@@ -112,7 +112,7 @@ guarantees a `test/trust-check.sh` failure ~25 min into the dev run, and a kille
       Pass A's own first attempt also failed — `repl: unbound variable rd-report` — which is the
       homing error recorded in 3.3/design D2, not the staging. Pass A converged in 1120s, pass B in
       701s. Verified between them that the pass-A binary resolves `read-all-from-string-ci`, and
-      after pass B that the Emit door yields `(old kept Plain)` — byte-for-byte what the Chez door
+      after pass B that the Emit path yields `(old kept Plain)` — byte-for-byte what the Chez path
       already gave.
 - [x] 5.2 `./run-all-tests.sh`. — 22/24 first pass. Both failures were mine and both are fixed:
       `module-scaffold byte-identity` ran before 5.4's re-record, and `library include declarations`
@@ -143,7 +143,7 @@ guarantees a `test/trust-check.sh` failure ~25 min into the dev run, and a kille
       an **idle** machine; 1.2's numbers were taken with background builds running, so they are
       superseded. P12's regression, cleanly:
 
-      | door | prereg (b102070) | HEAD (9a84ca2) | delta |
+      | path | prereg (b102070) | HEAD (9a84ca2) | delta |
       |---|---|---|---|
       | `emit run`, total wall clock | 3.72 s | 4.47 s | +20.2% |
       | — of which fixed compile + JIT | 0.61 s | 0.83 s | +0.22 s |
@@ -154,13 +154,13 @@ guarantees a `test/trust-check.sh` failure ~25 min into the dev run, and a kille
       The fixed row was nearly missed: `emit run` JIT-compiles the baked set first, and
       `reader-lexical-conformance` grew `(emit internal)` 170,716 → 289,754 B, so 0.22 s of the
       0.75 s delta is compiling a bigger substrate, not reading. A naive totals comparison would
-      have overstated the reader's share and, in P13, would have called the dev door 57% slower
+      have overstated the reader's share and, in P13, would have called the development path 57% slower
       when the honest figure is 28%.
 
       Tighter than 1.2's +15.6% and matching P12's original "+20%" almost exactly (run-to-run spread
       3.71–3.73 and 4.46–4.49). This change's own cost, same method:
 
-      | door | before (9a84ca2) | after, plain | after, **folding** |
+      | path | before (9a84ca2) | after, plain | after, **folding** |
       |---|---|---|---|
       | `emit run` (JIT) | 4.48 s | 4.49 s | 4.52 s (+0.9%) |
       | AOT binary | 2.84 s | 2.84 s | 2.87 s (+1.1%) |
@@ -169,11 +169,11 @@ guarantees a `test/trust-check.sh` failure ~25 min into the dev run, and a kille
       So the threaded argument costs **nothing measurable**, and folding costs ~1% — paid only by
       `include-ci`, and only on the symbols in the file.
 - [x] 6.2 `docs/PERFORMANCE.md` P12 — **rewrite, do not tick.** Corrected numbers from 1.2 and 6.1,
-      the corrected scope (the dev door, not the shipped artifact), its value re-rated against the
-      door it actually affects, a pointer to `tools/gen-reader-bench.ss`, and a cross-reference to
+      the corrected scope (the development path, not the shipped artifact), its value re-rated against the
+      path it actually affects, a pointer to `tools/gen-reader-bench.ss`, and a cross-reference to
       the new item below. Keep the three fix sketches; they are still the right sketches for the
-      door that does not optimize.
-- [x] 6.3 `docs/PERFORMANCE.md` — add the item the measurement found: the JIT/REPL door builds a
+      path that does not optimize.
+- [x] 6.3 `docs/PERFORMANCE.md` — add the item the measurement found: the JIT/REPL builds a
       plain `LLJITBuilder` with no IR optimization pipeline, so every JITted program pays full
       per-call overhead, and `emit run` is measurably slower than the `-O2` binary of the same
       program. Symptom with the numbers, cause with file references, fix sketch, and the sequencing

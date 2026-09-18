@@ -1279,7 +1279,7 @@ declare fastcc i64 @"scheme.base:code:read-all-from-string-ci"(i64, i64, i64, i6
 @.str.lit.829 = private unnamed_addr constant [58 x i8] c" -- a clause is (<feature requirement> <declaration> ...)\00"
 @.str.sym.830 = private unnamed_addr constant [5 x i8] c"else\00"
 @.str.lit.831 = private unnamed_addr constant [39 x i8] c"an else clause must be the last clause\00"
-@.str.lit.832 = private unnamed_addr constant [42 x i8] c"this door installed no source reader, so \00"
+@.str.lit.832 = private unnamed_addr constant [51 x i8] c"this compiler host installed no source reader, so \00"
 @.str.lit.833 = private unnamed_addr constant [20 x i8] c" cannot be included\00"
 @.str.lit.834 = private unnamed_addr constant [16 x i8] c"include cycle: \00"
 @.str.lit.835 = private unnamed_addr constant [27 x i8] c" includes itself, through \00"
@@ -61690,7 +61690,7 @@ arityerr5949:
   call void @rt_arity_error(i64 3, i64 %argc)
   unreachable
 argok5950:
-  %t39962 = call i64 @rt_make_string(ptr @.str.lit.832, i64 41)
+  %t39962 = call i64 @rt_make_string(ptr @.str.lit.832, i64 50)
   %t39963 = and i64 %self, -8
   %t39964 = inttoptr i64 %t39963 to ptr
   %t39965 = getelementptr i64, ptr %t39964, i64 1

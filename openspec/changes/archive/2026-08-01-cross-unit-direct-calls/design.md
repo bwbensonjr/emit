@@ -23,15 +23,15 @@ against 0.06s today. The direct call is not the win; it is what *makes* the win 
 
 **Goals:**
 
-- Direct calls into libraries, with cross-unit inlining actually enabled, on the AOT door.
-- Keep the dev/REPL door's emitted program IR identical to the ship door's if at all possible
+- Direct calls into libraries, with cross-unit inlining actually enabled, on the AOT path.
+- Keep the dev/REPL's emitted program IR identical to the shipping path's if at all possible
   (see D4) — this project treats dev→ship fidelity as a design rule, not a nicety.
 - Land the three parts in an order where each is independently verifiable even though only the
   combination pays.
 
 **Non-Goals:**
 
-- **Inlining across units in the JIT.** The dev door runs no IR passes; this change gives it a
+- **Inlining across units in the JIT.** The development path runs no IR passes; this change gives it a
   slightly shorter instruction sequence and nothing more.
 - **Devirtualizing genuinely higher-order calls.** 1563 of the compiler's surviving indirect sites
   are `map`/`filter`-style callbacks with no static callee. Out of scope, permanently.
@@ -97,23 +97,23 @@ regression is a reason to reconsider, not a footnote.
 A direct call assumes the global's closure is the one the label belongs to — i.e. that
 `scheme.base:zero?` is never reassigned after `__init`. The obvious framing is the closed-world
 AOT assumption `aot-release-profile` already relies on, with the lowering restricted to the ship
-door.
+path.
 
 **That framing looks unnecessary, and avoiding it is worth the investigation.** Library globals
-appear to be immutable after `__init` on *both* doors: the REPL preloads units once and has no
+appear to be immutable after `__init` on *both* paths: the REPL preloads units once and has no
 reload, and a user redefining `car` at the REPL creates a fresh *program* global under the
 generation-mangling scheme rather than touching `scheme.base:car`. If that holds, the lowering is
-sound everywhere, the emitted program IR stays identical across doors, and `demos/run-backends.sh`
+sound everywhere, the emitted program IR stays identical across paths, and `demos/run-backends.sh`
 and `self-emit-equiv` keep passing unchanged.
 
 An AOT-only lowering would be a **much** larger carve-out than P1's: P1 varies only the *library*
-units, whereas this would vary the *program* module between doors — precisely the divergence the
+units, whereas this would vary the *program* module between paths — precisely the divergence the
 one-compiler-core rule exists to prevent. Confirm the immutability claim first (task 1.1); if it
 fails, the fallback is the AOT-only carve-out with the byte-identity tests taught about it, and
 that should be re-proposed rather than absorbed silently.
 
-**Resolved: it holds, on both doors, so there is no carve-out.** The lowering is enabled
-everywhere and the program module stays byte-identical across doors. Three independent reasons
+**Resolved: it holds, on both paths, so there is no carve-out.** The lowering is enabled
+everywhere and the program module stays byte-identical across paths. Three independent reasons
 were checked, and the argument depends on all three — a future library-*reload* feature would
 break the third and must revisit this decision:
 
@@ -155,7 +155,7 @@ feature would remove.
 
 - **A label mismatch between the full and pruned compile** → a link-time undefined symbol, which
   is the safe direction (loud, not silent). Pin it with a test that builds the same program
-  through both doors.
+  through both paths.
 - **LTO grows the binary or the build time** → measure before committing; P1's size gains are
   recent and hard-won, and this must not quietly undo them.
 - **The immutability assumption (D4) is wrong** → wrong-callee dispatch, a silent miscompile. This

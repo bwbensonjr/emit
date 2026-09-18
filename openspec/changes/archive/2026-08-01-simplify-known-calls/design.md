@@ -15,11 +15,11 @@ program, `demos/square.scm`:
 back off, reloads the code pointer, and issues an indirect call — to compute `34 × 34`, a
 whole-program constant, on every execution.
 
-**Neither door recovers it.** Measured, not assumed:
+**Neither path recovers it.** Measured, not assumed:
 
-- The dev door (`emit run`, REPL) builds a bare `LLJITBuilder()` with no IR transform layer
+- The development path (`emit run`, REPL) builds a bare `LLJITBuilder()` with no IR transform layer
   (`src/emit.cpp:404`, `:608`). There are no IR passes at all.
-- The ship door links at `-O2` (`src/compile.ss:232`, `src/emit.cpp:747`). Extracting the program
+- The shipping path links at `-O2` (`src/compile.ss:232`, `src/emit.cpp:747`). Extracting the program
   unit from `emit run --emit` and running `opt -O2` leaves `scheme_entry` unchanged — allocation,
   store, masked reload and indirect call all survive. The blocker is that `rt_alloc_words` is an
   opaque external returning `i64`, so LLVM cannot prove its result is 8-aligned, cannot prove the
@@ -37,7 +37,7 @@ Recorded as **P6-A** in `docs/PERFORMANCE.md`.
 
 **Goals:**
 
-- Add the first pass that *removes* work, in the shared compiler core so both doors get it
+- Add the first pass that *removes* work, in the shared compiler core so both paths get it
   identically (the one-compiler-core rule, `CLAUDE.md`).
 - Eliminate, for a singly-called known lambda, all three costs at once: the closure allocation,
   the indirect call, and — when the arguments are constants — the arithmetic itself.
@@ -56,7 +56,7 @@ Recorded as **P6-A** in `docs/PERFORMANCE.md`.
   form is compiled separately and top-level names are globals (`global-ref`), so no binding is
   visible to inline; library units likewise define globals. The pass therefore fires on program
   files and not in the REPL. This is a *performance* asymmetry only — values are identical on
-  every door — and closing it needs the closed-world reasoning P1/P5-B-general already own.
+  every path — and closing it needs the closed-world reasoning P1/P5-B-general already own.
 - **Effect analysis.** Dead-binding removal is restricted to right-hand sides that are
   syntactically effect-free (a `lambda` or a `const`), not proved so.
 - **Algebraic identities** (`(* x 1)`, `(+ x 0)`, etc.). Nothing here needs them and each is
@@ -137,7 +137,7 @@ the better trade:
 folded result must also survive `encode-const`, which mis-emits any literal at or above 2^57
 (issue #7) — so a product in [2^57, 2^60) was folded correctly and then written out wrong, and
 `(* 1073741823 1073741823)` printed correctly before this pass and wrongly after, on the shipped
-door only. The window is now **±(2^28 − 1)**, whose largest product (2^56 − 2^29 + 1) sits below
+path only. The window is now **±(2^28 − 1)**, whose largest product (2^56 − 2^29 + 1) sits below
 the encoding cliff; it can widen back to the arithmetic ceiling once #7 is fixed. The lesson is
 that "what the arithmetic can compute" and "what the emitter can write down" are two different
 ceilings, and the fold guard is bounded by the lower one.
@@ -165,8 +165,8 @@ enables removal — and a chain (`f` calls `g` calls `h`) needs another round. R
 the rules cleverly in one traversal, apply the rule set repeatedly until the term stops changing,
 with a small iteration cap as a runaway guard.
 
-This is safe for the cross-door byte-identity guarantee because the pass is a pure function of the
-term: same input IL, same number of iterations, same output, on every host and every door.
+This is safe for the cross-path byte-identity guarantee because the pass is a pure function of the
+term: same input IL, same number of iterations, same output, on every host and every path.
 
 ### D5 — Why not just do P6-B (the LLVM `llvm.assume`)
 
@@ -185,7 +185,7 @@ fixnum tag check and folds the multiply. (An `align` operand bundle on the `intt
 
 That is a real and broad win, but it is **not a substitute** for this change:
 
-1. It helps only the ship door. The dev door runs no IR passes, so B alone means a constant folded
+1. It helps only the shipping path. The development path runs no IR passes, so B alone means a constant folded
    in the shipped binary and recomputed in the REPL — values identical, but `--dump` stops
    describing what actually runs, which is the dev→ship fidelity property `CLAUDE.md` exists to
    protect.

@@ -1,17 +1,17 @@
 ## Context
 
-Three doors obtain library units through one seam in `src/emit.cpp`: `seed_session` (registration of
+three paths obtain library units through one seam in `src/emit.cpp`: `seed_session` (registration of
 the baked set, then a manifest preload) for `emit run`/`emit build`/`emit lib`, and a hand-rolled
 eager preload for `emit repl`. `baked-set-artifact-cache` put a cache in front of the first half of
 that seam; this change finishes the seam.
 
 Current state, with the facts each item rests on:
 
-- **`emit repl` seeds differently from every other door.** `preload_libraries`
+- **`emit repl` seeds differently from every other path.** `preload_libraries`
   (`src/emit.cpp:1288`) reads its *first* manifest through mode 5 (`repl-manifest-paths`,
   `src/repl-core.ss:485` — every `(library ...)` entry's source path) and only uses mode 9
   (`repl-manifest-user-paths`, `src/repl-core.ss:505`) to de-duplicate the chained manifests.
-  `preload_user_libraries` (`src/emit.cpp:570`), the run door's, uses mode 9 throughout. The
+  `preload_user_libraries` (`src/emit.cpp:570`), the `emit run` command's, uses mode 9 throughout. The
   difference is `(scheme base)`, which mode 9 omits and mode 5 does not, and which under
   `--no-prelude` is nobody's job to register — so the REPL compiles it, binds nothing to it, and
   discards it. Measured at HEAD 7b7538b: 1.69 s against a 0.05 s no-manifest floor (issue #101).
@@ -19,7 +19,7 @@ Current state, with the facts each item rests on:
   But the baked set is a *partition* of two members — `(emit internal)` and `(scheme base)`
   (`src/prelude-surface.scm:232`) — and this repository's own `emit-libs.scm:32-33` names both,
   because the Chez driver resolves them from there. So the substrate leaks through the same hole,
-  eagerly on the REPL door and on demand on the run door.
+  eagerly on the REPL and on demand on the `emit run` command.
 - **The cache is keyed on the executable alone.** That is exactly right for the baked set, whose
   source is compiled *into* the binary, and insufficient for a user library, whose source is on
   disk. The second half of the key needs the library's `.sld` **and its include closure**, and the
@@ -30,10 +30,10 @@ Current state, with the facts each item rests on:
 - **The shake is driver-side.** `compile-library*` (`src/core.ss:1109`) takes `keep-roots` and is in
   the shared core, but everything that *drives* it — `program-root-internals`, the prunability rule,
   the root extraction from the emitted program text — lives in `build-modular-artifacts*`
-  (`src/compile.ss:728`), which the Chez-free door does not run. `emit_build` (`src/emit.cpp:1710`)
+  (`src/compile.ss:728`), which the Chez-free path does not run. `emit_build` (`src/emit.cpp:1710`)
   writes the units it was handed by `compile_program` straight to temp `.ll` files and forks clang.
 
-Constraints that shape everything below: the core performs no file I/O (doors do); mode numbers are
+Constraints that shape everything below: the core performs no file I/O (paths do); mode numbers are
 a positional protocol between `src/emit.cpp` and `src/repl-core.ss`; `src/repl-core.ss`,
 `src/core.ss`, and `src/include-reader.ss` are all in `CORE_FLAT`, so every edit to them shares one
 `make regen` barrier (~22 min, 5 self-compiles); and the cache must stay a pure accelerator —
@@ -43,9 +43,9 @@ nothing may become load-bearing for correctness.
 
 **Goals:**
 
-- One seeding path for every door, so `--no-prelude` means the same thing on all of them and no door
+- One seeding path for every path, so `--no-prelude` means the same thing on all of them and no path
   compiles a library it will not bind.
-- The cache covers every unit a Chez-free door consumes — baked, user, and shaken — under one key
+- The cache covers every unit a Chez-free path consumes — baked, user, and shaken — under one key
   discipline and one set of degradation rules.
 - A delivered executable's size does not depend on which driver produced it.
 - P8's saving does not come out of P3's: a warm rebuild of the same program must be faster than
@@ -56,24 +56,24 @@ nothing may become load-bearing for correctness.
 - The ~0.30 s IR-parse/JIT half (a `.bc`/`.o` layer — independent, still better measured after this).
 - P11 (`runtime.c` → bitcode, 0.16 s / 5%).
 - Curating `(scheme base)`'s export surface (issue #29). P8's own entry records why that is not a
-  substitute: the shake already reaches the ideal on the door that has one.
+  substitute: the shake already reaches the ideal on the path that has one.
 - Unifying with `src/compile.ss`'s `build/lib` cache. Two caches, as `baked-set-artifact-cache`
   decided; the Chez driver's freshness rules do not move.
 - Cache eviction (see Open Questions).
 
 ## Decisions
 
-### D1 — The REPL preloads through the run door's index, first manifest included
+### D1 — The REPL preloads through the `emit run` command's index, first manifest included
 
 `preload_libraries` uses mode 9 for every manifest in the chain, not mode 5 for the first and mode 9
 for the rest. The REPL stays **eager** — a session is an open world and any prompt may import
 anything — so the change is only *which entries* are preloaded, not when. The eager/lazy split
-between the REPL and the run door is deliberate and stays.
+between the REPL and the `emit run` command is deliberate and stays.
 
 *Alternative — teach the REPL host a `--no-prelude` branch that skips the `(scheme base)` entry.*
 This is issue #101's broader reading and is rejected for the reason the issue itself gives: it adds
 a second special case to a flag, where the underlying fact is that the manifest is no longer a source
-of standard libraries for **any** door. `baked-set-on-every-door` made registration universal; this
+of standard libraries for **any** path. `baked-set-on-every-door` made registration universal; this
 is the other half of that change, arriving late.
 
 ### D2 — Mode 9 omits every baked member, not the one name it hard-codes
@@ -81,12 +81,12 @@ is the other half of that change, arriving late.
 `repl-manifest-user-paths` filters on baked-set membership (`src/core.ss:211-230`) rather than on
 `(equal? name '(scheme base))`. This closes the substrate leak D1 would otherwise inherit: with the
 prelude, a manifest entry for `(emit internal)` is absorbed by the already-registered guard and costs
-a parse; without it, the entry would be compiled by a door that has deliberately registered no
+a parse; without it, the entry would be compiled by a path that has deliberately registered no
 standard library at all. One predicate replaces one literal, and the mode's contract is unchanged.
 
 ### D3 — Mode 5 is retired, not renumbered
 
-With D1, no door calls mode 5. Its number stays reserved and `repl-manifest-paths` is deleted, rather
+With D1, no path calls mode 5. Its number stays reserved and `repl-manifest-paths` is deleted, rather
 than renumbering 6-15 downward: the mode number is a wire protocol between two files that regen
 compiles independently, and a gap costs a comment while a renumber costs a mixed-source window in
 which the host and the core disagree about what mode 7 means.
@@ -95,8 +95,8 @@ which the host and the core disagree about what mode 7 means.
 
 This follows from D1 and is a deliberate behavior change. Today the REPL's mode-5 preload loads
 `(scheme base)` from the manifest even under `--no-prelude`, so such a library resolves — by accident,
-in a session where the user cannot reference those names themselves. The run door has behaved the
-other way since `run-door-user-libraries`. After this change both doors agree: `--no-prelude` is a
+in a session where the user cannot reference those names themselves. the `emit run` command has behaved the
+other way since `run-door-user-libraries`. After this change both paths agree: `--no-prelude` is a
 session with no standard library, and a library depending on one reports an unresolved import
 through the existing path (`src/emit.cpp:1368-1372`), rather than silently working.
 
@@ -138,7 +138,7 @@ drivers call the same code, and `src/compile.ss` keeps only the call. Copying th
 `src/repl-core.ss` would leave two implementations of "which of a unit's candidate names does this
 program's IR actually mention" — a rule that already has one subtle bug fixed in it (`member` vs
 `memq`, recorded at `src/compile.ss:770-780`) and whose divergence would show up as undefined symbols
-at link time, on one door only. This is the change's only edit to `src/compile.ss`, and it is a
+at link time, on one path only. This is the change's only edit to `src/compile.ss`, and it is a
 deletion plus a call; its behavior does not move.
 
 ### D9 — `emit build` shakes by recompiling against roots, and the shaken unit is a cache entry
@@ -177,12 +177,12 @@ axes. The cold row is roughly a wash in time and a 100 KB win in size. Both rows
 from P8's and P3's measurements and are acceptance criteria, not claims — task 8 measures them.
 
 **Measured (`hello.scm`, idle machine, best of 3).** Executable 212,232 B -> **93,656 B**, exactly
-the Chez door's figure. Rebuild of an *unchanged* program 0.732 s -> **0.611 s**; build of a
+the Chez path's figure. Rebuild of an *unchanged* program 0.732 s -> **0.611 s**; build of a
 *changed* program ~0.73 s -> **~0.90 s**; fully cold 1.902 s -> **2.054 s**. So the warm row held and
 the cold row cost more than "roughly a wash" — a shake is a recompile, and only an unchanged program
 is served from the cache. 56% smaller always, 16% faster on a rebuild, ~0.17 s slower on an edit.
 
-*Alternative — prune the emitted IR text at the build door.* Preserves the cache exactly and needs no
+*Alternative — prune the emitted IR text at the `emit build` command.* Preserves the cache exactly and needs no
 recompile, but it is a second, independent reachability implementation over LLVM text, with
 link-time undefined symbols as its failure mode. Rejected against D8's reasoning.
 
@@ -210,8 +210,8 @@ already carries each registered library's imports. The rule keeps `(emit interna
 `(scheme base)` imports it — the same conclusion `scheme-base-partition` reached the hard way, and
 the reason the comparison in that rule must be `member` and not `memq`.
 
-**It reduces to its second half on this door.** The session *is* the program's import closure — the
-run door preloads lazily, and `emit build` reaches libraries through that same seeding — so "a
+**It reduces to its second half on this path.** The session *is* the program's import closure — the
+`emit run` command preloads lazily, and `emit build` reaches libraries through that same seeding — so "a
 direct import of the program that no other unit imports" becomes "no other registered library
 imports it": something must import a library that is present, and if no unit does, the program does.
 One predicate over `*repl-lib-imports*`, and no program-import list to thread through the protocol.
@@ -219,9 +219,9 @@ One predicate over `*repl-lib-imports*`, and no program-import list to thread th
 **Measured consequence, worth stating plainly.** This rule bounds P8's win to programs whose direct
 imports are their only importers. `hello.scm` is that shape and drops from 212,232 B to 93,656 B;
 `uses-lib.scm`, which imports a user library that imports `(scheme base)`, is 212,296 B after the
-change — `(scheme base)` is imported by `(demo util)` and must stay whole. The **Chez door produces
-212,304 B for the same program**, so this is not a gap between the doors but the shake's own limit,
-and closing it means backward propagation through the import DAG rather than anything door-specific.
+change — `(scheme base)` is imported by `(demo util)` and must stay whole. The **Chez path produces
+212,304 B for the same program**, so this is not a gap between the paths but the shake's own limit,
+and closing it means backward propagation through the import DAG rather than anything path-specific.
 Out of scope here, and recorded so the next reader does not mistake it for a regression.
 
 ### D12 — Narration names the unit and the kind
@@ -235,7 +235,7 @@ entries and rebuilds one is unreadable.
 
 Mode 14 gained a third answer: `deferred`, the status mode 4 already uses for a library whose
 dependencies are not loaded yet. A cache hit would otherwise be *order-blind* exactly where
-compiling is not — the REPL door runs each unit's `__init` as it adds it, so registering a cached
+compiling is not — the REPL runs each unit's `__init` as it adds it, so registering a cached
 unit ahead of a unit it reads globals from would initialize against uninitialized slots. With the
 status, both preloads retry a deferred entry in the fixpoint loop they already run, and a hit and a
 compile go around it identically.
@@ -267,15 +267,15 @@ they failed at (`*shake-step*`, a plain variable rather than a nested `guard`), 
 - **A second shake implementation would diverge silently** → D8 keeps one, in the shared core; the
   acceptance test is a byte comparison of `emit build`'s executable against the Chez driver's on the
   same program, not just "it runs".
-- **A shaken unit served to an open-world door would break at the first unreferenced binding** → D10
-  puts the kind in the key; a test asserts the REPL and run doors never read a `shake-` entry.
+- **A shaken unit served to an open-world path would break at the first unreferenced binding** → D10
+  puts the kind in the key; a test asserts the REPL and `emit run` commands never read a `shake-` entry.
 - **Cold `emit build` could get slower before the cache warms** → measured as an acceptance
   criterion (D9's table); if the cold row regresses beyond the projection, the shake is gated on the
   entry being cacheable at all rather than shipped unconditionally.
 - **Include tracking is global state and could leak across loads** → reset at the start of each
   registration, with a test that two libraries including the same fragment record it once each
   rather than the second inheriting the first's closure.
-- **D4 is an observable behavior change** → deliberate, door parity, and covered by a scenario; it
+- **D4 is an observable behavior change** → deliberate, path parity, and covered by a scenario; it
   affects only `emit repl --no-prelude` with a manifest whose libraries import `(scheme base)`.
 - **Three items, one regen barrier** → every `CORE_FLAT` edit (modes, tracker, D8's move) must be
   finished before the single `make regen`; the task list orders them accordingly, and the iteration
@@ -293,6 +293,6 @@ they failed at (`*shake-step*`, a plain variable rather than a nested `guard`), 
 - **Should `emit lib` shake to the library's own exported interface?** The `aot-codegen` requirement
   already states the root set is a parameter so that exactly this becomes possible. Out of scope
   here; worth an issue once P8 lands.
-- **Does the run door want the shake too?** No — it JITs into an open world. But `emit run` on a
-  program that is about to be built shares nothing with the build door's shaken entries, which is
+- **Does the `emit run` command want the shake too?** No — it JITs into an open world. But `emit run` on a
+  program that is about to be built shares nothing with the `emit build` command's shaken entries, which is
   correct and worth stating in the spec so it is not later read as a miss.

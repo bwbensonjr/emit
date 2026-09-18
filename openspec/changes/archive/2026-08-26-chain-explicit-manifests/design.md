@@ -22,7 +22,7 @@ bootstrap-only Chez driver need no change.
   namespace.
 - Make explicit and discovered project manifests use the same installed-library fallback while
   retaining deterministic precedence and transparent narration.
-- Keep the behavior change localized to candidate construction and door option parsing; downstream
+- Keep the behavior change localized to candidate construction and path option parsing; downstream
   compilation should continue to consume the same ordered manifest vector.
 - Preserve an exact, intentional single-manifest mode for hermetic callers and test fixtures.
 
@@ -72,7 +72,7 @@ REPL preload and duplicate narration.
 
 ### D3 — Use `--no-manifest-chain` as the compatibility and hermeticity control
 
-All four user-facing doors will parse the valueless `--no-manifest-chain` option and pass
+All four user-facing commands will parse the valueless `--no-manifest-chain` option and pass
 `chain = false` to the shared resolver. The default remains `chain = true`. Command help will say
 that the flag limits library lookup to the first resolved manifest.
 
@@ -124,8 +124,8 @@ will:
 5. prove project override precedence, first-manifest program ownership, missing explicit-file
    errors, narration, and `--no-manifest-chain` isolation.
 
-Focused CLI tests will assert that all four doors accept the new option and that malformed uses
-remain ordinary usage errors. Existing chained-manifest and door-fidelity suites remain the broad
+Focused CLI tests will assert that all four commands accept the new option and that malformed uses
+remain ordinary usage errors. Existing chained-manifest and path-fidelity suites remain the broad
 regression guard.
 
 ## Risks / Trade-offs
@@ -140,7 +140,7 @@ regression guard.
   and measure the focused installed REPL case if the suite shows a material regression.
 - **One physical manifest may appear under multiple paths.** → Canonical de-duplication prevents
   duplicate compilation, initialization, and narration.
-- **Option parsing is duplicated across four doors.** → Add the same boolean branch to each parser
+- **Option parsing is duplicated across four commands.** → Add the same boolean branch to each parser
   and cover every verb; do not broaden this fix into a parser refactor.
 
 ## Migration Plan

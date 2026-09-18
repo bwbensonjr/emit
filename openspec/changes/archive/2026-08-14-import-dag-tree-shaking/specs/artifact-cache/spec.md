@@ -23,7 +23,7 @@ SHALL therefore be served a different entry, even when the program is unchanged.
 - **WHEN** two programs reaching different subsets of a library are built in turn
 - **THEN** each is served the unit pruned to its own root set, and neither is served the other's
 
-#### Scenario: An open-world door never reads a shaken entry
+#### Scenario: An open-world path never reads a shaken entry
 
 - **WHEN** `emit repl` or `emit run` seeds a session after `emit build` has populated shaken entries
   for the same library and compiler

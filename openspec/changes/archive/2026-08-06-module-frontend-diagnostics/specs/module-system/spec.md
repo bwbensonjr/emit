@@ -136,16 +136,16 @@ on the keyword alone.
 ### Requirement: A `define-library` that cannot be compiled as a library is reported as one
 
 A `define-library` form SHALL be compiled as a library unit only where a library unit is what the
-door produces: as the sole top-level form of a source. Where that condition does not hold, the
+path produces: as the sole top-level form of a source. Where that condition does not hold, the
 compiler SHALL report the form as a misplaced `define-library`, naming the rule it violates, rather
 than passing it to ordinary expression parsing — where `define-library` is not a form, so it is read
 as an application over internal defines and reported as a malformed body.
 
-This SHALL hold on the interactive door as well: a `define-library` entered at the REPL prompt SHALL
+This SHALL hold on the interactive execution path as well: a `define-library` entered at the REPL prompt SHALL
 be reported as not supported at the prompt, naming libraries as something imported through the
 manifest, rather than producing a parse error about an empty body.
 
-Whether the interactive door should *accept* a `define-library` is a separate question and is not
+Whether the interactive execution path should *accept* a `define-library` is a separate question and is not
 settled by this requirement; what is required here is that the current limit be stated.
 
 #### Scenario: A define-library alongside another top-level form

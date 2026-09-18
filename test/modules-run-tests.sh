@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# modules-run-tests.sh -- the module RUN door (change: run-door-user-libraries).
-# Chez-FREE: drives the shipped `emit run`, which registers the baked-in
+# modules-run-tests.sh -- the module emit run command (change: run-door-user-libraries).
+# Chez-FREE: drives the shipped emit run, which registers the baked-in
 # (scheme base), preloads the manifest's user libraries into the JIT (without running
 # their __init), then compiles the whole program against them via the mode-dispatched
-# embedded compiler and runs it in-process.  This is the third module door, at parity
-# with the AOT and REPL doors.
+# embedded compiler and runs it in-process.  This is the third module path, at parity
+# with the AOT path and REPL.
 #
-# The final section (dev->ship fidelity vs the AOT door) is Chez-GATED: it compares the
-# run-door value and program-module bytes to the Chez AOT driver's.
+# The final section (dev->ship fidelity vs the AOT path) is Chez-GATED: it compares the
+# run-path value and program-module bytes to the Chez AOT driver's.
 #
 # Run from the repo root:  test/modules-run-tests.sh
 set -u
@@ -44,13 +44,13 @@ check_fail () {  # <name> <src> <manifest> <regex>
   fi
 }
 
-echo "module run door (emit run, Chez-free)"
+echo "module emit run command (emit run, Chez-free)"
 check run-import   "$MOD/prog-mylib.scm"   142   # import (mylib); greet -> 142
 check run-chain    "$MOD/prog-chain.scm"    15   # (chain-a) -> (chain-b), transitive
 check run-diamond  "$MOD/prog-diamond.scm"  35   # (dia-a)+(dia-b) both import (dia-c), once each
 check run-rename   "$MOD/prog-rename.scm"   77   # (rename-lib): importer sees fmap
 
-echo "run door: exported macros (change: library-macro-export, issue #48)"
+echo "emit run command: exported macros (change: library-macro-export, issue #48)"
 check run-macro        "$MOD/prog-macrolib.scm"      32
 check run-macro-helper "$MOD/prog-macro-helper.scm"  18   # template reaches a PRIVATE helper/macro
 check run-macro-rename "$MOD/prog-macro-rename.scm"  21
@@ -59,16 +59,16 @@ check run-macro-unused "$MOD/prog-macro-unused.scm"  22
 check run-macro-user   "$MOD/prog-macro-user.scm"     10   # a LIBRARY imports another's macro
 check run-macro-rec    "$MOD/prog-macro-rec.scm"      17   # recursive variadic macro
 
-echo "run door: a plain program needs no manifest ((scheme base) is baked in)"
+echo "emit run command: a plain program needs no manifest ((scheme base) is baked in)"
 RUNABS="$PWD/build/emit"
 plain="$TMP/plain.scm"; printf '(map (lambda (x) (* x x)) (list 1 2 3))\n' > "$plain"
 got="$(cd "$TMP" && "$RUNABS" run < plain.scm 2>/dev/null)"    # run from a dir with NO manifest present
 if [ "$got" = "(1 4 9)" ]; then echo "  [OK  ] run-no-manifest => $got"; pass=$((pass+1))
 else echo "  [FAIL] run-no-manifest => $got  (expected (1 4 9))"; fail=$((fail+1)); fi
 
-echo "run door: import errors are reported and exit non-zero"
+echo "emit run command: import errors are reported and exit non-zero"
 check_fail run-cycle   "$MOD/prog-cycle.scm"   "$MOD/emit-libs-cycle.scm" "cyclic|unresolved"
-# The run door NAMES the unresolved library now, as `emit lib` always did -- it used to
+# the emit run command NAMES the unresolved library now, as emit lib always did -- it used to
 # report the constant "program imports a library not found in the manifest", naming nothing
 # (change: manifest-empty-guards; issue #63).  Asserting the NAME, not just the phrase, is
 # the point of the change: module-system requires the failure be reported "naming the
@@ -80,19 +80,19 @@ check_fail run-macro-dupname "$MOD/prog-macro-dupname.scm" "$MOD/emit-libs-macdu
 # the INTERNAL keyword of a renamed macro export stays invisible to the importer
 check_fail run-macro-hidden  "$MOD/prog-macro-rename-bad.scm" "$MAN" "unbound variable.*%swap"
 
-# --- an import SET is rejected by name, identically on every path -------------
+# --- an import SET is rejected by name, identically on every compilation path -
 # (change: module-frontend-diagnostics, issue #45.)  These cases live HERE rather than in
 # test/modules-tests.sh, which the tasks named: that suite is Chez-GATED and exits 0
-# without chez, so the assertions would not run on the Chez-free path these doors take.
+# without chez, so the assertions would not run on the Chez-free path these paths take.
 #
 # The property under test is not just "it fails" -- it is that ONE form gets ONE message.
 # Before this change an import set was read as a library NAME, so the program path
 # reported a missing manifest entry and the library path reported an unresolved or cyclic
 # import: two unrelated stories, neither naming the form.
-echo "run door: an import set is rejected by name, on both the program and library paths"
+echo "emit run command: an import set is rejected by name, on both the program and library paths"
 
-# the message body, with each door's own prefix stripped -- the prefix is per-door by
-# design (a door's diagnostics name that door), the message must not be.
+# the message body, with each path's own prefix stripped -- the prefix is per-path by
+# design (a path's diagnostics name that path), the message must not be.
 is_msg () { sed -n 's/^.*\(import sets are not supported.*\)$/\1/p' "$1" | head -1; }
 
 for spec in 'only (scheme base) car' 'except (scheme base) car' \
@@ -103,7 +103,7 @@ for spec in 'only (scheme base) car' 'except (scheme base) car' \
     "import sets are not supported: \($kw "
 done
 
-# the SAME form inside a define-library, through `emit lib`, and the two messages must
+# the SAME form inside a define-library, through emit lib, and the two messages must
 # match -- the property today's code does not have.
 printf '(define-library (isl)\n  (export f)\n  (import (only (scheme base) car))\n  (begin (define (f x) x)))\n' \
   > "$TMP/isl.sld"
@@ -129,7 +129,7 @@ fi
 # no `define-library`, so it read one as an application over internal defines and
 # reported `internal defines with no following body expression ?` -- a message about the
 # misparse, with a trailing `?` that is an artifact of it.
-echo "run door: a define-library that is not its source's only form is named as one"
+echo "emit run command: a define-library that is not its source's only form is named as one"
 printf '(define-library (two)\n  (export f)\n  (begin (define (f x) x)))\n(display 1)\n' \
   > "$TMP/two.scm"
 check_fail misplaced-library "$TMP/two.scm" "$MAN" \
@@ -143,7 +143,7 @@ fi
 # At the PROMPT: named as unsupported there, and -- design D6 -- the session survives it,
 # which the following form's value proves.  A mistyped declaration taking down a session
 # would trade one defect for a worse one.
-echo "REPL door: a define-library at the prompt is named, and the session survives"
+echo "REPL: a define-library at the prompt is named, and the session survives"
 repl_in=$'(define-library (r) (export f) (begin (define (f x) x)))\n(+ 1 2)\n'
 printf '%s' "$repl_in" | build/emit repl --no-manifest-chain --manifest "$MAN" \
   >"$TMP/repl.out" 2>"$TMP/repl.err"
@@ -158,10 +158,10 @@ else
   echo "  [FAIL] repl-session-survives"; sed 's/^/         /' "$TMP/repl.out"; fail=$((fail+1))
 fi
 
-# --- dev->ship fidelity vs the AOT door (Chez-gated) -----------------------
+# --- dev->ship fidelity vs the AOT path (Chez-gated) -----------------------
 if command -v chez >/dev/null 2>&1; then
-  echo "dev->ship fidelity: run door matches the AOT door"
-  # a minimal manifest so both doors build exactly the program's closure (base + mylib)
+  echo "dev->ship fidelity: emit run command matches the AOT path"
+  # a minimal manifest so both paths build exactly the program's closure (base + mylib)
   min="$TMP/min-libs.scm"
   # absolute paths: the manifest lives in $TMP, and a manifest's relative paths resolve
   # against its own directory (change: manifest-search-path)

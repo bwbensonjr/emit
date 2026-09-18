@@ -3,7 +3,7 @@
 An unterminated list or string is closed **silently** at end of input, so a truncated source
 compiles and runs as though it were complete (issue #66). The file `(display (list 1 2 3)` — no
 closing paren — prints `(1 2 3)` and exits 0. So does `(display "abc`. The reader's own probe
-confirms the read, not the door: `(read-all-from-string "(a b")` returns `((a b))`.
+confirms the read, not the path: `(read-all-from-string "(a b")` returns `((a b))`.
 
 That is the same failure class `reader-lexical-conformance` closed for the unterminated **block
 comment** (issue #59), which now reports `read: unterminated block comment #| opened at index 12`.
@@ -94,7 +94,7 @@ extends it to the rest, and settles a manifest grammar question `module-system` 
 - `src/repl-core.ss` — **two** manifest parsers, not one. `manifest-empty-guards` consolidated
   `repl-manifest-paths` and `repl-manifest-user-paths` into `manifest-entries`, but
   `repl-manifest-programs` (mode 10) kept its own `(car forms)` because it returns a status pair
-  rather than raising. Both need the form-count rule or the build door still drops the second form.
+  rather than raising. Both need the form-count rule or the `emit build` command still drops the second form.
   Also in `CORE_FLAT`.
 - `(scheme read)`'s private copy of the reporting path — it cannot import a private name, so it
   keeps its own copy of `rd-report`, the arrangement `%check-input-port` already has. Both copies
@@ -104,7 +104,7 @@ extends it to the rest, and settles a manifest grammar question `module-system` 
   today. The tests pin that it stays that way.
 - Tests — reader cases for each unterminated construct on both entry points; a probe case asserting
   incomplete for the same text; manifest fixtures for a truncated manifest and for a two-form
-  manifest, on the `build` and `run` doors.
+  manifest, on the `build` and `run` paths.
 - IR moves for every program, because the reader is in the baked substrate. `bootstrap/*.ll` and the
   generated `.sld` files change; `test/module-scaffold-baseline.sha256` is re-recorded with the
   delta explained, per the baseline protocol.

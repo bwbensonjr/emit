@@ -1,6 +1,6 @@
 ## Why
 
-Stage 1 (`module-artifacts-vertical-slice`) proved both doors on the smallest possible case:
+Stage 1 (`module-artifacts-vertical-slice`) proved both paths on the smallest possible case:
 one flat library, one bare-name export, one program importing it. Real libraries are not
 flat — they build on other libraries, they rename their exports, and a program can reach the
 same dependency by two paths. Stage 2 of the Modules v0 design
@@ -49,7 +49,7 @@ each unit exactly once. This is the last stage before the prelude can be re-home
 - `module-system`: Adds requirements for export-rename, transitive (lib→lib) import
   resolution, topological dependency ordering with diamond-safe one-time init, stale-rebuild,
   and a generalized manifest resolver. No Stage 0/1 requirement is weakened: library-free
-  programs still emit byte-identical IR, a unit's `.ll` stays byte-identical across doors, and
+  programs still emit byte-identical IR, a unit's `.ll` stays byte-identical across paths, and
   the single-library slice keeps working.
 
 ## Impact
@@ -65,7 +65,7 @@ each unit exactly once. This is the last stage before the prelude can be re-home
   the generalized manifest resolver.
 - **Tooling / observability:** the build driver narrates the resolved build order and
   per-unit compile/reuse decisions per `docs/OUTPUT.md`, honoring `EMIT_VERBOSITY`.
-- **Tests:** new `test/modules-*` cases (transitive chain both doors, export-rename, diamond
+- **Tests:** new `test/modules-*` cases (transitive chain both paths, export-rename, diamond
   init-once, cycle error, stale-rebuild) wired into `run-all-tests.sh` and `run-dev-tests.sh`.
 - **Committed IR:** if any `CORE_FLAT` file changes, `make regen` regenerates `bootstrap/*.ll`
   and the anti-stale trust-check must stay green.

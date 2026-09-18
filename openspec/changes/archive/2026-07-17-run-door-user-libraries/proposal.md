@@ -1,16 +1,16 @@
 ## Why
 
-The Chez-free in-process runner `build/scheme-run` is the "run-program" door of the
-module system, but it is the only door that cannot load **user** libraries. It bakes in
+The Chez-free in-process runner `build/scheme-run` is the "run-program" path of the
+module system, but it is the only path that cannot load **user** libraries. It bakes in
 `(scheme base)` and auto-imports only that; it has no manifest and no filesystem access, so
 `(import (mylib))` fails with an unbound variable. `docs/MODULES.md` (lines 117, 126) flags
-this explicitly as "future work." This is the last module-door gap: the **AOT door**
-(`build and link an importing program`) and the **REPL door** (`import a library
+this explicitly as "future work." This is the last module-path gap: the **AOT path**
+(`build and link an importing program`) and the **REPL** (`import a library
 interactively`) both already resolve user libraries, the latter Chez-free. Closing it
-reaches door parity and finishes "the proven surface" that later packaging work
+reaches path parity and finishes "the proven surface" that later packaging work
 (`openspec/explorations/packaging-and-emit-cli.md`, slice #3) is gated on.
 
-The REPL door already solved exactly this problem Chez-free, and its machinery is reusable:
+the REPL already solved exactly this problem Chez-free, and its machinery is reusable:
 the C++ host does the manifest/file I/O and feeds source text to the in-process compiler
 through a small mode protocol (`src/repl-core.ss`: mode 5 "manifest text → source paths",
 mode 4 "load-library source text → unit IR + `__init`", mode 6 auto-import `(scheme base)`).
@@ -33,12 +33,12 @@ resolution path.
   the topological preload loop; the Scheme side is reused as-is where possible.
 - **Dev→ship fidelity is a hard acceptance criterion.** A program built+run through
   `scheme-run` with a given manifest MUST behave identically to the same program through the
-  AOT door with the same manifest.
+  AOT path with the same manifest.
 
 Non-goals (deferred): manifest schema extensions such as a bin/project entry (that is
 packaging slice #2); any dependency/registry/version/lockfile model; renaming binaries under
-a unified `emit` CLI (packaging slice #1). This change only brings the *run* door to parity
-with the *AOT* and *REPL* doors on the **existing** manifest format.
+a unified `emit` CLI (packaging slice #1). This change only brings the *run* path to parity
+with the *AOT* and *REPL* paths on the **existing** manifest format.
 
 ## Capabilities
 
@@ -46,9 +46,9 @@ with the *AOT* and *REPL* doors on the **existing** manifest format.
 <!-- None — this extends the existing module-system surface. -->
 
 ### Modified Capabilities
-- `module-system`: add a requirement for the run-program (in-process, Chez-free) door to
-  resolve user libraries via the manifest, complementing the existing "AOT door — build and
-  link an importing program" and "REPL door — import a library interactively" requirements.
+- `module-system`: add a requirement for the run-program (in-process, Chez-free) path to
+  resolve user libraries via the manifest, complementing the existing "AOT path — build and
+  link an importing program" and "REPL — import a library interactively" requirements.
 
 ## Impact
 
@@ -58,7 +58,7 @@ with the *AOT* and *REPL* doors on the **existing** manifest format.
   parsing for `--manifest` on the run path. No expected change to the emitter, so committed
   `bootstrap/*.ll` should be unaffected — but if the embedded entry's emitted IR changes,
   `make regen` + the trust-check apply.
-- **Doors/fidelity**: run-program output must match the AOT door for the same manifest;
+- **Paths/fidelity**: run-program output must match the AOT path for the same manifest;
   covered by value-equivalence tests across the module test suites (`test/modules/`).
 - **Tests**: extend `test/modules/` (or the demo harness) to run importing programs through
   `scheme-run` and assert parity with the AOT/JIT backends.

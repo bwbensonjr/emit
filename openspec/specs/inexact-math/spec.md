@@ -18,7 +18,7 @@ Unlike `(scheme base)`, `(scheme inexact)` SHALL NOT be auto-imported: its bindi
 absent from a program that does not import it, and the names SHALL remain available for a program
 to define itself. It SHALL be an ordinary library — resolved through the library manifest,
 compiled to a unit artifact, and linked like any other — rather than a special case in the
-compiler, so that the same bindings are available identically on every door (`emit run`,
+compiler, so that the same bindings are available identically on every path (`emit run`,
 `emit repl`, and a program built with `emit build`).
 
 #### Scenario: Importing the library makes its procedures available
@@ -37,7 +37,7 @@ compiler, so that the same bindings are available identically on every door (`em
 - **WHEN** a program that does not import `(scheme inexact)` defines its own `sqrt` and calls it
 - **THEN** its own definition is used, with no conflict
 
-#### Scenario: Every door agrees
+#### Scenario: every path agrees
 
 - **WHEN** the same program importing `(scheme inexact)` is run through `emit run`, evaluated in
   `emit repl`, and built into an executable with `emit build`

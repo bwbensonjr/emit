@@ -1,6 +1,6 @@
 ## Context
 
-Four doors — `emit run`, `emit build`, `emit repl`, `emit lib` — drive one compiler core through the
+four commands — `emit run`, `emit build`, `emit repl`, `emit lib` — drive one compiler core through the
 mode-dispatched embedded compiler (`src/repl-core.ss`, `rt_repl_set` + `scheme_entry`). Two of them
 register the baked library set and two do not:
 
@@ -22,16 +22,16 @@ register the baked library set and two do not:
 
 `init-session` has returned `""` since the prelude was re-homed as `(scheme base)`
 (`src/repl-core.ss:190-210`): it merges the derived-form *macros* and emits no procedure batch. So
-every door's procedures must come from a loaded `(scheme base)`, and only run/build have one without
+every path's procedures must come from a loaded `(scheme base)`, and only run/build have one without
 a manifest.
 
 Two constraints shape the fix. `src/core.ss` and `src/repl-core.ss` perform **no file I/O** by
 design — the host reads files and hands text in — so "find the standard library" is a host-side
-decision on every door. And `src/repl-core.ss` rides `CORE_FLAT`, so any change to it is IR-shaping:
+decision on every path. And `src/repl-core.ss` rides `CORE_FLAT`, so any change to it is IR-shaping:
 `make regen`, the self-hosting fixed point, and the trust-check are in play.
 
 The dedup machinery this needs already exists. `repl-load-library-text` returns `already` for a
-library whose name is in `*repl-libs*` (`src/repl-core.ss:280-286`), added so the run door tolerates
+library whose name is in `*repl-libs*` (`src/repl-core.ss:280-286`), added so the `emit run` command tolerates
 a manifest that lists `(scheme base)` after mode 8 registered it. Its comment says "The REPL never
 double-loads, so it never sees this status" — which this change makes false, deliberately.
 
@@ -39,7 +39,7 @@ double-loads, so it never sees this status" — which this change makes false, d
 
 **Goals:**
 
-- One session-seeding sequence, used by all four doors, that registers the baked set before the
+- One session-seeding sequence, used by all four commands, that registers the baked set before the
   manifest is consulted.
 - `emit repl` started in any directory has the standard library, the derived-form macros, and the
   ability to load a project library that imports `(scheme base)`.
@@ -61,22 +61,22 @@ double-loads, so it never sees this status" — which this change makes false, d
 
 ## Decisions
 
-### D1 — Register the baked set on every door, rather than teaching each door to find `base.sld`
+### D1 — Register the baked set on every path, rather than teaching each path to find `base.sld`
 
 The alternative was to keep the manifest as the REPL's source of the standard library and make the
 lookup better — e.g. have the REPL synthesize a default entry pointing at the installed
 `<prefix>/share/emit/lib/scheme/base.sld` when the manifest omits one. Rejected: it adds a *second*
-answer to "where does the standard library come from", door-dependent, and it reintroduces a file
+answer to "where does the standard library come from", path-dependent, and it reintroduces a file
 dependency that the module-system spec explicitly removed ("a program importing only `(scheme base)`
-needs no manifest present at all"). Registering the baked set is the answer the other two doors
+needs no manifest present at all"). Registering the baked set is the answer the other two paths
 already give; making it universal removes a special case instead of adding one.
 
-It also subsumes #39's own suggestion ("have the REPL door bake the set the way the run door does")
+It also subsumes #39's own suggestion ("have the REPL bake the set the way the `emit run` command does")
 and generalizes it to `emit lib`, which #39 did not know about.
 
 ### D2 — The REPL host runs each member's initializer; mode 8 returns one init symbol per member
 
-On the run and build doors nothing runs the baked initializers at registration time: the program's
+On the run and `emit build` commands nothing runs the baked initializers at registration time: the program's
 `@scheme_entry` calls them in topological order, exactly as an AOT executable does. A REPL session
 has no program entry, so the **host** must run them, once, at startup — the same shape as the
 `__repl_prelude` thunk the REPL runs today.
@@ -84,7 +84,7 @@ has no program entry, so the **host** must run them, once, at startup — the sa
 Mode 8 currently returns `(ok . (ir . init-symbol))` with `(scheme base)`'s symbol only, "kept for
 protocol compatibility; the host does not use it" (`src/repl-core.ss:427`). It becomes one symbol per
 member, newline-joined, in the same order as the boundary-joined modules — which is already
-dependency order. This is **additive**: the run door reads `rt_car(rt_cdr(r))` and never looks at the
+dependency order. This is **additive**: the `emit run` command reads `rt_car(rt_cdr(r))` and never looks at the
 cdr (`src/emit.cpp:470`), so it needs no change and its emitted IR does not move.
 
 Rejected alternative: a new mode returning the init symbols separately. It would mean two calls that
@@ -106,7 +106,7 @@ member hits the guard and loads nothing.
 **Corrected during implementation.** The host-side ordering below is necessary but was not
 sufficient: the deeper cause is that `compile-library-form` (`src/core.ss:88-90`) hardcodes `'()`
 for the import tables, so **every** lone-`define-library` compile resolves no imports at all. The
-defect is therefore wider than `emit lib` — the run door fails the same way:
+defect is therefore wider than `emit lib` — the `emit run` command fails the same way:
 
 ```
 $ emit run --emit < stats.sld        # a library importing (scheme base)
@@ -121,7 +121,7 @@ resolve:
 
 - **`compile-source-rehomed`'s library branch** (in-core, no I/O) compiles the baked set for its
   export tables and resolves the library's declared imports against those. That fixes a lone library
-  importing `(scheme base)` on the run door. It still emits only the library's own module — the unit
+  importing `(scheme base)` on the `emit run` command. It still emits only the library's own module — the unit
   *resolves against* `(scheme base)` without *emitting* it, which is what the existing "a lone
   define-library compiles to a single unit with no baked base" rule means.
 - **mode 7's library branch and mode 11** (host-driven) resolve against the **session** via
@@ -147,7 +147,7 @@ holds those tables. `emit_lib` cannot simply call mode 8 itself before mode 11, 
 their behavior and emitted IR are unchanged. `emit_lib` calls `seed_session`, then mode 11, then
 `compile_unit`, dropping its own `mode 0` init. The export table and the unit IR then come from one
 session with one import environment, which is what keeps `emit lib`'s `.ll` byte-identical to the
-other doors' — a requirement the `emit-cli` spec already states and this change must not weaken.
+other paths' — a requirement the `emit-cli` spec already states and this change must not weaken.
 
 Rejected alternative: give `emit_lib` its own copy of the seeding sequence. It would be the second
 place that knows the startup protocol, and the spec's "one compile-unit core" is the property most
@@ -159,7 +159,7 @@ A stated consequence, not an accident: after this change, editing `lib/scheme/ba
 change what `emit repl` sees until `make regen`. That is already true of `emit run` and `emit build`,
 and it is the existing stance that committed IR is authoritative and never silently rebuilt (design
 D4 of `fix-stale-repl-host-rebuild`, reaffirmed by the README's "the default build does not
-auto-regenerate"). Making the REPL agree removes the one door where a stale `base.sld` produced a
+auto-regenerate"). Making the REPL agree removes the one path where a stale `base.sld` produced a
 *different* answer than the others — the failure mode gets less interesting, which is the same
 argument the `library-sources-and-artifacts` exploration makes for #31.
 
@@ -184,7 +184,7 @@ this change fixes. A project session now costs what an in-repo session costs, wh
 No `docs/PERFORMANCE.md` entry is warranted for a regression, because there isn't one. The ~0.8s
 absolute cost is worth recording against **P3** ("Precompiled prelude / library objects") instead: it
 is the baked set being compiled from source at every session start, which is what P3 proposes to
-cache, and it is now paid by all four doors rather than three.
+cache, and it is now paid by all four commands rather than three.
 
 The REPL trades "read and compile `base.sld` + `internal.sld` from the manifest" for "compile the
 baked set from the baked-in `*prelude-source*`". Both compile the same procedures, so the expectation
@@ -204,7 +204,7 @@ would make both worse; `MODULES.md` is already 501 lines and is the wrong thing 
 their first day.
 
 It is verified the way the workflow was investigated: the change builds the project the document
-describes and checks the output it claims, so the document cannot drift from a door's behavior
+describes and checks the output it claims, so the document cannot drift from a path's behavior
 without a test noticing (task 6.3).
 
 ## Risks / Trade-offs
@@ -212,7 +212,7 @@ without a test noticing (task 6.3).
 - **`src/repl-core.ss` is in `CORE_FLAT`, so this is IR-shaping** → the fixed point, the trust-check,
   and `test/module-scaffold-baseline.sha256` are all in play. Mitigation: land the mode 8 payload
   change as its own step with its own `make regen`, so the baseline re-record is one explainable
-  delta (the protocol in that script's header requires this); keep the C++ door changes, which are
+  delta (the protocol in that script's header requires this); keep the C++ path changes, which are
   not IR-shaping, in separate steps.
 - **The REPL startup sequence is the riskiest edit** — it must add modules and run initializers in
   dependency order before any user form, and a mistake shows up as an unbound name or a null slot
@@ -225,7 +225,7 @@ without a test noticing (task 6.3).
   so the guard failing is loud rather than silent) — and that is the common case in this tree, so it
   gets caught immediately rather than only in a user project.
 - **A stale `base.sld` becomes invisible in the REPL** (D5) → accepted, and consistent with the other
-  doors. Mitigation: documented in `docs/MODULES.md` and `docs/PROJECTS.md`, and `make regen` is the
+  paths. Mitigation: documented in `docs/MODULES.md` and `docs/PROJECTS.md`, and `make regen` is the
   one-word refresh; the trust-check already fails a compiler edit that forgot it.
 - **The documentation can rot** → mitigation is D7's verified example; the risk that remains is prose
   about limits (macro exports, whole-library imports) drifting as those limits lift, which is the
@@ -237,12 +237,12 @@ No user migration: every existing manifest keeps working, since a baked member's
 no-op rather than an error. A user project's manifest may *drop* its `(scheme base)` /
 `(emit internal)` entries after this change, and `docs/MODULES.md` stops telling people to add them.
 
-Rollback is per-step and ordinary — the C++ door changes revert independently of the `repl-core.ss`
+Rollback is per-step and ordinary — the C++ path changes revert independently of the `repl-core.ss`
 payload change, and the latter reverts with a `make regen`.
 
 ## Open Questions
 
-1. Should `emit lib` gain `--no-prelude` for symmetry with the other three doors? A library that
+1. Should `emit lib` gain `--no-prelude` for symmetry with the other three paths? A library that
    imports nothing does not need the baked set, and skipping it would make `emit lib` on
    `test/modules/mylib.sld` measurably faster. Deferred — no one has asked, and the default must
    work first.
@@ -260,4 +260,4 @@ proposal's What Changes):
 4. A manifest entry whose `(source …)` file does not exist **segfaulted `emit repl`** at startup — the
    host read the missing file as `""`, and mode 4's `(car '())` trap is not catchable by the
    in-language `guard` around it. Confirmed on `main`, so it predates this change. Both preload paths
-   now name the unreadable path; the REPL keeps the session, the run door exits non-zero.
+   now name the unreadable path; the REPL keeps the session, the `emit run` command exits non-zero.

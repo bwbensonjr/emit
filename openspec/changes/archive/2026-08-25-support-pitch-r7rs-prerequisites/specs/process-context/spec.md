@@ -24,7 +24,7 @@ For a standalone executable, the first element SHALL be the operating system's `
 - **WHEN** an AOT executable is invoked as `tool --check a.scm`
 - **THEN** `(command-line)` contains its command name followed by `--check` and `a.scm` in that order
 
-#### Scenario: The development door forwards option-like arguments
+#### Scenario: The development path forwards option-like arguments
 
 - **WHEN** `emit run formatter.scm -- --check a.scm` executes a program that prints `(command-line)`
 - **THEN** the program receives `("formatter.scm" "--check" "a.scm")`, and `--check` is not parsed as an Emit option
@@ -38,7 +38,7 @@ For a standalone executable, the first element SHALL be the operating system's `
 - **WHEN** `exit` is called inside nested `dynamic-wind` extents whose after thunks write markers
 - **THEN** both markers are written in innermost-to-outermost order before the process terminates
 
-#### Scenario: Pitch's status reaches the shell through both doors
+#### Scenario: Pitch's status reaches the shell through both paths
 
 - **WHEN** the same program calls `(exit 2)` once under `emit run` and once as an AOT executable
 - **THEN** both processes terminate with operating-system status 2

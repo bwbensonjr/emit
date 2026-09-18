@@ -36,7 +36,7 @@
 
 ## 6. Verification
 
-- [x] 6.1 The round trip that motivated the change: open a file for output, write, close, open it for input, read it back — through all three doors (AOT, run, REPL)
+- [x] 6.1 The round trip that motivated the change: open a file for output, write, close, open it for input, read it back — through all three paths (AOT, run, REPL)
 - [x] 6.2 `read` over a port returns successive data and then the eof object, and skips leading whitespace and comments
 - [x] 6.3 `peek-char` does not consume; `read-line` splits correctly including a final unterminated line; `read-string` returns short only at end of input
 - [x] 6.4 A file port and a string port produce identical results for the same text and the same operation sequence — the claim that makes slurp-on-open worth it

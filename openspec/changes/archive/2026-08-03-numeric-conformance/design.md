@@ -10,7 +10,7 @@ Three constraints shape every decision below.
 
 1. **Dev→ship fidelity is a design goal, not a nicety.** The emitter runs both under Chez (the
    bootstrap driver) and self-hosted (`emit run`, `emit repl`, `emit build`). Anything the emitter
-   computes from *host* behaviour can diverge between doors. #24 is the live instance: the flonum
+   computes from *host* behaviour can diverge between paths. #24 is the live instance: the flonum
    literal path interpolates the host's `number->string` into IR text, so `(* 100.0 2.0)` compiles
    under Chez and emits invalid IR self-hosted. This is the same class as the closed #7, and it is
    why the emitter half of this change is the part that must land first and cleanly.
@@ -41,7 +41,7 @@ Current state of the four defects, verified against `build/emit` at `5d38be0`:
 **Goals:**
 
 - The emitter writes a flonum literal into IR in a form LLVM accepts, **identically on every
-  door**, derived from canonical formatting rather than host printing.
+  path**, derived from canonical formatting rather than host printing.
 - All five comparisons are first-class values; `max`/`min` are variadic with R7RS contagion.
 - `quotient`, `remainder`, and `integer->char` reject arguments they currently reinterpret.
 - R7RS §6.2's `(scheme base)` numeric inventory is present, with the §6.2.3 exact-for-exact
@@ -77,13 +77,13 @@ Current state of the four defects, verified against `build/emit` at `5d38be0`:
 whatever the host prints.
 
 The fix is a single `ir-double` formatter used by both sites, producing text that is (a) valid
-LLVM in a `double` position and (b) **byte-identical across doors**.
+LLVM in a `double` position and (b) **byte-identical across paths**.
 
 Both properties are required, and the second is the one that is easy to miss. LLVM rejects
 `1e+02` because a floating-point constant must carry a `.` or use the `0x` form — that is (a),
 the reported symptom. But even after (a) is fixed, `number->string` gives `100.0` under Chez and
-`1e+02` self-hosted, so the emitted IR *text* would still differ by door. That divergence exists
-today at the boxed site (the `@.flo.lit.` global's contents differ between doors), which
+`1e+02` self-hosted, so the emitted IR *text* would still differ by path. That divergence exists
+today at the boxed site (the `@.flo.lit.` global's contents differ between paths), which
 `self-emit-equiv.sh` does not catch only because the compiler's own source contains no flonum
 literals. Fixing (a) alone would leave a fidelity hole in place.
 
@@ -108,10 +108,10 @@ Alternatives considered:
   bits of a double in the emitter needs a primitive that does not exist under the Chez host, where
   `src/emit.ss` is *evaluated*, not compiled.
 - **Append `.0` when the text contains no `.`** — the one-line fix the issue floats. Rejected: it
-  produces valid IR but leaves the text door-dependent (`100.0` vs `1.0e+02`), so it fixes the
+  produces valid IR but leaves the text path-dependent (`100.0` vs `1.0e+02`), so it fixes the
   compile error and not the fidelity defect underneath it.
 
-Verification is a door-parity test on a flonum-literal-heavy program (the existing
+Verification is a path-parity test on a flonum-literal-heavy program (the existing
 `dump-parity`/`repl-equiv` machinery), not just a compile-success test — the assertion that
 matters is *identical IR text*, and no current test would notice its absence.
 
@@ -286,16 +286,16 @@ rather than half-implementing prefixes here.
 ### D8 — The non-finite tokens land in both readers
 
 There are two readers: the prelude's (`src/prelude.scm`, `rd-atom`/`rd-flonum?`) and the
-bootstrap's (`src/parse.ss`, the `const` clause). They must agree or the doors disagree about what
+bootstrap's (`src/parse.ss`, the `const` clause). They must agree or the paths disagree about what
 a program *means* — a fidelity break of the same shape as #24. `+inf.0`, `-inf.0`, `+nan.0` are
 three exact literal strings recognized in `rd-atom` before the flonum classifier runs, added to
-both, with a door-parity test rather than a single-door test.
+both, with a path-parity test rather than a single-path test.
 
 ## Risks / Trade-offs
 
 - **The IR-double canonicalization assumes the two printers agree on shortest-round-trip
   digits.** They should — shortest-round-trip digits are unique — but "should" is doing work here,
-  and a disagreement would surface as door-divergent IR text rather than as a compile error.
+  and a disagreement would surface as path-divergent IR text rather than as a compile error.
   → The parity test in D1 covers a spread of literals chosen to hit the interesting cases
   (integral, exponent-requiring, subnormal, `1e308`, `5e-324`, values near the exponent window
   boundary), and it compares emitted text, not results.
@@ -339,7 +339,7 @@ both, with a door-parity test rather than a single-door test.
 ## Migration Plan
 
 1. **Emitter (D1)** — the `ir-double` formatter and both literal sites, then a plain regen; verify
-   the door-parity test and re-record the IR baseline with a reviewed diff.
+   the path-parity test and re-record the IR baseline with a reviewed diff.
 2. **Runtime guards (D3)** — `rt_quotient`/`rt_remainder`/`rt_integer_to_char`; runtime-only, no IR
    change, testable immediately.
 3. **Comparisons and `max`/`min` (D2, D6)** — `*integrable*` entries plus the generalized eta, and

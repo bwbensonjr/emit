@@ -21,7 +21,7 @@ The relevant current state, verified rather than assumed:
 - **The raise path is Scheme.** Under `dynamic-extent` D4, `raise` (`src/prelude.scm:646`) walks
   `*handlers*` and *calls* the current handler; `guard` is a handler that escapes. `rt_raise`
   (`:1995`) is only the unhandled tail.
-- **Both mechanisms this change needs already exist next door.** `rt_intern` canonicalizes symbols by
+- **Both mechanisms this change needs already exist next path.** `rt_intern` canonicalizes symbols by
   name against an uncollectable scanned table (`:674`), and `rt_repl_cell` (`:1141`) is the
   established pattern for a GC-scanned root cell holding a Scheme value across calls.
 

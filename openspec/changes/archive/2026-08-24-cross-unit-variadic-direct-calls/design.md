@@ -16,7 +16,7 @@ call to continue evaluating and passing the imported closure as `self`.
 
 - Describe fixed and variadic call arity without changing existing fixed-row bytes.
 - Use the existing direct ABI for every statically valid call to an immutable variadic export.
-- Keep emitted behavior and direct-call eligibility identical across AOT, run, and REPL doors.
+- Keep emitted behavior and direct-call eligibility identical across AOT, run, and REPLs.
 - Preserve compatibility with existing fixed-arity export tables and with the tree-shaker's root
   rule.
 

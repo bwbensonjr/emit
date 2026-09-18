@@ -7,7 +7,7 @@ The *surface* is where the distance is: Emit binds 20 of roughly 60 R7RS numeric
 (#27), three of the five comparisons cannot be passed to a higher-order procedure (#26),
 `quotient`/`remainder` return shifted garbage instead of trapping (#23), the reader cannot read
 back the `+inf.0` its own printer emits (#25), and a flonum literal with an exponent makes the
-compiler emit **invalid LLVM IR** — differently on each door (#24):
+compiler emit **invalid LLVM IR** — differently on each path (#24):
 
 ```
 $ echo '(display (* 100.0 2.0))' | build/emit run
@@ -76,7 +76,7 @@ bignums; `(scheme complex)`, which should stay absent since Emit is real-only; a
   inventory and the variadic `max`/`min` with contagion; and **Read data from source text** gains
   the three non-finite tokens.
 - `aot-codegen`: a requirement that a flonum literal is written into IR in a form LLVM accepts
-  regardless of which door's `number->string` runs — the emitter must not derive IR text from host
+  regardless of which path's `number->string` runs — the emitter must not derive IR text from host
   printing (the #24 fidelity rule, the same shape as the `fixnum-overflow-trap` delta).
 
 `primitive-layer` needs no delta: its requirements govern how *any* primitive behaves, and the new

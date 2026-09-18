@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # prelude-base-run-tests.sh -- Stage 3 (scheme base) re-home on the CHEZ-FREE
-# embedded-runner door (change: embedded-runner-rehome).  Exercises `emit run`
-# and `emit build`, which now auto-import (scheme base) instead of prepending
+# embedded-runner path (change: embedded-runner-rehome).  Exercises emit run
+# and emit build, which now auto-import (scheme base) instead of prepending
 # the prelude: the program references scheme.base:* externals and the (scheme base)
 # module is JIT'd / clang-linked alongside it.  The Chez-free behavior checks always
 # run; a byte-identity-vs-Chez-driver check runs only when chez is present.
 #
-# (Value/exit-code parity of `emit run` vs the AOT driver across ALL demos lives in
+# (Value/exit-code parity of emit run vs the AOT driver across ALL demos lives in
 # demos/run-embedded.sh; this suite covers the re-home-specific behaviors.)
 #
 # Run from the repo root: test/prelude-base-run-tests.sh
@@ -19,7 +19,7 @@ make emit >/dev/null 2>&1 || { echo "fatal: could not build build/emit"; exit 1;
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 pass=0; fail=0
 
-# run a program string through `emit run`; compare stdout to expected.
+# run a program string through emit run; compare stdout to expected.
 run_val () {  # name  source  expected  [extra emit run args...]
   local name="$1" src="$2" want="$3"; shift 3
   local got; got="$(printf '%s' "$src" | timeout 60 build/emit run "$@" 2>"$TMP/$name.err")"
@@ -161,7 +161,7 @@ else
 fi
 
 # The committed baked IR (linked into every binary, incl. the compiler itself since
-# compiler-bootstrap-rehome) must equal the modules `emit run` emits AHEAD of a program --
+# compiler-bootstrap-rehome) must equal the modules emit run emits AHEAD of a program --
 # same libraries, same core, no drift.
 #
 # The comparison used to include a THIRD derivation, `emit run --emit < base.sld`, which is

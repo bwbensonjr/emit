@@ -16,11 +16,11 @@
 ;;; reserves for the standard precisely to say so, and nothing auto-imports it, so listing
 ;;; it here does not put a single name into a user program's scope.
 ;;;
-;;; It is listed because the manifest-driven doors need it, not for a user's benefit.  The
-;;; doors that build the baked set from the compiler's baked-in prelude source resolve both
-;;; it and (scheme base) with no files at all; the REPL door and the Chez driver resolve
+;;; It is listed because the manifest-driven paths need it, not for a user's benefit.  The
+;;; paths that build the baked set from the compiler's baked-in prelude source resolve both
+;;; it and (scheme base) with no files at all; the REPL and the Chez driver resolve
 ;;; (scheme base) from THIS manifest, and base.sld imports the substrate, so without an
-;;; entry those doors would have no standard library.  It is ordered first for readability;
+;;; entry those paths would have no standard library.  It is ordered first for readability;
 ;;; the loader is fixpoint-driven and does not depend on manifest order.
 ;;;
 ;;; (emit filesystem) is a PUBLIC but non-standard ordinary library.  Its four narrow

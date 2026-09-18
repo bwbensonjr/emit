@@ -1,9 +1,9 @@
 ## 1. Pin the defects with failing tests
 
-- [x] 1.1 Add `test/project-door-tests.sh` that builds a throwaway project in a temp directory —
+- [x] 1.1 Add `test/project-command-tests.sh` that builds a throwaway project in a temp directory —
       one library importing `(scheme base)`, one library importing that library plus
       `(scheme inexact)`, a program, and a manifest naming **only** the project's own libraries and
-      its `(program …)` entry — and asserts each door works there. Register it in
+      its `(program …)` entry — and asserts each path works there. Register it in
       `run-all-tests.sh` (Chez-free, default suite).
 - [x] 1.2 In that suite, assert the two currently-failing cases so the suite fails before the fix:
       `emit repl` in the project directory resolves `map` and loads the project library, and
@@ -35,14 +35,14 @@ All edits in this group are in `CORE_FLAT`, so they share ONE `make regen` (2.8)
 - [x] 2.2 Correct the stale comment on `repl-load-library-text`'s `already` branch — the REPL now
       double-loads by design and does see that status — and state that the guard covers every baked
       member by name.
-- [x] 2.3 Confirm the run door is unaffected: it reads only `rt_car(rt_cdr(r))` (`src/emit.cpp:470`),
+- [x] 2.3 Confirm the `emit run` command is unaffected: it reads only `rt_car(rt_cdr(r))` (`src/emit.cpp:470`),
       so verify by inspection and by test that `emit run`/`emit build` emitted IR does not move.
 - [x] 2.8 `make regen` once for the whole group, then re-record
       `test/module-scaffold-baseline.sha256` if it moves, with the delta explained in the commit
       message per that script's header protocol. Confirm `./run-dev-tests.sh` passes (self-host fixed
       point + trust-check) with `chez` available.
 
-## 3. The REPL door registers and initializes the baked set
+## 3. the REPL registers and initializes the baked set
 
 - [x] 3.1 In `emit_repl` (`src/emit.cpp`), after the JIT is created and `init-session` has run, call
       mode 8 when the prelude is enabled; split the returned IR on the boundary marker exactly as
@@ -58,7 +58,7 @@ All edits in this group are in `CORE_FLAT`, so they share ONE `make regen` (2.8)
 - [x] 3.6 Narrate the registered members at verbose verbosity only, per `docs/OUTPUT.md` (resolves
       design open question 2).
 
-## 4. The `emit lib` door seeds its session before deriving either artifact
+## 4. The `emit lib` path seeds its session before deriving either artifact
 
 - [x] 4.1 Split `compile_program` (`src/emit.cpp`) into `seed_session` (init-session, mode 8 baked-set
       registration, `preload_user_libraries`) and `compile_unit` (mode 7), keeping the call order
@@ -68,13 +68,13 @@ All edits in this group are in `CORE_FLAT`, so they share ONE `make regen` (2.8)
 - [x] 4.3 Verify a library importing `(scheme base)`, a library importing another manifest library,
       and a library importing both compile to artifacts; and that an unresolvable import is reported
       with no artifact written.
-- [x] 4.4 Verify `emit lib`'s unit `.ll` stays byte-identical to the unit the run and AOT doors emit
+- [x] 4.4 Verify `emit lib`'s unit `.ll` stays byte-identical to the unit the run and AOT paths emit
       for the same source, for an importing library as well as an import-free one (the `emit-cli`
       spec's one-compile-unit-core requirement).
 
-## 5. Diagnostics name the door
+## 5. Diagnostics name the path
 
-- [x] 5.1 Drop the leaked `repl:` prefix from diagnostics the non-REPL doors print, so `emit lib`
+- [x] 5.1 Drop the leaked `repl:` prefix from diagnostics the non-REPLs print, so `emit lib`
       reports `emit lib: unbound variable map`. Strip it **host-side** in `src/emit.cpp` rather than
       changing the `(error 'repl …)` raise sites: the prefix comes from `error-object-message`, so
       editing the raise sites would be IR-shaping *and* would change the REPL's own output, which the
@@ -83,7 +83,7 @@ All edits in this group are in `CORE_FLAT`, so they share ONE `make regen` (2.8)
 
 ## 6. Verification and measurement
 
-- [x] 6.1 Run `./run-all-tests.sh` — all suites green, including the new `project-door-tests.sh` and
+- [x] 6.1 Run `./run-all-tests.sh` — all suites green, including the new `project-command-tests.sh` and
       the existing `prelude-base-repl-tests.sh`, `modules-repl-tests.sh`, `repl-host-tests.sh`,
       `install-layout-tests.sh`, and `library-partition-tests.sh`.
 - [x] 6.2 Run `./run-dev-tests.sh` with `chez` present — backend equivalence, the self-hosting fixed
@@ -114,7 +114,7 @@ All edits in this group are in `CORE_FLAT`, so they share ONE `make regen` (2.8)
 - [x] 7.5 Document that after this change the baked `(scheme base)` wins over a manifest entry, so a
       compiler developer editing `lib/scheme/base.sld` refreshes the REPL with `make regen`
       (design D5).
-- [x] 7.6 Verify the document by making its example project the one `test/project-door-tests.sh`
+- [x] 7.6 Verify the document by making its example project the one `test/project-command-tests.sh`
       builds, so the commands and outputs it prints are the ones the suite asserts.
 - [x] 7.7 Add the index line to `docs/README.md` and a pointer from `README.md`'s quick start.
 
@@ -122,7 +122,7 @@ All edits in this group are in `CORE_FLAT`, so they share ONE `make regen` (2.8)
 
 - [x] 8.1 Remove `docs/MODULES.md`'s note that a hand-written manifest must also name
       `(emit internal)`, and its pointer to #39 as an open proposal; describe the baked set as
-      registered on every door instead.
+      registered on every path instead.
 - [x] 8.2 Sync the delta specs into `openspec/specs/{module-system,emit-cli,interactive-repl}` and
       archive the change.
 - [x] 8.3 Close **#39** referencing the fixing commit; note in the closing comment that the fix also
@@ -133,4 +133,4 @@ All edits in this group are in `CORE_FLAT`, so they share ONE `make regen` (2.8)
 - [x] 8.5 Update `openspec/explorations/library-sources-and-artifacts.md` — the manifest/baked-set
       relationship it maps changes here, so add a LANDED note to Finding 1 recording that the
       "baked libraries are CWD-independent, manifest libraries are not" axis now holds on all four
-      doors rather than only the run door.
+      paths rather than only the `emit run` command.

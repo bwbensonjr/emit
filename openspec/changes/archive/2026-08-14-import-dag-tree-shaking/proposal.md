@@ -18,7 +18,7 @@ Binary size is a stated design goal (`CLAUDE.md`: "small, clean, self-contained 
 executables"), and ~170 KB of unreachable IR is now the single largest dead payload in a minimal
 binary — the last high-value open size item in `docs/PERFORMANCE.md` (P10). Now is the moment for
 two reasons: `chez-free-unit-pipeline` just gave `emit build` a shake of its own, so a better root
-computation lands on **both** ship doors at once rather than being retrofitted to the second later;
+computation lands on **both** shipping paths at once rather than being retrofitted to the second later;
 and `homebrew-tap-distribution` will tag 0.1.0, whose first impression is the size of what it
 delivers.
 
@@ -30,7 +30,7 @@ delivers.
   longer disqualified from shaking because something imports it; it is shaken against its importers'
   *shaken* form. `(scheme base)` pruned to 4 defines references almost nothing in the substrate, so
   a program calling only `car` should keep ~0 reader bindings.
-- **Retire the "imported by another unit" prunability gate** on both ship doors — the Chez driver's
+- **Retire the "imported by another unit" prunability gate** on both shipping paths — the Chez driver's
   `(member nm imported-by-unit)` test and mode 17's `imported-by-another?` `keep` answer. Under
   reverse-topological order the condition that made the gate necessary (an importer kept full could
   reference a dropped binding) can no longer arise, because every importer is final before its
@@ -68,13 +68,13 @@ exported interface) without change." This change is that sentence being cashed i
 - `artifact-cache`: a shaken entry's key must cover the full root text (program IR plus the
   finalized IR of the unit's importers), not the program IR alone.
 - ~~`emit-cli`~~: withdrawn with the `emit lib` half. The "byte-for-byte identical to the unit the
-  AOT and REPL doors produce" guarantee stays exactly as written, unqualified.
+  AOT and REPLs produce" guarantee stays exactly as written, unqualified.
 
 ## Impact
 
 **Code.**
 - `src/core.ss` — `program-root-internals` is the shared root rule (moved here by
-  `chez-free-unit-pipeline` design D8 precisely so both doors compute roots once); it grows a
+  `chez-free-unit-pipeline` design D8 precisely so both paths compute roots once); it grows a
   root-text parameter that is no longer just the program. `compile-library*` is unchanged — it
   already takes `keep-roots`.
 - `src/compile.ss` — `build-modular-artifacts*`: reverse-topological iteration, per-unit root union,

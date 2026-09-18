@@ -529,7 +529,7 @@ respectively, rather than interning them as symbols.
 This SHALL close the write/read round trip for every value the printer can produce: since
 `(/ 1.0 0.0)` prints as `+inf.0`, feeding a program's own output back through the reader SHALL
 NOT silently turn a number into an identifier. Both readers SHALL agree, so a datum has the same
-meaning on every door.
+meaning on every path.
 
 #### Scenario: The non-finite tokens read as numbers
 
@@ -542,7 +542,7 @@ meaning on every door.
 - **WHEN** a program divides `1.0` by `0.0`, prints the result, and reads that text back
 - **THEN** the value read is a number equal to the original infinity, not the symbol `+inf.0`
 
-#### Scenario: Both doors agree
+#### Scenario: both paths agree
 
 - **WHEN** the same source containing `+inf.0` is read by the prelude reader and by the
   bootstrap reader

@@ -5,7 +5,7 @@
 ;;; suites report it at startup.
 ;;; Paths are relative to THIS FILE (change: manifest-search-path).
 ;;; (scheme base) and the substrate are named because the CHEZ driver has no baked set and
-;;; the program auto-imports the prelude; the Chez-free doors ignore these entries.
+;;; the program auto-imports the prelude; the Chez-free paths ignore these entries.
 ((library (emit internal)     (source "../../lib/emit/internal.sld"))
  (library (scheme base)       (source "../../lib/scheme/base.sld"))
  (library (macro-dupname-lib) (source "macro-dupname-lib.sld")))

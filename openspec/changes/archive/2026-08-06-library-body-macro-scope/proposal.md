@@ -24,8 +24,8 @@ compile-time interface and `compile-library*` already merges `import-tables->mac
 
 - **A library body can use the derived forms it imports.** A library that imports `(scheme base)`
   gets `cond`, `case`, `when`, `unless`, `let*`, `and`, `or`, `guard`, and `parameterize` in its
-  body, exactly as a program does. This holds on all three doors — the Chez batch driver, the REPL,
-  and the Chez-free embedded run door — per dev→ship fidelity.
+  body, exactly as a program does. This holds on all three paths — the Chez batch driver, the REPL,
+  and the Chez-free embedded `emit run` command — per dev→ship fidelity.
 - **The derived-form macros get declared homes, split across two members.** `and`, `or`, `let*`,
   `cond`, `when` and `unless` are homed in `(emit internal)`; `case`, `guard`, `parameterize` and
   `do` in `(scheme base)`, with `(scheme base)` re-exporting the substrate's six so one import brings
@@ -105,7 +105,7 @@ defines it", and is modified there.
   demonstrate byte-identity for programs that compile today, or state exactly which forms move and
   why.
 - Tests: `test/modules-tests.sh`, `test/modules-run-tests.sh`, `test/modules-repl-tests.sh` (a
-  fixture library using `cond`/`when`/`and` in its body, on all three doors; a re-export fixture),
+  fixture library using `cond`/`when`/`and` in its body, on all three paths; a re-export fixture),
   `test/scheme-base-gen-check.sh` and `test/scheme-base-surface-check.sh` (the generated surface now
   includes macro exports), and `test/aot-tree-shaking-tests.sh`.
 - Docs: `docs/MODULES.md` (the "Scope & limits" bullet this closes, the export surface, and the

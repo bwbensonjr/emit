@@ -123,13 +123,13 @@ else
   bad "label-stability check: missing $full or $pruned"
 fi
 
-# --- door parity: both ship doors shake the same program the same way --------
+# --- path parity: both shipping paths shake the same program the same way --------
 # (change: chez-free-unit-pipeline; docs/PERFORMANCE.md P8).  The size of a standalone
-# executable must not depend on WHICH door built it.  Before this, the Chez driver shaved
-# a hello-world to ~94 KB while `emit build` linked the whole standard library for ~212 KB,
+# executable must not depend on WHICH path built it.  Before this, the Chez driver shaved
+# a hello-world to ~94 KB while emit build linked the whole standard library for ~212 KB,
 # and the gap grew with every addition to `(scheme base)`.
 #
-# Chez-gated because only this suite has Chez; the Chez-free half (that `emit build` shakes
+# Chez-gated because only this suite has Chez; the Chez-free half (that emit build shakes
 # at all) is asserted in test/unit-pipeline-tests.sh.
 printf '(display "hello")\n(newline)\n' > "$TMP/hello.scm"
 cat > "$TMP/emit-libs.scm" <<EOF
@@ -143,17 +143,17 @@ if [ -x "$TMP/hello-chez" ] && [ -x "$TMP/hello-emit" ]; then
   cz=$(stat -f%z "$TMP/hello-chez" 2>/dev/null || stat -c%s "$TMP/hello-chez")
   em=$(stat -f%z "$TMP/hello-emit" 2>/dev/null || stat -c%s "$TMP/hello-emit")
   [ "$("$TMP/hello-chez")" = "$("$TMP/hello-emit")" ] \
-    && ok "both ship doors deliver the same behaviour" \
-    || bad "the two ship doors disagree on output"
+    && ok "both shipping paths deliver the same behaviour" \
+    || bad "the two shipping paths disagree on output"
   # Same program, same compiler, same shake: within 10% is "the same order", which is the
   # spec's claim; they were 2.3x apart.
   if [ "$em" -le $(( cz * 110 / 100 )) ] && [ "$cz" -le $(( em * 110 / 100 )) ]; then
-    ok "both ship doors deliver the same size (chez $cz B, emit build $em B)"
+    ok "both shipping paths deliver the same size (chez $cz B, emit build $em B)"
   else
-    bad "ship-door size gap: chez $cz B vs emit build $em B"
+    bad "shipping-path size gap: chez $cz B vs emit build $em B"
   fi
 else
-  bad "door-parity: one of the two doors produced no executable"
+  bad "path-parity: one of the two paths produced no executable"
 fi
 
 # --- backward root propagation through the import DAG ------------------------

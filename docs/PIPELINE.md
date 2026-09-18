@@ -70,7 +70,7 @@ read (host) → prepend prelude → collect-toplevel → expand → parse+rename
 
 **Prelude.** `src/prelude.scm` is a small standard library (`not`, `list`, `length`, `reverse`,
 `append`, `map`, `memq`, `assq`, plus the derived-form macros below). It is no longer *prepended*:
-it is re-homed as the library **`(scheme base)`**, auto-imported into every program on all doors —
+it is re-homed as the library **`(scheme base)`**, auto-imported into every program on all compilation paths —
 the Chez driver, the REPL, and the Chez-free embedded runner — and, since
 `compiler-bootstrap-rehome`, into the compiler's own build too (its procedures resolve as
 `scheme.base:*` externals against a linked `scheme.base.ll`; the derived-form macros are merged
@@ -115,7 +115,7 @@ letrec-binding the lambda-initialized rest (see below). It finds nothing in the 
 library units, whose top-level defines are persistent globals rather than a binding group —
 `simplify` runs over all 120 of `(scheme base)`'s defines and rewrites none. Folding and
 dead-binding removal still apply to local `let`s everywhere. This is a performance asymmetry
-only; values are identical on every door.
+only; values are identical on every path.
 
 **Top-level defines and boxing.** `build-program` hands the whole group over as **one
 `letrec`**, mixed initializers and all — that is enough on its own, because the `letrec`
@@ -183,7 +183,7 @@ no scope tracking. It rewrites a direct unshadowed call `(call cons a b)` into t
 `(primcall %cons a b)` (recovering baseline codegen — the `%`-op lowers to the same `rt_cons`
 and never appears in LLVM IR), and a value/`apply`/wrong-arity use of the bare symbol into an
 eta lambda `(lambda (p…) (primcall %cons p…))`. A shadowed (renamed) binding is left
-untouched, so the user binding wins. Because the pass is shared by all doors, the REPL and the
+untouched, so the user binding wins. Because the pass is shared by all paths, the REPL and the
 AOT build make **identical** inlining decisions (dev→ship fidelity). The raw `%`-ops it emits
 stay reserved primcall heads, which is why adding an integrable is a staged-bootstrap step
 (the committed seed must learn the `%`-name — see the `first-class-primitives` change and the
@@ -200,7 +200,7 @@ D3 lesson recorded there).
 | lambda-lift + lower | `(program (code …) entry)` with `(local x)｜(free-ref i)｜(make-closure …)｜(closure-block …)｜(app f (a…))`; a call to a statically-known closure becomes `(known-app label f (a…))`, or `(self-app label (a…))` for a self-call, so no code pointer is loaded (P5-B). An operator that resolved to an **imported** procedure with a recorded label and matching arity takes the same `known-app` path across the unit boundary: exact count for fixed procedures, at least the minimum for variadic procedures (P5/P9, cross-unit). An exact-minimum variadic call selects the optional collision-safe `min-entry:$...` label; larger counts and old call rows keep the ordinary label. In a **library** unit a top-level lambda binding is lifted under the stable label `libname:code:<name>` rather than a counter one, so a tree-shaken recompile spells it identically | `src/passes/lower.ss` |
 | emit | textual LLVM IR (opaque `ptr`, `fastcc`, `musttail`); each variadic body has a checked ordinary entry used by its closure and a same-ABI minimum entry that binds empty rest without `rt_build_rest`; the allocator is declared `align 8` so `-O2` can see through a closure's tag mask (P6-B); each cross-unit `known-app` label is `declare`d, as an imported global is | `src/emit.ss` |
 
-**Inspecting the stages (`--dump`).** Every door of the shipped binary prints the IL after
+**Inspecting the stages (`--dump`).** Every command of the shipped binary prints the IL after
 each named pass to stderr — `build/emit run --dump prog.scm`, and likewise `build`, `lib`,
 and `repl`; `EMIT_DUMP_LEVEL=2 build/schemec` for the filter, which has no argument parser.
 No Chez required (change: `emit-dump-stages`); the Chez driver's `--dump` remains as the
@@ -210,7 +210,7 @@ Which stage names you see depends on which front half runs, and there are two:
 
 - **whole-program** (`compile-forms` — the `schemec` filter, and the Chez driver under
   `--no-prelude`): `collect-toplevel`, `expand`, `parse+rename`, then the four above.
-- **modular** (`compile-program-with-imports` — what every shipped door takes, since
+- **modular** (`compile-program-with-imports` — what every shipped command takes, since
   `(scheme base)` is auto-imported, and the Chez driver's default): the same ladder with
   `parse+rename+imports`, that stage additionally resolving imported globals.
 

@@ -6,9 +6,9 @@
 ;;; list read THIS file, so they cannot disagree:
 ;;;
 ;;;   tools/gen-scheme-base.ss   (Chez) writes the committed lib/**/*.sld, which the Chez
-;;;                              driver and the REPL door resolve via the manifest
+;;;                              driver and the REPL resolve via the manifest
 ;;;   partition-library-form     (src/core.ss) the portable derivation used by
-;;;   + compile-baked-set        `emit run` / `emit build` / the run door, from the
+;;;   + compile-baked-set        emit run / emit build / the emit run command, from the
 ;;;                              baked-in prelude source with no filesystem
 ;;;
 ;;; The export list is the prelude's top-level defines in SOURCE ORDER minus
@@ -214,7 +214,7 @@
 ;;; auto-imported -- which is what keeps it out of scope in an ordinary program, and so
 ;;; what preserves issue #29's privacy guarantee -- and carries no stability guarantee.
 ;;; It is baked because (scheme base) imports it and (scheme base) must resolve with no
-;;; manifest; it is ALSO written to disk and listed in emit-libs.scm because the REPL door
+;;; manifest; it is ALSO written to disk and listed in emit-libs.scm because the REPL
 ;;; resolves (scheme base) from the manifest (src/emit.cpp, mode 5 -> mode 4), so
 ;;; base.sld's import of it has to resolve there too.
 ;;;

@@ -37,7 +37,7 @@ work.
 
 **Goals:**
 
-- No indexed access reads or writes an address outside the object, from any door, through any call
+- No indexed access reads or writes an address outside the object, from any path, through any call
   path.
 - No construction produces an object with a negative recorded length.
 - `(substring "abcdef" 4 1)` stops terminating the process on a signal.

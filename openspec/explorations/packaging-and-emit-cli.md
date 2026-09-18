@@ -55,8 +55,8 @@ The manifest already exists as the seed of a project file — a readable s-expre
   unit-general** by deliberate factoring — "a future manifest can supply richer roots (a
   bin entry, or a delivered library's exports) without reworking the pass." That is the
   compile-and-deliver half of `emit build`, already landed as a first slice.
-- **Dev→ship fidelity.** One shared compiler core across REPL/JIT and AOT; the dev door
-  keeps full cached units (open world), the ship door builds a pruned per-program `__init`
+- **Dev→ship fidelity.** One shared compiler core across REPL/JIT and AOT; the development path
+  keeps full cached units (open world), the shipping path builds a pruned per-program `__init`
   (closed world). Observable behavior is identical.
 
 ## What is missing (the packaging work proper)
@@ -86,29 +86,29 @@ that as a wall in front of *all* packaging work. Grounding it in the actual spec
 that: the surface is largely proven already.
 
 `openspec/specs/module-system/spec.md` carries **22 requirements**, and nine module-related
-changes are archived. The doors packaging would unify mostly exist:
+changes are archived. The paths packaging would unify mostly exist:
 
 | Capability | Module-system requirement | State |
 |---|---|---|
-| build + link an importer (`emit build`) | "AOT door — build and link an importing program" | ✅ shipped (needs Chez: `bin/scheme-compile`) |
-| import interactively (`emit repl`)       | "REPL door — import a library interactively"      | ✅ shipped, Chez-free (`repl-host`) |
+| build + link an importer (`emit build`) | "AOT path — build and link an importing program" | ✅ shipped (needs Chez: `bin/scheme-compile`) |
+| import interactively (`emit repl`)       | "REPL — import a library interactively"      | ✅ shipped, Chez-free (`repl-host`) |
 | manifest resolution                       | "Library manifest"                                | ✅ shipped |
 | run in-process (`emit run`)               | *(no requirement yet)*                            | ❌ **the one gap** |
 
 So the gate is **not** modules-at-large; it is one concrete, bounded gap: the Chez-free
 in-process runner (`build/scheme-run`) auto-imports only `(scheme base)` and has "no
 manifest" (`docs/MODULES.md:117,126`), so it cannot resolve *user* libraries the way the
-AOT and REPL doors already can. Closing that gap is a **module-system completion**, and it
+AOT and REPLs already can. Closing that gap is a **module-system completion**, and it
 is the thing that finishes "the proven surface."
 
 ## Toward a first proposable slice — the path forward
 
 Reranked after the gate correction. The genuinely-proposable-now slice turns out not to be
-"packaging" at all — it is the last module door. Packaging-proper still wants design.
+"packaging" at all — it is the last module path. Packaging-proper still wants design.
 
 | # | Slice | Proposable now? | Why |
 |---|---|---|---|
-| **3** | **`scheme-run` resolves user libs via `--manifest` (Chez-free)** | **Yes — now** | A *module-system completion*, not packaging. Clear spec home (a new `module-system` requirement: "run-program door resolves user libraries via manifest"), clear acceptance (parity with the shipped AOT door), no undecided first-order questions. Unblocks `emit run` parity. |
+| **3** | **`scheme-run` resolves user libs via `--manifest` (Chez-free)** | **Yes — now** | A *module-system completion*, not packaging. Clear spec home (a new `module-system` requirement: "run-program path resolves user libraries via manifest"), clear acceptance (parity with the shipped AOT path), no undecided first-order questions. Unblocks `emit run` parity. |
 | 2 | Manifest bin-entry + `emit build <project>` | Soon (needs design) | The reachability pass already accepts explicit roots; but "what is a bin/project entry in the manifest" is a real schema-design question. Most direct continuation of `aot-release-profile`. |
 | 1 | Unified `emit` CLI dispatcher / rename | Later | D7 defers the rename; low value until the verbs are coherent; entangled with the CLI-naming/back-compat open question. |
 
@@ -136,27 +136,27 @@ Reranked after the gate correction. The genuinely-proposable-now slice turns out
 ## Status of the follow-on proposal
 
 - **Slice #3 → landed & archived** as a `module-system` change (change:
-  `run-door-user-libraries`, 2026-07-17). It finished the run-program door and thereby "proved
+  `run-door-user-libraries`, 2026-07-17). It finished the run-program path and thereby "proved
   the surface" packaging sits on.
 - **Slice #2 → landed** as the `emit-build-bin-entry` change (2026-07-17). It adds the
   `(program NAME (source S) [(output O)])` manifest entry and a `bin/emit build [NAME]` verb
   that resolves it and delivers a standalone executable. Two decisions departed from this note's
   initial framing:
-  - **Chez-free door, not the Chez ship path.** `emit build` delivers via `bin/scheme-compile`
+  - **Chez-free path, not the Chez ship path.** `emit build` delivers via `bin/scheme-compile`
     (Chez-free: `scheme-run --emit` + clang), *not* the Chez driver's tree-shaking release
     profile. So this slice links full library units — **no whole-program strip yet**. Porting
-    the closed-world strip (the `aot-release-profile` pass) to the Chez-free door is now its own
+    the closed-world strip (the `aot-release-profile` pass) to the Chez-free path is now its own
     deferred item, distinct from the dependency-model question.
   - **Chez-free resolver.** The `(program …)` entry is resolved by the embedded compiler
     (`src/repl-core.ss` mode 10, exposed as `scheme-run --resolve-program NAME`), reusing the run
-    door's manifest machinery — keeping `emit build` Chez-free end to end.
+    path's manifest machinery — keeping `emit build` Chez-free end to end.
   - `emit` was introduced **additively** (`bin/emit`, `build` verb only); nothing was renamed,
     so the CLI-naming/back-compat question below stays with slice #1.
 - **Slice #1 → landed** as the `emit-cli-unification` change (2026-07-17). A single compiled
   `build/emit` binary is now the sole user-facing entry point, dispatching four verbs to one
   shared compiler core: `emit run` (was `build/scheme-run`), `emit repl` (was
   `build/repl-host`), `emit build` (was `bin/emit` / `bin/scheme-compile`, now emitting IR
-  in-process and forking `clang` itself), and the **new** `emit lib` compile-unit door
+  in-process and forking `clang` itself), and the **new** `emit lib` compile-unit path
   (unit `.ll` + `.exports`, via a new embedded-compiler mode 11). The old binaries and bash
   wrappers were removed and every caller (`Makefile`, `tools/regen.sh`, the tests, demos, and
   docs) migrated to `emit <verb>`; the self-hosting fixed point and trust-check still hold
@@ -169,4 +169,4 @@ Reranked after the gate correction. The genuinely-proposable-now slice turns out
   lockfile); decide before any dependency notion grows.
 - **CLI naming / back-compat** — unchanged; blocks slice #1.
 - **Chez-free tree-shaking** — new: `emit build` links full units. Bringing the closed-world
-  strip to the Chez-free door would shrink delivered binaries without needing Chez at build time.
+  strip to the Chez-free path would shrink delivered binaries without needing Chez at build time.

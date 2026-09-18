@@ -8,7 +8,7 @@ Defines R7RS-small arity-dispatched procedures through the explicitly imported `
 
 Emit SHALL provide an ordinary importable `(scheme case-lambda)` library that exports the `case-lambda` syntax. The library SHALL be available to source programs, user libraries, the REPL, `emit run`, and standalone builds through the same module artifact mechanism as other non-baked standard libraries.
 
-#### Scenario: An imported case-lambda macro works through both execution doors
+#### Scenario: An imported case-lambda macro works through both execution paths
 
 - **WHEN** a program imports `(scheme case-lambda)`, defines a procedure with `case-lambda`, and is executed once with `emit run` and once as an AOT executable
 - **THEN** both executions select the same clause and return the same value

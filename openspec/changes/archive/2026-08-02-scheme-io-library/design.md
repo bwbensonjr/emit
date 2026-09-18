@@ -178,7 +178,7 @@ All three are resolved; the answers are recorded here and in `docs/PRIMITIVES.md
   port links none of it. The tree-shake does exactly the job D5 hoped, and it was measured, not
   assumed. A separate library would therefore buy ~nothing on that path while costing R7RS
   conformance (these procedures *are* `(scheme base)` procedures).
-  The finding the measurement *did* surface is a different one: the Chez-free `emit build` door
+  The finding the measurement *did* surface is a different one: the Chez-free `emit build` path
   does not shake at all, so it paid the full **+20,352 bytes (+17.9%)**. That is a pre-existing
   gap this change made expensive rather than a reason to split the library, and it is now
   `docs/PERFORMANCE.md` **P8**.

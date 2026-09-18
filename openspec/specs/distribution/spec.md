@@ -3,8 +3,8 @@
 ## Purpose
 
 Defines what an installed Emit consists of and where it lives: the requirement that an
-installation be self-sufficient for **every door** — the binary, the default manifest and the
-library sources it names, and the support files the delivering doors require, each placed where
+installation be self-sufficient for **every path** — the binary, the default manifest and the
+library sources it names, and the support files the delivering paths require, each placed where
 the binary's own lookups will find it — the `make install` target that produces that layout under
 a `PREFIX`/`DESTDIR` staging convention, and the guarantee that installing an Emit leaves the
 from-source developer workflow untouched.
@@ -56,7 +56,7 @@ not be installed.
 ### Requirement: `make install` produces the installed layout
 
 The project SHALL provide an `install` make target that stages the built binary, the default
-manifest, the shipped library sources, and the **support files the delivering doors require** into a
+manifest, the shipped library sources, and the **support files the delivering paths require** into a
 prefix. The target SHALL honor a `PREFIX` variable (defaulting to `/usr/local`) for the installed
 paths that get compiled into the binary, and a `DESTDIR` variable (defaulting to empty) prepended to
 every path it writes, so a packager can stage into a temporary root without changing what the binary
@@ -101,7 +101,7 @@ be idempotent — running it twice over the same prefix leaves the same tree and
 
 ### Requirement: The from-source developer workflow is unaffected by installation
 
-Installation SHALL be additive: an in-repo invocation of any door SHALL continue to resolve the
+Installation SHALL be additive: an in-repo invocation of any path SHALL continue to resolve the
 repository's own `./emit-libs.scm` for every library that manifest names, and the repository's own
 support files for every support file the source tree provides, even when a different Emit is
 installed on the system — because the working-directory and checkout candidates are searched before
@@ -114,7 +114,7 @@ so a resolution reaching outside the checkout is visible rather than silent.
 
 #### Scenario: The repo manifest wins over an installed one
 
-- **WHEN** a door is invoked from the repository root while an Emit is also installed under a
+- **WHEN** a path is invoked from the repository root while an Emit is also installed under a
   prefix carrying its own manifest
 - **THEN** the repository's `./emit-libs.scm` and its `lib/` sources are the ones used for every
   library the repository's manifest names
@@ -127,5 +127,5 @@ so a resolution reaching outside the checkout is visible rather than silent.
 
 #### Scenario: A resolution that reaches an installed manifest is narrated
 
-- **WHEN** a door resolves a library from a searched candidate later than the first
+- **WHEN** a path resolves a library from a searched candidate later than the first
 - **THEN** the manifest that supplied it is named on standard error at default verbosity

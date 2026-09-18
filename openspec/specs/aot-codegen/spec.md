@@ -486,7 +486,7 @@ indirectly as before, so that arity errors continue to trap exactly as they do t
 
 ### Requirement: The AOT build optimizes the linked module (release profile)
 
-The AOT/build door SHALL compile the linked module with an optimizing pipeline (`-O2`) rather than
+The AOT/`emit build` command SHALL compile the linked module with an optimizing pipeline (`-O2`) rather than
 the toolchain default, and SHALL additionally enable link-time optimization (`-flto`) so that the
 optimizer can act across compilation-unit boundaries.
 
@@ -499,18 +499,18 @@ today's indirect call. Because binary size is a first-class concern for this pro
 profile's size SHALL be measured when LTO is enabled, and a size regression SHALL be treated as a
 reason to reconsider the setting rather than a cost to absorb silently.
 
-The interactive/JIT door SHALL remain unoptimized; this requirement governs the ship path only.
+The interactive/JIT execution path SHALL remain unoptimized; this requirement governs the ship path only.
 
 #### Scenario: The delivered executable is built with an optimizing pipeline
 
-- **WHEN** a program is delivered through the AOT/build door
+- **WHEN** a program is delivered through the AOT/`emit build` command
 - **THEN** the linked module is compiled at `-O2` with link-time optimization enabled
 - **AND** the executable produces the same result as an unoptimized build (e.g. `(ack 3 12)` ⇒
   `32765`)
 
 #### Scenario: Cross-unit calls are optimized across the unit boundary
 
-- **WHEN** a program that direct-calls an imported procedure is delivered through the AOT door
+- **WHEN** a program that direct-calls an imported procedure is delivered through the AOT path
 - **THEN** the optimizer may inline that procedure across the unit boundary
 
 #### Scenario: Binary size is measured against the previous release profile
@@ -542,21 +542,21 @@ delivered library's exported interface) without change.
 
 Root sets SHALL propagate **backward through the import graph**: a unit that another unit imports
 SHALL be shaken against what its importers **retain**, and SHALL NOT be exempted from shaking on the
-grounds that something imports it. To make that sound, the shipping doors SHALL finalize units in an
+grounds that something imports it. To make that sound, the shipping paths SHALL finalize units in an
 order in which every unit that imports a given unit is already final before that unit is shaken, and
 SHALL seed each unit's root set with the program's roots together with the references still present
 in those finalized importers. Consequently a unit's eligibility for shaking SHALL NOT depend on
 whether the program imports it **directly**: every unit in the program's import closure is subject
 to the same computation.
 
-This transform SHALL apply to **every** door that delivers a native executable, and the doors SHALL
+This transform SHALL apply to **every** path that delivers a native executable, and the paths SHALL
 share one implementation of it rather than each computing reachability its own way. A delivered
-executable's size SHALL NOT depend on which door produced it: for the same program and the same
-compiler, the shipping doors SHALL retain the same set of library bindings.
+executable's size SHALL NOT depend on which path produced it: for the same program and the same
+compiler, the shipping paths SHALL retain the same set of library bindings.
 
-This transform SHALL NOT apply to the interactive/REPL door or to in-process execution, which
+This transform SHALL NOT apply to the interactive/REPL or to in-process execution, which
 continue to provide the full library units (open world — any binding may be referenced by a later
-form), and all doors SHALL share one compiler core. Tree-shaking SHALL preserve observable behavior:
+form), and all paths SHALL share one compiler core. Tree-shaking SHALL preserve observable behavior:
 a program's result SHALL be identical to a non-shaken build.
 
 #### Scenario: Unused library bindings are dropped from the executable
@@ -572,7 +572,7 @@ a program's result SHALL be identical to a non-shaken build.
   binding) is built for AOT
 - **THEN** that binding is retained and the program produces the same result as a non-shaken build
 
-#### Scenario: Both shipping doors deliver the same shaken program
+#### Scenario: Both shipping paths deliver the same shaken program
 
 - **WHEN** the same program is built with `emit build` and with the Chez batch driver's AOT path, at
   the same commit
@@ -585,9 +585,9 @@ a program's result SHALL be identical to a non-shaken build.
   with `emit build`
 - **THEN** the delivered executable does not grow by the added bindings
 
-#### Scenario: The REPL door keeps the full library
+#### Scenario: the REPL keeps the full library
 
-- **WHEN** the same library is loaded through the interactive/REPL door
+- **WHEN** the same library is loaded through the interactive/REPL
 - **THEN** every binding remains available regardless of what any single form references (open
   world), and behavior matches the AOT build for programs that use the same bindings
 
@@ -634,8 +634,8 @@ The formatter SHALL satisfy two independent properties:
    floating-point constant SHALL therefore always carry a decimal point (or use the
    hexadecimal bit-pattern form), so a value whose shortest decimal uses an exponent SHALL NOT
    be rendered in a form (such as `1e+02`) that LLVM parses as an integer constant and rejects.
-2. **Door independence** — for a given double, the emitted text SHALL be **byte-identical
-   regardless of which door's number printer is available**: the Chez-hosted bootstrap driver and
+2. **Path independence** — for a given double, the emitted text SHALL be **byte-identical
+   regardless of which path's number printer is available**: the Chez-hosted bootstrap driver and
    the self-hosted compiler SHALL emit the same IR text for the same literal. The formatter MAY
    consume the host's shortest-round-trippable digits, but SHALL impose its own canonical framing
    (sign, decimal point placement, exponent presence and spelling) so that host framing
@@ -647,11 +647,11 @@ have no decimal spelling LLVM accepts, SHALL be emitted in the hexadecimal bit-p
 
 #### Scenario: A literal whose shortest decimal uses an exponent compiles
 
-- **WHEN** a program evaluating `(* 100.0 2.0)` is compiled through any door
+- **WHEN** a program evaluating `(* 100.0 2.0)` is compiled through any path
 - **THEN** it compiles successfully and yields `200.0` — the literal is emitted with a decimal
   point rather than as `1e+02`, which LLVM rejects as an integer constant in a `double` position
 
-#### Scenario: The same literal emits identical IR on every door
+#### Scenario: The same literal emits identical IR on every path
 
 - **WHEN** a program containing flonum literals — including an integral value (`100.0`), a
   large-magnitude value (`1e15`, `1e308`), and a subnormal value — is compiled by the

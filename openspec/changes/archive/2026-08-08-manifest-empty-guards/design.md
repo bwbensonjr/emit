@@ -27,7 +27,7 @@ byte-empty, so `mtext.empty()` is false and the guard never fires. Emptiness tha
 re-implementation of that test would be a second reader, which is exactly what the Chez-free
 single-grammar design exists to avoid.
 
-**Blast radius is two doors, not one.** `emit run` segfaults on the same manifests (mode 9,
+**Blast radius is two paths, not one.** `emit run` segfaults on the same manifests (mode 9,
 `repl-manifest-user-paths`), and mode 5 (`repl-manifest-paths`) carries the identical expression.
 `emit repl` and `emit lib` were checked and do not crash on these inputs, but they reach the same
 parsers on other paths, so all three sites are fixed together rather than only the one with a
@@ -38,7 +38,7 @@ reproduction.
 exists but holds no datum reaches it. Verified: a manifest naming a comment-only `.sld` that a
 program imports segfaults `emit run` (exit 139). The byte-empty case is masked because the host folds
 an empty read into "cannot read library source" (`src/emit.cpp:1025`, `:595`) and never calls mode 4
-— which is also why `test/project-door-tests.sh` case 20, whose comment records this same
+— which is also why `test/project-command-tests.sh` case 20, whose comment records this same
 `(car '())` crash for an *unreadable* source, passes today without any Scheme-side guard.
 
 This site needs a **different** answer than the manifest parsers, and D2 splits accordingly: an empty
@@ -49,7 +49,7 @@ manifest declares nothing and is benign, whereas an empty library source cannot 
 
 **Goals:**
 
-- No door terminates on a signal for any manifest text.
+- No path terminates on a signal for any manifest text.
 - A manifest with no datum resolves exactly as no manifest does, per the existing non-fatal
   requirement.
 - `emit build` distinguishes "no manifest found" from "manifest declares no entries" from "no
@@ -71,7 +71,7 @@ manifest declares nothing and is benign, whereas an empty library source cannot 
 
 The crash is fixed entirely on the Scheme side, where the reader's notion of "no datum" lives. The
 `src/emit.cpp` edits carry **no correctness load** — they only improve which message is printed
-once the door is guaranteed to return normally. This keeps the two concerns separable: if the
+once the path is guaranteed to return normally. This keeps the two concerns separable: if the
 message wording is revised later, no crash can come back with it.
 
 *Alternative considered:* the issue's `mtext.empty()` guard alone. Rejected — it leaves the
@@ -84,7 +84,7 @@ Add a single accessor next to the three parsers and route all of them through it
 ```scheme
 ;; The manifest's entry list: its first top-level form, or () when the text holds no
 ;; datum (empty / whitespace-only / comment-only).  `car` is unchecked (core-language),
-;; so the pair test is what keeps a datum-free manifest from faulting the door.
+;; so the pair test is what keeps a datum-free manifest from faulting the path.
 (define (manifest-entries text)
   (let ([forms (read-all-from-string text)])
     (if (pair? forms) (car forms) (quote ()))))
@@ -124,12 +124,12 @@ becoming, for mode 4, an error naming the library source as holding no `define-l
 idiom rather than inventing a second one keeps the two empty-read outcomes — benign `()` for a
 manifest, error status for a source — visibly different at each call site.
 
-### D3: Mode 10 returns a status pair so the build door can name the cause
+### D3: Mode 10 returns a status pair so the `emit build` command can name the cause
 
 `emit build` needs to tell an entryless manifest from a library-only one, and only the Scheme side
 can decide "no datum". Mode 10 currently returns a bare string of program triples. Change it to the
 `(status . payload)` convention **already used by modes 4 and 8**, for which `src/emit.cpp` already
-has `status_of` and `door_msg`:
+has `status_of` and `path_msg`:
 
 - `(ok . TRIPLES)` — zero or more program entries, current wire format unchanged;
 - `(error . "…declares no entries…")` — the text held no datum.
@@ -166,7 +166,7 @@ alternative was a third issue whose fix would need its own eleven minutes.
 
 *Cost:* a second `make regen`. Accepted deliberately.
 
-### D4: Fixtures assert exit status *and* message, on both doors
+### D4: Fixtures assert exit status *and* message, on both paths
 
 Every case here exits non-zero, so a status-only assertion passes when the wrong message is
 printed — and passing the *wrong* diagnostic is the failure mode this change exists to remove.
@@ -181,11 +181,11 @@ since that is the regression being prevented.
   Scheme half through `chez --libdirs src --script src/compile.ss` and regen once at the end.
 - **Mode 10's contract changes on both sides at once** → a half-applied change leaves `emit build`
   reading a status pair as a triple string, or vice versa. Both sides are in one commit, and
-  `test/project-door-tests.sh` covers the ordinary build path, so a mismatch fails loudly rather
+  `test/project-command-tests.sh` covers the ordinary build path, so a mismatch fails loudly rather
   than silently resolving the wrong program.
 - **The `(error . …)` payload for an entryless manifest is a message, not a condition** → wording
   lives in Scheme while the other two cases' wording lives in C++. Accepted: it is the only way the
-  reader's decision reaches the door, and D1 keeps it out of the crash-fix path.
+  reader's decision reaches the path, and D1 keeps it out of the crash-fix path.
 - **The existing grammar silently ignores a manifest's second top-level form** (`car` takes only
   the first). Out of scope, and unchanged by this fix — but now visible in one place rather than
   three. Worth a follow-up issue after this lands.

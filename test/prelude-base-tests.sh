@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# prelude-base-tests.sh -- Stage 3 (scheme base) auto-import, AOT door (change:
+# prelude-base-tests.sh -- Stage 3 (scheme base) auto-import, AOT path (change:
 # module-prelude-scheme-base).  Chez-GATED: drives the import-aware AOT build path
 # (chez src/compile.ss), which auto-imports (scheme base) into every prelude-enabled
 # program -- its procedures come from the linked scheme.base.ll and its derived-form
@@ -33,7 +33,7 @@ check () {  # <name> <src> <expected>
   else echo "  [FAIL] $name => $got  (expected $want)"; fail=$((fail+1)); fi
 }
 
-echo "(scheme base) auto-import (AOT door)"
+echo "(scheme base) auto-import (AOT path)"
 check base-procs  "$MOD/prog-base-procs.scm"  "(4 16)"      # map/filter via (scheme base), no import
 check base-macros "$MOD/prog-base-macros.scm" "(yes 2 7)"   # cond/case/when derived-form macros
 check base-shadow "$MOD/prog-base-shadow.scm" mine          # user map shadows the (scheme base) export

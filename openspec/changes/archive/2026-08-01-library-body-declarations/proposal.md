@@ -77,4 +77,4 @@ Issue #16.
   a positional tag so `--dump` output stays readable.
 - `bootstrap/*.ll` — regenerated (`make regen`), then `test/trust-check.sh` on the commit.
 - Tests: a library that runs a command at init and one that declares, uses, and exports a record
-  type, through all three doors and through the tree-shake.
+  type, through all three paths and through the tree-shake.

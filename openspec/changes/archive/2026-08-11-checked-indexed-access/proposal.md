@@ -33,7 +33,7 @@ GC Warning: Out of Memory! Heap size: 8 MiB. Returning NULL!
 and `(make-vector -1 0)` returns a vector whose length is `-1`.
 
 R7RS says only that it *is an error* to supply an out-of-range index, so any behaviour conforms. But
-the unchecked choice contradicts the stance this implementation already took next door.
+the unchecked choice contradicts the stance this implementation already took next path.
 `core-language` states that exact integer overflow "SHALL report the violation of the implementation
 restriction and abort the computation via the runtime trap mechanism… It SHALL NOT produce a value
 that is not the mathematically correct result." An out-of-bounds `vector-set!` is the same class and

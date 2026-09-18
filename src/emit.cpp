@@ -1,22 +1,22 @@
 // emit.cpp -- the unified `emit` front-end (change: emit-cli-unification).
 //
 // One compiled binary, the sole user-facing entry point, dispatching on its first
-// argument (the VERB) to the four compiler doors:
+// argument (the VERB) to the four compiler commands:
 //
 //   emit run  [FILE] [--manifest F] [--no-manifest-chain] [--no-prelude]
 //   emit repl [--manifest F] [--no-manifest-chain] [--no-prelude]
 //   emit build [NAME] [--manifest F] [--no-manifest-chain] [-o OUT] [--no-prelude]
 //   emit lib  SRC  [-o DIR] [--manifest F] [--no-manifest-chain]
 //
-// The run door (was build/scheme-run, src/run.cpp) and the REPL door (was
+// the emit run command (was build/scheme-run, src/run.cpp) and the REPL (was
 // build/repl-host, src/repl/host.cpp) link byte-for-byte the SAME embedded compiler
 // IR (bootstrap/embed-repl.ll + bootstrap/scheme.base.ll) and drive it through the
 // runtime's REPL channel (rt_repl_set / scheme_entry); they differ only in their
-// former `main`.  This file merges both -- plus the AOT `build` door (was
-// bin/scheme-compile / bin/emit) and the new compile-unit `lib` door -- into one
+// former `main`.  This file merges both -- plus the AOT `build` path (was
+// bin/scheme-compile / bin/emit) and the new compile-unit `lib` path -- into one
 // dispatch layer over one shared compiler core (design D1).
 //
-// `build`/`lib` emit IR in-process (the same modes the run door uses) and then fork
+// `build`/`lib` emit IR in-process (the same modes the emit run command uses) and then fork
 // `clang` to link a native executable (`build`) or just write the unit artifact
 // (`lib`).  The C toolchain (CC / GC_INC / GC_LIB) is read from the environment; if
 // absent, it is discovered by consulting tools/llvm-env.sh --print-env (found
@@ -94,12 +94,12 @@ extern "C" {
 
 typedef intptr_t (*entry_t)(void);
 
-// Per-process JIT (one verb runs per invocation, so the run and REPL doors never
+// Per-process JIT (one verb runs per invocation, so emit run and emit repl never
 // contend for it).
 static std::unique_ptr<LLJIT> JIT;
 static std::set<std::string> g_repl_added_units;
 
-// The shipped JIT doors use one backend policy (change: jit-dev-optimization-profile).
+// The shipped JIT execution paths use one backend policy (change: jit-dev-optimization-profile).
 // O1 is the development default: enough to remove ordinary call/allocation scaffolding
 // without unconditionally paying O2's compile-time cost at every prompt.  O0 is the exact
 // identity-transform rollback/measurement path; O2 is explicit.  The choice is fixed for
@@ -131,9 +131,9 @@ static const char *jit_opt_name(JitOptLevel level) {
 
 // Shared parser for the only three JIT optimization flags.  Returns true when A
 // was one of them (whether accepted or conflicting), and sets OK false only for a
-// conflict.  Unsupported -O spellings fall through to the door's normal unknown-
+// conflict.  Unsupported -O spellings fall through to the command's normal unknown-
 // option arm, so its established diagnostic and exit status stay single-sourced.
-static bool parse_jit_opt(const std::string &a, const char *door,
+static bool parse_jit_opt(const std::string &a, const char *verb,
                           JitOptLevel &level, std::string &seen, bool &ok) {
   JitOptLevel next;
   if      (a == "-O0") next = JitOptLevel::O0;
@@ -141,7 +141,7 @@ static bool parse_jit_opt(const std::string &a, const char *door,
   else if (a == "-O2") next = JitOptLevel::O2;
   else return false;
   if (!seen.empty()) {
-    std::cerr << "emit " << door << ": conflicting JIT optimization options "
+    std::cerr << "emit " << verb << ": conflicting JIT optimization options "
               << seen << " and " << a << "\n";
     ok = false;
     return true;
@@ -229,7 +229,7 @@ static void install_jit_transform(LLJIT &jit, JitOptLevel level) {
 
 // ORC materializes lazily at lookup.  Keep transform time out of the materialization
 // bucket so verbose measurements distinguish LLVM optimization from the remaining
-// object generation/link work at both shipped JIT doors.
+// object generation/link work at both shipped JIT execution paths.
 static Expected<ExecutorAddr> jit_lookup(const std::string &name) {
   auto begin = SteadyClock::now();
   uint64_t transform_before = g_jit_metrics.transform_ns;
@@ -243,7 +243,7 @@ static Expected<ExecutorAddr> jit_lookup(const std::string &name) {
 }
 
 // The absolute path of this binary's argv[0], captured in main.  Used to locate the
-// repo's toolchain script + runtime source for the build/lib doors.
+// repo's toolchain script + runtime source for the emit build and emit lib commands.
 static std::string g_argv0;
 
 // The boundary marker the compiler joins separate modules with (src/core.ss
@@ -272,7 +272,7 @@ static void vsay(const std::string &m) { if (g_level >= 2) std::cerr << m << "\n
 // (src/compile.ss): an explicit --dump wins, else EMIT_VERBOSITY=verbose gives the
 // concise stage trace, else off.  MUST be called before the first scheme_entry().
 //
-// Narration goes to stderr on both sides, so this never changes a door's stdout: `emit
+// Narration goes to stderr on both sides, so this never changes a command's stdout: `emit
 // run --emit --dump` writes the same IR bytes as without it.
 static void forward_dump_level(bool dump, bool dump_all) {
   int lvl = dump_all ? 3 : (dump ? 2 : (g_level >= 2 ? 1 : 0));
@@ -280,7 +280,7 @@ static void forward_dump_level(bool dump, bool dump_all) {
   setenv("EMIT_DUMP_LEVEL", std::to_string(lvl).c_str(), 1);
 }
 
-// The two dump flags, shared by every door's option loop.
+// The two dump flags, shared by every command's option loop.
 static bool is_dump_flag(const std::string &a, bool &dump, bool &dump_all) {
   if (a == "--dump")     { dump = true;     return true; }
   if (a == "--dump-all") { dump_all = true; return true; }
@@ -288,7 +288,7 @@ static bool is_dump_flag(const std::string &a, bool &dump, bool &dump_all) {
 }
 
 // --- usage text (change: emit-cli-front-door) -----------------------------------
-// Asking a tool what it does is a REQUEST, not an error: every door accepts
+// Asking a tool what it does is a REQUEST, not an error: every command accepts
 // --help/-h, prints its own usage, and exits 0.
 static bool is_help_flag(const std::string &a) { return a == "--help" || a == "-h"; }
 
@@ -401,13 +401,14 @@ static std::string read_file(const std::string &path) {
   ss << f.rdbuf();
   return ss.str();
 }
-// A diagnostic the embedded compiler raised, as a door should print it.  The core raises
+// Normalize a diagnostic raised by the embedded compiler for the command that reports it.
+// The core raises
 // with `(error 'repl ...)`, so error-object-message carries a "repl: " prefix that is
-// accurate inside `emit repl` and noise everywhere else -- `emit lib: repl: unbound
+// accurate inside emit repl and noise everywhere else -- `emit lib: repl: unbound
 // variable map` names the wrong tool.  Strip it here, host-side, rather than at the raise
 // sites: those are in CORE_FLAT (editing them is IR-shaping) and they feed the REPL's own
 // output too, which stays as it is (change: baked-set-on-every-door).
-static std::string door_msg(const std::string &m) {
+static std::string normalize_compiler_message(const std::string &m) {
   const std::string p = "repl: ";
   return m.compare(0, p.size(), p) == 0 ? m.substr(p.size()) : m;
 }
@@ -503,12 +504,12 @@ static bool file_readable(const std::string &p) {
 }
 
 // --- support-file location (change: installed-emit-completeness; issue #36) -----
-// The build door needs two files that are not the binary and not a library:
+// the emit build command needs two files that are not the binary and not a library:
 // tools/llvm-env.sh (toolchain discovery, which in turn sources tools/log.sh) and
 // src/runtime/runtime.c (compiled into every delivered executable).  They used to be
 // found through a repo_root() that stripped "/emit" and "/build" off this binary's
 // path -- an assumption that it sits in a checkout, which an INSTALLED emit does not,
-// so `emit build` was the one door that did not work when installed.
+// so emit build was the one path that did not work when installed.
 //
 // This is the manifest lookup's shape applied to a file (design D5).  Given the path
 // the file has RELATIVE TO THE REPO ROOT, try in order:
@@ -578,11 +579,11 @@ static void append_manifest(std::vector<std::string> &found,
     found.push_back(candidate);
 }
 
-// Resolve the manifest chain for a door.  `flag` is the door's --manifest argument
+// Resolve the manifest chain for a command.  `flag` is the command's --manifest argument
 // (empty if not given). An explicit request is first and is followed by installed
 // candidates only; discovery considers the CWD and installed candidates. When
 // `chain` is false, either path stops after its first readable manifest. Sets `bad`
-// when an EXPLICIT request names a missing file (message already printed); the door
+// when an EXPLICIT request names a missing file (message already printed); the command
 // must then exit non-zero.
 static std::vector<std::string> resolve_manifests(const std::string &flag, bool chain,
                                                   bool &bad) {
@@ -653,11 +654,11 @@ static std::string library_label(const std::string &key) {
   return (!key.empty() && key[key.size() - 1] == ':') ? key.substr(0, key.size() - 1) : key;
 }
 
-// Narrate which manifest(s) a door resolved (docs/OUTPUT.md form), so "which
+// Narrate which manifest(s) a command resolved (docs/OUTPUT.md form), so "which
 // emit-libs.scm am I getting?" stays a short answer rather than an strace session --
-// which matters more now that the answer can be plural (design D8): a door that
+// which matters more now that the answer can be plural (design D8): a command that
 // silently consults two manifests is worse than one that consults the wrong one.
-// stderr only: no door's stdout changes by a byte.
+// stderr only: no command's stdout changes by a byte.
 static void say_manifest(const std::vector<std::string> &manifests) {
   if (manifests.empty()) {
     vsay("resolve manifest -> none found (baked-in libraries only)");
@@ -685,13 +686,13 @@ static void say_chained(const std::string &manifest, const std::vector<std::stri
 }
 
 // ===========================================================================
-// run door -- in-process compile-and-run (was src/run.cpp).
+// emit run command -- in-process compile-and-run (was src/run.cpp).
 // ===========================================================================
 
 // Tell the compiler where the source it is about to receive came from (mode 13; change:
 // library-include-declarations, design D4).  The core is handed source TEXT and never a
 // path, so without this an `include` inside that source would have nothing to resolve
-// against but the working directory -- and a door that resolves against the CWD works
+// against but the working directory -- and a path that resolves against the CWD works
 // from the repo root and nowhere else, the failure `manifest-search-path` and
 // `baked-set-on-every-door` each had to fix once.  "" means the source has no path (it
 // came from stdin); every other submission names its file.
@@ -773,8 +774,8 @@ static std::vector<LibraryName> source_imports(const std::string &text,
 // held exactly one library, but a second entry showed three things wrong with it: a
 // program's emitted IR carried units it never imported; `--no-prelude` -- which
 // promises a single self-contained module -- emitted a preloaded unit's boundary
-// marker anyway; and the run door's program IR stopped matching the Chez driver's,
-// which resolves imports on demand, breaking the door-parity invariant that
+// marker anyway; and the emit run command's program IR stopped matching the Chez driver's,
+// which resolves imports on demand, breaking the path-parity invariant that
 // test/prelude-base-run-tests.sh pins.  So this walks the transitive closure of the
 // program's imports over the manifest index instead, which is what the Chez driver's
 // toposort-libs already does on its side.
@@ -818,7 +819,7 @@ static std::string manifest_mode_text(int mode, const std::string &mtext,
 // the preload narrates.
 //
 // Mode 9's index omits every baked member, so what comes back is exactly the libraries that
-// have a source file -- which is what both the preload and the build door's shake want.
+// have a source file -- which is what both the preload and the emit build command's shake want.
 static void manifest_library_index(const std::vector<std::string> &manifests,
                                    std::map<std::string, std::string> &path_of,
                                    std::map<std::string, std::string> &from_of) {
@@ -906,7 +907,7 @@ static std::vector<std::string> installed_manifest_candidates() {
   return out;
 }
 
-static bool parse_environment_roots(ResolverOptions &options, const std::string &door) {
+static bool parse_environment_roots(ResolverOptions &options, const std::string &command) {
   const char *raw = std::getenv("EMIT_LIBRARY_PATH");
   if (!raw) return true;
 #ifdef _WIN32
@@ -921,7 +922,7 @@ static bool parse_environment_roots(ResolverOptions &options, const std::string 
     std::string element = paths.substr(start, end == std::string::npos
                                                ? std::string::npos : end - start);
     if (element.empty()) {
-      std::cerr << "emit " << door
+      std::cerr << "emit " << command
                 << ": EMIT_LIBRARY_PATH contains an empty element\n";
       return false;
     }
@@ -1084,7 +1085,7 @@ class LibraryResolver {
     intptr_t result = scheme_entry();
     if (status_of(result) != "ok") {
       error = "library " + requested.label + " from " + source + ": " +
-              door_msg(scm_str(rt_cdr(result)));
+              normalize_compiler_message(scm_str(rt_cdr(result)));
       return false;
     }
     std::string payload = scm_str(rt_cdr(result));
@@ -1122,7 +1123,7 @@ static void cache_store_unit(const std::string &key, const std::string &path,
 
 // The REPL host deliberately stays EAGER: a session is an open world where the user may
 // import anything at any prompt, so every user library on the manifest must already be
-// loaded.  Only this door, compiling one known program, can be lazy.  Both doors read the
+// loaded.  Only emit run, compiling one known program, can be lazy.  Both commands read the
 // same mode-9 index; they differ only in how much of it they load.
 static bool preload_user_libraries(LibraryResolver &resolver,
                                    std::vector<std::string> &modules,
@@ -1191,7 +1192,7 @@ static bool preload_user_libraries(LibraryResolver &resolver,
       // (change: baked-set-on-every-door).
       if (src.empty()) {
         // "emit: ", not "emit run: ": this preload is shared by the run, build and lib
-        // doors, so naming one of them would be wrong for the other two.
+        // paths, so naming one of them would be wrong for the other two.
         std::cerr << "emit: cannot read library source " << p
                   << " (named in the manifest)\n";
         return false;
@@ -1203,7 +1204,7 @@ static bool preload_user_libraries(LibraryResolver &resolver,
       if (st == "deferred") { deferred.push_back(descriptor); continue; }
       if (st == "already") { progress = true; continue; }  // e.g. baked (scheme base): no module
       if (st != "ok") {
-        std::cerr << "emit: loading library " << p << ": " << door_msg(scm_str(rt_cdr(r))) << "\n";
+        std::cerr << "emit: loading library " << p << ": " << normalize_compiler_message(scm_str(rt_cdr(r))) << "\n";
         return false;
       }
       std::string ir = scm_str(rt_car(rt_cdr(r)));
@@ -1239,7 +1240,7 @@ static int resolve_program(const std::string &manifest, const std::string &name,
                            std::string &src, std::string &out) {
   // THREE distinguishable reasons no program entry resolves, and they call for different
   // user actions (change: manifest-empty-guards; issue #63).  All three used to reach mode
-  // 10 and SEGFAULT: the parser took (car '()) of a datum-free read, so `emit build` in a
+  // 10 and SEGFAULT: the parser took (car '()) of a datum-free read, so emit build in a
   // fresh directory -- the first thing an installed Emit is asked to do -- died on a signal
   // with no diagnostic.  A byte-length guard here would have caught only two of them;
   // whether a manifest holds a DATUM is the reader's question, so mode 10 answers it.
@@ -1252,7 +1253,7 @@ static int resolve_program(const std::string &manifest, const std::string &name,
   rt_repl_set(10, mtext.data(), (intptr_t)mtext.size());
   intptr_t r = scheme_entry();
   if (status_of(r) != "ok") {          // (2) found, but holds no datum at all
-    std::cerr << "emit: manifest " << manifest << " " << door_msg(scm_str(rt_cdr(r)))
+    std::cerr << "emit: manifest " << manifest << " " << normalize_compiler_message(scm_str(rt_cdr(r)))
               << "\n";
     return 1;
   }
@@ -1291,13 +1292,13 @@ static int resolve_program(const std::string &manifest, const std::string &name,
 // --- artifact cache for the baked standard library (change: baked-set-artifact-cache) ---
 //
 // The baked set is recompiled from this binary's own `*prelude-source*` at every process
-// start: 1.72s of a 1.80s trivial `emit run`, and ~74% of the default suite's wall clock
+// start: 1.72s of a 1.80s trivial emit run, and ~74% of the default suite's wall clock
 // (docs/PERFORMANCE.md P3).  Nothing about it varies with the program being compiled, so
 // it is compiled once and reused by every later process.
 //
 // The cache is a PURE ACCELERATOR.  No location, no entry, a stale entry, a torn entry, an
 // unwritable directory -- every one of them falls through to the from-source compile and
-// succeeds, so no door gains a failure mode it did not have before (spec: artifact-cache,
+// succeeds, so no path gains a failure mode it did not have before (spec: artifact-cache,
 // "Every cache failure degrades to compiling from source").  That is what lets every
 // helper below simply return false or "" on any problem, with no error path of its own.
 
@@ -1358,7 +1359,7 @@ static bool mkdirs(const std::string &path) {
 //
 // ONE resolution for a checkout and an install alike -- deliberately NOT `build/lib`, so
 // that no code path exists only for installed users.  The directory is created on demand;
-// if it cannot be, the answer is "" and every door simply compiles from source.
+// if it cannot be, the answer is "" and every command simply compiles from source.
 static std::string cache_dir() {
   static std::string memo;
   static bool done = false;
@@ -1400,7 +1401,7 @@ static std::string cache_dir() {
 // where a full one is wanted" is a property of where an entry is looked up rather than a
 // discipline every caller has to observe.  A shaken unit is a different artifact for the
 // same source -- sound only for the program whose roots produced it -- and the open-world
-// doors would break at the first binding it dropped.
+// paths would break at the first binding it dropped.
 //
 // `srcid` is a digest of the library's PATH, not of its content: the entry has to be
 // findable before anything about the source has been read, so the content digests live
@@ -1539,7 +1540,7 @@ static void split_modules(const std::string &joined, std::vector<std::string> &m
   modules.push_back(joined.substr(start));
 }
 
-// Does the door want to WATCH the compile happen?  `--dump-all` (level 3) asks to see a
+// Does the command want to WATCH the compile happen?  `--dump-all` (level 3) asks to see a
 // library's per-define stages, and those stages exist only while it is being compiled -- a
 // reused entry would print none of them.  So a request to observe the compile bypasses the
 // cache entirely: the flag's whole purpose is that the work happens where you can watch it.
@@ -1621,7 +1622,7 @@ static CacheRead cache_load_entry(const std::string &stem, const std::string &wh
   std::string st = status_of(r);
   if (st == "deferred") return CacheRead::Deferred;    // valid, but not yet: retry later
   if (st != "ok") {
-    vsay("cache: entry for " + what + " refused (" + door_msg(scm_str(rt_cdr(r))) +
+    vsay("cache: entry for " + what + " refused (" + normalize_compiler_message(scm_str(rt_cdr(r))) +
          "), recompiling");
     return CacheRead::Miss;
   }
@@ -1713,7 +1714,7 @@ static CacheRead cache_load_unit(const std::string &key, const std::string &path
 }
 
 // The source files the compiler just read for a library (mode 16): its own source plus its
-// include closure.  Empty when the door submitted source with no path, in which case there
+// include closure.  Empty when the host submitted source with no path, in which case there
 // is nothing to key an entry on and the caller must not cache.
 static std::vector<std::string> library_sources_just_read() {
   std::vector<std::string> out;
@@ -1749,8 +1750,8 @@ static void cache_store_unit(const std::string &key, const std::string &path,
 // The baked set is a PARTITION, so mode 8 returns one module per member in dependency
 // order, joined by the boundary marker -- they cannot share an LLVM module (change:
 // scheme-base-partition).  Split them into separate entries: every consumer of `modules`
-// (the JIT's addIRModule, --emit's stdout, `emit build`'s clang inputs) needs one module
-// per element.  `inits` gets one __init symbol per module, in the same order, for a door
+// (the JIT's addIRModule, --emit's stdout, emit build's clang inputs) needs one module
+// per element.  `inits` gets one __init symbol per module, in the same order, for a path
 // with no program entry to drive them -- the REPL (change: baked-set-on-every-door).
 //
 // A valid cache entry short-circuits the whole thing (change: baked-set-artifact-cache):
@@ -1763,7 +1764,7 @@ static bool register_baked_set(std::vector<std::string> &modules,
   rt_repl_set(8, "", 0);
   intptr_t r = scheme_entry();
   if (status_of(r) != "ok") {
-    std::cerr << "emit: (scheme base): " << door_msg(scm_str(rt_cdr(r))) << "\n";
+    std::cerr << "emit: (scheme base): " << normalize_compiler_message(scm_str(rt_cdr(r))) << "\n";
     return false;
   }
   std::string baked = scm_str(rt_car(rt_cdr(r)));
@@ -1778,15 +1779,15 @@ static bool register_baked_set(std::vector<std::string> &modules,
 }
 
 // Seed a compile session: init-session, register the baked library set, and preload the
-// libraries the source imports.  The front half of every door that compiles from a
-// manifest -- `emit run`, `emit build`, and `emit lib` -- so that all of them resolve
-// imports against the same environment (change: baked-set-on-every-door; `emit lib` used
+// libraries the source imports.  The front half of every command that compiles from a
+// manifest -- emit run, emit build, and emit lib -- so that all of them resolve
+// imports against the same environment (change: baked-set-on-every-door; emit lib used
 // to run its export-table mode against an unseeded session, which is why a library
 // importing `(scheme base)` failed there).  GC must be initialized and EMIT_NO_PRELUDE set
 // by the caller before this runs.
 //
 // `module_keys` is filled in step with `modules`: the canonical unit key of each module, so
-// a door holding the IR can still say which library it is.  `emit build`'s tree-shake needs
+// a path holding the IR can still say which library it is.  emit build's tree-shake needs
 // that (change: chez-free-unit-pipeline) -- for the baked members it is read back out of the
 // __init symbols, which carry the unit prefix ("scheme.base:__init"), rather than being
 // tracked separately and risking a second source of truth.
@@ -1823,7 +1824,7 @@ static bool compile_unit(const std::string &prog_src, std::vector<std::string> &
   intptr_t pr = scheme_entry();
   std::string pst = status_of(pr);
   if (pst != "ok" && pst != "library") {
-    std::cerr << "emit: " << door_msg(scm_str(rt_cdr(pr))) << "\n";
+    std::cerr << "emit: " << normalize_compiler_message(scm_str(rt_cdr(pr))) << "\n";
     return false;
   }
   prog_ir = scm_str(rt_car(rt_cdr(pr)));
@@ -1834,15 +1835,15 @@ static bool compile_unit(const std::string &prog_src, std::vector<std::string> &
   return true;
 }
 
-// --- the ship door's tree-shake (change: chez-free-unit-pipeline, design D9) ---
+// --- the shipping path's tree-shake (change: chez-free-unit-pipeline, design D9) ---
 // Replace each prunable unit with one pruned to what this program's IR actually reaches.
-// The Chez driver has done this since aot-release-profile; `emit build` did not, and shipped
+// The Chez driver has done this since aot-release-profile; emit build did not, and shipped
 // 212 KB where the driver shipped 94 KB for the same hello-world, with the extra IR costing
 // LTO time as well as bytes (docs/PERFORMANCE.md P8).
 //
 // The core decides everything that needs the import graph or the export tables -- which
 // units are prunable, what the roots are, what the pruned unit is (mode 17).  This function
-// is the door's half: which module goes with which library, where a library's source is, and
+// is the path's half: which module goes with which library, where a library's source is, and
 // the cache.
 //
 // REVERSE ORDER, AND AN ACCUMULATING ROOT TEXT (change: import-dag-tree-shaking, design D1).
@@ -1917,12 +1918,12 @@ static void shake_units(std::vector<std::string> &modules,
       //
       // The payload is read ONLY for `error`, whose cdr is a message string.  Any other
       // status is reported by name without touching its cdr: `scm_str` would call
-      // rt_string_len on whatever is there, and a status this door does not know is exactly
+      // rt_string_len on whatever is there, and a status this host does not know is exactly
       // the case where that assumption is least safe.  Found the honest way -- mid-change,
       // a new host ran against a core that still answered `keep` (cdr = a library NAME, a
       // list), and this line silently produced nothing at all.
       vsay("shake: " + key + " kept whole (" +
-           (st == "error" ? door_msg(scm_str(rt_cdr(r))) : "door answered " + st) + ")");
+           (st == "error" ? normalize_compiler_message(scm_str(rt_cdr(r))) : "host answered " + st) + ")");
       root_text += modules[i];
       continue;
     }
@@ -1945,12 +1946,12 @@ static void shake_units(std::vector<std::string> &modules,
   }
 }
 
-// The manifest chain's library key -> source path map, for a door that needs to find a
+// The manifest chain's library key -> source path map, for a path that needs to find a
 // library's source again after the session was seeded (the shake, when a cache hit meant the
 // .sld was never read).
 // Compile a whole program (or a lone define-library) to its unit modules + program
-// IR, in-process -- the shared front half of `emit run`, `emit run --emit`, and
-// `emit build` (spec: no second compilation path).  Seed, then compile: the same mode
+// IR, in-process -- the shared front half of emit run, `emit run --emit`, and
+// emit build (spec: no second compilation path).  Seed, then compile: the same mode
 // sequence in the same order as before it was split, so the emitted IR does not move.
 static bool compile_program(const std::string &prog_src, LibraryResolver &resolver,
                             bool no_prelude, std::vector<std::string> &modules,
@@ -2144,7 +2145,7 @@ static int emit_run(int argc, char **argv) {
     // (write (if #f #f)) still renders #<unspecified>; #f and () are legitimate final
     // values and still print, which is why the unspecified value must stay distinct
     // from both.  The identical guard is in the runtime's own main
-    // (src/runtime/runtime.c), so this door and a delivered executable remain
+    // (src/runtime/runtime.c), so this path and a delivered executable remain
     // byte-identical on stdout (design D5).
     if (!rt_is_unspec(r)) {
       rt_write(r);
@@ -2177,7 +2178,7 @@ static int emit_run(int argc, char **argv) {
 }
 
 // ===========================================================================
-// REPL door -- persistent ORC/LLJIT interactive host (was src/repl/host.cpp).
+// REPL -- persistent ORC/LLJIT interactive host (was src/repl/host.cpp).
 // ===========================================================================
 
 typedef intptr_t (*thunk_t)(void);
@@ -2205,7 +2206,7 @@ static void run_thunk(const std::string &name) {
     // #<unspecified>.  Only the unspecified value is suppressed -- #f and () are
     // legitimate results and still echo, which is why the value must be distinct from
     // both.  emit_run above and the runtime's main apply the SAME rule to a whole
-    // program's final value (change: emit-cli-front-door): the two doors agree, which
+    // program's final value (change: emit-cli-front-door): the two paths agree, which
     // is the dev->ship fidelity the batch report existed to protect -- what changed is
     // only what they agree on.
     if (!rt_is_unspec(r)) {
@@ -2294,20 +2295,20 @@ static bool run_init_list(const std::string &list) {
 // open world where the user may import anything at any prompt, so an installed REPL
 // must have the full standard surface even when the project's own manifest names none
 // of it -- otherwise `(import (scheme file))` failing at the prompt would reintroduce
-// issue #44 one layer up.  The lazy doors need no such decision: an unresolved name
+// issue #44 one layer up.  The lazy paths need no such decision: an unresolved name
 // simply walks to the next manifest there.
 //
-// ONE INDEX FOR EVERY MANIFEST AND EVERY DOOR (change: chez-free-unit-pipeline, design D1;
+// ONE INDEX FOR EVERY MANIFEST AND EVERY COMMAND (change: chez-free-unit-pipeline, design D1;
 // issue #101).  The first manifest used to come through mode 5 -- every library entry,
 // baked members included -- while the rest came through mode 9, and the difference was the
 // standard library: with `--no-prelude` nothing registers the baked set, so this loop
 // compiled `(scheme base)` from the manifest and bound none of it.  1.14 s of work performed
 // and discarded, against a 0.024 s floor.  Mode 9 omits every baked member (not just
-// `(scheme base)`: the substrate leaked through the same hole), which is what the run door
-// has always used, so the two doors now seed identically.
+// `(scheme base)`: the substrate leaked through the same hole), which is what the emit run command
+// has always used, so the two paths now seed identically.
 //
 // Under `--no-prelude` a manifest library that imports a baked member does not resolve;
-// that is the run door's behaviour since run-door-user-libraries, and it is reported below
+// that is the emit run command's behaviour since run-door-user-libraries, and it is reported below
 // as an unresolved import rather than silently satisfied by a standard library the session
 // deliberately does not have (design D4).
 //
@@ -2336,7 +2337,7 @@ static void preload_libraries(LibraryResolver &resolver, bool have_baked,
     for (const LibraryDescriptor &descriptor : pending) {
       const std::string &key = descriptor.name.key;
       const std::string &p = descriptor.source;
-      // The same cache the run door reads (change: chez-free-unit-pipeline).  This door
+      // The same cache the emit run command reads (change: chez-free-unit-pipeline).  This path
       // benefits most: it preloads EVERY user library on the manifest, so a session paid for
       // all of them on every start -- 0.138 s for this repository's four non-baked
       // libraries, on top of the standard library the cache already covers.
@@ -2356,10 +2357,10 @@ static void preload_libraries(LibraryResolver &resolver, bool have_baked,
         continue;
       }
       std::string src = read_file(p);
-      // Unreadable or empty: report and keep the session (see the run door's note above --
+      // Unreadable or empty: report and keep the session (see the emit run command's note above --
       // handing "" to mode 4 traps uncatchably).  The REPL preloads EAGERLY, so a manifest
       // entry the session never imports still reaches this, which is why a typo'd path used
-      // to abort `emit repl` at startup rather than at the import.
+      // to abort emit repl at startup rather than at the import.
       if (src.empty()) {
         std::cerr << "error: cannot read library source " << p << " (named in the manifest)\n";
         progress = true;                     // drop it; do not retry an unreadable file
@@ -2374,11 +2375,11 @@ static void preload_libraries(LibraryResolver &resolver, bool have_baked,
       // repository's own emit-libs.scm has (the Chez driver resolves them from there).  The
       // baked member wins and this contributes no second module; adding one would collide in
       // the JIT.  The REPL only began seeing this status once it registered the baked set
-      // before preloading (change: baked-set-on-every-door); the run door's own preload has
+      // before preloading (change: baked-set-on-every-door); the emit run command's own preload has
       // handled it since run-door-user-libraries.
       if (st == "already") { registered.insert(key); progress = true; continue; }
       if (st != "ok") {
-        std::cerr << "error: loading library " << p << ": " << door_msg(scm_str(rt_cdr(r))) << "\n";
+        std::cerr << "error: loading library " << p << ": " << normalize_compiler_message(scm_str(rt_cdr(r))) << "\n";
         progress = true;                     // drop it; do not retry a hard error
         continue;
       }
@@ -2506,7 +2507,7 @@ static bool register_repl_closure(const std::string &form, LibraryResolver &reso
       }
       if (status != "ok" && status != "already") {
         failure = "loading library " + path + ": " +
-                  door_msg(scm_str(rt_cdr(result)));
+                  normalize_compiler_message(scm_str(rt_cdr(result)));
         ok = false;
         break;
       }
@@ -2554,7 +2555,7 @@ static bool register_repl_closure(const std::string &form, LibraryResolver &reso
 //   $ echo $?  ->  1                       <- session gone, next form never read
 //
 // The compiler is compiled Scheme like any other guest code, so it gets the same isolation
-// the guest's own code has had since the REPL door existed.  `rt_guard_reset()` for the same
+// the guest's own code has had since the REPL existed.  `rt_guard_reset()` for the same
 // reason `run_thunk` calls it: a trap may have bypassed rt_run_guarded's frame pop.
 //
 // A compile-time trap is reported as `error:` rather than `!trap:`: from the session's point
@@ -2636,7 +2637,7 @@ static int emit_repl(int argc, char **argv) {
       resolver_options.explicit_roots.push_back(argv[++i]);
     else if (a == "--no-library-paths") resolver_options.library_paths = false;
     else if (a == "--manifest" && i + 1 < argc) manifest = argv[++i];
-    // The rejection arm the other three doors already had (design D3).  Without it
+    // The rejection arm the other three commands already had (design D3).  Without it
     // `emit repl --bogus-flag` started a session and exited 0, so a typo'd flag was
     // indistinguishable from one that worked.  `repl` takes no positional argument,
     // so anything unrecognized -- dashed or not -- is an error here.
@@ -2705,10 +2706,10 @@ static int emit_repl(int argc, char **argv) {
     rt_trap = nullptr;
   }
 
-  // Register the BAKED library set, exactly as the run and build doors do (mode 8), so a
+  // Register the BAKED library set, exactly as emit run and emit build do (mode 8), so a
   // session's standard library does not depend on the manifest -- or on the directory the
   // session was started in.  Before this, the REPL resolved (scheme base) from the manifest
-  // (eager preload of every entry), so `emit repl` in a user project directory had NO
+  // (eager preload of every entry), so emit repl in a user project directory had NO
   // standard library at all and could not even load a project library that imports
   // (scheme base) (change: baked-set-on-every-door, issue #39).
   //
@@ -2799,7 +2800,7 @@ static int emit_repl(int argc, char **argv) {
 }
 
 // ===========================================================================
-// build / lib doors -- emit IR in-process, then fork clang (was bin/scheme-compile,
+// emit build / emit lib -- emit IR in-process, then fork clang (was bin/scheme-compile,
 // bin/emit).
 // ===========================================================================
 
@@ -2905,7 +2906,7 @@ static bool link_clang(const Toolchain &tc, const std::string &runtime_c,
   // emitter now produces cannot be inlined -- measured, the direct call alone and LTO
   // alone each change nothing, while together they are ~7x on a call-heavy probe.  It
   // also shrinks the delivered binary rather than growing it.  Mirrors `ship-lto` in
-  // src/compile.ss; the JIT/REPL door is untouched.
+  // src/compile.ss; the JIT/REPL is untouched.
   args.push_back("-flto");
   args.push_back("-I" + tc.gc_inc);
   args.push_back("-L" + tc.gc_lib);
@@ -3007,7 +3008,7 @@ static int emit_build(int argc, char **argv) {
   say("build " + (name.empty() ? std::string("<sole program>") : name) +
       " -> " + out + "  [source " + src + "]");
 
-  // Emit the program IR in-process (same modes the run door uses).
+  // Emit the program IR in-process (same modes the emit run command uses).
   if (file_bytes(src) < 0) {
     std::cerr << "emit build: cannot read source " << src << "\n";
     return 1;
@@ -3025,7 +3026,7 @@ static int emit_build(int argc, char **argv) {
   // Tree-shake: replace each unit with one holding only what is still reached -- by this
   // program, or by an importing unit already pruned (change: chez-free-unit-pipeline, then
   // import-dag-tree-shaking; docs/PERFORMANCE.md P8 and P10).  This is the ship path, so the
-  // world is closed; the run and REPL doors keep whole units and are untouched.
+  // world is closed; emit run and the REPL keep whole units and are untouched.
   shake_units(modules, module_keys, prog_ir, resolver.selected_paths());
 
   // Write each unit + the program to temp .ll files (clang infers IR from .ll).  The
@@ -3139,7 +3140,7 @@ static int emit_lib(int argc, char **argv) {
   rt_repl_set(11, lib_src.data(), (intptr_t)lib_src.size());
   intptr_t er = scheme_entry();
   if (status_of(er) != "ok") {
-    std::cerr << "emit lib: " << door_msg(scm_str(rt_cdr(er))) << "\n";
+    std::cerr << "emit lib: " << normalize_compiler_message(scm_str(rt_cdr(er))) << "\n";
     return 1;
   }
   std::string exp_payload = scm_str(rt_cdr(er));
@@ -3151,7 +3152,7 @@ static int emit_lib(int argc, char **argv) {
   std::string base = exp_payload.substr(0, nl);
   std::string exports_datum = exp_payload.substr(nl + 1);
 
-  // Unit .ll via the emit path (same bytes the run/AOT doors produce for the source):
+  // Unit .ll via the emit path (same bytes the run/AOT paths produce for the source):
   // a lone define-library compiles to one unit with no baked (scheme base).  This reuses
   // the session seeded above rather than re-seeding, which is the point: re-seeding is what
   // used to discard the registration mode 11 needed.
@@ -3180,7 +3181,7 @@ static int emit_lib(int argc, char **argv) {
 // verb dispatch.
 // ===========================================================================
 
-// Print VERB's own usage to OS; false when VERB is not a door.
+// Print VERB's own usage to OS; false when VERB does not name a command.
 static bool usage_for_verb(const std::string &verb, std::ostream &os) {
   if      (verb == "run")   usage_run(os);
   else if (verb == "repl")  usage_repl(os);
@@ -3212,7 +3213,7 @@ int main(int argc, char **argv) {
     return 2;
   }
   // Hand the verb its own argv slice (argv[0] == verb, options follow), matching the
-  // per-door argument loops.
+  // per-command argument loops.
   if (verb == "run")   return emit_run(argc - 1, argv + 1);
   if (verb == "repl")  return emit_repl(argc - 1, argv + 1);
   if (verb == "build") return emit_build(argc - 1, argv + 1);

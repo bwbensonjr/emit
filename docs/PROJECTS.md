@@ -4,7 +4,7 @@ How to write, run, and ship your own Scheme program with Emit, starting from a c
 repository. This is the task-ordered walkthrough; [`MODULES.md`](MODULES.md) is the reference for
 the module system it uses, and the authoritative requirements live under `openspec/specs/`.
 
-Everything below is exercised by `test/project-door-tests.sh`, which builds this same project and
+Everything below is exercised by `test/project-command-tests.sh`, which builds this same project and
 asserts these commands produce these values — so if the document and the compiler disagree, the
 default test suite fails.
 
@@ -85,7 +85,7 @@ is forwarded unchanged; `(command-line)` sees `formatter.scm`, `--check`, and `i
 read from stdin uses `-` as its logical command name. Non-executing modes such as `--emit` reject
 program arguments.
 
-The run door uses LLVM's `-O1` JIT profile by default. Use `emit run -O0 main.scm` for the old
+the `emit run` command uses LLVM's `-O1` JIT profile by default. Use `emit run -O0 main.scm` for the old
 unoptimized diagnostic/baseline path, or `emit run -O2 main.scm` when a longer-running program can
 justify more JIT latency. These profiles affect execution only: `emit run --emit` remains the
 compiler-produced IR path and therefore rejects a simultaneous `-O` option rather than ignoring it.
@@ -245,7 +245,7 @@ the Emit checkout at runtime.
 
 Before linking, `emit build` tree-shakes unreachable bindings through the whole import DAG and
 then runs the closed-world `-O2 -flto` ship profile. This is intentionally stronger than the
-open-world per-module JIT optimization. The missing tree shake in this door was fixed by
+open-world per-module JIT optimization. The missing tree shake in this path was fixed by
 `chez-free-unit-pipeline` and `import-dag-tree-shaking` (`Fixes #112`).
 
 A `.scm`-suffixed or path-shaped operand is always direct source; `-o PATH` overrides its
@@ -271,7 +271,7 @@ cat build/lib/my.stats.exports
 ((my stats) ((sum-list . "my.stats:sum-list") (mean . "my.stats:mean")) ((sum-list "my.stats:code:sum-list" 1) (mean "my.stats:code:mean" 1)))
 ```
 
-The `.ll` is byte-identical to the unit the run and build doors emit for that source — one
+The `.ll` is byte-identical to the unit the run and `emit build` commands emit for that source — one
 compile-unit core, so an artifact cannot drift from what a build would have produced. `-o` defaults
 to `build/lib`. The export table's second list records each export's code label and arity, which is
 what lets an importing program call it directly instead of through its closure.
@@ -353,7 +353,7 @@ make install                        # /usr/local/bin/emit + /usr/local/share/emi
 make install PREFIX=$HOME/.local
 ```
 
-This installs the binary together with everything the doors need beside it, under
+This installs the binary together with everything the commands need beside it, under
 `<prefix>/share/emit/`, where the binary's own lookups find it:
 
 - the compatibility manifest and every non-baked library source at its conventional
@@ -442,8 +442,8 @@ project:
 The library sources under `lib/` are **generated** from `src/prelude.scm` (except
 `lib/scheme/inexact.sld`, which is hand-written) — do not edit them by hand. And note that the
 baked `(scheme base)` in the binary wins over a manifest entry for it, so editing
-`lib/scheme/base.sld` does not change what any door sees until you run `make regen`. That is the
-same rule for every door: the committed IR under `bootstrap/` is authoritative and is never
+`lib/scheme/base.sld` does not change what any command sees until you run `make regen`. That is the
+same rule for every command: the committed IR under `bootstrap/` is authoritative and is never
 silently rebuilt.
 
 ## Where to go next

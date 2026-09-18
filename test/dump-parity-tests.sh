@@ -8,10 +8,10 @@
 # two dumpers are independent, so bracket style and line breaking differ by design.
 #
 # Two paths, each compared against its own reference, because the compiler has two
-# front halves and the doors do not use the same one:
+# front halves and the paths do not use the same one:
 #
 #   modular  (compile-program-with-imports, stage `parse+rename+imports`) -- what the
-#            Chez driver takes by default and what EVERY shipped door takes, since
+#            Chez driver takes by default and what EVERY shipped path takes, since
 #            (scheme base) is auto-imported.  chez driver  vs  `emit run --dump`.
 #   whole-program (compile-forms, stage `parse+rename`) -- the Chez driver's
 #            --no-prelude path and the `schemec` filter.  chez --no-prelude  vs
@@ -36,7 +36,7 @@ pass=0; fail=0
 # $3 = source text.
 #
 # Both sides run at EMIT_VERBOSITY=quiet: an explicit --dump outranks the verbosity level
-# (the Chez driver's own precedence, which the doors copy), so quiet keeps the dump while
+# (the Chez driver's own precedence, which the paths copy), so quiet keeps the dump while
 # stripping the surrounding link/status narration -- which would otherwise land inside the
 # last section and fail to read back as data.
 parity () {
@@ -69,7 +69,7 @@ parity () {
   fi
 }
 
-echo "modular path (every shipped door): chez driver vs emit run --dump"
+echo "modular path (every shipped path): chez driver vs emit run --dump"
 
 # recursion + a let-bound temporary from the n-ary `=` desugaring
 parity fact modular '(letrec ([fact (lambda (n) (if (= n 0) 1 (* n (fact (- n 1)))))]) (fact 5))'

@@ -6,8 +6,8 @@
 # against the imports, and links runtime + units + program into one exe.
 #
 # Covers: AOT import (mylib), own-define shadowing, the two-unit no-collision
-# blocker, and the library __init one-shot guard (structural).  The REPL door and
-# cross-door byte-identity are exercised by the REPL suites once wired.
+# blocker, and the library __init one-shot guard (structural).  the REPL and
+# cross-path byte-identity are exercised by the REPL suites once wired.
 #
 # Run from the repo root:  test/modules-tests.sh
 set -u
@@ -56,12 +56,12 @@ check_fail () {  # <name> <src> <manifest> <regex>
   fi
 }
 
-echo "module vertical-slice (AOT door)"
+echo "module vertical-slice (AOT path)"
 check aot-import   "$MOD/prog-mylib.scm"  142   # import (mylib); greet -> 142
 check aot-shadow   "$MOD/prog-shadow.scm" 7     # own greet shadows the import
 check aot-nocollide "$MOD/prog-both.scm"  43    # (liba)+(libb) same-named internals link
 
-echo "generalize: transitive imports, rename, diamond (AOT door)"
+echo "generalize: transitive imports, rename, diamond (AOT path)"
 check aot-chain    "$MOD/prog-chain.scm"   15   # (chain-a) transitively imports (chain-b)
 check aot-rename   "$MOD/prog-rename.scm"  77   # (rename (rename-lib)); importer sees fmap
 check aot-variadic "$MOD/prog-varlib.scm" "(2 15)"  # (varlib): rest params + apply (issue #11)
@@ -230,27 +230,27 @@ check_backend be-prelude-bc  "$TMP/be-prelude.scm" bitcode "(1 4 9)"   # (scheme
 check_backend be-import-jit  "$MOD/prog-mylib.scm" jit     142         # (import (mylib)) via jit
 check_backend be-import-bc   "$MOD/prog-mylib.scm" bitcode 142         # (import (mylib)) via bitcode
 
-echo "dev->ship fidelity (cross-door byte-identity)"
-# The library unit emitted for the AOT door (chez compile.ss, above) must be
-# byte-identical to the one the embedded compiler emits for the REPL door.
+echo "dev->ship fidelity (cross-path byte-identity)"
+# The library unit emitted for the AOT path (chez compile.ss, above) must be
+# byte-identical to the one the embedded compiler emits for the REPL.
 # build/emit run --emit compiles a lone define-library through the SAME core the
 # REPL host uses; compare it to the AOT unit (host target header stripped).
 if make emit >/dev/null 2>&1; then
   # mylib is all fixed-arity; varlib is variadic and uses `apply`.  Both shapes must
-  # be covered -- the variadic one is where the doors diverged (issue #11), and the
+  # be covered -- the variadic one is where the paths diverged (issue #11), and the
   # suite was blind to it for as long as this loop named only mylib.
   for L in mylib varlib; do
     aot="$TMP/$L.aot.ll"; repl="$TMP/$L.repl.ll"
     grep -v '^target ' "build/lib/$L.ll" > "$aot"
     build/emit run --emit < "$MOD/$L.sld" > "$repl" 2>/dev/null
     if diff -q "$aot" "$repl" >/dev/null; then
-      echo "  [OK  ] $L unit identical (AOT door == REPL door)"; pass=$((pass+1))
+      echo "  [OK  ] $L unit identical (AOT path == REPL)"; pass=$((pass+1))
     else
-      echo "  [FAIL] $L unit differs across doors"; fail=$((fail+1))
+      echo "  [FAIL] $L unit differs across paths"; fail=$((fail+1))
     fi
   done
 else
-  echo "  [SKIP] cross-door (could not build emit)"
+  echo "  [SKIP] cross-path (could not build emit)"
 fi
 
 echo "-------------------------------------------"

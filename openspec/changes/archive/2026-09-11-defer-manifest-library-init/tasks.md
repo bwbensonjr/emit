@@ -52,8 +52,8 @@
       library is never initialized; an import initializes the library and its closure before its
       names are usable; a second import does not re-initialize; a failed init binds no names.
       Verify the suite passes.
-- [x] 4.2 Add the door-agreement case: a session importing a library chain and a program importing
-      the same chain initialize in the same order. Verify by comparing the orders the two doors
+- [x] 4.2 Add the path-agreement case: a session importing a library chain and a program importing
+      the same chain initialize in the same order. Verify by comparing the orders the two paths
       report, so a future divergence fails rather than going unnoticed (design D4).
 - [x] 4.3 Add the startup-cost case from the spec — the same manifest with and without an outsized
       library start in the same order of time. Verify it is written to compare orders of magnitude,

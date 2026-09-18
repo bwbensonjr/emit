@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# modules-repl-tests.sh -- Stage 1 module REPL door (change:
-# module-artifacts-vertical-slice).  Chez-FREE: drives the shipped `emit repl`,
+# modules-repl-tests.sh -- Stage 1 module REPL (change:
+# module-artifacts-vertical-slice).  Chez-FREE: drives the shipped emit repl,
 # which preloads the manifest's libraries into the shared JITDylib and honors
 # interactive (import (L)) by merging the unit's exports into the session scope.
 #
@@ -24,12 +24,12 @@ check () {  # <name> <input> <expected-last-value>
   else echo "  [FAIL] $1 => $got  (expected $3)"; fail=$((fail+1)); fi
 }
 
-echo "module vertical-slice (REPL door)"
+echo "module vertical-slice (REPL)"
 check repl-import   $'(import (mylib))\n(greet)\n'                       142
 check repl-both     $'(import (liba))\n(import (libb))\n(+ (a-val) (b-val))\n' 43
 check repl-shadow   $'(import (mylib))\n(define (greet) 99)\n(greet)\n'  99
 
-echo "generalize: transitive imports, rename, diamond (REPL door)"
+echo "generalize: transitive imports, rename, diamond (REPL)"
 # (chain-a) transitively imports (chain-b); the fixpoint preload loads chain-b first
 # even though the manifest lists chain-a earlier (topological, not manifest, order).
 check repl-chain    $'(import (chain-a))\n(a-plus)\n'                    15
@@ -38,7 +38,7 @@ check repl-rename   $'(import (rename-lib))\n(fmap)\n'                   77
 check repl-diamond  $'(import (dia-a))\n(import (dia-b))\n(+ (a-val) (b-val))\n' 35
 
 # a renamed export exposes only its EXTERNAL name; the internal name stays unbound.
-echo "rename hides the internal name (REPL door)"
+echo "rename hides the internal name (REPL)"
 rerr="$(printf '(import (rename-lib))\n(%%fast-map)\n' | $HOST 2>&1 >/dev/null)"
 rval="$(printf '(import (rename-lib))\n(fmap)\n' | $HOST 2>/dev/null | awk 'NF{v=$0}END{print v}')"
 if echo "$rerr" | grep -q "unbound variable %fast-map" && [ "$rval" = "77" ]; then
@@ -47,7 +47,7 @@ else
   echo "  [FAIL] rename-hides-internal  (fmap=$rval; internal name should be unbound)"; fail=$((fail+1))
 fi
 
-echo "exported macros (REPL door; change: library-macro-export, issue #48)"
+echo "exported macros (REPL; change: library-macro-export, issue #48)"
 # The macro must be usable in a LATER form -- the whole point of merging it into session
 # state rather than into one form's compile.
 check repl-macro        $'(import (macrolib))\n(define a 1)\n(define b 2)\n(swap! a b)\n(+ (* a 10) b (mval))\n' 32
@@ -64,7 +64,7 @@ check repl-macro-shadow $'(import (macrolib))\n(define-syntax swap! (syntax-rule
 
 # A form that fails to compile rolls the session back; an imported macro must survive that
 # rollback, as an imported procedure does (spec scenario).
-echo "an imported macro survives a failed form (REPL door)"
+echo "an imported macro survives a failed form (REPL)"
 mout="$(printf '(import (macro-helper-lib))\n(twice 5)\n(nope 1)\n(twice 10)\n' | $HOST 2>/dev/null)"
 merr="$(printf '(import (macro-helper-lib))\n(twice 5)\n(nope 1)\n(twice 10)\n' | $HOST 2>&1 >/dev/null)"
 if echo "$merr" | grep -q "unbound variable nope" \
@@ -98,7 +98,7 @@ icheck () {  # <name> <input> <expected-last-value>
   else echo "  [FAIL] $1 => $got  (expected $3)"; fail=$((fail+1)); fi
 }
 
-echo "deferred initialization (REPL door)"
+echo "deferred initialization (REPL)"
 
 # A library the session never imports is registered but NOT initialized.  The absence
 # of its narration IS the observable: the spec's "has not run", checked without
@@ -167,17 +167,17 @@ else
   echo "  [FAIL] init-narration-verbose-only  (leaked to default/quiet/stdout)"; fail=$((fail+1))
 fi
 
-# DOOR AGREEMENT (design D4): the run door and the REPL door initialize one closure in
+# PATH AGREEMENT (design D4): the emit run command and the REPL initialize one closure in
 # the same order.  Both print 1 only if (init-count) ran before (init-outer); the
 # observable is a value, not narration, so it holds for a delivered program too.
-echo "the two doors initialize a closure alike"
+echo "the two paths initialize a closure alike"
 progout="$(build/emit run --no-manifest-chain --manifest test/modules/emit-libs-init.scm \
              test/modules/prog-init-outer.scm 2>/dev/null)"
 replout="$(irun_last $'(import (init-outer))\n(outer-ticks)\n')"
 if [ "$progout" = "1" ] && [ "$replout" = "1" ]; then
-  echo "  [OK  ] door-agreement-init-order  (run => $progout, repl => $replout)"; pass=$((pass+1))
+  echo "  [OK  ] path-agreement-init-order  (run => $progout, repl => $replout)"; pass=$((pass+1))
 else
-  echo "  [FAIL] door-agreement-init-order  (run => $progout, repl => $replout)"; fail=$((fail+1))
+  echo "  [FAIL] path-agreement-init-order  (run => $progout, repl => $replout)"; fail=$((fail+1))
 fi
 
 # STARTUP COST (spec scenario): adding a conventional root containing one outsized

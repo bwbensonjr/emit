@@ -7,7 +7,7 @@ module-qualified symbol ABI that make it safe. What's still missing is the artif
 there is no library surface syntax, nothing emits a linkable/loadable unit, and the
 `imported` binding kind is structured but never produced. This change is **Stage 1** of the
 design (`openspec/explorations/modules-v0-design.md`) — the smallest end-to-end
-vertical slice that proves both doors on one trivial library.
+vertical slice that proves both paths on one trivial library.
 
 ## What Changes
 
@@ -28,7 +28,7 @@ vertical slice that proves both doors on one trivial library.
   against the in-memory export environment to a `(global-ref @"L:x")`, emitted as
   `external global i64` — the referenced-but-not-defined hook Stage 0 wired but left
   unexercised.
-- Drive **both doors** off the same compile-unit entry (design D5): the AOT
+- Drive **both paths** off the same compile-unit entry (design D5): the AOT
   **build-program** path resolves `(import (L))` through a minimal manifest, compiles the
   library and the program, and links `clang runtime.c L.ll prog.ll -lgc -o exe`; the program's
   single `@scheme_entry` calls each imported library's `__init` before the program body. The
@@ -38,7 +38,7 @@ vertical slice that proves both doors on one trivial library.
   override `--manifest`) mapping a library name → its source (and optional artifact dir);
   two entries suffice for the slice.
 - Add a **`test/modules-*` suite**: AOT build+run of a program importing a library; the same
-  library imported interactively in the REPL; a unit's `.ll` byte-identical across both doors
+  library imported interactively in the REPL; a unit's `.ll` byte-identical across both paths
   (dev→ship fidelity); and the original blocker as a test — two independently compiled units
   each with an internal `helper` + lifted code blocks link with no symbol collision.
 
@@ -49,7 +49,7 @@ vertical slice that proves both doors on one trivial library.
 
 ### Modified Capabilities
 - `module-system`: Adds the library-surface, artifact-emission, import-resolution, and
-  both-doors requirements — the first stage that produces and consumes a module artifact,
+  both-paths requirements — the first stage that produces and consumes a module artifact,
   building on Stage 0's typed-scope and symbol-naming foundation. No Stage 0 requirement is
   weakened: library-free programs still emit byte-identical IR (only library units carry the
   `@"L:…"` names).
@@ -67,8 +67,8 @@ vertical slice that proves both doors on one trivial library.
   multi-`.ll` linking with `__init` ordering, and REPL `addIRModule` + `__init` + export merge.
 - **Tooling / observability:** the build driver narrates unit compiles/links per
   `docs/OUTPUT.md` (`compile (foo bar) -> build/lib/foo.bar.ll [N bytes]`, `link … -> exe`).
-- **Tests:** new `test/modules-*` suite wired into `run-all-tests.sh` (AOT/REPL doors,
-  byte-identity across doors) and `run-dev-tests.sh` where Chez is needed.
+- **Tests:** new `test/modules-*` suite wired into `run-all-tests.sh` (AOT/REPLs,
+  byte-identity across paths) and `run-dev-tests.sh` where Chez is needed.
 - **Committed IR:** if any `CORE_FLAT` file changes, `make regen` regenerates
   `bootstrap/*.ll`; the anti-stale trust-check must stay green.
 - **Dependencies:** builds on the archived `module-resolution-scaffold` (Stage 0).

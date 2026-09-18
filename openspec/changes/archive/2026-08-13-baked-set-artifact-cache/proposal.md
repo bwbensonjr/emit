@@ -24,7 +24,7 @@ already built: an export table is a readable datum, and `emit lib` already *writ
 
 ## What Changes
 
-- **A cache of compiled library units for the Chez-free doors.** A unit is compiled once and reused
+- **A cache of compiled library units for the Chez-free paths.** A unit is compiled once and reused
   by later processes, keyed so that a stale entry can never be used. `emit run`, `emit build`,
   `emit lib`, and `emit repl` all consult it.
 - **A new compiler-core entry point that registers a library unit into a session from a prebuilt
@@ -34,7 +34,7 @@ already built: an export table is a readable datum, and `emit lib` already *writ
   `compile-baked-set` on every process start; it will reuse a cached set when one is valid.
 - **The cache is transparent, never load-bearing for correctness.** A miss, a stale entry, an
   unreadable entry, or an unwritable cache directory SHALL fall back to compiling from source and
-  succeed. No door acquires a new failure mode, and no program's emitted IR depends on whether the
+  succeed. No path acquires a new failure mode, and no program's emitted IR depends on whether the
   cache was warm.
 - **The cache works from an install, not only a checkout** — it needs a user-writable location,
   since `<prefix>/share/emit/` is not writable and the existing `build/lib` is checkout-only.
@@ -47,7 +47,7 @@ of the win: the baked set is 1.72 s of the 1.80 s, while user libraries add ~0.4
 minority of processes that import any. The baked set needs no such tracking at all, because its
 source is compiled into the binary and the executable's own identity keys it.
 
-Also explicitly **not** in scope: P8 (tree-shaking on the `emit build` door) and P11 (the `runtime.c`
+Also explicitly **not** in scope: P8 (tree-shaking on the `emit build` path) and P11 (the `runtime.c`
 recompile, measured at 0.16 s / 5% and deliberately not scheduled). Precompiling units to `.bc`/`.o`
 is out too — it attacks the 0.30 s JIT half and can follow independently once the 1.43 s is gone.
 
@@ -56,7 +56,7 @@ is out too — it attacks the 0.30 s JIT half and can follow independently once 
 ### New Capabilities
 
 - `artifact-cache`: A keyed, self-populating, transparent cache of the compiled baked standard
-  library for the Chez-free doors. Covers what identifies a cache entry, where entries live for both
+  library for the Chez-free paths. Covers what identifies a cache entry, where entries live for both
   a checkout and an install, when an entry may be reused, and the requirement that every failure path
   degrades to compiling from source rather than to an error.
 
@@ -67,7 +67,7 @@ is out too — it attacks the 0.30 s JIT half and can follow independently once 
   whole-program entries. The dev→ship fidelity requirement is extended to state that a session
   seeded from cached units is indistinguishable from one seeded by compiling them.
 
-*(No `module-system` delta. An earlier draft extended its freshness rule to the Chez-free doors; with
+*(No `module-system` delta. An earlier draft extended its freshness rule to the Chez-free paths; with
 user-library caching deferred, that requirement is untouched and stays available for the follow-up
 change to extend.)*
 
@@ -79,12 +79,12 @@ change to extend.)*
 - `src/core.ss` — untouched, as it turned out: the reuse path is a sibling of the compile path
   rather than a branch inside `compile-baked-set` (design D9).
 - `src/emit.cpp` — host-side cache I/O (locate, key, read, write) around `register_baked_set`, which
-  all four doors reach through `seed_session`. Host C++, so it reaches the binaries through plain
+  all four commands reach through `seed_session`. Host C++, so it reaches the binaries through plain
   `make`, not regen.
 - Cache location and key interact with `artifact-compiler-stamp` (the existing stamp) and with the
   `installed-emit-completeness` install contract, which deliberately ships no compiled artifacts —
   a *derived, local, regenerable* cache is consistent with that, but the reasoning must be recorded.
-- No change to emitted IR, to any door's output, or to the AOT ship path. The self-hosting fixed
+- No change to emitted IR, to any path's output, or to the AOT ship path. The self-hosting fixed
   point must still converge and `bootstrap/` must be reproduced byte-identically.
 - Two measurements become the change's acceptance evidence: a trivial `emit run` should approach its
   0.08 s `--no-prelude` floor, and `./run-all-tests.sh` should drop substantially from 1605 s.

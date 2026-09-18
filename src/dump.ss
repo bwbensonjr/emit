@@ -5,7 +5,7 @@
 ;;; binary can show its stages with no Chez present.  Two runtime primitives make it
 ;;; possible -- `(%dump-level)`, the host-forwarded EMIT_DUMP_LEVEL probe, and
 ;;; `(%stderr-write v display?)`, the narration channel (stdout is reserved for a
-;;; door's IR payload, so narration cannot go there).
+;;; path's IR payload, so narration cannot go there).
 ;;;
 ;;; NOT in `compile.ss`'s (include ...) block, and so not in src/util.scm: those files
 ;;; are EVALUATED by Chez, where the two %-ops are unbound identifiers.  This file is
@@ -186,7 +186,7 @@
   (if #f #f))
 
 ;; Build the dump procedure for one compilation unit: (stage form) -> unspecified.
-;; `unit` is #f for the program (or the library `emit lib` was pointed at -- the
+;; `unit` is #f for the program (or the library emit lib was pointed at -- the
 ;; unit under inspection either way) and a library name for an incidentally
 ;; compiled unit like (scheme base), which is dumped only at level 3 (design D7).
 ;; Returns core.ss's `no-dump` when this unit is not being dumped, so every caller

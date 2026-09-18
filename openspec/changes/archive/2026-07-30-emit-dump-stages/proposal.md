@@ -3,7 +3,7 @@
 Per-pass IL inspection — the `--dump` flag — is the project's primary window into the
 compiler, and it is the **last developer-facing capability that still requires Chez
 Scheme**. The dumper lives in the Chez driver (`src/compile.ss:139`), which is the only
-caller that passes a real `dump` procedure into the core; every Chez-free door
+caller that passes a real `dump` procedure into the core; every Chez-free path
 (`emit run`, `emit build`, `emit lib`, `emit repl`) hardcodes `no-dump`
 (`src/core.ss`, `src/repl-core.ss:244,350,370,379,432`). So the shipped binary — the one
 the README tells users to build and the one whose behavior actually ships — cannot show
@@ -14,7 +14,7 @@ That inverts the project's stated posture: the compiled compiler is the authorit
 form, and Chez survives only as the genesis (`historical/genesis/`) and an optional CI
 trust-check. It also leaves the embedded compiler with **no narration channel at all** —
 it has `%display`/`%write` to stdout, but stdout on the `--emit`/`schemec` paths carries
-IR, so the Chez-free doors cannot satisfy the `tooling-observability` requirement that a
+IR, so the Chez-free paths cannot satisfy the `tooling-observability` requirement that a
 compiler announce its stages at verbose verbosity.
 
 ## What Changes
@@ -30,14 +30,14 @@ compiler announce its stages at verbose verbosity.
   parity requirement already establishes (`EMIT_NO_PRELUDE` → `%no-prelude?` →
   `rt_no_prelude_p`).
 - **Stage coverage closed on the modular path.** `compile-program-with-imports` — the path
-  every door now takes — runs `recognize-let`, `convert-assignments`, and
+  every path now takes — runs `recognize-let`, `convert-assignments`, and
   `convert-closures` but dumps none of them (`src/core.ss:387`); the per-form REPL path
   (`repl-lower-form*`) dumps nothing. Both are brought up to the seven stages the
   whole-program path already exposes.
 - **A readable dump format in-language.** Chez's dumper uses `pretty-print`; the embedded
   compiler has only a flat writer. A minimal in-language pretty-printer gives the
   Chez-free dump the same readability, since readability *is* the deliverable.
-- **`-v` stage announcements on the Chez-free doors,** using the same channel — the
+- **`-v` stage announcements on the Chez-free paths,** using the same channel — the
   concise `stage <name>` trace the Chez driver already emits at
   `EMIT_VERBOSITY=verbose`.
 - **Chez `--dump` retained,** unchanged, as the independent-host reference a parity check
@@ -63,7 +63,7 @@ None — this closes gaps in existing capabilities rather than introducing a new
   compiler — a stderr channel plus the host-forwarded flag — parallel to the existing
   "runner supports --no-prelude parity" requirement.
 - `tooling-observability`: extends the conforming-tool list and the verbosity requirement
-  to the Chez-free doors, which currently cannot narrate.
+  to the Chez-free paths, which currently cannot narrate.
 - `self-hosting`: records that no developer-facing compiler capability requires Chez —
   Chez is retained for verification (trust-check, fixed point, dev suite) and the frozen
   genesis only.

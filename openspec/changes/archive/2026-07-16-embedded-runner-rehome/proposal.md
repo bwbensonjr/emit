@@ -11,7 +11,7 @@ the Chez driver emits IR in which prelude procedures are imported externals plus
 contradicts the `compiler-embedding` spec's standing guarantees that "runner output matches
 AOT output" and that "there SHALL NOT be a separate compilation path for the runner," and it
 leaves the largest, most-depended-on unit unexercised by the module system on the Chez-free
-door. Re-homing the embedded runner closes the last gap in Modules v0's dev→ship fidelity.
+path. Re-homing the embedded runner closes the last gap in Modules v0's dev→ship fidelity.
 
 ## What Changes
 
@@ -22,7 +22,7 @@ door. Re-homing the embedded runner closes the last gap in Modules v0's dev→sh
   `compile-program-with-imports` machinery, and merges the derived-form macros
   (`and`/`or`/`when`/`unless`/`let*`/`cond`/`case`/`guard`/`%guard-clauses`) into the program's
   `macro-env` at expand time. This is the same compiler-core logic the Chez driver already uses
-  — now reached on the Chez-free door — so the runner exercises the real module system.
+  — now reached on the Chez-free path — so the runner exercises the real module system.
 - **The entry returns two modules, sentinel-delimited: `(scheme base)` IR then program IR.** They
   cannot be merged into one LLVM module (both emit a fixed `@__apply0` and reset string globals, so
   they would collide), so the entry separates them with a boundary marker. `src/run.cpp` splits on
@@ -59,8 +59,8 @@ door. Re-homing the embedded runner closes the last gap in Modules v0's dev→sh
   "one compilation path for the runner" guarantees against the Chez driver *after* Stage 3's
   re-homing, and supersedes the description of the entry as prepending the prelude.
 - `module-system`: The implicit `(scheme base)` auto-import (with `--no-prelude` opt-out) and its
-  manifest entry, established for the Chez door in Stage 3, now also hold on the Chez-free embedded
-  door — the same requirement satisfied by a second, portable implementation.
+  manifest entry, established for the Chez path in Stage 3, now also hold on the Chez-free embedded
+  path — the same requirement satisfied by a second, portable implementation.
 
 ## Impact
 

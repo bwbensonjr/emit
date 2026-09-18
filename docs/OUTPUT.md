@@ -56,7 +56,7 @@ regen: assemble flat source (ordered cat; no Chez)  [0s]
     it stays on **stderr** with a **non-zero** exit, and stdout stays empty.
 
   This is not an inconsistency; it is the rule above applied correctly. Relatedly, every
-  door MUST reject an option it does not recognize, naming the door and the option, and
+  command MUST reject an option it does not recognize, naming the command and the option, and
   exit non-zero — a flag that is silently ignored reports success for work not done.
 
 ## Verbosity
@@ -122,9 +122,9 @@ level (including `quiet`) — the same precedence the Chez driver has always had
 | `--dump-all`             | `--dump`, plus `(scheme base)` and imported library units      |
 | `EMIT_VERBOSITY=verbose` | pass *names* only (`  stage lower`), no IL                     |
 
-Every door of the shipped binary accepts both flags — `emit run`, `emit build`,
+Every command of the shipped binary accepts both flags — `emit run`, `emit build`,
 `emit lib`, `emit repl` — as does the Chez driver (`--dump`). All dump output is
-**stderr**, so it cannot perturb a door's stdout: `emit run --emit --dump` writes the
+**stderr**, so it cannot perturb a command's stdout: `emit run --emit --dump` writes the
 same IR bytes as `emit run --emit`, which is what keeps `make regen` and the trust-check
 safe. `test/dump-stages-tests.sh` asserts that byte-for-byte.
 
@@ -152,7 +152,7 @@ their header with that form: `;; ==== after convert-closures [define fact] ====`
 - **The Chez driver (`compile.ss`)** — reads `EMIT_VERBOSITY` (and `-q`/`-v`); stage
   announcements are gated to `verbose`, and `--dump` additionally pretty-prints the full
   intermediate form after each pass.
-- **The embedded compiler (the shipped doors)** — narrates through `%stderr-write`, never
+- **The embedded compiler (the shipped commands)** — narrates through `%stderr-write`, never
   `%display`/`%write` (those are stdout, where the IR payload lives). It reads no
   environment itself: the *entry* builds the dumper from `(%dump-level)` and passes it down
   the core's `dump` parameter, so `src/core.ss` stays port-free and effect-free.

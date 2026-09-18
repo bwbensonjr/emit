@@ -1,7 +1,7 @@
 ;;; compile.ss -- the CHEZ-HOSTED driver for the compiler core.
 ;;;
 ;;; NOT the everyday entry point.  Emit is self-hosting: `build/emit`
-;;; (verbs run/repl/build/lib) is the sole user-facing door, and `make` builds it
+;;; (verbs run/repl/build/lib) is the sole user-facing command, and `make` builds it
 ;;; from the committed IR with LLVM alone -- no Chez anywhere.  See src/README.md
 ;;; and docs/PIPELINE.md.
 ;;;
@@ -11,8 +11,8 @@
 ;;; cross-checks the self-hosted compiler against an implementation that shares
 ;;; none of its runtime.  That is what the Chez-gated suites do (./run-dev-tests.sh:
 ;;; self-emission equivalence, the self-hosting fixed point, --dump parity, and the
-;;; cross-door byte-identity checks); ./run-all-tests.sh needs none of it.  It also
-;;; still owns one capability the Chez-free door lacks -- the closed-world
+;;; cross-path byte-identity checks); ./run-all-tests.sh needs none of it.  It also
+;;; still owns one capability the Chez-free path lacks -- the closed-world
 ;;; tree-shaking AOT ship path (docs/MODULES.md, "Scope & limits").
 ;;;
 ;;; Usage, when you do want it (run from the repo root; needs `chez` on PATH):
@@ -163,7 +163,7 @@
 (define (read-program path) ; -> ordered list of all top-level forms (file I/O)
   (let* ([p (open-input-file path)] [forms (read-forms p)]) (close-port p) forms))
 
-;; --- the include reader this door installs (change: library-include-declarations,
+;; --- the include reader this driver installs (change: library-include-declarations,
 ;; design D2/D3/D5) ---------------------------------------------------------
 ;; The core performs no I/O and knows nothing about paths: it hands this procedure the
 ;; filename as WRITTEN plus the token of the file that named it, and receives
@@ -214,7 +214,7 @@
     ;;
     ;; This DOES restore two independent implementations of one rule, which
     ;; library-include-declarations design D6 avoided on purpose.  The reason to accept
-    ;; that: D6's single implementation was guaranteeing the WRONG answer on both doors,
+    ;; that: D6's single implementation was guaranteeing the WRONG answer on both paths,
     ;; and a post-read fold cannot be made right.  Path resolution and cycle detection in
     ;; this same procedure already live under that regime, pinned by the cross-host
     ;; equivalence suites rather than by construction.  One known divergence: Chez folds
@@ -319,7 +319,7 @@
 ;; Ackermann probe, both faster and ~14% smaller.  This is a link/codegen-time step:
 ;; the emitter's textual IR and the committed bootstrap/*.ll are unchanged, so IR
 ;; byte-identity and the self-hosting fixed point are unaffected.  The JIT/REPL (dev)
-;; door is not gated by this.
+;; path is not gated by this.
 (define ship-opt "-O2")
 ;; Link-time optimization for the AOT ship path (change: cross-unit-direct-calls,
 ;; design D3).  The AOT link hands clang several separately-emitted modules -- the
@@ -328,7 +328,7 @@
 ;; a 30-million-call probe, the direct call alone and LTO alone each change nothing
 ;; (0.07s either way), while together they are 0.01s.  It also SHRINKS the delivered
 ;; binary here (58144 -> 35024 bytes on that probe), so it does not cost the size wins
-;; P1 bought.  The JIT/REPL door is not gated by this, and the bitcode exit needs it
+;; P1 bought.  The JIT/REPL execution path is not gated by this, and the bitcode exit needs it
 ;; even less: llvm-link already merges the whole set into one module before -O2.
 (define ship-lto "-flto")
 ;; One emitted OUT.ll drives three exits.  AOT uses `aot-cc` (a system clang when present,
@@ -419,7 +419,7 @@
 ;; --- interactive REPL: launch the embedded-compiler host ----------------
 ;; The REPL is now Chez-free (change: repl-embedded-incremental): the whole
 ;; incremental loop -- read a complete form, compile it against the persistent
-;; session state, JIT and run it, print the value -- lives in the `emit repl` door
+;; session state, JIT and run it, print the value -- lives in the emit repl command
 ;; (build/emit, change: emit-cli-unification), which A-links the EMBEDDED compiler
 ;; and does its own compilation in-process.  This driver only ensures the binary is
 ;; up to date and then hands the terminal over to it (it inherits this process's
@@ -859,10 +859,10 @@
 ;; one path, not per-backend.
 ;; --- closed-world AOT tree-shaking (change: aot-release-profile) -------------
 ;; `program-root-internals` and `str-contains?` used to live here.  They MOVED to
-;; src/core.ss (change: chez-free-unit-pipeline, design D8), because `emit build` now
+;; src/core.ss (change: chez-free-unit-pipeline, design D8), because emit build now
 ;; shakes too and the rule for "which of a unit's candidate names does this program's IR
 ;; actually mention" must have exactly one implementation.  It has already had one subtle
-;; bug fixed in it (`member` vs `memq`, below), and a divergence between the two doors
+;; bug fixed in it (`member` vs `memq`, below), and a divergence between the two paths
 ;; would surface as undefined symbols at link time on one of them only.  This driver keeps
 ;; the calls; core.ss carries the definitions and the reasoning.
 
@@ -899,7 +899,7 @@
                                      direct-imports)]
                  [prog-ll (string-append out ".ll")] ; beside the exe, not the source
                  ;; The program is the unit under inspection; the library units above
-                 ;; keep no-dump, matching the shipped doors' default (design D7 --
+                 ;; keep no-dump, matching the shipped paths' default (design D7 --
                  ;; the driver has no --dump-all).
                  [prog-ir (compile-program-with-imports prelude-forms
                                                         user-forms
@@ -991,56 +991,57 @@
                  [ll (string-append art-dir "/" base ".ll")]
                  [expf (string-append art-dir "/" base ".exports")]
                  [stampf (string-append art-dir "/" base ".stamp")])
-            (if (artifacts-fresh? (cadr entry) ll expf stampf stamp)
-                ;; reuse: read the export table back from the artifact
-                (let ([table (car (read-program expf))])
-                  (note "reuse ~s -> ~a  [fresh]\n" name ll)
-                  (loop (cdr libs) (cons (cons name table) tables) (cons ll lls)))
-                ;; rebuild: import env comes from this lib's already-built deps.
-                ;; Capture the reason BEFORE writing (the writes make it fresh again).
-                (let* ([reason (rebuild-reason (cadr entry) ll expf stampf stamp)]
-                       [imp-tables (map (lambda (n) (cdr (assoc n tables))) (cadr dl))]
-                       [res (compile-library (car dl)
-                                             (cadr dl)
-                                             (caddr dl)
-                                             (cadddr dl)
-                                             imp-tables
-                                             no-dump)]
-                       [ll-text (string-append header (car res))])
-                  (sh "mkdir" (string-append "mkdir -p " art-dir))
-                  (write-text ll ll-text)
-                  ;; `render-datum`, not `write`: the export datum now carries a
-                  ;; library's compile-time interface, whose templates may hold
-                  ;; characters that Chez's `write` and Emit's own reader spell
-                  ;; differently.  One renderer on every door is what makes `emit lib`'s
-                  ;; artifact byte-identical to the driver's (change:
-                  ;; library-macro-export) -- and it is byte-identical to `write` for
-                  ;; every table that exists today, which is measured, not assumed.
-                  (let ([o (open-output-file expf 'replace)])
-                    (display (render-datum (cadr res)) o)
-                    (newline o)
-                    (close-port o))
-                  ;; write the .stamp LAST so a torn write fails safe toward
-                  ;; rebuild (D3); `write` (not display) so the digest string
-                  ;; round-trips as a string, not a symbol.
-                  (let ([o (open-output-file stampf 'replace)])
-                    (write (stamp-datum stamp (library-includes name)) o)
-                    (newline o)
-                    (close-port o))
-                  ;; The macro count rides the existing metrics clause and only when
-                  ;; there is one, so a library that exports no macro narrates exactly
-                  ;; what it always did (change: library-macro-export; docs/OUTPUT.md).
-                  (note
-                    "compile ~s -> ~a  [~a bytes~a, recompile: ~a]\n"
-                    name
-                    ll
-                    (string-length ll-text)
-                    (let ([n (length (ct-macros (table-ct-half (cadr res))))])
-                      (if (= n 0) "" (string-append ", " (number->string n) " macros")))
-                    reason)
-                  (loop (cdr libs)
-                        (cons (cons name (cadr res)) tables)
-                        (cons ll lls))))))))))
+            (if
+              (artifacts-fresh? (cadr entry) ll expf stampf stamp)
+              ;; reuse: read the export table back from the artifact
+              (let ([table (car (read-program expf))])
+                (note "reuse ~s -> ~a  [fresh]\n" name ll)
+                (loop (cdr libs) (cons (cons name table) tables) (cons ll lls)))
+              ;; rebuild: import env comes from this lib's already-built deps.
+              ;; Capture the reason BEFORE writing (the writes make it fresh again).
+              (let* ([reason (rebuild-reason (cadr entry) ll expf stampf stamp)]
+                     [imp-tables (map (lambda (n) (cdr (assoc n tables))) (cadr dl))]
+                     [res (compile-library (car dl)
+                                           (cadr dl)
+                                           (caddr dl)
+                                           (cadddr dl)
+                                           imp-tables
+                                           no-dump)]
+                     [ll-text (string-append header (car res))])
+                (sh "mkdir" (string-append "mkdir -p " art-dir))
+                (write-text ll ll-text)
+                ;; `render-datum`, not `write`: the export datum now carries a
+                ;; library's compile-time interface, whose templates may hold
+                ;; characters that Chez's `write` and Emit's own reader spell
+                ;; differently.  One renderer on every compilation path is what makes emit lib's
+                ;; artifact byte-identical to the driver's (change:
+                ;; library-macro-export) -- and it is byte-identical to `write` for
+                ;; every table that exists today, which is measured, not assumed.
+                (let ([o (open-output-file expf 'replace)])
+                  (display (render-datum (cadr res)) o)
+                  (newline o)
+                  (close-port o))
+                ;; write the .stamp LAST so a torn write fails safe toward
+                ;; rebuild (D3); `write` (not display) so the digest string
+                ;; round-trips as a string, not a symbol.
+                (let ([o (open-output-file stampf 'replace)])
+                  (write (stamp-datum stamp (library-includes name)) o)
+                  (newline o)
+                  (close-port o))
+                ;; The macro count rides the existing metrics clause and only when
+                ;; there is one, so a library that exports no macro narrates exactly
+                ;; what it always did (change: library-macro-export; docs/OUTPUT.md).
+                (note
+                  "compile ~s -> ~a  [~a bytes~a, recompile: ~a]\n"
+                  name
+                  ll
+                  (string-length ll-text)
+                  (let ([n (length (ct-macros (table-ct-half (cadr res))))])
+                    (if (= n 0) "" (string-append ", " (number->string n) " macros")))
+                  reason)
+                (loop (cdr libs)
+                      (cons (cons name (cadr res)) tables)
+                      (cons ll lls))))))))))
 
 ;; --- modular-set backend consumers (change: driver-backend-rehome) ---------
 ;; Each takes the unit .ll's (link order) + the program .ll and drives one exit.
@@ -1161,7 +1162,7 @@
               ;; this, --dump on the DEFAULT path (prelude on, or any import) was silently
               ;; ignored: only --no-prelude + no imports, the compile-file path below, ever
               ;; dumped.  Wiring the existing dumper through is what lets the shipped
-              ;; binary's dump be checked against this one on the path every door takes
+              ;; binary's dump be checked against this one on the modular path every command takes
               ;; (test/dump-parity-tests.sh).
               (set! *dumpf* dumpf)
               (cond
@@ -1218,7 +1219,7 @@
         (set! *library-paths-enabled?* #f)
         (loop (cdr args) src out dump? backend prelude? repl? emit-ir? via?)]
       [(string=? (car args) "--no-manifest-chain")
-        ;; The bootstrap driver reads one manifest; accept the production door's
+        ;; The bootstrap driver reads one manifest; accept the production command's
         ;; compatibility control so scripts can share resolver arguments.
         (loop (cdr args) src out dump? backend prelude? repl? emit-ir? via?)]
       [(string=? (car args) "-o")

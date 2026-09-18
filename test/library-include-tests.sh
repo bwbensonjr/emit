@@ -9,16 +9,16 @@
 #
 # What this suite pins, and why each case is here rather than assumed:
 #
-#   * a library assembled from included files compiles and runs on EVERY door -- the
-#     compiler core performs no I/O, so each door installs its own reader and the doors
+#   * a library assembled from included files compiles and runs on every compilation path -- the
+#     compiler core performs no I/O, so each path installs its own reader and the paths
 #     are the thing most likely to disagree;
 #   * the project lives OUTSIDE the repo, because an include that resolves against the
 #     working directory instead of the including file works from the repo root and
 #     nowhere else -- the failure `manifest-search-path` and `baked-set-on-every-door`
 #     each had to fix once;
 #   * a NESTED include resolves beside its own file, not beside the .sld;
-#   * an `import` arriving through an included declarations file reaches the run door's
-#     dependency walk (design D11) -- when it does not, the door blames the manifest for
+#   * an `import` arriving through an included declarations file reaches the emit run command's
+#     dependency walk (design D11) -- when it does not, the path blames the manifest for
 #     a dependency the source named;
 #   * `include-ci` folds case, `cond-expand` selects by feature, and both are refused
 #     precisely where they cannot be answered honestly (a `(library ...)` requirement);
@@ -104,10 +104,10 @@ EOF
 #   |KeepCase|   -> KeepCase    a bar-quoted name does NOT, though its BODY still folds
 #
 # This is the cross-host pin.  The fold used to live in the core (one implementation,
-# library-include-declarations design D6) and now lives in each door's reader -- Emit's
+# library-include-declarations design D6) and now lives in each path's reader -- Emit's
 # read-all-from-string-ci and Chez's `case-sensitive` -- so the two CAN drift, and only a
 # fixture read by both can catch it.  Cases 1-4 read it with Emit's reader; the driver
-# section at the end reads it with Chez's and then `cmp`s the two doors' geom.ll BYTE FOR
+# section at the end reads it with Chez's and then `cmp`s the two paths' geom.ll BYTE FOR
 # BYTE, which is what turns a folding disagreement into a test failure rather than into
 # two libraries that each look fine alone.
 #
@@ -118,7 +118,7 @@ EOF
 #
 # NOT here: a symbol inside a #(...) vector literal, which read-time folding reaches and
 # the old shape-walking fold missed.  A quoted vector cannot be lowered as a constant at
-# all (issue #64, `bad const ?`), so it cannot travel through a door; that case is pinned
+# all (issue #64, `bad const ?`), so it cannot travel through a path; that case is pinned
 # at the reader in test/read-all-tests.ss instead.
 cat > "$PROJ/lib/GEOM-OLD.scm" <<'EOF'
 (DEFINE (LEGACY) (QUOTE OLD))
@@ -138,7 +138,7 @@ EOF
 
 VALUE='(12 14 emit old (q 3 z) kept)'
 
-echo "a library assembled from included files, on every door"
+echo "a library assembled from included files, on every compilation path"
 
 # 1. emit run: the library resolves through the project manifest and every splice lands.
 got="$(cd "$PROJ" && "$EMITABS" run main.scm 2>"$TMP/run.err")"
@@ -171,7 +171,7 @@ if grep -q 'perim' "$PROJ/build/lib/geom.exports" 2>/dev/null \
   ok ".exports lists an included export and a case-folded one"
 else bad ".exports content"; sed 's/^/         /' "$PROJ/build/lib/geom.exports" 2>/dev/null; fi
 
-# 6. One compile-unit core: emit lib's unit == the unit the run door emits for the source.
+# 6. One compile-unit core: emit lib's unit == the unit the emit run command emits for the source.
 #    PIPED, so the source has no path and its includes resolve against the working
 #    directory -- the documented fallback, and the reason this runs from lib/ rather than
 #    from the project root.  The two units must still be byte-identical: where a file was
@@ -193,7 +193,7 @@ echo
 echo "an import behind an inclusion reaches the dependency walk (design D11)"
 
 # 8. The library's ONLY import arrives through an included declarations file, and the
-#    dependency is a manifest library rather than a baked one -- so the run door's lazy
+#    dependency is a manifest library rather than a baked one -- so the emit run command's lazy
 #    closure walk has to see it, or the compile fails with a missing (scheme inexact).
 P2="$TMP/proj2"; mkdir -p "$P2/lib"
 cat > "$P2/lib/rms.sld" <<'EOF'

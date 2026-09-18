@@ -19,9 +19,9 @@ runs from a checkout, so the checkout candidate must stay first and must resolve
 today. And **`homebrew-tap-distribution` is unstarted**, so its task 3.2 can be redirected at this
 change's mechanism rather than reworked after the fact.
 
-One correction to #36 recorded here because the tasks depend on it: the issue titles both doors,
+One correction to #36 recorded here because the tasks depend on it: the issue titles both paths,
 but **`emit lib` is not affected**. `repo_root()` has exactly one caller (`src/emit.cpp:1086`, the
-build door); `emit lib` emits `.ll` and never links. Verified from the install prefix —
+`emit build` command); `emit lib` emits `.ll` and never links. Verified from the install prefix —
 `emit lib mine.sld` succeeds with no toolchain in the environment.
 
 ## Goals / Non-Goals
@@ -127,16 +127,16 @@ information in the system and must never beat a live answer.
 This is the mechanism `homebrew-tap-distribution` task 3.2 describes. That change's task becomes
 "depends on `installed-emit-completeness`" rather than a second design.
 
-### D7 — The REPL preloads the union of the chain; the lazy doors resolve on demand
+### D7 — The REPL preloads the union of the chain; the lazy paths resolve on demand
 
-The doors already differ: the REPL preloads **eagerly** (`src/emit.cpp:760`ff — "a manifest entry
+The paths already differ: the REPL preloads **eagerly** (`src/emit.cpp:760`ff — "a manifest entry
 the session never imports still reaches this"), while run/build resolve the transitive closure of
 what the program actually imports.
 
-Under a chain the lazy doors need no decision — an unresolved name simply walks to the next
+Under a chain the lazy paths need no decision — an unresolved name simply walks to the next
 manifest. The REPL does: preload the first manifest only, or the union? **Union.** An installed
 REPL having the full standard surface interactively is the same argument #35 made when it fixed the
-REPL door, and a session where `(import (scheme file))` fails because the project's manifest does
+REPL, and a session where `(import (scheme file))` fails because the project's manifest does
 not mention it would reintroduce #44 one layer up.
 
 The cost is REPL startup compiling the installed manifest's non-baked libraries. Measuring it is a
@@ -157,7 +157,7 @@ fallback is not taken.
 `say_manifest()` currently prints one line. With a chain it reports what was actually resolved, in
 `docs/OUTPUT.md` form — the searched candidates that exist, in order, on stderr. "Which
 `emit-libs.scm` am I getting?" must stay a one-line answer now that the answer can be plural; a
-door that silently consults two manifests is worse than one that consults the wrong one.
+path that silently consults two manifests is worse than one that consults the wrong one.
 
 ## Risks / Trade-offs
 
@@ -171,8 +171,8 @@ door that silently consults two manifests is worse than one that consults the wr
   the lowest precedence, so live discovery wins whenever it produces an answer; the stale value is
   only ever reached when the alternative is failing outright. It should still fail with a message
   naming the compiled-in path rather than clang's own error.
-- **`resolve_manifest()` returning a list touches every door.** → Mechanical, but it is the widest
-  blast radius here; the doors' existing behaviour in a checkout is pinned by the byte-identity
+- **`resolve_manifest()` returning a list touches every path.** → Mechanical, but it is the widest
+  blast radius here; the paths' existing behaviour in a checkout is pinned by the byte-identity
   suites, which is the guard that this refactor is transparent.
 - **Installing `llvm-env.sh` makes a developer script part of the install contract.** → It is
   already the single source of toolchain truth for the Makefile and the Chez driver; shipping it

@@ -43,7 +43,7 @@ declared export interface.
 The codebase is already ~80% shaped for this: the REPL host resolves cross-module
 symbols in a shared JITDylib (`src/repl/host.cpp`), and AOT already links multiple
 `.ll` files. **A library is "a module you `addIRModule` before the user types" in the
-REPL, and "a `.o` you pass to clang" in the static build — the same bytes, two doors.**
+REPL, and "a `.o` you pass to clang" in the static build — the same bytes, two paths.**
 The quiet enabler is the **uniform calling convention**: every Scheme function shares
 one `tailcc` prototype `(self, argc, a0…a{K-1}, overflow)`, so separately-compiled
 modules link at the IR level with no glue.

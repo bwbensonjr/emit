@@ -1,7 +1,7 @@
 ## Why
 
 `emit run` and `emit repl` hand each LLVM module to ORC/LLJIT without an optimization
-pipeline, so the primary development doors pay call and allocation overhead that the
+pipeline, so the primary development paths pay call and allocation overhead that the
 `-O2 -flto` ship path removes.  On the reproducible reader workload this leaves the JITted
 program about 28% slower than the delivered executable after startup is excluded, and it
 turns reader structure that is free under AOT into the separate P12 performance item.
@@ -10,7 +10,7 @@ turns reader structure that is free under AOT into the separate P12 performance 
 
 - Give the shipped `emit run` and `emit repl` ORC hosts a standard LLVM per-module
   optimization pipeline before each module is materialized.
-- Add `-O0`, `-O1`, and `-O2` to both doors.  The development default becomes `-O1`;
+- Add `-O0`, `-O1`, and `-O2` to both paths.  The development default becomes `-O1`;
   `-O0` preserves the current unoptimized path for diagnosis and comparison, while `-O2`
   permits an explicit execution-speed-over-JIT-latency choice.
 - Apply the selected profile uniformly to baked libraries, manifest libraries, whole-program
@@ -45,7 +45,7 @@ turns reader structure that is free under AOT into the separate P12 performance 
 ## Impact
 
 - **Host code:** `src/emit.cpp` gains one shared LLVM new-pass-manager transform used by both
-  LLJIT instances and option parsing for the two JIT doors.  This is host C++, not compiler
+  LLJIT instances and option parsing for the two JIT execution paths.  This is host C++, not compiler
   source, so it does not require `make regen` and must not change `bootstrap/*.ll`.
 - **LLVM API surface:** add the PassBuilder/new-pass-manager headers and analysis-manager setup
   already supplied by the supported LLVM installation; no new third-party dependency.
@@ -53,7 +53,7 @@ turns reader structure that is free under AOT into the separate P12 performance 
   option/combination diagnostics are covered by the existing CLI conventions.
 - **Observability:** verbose narration identifies the selected profile and reports optimization
   time separately from program execution; stdout data and `--dump` output remain unchanged.
-- **Tests and measurements:** extend CLI, run-door, REPL persistence/redefinition, backend-value
+- **Tests and measurements:** extend CLI, run-path, REPL persistence/redefinition, backend-value
   equivalence, and output-channel tests; use `tools/gen-reader-bench.ss` for the P12/P13 before
   and after; update `docs/PERFORMANCE.md`, `docs/PROJECTS.md`, and `docs/PIPELINE.md` with the
   measured result and the frontend/backend boundary.

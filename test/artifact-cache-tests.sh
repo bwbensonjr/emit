@@ -4,13 +4,13 @@
 # The cache is a PURE ACCELERATOR, so the tests split along that claim rather than along the
 # implementation:
 #
-#   TRANSPARENCY  a door's output must not depend on cache state.  The load-bearing check is
+#   TRANSPARENCY  a path's output must not depend on cache state.  The load-bearing check is
 #                 byte-identity of emitted IR cold vs warm -- not "it still works", which a
 #                 cache that silently served a stale library would also pass.
 #   INVALIDATION  an entry keyed on this binary must not be served to a different one.
 #   DEGRADATION   every failure path -- unwritable location, corrupt entry, absent
 #                 directory -- must still produce the right answer.  These are the tests
-#                 that keep "no door gains a failure mode" true.
+#                 that keep "no path gains a failure mode" true.
 #   NARRATION     reuse and recompile must be distinguishable, and must stay on stderr.
 #
 # EMIT_CACHE points every case at a scratch directory, so nothing here touches the
@@ -156,7 +156,7 @@ n10=$(ls "$C10" 2>/dev/null | grep -c '^baked-' || true)
 [ "$n10" = 0 ] && ok "--no-prelude writes no cache entry" \
   || bad "--no-prelude wrote $n10 cache file(s)"
 
-# --- the other doors reach the same cache --------------------------------------------
+# --- the other paths reach the same cache --------------------------------------------
 C11="$TMP/c11"
 printf '(display 1)\n' > "$TMP/one.scm"
 EMIT_CACHE="$C11" $RUN "$TMP/one.scm" >/dev/null 2>&1

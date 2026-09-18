@@ -15,7 +15,7 @@
   (b pear-b))
 ; Sequence the pre-mutation read, the mutation, and the post-mutation read with
 ; let*/begin so the result does not depend on argument evaluation order, which
-; R7RS leaves unspecified (4.1.3).  The two doors now agree on it -- they emit
+; R7RS leaves unspecified (4.1.3).  The two paths now agree on it -- they emit
 ; operands strictly left-to-right (issue #6, fixed with #11) -- but relying on an
 ; unspecified order would still be fragile, so the sequencing stays.
 (let* ((p         (make-point 3 4))

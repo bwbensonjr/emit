@@ -13,7 +13,7 @@ round-trips through the Chez-hosted driver's `read` and Emit's own in-language r
 A **bytevector** literal has no such form: R7RS spells it `#u8(...)`, which Emit's reader accepts and
 the Chez-hosted driver's `read` rejects, while Chez's `#vu8(...)` is rejected by Emit's reader. A
 bytevector literal in an exported macro template SHALL therefore be a compile-time error naming the
-reason, under the rule above — not a table written in a spelling one door cannot read back. This
+reason, under the rule above — not a table written in a spelling one path cannot read back. This
 constrains only the table: a bytevector *constant* elsewhere in a library or program is unaffected.
 
 This makes explicit for the table what has always been true of it: the table is a compilation

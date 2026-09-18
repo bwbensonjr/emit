@@ -4,7 +4,7 @@ See `proposal.md` — Why for the motivation and `docs/PERFORMANCE.md` P23 for t
 What matters here is the machinery that already exists, because this change wires existing pieces
 together rather than building new ones.
 
-The REPL door seeds a session in three steps (`src/emit.cpp:2140-2225`): register the baked set
+the REPL seeds a session in three steps (`src/emit.cpp:2140-2225`): register the baked set
 (mode 8), preload every manifest library (`preload_libraries`, `src/emit.cpp:1935`), auto-import
 `(scheme base)` (mode 6). The preload, per library, does `add_ir` then `run_init`. `add_ir` is
 cheap in JIT terms — ORC materializes lazily at lookup, so a module that is added and never
@@ -16,7 +16,7 @@ Four pieces the fix needs are already built:
 - **`*repl-lib-imports*`** (`src/repl-core.ss:49`) — each loaded unit's direct imports, populated
   by every registration path (source load, cache registration, baked set).
 - **`run-closure-order`** (`src/repl-core.ss:715`) — the transitive import closure in dependency
-  order over that graph, DFS post-order with a cycle check. The **run door already uses it** to
+  order over that graph, DFS post-order with a cycle check. The **`emit run` command already uses it** to
   order a program's inits, and it exists precisely because the driver's `toposort-libs` reads
   files and is Chez-only.
 - **A newline-joined init-symbol list** as a core→host payload convention, which mode 8 already
@@ -32,7 +32,7 @@ the right inits in the right order.
 **Goals:**
 
 - Session startup stops scaling with manifest libraries the session does not import.
-- The REPL and the run door initialize a given import closure in the **same order**, because
+- The REPL and the `emit run` command initialize a given import closure in the **same order**, because
   dev→ship fidelity is a stated project requirement and a divergence here would be invisible until
   a library body's effects differed between `emit repl` and `emit build`.
 - A failed initialization leaves no partially imported library behind.
@@ -43,7 +43,7 @@ the right inits in the right order.
 - Deferring the **registration** as well as the initialization (read, compile/cache-load, `add_ir`).
   That would make startup independent of manifest size entirely, but it moves a broken library's
   diagnostic from startup to the import. Recorded as the follow-on in P23, not taken here.
-- The run, build and lib doors. The run door already preloads only the program's import closure
+- The run, build and `emit lib` commands. the `emit run` command already preloads only the program's import closure
   (mode 9's lazy closure) and inits it from `@scheme_entry`; nothing about it is eager in the way
   this change targets.
 - The `.bc`/`.o` object-code cache (P23 fix 2) and shrinking `(scheme char)`'s IR (P23 fix 3).
@@ -105,9 +105,9 @@ The division is therefore: **the core answers what the import graph implies** (w
 what order), **the host records what actually happened in this process**. The host already keeps
 exactly this kind of state for the baked set's inits.
 
-### D4 — One ordering, shared with the run door
+### D4 — One ordering, shared with the `emit run` command
 
-The import arm calls `run-closure-order`, the same function the run door's mode 7 calls to order a
+The import arm calls `run-closure-order`, the same function the `emit run` command's mode 7 calls to order a
 program's inits. Two orderings that agree today and drift tomorrow is the specific failure that
 would break dev→ship fidelity silently, and the cheapest guard against it is that there is only
 one function. Its cycle check comes along for free.
@@ -135,11 +135,11 @@ does not appear today.
   the observables explicitly — dump output under `--dump`/`--dump-all`, the verbose narration at
   startup and at import, the `[N/M modules]` session line, stdout byte-identity — not just the
   values.
-- **The REPL and the run door initialize in different orders** → D4 puts both on
+- **The REPL and the `emit run` command initialize in different orders** → D4 puts both on
   `run-closure-order`. Add a test that a session importing a library chain and a program importing
   the same chain report the same order.
 - **A library body's effects never happen in a session that never imports it** → True, and it is
-  what "deferred" means. It is also already true of the run door, which inits only a program's
+  what "deferred" means. It is also already true of the `emit run` command, which inits only a program's
   closure, so this makes the REPL *more* like a delivered program rather than less. Worth stating
   in the spec, which it is.
 - **An init trap leaves the JIT'd heap half-mutated** → Unavoidable for any initialization that
@@ -149,7 +149,7 @@ does not appear today.
 
 ## Migration Plan
 
-No user-facing migration: the change is internal to one door and has no flag, no artifact format
+No user-facing migration: the change is internal to one path and has no flag, no artifact format
 change, and no cache-key change.
 
 The build discipline is the constraint. `src/repl-core.ss` is a compiler source in `CORE_FLAT`, so

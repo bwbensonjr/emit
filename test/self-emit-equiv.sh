@@ -41,7 +41,7 @@ check apply       '(letrec ([f (lambda (a b) (+ a b))]) (apply f (quote (3 4))))
 # render a flonum literal with the HOST's number->string.  The two hosts print the
 # same shortest-round-trip DIGITS with different framing -- Chez `100.0`/`1e15`/
 # `5e-324|1` vs Emit's %g loop `1e+02`/`1e+15`/`5e-324` -- so the IR text diverged
-# by door, and self-hosted the `1e+02` form was not even valid LLVM (an integer
+# by path, and self-hosted the `1e+02` form was not even valid LLVM (an integer
 # constant in a `double` position).  Byte equality here is the assertion that the
 # canonical formatter, not the host printer, decides the text.
 #

@@ -43,7 +43,7 @@ every compiler-source edit lands before regen starts, and no further edits until
 
 **Goals:**
 
-- No primitive dereferences an argument whose tag it has not verified, from any door, through any
+- No primitive dereferences an argument whose tag it has not verified, from any path, through any
   call path — including a primitive used as a first-class value.
 - No indexed accessor derives a bound from an object it has not verified. This closes the hole in
   the guarantee `checked-indexed-access` states.
@@ -99,7 +99,7 @@ a hole where the failures actually happen is not one.
 `primitive-layer` requires a primitive used as a value to be the same procedure as the directly
 called one, so `(apply car (list 7))` reaches `rt_car`. A guard emitted at call sites would leave
 that path open, and would have to be repeated in the emitter for every primitive. One guard per
-`rt_*` function covers every door and every path, and — for everything except the non-procedure call
+`rt_*` function covers every path and every path, and — for everything except the non-procedure call
 (D6) — leaves the emitted IR untouched.
 
 ### D3 — A `CHECK_TAG` macro beside `CHECK_INDEX`, ordered before the length load
@@ -150,7 +150,7 @@ it doubles the formatting paths, and the type name alone is sufficient to identi
 `car: not a pair: got the empty list` and abort, as `(vector-ref (vector 1 2) 9)` does today.
 `rt_fatal` longjmps to the *host* frame (`rt_trap`) or exits; the Scheme handler chain is
 `*handlers*` in `src/prelude.scm:557`, which C cannot reach. Routing traps into it is issue #89 and
-a genuine design (a C-callable door onto the Scheme handler chain, plus a re-entrancy story).
+a genuine design (a C-callable path onto the Scheme handler chain, plus a re-entrancy story).
 
 Keeping them separate is deliberate: this change is a **memory-safety** change with a large blast
 radius across the runtime and a regen cycle, and #89 is a **control-flow** change that alters what

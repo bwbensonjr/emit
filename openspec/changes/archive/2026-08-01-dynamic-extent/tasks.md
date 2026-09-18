@@ -48,7 +48,7 @@
 - [x] 7.4 Parameters: read, `parameterize`, restoration after normal exit AND after an escape; the converter applied to both the initial and the bound value
 - [x] 7.5 **`guard` regression** — its existing behaviour is unchanged: clause selection, reraise, and the unhandled-raise rendering and non-zero exit. This is the part most likely to be broken by task 5, and it is already covered by existing suites, so run them deliberately rather than incidentally
 - [x] 7.6 The rule chosen in 1.2 (a raising `after` thunk) behaves as specified
-- [x] 7.7 All three doors agree — AOT, run, REPL — on an escape, a wind, and a parameterize
+- [x] 7.7 All three paths agree — AOT, run, REPL — on an escape, a wind, and a parameterize
 - [x] 7.8 **Size:** re-measure 1.1 and report the `hello.scm` delta; an unused `dynamic-wind` should be pruned by the tree-shake, which must be measured rather than assumed
 - [x] 7.9 New suite registered in `run-all-tests.sh`; `./run-all-tests.sh` and `./run-dev-tests.sh` green
 - [x] 7.10 `make regen` reconverges and `test/trust-check.sh` passes on the commit; `bootstrap/scheme.base.ll` legitimately moves here, so confirm the compiler's own behaviour is unchanged (`self-emit-equiv`, `self-host-fixpoint`, `dump-parity`)

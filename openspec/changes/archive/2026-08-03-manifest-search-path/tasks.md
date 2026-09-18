@@ -3,8 +3,8 @@
 - [x] 1.1 Reproduce the defect from outside the repo: from `/tmp`, confirm a plain program runs
       (baked `(scheme base)`) while `(import (scheme inexact))` fails with
       "program imports a library not found in the manifest" — for `emit run` and `emit repl`.
-      **Reproduced, and worse than filed:** the run door behaves as the issue describes, but the
-      REPL door from `/tmp` has no `(scheme base)` *at all* — it warns
+      **Reproduced, and worse than filed:** the `emit run` command behaves as the issue describes, but the
+      REPL from `/tmp` has no `(scheme base)` *at all* — it warns
       "auto-import (scheme base): (scheme base) not loaded (missing from manifest?)" and `map` is
       unbound, leaving only primitives. The REPL resolves `(scheme base)` through the manifest
       (eager, mode 5) instead of using the baked prelude, so an installed REPL loses the whole
@@ -28,7 +28,7 @@
       rather than falling through; 3–5 fall through silently. Reuse the `realpath()` approach
       from `repo_root()` (`:180`).
 - [x] 2.2 Replace the four duplicated `mp ? … : "emit-libs.scm"` sites — `:409` (run), `:579`
-      (build), `:867` (repl), `:956` (lib) — with calls to it, so no door keeps its own copy.
+      (build), `:867` (repl), `:956` (lib) — with calls to it, so no path keeps its own copy.
 - [x] 2.3 Join relative manifest paths against the manifest's directory (D3) before every read:
       `preload_user_libraries` (the `path_of` table and the closure walk, `:255-270`),
       `preload_libraries` (`:583+`), and `resolve_program`'s `src`/`out` (`:300+`). Absolute
@@ -48,7 +48,7 @@
       path used by the AOT build.
 - [x] 3.3 Confirm parity holds with tasks 2.x: `test/self-emit-equiv.sh`,
       `test/dump-parity-tests.sh`, and `test/prelude-base-run-tests.sh` green. Land 2.x and 3.x
-      together — a half-applied rule breaks the door-parity guards.
+      together — a half-applied rule breaks the path-parity guards.
 
 ## 4. Migrate the test fixtures (D7)
 
@@ -125,6 +125,6 @@
 - [x] 7.3 `openspec validate manifest-search-path`; sync specs and archive.
       **Synced:** created `openspec/specs/distribution/spec.md` (new capability, 3 requirements)
       and replaced the two `module-system` requirements in place. `openspec validate --all
-      --strict` passes 21/21. The old run-door text that had `EMIT_MANIFEST` outranking
+      --strict` passes 21/21. The old run-path text that had `EMIT_MANIFEST` outranking
       `--manifest` is gone, resolving the contradiction with the implementation and
       `docs/MODULES.md` that the proposal flagged.

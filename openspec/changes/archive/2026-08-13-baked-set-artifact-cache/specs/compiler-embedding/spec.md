@@ -46,7 +46,7 @@ Reusing a cached library unit SHALL NOT constitute a second compilation path. A 
 cached units and a session seeded by compiling those units from source SHALL be indistinguishable:
 the same export tables, the same initialization ordering, and byte-identical emitted IR for any
 program compiled against them. Whether a unit was reused or recompiled SHALL therefore be
-unobservable in any door's output.
+unobservable in any path's output.
 
 #### Scenario: Runner output matches AOT output
 

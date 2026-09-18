@@ -4,7 +4,7 @@ No code changes in this group. It establishes the numbers the later assertions a
 against, and it decides whether group 6 happens at all.
 
 - [x] 1.1 Record the baseline for a minimal program: build `(display (car (list 1 2)))` through both
-      ship doors, and record the delivered binary size, the linked `scheme.base` and `emit.internal`
+      shipping paths, and record the delivered binary size, the linked `scheme.base` and `emit.internal`
       unit sizes, and the count of `emit.internal:*` symbols in the binary. This is the before-side
       of D5's assertion.
 - [x] 1.2 Record which `(emit internal)` bindings a **shaken** `(scheme base)` still references, for
@@ -13,7 +13,7 @@ against, and it decides whether group 6 happens at all.
       test can honestly assert.
 - [x] 1.3 **D7 gate.** Shake `lib/scheme/read.sld` and `lib/scheme/base.sld` to their own export
       interface (one `compile-library*` call with `candidates` passed unfiltered as `keep-roots`)
-      and compare byte counts against the unpruned units. Runnable before any door work exists.
+      and compare byte counts against the unpruned units. Runnable before any path work exists.
       → **0% / 0% / 0.45%.** Measured on `(emit internal)`, `(scheme read)`, `(scheme base)`.
 - [x] 1.4 Decide group 6 on 1.3's numbers against the pre-stated threshold: **under 10% on both
       libraries and group 6 is dropped**, the measurement is recorded in `docs/PERFORMANCE.md`, the
@@ -25,12 +25,12 @@ against, and it decides whether group 6 happens at all.
 ## 2. The shared root rule (`src/core.ss`)
 
 - [x] 2.1 Give `program-root-internals` a root-text parameter that is no longer only the program's
-      IR, keeping one implementation for both doors (the reason `chez-free-unit-pipeline` design D8
+      IR, keeping one implementation for both paths (the reason `chez-free-unit-pipeline` design D8
       moved it here). Update its comment: the text searched is the program plus finalized importers.
       → **The body needed no change at all** — the parameter was already the text to search, so
       backward propagation is entirely in what the callers pass. Renamed `prog-text` to `root-text`
       and documented D1's soundness argument and D3's `ptr`/`code:` pairing assumption at the one
-      place both doors read. Kept the function's name: a program still imposes every root, the text
+      place both paths read. Kept the function's name: a program still imposes every root, the text
       it is read out of just grew.
 - [x] 2.2 Confirm `compile-library*` needs no change — it already takes `keep-roots` — and note in
       the change record that only the roots handed to it differ. → **Confirmed, untouched.**
@@ -57,10 +57,10 @@ directly. It is the fast half and it validates the whole idea before the regen b
       The floor is an empty `__init`: `cmd-roots` is empty post-expansion too, so
       `define-record-type` leaves no command and the substrate prunes to zero bindings.
       `demos/run-tests.sh` (RUNNER=aot): **80/80**. `test/aot-tree-shaking-tests.sh`: 9/10, the
-      one failure being the cross-door size gap that group 4 exists to close (chez 51,656 B vs
+      one failure being the cross-path size gap that group 4 exists to close (chez 51,656 B vs
       `emit build` 110,424 B).
 
-## 4. The `emit build` door (`src/repl-core.ss` + `src/emit.cpp`)
+## 4. The `emit build` path (`src/repl-core.ss` + `src/emit.cpp`)
 
 `src/repl-core.ss` is in `CORE_FLAT`; `src/emit.cpp` is host C++ and reaches the binaries through
 plain `make`. Finish 4.1–4.2 (Scheme) **before** the regen in group 5; 4.3–4.6 are iterable after it
@@ -71,7 +71,7 @@ with `make` alone.
       than the program IR. Update the mode's protocol comment, which currently documents the
       prunability rule this change retires.
 - [x] 4.2 Keep the `(keep . NAME)` answer itself for the reasons that remain (an unresolvable
-      library, a door that cannot supply source), so the host's "kept whole (…)" narration still
+      library, a path that cannot supply source), so the host's "kept whole (…)" narration still
       distinguishes a sound skip from an error.
       → **The premise did not survive the code.** `keep` had exactly ONE producer — the
       import-graph gate 4.1 removed — and one consumer, so it was removed from both sides
@@ -90,11 +90,11 @@ with `make` alone.
       leaves that unit whole, which stays sound under the new order.
       → A unit left whole is appended to `root_text` **whole**, so its own references still
       root its dependencies and nothing downstream is over-pruned on its behalf. Verified for
-      real in the intermediate state above: new host + old core degraded to "kept whole (door
+      real in the intermediate state above: new host + old core degraded to "kept whole (path
       answered keep)" and still delivered a correct binary.
-- [x] 4.6 Verify the cross-door requirement against 1.1: the same program built both ways retains
+- [x] 4.6 Verify the cross-path requirement against 1.1: the same program built both ways retains
       the same set of library bindings and delivers binaries of the same order of size.
-      → **Byte-identical, not merely the same order: 52,152 B from both doors**, 1
+      → **Byte-identical, not merely the same order: 52,152 B from both paths**, 1
       `emit.internal:*` symbol each, 0 reader bindings each.
 
 ## 5. Regen barrier
@@ -134,7 +134,7 @@ change the answer, the measurement is cheap to re-run and lives in `measurements
 - [x] 7.5 Extend `test/unit-pipeline-tests.sh` (or `test/artifact-cache-tests.sh`) for D4: two
       programs that prune a shared importer differently are each served their own entry for the
       transitively imported unit.
-- [x] 7.6 Confirm the open-world doors are untouched — `emit run` / `emit repl` still seed from full
+- [x] 7.6 Confirm the open-world paths are untouched — `emit run` / `emit repl` still seed from full
       units and keep every binding available. → Already asserted by two pre-existing checks in
       `unit-pipeline-tests.sh`; both still pass, so no new test was needed.
 

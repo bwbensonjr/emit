@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # End-to-end tests for the interactive REPL driver (change: interactive-repl,
-# Group 5): `compile.ss --repl` driving `emit repl` as a co-process.  Feeds a
+# Group 5): `compile.ss --repl` driving emit repl as a co-process.  Feeds a
 # scripted session on stdin and checks the values echoed on stdout (prompts and
 # diagnostics go to stderr, so stdout is values only).
 # Run from the repo root: test/repl-interactive-tests.sh

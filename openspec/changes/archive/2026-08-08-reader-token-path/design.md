@@ -46,7 +46,7 @@ And one from `docs/PERFORMANCE.md`:
   change does not add case tables (D5).
 - No new reader features, no port-side folding, and no change to `rd-skip-ws`, the sentinel
   encoding, or the probe.
-- Not fixing the dev door's missing optimization pipeline. That is filed, not built (D7).
+- Not fixing the development path's missing optimization pipeline. That is filed, not built (D7).
 
 ## Decisions
 
@@ -123,11 +123,11 @@ the concept — 128 exports to 129. The argument for hiding it (no user asked fo
 an extension) is real, but weaker than the argument for not fragmenting the reader's reporting
 discipline, which is a rule the whole partition rests on.
 
-### D3 — Both doors fold at read time, and neither protocol changes
+### D3 — both paths fold at read time, and neither protocol changes
 
 The core already hands the include reader the declaration that asked:
 `(reader WHO FILENAME BASE) -> (TOKEN . FORMS)` (`library-include-declarations` D2). `WHO` is
-`include-ci` exactly when folding is wanted, so both doors dispatch on an argument they already
+`include-ci` exactly when folding is wanted, so both paths dispatch on an argument they already
 receive.
 
 - **Emit** (`src/include-reader.ss`) — `read-all-from-string-ci` instead of
@@ -178,7 +178,7 @@ says it outright: it is an implementation independent of `src/compile.ss`'s, and
 implementations of one rule is also what lets the cross-host equivalence suites measure them against
 each other." Path resolution, the source home, and cycle detection already live under exactly this
 regime. Folding joins them, pinned by an `include-ci` fixture that
-`test/self-emit-equiv.sh` compares across the two doors.
+`test/self-emit-equiv.sh` compares across the two paths.
 
 ### D6 — The benchmark gets a generator, because a described benchmark is not reproducible
 
@@ -196,7 +196,7 @@ Any later reader measurement regenerates the same bytes.
 The baseline measurement (task 1.2) compared the pre-regression tree (b102070, built in a worktree)
 against HEAD on one input:
 
-| door | pre-regression | HEAD | delta |
+| path | pre-regression | HEAD | delta |
 |---|---|---|---|
 | `emit run`, total wall clock | 3.72 s | 4.47 s | +20.2% |
 | — of which fixed compile + JIT | 0.61 s | 0.83 s | +0.22 s |
@@ -206,7 +206,7 @@ against HEAD on one input:
 
 Medians of five interleaved runs on an idle machine. The fixed row is easy to miss and matters: `emit run` JIT-compiles the baked set first, and `reader-lexical-conformance` grew `(emit internal)` 170,716 → 289,754 B, so 0.22 s of the 0.75 s delta is compiling a larger substrate rather than reading. `emit run` creates a plain `LLJITBuilder().create()` with no IR
 optimization pipeline (`src/emit.cpp:839`); the AOT link passes `-O2 -flto` (`src/emit.cpp:1337`;
-`ship-opt`/`ship-lto` at `src/compile.ss:299`). The regression exists on the unoptimized door and
+`ship-opt`/`ship-lto` at `src/compile.ss:299`). The regression exists on the unoptimized path and
 not in the shipped artifact — consistent with P12's own diagnosis of per-call overhead, since
 inlining is what removes that. (The `-O2` result is measured; *which* inlining decision removes it
 is inference, and is not claimed as more.)
@@ -218,17 +218,17 @@ Three consequences, and each is a reason not to do the rework here:
    on the *unaffected* path. The cost lands on `emit run` and the REPL: a dev-loop cost.
 2. **The fix would hand-fold what `-O2` already folds** — and would cost D3 its by-construction
    shared-grammar guarantee, replacing it with a corpus test. Real complexity, for a benefit
-   confined to the door that does not optimize.
-3. **The measurement found a bigger item.** No IR optimization pipeline on the dev door is a cost
+   confined to the path that does not optimize.
+3. **The measurement found a bigger item.** No IR optimization pipeline on the development path is a cost
    every JITted program pays on every call, not just the reader's. That is the entry the numbers
    actually justify.
 
 So: P12 is **rewritten, not ticked** — corrected numbers, corrected scope, its value re-rated
-against the door it affects, and a pointer to the generator. The dev-door pipeline becomes a new
+against the path it affects, and a pointer to the generator. The dev-path pipeline becomes a new
 `PERFORMANCE.md` entry. Neither is implemented here; this change ships the fold.
 
 *Alternative rejected — do the rework anyway, since it helps `emit run` and the REPL.* It does, and
-if the dev door never gets an optimization pipeline it may be worth revisiting. But doing it now
+if the development path never gets an optimization pipeline it may be worth revisiting. But doing it now
 means paying the D3 cost to fix a symptom whose cause is one entry down the list, and doing it
 *inside a correctness change* means the regen that fixes #61 also carries an optimization nobody
 measured a need for on the ship path.
@@ -256,7 +256,7 @@ measured a need for on the ship path.
   the population is close to empty — `include-ci` exists for old case-folding Scheme, which predates
   bar syntax being used this way. No deprecation path is warranted.
 
-- **The threaded argument costs the ordinary read something**, on the door that does not inline. →
+- **The threaded argument costs the ordinary read something**, on the path that does not inline. →
   Measured, not assumed: the same benchmark runs before and after, and a folding read is measured
   too. If the plain read regresses on `emit run`, that is a finding to record, not to hide.
 

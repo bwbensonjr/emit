@@ -3,7 +3,7 @@
 # on (scheme base) (change: compiler-bootstrap-rehome).
 #
 # The compiler is now compiled as a program that AUTO-IMPORTS (scheme base), so the
-# module-aware compiler is `emit run` (embed), not the `schemec` filter (which
+# module-aware compiler is emit run (embed), not the `schemec` filter (which
 # cannot resolve imports).  The fixed point spans {the baked library set, embed.ll}: a
 # module-aware compiler, compiling its OWN source, must reproduce byte-identical library +
 # compiler IR.
@@ -81,7 +81,7 @@ link_run () {  # <embed.ll> <out> <baked.ll>...
 # out of a whole-program compile.
 emit_baked_set () {  # <prefix>  -> writes <prefix>1.ll.., echoes N
   # `emit run --emit` on a trivial program: the units come out ahead of it.  Note the verb --
-  # `emit` is the unified CLI (change: emit-cli-unification) and has no default door.
+  # `emit` is the unified CLI (change: emit-cli-unification) and has no default path.
   printf '(quote ())\n' | build/emit run --emit > "$work/baked.emit" 2>/dev/null
   split_units "$work/baked.emit" "$1"
 }

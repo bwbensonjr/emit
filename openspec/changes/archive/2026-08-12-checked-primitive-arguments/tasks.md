@@ -20,7 +20,7 @@
 - [x] 1.8 Add the right-typed regression guard: `car`/`cdr` over a list, every accessor over a
       correctly-typed object, direct and value-position procedure calls — all must be unchanged.
       An over-tight guard has to fail here before it can fail a user
-- [x] 1.9 Add the door-agreement and session-survival cases: the same wrong-typed program under the
+- [x] 1.9 Add the path-agreement and session-survival cases: the same wrong-typed program under the
       in-process runner and as a standalone executable, and a REPL session that traps and then
       evaluates `(+ 1 2)` to `3`
 - [x] 1.10 Confirm 1.1/1.3/1.4/1.5/1.7 fail against the current `build/emit` in the way #84 and #78

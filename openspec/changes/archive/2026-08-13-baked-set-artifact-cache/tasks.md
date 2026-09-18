@@ -63,7 +63,7 @@ and mode 8's protocol are both left untouched. See design D9.
 - [x] 4.6 Add cache narration per the spec and `docs/OUTPUT.md` — reused vs recompiled, with the
       reason when recompiled, on stderr and verbosity-controlled.
 
-## 5. Wire the doors
+## 5. Wire the paths
 
 - [x] 5.1 Make `register_baked_set` consult the cache before driving mode 8, and populate it after a
       from-source compile. `emit run`, `emit build`, `emit lib`, and `emit repl` all reach this

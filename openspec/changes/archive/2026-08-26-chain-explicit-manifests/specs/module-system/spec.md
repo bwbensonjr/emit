@@ -8,13 +8,13 @@ build directory rather than the source tree. The manifest MAY list any number of
 Resolving an imported library that has no manifest entry and that is not a member of the baked set
 SHALL be a compile-time error naming the missing library. The standard library `(scheme base)` SHALL
 remain **listable** in a manifest, so the Chez-hosted driver can resolve it from the committed
-`.sld` like any other library — but a door that has registered the baked set SHALL treat such an
+`.sld` like any other library — but a path that has registered the baked set SHALL treat such an
 entry as already satisfied (see "The baked library set is a partition emitted in dependency order"),
-so no door depends on the entry's presence and no door loads a second copy because of it.
+so no path depends on the entry's presence and no path loads a second copy because of it.
 
-**Locating the manifests.** Every door SHALL use the same ordered candidates:
+**Locating the manifests.** every path SHALL use the same ordered candidates:
 
-1. the `--manifest FILE` argument, when the door accepts one and it is given;
+1. the `--manifest FILE` argument, when the path accepts one and it is given;
 2. the `EMIT_MANIFEST` environment variable, when set;
 3. `./emit-libs.scm`, relative to the current working directory;
 4. `<dir of the resolved real path of the running executable>/../share/emit/emit-libs.scm`,
@@ -23,7 +23,7 @@ so no door depends on the entry's presence and no door loads a second copy becau
 5. a compiled-in installation default, `<install prefix>/share/emit/emit-libs.scm`.
 
 Candidates 1 and 2 are **explicit requests**. `--manifest FILE` SHALL outrank
-`EMIT_MANIFEST`. When the selected explicit request names a file that does not exist, the door
+`EMIT_MANIFEST`. When the selected explicit request names a file that does not exist, the path
 SHALL report that named file as missing rather than silently falling through. When it is readable,
 it SHALL be the first manifest and candidate 3 SHALL be skipped: an unrelated working directory's
 project manifest is not part of an explicitly selected project's resolution. Every distinct,
@@ -37,7 +37,7 @@ A missing searched candidate is not an error. Finding no manifest at all SHALL r
 a program that imports only baked-in libraries runs unaffected — and the resulting failure SHALL
 be reported by import resolution, naming the unresolved library.
 
-Every user-facing `emit` door SHALL accept `--no-manifest-chain`. When present, only the
+Every user-facing `emit` path SHALL accept `--no-manifest-chain`. When present, only the
 highest-priority manifest selected by the procedure above SHALL be used and no later readable
 candidate SHALL extend it. Thus `--manifest FILE --no-manifest-chain` SHALL provide the
 single-manifest behavior formerly implied by `--manifest FILE`. The missing-explicit-manifest rule
@@ -47,11 +47,11 @@ SHALL remain unchanged when chaining is disabled.
 `(source …)`, a program entry's `(source …)`, and a program entry's `(output …)` — SHALL be
 resolved against the directory containing the manifest in which it appears, not against the
 current working directory. An absolute path SHALL be used as given. A manifest therefore carries
-its own library sources with it and resolves identically no matter which directory the door is
+its own library sources with it and resolves identically no matter which directory the path is
 invoked from. When manifests chain, each entry SHALL be resolved against **its own** manifest's
 directory, so entries inherited from a later candidate continue to name that candidate's sources.
 
-**Narration.** Each door SHALL narrate which manifest or manifests it resolved, on standard error,
+**Narration.** Each path SHALL narrate which manifest or manifests it resolved, on standard error,
 in the project's tool-output format, suppressed at `EMIT_VERBOSITY=quiet` and never altering
 standard output. When more than one candidate is in use, the narration SHALL name each in
 resolution order, whether the first manifest was discovered or explicit, so which libraries are in
@@ -133,12 +133,12 @@ against that file rather than searched for in an installed one.
 
 - **WHEN** `emit build NAME --manifest FILE` selects a project manifest with no program `NAME`,
   while a later installed manifest contains a program entry with that name
-- **THEN** the door reports no program entry in `FILE` and does not search the installed manifest
+- **THEN** the path reports no program entry in `FILE` and does not search the installed manifest
 
-#### Scenario: (scheme base) needs no manifest entry on any door
+#### Scenario: (scheme base) needs no manifest entry on any path
 
 - **WHEN** the auto-import of `(scheme base)` (or an explicit `(import (scheme base))`) is
-  resolved on any door against a manifest that does not name it
+  resolved on any path against a manifest that does not name it
 - **THEN** it resolves against the registered baked member and the compile proceeds, with no
   error naming `(scheme base)` as missing from the manifest
 
@@ -148,7 +148,7 @@ against that file rather than searched for in an installed one.
   Chez-hosted driver resolves them from it
 - **THEN** the driver locates them through the manifest and builds them from the committed `.sld`
   sources, compiled and loaded like any other library unit, as before
-- **AND** a Chez-free door reading the same manifest resolves those two entries to the baked members
+- **AND** a Chez-free path reading the same manifest resolves those two entries to the baked members
   it already registered, so neither is loaded a second time
 
 #### Scenario: A program entry is parsed and does not affect library resolution
@@ -167,7 +167,7 @@ against that file rather than searched for in an installed one.
 
 #### Scenario: An installed manifest is found from an unrelated directory
 
-- **WHEN** a door is invoked from a directory containing no `emit-libs.scm`, and a manifest is
+- **WHEN** a path is invoked from a directory containing no `emit-libs.scm`, and a manifest is
   installed at `<prefix>/share/emit/emit-libs.scm` beside the running executable
 - **THEN** the installed manifest is located through the executable-relative candidate and its
   libraries resolve, so a program importing a non-baked-in standard library runs successfully
@@ -182,19 +182,19 @@ against that file rather than searched for in an installed one.
 #### Scenario: Manifest sources resolve against the manifest's own directory
 
 - **WHEN** a manifest at `<dir>/emit-libs.scm` maps `(mylib)` to the relative source
-  `"mylib.sld"`, and a door is invoked from a different current working directory
+  `"mylib.sld"`, and a path is invoked from a different current working directory
 - **THEN** the source is read from `<dir>/mylib.sld`, and the same manifest resolves identically
-  regardless of the directory the door was invoked from
+  regardless of the directory the path was invoked from
 
 #### Scenario: An explicitly named manifest that is missing is reported
 
 - **WHEN** `--manifest FILE` (or `EMIT_MANIFEST`) names a file that does not exist
-- **THEN** the door reports that named file as missing and does not fall through to
+- **THEN** the path reports that named file as missing and does not fall through to
   `./emit-libs.scm` or to an installed manifest
 
 #### Scenario: The resolved manifest is narrated
 
-- **WHEN** a door resolves one or more manifests at default verbosity
+- **WHEN** a path resolves one or more manifests at default verbosity
 - **THEN** it names each resolved manifest path in resolution order on standard error, including
   `[chained]` and supplying-manifest narration for an installed fallback, and at
   `EMIT_VERBOSITY=quiet` those lines are absent while standard output is byte-identical either way

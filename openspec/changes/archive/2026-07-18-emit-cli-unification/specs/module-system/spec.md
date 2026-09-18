@@ -1,6 +1,6 @@
 ## MODIFIED Requirements
 
-### Requirement: Run door — run an importing program in-process (Chez-free)
+### Requirement: `emit run` command — run an importing program in-process (Chez-free)
 
 The in-process runner (`emit run`) SHALL resolve a program's imports (and each
 library's imports) through the manifest to their sources, build the transitive dependency
@@ -8,9 +8,9 @@ graph, reject import cycles with an error, load each unit in the transitive clos
 running JIT session in dependency order, invoke each unit's initializer exactly once, and
 then compile and run the program against the import environment built from its dependencies'
 export tables — all without Chez and without a second library-resolution path (it drives the
-same manifest resolution and compile-unit core the AOT and REPL doors use).
+same manifest resolution and compile-unit core the AOT and REPLs use).
 
-The manifest SHALL be located the same way the other doors locate it: the `EMIT_MANIFEST`
+The manifest SHALL be located the same way the other paths locate it: the `EMIT_MANIFEST`
 environment variable if set, otherwise `--manifest FILE` if given, otherwise the default
 `emit-libs.scm`. When no manifest is present and the program imports only `(scheme base)` (or
 imports nothing), the runner SHALL behave exactly as before (no regression), since the
@@ -48,21 +48,21 @@ initializer).
 - **THEN** it behaves exactly as before this change — the value is identical and no manifest
   is required
 
-### Requirement: Run door matches the AOT door (dev→ship fidelity)
+### Requirement: `emit run` command matches the AOT path (dev→ship fidelity)
 
 A program run through `emit run` with a given manifest SHALL produce the same value
-as the same program built and run through the AOT door (`emit build`) with the same
+as the same program built and run through the AOT path (`emit build`) with the same
 manifest. The emitted program module and each imported unit's module SHALL be
-byte-for-byte identical across the run and AOT doors, because all doors drive the same
+byte-for-byte identical across the run and AOT paths, because all paths drive the same
 compile-unit core.
 
-#### Scenario: Run-door value matches AOT-door value
+#### Scenario: run-path value matches AOT-path value
 
 - **WHEN** an importing program is run via `emit run` and also built+run via the AOT
-  door (`emit build`), with the same manifest
+  path (`emit build`), with the same manifest
 - **THEN** the two printed values are identical
 
-#### Scenario: A unit's module bytes match across the run and AOT doors
+#### Scenario: A unit's module bytes match across the run and AOT paths
 
-- **WHEN** `(mylib)` is loaded by the run door and compiled for the AOT link
+- **WHEN** `(mylib)` is loaded by the `emit run` command and compiled for the AOT link
 - **THEN** the two unit modules are byte-for-byte identical

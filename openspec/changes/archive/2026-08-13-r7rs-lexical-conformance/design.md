@@ -267,7 +267,7 @@ first tag's release notes as a behavior change a program can tell.
 **The flonum change moves the text of every flonum-printing site at once** → It has to: `flonum_format`
 is shared, and splitting it would let `write` and `number->string` disagree, which is a worse defect
 than the one being fixed. Existing test expectations containing exponent-form output must be updated in
-the same commit — `test/numeric-conformance-tests.sh` has four (`(* 100.0 2.0)` on three doors, and the
+the same commit — `test/numeric-conformance-tests.sh` has four (`(* 100.0 2.0)` on three paths, and the
 bare `100.0` literal). `test/dump-parity-tests.sh` compares Emit's dump against Chez's, and Chez prints
 `100.0` — so this should move parity *toward* agreement, and any divergence it reveals is real.
 
@@ -275,7 +275,7 @@ bare `100.0` literal). `test/dump-parity-tests.sh` compares Emit's dump against 
 program moves and that is true only of the reader and `case` (which are baked into `(scheme base)`), not
 of this. The emitter never passes the printer's framing through: `numeric-conformance` design D1 already
 established that host framing must not reach IR text, so `ir-double` decomposes whatever the printer
-produced into sign + digits + point via `flonum-parts` — which explicitly "handles both doors' framing" —
+produced into sign + digits + point via `flonum-parts` — which explicitly "handles both paths' framing" —
 and re-frames canonically (shorter of positional and scientific, positional on a tie). Only a change to
 the *digits* could move IR, and digit selection is untouched. So `test/self-emit-equiv.sh`,
 `test/module-scaffold-baseline.sh`, and the committed `bootstrap/*.ll` are insulated from this by

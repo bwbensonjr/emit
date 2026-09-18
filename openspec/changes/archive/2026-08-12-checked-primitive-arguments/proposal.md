@@ -137,7 +137,7 @@ report-rather-than-corrupt line already drawn for exact-integer overflow and for
   value are redundancy-elimination candidates; and the test is on a value already in a register, not
   a load. The measurement and its outcome belong in `docs/PERFORMANCE.md`.
 - `test/` — a new suite in the shape of `test/indexed-access-tests.sh`, which is the model: it pins
-  wrong-typed reads, wrong-typed writes with a neighbouring object checked, both doors agreeing, and
+  wrong-typed reads, wrong-typed writes with a neighbouring object checked, both paths agreeing, and
   REPL survival.
 - `test/r7rs/exclusions.tsv` — **3 rows removed and 12 retagged.** The estimate above (17 rows
   deleted) was wrong: most of those forms stay excluded, but for reasons the manifest had recorded

@@ -93,7 +93,7 @@
 ;; is what keeps one compilation's table from leaking into the next.
 ;;
 ;; Soundness rests on a library global being assigned once, by its unit's __init,
-;; and never reassigned -- see design D4.  That holds on BOTH doors: a unit's
+;; and never reassigned -- see design D4.  That holds on both paths: a unit's
 ;; globals are stored only by its own per-define __init_N thunks, `set!` on a
 ;; own top-level binding, or on an imported one, is a compile error (issue #5 made a
 ;; REPL SESSION global assignable, and deliberately stopped there), and a REPL

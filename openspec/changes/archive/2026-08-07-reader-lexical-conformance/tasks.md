@@ -159,7 +159,7 @@
       ~200k-token file, five interleaved runs per binary. Recorded as **P12**. The cause is not the
       prefix scan the design worried about — it is one procedure call per token per classifier, and
       the micro-fix (ordering the rational scan after the classifiers) is worth ~10% under Chez and
-      nothing on the self-hosted door, which is what says the cost is structural. P12 names the
+      nothing on the self-hosted path, which is what says the cost is structural. P12 names the
       three fixes that would remove work rather than move it.
 - [x] 9.5 Commit, then `test/trust-check.sh` (it `[SKIP]`s while `bootstrap/` is dirty). — Passed:
       "committed IR is exactly what the current source regenerates". Worth recording the trap it

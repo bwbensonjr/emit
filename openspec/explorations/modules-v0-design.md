@@ -35,7 +35,7 @@ slice and the concrete mechanisms.
 ## Goals / Non-Goals
 
 **Goals:**
-- A `define-library` compiles once to a reusable artifact usable through **both doors**:
+- A `define-library` compiles once to a reusable artifact usable through **both paths**:
   linked into an AOT executable, and `addIRModule`'d into the interactive REPL — the same
   bytes, verified byte-identical.
 - Support the R7RS-small surface subset: `define-library`, `export` (including
@@ -45,7 +45,7 @@ slice and the concrete mechanisms.
 - Library discovery via an explicit manifest/registry.
 - Re-home the prelude as one implicit library `(scheme base)`, auto-imported, so existing
   programs are unaffected.
-- One compiler core drives both doors (no second compilation path); the pure core stays
+- One compiler core drives both paths (no second compilation path); the pure core stays
   free of filesystem/subprocess I/O.
 
 **Non-Goals (deferred, explicit):**
@@ -67,7 +67,7 @@ slice and the concrete mechanisms.
 ### D1 — Module compilation lives in the embedded compiler, not the `schemec` filter
 
 Module-aware compilation needs richer input than a text filter's stdin→stdout seam: a unit
-must know *which library it is* and *its imports' export tables*. The REPL door already
+must know *which library it is* and *its imports' export tables*. the REPL already
 requires the in-process embedded compiler (Path A). So the embedded compiler gains a
 **compile-unit** capability, and the AOT path drives that *same* embedded compiler to emit
 each unit before linking. `schemec` (the pure whole-program text→IR filter) is unchanged.
@@ -136,10 +136,10 @@ export table's *key* is the external name. `(export map)` → `map → @"L:map"`
 `(export (rename %fast-map map))` → `map → @"L:%fast-map"`. Rename is pure table indirection
 — no new emission logic — which is why v0 affords it while deferring `only`/`except`/`prefix`.
 
-### D5 — The two doors, one in-memory export environment
+### D5 — The two paths, one in-memory export environment
 
 The compiler resolves imports against an **in-memory export environment**; only who
-populates it differs by door.
+populates it differs by path.
 
 - **AOT (build-program):** a build driver reads the program's `import` forms, resolves each
   `(import (L))` through the manifest to its `.ll` + `.exports` (transitively, topologically
@@ -153,7 +153,7 @@ populates it differs by door.
   the compiler's own session state (already-loaded modules). Later forms referencing imported
   names emit `external global` refs resolved across the JITDylib.
 
-Both doors call the *same* compile-unit entry, so a unit's `.ll` bytes are identical across
+both paths call the *same* compile-unit entry, so a unit's `.ll` bytes are identical across
 them — dev→ship fidelity extends to libraries, guarded by self-emission-equivalence.
 
 ### D6 — Prelude as `(scheme base)`, split procedure/macro
@@ -209,9 +209,9 @@ default under `build/` so compiled units stay out of the source tree.
 - **[Init ordering / diamond imports run a library twice]** → the one-shot `@"L:__inited"`
   guard makes `__init` idempotent; AOT orders inits at compile time, the REPL runs each on
   first import.
-- **["Both doors" in v0 is a larger first bite]** → Approach A stages it: Stage 0 (no
-  artifacts) → Stage 1 (trivial user library, both doors) → Stage 2 (generalize) → Stage 3
-  (prelude). Both-doors acceptance concentrates in Stage 1 on the smallest possible unit.
+- **["both paths" in v0 is a larger first bite]** → Approach A stages it: Stage 0 (no
+  artifacts) → Stage 1 (trivial user library, both paths) → Stage 2 (generalize) → Stage 3
+  (prelude). both-paths acceptance concentrates in Stage 1 on the smallest possible unit.
 - **[Manifest adds a config layer]** → v0 keeps it a two-entry file for the slice; format is
   a plain s-expression consistent with the project's text ethos.
 - **[Embedded compile-unit entry grows the FFI surface]** → it is a parameterized sibling of
@@ -225,7 +225,7 @@ default under `build/` so compiled units stay out of the source tree.
   emit byte-identical IR. **Tracked as its own OpenSpec change**
   (`openspec/changes/module-resolution-scaffold`), landed and verified before the
   module-artifact stages — it is self-contained and byte-identity-testable.
-- **Stage 1 — Vertical slice (both-doors milestone).** One trivial `(mylib)` exporting one
+- **Stage 1 — Vertical slice (both-paths milestone).** One trivial `(mylib)` exporting one
   procedure → `mylib.ll` + `mylib.exports`; a program `(import (mylib))` that links into a
   working exe *and* loads into the REPL. Minimal two-entry manifest. v0's core gate.
 - **Stage 2 — Generalize.** Export-rename; transitive imports (lib→lib); dependency ordering

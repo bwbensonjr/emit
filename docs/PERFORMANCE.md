@@ -17,12 +17,12 @@ speed items in this list.
 |----|------|------|-------|------|-----------------|------|
 | [P1](#p1-dead-code-elimination-for-library-units) | Dead-code elimination for library units | size | high | med | `aot-release-profile` | ☑ |
 | [P2](#p2-immediate-non-heap-characters) | Immediate (non-heap) characters | speed + cleanup | med | med | `immediate-characters` | ☑ |
-| [P3](#p3--the-chez-free-doors-recompile-the-standard-library-at-every-invocation) | The Chez-free doors recompile the standard library at every invocation | build speed | **high** | med | `baked-set-artifact-cache` | ☑ |
+| [P3](#p3--the-chez-free-paths-recompile-the-standard-library-at-every-invocation) | The Chez-free paths recompile the standard library at every invocation | build speed | **high** | med | `baked-set-artifact-cache` | ☑ |
 | [P4](#p4-on-codepoint-string-indexing) | O(n) codepoint string indexing | speed | low–med | med–high | `codepoint-string-indexing` | ☑ |
 | [P5](#p5-arithmetic-and-call-overhead-ackermann-benchmark) | Arithmetic & call overhead (Ackermann benchmark) | speed | high | med–high | `inline-fixnum-arith-and-self-calls` (A + B-self) | ☑ |
 | [P6](#p6-no-optimizer-pass-known-call-inlining-and-constant-folding) | No optimizer pass: known-call inlining & constant folding | speed + size | med–high | med | `simplify-known-calls` (A) | ☑ |
 | [P7](#p7-boxing-driven-by-desugaring-rather-than-by-mutation) | Boxing driven by desugaring rather than by mutation | speed + size | med | low–med | — | ☑ |
-| [P8](#p8-the-emit-build-door-does-not-tree-shake) | The `emit build` door does not tree-shake | size + build speed | med–high | med | `chez-free-unit-pipeline` | ☑ |
+| [P8](#p8-the-emit-build-path-does-not-tree-shake) | The `emit build` path does not tree-shake | size + build speed | med–high | med | `chez-free-unit-pipeline` | ☑ |
 | [P9](#p9--an-optional-argument-costs-every-call-site-its-cross-unit-direct-call) | An optional argument costs every call site its cross-unit direct call | speed + IR size | **med** (follow-up: −5.00% confirmed) | med | `cross-unit-variadic-direct-calls`, `variadic-min-arity-fast-entry` | ☑ |
 | [P10](#p10--a-library-another-unit-imports-is-never-tree-shaken-the-substrate-ships-whole) | A library another unit imports is never tree-shaken (the substrate ships whole) | size | high | med | `import-dag-tree-shaking` | ☑ |
 | [P11](#p11--every-emit-build-recompiles-the-c-runtime-from-source) | Every `emit build` recompiles the C runtime from source | build speed | **low** (measured: 5%) | low | — | ☐ |
@@ -96,7 +96,7 @@ larger than the JIT* — turning on `-O2` alone is ~14% smaller and faster; (2) 
 Scheme-level, root-set-driven reachability pass recompiles each prunable unit emitting only the
 reachable bindings + a pruned `__init` (`compile-library*` in `src/core.ss`), which the AOT driver
 (`build-modular-artifacts*` in `src/compile.ss`) links — keeping the AOT path clang-only. The
-dev/REPL/JIT door keeps the full cached units (open world). See `aot-release-profile` and the
+dev/REPL/JIT execution path keeps the full cached units (open world). See `aot-release-profile` and the
 original analysis below.
 
 **Symptom (original).** Every AOT binary links the *entire* `(scheme base)` unit — all 196 defined
@@ -129,13 +129,13 @@ strip "unused" prelude functions, because you do not know what the user will typ
 DCE must be an **AOT ship-time-only transform**, not part of the shared compiler core. That
 is consistent with the size-is-a-shipping-concern framing, but it means the "one compiler
 core" rule (`CLAUDE.md`) needs an explicit, documented carve-out: identical IR on every
-door, plus a link-time pruning pass only on the `--backend aot` path. Decide and record this
+path, plus a link-time pruning pass only on the `--backend aot` path. Decide and record this
 in the change's design before implementing.
 
 **OpenSpec change:** `aot-release-profile` (implemented). Chose Scheme-level tree-shaking
 (recompile each prunable unit to a reachability keep-set) over LLVM `internalize`/`globaldce`
 — the latter removes nothing here because eager `__init` + `rt_root` keep every binding live —
-plus `-O2` at the AOT link. AOT stays clang-only; the dev/REPL/JIT door keeps full units.
+plus `-O2` at the AOT link. AOT stays clang-only; the dev/REPL/JIT execution path keeps full units.
 
 ---
 
@@ -188,7 +188,7 @@ literals now emit an inline immediate constant instead of an `rt_make_char` call
 
 ---
 
-## P3 — The Chez-free doors recompile the standard library at every invocation
+## P3 — The Chez-free paths recompile the standard library at every invocation
 
 **Status:** ☑ done for the baked standard library (change: `baked-set-artifact-cache`), and the
 user-library half has since landed too (change: `chez-free-unit-pipeline`); only the `.bc`/`.o`
@@ -245,7 +245,7 @@ set and its residue is two named, measured pieces rather than an implied remaind
   users; `installed-emit-completeness`'s no-shipped-artifacts contract is untouched, because a
   locally derived, keyed, regenerable cache puts nothing on the install surface.
 - Every failure path — no location, stale, corrupt, unwritable, raced — compiles from source and
-  succeeds, so no door gained a failure mode.
+  succeeds, so no path gained a failure mode.
 
 **The one regression it caused, and the lesson.** `--dump-all` prints `(scheme base)`'s per-define
 stage headers, and those exist only *while* the set is compiling: with a warm cache it printed **0**
@@ -280,7 +280,7 @@ That the compile half is 5x the JIT half is the useful part: **caching the IR te
 83% of the cost**, with no `.bc`/`.o` and no LLVM-side work at all. The `.bc`/`.o` idea the original
 entry proposes attacks the 0.30 s and can wait.
 
-**Cause — there is no artifact cache on the Chez-free doors at all.** The cache the original entry
+**Cause — there is no artifact cache on the Chez-free paths at all.** The cache the original entry
 describes (`artifacts-fresh?` + `build/lib/*.{ll,exports,stamp}`) belongs to the *Chez driver*,
 `src/compile.ss`. The shipped binary has none:
 
@@ -301,7 +301,7 @@ right direction: an export table is a plain readable datum —
 **reads** one back. There is no mode that registers a unit into the session from a prebuilt `.ll` +
 `.exports` pair without compiling it. Add that, key it on the stamp `artifact-compiler-stamp`
 already defines (for the baked set the key is simpler still — the prelude source is *baked into the
-binary*, so the binary's own identity is the key), and all three doors plus user-library preloading
+binary*, so the binary's own identity is the key), and all three paths plus user-library preloading
 collect the win from one change.
 
 **Cost to the test loop, measured.** `./run-all-tests.sh` at this commit: 28 suites, **1605 s**, 0
@@ -317,7 +317,7 @@ failed. Per-suite wall clock against the number of `emit` processes each suite s
 | indexed access bounds | 79 s | 13 | 6.1 s |
 | R7RS-small (sections only) | 62 s | 21 | 2.95 s |
 | catchable errors + kinds | 50 s | 24 | 2.08 s |
-| module run door | 47 s | 18 | 2.6 s |
+| module `emit run` command | 47 s | 18 | 2.6 s |
 | dynamic extent (call/cc) | 43 s | 21 | 2.05 s |
 | module vertical-slice (REPL) | 40 s | 14 | 2.9 s |
 
@@ -338,7 +338,7 @@ lands on it — with the clock as the axis instead of bytes. `scheme-io-library`
 `reader-lexical-conformance` and `catchable-errors-with-kinds` have each added to it since the 0.12 s
 figure was taken.
 
-**The REPL door, measured across all four combinations.** An earlier revision of this entry reported
+**the REPL, measured across all four combinations.** An earlier revision of this entry reported
 an anomaly here — a 0.01 s start that still resolved a `(scheme base)` procedure — and asked whether
 the linked-in unit was reusable or whether that path was a dev→ship fidelity gap. **That was a
 conflation of two different invocations**: the 0.01 s came from a `--no-prelude` run and the working
@@ -353,7 +353,7 @@ conflation of two different invocations**: the 0.01 s came from a `--no-prelude`
 
 No case both starts instantly and has a standard library, so there is **no** anomaly, **no** cheap
 reuse-the-linked-unit win, and **no** fidelity hazard: the REPL bakes from `*prelude-source*` like
-the run door (~1.9 s), which is consistent and correct. The `--no-prelude` floor being 1.65–1.69 s
+the `emit run` command (~1.9 s), which is consistent and correct. The `--no-prelude` floor being 1.65–1.69 s
 rather than 0.05 s is not the prelude at all, which is what misled the first reading.
 
 It is instead **a separate defect, worth fixing on its own**: `emit repl --no-prelude` with a
@@ -387,14 +387,14 @@ the same machine, `HEAD` = a68046e, warm cache, best of five:
 | `emit repl`, no manifest, `--no-prelude` | 0.05 s | 0.01 s |
 
 - **The `--no-prelude` defect this section filed as issue #101 is fixed** — closed 2026-08-14 by
-  `6a235ce` ("one seeding path, cached user libraries, a shaking build door"), and confirmed here
+  `6a235ce` ("one seeding path, cached user libraries, a shaking `emit build` command"), and confirmed here
   at 0.07 s against the 1.69 s the issue recorded. The REPL no longer loads `(scheme base)` from
   the manifest, and the eight manifest libraries that import it now report themselves as not
   loaded rather than being compiled and discarded.
 - **"User-library caching was also deferred"** (in Outcome, above) no longer holds either:
   `chez-free-unit-pipeline` gave the preload the same cache, and a warm session reuses a
   `unit-*.ll` for every manifest library.
-- **The prelude-from-source cost is gone from the REPL door.** The 1.87 → 0.34 s row is the whole
+- **The prelude-from-source cost is gone from the REPL.** The 1.87 → 0.34 s row is the whole
   of it; a warm REPL start now reads `baked-v2-*.ll` instead of compiling `*prelude-source*`.
 
 What the row-1 2.21 s is made of has therefore changed character completely: it is **no longer
@@ -424,7 +424,7 @@ bitcode/object at link time; there is no committed precompiled `.bc`/`.o` for th
 **Possible fix.** Precompile stable library units to `.bc`/`.o` and link the object rather
 than re-assembling the `.ll`.
 
-**Measured, and now paid by every door** (change: `baked-set-on-every-door`). A JIT door does not
+**Measured, and now paid by every path** (change: `baked-set-on-every-door`). A JIT execution path does not
 even reach the cached-`.ll` path: it compiles the baked set from the baked-in `*prelude-source*` at
 every start. That is the whole of `emit repl`'s startup latency —
 
@@ -442,18 +442,18 @@ roughly its `--no-prelude` floor, which is the most visible latency in the prima
 
 **Correction (2026-08-13).** Two things above do not survive re-measurement. First, "~0.12s is the
 session and the rest is the standard library" reads the 0.84/0.72 pair backwards: 0.12 s is the
-*prelude delta*, and 0.72 s — now 1.65 s — is the `--no-prelude` floor, i.e. whatever the REPL door
-does regardless. So on the REPL door the baked set was never "the whole of startup latency"; the
+*prelude delta*, and 0.72 s — now 1.65 s — is the `--no-prelude` floor, i.e. whatever the REPL
+does regardless. So on the REPL the baked set was never "the whole of startup latency"; the
 four-case table in the re-measurement above shows where that floor actually comes from (the
 manifest-driven `(scheme base)` load, which `--no-prelude` does not skip).
 Second, "a precompiled baked set would cut a REPL start to roughly its `--no-prelude` floor" is true
 and no longer interesting, because that floor is itself ~1.65 s. The measurement that *does* hold,
-and that this item now turns on, is the **run** door's: 1.80 s against a 0.08 s `--no-prelude` floor.
+and that this item now turns on, is the **run** path's: 1.80 s against a 0.08 s `--no-prelude` floor.
 
 **Interaction with P1 (`aot-release-profile`).** P1 landed via Scheme-level tree-shaking, which
 recompiles a *program-specific pruned* unit on the AOT ship path (it does **not** reuse the cached
 full `.ll` there). So a precompiled/cached `.bc` for the full `(scheme base)` still helps the
-**dev/REPL/JIT** door (which links the full unit), but the AOT door emits a per-program pruned
+**dev/REPL/JIT** path (which links the full unit), but the AOT path emits a per-program pruned
 unit. If AOT build time ever matters, cache the pruned unit keyed by its (root-set → keep-set)
 mapping rather than precompiling the full unit for AOT.
 
@@ -605,7 +605,7 @@ top-levels) is **deferred**: it breaks REPL redefinition and needs the P1-style 
 carve-out, so it may ride with P1's link rework.
 
 **OpenSpec change:** `inline-fixnum-arith-and-self-calls` (A + B-self; implemented). B-general
-remains unscheduled, and it may compose with `aot-release-profile`'s closed-world AOT door
+remains unscheduled, and it may compose with `aot-release-profile`'s closed-world AOT path
 (direct calls to immutable known top-levels are safe under the same closed-world assumption).
 
 **B-general re-measured after P6-B.** P6-B was expected to have absorbed much of this item. It has
@@ -634,8 +634,8 @@ took it from **0.06s to 0.02s** (best-of-5, identical results). The direct call 
 inline the callee, so most of that is the inlining it unlocks. This is a call-dominated
 microbenchmark and an upper bound; code doing real work per call will see less.
 
-The **dev door gets nothing from P6-B** — it runs no IR passes at all — so B-general's value there
-is undiminished, and unlike P6-B it would help both doors.
+The **development path gets nothing from P6-B** — it runs no IR passes at all — so B-general's value there
+is undiminished, and unlike P6-B it would help both paths.
 
 Verdict: still worth scheduling.
 
@@ -710,7 +710,7 @@ reproduces exactly — neither piece is worth anything alone:
 | indirect (before) | 0.07s | 0.07s |
 | direct call (after) | 0.07s | **0.01s** |
 
-Delivered through the AOT door — pre-change (indirect, `-O2`) versus post-change (direct,
+Delivered through the AOT path — pre-change (indirect, `-O2`) versus post-change (direct,
 `-O2 -flto`), both tree-shaken, values byte-identical:
 
 | | before | after |
@@ -752,8 +752,8 @@ it is not being split out into its own backlog item — the size win arrives wit
 would be double-counted.
 
 **The immutability argument, settled.** The lowering assumes a library global is assigned once by
-its unit's `__init` and never reassigned, and that turned out to hold on **both** doors, so there
-is no AOT-only carve-out and the program module stays byte-identical across doors. Three
+its unit's `__init` and never reassigned, and that turned out to hold on **both** paths, so there
+is no AOT-only carve-out and the program module stays byte-identical across paths. Three
 independent reasons, all checked: a unit's globals are stored only by its own per-define
 `__init_N` thunks; `set!` on a unit's own top-level binding, or on an imported one, is a
 *compile error* on every path that produces a `global-set!` into a unit's slot (issue #5 made a
@@ -808,7 +808,7 @@ already range-narrowed), which the current `simplify` pass has no type informati
 `convert-closures`) inlines a singly-referenced lambda binding into its one call site, propagates
 immediate constants, folds `%+ %- %* %= %<` over them, and drops the bindings left unreferenced.
 `demos/square.scm` now reaches `convert-closures` as `(const 1156)` — the closure record, the
-indirect call and the multiply are all gone before the emitter runs, on **every** door rather than
+indirect call and the multiply are all gone before the emitter runs, on **every** path rather than
 only under the ship path's `-O2`.
 
 Measured over the 72-demo suite (before = `build/emit` relinked from the previous committed IR):
@@ -881,7 +881,7 @@ This generalizes well past constant folding: *any* call to a lambda that is boun
 assigned, and referenced only in operator position pays for a closure record and an indirect call
 that the compiler has enough information to remove.
 
-**Cause — two independent ones, one per door.**
+**Cause — two independent ones, one per path.**
 
 1. **There is no optimizing pass in the Scheme core.** The ladder is `expand` →
    `recognize-let` → `convert-assignments` → `convert-closures` → `lower-program`
@@ -901,11 +901,11 @@ that the compiler has enough information to remove.
    hop removed: `collect-toplevel` wraps the file in a `letrec`, so the operator is a name bound
    to a lambda rather than the lambda itself.
 
-2. **LLVM cannot recover it on either door.**
-   - The **dev door** (`emit run`, REPL) builds a plain `LLJITBuilder()` with no IR transform
+2. **LLVM cannot recover it on either path.**
+   - The **development path** (`emit run`, REPL) builds a plain `LLJITBuilder()` with no IR transform
      layer (`src/emit.cpp:404`, `:608`). There are no IR passes at all — no inlining, no
      constant folding, nothing. Whatever the Scheme core emits is what runs.
-   - The **ship door** links at `-O2` (`src/compile.ss:232`, `src/emit.cpp:747`), and `-O2`
+   - The **shipping path** links at `-O2` (`src/compile.ss:232`, `src/emit.cpp:747`), and `-O2`
      still does not fold this. Measured by extracting the program unit from `emit run --emit`
      and running `opt -O2`: the allocation, the store, the masked reload and the indirect call
      all survive verbatim.
@@ -963,11 +963,11 @@ cheap one):
   allocations would mean changing `rt_alloc_words` to return `ptr`, which touches every emitted
   allocation site. Only worth it if allocation removal shows up as a real win.
 
-**Why A is not redundant with B.** B helps only the **ship** door, because the dev door runs no
+**Why A is not redundant with B.** B helps only the **ship** path, because the development path runs no
 IR passes at all — so B alone would mean a constant folded in the shipped binary and recomputed
 in the REPL, which is exactly the kind of dev→ship divergence `CLAUDE.md` rules out (values stay
 identical, but the performance characteristics diverge, and `--dump` stops describing what
-actually runs). A lands in the shared core, so both doors get it, and A additionally removes the
+actually runs). A lands in the shared core, so both paths get it, and A additionally removes the
 allocation that B leaves behind. B remains worth doing on its own merits: it unblocks LLVM's
 inliner for *every* known-callee call site on the ship path, which is a large part of what P5's
 deferred B-general was after — reached through LLVM instead of through the emitter.
@@ -1005,7 +1005,7 @@ replaces an `inttoptr`), and `emit-spill` drops its conversion entirely, so the 
 changed — the declaration is in every module — and none grew; all 77 values are unchanged.
 
 The `llvm.assume` sketched below was measured to work equally well and was **rejected**: at 847
-allocation sites it would have added ~2,500 lines of IR and left the dev door, which runs no IR
+allocation sites it would have added ~2,500 lines of IR and left the development path, which runs no IR
 passes, carrying dead instructions. Stating the fact in the declaration costs nothing anywhere.
 `noalias` was also measured and buys nothing here — it does not let LLVM delete a dead
 allocation, which would need allocator attributes and is the unmeasured B2 note below.
@@ -1019,13 +1019,13 @@ restricted to immediates so a string or pair literal is never duplicated into tw
 
 The window was briefly clamped to ±(2^28 − 1) and is now back at ±(2^30 − 1). The original value
 bounded the *arithmetic* correctly but not the *encoding*: `encode-const` mis-emitted any literal
-at or above 2^57, so a folded result in [2^57, 2^60) came out wrong on the self-hosted door
+at or above 2^57, so a folded result in [2^57, 2^60) came out wrong on the self-hosted path
 (issue #7). That shipped briefly as a value-changing regression — `(* 1073741823 1073741823)`
 printed correctly before the pass and wrongly after. Fixing #7 (encode-const now multiplies in
 decimal on the digit string, where nothing can overflow) removed the tighter ceiling and let the
 window return to the arithmetic one. `demos/fold-boundary.scm` pins fold-equals-runtime at the
 window edge and `demos/fixnum-literals.scm` pins literal round-tripping across the top of the
-fixnum range, both on every door.
+fixnum range, both on every path.
 
 The lesson generalizes past this pass: *what the arithmetic can compute* and *what the emitter can
 write down* are two different ceilings, and anything that manufactures a constant at compile time
@@ -1171,7 +1171,7 @@ before/after IR capture discipline.
 
 ---
 
-## P8 — The `emit build` door does not tree-shake
+## P8 — The `emit build` path does not tree-shake
 
 **Status:** ☑ done (change: `chez-free-unit-pipeline`, 2026-08-13).
 
@@ -1180,24 +1180,24 @@ before/after IR capture discipline.
 | | before | after |
 |---|---|---|
 | delivered executable | 212,232 B | **93,656 B** (−56%) |
-| the Chez AOT door, same program | 93,656 B | 93,656 B |
+| the Chez AOT path, same program | 93,656 B | 93,656 B |
 | rebuild of an **unchanged** program | 0.732 s | **0.611 s** (−16%) |
 | build of a **changed** program (baked set warm) | ~0.73 s | ~0.90 s (+23%) |
 | fully cold cache | 1.902 s | 2.054 s (+8%) |
 | `(scheme base)` unit IR into the link | 592,048 B | 5,820 B |
 
-The size claim of this entry is now **exactly** met: the two ship doors deliver the same bytes for
-the same program, so a delivered executable no longer depends on which door built it.
+The size claim of this entry is now **exactly** met: the two shipping paths deliver the same bytes for
+the same program, so a delivered executable no longer depends on which path built it.
 
 The time rows need reading carefully, and an earlier draft of this note got them wrong by measuring
 a warm shake entry and calling it cold. A shake **is** a recompile of the unit, so a program whose
 IR has changed pays for one; only a rebuild of an unchanged program is served from the cache. The
 honest summary is: **56% smaller always, 16% faster when you rebuild without editing, ~0.17 s slower
-when you do edit.** For the door whose product is a standalone executable that is the right side of
+when you do edit.** For the path whose product is a standalone executable that is the right side of
 the trade, and it is the trade the design chose deliberately (D9) rather than one it stumbled into.
 
 The shake reuses `compile-library*` (no second implementation; its root-extraction helpers moved
-from `src/compile.ss` into the shared core so the two doors cannot drift), and each pruned unit is
+from `src/compile.ss` into the shared core so the two paths cannot drift), and each pruned unit is
 stored as its own artifact-cache entry keyed by the program that produced it — which is what keeps
 P3's saving intact instead of spending it here. Verified across the whole demo corpus: 80 programs,
 each built shaken and compared against `emit run`'s unshaken result, 80 agreeing.
@@ -1205,9 +1205,9 @@ each built shaken and compared against `emit run`'s unshaken result, 80 agreeing
 **What it does NOT fix, and where that now lives.** The prunability rule — a unit another unit
 imports must stay whole — bounds the win to programs whose direct imports are their only importers.
 `hello.scm` is that shape; a program importing a user library that imports `(scheme base)` gets
-212,296 B, and the **Chez door gives 212,304 B for the same program**, so this is the shake's own
-limit rather than a door gap. That limit is [P10](#p10--a-library-another-unit-imports-is-never-tree-shaken-the-substrate-ships-whole),
-which this change makes reachable on a second door: P10 is now the largest remaining size lever on
+212,296 B, and the **Chez path gives 212,304 B for the same program**, so this is the shake's own
+limit rather than a path gap. That limit is [P10](#p10--a-library-another-unit-imports-is-never-tree-shaken-the-substrate-ships-whole),
+which this change makes reachable on a second path: P10 is now the largest remaining size lever on
 both ship paths, and it is what a user-library program needs before it sees any of this.
 
 **OpenSpec change:** `chez-free-unit-pipeline`.
@@ -1217,7 +1217,7 @@ both ship paths, and it is what a user-library program needs before it sees any 
 ### The entry as it stood (kept for the reasoning and the measurements)
 
 **Symptom.** P1 gave the AOT ship path a root-set-driven shake, but it lives in the *Chez*
-driver (`build-modular-artifacts*` in `src/compile.ss`). The Chez-free `emit build` door links
+driver (`build-modular-artifacts*` in `src/compile.ss`). The Chez-free `emit build` path links
 the whole committed `(scheme base)` instead, so the two ship paths differ by ~3× on the same
 program. Measured on `hello.scm` (2026-08-01, during `scheme-io-library`):
 
@@ -1228,14 +1228,14 @@ program. Measured on `hello.scm` (2026-08-01, during `scheme-io-library`):
 
 **Why it matters more now.** `scheme-io-library` was the first change in a while to *grow*
 `(scheme base)` — by 82 KB of IR (+25%). The shake absorbed it completely on the AOT path
-(**+120 B, +0.35%** on `hello.scm`), while the unshaken door paid the full **+20,352 B
+(**+120 B, +0.35%** on `hello.scm`), while the unshaken path paid the full **+20,352 B
 (+17.9%)**. That asymmetry is the whole finding: the size of a standalone binary is currently a
-function of *which door built it*, and only one door honours the "small, clean, self-contained
-executables" goal. Every future `(scheme base)` addition widens the gap on the wrong door.
+function of *which path built it*, and only one path honours the "small, clean, self-contained
+executables" goal. Every future `(scheme base)` addition widens the gap on the wrong path.
 
 **Confirmed again, and quantified, by `numeric-conformance` (2026-08-03).** That change adds
 ~40 R7RS §6.2 procedures to the prelude and 17 internal `%`-op primitives. Measured on one
-program (`fib`, which references *none* of them), same source at three commits, both doors:
+program (`fib`, which references *none* of them), same source at three commits, both paths:
 
 | commit | `chez compile.ss` (shaken) | `emit build` (unshaken) |
 |---|---|---|
@@ -1243,8 +1243,8 @@ program (`fib`, which references *none* of them), same source at three commits, 
 | `ed75577` (+17 C primitives, no Scheme yet) | 34,968 B | 134,824 B |
 | after the §6.2 inventory (+40 procedures) | **34,968 B** | **154,216 B** |
 
-The shaken door is **byte-identical across all three** — the shake is not merely absorbing the
-growth, it is removing 100% of it — while the unshaken door grew **+19,808 B (+14.7%)**. The
+The shaken path is **byte-identical across all three** — the shake is not merely absorbing the
+growth, it is removing 100% of it — while the unshaken path grew **+19,808 B (+14.7%)**. The
 middle row isolates a second, smaller effect worth knowing: 17 new `rt_*` C functions cost only
 **+416 B** in an `emit build` executable (LTO drops the unreferenced ones) but **+17,744 B
 (+3.2%)** in `build/schemec`, which links `runtime.c` without `-ffunction-sections`/
@@ -1253,19 +1253,19 @@ middle row isolates a second, smaller effect worth knowing: 17 new `rt_*` C func
 
 Two consequences for sequencing. First, P8 is now the single largest lever on the flagship
 size goal and its cost rises with every prelude addition — this change alone raised the
-door gap from ~100 KB to ~119 KB. Second, a future change that curates `(scheme base)`'s export
+path gap from ~100 KB to ~119 KB. Second, a future change that curates `(scheme base)`'s export
 surface (GitHub issue #29) does **not** substitute for P8: the shake already achieves the ideal
-here, so the problem is entirely the door that lacks it, not the size of the library.
+here, so the problem is entirely the path that lacks it, not the size of the library.
 
 **Cause.** The shake is a Scheme-level pass over library units that the Chez driver runs before
 linking; the `emit build` verb emits the program IR in-process and forks `clang` over the
 committed unit IR without that step. Nothing about the pass is Chez-specific — it is
 `compile-library*` in `src/core.ss`, which the embedded compiler already contains — it simply
-is not wired into the Chez-free door's build sequence.
+is not wired into the Chez-free path's build sequence.
 
 **Fix sketch.** Have `emit build` call the same `compile-library*` reachability pass on each
 linked unit, driven by the program's root set, and link the pruned IR instead of the committed
-`bootstrap/scheme.base.ll`. The dev/REPL/JIT door keeps the full units (open world), exactly as
+`bootstrap/scheme.base.ll`. The dev/REPL/JIT execution path keeps the full units (open world), exactly as
 today. The likely subtlety is that `emit build` links a *committed* artifact rather than one it
 compiled, so it needs the unit's export table to compute reachability — which
 `build/lib/*.exports` already carries.
@@ -1286,12 +1286,12 @@ the unshaken library IR is a large share of it — LTO time scales with IR volum
 
 Derived from `emit build --no-prelude`, which finishes in **0.62 s** and produces a working
 34,776 B executable against the full build's 212,192 B. The 0.68 s is inference from that
-subtraction rather than a direct measurement of a shaken link on this door — the door cannot
+subtraction rather than a direct measurement of a shaken link on this path — the path cannot
 shake yet, which is the item — but the mechanism (less IR through `-flto`) is not in doubt, and
 the byte figures bound it.
 
 So P8 is a **size *and* build-speed** item, and after P3 it is the largest remaining one on this
-door. That also settles its ordering against P11: P8 is worth ~4x P11 here and carries no install-
+path. That also settles its ordering against P11: P8 is worth ~4x P11 here and carries no install-
 contract risk.
 
 **Value:** med–high — it serves the flagship standalone-executable size goal, it is the difference
@@ -1393,7 +1393,7 @@ ordinary rest-building prologue. Neither path needs a caller-built list or a new
 indirect-call sequences from the demo corpus
 and makes the cross-unit call graph explicit. **Cost:** med — the metadata and lowering changes
 reuse the existing ABI, but the fast entry duplicates variadic bodies in raw IR and the compiler
-regeneration and cross-door compatibility matrix dominate the work.
+regeneration and cross-path compatibility matrix dominate the work.
 
 **OpenSpec change:** `cross-unit-variadic-direct-calls` (implemented; archived at
 `openspec/changes/archive/2026-08-24-cross-unit-variadic-direct-calls`). It was deliberately not
@@ -1406,7 +1406,7 @@ improvement applies to every variadic callee. Follow-up: `variadic-min-arity-fas
 
 **Status:** ☑ done (change: `import-dag-tree-shaking`)
 
-**Outcome.** Root sets now propagate **backward through the import DAG**. Both ship doors shake the
+**Outcome.** Root sets now propagate **backward through the import DAG**. Both shipping paths shake the
 closure in reverse topological order, accumulating each finalized unit's IR into the text the next
 unit's roots are read out of — so a unit is shaken against what its importers *retained*, and the
 "imported by another unit" exemption is gone. Measured on `(display (car (list 1 2)))`:
@@ -1420,7 +1420,7 @@ unit's roots are read out of — so a unit is shaken against what its importers 
 
 The substrate prunes to an empty `__init` — zero bindings — because a `(scheme base)` shaken to
 `list` references none of it, and the substrate's 88 body forms contain no top-level command to seed
-`cmd-roots`. Both doors deliver byte-identical binaries, which is the cross-door requirement holding
+`cmd-roots`. both paths deliver byte-identical binaries, which is the cross-path requirement holding
 at the new size rather than the old one.
 
 The mechanism cost nothing new: roots were already derived by *searching emitted IR text* for
@@ -1488,8 +1488,8 @@ ordering and the per-unit root union.
 on the axis the project treats as a defining goal. **Cost:** med — one pass ordering change plus a
 root-union step; no new representation, and the closed-world assumption is unchanged.
 
-**Interaction with P8.** P8 notes the Chez-free `emit build` door does not tree-shake at all. Fixing
-P8 without P10 would give that door the same blind spot; fixing P10 first means both doors inherit
+**Interaction with P8.** P8 notes the Chez-free `emit build` path does not tree-shake at all. Fixing
+P8 without P10 would give that path the same blind spot; fixing P10 first means both paths inherit
 the better root computation.
 
 **OpenSpec change:** `import-dag-tree-shaking` (implemented) — the fix sketch above is what was
@@ -1525,7 +1525,7 @@ ABI-specific in a way source is not, and would have to be validated against the 
 target before it could be trusted. `installed-emit-completeness` made `emit build` work from an
 install by shipping `src/runtime/runtime.c` at its repo-relative subpath under
 `<prefix>/share/emit/`, and recorded this speed idea here rather than taking it, because the
-correctness question (does the door work at all when installed?) and the speed question (how fast
+correctness question (does the path work at all when installed?) and the speed question (how fast
 does it work?) have different answers and different risks.
 
 Worth revisiting once there is a measurement: how much of `emit build`'s wall clock is the runtime
@@ -1553,7 +1553,7 @@ cached `runtime.o` does not avoid any of it. Caching the C compile can therefore
 than the 0.16 s, no matter how large `runtime.c` grows.
 
 **What to do instead.** The link is 36% and P8 is ~23% of it, so **P8 is worth ~4x this item on the
-same door** and carries no contract risk. P3 is worth ~11x. Both should land first, and either may
+same path** and carries no contract risk. P3 is worth ~11x. Both should land first, and either may
 change this denominator enough to make the question moot.
 
 **If it is ever revisited, the framing should change.** This entry proposes *shipping* a prebuilt
@@ -1582,7 +1582,7 @@ explicit non-goal; the measurement it asked for was taken 2026-08-13 and confirm
 every admitted module.  On the generated 200,000-token corpus, median guest execution was
 3.645 s at O0, 3.651 s at O1, and 3.635 s at O2, versus 2.93 s for the delivered `-O2 -flto`
 executable.  O1 therefore recovers **0%** of this item and the JIT remains about 25% slower before
-startup.  P13 is complete—the door now optimizes—but its open-world per-module boundary prevents
+startup.  P13 is complete—the path now optimizes—but its open-world per-module boundary prevents
 the cross-unit/closed-world work that makes the calls free under AOT.  This item remains the
 reader-specific debt; its Scheme-level sketches below are again the available fixes unless a
 separately designed safe cross-module JIT strategy lands first.
@@ -1595,7 +1595,7 @@ forms, 1,939,560 B: 50k symbols, 50k integers, 50k decimals, 50k strings), five 
 binary on an otherwise idle machine, the pre-change tree in a detached-HEAD worktree (b102070)
 against the post-change one (9a84ca2):
 
-| door | before | after | delta |
+| path | before | after | delta |
 |---|---|---|---|
 | `emit run`, total wall clock | 3.72 s | 4.47 s | +20.2% |
 | — of which fixed compile + JIT | 0.61 s | 0.83 s | +0.22 s |
@@ -1619,7 +1619,7 @@ written in Scheme.
 
 **What the earlier re-measurement changed** (`reader-token-path`, which set out to fix this and did not).
 The original entry recorded the `emit run` number alone and read it as a property of the reader. It
-is a property of the reader *and the door*. At that time `emit run` built a plain
+is a property of the reader *and the path*. At that time `emit run` built a plain
 `LLJITBuilder().create()` with no IR optimization pipeline; the AOT link passes `-O2 -flto`
 (`src/emit.cpp:2322,2330`, `ship-opt`/`ship-lto` at `src/compile.ss:320,330`). Where an optimizer runs, the
 extra calls can cost nothing measurable. The new evidence sharpens that statement: AOT LTO removes
@@ -1635,7 +1635,7 @@ Three consequences, and they are why this is still ☐ rather than in progress:
 2. **The fix below would hand-fold what `-O2` already folds** — and would cost
    `reader-lexical-conformance` design D3 its by-construction guarantee that `rd-atom` and
    `string->number` accept the same tokens (they hold it today by being the same call), replacing it
-   with a corpus test. Real complexity, for a benefit confined to the door whose safe backend
+   with a corpus test. Real complexity, for a benefit confined to the path whose safe backend
    profile still does not remove this call chain.
 3. **P13 was the right next experiment, not the fix.** It is now complete and improves a
    whole-program call-heavy workload, but recovered none of this item. Fixing this item still
@@ -1655,7 +1655,7 @@ slice was taken and did not move the measurement:
 
 Note also what is *not* the cause, measured: ordering the rational scan after the classifiers rather
 than before is provably redundant work removed, and is worth ~10% under Chez while sitting inside
-the noise on the self-hosted door. That null result is the original evidence that the cost is
+the noise on the self-hosted path. That null result is the original evidence that the cost is
 structural rather than in any one scan.
 
 **Reproducing it.** `tools/gen-reader-bench.ss` writes the input (fixed-seed, byte-identical across
@@ -1665,7 +1665,7 @@ existed — a described benchmark is not a reproducible one, and re-deriving it 
 produced the same token count in a different number of bytes, which is why the figures above are not
 comparable to the ones this entry carried before.
 
-**Value:** low — a constant factor on the dev door only, with no effect on the delivered binary, on
+**Value:** low — a constant factor on the development path only, with no effect on the delivered binary, on
 emitted code, or on binary size. (Was "low–med", on the belief that it touched every compile.)
 **Cost:** med — the fixes touch the classifiers `string->number` shares with the reader, so the
 shared-grammar property (`reader-lexical-conformance` design D3) has to survive whatever is done,
@@ -2185,7 +2185,7 @@ does not `(import (scheme char))`. The other eight preloaded libraries cost 0.05
 (row 2 against row 3), so this is not "the manifest is big" — it is one library.
 
 **Cause — eager `__init`, which defeats ORC's laziness.** `preload_libraries`
-(`src/emit.cpp:1988`, called from the REPL door at `src/emit.cpp:2289`) walks every manifest entry
+(`src/emit.cpp:1988`, called from the REPL at `src/emit.cpp:2289`) walks every manifest entry
 and, for each, calls `add_ir` then `run_init`. `add_ir` alone would be nearly free in JIT terms:
 ORC materializes lazily at lookup, so a module that is added and never referenced is never
 code-generated. `run_init` (`src/emit.cpp:1908`) is the lookup — it resolves the unit's `__init`
@@ -2243,7 +2243,7 @@ them, which is why the fix is a deletion rather than a mechanism.
 same ~1.8 s at that import (`4/12 modules, materialize 2036ms`). That is the honest shape of
 this fix: it removes work the session never asked for and does nothing for work it did. Fix 3
 below is now the more interesting of the two that remain, because `(scheme char)`'s 20x
-source→IR expansion *is* that remaining 1.8 s, and shrinking it would help the AOT door and P8's
+source→IR expansion *is* that remaining 1.8 s, and shrinking it would help the AOT path and P8's
 size axis at the same time.
 
 **What did not change, checked rather than assumed.** stdout is byte-identical at every
@@ -2266,8 +2266,8 @@ emits identical IR.
    module is still added at startup, which is what makes an interactive `(import (L))`
    resolvable at all; only the `__init` waits. The hazard was **initialization order** — a
    member's initializer reads globals defined by the members it imports — and it was settled by
-   reusing `run-closure-order`, the topological closure the run door already orders a program's
-   inits with, so the two doors cannot drift. The prompt's import also had to be split into
+   reusing `run-closure-order`, the topological closure the `emit run` command already orders a program's
+   inits with, so the two paths cannot drift. The prompt's import also had to be split into
    resolve-then-commit (`src/repl-core.ss`, mode 3's import arm and mode 6), so that a library
    whose body raises binds none of its names.
 2. **Cache object code, not IR text.** This is the `.bc`/`.o` half P3 named and deferred as worth
@@ -2278,7 +2278,7 @@ emits identical IR.
 3. **Shrink `(scheme char)`'s IR.** A 20x source→IR expansion on what is fundamentally static
    table data suggests the tables are emitted as initialization *code* rather than as constant
    data. This is P14's shape (an aggregate constant rebuilt at every evaluation) at an unusual
-   size, it would help the AOT door and P8's binary-size axis as well as this one, and it is the
+   size, it would help the AOT path and P8's binary-size axis as well as this one, and it is the
    only one of the three that reduces the work rather than moving it.
 
 (1) and (3) are independent and compose; (2) should follow (1), since deferring changes which
@@ -2289,7 +2289,7 @@ preserves every value while altering an observable — narration order, `--dump-
 headers, the `[N/M modules]` session line. P3's cache regression was caught only by a pre-existing
 dump test; test this one on "every observable is the same", not on "the answer is the same".
 
-**How to measure it.** There is no dedicated profiler and none is needed: the door's narration is
+**How to measure it.** There is no dedicated profiler and none is needed: the path's narration is
 already per-phase, and it is emitted as the work happens, so timestamping stderr turns it into a
 profile with no code change —
 

@@ -20,7 +20,7 @@ and `make-string` SHALL NOT produce an object whose recorded length is negative.
 
 The diagnostic SHALL name the procedure, the offending index or size, and the valid range, so the
 report identifies which access failed without a debugger. Reporting SHALL use the same runtime trap
-mechanism as the fixnum overflow diagnostic, and therefore behaves the same way at both doors: a
+mechanism as the fixnum overflow diagnostic, and therefore behaves the same way at both paths: a
 standalone executable exits non-zero, and the in-process runner returns control to its host so a
 subsequent form still evaluates.
 
@@ -99,7 +99,7 @@ unspecified byte of memory or corrupted an unrelated object.
   as a value rather than through a direct call
 - **THEN** the same diagnostic is reported, because the check lives in the runtime primitive
 
-#### Scenario: Both doors agree, and the in-process host survives
+#### Scenario: both paths agree, and the in-process host survives
 
 - **WHEN** the same out-of-range program is run under the in-process runner and as a standalone
   executable

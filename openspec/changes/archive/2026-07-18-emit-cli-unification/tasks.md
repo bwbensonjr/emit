@@ -12,11 +12,11 @@
 - [x] 2.3 Narrate per `docs/OUTPUT.md` (program, resolved source, exe path + size; `EMIT_VERBOSITY`).
 - [x] 2.4 Parity test: `emit build NAME` vs. emitting the resolved source's IR and linking it directly produce executables that run to the identical value.
 
-## 3. `emit lib` — the compile-unit door (new mode)
+## 3. `emit lib` — the compile-unit path (new mode)
 
 - [x] 3.1 In `src/repl-core.ss`, add a dispatch mode (next free integer, 11) that returns a library source's readable export table text (`(NAME ((external . "mangled") …))`); document it in the mode-list comment. `make regen` and confirm byte-stability.
 - [x] 3.2 Implement `emit lib SRC [-o DIR] [--manifest F]`: emit the lone unit `.ll` (the `--emit` path on a `define-library`) and write `<name>.ll` + `<name>.exports` under `DIR` (default `build/lib`), named by the library's `define-library` name. (Decide `.stamp` per design open question.)
-- [x] 3.3 Test: `emit lib` writes `.ll` + `.exports`; the `.ll` is byte-identical to the unit the run/AOT doors emit for the same source; the `.exports` lists the exports.
+- [x] 3.3 Test: `emit lib` writes `.ll` + `.exports`; the `.ll` is byte-identical to the unit the run/AOT paths emit for the same source; the `.exports` lists the exports.
 
 ## 4. Cutover: drive everything through `emit`
 
@@ -27,7 +27,7 @@
 ## 5. Remove the old entry points
 
 - [x] 5.1 Delete `bin/scheme-compile` and `bin/emit` (bash); drop the `scheme-run` / `repl-host` / `bin/scheme-compile` `Makefile` targets and any `src/repl/build-host.sh` / `src/run-boot.cpp` references no longer needed (keep `schemec`, the bootstrap seed).
-- [x] 5.2 Acceptance grep-sweep: no non-archive file references `scheme-run`, `repl-host`, or `scheme-compile` except as historical notes; every door reachable only through `emit`.
+- [x] 5.2 Acceptance grep-sweep: no non-archive file references `scheme-run`, `repl-host`, or `scheme-compile` except as historical notes; every path reachable only through `emit`.
 
 ## 6. Explorations note
 

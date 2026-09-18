@@ -31,8 +31,8 @@ worst possible introduction.
 - **`emit run` treats a datum-free manifest as no manifest.** Per the existing non-fatal
   requirement, a program importing only baked-in libraries runs unaffected; one importing a
   user library gets the ordinary unresolved-import error naming the library.
-- **Fixtures cover the degenerate manifests.** `test/project-door-tests.sh` has manifest fixtures
-  but none for an absent, empty, whitespace-only, or comment-only manifest, on either door.
+- **Fixtures cover the degenerate manifests.** `test/project-command-tests.sh` has manifest fixtures
+  but none for an absent, empty, whitespace-only, or comment-only manifest, on either path.
 
 Not in scope: making `car` checked. Unchecked accessors on type-confused arguments are a stated
 `core-language` decision with R7RS latitude behind them, and re-opening it is a tower-wide
@@ -50,7 +50,7 @@ degenerate-input requirements they left unstated.
 
 - `module-system`: gains a requirement for the degenerate-manifest case — a manifest that exists
   but contains no datum SHALL be equivalent to a manifest with no entries, and SHALL NOT be fatal
-  to a door that does not need an entry from it. Added rather than modified: the existing "Library
+  to a path that does not need an entry from it. Added rather than modified: the existing "Library
   manifest" requirement's "Finding no manifest at all SHALL remain non-fatal" stays as written and
   is extended, not revised.
 - `project-build`: gains a requirement for the no-resolvable-entry cases — absent manifest,
@@ -63,6 +63,6 @@ degenerate-input requirements they left unstated.
   `make regen` cycle.**
 - `src/emit.cpp` — `resolve_program` (:633) and its `progs.empty()` branch (:643); host C++,
   reached by plain `make`.
-- `test/project-door-tests.sh` — new degenerate-manifest fixtures for the `build` and `run` doors.
+- `test/project-command-tests.sh` — new degenerate-manifest fixtures for the `build` and `run` paths.
 - No IR-shape or surface change: no library gains or loses a name, and no emitted program changes.
   `bootstrap/*.ll` changes only because the parsers do.

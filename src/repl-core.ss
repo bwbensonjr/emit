@@ -4,7 +4,7 @@
 ;;; the compiler that used to live in the Chez driver (`run-repl`, compile.ss).
 ;;; Ported here it compiles under Emit itself, so the interactive `--repl`
 ;;; runs its compilation in-process (no Chez, no per-form subprocess) -- the same
-;;; embedding Path A that `emit run` uses for batch.
+;;; embedding Path A that emit run uses for batch.
 ;;;
 ;;; It is assembled ONLY into the REPL embedded compiler (tools/assemble-core.ss
 ;;; --repl-entry), after the pure core (parse/expand/passes/emit/core.ss) whose
@@ -43,7 +43,7 @@
 (define *repl-calls* (quote ()))
 
 ;; ((lib-name . (import-name ...)) ...) each loaded unit's DIRECT imports -- the run
-;; door computes a program's transitive init closure in topological order over this
+;; path computes a program's transitive init closure in topological order over this
 ;; in-memory graph, since the driver's toposort-libs reads files and is Chez-only
 ;; (change: run-door-user-libraries).
 (define *repl-lib-imports* (quote ()))
@@ -110,7 +110,7 @@
 ;; USERS do not, and the `?` this fell through to swallowed the one part of the message
 ;; the user typed -- `(import (bad))` reported "imported library not loaded ?", dropping
 ;; the library name.  It falls through to render-datum-loose instead, which fixes every
-;; LIST irritant on every door at once rather than one call site: render-datum moved to
+;; LIST irritant on every compilation path at once rather than one call site: render-datum moved to
 ;; src/core.ss during module-frontend-diagnostics for exactly this reason.
 ;;
 ;; The LOOSE renderer, not the strict one: strict raises for a character with no portable
@@ -196,7 +196,7 @@
               ;; this same import.  No session binding has been merged at this point.
               (cons (quote resolve) "")
               ;; run-closure-order, not the named libraries: an `__init` reads globals the
-              ;; libraries it imports define, and this is the run door's own ordering
+              ;; libraries it imports define, and this is the emit run command's own ordering
               ;; (design D4), so a session and a delivered program initialize a closure
               ;; alike.
               (cons (quote import)
@@ -361,7 +361,7 @@
                       (string-append "imported library not loaded: "
                                      (render-datum (car libs))))]))))
 
-;; --- library import (both-doors REPL half; change: module-artifacts-vertical-slice)
+;; --- library import (both-paths REPL half; change: module-artifacts-vertical-slice)
 ;; Merge a loaded library's exports into the session scope: each external name
 ;; maps to the exporter's mangled global symbol, so a later form resolves it to an
 ;; `external global` the JIT binds to the already-loaded unit (design D3).  Returns
@@ -432,7 +432,7 @@
 ;; both must resolve its declared imports the same way or the table would describe a
 ;; different resolution than the emitted unit does.  Returns the export tables for the
 ;; library's declared imports, or #f when one of them is not loaded in this session --
-;; which for `emit lib` means "neither baked nor named in the manifest".
+;; which for emit lib means "neither baked nor named in the manifest".
 ;;
 ;; Before this, both passed '() and an import resolved to nothing: a library declaring
 ;; `(import (scheme base))` failed with `unbound variable map`, and -- the quieter half
@@ -446,12 +446,12 @@
 ;; a rendered LIST of names would give, which reads like one nested library name.
 ;;
 ;; Takes the import NAMES, not a library form, because both callers need it and only one
-;; has a form: the lone-library path (mode 7 / `emit lib`) parses them out of the
+;; has a form: the lone-library path (mode 7 / emit lib) parses them out of the
 ;; define-library, and the PROGRAM path already holds them as `direct` (change:
 ;; manifest-empty-guards; issue #63).  The program path used to report the constant
 ;; "program imports a library not found in the manifest", naming nothing -- while the
 ;; library path two hundred lines away named the library correctly, so the same failure
-;; read differently depending on which door found it.  module-system already required the
+;; read differently depending on which path found it.  module-system already required the
 ;; name ("the resulting failure SHALL be reported by import resolution, naming the
 ;; unresolved library"); only the library half implemented it.
 (define (unresolved-imports-msg imps0)
@@ -493,9 +493,9 @@
     (reset-includes-read!)
     (let* ([forms (read-all-from-string text)]
            ;; A source that holds NO DATUM cannot yield the define-library this needs, and
-           ;; (car '()) is unchecked -- it faulted the door instead of reporting (change:
+           ;; (car '()) is unchecked -- it faulted the path instead of reporting (change:
            ;; manifest-empty-guards; issue #63).  Raise into the guard above rather than
-           ;; return early, so the path prefix the host adds is the same one every other
+           ;; return early, so the command prefix the host adds is the same one every other
            ;; library error gets.  Byte-empty sources never arrive here (the host folds an
            ;; empty read into "cannot read library source"), but a comment-only one does.
            ;; Unlike an entryless MANIFEST, which is benign, this is an error: see
@@ -506,7 +506,7 @@
            [name (car dl)]
            [tables (repl-import-tables (cadr dl))]) ; #f if a dep is not loaded yet
       (cond
-        ;; Already loaded -> skip (no module).  EVERY door registers the baked set (mode 8)
+        ;; Already loaded -> skip (no module).  Every compiler host registers the baked set (mode 8)
         ;; before preloading the manifest, and a manifest may name a baked member -- the
         ;; repository's own emit-libs.scm names both, because the Chez driver resolves them
         ;; from there.  This guard is what makes such an entry a no-op rather than a
@@ -516,7 +516,7 @@
         ;; than an enumerated subset.  It is now a BACKSTOP rather than the mechanism: mode 9
         ;; omits every baked member from the preload list in the first place (change:
         ;; chez-free-unit-pipeline), so a manifest entry for one no longer reaches this at
-        ;; all through a door's preload.  It still fires for an interactive `(import ...)`
+        ;; all through a path's preload.  It still fires for an interactive `(import ...)`
         ;; of a baked member, and it is what keeps a stale cache entry or a hand-driven mode
         ;; 4 from adding a duplicate module.
         [(assoc name *repl-libs*) (cons (quote already) name)]
@@ -533,7 +533,7 @@
                                         (make-dumper name))])
               (set! counter saved) ; undo compile-library's reset-counter!
               (set! *repl-libs* (cons (cadr res) *repl-libs*)) ; the export table itself
-              ;; record this unit's DIRECT imports for the run door's init-closure
+              ;; record this unit's DIRECT imports for the emit run command's init-closure
               ;; topological sort (change: run-door-user-libraries).
               (set! *repl-lib-imports* (cons (cons name (cadr dl)) *repl-lib-imports*))
               (cons (quote ok) (cons (car res) (mangle name "__init")))))]))))
@@ -543,7 +543,7 @@
 ;; manifest-empty-guards; issue #63).  The pair test is the whole point: `car` of a
 ;; non-pair is unchecked by design (core-language, "the runtime applies the SAME
 ;; unchecked semantics ... e.g. `(car x)` for a non-pair `x`"), so the three parsers
-;; below used to SEGFAULT the door on a datum-free manifest rather than diagnose it.
+;; below used to SEGFAULT the host on a datum-free manifest rather than diagnose it.
 ;;
 ;; It has to be decided HERE and not in the host, because "empty" means "no datum" and
 ;; whitespace and comments are the READER's grammar: a byte-length test in C++ passes a
@@ -598,7 +598,7 @@
 
 ;; Mode 5 -- `repl-manifest-paths`, every (library ...) entry's source path including the
 ;; baked members -- is RETIRED (change: chez-free-unit-pipeline, design D3).  The REPL host
-;; was its only caller and now uses mode 9 like every other door.  The number stays reserved
+;; was its only caller and now uses mode 9 like every other path.  The number stays reserved
 ;; rather than renumbering 6-15 downward: a mode number is a wire protocol between
 ;; src/emit.cpp and this file, which regen compiles independently, so a gap costs this
 ;; comment while a renumber costs a window in which the host and the core disagree about
@@ -615,9 +615,9 @@
 ;; hard-code.  The baked set is a PARTITION -- (emit internal) as well as (scheme base) --
 ;; and this repository's own emit-libs.scm names both, for the Chez driver.  With one name
 ;; hard-coded the substrate leaked through the same hole the standard library did: eagerly
-;; on the REPL door, on demand on the run door.
+;; on the REPL, on demand on the emit run command.
 ;;
-;; EVERY door uses this now (change: chez-free-unit-pipeline, design D1).  The REPL used to
+;; Every command uses this now (change: chez-free-unit-pipeline, design D1).  The REPL used to
 ;; take the whole manifest through mode 5, which is why `emit repl --no-prelude` compiled
 ;; (scheme base) from the manifest and then bound none of it -- 1.14 s of work performed and
 ;; discarded against a 0.024 s floor (issue #101).  Mode 5 is retired; see below.
@@ -626,7 +626,7 @@
 ;; `(mangle name "")` -- the same canonical unit prefix the emitted symbols carry --
 ;; so the run host can index the manifest by library name using plain string
 ;; comparison, without re-implementing library-name equality in C++.  It needs that
-;; index because the run door now preloads LAZILY: only the libraries in the
+;; index because the emit run command now preloads LAZILY: only the libraries in the
 ;; program's transitive import closure, rather than every entry in the manifest.
 (define (repl-manifest-user-paths text)
   (let loop ([es (manifest-entries text)] [acc ""])
@@ -645,7 +645,7 @@
                   acc))))))
 
 ;; A SOURCE TEXT's direct imports as structured records (name, canonical key,
-;; rendered name).  Serves both shapes the run door's lazy preload walks:
+;; rendered name).  Serves both shapes the emit run command's lazy preload walks:
 ;; a PROGRAM (its leading `(import ...)` forms, via the same collect-imports the
 ;; compile paths use) and a LIBRARY .sld (its `import` declaration, via the same
 ;; parse-define-library that loading one uses).  Answering for both from one entry
@@ -660,11 +660,11 @@
 ;; It also DIAGNOSES nothing.  The two parsers it borrows now reject what the module
 ;; front end does not implement -- an import set, an unrecognized declaration (change:
 ;; module-frontend-diagnostics) -- and this mode's contract is a plain string, so a raise
-;; here would escape uncaught and abort the door before the compile that owns the
-;; diagnostic ever ran: the user would see the message with no door prefix and a dead
+;; here would escape uncaught and abort the host before the compile that owns the
+;; diagnostic ever ran: the user would see the message with no command prefix and a dead
 ;; process, which is exactly the abort design D6 rules out.  A source whose imports
 ;; cannot be read simply has none to preload; the guarded compile that follows reports
-;; it, once, through its door.
+;; it, once, through its path.
 (define (repl-source-imports text)
   (guard (e (#t (quote ())))
     (let* ([forms (read-all-from-string text)]
@@ -691,7 +691,7 @@
 ;; Where the source the host is ABOUT to submit came from (change:
 ;; library-include-declarations, design D4).  The core is handed source TEXT and never a
 ;; path, so an `include` in that text would otherwise have nothing to resolve against but
-;; the working directory -- the door-parity failure `manifest-search-path` and
+;; the working directory -- the path-parity failure `manifest-search-path` and
 ;; `baked-set-on-every-door` each had to fix once.  The host calls this before modes 4, 7,
 ;; 11, and 12; "" means the source has no path (it came from standard input) and its
 ;; relative includes resolve against the current directory.
@@ -701,17 +701,17 @@
 ;; environment would silently outlive the compile that set it.
 (define (repl-set-source-home path) (set-source-home! path) (cons (quote ok) ""))
 
-;; List the manifest's PROGRAM entries for the emit build door (Chez-free; change:
+;; List the manifest's PROGRAM entries for the emit build command (Chez-free; change:
 ;; emit-build-bin-entry).  Each `(program NAME (source S) [(output O)])` entry yields
 ;; THREE newline-separated lines -- NAME, S, and O (O empty when there is no
 ;; (output ...) clause) -- so the host (`emit run --resolve-program`) can select
-;; one by name and hand its source to `emit build`.  Library entries are
+;; one by name and hand its source to emit build.  Library entries are
 ;; ignored (this lists programs, not libraries); uses only \n, mirroring
 ;; repl-manifest-user-paths.
 ;;
 ;; Returns (status . payload) -- the convention modes 4 and 8 already use, for which the
-;; host has status_of/door_msg -- rather than a bare string (change:
-;; manifest-empty-guards; issue #63).  `emit build` needs an entryless manifest to be
+;; host has status_of/normalize_compiler_message -- rather than a bare string (change:
+;; manifest-empty-guards; issue #63).  emit build needs an entryless manifest to be
 ;; DISTINGUISHABLE from one declaring libraries but no program: both yield zero triples,
 ;; but the first means "you have not written your manifest yet" and the second means
 ;; "you wrote libraries but no program", and only the reader can tell them apart.  A
@@ -719,12 +719,12 @@
 ;; NOTE this does NOT route through `manifest-entries`: it needs the (ok . _) / (error . MSG)
 ;; pair, and manifest-entries raises.  That difference is why the form-count RULE is factored
 ;; into `manifest-extra-forms` and applied here separately -- consolidating only two of the
-;; three parsers is what let a two-form manifest through this door after the other two
+;; three parsers is what let a two-form manifest through this path after the other two
 ;; rejected it, so mode 10 narrated a build it then abandoned (change: reader-input-termination).
 ;;
 ;; The guard is what lets the HOST name the manifest: it prints "emit: manifest PATH <msg>",
 ;; and the core is handed only text.  Without it a truncated manifest reported the reader's
-;; raise with no file attached, and every door's narration had already listed the candidates.
+;; raise with no file attached, and every command's narration had already listed the candidates.
 (define (repl-manifest-programs text)
   (guard (e (#t (cons (quote error) (repl-error->string e))))
     (let ([forms (read-all-from-string text)])
@@ -755,13 +755,13 @@
                       (loop (cdr es) (string-append acc name "\n" src "\n" out "\n")))
                     (loop (cdr es) acc)))))))))))
 
-;; --- run door: run an importing program in-process (change: run-door-user-libraries) ---
+;; --- emit run command: run an importing program in-process (change: run-door-user-libraries) ---
 ;; The run host preloads user libraries (mode 4, WITHOUT running __init) and registers
 ;; the baked (scheme base) (mode 8), then mode 7 compiles the whole program against them.
 ;; It is a FRESH whole-program compile calling the SAME compile-program-with-imports the
-;; AOT door drives, so the emitted program module is byte-identical to the AOT prog.ll.
+;; AOT path drives, so the emitted program module is byte-identical to the AOT prog.ll.
 
-;; Append (scheme base) to a program's imports unless already present -- the run-door
+;; Append (scheme base) to a program's imports unless already present -- the run-path
 ;; equivalent of the driver's with-scheme-base, matching its direct-import order so the
 ;; toposort (and thus the program module) agrees byte-for-byte.  Under --no-prelude
 ;; (host sets EMIT_NO_PRELUDE, read by %no-prelude?) the prelude is not implied, exactly
@@ -803,11 +803,11 @@
 ;; the same marker it already uses for the library/program split.
 ;;
 ;; The init field is every member's __init symbol, newline-joined in the SAME dependency
-;; order as the modules (compile-baked-set returns its tables in that order).  A door that
+;; order as the modules (compile-baked-set returns its tables in that order).  A host that
 ;; emits a program ignores this and lets the program's @scheme_entry drive the __inits; the
-;; REPL door has no program entry, so its host runs them itself, in this order, once
+;; REPL has no program entry, so its host runs them itself, in this order, once
 ;; (change: baked-set-on-every-door).  It used to be (scheme base)'s symbol alone, "kept
-;; for protocol compatibility" -- the run door reads only the car of this pair, so widening
+;; for protocol compatibility" -- the emit run command reads only the car of this pair, so widening
 ;; the cdr leaves it untouched.
 (define (run-register-baked-set)
   (guard (e (#t (cons (quote error) (repl-error->string e))))
@@ -818,7 +818,7 @@
       (for-each
         (lambda (p) ; p = (LIBRARY-NAME . EXPORT-TABLE)
           (set! *repl-libs* (cons (cdr p) *repl-libs*)) ; the export table itself
-          ;; the run door's init-closure topological sort reads these (run-closure-order),
+          ;; the emit run command's init-closure topological sort reads these (run-closure-order),
           ;; so a baked member that imports another must declare it here too.
           (set! *repl-lib-imports*
             (cons (cons (car p) (baked-entry-imports (car p))) *repl-lib-imports*)))
@@ -838,9 +838,9 @@
 ;; --- artifact cache: registering a library without compiling it --------------------
 ;; (change: baked-set-artifact-cache.)  A cached library needs four things to enter a
 ;; session: its NAME, its DIRECT IMPORTS, its EXPORT TABLE, and its `__init` symbol.  Only
-;; the table is what `emit lib` already writes -- the imports are not in it, because a
+;; the table is what emit lib already writes -- the imports are not in it, because a
 ;; table is keyed on what a library *exports*, not on what it depends on, and the run
-;; door's init-closure toposort needs the dependencies (run-closure-order).  So a cache
+;; path's init-closure toposort needs the dependencies (run-closure-order).  So a cache
 ;; entry carries a metadata datum of its own alongside the unit IR.
 ;;
 ;; The IR is deliberately absent from both modes below.  Registration does not read it --
@@ -850,7 +850,7 @@
 ;; Mode 14: register every library in a cache entry's metadata, in the order given, with
 ;; no compilation.  This leaves exactly what mode 8 (baked set) or mode 4 (one library)
 ;; leaves behind, which is what makes a cache-seeded session indistinguishable from a
-;; compiled one (spec: artifact-cache, "The cache never changes what a door produces").
+;; compiled one (spec: artifact-cache, "The cache never changes what a path produces").
 ;;
 ;; Returns the `__init` symbols newline-joined in order -- for a single-member entry that
 ;; is the one symbol mode 4 returns, so ONE mode serves the baked set and a user library
@@ -915,7 +915,7 @@
               (check-cached-rows (cdr rows))))))))
 
 ;; Publish each row.  An already-registered library is left alone rather than duplicated,
-;; the same tolerance mode 4's `already` status provides: every door registers the baked
+;; the same tolerance mode 4's `already` status provides: every compiler host registers the baked
 ;; set before preloading a manifest, and a manifest may name a baked member.  Its `__init`
 ;; is still reported, because every baked module is linked regardless and each `__init` is
 ;; one-shot guarded -- the same reason `run-register-baked-set` names them all.
@@ -985,7 +985,7 @@
   (cond [(assoc name *repl-lib-imports*) => cdr] [else (quote ())]))
 
 ;; Mode 16: the SOURCE FILES the most recent library registration read -- the library's own
-;; source (the path the door named through mode 13) followed by every file the include
+;; source (the host named its path through mode 13) followed by every file the include
 ;; family opened for it, in read order, newline-joined (change: chez-free-unit-pipeline,
 ;; design D5/D7).
 ;;
@@ -1000,8 +1000,8 @@
 ;; parsing, so two libraries including the same fragment each report it.
 ;;
 ;; The library's own source comes first because it is the only file the reader never opened
-;; (the door read it and handed over the text), so the record would otherwise omit exactly
-;; the file a reader of the entry would expect to see named.  Empty when the door submitted
+;; (the host read it and handed over the text), so the record would otherwise omit exactly
+;; the file a reader of the entry would expect to see named.  Empty when the host submitted
 ;; source with no path (standard input), in which case the caller has nothing to key on and
 ;; must not cache.
 (define (repl-library-sources-text)
@@ -1012,11 +1012,11 @@
                        (if (string=? home "") "" (string-append home "\n"))
                        (includes-read))))))
 
-;; --- the ship door's tree-shake (change: chez-free-unit-pipeline, design D9) ---
+;; --- the shipping path's tree-shake (change: chez-free-unit-pipeline, design D9) ---
 ;; Mode 17: recompile ONE registered library, keeping only the bindings a program's emitted
 ;; IR actually reaches, and return the pruned unit for the host to link in place of the full
 ;; one.  This is the Chez driver's AOT tree-shake (src/compile.ss's build-modular-artifacts*)
-;; made available to `emit build`, which until now linked whole units and delivered ~2.3x the
+;; made available to emit build, which until now linked whole units and delivered ~2.3x the
 ;; bytes for the same program (docs/PERFORMANCE.md P8).
 ;;
 ;; INPUT, three parts, because the core does no I/O and cannot fetch any of them itself:
@@ -1024,7 +1024,7 @@
 ;;   <mangled unit key>\n            which library, in the same "scheme.base" key mode 9
 ;;                                   hands the host, so no library-name parsing in C++
 ;;   <library source text>           for a user library; EMPTY for a baked member, whose
-;;                                   source is *prelude-source* and needs no door
+;;                                   source is *prelude-source* and needs no host-supplied text
 ;;   ; ==EMIT-UNIT-BOUNDARY==\n      the marker the host already splits module streams on
 ;;   <the ROOT IR>                   what the roots are read out of
 ;;
@@ -1042,13 +1042,13 @@
 ;; units import this one: a unit emits `ptr @"X:name"` only for a library it imports, so a
 ;; non-importer contributes no match.
 ;;
-;; PRUNABILITY: every registered library is prunable.  This door used to answer `keep` for a
+;; PRUNABILITY: every registered library is prunable.  This path used to answer `keep` for a
 ;; unit another registered library imports -- the Chez driver's rule, whose justification was
 ;; that an importer kept full could reference a binding its dependency dropped.  Reverse order
 ;; removes that hazard, and with it the reason `(emit internal)` shipped whole in every
 ;; delivered binary (`(scheme base)` imports it).
 ;;
-;; A raise is reported WITH the key it was shaking.  A door that gets "kept whole (...)"
+;; A raise is reported WITH the key it was shaking.  A path that gets "kept whole (...)"
 ;; for every unit needs to know whether the reason was this library's own compile or the
 ;; protocol never naming a registered library at all, and the two read identically without
 ;; it -- which cost an afternoon the first time.
@@ -1102,7 +1102,7 @@
 ;; Recompile NAME against the roots ROOT-IR imposes -- the program's IR plus every unit the
 ;; host has already shaken, which in reverse link order is everything importing NAME (change:
 ;; import-dag-tree-shaking).  The declaration comes from the
-;; partition for a baked member and from the door's source text for a user library -- the
+;; partition for a baked member and from the host's source text for a user library -- the
 ;; two ways a library body reaches this compiler, and the reason a cache-seeded session can
 ;; still shake: mode 14 registers from prebuilt IR and retains no body forms, but the baked
 ;; source is compiled INTO this binary and a user library's file is one read away.
@@ -1110,8 +1110,8 @@
 ;; The pruned table is DISCARDED rather than published: the program was already compiled
 ;; against the full table (mode 7 runs first), and republishing a smaller one would leave the
 ;; session describing a library that no longer matches what its importers resolved against.
-;; Each step is LABELLED, because every way this can fail arrives at the door as one
-;; string and the door can only report it -- "kept whole (match: no matching clause 0)"
+;; Each step is LABELLED, because every way this can fail arrives at the path as one
+;; string and the path can only report it -- "kept whole (match: no matching clause 0)"
 ;; names neither the step nor the library, and the first bug here cost an afternoon of
 ;; four-minute self-compiles to place.
 ;;
@@ -1123,7 +1123,7 @@
 
 (define (shake-registered-library name src root-ir)
   ;; The recompile re-runs this library's `include` declarations, so the record mode 16
-  ;; reports must describe THIS read and not the preload's -- the door caches the pruned
+  ;; reports must describe THIS read and not the preload's -- the path caches the pruned
   ;; unit against the same source closure a full unit entry is keyed on.
   (reset-includes-read!)
   (let* ([_ (shake-at! "parse")]
@@ -1168,7 +1168,7 @@
         ;; no program entry (matches compile-source-rehomed).  The host emits/JITs just
         ;; this module; the 'library status tells it to drop the baked base + preloaded
         ;; units it set up for the program case.  (Used by `emit run --emit < lib.sld`.)
-        ;; A lone define-library IS the unit under inspection here (this is `emit lib`'s
+        ;; A lone define-library IS the unit under inspection here (this is emit lib's
         ;; and `emit run --emit < lib.sld`'s path), so it dumps at the ordinary level.
         ;;
         ;; Its imports resolve against the SESSION (mode 8's baked members plus the
@@ -1202,10 +1202,10 @@
                               (make-dumper #f)) ; the program: the unit under inspection
                             "scheme_entry")))))]))))
 
-;; --- emit lib door: a library's export table as readable text (mode 11) ------
-;; (change: emit-cli-unification, design D3).  `emit lib` writes a library's unit
+;; --- emit lib command: a library's export table as readable text (mode 11) ------
+;; (change: emit-cli-unification, design D3).  emit lib writes a library's unit
 ;; artifact: the `.ll` comes from the emit path (mode 7's single-define-library
-;; branch); this mode surfaces the `.exports` sidecar the AOT door's artifact cache
+;; branch); this mode surfaces the `.exports` sidecar the AOT path's artifact cache
 ;; expects -- the (NAME ((external . "mangled") ...) ((external "label" arity) ...))
 ;; datum that compile-library
 ;; computes but only the Chez driver used to write out.  We compile the lone library
@@ -1225,7 +1225,7 @@
 ;; `render-datum` -- which renders the export-table datum, matching what the Chez
 ;; driver's `write` produces for (NAME export-table) -- lives in core.ss: the module
 ;; front end's diagnostics name the form the user wrote, and a form has to be rendered
-;; INTO the message to survive every door (change: module-frontend-diagnostics).  One
+;; INTO the message to survive every command (change: module-frontend-diagnostics).  One
 ;; renderer, two consumers.
 
 ;; Mode 11: compile a lone define-library source and return (ok . payload) where
@@ -1265,7 +1265,7 @@
                      ;; fourth field appears only for a library that exports a macro
                      ;; (change: library-macro-export).  `render-datum` renders whatever
                      ;; compile-library returns, and the Chez driver writes its artifact
-                     ;; through the SAME renderer, so the two doors' bytes agree by
+                     ;; through the SAME renderer, so the two paths' bytes agree by
                      ;; construction rather than by two implementations agreeing.
                      [nt (cadr res)]
                      [name (car nt)])
@@ -1453,7 +1453,7 @@
       (set! *repl-libs* (vector-ref s 5))
       (set! *repl-lib-imports* (vector-ref s 6))
       (set! *repl-calls* (vector-ref s 7))
-      ;; The door's source home (change: library-include-declarations, design D4).  It
+      ;; The host's source home (change: library-include-declarations, design D4).  It
       ;; rides the state vector for the same reason the rest of this does: the assembled
       ;; program's globals are re-created on every host call, so a home set by mode 13
       ;; would be gone by the time mode 4/7/11/12 needed it.
@@ -1495,10 +1495,10 @@
 ;;   4 load-library (source text -> unit IR + __init)   5 manifest text -> source paths
 ;;   6 merge a library into the session: "" = (scheme base) at startup, else an import
 ;;     form's text, the commit half of a prompt's import (defer-manifest-library-init)
-;;   7 run door: compile a whole program with imports  8 run door: register baked (scheme base)
-;;   9 run door: manifest text -> "KEY\tPATH" per user library (omitting (scheme base))
-;;  10 emit build door: manifest text -> program entries (NAME/source/output triples)
-;;  11 emit lib door: library source -> "<basename>\n<export-table datum>"
+;;   7 emit run command: compile a whole program with imports  8 emit run command: register baked (scheme base)
+;;   9 emit run command: manifest text -> "KEY\tPATH" per user library (omitting (scheme base))
+;;  10 emit build command: manifest text -> program entries (NAME/source/output triples)
+;;  11 emit lib command: library source -> "<basename>\n<export-table datum>"
 ;;  12 source text -> structured direct-import descriptors (for lazy resolution)
 ;;  13 where the NEXT source submitted came from, so its includes resolve beside it
 ;;  14 artifact cache: metadata datum -> register those libraries, no compilation
@@ -1515,21 +1515,22 @@
               [(= mode 1) (init-session *prelude-source*)]
               [(= mode 2) (form-complete-code (repl-input))]
               [(= mode 4) (repl-load-library-text (repl-input))] ; load a library unit
-              ;; 5 is RETIRED (chez-free-unit-pipeline): every door uses mode 9.
+              ;; 5 is RETIRED (chez-free-unit-pipeline): every command uses mode 9.
               [(= mode 6) (repl-autoimport
                             (repl-input))] ; merge a library: "" = (scheme base)
-              [(= mode 7) (compile-program-text (repl-input))] ; run door: whole program
-              [(= mode 8) (run-register-baked-set)] ; run door: the baked set
+              [(= mode 7) (compile-program-text
+                            (repl-input))] ; emit run command: whole program
+              [(= mode 8) (run-register-baked-set)] ; emit run command: the baked set
               [(= mode 9) (repl-manifest-user-paths
-                            (repl-input))] ; every door: manifest's user libraries
+                            (repl-input))] ; every command: manifest's user libraries
               [(= mode 10) (repl-manifest-programs
-                             (repl-input))] ; emit build door: program entries
+                             (repl-input))] ; emit build command: program entries
               [(= mode 11) (repl-library-exports-text
-                             (repl-input))] ; emit lib door: export table
+                             (repl-input))] ; emit lib command: export table
               [(= mode 12) (repl-source-imports
-                             (repl-input))] ; run door: a source's imports
+                             (repl-input))] ; emit run command: a source's imports
               [(= mode 13) (repl-set-source-home
-                             (repl-input))] ; every door: the next source's path
+                             (repl-input))] ; every command: the next source's path
               [(= mode 14) (repl-register-cached-libs
                              (repl-input))] ; cache: register prebuilt units
               [(= mode 15) (repl-cached-libs-text
@@ -1537,7 +1538,7 @@
               [(= mode 16)
                 (repl-library-sources-text)] ; cache: a library's source files
               [(= mode 17) (repl-shake-library
-                             (repl-input))] ; emit build door: prune a unit
+                             (repl-input))] ; emit build command: prune a unit
               [(= mode 18) (repl-library-identity
                              (repl-input))] ; resolver: validate selected source
               [(= mode 19) (repl-registration-begin)]

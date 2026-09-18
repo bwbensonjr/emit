@@ -43,7 +43,7 @@ with an improper tail, SHALL be reported rather than silently contributing only 
 The diagnostic SHALL name the procedure and the type of argument it required, following the shape of
 the existing runtime diagnostics (`+: not a number`). Reporting SHALL use the same runtime trap
 mechanism as the fixnum overflow and out-of-range diagnostics, and therefore behaves the same way at
-both doors: a standalone executable exits non-zero, and the in-process runner returns control to its
+both paths: a standalone executable exits non-zero, and the in-process runner returns control to its
 host so a subsequent form still evaluates.
 
 The check SHALL live in the runtime primitive rather than at call sites, so that every path reaches
@@ -110,7 +110,7 @@ value afterwards: every access it turns into a trap is one that previously read 
 - **THEN** the computation aborts with the type diagnostic and does not evaluate the guard clause —
   the same behaviour an out-of-range index has under a guard
 
-#### Scenario: Both doors agree, and the in-process host survives
+#### Scenario: both paths agree, and the in-process host survives
 
 - **WHEN** the same wrong-typed program is run under the in-process runner and as a standalone
   executable
@@ -189,7 +189,7 @@ and `make-string` SHALL NOT produce an object whose recorded length is negative.
 
 The diagnostic SHALL name the procedure, the offending index or size, and the valid range, so the
 report identifies which access failed without a debugger. Reporting SHALL use the same runtime trap
-mechanism as the fixnum overflow diagnostic, and therefore behaves the same way at both doors: a
+mechanism as the fixnum overflow diagnostic, and therefore behaves the same way at both paths: a
 standalone executable exits non-zero, and the in-process runner returns control to its host so a
 subsequent form still evaluates.
 
@@ -284,7 +284,7 @@ unspecified byte of memory or corrupted an unrelated object.
 - **THEN** the diagnostic names the index and the type required, rather than reporting an
   out-of-range index derived from the argument's representation
 
-#### Scenario: Both doors agree, and the in-process host survives
+#### Scenario: both paths agree, and the in-process host survives
 
 - **WHEN** the same out-of-range program is run under the in-process runner and as a standalone
   executable

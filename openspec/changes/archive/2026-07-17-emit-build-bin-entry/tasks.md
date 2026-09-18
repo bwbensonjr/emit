@@ -34,4 +34,4 @@
 ## 6. Docs
 
 - [x] 6.1 Document the `(program …)` manifest entry, `scheme-run --resolve-program`, and `emit build` in `docs/MODULES.md`.
-- [x] 6.2 Update `openspec/explorations/packaging-and-emit-cli.md`: record slice #2's status — `emit build` introduced additively (build verb only), Chez-free door (no tree-shaking yet), with CLI-naming/back-compat and Chez-free tree-shaking still deferred.
+- [x] 6.2 Update `openspec/explorations/packaging-and-emit-cli.md`: record slice #2's status — `emit build` introduced additively (build verb only), Chez-free path (no tree-shaking yet), with CLI-naming/back-compat and Chez-free tree-shaking still deferred.

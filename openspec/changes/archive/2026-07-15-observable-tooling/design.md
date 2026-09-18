@@ -45,7 +45,7 @@ conforming message" that contributors actually read.
 
 *Alternative considered:* put it only in the spec. Rejected — contributors edit shell
 scripts far more than they read `openspec/specs/`, so the guidance needs to sit next to the
-code and be linked from the front door.
+code and be linked from the CLI interface.
 
 ### D2: Message format — `<verb> <input> -> <output>  [<metrics>]`
 

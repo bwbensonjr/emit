@@ -2,7 +2,7 @@
 
 `emit repl` takes **2.21 s** to reach a prompt in this repository, and **1.82 s** of that is
 `(scheme char)` — a manifest library the session never imports, whose 4.0 MB of IR is
-code-generated at startup because the door runs every preloaded unit's `__init` eagerly
+code-generated at startup because the path runs every preloaded unit's `__init` eagerly
 (`docs/PERFORMANCE.md` P23). The cost is not compilation: `baked-set-artifact-cache` and
 `chez-free-unit-pipeline` made every unit a cache hit, so what is left is ORC materialization that
 only happens because an eager `run_init` looks the module up. ORC would otherwise defer it.
@@ -31,7 +31,7 @@ open world it was protecting.
 - The compiler's `import` status gains the library names it imported, so the host knows which
   deferred inits to run. Today it returns an empty payload.
 - Running a deferred `__init` is narrated at verbose verbosity, following `docs/OUTPUT.md`.
-- **Not** changed: the `run`, `build` and `lib` doors (the run door already preloads only a
+- **Not** changed: the `run`, `build` and `lib` paths (the `emit run` command already preloads only a
   program's import closure), `--no-prelude`, the manifest chain, the cache, and the JIT
   optimization profile.
 

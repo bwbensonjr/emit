@@ -213,7 +213,7 @@
 (define (left-fold-eta raw ident)
   ;; let* (not let): four counter-bumping inits, so a parallel `let` would number
   ;; them in host order (issue #11) and the eta expansion's names would differ
-  ;; between the Chez driver and the shipped doors.
+  ;; between the Chez driver and the shipped paths.
   (let* ([gs (fresh-name 'gs)]
          [loop (fresh-name 'loop)]
          [acc (fresh-name 'acc)]
@@ -232,7 +232,7 @@
 (define (diff-eta raw)
   ;; let* (not let): four counter-bumping inits, so a parallel `let` would number
   ;; them in host order (issue #11) and the eta expansion's names would differ
-  ;; between the Chez driver and the shipped doors.
+  ;; between the Chez driver and the shipped paths.
   (let* ([gs (fresh-name 'gs)]
          [loop (fresh-name 'loop)]
          [acc (fresh-name 'acc)]
@@ -255,7 +255,7 @@
 (define (div-eta raw)
   ;; let* (not let): four counter-bumping inits, so a parallel `let` would number
   ;; them in host order (issue #11) and the eta expansion's names would differ
-  ;; between the Chez driver and the shipped doors.
+  ;; between the Chez driver and the shipped paths.
   (let* ([gs (fresh-name 'gs)]
          [loop (fresh-name 'loop)]
          [acc (fresh-name 'acc)]
@@ -297,7 +297,7 @@
 (define (cmp-chain-eta raw kind)
   ;; let* (not let): five counter-bumping inits, so a parallel `let` would number
   ;; them in host order (issue #11) and the eta expansion's names would differ
-  ;; between the Chez driver and the shipped doors.
+  ;; between the Chez driver and the shipped paths.
   (let* ([gs (fresh-name 'gs)]
          [loop (fresh-name 'loop)]
          [prev (fresh-name 'prev)]

@@ -72,7 +72,7 @@ A program that imports libraries SHALL, in its `@scheme_entry`, call the importe
 - **THEN** `@scheme_entry` calls `@"mylib:__init"` before the body runs, and the call to
   `greet` observes the populated global
 
-### Requirement: AOT door — build and link an importing program
+### Requirement: AOT path — build and link an importing program
 
 An import-aware build path SHALL resolve a program's imports (and each library's imports)
 through the manifest to their sources, build the transitive dependency graph, reject import
@@ -98,7 +98,7 @@ is not in the program's transitive import closure SHALL NOT be linked.
 - **WHEN** the build path resolves a graph in which `(a)` imports `(b)` and `(b)` imports `(a)`
 - **THEN** it reports a compile-time error naming the cycle rather than looping or linking
 
-### Requirement: REPL door — import a library interactively
+### Requirement: REPL — import a library interactively
 
 The interactive REPL SHALL, on evaluating `(import (<lib>))`, resolve the library and its
 transitive dependencies through the manifest, load each unit module into the running session

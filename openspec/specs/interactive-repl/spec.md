@@ -209,7 +209,7 @@ The converse SHALL also hold: a session's standard library never *comes* from th
 manifest entry naming a member of the baked set SHALL NOT be loaded, compiled, or read for its
 source by a session, in either prelude mode. This applies to every baked member — the standard
 library and the substrate it stands on — rather than to one name, and makes the REPL's seeding
-identical to the run door's.
+identical to the `emit run` command's.
 
 `--no-prelude` SHALL remain the single way to start a session without the standard library, and SHALL
 skip registering the baked set entirely. A session started that way SHALL report an unbound variable

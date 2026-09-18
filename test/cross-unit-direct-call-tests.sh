@@ -4,7 +4,7 @@
 # A call whose operator resolves to an imported library procedure of matching
 # arity is lowered to a DIRECT call to that procedure's code label instead of
 # loading a code pointer out of its closure.  This suite pins the emitted shape
-# and the boundaries of the rule, on the shipped Chez-free doors:
+# and the boundaries of the rule, on the shipped Chez-free paths:
 #
 #   * a fixed-arity import is direct-called, with the global still loaded and
 #     passed as the callee's `self` (it carries the captured environment) and the

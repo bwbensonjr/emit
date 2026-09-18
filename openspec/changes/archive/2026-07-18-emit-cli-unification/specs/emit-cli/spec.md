@@ -3,16 +3,16 @@
 ### Requirement: Single `emit` binary is the sole user-facing entry point
 
 The project SHALL ship one compiled `emit` binary that is the sole user-facing entry
-point to the compiler's four doors. It SHALL dispatch on its first argument (the
+point to the compiler's four commands. It SHALL dispatch on its first argument (the
 *verb*) to `lib`, `build`, `run`, or `repl`, and SHALL report a usage error naming the
 known verbs when given an unknown or missing verb. The previously separate entry
 points (`build/scheme-run`, `build/repl-host`, `bin/scheme-compile`, and the `bin/emit`
 bash wrapper) SHALL be removed; no user-facing invocation depends on them.
 
-#### Scenario: A verb dispatches to its door
+#### Scenario: A verb dispatches to its path
 
 - **WHEN** the user runs `emit run`, `emit repl`, `emit build`, or `emit lib`
-- **THEN** the corresponding door executes
+- **THEN** the corresponding path executes
 
 #### Scenario: An unknown verb is an error
 
@@ -24,7 +24,7 @@ bash wrapper) SHALL be removed; no user-facing invocation depends on them.
 
 - **WHEN** the repository is built
 - **THEN** no `build/scheme-run`, `build/repl-host`, `bin/scheme-compile`, or
-  `bin/emit` is produced or required; every door is reached through `emit <verb>`
+  `bin/emit` is produced or required; every path is reached through `emit <verb>`
 
 ### Requirement: `emit run` runs a program in-process (Chez-free)
 
@@ -60,20 +60,20 @@ compilation, and manifest-driven `import`.
   evaluates an expression using its export
 - **THEN** the session behaves exactly as the prior `repl-host` did
 
-### Requirement: `emit lib` compiles one library to an artifact (compile-unit door)
+### Requirement: `emit lib` compiles one library to an artifact (compile-unit path)
 
 `emit lib SRC [-o DIR] [--manifest F]` SHALL compile a single `define-library` source
 to its artifact — the unit IR (`<name>.ll`) and the readable export table
 (`<name>.exports`) — Chez-free, where `<name>` is derived from the library's
 `define-library` name. Artifacts SHALL default under `build/lib` and be written under
 `DIR` when `-o` is given. The emitted unit IR SHALL be byte-for-byte identical to the
-unit the AOT and REPL doors produce for the same source (one compile-unit core).
+unit the AOT and REPLs produce for the same source (one compile-unit core).
 
 #### Scenario: Compile a library to its artifact
 
 - **WHEN** `emit lib test/modules/mylib.sld -o build/lib` is run
 - **THEN** it writes `build/lib/mylib.ll` and `build/lib/mylib.exports`, with the `.ll`
-  byte-identical to the unit the other doors emit for `mylib`
+  byte-identical to the unit the other paths emit for `mylib`
 
 #### Scenario: The export table lists the library's exports
 

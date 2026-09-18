@@ -4,16 +4,16 @@
       `emit repl --no-prelude`, each with a resolving manifest and with none, with the `map` probe.
       Record the numbers; they are the acceptance baseline for group 3.
       *Post-cache: 0.424 / **1.163** / 0.286 / 0.024 s. The waste is now ~1.14 s and a LARGER share
-      of the door than the issue recorded, because the cache took the prelude row down and left
+      of the path than the issue recorded, because the cache took the prelude row down and left
       this one untouched. Row 1 vs row 3 (0.138 s) is the eager preload compiling the manifest's
       four non-baked libraries on every session start — task 4.4's target.*
 - [x] 1.2 Measure `emit build` on `hello.scm` and on one program importing a user library: wall
       clock (cold and warm cache) and delivered executable bytes. Record the same for the Chez AOT
       path (`chez --libdirs src --script src/compile.ss`) on the same programs — that pair is P8's
-      door-parity acceptance criterion.
-      *`hello.scm`: 1.902 s cold / 0.732 s warm / 212,232 B, against the Chez door's 93,656 B — a
+      path-parity acceptance criterion.
+      *`hello.scm`: 1.902 s cold / 0.732 s warm / 212,232 B, against the Chez path's 93,656 B — a
       118,576 B gap. Floor (`--no-prelude`): 0.23 s / 34,776 B. **`uses-lib.scm` is 212,304 B on the
-      CHEZ door too**: the prunability rule keeps `(scheme base)` full whenever another unit imports
+      CHEZ path too**: the prunability rule keeps `(scheme base)` full whenever another unit imports
       it, so P8 wins nothing on programs importing a user library that imports the standard library.
       That bounds this change's size claim to programs of `hello.scm`'s shape.*
 - [x] 1.3 Measure a program importing a user library through `emit run`, twice, to size the
@@ -72,7 +72,7 @@
       error apiece blaming the manifest — the flag removed the dependency, so "dependency missing
       from manifest?" was the wrong story (design D4).*
 
-## 4. Host: cache generalization and the build-door shake
+## 4. Host: cache generalization and the build-path shake
 
 - [x] 4.1 Generalize the cache key to a `(kind, compiler-digest, source-digest[, root-digest])`
       stem, with the kind in the entry name (design D10): `baked-`, `unit-`, `shake-`. Keep the
@@ -86,7 +86,7 @@
       closure (2.4), and stores. *Mode 14 also gained a `deferred` status so a cached unit cannot
       register ahead of a unit it reads globals from (design D13).*
 - [x] 4.4 Make the REPL's `preload_libraries` cache-aware through the same helper, so the eager
-      door benefits identically and the two preloads do not diverge again.
+      path benefits identically and the two preloads do not diverge again.
 - [x] 4.5 `emit_build` (`src/emit.cpp:1710`): between `compile_program` and the temp-`.ll` write,
       determine the prunable units (design D11, using the imports mode 15 reports) and each one's
       root set from the emitted program IR (the moved `program-root-internals`).
@@ -102,7 +102,7 @@
       was written whole, not that its bytes survived, so a garbage-but-non-empty `.ll` was trusted
       and reached the JIT. Each split module must now contain its own `:__init` definition, checked
       BEFORE mode 14 so a rejected entry leaves the session untouched.*
-- [x] 4.9 Confirm `--no-prelude` on the build door still skips the baked set entirely, and that its
+- [x] 4.9 Confirm `--no-prelude` on the `emit build` command still skips the baked set entirely, and that its
       shake path handles a program whose only units are user libraries. *`emit build bare
       --no-prelude` is unchanged at 34,776 B / 0.23 s; with no modules there is nothing to shake.*
 
@@ -128,7 +128,7 @@
       which asserts both: no `baked set` narration, and the same cost with a manifest as without.*
 - [x] 6.2 REPL seeding parity: a session against a manifest naming both baked members starts with
       the standard library available, adds no duplicate unit, and reads no library source for them.
-- [x] 6.3 `--no-prelude` door parity: the same manifest and library through `emit repl --no-prelude`
+- [x] 6.3 `--no-prelude` path parity: the same manifest and library through `emit repl --no-prelude`
       and `emit run --no-prelude` reach the same unresolved-import outcome.
 - [x] 6.4 User-library cache: cold vs warm byte-identity of emitted IR for a program importing a
       user library; a second invocation does not recompile it.
@@ -146,9 +146,9 @@
       non-shaken build, and to the Chez driver's AOT output on the same programs.
       *All 80 demos built through `emit build` and compared against `emit run`: 80 agreeing on both
       output and exit code, each executable 93-95 KB against the unshaken ~212 KB.*
-- [x] 6.8 Door-parity size: `emit build` and the Chez AOT path retain the same library bindings on
+- [x] 6.8 path-parity size: `emit build` and the Chez AOT path retain the same library bindings on
       `hello.scm`, and the two byte sizes are of the same order (task 1.2's baseline, ~134 KB →
-      ~34 KB). *Added to `test/aot-tree-shaking-tests.sh` (Chez-gated): **93,656 B on both doors**,
+      ~34 KB). *Added to `test/aot-tree-shaking-tests.sh` (Chez-gated): **93,656 B on both paths**,
       same output. Not "the same order" — the same number.*
 - [x] 6.9 Kind isolation: after a build populates `shake-` entries, `emit repl` and `emit run` seed
       from full units and every binding of that library is still available.
@@ -188,9 +188,9 @@
       `aot-codegen` root-set requirement already anticipates. *Issue #104, with the measurement to
       take first — a well-kept library may lose nothing.*
 - [x] 7.5 Close issue #101 from the fixing commit (`Fixes #101`).
-- [x] 7.6 Update `docs/MODULES.md` and `docs/PIPELINE.md` where they describe the doors' seeding or
+- [x] 7.6 Update `docs/MODULES.md` and `docs/PIPELINE.md` where they describe the paths' seeding or
       the shake as driver-only. *`docs/MODULES.md`: the delivery paragraph, the "no tree-shaking on
-      the Chez-free door" limitation (now the prunability limit, pointing at P10), and the eager-
+      the Chez-free path" limitation (now the prunability limit, pointing at P10), and the eager-
       preload paragraph. `docs/PIPELINE.md` needed nothing — its one mention is label stability
       under a tree-shaken recompile, which is still exactly right.*
 

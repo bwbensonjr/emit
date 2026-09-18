@@ -44,7 +44,7 @@
       read error.
 - [x] 3.4 Add direct identity/topology tests for self and multi-node pair cycles, vector and mixed
       cycles, shared acyclic values, multiple labels, label-scope boundaries, and every malformed
-      class across `read-from-string`, whole-source reads, `(scheme read)`, compiler, and REPL doors.
+      class across `read-from-string`, whole-source reads, `(scheme read)`, compiler, and REPLs.
 - [x] 3.5 Add write-to-string/read-back tests that inspect both finite content and `eq?` back-edges,
       while retaining the existing printer tests as the exact-output authority.
 - [x] 3.6 Make `encode-const` in `src/emit.ss` memoize source-object identity, allocate pairs/vectors

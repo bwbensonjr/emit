@@ -1,7 +1,7 @@
 Three commits, in this order, none red in between (design §"Migration"/D1–D7). The atomicity rule
 throughout: `src/prelude-surface.scm`, the regenerated `lib/scheme/base.sld`, and the regenerated
 `bootstrap/*.ll` land **in the same commit** — a `base.sld` that disagrees with the baked compiler
-makes the driver and the run door emit different program modules, which
+makes the driver and the `emit run` command emit different program modules, which
 `test/prelude-base-run-tests.sh` catches, and `run-all-tests.sh` links `build/emit` from committed IR.
 
 ## 1. Commit 1 — the mechanism, with an empty policy (provably inert)
@@ -82,8 +82,8 @@ makes the driver and the run door emit different program modules, which
       reference-driven, and an unreferenced declaration produces no relocation).
 - [x] 2.6 Add the issue's repro to `test/prelude-base-run-tests.sh`: `rd-atom`, `%map1`, and
       `%port-buf` are unbound under `emit run` (using the existing `run_unbound` helper) while `map`
-      still resolves; confirm the same on the REPL door in `test/prelude-base-repl-tests.sh`.
-- [x] 2.7 Confirm the private helpers still serve their callers on every door — `read-from-string`
+      still resolves; confirm the same on the REPL in `test/prelude-base-repl-tests.sh`.
+- [x] 2.7 Confirm the private helpers still serve their callers on every path — `read-from-string`
       over the `rd-*` family, the ports and hash tables over their `%` representations, `guard` /
       `parameterize` / `dynamic-wind` over the wind list — via
       `test/io-ports-tests.sh`, `test/dynamic-extent-tests.sh`, and `chez --script
@@ -116,7 +116,7 @@ makes the driver and the run door emit different program modules, which
 - [x] 3.4 Add cases to `test/dynamic-extent-tests.sh`: `with-exception-handler` called directly (a
       handler that escapes sees the raised object; the chain is restored on normal exit) and
       `with-parameters` called directly with computed lists; confirm `guard` and `parameterize` still
-      pass unchanged on all four doors.
+      pass unchanged on all four commands.
 - [x] 3.5 Regenerate `lib/scheme/base.sld`; `make regen`; re-commit `bootstrap/*.ll`. This is the only
       commit in which `bootstrap/scheme.base.ll` moves — verify the diff is exactly two renamed
       globals and two renamed code labels (labels are name-derived, `src/passes/lower.ss:91-92`) — and

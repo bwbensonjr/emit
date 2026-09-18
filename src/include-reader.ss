@@ -3,7 +3,7 @@
 ;;;
 ;;; `src/core.ss` performs no I/O.  Where a library declaration names another file --
 ;;; `include`, `include-ci`, `include-library-declarations` -- the core calls a reader a
-;;; DOOR installed (core.ss's `*include-reader*` side-channel, design D2).  This file is
+;;; host installed (core.ss's `*include-reader*` side-channel, design D2).  This file is
 ;;; the reader the shipped binary installs; `src/compile.ss` defines an independent one
 ;;; over Chez ports.
 ;;;
@@ -15,10 +15,10 @@
 ;;;
 ;;; The protocol, from core.ss:  (reader WHO FILENAME BASE) -> (TOKEN . FORMS).  BASE is
 ;;; the token (resolved path) of the file the declaration appeared in, or #f for the
-;;; source the door itself submitted -- which is what the source home below records.
+;;; source the host itself submitted -- which is what the source home below records.
 
-;; --- the door's source home (design D4) ------------------------------------
-;; The core is handed source TEXT, never a path, so a door must say where that text came
+;; --- the host's source home (design D4) ------------------------------------
+;; The core is handed source TEXT, never a path, so a host must say where that text came
 ;; from before submitting it (repl-core.ss's set-source-home mode).  "" means "no path"
 ;; -- source read from standard input -- and resolves against the current directory,
 ;; which is the ONLY case in which the working directory is consulted.
@@ -53,7 +53,7 @@
 ;; where that path is known, and the same thing src/compile.ss's `*includes-read*` records
 ;; for the Chez driver's stamp (src/compile.ss:196-222).
 ;;
-;; A door RESETS this before submitting a library and reads it back afterwards, so the list
+;; A host RESETS this before submitting a library and reads it back afterwards, so the list
 ;; describes one registration rather than accumulating across a session: two libraries that
 ;; include the same fragment must each report it, and neither may inherit the other's.
 ;; Accumulated newest-first and reversed on read, so the order is the order they were read.
@@ -74,11 +74,11 @@
 ;; that asked for it, the filename as written, and the path it resolved to.  An EMPTY file
 ;; is legal and contributes no forms.
 ;; WHO is `include-ci` exactly when the forms are to be read case-insensitively, so the
-;; door already has everything it needs to fold at READ time (change: reader-token-path,
+;; host already has everything it needs to fold at READ time (change: reader-token-path,
 ;; issue #61) -- the protocol did not have to change to carry a fold flag.  Folding here
 ;; rather than over the returned forms is what leaves a bar-quoted `|MixedCase|` alone:
 ;; after reading it is the same interned symbol as `MixedCase`, and no walk can tell them
-;; apart.  The Chez driver's own door (src/compile.ss) reads under `case-sensitive`, which
+;; apart.  The Chez driver reads under `case-sensitive`, which
 ;; draws the same distinction; the two agree on ASCII and diverge above it, a limit
 ;; recorded in docs/MODULES.md rather than closed with Unicode case tables.
 (define (emit-include-reader who filename base)

@@ -158,7 +158,7 @@ fi
 
 # --- 2b. the substrate does not depend on the library that imports it -------
 # (scheme base) imports (emit internal), so the substrate cannot import it back -- a cycle
-# no door could resolve.  Its .sld must therefore have NO import clause at all (change:
+# no path could resolve.  Its .sld must therefore have NO import clause at all (change:
 # scheme-base-partition, design D10).
 if grep -q '^  (import ' lib/emit/internal.sld; then
   bad "lib/emit/internal.sld has an import clause: $(grep '^  (import ' lib/emit/internal.sld | tr '\n' ' ')"

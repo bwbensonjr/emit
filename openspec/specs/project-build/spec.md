@@ -8,18 +8,18 @@ TBD - created by archiving change emit-build-bin-entry. Update Purpose after arc
 The `emit` binary SHALL provide a `build` verb that builds a standalone executable
 from a program named in the manifest. Invoked as `emit build [NAME]`, it SHALL
 resolve the manifest's `(program NAME …)` entry to its source file, build that
-source through the shipped Chez-free AOT door (`bin/scheme-compile`: `scheme-run
+source through the shipped Chez-free AOT path (`bin/scheme-compile`: `scheme-run
 --emit` + clang), and deliver the resulting native executable to the entry's
 configured output path. The resolution of the program entry SHALL itself be
 Chez-free. This slice does not tree-shake: full library units are linked, as the
-Chez-free AOT door does today.
+Chez-free AOT path does today.
 
 When the manifest contains exactly one program entry, `NAME` MAY be omitted and that
 entry SHALL be selected. When `NAME` is omitted and the manifest has zero or more
 than one program entry, `emit build` SHALL report an error naming the available
 program entries.
 
-The manifest SHALL be located the same way the other doors locate it: the
+The manifest SHALL be located the same way the other paths locate it: the
 `EMIT_MANIFEST` environment variable if set, otherwise `--manifest FILE` if given,
 otherwise the default `emit-libs.scm`.
 
@@ -93,7 +93,7 @@ buildable.
   `output` clause and the user runs `emit build my-app`
 - **THEN** the executable is delivered to a default path derived from `my-app`
 
-### Requirement: emit build matches the AOT door
+### Requirement: emit build matches the AOT path
 
 A program built through `emit build` SHALL produce a standalone executable whose
 observable behavior is identical to building that same source directly through the
@@ -111,7 +111,7 @@ runs that pipeline within the `emit` binary; it introduces no second compilation
 
 Resolving a `(program NAME …)` entry to its source and output SHALL be performed by
 the embedded compiler with no dependency on Chez, reusing the same manifest machinery
-the run door uses. `emit run` SHALL expose this via a `--resolve-program NAME` mode
+the `emit run` command uses. `emit run` SHALL expose this via a `--resolve-program NAME` mode
 that reads the manifest (`--manifest` > `EMIT_MANIFEST` > default `emit-libs.scm`) and
 prints the resolved source and output, without JIT-compiling or running any program.
 

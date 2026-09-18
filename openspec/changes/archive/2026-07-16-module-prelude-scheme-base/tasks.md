@@ -13,8 +13,8 @@
 ## 2. Split the prelude into (scheme base) + macro set (single source: src/prelude.scm)
 
 - [x] 2.1 Write a small generator (`tools/gen-scheme-base.ss`) that reads `src/prelude.scm` and emits the runtime half — wraps the non-`define-syntax` forms as `(define-library (scheme base) (export …) (begin …))` at `lib/scheme/base.sld`, exporting every procedure name (the `define-syntax` forms stay in the body so the library compiles, but are not exported)
-- [x] 2.2 (superseded) No separate `*prelude-macros-source*` bake is needed — both doors filter the prelude source they already have (`src/prelude.scm` for the Chez driver, the baked `*prelude-source*` for the embedded REPL) for `define-syntax` at compile time. Simpler, one fewer baked constant, same result.
-- [x] 2.3 Check in `lib/scheme/base.sld` and add a **regenerate-and-diff guard** (a test that reruns the generator and fails if the checked-in copy is stale) so it cannot drift from `src/prelude.scm`. (Simplification found during apply: the macro half needs **no separate baked constant** — both doors filter the prelude source they already have for `define-syntax`; only `base.sld` is generated.)
+- [x] 2.2 (superseded) No separate `*prelude-macros-source*` bake is needed — both paths filter the prelude source they already have (`src/prelude.scm` for the Chez driver, the baked `*prelude-source*` for the embedded REPL) for `define-syntax` at compile time. Simpler, one fewer baked constant, same result.
+- [x] 2.3 Check in `lib/scheme/base.sld` and add a **regenerate-and-diff guard** (a test that reruns the generator and fails if the checked-in copy is stale) so it cannot drift from `src/prelude.scm`. (Simplification found during apply: the macro half needs **no separate baked constant** — both paths filter the prelude source they already have for `define-syntax`; only `base.sld` is generated.)
 - [x] 2.4 Add `(library (scheme base) (source "lib/scheme/base.sld"))` to the default `emit-libs.scm` (and the test manifest)
 
 ## 3. Compile (scheme base) as a library (runtime half), committed and kept fresh
@@ -22,15 +22,15 @@
 - [x] 3.1 Compile `lib/scheme/base.sld` in isolation with the derived-form macros in scope (prelude procedures use `cond`/`case`/…); confirm it compiles without an unbound-macro error
 - [x] 3.2 Verify the emitted `scheme.base.ll` exports the prelude procedures, has a guarded `@"scheme.base:__init"`, and defines no `@scheme_entry`; verify `scheme.base.exports` maps each procedure name to `scheme.base:<name>`
 - [x] 3.3 Confirm `mangle` yields the expected `scheme.base:x` for the two-part `(scheme base)` name
-- [x] 3.4 Build `scheme.base.{ll,exports}` **on demand** (cached by Stage-2 stale-rebuild in `build/lib`) rather than committing them. (Revised during apply: the compiled `.ll` embeds a host-specific target-triple header, so a committed copy is non-portable across dev machines; both active doors already build it once (~1s) and cache it, and the byte-identity baseline is untouched. The `base.sld` **source** is committed and guarded (2.3), so "edit prelude.scm → regenerate → commit" stays one motion; the committed-compiled-artifact optimization moves to the embedded follow-on if it proves worthwhile.)
+- [x] 3.4 Build `scheme.base.{ll,exports}` **on demand** (cached by Stage-2 stale-rebuild in `build/lib`) rather than committing them. (Revised during apply: the compiled `.ll` embeds a host-specific target-triple header, so a committed copy is non-portable across dev machines; both active paths already build it once (~1s) and cache it, and the byte-identity baseline is untouched. The `base.sld` **source** is committed and guarded (2.3), so "edit prelude.scm → regenerate → commit" stays one motion; the committed-compiled-artifact optimization moves to the embedded follow-on if it proves worthwhile.)
 
-## 4. Auto-import (scheme base) — Chez batch door (src/compile.ss)
+## 4. Auto-import (scheme base) — Chez batch path (src/compile.ss)
 
 - [x] 4.1 Route a prelude-enabled program through `compile-program-with-imports` with macro-only `prelude-forms` (the derived-form macros) and an implicit `(scheme base)` import added to the program's imports; `--no-prelude` bypasses both
 - [x] 4.2 Ensure the implicit `(scheme base)` participates in the transitive closure / topological order and links exactly once alongside any explicit imports
 - [x] 4.3 Confirm user-wins shadowing: a program defining its own `map` uses its definition, not the `(scheme base)` export
 
-## 5. Auto-import (scheme base) — AOT embedded door (DEFERRED to a follow-on)
+## 5. Auto-import (scheme base) — AOT embedded path (DEFERRED to a follow-on)
 
 > **Deferred (scope decision):** `scheme-run` / `bin/scheme-compile` keep prepending the
 > prelude this stage; re-homing the Chez-free embedded runner (a new `run.cpp` preload
@@ -42,7 +42,7 @@
 - [ ] 5.3 (deferred) `bin/scheme-compile` links `scheme.base.ll`
 - [ ] 5.4 (deferred) dev→ship fidelity across the embedded runner and the Chez driver
 
-## 6. Auto-import (scheme base) — REPL door (src/repl-core.ss + src/repl/host.cpp)
+## 6. Auto-import (scheme base) — REPL (src/repl-core.ss + src/repl/host.cpp)
 
 - [x] 6.1 `init-session`: stop prepending the full prelude batch; merge the derived-form macros into `*repl-macro-env*`/`*repl-known*`, and auto-import the preloaded `(scheme base)` by merging its exports into the session scope
 - [x] 6.2 Confirm the host still preloads `(scheme base)` as a manifest library (existing behavior) and that `--no-prelude` yields an empty session (no macros, no auto-import)
@@ -61,16 +61,16 @@
 
 ## 9. Tests (test/modules-* and demos)
 
-- [x] 9.1 Prelude-only program (uses only prelude procedures, no explicit import) builds+runs via `(scheme base)` — AOT door — asserting the value
+- [x] 9.1 Prelude-only program (uses only prelude procedures, no explicit import) builds+runs via `(scheme base)` — AOT path — asserting the value
 - [x] 9.2 Same program in the REPL — asserting the value
-- [x] 9.3 Derived-form macros without a prepended prelude: `cond`/`case`/`when` in a prelude-only program work on both doors
+- [x] 9.3 Derived-form macros without a prepended prelude: `cond`/`case`/`when` in a prelude-only program work on both paths
 - [x] 9.4 `--no-prelude`: a reference to a prelude procedure AND to a derived-form macro are both unbound/undefined errors
 - [x] 9.5 `(scheme base)` links exactly once when auto-import coincides with an explicit import
 - [x] 9.6 User-shadow: a program defining its own `map` uses its own definition
-- [x] 9.7 Wire the new cases into `run-all-tests.sh` (Chez-free doors) and `run-dev-tests.sh` (Chez-gated pieces)
+- [x] 9.7 Wire the new cases into `run-all-tests.sh` (Chez-free paths) and `run-dev-tests.sh` (Chez-gated pieces)
 
 ## 10. Verification
 
-- [x] 10.1 Run `run-all-tests.sh` — all suites pass, including demo values and the REPL doors
+- [x] 10.1 Run `run-all-tests.sh` — all suites pass, including demo values and the REPLs
 - [x] 10.2 Run `run-dev-tests.sh` — self-emission-equivalence, self-hosting fixed point, and the anti-stale trust-check all pass; the AOT module suite passes
 - [x] 10.3 Commit regenerated `bootstrap/*.ll`, the regenerated baseline, `lib/scheme/base.sld`, and the source changes together

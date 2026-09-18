@@ -4,7 +4,7 @@ Recorded during implementation. Task 1.x is the before-side; later tasks fill in
 
 ## 1.1 — Baseline, minimal program
 
-Program: `(display (car (list 1 2)))`. Both ship doors, at `1b6771a`, `-O2 -flto`.
+Program: `(display (car (list 1 2)))`. Both shipping paths, at `1b6771a`, `-O2 -flto`.
 
 | | Chez driver | `emit build` |
 |---|---|---|
@@ -14,7 +14,7 @@ Program: `(display (car (list 1 2)))`. Both ship doors, at `1b6771a`, `-O2 -flto
 | distinct `scheme.base:*` symbols | **3** | **3** |
 | value | `1` | `1` |
 
-The two doors agree exactly, which is the `aot-codegen` cross-door requirement holding at baseline.
+The two paths agree exactly, which is the `aot-codegen` cross-path requirement holding at baseline.
 
 The three `scheme.base:*` symbols are `__inited`, `list`, `code:list`. So the delivered executable
 carries **161 substrate symbols to support 1 standard-library binding.**
@@ -89,7 +89,7 @@ withdrawn, and issue #104 is answered with these numbers rather than with an imp
 What remains in scope is P10 — backward root propagation through the import DAG — which 1.1 and 1.2
 show is worth ~348 KB of IR and 161 of 164 symbols in a minimal binary.
 
-## 3.5 / 4.6 — After: both doors, same minimal program
+## 3.5 / 4.6 — After: both paths, same minimal program
 
 | | before | after | |
 |---|---|---|---|
@@ -100,7 +100,7 @@ show is worth ~348 KB of IR and 161 of 164 symbols in a minimal binary.
 | `scheme.base:*` symbols | 3 | 3 | unchanged |
 | value | `1` | `1` | unchanged |
 
-**The two doors agree byte-for-byte** (52,152 B each), which is a stronger result than the
+**The two paths agree byte-for-byte** (52,152 B each), which is a stronger result than the
 `aot-codegen` requirement asks for — it requires only "the same order of size".
 
 The substrate's pruned unit contains **two defines: `__init` and nothing else.** The open question
@@ -109,13 +109,13 @@ post-expansion as well as in source, and the floor is an empty initializer rathe
 record-type plumbing.
 
 **The counterpart direction.** A program that reads (`read-all-from-string`) keeps **55** `rd-*`
-bindings and shakes the substrate only 348,399 → 332,032 B (−4.7%). Both doors. That is the
+bindings and shakes the substrate only 348,399 → 332,032 B (−4.7%). both paths. That is the
 assertion that fails if the shake is too aggressive, and it is why it is in the suite alongside the
 absence check.
 
 ## Protocol cost (design risk: mode 17 carries more text)
 
-Not measured precisely, and it does not need to be: the root text handed across the door for unit
+Not measured precisely, and it does not need to be: the root text handed across the path for unit
 *i* is the program's IR plus the pruned IR of the units after it, so the total copied across a build
 is bounded by (program IR + all pruned units) × unit count. The shipped closure is 3 units and the
 pruned units are single-digit KB, so for the minimal program this is ~20 KB per call. The

@@ -35,7 +35,7 @@ registrations, so that two libraries including the same file each report it once
 The embedded compiler SHALL expose an entry point that recompiles a library — resolved against the
 current session, exactly as its original registration was — retaining only the bindings transitively
 reachable from an explicit root set, and returning the pruned unit. The entry SHALL accept the root
-set from the caller, so a door that computes roots from an emitted program can drive the same
+set from the caller, so a path that computes roots from an emitted program can drive the same
 reachability the batch driver drives.
 
 The pruned unit SHALL be equivalent, for any program whose references are contained in that root
@@ -70,9 +70,9 @@ auto-import and the derived-form macro merge, emit only the program IR, and leav
 unbound — matching the Chez batch driver's `--no-prelude`. The runner's single-module IR handling
 (JIT for `scheme-run`, clang link for `scheme-compile`) SHALL be otherwise unchanged.
 
-`--no-prelude` SHALL suppress the standard library's **compilation**, not only its binding. No door
+`--no-prelude` SHALL suppress the standard library's **compilation**, not only its binding. No path
 running under `--no-prelude` SHALL compile, register, or load any member of the baked library set,
-from its baked-in source or from a manifest, whether or not a manifest resolves. A door that
+from its baked-in source or from a manifest, whether or not a manifest resolves. A path that
 performs that work and then discards it violates this requirement even though the resulting session
 binds the same names.
 
@@ -90,7 +90,7 @@ binds the same names.
 
 #### Scenario: A resolvable manifest does not reintroduce the standard library's cost
 
-- **WHEN** a door is run with `--no-prelude` in a directory where a manifest resolves and names a
+- **WHEN** a path is run with `--no-prelude` in a directory where a manifest resolves and names a
   baked member
 - **THEN** no member of the baked set is compiled, and the invocation's cost is indistinguishable
   from the same invocation where no manifest resolves

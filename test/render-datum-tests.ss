@@ -11,7 +11,7 @@
 ;;;     deliberately different (a character with no portable representation).  They share
 ;;;     one worker precisely so a new datum type gains an arm in both at once; a test
 ;;;     that compares them is what keeps that true;
-;;;   * strict mode RAISES rather than emitting something the other door cannot read --
+;;;   * strict mode RAISES rather than emitting something the other path cannot read --
 ;;;     for such a character, and for a bytevector, whose R7RS #u8(...) spelling Chez's
 ;;;     `read` rejects (design D3a);
 ;;;   * what strict mode DOES write reads back through Chez's `read` as the same datum.
@@ -100,7 +100,7 @@
 
 ;; R7RS spells it #u8(...); Chez's `read` rejects that and uses #vu8(...).  The driver
 ;; reads export tables back with `read`, so strict mode must refuse rather than write a
-;; spelling one door cannot parse.
+;; spelling one path cannot parse.
 (if (eq? 'raised (raised (lambda () (render-datum (bytevector 1 2)))))
     (ok "strict raises on a bytevector")
     (bad "strict should have raised on a bytevector"))

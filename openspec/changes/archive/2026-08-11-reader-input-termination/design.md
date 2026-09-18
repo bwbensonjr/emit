@@ -156,7 +156,7 @@ rejects — which is exactly the seam where the two are allowed to differ.
 `manifest-entries` reports when `read-all-from-string` yields more than one form. Rejecting rather
 than concatenating is the grammar decision argued in the proposal: it is the smaller change, it
 enforces the documented grammar rather than widening it, and it is the direction that can be reversed
-later. Concatenation is a one-way door taken by accident if taken now.
+later. Concatenation is a one-way path taken by accident if taken now.
 
 **The chain does not conflict with this**, which was the risk worth checking: `resolve_manifests`
 returns a vector of *paths* and the host reads and parses each one separately —
@@ -181,7 +181,7 @@ change's proposal both state that `manifest-empty-guards` consolidated the three
 `repl-manifest-programs` (mode 10) kept its own inline `(read-all-from-string text)` + `(car forms)`,
 because it alone returns an `(ok . _)` / `(error . MSG)` status pair and `manifest-entries` raises.
 
-Fixing only `manifest-entries` therefore left the **build door** still dropping the second form: it
+Fixing only `manifest-entries` therefore left the **`emit build` command** still dropping the second form: it
 resolved the program from form one, narrated `build <sole program> -> p`, and only failed later when
 the library preload (mode 5/9) parsed the same text. Observed exactly that way before the fix.
 

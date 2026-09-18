@@ -8,7 +8,7 @@ artifact directory; compiled artifacts SHALL default under a build directory rat
 source tree. The manifest MAY list any number of libraries. Resolving an imported library
 that has no manifest entry SHALL be a compile-time error naming the missing library. The
 standard library `(scheme base)` SHALL be resolvable through the manifest like any other
-library, so both doors build/load it through the same machinery.
+library, so both paths build/load it through the same machinery.
 
 The manifest MAY additionally contain **program entries** of the form
 `(program NAME (source S) [(output O)])`, where `NAME` is a bare symbol naming a

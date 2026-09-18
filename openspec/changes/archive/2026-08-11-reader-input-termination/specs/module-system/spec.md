@@ -30,8 +30,8 @@ than one form.
 
 #### Scenario: A second top-level form is reported, not ignored
 
-- **WHEN** a door locates a manifest whose text is two top-level lists, each holding one entry
-- **THEN** the door reports an error naming the manifest and that it holds two top-level forms, and
+- **WHEN** a path locates a manifest whose text is two top-level lists, each holding one entry
+- **THEN** the path reports an error naming the manifest and that it holds two top-level forms, and
   exits non-zero — rather than resolving only the first list's entries
 
 #### Scenario: The dropped entry is not reported as an unresolved import
@@ -43,7 +43,7 @@ than one form.
 
 #### Scenario: A single-form manifest is unaffected
 
-- **WHEN** a door locates a well-formed manifest — one top-level list of any number of entries,
+- **WHEN** a path locates a well-formed manifest — one top-level list of any number of entries,
   with any surrounding whitespace and comments
 - **THEN** it resolves every entry in that list, exactly as before
 
@@ -53,15 +53,15 @@ than one form.
 
 A manifest file that exists and is readable but contains no datum — a zero-byte file, a file of
 only whitespace, or a file of only comments — SHALL be equivalent to a manifest that declares no
-entries. It SHALL NOT be an error to *locate* such a manifest, and no door SHALL fail on account
-of one except where that door requires an entry it cannot find, in which case it SHALL report the
+entries. It SHALL NOT be an error to *locate* such a manifest, and no path SHALL fail on account
+of one except where that path requires an entry it cannot find, in which case it SHALL report the
 absence rather than terminate abnormally.
 
 This extends "Finding no manifest at all SHALL remain non-fatal" to the case where a manifest is
-found but declares nothing: the two SHALL be indistinguishable to every door in what they resolve,
+found but declares nothing: the two SHALL be indistinguishable to every path in what they resolve,
 differing only in narration, which continues to name the manifest that was located.
 
-No door SHALL terminate on a signal, and no door SHALL exit without a diagnostic, for any manifest
+No path SHALL terminate on a signal, and no path SHALL exit without a diagnostic, for any manifest
 text.
 
 A manifest that is *truncated* — one whose text ends inside an unterminated list or string — SHALL
@@ -73,7 +73,7 @@ construct it left open, rather than resolving as though the missing entries were
 
 #### Scenario: An entryless manifest resolves like no manifest
 
-- **WHEN** a door locates an `emit-libs.scm` that is empty, whitespace-only, or comment-only
+- **WHEN** a path locates an `emit-libs.scm` that is empty, whitespace-only, or comment-only
 - **THEN** it resolves the same set of libraries it would have resolved had no manifest been found
   — the baked set alone — and narrates the manifest it located
 
@@ -88,24 +88,24 @@ construct it left open, rather than resolving as though the missing entries were
 - **WHEN** `emit run prog.scm` is invoked with an entryless manifest present and `prog.scm` imports
   a library that is neither baked nor declared
 - **THEN** import resolution reports a compile-time error naming the unresolved library, and the
-  door exits non-zero without crashing
+  path exits non-zero without crashing
 
 #### Scenario: A library source holding no datum is reported, not crashed on
 
 - **WHEN** a manifest names a library whose source file exists but holds no datum — a zero-byte file,
   whitespace only, or comments only — and a program imports that library
-- **THEN** the door reports a compile-time error naming that source as containing no
+- **THEN** the path reports a compile-time error naming that source as containing no
   `define-library`, and exits non-zero without crashing
 
-#### Scenario: A manifest that is not a list of entries does not crash a door
+#### Scenario: A manifest that is not a list of entries does not crash a path
 
-- **WHEN** a door locates a manifest whose top-level form is not a proper list — a bare symbol, a
+- **WHEN** a path locates a manifest whose top-level form is not a proper list — a bare symbol, a
   number, a string, or an improper list such as `(a . b)`
-- **THEN** the door resolves no entries from it and exits with a status it chose, never on a signal
+- **THEN** the path resolves no entries from it and exits with a status it chose, never on a signal
 
 #### Scenario: A truncated manifest is reported, not built from
 
-- **WHEN** a door locates a manifest whose text is `((program p (source "hello.scm") (output "h")`
+- **WHEN** a path locates a manifest whose text is `((program p (source "hello.scm") (output "h")`
   — one closing paren short — and a program is built
-- **THEN** the door reports the unterminated list and exits non-zero, rather than resolving the
+- **THEN** the path reports the unterminated list and exits non-zero, rather than resolving the
   entry and writing an executable

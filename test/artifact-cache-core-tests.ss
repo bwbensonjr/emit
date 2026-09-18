@@ -1,7 +1,7 @@
 ;;; artifact-cache-core-tests.ss -- modes 14/15 round-trip (change: baked-set-artifact-cache).
 ;;;
 ;;; The register-from-prebuilt path has to be indistinguishable from the compile path
-;;; (spec: artifact-cache, "The cache never changes what a door produces"), and the cheapest
+;;; (spec: artifact-cache, "The cache never changes what a path produces"), and the cheapest
 ;;; way to hold that is to compile a library, serialize what it registered, register THAT
 ;;; into a fresh session, and require the two registrations to be equal.
 ;;;
@@ -144,7 +144,7 @@
 
 ;; An entry whose imports are not registered yet is DEFERRED, not applied and not refused
 ;; (change: chez-free-unit-pipeline, design D13).  A cache hit would otherwise be order-blind
-;; exactly where compiling is not: the REPL door runs each unit's __init as it adds it, so a
+;; exactly where compiling is not: the REPL runs each unit's __init as it adds it, so a
 ;; unit registered ahead of one it reads globals from would initialize against empty slots.
 ;; The host's fixpoint loop already retries this status -- it is mode 4's.
 (init-session "")

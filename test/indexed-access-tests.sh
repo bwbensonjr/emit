@@ -10,7 +10,7 @@
 #   * out-of-range WRITES do not reach memory, and the observable is a NEIGHBOURING
 #     object: a store that trapped after landing is indistinguishable from one that
 #     never happened unless something else's contents are checked afterwards, which
-#     is why that case runs in the REPL (the one door that survives a trap and can
+#     is why that case runs in the REPL (the one path that survives a trap and can
 #     still be asked what `b` holds);
 #   * NEGATIVE indices trap -- they used to read backwards from the object;
 #   * `substring` validates both bounds AND their order; the reversed pair used to
@@ -24,7 +24,7 @@
 #     which is the case a plausible `str_len` guard wrongly rejects;
 #   * IN-RANGE access is unchanged, checked first: an off-by-one in a bound test
 #     breaks these before it breaks any trap;
-#   * both doors agree -- the in-process runner and a standalone executable report
+#   * both execution paths agree -- the in-process runner and a standalone executable report
 #     the same diagnostic -- and the runner's host survives the trap.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.
@@ -246,10 +246,10 @@ trap_msg "an accessor passed as a higher-order argument" \
   '(display (map (lambda (i) (vector-ref (vector 1 2 3) i)) (list 0 1 5)))' \
   "vector-ref: index out of range: 5 (length 3)"
 
-# --- the REPL door: the host survives, and the NEIGHBOUR is unmodified -------
+# --- the REPL: the host survives, and the NEIGHBOUR is unmodified -------
 # This is the case that distinguishes a real fix from one that traps after the
-# store has already landed.  The REPL is the only door that can be asked what `b`
-# holds afterwards -- under `emit run` the trap ends the program, so the store's
+# store has already landed.  The REPL is the only path that can be asked what `b`
+# holds afterwards -- under emit run the trap ends the program, so the store's
 # effect is unobservable.  Before the guards this session printed `#(7 8 9 999)`-
 # style corruption or a modified `b` and never trapped at all.
 repl "an out-of-range write leaves a neighbouring object untouched" \
@@ -273,7 +273,7 @@ repl "the session survives each accessor's trap in turn" \
 EOF
 
 # --- a standalone executable reports the same thing and exits non-zero -------
-# `emit build` delivers a named program from a manifest, so the case needs one.
+# emit build delivers a named program from a manifest, so the case needs one.
 # Absolute source paths: a manifest's relative paths resolve against its own
 # directory (change: manifest-search-path), and this manifest lives in $TMP.
 cat > "$TMP/exe.scm" <<'EOF'

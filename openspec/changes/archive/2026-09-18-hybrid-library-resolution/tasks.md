@@ -7,7 +7,7 @@
   manifest overrides; verify the focused resolver tests fail for the intended missing behavior.
 - [x] 1.2 Add mixed-provider project fixtures in which a conventional project library imports an
   installed-style library and a manifest-mapped exception; verify the fixtures define one expected
-  dependency order and result for every door.
+  dependency order and result for every path.
 
 ## 2. Shared Resolution Machinery
 
@@ -28,7 +28,7 @@
 ## 3. CLI and Resolver Configuration
 
 - [x] 3.1 Add repeatable `-L` / `--library-path`, `EMIT_LIBRARY_PATH` parsing with host separators,
-  empty-element rejection, and `--no-library-paths` to run, repl, build, and lib; verify each door's
+  empty-element rejection, and `--no-library-paths` to run, repl, build, and lib; verify each path's
   option tests cover ordering, environment fallback, opt-out, and unknown-option behavior.
 - [x] 3.2 Construct project and installed default roots from the selected project manifest,
   invocation directory, resolved executable, and compiled prefix in the specified precedence;
@@ -49,7 +49,7 @@
 - [x] 4.3 Validate cache entries only after provider selection and against the selected source
   identity; verify warm/cold output is byte-identical and a cached unit from an overridden source is
   rejected rather than changing precedence.
-- [x] 4.4 Extend cross-door equivalence tests so one source resolved through a manifest and through a
+- [x] 4.4 Extend cross-path equivalence tests so one source resolved through a manifest and through a
   root produces byte-identical unit IR and compile-time interfaces; verify the new comparisons pass
   through the Chez and Chez-free paths.
 
@@ -95,7 +95,7 @@
 ## 8. System and User Documentation
 
 - [x] 8.1 Update `docs/MODULES.md` as the system reference for provider records, exact precedence,
-  safe path derivation, source-name validation, mixed dependency DAGs, artifacts, and cross-door
+  safe path derivation, source-name validation, mixed dependency DAGs, artifacts, and cross-path
   byte identity; verify every resolver example corresponds to an automated fixture.
 - [x] 8.2 Update the REPL architecture sections in `docs/MODULES.md` and relevant source/toolchain
   documentation to distinguish eager manifest registration, on-demand conventional registration,
@@ -106,7 +106,7 @@
 - [x] 8.4 Rewrite the user path in `docs/PROJECTS.md` to lead with `main.scm` plus conventional
   `lib/<components>.sld`, direct run/build commands, and no manual library mappings; then document
   manifests for exceptional paths, overrides, named programs, artifact directories, and hermetic
-  operation, and verify every published command succeeds in the project-door test fixture.
+  operation, and verify every published command succeeds in the project-path test fixture.
 - [x] 8.5 Update `README.md`, command help, installation guidance, and any stale manifest-only
   examples to explain `-L`, `EMIT_LIBRARY_PATH`, default roots, opt-out flags, direct builds, and
   shipped-library fallback; verify `rg` finds no remaining claim that every non-baked library is
@@ -120,7 +120,7 @@
   compiler-source edits during verification, and verify the self-hosting fixed point converges with
   a coherent `bootstrap/` diff.
 - [x] 9.3 Run `./run-all-tests.sh` after regeneration and verify every default suite passes,
-  including hybrid resolver, project-door, module, REPL, installation, cache, output, and
+  including hybrid resolver, project-path, module, REPL, installation, cache, output, and
   byte-identity coverage.
 - [x] 9.4 Run the independent `./run-dev-tests.sh` suites after regeneration and verify each passes;
   after the implementation and regenerated IR are committed, rerun `test/trust-check.sh` and verify

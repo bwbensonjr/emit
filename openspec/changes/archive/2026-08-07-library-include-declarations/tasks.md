@@ -32,17 +32,17 @@
 ## 2. The reader side-channel and the Chez driver's reader (design D2, D3, D5)
 
 - [x] 2.1 Add `*include-reader*` and `set-include-reader!` to `src/core.ss`, with a default stub
-      raising `include: this door installed no source reader ("f.scm")`. Wire the three `include`
+      raising `include: this path installed no source reader ("f.scm")`. Wire the three `include`
       declarations in the pre-pass to call it with the filename **as written**; keep every path
       operation out of the core.
 - [x] 2.2 Add the include stack (design D5/D9) — the resolved path of each file currently being
       expanded — and the cycle diagnostic naming the cycle.
-      → The stack lives in the CORE after all, holding the door's opaque tokens. It cannot live in
+      → The stack lives in the CORE after all, holding the path's opaque tokens. It cannot live in
       the reader: a nested include is expanded *after* the reader returned, so the reader's dynamic
       extent is not the file's. The reader now answers `(TOKEN . FORMS)` and the core threads TOKEN
       back as the next call's BASE, which is also what makes a nested include resolve beside its own
       file. The core still never interprets a token — design D3's rule is intact and D5/D9 are
-      revised to say tokens rather than "the door's stack".
+      revised to say tokens rather than "the path's stack".
 - [x] 2.3 Install a Chez reader in `src/compile.ss`: resolve relative to the including file's
       directory, absolute as written, stdin against the current directory; read with the driver's
       existing `read-forms`. Set the home from the source path in `compile-file` (`:237`) and from
@@ -61,23 +61,23 @@
 - [x] 3.3 Handle `%read-file` returning `#f` (missing/unopenable file) as the named error from 2.4,
       never as an empty string — the runtime distinguishes them precisely so this layer can.
 
-## 4. Door plumbing: telling the compiler where the source came from (design D4, D11)
+## 4. Path plumbing: telling the compiler where the source came from (design D4, D11)
 
 - [x] 4.1 Add the "set source home" mode to `src/repl-core.ss`'s dispatch (`:766`, alongside modes
       0–12), installing the Chez-free reader for the session on first use.
-- [x] 4.2 Call it from `src/emit.cpp` before every source submission: the run door's preload
+- [x] 4.2 Call it from `src/emit.cpp` before every source submission: the `emit run` command's preload
       (mode 4, `preload_user_libraries`, `:502`) with each library's own directory, the program
       compile (mode 7) with the program file's directory or the working directory for stdin,
       `emit lib` (mode 11, `:1467`) with the `.sld`'s directory, and the REPL's eager preload
       (`preload_libraries`, `:951`).
 - [x] 4.3 Set it for the imports query too, and make mode 12 (`repl-source-imports`) run the
-      pre-pass (design D11), so the run door's lazy closure walk sees an import that arrived through
+      pre-pass (design D11), so the `emit run` command's lazy closure walk sees an import that arrived through
       `include-library-declarations` or `cond-expand`.
-- [x] 4.4 Verify each door from a directory **outside** the repo — the failure mode
-      `manifest-search-path` and `baked-set-on-every-door` each had to fix once is a door that
+- [x] 4.4 Verify each path from a directory **outside** the repo — the failure mode
+      `manifest-search-path` and `baked-set-on-every-door` each had to fix once is a path that
       silently resolves against the working directory.
       → Case 2 of the new suite runs `emit run` from a third directory; the project itself lives
-      outside the repo, so every case is that test. All four doors pass.
+      outside the repo, so every case is that test. all four commands pass.
 
 ## 5. Artifact freshness (design D10)
 
@@ -104,14 +104,14 @@
       `test/modules/`: an include that resolved against the working directory would pass from the
       repo root, which is exactly the bug this suite exists to catch. `test/modules/` gained
       nothing.
-- [x] 6.3 Cover every door in that suite — `emit run` through the manifest, `emit build`,
+- [x] 6.3 Cover every path in that suite — `emit run` through the manifest, `emit build`,
       `emit lib`, the REPL's loader — running from a temporary directory outside the repo the way
-      `test/project-door-tests.sh` does.
+      `test/project-command-tests.sh` does.
 - [x] 6.4 Cover the negative cases by message: missing file, include cycle, `(library …)` feature
       requirement, malformed clause, and an import set arriving through an included declarations
       file (which must report the ordinary import-set diagnostic).
 - [x] 6.5 Add an included file that exercises reader corners — brackets, `#| |#`, quasiquote,
-      characters — so the Chez/Emit reader divergence risk is actually under the cross-door
+      characters — so the Chez/Emit reader divergence risk is actually under the cross-path
       equivalence checks rather than assumed away.
       → `geom-corners.scm`: a block comment, bracket `let`, quasiquote with unquote, and a
       character literal — read by Chez under the driver and by Emit's reader in the binary,

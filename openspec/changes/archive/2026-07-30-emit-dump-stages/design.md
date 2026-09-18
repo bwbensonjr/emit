@@ -29,7 +29,7 @@ committed seed already knows how to compile it — the D3 lesson recorded in
 `first-class-primitives`.
 
 Also worth fixing while here: the dump is *incomplete* even under Chez on the path that
-now matters most. `compile-program-with-imports` — what every door takes since the
+now matters most. `compile-program-with-imports` — what every path takes since the
 prelude was re-homed as `(scheme base)` — runs `recognize-let`, `convert-assignments`, and
 `convert-closures` but dumps only `collect-toplevel`, `expand`, `parse+rename+imports`,
 and `lower` (`src/core.ss:387-388`). `repl-lower-form*` (`src/parse.ss:622`) takes no
@@ -41,7 +41,7 @@ dumper at all, so the REPL's per-form lowering is entirely opaque.
 
 - `--dump` on `emit run`, `emit build`, `emit lib`, `emit repl`, and `schemec` — the IL
   after each named pass, on stderr, from the shipped binary with no Chez present.
-- Byte-identical stdout with dumping on or off, on every door.
+- Byte-identical stdout with dumping on or off, on every path.
 - Dump output readable enough to replace the Chez dump in daily use.
 - All seven stages observable on the modular and per-form paths, not just the
   whole-program path.
@@ -72,7 +72,7 @@ Add `%dump-level` → `rt_dump_level()`, a nullary primitive returning a fixnum:
 
 A level rather than a boolean because the Chez driver already has *two* observability
 modes over this one channel (full `--dump` and concise `-v` stage announcements), and the
-Chez-free doors need both to satisfy `tooling-observability`. One probe serves both.
+Chez-free paths need both to satisfy `tooling-observability`. One probe serves both.
 
 *Refined during implementation:* the level carries a **fourth** value, `3` = full dump
 including library units, so D7's `--dump-all` rides the same probe instead of adding a
@@ -120,7 +120,7 @@ the same parameter that Chez's `dump` travels.
 
 This preserves the `compiler-pipeline` requirement that the pure core be separable from
 the I/O driver — the core stays port-free and effect-free; only the entry layer probes the
-environment and writes stderr. It also means the Chez driver and the embedded doors remain
+environment and writes stderr. It also means the Chez driver and the embedded paths remain
 *two dumpers over one plumbing*, not two plumbings.
 
 ### D4 — The pretty-printer is compiler-internal, not prelude
@@ -244,7 +244,7 @@ measured against.
   the first real REPL dump.
 - **Environment variable name.** `EMIT_DUMP_LEVEL` (explicit, matches the value it
   carries) vs `EMIT_DUMP` (shorter, matches `EMIT_NO_PRELUDE`'s boolean-ish style). Leaning
-  `EMIT_DUMP_LEVEL` since it holds `0|1|2`, with `--dump` as the ergonomic front door.
+  `EMIT_DUMP_LEVEL` since it holds `0|1|2`, with `--dump` as the ergonomic CLI interface.
 - **Whether `emit build` should dump at all,** given it delegates to the same front half as
   `emit run --emit`. Cheap to include and consistent; the only argument against is one more
   flag on one more verb.

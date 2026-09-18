@@ -1,6 +1,6 @@
 ## 1. Pin the defect before changing anything
 
-- [x] 1.1 Add failing fixtures to `test/project-door-tests.sh` for `emit build` with an absent,
+- [x] 1.1 Add failing fixtures to `test/project-command-tests.sh` for `emit build` with an absent,
       empty, whitespace-only, and comment-only manifest; assert exit is non-zero **and below 128**
       (no signal death) and that a diagnostic reached stderr
 - [x] 1.2 Add the same four fixtures for `emit run` with a program importing only baked libraries,
@@ -37,7 +37,7 @@
 - [x] 3.2 Update the mode-10 comment block (`src/repl-core.ss:466-472`) to document the new
       contract, noting it now matches modes 4 and 8
 - [x] 3.3 Update `resolve_program` (`src/emit.cpp:633`) to read the status pair via the existing
-      `status_of` / `door_msg` helpers
+      `status_of` / `path_msg` helpers
 
 ## 4. C++ side: name the cause (design D1, D3)
 

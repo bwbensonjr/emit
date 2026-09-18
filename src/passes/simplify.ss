@@ -251,7 +251,7 @@
 ;; cleverly in a single traversal, run the whole rewrite to a fixed point.  The
 ;; cap is a runaway guard, not a tuning knob: the pass is a pure function of the
 ;; term, so the same input reaches the same fixed point in the same number of
-;; rounds on every host and every door (the cross-door byte-identity guarantee).
+;; rounds on every host and every compilation path (the cross-path byte-identity guarantee).
 (define sfy-max-rounds 10)
 
 (define (simplify e)

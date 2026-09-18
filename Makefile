@@ -85,7 +85,7 @@ schemec:    $(SCHEMEC)
 # (-rdynamic) so JIT'd code resolves them here.  It links $(BAKED_LL) too: the compiler is
 # re-homed on the baked library set (change: compiler-bootstrap-rehome), so its IR
 # references scheme.base:* / emit.internal:* externals resolved against those committed
-# libraries, each initialized once via its __init guard.  The run/repl doors were formerly
+# libraries, each initialized once via its __init guard.  The run/REPL commands were formerly
 # the separate build/scheme-run and build/repl-host binaries, merged here; build/lib forks
 # clang.
 $(EMIT): build/emit.o build/runtime-host.o $(EMBED_REPL_LL) $(BAKED_LL) Makefile
@@ -114,7 +114,7 @@ build/runtime-host.o: src/runtime/runtime.c Makefile | build
 #
 # EMIT_DEFAULT_CC/_GC_INC/_GC_LIB record the toolchain THIS build resolved -- the same
 # llvm-env.sh values every other recipe here uses -- as the LOWEST-precedence source
-# for `emit build`'s link (change: installed-emit-completeness, issue #36).  They are
+# for emit build's link (change: installed-emit-completeness, issue #36).  They are
 # reached only when neither an explicit CC/GC_* nor a run-time llvm-env.sh discovery
 # produced an answer, which is the keg-only-LLVM case: nothing on PATH to find.  They
 # describe the BUILD MACHINE's toolchain, so they follow $(CC)/$(GC_*) and not
@@ -164,8 +164,8 @@ catalogue:
 # format: the covered set of hand-authored Scheme sources (change:
 # pitch-source-formatting)
 # ===========================================================================
-# Two doors over one policy.  tools/format.sh holds the covered-set resolution,
-# the dialect groups, and the pinned formatter identity, so the doors and the
+# two paths over one policy.  tools/format.sh holds the covered-set resolution,
+# the dialect groups, and the pinned formatter identity, so the paths and the
 # commit gate cannot disagree about what is covered.
 #
 # The formatter is an OPTIONAL DEVELOPER TOOL.  Emit compiles pitch, so nothing
@@ -175,7 +175,7 @@ catalogue:
 #
 # Exit status is the script's: 1 means a covered file would change, 2 means the
 # invocation or the environment is wrong.  The presence check below is the
-# door's own, and exists only to add the install hint; tools/format.sh holds the
+# path's own, and exists only to add the install hint; tools/format.sh holds the
 # authoritative check, so calling it directly is equally protected.
 .PHONY: format format-check
 format:
@@ -209,7 +209,7 @@ install-hooks:
 	  say "install-hooks tools/hooks/pre-commit -> $$dst  [staged covered files, skips without pitch]"
 
 # ===========================================================================
-# install: the binary PLUS everything the doors need beside it -- the libraries
+# install: the binary PLUS everything the paths need beside it -- the libraries
 # (change: manifest-search-path, issue #35) and the support files (change:
 # installed-emit-completeness, issue #36).
 # ===========================================================================
@@ -217,8 +217,8 @@ install-hooks:
 # <prefix>/share/emit/lib. The compatibility manifest remains beside that root for
 # exact mappings and older projects; executable-relative lookup resolves symlinks.
 #
-# LIBRARY SOURCE is what ships -- an installed door compiles a needed library on
-# demand exactly as an in-repo door does.  Compiled artifacts (.ll/.exports) are
+# LIBRARY SOURCE is what ships -- an installed command compiles a needed library on
+# demand exactly as an in-repo command does.  Compiled artifacts (.ll/.exports) are
 # deliberately NOT part of the install contract; that would put artifact staleness on
 # the install surface.
 #
@@ -232,10 +232,10 @@ install-hooks:
 # created from the same lists, so adding a library to either needs no edit here.
 #
 # THE SUPPORT FILES ship too (change: installed-emit-completeness, issue #36).  The
-# build door needs two files that are neither the binary nor a library --
+# emit build command needs two files that are neither the binary nor a library --
 # tools/llvm-env.sh, which discovers the C toolchain, and src/runtime/runtime.c, which
-# is compiled into every delivered executable -- and without them `emit build` was the
-# one door that did not work from an install.  tools/log.sh is here because
+# is compiled into every delivered executable -- and without them emit build was the
+# one path that did not work from an install.  tools/log.sh is here because
 # llvm-env.sh SOURCES it for its narration: shipping the script alone would install
 # one that fails on its first line.
 #

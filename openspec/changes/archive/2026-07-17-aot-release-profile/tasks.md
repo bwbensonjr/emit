@@ -5,14 +5,14 @@
 
 ## 2. Optimize at the AOT link (release profile)
 
-- [x] 2.1 Add an optimizing step (opt/`-O2`) to the AOT backend over the linked module set, gated to the AOT/build door; keep the JIT and bitcode paths consistent in optimization level.
+- [x] 2.1 Add an optimizing step (opt/`-O2`) to the AOT backend over the linked module set, gated to the AOT/`emit build` command; keep the JIT and bitcode paths consistent in optimization level.
 - [x] 2.2 Confirm the emitter's textual IR and committed `bootstrap/*.ll` are unchanged (optimization is link/codegen-time), so IR byte-identity and self-hosting fixed-point checks are unaffected.
 
 ## 3. Reachability tree-shaking (closed-world, AOT-only)
 
 - [x] 3.1 Implement a root-set-driven reachability walk over the units' export/reference graph (prelude = one unit; not special-cased); input = explicit root set (program entry + top-level references).
 - [x] 3.2 Generate a program-specific pruned `__init` that constructs only the reachable bindings, in dependency order, so unreachable `code_N` become genuinely unreferenced; let `globaldce`/`-O2` strip them.
-- [x] 3.3 Keep the dev/REPL door on the full cached units (open world); apply shaking only on the AOT/build door. One compiler core; no REPL behavior change.
+- [x] 3.3 Keep the dev/REPL on the full cached units (open world); apply shaking only on the AOT/`emit build` command. One compiler core; no REPL behavior change.
 
 ## 4. Tests
 

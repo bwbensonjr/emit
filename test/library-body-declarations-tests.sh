@@ -53,19 +53,19 @@ echo "library body declarations (issue #16)"
 # 42 = 40 stored by the first command, +2 by a procedure defined BETWEEN the two
 # commands and called by the second; 1 = the first command ran before the second.
 # Before this change the body's commands were dropped and this was (0 0).
-check "run door: a body's commands run, in source order" "$MOD/prog-cmdlib.scm" '(42 1)'
+check "emit run command: a body's commands run, in source order" "$MOD/prog-cmdlib.scm" '(42 1)'
 
 # --- 2. define-record-type works in a library body ---------------------------
 # The last element comes from a procedure INSIDE the library that uses the accessors,
 # which is the half that failed with "unbound variable pt-x".
-check "run door: a library declares, uses and exports a record type" \
+check "emit run command: a library declares, uses and exports a record type" \
       "$MOD/prog-reclib.scm" '(7 8 #t 15)'
 
 # --- 3. a library TOP-LEVEL set! takes effect (library-toplevel-set interaction) --
-check "run door: a top-level set! in a library body takes effect" \
+check "emit run command: a top-level set! in a library body takes effect" \
       "$MOD/prog-tlsetlib.scm" '(101 1001)'
 
-# --- 4. the AOT door, where the tree-shake runs ------------------------------
+# --- 4. the AOT path, where the tree-shake runs ------------------------------
 # Absolute source paths: this manifest lives in $TMP, and a manifest's relative paths
 # resolve against its own directory (change: manifest-search-path).
 BMAN="$TMP/build.scm"
@@ -85,17 +85,17 @@ aot () {  # <name> <program-entry> <exe> <expected>
     if [ "$got" = "$4" ]; then ok "$1 => $got"; else bad "$1 => $got (expected $4)"; fi
   else bad "$1 (build failed)"; sed 's/^/         /' "$TMP/b.log"; fi
 }
-aot "AOT door: commands survive build + link"      cmd-app "$TMP/cmd-app" '(42 1)'
-aot "AOT door: record type survives build + link"  rec-app "$TMP/rec-app" '(7 8 #t 15)'
-aot "AOT door: top-level set! survives build + link" tls-app "$TMP/tls-app" '(101 1001)'
+aot "AOT path: commands survive build + link"      cmd-app "$TMP/cmd-app" '(42 1)'
+aot "AOT path: record type survives build + link"  rec-app "$TMP/rec-app" '(7 8 #t 15)'
+aot "AOT path: top-level set! survives build + link" tls-app "$TMP/tls-app" '(101 1001)'
 
-# --- 5. the REPL door --------------------------------------------------------
+# --- 5. the REPL --------------------------------------------------------
 out="$(printf '(import (cmdlib))\n(get)\n(import (reclib))\n(sum-fields (make-pt 7 8))\n(import (tlsetlib))\n(f 1)\n' \
         | build/emit repl --manifest "$MAN" 2>/dev/null | tr -d ' >' | grep -v '^$' | grep -v 'Emit')"
 if [ "$out" = "$(printf '42\n15\n101')" ]; then
-  ok "REPL door: all three libraries behave as on the other doors"
+  ok "REPL: all three libraries behave as on the other paths"
 else
-  bad "REPL door (got: $(printf '%s' "$out" | tr '\n' '/'))"
+  bad "REPL (got: $(printf '%s' "$out" | tr '\n' '/'))"
 fi
 
 # --- 6. emitted shape: one __init_N per body form, called in source order ----

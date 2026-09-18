@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# project-door-tests.sh -- every door works in a USER PROJECT directory
-# (change: baked-set-on-every-door; issue #39 plus the `emit lib` half found with it).
+# project-command-tests.sh -- every command works in a USER PROJECT directory
+# (change: baked-set-on-every-door; issue #39 plus the emit lib half found with it).
 #
 # The project this builds is the one docs/PROJECTS.md walks through, so the commands
 # and values that document prints are the ones asserted here: two libraries (one
 # importing (scheme base), one importing that library plus (scheme inexact)), a
 # program, and a manifest naming ONLY the project's own libraries and its program
 # entry.  A user's manifest has no business naming (scheme base) or the internal
-# substrate -- they are baked into the binary -- and before this change two doors
+# substrate -- they are baked into the binary -- and before this change two commands
 # required exactly that:
 #
 #   emit repl : resolved (scheme base) from the manifest (eager preload, mode 5), so
@@ -19,7 +19,7 @@
 #               library importing (scheme base) failed --
 #                 emit lib: repl: unbound variable map
 #
-# Chez-FREE (default suite).  Run from the repo root:  test/project-door-tests.sh
+# Chez-FREE (default suite).  Run from the repo root:  test/project-command-tests.sh
 set -u
 cd "$(dirname "$0")/.."
 . tools/log.sh
@@ -157,8 +157,8 @@ else bad "emit lib (transitive imports) failed"; sed 's/^/         /' "$TMP/l2.l
 # 13. One compile-unit core: emit lib's unit IR == the unit `emit run --emit` emits.
 (cd "$PROJ" && "$EMITABS" run --emit < lib/my/stats.sld) >"$TMP/via-run.ll" 2>/dev/null
 if cmp -s "$TMP/via-run.ll" "$PROJ/build/lib/my.stats.ll"; then
-  ok "emit lib .ll byte-identical to the run door's unit"
-else bad "emit lib .ll differs from the run door's unit"; fi
+  ok "emit lib .ll byte-identical to the emit run command's unit"
+else bad "emit lib .ll differs from the emit run command's unit"; fi
 
 # 14. An unresolvable import is reported and writes nothing.
 cat > "$PROJ/lib/broken.sld" <<'EOF'
@@ -176,7 +176,7 @@ else
   else bad "emit lib wrote an artifact despite failing"; fi
 fi
 
-# 15. Diagnostics name the door, not the compiler's internal REPL orchestration.
+# 15. Diagnostics name the command, not the compiler's internal REPL orchestration.
 cat > "$PROJ/lib/unbound.sld" <<'EOF'
 (define-library (unbound)
   (import (scheme base))
@@ -192,7 +192,7 @@ echo
 echo "a manifest that DOES name the baked members still works (no double load)"
 
 # The repository's own emit-libs.scm names (scheme base) and (emit internal) -- the Chez
-# driver resolves them from there -- so every in-repo door start exercises the
+# driver resolves them from there -- so every in-repo command start exercises the
 # already-loaded guard.  A second copy would collide in the JIT rather than fail quietly.
 cat > "$PROJ/baked.scm" <<EOF
 ((library (emit internal)  (source "$REPO/lib/emit/internal.sld"))
@@ -253,7 +253,7 @@ else
   sed 's/^/         /' "$TMP/r6.err"
 fi
 
-# 21. The run door reports it when the program imports the missing library, and exits non-zero.
+# 21. the emit run command reports it when the program imports the missing library, and exits non-zero.
 printf '(import (ghost))\n(quote x)\n' > "$PROJ/ghost.scm"
 if (cd "$PROJ" && "$EMITABS" run ghost.scm --manifest typo.scm) >"$TMP/g.log" 2>&1; then
   bad "emit run should fail on an unreadable library source"
@@ -276,7 +276,7 @@ BARE="$TMP/bare-proj"
 mkdir -p "$BARE"
 printf '(display (+ 1 2))\n(newline)\n' > "$BARE/hello.scm"
 
-# 22. `emit build` with NO manifest at all names the file it looked for and exits cleanly.
+# 22. emit build with NO manifest at all names the file it looked for and exits cleanly.
 (cd "$BARE" && rm -f emit-libs.scm && "$EMITABS" build) >"$TMP/e0.log" 2>&1
 rc=$?
 if [ "$rc" -ne 0 ] && [ "$rc" -lt 128 ] && grep -q 'no manifest found' "$TMP/e0.log" \
@@ -327,7 +327,7 @@ else
   bad "emit build library-only manifest (exit $rc)"; sed 's/^/         /' "$TMP/e27.log"
 fi
 
-# 28-30. The run door: an entryless manifest resolves like NO manifest, which module-system
+# 28-30. the emit run command: an entryless manifest resolves like NO manifest, which module-system
 #        requires to stay non-fatal for a program importing only baked-in libraries.
 n=28
 for shape in empty whitespace comment; do
@@ -348,8 +348,8 @@ done
 
 # 31. An UNRESOLVED import is reported by import resolution and NAMES the library, in all
 #     three manifest states.  The program path used to report the constant "program imports a
-#     library not found in the manifest" -- naming nothing -- while `emit lib` named the
-#     library correctly, so the same failure read differently depending on the door.
+#     library not found in the manifest" -- naming nothing -- while emit lib named the
+#     library correctly, so the same failure read differently depending on the command.
 #     module-system requires the name ("reported by import resolution, naming the unresolved
 #     library"); only the library half implemented it.
 printf '(import (absent))\n(display 1)\n' > "$BARE/needs.scm"
@@ -371,7 +371,7 @@ for state in none entryless lacking; do
   n=$((n+1))
 done
 
-# 31d. `emit lib`'s message, which was already correct, must not have changed.
+# 31d. emit lib's message, which was already correct, must not have changed.
 printf '(define-library (x)\n  (import (absent))\n  (export f)\n  (begin (define (f) 1)))\n' \
   > "$BARE/x.sld"
 : > "$BARE/emit-libs.scm"
@@ -430,7 +430,7 @@ done
 echo
 echo "a truncated or multi-form manifest (issues #66, #67)"
 
-# 35. `emit build` on a truncated manifest used to WRITE AN EXECUTABLE and exit 0 -- the worst
+# 35. emit build on a truncated manifest used to WRITE AN EXECUTABLE and exit 0 -- the worst
 #     shape of this defect, because the manifest is data the compiler acts on rather than text
 #     it merely reads.  The entry below is one closing paren short.
 BUILDP="$TMP/buildp"

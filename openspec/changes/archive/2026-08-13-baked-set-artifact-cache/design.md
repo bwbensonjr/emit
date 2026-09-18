@@ -33,7 +33,7 @@ gap.  That was a conflation of two different invocations.  Measured properly:
 | `emit repl`, no manifest, `--no-prelude` | 0.05 s | no |
 
 No case both starts instantly and has a standard library.  The REPL bakes from `*prelude-source*`
-like the run door (~1.9 s), which is consistent and correct.  So there is **no** cheap
+like the `emit run` command (~1.9 s), which is consistent and correct.  So there is **no** cheap
 reuse-the-linked-unit win to design around, and **no** fidelity hazard to fix first.  The design
 below therefore proceeds on the ordinary caching path.
 
@@ -47,7 +47,7 @@ issue #101.
 
 **Goals:**
 
-- Recover the ~1.43 s Scheme-level compile of the standard library on every Chez-free door.
+- Recover the ~1.43 s Scheme-level compile of the standard library on every Chez-free path.
 - One mechanism serving the baked set and user libraries, and behaving the same in a checkout and an
   install.
 - Transparency that is *verified* by construction, not asserted.
@@ -98,10 +98,10 @@ Two follow-ups came out of measuring it:
   expensive at the call site, which is what made the ordering easy to get wrong.
 - **The target header is *not* part of the key, and does not need to be.** The Chez driver's stamp
   hashes the compiler sources *plus* the host target header, because it prepends that header to every
-  `.ll`. The obvious worry is that the Chez-free key omits it. Checked: the Chez-free door emits **no**
+  `.ll`. The obvious worry is that the Chez-free key omits it. Checked: the Chez-free path emits **no**
   `target datalayout` / `target triple` lines at all (0 in emitted IR, and none in a cached unit) — the
   JIT infers the host and the AOT link passes `-Wno-override-module`. So there is no header in the
-  cached artifact that could go stale, and the executable digest alone is a complete key for this door.
+  cached artifact that could go stale, and the executable digest alone is a complete key for this path.
 
 *Alternatives:* a stamp constant baked in at build time (zero I/O, but needs build plumbing and can
 silently go stale if a build path forgets to regenerate it — a possible later optimization once the
@@ -123,7 +123,7 @@ all** (compile from source, silently, and succeed). `EMIT_CACHE` follows the est
 `EMIT_MANIFEST` / `EMIT_PREFIX` naming.
 
 A checkout deliberately does **not** get special treatment — it does not reuse `build/lib`. One
-location means a door behaves identically in a checkout and from an install, which is the same
+location means a path behaves identically in a checkout and from an install, which is the same
 argument dev→ship fidelity makes elsewhere in this project; two locations would mean two code paths
 and a class of bug that only appears for installed users.
 
@@ -142,7 +142,7 @@ would invite a set that is individually fresh and mutually inconsistent.
 
 ### D6 — Transparency is verified by a cold-vs-warm byte-identity check
 
-The specs require that no door's output depend on cache state. That is testable directly: compile the
+The specs require that no path's output depend on cache state. That is testable directly: compile the
 demo corpus with an empty cache and again with a warm one and require byte-identical emitted IR,
 in the discipline `test/module-scaffold-baseline.sh` already establishes for IR stability. This is
 the load-bearing test of the change; the timing improvement is the easy part to confirm.
@@ -205,8 +205,8 @@ asked. Levels 1 and 2 are unaffected, because they deliberately do not dump libr
 (`emit-dump-stages` design D7) — for them a reused entry changes nothing that is printed, and the
 suite asserts that direction too.
 
-This is the one place where cache state legitimately changes what appears on a door's *stderr*. It
-does not weaken the transparency requirement, which is about what a door produces: emitted IR, values,
+This is the one place where cache state legitimately changes what appears on a path's *stderr*. It
+does not weaken the transparency requirement, which is about what a path produces: emitted IR, values,
 and diagnostics stay byte-identical, and `dump-stages-tests` separately asserts that dumping changes
 no output byte. `--dump-all` becomes slow again, which is correct for a debugging flag.
 
@@ -234,7 +234,7 @@ quietly breaking the second. This one was caught by an existing suite rather tha
 - **The win is easy to mis-measure** → the acceptance figures must be taken on a comparatively idle
   machine, and reported as cold-vs-warm on the same machine in the same session. The load caveat now
   recorded in P3 applies to any re-measurement.
-- **Trade-off accepted:** ~1–2 ms of hashing on every door invocation, including the cold path where
+- **Trade-off accepted:** ~1–2 ms of hashing on every path invocation, including the cold path where
   it buys nothing, in exchange for a key that cannot be wrong.
 
 ## Migration Plan

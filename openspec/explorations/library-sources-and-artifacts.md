@@ -13,7 +13,7 @@ Captured: 2026-08-03 (against `main` at `ab5aa0d`)
 ## Why this note exists
 
 Three open issues each answer part of a question none of them asks on its own: **what is the
-relationship between a library's source, the artifact a door consumes, and the manifest?** #18 adds
+relationship between a library's source, the artifact a path consumes, and the manifest?** #18 adds
 a third way source becomes a library body (`include` splices before anything else runs), #31
 collapses two derivations of `(scheme base)` into one, and #33 multiplies the number of libraries.
 Deciding the shared question once is what keeps them from re-litigating it three times.
@@ -21,7 +21,7 @@ Deciding the shared question once is what keeps them from re-litigating it three
 ## Today's picture
 
 ```
-   SOURCE                    ARTIFACT                  HOW A DOOR FINDS IT
+   SOURCE                    ARTIFACT                  HOW A HOST FINDS IT
    ══════                    ════════                  ═══════════════════
 
    src/prelude.scm ──gen──▶ lib/scheme/base.sld ──┐
@@ -31,7 +31,7 @@ Deciding the shared question once is what keeps them from re-litigating it three
                           (string in the compiler) └──▶ BAKED: the library form is
                                                         rebuilt in-language by
                                                         scheme-base-library-form
-                                                        (run / build / REPL doors)
+                                                        (run / build / REPLs)
 
    lib/scheme/inexact.sld ──────────────────────────▶ manifest, lazily preloaded
    (hand-written)                                     (transitive closure of imports)
@@ -66,19 +66,19 @@ That is the design showing through rather than a defect: a **baked** library is 
 sits on.
 
 > **AMENDED** (`baked-set-on-every-door`). The axis is right, but the claim that a baked library is
-> CWD-independent held only on the **run** door when this was written. The REPL and `emit lib`
-> resolved `(scheme base)` from the manifest, so on those two doors even a *baked* library was
+> CWD-independent held only on the **run** path when this was written. The REPL and `emit lib`
+> resolved `(scheme base)` from the manifest, so on those two paths even a *baked* library was
 > CWD-dependent — measured from a user project directory, `emit repl` had no standard library at all
 > and `emit lib` could not compile a library that imports one. The RESOLVED note in Finding 2 spotted
-> the REPL half (as #39); the `emit lib` half was never filed. Both are fixed: **every door now
+> the REPL half (as #39); the `emit lib` half was never filed. Both are fixed: **every path now
 > registers the baked set before it consults the manifest**, so Finding 1's sentence is true as
 > written for the first time.
 >
 > Two things that change the map above. A manifest entry naming a baked member is now a no-op on the
-> Chez-free doors (the baked member wins), which is what lets this repository keep the entries the
-> Chez driver needs. And the deeper cause was not door wiring at all: `compile-library-form`
+> Chez-free paths (the baked member wins), which is what lets this repository keep the entries the
+> Chez driver needs. And the deeper cause was not path wiring at all: `compile-library-form`
 > hardcoded empty import tables, so *every* lone-`define-library` compile resolved no imports on any
-> door — the tables are now threaded in. Open question 3 below (manifest as a single file vs. a
+> path — the tables are now threaded in. Open question 3 below (manifest as a single file vs. a
 > library *path*) gained a concrete symptom in the process: a project's own `emit-libs.scm` shadows
 > an installed one entirely, so a project that imports `(scheme inexact)` must name it even on a
 > system where Emit is installed.
@@ -124,10 +124,10 @@ the full standard surface with no files beside it?* — not a compiler one.
 > expected to carry it in `<prefix>/share/emit/`. Two things landed with it that the note did not
 > anticipate:
 >
-> - **The defect was worse than measured here.** The `emit repl` door resolves even `(scheme base)`
+> - **The defect was worse than measured here.** The `emit repl` path resolves even `(scheme base)`
 >   through the manifest (eager preload, mode 5), so from outside the repo an installed REPL had
 >   *no standard library at all* — `map` unbound, primitives only. Finding 1's "baked libraries are
->   CWD-independent" holds for the run door; it never held for the REPL.
+>   CWD-independent" holds for the `emit run` command; it never held for the REPL.
 > - **A second, independent instance of the same family**, now #36: `emit build`/`emit lib` locate
 >   `tools/llvm-env.sh` and `src/runtime/runtime.c` through `repo_root()`, which assumes a checkout,
 >   so they still do not work from an install. That is toolchain/runtime, not library resolution,
@@ -140,7 +140,7 @@ the full standard surface with no files beside it?* — not a compiler one.
 > driver's include block (the `src/dump.ss` arrangement), the driver installs its own reader over
 > Chez ports, and `src/core.ss` still performs no I/O. Two things this finding did not foresee.
 > The reader protocol needs a **token**, not just forms: a nested include is expanded *after* the
-> reader returned, so a door-side "current file" would already be stale — the core threads the
+> reader returned, so a path-side "current file" would already be stale — the core threads the
 > token back as the next call's base. And `cond-expand` landed **with** the include family rather
 > than before it (step ② and ③ together): both `include-library-declarations` and `cond-expand`
 > splice at the *declaration* level, so one recursive walker serves both and doing them separately
@@ -153,7 +153,7 @@ that. They are not equivalent:
   (a) INJECTED SIDE-CHANNEL              (b) %-PRIM FILE READS
       the shape of `dump`                    the shape of src/dump.ss
       host reads; core splices forms         core reads through port primitives
-      ✓ works on all four doors              ✗ Chez cannot EVALUATE %-ops, so the
+      ✓ works on all four commands              ✗ Chez cannot EVALUATE %-ops, so the
       ✓ core stays I/O-free                    driver's include block excludes the file
       ✓ mirrors how `emit lib` already       → the Chez driver would lose `include`
         hands source TEXT to the core          (tools/regen.sh's note on dump.ss)
@@ -161,7 +161,7 @@ that. They are not equivalent:
 
 Only (a) survives the Chez driver, which is where the byte-identity guarantees live
 (`test/self-emit-equiv.sh`, `test/dump-parity-tests.sh`, `test/prelude-base-run-tests.sh`). So the
-`include` family wants an injected `path -> forms` reader, supplied by whichever door is driving,
+`include` family wants an injected `path -> forms` reader, supplied by whichever path is driving,
 exactly as `dump` is threaded today.
 
 Everything (b) would require now exists in Scheme — `read` on ports, `open-input-file`,
@@ -197,8 +197,8 @@ load-bearing for the Chez-free build. Two facts cut against that:
 
 - `lib/scheme/base.sld` is **already** a build input: `tools/regen.sh:96,102` derives
   `bootstrap/scheme.base.ll` from it. It is load-bearing now.
-- Baking it makes door *divergence impossible*. Today a stale `base.sld` means the driver and the
-  run door disagree; afterwards both are consistently stale, and `test/scheme-base-surface-check.sh`
+- Baking it makes path *divergence impossible*. Today a stale `base.sld` means the driver and the
+  `emit run` command disagree; afterwards both are consistently stale, and `test/scheme-base-surface-check.sh`
   (Chez-free, added by #29) already catches stale. The failure mode becomes less interesting, not
   more.
 

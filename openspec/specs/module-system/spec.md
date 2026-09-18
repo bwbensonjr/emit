@@ -228,8 +228,8 @@ vector and bytevector literals and inside quoted structure. (The vector case is 
 reader rather than through a library, because a quoted vector cannot currently be lowered as a
 constant at all — an unrelated gap, GitHub issue #64.)
 
-Both doors SHALL implement this rule and SHALL agree on it for ASCII source. Case folding outside
-ASCII is **not** guaranteed to agree between doors and is a recorded limit, not a promise.
+Both compilation paths SHALL implement this rule and SHALL agree on it for ASCII source. Case folding outside
+ASCII is **not** guaranteed to agree between paths and is a recorded limit, not a promise.
 
 An included form SHALL be subject to every rule a directly written body form is subject to —
 definitions, `define-syntax`, `define-record-type`, and commands all behave identically, and source
@@ -267,19 +267,19 @@ order across the splice is preserved.
 - **THEN** the library defines `KeepCase` and calling it yields the symbol `kept` — the name is
   left literal and the unquoted identifiers around it are folded
 
-#### Scenario: Both doors fold an included file identically
+#### Scenario: both paths fold an included file identically
 
 - **WHEN** a library whose `include-ci` file mixes unquoted mixed-case and bar-quoted ASCII
   identifiers is compiled by the Chez driver and by the shipped compiler
 - **THEN** both produce the same names, and the emitted IR agrees byte for byte where the existing
-  cross-door equivalence checks compare it
+  cross-path equivalence checks compare it
 
-#### Scenario: The same source includes identically on every door
+#### Scenario: The same source includes identically on every path
 
 - **WHEN** a library using `include` is compiled by the Chez driver, by `emit lib`, by `emit run`
   through the manifest, and by the REPL's library loader
-- **THEN** all doors produce the same unit, and the emitted IR agrees byte for byte where the
-  existing cross-door equivalence checks compare it
+- **THEN** all paths produce the same unit, and the emitted IR agrees byte for byte where the
+  existing cross-path equivalence checks compare it
 
 ### Requirement: Library declarations may be included from another file
 
@@ -300,7 +300,7 @@ inclusion is expanded on the same terms as one written in the `define-library`.
 - **WHEN** an included declarations file contains `(import (scheme inexact))` and the library body
   calls `sqrt`
 - **THEN** the import resolves as though written in the `define-library`, and the library's imports
-  as reported to the doors' dependency resolution include `(scheme inexact)`
+  as reported to the paths' dependency resolution include `(scheme inexact)`
 
 #### Scenario: An included import set is rejected identically
 
@@ -319,7 +319,7 @@ SHALL have no effect. If no clause is satisfied and there is no `else`, the `con
 contribute nothing.
 
 The set of advertised feature identifiers SHALL be a single declaration in the compiler, so that
-every door answers a feature requirement identically. A feature identifier SHALL NOT be advertised
+every compilation path answers a feature requirement identically. A feature identifier SHALL NOT be advertised
 unless Emit provides the corresponding feature.
 
 A `(library ⟨name⟩)` feature requirement SHALL be reported as a recognized R7RS form this stage does
@@ -354,7 +354,7 @@ A malformed clause SHALL be a compile-time error naming the clause.
 
 - **WHEN** a `cond-expand` clause contains `(import (scheme inexact))` and `(export root)`
 - **THEN** the selected clause's `import` and `export` are treated exactly as declarations written in
-  place, and the import participates in dependency resolution on every door
+  place, and the import participates in dependency resolution on every path
 
 ### Requirement: An included filename resolves relative to the file that named it
 
@@ -365,8 +365,8 @@ to a library's `(source …)`. An absolute filename SHALL be used as written. Wh
 filename (it was read from standard input), a relative filename SHALL resolve against the current
 directory.
 
-Reading files is the door's responsibility, not the compiler core's: the core SHALL obtain forms
-through a reader the door installs, and SHALL perform no file access itself.
+Reading files is the host's responsibility, not the compiler core's: the core SHALL obtain forms
+through a reader the host installs, and SHALL perform no file access itself.
 
 #### Scenario: A library finds its pieces from any working directory
 
@@ -469,8 +469,8 @@ defines itself. The transformers SHALL travel in the library's compile-time expo
 merged into the importing compile's macro environment before expansion, alongside the runtime
 bindings merged into its environment.
 
-This SHALL hold identically on all three doors — the Chez batch driver, the REPL, and the Chez-free
-embedded run door — and for both `emit run` and `emit build`, per dev→ship fidelity: a macro
+This SHALL hold identically on all three paths — the Chez batch driver, the REPL, and the Chez-free
+embedded `emit run` command — and for both `emit run` and `emit build`, per dev→ship fidelity: a macro
 developed against a library in the REPL SHALL expand the same way in the linked executable.
 
 An exported macro's keyword SHALL be a known binding in the importing unit, so a macro use is not
@@ -487,7 +487,7 @@ mistaken for an application of an unbound variable, and so another macro's templ
 - **WHEN** `(uses-mac)` imports `(mymac)` and one of its own procedure bodies uses `(swap! x y)`
 - **THEN** `(uses-mac)` compiles, and a program importing it observes the swap
 
-#### Scenario: The three doors agree on an exported macro
+#### Scenario: The three paths agree on an exported macro
 
 - **WHEN** the same program using an imported macro is run through `emit run`, built and executed
   through `emit build`, and evaluated form-by-form in `emit repl`
@@ -598,16 +598,16 @@ compile-time interface is byte-identical however and wherever it is compiled.
 ### Requirement: A `define-library` that cannot be compiled as a library is reported as one
 
 A `define-library` form SHALL be compiled as a library unit only where a library unit is what the
-door produces: as the sole top-level form of a source. Where that condition does not hold, the
+path produces: as the sole top-level form of a source. Where that condition does not hold, the
 compiler SHALL report the form as a misplaced `define-library`, naming the rule it violates, rather
 than passing it to ordinary expression parsing — where `define-library` is not a form, so it is read
 as an application over internal defines and reported as a malformed body.
 
-This SHALL hold on the interactive door as well: a `define-library` entered at the REPL prompt SHALL
+This SHALL hold on the interactive execution path as well: a `define-library` entered at the REPL prompt SHALL
 be reported as not supported at the prompt, naming libraries as something imported through the
 manifest, rather than producing a parse error about an empty body.
 
-Whether the interactive door should *accept* a `define-library` is a separate question and is not
+Whether the interactive execution path should *accept* a `define-library` is a separate question and is not
 settled by this requirement; what is required here is that the current limit be stated.
 
 #### Scenario: A define-library alongside another top-level form
@@ -837,7 +837,7 @@ round-trips through the Chez-hosted driver's `read` and Emit's own in-language r
 A **bytevector** literal has no such form: R7RS spells it `#u8(...)`, which Emit's reader accepts and
 the Chez-hosted driver's `read` rejects, while Chez's `#vu8(...)` is rejected by Emit's reader. A
 bytevector literal in an exported macro template SHALL therefore be a compile-time error naming the
-reason, under the rule above — not a table written in a spelling one door cannot read back. This
+reason, under the rule above — not a table written in a spelling one path cannot read back. This
 constrains only the table: a bytevector *constant* elsewhere in a library or program is unaffected.
 
 This makes explicit for the table what has always been true of it: the table is a compilation
@@ -1020,7 +1020,7 @@ A program that imports libraries SHALL, in its `@scheme_entry`, call the importe
 - **THEN** `@scheme_entry` calls `@"mylib:__init"` before the body runs, and the call to
   `greet` observes the populated global
 
-### Requirement: AOT door — build and link an importing program
+### Requirement: AOT path — build and link an importing program
 
 An import-aware build path SHALL resolve a program's imports and each library's imports through the
 shared hybrid resolver, build the transitive dependency graph, reject import cycles with a
@@ -1047,7 +1047,7 @@ transitive import closure SHALL NOT be linked.
 - **WHEN** the resolved graph has `(a)` importing `(b)` and `(b)` importing `(a)`
 - **THEN** the build reports a compile-time error naming the cycle rather than looping or linking
 
-### Requirement: REPL door — import a library interactively
+### Requirement: REPL — import a library interactively
 
 The interactive REPL SHALL obtain the standard library by registering the baked set at startup. It
 SHALL eagerly register libraries enumerated by resolved manifests, preserving startup validation of
@@ -1121,7 +1121,7 @@ requested library's names out of scope while the session remains usable.
 - **WHEN** a session references an internal substrate name without explicitly importing it
 - **THEN** the name remains unbound regardless of library providers
 
-### Requirement: Run door — run an importing program in-process (Chez-free)
+### Requirement: `emit run` command — run an importing program in-process (Chez-free)
 
 The in-process runner (`emit run`) SHALL resolve a program's imports and each library's imports
 through the shared hybrid resolver, build the transitive dependency graph, reject cycles, load each
@@ -1160,31 +1160,31 @@ SHALL have no observable effect.
 - **WHEN** `emit run` receives `--manifest FILE` while `EMIT_MANIFEST` names another manifest
 - **THEN** `FILE` supplies the first exact manifest provider, as before
 
-### Requirement: Run door matches the AOT door (dev→ship fidelity)
+### Requirement: `emit run` command matches the AOT path (dev→ship fidelity)
 
 A program run through `emit run` with a given resolver configuration SHALL produce the same value as
 the same program built and run through `emit build` with that configuration. The emitted program
 module and each imported unit's module SHALL be byte-for-byte identical across the run and AOT
-doors because all providers feed the same compile-unit core.
+paths because all providers feed the same compile-unit core.
 
-#### Scenario: Run-door value matches AOT-door value
+#### Scenario: run-path value matches AOT-path value
 
 - **WHEN** an importing program is run and built with the same manifests, library roots, and
   conventional-lookup policy
 - **THEN** the two printed values are identical
 
-#### Scenario: A unit's module bytes match across the run and AOT doors
+#### Scenario: A unit's module bytes match across the run and AOT paths
 
-- **WHEN** a library is loaded by the run door and compiled for the AOT link from the same resolved
+- **WHEN** a library is loaded by the `emit run` command and compiled for the AOT link from the same resolved
   source
 - **THEN** the two unit modules are byte-for-byte identical
 
 ### Requirement: Dev→ship fidelity for library units
 
 A library unit's emitted module SHALL be byte-for-byte identical whether it is produced for
-the AOT door or the REPL door, because both doors drive the same compile-unit core entry.
+the AOT path or the REPL, because both paths drive the same compile-unit core entry.
 
-#### Scenario: A unit's module bytes match across doors
+#### Scenario: A unit's module bytes match across paths
 
 - **WHEN** `(mylib)` is compiled for the AOT link and for REPL loading
 - **THEN** the two unit modules are byte-for-byte identical
@@ -1208,7 +1208,7 @@ library entry SHALL override conventional lookup for that name within the same r
 SHALL support names or layouts that conventional derivation cannot represent. Compiled artifacts
 SHALL continue to default under the build directory.
 
-Every door SHALL locate manifests using the existing precedence: `--manifest FILE`, then
+Every path SHALL locate manifests using the existing precedence: `--manifest FILE`, then
 `EMIT_MANIFEST`, then `./emit-libs.scm`, then executable-relative and compiled-prefix installed
 candidates. Explicit missing manifests SHALL remain errors; searched missing candidates SHALL remain
 nonfatal. Explicit selection SHALL skip an unrelated `./emit-libs.scm`, and readable installed
@@ -1281,7 +1281,7 @@ source came from a manifest or a conventional root; narration SHALL never alter 
 
 #### Scenario: Relative manifest paths retain their base
 
-- **WHEN** a manifest maps a library to a relative source and the door runs from another directory
+- **WHEN** a manifest maps a library to a relative source and the path runs from another directory
 - **THEN** the source resolves relative to that manifest
 
 #### Scenario: The selected provider is narrated
@@ -1343,16 +1343,16 @@ source came from a manifest or a conventional root; narration SHALL never alter 
 - **WHEN** the first manifest lacks a requested program name but an installed manifest has it
 - **THEN** named program lookup reports the first manifest and does not fall through
 
-#### Scenario: (scheme base) needs no manifest entry on any door
+#### Scenario: (scheme base) needs no manifest entry on any path
 
-- **WHEN** any door auto-imports or explicitly imports `(scheme base)` with no exact entry
+- **WHEN** any path auto-imports or explicitly imports `(scheme base)` with no exact entry
 - **THEN** the baked member satisfies it without filesystem lookup
 
 #### Scenario: (scheme base) resolves through the manifest
 
 - **WHEN** the Chez bootstrap driver uses a repository manifest entry for `(scheme base)` while a
-  Chez-free door has already registered the baked member
-- **THEN** the driver can compile the committed source and the Chez-free door admits no second copy
+  Chez-free path has already registered the baked member
+- **THEN** the driver can compile the committed source and the Chez-free path admits no second copy
 
 #### Scenario: A program entry is parsed and does not affect library resolution
 
@@ -1376,7 +1376,7 @@ source came from a manifest or a conventional root; narration SHALL never alter 
 
 #### Scenario: Manifest sources resolve against the manifest's own directory
 
-- **WHEN** an exact entry uses a relative source and the door runs elsewhere
+- **WHEN** an exact entry uses a relative source and the path runs elsewhere
 - **THEN** the source resolves against the entry's manifest directory
 
 #### Scenario: An explicitly named manifest that is missing is reported
@@ -1393,15 +1393,15 @@ source came from a manifest or a conventional root; narration SHALL never alter 
 
 A manifest file that exists and is readable but contains no datum — a zero-byte file, a file of
 only whitespace, or a file of only comments — SHALL be equivalent to a manifest that declares no
-entries. It SHALL NOT be an error to *locate* such a manifest, and no door SHALL fail on account
-of one except where that door requires an entry it cannot find, in which case it SHALL report the
+entries. It SHALL NOT be an error to *locate* such a manifest, and no path SHALL fail on account
+of one except where that path requires an entry it cannot find, in which case it SHALL report the
 absence rather than terminate abnormally.
 
 This extends "Finding no manifest at all SHALL remain non-fatal" to the case where a manifest is
-found but declares nothing: the two SHALL be indistinguishable to every door in what they resolve,
+found but declares nothing: the two SHALL be indistinguishable to every path in what they resolve,
 differing only in narration, which continues to name the manifest that was located.
 
-No door SHALL terminate on a signal, and no door SHALL exit without a diagnostic, for any manifest
+No path SHALL terminate on a signal, and no path SHALL exit without a diagnostic, for any manifest
 text.
 
 A manifest that is *truncated* — one whose text ends inside an unterminated list or string — SHALL
@@ -1413,7 +1413,7 @@ construct it left open, rather than resolving as though the missing entries were
 
 #### Scenario: An entryless manifest resolves like no manifest
 
-- **WHEN** a door locates an `emit-libs.scm` that is empty, whitespace-only, or comment-only
+- **WHEN** a path locates an `emit-libs.scm` that is empty, whitespace-only, or comment-only
 - **THEN** it resolves the same set of libraries it would have resolved had no manifest been found
   — the baked set alone — and narrates the manifest it located
 
@@ -1428,26 +1428,26 @@ construct it left open, rather than resolving as though the missing entries were
 - **WHEN** `emit run prog.scm` is invoked with an entryless manifest present and `prog.scm` imports
   a library that is neither baked nor declared
 - **THEN** import resolution reports a compile-time error naming the unresolved library, and the
-  door exits non-zero without crashing
+  path exits non-zero without crashing
 
 #### Scenario: A library source holding no datum is reported, not crashed on
 
 - **WHEN** a manifest names a library whose source file exists but holds no datum — a zero-byte file,
   whitespace only, or comments only — and a program imports that library
-- **THEN** the door reports a compile-time error naming that source as containing no
+- **THEN** the path reports a compile-time error naming that source as containing no
   `define-library`, and exits non-zero without crashing
 
-#### Scenario: A manifest that is not a list of entries does not crash a door
+#### Scenario: A manifest that is not a list of entries does not crash a path
 
-- **WHEN** a door locates a manifest whose top-level form is not a proper list — a bare symbol, a
+- **WHEN** a path locates a manifest whose top-level form is not a proper list — a bare symbol, a
   number, a string, or an improper list such as `(a . b)`
-- **THEN** the door resolves no entries from it and exits with a status it chose, never on a signal
+- **THEN** the path resolves no entries from it and exits with a status it chose, never on a signal
 
 #### Scenario: A truncated manifest is reported, not built from
 
-- **WHEN** a door locates a manifest whose text is `((program p (source "hello.scm") (output "h")`
+- **WHEN** a path locates a manifest whose text is `((program p (source "hello.scm") (output "h")`
   — one closing paren short — and a program is built
-- **THEN** the door reports the unterminated list and exits non-zero, rather than resolving the
+- **THEN** the path reports the unterminated list and exits non-zero, rather than resolving the
   entry and writing an executable
 
 ### Requirement: A manifest is exactly one top-level form
@@ -1480,8 +1480,8 @@ than one form.
 
 #### Scenario: A second top-level form is reported, not ignored
 
-- **WHEN** a door locates a manifest whose text is two top-level lists, each holding one entry
-- **THEN** the door reports an error naming the manifest and that it holds two top-level forms, and
+- **WHEN** a path locates a manifest whose text is two top-level lists, each holding one entry
+- **THEN** the path reports an error naming the manifest and that it holds two top-level forms, and
   exits non-zero — rather than resolving only the first list's entries
 
 #### Scenario: The dropped entry is not reported as an unresolved import
@@ -1493,15 +1493,15 @@ than one form.
 
 #### Scenario: A single-form manifest is unaffected
 
-- **WHEN** a door locates a well-formed manifest — one top-level list of any number of entries,
+- **WHEN** a path locates a well-formed manifest — one top-level list of any number of entries,
   with any surrounding whitespace and comments
 - **THEN** it resolves every entry in that list, exactly as before
 
-#### Scenario: No door crashes on a degenerate manifest
+#### Scenario: No path crashes on a degenerate manifest
 
-- **WHEN** any door is invoked with a manifest that is absent, empty, whitespace-only,
+- **WHEN** any path is invoked with a manifest that is absent, empty, whitespace-only,
   comment-only, or not a proper list of entries
-- **THEN** the door exits with a status it chose — never on a signal — and every non-zero exit
+- **THEN** the path exits with a status it chose — never on a signal — and every non-zero exit
   carries a diagnostic on standard error
 
 ### Requirement: Transitive library imports
@@ -1589,27 +1589,28 @@ is: the guarantee that a program importing only `(scheme base)` (or importing no
 manifest present SHALL extend to whatever `(scheme base)` itself imports. A library the baked set
 depends on SHALL NOT be resolved through the manifest.
 
-**Every door SHALL register the baked set before it consults the manifest.** This holds for the AOT
-door, the run door, the REPL door, and the compile-unit (`emit lib`) door alike: a door SHALL NOT
-require a manifest entry to obtain the standard library, and the directory a door is invoked from
+**Every compiler host SHALL register the baked set before it consults the manifest.** This holds for
+the Chez driver, the embedded host used by `emit run` and `emit build`, the REPL host, and `emit lib`
+alike: a host SHALL NOT require a manifest entry to obtain the standard library, and the directory a command is invoked from
 SHALL NOT determine whether the standard library is available. Registration makes each member's
 export table and declared imports known to the compile session, so a program or library that imports
 a baked member resolves it with no file access.
 
-A door with no program entry to drive initialization — the REPL — SHALL additionally run each
+A host with no program entry to drive initialization — the REPL — SHALL additionally run each
 registered member's initializer exactly once, in the dependency order the members were emitted in,
-before it evaluates any user form. A door that emits a program SHALL continue to leave initialization
+before it evaluates any user form. A host that emits a program SHALL continue to leave initialization
 to the program's entry, which calls each `__init` in topological order as an AOT executable does.
 
 **A manifest entry naming a member of the baked set SHALL resolve to the baked member** rather than
 loading a second copy of that library. The determination SHALL be by library name, so it covers every
 member of the set rather than an enumerated subset. A manifest that names a baked member SHALL
-therefore remain valid on every door and SHALL contribute no additional module, and a manifest that
-names none SHALL work equally well.
+therefore remain valid on every compilation path and SHALL contribute no additional module, and a
+manifest that names none SHALL work equally well.
 
-A baked library MAY import another baked library. All doors — the AOT door, the REPL door's eager
-preload, the run door's lazy import closure, and the auto-import — SHALL handle a baked library that
-has imports, and SHALL continue to emit byte-identical modules across doors for the same program.
+A baked library MAY import another baked library. All compiler hosts — the Chez driver, the REPL's
+eager preload, and the embedded host's lazy import closure and auto-import — SHALL handle a baked
+library that has imports and SHALL continue to emit byte-identical modules across compilation paths
+for the same program.
 
 #### Scenario: A program with no imports needs no manifest, still
 
@@ -1624,24 +1625,24 @@ has imports, and SHALL continue to emit byte-identical modules across doors for 
 - **THEN** that library's module is emitted before `(scheme base)`, its initializer runs before
   `(scheme base)`'s, and each initializer runs exactly once
 
-#### Scenario: Door parity survives partitioning
+#### Scenario: Compilation-path parity survives partitioning
 
-- **WHEN** the same program is compiled through the AOT door, the run door, and the Chez-hosted
+- **WHEN** the same program is compiled through the AOT path, the `emit run` command, and the Chez-hosted
   driver against the same partition
 - **THEN** the emitted program module is byte-identical across all three, as it was before the
   prelude was partitioned
 
-#### Scenario: Every door has the standard library without a manifest entry for it
+#### Scenario: Every command has the standard library without a manifest entry for it
 
-- **WHEN** each of the four doors is exercised in a directory whose manifest names only a project's
+- **WHEN** each of the four commands is exercised in a directory whose manifest names only a project's
   own libraries and no member of the baked set
-- **THEN** every door resolves `(scheme base)`, so a program referencing a standard-library name
+- **THEN** every command resolves `(scheme base)`, so a program referencing a standard-library name
   compiles and runs, a REPL session resolves that name, and a library importing `(scheme base)`
   compiles to its artifact
 
 #### Scenario: A manifest entry for a baked member loads no second copy
 
-- **WHEN** a door starts against a manifest that names `(scheme base)` and the internal substrate,
+- **WHEN** a command starts against a manifest that names `(scheme base)` and the internal substrate,
   after the baked set has been registered
 - **THEN** each baked member contributes exactly one module to the session, the manifest entry
   resolves to the baked member, and no duplicate-symbol failure occurs
@@ -1719,8 +1720,8 @@ would split the state. Consequently the substrate SHALL NOT contain the exceptio
 machinery that raises errors SHALL be assigned to the libraries that consume it rather than to the
 substrate.
 
-Its resolution SHALL be identical on every door: the doors that build the baked set from the
-compiler's baked-in prelude source SHALL resolve it baked, and the doors that resolve `(scheme base)`
+Its resolution SHALL be identical on every path: the paths that build the baked set from the
+compiler's baked-in prelude source SHALL resolve it baked, and the paths that resolve `(scheme base)`
 through the manifest SHALL find the substrate through the manifest too, so `(scheme base)`'s import of
 it resolves on either path. It SHALL be installed alongside the other shipped library sources.
 
@@ -1745,9 +1746,9 @@ it resolves on either path. It SHALL be installed alongside the other shipped li
 - **THEN** the guard catches it, exactly as it did before the relocation, because the exception-handler
   chain is a single binding rather than one copy per library
 
-#### Scenario: The substrate resolves on the manifest-driven doors too
+#### Scenario: The substrate resolves on the manifest-driven paths too
 
-- **WHEN** a door that resolves `(scheme base)` from the manifest starts up, and `(scheme base)`'s
+- **WHEN** a path that resolves `(scheme base)` from the manifest starts up, and `(scheme base)`'s
   source imports the substrate
 - **THEN** the substrate resolves through the same manifest and `(scheme base)` loads, rather than
   failing because an internal library was reachable only when baked
@@ -1868,7 +1869,7 @@ reaching internals through `(scheme base)`.
 #### Scenario: An internal helper is not in scope in a user program
 
 - **WHEN** a program with no explicit import references a prelude-internal name such as `rd-atom`
-  or `%map1`, and is compiled on any door
+  or `%map1`, and is compiled on any path
 - **THEN** compilation fails with an unbound-variable error, while a program referencing a public
   name such as `map` in the same position still compiles and runs
 
@@ -1890,7 +1891,7 @@ reaching internals through `(scheme base)`.
 - **WHEN** the same program is compiled by the Chez-hosted driver and by the Chez-free portable
   derivation
 - **THEN** both resolve each shipped library against the same export list in the same order, and the
-  emitted program module is byte-identical between the two doors
+  emitted program module is byte-identical between the two paths
 
 #### Scenario: A private binding still serves the procedures that call it
 
@@ -1910,7 +1911,7 @@ reaching internals through `(scheme base)`.
 Unless `--no-prelude` is given, the compiler SHALL make the prelude available to a user
 program (and REPL session) without an explicit import, as though it began with `(import
 (scheme base))`: the prelude procedures resolve to `(scheme base)` and the derived-form macro
-set is merged into the compile's `macro-env`. This SHALL hold identically on all three doors —
+set is merged into the compile's `macro-env`. This SHALL hold identically on all three paths —
 the Chez batch driver, the REPL, and the Chez-free embedded runner (`scheme-run` /
 `scheme-compile`): on each, the procedures resolve as imported bindings referencing `scheme.base`
 external globals and `scheme.base.ll` is linked/loaded/concatenated into the result. On the
@@ -1923,12 +1924,12 @@ the Stage 0 resolution order).
 
 - **WHEN** a program that references only prelude procedures (e.g. `(map (lambda (x) (+ x 1))
   '(1 2 3))`) is compiled without `--no-prelude` and without any `import`
-- **THEN** it builds and runs; on every door the prelude procedures resolve to
+- **THEN** it builds and runs; on every path the prelude procedures resolve to
   `(scheme base)` exports and `scheme.base.ll` is linked/loaded/concatenated into the result
 
 #### Scenario: A derived-form macro works without a prepended prelude
 
-- **WHEN** a program uses `cond`/`case`/`when` without `--no-prelude` on any door
+- **WHEN** a program uses `cond`/`case`/`when` without `--no-prelude` on any path
 - **THEN** the derived-form macro expands correctly (its expansion's procedure calls resolve
   to `(scheme base)` exports) and the program produces the expected value
 
@@ -1940,7 +1941,7 @@ the Stage 0 resolution order).
 
 #### Scenario: --no-prelude skips both halves
 
-- **WHEN** a program is compiled `--no-prelude` (on any door, including the embedded runner)
+- **WHEN** a program is compiled `--no-prelude` (on any path, including the embedded runner)
 - **THEN** `(scheme base)` is not auto-imported, the derived-form macros are not merged, and a
   reference to a prelude name (procedure or macro) is an unbound/undefined error
 
@@ -2010,8 +2011,8 @@ library: a library that imports `(scheme base)` SHALL be able to use `cond`, `ca
 A library's own `define-syntax` SHALL take precedence over an imported keyword of the same spelling,
 matching the user-wins shadowing the runtime environment already gives a `define`.
 
-This SHALL hold identically on all three doors — the Chez batch driver, the REPL, and the Chez-free
-embedded run door — per dev→ship fidelity.
+This SHALL hold identically on all three paths — the Chez batch driver, the REPL, and the Chez-free
+embedded `emit run` command — per dev→ship fidelity.
 
 #### Scenario: A library body uses a derived form
 
@@ -2025,10 +2026,10 @@ embedded run door — per dev→ship fidelity.
 - **WHEN** a `define-library` importing `(scheme base)` defines `(define (f x) (and x 7))`
 - **THEN** the library compiles and `(f 1)` is `7`
 
-#### Scenario: The three doors agree on a library body's derived forms
+#### Scenario: The three paths agree on a library body's derived forms
 
 - **WHEN** the same library using a derived form in its body is compiled by the Chez driver, loaded
-  by the REPL, and linked by the Chez-free run door
+  by the REPL, and linked by the Chez-free `emit run` command
 - **THEN** all three compile it without error and a program using it produces the same value on each
 
 #### Scenario: A library's own macro shadows an imported one
@@ -2080,7 +2081,7 @@ particular library name would reintroduce the two-tier privilege this capability
 When a form's head names a macro the compiler knows about but that is not in the compiling unit's
 macro environment, the diagnostic SHALL report a macro that is not in scope and SHALL name the
 library whose import would bring it in, rather than reporting an unbound variable. The message
-SHALL be the same on every door.
+SHALL be the same on every path.
 
 #### Scenario: A derived form used in a library that does not import (scheme base)
 
@@ -2105,7 +2106,7 @@ artifact or binding from it.
 
 Library discovery SHALL be a host responsibility. The compiler core SHALL continue to perform no
 filesystem access and SHALL receive the selected source, source-home, imports, and compile-time
-interfaces through the existing door protocol.
+interfaces through the existing path protocol.
 
 #### Scenario: A conventional project library resolves without a mapping
 
@@ -2133,11 +2134,11 @@ interfaces through the existing door protocol.
 - **THEN** resolution reports the library as unresolved without probing a path outside a configured
   root
 
-### Requirement: Every door uses one resolved library identity
+### Requirement: every path uses one resolved library identity
 
-The Chez driver and the `run`, `build`, `lib`, and `repl` doors SHALL apply the same provider
+The Chez driver and the `run`, `build`, `lib`, and `repl` paths SHALL apply the same provider
 precedence, conventional path derivation, declaration-name validation, import-closure ordering, and
-source-home rules. Once a provider resolves a library, every door SHALL compile that source through
+source-home rules. Once a provider resolves a library, every path SHALL compile that source through
 the existing shared compile-unit core, preserving deterministic unit-qualified symbols, compile-time
 export interfaces, artifact freshness, tree shaking, and byte-identical full unit IR.
 

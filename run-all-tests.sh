@@ -3,8 +3,8 @@
 #
 # This suite answers "do the SHIPPED binaries work?".  Every suite here exercises
 # a binary linked from the committed IR with LLVM only (no Chez): the demos run
-# through `emit run` (compile+run in one process), the interactive REPL runs
-# through `emit repl`.  Both are verbs of the single build/emit binary; no Chez
+# through emit run (compile+run in one process), the interactive REPL runs
+# through emit repl.  Both are verbs of the single build/emit binary; no Chez
 # process is invoked.
 #
 # The Chez-bound suites -- "does the source still build correctly and reproduce
@@ -63,7 +63,7 @@ run_suite "R7RS numeric conformance" test/numeric-conformance-tests.sh
 #   sections          runs the ~790 forms that already work -- a REGRESSION gate, and
 #                     cheap, so it stays in the default run
 #   stale exclusions  re-runs all 389 excluded forms to see whether any now passes --
-#                     CONFORMANCE BOOKKEEPING, one `emit run` per form, and only
+#                     CONFORMANCE BOOKKEEPING, one emit run per form, and only
 #                     meaningful while someone is deliberately closing a gap
 #
 # The second is opt-in: `EMIT_R7RS=1 ./run-all-tests.sh`, or run
@@ -86,11 +86,11 @@ run_suite "filesystem access extension" test/filesystem-access-tests.sh
 run_suite "catchable errors + kinds"  test/catchable-errors-tests.sh
 run_suite "io ports + eof object"     test/io-ports-tests.sh
 run_suite "module vertical-slice (REPL)" test/modules-repl-tests.sh
-run_suite "module run door (emit run)" test/modules-run-tests.sh
+run_suite "module emit run command (emit run)" test/modules-run-tests.sh
 run_suite "hybrid library resolution" test/hybrid-library-resolution-tests.sh
 run_suite "emit build + program resolver" test/emit-build-tests.sh
 run_suite "unit pipeline (seeding, caching, shaking)" test/unit-pipeline-tests.sh
-run_suite "CLI front door (help + final value)" test/emit-cli-tests.sh
+run_suite "CLI interface (help + final value)" test/emit-cli-tests.sh
 run_suite "JIT optimization profiles" test/jit-optimization-tests.sh
 run_suite "(scheme base) declared surface" test/scheme-base-surface-check.sh
 run_suite "Unicode data checksums + generated tables" test/unicode-data-gen-check.sh
@@ -99,12 +99,12 @@ run_suite "binding shadows a keyword"   test/binding-shadowing-tests.sh
 run_suite "(scheme base) auto-import (REPL)" test/prelude-base-repl-tests.sh
 run_suite "(scheme base) re-home (emit run/build)" test/prelude-base-run-tests.sh
 run_suite "R7RS library partition"      test/library-partition-tests.sh
-run_suite "--dump stages (all doors)"   test/dump-stages-tests.sh
+run_suite "--dump stages (all commands)"   test/dump-stages-tests.sh
 run_suite "installed layout (libraries + support files)" test/install-layout-tests.sh
 run_suite "reader datum parity (vector consts + rendering)" test/reader-datum-parity-tests.sh
 run_suite "cyclic datum read/compare/write round trip" test/cyclic-datum-tests.sh
 run_suite "printer cycles + char names + trap delivery" test/printer-cycles-tests.sh
-run_suite "every door in a user project"      test/project-door-tests.sh
+run_suite "every command in a user project"      test/project-command-tests.sh
 
 echo
 echo "================================================================"

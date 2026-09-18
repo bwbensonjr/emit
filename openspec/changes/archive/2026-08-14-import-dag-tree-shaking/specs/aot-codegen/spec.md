@@ -16,21 +16,21 @@ delivered library's exported interface) without change.
 
 Root sets SHALL propagate **backward through the import graph**: a unit that another unit imports
 SHALL be shaken against what its importers **retain**, and SHALL NOT be exempted from shaking on the
-grounds that something imports it. To make that sound, the shipping doors SHALL finalize units in an
+grounds that something imports it. To make that sound, the shipping paths SHALL finalize units in an
 order in which every unit that imports a given unit is already final before that unit is shaken, and
 SHALL seed each unit's root set with the program's roots together with the references still present
 in those finalized importers. Consequently a unit's eligibility for shaking SHALL NOT depend on
 whether the program imports it **directly**: every unit in the program's import closure is subject
 to the same computation.
 
-This transform SHALL apply to **every** door that delivers a native executable, and the doors SHALL
+This transform SHALL apply to **every** path that delivers a native executable, and the paths SHALL
 share one implementation of it rather than each computing reachability its own way. A delivered
-executable's size SHALL NOT depend on which door produced it: for the same program and the same
-compiler, the shipping doors SHALL retain the same set of library bindings.
+executable's size SHALL NOT depend on which path produced it: for the same program and the same
+compiler, the shipping paths SHALL retain the same set of library bindings.
 
-This transform SHALL NOT apply to the interactive/REPL door or to in-process execution, which
+This transform SHALL NOT apply to the interactive/REPL or to in-process execution, which
 continue to provide the full library units (open world — any binding may be referenced by a later
-form), and all doors SHALL share one compiler core. Tree-shaking SHALL preserve observable behavior:
+form), and all paths SHALL share one compiler core. Tree-shaking SHALL preserve observable behavior:
 a program's result SHALL be identical to a non-shaken build.
 
 #### Scenario: Unused library bindings are dropped from the executable
@@ -46,7 +46,7 @@ a program's result SHALL be identical to a non-shaken build.
   binding) is built for AOT
 - **THEN** that binding is retained and the program produces the same result as a non-shaken build
 
-#### Scenario: Both shipping doors deliver the same shaken program
+#### Scenario: Both shipping paths deliver the same shaken program
 
 - **WHEN** the same program is built with `emit build` and with the Chez batch driver's AOT path, at
   the same commit
@@ -59,9 +59,9 @@ a program's result SHALL be identical to a non-shaken build.
   with `emit build`
 - **THEN** the delivered executable does not grow by the added bindings
 
-#### Scenario: The REPL door keeps the full library
+#### Scenario: the REPL keeps the full library
 
-- **WHEN** the same library is loaded through the interactive/REPL door
+- **WHEN** the same library is loaded through the interactive/REPL
 - **THEN** every binding remains available regardless of what any single form references (open
   world), and behavior matches the AOT build for programs that use the same bindings
 

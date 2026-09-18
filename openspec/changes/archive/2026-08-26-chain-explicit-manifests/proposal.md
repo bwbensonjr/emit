@@ -17,7 +17,7 @@ incompatible (GitHub issue #114).
 - Keep program lookup confined to the first, explicitly selected manifest; installed manifests
   supply libraries only.
 - **BREAKING**: `--manifest FILE` and `EMIT_MANIFEST` no longer imply hermetic library resolution.
-  Add `--no-manifest-chain` to the four `emit` doors as the explicit way to resolve libraries
+  Add `--no-manifest-chain` to the four `emit` paths as the explicit way to resolve libraries
   against only the highest-priority manifest; used with `--manifest FILE`, it preserves the former
   behavior.
 - Keep a missing explicit manifest an immediate error instead of falling through, and continue to
@@ -43,7 +43,7 @@ incompatible (GitHub issue #114).
 
 - `src/emit.cpp`: manifest candidate construction, common option parsing/usage for `run`, `repl`,
   `build`, and `lib`, and chain narration inputs.
-- `test/install-layout-tests.sh` and focused door tests: replace the old explicit-non-extension
+- `test/install-layout-tests.sh` and focused path tests: replace the old explicit-non-extension
   assertion and cover out-of-tree project builds/runs against installed standard libraries.
 - `docs/PROJECTS.md`, `docs/MODULES.md`, and command help: document chaining defaults and
   `--no-manifest-chain`.

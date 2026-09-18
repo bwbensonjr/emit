@@ -3,7 +3,7 @@
 Today the manifest (`emit-libs.scm`) maps only *library* names to sources; building
 a deliverable program means passing a source path to `bin/scheme-compile` by hand.
 The `aot-release-profile` change landed the compile-and-strip machinery on the
-Chez-hosted driver; `run-door-user-libraries` then completed the Chez-free doors so
+Chez-hosted driver; `run-door-user-libraries` then completed the Chez-free paths so
 that `scheme-run`/`bin/scheme-compile` resolve user libraries through the manifest.
 What is missing is the *project* half: a way for the manifest to name the program to
 build and where to deliver it, and a single command that turns "the project" into a
@@ -20,12 +20,12 @@ proved the module surface packaging sits on.
 - Introduce a new, **additive** `emit` binary with a single verb: `emit build
   [NAME]` (a `bin/emit` wrapper). It resolves the named program entry through the
   manifest **Chez-free** and delivers a standalone executable via the shipped
-  Chez-free AOT door (`bin/scheme-compile`: `scheme-run --emit` + clang `-O2`).
+  Chez-free AOT path (`bin/scheme-compile`: `scheme-run --emit` + clang `-O2`).
   With one program entry, `NAME` may be omitted.
 - Add a **Chez-free manifest program-entry resolver** to the embedded compiler: a
   new dispatch mode in `src/repl-core.ss` (manifest text + program name → source +
   output) exposed by a `scheme-run --resolve-program NAME` host flag in
-  `src/run.cpp`, reusing the same manifest machinery the run door already uses. The
+  `src/run.cpp`, reusing the same manifest machinery the `emit run` command already uses. The
   committed embedded IR is regenerated (`make regen`, Chez-free).
 - Make both manifest readers **ignore program entries during library resolution**
   (`read-manifest` in `src/compile.ss`; `repl-manifest-paths` /
@@ -35,7 +35,7 @@ proved the module surface packaging sits on.
   `scheme-run`, `repl-host`, and `bin/scheme-compile` keep working unchanged. The
   CLI-naming / deprecation / verb-unification decisions stay deferred to slice #1.
 - Scope is **local paths only**, and this slice does **not** add tree-shaking to the
-  Chez-free door (full library units are linked, as `bin/scheme-compile` does
+  Chez-free path (full library units are linked, as `bin/scheme-compile` does
   today). No registry, version constraints, or lockfile — the dependency-model and
   Chez-free-tree-shaking questions stay explicitly deferred.
 
@@ -44,7 +44,7 @@ proved the module surface packaging sits on.
 ### New Capabilities
 - `project-build`: The `emit build` command — resolve a manifest program entry to
   its source and delivery path, build a standalone executable via the shipped
-  Chez-free AOT door (`bin/scheme-compile`), and report the result. The seed of the
+  Chez-free AOT path (`bin/scheme-compile`), and report the result. The seed of the
   packaging tool.
 
 ### Modified Capabilities

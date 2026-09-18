@@ -28,7 +28,7 @@ record the reason they are exported.
 #### Scenario: An internal helper is not in scope in a user program
 
 - **WHEN** a program with no explicit import references a prelude-internal name such as `rd-atom`
-  or `%map1`, and is compiled on any door
+  or `%map1`, and is compiled on any path
 - **THEN** compilation fails with an unbound-variable error, while a program referencing a public
   name such as `map` in the same position still compiles and runs
 
@@ -50,7 +50,7 @@ record the reason they are exported.
 - **WHEN** the same program is compiled by the Chez-hosted driver and by the Chez-free portable
   derivation
 - **THEN** both resolve `(scheme base)` against the same export list in the same order, and the
-  emitted program module is byte-identical between the two doors
+  emitted program module is byte-identical between the two paths
 
 #### Scenario: A private binding still serves the procedures that call it
 

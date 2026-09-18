@@ -11,7 +11,7 @@
 # display bytes: these expectations are the display output alone, with no trailing
 # token.  That makes them a direct test of what `display` writes.  The rule is the
 # interactive REPL's echo suppression (src/emit.cpp run_thunk) stated for programs, and
-# `emit run` carries the identical guard, so this door and the in-process one agree.
+# emit run carries the identical guard, so this path and the in-process one agree.
 # It remains a REPORTING policy: an explicit `(write (if #f #f))` still renders
 # `#<unspecified>`.  RT_FILTER_MAIN is the separate, stronger mode that suppresses
 # EVERY final value; the self-hosted `schemec` is built with it (Makefile:99).

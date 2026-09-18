@@ -33,7 +33,7 @@ pass=0; fail=0
 ok ()  { echo "  [OK  ] $1"; pass=$((pass+1)); }
 bad () { echo "  [FAIL] $1"; fail=$((fail+1)); }
 
-# Run a program through `emit run` and compare stdout exactly.
+# Run a program through emit run and compare stdout exactly.
 val () {  # <name> <source-text> <expected-stdout>
   local name="$1" src="$2" want="$3"
   printf '%s\n' "$src" > "$TMP/$name.scm"
@@ -116,7 +116,7 @@ got="$(cd "$TMP/proj" && "$EMITABS" run usev.scm 2>"$TMP/usev.err")"
 echo
 echo "an exported macro TEMPLATE holding a vector round-trips the export table"
 
-# This is the silent corruption.  Before the change `emit lib` exited 0 having written
+# This is the silent corruption.  Before the change emit lib exited 0 having written
 #   ((veclib) () () (((vconst () ((_) quote ?))) () ()))
 # -- the literal became `?`.  Assert the TABLE, not just the value: the value assertion
 # alone would pass on a table that is wrong but never re-read in this run.
@@ -146,7 +146,7 @@ fi
 # A BYTEVECTOR in a template is refused, not written.  R7RS spells it #u8(...), which
 # Chez's `read` rejects (Chez uses #vu8), and the driver reads export tables back with
 # `read` on its artifact-reuse path -- so a table carrying #u8(...) is a rendering the
-# other door cannot read back, which render-char's rule already forbids.  Loud error,
+# other path cannot read back, which render-char's rule already forbids.  Loud error,
 # not the silent `?` it used to write.  (A bytevector CONSTANT is unaffected: see the
 # library-body case above, which passes.)
 cat > "$TMP/proj/bvlib.sld" <<'EOF'

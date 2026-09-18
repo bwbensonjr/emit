@@ -10,7 +10,7 @@ without weakening separate compilation or REPL-to-executable fidelity.
 
 ## What Changes
 
-- Add one shared hybrid library resolver used by the Chez driver and every `emit` door: baked
+- Add one shared hybrid library resolver used by the Chez driver and every `emit` path: baked
   libraries first, exact manifest mappings as overrides, then ordered conventional library roots.
 - Map an eligible library name such as `(my stats)` to `my/stats.sld` beneath each root, require the
   resolved file's `define-library` name to match the requested name, and retain manifests for
@@ -29,10 +29,10 @@ without weakening separate compilation or REPL-to-executable fidelity.
 - Allow a simple application to be delivered directly from a source operand, with an optional
   output override, while retaining manifest `(program ...)` entries for named multi-target builds.
 - Preserve artifact identity, tree shaking, transitive dependency ordering, diagnostics, and
-  byte-identical library IR across the REPL, run, lib, and AOT doors regardless of which provider
+  byte-identical library IR across the REPL, run, lib, and AOT paths regardless of which provider
   resolved the source.
 - Update system/design documentation for resolver precedence, path derivation, caching, REPL
-  loading, installation layout, and door parity; update user documentation, examples, help text,
+  loading, installation layout, and path parity; update user documentation, examples, help text,
   and project walkthroughs to make conventional one-file and `lib/` layouts the default path while
   documenting when manifests remain appropriate.
 
@@ -45,12 +45,12 @@ None.
 ### Modified Capabilities
 
 - `module-system`: Replace manifest-only discovery with deterministic hybrid resolution while
-  preserving separate compilation, import-closure construction, artifact reuse, and cross-door
+  preserving separate compilation, import-closure construction, artifact reuse, and cross-path
   byte identity.
 - `interactive-repl`: Admit conventional-path libraries on first import while preserving eager
   registration for enumerated manifest libraries and deferred, dependency-ordered initialization.
 - `emit-cli`: Add library-path configuration and manifest-only opt-out options consistently to all
-  applicable doors.
+  applicable paths.
 - `distribution`: Install shipped `.sld` sources in the conventional hierarchy and make the
   executable-relative and prefix roots discoverable without requiring per-library mappings.
 - `project-build`: Permit direct source delivery without a `(program ...)` entry while retaining
@@ -64,7 +64,7 @@ None.
   source delivery changes the accepted `emit build` operand forms.
 - `Makefile` and installation tests will establish the conventional installed library hierarchy;
   the installed manifest remains supported for exceptions and compatibility.
-- Module, REPL, project-door, installation, artifact-cache, output, and cross-door equivalence tests
+- Module, REPL, project-path, installation, artifact-cache, output, and cross-path equivalence tests
   will cover manifest overrides, conventional lookup, collisions, missing/mismatched sources,
   transitive imports, and warm/cold cache behavior.
 - `README.md`, `docs/PROJECTS.md`, `docs/MODULES.md`, `docs/OUTPUT.md`, relevant source architecture

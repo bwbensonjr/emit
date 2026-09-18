@@ -97,7 +97,7 @@ transformers. Verified absent today: `compile-library: export of a name the libr
 - [x] 6.1 When a head names a known derived form not in the compiling unit's `macro-env`, report a
       macro that is not in scope and name `(scheme base)` as the library that exports it.
       Now reports `macro not in scope -- add (import (scheme base)) with irritant when`.
-- [x] 6.2 Make the message identical on all three doors.
+- [x] 6.2 Make the message identical on all three paths.
 
 ## 7. Tests
 
@@ -109,17 +109,17 @@ transformers. Verified absent today: `compile-library: export of a name the libr
       reaches macro-helper-lib's private `helper` and private macro `%inc`). Both registered in
       `test/modules/emit-libs.scm`.
 - [x] 7.2 `test/modules-run-tests.sh` and `test/modules-repl-tests.sh`: the same fixtures on the run
-      and REPL doors, for dev→ship fidelity.
+      and REPLs, for dev→ship fidelity.
 - [x] 7.3 `test/aot-tree-shaking-tests.sh`: a private binding reachable only through a **re-exported**
       template survives the shake, and is pruned when the macro is unused.
 - [x] 7.4 A negative test for the new diagnostic: a library without `(import (scheme base))` using
       `(when …)` reports a macro not in scope, not an unbound variable.
 - [x] 7.5 A negative test that a substrate-private name is still unbound in a program.
-- [x] 7.6 Extend the driver-vs-run-door byte-identity pin (`test/prelude-base-run-tests.sh`) to cover
+- [x] 7.6 Extend the driver-vs-run-path byte-identity pin (`test/prelude-base-run-tests.sh`) to cover
       the macro half of the export interface (design D6).
       No new pin needed: the suite ("(scheme base) re-home (emit run/build)") passes unchanged, and
-      the macro half is covered end-to-end by the run-door and REPL-door module suites plus
-      modules-tests' existing cross-door byte-identity checks. The dual derivation is already
+      the macro half is covered end-to-end by the run-path and REPL-path module suites plus
+      modules-tests' existing cross-path byte-identity checks. The dual derivation is already
       guarded by `scheme-base-gen-check.sh` (regenerate + whole-file diff), which now ranges over
       the macro exports because the generator derives them from the same declaration.
 - [x] 7.7 Update `test/scheme-base-gen-check.sh` / `test/scheme-base-surface-check.sh` for a

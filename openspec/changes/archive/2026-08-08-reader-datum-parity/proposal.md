@@ -41,7 +41,7 @@ bug becomes a quiet one.
   representations `core-language` already requires both readers to accept, so the export table
   continues to round-trip through Chez's `read` and Emit's own reader.
 - **`repl-irritant->string` falls through to `render-datum`** instead of `"?"`, which fixes every
-  list irritant on every door at once rather than the one call site #52 reports. `render-datum`
+  list irritant on every path at once rather than the one call site #52 reports. `render-datum`
   moved to `src/core.ss` during `module-frontend-diagnostics` for exactly this reason, so it is
   already available everywhere.
 - **`bad const` becomes nameable.** With the renderer's arms in place, a constant that still cannot
@@ -64,7 +64,7 @@ None. Every requirement below constrains behavior an existing capability already
   template's data faithfully, and that a datum the writer cannot represent is an error rather than
   a placeholder.
 - `emit-cli`: gains a requirement that a diagnostic naming a datum renders that datum, extending
-  "A door's diagnostics name that door" (:216) from *which tool* to *which value*.
+  "A path's diagnostics name that path" (:216) from *which tool* to *which value*.
 
 ## Impact
 

@@ -2,7 +2,7 @@
 # End-to-end demo-value harness: run each demo, compare stdout to the expected
 # value.  Two backends drive the SAME expected values (change:
 # self-hosting-completion, design D5):
-#   RUNNER=emit-run (default)   Chez-FREE: `emit run` compiles+runs the
+#   RUNNER=emit-run (default)   Chez-FREE: emit run compiles+runs the
 #                                demo in-process (the shipped runner, no Chez).
 #   RUNNER=aot                   Chez: chez compile.ss -> native exe (dev/CI).
 # Run from the repo root:  [RUNNER=aot] demos/run-tests.sh

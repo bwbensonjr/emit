@@ -1423,7 +1423,7 @@ and `make-string` SHALL NOT produce an object whose recorded length is negative.
 
 The diagnostic SHALL name the procedure, the offending index or size, and the valid range, so the
 report identifies which access failed without a debugger. Reporting SHALL use the same runtime trap
-mechanism as the fixnum overflow diagnostic, and therefore behaves the same way at both doors: a
+mechanism as the fixnum overflow diagnostic, and therefore behaves the same way at both paths: a
 standalone executable exits non-zero, and the in-process runner returns control to its host so a
 subsequent form still evaluates.
 
@@ -1518,7 +1518,7 @@ unspecified byte of memory or corrupted an unrelated object.
 - **THEN** the diagnostic names the index and the type required, rather than reporting an
   out-of-range index derived from the argument's representation
 
-#### Scenario: Both doors agree, and the in-process host survives
+#### Scenario: both paths agree, and the in-process host survives
 
 - **WHEN** the same out-of-range program is run under the in-process runner and as a standalone
   executable
@@ -1574,7 +1574,7 @@ with an improper tail, SHALL be reported rather than silently contributing only 
 The diagnostic SHALL name the procedure and the type of argument it required, following the shape of
 the existing runtime diagnostics (`+: not a number`). Reporting SHALL use the same runtime trap
 mechanism as the fixnum overflow and out-of-range diagnostics, and therefore behaves the same way at
-both doors: a standalone executable exits non-zero, and the in-process runner returns control to its
+both paths: a standalone executable exits non-zero, and the in-process runner returns control to its
 host so a subsequent form still evaluates.
 
 The check SHALL live in the runtime primitive rather than at call sites, so that every path reaches
@@ -1641,7 +1641,7 @@ value afterwards: every access it turns into a trap is one that previously read 
 - **THEN** the computation aborts with the type diagnostic and does not evaluate the guard clause —
   the same behaviour an out-of-range index has under a guard
 
-#### Scenario: Both doors agree, and the in-process host survives
+#### Scenario: both paths agree, and the in-process host survives
 
 - **WHEN** the same wrong-typed program is run under the in-process runner and as a standalone
   executable
@@ -2766,7 +2766,7 @@ cyclic structures SHALL compile as constants — under `quote`, under the `'` ab
 nested to any depth inside another quoted datum. Their values SHALL have the same content and, for
 datum labels, the same shared/cyclic object topology as the datum produced by the runtime reader.
 
-This SHALL hold on every door and in every position a constant may appear: a program's top level, a
+This SHALL hold on every path and in every position a constant may appear: a program's top level, a
 procedure body, a library body, and a macro template.
 
 Elements SHALL be lowered by the same constant encoding as any other quoted datum, so a vector may
@@ -3521,7 +3521,7 @@ the shape of existing output does not move.
 This SHALL close the write/read round trip for every value the printer can produce: since
 `(/ 1.0 0.0)` prints as `+inf.0`, feeding a program's own output back through the reader SHALL
 NOT silently turn a number into an identifier. Both readers SHALL agree, so a datum has the same
-meaning on every door.
+meaning on every path.
 
 #### Scenario: The non-finite tokens read as numbers
 
@@ -3540,7 +3540,7 @@ meaning on every door.
 - **WHEN** a program divides `1.0` by `0.0`, prints the result, and reads that text back
 - **THEN** the value read is a number equal to the original infinity, not the symbol `+inf.0`
 
-#### Scenario: Both doors agree
+#### Scenario: both paths agree
 
 - **WHEN** the same source containing `+inf.0` is read by the prelude reader and by the
   bootstrap reader
@@ -3752,7 +3752,7 @@ When that value is **the unspecified value**, the program SHALL print nothing fo
 value's written representation nor a trailing newline. Any other final value, including `#f` and
 `()`, SHALL be printed as before.
 
-This is the program-level counterpart of the interactive door's existing echo-suppression rule
+This is the program-level counterpart of the interactive execution path's existing echo-suppression rule
 (`interactive-repl`, "Read-eval-print loop prints results interactively"). The two SHALL agree: a
 form that prints nothing at the prompt SHALL print nothing as a program's last form, so the
 development loop and the delivered artifact do not disagree about the same value.
@@ -3764,7 +3764,7 @@ Output the program itself produced is unaffected.
 
 The rule SHALL hold identically on every exit — running in process, a delivered native executable,
 the batch JIT, and bitcode — so that a program's standard output is byte-identical however it is
-run. This is what makes the suppression safe: the doors continue to agree, which is the property the
+run. This is what makes the suppression safe: the paths continue to agree, which is the property the
 unsuppressed report existed to protect.
 
 This requirement is why the unspecified value must remain distinct from `#f` and `()`: those are

@@ -93,7 +93,7 @@ make install PREFIX=$HOME/.local  # a different prefix (also baked in as the fal
 make install PREFIX=/usr/local DESTDIR=/tmp/stage   # stage for a packager
 ```
 
-All four installed doors work from any directory. Projects normally use their own `./lib`;
+All four installed commands work from any directory. Projects normally use their own `./lib`;
 repeatable `-L` / `--library-path` and `EMIT_LIBRARY_PATH` add roots, while
 `--no-library-paths` disables every directory provider.
 
@@ -190,7 +190,7 @@ library-structured source are frozen under `historical/genesis/`.
   set); `make emit` (re)builds it. With the prelude re-homed as a baked set the run/AOT paths emit
   one module per baked library and then the program, separated by boundary markers.
 - `src/run-boot.cpp` — a minimal **batch bootstrap runner** (`build/emit-boot`) used only by
-  `tools/regen.sh` to drive the self-hosting fixed point; not a shipped door.
+  `tools/regen.sh` to drive the self-hosting fixed point; not a shipped path.
 - `bootstrap/` — committed host-agnostic stage-0 IR (the authoritative form): `schemec.ll`
   (batch filter), `embed.ll` (batch runner), `embed-repl.ll` (the mode-dispatched compiler `emit`
   links), and the baked library set `scheme.base.ll` + `emit.internal.ll` (the prelude re-homed as
@@ -210,7 +210,7 @@ library-structured source are frozen under `historical/genesis/`.
 - `docs/PRIMITIVES.md` — the primitive layer: how every primitive is an ordinary, shadowable,
   universal procedure, and how the `inline-primitives` pass recovers bare-metal codegen.
 - `docs/MODULES.md` — using the module system: writing a `define-library`, `import`/`export`, the
-  manifest (`emit-libs.scm`), building/running an importing program on each door, and `(scheme base)`.
+  manifest (`emit-libs.scm`), building/running an importing program on each path, and `(scheme base)`.
 - `docs/OUTPUT.md` — the tool-output convention: message format, stderr/stdout discipline,
   the `EMIT_VERBOSITY` control that every build/compile/regen/test tool honors, and the
   `--dump` / `--dump-all` stage dumps.
@@ -298,7 +298,7 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
 
 **Library & reader**
 - A prelude re-homed as the library `(scheme base)`, auto-imported into every program on all
-  three doors — the Chez driver, the REPL, and the Chez-free embedded runner
+  three compilation paths — the Chez driver, the REPL, and the Chez-free embedded runner
   (`emit run`/`emit build`) — with user-wins shadowing and `--no-prelude` to opt out:
   `list length reverse append map memq assq member assoc filter fold-left fold-right`,
   the n-ary character comparisons `char=? char<? char>? char<=? char>=?`, and `string->list`.

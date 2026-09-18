@@ -13,7 +13,7 @@ Emit programs can open, create, test, and delete individual files, but they cann
 
 ### New Capabilities
 
-- `filesystem-access`: Defines Emit's non-standard Scheme filesystem library, its four operations, error behavior, door parity, and installed availability.
+- `filesystem-access`: Defines Emit's non-standard Scheme filesystem library, its four operations, error behavior, path parity, and installed availability.
 
 ### Modified Capabilities
 

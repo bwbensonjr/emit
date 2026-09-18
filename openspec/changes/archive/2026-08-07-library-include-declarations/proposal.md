@@ -12,7 +12,7 @@ Two reasons it is now, and not later:
 - **The blocker is gone.** `scheme-io-library` landed `%read-file` (`rt_read_file`), so a file can
   be read from compiled Scheme. What kept `include` out was never the reading — it was that
   `src/core.ss` performs no I/O by design and the Chez driver cannot *evaluate* `%`-ops. Both are
-  satisfiable at once by the shape `dump` already uses: the **door installs a reader**, the core
+  satisfiable at once by the shape `dump` already uses: the **path installs a reader**, the core
   splices what it is handed. `src/dump.ss` is the precedent — a `%`-op-using file that rides the
   Chez-free assembly only, while the Chez driver supplies its own independent implementation.
 - **It is the last thing standing between the two derivations of `(scheme base)`.** Exploration
@@ -36,7 +36,7 @@ once instead of twice, and the second change would have rewritten the first one'
 - **`(cond-expand ⟨clause⟩ …)` selects library declarations by feature requirement**, supporting
   feature identifiers, `and`, `or`, `not`, and `else`, and splicing the selected clause's
   declarations. The advertised feature list is a **declaration in one file**, the way the
-  `(scheme base)` surface is (`src/prelude-surface.scm`), not something derived per door.
+  `(scheme base)` surface is (`src/prelude-surface.scm`), not something derived per path.
 - **A `(library ⟨name⟩)` feature requirement is rejected by name.** Answering it means asking
   whether a library is *available*, which is manifest resolution the parser does not have; it takes
   over the "recognized R7RS form this stage does not support" wording the four declarations are
@@ -44,8 +44,8 @@ once instead of twice, and the second change would have rewritten the first one'
 - **Filenames resolve relative to the directory of the file that named them**, matching the rule the
   manifest already uses for a library's `(source …)`. A source with no path — stdin — resolves
   against the current directory.
-- **A door installs the reader; the core still performs no I/O.** `src/core.ss` calls an installed
-  `path → forms` procedure. The Chez driver installs one over Chez ports; the Chez-free doors
+- **A path installs the reader; the core still performs no I/O.** `src/core.ss` calls an installed
+  `path → forms` procedure. The Chez driver installs one over Chez ports; the Chez-free paths
   install one over `%read-file` from a new `src/include-reader.ss` that rides `CORE_FLAT` and is
   excluded from the driver's `(include …)` block — exactly as `src/dump.ss` is.
 - **The artifact cache learns about included files.** A unit's `.stamp` sidecar records the files it
@@ -75,27 +75,27 @@ None. This completes a capability that already exists rather than introducing on
   that four of them be "rejected by name as unsupported" is replaced by requirements describing what
   they now do — file inclusion at body and declaration level, and feature-based declaration
   selection — plus the resolution rule for a filename and the errors for a missing file and a cycle.
-- `compiler-embedding`: a door-installed source reader joins the dump side-channel as a named
-  property of the embedding contract — the core reads no files, so a door that installs no reader
+- `compiler-embedding`: a path-installed source reader joins the dump side-channel as a named
+  property of the embedding contract — the core reads no files, so a path that installs no reader
   gets a diagnostic naming the declaration rather than a silent failure.
 
 ## Impact
 
 - `src/core.ss` — `parse-define-library` gains a declaration-expansion pre-pass; the reader
   side-channel and the case-folding walk live here; `reject-library-declaration` loses one arm.
-- `src/include-reader.ss` (**new**) — the `%read-file`-based reader for the Chez-free doors; rides
+- `src/include-reader.ss` (**new**) — the `%read-file`-based reader for the Chez-free paths; rides
   `CORE_FLAT` in `tools/regen.sh`, excluded from `src/compile.ss`'s `(include …)` block.
 - `src/repl-core.ss`, `src/emit.cpp` — one new mode that tells the compiler which directory the
-  source it is about to compile came from, set by the run, build, lib, and REPL doors before modes
+  source it is about to compile came from, set by the run, build, lib, and REPLs before modes
   4, 7, 11, and 12. Mode 12 (a source's imports) must splice too: an included declarations file can
-  contribute an `import`, and the run door's lazy closure walk reads its answer.
+  contribute an `import`, and the `emit run` command's lazy closure walk reads its answer.
 - `src/compile.ss` — the Chez-side reader, and `artifacts-fresh?` / `rebuild-reason` / the `.stamp`
   writer for the include list.
 - `tools/regen.sh` — `CORE_FLAT` gains the new file. **`make regen` is required**: `src/core.ss` and
   `src/repl-core.ss` both change.
 - `test/library-body-declarations-tests.sh` — its negative cases currently *assert* the
   unsupported-declaration message for all four declarations and will fail until they are replaced.
-- `test/library-include-tests.sh` (**new**) — the four declarations across every door, plus the
+- `test/library-include-tests.sh` (**new**) — the four declarations across every path, plus the
   negative cases; wired into `run-all-tests.sh`.
 - `docs/MODULES.md`, `docs/PROJECTS.md` — the scope-and-limits list and the "When you break a rule"
   table both name these four declarations as unsupported.

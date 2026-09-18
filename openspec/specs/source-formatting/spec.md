@@ -3,7 +3,7 @@
 ## Purpose
 
 Defines which of the repository's hand-authored Scheme files are mechanically formatted,
-the single declared configuration that decides their layout, the two doors that format and
+the single declared configuration that decides their layout, the two script operations that format and
 check them, the commit-time gate that keeps them formatted, and the evidence a whole-tree
 reformat must produce to show it changed no program's meaning. Formatting is treated as a
 property of the tree rather than a per-file negotiation, and the formatter is a *developer*
@@ -92,7 +92,7 @@ where it does not, the check SHALL rest on the formatter's observed layout inste
 
 #### Scenario: The pinned formatter identity is recorded and checked
 
-- **WHEN** the formatting doors run and the available formatter is not the pinned one
+- **WHEN** the formatting operations run and the available formatter is not the pinned one
 - **THEN** the mismatch is reported, naming both the pinned and the found identity, rather
   than silently producing layout the tree was not formatted with
 
@@ -100,38 +100,38 @@ where it does not, the check SHALL rest on the formatter's observed layout inste
 
 - **WHEN** the available formatter reports the pinned version but lays out differently
   from the build the covered set was formatted with
-- **THEN** the doors report the mismatch rather than accepting the version as sufficient
+- **THEN** both operations report the mismatch rather than accepting the version as sufficient
 - **AND** the report says which layer of the identity check failed
 
-### Requirement: Two doors format and check, and they narrate
+### Requirement: Two script operations format and check, and they narrate
 
-The project SHALL provide one door that rewrites the covered set in place and one door
-that answers the same question without writing anything. The checking door SHALL exit
+The project SHALL provide one script operation that rewrites the covered set in place and one operation
+that answers the same question without writing anything. The checking operation SHALL exit
 non-zero when any covered file would change, and SHALL distinguish that outcome from a
 usage or I/O failure, so an automated caller can tell "this tree is unformatted" from
 "this invocation is wrong".
 
-The two statuses SHALL be carried by the formatting *script*, which is the door an
+The two statuses SHALL be carried by the formatting *script*, which is the interface an
 automated caller invokes. The project's build-system targets SHALL wrap that script for
 human use and SHALL NOT be required to reproduce its statuses: GNU make exits 2 for any
 recipe failure, so a make target cannot distinguish the two outcomes, and requiring it to
 would be requiring something the build system cannot express. A make target SHALL still
 narrate the outcome, so a human reading the terminal sees which case occurred.
 
-Both doors SHALL conform to the project's tooling-observability conventions: each SHALL
+Both operations SHALL conform to the project's tooling-observability conventions: each SHALL
 announce the action it performs, name the covered set it resolved, and report the counts
 and elapsed time that make the run observable. Narration SHALL go to standard error.
 
-Running either door over an already-formatted tree SHALL write nothing — no file
+Running either operation over an already-formatted tree SHALL write nothing — no file
 modification times SHALL change — so that formatting never provokes a rebuild.
 
-#### Scenario: The checking door fails on an unformatted tree
+#### Scenario: The checking operation fails on an unformatted tree
 
-- **WHEN** the checking door runs and at least one covered file would change
+- **WHEN** the checking operation runs and at least one covered file would change
 - **THEN** it exits non-zero
 - **AND** it names each file that would change
 
-#### Scenario: The checking door distinguishes a broken invocation
+#### Scenario: The checking operation distinguishes a broken invocation
 
 - **WHEN** the formatting script is run with `--check` and cannot run — the formatter is
   absent, the configuration is malformed, or a covered path cannot be read
@@ -140,19 +140,19 @@ modification times SHALL change — so that formatting never provokes a rebuild.
 
 #### Scenario: The build-system wrapper narrates what its status cannot carry
 
-- **WHEN** a make target wrapping the checking door fails, in either case
+- **WHEN** a make target wrapping the checking operation fails, in either case
 - **THEN** the narration on standard error names which case occurred, even though the
   target's own exit status is the build system's generic failure status
 
 #### Scenario: A run reports what it did
 
-- **WHEN** either door completes
+- **WHEN** either operation completes
 - **THEN** its output names the action, the number of files considered, the number that
   changed or would change, and the elapsed time
 
 #### Scenario: A formatted tree is untouched
 
-- **WHEN** the formatting door runs twice in succession
+- **WHEN** the formatting operation runs twice in succession
 - **THEN** the second run rewrites no file and changes no modification time
 
 ### Requirement: The commit gate checks staged files and never blocks on an absent formatter
@@ -164,7 +164,7 @@ committed, and a whole-set gate would block a commit on drift elsewhere in the t
 the committer did not introduce.
 
 The gate SHALL take its covered-set membership and its dialect assignment from the same
-single declaration the doors use, so a file cannot be gated under one policy and formatted
+single declaration the operations use, so a file cannot be gated under one policy and formatted
 under another.
 
 When the formatter is not available, the gate SHALL skip and permit the commit, reporting

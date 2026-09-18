@@ -17,11 +17,11 @@
       through `ir-double`, replacing the bare `(number->string d)`.
 - [x] 1.6 Route the boxed literal path (`src/emit.ss:183`, the `@.flo.lit.` C string rebuilt by
       `rt_flonum_lit`) through the same formatter, so the two sites cannot drift and the string
-      constant's contents stop being door-dependent.
-- [x] 1.7 Verify the reported symptom on every door: `(* 100.0 2.0)`, `(+ 1e15 1.0)`,
+      constant's contents stop being path-dependent.
+- [x] 1.7 Verify the reported symptom on every path: `(* 100.0 2.0)`, `(+ 1e15 1.0)`,
       `(* 1e308 10.0)`, `(+ 1e16 1.0)`, and `(* 2.5 2.0)` compile and produce correct results under
       `emit run`, `emit repl`, `emit build`, and the Chez-hosted AOT path.
-- [x] 1.8 Add a **door-parity** test asserting the emitted IR *text* is identical between the
+- [x] 1.8 Add a **path-parity** test asserting the emitted IR *text* is identical between the
       Chez-hosted driver and the self-hosted compiler for a flonum-literal-heavy program covering
       the 1.2 spread — the assertion is byte equality of IR, not equality of results.
 - [x] 1.9 Add a value-fidelity test: a 17-significant-digit literal round-trips bit-identically
@@ -61,7 +61,7 @@
       by substituting the underlying primitive (which would reverse `>`'s operands).
 - [x] 3.3 Add the eta-only entries for `>`, `<=`, `>=` over `%<` and `%=`, and confirm
       `(map car *integrable*)` flowing into `compute-known` and `*repl-known*` binds the three
-      names on both doors.
+      names on both paths.
 - [x] 3.4 Verify operator position is byte-for-byte unchanged: compile a program using
       `> <= >=` in operator position before and after, and diff the emitted IR to prove no drift.
 - [x] 3.5 Make `max` variadic in `src/prelude.scm` and add `min`, both with R7RS contagion —
@@ -150,7 +150,7 @@ writing a temporary arithmetic version to delete later. One staging serves all o
       unchanged — record the numbers in `docs/PERFORMANCE.md` if it leaks.
       RESULT: the shake keeps it BYTE-IDENTICAL (34,968 B for a `fib` program at 5d38be0, at the
       staging commit, and after the inventory — it removes 100% of the growth). `emit build` grew
-      +19,808 B (+14.7%) because that door has no shake, which is the known P8; quantified there
+      +19,808 B (+14.7%) because that path has no shake, which is the known P8; quantified there
       with the three-commit table. A second finding recorded as a NEW P9: `number->string` became
       variadic for the optional radix, and a rest-parameter callee cannot use the cross-unit
       direct-call convention, so every call site goes indirect — measured +22% on a
@@ -165,7 +165,7 @@ writing a temporary arithmetic version to delete later. One staging serves all o
 - [x] 6.2 Make the same three tokens numbers in the bootstrap reader's `const` path
       (`src/parse.ss`), so the two readers agree on what a datum means.
 - [x] 6.3 Tests: `(number? (read-from-string "+inf.0"))` and its two siblings; the
-      write→read round trip through `(/ 1.0 0.0)`; and a door-parity check that both readers produce
+      write→read round trip through `(/ 1.0 0.0)`; and a path-parity check that both readers produce
       the same datum for the same source.
 - [x] 6.4 Confirm the deferred half of #25 is untouched and still reported clearly: `#x1f`, `#e1.0`,
       and `1/2` behave as they do today (no silent change), and the issue records what remains.
@@ -179,16 +179,16 @@ writing a temporary arithmetic version to delete later. One staging serves all o
 - [x] 7.2 Add the `(scheme inexact)` entry to `emit-libs.scm` — the first non-`(scheme base)`
       library in the default manifest.
       This surfaced a design issue D5 had not considered, resolved by adding LAZY MANIFEST
-      PRELOAD to the run door (approved mid-implementation as option A). Eager preload compiled
+      PRELOAD to the `emit run` command (approved mid-implementation as option A). Eager preload compiled
       every manifest entry regardless of the program's imports, which with a second library
       (a) put units a program never imported into its emitted IR, (b) made `--no-prelude` emit a
-      boundary marker it had promised not to, and (c) broke run-door/Chez-driver program-IR
+      boundary marker it had promised not to, and (c) broke run-path/Chez-driver program-IR
       parity — a dev→ship fidelity break of the same class this change's group 1 fixed. The run
-      door now walks the transitive closure of the program's imports over the manifest
+      path now walks the transitive closure of the program's imports over the manifest
       (`preload_user_libraries`, compiler modes 9 + 12); the REPL host stays eager because an
       interactive session is an open world. All three invariants restored WITH the library in
       the default manifest, which was impossible before.
-- [x] 7.3 Verify the library on all three doors: `emit run`, `emit repl`, and an `emit build`
+- [x] 7.3 Verify the library on all three paths: `emit run`, `emit repl`, and an `emit build`
       executable, each importing `(scheme inexact)` and agreeing on results.
 - [x] 7.4 Verify the negative cases: without the import, `sqrt` is an unbound variable; and a
       program defining its own `sqrt` without the import uses its own.

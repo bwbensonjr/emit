@@ -5,7 +5,7 @@
 
 ## 2. Lower every body form, in source order (design D1)
 
-- [x] 2.1 In `compile-library*` (`src/core.ss`), replace the `filter define-form?` narrowing so both lowering paths fold over the whole of `runtime`; keep `fold-left` (cross-host determinism — Chez's `map` and the prelude's `map` apply in different orders and would diverge the two doors' bytes)
+- [x] 2.1 In `compile-library*` (`src/core.ss`), replace the `filter define-form?` narrowing so both lowering paths fold over the whole of `runtime`; keep `fold-left` (cross-host determinism — Chez's `map` and the prelude's `map` apply in different orders and would diverge the two paths' bytes)
 - [x] 2.2 Keep `defined-names` meaning "names this unit defines" — after the task 3.1 splice it still draws from defines alone, and is what `export`-validation and the shake's dependency filter test against
 - [x] 2.3 Give a command a positional dump tag in `unit-def-lcode`, which today tags with the define's name; confirm `--dump` output is still readable and that `test/dump-stages-tests.sh` passes
 - [x] 2.4 Verify the emitted shape: one `@"L:__init_N"` thunk per body form, called from `@"L:__init"` in source order, with the command's thunk between its neighbours' — not appended after them
@@ -27,7 +27,7 @@
 
 - [x] 5.1 The fixtures from 1.1 now pass: the command runs, and the record type is usable internally and exportable
 - [x] 5.2 Source ordering is observable, not assumed: a body with command / define / command records the two effects in source order
-- [x] 5.3 All three doors agree — AOT (with and without the tree-shake), run, REPL — on both a command library and a record library
+- [x] 5.3 All three paths agree — AOT (with and without the tree-shake), run, REPL — on both a command library and a record library
 - [x] 5.4 The tree-shake cases: a pruned unit still runs its command; a procedure only the command calls survives pruning and the program links; a reached accessor keeps the descriptor it needs (and NOT, per design D3, the rest of the record's bindings)
 - [x] 5.5 **Interaction with `library-toplevel-set` (design D5):** a library *top-level* `(set! f …)` now takes effect, and `f`'s call row is still withheld from the export table — the failure mode is silent misdispatch, so assert the table, not just the value
 - [x] 5.6 `build/lib/scheme.base.ll` is byte-identical to the 1.2 baseline, and `bootstrap/scheme.base.ll` is unchanged by the regen — the proof that no existing unit is affected

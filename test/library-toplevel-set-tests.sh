@@ -35,7 +35,7 @@ make emit >/dev/null 2>&1 || { echo "failed to build emit"; exit 1; }
 
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 
-# The AOT door builds a manifest PROGRAM ENTRY, so it needs its own manifest with the
+# the AOT path builds a manifest PROGRAM ENTRY, so it needs its own manifest with the
 # (output ...) pointed at the temp dir -- the suite writes nothing under build/.
 # Absolute source paths: this manifest lives in $TMP, and a manifest's relative paths
 # resolve against its own directory (change: manifest-search-path).
@@ -73,29 +73,29 @@ else
   bad "emit lib rejected mutlib.sld: $(cat "$TMP/lib.err")"
 fi
 
-# --- 2. every reader observes the assignment, on all three doors --------------
+# --- 2. every reader observes the assignment, on all three execution paths ----
 got="$($RUN --manifest "$MAN" < "$MOD/prog-mutlib.scm" 2>"$TMP/run.err")"
-if [ "$got" = "$WANT" ]; then ok "run door: importer observes the assignment => $got"
-else bad "run door => $got (expected $WANT)"; sed 's/^/         /' "$TMP/run.err"; fi
+if [ "$got" = "$WANT" ]; then ok "emit run command: importer observes the assignment => $got"
+else bad "emit run command => $got (expected $WANT)"; sed 's/^/         /' "$TMP/run.err"; fi
 
-# The AOT door, which is where a direct call would have been emitted and where the
+# the AOT path, which is where a direct call would have been emitted and where the
 # tree-shake recompiles the unit against the program's roots.
 if EMIT_VERBOSITY=quiet build/emit build mutlib-app --manifest "$BMAN" \
      >"$TMP/build.log" 2>&1; then
   got="$("$TMP/mutlib-app" 2>/dev/null)"
-  if [ "$got" = "$WANT" ]; then ok "AOT door: same value through build + link => $got"
-  else bad "AOT door => $got (expected $WANT)"; fi
+  if [ "$got" = "$WANT" ]; then ok "AOT path: same value through build + link => $got"
+  else bad "AOT path => $got (expected $WANT)"; fi
 else
-  bad "AOT door: emit build failed"; sed 's/^/         /' "$TMP/build.log"
+  bad "AOT path: emit build failed"; sed 's/^/         /' "$TMP/build.log"
 fi
 
 # A REPL session: same library, entered form by form.
 out="$(printf '(import (mutlib))\n(f 1)\n(bump)\n(f 1)\n(call-f 1)\n(g 1)\n(v 1 2)\n(bump-v)\n(v 1 2)\n(call-v 1 2)\n' \
         | build/emit repl --manifest "$MAN" 2>/dev/null | tr -d ' >' | grep -v '^$')"
 if [ "$out" = "$(printf '2\n101\n101\n1001\n(12)\n(changed12)\n(changed12)')" ]; then
-  ok "REPL door: the session observes the assignment"
+  ok "REPL: the session observes the assignment"
 else
-  bad "REPL door (got: $(printf '%s' "$out" | tr '\n' '/'))"
+  bad "REPL (got: $(printf '%s' "$out" | tr '\n' '/'))"
 fi
 
 # --- 3. the export table withholds exactly the assigned bindings -------------
@@ -153,7 +153,7 @@ want   "unit: the assigned lambda got an ordinary counter label" "$LL" \
        '^define fastcc i64 @"mutlib:code_[0-9]+"'
 
 # --- 6. the arms that must NOT have moved ------------------------------------
-# Each failure fixture gets its own throwaway manifest: a door preloads every library
+# Each failure fixture gets its own throwaway manifest: a path preloads every library
 # in the manifest it is handed, so a library that cannot compile must not share one
 # with a library that must.
 fails_with () {  # <name> <lib-name> <lib-source> <program> <regex>

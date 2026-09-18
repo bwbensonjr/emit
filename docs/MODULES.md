@@ -133,7 +133,7 @@ Physical roots and manifests are deduplicated at their first occurrence. A succe
 memoized for the compilation session, so a library cannot change providers midway through its
 dependency graph. Baked names are authoritative; project providers may override non-baked shipped
 libraries. The host owns filesystem access and hands source text, source home, imports, and
-compile-time interfaces to the same compiler core used by every door.
+compile-time interfaces to the same compiler core used by every compilation path.
 
 ### Exact manifests
 
@@ -163,13 +163,13 @@ overrides, artifact directories, and named program targets:
   `--manifest` at your own for additional libraries (as the test
   suites do with `test/modules/emit-libs.scm`). These mappings are not required when the sources
   occupy their conventional paths. Listing a library costs a program nothing unless
-  it imports it: the run door preloads lazily (see below) and `emit build` links only the
+  it imports it: the `emit run` command preloads lazily (see below) and `emit build` links only the
   program's import closure. Your own manifest need not name `(scheme base)` or `(emit internal)`:
-  every door registers the baked set before reading the manifest (see *The shipped libraries*).
+  every compiler host registers the baked set before reading the manifest (see *The shipped libraries*).
 
 ### Where manifests and roots are found
 
-Every door looks for the manifest the same way (change: `manifest-search-path`, issue #35):
+Every compiler host looks for the manifest the same way (change: `manifest-search-path`, issue #35):
 
 | # | candidate | for |
 |---|---|---|
@@ -210,7 +210,7 @@ Every door looks for the manifest the same way (change: `manifest-search-path`, 
 - Because candidate 3 is searched first, **installation is additive**: inside the repo you always
   get the repo's own `emit-libs.scm`, even with an `emit` installed system-wide. Chaining does not
   weaken that — a later candidate is consulted only for a name the earlier one does not resolve.
-- Each door narrates every manifest it resolved on stderr (`resolve manifest -> …`, the later ones
+- Each compiler host narrates every manifest it resolved on stderr (`resolve manifest -> …`, the later ones
   tagged `[chained]`), and names the manifest that supplied a library when it was not the first
   (`chain <manifest> -> <libraries>`). All of it is silenced by `EMIT_VERBOSITY=quiet` and none of
   it touches stdout. `make install` produces the layout candidates 4–5 look for; see
@@ -238,8 +238,9 @@ A manifest may also carry **program entries** — the deliverables `emit build` 
 
 ## Building and running
 
-There are three doors. All share one compiler core, so a library's compiled bytes are identical
-across them (dev→ship fidelity).
+Three compilation paths exercise the module system: the Chez driver, the REPL, and the Chez-free
+embedded runner used by `emit run` and `emit build`. All share one compiler core, so a library's
+compiled bytes are identical across them (dev→ship fidelity).
 
 ### Batch / AOT (and JIT, bitcode) — the Chez driver
 
@@ -269,10 +270,10 @@ build/emit repl --manifest test/modules/emit-libs.scm
 142
 ```
 
-### Chez-free embedded runner — the run door (user libraries)
+### Chez-free embedded runner — the `emit run` command (user libraries)
 
 `emit run` compiles and runs a whole program with **no Chez**, and resolves user-library
-`import`s through the hybrid provider chain — the *run door*, at parity with the AOT and REPL doors (change:
+`import`s through the hybrid provider chain — the *`emit run` command*, at parity with the AOT and REPLs (change:
 `run-door-user-libraries`). `(scheme base)` is baked in, so a plain program needs no manifest at
 all — it runs from any directory, installed or not. The program source is read from a
 `FILE` argument when given, otherwise stdin:
@@ -282,12 +283,12 @@ echo '(map (lambda (x) (* x x)) (list 1 2 3))' | build/emit run   # => (1 4 9)  
 build/emit run --manifest test/modules/emit-libs.scm test/modules/prog-mylib.scm   # => 142
 ```
 
-The run door reuses the REPL door's Chez-free machinery: the host resolves and reads each
+the `emit run` command reuses the REPL's Chez-free machinery: the host resolves and reads each
 NEEDED library source — the transitive closure of the program's imports, not the whole manifest
-(see [Lazy preload](#lazy-preload-on-the-run-door)) — and hands the text to the embedded
+(see [Lazy preload](#lazy-preload-on-the-run-path)) — and hands the text to the embedded
 compiler through a small mode protocol, then the
 program's `@scheme_entry` initializes the imported units in topological order before running — so
-the emitted program module is **byte-identical** to the AOT door's for the same manifest (dev→ship
+the emitted program module is **byte-identical** to the AOT path's for the same manifest (dev→ship
 fidelity). `emit build` uses the same `--emit` path for the native build.
 
 ### `emit build` — deliver a program
@@ -320,7 +321,7 @@ build/emit build --manifest my-project.scm
   # build/mylib-app
   ```
 
-- **Delivery** is the in-binary Chez-free AOT door: `emit build` emits the program IR in-process
+- **Delivery** is the in-binary Chez-free AOT path: `emit build` emits the program IR in-process
   (the `--emit` path) and forks `clang` to link the runtime and units into the executable — byte-
   for-behavior identical to emitting the resolved source's IR and linking it directly. It
   **tree-shakes** (change: `chez-free-unit-pipeline`): each prunable unit is recompiled to the
@@ -336,7 +337,7 @@ name and written under `-o DIR` (default `build/lib`):
 
 ```bash
 build/emit lib test/modules/mylib.sld -o build/lib
-# build/lib/mylib.ll        (byte-identical to the unit the run/AOT doors emit)
+# build/lib/mylib.ll        (byte-identical to the unit the run/AOT paths emit)
 # build/lib/mylib.exports   => ((mylib) ((greet . "mylib:greet"))
 #                                       ((greet "mylib:code:greet" 0)))
 ```
@@ -355,7 +356,7 @@ A call row is recorded only for a binding whose slot cannot move after `__init`.
 library **assigns** therefore gets a symbol row but no call row, however its initializer is shaped
 (change: `library-toplevel-set`) — see *Cross-unit direct calls* under Semantics.
 
-The four doors — `emit lib` / `emit build` / `emit run` / `emit repl` — are verbs of a single
+the four commands — `emit lib` / `emit build` / `emit run` / `emit repl` — are verbs of a single
 `emit` binary, the sole user-facing entry point (change: `emit-cli-unification`).
 
 ## `(scheme base)`
@@ -385,8 +386,8 @@ in every program, unasked.
 
 Both derivations of the export list read that one declaration — `tools/gen-scheme-base.ss` (which
 writes the committed `.sld` for the Chez driver) and `scheme-base-export-names` in `src/core.ss` (the
-portable derivation used by `emit run`/`emit build`/the run door, from the baked-in prelude source) —
-so the two doors cannot disagree. Order comes from the prelude, not from the declaration, so
+portable derivation used by `emit run`/`emit build`/the `emit run` command, from the baked-in prelude source) —
+so the two paths cannot disagree. Order comes from the prelude, not from the declaration, so
 regrouping the declaration cannot move emitted IR.
 
 The exported surface has two tiers:
@@ -464,21 +465,22 @@ with **no manifest present at all**. That guarantee is why the substrate had to 
 Every remaining library in the table is ordinary: a program reaches it through the hybrid
 resolver, normally from the conventional installed root.
 
-**Every door registers the baked set** before it consults the manifest — the AOT door, the run door,
-the REPL door, and the compile-unit (`emit lib`) door alike (change: `baked-set-on-every-door`). So a
+**Every compiler host registers the baked set** before it consults the manifest — the Chez driver,
+the embedded host used by `emit run` and `emit build`, the REPL host, and `emit lib` alike (change:
+`baked-set-on-every-door`). So a
 hand-written manifest never needs to name `(scheme base)` or `(emit internal)`, and the directory a
-door is invoked from cannot determine whether the standard library is available. That was not always
+command is invoked from cannot determine whether the standard library is available. That was not always
 so: the REPL and `emit lib` used to resolve `(scheme base)` *from* the manifest, so in a user project
 directory a session had no standard library at all and `emit lib` could not compile a library that
 imported one (issue #39, and its unfiled `emit lib` half).
 
 They do still *appear* in this repository's own manifest, because the Chez driver resolves them from
 there and `tools/regen.sh` derives `bootstrap/scheme.base.ll` from `lib/scheme/base.sld`. A manifest
-entry naming a baked member is a no-op on the Chez-free doors: the already-loaded guard in
+entry naming a baked member is a no-op on the Chez-free paths: the already-loaded guard in
 `repl-load-library-text` matches it by library name, so the baked member wins and no second module is
 loaded. One consequence to know: the baked `(scheme base)` therefore wins over the `.sld`, so editing
-`lib/scheme/base.sld` does not change what any door sees until `make regen` — the same rule the run
-and AOT doors always had, now true of the REPL too.
+`lib/scheme/base.sld` does not change what any compilation path sees until `make regen` — the same
+rule the embedded runner and AOT path always had, now true of the REPL too.
 
 ### `(emit internal)` — the substrate, and why it is not `(scheme …)`
 
@@ -566,7 +568,7 @@ its own.
 
 ## Closure loading and REPL registration
 
-The run and build doors load only the libraries the program **needs**. They ask the resolver for
+The run and `emit build` commands load only the libraries the program **needs**. They ask the resolver for
 each import while walking its transitive closure; one memoized descriptor carries the selected
 source, source home, artifact location, and provider identity into cache lookup and compilation.
 Mode 12 returns structured import descriptors containing both the canonical unit key and original
@@ -623,7 +625,7 @@ REPL, and AOT paths. Build still prunes only after full-unit compilation.
   linkage change is needed, as library code labels already have external linkage. This rests on the
   callee's slot still holding the closure its label belongs to, which the export table — the only channel by
   which an importer learns a label — enforces by recording a label only for a binding no unit can
-  reassign after `__init`. Three things make that hold on every door: assignment to an *imported*
+  reassign after `__init`. Three things make that hold on every path: assignment to an *imported*
   binding is a compile error, so no unit writes another unit's slot; a binding a unit assigns
   **itself** has its call row withheld (below); and a REPL redefinition binds a fresh *program*
   global rather than touching the library's slot (a REPL *session* global is assignable — issue #5
@@ -673,16 +675,16 @@ REPL, and AOT paths. Build still prunes only after full-unit compilation.
     Folding also reaches every symbol the read produces, including inside a vector literal; the
     fold this replaced walked pairs and symbols only, so it missed those.
 
-    Each door implements the rule with what it already has: the compiler's own reader has a
+    Each reader host implements the rule with what it already has: the compiler's own reader has a
     case-folding entry point, and the Chez bootstrap driver reads under Chez's `case-sensitive`
     parameter, which draws the same distinction. That is deliberately **two implementations** where
     there used to be one shared fold in the core — the shared one could not be made right, because
     it ran after reading, where `|MixedCase|` and `MixedCase` are already the same interned symbol.
-    They are pinned against each other by an `include-ci` fixture whose two doors' emitted IR is
+    They are pinned against each other by an `include-ci` fixture whose two paths' emitted IR is
     compared byte for byte (`test/library-include-tests.sh`).
 
     **Known limit:** the fold is **ASCII** on the compiler's own reader, while Chez's
-    `case-sensitive` folds Unicode (`ÉCOLE` → `école`). The two doors therefore agree on ASCII
+    `case-sensitive` folds Unicode (`ÉCOLE` → `école`). The two paths therefore agree on ASCII
     source and may disagree on a non-ASCII uppercase identifier inside an `include-ci` file. The
     substrate carries no Unicode case tables, and `include-ci` exists for old case-folding Scheme,
     which is ASCII; closing this would mean shipping case tables for one caller.
@@ -702,7 +704,7 @@ REPL, and AOT paths. Build still prunes only after full-unit compilation.
     `(source ...)`. Absolute filenames are used as written; source read from standard input resolves
     against the current directory. A file that cannot be read names the declaration, the filename as
     written, and the path it resolved to; an include cycle names the cycle.
-  - The compiler core still performs **no I/O**: each door installs the reader (the Chez driver over
+  - The compiler core still performs **no I/O**: each host installs the reader (the Chez driver over
     Chez ports, the binary over `%read-file`), and the core splices what it is handed. A unit's
     `.stamp` records the files it included, so editing one rebuilds the library that included it
     (`recompile: included source changed`).
@@ -756,7 +758,7 @@ expansion, as before. Emit's hygiene is a name-set test with no syntax objects, 
 template-introduced temporary (`tmp`) and a reference to a name nothing defines are indistinguishable
 here; leaving both means a macro that expands correctly cannot be broken by resolution. It is also
 why the baked derived forms need no special case: `when` falls through this arm and expands in the
-importer against the baked set every door registers.
+importer against the baked set every path registers.
 
 Two consequences worth knowing:
 
@@ -796,8 +798,8 @@ Two distinctions are deliberate:
 - **`rename` is rejected only in `import` position.** `(export (rename internal external))` stays
   valid; the rejection keys on the declaration the form appears in, not on the keyword.
 
-The message body is the same whichever door compiled the form — `emit run`, `emit build`,
-`emit lib`, or the REPL — so only the door's own prefix differs. Every one of these is a
+The message body is the same whichever command compiled the form — `emit run`, `emit build`,
+`emit lib`, or the REPL — so only the command's own prefix differs. Every one of these is a
 *recoverable* compile-time error: at the prompt the session reports it and stays alive.
 
 ## Scope & limits
@@ -808,12 +810,12 @@ This is Modules v0:
   `letrec-syntax`, inner `define-syntax`, `syntax-case`, and procedural/identifier transformers are
   all out of scope. A typo inside an exported template is reported in the importer rather than at the
   library (issue #56) — a consequence of hygiene being a name-set test with no syntax objects.
-- **A unit another unit imports is never tree-shaken.** Both ship doors prune only a unit that no
+- **A unit another unit imports is never tree-shaken.** Both shipping paths prune only a unit that no
   other unit in the closure imports, because an importer kept whole could reference a binding the
   pruned one dropped. `(scheme base)` imports the substrate, so the substrate always ships whole;
   and a program importing a user library that imports `(scheme base)` ships the whole standard
-  library on either door. See `docs/PERFORMANCE.md` P10 — the fix is backward propagation through
-  the import DAG, not anything door-specific. (The door gap itself is closed: `emit build` shakes,
+  library on either path. See `docs/PERFORMANCE.md` P10 — the fix is backward propagation through
+  the import DAG, not anything path-specific. (The path gap itself is closed: `emit build` shakes,
   change `chez-free-unit-pipeline`.)
 - Import specifiers are whole-library only — no `only`/`except`/`prefix`/`rename` import sets yet.
   An import set is rejected by name; see [When you break a rule](#when-you-break-a-rule).

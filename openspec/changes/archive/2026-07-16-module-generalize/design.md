@@ -7,7 +7,7 @@ case: a `compile-unit` core entry `(forms, library-name, import-env) → (ir-tex
 export-table)` (`src/core.ss`); library-mode emission with per-export externals, a
 guarded `@"L:__init"`, and no `@scheme_entry` (`src/emit.ss`); the resolver producing
 `imported` bindings from an in-memory import environment (`src/parse.ss`); a two-entry
-manifest (`emit-libs.scm`); and both doors — AOT `build-program` (`src/compile.ss`,
+manifest (`emit-libs.scm`); and both paths — AOT `build-program` (`src/compile.ss`,
 `bin/scheme-compile`) and REPL `import` (`src/repl/host.cpp`, `src/repl-core.ss`) — driven
 off the one `compile-unit`.
 
@@ -24,7 +24,7 @@ Every generalization Stage 2 needs already has a Stage-1 seam:
   changes how that pair is computed (external key from `<external>`, symbol from `<internal>`).
 
 The dominating constraints from Stages 0/1 hold unchanged: the pure core (`src/core.ss`) stays
-free of filesystem/subprocess I/O; a unit's `.ll` is byte-identical across both doors
+free of filesystem/subprocess I/O; a unit's `.ll` is byte-identical across both paths
 (dev→ship fidelity); and library-free programs keep emitting byte-identical IR.
 
 ## Goals / Non-Goals
@@ -42,7 +42,7 @@ free of filesystem/subprocess I/O; a unit's `.ll` is byte-identical across both 
   reuse otherwise.
 - A generalized manifest resolver (many libraries, default artifact dir, missing-library
   error).
-- `test/modules-*` extended: transitive chain (both doors), rename, diamond init-once, cycle
+- `test/modules-*` extended: transitive chain (both paths), rename, diamond init-once, cycle
   error, stale-rebuild.
 
 **Non-Goals:**
@@ -112,7 +112,7 @@ place (the entry) and needs no per-library "call my dependencies" prologue.
 
 *Alternative rejected:* each library's `__init` calls its own dependencies' `__init`s (a
 recursive init tree). Correct and also diamond-safe via the guard, but it spreads ordering
-across every unit and complicates the REPL door (which loads incrementally). Deferring to a
+across every unit and complicates the REPL (which loads incrementally). Deferring to a
 flat topological sequence in the entry / load order is simpler for v0; the guard makes both
 equivalent in effect. (If a later stage needs libraries initialized without a program entry,
 the recursive scheme can be revisited.)
@@ -124,8 +124,8 @@ On `(import (L))`, the host resolves `L`'s transitive dependency closure via the
 unit's `@"L:__init"` once (tracking already-initialized units in session state so a later
 `import` of an overlapping graph doesn't re-run), and merges `L`'s export table into the
 session scope. Diamond safety is doubly ensured: session-state tracking avoids a redundant
-call, and the `@"L:__inited"` guard makes even a redundant call a no-op. Both doors still call
-the same `compile-unit`, so unit `.ll` bytes stay identical across doors.
+call, and the `@"L:__inited"` guard makes even a redundant call a no-op. both paths still call
+the same `compile-unit`, so unit `.ll` bytes stay identical across paths.
 
 ### D6 — Stale-rebuild by mtime in the driver
 
@@ -190,11 +190,11 @@ out of scope.
    the whole closure in topo order into `@scheme_entry`.
 5. Diamond wiring + init-once (guard already present); REPL session-state tracking of
    initialized units.
-6. REPL door: load the transitive closure in order, init each once, merge the imported
+6. REPL: load the transitive closure in order, init each once, merge the imported
    library's exports.
 7. Stale-rebuild: mtime check per unit (reuse vs recompile) with narration.
 8. Manifest polish: arbitrary entries, default artifact dir, missing-library error.
-9. `test/modules-*`: transitive chain (both doors), rename, diamond init-once, cycle error,
+9. `test/modules-*`: transitive chain (both paths), rename, diamond init-once, cycle error,
    stale-rebuild; wire into `run-all-tests.sh` / `run-dev-tests.sh`.
 10. `make regen` if any `CORE_FLAT` file changed; both suites green including the trust-check.
 
@@ -210,6 +210,6 @@ library-free or single-library behavior.
 - Whether the flat "entry inits the whole closure" scheme (D4) suffices for the REPL's
   incremental loading in all diamond shapes, or whether session-state tracking must also
   reconcile a later `import` that introduces a new path to an already-initialized unit
-  (expected: the guard + tracking cover it; confirm with the diamond test under the REPL door).
+  (expected: the guard + tracking cover it; confirm with the diamond test under the REPL).
 - mtime granularity / clock-skew edge cases for stale-rebuild — acceptable for v0, but confirm
   the check treats "equal mtime" and "artifact absent" conservatively (rebuild on doubt).

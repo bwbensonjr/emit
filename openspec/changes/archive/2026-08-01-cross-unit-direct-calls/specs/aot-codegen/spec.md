@@ -38,7 +38,7 @@ indirectly as before, so that arity errors continue to trap exactly as they do t
 
 ### Requirement: The AOT build optimizes the linked module (release profile)
 
-The AOT/build door SHALL compile the linked module with an optimizing pipeline (`-O2`) rather than
+The AOT/`emit build` command SHALL compile the linked module with an optimizing pipeline (`-O2`) rather than
 the toolchain default, and SHALL additionally enable link-time optimization (`-flto`) so that the
 optimizer can act across compilation-unit boundaries.
 
@@ -51,18 +51,18 @@ today's indirect call. Because binary size is a first-class concern for this pro
 profile's size SHALL be measured when LTO is enabled, and a size regression SHALL be treated as a
 reason to reconsider the setting rather than a cost to absorb silently.
 
-The interactive/JIT door SHALL remain unoptimized; this requirement governs the ship path only.
+The interactive/JIT execution path SHALL remain unoptimized; this requirement governs the ship path only.
 
 #### Scenario: The delivered executable is built with an optimizing pipeline
 
-- **WHEN** a program is delivered through the AOT/build door
+- **WHEN** a program is delivered through the AOT/`emit build` command
 - **THEN** the linked module is compiled at `-O2` with link-time optimization enabled
 - **AND** the executable produces the same result as an unoptimized build (e.g. `(ack 3 12)` ⇒
   `32765`)
 
 #### Scenario: Cross-unit calls are optimized across the unit boundary
 
-- **WHEN** a program that direct-calls an imported procedure is delivered through the AOT door
+- **WHEN** a program that direct-calls an imported procedure is delivered through the AOT path
 - **THEN** the optimizer may inline that procedure across the unit boundary
 
 #### Scenario: Binary size is measured against the previous release profile

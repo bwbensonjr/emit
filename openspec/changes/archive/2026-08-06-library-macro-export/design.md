@@ -38,7 +38,7 @@ Three facts constrain — and cheapen — the design:
 **Goals:**
 
 - `(export <macro>)` compiles, and an importing program, library, or REPL session can use the macro.
-- Identical behavior on all three doors: Chez batch driver, REPL, Chez-free embedded run door
+- Identical behavior on all three paths: Chez batch driver, REPL, Chez-free embedded `emit run` command
   (dev→ship fidelity).
 - A template may reference the exporting library's **private** bindings without widening its public
   export surface.
@@ -113,7 +113,7 @@ also **relaxes** the current prohibition on `(rename …)` for template names: t
 depends on the importer resolving any particular spelling.
 
 The pass is a pure structural rewrite — no `fresh-name`, no counter — so the compile-time half is
-deterministic and byte-identical across doors, which `render-datum` and dev→ship fidelity both
+deterministic and byte-identical across paths, which `render-datum` and dev→ship fidelity both
 require.
 
 The library's **own** body keeps compiling against the *unresolved* `macro-env`, unchanged. Resolving
@@ -154,7 +154,7 @@ diagnostic gap; it gets a GitHub issue rather than a heuristic, and the proposal
 
 ### D5 — Baked `(scheme base)` macros in a template are left alone, not copied
 
-`when`, `cond`, `case`, `guard` and friends are universally available: every door registers the baked
+`when`, `cond`, `case`, `guard` and friends are universally available: every path registers the baked
 set before reading the manifest (change: `baked-set-on-every-door`), so an importer's `macro-env`
 already has them. Leaving them unresolved keeps artifacts small and avoids dragging each derived
 form's own template — and its prelude-procedure references — into every user library's compile-time
@@ -192,11 +192,11 @@ import path (`src/repl-core.ss:240-260`), which pushes into `*repl-macro-env*` /
 `*repl-env*` and therefore persists across forms the way an imported procedure already does. A new
 `import-tables->macro-env` sits beside `import-tables->env-alist` so all three share one reader.
 
-### D8 — No new door mode
+### D8 — No new path mode
 
 `emit lib` (mode 11) resolves its imports against the manifest already, so it can build the same
 four-field datum the driver writes; `render-datum` gains the fourth field and stays the single
-renderer. The run door's `preload_user_libraries` needs nothing new: a program that uses only a macro
+renderer. the `emit run` command's `preload_user_libraries` needs nothing new: a program that uses only a macro
 from a library still `import`s it, so the existing closure walk (mode 12) links the unit whose globals
 the expansion references.
 

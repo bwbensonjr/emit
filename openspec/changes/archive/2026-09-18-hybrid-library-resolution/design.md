@@ -4,7 +4,7 @@
 
 See `proposal.md` for motivation. Today the manifest is both an exact name-to-source map and the
 finite index that lets the REPL register every user library before its first prompt. The run, build,
-and lib doors already walk only the import closure they need. The recent
+and `emit lib` commands already walk only the import closure they need. The recent
 `defer-manifest-library-init` change retained eager REPL registration but moved initialization and
 ORC materialization to first import.
 
@@ -24,7 +24,7 @@ compiled prefix remains the last fallback.
 
 - Make the conventional project shape `lib/a/b.sld` sufficient for `(import (a b))`.
 - Treat manifests as exact overrides and program/build metadata rather than mandatory repetition.
-- Give all doors one observable provider order and one selected source for each library name.
+- Give all paths one observable provider order and one selected source for each library name.
 - Preserve deterministic separate artifacts, compile-time macro interfaces, tree shaking, and
   REPL-to-ship behavior.
 - Preserve eager startup validation for libraries a manifest explicitly enumerates while permitting
@@ -150,7 +150,7 @@ Alternatives considered:
 
 ### D5: Separate manifest chaining from conventional lookup controls
 
-All four user-facing doors and the Chez driver accept repeated `-L DIR` and
+All four user-facing commands and the Chez driver accept repeated `-L DIR` and
 `--library-path DIR`. `EMIT_LIBRARY_PATH` uses the host path-list separator. Empty elements are
 errors, preventing an accidental current-directory provider. Relative explicit and environment
 roots resolve from the invocation directory and are canonicalized before deduplication.
@@ -231,7 +231,7 @@ manifest-only mental model in `README.md`, `docs/PROJECTS.md`, or `docs/MODULES.
 3. Add the REPL on-demand registration transaction and parity tests, retaining eager exact-manifest
    registration.
 4. Install the conventional shipped hierarchy and enable project/installed default roots.
-5. Add direct source build mode and its project-door tests.
+5. Add direct source build mode and its project-path tests.
 6. Update command help, system documentation, user guides, examples, and output narration; run
    documentation commands in their published forms as acceptance tests.
 7. Complete the compiler-source edit set, cross the `make regen` barrier once, run

@@ -1,25 +1,25 @@
 #!/usr/bin/env bash
 # install-layout-tests.sh -- guard that an INSTALLED emit is a complete product:
 # it resolves its libraries (change: manifest-search-path, GitHub issue #35) AND its
-# support files, so every door works from an install (change:
+# support files, so every command works from an install (change:
 # installed-emit-completeness, issues #36 and #44), including a project manifest
 # selected explicitly from another working directory (issue #114).
 #
 # Before hybrid resolution, a non-baked library was reachable only through a manifest,
 # and that manifest was looked up as the bare relative string "emit-libs.scm" --
 # i.e. against the CURRENT DIRECTORY.  An installed `emit` therefore lost every
-# non-baked library the moment the user left the source tree: `emit run` could not
-# (import (scheme inexact)), and `emit repl` lost (scheme base) itself, leaving a
+# non-baked library the moment the user left the source tree: emit run could not
+# (import (scheme inexact)), and emit repl lost (scheme base) itself, leaving a
 # session with primitives only.
 #
-# Two doors stayed outside that guarantee, and both are reachable from one ordinary
+# Two commands stayed outside that guarantee, and both are reachable from one ordinary
 # PROJECT directory -- a directory with its own emit-libs.scm, which a project must
 # have to declare its own program:
 #
-#   #36  `emit build` found tools/llvm-env.sh and src/runtime/runtime.c by stripping
+#   #36  emit build found tools/llvm-env.sh and src/runtime/runtime.c by stripping
 #        "/emit" and "/build" off its own path, an assumption that it sits in a
-#        checkout, so the one door that produces the project's first-class deliverable
-#        was the one door that did not work when installed.
+#        checkout, so the one path that produces the project's first-class deliverable
+#        was the one path that did not work when installed.
 #   #44  the manifest lookup stopped at the first candidate that EXISTS, so a project's
 #        own ./emit-libs.scm HID the installed one and the project silently lost every
 #        shipped library it did not name itself.
@@ -141,7 +141,7 @@ else
   bad "installed root without manifest => [$root_got]"; sed 's/^/         /' "$TMP/e1root"
 fi
 
-# The REPL door lost (scheme base) entirely before this change (it resolves the
+# the REPL lost (scheme base) entirely before this change (it resolves the
 # auto-import through the manifest rather than from the baked prelude).
 rval="$(printf '(map (lambda (x) (* x x)) (list 1 2 3))\n' \
          | EMIT_VERBOSITY=quiet "$EMIT" repl 2>/dev/null | awk 'NF{v=$0}END{print v}')"
@@ -152,7 +152,7 @@ rval="$(printf '(map (lambda (x) (* x x)) (list 1 2 3))\n' \
 # An installed session does not depend on the INSTALLED MANIFEST naming the standard
 # library either: point EMIT_MANIFEST at a manifest that names no baked member (what a
 # user's own project manifest looks like) and the session must still have (scheme base),
-# because every door registers the baked set before it reads the manifest
+# because every compiler host registers the baked set before it reads the manifest
 # (change: baked-set-on-every-door).
 echo '((library (irrelevant) (source "nowhere.sld")))' > "$TMP/user-libs.scm"
 uval="$(printf '(map (lambda (x) (* x x)) (list 1 2 3))\n' \
@@ -163,7 +163,7 @@ uval="$(printf '(map (lambda (x) (* x x)) (list 1 2 3))\n' \
   || bad "installed REPL with a baked-free manifest => [$uval] (expected (1 4 9))"
 
 # A baked-only program needs no manifest at all -- unchanged by this work.  (The run
-# door prints the program's final value, so this is the value itself, not a display.)
+# path prints the program's final value, so this is the value itself, not a display.)
 bval="$(echo '(+ 1 2)' | EMIT_VERBOSITY=quiet "$EMIT" run 2>/dev/null)"
 [ "$bval" = "3" ] && ok "a baked-only program still needs no manifest => $bval" \
                   || bad "baked-only program => [$bval]"
@@ -208,9 +208,9 @@ do
 done
 
 # The substrate installs too -- not for a user to import, but because base.sld imports it
-# and the REPL door resolves (scheme base) through the manifest (see issue #39).  The REPL
+# and the REPL resolves (scheme base) through the manifest (see issue #39).  The REPL
 # check above already proves it resolves; this asserts the file is actually shipped, since
-# a missing one fails only on the REPL door and only at startup.
+# a missing one fails only on the REPL and only at startup.
 [ -f "$PREFIX/share/emit/lib/emit/internal.sld" ] \
   && ok "the internal substrate is installed beside the standard libraries" \
   || bad "$PREFIX/share/emit/lib/emit/internal.sld is missing from the install"
@@ -218,7 +218,7 @@ done
 # --- a PROJECT directory: the shape both #36 and #44 are reachable from ---------
 # Everything above runs from a directory with no emit-libs.scm at all.  A real project
 # has one -- it must, to declare its own program -- and that is exactly what used to
-# hide the installed manifest (#44) and what makes `emit build` the door a project
+# hide the installed manifest (#44) and what makes emit build the path a project
 # reaches for (#36).  So: one directory, one program, one manifest naming only that
 # program, and NOTHING in the environment.
 echo
@@ -264,7 +264,7 @@ ln -s fs-dir fs-link
 printf 'new\n' > fs-new.tmp
 printf 'old\n' > fs-target.scm
 
-# #36: `emit build` needs tools/llvm-env.sh + src/runtime/runtime.c, neither of which
+# #36: emit build needs tools/llvm-env.sh + src/runtime/runtime.c, neither of which
 # is a library.  `env -u` strips the toolchain so discovery has to work on its own --
 # through the INSTALLED llvm-env.sh, or failing that this binary's build-time defaults.
 if env -u CC -u GC_INC -u GC_LIB -u EMIT_GC_INC -u EMIT_GC_LIB \
@@ -486,7 +486,7 @@ else
   bad "emit build --no-manifest-chain"; sed 's/^/         /' "$TMP/hermetic.log"
 fi
 
-# The other two doors accept the shared opt-out too.  REPL needs no input; emit lib
+# The other two commands accept the shared opt-out too.  REPL needs no input; emit lib
 # compiles a baked-only library against exactly the project manifest.
 if (cd "$CALLER" && "$EMIT" repl --no-manifest-chain \
       --manifest "$PROJ/emit-libs.scm" </dev/null) >"$TMP/single-repl.out" 2>"$TMP/single-repl.err"; then
@@ -596,15 +596,15 @@ esac
 
 # Chaining must not weaken that.  The repository's own manifest names EVERY library it
 # ships, so nothing may be supplied by the installed one -- a `chain ... ->` line from
-# an in-repo door would mean a resolution silently reached outside the checkout.
+# an in-repo command would mean a resolution silently reached outside the checkout.
 "$REPO/build/emit" run demos/fact.scm >/dev/null 2>"$TMP/e9" || true
 grep -q '^chain ' "$TMP/e9" \
-  && { bad "an in-repo door resolved a library from outside the checkout"
+  && { bad "an in-repo command resolved a library from outside the checkout"
        sed 's/^/         /' "$TMP/e9"; } \
-  || ok "an in-repo door supplies every library from the repository's own manifest"
+  || ok "an in-repo command supplies every library from the repository's own manifest"
 
 # Support files follow the same rule: the checkout's llvm-env.sh and runtime.c are the
-# ones an in-repo `emit build` uses, even with a different emit installed.  The proof
+# ones an in-repo emit build uses, even with a different emit installed.  The proof
 # is that the delivered exe still builds and runs from the repo (the installed prefix
 # here carries its own copies, so a lookup that preferred them would still work -- what
 # would break is a from-source developer editing runtime.c and not seeing the edit).
@@ -620,7 +620,7 @@ fi
 
 # --- narration is suppressible -------------------------------------------------
 # The resolved manifest is named at default verbosity and absent at quiet, and stdout
-# is identical either way (narration is stderr, so no door's data output shifts).
+# is identical either way (narration is stderr, so no path's data output shifts).
 echo
 echo "manifest narration"
 out_d="$(echo '(+ 1 2)' | "$EMIT" run 2>"$TMP/n1")"
@@ -683,7 +683,7 @@ itwo="$(EMIT_VERBOSITY=quiet EMIT_CACHE="$ICACHE" "$EMIT" run "$TMP/one.scm" 2>/
 [ "$itwo" = "42" ] && ok "installed emit reuses its cache => $itwo" \
   || bad "installed emit, warm cache => [$itwo]"
 
-# The install contract is unchanged: a cache entry exists only because a door ran, never
+# The install contract is unchanged: a cache entry exists only because a path ran, never
 # because something was installed.
 if find "$PREFIX" -type f \( -name '*.ll' -o -name '*.bc' -o -name '*.o' -o -name 'baked-*' \) \
      | grep -q .; then

@@ -133,7 +133,7 @@ trap_msg "a literal far past the bound"       '99999999999999999999' "fixnum ove
 check "a literal AT the bound still reads"    "(list $MAX $MIN)" "($MAX $MIN)"
 
 # --- a standalone executable exits non-zero ------------------------------------
-# `emit build` delivers a named program from a manifest, so the case needs one.
+# emit build delivers a named program from a manifest, so the case needs one.
 printf '(begin (display "before") (newline) (+ %s 1))\n' "$MAX" > "$TMP/exe.scm"
 # Absolute source paths: this manifest lives in $TMP, and a manifest's relative paths
 # resolve against its own directory (change: manifest-search-path).

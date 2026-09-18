@@ -19,7 +19,7 @@
 - [x] 3.3 The export table for that library records `f`'s symbol and NO call row, while an unassigned sibling of the same shape keeps its row — so the withholding is per binding, not per unit
 - [x] 3.4 The emitted unit defines `mylib:code:f` exactly once and links (the D2 collision; without task 1 the unit does not link at all)
 - [x] 3.5 `(set! car …)` in a library body is still rejected, and so is assignment to a primitive — the arms that must not have moved
-- [x] 3.6 Same program through the AOT and run doors, and through the tree-shaking path, agrees on the value (design D3: the pruned table is discarded, so the program's indirect call must survive pruning)
+- [x] 3.6 Same program through the AOT and `emit run` commands, and through the tree-shaking path, agrees on the value (design D3: the pruned table is discarded, so the program's indirect call must survive pruning)
 - [x] 3.7 Register the new suite in `run-all-tests.sh` (Chez-free, like `test/cross-unit-direct-call-tests.sh`)
 - [x] 3.8 `./run-all-tests.sh` and `./run-dev-tests.sh` green
 - [x] 3.9 `make regen` reconverges (a second regen reproduces `bootstrap/*.ll` byte-for-byte) and `test/trust-check.sh` passes on the commit; the IR diff must be compiler churn only, with no change to `build/lib/scheme.base.ll`

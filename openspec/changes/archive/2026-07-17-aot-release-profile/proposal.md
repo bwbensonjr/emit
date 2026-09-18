@@ -16,7 +16,7 @@ Nothing is pruned because nothing *looks* dead.
 Both problems are safe to fix only under the **closed-world** assumption that AOT already has: a
 sealed, complete program with no future `define`/redefinition (unlike the open-world REPL). A
 compiled program has no `eval` or dynamic name lookup (verified), so static reachability is sound.
-This change turns the AOT door into a proper **release profile**: optimize at link, and emit/init
+This change turns the AOT path into a proper **release profile**: optimize at link, and emit/init
 only the library bindings the sealed program actually reaches. It is deliberately framed and
 factored as the first slice of a future `emit build` (the "compile the project and deliver it"
 half of a `cargo`/`uv`-style project tool), so it grows into that vision rather than being a
@@ -41,9 +41,9 @@ prelude-specific hack.
   same shape `cargo`/`uv` use — separate compilation for dev, whole-program strip at final link —
   so a future manifest can supply richer roots (a bin entry, or a delivered library's exports)
   without reworking the pass.
-- **Dev door untouched.** The REPL / JIT / `emit run` path keeps the full library units and the
+- **development path untouched.** The REPL / JIT / `emit run` path keeps the full library units and the
   one shared compiler core; dev→ship fidelity (identical observable behavior) is preserved. The
-  new work is a ship-time-only transform, gated to the AOT/`build` door.
+  new work is a ship-time-only transform, gated to the AOT/`build` path.
 
 Explicitly **out of scope** (future work, noted so the substrate stays clean for the layer above):
 the packaging layer itself — a project manifest, dependency resolution, a lockfile, workspaces,
@@ -60,7 +60,7 @@ root set pluggable.
 ### Modified Capabilities
 - `aot-codegen`: add release-profile requirements — (1) the AOT link optimizes the module (opt/-O2);
   (2) the AOT build tree-shakes unreachable library bindings via a root-set-driven, unit-general
-  reachability pass, preserving observable behavior; the dev/REPL door is unaffected.
+  reachability pass, preserving observable behavior; the dev/REPL is unaffected.
 
 ## Impact
 

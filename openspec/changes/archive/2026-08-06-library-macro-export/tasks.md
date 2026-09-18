@@ -48,9 +48,9 @@
       → **stronger than planned, and it simplified the change:** the *driver* now writes through
       `render-datum` too (`src/compile.ss`), replacing Chez's `write`. Measured first — the two agree
       byte-for-byte on all 9 committed tables including `scheme.base.exports` — so unifying moved
-      nothing and made cross-door byte-identity (6.2) hold by construction instead of by two
+      nothing and made cross-path byte-identity (6.2) hold by construction instead of by two
       implementations agreeing. Added booleans (common in templates) and `render-char`, which errors
-      rather than emit a spelling the other door's reader cannot read back.
+      rather than emit a spelling the other path's reader cannot read back.
 - [x] 2.3 Add accessors beside `import-tables->env-alist` (`src/core.ss:607`) that read the fourth
       field and **return empty for a three-field table**, so a stale or hand-copied artifact is read
       rather than crashed on (risk R1)
@@ -73,7 +73,7 @@
       defining its own `+` would rewrite `(+ a b)` in a template into a call to a global and lose
       `expand-arith`'s inline arithmetic.
 - [x] 3.2 Add the baked `(scheme base)` macro keywords to the left-alone set (design D5) — sourced
-      from the same baked list the doors register, not a second hand-maintained list
+      from the same baked list the paths register, not a second hand-maintained list
       → **no code needed, and the task's premise was wrong.** A baked keyword is in no `defined-names`,
       no `macro-env`, and no import env, so D4's fall-through already leaves it alone — D5 is
       implemented by D4. Naming the set explicitly would only serve a rejection D4 says we do not do.
@@ -93,14 +93,14 @@
 - [x] 3.6 Leave every other identifier **exactly as written** (design D4) — no binding analysis, no
       rejection; assert on a fixture that a template temporary is still renamed per expansion
       → `prog-macrolib.scm` defines its own `tmp` = 900 and adds `(- tmp 900)` to the answer, so a
-      hygiene failure is a wrong value (not a compile error) on all three doors.
+      hygiene failure is a wrong value (not a compile error) on all three paths.
 - [x] 3.9 **Unplanned:** skip a rule's `syntax-rules` **literals** as well as its pattern variables.
       Found on self-review, not by a test: a literal is matched by identity at the use site
       (`match-pat`), so rewriting one breaks the match in the importer — which a library that happens
       to define a top-level binding of that name (`else`, `=>`) would have caused. Spec requirement
       and expander test added.
 - [x] 3.7 Confirm the pass calls no `fresh-name` and reads no counter, so the interface is
-      deterministic and byte-identical across doors
+      deterministic and byte-identical across paths
       → asserted in `expander-tests.ss` by advancing the counter between two runs and comparing;
       confirmed end-to-end by `emit lib`'s artifact matching the driver's byte-for-byte.
 - [x] 3.8 Reject a library that binds one name with both `define` and `define-syntax`, naming the
@@ -146,9 +146,9 @@
       (`src/emit.ss:1515,1548`)
 - [x] 5.5 Verify against the two-library fixture (1.5) that two units' resolved helpers of the same
       spelling coexist and each reaches its own library's binding
-      → `prog-macro-dup` => 103 on all three doors (a shared resolution would give 4 or 202).
+      → `prog-macro-dup` => 103 on all three paths (a shared resolution would give 4 or 202).
 
-## 6. Doors (design D8)
+## 6. Paths (design D8)
 
 - [x] 6.1 Chez driver: write the fourth field in the `.exports` writer (`src/compile.ss:695`+) and
       read it on the reuse path (`:688`)
@@ -163,12 +163,12 @@
       save/restore (`:713`, `:721`) so a failed form does not lose an imported macro
       → the save/restore already snapshots all three vars, so rollback was free. Pinned by
       `macro-survives-failed-form` (18, error, 33).
-- [x] 6.4 Run door: confirm no new mode is needed — a program using only a macro still `import`s the
+- [x] 6.4 `emit run` command: confirm no new mode is needed — a program using only a macro still `import`s the
       library, so the mode-12 closure walk already links the unit whose globals the expansion
       references. Measure it rather than reasoning about it
-      → measured: all five positives and both negatives behave identically to the AOT door, with no
+      → measured: all five positives and both negatives behave identically to the AOT path, with no
       `emit.cpp` change at all.
-- [x] 6.5 Narration: the lib door names what it wrote, per `docs/OUTPUT.md` — the macro count belongs
+- [x] 6.5 Narration: the `emit lib` command names what it wrote, per `docs/OUTPUT.md` — the macro count belongs
       in the existing line rather than a new one
       → `compile (macro-helper-lib) -> … [6730 bytes, 2 macros, recompile: missing]`; the clause is
       omitted at zero, so a macro-free library narrates exactly what it always did.
@@ -194,13 +194,13 @@
       including the left-alone cases and the transitive private macro
       → 16 new checks, 19 passing. Needed `src/match.scm` + `src/parse.ss` added to the file's
       include list (the pass classifies against `*prims*`/`*integrable*`).
-- [x] 8.2 `test/modules-tests.sh` (AOT door), `test/modules-run-tests.sh` (run door),
-      `test/modules-repl-tests.sh` (REPL door): each fixture from task 1, same expected output on
+- [x] 8.2 `test/modules-tests.sh` (AOT path), `test/modules-run-tests.sh` (`emit run` command),
+      `test/modules-repl-tests.sh` (REPL): each fixture from task 1, same expected output on
       all three — the dev→ship fidelity claim
-      → 32 / 18 / 21 / 103 / 22 / 10 identical on all three doors, plus `emit build` (`macro-app`
+      → 32 / 18 / 21 / 103 / 22 / 10 identical on all three paths, plus `emit build` (`macro-app`
       => 18). **Coverage gap found and closed:** a spec scenario said "a library uses a macro
       exported by a library it imports" and no fixture drove it — `macro-user-lib.sld` /
-      `prog-macro-user.scm` now do, on all three doors. That path is the `compile-library*` merge,
+      `prog-macro-user.scm` now do, on all three paths. That path is the `compile-library*` merge,
       not the program one.
       → also added `macro-rec-lib.sld` / `prog-macro-rec.scm`: a **recursive variadic** macro, the
       commonest real shape and the end-to-end exercise of "one macro under two keywords" (3.5), which
@@ -212,7 +212,7 @@
       `define-syntax` beats an imported keyword.
 - [x] 8.4 A negative test for the double-binding rejection (3.8)
       → three: `macro-double-binding` (`emit lib`), `macro-dupname` (AOT), `run-macro-dupname` (run
-      door). The fixture lives in its own manifest (`emit-libs-macdup.scm`) because the REPL door
+      path). The fixture lives in its own manifest (`emit-libs-macdup.scm`) because the REPL
       preloads every manifest library eagerly and a deliberately-invalid one would make every
       session in these suites report it at startup.
 - [x] 8.5 Re-run `test/module-scaffold-baseline.sha256`, `test/self-emit-equiv.sh`, and

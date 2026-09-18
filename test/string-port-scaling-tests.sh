@@ -81,7 +81,7 @@ EOF
 }
 
 # Build a standalone executable, so what is timed is the PROGRAM and not a compile.
-# `emit run` would put its own compile in both columns and dilute the very ratio this
+# emit run would put its own compile in both columns and dilute the very ratio this
 # suite exists to measure.
 build () {                      # build NAME N KEEP -> $TMP/NAME
   gen "$TMP/$1.scm" "$2" "$3"

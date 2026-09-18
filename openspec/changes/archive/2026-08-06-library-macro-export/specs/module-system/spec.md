@@ -8,8 +8,8 @@ defines itself. The transformers SHALL travel in the library's compile-time expo
 merged into the importing compile's macro environment before expansion, alongside the runtime
 bindings merged into its environment.
 
-This SHALL hold identically on all three doors — the Chez batch driver, the REPL, and the Chez-free
-embedded run door — and for both `emit run` and `emit build`, per dev→ship fidelity: a macro
+This SHALL hold identically on all three paths — the Chez batch driver, the REPL, and the Chez-free
+embedded `emit run` command — and for both `emit run` and `emit build`, per dev→ship fidelity: a macro
 developed against a library in the REPL SHALL expand the same way in the linked executable.
 
 An exported macro's keyword SHALL be a known binding in the importing unit, so a macro use is not
@@ -26,7 +26,7 @@ mistaken for an application of an unbound variable, and so another macro's templ
 - **WHEN** `(uses-mac)` imports `(mymac)` and one of its own procedure bodies uses `(swap! x y)`
 - **THEN** `(uses-mac)` compiles, and a program importing it observes the swap
 
-#### Scenario: The three doors agree on an exported macro
+#### Scenario: The three paths agree on an exported macro
 
 - **WHEN** the same program using an imported macro is run through `emit run`, built and executed
   through `emit build`, and evaluated form-by-form in `emit repl`
@@ -383,7 +383,7 @@ byte-identical to the one it produced before this change.
 - **WHEN** a library that exports no macro is recompiled after this change
 - **THEN** its emitted IR is byte-for-byte identical to what it produced before
 
-### Requirement: REPL door — import a library interactively
+### Requirement: REPL — import a library interactively
 
 The interactive REPL SHALL obtain the standard library by registering the **baked set** at session
 startup — not from the manifest — and SHALL run each registered member's initializer once, in
@@ -405,8 +405,8 @@ bindings and environment, so that a form entered later may use an imported macro
 across forms for the life of the session, as an imported procedure does, and SHALL be restored with
 the rest of the session state when a form's compilation fails and the session rolls back.
 
-The REPL door SHALL remain **eager** over the manifest's remaining libraries: a session is an open
-world in which any prompt may import anything, so the laziness of the run door does not apply.
+the REPL SHALL remain **eager** over the manifest's remaining libraries: a session is an open
+world in which any prompt may import anything, so the laziness of the `emit run` command does not apply.
 
 #### Scenario: Imported procedure is callable in the REPL
 

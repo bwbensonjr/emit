@@ -53,7 +53,7 @@ SHALL be a property of how entries are located rather than a convention observed
 - **WHEN** two programs reaching different subsets of a library are built in turn
 - **THEN** each is served the unit pruned to its own root set, and neither is served the other's
 
-#### Scenario: An open-world door never reads a shaken entry
+#### Scenario: An open-world path never reads a shaken entry
 
 - **WHEN** `emit repl` or `emit run` seeds a session after `emit build` has populated shaken entries
   for the same library and compiler
@@ -79,7 +79,7 @@ switches, where content is stable and modification times are not.
 
 #### Scenario: A rebuilt compiler is not served a stale entry
 
-- **WHEN** the compiler binary is rebuilt and a door is run again
+- **WHEN** the compiler binary is rebuilt and a path is run again
 - **THEN** no entry written by the previous binary is reused, and the baked set is recompiled
 
 #### Scenario: A different binary does not share an entry
@@ -98,9 +98,9 @@ switches, where content is stable and modification times are not.
   unchanged, and a program importing it is run again
 - **THEN** the entry is still reused
 
-### Requirement: The cache never changes what a door produces
+### Requirement: The cache never changes what a path produces
 
-A door's observable result SHALL NOT depend on whether the cache was warm, cold, or absent. For the
+A path's observable result SHALL NOT depend on whether the cache was warm, cold, or absent. For the
 same inputs, the emitted IR, the delivered executable's behavior, the session environment imports
 resolve against, and every diagnostic SHALL be identical in all three states. This SHALL hold for
 every kind of entry — the baked set, a unit compiled from disk, and a unit pruned to a root set.
@@ -133,16 +133,16 @@ every kind of entry — the baked set, a unit compiled from disk, and a unit pru
 
 ### Requirement: Cache reuse is narrated
 
-Each door SHALL report whether each unit it needed was reused or recompiled, and name the reason when
+Each path SHALL report whether each unit it needed was reused or recompiled, and name the reason when
 it recompiles, following the project's narration convention: narration on stderr, controllable
 through verbosity, concise by default.
 
 Narration SHALL name the library a message concerns and distinguish a full unit from one pruned to a
-root set, so that a door reusing several entries and rebuilding one reports which is which.
+root set, so that a path reusing several entries and rebuilding one reports which is which.
 
 #### Scenario: Reuse and rebuild are distinguishable
 
-- **WHEN** a door runs with a warm cache, and again after the entry is invalidated
+- **WHEN** a path runs with a warm cache, and again after the entry is invalidated
 - **THEN** the narration reports the reused set as reused, and the invalidated one as recompiled
   together with the reason
 
@@ -153,5 +153,5 @@ root set, so that a door reusing several entries and rebuilding one reports whic
 
 #### Scenario: Narration stays on stderr
 
-- **WHEN** a door that emits data on stdout runs with narration enabled
+- **WHEN** a path that emits data on stdout runs with narration enabled
 - **THEN** cache narration appears on stderr and does not contaminate stdout

@@ -1,8 +1,8 @@
 ## Context
 
-`run-door-user-libraries` completed the Chez-free doors: `scheme-run` resolves user
+`run-door-user-libraries` completed the Chez-free paths: `scheme-run` resolves user
 libraries through the manifest in-process, and `bin/scheme-compile` (the Chez-free
-AOT door: `scheme-run --emit` + clang `-O2`) builds and links importing programs
+AOT path: `scheme-run --emit` + clang `-O2`) builds and links importing programs
 without Chez. This change supplies the *project* half — a manifest that names the
 program to build, and a `emit build` command that delivers it as a standalone
 executable, **staying Chez-free end-to-end** per the design goal that standalone
@@ -31,7 +31,7 @@ Current state:
   default `emit-libs.scm` via `scheme-run --emit`.
 
 User decisions for this slice: manifest program entries use `(program NAME …)`;
-`emit build` delivers via the **Chez-free** door (`bin/scheme-compile`, no
+`emit build` delivers via the **Chez-free** path (`bin/scheme-compile`, no
 tree-shaking); the program-entry **resolver is Chez-free**, added to the embedded
 compiler and driven by a `scheme-run --resolve-program` flag.
 
@@ -52,7 +52,7 @@ compiler and driven by a `scheme-run --resolve-program` flag.
 - No renaming/removal/deprecation of `scheme-compile`, `scheme-run`, `repl-host`, or
   `bin/scheme-compile` (slice #1's CLI-naming/back-compat decision).
 - No `emit lib` / `emit run` / `emit repl` verbs — only `build`.
-- **No tree-shaking on the Chez-free door.** Full units are linked, matching
+- **No tree-shaking on the Chez-free path.** Full units are linked, matching
   `bin/scheme-compile` today. Porting the closed-world strip to the Chez-free path
   is deferred.
 - No dependency model: no registry, version constraints, or lockfile.
@@ -78,7 +78,7 @@ parsers dispatch on the head keyword of each entry.
 This is the spec's "library resolution is unchanged by program entries," and it is
 required for correctness: without it, a program entry's `(source …)` would be loaded
 as a spurious library unit. The two parsers are edited in lockstep to stay
-consistent (module-system spec applies to every door).
+consistent (module-system spec applies to every path).
 
 ### D3: Chez-free resolver as an embedded-compiler mode + host flag
 
@@ -100,7 +100,7 @@ keeps the manifest grammar single-sourced in the compiler.
   outside the compiler — fails on comments/strings/nesting, departs from
   single-source-of-truth.
 - **Alternative rejected (Chez resolver)**: reusing `compile.ss` needs Chez, so
-  `emit build` would not be Chez-free end-to-end — undercutting the chosen door.
+  `emit build` would not be Chez-free end-to-end — undercutting the chosen path.
 
 ### D4: `emit` is a thin additive bash wrapper, `build` verb only
 
@@ -117,7 +117,7 @@ keeps the manifest grammar single-sourced in the compiler.
 
 Any verb other than `build` prints a usage error listing only `build`. No existing
 binary is renamed; `emit` is purely additive. Because step 4 *is* `bin/scheme-compile`,
-parity with the AOT door holds by construction.
+parity with the AOT path holds by construction.
 
 ## Risks / Trade-offs
 
@@ -128,7 +128,7 @@ parity with the AOT door holds by construction.
   idempotent by design; run it and verify `git diff bootstrap/` is empty after a
   second pass (the repo's existing trust-check).
 - **[No tree-shaking → larger binaries than the Chez driver]** → Accepted for this
-  slice and called out in the spec; the closed-world strip on the Chez-free door is
+  slice and called out in the spec; the closed-world strip on the Chez-free path is
   future work, not a regression of any shipped behavior.
 - **[Two build entry points (`emit build`, `bin/scheme-compile`) could drift]** →
   `emit build` adds only resolution; the build itself *is* `bin/scheme-compile`.

@@ -22,7 +22,7 @@ change keeps them agreeing. It changes what they agree on, to what the REPL alre
 **Goals:**
 
 - Asking a tool what it does succeeds, at the top level and per verb.
-- Every door validates its options the same way.
+- every path validates its options the same way.
 - A delivered executable's stdout is the program's own output when the program ends in output.
 - `emit run`, a built executable, JIT, and bitcode remain byte-identical on stdout.
 - The REPL's rule and the program rule become one rule stated twice, not two policies.
@@ -71,7 +71,7 @@ The fix is the arm the other three already have.
 The tempting alternative is one shared option parser. Rejected: the loops differ in what they accept
 positionally (a file, a name, a source path, nothing) and the shared surface is three flags. A
 parser abstraction would be larger than the four loops it replaces, and this change's value is that
-the doors *behave* alike, not that they share code.
+the paths *behave* alike, not that they share code.
 
 ### D4 — The program-entry suppression is the REPL's rule, stated for programs
 
@@ -89,7 +89,7 @@ already requires.
 
 A delivered executable's value print is `main` in `src/runtime/runtime.c:1843-1845`; `emit run`'s is
 the host's in-process run path in `src/emit.cpp`. Both need the guard, and the test that they agree
-is that the same program's stdout is byte-identical through both doors — which is exactly what
+is that the same program's stdout is byte-identical through both paths — which is exactly what
 `test/io-primitives-tests.sh` already checks, once its three expectations are updated.
 
 `RT_FILTER_MAIN` stays as it is: a separate compile-time mode that suppresses *every* final value,
@@ -99,7 +99,7 @@ used by `schemec`. This change makes the default mode print less; it does not me
 
 Four expectations move (`demos/mandelbrot.expected`, `test/io-primitives-tests.sh:47,50,53`). No
 flag to restore the old output: the trailing token was never a feature, and a compatibility switch
-would make the doors disagree again on request, which is the defect.
+would make the paths disagree again on request, which is the defect.
 
 Worth recording that the surface is this small. #42 expected "`demos/run-tests.sh` and several
 `test/*-tests.sh`" to move, and that estimate is what kept this out of `baked-set-on-every-door`.
@@ -115,7 +115,7 @@ does not move either, since it tests the REPL rule being generalized.
   program that wants to report completion can say so. Exit status is unchanged and remains the
   signal for success.
 - **`emit run` becomes slightly less useful as a scratchpad** — `(vector-set! v 0 1)` as a last form
-  now shows nothing. → It matches what the same input does at the REPL prompt, which is the door
+  now shows nothing. → It matches what the same input does at the REPL prompt, which is the path
   users learn first.
 - **Two destinations for the same usage text (D1)** could look inconsistent in a transcript. →
   Scenario coverage pins both directions, and the rule ("requested → stdout, error → stderr") is one
@@ -129,7 +129,7 @@ does not move either, since it tests the REPL rule being generalized.
 1. **Should `emit help <verb>` exist as an alias for `emit <verb> --help`? — Yes.** It cost the one
    dispatch arm the question anticipated: `main` handles `--help`/`-h`/`help` together, before verb
    dispatch, and `emit help VERB` routes to the same per-verb writer `emit VERB --help` uses. There
-   is one usage text per door and two ways to ask for it, which is the point — a user who has read
+   is one usage text per path and two ways to ask for it, which is the point — a user who has read
    nothing types the word before the flag. `emit help <not-a-verb>` is an error like any other
    unknown verb: diagnostic and summary on stderr, exit 2.
 2. **Does the per-verb help repeat the shared flags, or point at the top-level block? — Repeat

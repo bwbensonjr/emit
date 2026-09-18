@@ -129,7 +129,7 @@ nothing at link time and costs a third baked library and a third partition. One 
 R7RS reserves the `(scheme …)` namespace for the standard, so an implementation-internal library
 must not live there. `(emit internal)` says whose it is and that it is not API. It is listed in the
 manifest for the Chez driver's benefit like `(scheme base)` is, but resolves baked in the Chez-free
-doors.
+paths.
 
 ### D6 — The substrate also defines the nine `cxr` forms; `(scheme cxr)` defines its own
 
@@ -284,8 +284,8 @@ D1 rejected, arriving by the other road.
   name now fails with an unbound variable. → Sweep `demos/`, `test/`, and the docs; the failure is
   loud, not silent, which is the good case.
 - **R5 — A baked library importing another baked library is a new shape.** The auto-import (mode 6),
-  the REPL's eager preload (mode 5), and the run door's lazy closure all assume `(scheme base)` is
-  import-free. → Exercise all four doors explicitly; the door-parity guards
+  the REPL's eager preload (mode 5), and the `emit run` command's lazy closure all assume `(scheme base)` is
+  import-free. → Exercise all four commands explicitly; the path-parity guards
   (`test/prelude-base-run-tests.sh`, `test/dump-parity-tests.sh`, `test/self-emit-equiv.sh`) are the
   net.
 
@@ -313,7 +313,7 @@ changes the surface.
 
 ## Open Questions
 
-1. **Answered: yes, it is listed** — and not as a preference. The REPL door does not use the baked
+1. **Answered: yes, it is listed** — and not as a preference. the REPL does not use the baked
    registration at all: it preloads the manifest (`src/emit.cpp:811` → mode 5, then mode 4 per
    library) and resolves `(scheme base)` from `lib/scheme/base.sld`, so once that file carries
    `(import (emit internal))` the import has to resolve *through the manifest* or the REPL has no

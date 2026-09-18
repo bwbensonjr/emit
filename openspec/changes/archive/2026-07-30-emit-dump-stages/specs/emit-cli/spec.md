@@ -1,15 +1,15 @@
 ## ADDED Requirements
 
-### Requirement: Every door accepts `--dump` for per-pass stage inspection
+### Requirement: every path accepts `--dump` for per-pass stage inspection
 
 `emit run`, `emit build`, `emit lib`, and `emit repl` SHALL accept a `--dump` flag that
 prints the intermediate language after each named compiler pass. The flag SHALL also be
 settable through the environment so that tools and scripts can enable it without editing a
 command line. All dump output SHALL be written to standard error; the flag SHALL NOT alter
-what any door writes to standard output, and SHALL NOT alter the delivered executable, the
+what any path writes to standard output, and SHALL NOT alter the delivered executable, the
 library artifact, or the value a program computes.
 
-#### Scenario: `--dump` on the run door
+#### Scenario: `--dump` on the `emit run` command
 
 - **WHEN** `emit run --dump FILE` is run
 - **THEN** the IL after each named pass is printed to standard error, and the program's
@@ -21,14 +21,14 @@ library artifact, or the value a program computes.
   `emit run --emit --dump`
 - **THEN** the bytes written to standard output are byte-for-byte identical
 
-#### Scenario: `--dump` on the lib door
+#### Scenario: `--dump` on the `emit lib` command
 
 - **WHEN** `emit lib SRC --dump` compiles a library
 - **THEN** the stages of that library's unit compilation are printed to standard error, and
   the written `.ll` and `.exports` artifacts are byte-identical to those written without
   `--dump`
 
-#### Scenario: `--dump` on the build door
+#### Scenario: `--dump` on the `emit build` command
 
 - **WHEN** `emit build NAME --dump` delivers a native executable
 - **THEN** the stages are printed to standard error and the delivered executable behaves
@@ -42,7 +42,7 @@ library artifact, or the value a program computes.
 
 #### Scenario: The environment enables dumping
 
-- **WHEN** a door is run with the dump environment variable set and no `--dump` on the
+- **WHEN** a path is run with the dump environment variable set and no `--dump` on the
   command line
 - **THEN** it dumps as if `--dump` had been passed
 

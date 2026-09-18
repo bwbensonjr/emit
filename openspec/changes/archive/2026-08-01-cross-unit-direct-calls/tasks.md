@@ -1,7 +1,7 @@
 ## 0. Settle the assumption the whole change rests on
 
-- [x] 0.1 **Confirm library globals are never reassigned after `__init`, on both doors** (design D4). Read the REPL preload path and the generation-mangling scheme; then test it: redefine a `(scheme base)` name at the REPL, call both it and a previously-compiled procedure that used the library binding, and check each resolves to the binding it captured. This decides whether the lowering is door-independent or needs an AOT-only carve-out
-- [x] 0.2 (not needed -- D4 held on both doors, so no carve-out) If it needs a carve-out: **stop and re-propose**. Varying the *program* module between doors is a far larger departure than P1's (which varies only library units), and it should not be absorbed into this change silently
+- [x] 0.1 **Confirm library globals are never reassigned after `__init`, on both paths** (design D4). Read the REPL preload path and the generation-mangling scheme; then test it: redefine a `(scheme base)` name at the REPL, call both it and a previously-compiled procedure that used the library binding, and check each resolves to the binding it captured. This decides whether the lowering is path-independent or needs an AOT-only carve-out
+- [x] 0.2 (not needed -- D4 held on both paths, so no carve-out) If it needs a carve-out: **stop and re-propose**. Varying the *program* module between paths is a far larger departure than P1's (which varies only library units), and it should not be absorbed into this change silently
 - [x] 0.3 Record the baseline: `emit`/`schemec` sizes, AOT link wall time, demo-suite time, and the 30M-call probe at 0.06s, so parts 1–3 can each be shown neutral before the combination pays
 
 ## 1. Stable code labels for library procedures (design D1)
@@ -28,7 +28,7 @@
 
 ## 4. LTO on the ship path (design D3)
 
-- [x] 4.1 Add `-flto` to the AOT link (`link_clang` in `src/emit.cpp`, and the `ship-opt` sibling in `src/compile.ss`); leave the JIT/REPL door untouched
+- [x] 4.1 Add `-flto` to the AOT link (`link_clang` in `src/emit.cpp`, and the `ship-opt` sibling in `src/compile.ss`); leave the JIT/REPL untouched
 - [x] 4.2 Measure delivered binary size against the same programs without LTO. Binary size is a first-class concern here — a regression is a reason to reconsider the setting, not a footnote
 - [x] 4.3 Measure AOT link wall time; record it, since it is a per-build cost paid by every user
 - [x] 4.4 **Measure LTO standalone**, before the direct calls land: `runtime.c` is in the same link, so LTO may inline `rt_add`/`rt_car` into Scheme code. If that is a large independent win it belongs in its own backlog item and must not be used to justify this change (design Open Questions)
@@ -39,7 +39,7 @@
 - [x] 5.2 Re-measure the indirect call sites surviving `-O2` in the compiler's module (was 755 direct / 2073 indirect after P5-B-general) and report how many of the 808 cross-unit sites converted
 - [x] 5.3 Ackermann and mandelbrot for regression; neither is library-call-heavy, so both should be flat
 - [x] 5.4 `demos/run-tests.sh` — every demo's value unchanged; `demos/run-backends.sh` — AOT/JIT/bitcode agree
-- [x] 5.5 If D4 held, assert the program module is still byte-identical across doors (`self-emit-equiv`, `dump-parity`); if it did not, this is where the carve-out's tests would go
+- [x] 5.5 If D4 held, assert the program module is still byte-identical across paths (`self-emit-equiv`, `dump-parity`); if it did not, this is where the carve-out's tests would go
 - [x] 5.6 `test/modules/` — confirm a *user* library gets the same treatment, not just `(scheme base)`
 - [x] 5.7 `make regen` reconverges (verified idempotent: a second regen reproduces bootstrap/*.ll byte-for-byte) and `test/trust-check.sh` passes -- **trust-check runs on the commit**: it skips while `bootstrap/` is dirty by design, so it must be re-run once these artifacts are committed; expect a large but mechanical IR diff from the label rename
 - [x] 5.8 `./run-all-tests.sh` and `./run-dev-tests.sh` both green

@@ -145,7 +145,7 @@ and the rejected alternative are in D10; D1 and D7 are amended.
       learn to resolve a program's import against the baked set for this to take effect.
 - [x] 4.5 `(emit internal)` **is** listed in `emit-libs.scm`, with a generated on-disk
       `lib/emit/internal.sld` beside its baked twin (open question 1, now answered in the design):
-      the REPL door resolves `(scheme base)` from the manifest (`src/emit.cpp:811`, mode 5 → mode 4),
+      the REPL resolves `(scheme base)` from the manifest (`src/emit.cpp:811`, mode 5 → mode 4),
       so `base.sld`'s new import must resolve there or the REPL has no standard library. Also extend
       `make install`: `SLDS` globs `lib/scheme/*.sld` only (`Makefile:164`), which does not reach
       `lib/emit/`.
@@ -210,11 +210,11 @@ names unbound in a bare program; a program importing nothing still runs with **n
 `(guard (e (#t 'caught)) (read-char 5))` and a closed-port `read` are both still caught (D10's
 regression case, checked by hand — 6.x should make it a test).
 
-**Follow-up, filed as issue #39, not this change.** The REPL door resolves `(scheme base)` from the
-manifest (`src/emit.cpp:811`, mode 5 -> mode 4) while the run/build doors bake it (mode 8). That
-inconsistency is why a user manifest must name the substrate at all. If the REPL door registered the
-baked set the way the run door does, no manifest would need to mention `(scheme base)` **or**
-`(emit internal)` — only genuinely user-supplied libraries. That is a door-architecture change with
+**Follow-up, filed as issue #39, not this change.** the REPL resolves `(scheme base)` from the
+manifest (`src/emit.cpp:811`, mode 5 -> mode 4) while the run/`emit build` commands bake it (mode 8). That
+inconsistency is why a user manifest must name the substrate at all. If the REPL registered the
+baked set the way the `emit run` command does, no manifest would need to mention `(scheme base)` **or**
+`(emit internal)` — only genuinely user-supplied libraries. That is a path-architecture change with
 its own protocol work (mode 8 would return N init symbols so the REPL can run them in dependency
 order), so it does not belong here.
 
@@ -285,7 +285,7 @@ order), so it does not belong here.
 
 - [x] 6.1 New suite (or extend `test/prelude-base-run-tests.sh`): each of the sixteen names is
       **unbound** in a bare program and **bound and correct** after importing its library, on the
-      run door, the AOT door, and the REPL door.
+      `emit run` command, the AOT path, and the REPL.
 - [x] 6.2 Assert `(cadr '(1 2 3))` still works with no import (the depth-2 four stay in
       `(scheme base)`), so the partition is not over-applied.
 - [x] 6.3 Assert substrate names (`rd-atom`, `rd-skip-ws`, `%make-port`) are unbound in a bare
@@ -298,7 +298,7 @@ order), so it does not belong here.
 **How step 6 landed.** 6.1–6.3 and 6.5 are a new suite, `test/library-partition-tests.sh`
 (78 checks, registered in `run-all-tests.sh` as "R7RS library partition"); 6.4 extended
 `test/install-layout-tests.sh` (now 21 checks). Each of the sixteen names is checked in *both*
-directions — unbound bare, then correct with its import on the run, AOT and REPL doors — because a
+directions — unbound bare, then correct with its import on the run, AOT and REPLs — because a
 name that is merely still reachable proves nothing and a name unbound everywhere is a regression.
 Beyond the task list it also pins the three things D10 argued about: one port type across libraries,
 one handler chain (`guard` catching an error raised by relocated machinery), and `(scheme cxr)`
@@ -350,7 +350,7 @@ recording because they are the kind that make a suite pass for the wrong reason:
       `(scheme base)` *missing*") is explicitly out of this change's scope, so `Fixes #33` would
       close unfinished work. The commit says `Refs #33` and the audit stays on that issue.
       Two issues filed along the way, both pre-existing gaps this change surfaced rather than caused:
-      **#39** (a hand-written manifest must name `(emit internal)`, because the REPL door resolves
+      **#39** (a hand-written manifest must name `(emit internal)`, because the REPL resolves
       `(scheme base)` from the manifest while run/build bake it) and **#40** (the surface
       declaration's seven rot checks are never exercised).
 - [x] 8.3 `openspec validate scheme-base-partition`; sync specs and archive.

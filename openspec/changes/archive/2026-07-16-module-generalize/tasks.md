@@ -30,7 +30,7 @@
 - [x] 5.1 Emit `@scheme_entry` calls to every transitive-closure library's `@"L:__init"` in topological order (dependencies first) before the program body; declare each `__init` external
 - [x] 5.2 Confirm the Stage 1 `@"L:__inited"` guard makes a diamond's shared unit run its body once even when reached via multiple dependents
 
-## 6. REPL door — transitive import (src/repl/host.cpp + src/repl-core.ss)
+## 6. REPL — transitive import (src/repl/host.cpp + src/repl-core.ss)
 
 - [x] 6.1 On `(import (L))`, resolve `L`'s transitive dependency closure via the manifest and `addIRModule` each unit `.ll` in topological order into the shared JITDylib
 - [x] 6.2 Track already-initialized units in session state; call each unit's `@"L:__init"` once (guard also protects against a redundant call); merge `L`'s export table into the session scope
@@ -55,11 +55,11 @@
 - [x] 9.5 Cycle: a graph with `(a)`↔`(b)` reports a compile-time cycle error (no loop, no link)
 - [x] 9.6 Stale-rebuild: touch/edit a library source and assert a recompile; unchanged source reuses artifacts
 - [x] 9.7 Missing-library: importing a library absent from the manifest reports the naming error
-- [x] 9.8 Confirm all Stage 1 `test/modules-*` cases and Stage 0's demo byte-identity guard still pass; wire new cases into `run-all-tests.sh` (Chez-free doors) and `run-dev-tests.sh` (Chez-gated pieces)
+- [x] 9.8 Confirm all Stage 1 `test/modules-*` cases and Stage 0's demo byte-identity guard still pass; wire new cases into `run-all-tests.sh` (Chez-free paths) and `run-dev-tests.sh` (Chez-gated pieces)
 
 ## 10. Regen and verification
 
 - [x] 10.1 If any `CORE_FLAT` file changed (export/import parser tweaks), `make regen` to rebuild `bootstrap/{schemec,embed,embed-repl}.ll`
 - [x] 10.2 Run `run-all-tests.sh` — all suites pass, including Stage 0/1 module guards and the demo byte-identity guard
-- [x] 10.3 Run `run-dev-tests.sh` — self-emission-equivalence (incl. cross-door unit byte-identity), self-hosting fixed point, and the anti-stale trust-check all pass
+- [x] 10.3 Run `run-dev-tests.sh` — self-emission-equivalence (incl. cross-path unit byte-identity), self-hosting fixed point, and the anti-stale trust-check all pass
 - [x] 10.4 Commit regenerated `bootstrap/*.ll` (if any) together with the source change

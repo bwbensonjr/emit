@@ -7,7 +7,7 @@ When that value is **the unspecified value**, the program SHALL print nothing fo
 value's written representation nor a trailing newline. Any other final value, including `#f` and
 `()`, SHALL be printed as before.
 
-This is the program-level counterpart of the interactive door's existing echo-suppression rule
+This is the program-level counterpart of the interactive execution path's existing echo-suppression rule
 (`interactive-repl`, "Read-eval-print loop prints results interactively"). The two SHALL agree: a
 form that prints nothing at the prompt SHALL print nothing as a program's last form, so the
 development loop and the delivered artifact do not disagree about the same value.
@@ -19,7 +19,7 @@ Output the program itself produced is unaffected.
 
 The rule SHALL hold identically on every exit — running in process, a delivered native executable,
 the batch JIT, and bitcode — so that a program's standard output is byte-identical however it is
-run. This is what makes the suppression safe: the doors continue to agree, which is the property the
+run. This is what makes the suppression safe: the paths continue to agree, which is the property the
 unsuppressed report existed to protect.
 
 This requirement is why the unspecified value must remain distinct from `#f` and `()`: those are

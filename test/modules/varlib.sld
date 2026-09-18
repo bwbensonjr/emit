@@ -1,8 +1,8 @@
 ;;; varlib.sld -- a library whose exports are VARIADIC (issue #11).
-;;; The cross-door byte-identity check below was blind to this shape for a long
+;;; The cross-path byte-identity check below was blind to this shape for a long
 ;;; time: mylib defines only fixed-arity procedures, so it never reached the
 ;;; emitter's rest-list path (emit-build-rest) or its `apply` path, both of which
-;;; diverged between the Chez-hosted driver and the shipped self-hosted doors.
+;;; diverged between the Chez-hosted driver and the shipped self-hosted paths.
 ;;; Keep at least one variadic export here, and one that uses `apply`.
 (define-library (varlib)
   (export tail-of pass-through collect)

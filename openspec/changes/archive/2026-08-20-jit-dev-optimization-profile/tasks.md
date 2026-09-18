@@ -17,12 +17,12 @@
       source is compiled.
 - [x] 2.2 Reject a JIT optimization level combined with `emit run --emit` or
       `--resolve-program`, and leave `build`/`lib` rejecting the levels as unknown; verify every
-      error names the invoked door/options, writes no data to stdout, and has a non-zero status.
+      error names the invoked path/options, writes no data to stdout, and has a non-zero status.
 - [x] 2.3 Update the run and REPL usage text to list the three JIT profiles and O1 default; verify
       `emit run --help`, `emit repl --help`, and both `emit help <verb>` spellings remain successful
       stdout-only requests.
 - [x] 2.4 Extend `test/emit-cli-tests.sh` with the profile, conflict, unsupported-level,
-      non-executing-mode, and non-JIT-door cases; verify the suite passes against the rebuilt host.
+      non-executing-mode, and non-JIT-path cases; verify the suite passes against the rebuilt host.
 
 ## 3. Shared ORC Optimization Transform
 
@@ -43,7 +43,7 @@
 
 ## 4. Run and Incremental-Session Correctness
 
-- [x] 4.1 Add run-door cases at O0/O1/O2 for a no-prelude program, baked-library calls, and a
+- [x] 4.1 Add run-path cases at O0/O1/O2 for a no-prelude program, baked-library calls, and a
       manifest library import; verify all levels produce byte-identical stdout and initialize each
       unit once.
 - [x] 4.2 Extend the interactive tests at O1 and O2 with earlier-definition lookup, prospective
@@ -89,7 +89,7 @@
 
 ## 7. Verification and OpenSpec Completion
 
-- [x] 7.1 Run the focused CLI, run-door, module, artifact-cache, REPL interactive/equivalence,
+- [x] 7.1 Run the focused CLI, run-path, module, artifact-cache, REPL interactive/equivalence,
       dynamic-extent, dump, and trap suites; verify every suite passes at the O1 default and the
       profile-specific O2 cases pass.
 - [x] 7.2 Run `./run-all-tests.sh` and then the independent suites in `./run-dev-tests.sh`; verify

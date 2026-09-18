@@ -68,7 +68,7 @@
 ;; `collect-toplevel`) already get this from `exp`'s letrec arm -- the names are lexical
 ;; bindings by then.  It is the per-form paths that need it: a library body form and a
 ;; REPL form are each expanded on their own, with no enclosing letrec to put the name in
-;; scope.  Pruning uniformly is what makes those three paths agree (dev->ship fidelity).
+;; scope.  Pruning uniformly is what makes those three compilation paths agree (dev->ship fidelity).
 ;;
 ;; A collision inside our OWN sources would silently delete a macro we depend on, so it is
 ;; a checked build invariant rather than a hope: test/macro-shadow-check.sh.
@@ -252,7 +252,7 @@
 ;; nothing defines are indistinguishable here; leaving both alone means a macro that
 ;; expands correctly today cannot be broken by this pass.  It is also the whole of design
 ;; D5: a baked derived form (`when`, `cond`) falls through this arm and expands in the
-;; importer against the baked set every door registers, so none of those transformers has
+;; importer against the baked set every compiler host registers, so none of those transformers has
 ;; to be copied into a user library's interface.
 ;;
 ;; Returns the library's compile-time interface: (list <entries> <own-refs> <foreign-refs>).

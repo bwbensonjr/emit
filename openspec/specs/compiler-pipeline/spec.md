@@ -132,7 +132,7 @@ representable is correct behavior, whereas performing one that would not is not.
 
 #### Scenario: The pass appears in the documented ladder and in --dump
 
-- **WHEN** a program is compiled with `--dump` on any door
+- **WHEN** a program is compiled with `--dump` on any path
 - **THEN** the IL after `simplify` is printed as its own named stage between the
   `convert-assignments` and `convert-closures` stages
 - **AND** `docs/PIPELINE.md` lists the stage with its input and output IL shape, consistent with

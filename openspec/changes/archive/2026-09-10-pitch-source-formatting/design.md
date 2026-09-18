@@ -211,9 +211,9 @@ still the best available number and is known to be too high.
 
 **Goals**
 
-- Land the covered-set declaration, the configuration, the doors, and the gate now, so the
+- Land the covered-set declaration, the configuration, the paths, and the gate now, so the
   policy is reviewable and testable before 9,795 lines move.
-- Keep the policy in exactly one place, so the gate and the doors cannot disagree.
+- Keep the policy in exactly one place, so the gate and the paths cannot disagree.
 - Make the eventual reformat *checkable* rather than merely reviewable, using the
   regenerated IR as the oracle.
 - Keep the formatter strictly optional to build and test Emit.
@@ -396,20 +396,20 @@ splitting the reformat into non-regen files first and `CORE_FLAT` second — two
 crossings, two regens (~44 min), and it forfeits the single clean before/after IR
 comparison that makes the whole thing verifiable.
 
-**D11 — The script carries the exit statuses; the Makefile targets are the human doors.**
+**D11 — The script carries the exit statuses; the Makefile targets are the human paths.**
 `tools/format.sh --check` exits 1 for "a covered file would change" and 2 for "the
 environment or the invocation is wrong", which is the distinction an automated caller
 needs. `make format-check` cannot reproduce it: GNU make exits 2 on any recipe failure,
 whatever the recipe returned (measured on GNU Make 3.81 — both cases arrive as 2). Rather
-than pretend the make door carries the distinction, the requirement names the script as
-the automated-caller door and the make targets as wrappers that narrate the outcome for a
-human. *Alternative rejected:* dropping the make doors to keep one door with honest
+than pretend the make path carries the distinction, the requirement names the script as
+the automated-caller path and the make targets as wrappers that narrate the outcome for a
+human. *Alternative rejected:* dropping the make paths to keep one path with honest
 statuses — they are a stated deliverable and are how the rule will actually be run.
 
 ## Risks / Trade-offs
 
 - **The upstream fixes may not land, leaving this change half-applied indefinitely.** →
-  Everything except the reformat is independently useful: the config, the doors, and the
+  Everything except the reformat is independently useful: the config, the paths, and the
   pinned version make `make format-check` a working report on the tree's drift. The change
   is archivable in that state, with the reformat re-proposed when pitch is ready. This is
   a deliberate trade: a change that stops short of its most visible step, in exchange for

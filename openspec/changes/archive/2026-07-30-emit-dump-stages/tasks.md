@@ -72,7 +72,7 @@
 ## 4. Host flag plumbing (`src/emit.cpp`)
 
 - [x] 4.1 Parse `--dump` and `--dump-all` in `emit_run` (`~:302`), `emit_build`,
-  `emit_lib`, and `emit_repl`, and reject them nowhere else; extend each door's usage text
+  `emit_lib`, and `emit_repl`, and reject them nowhere else; extend each path's usage text
   and the top-level `usage()` (`~:898`).
 - [x] 4.2 Compute the dump level once — `--dump`/`--dump-all` wins, else
   `EMIT_VERBOSITY=verbose` gives level 1, else 0 — mirroring `src/compile.ss:682`, and
@@ -80,7 +80,7 @@
   `EMIT_NO_PRELUDE` is set at `~:340`).
 - [x] 4.3 Do the same in `src/run-boot.cpp` (`~:77`) so the bootstrap runner can dump when
   debugging a regen.
-- [x] 4.4 Re-check that no door writes dump output to stdout, including the `--emit` and
+- [x] 4.4 Re-check that no path writes dump output to stdout, including the `--emit` and
   `--resolve-program` paths.
 
 ## 5. Stage 2 of the staged bootstrap
@@ -124,7 +124,7 @@ Two defects the verification work surfaced, both fixed here:
   non-modular `compile-file` path ever dumped. Publish the selected dumper as `*dumpf*`
   and use it for the program unit. A deviation from design D10 ("leave the driver
   alone"), justified: it wires the *existing* dumper rather than changing it, and
-  without it the modular path — the one every door takes, and the one carrying the three
+  without it the modular path — the one every path takes, and the one carrying the three
   newly-dumped stages — has no reference for D5 to check against.
 - [x] 6.8 **Write-style string output escaped nothing, so a dump was not readable data.**
   `print_val`'s `HDR_STRING` arm wrote raw bytes inside quotes, so a string constant
@@ -137,7 +137,7 @@ Two defects the verification work surfaced, both fixed here:
 
 ## 7. Documentation
 
-- [x] 7.1 `README.md` — add `--dump` to the quick-start door examples and state that stage
+- [x] 7.1 `README.md` — add `--dump` to the quick-start path examples and state that stage
   inspection no longer needs Chez; update the Chez-role paragraph to "verification and
   genesis only".
 - [x] 7.2 `docs/PIPELINE.md` — update the `--dump` references to name the shipped binary,

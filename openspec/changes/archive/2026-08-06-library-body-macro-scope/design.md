@@ -27,7 +27,7 @@ compiler generates, which is precisely the two-tier privilege this change remove
 
 **Goals:**
 
-- A library that imports `(scheme base)` can use the derived forms in its body, on all three doors.
+- A library that imports `(scheme base)` can use the derived forms in its body, on all three paths.
 - The derived forms reach every partition member through an ordinary `import`, not body-injection.
 - A library may re-export a macro it imports, as a general capability.
 - `library-body-forms`' copy is deleted, and the resulting IR/binary-size change is measured.
@@ -137,7 +137,7 @@ the declaration and must agree (D6).
 
 `(scheme base)`'s library form is derived twice — by `tools/gen-scheme-base.ss` (Chez, writes the
 committed `.sld`) and by `partition-library-form`/`library-export-names` (in-language, for the
-Chez-free doors). #31 exists to delete that duplication and is not in scope here. This change
+Chez-free paths). #31 exists to delete that duplication and is not in scope here. This change
 therefore *widens* the duplicated surface to include macro exports and re-exports, which makes the
 existing byte-identity pin (`test/prelude-base-run-tests.sh`) more load-bearing, not less. Both
 derivations must be updated together and the pin must cover the macro half.
@@ -170,7 +170,7 @@ applied — name the form the user wrote, at the point they wrote it.
   `(emit internal)`'s compile-time half reachable. Assert the negative: a program must still fail on
   a substrate-private name.
 - **Dual derivation divergence (D6)** → A `.sld` and the in-language form disagreeing on the macro
-  half would give the REPL/run doors a different surface than the driver. Extend the existing
+  half would give the REPL/`emit run` commands a different surface than the driver. Extend the existing
   byte-identity pin rather than trusting construction.
 - **Partition surgery is broad and `make regen` is a ~12-minute barrier** → Sequence so the risky
   measurement (D4) happens before the surgery, and batch source edits between regens per

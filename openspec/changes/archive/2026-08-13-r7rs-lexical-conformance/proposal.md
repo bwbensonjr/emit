@@ -114,7 +114,7 @@ Two user-visible behavior changes belong in the notes, because a program can tel
 - **A round flonum prints positionally**, so `(display 100.0)` writes `100.0` where it wrote
   `1e+02`. The digits are unchanged and every value still reads back; only the notation moves, and
   only for decimal exponents in `[-3, 9]`. This also brings the printer into agreement with Chez,
-  which is what the two doors are compared against.
+  which is what the two paths are compared against.
 
 Also worth a line, as additions rather than changes: `#true`/`#false`, the R7RS character names
 (`#\alarm`, `#\backspace`, `#\escape`, and `#\delete`) plus `#\page`, the `#\xHH` character form,

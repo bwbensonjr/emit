@@ -25,8 +25,8 @@
 ;;; src/compile.ss's include block deliberately omits this file, exactly as it omits
 ;;; src/dump.ss.
 ;;;
-;;; The substrate resolves BAKED on the doors that build the baked set from the compiler's
-;;; baked-in prelude source, and through the hybrid resolver on doors that resolve
+;;; The substrate resolves BAKED on the paths that build the baked set from the compiler's
+;;; baked-in prelude source, and through the hybrid resolver on paths that resolve
 ;;; (scheme base) that way -- so this import costs no manifest requirement that
 ;;; (scheme base) did not already impose.
 (import (emit internal))
