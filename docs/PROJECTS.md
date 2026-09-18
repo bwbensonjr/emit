@@ -97,12 +97,12 @@ imports, what it exports, and a body. Unlike a program, **a library does not aut
 `(scheme base)`** — it must ask:
 
 ```sh
-mkdir -p lib
+mkdir -p lib/my
 ```
 
-`lib/stats.sld`:
+`lib/my/stats.sld`:
 ```scheme
-(define-library (stats)
+(define-library (my stats)
   (import (scheme base))
   (export sum-list mean)
   (begin
@@ -111,10 +111,10 @@ mkdir -p lib
 ```
 
 A library may import another library, including a standard one that is not auto-imported.
-`lib/report.sld`:
+`lib/my/report.sld`:
 ```scheme
-(define-library (report)
-  (import (scheme base) (stats) (scheme inexact))
+(define-library (my report)
+  (import (scheme base) (my stats) (scheme inexact))
   (export describe)
   (begin
     (define (square x) (* x x))
@@ -129,83 +129,60 @@ while `describe` still calls it.
 
 `main.scm`:
 ```scheme
-(import (report))
+(import (my report))
 (describe (list 1.0 2.0 3.0))
 ```
 
-## The manifest
+## No mapping file is needed
 
-Emit resolves a library **name** to a **file** through a manifest, `emit-libs.scm` — an
-s-expression list of entries. Create one at your project root:
+The project now has the conventional layout:
 
-```scheme
-((library (stats)  (source "lib/stats.sld"))
- (library (report) (source "lib/report.sld"))
- (program myproj (source "main.scm") (output "build/myproj")))
+```text
+main.scm
+lib/
+  my/
+    stats.sld
+    report.sld
 ```
 
-Four things to know:
-
-- **Relative paths resolve against the manifest's own directory**, not your current directory. So
-  the manifest travels with the project and works from anywhere. Absolute paths are used as given.
-- **`(program …)` entries name build targets**, not libraries. They are never imported; `emit build`
-  resolves them. `(output …)` is optional and defaults to `build/<NAME>`.
-- **You do not list `(scheme base)`.** It is baked into the binary, along with the internal
-  substrate it stands on, so a program that imports nothing — or only `(scheme base)` — needs no
-  manifest at all. Every door registers the baked set before it reads the manifest.
-- **You list only your own entries.** The manifest above names no standard library and no path into
-  the Emit installation, yet `main.scm` may import `(scheme inexact)` freely — see below.
-
-Non-baked standard libraries — `(scheme inexact)`, `(scheme cxr)`, `(scheme read)`,
-`(scheme file)`, `(scheme case-lambda)`, `(scheme char)`, `(scheme process-context)`, and
-`(scheme write)` — ship as **source files** and are reached through the manifest. Your project's
-manifest does not have to name them, because **project manifests chain installed libraries**
-(changes: `installed-emit-completeness`, issue #44; `chain-explicit-manifests`, issue #114).
-Whether Emit discovers `./emit-libs.scm` in the project or you select that file with
-`--manifest FILE` / `EMIT_MANIFEST`, any library name it does not resolve falls through to the
-manifest installed beside `emit`. A project manifest therefore *extends* the installed one rather
-than shadowing it, and needs no absolute path into the installation prefix — which matters because
-that prefix is a Cellar directory that moves on every Homebrew upgrade.
-
-If you *want* a name to mean something of your own, define it: your entry is consulted first and
-wins. Explicit selection does not consult `./emit-libs.scm` in the caller's current directory; the
-named project is first and only the installed candidates extend it. That makes an out-of-tree build
-ordinary:
-
-```sh
-work="$(mktemp -d)"
-cd "$work"
-emit build myproj --manifest /path/to/myproj/emit-libs.scm
-```
-
-The program entry and all project-relative paths come from `/path/to/myproj/emit-libs.scm`, while
-standard libraries come from the installed manifest. If library resolution must use exactly one
-manifest, add `--no-manifest-chain`:
-
-```sh
-emit build myproj --manifest /path/to/myproj/emit-libs.scm --no-manifest-chain
-```
-
-This is manifest hermeticity specifically; toolchain discovery and other environment inputs are
-unchanged.
-
-Emit reports which manifests it used, on stderr:
+Emit maps `(my report)` to `lib/my/report.sld` and validates the file's declared name. It searches
+the project root before installed roots, so `(scheme inexact)` still comes from Emit's installed
+`lib/scheme/inexact.sld`. Run the application directly:
 
 ```sh
 emit run main.scm
 ```
-```
-resolve manifest -> emit-libs.scm
-resolve manifest -> /usr/local/share/emit/emit-libs.scm  [chained]
-chain /usr/local/share/emit/emit-libs.scm -> scheme.inexact  [1 library]
-(n 3 mean 2.0 rms 2.160246899469287)
+
+Add roots explicitly with repeatable `-L DIR` / `--library-path DIR`, or set
+`EMIT_LIBRARY_PATH` to the host's path-separated list. Explicit roots precede the environment,
+which precedes the project `lib/` root. The first matching source wins.
+
+## When to add a manifest
+
+Use `emit-libs.scm` when a name cannot use the conventional mapping, when a source lives at an
+exceptional path, when artifacts need a selected directory, or when you want stable named program
+targets:
+
+```scheme
+((library (legacy stats) (source "vendor/statistics.sld") (artifacts "build/vendor"))
+ (program myproj (source "main.scm") (output "build/myproj")))
 ```
 
-The `chain` line names the manifest a library actually came from, so a resolution reaching outside
-your project is visible rather than silent. To use a different project manifest: `--manifest FILE`,
-or the `EMIT_MANIFEST` environment variable. The flag wins when both are present. Naming one that
-does not exist is an error rather than a silent fallback, and a physical manifest reached through
-multiple candidate paths is resolved and narrated only once.
+Exact project entries override conventional files. Relative source, artifact, program, and output
+paths resolve against the manifest's directory. You never need to map `(scheme base)`, and ordinary
+installed libraries need no project mapping.
+
+`--manifest FILE` wins over `EMIT_MANIFEST`; either selects an out-of-tree project without
+consulting an unrelated working-directory manifest. Installed providers remain available. For exact
+single-manifest operation, disable both independent fallback mechanisms:
+
+```sh
+emit build myproj --manifest /path/to/myproj/emit-libs.scm \
+  --no-manifest-chain --no-library-paths
+```
+
+Emit narrates each selected non-baked source on stderr, including its provider kind. Quiet mode
+suppresses that narration without changing program output.
 
 ## The development loop
 
@@ -219,7 +196,7 @@ emit repl
 ```
 resolve manifest -> emit-libs.scm
 Emit (embedded compiler, ORC/LLJIT).  ^D to exit.
-> (import (report))
+> (import (my report))
 > (describe (list 1.0 2.0 3.0))
 (n 3 mean 2.0 rms 2.160246899469287)
 > (define (twice f x) (f (f x)))
@@ -227,8 +204,9 @@ Emit (embedded compiler, ORC/LLJIT).  ^D to exit.
 18
 ```
 
-- Your project's libraries are available through the manifest; `(import (report))` loads it and its
-  dependencies in order, initializing each once.
+- Exact manifest libraries are validated at startup. A conventional library such as
+  `(my report)` is untouched until its first import, when Emit resolves and registers its
+  dependency closure, then initializes each member once.
 - A **compile error** is reported and the session rolls back, so a typo does not end your session.
   A **runtime trap** (say an arity error) is isolated the same way.
 - **Redefinition works**: a later `define` of the same name shadows the earlier one for subsequent
@@ -241,22 +219,21 @@ Emit (embedded compiler, ORC/LLJIT).  ^D to exit.
 - The session uses the same `-O0`/`-O1`/`-O2` JIT profiles as `emit run`, with O1 as the default.
   The selection is fixed when the session starts and applies to libraries and every later form.
 
-After editing a library source, restart the session to pick it up — a running session holds the
-unit it already loaded.
+After editing an already imported library source, restart the session to pick it up — a running
+session holds the unit it selected.
 
 ## Delivering an executable
 
 ```sh
-emit build myproj
+emit build main.scm
 ```
 ```
-resolve manifest -> emit-libs.scm
-build myproj -> build/myproj  [source main.scm]
-wrote build/myproj  [155768 bytes exe]
+build main.scm -> build/main  [source main.scm]
+wrote build/main  [155768 bytes exe]
 ```
 
 ```sh
-./build/myproj
+./build/main
 ```
 ```
 (n 3 mean 2.0 rms 2.160246899469287)
@@ -271,9 +248,9 @@ then runs the closed-world `-O2 -flto` ship profile. This is intentionally stron
 open-world per-module JIT optimization. The missing tree shake in this door was fixed by
 `chez-free-unit-pipeline` and `import-dag-tree-shaking` (`Fixes #112`).
 
-If the manifest has exactly one `(program …)` entry you can omit the name (`emit build`). With
-zero or several, omitting it is an error that lists the available entries. `-o PATH` overrides the
-entry's output path.
+A `.scm`-suffixed or path-shaped operand is always direct source; `-o PATH` overrides its
+`build/<basename>` default. A bare operand remains a manifest program name. If a manifest has
+exactly one `(program …)` entry you can still omit the name (`emit build`).
 
 ## Compiling one library
 
@@ -281,17 +258,17 @@ entry's output path.
 readable export table:
 
 ```sh
-emit lib lib/stats.sld -o build/lib
+emit lib lib/my/stats.sld -o build/lib
 ```
 ```
-lib lib/stats.sld -> build/lib/stats.ll  [10363 bytes]
+lib lib/my/stats.sld -> build/lib/my.stats.ll  [10363 bytes]
 ```
 
 ```sh
-cat build/lib/stats.exports
+cat build/lib/my.stats.exports
 ```
 ```
-((stats) ((sum-list . "stats:sum-list") (mean . "stats:mean")) ((sum-list "stats:code:sum-list" 1) (mean "stats:code:mean" 1)))
+((my stats) ((sum-list . "my.stats:sum-list") (mean . "my.stats:mean")) ((sum-list "my.stats:code:sum-list" 1) (mean "my.stats:code:mean" 1)))
 ```
 
 The `.ll` is byte-identical to the unit the run and build doors emit for that source — one
@@ -339,9 +316,9 @@ missing path, and failed replacement raise catchable objects satisfying `file-er
 (cadr  (list 1 2 3))        ; => 2   -- the depth-2 forms ARE in (scheme base)
 ```
 
-Each of these is an ordinary manifest-resolved library, so add an entry for the ones you use. For
-the full exported surface of each, see [`MODULES.md`](MODULES.md); for the primitive layer beneath
-it, [`PRIMITIVES.md`](PRIMITIVES.md).
+Each is an ordinary installed library: import it and Emit finds its conventional source without a
+project mapping. For the full exported surface, see [`MODULES.md`](MODULES.md); for the primitive
+layer beneath it, [`PRIMITIVES.md`](PRIMITIVES.md).
 
 ## Looking inside the compiler
 
@@ -379,9 +356,8 @@ make install PREFIX=$HOME/.local
 This installs the binary together with everything the doors need beside it, under
 `<prefix>/share/emit/`, where the binary's own lookups find it:
 
-- the default manifest and the library sources it names — so `emit run` and `emit repl` resolve the
-  shipped libraries from any directory, and (because the searched manifests chain) from a project
-  with its own manifest too;
+- the compatibility manifest and every non-baked library source at its conventional
+  `lib/<components>.sld` path, so projects need no installed-library mappings;
 - the support files `emit build` needs to link — `tools/llvm-env.sh` for toolchain discovery, the
   `tools/log.sh` it sources, and `src/runtime/runtime.c`, each at the same subpath it has in the
   source tree.

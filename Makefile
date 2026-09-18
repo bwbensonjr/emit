@@ -107,10 +107,10 @@ $(SCHEMEC): $(SCHEMEC_LL) $(BAKED_LL) src/runtime/runtime.c Makefile | build
 build/runtime-host.o: src/runtime/runtime.c Makefile | build
 	$(CC) -std=gnu11 -O2 -I$(GC_INC) -DRT_NO_MAIN -c $< -o $@
 
-# Unified emit front-end, compiled as C++ against the LLVM headers.  EMIT_PREFIX is
-# the LAST manifest candidate (change: manifest-search-path): the prefix this binary
-# was built for, consulted only when neither ./emit-libs.scm nor a manifest beside the
-# executable exists.  A plain in-repo `make` bakes /usr/local and never uses it.
+# Unified emit front-end, compiled as C++ against the LLVM headers. EMIT_PREFIX names
+# the installed library root and its compatibility manifest: the prefix this binary
+# was built for, consulted after project and explicit roots. A plain in-repo `make`
+# bakes /usr/local and ordinarily resolves the checkout's own project root first.
 #
 # EMIT_DEFAULT_CC/_GC_INC/_GC_LIB record the toolchain THIS build resolved -- the same
 # llvm-env.sh values every other recipe here uses -- as the LOWEST-precedence source
@@ -213,12 +213,9 @@ install-hooks:
 # (change: manifest-search-path, issue #35) and the support files (change:
 # installed-emit-completeness, issue #36).
 # ===========================================================================
-# A library that is not baked into the compiler is reachable only through a manifest,
-# so installing the binary alone ships an `emit` whose standard library disappears the
-# moment the user leaves this directory.  The layout below is exactly what the
-# binary's own manifest lookup searches for: <prefix>/bin/emit finds
-# <prefix>/share/emit/emit-libs.scm via its executable-relative candidate (symlinks
-# resolved), and that manifest's relative (source ...) paths resolve beside it.
+# Non-baked libraries install at their conventional component paths beneath
+# <prefix>/share/emit/lib. The compatibility manifest remains beside that root for
+# exact mappings and older projects; executable-relative lookup resolves symlinks.
 #
 # LIBRARY SOURCE is what ships -- an installed door compiles a needed library on
 # demand exactly as an in-repo door does.  Compiled artifacts (.ll/.exports) are

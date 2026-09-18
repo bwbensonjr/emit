@@ -49,6 +49,7 @@
 #include <memory>
 #include <map>                             // manifest index for the lazy preload
 #include <set>
+#include <functional>
 
 #include <unistd.h>
 #include <sys/wait.h>
@@ -70,6 +71,10 @@ extern "C" {
   void rt_repl_set(intptr_t mode, const char *bytes, intptr_t len);
   void rt_set_command_line(int argc, const char *const *argv);
   intptr_t rt_fixnum_value(intptr_t v);
+  intptr_t rt_is_pair_value(intptr_t v);
+  intptr_t rt_is_symbol_value(intptr_t v);
+  intptr_t rt_is_fixnum_value(intptr_t v);
+  intptr_t rt_is_null_value(intptr_t v);
   intptr_t rt_car(intptr_t v);
   intptr_t rt_cdr(intptr_t v);
   intptr_t rt_symbol_to_string(intptr_t v);
@@ -92,6 +97,7 @@ typedef intptr_t (*entry_t)(void);
 // Per-process JIT (one verb runs per invocation, so the run and REPL doors never
 // contend for it).
 static std::unique_ptr<LLJIT> JIT;
+static std::set<std::string> g_repl_added_units;
 
 // The shipped JIT doors use one backend policy (change: jit-dev-optimization-profile).
 // O1 is the development default: enough to remove ordinary call/allocation scaffolding
@@ -302,16 +308,25 @@ static void usage_shared(std::ostream &os) {
   os << "\n"
         "options every verb accepts:\n"
         "  --no-manifest-chain   resolve libraries from only the first manifest\n"
+        "  -L DIR, --library-path DIR\n"
+        "               add a conventional library root (repeatable)\n"
+        "  --no-library-paths\n"
+        "               disable explicit, environment, project, and installed roots\n"
         "  --dump       print the IL after each compiler pass to stderr (stdout unchanged)\n"
         "  --dump-all   --dump, plus the stages of (scheme base) and imported libraries\n"
         "  --help, -h   print this usage on stdout and exit\n";
+  os << "\n"
+        "library lookup: baked libraries, the project manifest, -L roots,\n"
+        "EMIT_LIBRARY_PATH, project lib/, then installed manifest/root pairs.\n"
+        "For example, (my stats) is ROOT/my/stats.sld.  Combine --manifest F,\n"
+        "--no-manifest-chain, and --no-library-paths for exact single-manifest lookup.\n";
 }
 
 static void usage(std::ostream &os) {
   os << "usage: emit <verb> [args]\n"
         "  emit run  [FILE] [--manifest F] [--no-prelude]     compile and run a program\n"
         "  emit repl [--manifest F] [--no-prelude]            interactive REPL\n"
-        "  emit build [NAME] [--manifest F] [-o OUT] [--no-prelude]   deliver a native exe\n"
+        "  emit build [NAME|FILE] [--manifest F] [-o OUT] [--no-prelude]   deliver a native exe\n"
         "  emit lib  SRC [-o DIR] [--manifest F]              compile one library -> artifact\n"
         "  emit help [VERB]                                   this summary, or a verb's usage\n";
   usage_shared(os);
@@ -338,7 +353,7 @@ static void usage_run(std::ostream &os) {
 static void usage_repl(std::ostream &os) {
   os << "usage: emit repl [options]           interactive REPL (^D to exit)\n"
         "\n"
-        "  --manifest F              manifest whose libraries are preloaded into the session\n"
+        "  --manifest F              exact libraries are registered before the first prompt\n"
         "  --no-prelude              do not bake or auto-import (scheme base)\n"
         "  -O0                       unoptimized JIT profile\n"
         "  -O1                       standard O1 JIT profile (default)\n"
@@ -347,9 +362,10 @@ static void usage_repl(std::ostream &os) {
 }
 
 static void usage_build(std::ostream &os) {
-  os << "usage: emit build [NAME] [options]   deliver a native executable\n"
+  os << "usage: emit build [NAME|FILE] [options]   deliver a native executable\n"
         "\n"
         "  NAME                      manifest (program NAME) entry; the sole entry when omitted\n"
+        "  FILE                      .scm or path-shaped source; no program entry required\n"
         "  --manifest F              manifest to resolve the program and its libraries against\n"
         "  -o OUT                    output path, overriding the entry's own\n"
         "  --no-prelude              do not bake or imply (scheme base)\n";
@@ -523,10 +539,8 @@ static std::string support_file(const std::string &relpath) {
 }
 
 // --- manifest location (change: manifest-search-path; issue #35) ---------------
-// A library that is not baked into the binary is reachable only through a manifest,
-// so WHERE the manifest is looked for decides whether an installed `emit` has a
-// standard library at all.  The ordered candidates (spec: module-system "Library
-// manifest"):
+// Manifests supply exact mappings and program metadata. Their location also pairs each
+// installed exact provider with its sibling conventional library root.
 //
 //   1. --manifest FILE          explicit
 //   2. $EMIT_MANIFEST           explicit
@@ -610,6 +624,18 @@ static std::string first_manifest(const std::vector<std::string> &manifests) {
   return manifests.empty() ? std::string() : manifests[0];
 }
 
+// The first manifest is a project provider only when it came from an explicit request
+// or from ./emit-libs.scm.  When neither exists, the first readable installed manifest
+// remains first for program-lookup compatibility but belongs at the installed resolver
+// tier rather than ahead of project library roots.
+static std::string project_manifest_for(const std::string &flag,
+                                        const std::vector<std::string> &manifests) {
+  if (manifests.empty()) return std::string();
+  const char *env = std::getenv("EMIT_MANIFEST");
+  if (!flag.empty() || (env && *env)) return manifests[0];
+  return file_readable(kManifestName) ? manifests[0] : std::string();
+}
+
 // Resolve a path that appeared INSIDE a manifest -- a library's (source ...), a
 // program entry's (source ...)/(output ...) -- against that manifest's own
 // directory.  One rule: a relative path in a manifest is relative to that manifest,
@@ -678,15 +704,61 @@ static void set_source_home(const std::string &path) {
 // keys matching the manifest index.  A pure query: it reads and parses, registering
 // nothing.  `home` is the source's own path: the answer depends on it, because an
 // `import` may arrive through an included declarations file (design D11).
-static std::vector<std::string> source_imports(const std::string &text, const std::string &home) {
-  std::vector<std::string> out;
+struct LibraryName {
+  std::string key;
+  std::string label;
+  std::vector<std::string> components;
+  bool conventional = true;
+};
+
+static LibraryName library_name_from_record(intptr_t record) {
+  LibraryName out;
+  if (!rt_is_pair_value(record)) { out.conventional = false; return out; }
+  intptr_t name = rt_car(record);
+  intptr_t fields = rt_cdr(record);
+  if (!rt_is_pair_value(fields)) { out.conventional = false; return out; }
+  out.key = scm_str(rt_car(fields));
+  fields = rt_cdr(fields);
+  if (!rt_is_pair_value(fields)) { out.conventional = false; return out; }
+  out.label = scm_str(rt_car(fields));
+
+  intptr_t parts = name;
+  while (rt_is_pair_value(parts)) {
+    intptr_t part = rt_car(parts);
+    std::string component;
+    if (rt_is_symbol_value(part)) {
+      component = scm_str(rt_symbol_to_string(part));
+    } else if (rt_is_fixnum_value(part) && rt_fixnum_value(part) >= 0) {
+      component = std::to_string(rt_fixnum_value(part));
+    } else {
+      out.conventional = false;
+    }
+    if (component.empty() || component == "." || component == ".." ||
+        component.find('/') != std::string::npos ||
+        component.find('\\') != std::string::npos ||
+        component.find('\0') != std::string::npos)
+      out.conventional = false;
+    out.components.push_back(component);
+    parts = rt_cdr(parts);
+  }
+  if (!rt_is_null_value(parts) || out.components.empty()) out.conventional = false;
+  return out;
+}
+
+// Ask the compiler which libraries a source text imports (mode 12).  Each result keeps
+// both the canonical identity key and the original name components: keys are intentionally
+// not reversible, while directory providers need the components for safe path derivation.
+static std::vector<LibraryName> source_imports(const std::string &text,
+                                               const std::string &home) {
+  std::vector<LibraryName> out;
   set_source_home(home);
   rt_repl_set(12, text.data(), (intptr_t)text.size());
-  std::string s = scm_str(scheme_entry());
-  std::istringstream lines(s);
-  std::string line;
-  while (std::getline(lines, line))
-    if (!line.empty()) out.push_back(line);
+  intptr_t records = scheme_entry();
+  while (rt_is_pair_value(records)) {
+    LibraryName name = library_name_from_record(rt_car(records));
+    if (!name.key.empty()) out.push_back(name);
+    records = rt_cdr(records);
+  }
   return out;
 }
 
@@ -768,6 +840,276 @@ static void manifest_library_index(const std::vector<std::string> &manifests,
   }
 }
 
+struct ResolverOptions {
+  std::vector<std::string> explicit_roots;
+  std::vector<std::string> environment_roots;
+  bool library_paths = true;
+};
+
+enum class ProviderKind { Manifest, Directory };
+
+struct LibraryDescriptor {
+  LibraryName name;
+  std::string source;
+  std::string source_home;
+  std::string artifact_dir;
+  ProviderKind provider_kind;
+  std::string provider;
+};
+
+struct LibraryProvider {
+  ProviderKind kind;
+  std::string identity;
+  std::string root;
+  std::map<std::string, std::string> exact;
+};
+
+enum class ResolveResult { Found, Missing, Error };
+
+static bool regular_readable(const std::string &path) {
+  struct stat st;
+  return stat(path.c_str(), &st) == 0 && S_ISREG(st.st_mode) &&
+         access(path.c_str(), R_OK) == 0;
+}
+
+static std::string absolute_path(const std::string &path) {
+  if (path.empty() || path[0] == '/') return path;
+  char cwd[PATH_MAX];
+  if (!getcwd(cwd, sizeof cwd)) return path;
+  return std::string(cwd) + "/" + path;
+}
+
+static std::string canonical_root(const std::string &path) {
+  return canonical_path(absolute_path(path));
+}
+
+static std::string conventional_relative_path(const LibraryName &name) {
+  if (!name.conventional) return std::string();
+  std::string path;
+  for (size_t i = 0; i < name.components.size(); i++) {
+    if (i) path += "/";
+    path += name.components[i];
+  }
+  return path + ".sld";
+}
+
+static std::vector<std::string> installed_manifest_candidates() {
+  std::vector<std::string> out;
+  std::set<std::string> seen;
+  std::string exe = exe_path();
+  if (!exe.empty()) {
+    std::string p = dir_of(dir_of(exe)) + "/share/emit/" + kManifestName;
+    if (seen.insert(canonical_path(absolute_path(p))).second) out.push_back(p);
+  }
+  std::string p = std::string(EMIT_PREFIX) + "/share/emit/" + kManifestName;
+  if (seen.insert(canonical_path(absolute_path(p))).second) out.push_back(p);
+  return out;
+}
+
+static bool parse_environment_roots(ResolverOptions &options, const std::string &door) {
+  const char *raw = std::getenv("EMIT_LIBRARY_PATH");
+  if (!raw) return true;
+#ifdef _WIN32
+  const char separator = ';';
+#else
+  const char separator = ':';
+#endif
+  std::string paths(raw);
+  size_t start = 0;
+  while (true) {
+    size_t end = paths.find(separator, start);
+    std::string element = paths.substr(start, end == std::string::npos
+                                               ? std::string::npos : end - start);
+    if (element.empty()) {
+      std::cerr << "emit " << door
+                << ": EMIT_LIBRARY_PATH contains an empty element\n";
+      return false;
+    }
+    options.environment_roots.push_back(element);
+    if (end == std::string::npos) break;
+    start = end + 1;
+  }
+  return true;
+}
+
+class LibraryResolver {
+ public:
+  LibraryResolver(const std::vector<std::string> &manifests,
+                  const std::string &project_manifest,
+                  const ResolverOptions &options)
+      : manifests_(manifests), project_manifest_(project_manifest), options_(options) {}
+
+  bool prepare() {
+    if (prepared_) return true;
+    prepared_ = true;
+
+    std::set<std::string> included;
+    for (const std::string &manifest : manifests_)
+      included.insert(canonical_path(absolute_path(manifest)));
+
+    if (!project_manifest_.empty())
+      add_manifest_provider(project_manifest_);
+
+    if (options_.library_paths) {
+      for (const std::string &root : options_.explicit_roots)
+        add_directory_provider(root, "command line");
+      for (const std::string &root : options_.environment_roots)
+        add_directory_provider(root, "EMIT_LIBRARY_PATH");
+      std::string project_dir = project_manifest_.empty()
+                                  ? std::string()
+                                  : dir_of(project_manifest_);
+      add_directory_provider(project_dir.empty() ? "lib" : project_dir + "/lib",
+                             "project");
+    }
+
+    for (const std::string &candidate : installed_manifest_candidates()) {
+      std::string identity = canonical_path(absolute_path(candidate));
+      if (included.count(identity) &&
+          (project_manifest_.empty() ||
+           identity != canonical_path(absolute_path(project_manifest_))))
+        add_manifest_provider(candidate);
+      if (options_.library_paths)
+        add_directory_provider(dir_of(candidate) + "/lib", "installed");
+    }
+
+    // Preserve a readable chained manifest whose spelling is not one of this binary's
+    // installed candidates.  This is primarily defensive for unusual configured builds.
+    for (const std::string &manifest : manifests_) {
+      if (!project_manifest_.empty() &&
+          canonical_path(absolute_path(manifest)) ==
+            canonical_path(absolute_path(project_manifest_)))
+        continue;
+      bool present = false;
+      for (const LibraryProvider &provider : providers_)
+        if (provider.kind == ProviderKind::Manifest &&
+            canonical_path(absolute_path(provider.identity)) ==
+              canonical_path(absolute_path(manifest)))
+          present = true;
+      if (!present) add_manifest_provider(manifest);
+    }
+    return true;
+  }
+
+  ResolveResult resolve(const LibraryName &name, LibraryDescriptor &answer,
+                        std::string &error) {
+    std::map<std::string, LibraryDescriptor>::const_iterator memo = memo_.find(name.key);
+    if (memo != memo_.end()) { answer = memo->second; return ResolveResult::Found; }
+
+    std::string relative = conventional_relative_path(name);
+    for (const LibraryProvider &provider : providers_) {
+      std::string source;
+      if (provider.kind == ProviderKind::Manifest) {
+        std::map<std::string, std::string>::const_iterator exact =
+            provider.exact.find(name.key);
+        if (exact == provider.exact.end()) continue;
+        source = exact->second;
+      } else {
+        if (relative.empty()) continue;
+        source = provider.root + "/" + relative;
+        if (!regular_readable(source)) continue;
+        std::string declared_key, declared_label;
+        if (!validate_directory_source(name, source, declared_key, declared_label, error))
+          return ResolveResult::Error;
+      }
+
+      answer.name = name;
+      answer.source = source;
+      answer.source_home = source;
+      answer.artifact_dir = "build/lib";
+      answer.provider_kind = provider.kind;
+      answer.provider = provider.kind == ProviderKind::Manifest
+                          ? provider.identity : provider.root;
+      memo_[name.key] = answer;
+      selected_paths_[name.key] = source;
+      say("resolve library " + name.label + " -> " + source + "  [" +
+          (provider.kind == ProviderKind::Manifest ? "manifest " : "directory ") +
+          answer.provider + "]");
+      return ResolveResult::Found;
+    }
+    return ResolveResult::Missing;
+  }
+
+  std::vector<LibraryDescriptor> exact_descriptors() const {
+    std::vector<LibraryDescriptor> out;
+    std::set<std::string> seen;
+    for (const LibraryProvider &provider : providers_) {
+      if (provider.kind != ProviderKind::Manifest) continue;
+      for (const auto &entry : provider.exact) {
+        if (!seen.insert(entry.first).second) continue;
+        LibraryDescriptor descriptor;
+        descriptor.name.key = entry.first;
+        descriptor.name.label = library_label(entry.first);
+        descriptor.source = entry.second;
+        descriptor.source_home = entry.second;
+        descriptor.artifact_dir = "build/lib";
+        descriptor.provider_kind = ProviderKind::Manifest;
+        descriptor.provider = provider.identity;
+        out.push_back(descriptor);
+      }
+    }
+    return out;
+  }
+
+  const std::map<std::string, std::string> &selected_paths() const {
+    return selected_paths_;
+  }
+
+ private:
+  void add_manifest_provider(const std::string &manifest) {
+    LibraryProvider provider;
+    provider.kind = ProviderKind::Manifest;
+    provider.identity = manifest;
+    std::map<std::string, std::string> from;
+    manifest_library_index(std::vector<std::string>(1, manifest), provider.exact, from);
+    providers_.push_back(provider);
+  }
+
+  void add_directory_provider(const std::string &root, const std::string &identity) {
+    std::string physical = canonical_root(root);
+    if (!directory_identities_.insert(physical).second) return;
+    LibraryProvider provider;
+    provider.kind = ProviderKind::Directory;
+    provider.identity = identity;
+    provider.root = physical;
+    providers_.push_back(provider);
+    vsay("library root " + physical + "  [" + identity + "]");
+  }
+
+  bool validate_directory_source(const LibraryName &requested, const std::string &source,
+                                 std::string &declared_key, std::string &declared_label,
+                                 std::string &error) {
+    std::string text = read_file(source);
+    set_source_home(source);
+    rt_repl_set(18, text.data(), (intptr_t)text.size());
+    intptr_t result = scheme_entry();
+    if (status_of(result) != "ok") {
+      error = "library " + requested.label + " from " + source + ": " +
+              door_msg(scm_str(rt_cdr(result)));
+      return false;
+    }
+    std::string payload = scm_str(rt_cdr(result));
+    size_t tab = payload.find('\t');
+    declared_key = payload.substr(0, tab);
+    declared_label = tab == std::string::npos ? std::string("<unknown>")
+                                               : payload.substr(tab + 1);
+    if (declared_key != requested.key) {
+      error = "library " + requested.label + " resolved to " + source +
+              " but declares " + declared_label;
+      return false;
+    }
+    return true;
+  }
+
+  std::vector<std::string> manifests_;
+  std::string project_manifest_;
+  ResolverOptions options_;
+  bool prepared_ = false;
+  std::vector<LibraryProvider> providers_;
+  std::set<std::string> directory_identities_;
+  std::map<std::string, LibraryDescriptor> memo_;
+  std::map<std::string, std::string> selected_paths_;
+};
+
 // The artifact cache is defined further down, beside the rest of the entry machinery, but
 // the two preloads are its first clients -- so its unit-level face is declared here.  A
 // read answers Hit, Miss, or Deferred: Deferred is a VALID entry whose imports are not
@@ -782,66 +1124,59 @@ static void cache_store_unit(const std::string &key, const std::string &path,
 // import anything at any prompt, so every user library on the manifest must already be
 // loaded.  Only this door, compiling one known program, can be lazy.  Both doors read the
 // same mode-9 index; they differ only in how much of it they load.
-static bool preload_user_libraries(const std::vector<std::string> &manifests,
+static bool preload_user_libraries(LibraryResolver &resolver,
                                    std::vector<std::string> &modules,
                                    std::vector<std::string> &module_keys,
                                    const std::string &program_src,
                                    const std::string &program_home) {
-  if (manifests.empty()) return true;        // no manifest: no user libraries
-
-  std::map<std::string, std::string> path_of;      // library key -> source path
-  std::map<std::string, std::string> from_of;      // key -> manifest, when not the first
-  manifest_library_index(manifests, path_of, from_of);
-  if (path_of.empty()) return true;
+  if (!resolver.prepare()) return false;
 
   // The closure walk: start at the program's imports and follow each reached .sld's
   // own imports.  Reading those files is why this loop lives here and not in the
   // core, which performs no I/O by design.
   std::set<std::string> needed;
-  std::map<std::string, std::vector<std::string>> supplied;   // manifest -> keys, for narration
-  std::vector<std::string> work = source_imports(program_src, program_home);
+  std::map<std::string, LibraryDescriptor> descriptors;
+  std::vector<LibraryName> work = source_imports(program_src, program_home);
   while (!work.empty()) {
-    std::string key = work.back();
+    LibraryName name = work.back();
     work.pop_back();
-    if (needed.count(key)) continue;
-    std::map<std::string, std::string>::const_iterator it = path_of.find(key);
-    // Not in the manifest: either (scheme base), which is baked in, or a genuinely
-    // missing library -- which the program's own compile reports precisely, so
-    // guessing here would only produce a worse diagnostic.
-    if (it == path_of.end()) continue;
-    needed.insert(key);
-    // A name supplied by a LATER manifest is a resolution reaching outside the first
-    // one -- ambient state, so it is named rather than silent (design D8).
-    std::map<std::string, std::string>::const_iterator f = from_of.find(key);
-    if (f != from_of.end()) supplied[f->second].push_back(key);
+    if (needed.count(name.key)) continue;
+    LibraryDescriptor descriptor;
+    std::string error;
+    ResolveResult result = resolver.resolve(name, descriptor, error);
+    // Missing here can be a baked member.  The guarded program compile owns the final
+    // unresolved-import diagnostic after every disk provider has had its chance.
+    if (result == ResolveResult::Missing) continue;
+    if (result == ResolveResult::Error) {
+      std::cerr << "emit: " << error << "\n";
+      return false;
+    }
+    needed.insert(name.key);
+    descriptors[name.key] = descriptor;
     // The .sld's own path is its home, so an import behind an included declarations
     // file is reached here rather than surfacing later as a missing dependency (D11).
-    std::vector<std::string> deps = source_imports(read_file(it->second), it->second);
+    std::vector<LibraryName> deps =
+        source_imports(read_file(descriptor.source), descriptor.source);
     for (size_t i = 0; i < deps.size(); i++) work.push_back(deps[i]);
   }
 
-  for (size_t mi = 1; mi < manifests.size(); mi++)
-    say_chained(manifests[mi], supplied[manifests[mi]]);
-
-  // (key, path) pairs from here on: the KEY is what an entry is filed under, so the cache
-  // needs it beside the path it would otherwise have carried alone.
-  std::vector<std::pair<std::string, std::string>> pending;
+  std::vector<LibraryDescriptor> pending;
   for (std::set<std::string>::const_iterator k = needed.begin(); k != needed.end(); ++k)
-    pending.push_back(std::make_pair(*k, path_of[*k]));
+    pending.push_back(descriptors[*k]);
 
   while (!pending.empty()) {
-    std::vector<std::pair<std::string, std::string>> deferred;
+    std::vector<LibraryDescriptor> deferred;
     bool progress = false;
-    for (const std::pair<std::string, std::string> &kp : pending) {
-      const std::string &key = kp.first;
-      const std::string &p = kp.second;
+    for (const LibraryDescriptor &descriptor : pending) {
+      const std::string &key = descriptor.name.key;
+      const std::string &p = descriptor.source;
       // A cached unit registers without reading the .sld, compiling it, or running any of
       // its includes (change: chez-free-unit-pipeline).  `Deferred` means the entry is
       // valid but its imports are not registered yet, which is the same condition mode 4
       // reports and goes around the same fixpoint loop.
       std::string cached_ir, cached_init;
       CacheRead cr = cache_load_unit(key, p, cached_ir, cached_init);
-      if (cr == CacheRead::Deferred) { deferred.push_back(kp); continue; }
+      if (cr == CacheRead::Deferred) { deferred.push_back(descriptor); continue; }
       if (cr == CacheRead::Hit) {
         modules.push_back(cached_ir);
         module_keys.push_back(key);
@@ -865,7 +1200,7 @@ static bool preload_user_libraries(const std::vector<std::string> &manifests,
       rt_repl_set(4, src.data(), (intptr_t)src.size());
       intptr_t r = scheme_entry();
       std::string st = status_of(r);
-      if (st == "deferred") { deferred.push_back(kp); continue; }
+      if (st == "deferred") { deferred.push_back(descriptor); continue; }
       if (st == "already") { progress = true; continue; }  // e.g. baked (scheme base): no module
       if (st != "ok") {
         std::cerr << "emit: loading library " << p << ": " << door_msg(scm_str(rt_cdr(r))) << "\n";
@@ -880,9 +1215,9 @@ static bool preload_user_libraries(const std::vector<std::string> &manifests,
       progress = true;
     }
     if (!progress) {                         // every remaining unit is stuck
-      for (const std::pair<std::string, std::string> &kp : deferred)
-        std::cerr << "emit run: library " << kp.second
-                  << ": unresolved or cyclic import (dependency missing from manifest?)\n";
+      for (const LibraryDescriptor &descriptor : deferred)
+        std::cerr << "emit: library " << descriptor.source
+                  << ": unresolved or cyclic import (dependency missing from providers?)\n";
       return false;
     }
     pending.swap(deferred);
@@ -1455,7 +1790,7 @@ static bool register_baked_set(std::vector<std::string> &modules,
 // that (change: chez-free-unit-pipeline) -- for the baked members it is read back out of the
 // __init symbols, which carry the unit prefix ("scheme.base:__init"), rather than being
 // tracked separately and risking a second source of truth.
-static bool seed_session(const std::string &prog_src, const std::vector<std::string> &manifests,
+static bool seed_session(const std::string &prog_src, LibraryResolver &resolver,
                          bool no_prelude, std::vector<std::string> &modules,
                          std::vector<std::string> &module_keys,
                          const std::string &source_home) {
@@ -1473,7 +1808,7 @@ static bool seed_session(const std::string &prog_src, const std::vector<std::str
     for (const std::string &sym : inits)
       module_keys.push_back(sym.substr(0, sym.find(':') + 1));
   }
-  return preload_user_libraries(manifests, modules, module_keys, prog_src, source_home);
+  return preload_user_libraries(resolver, modules, module_keys, prog_src, source_home);
 }
 
 // Compile a whole program (or a lone define-library) against the seeded session (mode 7).
@@ -1613,23 +1948,16 @@ static void shake_units(std::vector<std::string> &modules,
 // The manifest chain's library key -> source path map, for a door that needs to find a
 // library's source again after the session was seeded (the shake, when a cache hit meant the
 // .sld was never read).
-static std::map<std::string, std::string>
-library_paths_by_key(const std::vector<std::string> &manifests) {
-  std::map<std::string, std::string> path_of, from_of;
-  manifest_library_index(manifests, path_of, from_of);
-  return path_of;
-}
-
 // Compile a whole program (or a lone define-library) to its unit modules + program
 // IR, in-process -- the shared front half of `emit run`, `emit run --emit`, and
 // `emit build` (spec: no second compilation path).  Seed, then compile: the same mode
 // sequence in the same order as before it was split, so the emitted IR does not move.
-static bool compile_program(const std::string &prog_src, const std::vector<std::string> &manifests,
+static bool compile_program(const std::string &prog_src, LibraryResolver &resolver,
                             bool no_prelude, std::vector<std::string> &modules,
                             std::vector<std::string> &module_keys,
                             std::string &prog_ir, bool &is_library,
                             const std::string &source_home) {
-  if (!seed_session(prog_src, manifests, no_prelude, modules, module_keys, source_home))
+  if (!seed_session(prog_src, resolver, no_prelude, modules, module_keys, source_home))
     return false;
   return compile_unit(prog_src, modules, module_keys, prog_ir, is_library, source_home);
 }
@@ -1644,6 +1972,7 @@ static int emit_run(int argc, char **argv) {
   std::string jit_opt_flag;
   std::string resolve_name;                    // "" => select the sole program entry
   std::string manifest;
+  ResolverOptions resolver_options;
   std::string prog_file;                       // positional FILE (else stdin)
   std::vector<std::string> program_args;       // tokens after the mandatory separator
   for (int i = 1; i < argc; i++) {
@@ -1661,6 +1990,9 @@ static int emit_run(int argc, char **argv) {
     else if (is_dump_flag(a, dump, dump_all)) { }
     else if (a == "--no-prelude") no_prelude = true;
     else if (a == "--no-manifest-chain") manifest_chain = false;
+    else if ((a == "-L" || a == "--library-path") && i + 1 < argc)
+      resolver_options.explicit_roots.push_back(argv[++i]);
+    else if (a == "--no-library-paths") resolver_options.library_paths = false;
     else if (a == "--manifest" && i + 1 < argc) manifest = argv[++i];
     else if (a == "--resolve-program") {
       resolve = true;
@@ -1680,6 +2012,8 @@ static int emit_run(int argc, char **argv) {
               << (emit ? "--emit" : "--resolve-program") << "\n";
     return 2;
   }
+  if (resolver_options.library_paths &&
+      !parse_environment_roots(resolver_options, "run")) return 2;
   if (!jit_opt_flag.empty() && (emit || resolve)) {
     std::cerr << "emit run: JIT optimization option " << jit_opt_flag
               << " conflicts with non-executing mode "
@@ -1723,11 +2057,14 @@ static int emit_run(int argc, char **argv) {
 
   GC_INIT();                                 // once, before the compiler allocates
 
+  LibraryResolver resolver(manifests, project_manifest_for(manifest, manifests),
+                           resolver_options);
+
   std::vector<std::string> modules, module_keys;
   std::string prog_ir;
   bool is_library = false;
   auto compile_begin = SteadyClock::now();
-  if (!compile_program(prog_src, manifests, no_prelude, modules, module_keys, prog_ir,
+  if (!compile_program(prog_src, resolver, no_prelude, modules, module_keys, prog_ir,
                        is_library, prog_file == "-" ? "" : prog_file))
     return 1;
   auto compile_end = SteadyClock::now();
@@ -1985,46 +2322,36 @@ static bool run_init_list(const std::string &list) {
 // of a 2.21 s start, nearly all of it `(scheme char)`'s 4 MB of Unicode tables
 // (docs/PERFORMANCE.md P23).  The `__init` now runs at the import that needs it, driven by
 // the order mode 3's import arm returns.
-static void preload_libraries(const std::vector<std::string> &manifests, bool have_baked) {
-  if (manifests.empty()) return;             // no manifest: no libraries this session
-
-  std::map<std::string, std::string> path_of, from_of;
-  manifest_library_index(manifests, path_of, from_of);
-  // A CHAIN needs NAMES, so that a library an earlier manifest already supplies is not
-  // loaded a second time from a later one; mode 9's index is both that and the paths to
-  // load.  A name a LATER manifest supplied is the chain reaching outward, which is named
-  // rather than silent (design D8); the first manifest is the session's own and is already
-  // reported by say_manifest.
-  std::vector<std::pair<std::string, std::string>> pending;   // (key, path)
-  std::map<std::string, std::vector<std::string>> supplied;   // manifest -> keys
-  for (std::map<std::string, std::string>::const_iterator it = path_of.begin();
-       it != path_of.end(); ++it) {
-    pending.push_back(std::make_pair(it->first, it->second));
-    std::map<std::string, std::string>::const_iterator f = from_of.find(it->first);
-    if (f != from_of.end()) supplied[f->second].push_back(it->first);
-  }
-  for (size_t mi = 1; mi < manifests.size(); mi++)
-    say_chained(manifests[mi], supplied[manifests[mi]]);
+static void preload_libraries(LibraryResolver &resolver, bool have_baked,
+                              std::set<std::string> &registered) {
+  if (!resolver.prepare()) return;
+  std::vector<LibraryDescriptor> pending = resolver.exact_descriptors();
+  for (const LibraryDescriptor &descriptor : pending)
+    say("resolve library " + descriptor.name.label + " -> " + descriptor.source +
+        "  [manifest " + descriptor.provider + "]");
 
   while (!pending.empty()) {
-    std::vector<std::pair<std::string, std::string>> deferred;
+    std::vector<LibraryDescriptor> deferred;
     bool progress = false;
-    for (const std::pair<std::string, std::string> &kp : pending) {
-      const std::string &key = kp.first;
-      const std::string &p = kp.second;
+    for (const LibraryDescriptor &descriptor : pending) {
+      const std::string &key = descriptor.name.key;
+      const std::string &p = descriptor.source;
       // The same cache the run door reads (change: chez-free-unit-pipeline).  This door
       // benefits most: it preloads EVERY user library on the manifest, so a session paid for
       // all of them on every start -- 0.138 s for this repository's four non-baked
       // libraries, on top of the standard library the cache already covers.
       std::string cached_ir, cached_init;
       CacheRead cr = cache_load_unit(key, p, cached_ir, cached_init);
-      if (cr == CacheRead::Deferred) { deferred.push_back(kp); continue; }
+      if (cr == CacheRead::Deferred) { deferred.push_back(descriptor); continue; }
       if (cr == CacheRead::Hit) {
         std::string err;
         if (!add_ir(cached_ir, "<repl>", err))
           std::cerr << "error: library add " << p << ": " << err << "\n";
+        else
+          g_repl_added_units.insert(key);
         // NO run_init here: see the note above the loop.  add_ir alone costs nothing in
         // the JIT, because ORC materializes at lookup and nothing has looked this up yet.
+        registered.insert(key);
         progress = true;
         continue;
       }
@@ -2042,14 +2369,14 @@ static void preload_libraries(const std::vector<std::string> &manifests, bool ha
       rt_repl_set(4, src.data(), (intptr_t)src.size());
       intptr_t r = scheme_entry();
       std::string st = status_of(r);
-      if (st == "deferred") { deferred.push_back(kp); continue; }
+      if (st == "deferred") { deferred.push_back(descriptor); continue; }
       // Already registered -- a manifest entry naming a member of the baked set, which this
       // repository's own emit-libs.scm has (the Chez driver resolves them from there).  The
       // baked member wins and this contributes no second module; adding one would collide in
       // the JIT.  The REPL only began seeing this status once it registered the baked set
       // before preloading (change: baked-set-on-every-door); the run door's own preload has
       // handled it since run-door-user-libraries.
-      if (st == "already") { progress = true; continue; }
+      if (st == "already") { registered.insert(key); progress = true; continue; }
       if (st != "ok") {
         std::cerr << "error: loading library " << p << ": " << door_msg(scm_str(rt_cdr(r))) << "\n";
         progress = true;                     // drop it; do not retry a hard error
@@ -2061,10 +2388,15 @@ static void preload_libraries(const std::vector<std::string> &manifests, bool ha
       intptr_t payload = rt_cdr(r);
       std::string ir = scm_str(rt_car(payload));
       std::string err;
-      if (!add_ir(ir, "<repl>", err)) { std::cerr << "error: library add " << p << ": " << err << "\n"; }
+      if (!add_ir(ir, "<repl>", err)) {
+        std::cerr << "error: library add " << p << ": " << err << "\n";
+      } else {
+        g_repl_added_units.insert(key);
+      }
       // NO run_init here either -- the unit's `__init` waits for an import (see above).
       // While mode 16 still describes THIS library's read.
       cache_store_unit(key, p, ir);
+      registered.insert(key);
       progress = true;
     }
     if (!progress) {                         // every remaining unit is stuck
@@ -2077,20 +2409,135 @@ static void preload_libraries(const std::vector<std::string> &manifests, bool ha
       // a session where the user could not name those procedures themselves.
       if (!have_baked) {
         std::string names;
-        for (const std::pair<std::string, std::string> &kp : deferred)
-          names += (names.empty() ? "" : ", ") + kp.first;
+        for (const LibraryDescriptor &descriptor : deferred)
+          names += (names.empty() ? "" : ", ") + descriptor.name.key;
         say(std::to_string(deferred.size()) +
             " manifest librar" + (deferred.size() == 1 ? "y" : "ies") +
             " not loaded under --no-prelude (they import the standard library): " + names);
         break;
       }
-      for (const std::pair<std::string, std::string> &kp : deferred)
-        std::cerr << "error: library " << kp.second
-                  << ": unresolved or cyclic import (dependency missing from manifest?)\n";
+      for (const LibraryDescriptor &descriptor : deferred)
+        std::cerr << "error: library " << descriptor.source
+                  << ": unresolved or cyclic import (dependency missing from providers?)\n";
       break;
     }
     pending.swap(deferred);
   }
+}
+
+// Resolve and register one prompt import's previously unknown directory-provider closure.
+// Resolution and declaration validation happen before the transaction.  Registration is
+// dependency-first inside the core transaction; a later failure restores the compiler's
+// library tables while any ORC modules already added remain inert and unpublished.
+static bool register_repl_closure(const std::string &form, LibraryResolver &resolver,
+                                  std::set<std::string> &registered) {
+  std::vector<LibraryName> roots = source_imports(form, "");
+  std::vector<LibraryDescriptor> order;
+  std::set<std::string> visiting, planned;
+  std::string failure;
+
+  std::function<bool(const LibraryName &)> visit = [&](const LibraryName &name) {
+    if (registered.count(name.key) || planned.count(name.key)) return true;
+    if (!visiting.insert(name.key).second) {
+      failure = "import cycle while resolving " + name.label;
+      return false;
+    }
+    LibraryDescriptor descriptor;
+    std::string error;
+    ResolveResult result = resolver.resolve(name, descriptor, error);
+    if (result == ResolveResult::Missing) {
+      failure = "unresolved import (not baked, not in a manifest or library path): " +
+                name.label;
+      return false;
+    }
+    if (result == ResolveResult::Error) { failure = error; return false; }
+    std::vector<LibraryName> deps =
+        source_imports(read_file(descriptor.source), descriptor.source);
+    for (const LibraryName &dep : deps)
+      if (!visit(dep)) return false;
+    visiting.erase(name.key);
+    planned.insert(name.key);
+    order.push_back(descriptor);
+    return true;
+  };
+
+  for (const LibraryName &root : roots)
+    if (!visit(root)) {
+      std::cerr << "error: " << failure << "\n";
+      return false;
+    }
+  if (order.empty()) return false;
+
+  rt_repl_set(19, "", 0);
+  intptr_t begin = scheme_entry();
+  if (status_of(begin) != "ok") {
+    std::cerr << "error: " << scm_str(rt_cdr(begin)) << "\n";
+    return false;
+  }
+
+  std::vector<std::string> completed;
+  bool ok = true;
+  for (const LibraryDescriptor &descriptor : order) {
+    const std::string &key = descriptor.name.key;
+    const std::string &path = descriptor.source;
+    std::string ir, init;
+    bool compiled = false;
+    CacheRead cached = cache_load_unit(key, path, ir, init);
+    if (cached == CacheRead::Deferred) {
+      failure = "library " + path + ": dependency was not registered";
+      ok = false;
+      break;
+    }
+    if (cached == CacheRead::Miss) {
+      std::string source = read_file(path);
+      if (source.empty()) {
+        failure = "cannot read library source " + path;
+        ok = false;
+        break;
+      }
+      set_source_home(path);
+      rt_repl_set(4, source.data(), (intptr_t)source.size());
+      intptr_t result = scheme_entry();
+      std::string status = status_of(result);
+      if (status == "deferred") {
+        failure = "library " + path + ": dependency was not registered";
+        ok = false;
+        break;
+      }
+      if (status != "ok" && status != "already") {
+        failure = "loading library " + path + ": " +
+                  door_msg(scm_str(rt_cdr(result)));
+        ok = false;
+        break;
+      }
+      if (status == "already") {
+        completed.push_back(key);
+        continue;
+      }
+      ir = scm_str(rt_car(rt_cdr(result)));
+      compiled = true;
+    }
+    if (!g_repl_added_units.count(key)) {
+      std::string add_error;
+      if (!add_ir(ir, "<repl>", add_error)) {
+        failure = "library add " + path + ": " + add_error;
+        ok = false;
+        break;
+      }
+      g_repl_added_units.insert(key);
+    }
+    if (compiled) cache_store_unit(key, path, ir);
+    completed.push_back(key);
+  }
+
+  rt_repl_set(ok ? 21 : 20, "", 0);
+  scheme_entry();
+  if (!ok) {
+    std::cerr << "error: " << failure << "\n";
+    return false;
+  }
+  registered.insert(completed.begin(), completed.end());
+  return true;
 }
 
 // Compile one complete form's text via the embedded compiler and act on the
@@ -2113,7 +2560,8 @@ static void preload_libraries(const std::vector<std::string> &manifests, bool ha
 // A compile-time trap is reported as `error:` rather than `!trap:`: from the session's point
 // of view this IS a compile-time failure of the form, which is the channel the other
 // compile-time failures below already use.
-static void process_form(const std::string &form) {
+static void process_form(const std::string &form, LibraryResolver &resolver,
+                         std::set<std::string> &registered) {
   jmp_buf jb;
   jmp_buf *saved = rt_trap;
   // ...and the compiler's own raiser is current while the compiler runs, so a trap reaches
@@ -2158,6 +2606,9 @@ static void process_form(const std::string &form) {
       intptr_t m = scheme_entry();
       if (status_of(m) != "ok") std::cerr << "error: " << scm_str(rt_cdr(m)) << "\n";
     }
+  } else if (st == "resolve") {
+    if (register_repl_closure(form, resolver, registered))
+      process_form(form, resolver, registered);
   } else {                                  // "error": compile-time; session continues
     std::cerr << "error: " << scm_str(rt_cdr(r)) << "\n";
   }
@@ -2170,6 +2621,7 @@ static int emit_repl(int argc, char **argv) {
   JitOptLevel jit_opt = JitOptLevel::O1;
   std::string jit_opt_flag;
   std::string manifest;
+  ResolverOptions resolver_options;
   for (int i = 1; i < argc; i++) {
     std::string a(argv[i]);
     bool opt_ok = true;
@@ -2180,6 +2632,9 @@ static int emit_repl(int argc, char **argv) {
     else if (a == "--no-prelude") prelude = false;
     else if (is_dump_flag(a, dump, dump_all)) { }
     else if (a == "--no-manifest-chain") manifest_chain = false;
+    else if ((a == "-L" || a == "--library-path") && i + 1 < argc)
+      resolver_options.explicit_roots.push_back(argv[++i]);
+    else if (a == "--no-library-paths") resolver_options.library_paths = false;
     else if (a == "--manifest" && i + 1 < argc) manifest = argv[++i];
     // The rejection arm the other three doors already had (design D3).  Without it
     // `emit repl --bogus-flag` started a session and exited 0, so a typo'd flag was
@@ -2188,10 +2643,15 @@ static int emit_repl(int argc, char **argv) {
     else { std::cerr << "emit repl: unknown option " << a
                      << " (emit repl takes no positional argument)\n"; return 2; }
   }
+  if (resolver_options.library_paths &&
+      !parse_environment_roots(resolver_options, "repl")) return 2;
   bool bad_manifest = false;
   std::vector<std::string> manifests =
       resolve_manifests(manifest, manifest_chain, bad_manifest);
   if (bad_manifest) return 1;
+  LibraryResolver resolver(manifests, project_manifest_for(manifest, manifests),
+                           resolver_options);
+  std::set<std::string> registered;
   // Per-form stage dumps for the whole session (change: emit-dump-stages).
   forward_dump_level(dump, dump_all);
 
@@ -2271,6 +2731,8 @@ static int emit_repl(int argc, char **argv) {
       }
     }
     for (const std::string &sym : baked_inits) {
+      registered.insert(sym.substr(0, sym.find(':') + 1));
+      g_repl_added_units.insert(sym.substr(0, sym.find(':') + 1));
       std::string who = unit_of_init(sym);
       // Recorded as run, so a later `(import (scheme base))` at the prompt -- whose
       // closure names these -- does not initialize the standard library a second time
@@ -2286,7 +2748,7 @@ static int emit_repl(int argc, char **argv) {
 
   // Preload manifest libraries so interactive (import (L)) forms can resolve them.
   say_manifest(manifests);
-  preload_libraries(manifests, /*have_baked=*/prelude);
+  preload_libraries(resolver, /*have_baked=*/prelude, registered);
 
   // The prelude's procedures live in the now-registered (scheme base) library;
   // auto-import it into the session scope (mode 6) so later forms resolve prelude
@@ -2321,7 +2783,7 @@ static int emit_repl(int argc, char **argv) {
       size_t cut = byte_offset_of_codepoint(buf, (size_t)code);
       std::string form = buf.substr(0, cut);
       buf.erase(0, cut);
-      process_form(form);
+      process_form(form, resolver, registered);
       if (buf.find_first_not_of(" \t\r\n") == std::string::npos) { buf.clear(); break; }
     }
     std::cerr << "> " << std::flush;
@@ -2486,6 +2948,7 @@ static void ensure_parent_dir(const std::string &path) {
 
 static int emit_build(int argc, char **argv) {
   std::string name, manifest, out;
+  ResolverOptions resolver_options;
   bool no_prelude = false;
   bool manifest_chain = true;
   bool dump = false, dump_all = false;
@@ -2494,12 +2957,17 @@ static int emit_build(int argc, char **argv) {
     if (is_help_flag(a)) { usage_build(std::cout); return 0; }
     else if (a == "--manifest" && i + 1 < argc) manifest = argv[++i];
     else if (a == "--no-manifest-chain") manifest_chain = false;
+    else if ((a == "-L" || a == "--library-path") && i + 1 < argc)
+      resolver_options.explicit_roots.push_back(argv[++i]);
+    else if (a == "--no-library-paths") resolver_options.library_paths = false;
     else if (a == "-o" && i + 1 < argc) out = argv[++i];
     else if (is_dump_flag(a, dump, dump_all)) { }
     else if (a == "--no-prelude") no_prelude = true;
     else if (!a.empty() && a[0] == '-') { std::cerr << "emit build: unknown option " << a << "\n"; return 2; }
     else name = a;
   }
+  if (resolver_options.library_paths &&
+      !parse_environment_roots(resolver_options, "build")) return 2;
   bool bad_manifest = false;
   std::vector<std::string> manifests =
       resolve_manifests(manifest, manifest_chain, bad_manifest);
@@ -2510,17 +2978,24 @@ static int emit_build(int argc, char **argv) {
   if (no_prelude) setenv("EMIT_NO_PRELUDE", "1", 1);
   forward_dump_level(dump, dump_all);
 
-  // Resolve the (program NAME) entry to its source + delivered path (Chez-free).
-  // The FIRST manifest only: program lookup does not chain (design D4).
-  rt_repl_set(0, "", 0);
-  scheme_entry();
   std::string src, entry_out;
-  if (resolve_program(first_manifest(manifests), name, src, entry_out)) return 1;
+  bool direct_source =
+      (!name.empty() &&
+       ((name.size() >= 4 && name.substr(name.size() - 4) == ".scm") ||
+        name.find('/') != std::string::npos || name.find('\\') != std::string::npos));
+  if (direct_source) {
+    src = name;
+  } else {
+    // Resolve the (program NAME) entry from the first manifest only.
+    rt_repl_set(0, "", 0);
+    scheme_entry();
+    if (resolve_program(first_manifest(manifests), name, src, entry_out)) return 1;
+  }
 
   // Output precedence: -o flag > entry (output ...) > build/<NAME> > build/<src base>.
   if (out.empty()) {
     if (!entry_out.empty()) out = entry_out;
-    else if (!name.empty()) out = "build/" + name;
+    else if (!name.empty() && !direct_source) out = "build/" + name;
     else {
       std::string b = src;
       auto sl = b.find_last_of('/'); if (sl != std::string::npos) b = b.substr(sl + 1);
@@ -2533,11 +3008,17 @@ static int emit_build(int argc, char **argv) {
       " -> " + out + "  [source " + src + "]");
 
   // Emit the program IR in-process (same modes the run door uses).
+  if (file_bytes(src) < 0) {
+    std::cerr << "emit build: cannot read source " << src << "\n";
+    return 1;
+  }
   std::string prog_src = read_file(src);
   std::vector<std::string> modules, module_keys;
   std::string prog_ir;
   bool is_library = false;
-  if (!compile_program(prog_src, manifests, no_prelude, modules, module_keys, prog_ir,
+  LibraryResolver resolver(manifests, project_manifest_for(manifest, manifests),
+                           resolver_options);
+  if (!compile_program(prog_src, resolver, no_prelude, modules, module_keys, prog_ir,
                        is_library, src))
     return 1;
 
@@ -2545,7 +3026,7 @@ static int emit_build(int argc, char **argv) {
   // program, or by an importing unit already pruned (change: chez-free-unit-pipeline, then
   // import-dag-tree-shaking; docs/PERFORMANCE.md P8 and P10).  This is the ship path, so the
   // world is closed; the run and REPL doors keep whole units and are untouched.
-  shake_units(modules, module_keys, prog_ir, library_paths_by_key(manifests));
+  shake_units(modules, module_keys, prog_ir, resolver.selected_paths());
 
   // Write each unit + the program to temp .ll files (clang infers IR from .ll).  The
   // program is just the last unit for linking -- no need to distinguish it.
@@ -2601,6 +3082,7 @@ static int emit_build(int argc, char **argv) {
 
 static int emit_lib(int argc, char **argv) {
   std::string src, dir = "build/lib", manifest;
+  ResolverOptions resolver_options;
   bool manifest_chain = true;
   bool dump = false, dump_all = false;
   for (int i = 1; i < argc; i++) {
@@ -2609,10 +3091,15 @@ static int emit_lib(int argc, char **argv) {
     else if (a == "-o" && i + 1 < argc) dir = argv[++i];
     else if (a == "--manifest" && i + 1 < argc) manifest = argv[++i];
     else if (a == "--no-manifest-chain") manifest_chain = false;
+    else if ((a == "-L" || a == "--library-path") && i + 1 < argc)
+      resolver_options.explicit_roots.push_back(argv[++i]);
+    else if (a == "--no-library-paths") resolver_options.library_paths = false;
     else if (is_dump_flag(a, dump, dump_all)) { }
     else if (!a.empty() && a[0] == '-') { std::cerr << "emit lib: unknown option " << a << "\n"; return 2; }
     else src = a;
   }
+  if (resolver_options.library_paths &&
+      !parse_environment_roots(resolver_options, "lib")) return 2;
   if (src.empty()) {
     // Usage as part of a diagnostic: stderr, non-zero (design D1).
     std::cerr << "emit lib: missing SRC\n";
@@ -2641,7 +3128,9 @@ static int emit_lib(int argc, char **argv) {
   // declaring `(import (scheme base))` failed with `unbound variable map`
   // (change: baked-set-on-every-door).
   std::vector<std::string> modules, module_keys;
-  if (!seed_session(lib_src, manifests, /*no_prelude=*/false, modules, module_keys, src))
+  LibraryResolver resolver(manifests, project_manifest_for(manifest, manifests),
+                           resolver_options);
+  if (!seed_session(lib_src, resolver, /*no_prelude=*/false, modules, module_keys, src))
     return 1;
 
   // .exports table + the library's basename (mode 11: (ok . "<basename>\n<datum>")).

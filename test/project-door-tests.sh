@@ -37,10 +37,11 @@ bad () { echo "  [FAIL] $1"; fail=$((fail+1)); }
 
 # --- the project docs/PROJECTS.md describes -------------------------------------
 PROJ="$TMP/myproj"
-mkdir -p "$PROJ/lib"
+mkdir -p "$PROJ/lib/my" "$PROJ/lib/scheme"
+cp "$REPO/lib/scheme/inexact.sld" "$PROJ/lib/scheme/inexact.sld"
 
-cat > "$PROJ/lib/stats.sld" <<'EOF'
-(define-library (stats)
+cat > "$PROJ/lib/my/stats.sld" <<'EOF'
+(define-library (my stats)
   (import (scheme base))
   (export sum-list mean)
   (begin
@@ -48,9 +49,9 @@ cat > "$PROJ/lib/stats.sld" <<'EOF'
     (define (mean xs) (/ (sum-list xs) (length xs)))))
 EOF
 
-cat > "$PROJ/lib/report.sld" <<'EOF'
-(define-library (report)
-  (import (scheme base) (stats) (scheme inexact))
+cat > "$PROJ/lib/my/report.sld" <<'EOF'
+(define-library (my report)
+  (import (scheme base) (my stats) (scheme inexact))
   (export describe)
   (begin
     (define (square x) (* x x))
@@ -61,18 +62,13 @@ cat > "$PROJ/lib/report.sld" <<'EOF'
 EOF
 
 cat > "$PROJ/main.scm" <<'EOF'
-(import (report))
+(import (my report))
 (describe (list 1.0 2.0 3.0))
 EOF
 
-# The manifest a project SHOULD be able to write: its own libraries and its program.
-# (scheme inexact) is not baked, so it IS named -- from the checkout, absolutely, since
-# a manifest's relative paths resolve against the manifest's own directory.
+# Conventional project libraries need no mapping; the manifest names only a stable target.
 cat > "$PROJ/emit-libs.scm" <<EOF
-((library (scheme inexact) (source "$REPO/lib/scheme/inexact.sld"))
- (library (stats)  (source "lib/stats.sld"))
- (library (report) (source "lib/report.sld"))
- (program myproj (source "main.scm") (output "build/myproj")))
+((program myproj (source "main.scm") (output "build/myproj")))
 EOF
 
 VALUE='(n 3 mean 2.0 rms 2.160246899469287)'
@@ -111,7 +107,7 @@ echo "$out" | grep -q 'empty' && ok "repl expands cond" || bad "repl cond => [$o
 
 # 6. The project's own library loads interactively -- it imports (scheme base), which
 #    is what made this fail with "unresolved or cyclic import" before.
-printf '(import (report))\n(describe (list 1.0 2.0 3.0))\n' > "$TMP/r3.in"
+printf '(import (my report))\n(describe (list 1.0 2.0 3.0))\n' > "$TMP/r3.in"
 out="$(cd "$PROJ" && "$EMITABS" repl < "$TMP/r3.in" 2>"$TMP/r3.err")"
 if echo "$out" | grep -qF "$VALUE"; then ok "repl imports the project library"
 else bad "repl import => [$out]"; sed 's/^/         /' "$TMP/r3.err"; fi
@@ -137,30 +133,30 @@ echo
 echo "emit lib in a project directory (the half issue #39 did not know about)"
 
 # 10. A library importing (scheme base) compiles to BOTH artifacts.
-if (cd "$PROJ" && EMIT_VERBOSITY=quiet "$EMITABS" lib lib/stats.sld -o build/lib) \
+if (cd "$PROJ" && EMIT_VERBOSITY=quiet "$EMITABS" lib lib/my/stats.sld -o build/lib) \
      >"$TMP/l1.log" 2>&1; then
-  if [ -s "$PROJ/build/lib/stats.ll" ] && [ -s "$PROJ/build/lib/stats.exports" ]; then
+  if [ -s "$PROJ/build/lib/my.stats.ll" ] && [ -s "$PROJ/build/lib/my.stats.exports" ]; then
     ok "emit lib (imports (scheme base)) wrote .ll + .exports"
   else bad "emit lib artifacts missing"; fi
 else bad "emit lib (imports (scheme base)) failed"; sed 's/^/         /' "$TMP/l1.log"; fi
 
 # 11. The export table names the library's exports.
-if grep -q 'sum-list' "$PROJ/build/lib/stats.exports" 2>/dev/null \
-   && grep -q 'mean' "$PROJ/build/lib/stats.exports" 2>/dev/null; then
+if grep -q 'sum-list' "$PROJ/build/lib/my.stats.exports" 2>/dev/null \
+   && grep -q 'mean' "$PROJ/build/lib/my.stats.exports" 2>/dev/null; then
   ok "emit lib .exports lists sum-list and mean"
 else bad "emit lib .exports content"; fi
 
 # 12. A library importing ANOTHER library (plus a manifest library) compiles too.
-if (cd "$PROJ" && EMIT_VERBOSITY=quiet "$EMITABS" lib lib/report.sld -o build/lib) \
+if (cd "$PROJ" && EMIT_VERBOSITY=quiet "$EMITABS" lib lib/my/report.sld -o build/lib) \
      >"$TMP/l2.log" 2>&1; then
-  grep -q 'stats:mean' "$PROJ/build/lib/report.ll" \
-    && ok "emit lib (imports (stats) + (scheme inexact)) references stats:mean" \
+  grep -q 'my.stats:mean' "$PROJ/build/lib/my.report.ll" \
+    && ok "emit lib (imports (my stats) + (scheme inexact)) references my.stats:mean" \
     || bad "emit lib report.ll missing the external global"
 else bad "emit lib (transitive imports) failed"; sed 's/^/         /' "$TMP/l2.log"; fi
 
 # 13. One compile-unit core: emit lib's unit IR == the unit `emit run --emit` emits.
-(cd "$PROJ" && "$EMITABS" run --emit < lib/stats.sld) >"$TMP/via-run.ll" 2>/dev/null
-if cmp -s "$TMP/via-run.ll" "$PROJ/build/lib/stats.ll"; then
+(cd "$PROJ" && "$EMITABS" run --emit < lib/my/stats.sld) >"$TMP/via-run.ll" 2>/dev/null
+if cmp -s "$TMP/via-run.ll" "$PROJ/build/lib/my.stats.ll"; then
   ok "emit lib .ll byte-identical to the run door's unit"
 else bad "emit lib .ll differs from the run door's unit"; fi
 
@@ -202,8 +198,8 @@ cat > "$PROJ/baked.scm" <<EOF
 ((library (emit internal)  (source "$REPO/lib/emit/internal.sld"))
  (library (scheme base)    (source "$REPO/lib/scheme/base.sld"))
  (library (scheme inexact) (source "$REPO/lib/scheme/inexact.sld"))
- (library (stats)  (source "$PROJ/lib/stats.sld"))
- (library (report) (source "$PROJ/lib/report.sld"))
+ (library (my stats)  (source "$PROJ/lib/my/stats.sld"))
+ (library (my report) (source "$PROJ/lib/my/report.sld"))
  (program myproj (source "$PROJ/main.scm") (output "$TMP/baked-app")))
 EOF
 
@@ -244,7 +240,7 @@ echo "a manifest naming a source that does not exist (a typo'd path)"
 #     empty form list, and a primitive trap is not catchable by the in-language `guard` that
 #     wraps that mode.  Eager preload means an entry the session never imports reaches this.
 cat > "$PROJ/typo.scm" <<EOF
-((library (stats) (source "$PROJ/lib/stats.sld"))
+((library (my stats) (source "$PROJ/lib/my/stats.sld"))
  (library (ghost) (source "nowhere.sld")))
 EOF
 out="$(cd "$PROJ" && "$EMITABS" repl --manifest typo.scm < "$TMP/r1.in" 2>"$TMP/r6.err")"
@@ -309,15 +305,14 @@ for shape in empty whitespace comment; do
   n=$((n+1))
 done
 
-# 26. A source path given where an ENTRY NAME belongs is the easy way to hit this by
-#     mistake -- `emit build` takes a manifest entry name, not a path.
+# 26. A source path is a direct one-file build and does not require a program entry.
 : > "$BARE/emit-libs.scm"
 (cd "$BARE" && "$EMITABS" build hello.scm) >"$TMP/e26.log" 2>&1
 rc=$?
-if [ "$rc" -ne 0 ] && [ "$rc" -lt 128 ]; then
-  ok "emit build NAME against an entryless manifest exits $rc, not a signal"
+if [ "$rc" -eq 0 ] && [ "$("$BARE/build/hello" 2>/dev/null)" = 3 ]; then
+  ok "emit build directly builds hello.scm without a program entry"
 else
-  bad "emit build hello.scm (exit $rc)"; sed 's/^/         /' "$TMP/e26.log"
+  bad "emit build hello.scm direct source (exit $rc)"; sed 's/^/         /' "$TMP/e26.log"
 fi
 
 # 27. A manifest declaring LIBRARIES but no program keeps its existing message -- this is
@@ -381,7 +376,7 @@ printf '(define-library (x)\n  (import (absent))\n  (export f)\n  (begin (define
   > "$BARE/x.sld"
 : > "$BARE/emit-libs.scm"
 (cd "$BARE" && "$EMITABS" lib x.sld -o build/lib) >"$TMP/e31d.log" 2>&1
-if grep -q 'unresolved import (not baked, not in the manifest): (absent)' "$TMP/e31d.log"; then
+if grep -q 'unresolved import (not baked, not in a manifest or library path): (absent)' "$TMP/e31d.log"; then
   ok "emit lib's unresolved-import message is unchanged"
 else
   bad "emit lib unresolved-import message"; sed 's/^/         /' "$TMP/e31d.log"

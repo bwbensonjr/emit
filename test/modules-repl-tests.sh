@@ -180,26 +180,20 @@ else
   echo "  [FAIL] door-agreement-init-order  (run => $progout, repl => $replout)"; fail=$((fail+1))
 fi
 
-# STARTUP COST (spec scenario): the same manifest, plus one outsized library the session
-# never imports, starts in the same ORDER of time.
+# STARTUP COST (spec scenario): adding a conventional root containing one outsized
+# library the session never imports does not materially change startup time. Exact
+# manifest entries remain eager by design; conventional roots are import-driven.
 echo "startup does not scale with an unimported library"
-# The two manifests are generated side by side with ABSOLUTE source paths.  A manifest's
-# (source ...) entries resolve relative to the manifest, so a copy placed elsewhere with
-# relative paths loads nothing and then times a session that is not the one under test --
-# which reads as a spectacular win.  Absolute paths, plus the load-error check below,
-# rule that out.
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 ROOT="$PWD"
-cat > "$TMP/small.scm" <<EOF
+cat > "$TMP/session.scm" <<EOF
 ((library (emit internal) (source "$ROOT/lib/emit/internal.sld"))
  (library (scheme base)   (source "$ROOT/lib/scheme/base.sld"))
  (library (init-count)    (source "$ROOT/test/modules/init-count.sld"))
  (library (init-outer)    (source "$ROOT/test/modules/init-outer.sld")))
 EOF
-sed 's|^ (library (init-outer).*)))$| (library (init-outer)    (source "INIT_OUTER"))\n (library (scheme char)   (source "SCHEME_CHAR")))|' \
-    "$TMP/small.scm" \
-  | sed "s|INIT_OUTER|$ROOT/test/modules/init-outer.sld|; s|SCHEME_CHAR|$ROOT/lib/scheme/char.sld|" \
-  > "$TMP/big.scm"
+mkdir -p "$TMP/unused/unused"
+cp "$ROOT/lib/scheme/char.sld" "$TMP/unused/unused/oversized.sld"
 
 manifest_loads_cleanly () {   # <manifest> -- no "error:" on stderr at session start
   ! printf '(+ 1 2)\n' \
@@ -217,17 +211,15 @@ tmin () {   # <command> -- best-of-three wall clock, in whole milliseconds
   echo "$b"
 }
 
-if ! manifest_loads_cleanly "$TMP/small.scm" || ! manifest_loads_cleanly "$TMP/big.scm"; then
-  echo "  [FAIL] startup-independent-of-unimported  (a generated manifest does not load)"
+if ! manifest_loads_cleanly "$TMP/session.scm"; then
+  echo "  [FAIL] startup-independent-of-unimported  (the generated manifest does not load)"
   fail=$((fail+1))
 else
-  t_small=$(tmin "build/emit repl --no-manifest-chain --manifest $TMP/small.scm")
-  t_big=$(tmin "build/emit repl --no-manifest-chain --manifest $TMP/big.scm")
-  # An ORDER-OF-MAGNITUDE assertion, not a threshold.  Initialized eagerly, (scheme char)
-  # alone put ~1.8 s on a ~0.4 s start -- several times over, on any machine.  Deferred, it
-  # costs a read and an IR parse.  The slack term keeps a fast small-manifest start from
-  # making the ratio brittle; the point is to catch a return to eager init, not to police
-  # milliseconds.
+  t_small=$(tmin "build/emit repl --no-manifest-chain --manifest $TMP/session.scm")
+  t_big=$(tmin "build/emit repl --no-manifest-chain --manifest $TMP/session.scm -L $TMP/unused")
+  # An order-of-magnitude assertion, not a threshold. Scanning or compiling the root's
+  # source would make startup several times slower; merely registering the root should
+  # stay well inside this deliberately loose allowance.
   if [ "$t_big" -lt $((t_small * 3 + 300)) ]; then
     echo "  [OK  ] startup-independent-of-unimported  (${t_small}ms vs ${t_big}ms)"
     pass=$((pass+1))

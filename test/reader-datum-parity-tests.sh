@@ -238,7 +238,8 @@ cat > "$TMP/badproj/emit-libs.scm" <<EOF
 EOF
 printf '(import (bad))\n(+ 1 2)\n' > "$TMP/imp.in"
 out="$(cd "$TMP/badproj" && "$EMITABS" repl < "$TMP/imp.in" 2>&1)"
-if echo "$out" | grep -q 'imported library not loaded' && echo "$out" | grep -q '(bad)'; then
+if echo "$out" | grep -q 'resolve library (bad)' \
+   && echo "$out" | grep -q 'error: loading library bad.sld:'; then
   ok "interactive import names the library (bad)"
 else
   bad "interactive import diagnostic"; printf '%s\n' "$out" | sed 's/^/         /'

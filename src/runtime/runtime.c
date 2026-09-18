@@ -1454,6 +1454,14 @@ val rt_repl_input(void) { return rt_repl_cell(&rt_repl_input_cell, NIL_V)[0]; }
  * consumed-count / incomplete(-1) / malformed(-2) result without knowing the tag. */
 intptr_t rt_fixnum_value(val v) { return UNFIX(v); }
 
+/* Host-only value predicates for structured compiler protocol results.  Keep the
+ * representation tests here: the C++ host may walk a returned library name, but it
+ * must not duplicate the runtime's tag layout. */
+intptr_t rt_is_pair_value(val v)   { return is_pair(v) ? 1 : 0; }
+intptr_t rt_is_symbol_value(val v) { return is_symbol(v) ? 1 : 0; }
+intptr_t rt_is_fixnum_value(val v) { return is_fixnum(v) ? 1 : 0; }
+intptr_t rt_is_null_value(val v)   { return v == NIL_V ? 1 : 0; }
+
 /* Is v THE unspecified value?  A host accessor, so UNSPEC_V's bit pattern stays defined
  * in exactly one place (this file) instead of being duplicated in the C++ host -- silent
  * representation drift is the main risk in change: unspecified-value.  The REPL uses this

@@ -164,5 +164,38 @@
 (check "  both are registered" (and (assoc '(dep) *repl-libs*)
                                     (assoc '(tlib) *repl-libs*) #t) #t)
 
+;; Hybrid resolver protocol: mode 12 retains the original name datum beside the
+;; canonical key, and mode 18 validates a selected source without registering it.
+(check "source import descriptors retain names and keys"
+       (repl-source-imports
+         "(import (my stats) (example net 2) (|unsafe/name|))")
+       (list (list '(my stats) (mangle '(my stats) "") "(my stats)")
+             (list '(example net 2) (mangle '(example net 2) "") "(example net 2)")
+             (list '(|unsafe/name|) (mangle '(|unsafe/name|) "") "(unsafe/name)")))
+(define identity
+  (repl-library-identity
+    "(define-library (my stats) (export answer) (begin (define answer 42)))"))
+(check "selected library identity validates" (car identity) 'ok)
+(check "selected library identity returns key and declaration"
+       (cdr identity)
+       (string-append (mangle '(my stats) "") "	(my stats)"))
+(check "selected library identity rejects extra forms"
+       (car (repl-library-identity
+              "(define-library (my stats) (export)) (display 1)"))
+       'error)
+
+;; On-demand registration is transactional in compiler state.
+(init-session "")
+(check "registration transaction begins" (car (repl-registration-begin)) 'ok)
+(check "transactional library compiles"
+       (car (repl-load-library-text
+              "(define-library (temp) (export value) (begin (define value 1)))"))
+       'ok)
+(check "transactional library is visible before rollback"
+       (and (assoc '(temp) *repl-libs*) #t)
+       #t)
+(check "registration transaction rolls back" (car (repl-registration-rollback)) 'ok)
+(check "rolled-back library is no longer registered" (assoc '(temp) *repl-libs*) #f)
+
 (printf "~a passed, ~a failed\n" pass fail)
 (exit (if (= fail 0) 0 1))

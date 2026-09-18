@@ -473,6 +473,10 @@
 ;; has no meaning here.  What parity requires is that both sides resolve the SAME
 ;; manifest to the SAME source bytes, which is the relative-path rule below.
 (define *manifest-path* (or (getenv "EMIT_MANIFEST") "emit-libs.scm"))
+(define *manifest-explicit?* (and (getenv "EMIT_MANIFEST") #t))
+(define *library-paths* (quote ()))
+(define *library-paths-enabled?* #t)
+(define *resolved-libraries* (quote ()))
 
 ;; The directory part of a path ("" when it has none, i.e. the current directory).
 (define (dir-of path)
@@ -497,11 +501,14 @@
 ;; targets, change: emit-build-bin-entry) are ignored here so that resolving library
 ;; imports is unchanged by their presence.
 (define (read-manifest path)
-  (unless (file-exists? path)
-    (error 'build (string-append "library manifest not found: " path)))
-  (map (lambda (entry) ; (library NAME (source S) [(artifacts A)])
-         (let ([name (cadr entry)] [clauses (cddr entry)])
-           (list name
+  (if (not (file-exists? path))
+      (if *manifest-explicit?*
+          (error 'build (string-append "library manifest not found: " path))
+          (quote ()))
+      (map (lambda (entry) ; (library NAME (source S) [(artifacts A)])
+             (let ([name (cadr entry)] [clauses (cddr entry)])
+               (list
+                 name
                  (manifest-relative
                    path
                    (cond
@@ -514,18 +521,138 @@
                    [(assq 'artifacts clauses)
                      =>
                      (lambda (c) (manifest-relative path (cadr c)))]
-                   [else "build/lib"]))))
-       (filter (lambda (entry) (and (pair? entry) (eq? (car entry) 'library)))
-               (car (read-program path)))))
+                   [else "build/lib"])
+                 (string-append "manifest " path))))
+           (filter (lambda (entry) (and (pair? entry) (eq? (car entry) 'library)))
+                   (car (read-program path))))))
+
+(define (path-list-separator)
+  (if (string-suffix? "nt" (symbol->string (machine-type))) #\; #\:))
+
+(define (split-path-list text)
+  (let ([n (string-length text)] [separator (path-list-separator)])
+    (let loop ([i 0] [start 0] [acc (quote ())])
+      (cond
+        [(= i n) (let ([part (substring text start i)])
+                   (if (string=? part "")
+                       (error 'build "EMIT_LIBRARY_PATH contains an empty element")
+                       (reverse (cons part acc))))]
+        [(char=? (string-ref text i) separator)
+          (let ([part (substring text start i)])
+            (if (string=? part "")
+                (error 'build "EMIT_LIBRARY_PATH contains an empty element")
+                (loop (+ i 1) (+ i 1) (cons part acc))))]
+        [else (loop (+ i 1) start acc)]))))
+
+(define (absolute-library-root path)
+  (if (path-absolute? path) path (path-build (current-directory) path)))
+
+(define (dedupe-library-roots roots)
+  (let loop ([roots roots] [seen (quote ())] [out (quote ())])
+    (if (null? roots)
+        (reverse out)
+        (let ([root (absolute-library-root (car roots))])
+          (if (member root seen)
+              (loop (cdr roots) seen out)
+              (loop (cdr roots) (cons root seen) (cons root out)))))))
+
+(define (string-has-char? text char)
+  (let loop ([i 0])
+    (and (< i (string-length text))
+         (or (char=? (string-ref text i) char) (loop (+ i 1))))))
+
+(define (library-relative-path name)
+  (define (component part)
+    (cond
+      [(symbol? part) (let ([text (symbol->string part)])
+                        (and (> (string-length text) 0)
+                             (not (string=? text "."))
+                             (not (string=? text ".."))
+                             (not (string-has-char? text #\/))
+                             (not (string-has-char? text #\\))
+                             (not (string-has-char? text (integer->char 0)))
+                             text))]
+      [(and (integer? part) (exact? part) (>= part 0)) (number->string part)]
+      [else #f]))
+  (let loop ([parts name] [out (quote ())])
+    (cond
+      [(null? parts)
+        (and (pair? out)
+             (let join ([parts (reverse out)] [path ""])
+               (if (null? (cdr parts))
+                   (string-append path (car parts) ".sld")
+                   (join (cdr parts) (string-append path (car parts) "/")))))]
+      [(not (pair? parts)) #f]
+      [else (let ([part (component (car parts))])
+              (and part (loop (cdr parts) (cons part out))))])))
+
+(define (project-library-root)
+  (let ([dir (dir-of *manifest-path*)])
+    (if (string=? dir "") "lib" (string-append dir "/lib"))))
+
+(define (configured-library-roots)
+  (if (not *library-paths-enabled?*)
+      (quote ())
+      (let* ([environment (getenv "EMIT_LIBRARY_PATH")]
+             [prefix (getenv "EMIT_PREFIX")]
+             [roots (append *library-paths*
+                            (if environment (split-path-list environment) (quote ()))
+                            (list (project-library-root))
+                            (if prefix
+                                (list (string-append prefix "/share/emit/lib"))
+                                (quote ())))])
+        (dedupe-library-roots roots))))
+
+(define (validate-library-source name path)
+  (set-source-home! path)
+  (let ([forms (read-program path)])
+    (unless (and (pair? forms) (null? (cdr forms)) (define-library-form? (car forms)))
+      (error 'build "library source is not exactly one define-library form" path))
+    (let ([declared (car (parse-define-library (car forms)))])
+      (unless (equal? declared name)
+        (error 'build
+               "resolved library source declares a different name"
+               name
+               declared
+               path)))))
 
 (define (manifest-lookup manifest name)
-  (or (assoc name manifest) (error 'build "library not found in manifest" name)))
+  (cond
+    [(assoc name *resolved-libraries*) => cdr]
+    [(assoc name manifest)
+      =>
+      (lambda (entry)
+        (note "resolve ~s -> ~a  [~a]\n" name (cadr entry) (cadddr entry))
+        (set! *resolved-libraries* (cons (cons name entry) *resolved-libraries*))
+        entry)]
+    [else
+      (let ([relative (library-relative-path name)])
+        (let loop ([roots (configured-library-roots)])
+          (cond
+            [(or (not relative) (null? roots))
+              (error 'build "library not found in manifests or library paths" name)]
+            [else
+              (let ([path (string-append (car roots) "/" relative)])
+                (if
+                  (file-exists? path)
+                  (begin
+                    (validate-library-source name path)
+                    (let ([entry (list name
+                                       path
+                                       "build/lib"
+                                       (string-append "directory " (car roots)))])
+                      (note "resolve ~s -> ~a  [directory ~a]\n" name path (car roots))
+                      (set! *resolved-libraries*
+                        (cons (cons name entry) *resolved-libraries*))
+                      entry))
+                  (loop (cdr roots))))])))]))
 
 (define (lib-basename name) ; (foo bar) -> "foo.bar"
-  (let loop ([parts (cdr name)] [acc (symbol->string (car name))])
+  (let loop ([parts (cdr name)] [acc (library-name-component->string (car name))])
     (if (null? parts)
         acc
-        (loop (cdr parts) (string-append acc "." (symbol->string (car parts)))))))
+        (loop (cdr parts)
+              (string-append acc "." (library-name-component->string (car parts)))))))
 
 (define (program-imports src) (car (collect-imports (read-program src))))
 
@@ -1021,7 +1148,7 @@
             (unless src
               (error
                 'compile
-                "usage: compile.ss SRC.scm [-o OUT] [--dump] [-q|-v] [--backend aot|jit|bitcode] [--no-prelude] [--via-schemec]\n   or: compile.ss --repl [--no-prelude]\n   or: compile.ss --emit-ir [--no-prelude] < SRC.scm  (IR text on stdout)\n   (-q/-v or env EMIT_VERBOSITY=quiet|verbose control status output; see docs/OUTPUT.md)\n   (--via-schemec / env SCHEMEC=<path>: run forms->IR through the compiled schemec)"))
+                "usage: compile.ss SRC.scm [-o OUT] [--dump] [-q|-v] [--backend aot|jit|bitcode] [--no-prelude] [-L DIR] [--no-library-paths] [--via-schemec]\n   or: compile.ss --repl [--no-prelude]\n   or: compile.ss --emit-ir [--no-prelude] < SRC.scm  (IR text on stdout)\n   (-L/--library-path and EMIT_LIBRARY_PATH add conventional library roots)\n   (-q/-v or env EMIT_VERBOSITY=quiet|verbose control status output; see docs/OUTPUT.md)\n   (--via-schemec / env SCHEMEC=<path>: run forms->IR through the compiled schemec)"))
             (let* ([out (or out (strip-ext src))]
                    [ll (string-append out ".ll")]
                    ;; --dump = full per-pass form trace; -v = concise stage names; else silent
@@ -1082,7 +1209,18 @@
                                  backend)])]))])]
       [(string=? (car args) "--manifest")
         (set! *manifest-path* (cadr args))
+        (set! *manifest-explicit?* #t)
         (loop (cddr args) src out dump? backend prelude? repl? emit-ir? via?)]
+      [(or (string=? (car args) "-L") (string=? (car args) "--library-path"))
+        (set! *library-paths* (append *library-paths* (list (cadr args))))
+        (loop (cddr args) src out dump? backend prelude? repl? emit-ir? via?)]
+      [(string=? (car args) "--no-library-paths")
+        (set! *library-paths-enabled?* #f)
+        (loop (cdr args) src out dump? backend prelude? repl? emit-ir? via?)]
+      [(string=? (car args) "--no-manifest-chain")
+        ;; The bootstrap driver reads one manifest; accept the production door's
+        ;; compatibility control so scripts can share resolver arguments.
+        (loop (cdr args) src out dump? backend prelude? repl? emit-ir? via?)]
       [(string=? (car args) "-o")
         (loop (cddr args) src (cadr args) dump? backend prelude? repl? emit-ir? via?)]
       [(string=? (car args) "-q")

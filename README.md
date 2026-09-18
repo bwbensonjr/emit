@@ -23,8 +23,8 @@ REPL-based development and debugging.
 
 ## Quick start
 
-**Writing your own project?** [`docs/PROJECTS.md`](docs/PROJECTS.md) is the guide: project layout,
-libraries and the manifest, the `emit repl` development loop, and `emit build` for a delivered
+**Writing your own project?** [`docs/PROJECTS.md`](docs/PROJECTS.md) is the guide: conventional
+`lib/<components>.sld` libraries, optional manifests, the `emit repl` development loop, and `emit build` for a delivered
 executable. The quick start below is the compiler's own build.
 
 **Install a recent LLVM + libgc.** The toolchain is discovered via `llvm-config` and
@@ -51,8 +51,10 @@ make                       # -> build/emit  (verbs: run / repl / build / lib)
 build/emit run demos/fact.scm                                  # => 120
 build/emit run < demos/fact.scm                                # (stdin also works)
 
-# standalone native executable, from a manifest (program NAME ...) entry
-# (emit IR in-process + clang link, all inside build/emit):
+# standalone native executable directly from source (no manifest entry):
+build/emit build demos/fact.scm -o build/fact
+
+# or from a stable manifest (program NAME ...) target:
 build/emit build fact --manifest emit-libs.scm                 # -> the delivered exe
 build/emit run --emit < demos/fact.scm > /tmp/fact.ll          # (the emit step alone)
 
@@ -81,10 +83,9 @@ cat src/prelude.scm demos/fact.scm | build/schemec > /tmp/fact.ll   # source tex
 ```
 
 **Installing.** `make install` puts `emit` on a prefix together with the library sources it
-needs beside it — `(scheme base)` and the internal substrate `(emit internal)` are baked into the
-binary, but every other library (`(scheme cxr)`, `(scheme read)`, `(scheme file)`,
-`(scheme inexact)`, `(emit filesystem)`) is found through a manifest, so the manifest and `lib/**.sld` are installed
-into `<prefix>/share/emit/` where the binary's own lookup finds them:
+needs beside it. `(scheme base)` and `(emit internal)` are baked; every other shipped library
+occupies its conventional `<prefix>/share/emit/lib/<components>.sld` path. The compatibility
+manifest remains available for exact mappings:
 
 ```sh
 make install                      # -> /usr/local/bin/emit + /usr/local/share/emit/
@@ -92,9 +93,9 @@ make install PREFIX=$HOME/.local  # a different prefix (also baked in as the fal
 make install PREFIX=/usr/local DESTDIR=/tmp/stage   # stage for a packager
 ```
 
-An installed `emit run` / `emit repl` then works from any directory. Note `emit build` /
-`emit lib` do **not** yet work from an install — they still look for `tools/llvm-env.sh` and
-`src/runtime/runtime.c` relative to a source checkout ([#36](https://github.com/bwbensonjr/emit/issues/36)).
+All four installed doors work from any directory. Projects normally use their own `./lib`;
+repeatable `-L` / `--library-path` and `EMIT_LIBRARY_PATH` add roots, while
+`--no-library-paths` disables every directory provider.
 
 **Changing the compiler.** Edit the source, then regenerate the committed IR and relink —
 the compiled compiler recompiles itself. See
@@ -183,7 +184,7 @@ library-structured source are frozen under `historical/genesis/`.
 - `src/emit.cpp` — the **unified front-end** (`build/emit`), the sole user-facing entry point,
   dispatching four verbs to one shared compiler core: `run` (in-process compile-and-run; also
   `--emit` to write IR and `--resolve-program`), `repl` (persistent LLVM ORC/LLJIT interactive
-  host), `build` (deliver a native exe from a manifest `(program …)` entry — emits IR in-process
+  host), `build` (deliver a native exe from direct source or a manifest `(program …)` entry — emits IR in-process
   and forks `clang`), and `lib` (compile one `define-library` to its `.ll` + `.exports` artifact).
   All four A-link the committed embedded compiler (`bootstrap/embed-repl.ll` + the baked library
   set); `make emit` (re)builds it. With the prelude re-homed as a baked set the run/AOT paths emit
@@ -307,7 +308,7 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
 - The implemented R7RS-small **library partition** (change: `scheme-base-partition`, issue #33):
   `(scheme cxr)` is complete with all twenty-four `car`/`cdr` compositions, while `(scheme read)`
   and `(scheme file)` export their implemented standard procedures; each is an ordinary
-  manifest-resolved library. **Breaking** — a program using `caddr`, `read` or the file procedures
+  ordinarily path-resolved library. **Breaking** — a program using `caddr`, `read` or the file procedures
   must now import the library that owns it. `caar`/`cadr`/`cdar`/`cddr` stay in `(scheme base)`.
   The private port and reader machinery they share lives in `(emit internal)`, which is baked but
   not auto-imported, so it is out of scope in an ordinary program.

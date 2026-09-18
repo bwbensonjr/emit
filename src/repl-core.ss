@@ -48,6 +48,31 @@
 ;; (change: run-door-user-libraries).
 (define *repl-lib-imports* (quote ()))
 
+;; Snapshot used only while the REPL host registers an on-demand directory closure.
+;; A failed closure restores these compiler-visible registrations; LLVM modules already
+;; added by the host may remain inert, but no library becomes importable from them.
+(define *repl-registration-transaction* #f)
+
+(define (repl-registration-begin)
+  (if *repl-registration-transaction*
+      (cons (quote error) "library registration transaction already active")
+      (begin
+        (set! *repl-registration-transaction*
+          (vector *repl-libs* *repl-lib-imports* *repl-calls*))
+        (cons (quote ok) ""))))
+
+(define (repl-registration-rollback)
+  (when *repl-registration-transaction*
+    (set! *repl-libs* (vector-ref *repl-registration-transaction* 0))
+    (set! *repl-lib-imports* (vector-ref *repl-registration-transaction* 1))
+    (set! *repl-calls* (vector-ref *repl-registration-transaction* 2))
+    (set! *repl-registration-transaction* #f))
+  (cons (quote ok) ""))
+
+(define (repl-registration-commit)
+  (set! *repl-registration-transaction* #f)
+  (cons (quote ok) ""))
+
 ;; register a define-syntax in the session (mirrors run-repl's note-syntax!)
 (define (repl-note-syntax! form)
   (set! *repl-macro-env* (cons (parse-define-syntax form) *repl-macro-env*))
@@ -162,17 +187,20 @@
           ;; other way would bind a library's names and only then discover that its body
           ;; raises.  The libraries are all checked for registration before any symbol is
           ;; returned, so an unresolved import is still reported from this arm.
-          (for-each (lambda (lib)
-                      (unless (assoc lib *repl-libs*)
-                        (error 'repl "imported library not loaded" lib)))
-                    (cdr form))
-          ;; run-closure-order, not the named libraries: an `__init` reads globals the
-          ;; libraries it imports define, and this is the run door's own ordering (design
-          ;; D4), so a session and a delivered program initialize a closure alike.  Members
-          ;; the host already initialized -- the baked set, and anything an earlier import
-          ;; reached -- are filtered by the host, which is the only party that knows what
-          ;; actually ran in this process (design D3).
-          (cons (quote import) (baked-init-symbols (run-closure-order (cdr form))))]
+          (let ([missing (filter (lambda (lib) (not (assoc lib *repl-libs*)))
+                                 (cdr form))])
+            (if
+              (pair? missing)
+              ;; Directory providers are intentionally not enumerated at startup.  Ask the
+              ;; host to resolve these names, register their dependency closure, and retry
+              ;; this same import.  No session binding has been merged at this point.
+              (cons (quote resolve) "")
+              ;; run-closure-order, not the named libraries: an `__init` reads globals the
+              ;; libraries it imports define, and this is the run door's own ordering
+              ;; (design D4), so a session and a delivered program initialize a closure
+              ;; alike.
+              (cons (quote import)
+                    (baked-init-symbols (run-closure-order (cdr form))))))]
         [else
           (let ([dn (define-name form)])
             ;; Every name this form binds: one define, or a record's whole family.  Both
@@ -293,6 +321,7 @@
   (set! *repl-libs* (quote ()))
   (set! *repl-calls* (quote ()))
   (set! *repl-lib-imports* (quote ()))
+  (set! *repl-registration-transaction* #f)
   (set! *repl-reader-fold?* #f)
   (set! *repl-reader-next-fold?* #f)
   ;; Stage 3 (module-prelude-scheme-base): the prelude's PROCEDURES now come from the
@@ -428,8 +457,9 @@
 (define (unresolved-imports-msg imps0)
   (let loop ([imps imps0] [missing (quote ())])
     (if (null? imps)
-        (string-append "unresolved import (not baked, not in the manifest): "
-                       (join-rendered (reverse missing)))
+        (string-append
+          "unresolved import (not baked, not in a manifest or library path): "
+          (join-rendered (reverse missing)))
         (loop (cdr imps)
               (if (assoc (car imps) *repl-libs*) missing (cons (car imps) missing))))))
 (define (lone-library-unresolved-msg lib)
@@ -614,13 +644,16 @@
                   (string-append acc (mangle name "") "\t" src "\n")
                   acc))))))
 
-;; A SOURCE TEXT's direct imports, one canonical key per line (change:
-;; numeric-conformance).  Serves both shapes the run door's lazy preload walks:
+;; A SOURCE TEXT's direct imports as structured records (name, canonical key,
+;; rendered name).  Serves both shapes the run door's lazy preload walks:
 ;; a PROGRAM (its leading `(import ...)` forms, via the same collect-imports the
 ;; compile paths use) and a LIBRARY .sld (its `import` declaration, via the same
 ;; parse-define-library that loading one uses).  Answering for both from one entry
 ;; point is what lets the host walk the closure outward -- program, then each .sld it
 ;; reaches -- without the core doing any I/O.  Keys match repl-manifest-user-paths.
+;; Returning the name datum as well as its key matters for conventional lookup: the
+;; mangled key is deliberately not reversible for every Scheme identifier, while the
+;; host needs the original components to derive and validate a safe relative path.
 ;;
 ;; This is a pure query: it reads and parses, and registers nothing.
 ;;
@@ -633,7 +666,7 @@
 ;; cannot be read simply has none to preload; the guarded compile that follows reports
 ;; it, once, through its door.
 (define (repl-source-imports text)
-  (guard (e (#t ""))
+  (guard (e (#t (quote ())))
     (let* ([forms (read-all-from-string text)]
            [lib? (and (pair? forms)
                       (pair? (car forms))
@@ -641,10 +674,19 @@
            [names (if lib?
                       (cadr (parse-define-library (car forms)))
                       (car (collect-imports forms)))])
-      (let loop ([ns names] [acc ""])
-        (if (null? ns)
-            acc
-            (loop (cdr ns) (string-append acc (mangle (car ns) "") "\n")))))))
+      (map (lambda (name) (list name (mangle name "") (render-datum name))) names))))
+
+;; Validate a directory provider's selected source before it is registered or cached.
+;; The host supplies text and owns the selected path.  This query confirms that the text
+;; is exactly one define-library form and returns its canonical key and rendered name;
+;; the host compares the key with the requested import and owns the path-rich diagnostic.
+(define (repl-library-identity text)
+  (guard (e (#t (cons (quote error) (repl-error->string e))))
+    (let ([forms (read-all-from-string text)])
+      (unless (and (pair? forms) (null? (cdr forms)) (define-library-form? (car forms)))
+        (error (quote library) "source is not exactly one define-library form"))
+      (let ([name (car (parse-define-library (car forms)))])
+        (cons (quote ok) (string-append (mangle name "") "\t" (render-datum name)))))))
 
 ;; Where the source the host is ABOUT to submit came from (change:
 ;; library-include-declarations, design D4).  The core is handed source TEXT and never a
@@ -1174,10 +1216,11 @@
 ;; "foo.bar" -- the artifact filename stem, matching mangle's dotting and the Chez
 ;; driver's lib-basename.
 (define (lib-name->basename name)
-  (let loop ([parts (cdr name)] [acc (symbol->string (car name))])
+  (let loop ([parts (cdr name)] [acc (library-name-component->string (car name))])
     (if (null? parts)
         acc
-        (loop (cdr parts) (string-append acc "." (symbol->string (car parts)))))))
+        (loop (cdr parts)
+              (string-append acc "." (library-name-component->string (car parts)))))))
 
 ;; `render-datum` -- which renders the export-table datum, matching what the Chez
 ;; driver's `write` produces for (NAME export-table) -- lives in core.ss: the module
@@ -1426,7 +1469,8 @@
       ;; submits it one complete form at a time.  NEXT is the mode computed by
       ;; the most recent completeness scan and committed when mode 3 reads it.
       (set! *repl-reader-fold?* (vector-ref s 10))
-      (set! *repl-reader-next-fold?* (vector-ref s 11)))))
+      (set! *repl-reader-next-fold?* (vector-ref s 11))
+      (set! *repl-registration-transaction* (vector-ref s 12)))))
 (define (repl-save-state!)
   (repl-state-set! (vector *repl-env*
                            *repl-macro-env*
@@ -1439,7 +1483,8 @@
                            (source-home)
                            (includes-read)
                            *repl-reader-fold?*
-                           *repl-reader-next-fold?*)))
+                           *repl-reader-next-fold?*
+                           *repl-registration-transaction*)))
 
 ;; --- the dispatched embedded entry (design D2) -------------------------------
 ;; The host sets (repl-mode)/(repl-input) via rt_repl_set, then calls this ccc
@@ -1454,10 +1499,12 @@
 ;;   9 run door: manifest text -> "KEY\tPATH" per user library (omitting (scheme base))
 ;;  10 emit build door: manifest text -> program entries (NAME/source/output triples)
 ;;  11 emit lib door: library source -> "<basename>\n<export-table datum>"
-;;  12 run door: a source text -> the library keys it imports (for the lazy preload)
+;;  12 source text -> structured direct-import descriptors (for lazy resolution)
 ;;  13 where the NEXT source submitted came from, so its includes resolve beside it
 ;;  14 artifact cache: metadata datum -> register those libraries, no compilation
 ;;  15 artifact cache: "" (baked set) or names -> the metadata datum to persist
+;;  18 selected library source -> canonical key and rendered declared name
+;;  19/20/21 begin, roll back, or commit an on-demand registration transaction
 ;; State is restored before and saved after each op (init modes seed it fresh).
 (define (repl-dispatch)
   (repl-restore-state!)
@@ -1491,6 +1538,11 @@
                 (repl-library-sources-text)] ; cache: a library's source files
               [(= mode 17) (repl-shake-library
                              (repl-input))] ; emit build door: prune a unit
+              [(= mode 18) (repl-library-identity
+                             (repl-input))] ; resolver: validate selected source
+              [(= mode 19) (repl-registration-begin)]
+              [(= mode 20) (repl-registration-rollback)]
+              [(= mode 21) (repl-registration-commit)]
               [else (compile-one-form-text (repl-input))])])
       (repl-save-state!)
       result)))

@@ -48,7 +48,9 @@ merged at expand time.
 
 - **`build/emit`** (`emit.cpp`) is the shipped, user-facing driver — verbs
   `run`, `repl`, `build`, `lib`. It A-links the compiler's *own* compiled IR and
-  calls into it in process, so the REPL and the batch compiler share one core.
+  calls into it in process, so the REPL and the batch compiler share one core. Its
+  host-side hybrid resolver selects exact manifest entries or conventional library-root
+  sources; the core receives structured names and source text but performs no filesystem I/O.
 - **`compile.ss`** is the Chez-hosted driver: a second, independent host over the
   same flat sources, used by the Chez-gated suites to cross-check the self-hosted
   compiler, and the owner of the tree-shaking AOT ship path. Not needed to build
@@ -72,7 +74,7 @@ parse.ss           source -> core IL, alpha-rename, import resolution
 passes/            one pass per file (expand, recognize-let,
                      convert-assignments, simplify, convert-closures, lower)
 emit.ss            L-code -> textual LLVM IR (opaque ptrs, fastcc, musttail)
-repl-core.ss       interactive session state; assembled into the REPL compiler only
+repl-core.ss       interactive state + resolver protocol; assembled into the REPL compiler only
 dump.ss            the --dump stage dumper (%-ops; not linked by the Chez driver)
 prelude.scm        standard library; the source of the (scheme base) module
 prelude-surface.scm  which prelude defines (scheme base) EXPORTS (issue #29)

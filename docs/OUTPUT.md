@@ -80,6 +80,36 @@ make                                   # concise (default)
 EMIT_VERBOSITY=verbose make regen      # per-step timing and detail
 ```
 
+## Library resolution
+
+Hybrid resolution is narration, never program data. At default verbosity a successful non-baked
+selection names the requested library, source, and provider kind:
+
+```text
+resolve library (my stats) -> /work/app/lib/my/stats.sld  [directory /work/app/lib]
+resolve library (odd exception) -> vendor/exception.sld  [manifest emit-libs.scm]
+```
+
+Manifest discovery remains a separate input line:
+
+```text
+resolve manifest -> emit-libs.scm
+resolve manifest -> /usr/local/share/emit/emit-libs.scm  [chained]
+```
+
+`EMIT_VERBOSITY=quiet` omits all of those lines and leaves only errors on stderr; stdout is
+byte-identical. Verbose mode additionally names each configured root as it enters the provider
+chain and retains cache/include detail:
+
+```text
+library root /work/app/lib  [project]
+library root /usr/local/share/emit/lib  [installed]
+```
+
+Resolver errors name the library and, once a source has been selected, its path. A declared-name
+mismatch names the requested name and the declaration. Do not print roots considered at default
+verbosity: that is diagnostic detail, while the selected provider is a principal input.
+
 ## Stage dumps (`--dump`)
 
 Per-pass intermediate-language inspection is a fourth, *orthogonal* level of detail: it

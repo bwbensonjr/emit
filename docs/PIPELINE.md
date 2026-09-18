@@ -225,7 +225,8 @@ auto-imported standard library's ~600 stage dumps would bury the program's seven
 the compiler-produced textual IR. `emit run --emit` stops there, and `--dump` observes only the
 Scheme pass ladder, so both outputs are independent of JIT optimization. When `emit run` executes
 or `emit repl` starts a session, the host admits each textual module separately to ORC: baked
-libraries, manifest libraries, the program, and every REPL form remain distinct modules. ORC's IR
+libraries, exact-manifest or on-demand conventional libraries, the program, and every REPL form
+remain distinct modules. ORC's IR
 transform layer then applies the session profile immediately before that module is materialized:
 
 - `-O0` is an identity transform;

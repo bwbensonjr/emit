@@ -38,6 +38,8 @@
        (mangle '(foo) 'bar) "foo:bar")
 (check "three-part library prefix"
        (mangle '(a b c) 'x) "a.b.c:x")
+(check "integer library-name component"
+       (mangle '(example net 2) 'open) "example.net.2:open")
 
 ;; purity: same (library, name) pair always yields the same symbol
 (check "same input yields same symbol"

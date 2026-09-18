@@ -111,10 +111,34 @@ A program imports a library with a top-level `import` and then uses its exports:
 A name the program defines itself shadows an imported one of the same spelling (**user-wins
 shadowing**).
 
-## The manifest
+## Hybrid library resolution
 
-Library *names* are mapped to *source files* by a manifest — an s-expression file (default
-`emit-libs.scm`; see **Where the manifest is found** below):
+Most libraries need no name-to-file mapping. Emit maps an eligible R7RS name beneath an ordered
+library root: `(my stats)` becomes `my/stats.sld`, and `(example net 2)` becomes
+`example/net/2.sld`. Each symbol or nonnegative exact integer is one path component. Empty
+symbols, `.`, `..`, NUL, and symbols containing `/` or `\` are deliberately not mapped;
+use an exact manifest entry for those names. The first readable regular file wins, but Emit admits
+it only when its sole form is `define-library` with exactly the requested name.
+
+The resolver constructs provider records in this order:
+
+1. baked libraries;
+2. exact entries in the project manifest;
+3. repeated `-L DIR` / `--library-path DIR` roots;
+4. roots in `EMIT_LIBRARY_PATH`;
+5. `lib` beside the project manifest, or `./lib` without one;
+6. each installed manifest followed by its sibling `lib` root.
+
+Physical roots and manifests are deduplicated at their first occurrence. A successful answer is
+memoized for the compilation session, so a library cannot change providers midway through its
+dependency graph. Baked names are authoritative; project providers may override non-baked shipped
+libraries. The host owns filesystem access and hands source text, source home, imports, and
+compile-time interfaces to the same compiler core used by every door.
+
+### Exact manifests
+
+A manifest is an s-expression file (default `emit-libs.scm`) for exceptional layouts, exact
+overrides, artifact directories, and named program targets:
 
 ```scheme
 ;; each entry: (library NAME (source PATH) [(artifacts DIR)])
@@ -133,16 +157,17 @@ Library *names* are mapped to *source files* by a manifest — an s-expression f
   beside itself. The rule covers a library's `source`, an explicit `artifacts`, and a program
   entry's `source`/`output`; the *default* artifact dir (`build/lib`) is the driver's own and
   stays relative to the invocation.
-- The default `emit-libs.scm` at the repo root lists the shipped libraries — `(emit internal)`,
+- The compatibility `emit-libs.scm` at the repo root lists the shipped libraries — `(emit internal)`,
   `(emit filesystem)`, `(scheme base)`, `(scheme cxr)`, `(scheme read)`, `(scheme file)`, `(scheme inexact)`,
   `(scheme case-lambda)`, `(scheme char)`, `(scheme process-context)`, and `(scheme write)`; point
   `--manifest` at your own for additional libraries (as the test
-  suites do with `test/modules/emit-libs.scm`). Listing a library costs a program nothing unless
+  suites do with `test/modules/emit-libs.scm`). These mappings are not required when the sources
+  occupy their conventional paths. Listing a library costs a program nothing unless
   it imports it: the run door preloads lazily (see below) and `emit build` links only the
   program's import closure. Your own manifest need not name `(scheme base)` or `(emit internal)`:
   every door registers the baked set before reading the manifest (see *The shipped libraries*).
 
-### Where the manifest is found
+### Where manifests and roots are found
 
 Every door looks for the manifest the same way (change: `manifest-search-path`, issue #35):
 
@@ -164,10 +189,9 @@ Every door looks for the manifest the same way (change: `manifest-search-path`, 
   route, a **library name** comes from the first manifest that names it, so a project manifest
   **extends** the installed one rather than replacing it. Your project keeps every shipped library
   without naming it or embedding an install path; define a name yourself and yours wins.
-- **`--no-manifest-chain` selects only the first readable manifest.** Use it with
-  `--manifest FILE` when library resolution must be hermetic: one project manifest, nothing
-  installed. The option is accepted by `run`, `repl`, `build`, and `lib` and controls only manifest
-  chaining — it does not disable toolchain discovery, caches, or other environment inputs.
+- **`--no-manifest-chain` selects only the first readable manifest.** It controls manifests only.
+  **`--no-library-paths`** independently disables explicit, environment, project, and installed
+  directory providers. Use both with `--manifest FILE` for exact single-manifest resolution.
 - A physical manifest reached through more than one spelling (an explicit symlink, the
   executable-relative candidate, and the same build-time prefix, for example) is used only once;
   the first spelling owns narration and relative paths.
@@ -192,9 +216,9 @@ Every door looks for the manifest the same way (change: `manifest-search-path`, 
   it touches stdout. `make install` produces the layout candidates 4–5 look for; see
   `test/install-layout-tests.sh`.
 
-The Chez driver (`src/compile.ss`) implements candidates 1–3 and the same relative-path rule, but
-not installed candidates 4–5 or `--no-manifest-chain`: it is a bootstrap-only path that runs from
-a checkout and is never installed.
+The Chez driver (`src/compile.ss`) is a bootstrap-only path, but accepts the same `-L`,
+`--library-path`, `EMIT_LIBRARY_PATH`, and `--no-library-paths` controls and uses the same safe
+name mapping. It is never installed; the shipped C++ host owns executable-relative installed roots.
 
 A manifest may also carry **program entries** — the deliverables `emit build` produces (change:
 `emit-build-bin-entry`):
@@ -219,7 +243,7 @@ across them (dev→ship fidelity).
 
 ### Batch / AOT (and JIT, bitcode) — the Chez driver
 
-`src/compile.ss` resolves imports through the manifest, compiles each library to a unit, and links
+`src/compile.ss` resolves imports through exact mappings and conventional roots, compiles each library to a unit, and links
 runtime + units + program. All three `--backend`s (`aot` default, `jit`, `bitcode`) resolve imports
 and the `(scheme base)` auto-import identically:
 
@@ -235,8 +259,8 @@ chez --libdirs src --script src/compile.ss test/modules/prog-mylib.scm \
 
 ### REPL — interactive import
 
-The shipped `emit repl` (build it with `make emit`) preloads the manifest's libraries and
-honors interactive `import`; pass the manifest via `--manifest` (or `EMIT_MANIFEST`):
+The shipped `emit repl` eagerly registers exact manifest libraries, then resolves conventional
+libraries on their first interactive `import`:
 
 ```sh
 build/emit repl --manifest test/modules/emit-libs.scm
@@ -248,10 +272,9 @@ build/emit repl --manifest test/modules/emit-libs.scm
 ### Chez-free embedded runner — the run door (user libraries)
 
 `emit run` compiles and runs a whole program with **no Chez**, and resolves user-library
-`import`s through the manifest — the *run door*, at parity with the AOT and REPL doors (change:
+`import`s through the hybrid provider chain — the *run door*, at parity with the AOT and REPL doors (change:
 `run-door-user-libraries`). `(scheme base)` is baked in, so a plain program needs no manifest at
-all — it runs from any directory, installed or not; user libraries are read from the manifest
-(found by the order under **Where the manifest is found**). The program source is read from a
+all — it runs from any directory, installed or not. The program source is read from a
 `FILE` argument when given, otherwise stdin:
 
 ```sh
@@ -259,7 +282,7 @@ echo '(map (lambda (x) (* x x)) (list 1 2 3))' | build/emit run   # => (1 4 9)  
 build/emit run --manifest test/modules/emit-libs.scm test/modules/prog-mylib.scm   # => 142
 ```
 
-The run door reuses the REPL door's Chez-free machinery: the host reads the manifest and each
+The run door reuses the REPL door's Chez-free machinery: the host resolves and reads each
 NEEDED library source — the transitive closure of the program's imports, not the whole manifest
 (see [Lazy preload](#lazy-preload-on-the-run-door)) — and hands the text to the embedded
 compiler through a small mode protocol, then the
@@ -269,14 +292,17 @@ fidelity). `emit build` uses the same `--emit` path for the native build.
 
 ### `emit build` — deliver a program
 
-`emit build` turns a manifest **program entry** into a standalone native executable — Chez-free end
-to end (change: `emit-build-bin-entry`), entirely within the compiled `build/emit` binary (it emits
+`emit build` turns either a direct `.scm`/path-shaped source or a manifest **program entry** into
+a standalone native executable — Chez-free end to end, entirely within the compiled `build/emit` binary (it emits
 the IR in-process and forks `clang`):
 
 ```bash
 # resolve (program mylib-app) and deliver its executable
 build/emit build mylib-app --manifest test/modules/emit-libs.scm
 ./build/mylib-app                       # => 142
+
+# a simple application needs no program entry
+build/emit build app/main.scm -o build/my-app
 
 # with exactly one program entry, the NAME may be omitted
 build/emit build --manifest my-project.scm
@@ -404,16 +430,16 @@ published fails the default suite, so adding a helper forces a visibility decisi
 | library | source | reached by | resolved |
 |---|---|---|---|
 | `(emit internal)` | generated from `src/prelude.scm` | explicit import; **not API** | **baked** + manifest |
-| `(emit filesystem)` | hand-written | `(import (emit filesystem))` | manifest |
+| `(emit filesystem)` | hand-written | `(import (emit filesystem))` | installed root / exact manifest |
 | `(scheme base)` | generated from `src/prelude.scm` | auto-imported everywhere | **baked** + manifest |
-| `(scheme cxr)` | generated from `src/prelude.scm` | `(import (scheme cxr))` | manifest |
-| `(scheme read)` | generated from `src/prelude.scm` | `(import (scheme read))` | manifest |
-| `(scheme file)` | generated from `src/prelude.scm` | `(import (scheme file))` | manifest |
-| `(scheme inexact)` | hand-written | `(import (scheme inexact))` | manifest |
-| `(scheme case-lambda)` | hand-written | `(import (scheme case-lambda))` | manifest |
-| `(scheme char)` | hand-written + generated Unicode 17.0.0 include | `(import (scheme char))` | manifest |
-| `(scheme process-context)` | hand-written | `(import (scheme process-context))` | manifest |
-| `(scheme write)` | hand-written | `(import (scheme write))` | manifest |
+| `(scheme cxr)` | generated from `src/prelude.scm` | `(import (scheme cxr))` | installed root / exact manifest |
+| `(scheme read)` | generated from `src/prelude.scm` | `(import (scheme read))` | installed root / exact manifest |
+| `(scheme file)` | generated from `src/prelude.scm` | `(import (scheme file))` | installed root / exact manifest |
+| `(scheme inexact)` | hand-written | `(import (scheme inexact))` | installed root / exact manifest |
+| `(scheme case-lambda)` | hand-written | `(import (scheme case-lambda))` | installed root / exact manifest |
+| `(scheme char)` | hand-written + generated Unicode 17.0.0 include | `(import (scheme char))` | installed root / exact manifest |
+| `(scheme process-context)` | hand-written | `(import (scheme process-context))` | installed root / exact manifest |
+| `(scheme write)` | hand-written | `(import (scheme write))` | installed root / exact manifest |
 
 ### Character library extension
 
@@ -435,8 +461,8 @@ every one of them.
 from the baked-in prelude source, so a program that imports nothing — or only `(scheme base)` — runs
 with **no manifest present at all**. That guarantee is why the substrate had to be baked too:
 `(scheme base)` imports it, and anything `(scheme base)` depends on inherits the requirement. The
-Every remaining library in the table is ordinary: a program reaches it only through the
-manifest, exactly as it reaches `(scheme inexact)`.
+Every remaining library in the table is ordinary: a program reaches it through the hybrid
+resolver, normally from the conventional installed root.
 
 **Every door registers the baked set** before it consults the manifest — the AOT door, the run door,
 the REPL door, and the compile-unit (`emit lib`) door alike (change: `baked-set-on-every-door`). So a
@@ -531,37 +557,35 @@ is hand-written where they are generated:
 |---|---|---|
 | source | generated from `src/prelude.scm` | hand-written `lib/scheme/inexact.sld` |
 | reached by | auto-imported everywhere | an explicit `(import (scheme inexact))` |
-| how it is found | baked into the compiler (`*prelude-source*`) | resolved through the manifest |
+| how it is found | baked into the compiler (`*prelude-source*`) | conventional installed root or exact manifest |
 
 Being ordinary is the point: it makes Emit's second standard library a *demonstration that the
 module system works* rather than a second special case, and it keeps `sqrt`/`sin`/`log` out of
 the universal namespace — without the import those names are unbound and a program may define
 its own.
 
-## Lazy preload on the run door
+## Closure loading and REPL registration
 
-The run door loads only the libraries the program **needs**: it walks the transitive closure of
-the program's imports over the manifest index and preloads that, rather than every manifest
-entry. Mechanically, `preload_user_libraries` (`src/emit.cpp`) drives two compiler modes — mode
-9 returns `KEY<TAB>PATH` for each manifest library, mode 12 answers "which libraries does this
-source import?" for a program and a `.sld` alike — and follows each reached `.sld`'s own
-imports. Reading those files stays in the host because the core performs no I/O by design.
+The run and build doors load only the libraries the program **needs**. They ask the resolver for
+each import while walking its transitive closure; one memoized descriptor carries the selected
+source, source home, artifact location, and provider identity into cache lookup and compilation.
+Mode 12 returns structured import descriptors containing both the canonical unit key and original
+name components. Mode 18 validates a directory-selected source's declared name. Reading files
+stays in the host because the compiler core performs no filesystem I/O.
 
-**The REPL host stays eager**, and should: a session is an open world where any prompt may import
-anything, so every user library on the manifest must already be loaded. Only the run door,
-compiling one known program, can be lazy. Both doors read the *same* index (mode 9), which omits
-every baked member — a session's standard library comes from the baked set, never from the
-manifest, in either prelude mode (change: `chez-free-unit-pipeline`, issue #101). Mode 5, which
-listed every manifest library including the baked ones, is retired.
+The REPL has two registration times. Exact manifest entries remain eager so an invalid explicit
+mapping is diagnosed before the first prompt, but their initialization and ORC materialization
+remain deferred until import. Conventional roots are never scanned: an unknown prompt import asks
+the same resolver for a transitive closure, registers it dependency-first in a compiler-state
+transaction, then retries the import. A failed read, validation, cache load, compile, or
+registration rolls back publication and the next prompt remains usable. Once registration
+succeeds, the existing resolve-then-commit path initializes each member at most once and merges
+exports only after success.
 
-This was not an optimization. Eager preload was invisible while the manifest held exactly one
-library; the moment a second one landed it (a) put units a program never imported into its
-emitted IR, (b) made `--no-prelude` — which promises a single self-contained module — emit a
-preloaded unit's boundary marker anyway, and (c) broke the byte-identical program IR between the
-run door and the Chez driver, which resolves imports on demand. All three are pinned by
-`test/prelude-base-run-tests.sh`. Note the shape: the Chez driver already did this with
-`toposort-libs`, so this was a resolution strategy that existed on one door being wired into the
-other — the same gap as `docs/PERFORMANCE.md` P8.
+Provider choice does not salt emitted semantics. Cache validation starts only after selection and
+checks the selected source identity; the same source reached through an exact entry or a root
+therefore produces byte-identical full unit IR and compile-time interfaces on the Chez, run, lib,
+REPL, and AOT paths. Build still prunes only after full-unit compilation.
 
 ## Semantics
 

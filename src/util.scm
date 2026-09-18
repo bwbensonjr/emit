@@ -77,12 +77,24 @@
     (let loop ([i 0])
       (cond [(= i n) #f] [(char=? (string-ref str i) #\:) #t] [else (loop (+ i 1))]))))
 
+(define (library-name-component->string component)
+  (cond
+    [(symbol? component) (symbol->string component)]
+    [(and (integer? component) (exact? component) (>= component 0))
+      (number->string component)]
+    [else (error 'library-name
+                 "expected an identifier or nonnegative exact integer"
+                 component)]))
+
 (define (mangle library-name internal-name)
   (let ([x (if (symbol? internal-name) (symbol->string internal-name) internal-name)])
     (if (null? library-name)
         x ; empty prefix: round-trip unchanged
-        (let loop ([parts (cdr library-name)] [acc (symbol->string (car library-name))])
+        (let loop ([parts (cdr library-name)]
+                   [acc (library-name-component->string (car library-name))])
           (if (null? parts)
               (string-append acc ":" x)
               (loop (cdr parts)
-                    (string-append acc "." (symbol->string (car parts)))))))))
+                    (string-append acc
+                                   "."
+                                   (library-name-component->string (car parts)))))))))

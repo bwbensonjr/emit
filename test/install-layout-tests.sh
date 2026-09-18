@@ -5,8 +5,8 @@
 # installed-emit-completeness, issues #36 and #44), including a project manifest
 # selected explicitly from another working directory (issue #114).
 #
-# A library that is not baked into the compiler is reachable only through a manifest,
-# and the manifest used to be looked up as the bare relative string "emit-libs.scm" --
+# Before hybrid resolution, a non-baked library was reachable only through a manifest,
+# and that manifest was looked up as the bare relative string "emit-libs.scm" --
 # i.e. against the CURRENT DIRECTORY.  An installed `emit` therefore lost every
 # non-baked library the moment the user left the source tree: `emit run` could not
 # (import (scheme inexact)), and `emit repl` lost (scheme base) itself, leaving a
@@ -127,6 +127,19 @@ want="$(cd "$REPO" && echo '(import (scheme inexact)) (display (sqrt 2.0))' \
   && ok "(scheme inexact) resolves; value matches the in-repo run => $got" \
   || { bad "(scheme inexact) from an unrelated cwd => [$got] (in-repo: [$want])"
        sed 's/^/         /' "$TMP/e1"; }
+
+# The conventional installed hierarchy is independently sufficient. Removing the
+# compatibility manifest must not remove a conventionally placed shipped library.
+INST_MAN="$PREFIX/share/emit/emit-libs.scm"
+mv "$INST_MAN" "$TMP/installed-manifest.saved"
+root_got="$(echo '(import (scheme inexact)) (display (sqrt 2.0))' \
+  | EMIT_VERBOSITY=quiet "$EMIT" run 2>"$TMP/e1root")"
+mv "$TMP/installed-manifest.saved" "$INST_MAN"
+if [ "$root_got" = "$want" ]; then
+  ok "installed conventional root works without the compatibility manifest"
+else
+  bad "installed root without manifest => [$root_got]"; sed 's/^/         /' "$TMP/e1root"
+fi
 
 # The REPL door lost (scheme base) entirely before this change (it resolves the
 # auto-import through the manifest rather than from the baked prelude).
@@ -308,13 +321,11 @@ grep -q "$PREFIX" emit-libs.scm \
   && bad "the project manifest names the install prefix" \
   || ok "the project manifest needs no path into the install prefix"
 
-# The chain is NARRATED: both manifests in order, and the one that supplied the
-# library.  A door that silently consults two manifests is worse than one that
-# consults the wrong one.
+# The chain and selected provider are narrated.
 "$EMIT" run hello.scm >/dev/null 2>"$TMP/e5"
 if grep -q 'resolve manifest -> emit-libs.scm' "$TMP/e5" \
    && grep -q "resolve manifest -> $RPREFIX/share/emit/emit-libs.scm  \[chained\]" "$TMP/e5" \
-   && grep -q "^chain $RPREFIX/share/emit/emit-libs.scm -> scheme.inexact" "$TMP/e5"; then
+   && grep -q "resolve library (scheme inexact).*\[manifest $RPREFIX/share/emit/emit-libs.scm\]" "$TMP/e5"; then
   ok "the chain and the supplying manifest are narrated"
 else
   bad "chain narration"; sed 's/^/         /' "$TMP/e5"
@@ -326,6 +337,27 @@ qout="$(EMIT_VERBOSITY=quiet "$EMIT" run hello.scm 2>&1 >/dev/null)"
 # --- chaining: precedence, non-extension, and what does NOT chain ---------------
 echo
 echo "manifest chaining"
+
+# A conventional project root also outranks the installed tier.
+mkdir -p "$PROJ/lib/scheme"
+cat > "$PROJ/lib/scheme/cxr.sld" <<'EOF'
+(define-library (scheme cxr)
+  (import (scheme base))
+  (export caddr)
+  (begin (define (caddr x) (quote conventional-override))))
+EOF
+cat > "$PROJ/cxr.scm" <<'EOF'
+(import (scheme cxr))
+(display (caddr (list 1 2 3)))
+EOF
+cgot="$(EMIT_VERBOSITY=quiet "$EMIT" run --manifest "$PROJ/emit-libs.scm" \
+          "$PROJ/cxr.scm" 2>"$TMP/e6root")"
+if [ "$cgot" = "conventional-override" ]; then
+  ok "a conventional project library overrides the installed library"
+else
+  bad "conventional project override => [$cgot]"; sed 's/^/         /' "$TMP/e6root"
+fi
+rm -f "$PROJ/lib/scheme/cxr.sld"
 
 # A project entry of the same name as a shipped library WINS -- the one part of the old
 # first-match-wins behaviour worth keeping, and the way a project overrides a library.
@@ -390,7 +422,7 @@ egot="$(cd "$CALLER" && EMIT_VERBOSITY=quiet "$EMIT" run \
 if [ "$(grep -c '^resolve manifest ->' "$TMP/e7n" || true)" = 2 ] \
    && sed -n '1p' "$TMP/e7n" | grep -q "resolve manifest -> $PROJ/emit-libs.scm" \
    && grep -q "resolve manifest -> $RPREFIX/share/emit/emit-libs.scm  \[chained\]" "$TMP/e7n" \
-   && grep -q "^chain $RPREFIX/share/emit/emit-libs.scm -> scheme.inexact" "$TMP/e7n" \
+   && grep -q "resolve library (scheme inexact).*\[manifest $RPREFIX/share/emit/emit-libs.scm\]" "$TMP/e7n" \
    && ! grep -q "$CALLER/emit-libs.scm" "$TMP/e7n"; then
   ok "an explicit chain is narrated and excludes the caller's manifest"
 else
@@ -426,15 +458,25 @@ else
   bad "explicit out-of-tree build"; sed 's/^/         /' "$TMP/outside-build.log"
 fi
 
-# Exact-one-manifest resolution is now intentional rather than coupled to location.
-# An installed-only import fails with the opt-out, while a baked-only build succeeds.
-if (cd "$CALLER" && EMIT_VERBOSITY=quiet "$EMIT" run --no-manifest-chain \
-      --manifest "$PROJ/emit-libs.scm" "$PROJ/hello.scm") >/dev/null 2>"$TMP/e7single"; then
-  bad "--no-manifest-chain resolved an installed-only import"
-elif grep -q 'not in the manifest\|unresolved or cyclic import' "$TMP/e7single"; then
-  ok "--no-manifest-chain preserves single-manifest library isolation"
+# Manifest chaining and directory lookup are independent. Suppressing only later
+# manifests still permits the installed conventional root.
+single_value="$(cd "$CALLER" && EMIT_VERBOSITY=quiet "$EMIT" run --no-manifest-chain \
+      --manifest "$PROJ/emit-libs.scm" "$PROJ/hello.scm" 2>"$TMP/e7root")"
+if [ "$single_value" = "$want" ]; then
+  ok "--no-manifest-chain retains installed conventional roots"
 else
-  bad "--no-manifest-chain diagnostic"; sed 's/^/         /' "$TMP/e7single"
+  bad "--no-manifest-chain lost installed roots"; sed 's/^/         /' "$TMP/e7root"
+fi
+
+# Combining both controls restores exact-one-manifest resolution.
+if (cd "$CALLER" && EMIT_VERBOSITY=quiet "$EMIT" run --no-manifest-chain \
+      --no-library-paths --manifest "$PROJ/emit-libs.scm" "$PROJ/hello.scm") \
+      >/dev/null 2>"$TMP/e7single"; then
+  bad "single-manifest mode resolved an installed-only import"
+elif grep -q 'not in a manifest or library path\|unresolved or cyclic import' "$TMP/e7single"; then
+  ok "both opt-outs preserve single-manifest library isolation"
+else
+  bad "single-manifest diagnostic"; sed 's/^/         /' "$TMP/e7single"
 fi
 if (cd "$CALLER" && EMIT_VERBOSITY=quiet "$EMIT" build hermetic \
       --no-manifest-chain --manifest "$PROJ/emit-libs.scm") >"$TMP/hermetic.log" 2>&1 \

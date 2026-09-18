@@ -218,7 +218,7 @@
 ;;; resolves (scheme base) from the manifest (src/emit.cpp, mode 5 -> mode 4), so
 ;;; base.sld's import of it has to resolve there too.
 ;;;
-;;; The last three are NOT baked: they are ordinary manifest-resolved libraries, like
+;;; The last three are NOT baked: they are ordinary hybrid-resolved libraries, like
 ;;; (scheme inexact), reached only through an explicit import (change:
 ;;; scheme-base-partition, issue #33).  They hold the sixteen names R7RS-small places
 ;;; outside (scheme base), and they IMPORT the baked members -- (scheme base) for the

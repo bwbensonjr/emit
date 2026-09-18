@@ -73,7 +73,7 @@ check_fail run-cycle   "$MOD/prog-cycle.scm"   "$MOD/emit-libs-cycle.scm" "cycli
 # (change: manifest-empty-guards; issue #63).  Asserting the NAME, not just the phrase, is
 # the point of the change: module-system requires the failure be reported "naming the
 # unresolved library", and a pattern that ignores the name would pass either way.
-check_fail run-missing "$MOD/prog-missing.scm" "$MAN"       "not in the manifest.*\(nope\)"
+check_fail run-missing "$MOD/prog-missing.scm" "$MAN"       "unresolved import.*\(nope\)"
 # a name bound both by define and define-syntax (change: library-macro-export, design D3)
 check_fail run-macro-dupname "$MOD/prog-macro-dupname.scm" "$MOD/emit-libs-macdup.scm" \
   "both define and define-syntax"
