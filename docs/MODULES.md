@@ -724,6 +724,32 @@ REPL, and AOT paths. Build still prunes only after full-unit compilation.
   is untouched — the toolchain is part of the cache key, as in Rust (`.rlib` SVH), GHC (`.hi`
   version), Go, and Bazel (change: `artifact-compiler-stamp`).
 
+### Portable and native cache tiers
+
+`emit run` and `emit repl` keep LLVM IR authoritative but derive a second, local cache tier for
+full library units. The portable `baked-` and `unit-` entries contain IR, registration metadata,
+and source identities. A matching `native-baked-` or `native-unit-` entry contains the relocatable
+objects LLVM produced after the session's JIT transform. A warm native hit goes directly to ORC's
+object layer, avoiding library IR parsing, optimization, and code generation.
+
+Native identity includes the portable unit's IR identity, native format, Emit executable digest,
+LLVM version, target triple and data layout, CPU and normalized target features, relocation and
+code models, and `-O0`, `-O1`, or `-O2` profile. Object digests and LLVM structural parsing reject
+corruption before admission. Files are written atomically beneath `EMIT_CACHE`, or the platform
+user cache when it is unset; an installed Emit derives them there and never modifies its install
+prefix. The cache is disposable. After confirming the resolved cache path, removing either its
+`native-` entries or the whole Emit cache is safe and only makes the next execution compile again.
+
+An exact REPL manifest entry may have a native object admitted at startup, but ORC does not link
+or initialize it until the first import looks up its initializer. Dependencies still initialize
+first and at most once. `--dump-all` bypasses both cache tiers because it requests observable
+library compilation stages.
+
+`emit build` deliberately ignores native entries. It consumes portable IR, prunes each unit to the
+program's root set, performs closed-world optimization, and links the resulting program. `emit lib`
+likewise continues to publish only `.ll` and `.exports`; local native objects are execution-cache
+accelerators, never shipped library artifacts.
+
 ### How an exported macro travels
 
 A transformer cannot ride in the emitted IR — it is consumed at compile time, not run — so it rides

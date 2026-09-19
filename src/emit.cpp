@@ -26,6 +26,10 @@
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+#include "llvm/ExecutionEngine/ObjectCache.h"
+#include "llvm/Object/ObjectFile.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -57,6 +61,8 @@
 #include <limits.h>
 
 #include <gc/gc.h>
+
+#include "native-cache.h"
 
 using namespace llvm;
 using namespace llvm::orc;
@@ -112,6 +118,10 @@ struct JitMetrics {
   uint64_t execute_ns = 0;
   size_t added = 0;
   size_t transformed = 0;
+  size_t parsed = 0;
+  size_t native_hits = 0;
+  size_t native_generated = 0;
+  uint64_t native_load_ns = 0;
 };
 
 static JitMetrics g_jit_metrics;
@@ -443,7 +453,8 @@ static bool write_file(const std::string &path, const std::string &data) {
 }
 
 // Parse IR text and add it to the JIT.  On failure, fill `err` and return false.
-static bool add_ir(const std::string &ir, const char *name, std::string &err) {
+static bool add_ir(const std::string &ir, const char *name, std::string &err,
+                   const std::string &identifier = "") {
   auto ctx = std::make_unique<LLVMContext>();
   SMDiagnostic diag;
   auto buf = MemoryBuffer::getMemBuffer(ir, name);
@@ -453,6 +464,8 @@ static bool add_ir(const std::string &ir, const char *name, std::string &err) {
     diag.print(name, os);
     return false;
   }
+  if (!identifier.empty()) mod->setModuleIdentifier(identifier);
+  ++g_jit_metrics.parsed;
   mod->setDataLayout(JIT->getDataLayout());
   if (Error e = JIT->addIRModule(ThreadSafeModule(std::move(mod), std::move(ctx)))) {
     err = toString(std::move(e));
@@ -1744,6 +1757,212 @@ static void cache_store_unit(const std::string &key, const std::string &path,
                     /*keys=*/key + "\n", manifest_text, modules);
 }
 
+// --- target-specific native object cache -----------------------------------
+
+static NativeJitSignature g_native_signature;
+
+static std::string native_stamp(const std::string &identity) {
+  return "emit-native-stamp-v" + std::to_string(kNativeCacheVersion) + "\n" +
+         g_native_signature.key() + "\n" + identity + "\n";
+}
+
+static std::string native_stem(const std::string &kind, const std::string &label,
+                               const std::string &identity) {
+  std::string dir = cache_dir();
+  if (dir.empty() || compiler_digest().empty() || g_native_signature.key().empty()) return "";
+  return dir + "/native-" + kind + (label.empty() ? "" : "-" + label) + "-v" +
+         std::to_string(kNativeCacheVersion) + "-" + identity + "-" +
+         g_native_signature.key();
+}
+
+static bool native_object_valid(const std::string &bytes) {
+  if (bytes.empty()) return false;
+  auto object = object::ObjectFile::createObjectFile(
+      MemoryBufferRef(StringRef(bytes.data(), bytes.size()), "native-cache-object"));
+  if (!object) {
+    consumeError(object.takeError());
+    return false;
+  }
+  return true;
+}
+
+static std::string native_metadata(const std::string &identity,
+                                   const std::vector<std::string> &objects) {
+  std::ostringstream output;
+  output << g_native_signature.text() << "identity=" << identity << "\n"
+         << "count=" << objects.size() << "\n";
+  for (size_t i = 0; i < objects.size(); ++i)
+    output << "object" << i << "=" << fnv1a_hex(objects[i]) << ":" << objects[i].size()
+           << "\n";
+  return output.str();
+}
+
+static bool native_entry_load(const std::string &stem, const std::string &identity,
+                              size_t count, std::vector<std::string> &objects) {
+  if (stem.empty() || cache_bypassed_for_dump()) return false;
+  if (read_file(stem + ".stamp") != native_stamp(identity)) return false;
+  std::vector<std::string> candidate;
+  for (size_t i = 0; i < count; ++i) {
+    std::string bytes = read_file(stem + "." + std::to_string(i) + ".o");
+    if (!native_object_valid(bytes)) return false;
+    candidate.push_back(std::move(bytes));
+  }
+  if (read_file(stem + ".meta") != native_metadata(identity, candidate)) return false;
+  objects = std::move(candidate);
+  return true;
+}
+
+static bool native_entry_store(const std::string &stem, const std::string &identity,
+                               const std::vector<std::string> &objects) {
+  if (stem.empty() || objects.empty() || cache_bypassed_for_dump()) return false;
+  ::remove((stem + ".stamp").c_str());
+  for (size_t i = 0; i < objects.size(); ++i)
+    if (!cache_write_atomic(stem + "." + std::to_string(i) + ".o", objects[i])) return false;
+  if (!cache_write_atomic(stem + ".meta", native_metadata(identity, objects))) return false;
+  return cache_write_atomic(stem + ".stamp", native_stamp(identity));
+}
+
+class NativeObjectAdapter final : public ObjectCache {
+public:
+  struct Group {
+    std::string stem;
+    std::string identity;
+    std::string what;
+    std::vector<std::string> objects;
+  };
+
+  void register_group(const std::string &stem, const std::string &identity,
+                      const std::string &what, const std::vector<std::string> &ids) {
+    Group group{stem, identity, what, std::vector<std::string>(ids.size())};
+    groups[stem] = std::move(group);
+    for (size_t i = 0; i < ids.size(); ++i) members[ids[i]] = std::make_pair(stem, i);
+  }
+
+  void notifyObjectCompiled(const Module *module, MemoryBufferRef object) override {
+    auto member = members.find(module->getModuleIdentifier());
+    if (member == members.end()) return;
+    Group &group = groups[member->second.first];
+    group.objects[member->second.second] = object.getBuffer().str();
+    for (const std::string &bytes : group.objects)
+      if (bytes.empty()) return;
+    auto begin = SteadyClock::now();
+    if (native_entry_store(group.stem, group.identity, group.objects)) {
+      ++g_jit_metrics.native_generated;
+      size_t bytes = 0;
+      for (const std::string &object_bytes : group.objects) bytes += object_bytes.size();
+      vsay("native object generated for " + group.what + " " +
+           g_native_signature.optimization_profile + " [" + std::to_string(bytes) +
+           " bytes, " + ms_text(elapsed_ms(begin, SteadyClock::now())) + "] -> " +
+           group.stem + ".0.o");
+    }
+  }
+
+  std::unique_ptr<MemoryBuffer> getObject(const Module *) override { return nullptr; }
+
+private:
+  std::map<std::string, Group> groups;
+  std::map<std::string, std::pair<std::string, size_t>> members;
+};
+
+static std::unique_ptr<NativeObjectAdapter> g_native_adapter;
+
+static bool native_cache_bypassed() {
+  const char *level = std::getenv("EMIT_DUMP_LEVEL");
+  return level && std::atoi(level) >= 3;
+}
+
+static bool native_admit(const std::string &stem, const std::string &identity, size_t count,
+                         const std::string &what, std::string &error) {
+  std::vector<std::string> objects;
+  auto begin = SteadyClock::now();
+  if (!native_entry_load(stem, identity, count, objects)) {
+    vsay("native object miss for " + what + " " + g_native_signature.optimization_profile);
+    return false;
+  }
+  ResourceTrackerSP tracker = JIT->getMainJITDylib().createResourceTracker();
+  for (size_t i = 0; i < objects.size(); ++i) {
+    auto buffer = MemoryBuffer::getMemBufferCopy(objects[i], what);
+    if (Error add_error = JIT->addObjectFile(tracker, std::move(buffer))) {
+      error = toString(std::move(add_error));
+      if (Error remove_error = tracker->remove()) consumeError(std::move(remove_error));
+      return false;
+    }
+    ++g_jit_metrics.added;
+  }
+  uint64_t duration = (uint64_t)std::chrono::duration_cast<std::chrono::nanoseconds>(
+      SteadyClock::now() - begin).count();
+  g_jit_metrics.native_load_ns += duration;
+  ++g_jit_metrics.native_hits;
+  size_t bytes = 0;
+  for (const std::string &object : objects) bytes += object.size();
+  vsay("native object reused for " + what + " " + g_native_signature.optimization_profile +
+       " [" + std::to_string(bytes) + " bytes, " + ms_text(nanos_ms(duration)) + "]");
+  return true;
+}
+
+static bool add_native_unit(const std::string &ir, const std::string &key,
+                            std::string &error) {
+  if (native_cache_bypassed()) return add_ir(ir, "<unit>", error);
+  std::string identity = fnv1a_hex(ir);
+  std::string stem = native_stem("unit", key, identity);
+  if (native_admit(stem, identity, 1, "library " + key, error)) return true;
+  std::string identifier = "emit-native-" + identity + "-" + g_native_signature.key();
+  g_native_adapter->register_group(stem, identity, "library " + key, {identifier});
+  return add_ir(ir, "<unit>", error, identifier);
+}
+
+static bool add_native_baked_set(const std::vector<std::string> &modules,
+                                 const std::vector<std::string> &keys,
+                                 std::string &error) {
+  if (native_cache_bypassed()) {
+    for (const std::string &module : modules)
+      if (!add_ir(module, "<baked>", error)) return false;
+    return true;
+  }
+  std::string joined;
+  for (const std::string &module : modules) joined += fnv1a_hex(module) + "\n";
+  std::string identity = fnv1a_hex(joined);
+  std::string stem = native_stem("baked", "", identity);
+  if (native_admit(stem, identity, modules.size(), "baked set", error)) return true;
+  std::vector<std::string> identifiers;
+  for (size_t i = 0; i < modules.size(); ++i)
+    identifiers.push_back("emit-native-baked-" + identity + "-" + std::to_string(i) + "-" +
+                          g_native_signature.key());
+  g_native_adapter->register_group(stem, identity, "baked set", identifiers);
+  for (size_t i = 0; i < modules.size(); ++i)
+    if (!add_ir(modules[i], "<baked>", error, identifiers[i])) return false;
+  return true;
+}
+
+static Expected<std::unique_ptr<LLJIT>> create_emit_jit(JitOptLevel level) {
+  auto target = JITTargetMachineBuilder::detectHost();
+  if (!target) return target.takeError();
+  auto layout = target->getDefaultDataLayoutForTarget();
+  if (!layout) return layout.takeError();
+  g_native_signature = NativeJitSignature();
+  g_native_signature.executable = compiler_digest();
+  g_native_signature.llvm = LLVM_VERSION_STRING;
+  g_native_signature.target_triple = target->getTargetTriple().str();
+  g_native_signature.data_layout = layout->getStringRepresentation();
+  g_native_signature.cpu = target->getCPU();
+  g_native_signature.features = target->getFeatures().getString();
+  g_native_signature.relocation_model = target->getRelocationModel()
+      ? std::to_string((int)*target->getRelocationModel()) : "default";
+  g_native_signature.code_model = target->getCodeModel()
+      ? std::to_string((int)*target->getCodeModel()) : "default";
+  g_native_signature.optimization_profile = jit_opt_name(level);
+  g_native_adapter = std::make_unique<NativeObjectAdapter>();
+  LLJITBuilder builder;
+  builder.setJITTargetMachineBuilder(std::move(*target));
+  builder.setCompileFunctionCreator(
+      [](JITTargetMachineBuilder machine)
+          -> Expected<std::unique_ptr<IRCompileLayer::IRCompiler>> {
+        return std::make_unique<ConcurrentIRCompiler>(std::move(machine),
+                                                       g_native_adapter.get());
+      });
+  return builder.create();
+}
+
 // Register the baked library set (mode 8) into the current session and return its modules
 // and their initializer symbols, positionally paired.
 //
@@ -2087,7 +2306,7 @@ static int emit_run(int argc, char **argv) {
   InitializeNativeTargetAsmPrinter();
   InitializeNativeTargetAsmParser();
 
-  auto jitOr = LLJITBuilder().create();
+  auto jitOr = create_emit_jit(jit_opt);
   if (!jitOr) {
     std::cerr << "emit run: fatal: failed to create LLJIT: " << toString(jitOr.takeError()) << "\n";
     return 1;
@@ -2108,8 +2327,23 @@ static int emit_run(int argc, char **argv) {
   // in topological order; its JITDylib definition shadows the linked-in compiler's.
   std::string err;
   auto admit_begin = SteadyClock::now();
-  for (size_t i = 0; i < modules.size(); i++)
-    if (!add_ir(modules[i], "<unit>", err)) { std::cerr << "emit run: " << err << "\n"; return 1; }
+  size_t baked_count = 0;
+  while (baked_count < module_keys.size() &&
+         (module_keys[baked_count] == "emit.internal:" ||
+          module_keys[baked_count] == "scheme.base:")) ++baked_count;
+  if (baked_count) {
+    std::vector<std::string> baked_modules(modules.begin(), modules.begin() + baked_count);
+    std::vector<std::string> baked_keys(module_keys.begin(), module_keys.begin() + baked_count);
+    if (!add_native_baked_set(baked_modules, baked_keys, err)) {
+      std::cerr << "emit run: " << err << "\n";
+      return 1;
+    }
+  }
+  for (size_t i = baked_count; i < modules.size(); i++)
+    if (!add_native_unit(modules[i], module_keys[i], err)) {
+      std::cerr << "emit run: " << err << "\n";
+      return 1;
+    }
   if (!add_ir(prog_ir, "<program>", err)) { std::cerr << "emit run: " << err << "\n"; return 1; }
   auto admit_end = SteadyClock::now();
 
@@ -2168,11 +2402,15 @@ static int emit_run(int argc, char **argv) {
   vsay(std::string("jit ") + jit_opt_name(jit_opt) + " program -> execute  [" +
        std::to_string(g_jit_metrics.transformed) + "/" +
        std::to_string(g_jit_metrics.added) + " modules, compile " +
-       ms_text(elapsed_ms(compile_begin, compile_end)) + ", admit " +
+       ms_text(elapsed_ms(compile_begin, compile_end)) + ", parse " +
+       std::to_string(g_jit_metrics.parsed) + ", admit " +
        ms_text(elapsed_ms(admit_begin, admit_end)) + ", transform " +
        ms_text(nanos_ms(g_jit_metrics.transform_ns)) + ", materialize " +
        ms_text(nanos_ms(g_jit_metrics.materialize_ns)) +
        ", execute " + ms_text(nanos_ms(g_jit_metrics.execute_ns)) +
+       ", native " + std::to_string(g_jit_metrics.native_hits) + " reused/" +
+       std::to_string(g_jit_metrics.native_generated) + " generated, load " +
+       ms_text(nanos_ms(g_jit_metrics.native_load_ns)) +
        "]");
   return 0;
 }
@@ -2346,7 +2584,7 @@ static void preload_libraries(LibraryResolver &resolver, bool have_baked,
       if (cr == CacheRead::Deferred) { deferred.push_back(descriptor); continue; }
       if (cr == CacheRead::Hit) {
         std::string err;
-        if (!add_ir(cached_ir, "<repl>", err))
+        if (!add_native_unit(cached_ir, key, err))
           std::cerr << "error: library add " << p << ": " << err << "\n";
         else
           g_repl_added_units.insert(key);
@@ -2389,7 +2627,7 @@ static void preload_libraries(LibraryResolver &resolver, bool have_baked,
       intptr_t payload = rt_cdr(r);
       std::string ir = scm_str(rt_car(payload));
       std::string err;
-      if (!add_ir(ir, "<repl>", err)) {
+      if (!add_native_unit(ir, key, err)) {
         std::cerr << "error: library add " << p << ": " << err << "\n";
       } else {
         g_repl_added_units.insert(key);
@@ -2520,7 +2758,7 @@ static bool register_repl_closure(const std::string &form, LibraryResolver &reso
     }
     if (!g_repl_added_units.count(key)) {
       std::string add_error;
-      if (!add_ir(ir, "<repl>", add_error)) {
+      if (!add_native_unit(ir, key, add_error)) {
         failure = "library add " + path + ": " + add_error;
         ok = false;
         break;
@@ -2661,7 +2899,7 @@ static int emit_repl(int argc, char **argv) {
   InitializeNativeTargetAsmPrinter();
   InitializeNativeTargetAsmParser();
 
-  auto jitOr = LLJITBuilder().create();
+  auto jitOr = create_emit_jit(jit_opt);
   if (!jitOr) {
     std::cerr << "fatal: failed to create LLJIT: " << toString(jitOr.takeError()) << "\n";
     return 1;
@@ -2724,12 +2962,13 @@ static int emit_repl(int argc, char **argv) {
   if (prelude) {
     std::vector<std::string> baked_modules, baked_inits;
     if (!register_baked_set(baked_modules, baked_inits)) return 1;
-    for (const std::string &m : baked_modules) {
-      std::string err;
-      if (!add_ir(m, "<baked>", err)) {
-        std::cerr << "fatal: baked library add: " << err << "\n";
-        return 1;
-      }
+    std::vector<std::string> baked_keys;
+    for (const std::string &sym : baked_inits)
+      baked_keys.push_back(sym.substr(0, sym.find(':') + 1));
+    std::string baked_error;
+    if (!add_native_baked_set(baked_modules, baked_keys, baked_error)) {
+      std::cerr << "fatal: baked library add: " << baked_error << "\n";
+      return 1;
     }
     for (const std::string &sym : baked_inits) {
       registered.insert(sym.substr(0, sym.find(':') + 1));
@@ -2792,10 +3031,14 @@ static int emit_repl(int argc, char **argv) {
   std::cerr << "\n";
   vsay(std::string("jit ") + jit_opt_name(jit_opt) + " repl -> session  [" +
        std::to_string(g_jit_metrics.transformed) + "/" +
-       std::to_string(g_jit_metrics.added) + " modules, transform " +
+       std::to_string(g_jit_metrics.added) + " modules, parse " +
+       std::to_string(g_jit_metrics.parsed) + ", transform " +
        ms_text(nanos_ms(g_jit_metrics.transform_ns)) + ", materialize " +
        ms_text(nanos_ms(g_jit_metrics.materialize_ns)) + ", execute " +
-       ms_text(nanos_ms(g_jit_metrics.execute_ns)) + "]");
+       ms_text(nanos_ms(g_jit_metrics.execute_ns)) + ", native " +
+       std::to_string(g_jit_metrics.native_hits) + " reused/" +
+       std::to_string(g_jit_metrics.native_generated) + " generated, load " +
+       ms_text(nanos_ms(g_jit_metrics.native_load_ns)) + "]");
   return 0;
 }
 

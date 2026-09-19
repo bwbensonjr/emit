@@ -150,7 +150,7 @@ for level in -O1 -O2; do
     env EMIT_VERBOSITY=verbose EMIT_CACHE="$cache" "$EMIT" repl "$level" \
     --manifest "$TMP/project/emit-libs.scm"
   [ "$CAP_RC" -eq 0 ] && [ "$(cat "$TMP/manifest-repl-cold-$level.out")" = I42 ] \
-    && grep -Eq 'jit .*repl -> session  \[[0-9]+/[0-9]+ modules, transform .*materialize .*execute ' \
+    && grep -Eq 'jit .*repl -> session  \[[0-9]+/[0-9]+ modules,.*transform .*materialize .*execute ' \
       "$TMP/manifest-repl-cold-$level.err" \
     && module_counts_match "$TMP/manifest-repl-cold-$level.err" \
     && ok "repl $level manifest source fallback uses the session profile" \
@@ -197,19 +197,19 @@ echo
 echo "the standard pipeline is per-module and the compiler IR boundary is unchanged"
 for level in -O0 -O1 -O2; do
   capture "trace-$level" env EMIT_VERBOSITY=quiet EMIT_JIT_TEST_TRACE=1 \
-    "$EMIT" run "$level" demos/fact.scm
+    EMIT_CACHE="$TMP/trace-cache-$level" "$EMIT" run "$level" demos/fact.scm
   [ "$CAP_RC" -eq 0 ] && [ "$(cat "$TMP/trace-$level.out")" = 120 ] \
     || bad "trace workload $level failed"
 done
-awk '/jit-test: <unit> -O0 same-module calls/ && $6 == $8 { found=1 } END { exit !found }' \
+awk '/jit-test:/ && $2 != "<program>" && $3 == "-O0" && $6 == $8 { found=1 } END { exit !found }' \
   "$TMP/trace--O0.err" \
   && ok "O0 identity leaves a same-module library helper call count unchanged" \
   || bad "O0 trace did not preserve same-module calls"
-awk '/jit-test: <unit> -O1 same-module calls/ && $6 > $8 { found=1 } END { exit !found }' \
+awk '/jit-test:/ && $2 != "<program>" && $3 == "-O1" && $6 > $8 { found=1 } END { exit !found }' \
   "$TMP/trace--O1.err" \
   && ok "O1 simplifies/inlines calls within an independently added module" \
   || bad "O1 trace did not simplify same-module calls"
-awk '/jit-test: <unit> -O2 same-module calls/ && $6 > $8 { found=1 } END { exit !found }' \
+awk '/jit-test:/ && $2 != "<program>" && $3 == "-O2" && $6 > $8 { found=1 } END { exit !found }' \
   "$TMP/trace--O2.err" \
   && ok "O2 simplifies/inlines calls within an independently added module" \
   || bad "O2 trace did not simplify same-module calls"

@@ -110,6 +110,23 @@ Resolver errors name the library and, once a source has been selected, its path.
 mismatch names the requested name and the declaration. Do not print roots considered at default
 verbosity: that is diagnostic detail, while the selected provider is a principal input.
 
+## Native object cache
+
+Native cache detail is verbose-only and always goes to stderr. Miss, generation, and reuse name
+the library and JIT profile; successful operations also report object bytes and timing:
+
+```text
+native object miss for library mylib: -O1
+native object generated for library mylib: -O1 [3176 bytes, 0.5ms] -> CACHE/native-unit-...o
+native object reused for library mylib: -O1 [3176 bytes, 0.1ms]
+jit -O1 program -> execute  [1/4 modules, parse 1, ..., native 2 reused/0 generated, load 3.1ms]
+```
+
+Default output remains concise. `EMIT_VERBOSITY=quiet` suppresses these lines completely and never
+changes program stdout. Portable IR narration continues to use `cache:`; `native object` therefore
+distinguishes the two tiers without making filenames part of program data. `--dump-all` prints the
+requested library stages and produces no native miss, generation, or reuse narration.
+
 ## Stage dumps (`--dump`)
 
 Per-pass intermediate-language inspection is a fourth, *orthogonal* level of detail: it

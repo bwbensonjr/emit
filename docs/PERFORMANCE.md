@@ -1895,11 +1895,18 @@ Growth has two shapes, and only one of them is bounded:
 | `baked-` | ~1 MB | one per compiler binary | how often you rebuild `emit` |
 | `unit-` | 8-40 KB | one per (library, compiler) | your libraries |
 | `shake-` | 5-8 KB | one per (**program**, library, compiler) | the programs you build |
+| `native-baked-` | 345-365 KB per profile | one set per compiler and JIT signature | compilers and profiles |
+| `native-unit-` | 3 KB for `(mylib)`, 1.49 MB for `(scheme char)` per profile | one per full library unit and JIT signature | libraries and profiles |
 
 The `baked-` entries dominate the bytes and are the ones a developer accumulates fastest —
 every `make regen` or relink produces a new binary digest and orphans the last ~1 MB entry.
 The `shake-` entries are the ones that grow without limit in principle, but they are small: 48
 of them here total under 400 KB.
+
+The native tier adds target- and profile-specific growth. The acceptance matrix produced 54 native
+files totaling 7,688,572 bytes across nine isolated caches: three profiles each for the baked set,
+`(mylib)`, and `(scheme char)`. Objects dominate that number; metadata and last-written stamps are
+small. The Unicode table unit is the outlier at about 1.49 MB per profile.
 
 **Why it has not mattered yet.** 7.2 MB is nothing, the location is `$EMIT_CACHE`-overridable,
 and `rm -rf ~/Library/Caches/emit` is always safe — the cache is a pure accelerator, so deleting
@@ -2314,6 +2321,110 @@ read every library and produces a *fast* session with no libraries at all, which
 like the win being measured. It reported 0.34 s, 0.05 s off the true answer, with eight
 `error: cannot read library source` lines scrolling past above the number. Rewrite the paths to
 absolute, and check the run is clean of `error:` before believing its clock.
+
+### Native-object cache baseline
+
+The `native-library-object-cache` change started from the following single-run baseline on
+2026-09-18: arm64 macOS 26.6.2, LLVM 22.1.4, `HEAD` = 39abbad. Each workload used its own empty
+`EMIT_CACHE`; the warm row immediately repeated the run against the populated portable IR cache.
+The first-import row is a fresh `emit repl` process after warming every portable manifest entry.
+Its wall time therefore includes startup and the requested import's dependency closure, while its
+transform and materialize columns cover exactly the modules forced during that session.
+
+`compile` is Scheme source-to-IR work reported by `emit run`. `IR parse` is the host's `admit`
+bucket: parsing the complete LLVM IR text and adding its modules to ORC. `transform` is the selected
+per-module optimization pipeline, and `materialize` is the remainder of ORC lookup, principally
+native object generation and linking. A dash means the REPL summary did not expose that phase
+separately; it remains included in wall time. Times are milliseconds except wall time, which is
+seconds.
+
+| workload | profile | cache/use | compile | IR parse | transform | materialize | wall |
+|---|---:|---|---:|---:|---:|---:|---:|
+| baked set | O0 | empty portable | 338.7 | 17.1 | 0.0 | 282.0 | 1.10 |
+| baked set | O0 | warm IR | 47.9 | 11.9 | 0.0 | 227.5 | 0.30 |
+| baked set | O0 | first import | - | - | 0.0 | 239.5 | 0.31 |
+| baked set | O1 | empty portable | 328.3 | 11.4 | 72.4 | 236.0 | 0.66 |
+| baked set | O1 | warm IR | 48.8 | 11.4 | 57.8 | 233.0 | 0.36 |
+| baked set | O1 | first import | - | - | 61.1 | 246.3 | 0.37 |
+| baked set | O2 | empty portable | 339.7 | 11.6 | 98.8 | 230.7 | 0.69 |
+| baked set | O2 | warm IR | 48.5 | 11.5 | 92.0 | 232.2 | 0.40 |
+| baked set | O2 | first import | - | - | 95.7 | 244.7 | 0.40 |
+| `(mylib)` | O0 | empty portable | 306.0 | 11.5 | 0.0 | 224.9 | 0.56 |
+| `(mylib)` | O0 | warm IR | 48.5 | 11.5 | 0.0 | 224.1 | 0.30 |
+| `(mylib)` | O0 | first import | - | - | 0.0 | 228.9 | 0.30 |
+| `(mylib)` | O1 | empty portable | 338.2 | 11.5 | 56.5 | 232.8 | 0.65 |
+| `(mylib)` | O1 | warm IR | 48.7 | 11.7 | 56.4 | 236.2 | 0.36 |
+| `(mylib)` | O1 | first import | - | - | 57.5 | 233.3 | 0.36 |
+| `(mylib)` | O2 | empty portable | 342.1 | 11.6 | 92.1 | 237.7 | 0.69 |
+| `(mylib)` | O2 | warm IR | 49.7 | 11.3 | 90.9 | 232.4 | 0.39 |
+| `(mylib)` | O2 | first import | - | - | 90.3 | 233.5 | 0.39 |
+| `(scheme char)` | O0 | empty portable | 13431.5 | 48.9 | 0.0 | 2051.3 | 15.56 |
+| `(scheme char)` | O0 | warm IR | 130.3 | 46.7 | 0.0 | 2047.1 | 2.24 |
+| `(scheme char)` | O0 | first import | - | - | 0.0 | 2101.2 | 2.22 |
+| `(scheme char)` | O1 | empty portable | 14184.8 | 47.5 | 138.0 | 2097.5 | 16.48 |
+| `(scheme char)` | O1 | warm IR | 134.2 | 47.5 | 135.7 | 2101.3 | 2.44 |
+| `(scheme char)` | O1 | first import | - | - | 138.1 | 2075.9 | 2.33 |
+| `(scheme char)` | O2 | empty portable | 14033.1 | 47.1 | 202.0 | 2081.0 | 16.38 |
+| `(scheme char)` | O2 | warm IR | 133.7 | 48.2 | 202.4 | 2055.4 | 2.46 |
+| `(scheme char)` | O2 | first import | - | - | 234.6 | 2178.8 | 2.54 |
+
+This baseline keeps source compilation visible rather than conflating it with backend cost. The
+native tier's target is the warm rows: remove library IR parsing, transform, and object generation
+while retaining only object admission/linking and unchanged program execution.
+
+**Native result.** The same machine and workloads after the change used `emit run --emit` to warm
+portable IR without invoking the JIT, followed by one cold-native execution, one warm-native
+execution, and a warm first-import REPL process. This isolates native generation from Scheme
+source compilation. `load` is object validation and ORC admission; object bytes include the baked
+set plus the named ordinary library where applicable.
+
+| workload | profile | use | transform | materialize | load | object bytes | wall |
+|---|---:|---|---:|---:|---:|---:|---:|
+| baked set | O0 | cold native | 0.0 | 238.3 | 0.0 | 344800 | 0.32 |
+| baked set | O0 | warm native | 0.0 | 9.8 | 2.9 | 344800 | 0.08 |
+| baked set | O0 | first import | 0.0 | 9.9 | 2.9 | 344800 | 0.07 |
+| baked set | O1 | cold native | 58.4 | 243.9 | 0.0 | 364760 | 0.38 |
+| baked set | O1 | warm native | 1.0 | 9.3 | 3.0 | 364760 | 0.08 |
+| baked set | O1 | first import | 0.7 | 9.3 | 3.1 | 364760 | 0.07 |
+| baked set | O2 | cold native | 94.8 | 245.4 | 0.0 | 363008 | 0.42 |
+| baked set | O2 | warm native | 1.2 | 9.6 | 3.1 | 363008 | 0.08 |
+| baked set | O2 | first import | 0.9 | 9.2 | 3.0 | 363008 | 0.07 |
+| `(mylib)` | O0 | cold native | 0.0 | 238.5 | 0.0 | 347904 | 0.32 |
+| `(mylib)` | O0 | warm native | 0.0 | 9.0 | 3.1 | 347904 | 0.08 |
+| `(mylib)` | O0 | first import | 0.0 | 9.0 | 2.9 | 347904 | 0.07 |
+| `(mylib)` | O1 | cold native | 59.2 | 246.7 | 0.0 | 367936 | 0.39 |
+| `(mylib)` | O1 | warm native | 0.5 | 9.4 | 3.0 | 367936 | 0.08 |
+| `(mylib)` | O1 | first import | 0.5 | 8.8 | 3.1 | 367936 | 0.08 |
+| `(mylib)` | O2 | cold native | 93.8 | 244.8 | 0.0 | 366184 | 0.42 |
+| `(mylib)` | O2 | warm native | 0.6 | 8.8 | 3.0 | 366184 | 0.08 |
+| `(mylib)` | O2 | first import | 0.5 | 8.5 | 3.0 | 366184 | 0.08 |
+| `(scheme char)` | O0 | cold native | 0.0 | 2061.0 | 0.0 | 1828664 | 2.28 |
+| `(scheme char)` | O0 | warm native | 0.0 | 11.4 | 13.5 | 1828664 | 0.19 |
+| `(scheme char)` | O0 | first import | 0.0 | 11.7 | 13.9 | 1828664 | 0.12 |
+| `(scheme char)` | O1 | cold native | 141.2 | 2077.8 | 0.0 | 1850152 | 2.44 |
+| `(scheme char)` | O1 | warm native | 0.6 | 12.1 | 13.7 | 1850152 | 0.20 |
+| `(scheme char)` | O1 | first import | 0.5 | 11.4 | 14.2 | 1850152 | 0.12 |
+| `(scheme char)` | O2 | cold native | 193.0 | 2075.0 | 0.0 | 1849104 | 2.48 |
+| `(scheme char)` | O2 | warm native | 0.6 | 11.5 | 13.6 | 1849104 | 0.19 |
+| `(scheme char)` | O2 | first import | 0.5 | 11.5 | 14.3 | 1849104 | 0.12 |
+
+Warm baked and small-library executions fall from 0.30-0.40 seconds to 0.08 seconds. Warm
+`(scheme char)` falls from 2.24-2.46 seconds to 0.19-0.20 seconds, and its first import falls from
+2.22-2.54 seconds to 0.12 seconds. The cold-native rows intentionally retain the old backend cost:
+they generate exactly the object the next process reuses.
+
+**LLVM compatibility matrix.** The focused signature, capture, admission, and native-cache suites
+were run where the required toolchain and operating system were available. Unavailable legs are
+recorded as unavailable, not passing:
+
+| platform | LLVM 19 minimum | current supported LLVM 22.1.4 |
+|---|---|---|
+| arm64 macOS 26.6.2 | unavailable: LLVM 19 is not installed | pass |
+| Linux | unavailable: no Linux runner in this workspace | unavailable: no Linux runner in this workspace |
+
+The adapter uses APIs with the same public signatures across LLVM 19-22: `ObjectCache`,
+`setCompileFunctionCreator`, `ConcurrentIRCompiler`, and `addObjectFile`. The unavailable legs
+remain explicit release-matrix work rather than inferred successes.
 
 ---
 

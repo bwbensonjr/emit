@@ -60,6 +60,7 @@ run_suite "render-datum units"          chez --libdirs src --script test/render-
 run_suite "mangle (symbol naming)"      chez --libdirs src --script test/mangle-tests.ss
 run_suite "simplify pass units"         chez --libdirs src --script test/simplify-tests.ss
 run_suite "artifact cache core"         chez --libdirs src --script test/artifact-cache-core-tests.ss
+run_suite "native object cache"         test/native-object-cache-tests.sh
 run_suite "module vertical-slice (AOT)" test/modules-tests.sh
 run_suite "hybrid resolver (Chez backends)" test/hybrid-library-resolution-chez-tests.sh
 run_suite "(scheme base) gen guard"     test/scheme-base-gen-check.sh
