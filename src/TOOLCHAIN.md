@@ -37,6 +37,14 @@ tools, `CC` selects the AOT compiler, `GC_INC` / `GC_LIB` / `GC_DYLIB` select li
 with a platform-neutral message (naming the `apt`/`brew` packages and `EMIT_LLVM_BIN`) if
 a needed tool is missing.
 
+Without an explicit LLVM override, discovery first uses an unversioned `llvm-config` on
+`PATH`, then tries version-suffixed commands on `PATH` from newest to oldest. Only when
+neither is available does it examine known install prefixes. Executable known-prefix
+candidates with a nonempty `llvm-config --version` result are ranked by that reported
+version, with path order used only to break equal-version ties deterministically. Thus an
+unversioned Homebrew `llvm` formula reporting LLVM 23 wins over a coexisting `llvm@22`
+keg even though the latter path sorts later.
+
 Two different LLVMs are therefore normally in play at once — a system `clang` for
 the AOT link, the discovered LLVM for the JIT/bitcode exits and the ORC host. That
 is deliberate, not a version skew to fix: the emitted IR uses only opaque pointers

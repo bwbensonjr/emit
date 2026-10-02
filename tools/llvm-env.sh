@@ -37,20 +37,43 @@ _llvm_env_die() { printf 'llvm-env: %s\n' "$1" >&2; }
 _llvm_env_dir=$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]:-$0}")" && pwd)
 . "$_llvm_env_dir/log.sh"
 
+# Choose among known-prefix candidates by the versions they report. The path is a
+# deterministic tie-breaker only; formula and directory names do not imply versions.
+_llvm_select_newest_config() {
+  local c version selected
+  selected=$(
+    for c in "$@"; do
+      [ -x "$c" ] || continue
+      version=$("$c" --version 2>/dev/null) || continue
+      [ -n "$version" ] || continue
+      version=${version%%$'\n'*}
+      printf '%s\t%s\n' "$version" "$c"
+    done \
+      | LC_ALL=C sort -t $'\t' -k1,1V -k2,2 \
+      | tail -n1 \
+      | cut -f2-
+  )
+  [ -n "$selected" ] || return 1
+  printf '%s\n' "$selected"
+}
+
 # Discover an llvm-config with no override applied: PATH, then version-suffixed newest-first, then
-# known install prefixes (apt, Apple-silicon Homebrew, Intel Homebrew) newest-first.
+# known install prefixes (apt, Apple-silicon Homebrew, Intel Homebrew) by reported version. Private
+# arguments let the regression suite replace only the final candidate set.
 _llvm_discover_config() {
   local c n
   c=$(command -v llvm-config 2>/dev/null || true); [ -n "$c" ] && { printf '%s\n' "$c"; return 0; }
   for n in 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15; do
     c=$(command -v "llvm-config-$n" 2>/dev/null || true); [ -n "$c" ] && { printf '%s\n' "$c"; return 0; }
   done
-  c=$(ls -d /usr/lib/llvm-*/bin/llvm-config \
-            /opt/homebrew/opt/llvm@*/bin/llvm-config /opt/homebrew/opt/llvm/bin/llvm-config \
-            /usr/local/opt/llvm@*/bin/llvm-config /usr/local/opt/llvm/bin/llvm-config \
-            2>/dev/null | sort -V | tail -n1)
-  [ -n "$c" ] && [ -x "$c" ] && { printf '%s\n' "$c"; return 0; }
-  return 1
+  if [ "$#" -gt 0 ]; then
+    _llvm_select_newest_config "$@"
+  else
+    _llvm_select_newest_config \
+      /usr/lib/llvm-*/bin/llvm-config \
+      /opt/homebrew/opt/llvm@*/bin/llvm-config /opt/homebrew/opt/llvm/bin/llvm-config \
+      /usr/local/opt/llvm@*/bin/llvm-config /usr/local/opt/llvm/bin/llvm-config
+  fi
 }
 
 # --- 1. Resolve the LLVM tool directory (LLVM_BIN) and an llvm-config for flags -------------

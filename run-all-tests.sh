@@ -48,6 +48,7 @@ if ! make all >/dev/null 2>&1; then
   echo "fatal: 'make all' failed (could not link the shipped binaries)"; exit 1
 fi
 
+run_suite "LLVM toolchain discovery"    test/llvm-discovery-tests.sh
 run_suite "demo values (emit run)"    env RUNNER=emit-run demos/run-tests.sh
 run_suite "module-scaffold byte-identity" test/module-scaffold-baseline.sh check
 run_suite "artifact cache (baked set)"  test/artifact-cache-tests.sh
