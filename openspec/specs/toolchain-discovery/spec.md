@@ -20,7 +20,10 @@ Intel or Apple-silicon Homebrew, Nix, or a custom build — works without editin
 files. Discovery SHALL use `llvm-config` as the anchor for the LLVM tools (its `--bindir` locating
 the tool directory) and `pkg-config bdw-gc` for libgc's include and library directories, with
 documented fallbacks when `pkg-config` has no `bdw-gc` entry. The macOS-Homebrew `llvm@22` keg
-SHALL be one discovered layout among several, not a precondition.
+SHALL be one discovered layout among several, not a precondition. When multiple `llvm-config`
+candidates exist in known install prefixes and no higher-precedence override or `PATH` candidate
+has been selected, discovery SHALL select the candidate reporting the newest LLVM version rather
+than inferring version order from candidate path names.
 
 #### Scenario: Builds on a distribution-package LLVM install
 
@@ -35,6 +38,19 @@ SHALL be one discovered layout among several, not a precondition.
 - **WHEN** the project is built on macOS where LLVM is a Homebrew keg (off PATH) and libgc is under
   the Homebrew prefix
 - **THEN** discovery finds the keg's `llvm-config` and libgc and the build behaves as before this change
+
+#### Scenario: Newest known-prefix LLVM wins when Homebrew kegs coexist
+
+- **WHEN** no LLVM override or `PATH` candidate is available, unversioned Homebrew `llvm` reports
+  LLVM 23, and a coexisting Homebrew `llvm@22` keg reports LLVM 22
+- **THEN** discovery selects the unversioned LLVM 23 toolchain even though the `llvm@22` candidate's
+  path sorts later lexicographically
+
+#### Scenario: Higher-precedence selection remains authoritative
+
+- **WHEN** an explicit override or an `llvm-config` candidate on `PATH` selects an older valid LLVM
+  while a newer candidate also exists in a known install prefix
+- **THEN** discovery uses the override or `PATH` candidate without replacing it through fallback ranking
 
 ### Requirement: Explicit environment overrides take precedence over discovery
 
