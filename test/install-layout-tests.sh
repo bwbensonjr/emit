@@ -48,10 +48,18 @@ ok  () { echo "  [OK  ] $1"; pass=$((pass+1)); }
 bad () { echo "  [FAIL] $1"; fail=$((fail+1)); }
 
 # --- install into a staging prefix --------------------------------------------
-# PREFIX is what gets compiled into the binary as its last-resort candidate; passing
-# it here also rebuilds emit.o, so the installed binary's baked prefix IS $PREFIX.
+# Start with the checkout's existing build. PREFIX is part of native-config, so this
+# one install must rebuild emit.o and relink before copying the binary whose fallback
+# is the new prefix.
 if ! make install PREFIX="$PREFIX" >"$TMP/install.log" 2>&1; then
   echo "  [FAIL] make install"; sed 's/^/         /' "$TMP/install.log"; exit 1
+fi
+if grep -q -- '-c src/emit.cpp -o build/emit.o' "$TMP/install.log" \
+   && grep -q -- 'build/emit.o build/runtime-host.o' "$TMP/install.log"; then
+  ok "changing PREFIX recompiles emit.o and relinks before installation"
+else
+  bad "changing PREFIX did not rebuild the prefix-sensitive native binary"
+  sed 's/^/         /' "$TMP/install.log"
 fi
 
 # The binary narrates paths it derived from its OWN resolved real path, so on a
@@ -78,11 +86,33 @@ done
   && ok "the installed llvm-env.sh is executable" \
   || bad "$PREFIX/share/emit/tools/llvm-env.sh is not executable"
 
-# A second install over the same prefix must succeed and leave the same tree.
+# Put only the executable in an unrelated tree. Its executable-relative support root is
+# intentionally absent, so resolving a shipped library proves this binary baked the new PREFIX.
+mkdir -p "$TMP/detached/bin" "$TMP/detached-cwd"
+cp "$EMIT" "$TMP/detached/bin/emit"
+detached_got="$(cd "$TMP/detached-cwd" \
+  && printf '(import (scheme inexact)) (display (+ 19 23))\n' \
+     | "$TMP/detached/bin/emit" run 2>"$TMP/detached.err")"
+if [ "$detached_got" = 42 ] \
+   && grep -q "resolve manifest -> $PREFIX/share/emit/emit-libs.scm" "$TMP/detached.err"; then
+  ok "a detached installed binary resolves the newly compiled-in PREFIX => $detached_got"
+else
+  bad "the detached binary did not resolve its compiled-in PREFIX => [$detached_got]"
+  sed 's/^/         /' "$TMP/detached.err"
+fi
+
+# A second install over the same prefix must succeed, leave the same tree, and perform no native
+# compile or link command because its sources and effective configuration are unchanged.
 before="$(find "$PREFIX" -type f | sort)"
 if make install PREFIX="$PREFIX" >"$TMP/install2.log" 2>&1; then
   [ "$before" = "$(find "$PREFIX" -type f | sort)" ] \
     && ok "install is idempotent" || bad "second install changed the tree"
+  if ! grep -Eq -- '-c src/|build/emit\.o build/runtime-host\.o' "$TMP/install2.log"; then
+    ok "a repeated install does not compile or relink"
+  else
+    bad "a repeated install rebuilt native outputs"
+    sed 's/^/         /' "$TMP/install2.log"
+  fi
 else bad "second install failed"; fi
 
 # The installed tree must not point back into the source tree it was built from --
@@ -91,16 +121,23 @@ if grep -q "$REPO" "$PREFIX/share/emit/emit-libs.scm"; then
   bad "the installed manifest names a path inside the source tree"
 else ok "the installed manifest does not depend on the build tree"; fi
 
-# DESTDIR stages the whole tree elsewhere WITHOUT changing the prefix the binary was
-# built to look in (a packager's split).
+# Changing only DESTDIR stages the same prefix elsewhere without changing native-config or the
+# prefix the binary was built to look in (a packager's split).
 STAGE="$TMP/stage"
-if make install PREFIX=/usr/local DESTDIR="$STAGE" >"$TMP/install3.log" 2>&1; then
-  [ -f "$STAGE/usr/local/bin/emit" ] && [ -f "$STAGE/usr/local/share/emit/emit-libs.scm" ] \
-    && [ -f "$STAGE/usr/local/share/emit/lib/scheme/base.sld" ] \
-    && [ -f "$STAGE/usr/local/share/emit/tools/llvm-env.sh" ] \
-    && [ -f "$STAGE/usr/local/share/emit/src/runtime/runtime.c" ] \
+STAGED_PREFIX="$STAGE$PREFIX"
+if make install PREFIX="$PREFIX" DESTDIR="$STAGE" >"$TMP/install3.log" 2>&1; then
+  [ -f "$STAGED_PREFIX/bin/emit" ] && [ -f "$STAGED_PREFIX/share/emit/emit-libs.scm" ] \
+    && [ -f "$STAGED_PREFIX/share/emit/lib/scheme/base.sld" ] \
+    && [ -f "$STAGED_PREFIX/share/emit/tools/llvm-env.sh" ] \
+    && [ -f "$STAGED_PREFIX/share/emit/src/runtime/runtime.c" ] \
     && ok "DESTDIR stages <destdir><prefix>/{bin,share/emit}" \
     || { bad "DESTDIR layout wrong"; find "$STAGE" -type f | sed 's/^/         /'; }
+  if ! grep -Eq -- '-c src/|build/emit\.o build/runtime-host\.o' "$TMP/install3.log"; then
+    ok "changing only DESTDIR does not compile or relink"
+  else
+    bad "changing only DESTDIR rebuilt native outputs"
+    sed 's/^/         /' "$TMP/install3.log"
+  fi
 else bad "make install with DESTDIR failed"; fi
 
 # The target narrates what it installs, and says nothing at all when quiet.

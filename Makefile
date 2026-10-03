@@ -29,11 +29,42 @@
 # Toolchain discovery is single-sourced in tools/llvm-env.sh (change:
 # allow-llvm-install-flexibility): --print-make writes the resolved CC/CXX/LLVM_CONFIG/GC_*/
 # CXXFLAGS/LDFLAGS as a Make fragment that we -include, so the build finds any LLVM discoverable
-# via llvm-config + libgc (apt, Homebrew, Nix, custom) instead of a fixed keg path.  Environment
-# and command-line overrides still win (they flow into the fragment, and `make VAR=...` overrides
-# the include).  build/llvm.mk is regenerated whenever the discovery script changes.
-build/llvm.mk: tools/llvm-env.sh tools/log.sh | build
-	tools/llvm-env.sh --print-make > $@
+# via llvm-config + libgc (apt, Homebrew, Nix, custom).  Re-run discovery on every Make invocation
+# so an upgrade at an unchanged package-manager path cannot leave the native build falsely current.
+# The recipe replaces build/llvm.mk only when its content changes: a change restarts Make once with
+# the new values, while identical discovery preserves the timestamp and cannot form a restart loop.
+#
+# Capture only genuine user inputs before the old fragment is included.  In particular, Make's
+# built-in CC=cc is not an override, and values from yesterday's included fragment must not mask a
+# changed environment during today's refresh.  Command-line variables still override the refreshed
+# include in the usual way.
+toolchain-input = $(if $(filter environment% command%,$(origin $(1))),$($(1)))
+TOOLCHAIN_INPUT_LLVM_CONFIG := $(call toolchain-input,LLVM_CONFIG)
+TOOLCHAIN_INPUT_EMIT_LLVM_BIN := $(call toolchain-input,EMIT_LLVM_BIN)
+TOOLCHAIN_INPUT_CC := $(call toolchain-input,CC)
+TOOLCHAIN_INPUT_CXX := $(call toolchain-input,CXX)
+TOOLCHAIN_INPUT_GC_INC := $(call toolchain-input,GC_INC)
+TOOLCHAIN_INPUT_GC_LIB := $(call toolchain-input,GC_LIB)
+TOOLCHAIN_INPUT_GC_DYLIB := $(call toolchain-input,GC_DYLIB)
+TOOLCHAIN_INPUT_EMIT_GC_INC := $(call toolchain-input,EMIT_GC_INC)
+TOOLCHAIN_INPUT_EMIT_GC_LIB := $(call toolchain-input,EMIT_GC_LIB)
+TOOLCHAIN_INPUT_EMIT_GC_DYLIB := $(call toolchain-input,EMIT_GC_DYLIB)
+TOOLCHAIN_INPUT_CXXFLAGS := $(call toolchain-input,CXXFLAGS)
+TOOLCHAIN_INPUT_LDFLAGS := $(call toolchain-input,LDFLAGS)
+
+build/llvm.mk: FORCE tools/llvm-env.sh tools/log.sh | build
+	@tmp="$@.$$$$.tmp"; trap 'rm -f "$$tmp"' EXIT HUP INT TERM; \
+	  LLVM_CONFIG="$(TOOLCHAIN_INPUT_LLVM_CONFIG)" \
+	  EMIT_LLVM_BIN="$(TOOLCHAIN_INPUT_EMIT_LLVM_BIN)" \
+	  CC="$(TOOLCHAIN_INPUT_CC)" CXX="$(TOOLCHAIN_INPUT_CXX)" \
+	  GC_INC="$(TOOLCHAIN_INPUT_GC_INC)" GC_LIB="$(TOOLCHAIN_INPUT_GC_LIB)" \
+	  GC_DYLIB="$(TOOLCHAIN_INPUT_GC_DYLIB)" \
+	  EMIT_GC_INC="$(TOOLCHAIN_INPUT_EMIT_GC_INC)" \
+	  EMIT_GC_LIB="$(TOOLCHAIN_INPUT_EMIT_GC_LIB)" \
+	  EMIT_GC_DYLIB="$(TOOLCHAIN_INPUT_EMIT_GC_DYLIB)" \
+	  CXXFLAGS="$(TOOLCHAIN_INPUT_CXXFLAGS)" LDFLAGS="$(TOOLCHAIN_INPUT_LDFLAGS)" \
+	  tools/llvm-env.sh --print-make > "$$tmp"; \
+	  if ! cmp -s "$$tmp" "$@"; then mv -f "$$tmp" "$@"; fi
 -include build/llvm.mk
 
 # Binaries.  `emit` is the single user-facing entry point (verbs run/repl/build/lib);
@@ -46,6 +77,35 @@ SCHEMEC     := build/schemec
 # DESTDIR stages that tree elsewhere without changing what the binary looks for.
 PREFIX      ?= /usr/local
 DESTDIR     ?=
+
+# Every effective value used by a native compile/link recipe or baked into a host object is a
+# build input.  Refresh this signature on every invocation, but replace it atomically only when
+# its content changes.  Native outputs depend on it; committed bootstrap IR deliberately does not.
+# DESTDIR is absent because it is only an installation staging root.  This is native rebuilding,
+# not `make regen`: configuration changes never regenerate bootstrap/*.ll.
+#
+# macOS Make 3.81 compares prerequisites at one-second timestamp resolution.  Before publishing
+# changed content, cross one timestamp tick so even an immediately repeated configuration change
+# leaves this prerequisite strictly newer than native outputs from the preceding invocation.
+NATIVE_CONFIG := build/native-config
+
+$(NATIVE_CONFIG): FORCE Makefile | build
+	@tmp="$@.$$$$.tmp"; trap 'rm -f "$$tmp"' EXIT HUP INT TERM; \
+	  { printf '%s\n' \
+	      'CC=$(CC)' \
+	      'CXX=$(CXX)' \
+	      'LLVM_CONFIG=$(LLVM_CONFIG)' \
+	      'GC_INC=$(GC_INC)' \
+	      'GC_LIB=$(GC_LIB)' \
+	      'CXXFLAGS=$(CXXFLAGS)' \
+	      'LDFLAGS=$(LDFLAGS)' \
+	      'PREFIX=$(PREFIX)'; } > "$$tmp"; \
+	  if ! cmp -s "$$tmp" "$@"; then \
+	    sleep 1; \
+	    touch "$$tmp"; \
+	    mv -f "$$tmp" "$@"; \
+	    . tools/log.sh; say "configure native build -> $@"; \
+	  fi
 
 # Committed, host-agnostic stage-0 compiler IR (checked-in INPUTS; design D3/D4).
 SCHEMEC_LL     := bootstrap/schemec.ll
@@ -88,14 +148,14 @@ schemec:    $(SCHEMEC)
 # libraries, each initialized once via its __init guard.  The run/REPL commands were formerly
 # the separate build/scheme-run and build/repl-host binaries, merged here; build/lib forks
 # clang.
-$(EMIT): build/emit.o build/runtime-host.o $(EMBED_REPL_LL) $(BAKED_LL) Makefile
+$(EMIT): build/emit.o build/runtime-host.o $(EMBED_REPL_LL) $(BAKED_LL) Makefile $(NATIVE_CONFIG)
 	$(CXX) build/emit.o build/runtime-host.o $(EMBED_REPL_LL) $(BAKED_LL) \
 	  -Wno-override-module -rdynamic $(LDFLAGS) -L$(GC_LIB) -lgc -lm -o $@
 	@. tools/log.sh; say "link $(EMBED_REPL_LL) + $(words $(BAKED_LL)) baked librar$(if $(word 2,$(BAKED_LL)),ies,y) -> $@  [$$(bytes $@) bytes]"
 
 # Batch text->IR filter compiler: links the committed schemec IR + the baked library set
 # with the runtime's RT_FILTER_MAIN (so the program's output is exactly the emitted IR).
-$(SCHEMEC): $(SCHEMEC_LL) $(BAKED_LL) src/runtime/runtime.c Makefile | build
+$(SCHEMEC): $(SCHEMEC_LL) $(BAKED_LL) src/runtime/runtime.c Makefile $(NATIVE_CONFIG) | build
 	$(CC) -O2 -Wno-override-module -DRT_FILTER_MAIN -I$(GC_INC) -L$(GC_LIB) \
 	  src/runtime/runtime.c $(SCHEMEC_LL) $(BAKED_LL) -lgc -lm -o $@
 	@. tools/log.sh; say "link $(SCHEMEC_LL) + $(words $(BAKED_LL)) baked librar$(if $(word 2,$(BAKED_LL)),ies,y) -> $@  [$$(bytes $@) bytes]"
@@ -104,7 +164,7 @@ $(SCHEMEC): $(SCHEMEC_LL) $(BAKED_LL) src/runtime/runtime.c Makefile | build
 # Runtime compiled as C without its standalone main (the host supplies one).
 # gnu11, not c11: the string ports use open_memstream, a POSIX-2008/GNU function that
 # strict ISO mode hides.  The other runtime.c recipes take clang's gnu default already.
-build/runtime-host.o: src/runtime/runtime.c Makefile | build
+build/runtime-host.o: src/runtime/runtime.c Makefile $(NATIVE_CONFIG) | build
 	$(CC) -std=gnu11 -O2 -I$(GC_INC) -DRT_NO_MAIN -c $< -o $@
 
 # Unified emit front-end, compiled as C++ against the LLVM headers. EMIT_PREFIX names
@@ -119,7 +179,7 @@ build/runtime-host.o: src/runtime/runtime.c Makefile | build
 # produced an answer, which is the keg-only-LLVM case: nothing on PATH to find.  They
 # describe the BUILD MACHINE's toolchain, so they follow $(CC)/$(GC_*) and not
 # PREFIX/DESTDIR -- staging into a temporary root must not change them.
-build/emit.o: src/emit.cpp Makefile | build
+build/emit.o: src/emit.cpp Makefile $(NATIVE_CONFIG) | build
 	$(CXX) $(CXXFLAGS) -DEMIT_PREFIX='"$(PREFIX)"' \
 	  -DEMIT_DEFAULT_CC='"$(CC)"' \
 	  -DEMIT_DEFAULT_GC_INC='"$(GC_INC)"' \
@@ -129,7 +189,7 @@ build/emit.o: src/emit.cpp Makefile | build
 # Batch bootstrap runner object (change: run-door-user-libraries, decision X):
 # tools/regen.sh links this with the batch embed.ll into build/emit-boot to
 # drive the self-hosting fixed point.  Not linked into any shipped binary.
-build/run-boot.o: src/run-boot.cpp Makefile | build
+build/run-boot.o: src/run-boot.cpp Makefile $(NATIVE_CONFIG) | build
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 # ===========================================================================
@@ -273,6 +333,10 @@ install: $(EMIT)
 build:
 	mkdir -p build
 
+# A real file named FORCE is never created.  It lets the two content-sensitive generated files
+# check their external inputs on each invocation without making downstream targets perpetually old.
+FORCE:
+
 # clean removes the binaries and every build/ intermediate, but LEAVES the
 # committed bootstrap/*.ll (checked-in inputs; rebuild them with 'make regen').
 .PHONY: clean
@@ -283,6 +347,6 @@ clean:
 	      build/schemec build/schemec-next \
 	      build/schemec.scm build/embed.scm build/embed-repl.scm \
 	      build/prelude-source.scm build/T-*.scm \
-	      build/schemec.ll build/schemec.ll.check build/llvm.mk
+	      build/schemec.ll build/schemec.ll.check build/llvm.mk $(NATIVE_CONFIG)
 	@echo "note: committed bootstrap/*.ll are checked-in inputs, left in place"
 	@echo "      (rebuild from source with 'make regen')"

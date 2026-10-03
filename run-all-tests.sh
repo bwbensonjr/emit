@@ -49,6 +49,7 @@ if ! make all >/dev/null 2>&1; then
 fi
 
 run_suite "LLVM toolchain discovery"    test/llvm-discovery-tests.sh
+run_suite "native build configuration"  test/native-build-config-tests.sh
 run_suite "demo values (emit run)"    env RUNNER=emit-run demos/run-tests.sh
 run_suite "module-scaffold byte-identity" test/module-scaffold-baseline.sh check
 run_suite "artifact cache (baked set)"  test/artifact-cache-tests.sh

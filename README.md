@@ -41,6 +41,14 @@ LLVM 19+ is expected (older warns but is not blocked; set `EMIT_LLVM_MIN` to cha
 If discovery picks the wrong toolchain, point it explicitly: `LLVM_CONFIG=/path/to/llvm-config`
 (or `EMIT_LLVM_BIN=/path/to/llvm/bin`) and `GC_INC` / `GC_LIB` for libgc.
 
+Each Make invocation refreshes discovery and records the effective compilers, LLVM identity,
+libgc paths, native flags, and `PREFIX` in `build/native-config`. If one of those values changes,
+the native host objects and binaries rebuild before they are used or installed; an unchanged
+invocation is a no-op apart from the discovery check. For example, run `make` twice to exercise
+the no-op case, then use `make LLVM_CONFIG=/other/llvm-config` to exercise configuration
+invalidation. This does not run `make regen` or modify the committed `bootstrap/*.ll` inputs.
+`DESTDIR` is intentionally absent from the signature because it only stages an install.
+
 ```sh
 # build the single shipped binary from the committed compiler LLVM IR
 make                       # -> build/emit  (verbs: run / repl / build / lib)
