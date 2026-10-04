@@ -184,7 +184,7 @@
       regen converged at iteration 1 in 234 s and left `bootstrap/` byte-identical, so the
       committed IR is the regenerated IR. The baseline moved only by `features`, which was
       explained and re-recorded in group 7.*
-- [ ] 9.2 Run `./run-all-tests.sh` and then `./run-dev-tests.sh`, suite by suite if a timeout
+- [x] 9.2 Run `./run-all-tests.sh` and then `./run-dev-tests.sh`, suite by suite if a timeout
       requires it. Commit, then run `test/trust-check.sh`. Verify all suites pass. Compare one
       self-compile's wall clock against the figure from 1.3 and record the delta. *Results:
       `run-all-tests.sh` 44/44. The one first-run failure, reader datum parity, used an import set
@@ -194,4 +194,6 @@
       pair went 104 s -> 119 s across this change. The same-input comparison (main's committed
       `embed.ll` vs this branch's, each compiling the new flat source, alternating runs) gives
       57/59 s old vs 58/53 s new, so the compiler is not slower per byte. The growth is the
-      compiler's own source, which grew ~23.5 KB (~4.5%, most of it comments in `src/core.ss`).*
+      compiler's own source, which grew ~23.5 KB (~4.5%, most of it comments in `src/core.ss`).
+      `test/trust-check.sh` after commit f393d00: OK, the committed IR is exactly what the source
+      regenerates.*
