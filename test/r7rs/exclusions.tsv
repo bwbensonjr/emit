@@ -114,7 +114,6 @@
 84457163cdcb4bd6	deliberate:#27	no exact rationals / bignums
 85140155019fdb88	deliberate:#27	complex or rational literal read as a variable
 852c50e79c5cd4b8	unimplemented	derived syntax / non-top-level define-syntax
-855ed90993f75554	unimplemented	missing (scheme base) name
 86a87464fe38bd9a	unimplemented	(scheme eval)
 878a9edcc2e76bdc	deliberate:#27	needs exact rationals
 88ad836fd43473de	deliberate:#27	no exact rationals / bignums
@@ -175,7 +174,6 @@ bd39ddbbb31e9f99	deliberate:#27	needs exact rationals
 bd8929c571beab7f	unimplemented	non-top-level define
 beb2b08c8c5bd97c	deliberate:#27	no exact rationals / bignums
 c04f6b6c7747f4a0	unimplemented	derived syntax / non-top-level define-syntax
-c0b824819a2f92d5	unimplemented	missing (scheme base) name
 c192106a835b6042	unimplemented	arity: optional or n-ary form
 c1ce722a6e5aa158	unimplemented	binary ports and bytevector I/O
 c6a57bfb99972ea3	deliberate:#27	complex or rational literal read as a variable

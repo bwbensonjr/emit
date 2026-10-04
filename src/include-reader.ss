@@ -101,3 +101,8 @@
                               ")")))))
 
 (set-include-reader! emit-include-reader)
+
+;; The unit's own source, for an include the expander finds deep in a body (change:
+;; portable-library-surface, design D9): "" -- standard input -- resolves against the
+;; current directory exactly as a #f base does.
+(set-source-home-reader! source-home)

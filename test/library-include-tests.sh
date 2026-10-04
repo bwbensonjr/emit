@@ -247,17 +247,17 @@ echo '(include-library-declarations "cyc-b.scm")' > "$PROJ/lib/cyc-a.scm"
 echo '(include-library-declarations "cyc-a.scm")' > "$PROJ/lib/cyc-b.scm"
 reject_lib "include-cycle" "lib/cyc.sld" 'include cycle'
 
-# 11. A (library ...) feature requirement is the one recognized R7RS form left that this
-#     stage refuses -- answering it is library availability, which the parser cannot
-#     resolve, and a wrong answer would silently select the other clause.
+# 11. A (library ...) feature requirement is ANSWERED now, by the resolver `import` uses
+#     (change: portable-library-surface; test/import-set-tests.sh covers the answers).  What
+#     is still refused by name is one whose operand is not a library name.
 cat > "$PROJ/lib/featlib.sld" <<'EOF'
 (define-library (featlib)
   (export g)
-  (cond-expand ((library (scheme base)) (begin (define (g) 1)))
+  (cond-expand ((library scheme-base) (begin (define (g) 1)))
                (else (begin (define (g) 2)))))
 EOF
 reject_lib "cond-expand-library-requirement" "lib/featlib.sld" \
-  'is an R7RS feature requirement this stage does not support'
+  'takes exactly one library name: \(library scheme-base\)'
 
 # 12. A malformed clause names the clause.
 cat > "$PROJ/lib/badclause.sld" <<'EOF'
@@ -265,17 +265,18 @@ cat > "$PROJ/lib/badclause.sld" <<'EOF'
 EOF
 reject_lib "cond-expand-bad-clause" "lib/badclause.sld" 'not a clause'
 
-# 13. An import set arriving through an included file gets the ORDINARY import-set
-#     diagnostic: the splice runs before the parse loop, so one validator sees both.
+# 13. An import set arriving through an included file is parsed like one written in place:
+#     the splice runs before the parse loop, so a set naming an absent export gets the
+#     ordinary diagnostic (change: portable-library-surface).
 cat > "$PROJ/lib/isl.sld" <<'EOF'
 (define-library (isl) (export g) (include-library-declarations "isl-decls.scm")
   (begin (define (g) 1)))
 EOF
 cat > "$PROJ/lib/isl-decls.scm" <<'EOF'
-(import (only (scheme base) car))
+(import (only (scheme base) nope))
 EOF
 reject_lib "included-import-set" "lib/isl.sld" \
-  'import sets are not supported: \(only \(scheme base\) car\)'
+  'nope is not exported by \(scheme base\) in \(only \(scheme base\) nope\)'
 
 # 14. A filename that is not a string.
 cat > "$PROJ/lib/badname.sld" <<'EOF'

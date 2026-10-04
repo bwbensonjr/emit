@@ -94,6 +94,7 @@
     with-exception-handler
     raise
     raise-continuable
+    features
     error-object?
     error-object-message
     error-object-irritants
@@ -278,6 +279,7 @@
     (define (with-exception-handler handler thunk) (let ((saved *handlers*)) (dynamic-wind (lambda () (set! *handlers* (cons handler saved))) thunk (lambda () (set! *handlers* saved)))))
     (define (raise obj) (if (null? *handlers*) (%raise obj) (let ((h (car *handlers*)) (saved *handlers*)) (set! *handlers* (cdr *handlers*)) (h obj) (set! *handlers* saved) (%raise obj))))
     (define (raise-continuable obj) (if (null? *handlers*) (%raise obj) (let ((handler (car *handlers*)) (saved *handlers*)) (dynamic-wind (lambda () (set! *handlers* (cdr saved))) (lambda () (handler obj)) (lambda () (set! *handlers* saved))))))
+    (define (features) (list-copy (%advertised-features)))
     (define (error-object? x) (%error-object? x))
     (define (error-object-message x) (%error-object-message x))
     (define (error-object-irritants x) (%error-object-irritants x))

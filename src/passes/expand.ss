@@ -470,6 +470,16 @@
                         [else acc]))
                     acc))))))
 
+;; ---- include and cond-expand inside bodies (change: portable-library-surface) ----
+;; Is F a form whose head is one of the three that splice?  Only the head is tested; the
+;; caller decides what a local binding of the keyword means.  The splicing itself is in
+;; src/core.ss, beside the include reader and the feature table it needs.
+(define (splicing-form? f)
+  (and (pair? f) (memq (car f) (quote (include include-ci cond-expand))) #t))
+
+(define (any-splicing-form? fs)
+  (and (pair? fs) (or (splicing-form? (car fs)) (any-splicing-form? (cdr fs)))))
+
 ;; ---- the fixpoint driver -------------------------------------------------
 (define *macro-depth-limit* 1000)
 
@@ -512,54 +522,75 @@
   (define (exp* es bound) (map (lambda (x) (exp1 x bound)) es))
 
   ;; a body: its internal defines bind for the whole body, then each form expands
-  (define (exp-body forms bound)
-    (let ([b (add-body-defines forms bound)]) (exp* forms b)))
+  ;; ...after its include and cond-expand forms are spliced (change:
+  ;; portable-library-surface, design D9), so an included definition is an internal
+  ;; definition of this body.  The splice itself is the core's (splice-body-forms), and
+  ;; it is reached only when a body has such a form, so this pass still runs without it.
+  (define (exp-body forms0 bound)
+    (let* ([forms
+             (if (any-splicing-form? forms0)
+                 (splice-body-forms forms0 bound (lambda (h) (macro-lookup h bound)))
+                 forms0)]
+           [b (add-body-defines forms bound)])
+      (exp* forms b)))
 
   (define (exp e depth bound)
     (when (> depth *macro-depth-limit*)
       (error 'expand "macro expansion did not terminate (depth limit exceeded)" e))
-    (if (not (pair? e))
-        e ; atoms/symbols/literals unchanged
-        (let ([h (car e)])
-          (cond
-            [(eq? h 'quote) e]   ; do not descend into quoted data
-            [(eq? h 'quasiquote) ; rewrite, then re-expand the unquoted holes
-              (exp1 (qq (cadr e) 1) bound)]
-            [(memq h '(unquote unquote-splicing))
-              (error 'expand "unquote/unquote-splicing outside quasiquote" e)]
-            [(macro-lookup h bound)
-              =>
-              (lambda (entry) (exp (apply-macro entry e bound) (+ depth 1) bound))]
-            [(eq? h 'lambda) `(lambda ,(cadr e)
-                                ,@(exp-body (cddr e) (add-formals (cadr e) bound)))]
-            [(eq? h 'let)
-              (if (symbol? (cadr e)) ; named let (overloads core `let`)
-                  ;; the loop NAME is bound in the body: `rewrite-named-let` produces a
-                  ;; letrec, so the arm below adds it -- no special case needed here
-                  (exp1 (rewrite-named-let (cadr e) (caddr e) (cdddr e)) bound)
-                  ;; initializers see the OUTER scope; only the body sees the names
-                  `(let ,(map (lambda (b) (bind-exp b bound)) (cadr e))
-                        ,@(exp-body (cddr e)
-                                    (add-formals (map bind-name (cadr e)) bound))))]
-            ;; letrec and letrec* expand identically and are DISTINGUISHED here only
-            ;; so the post-expand dump still shows the form the user wrote; parse
-            ;; maps both to the one `letrec` IL node (see src/parse.ss).
-            ;; The names are in scope for the INITIALIZERS as well as the body.
-            [(memq h '(letrec letrec*))
-              (let ([inner (add-formals (map bind-name (cadr e)) bound)])
-                `(,h ,(map (lambda (b) (bind-exp b inner)) (cadr e))
-                     ,@(exp-body (cddr e) inner)))]
-            [(memq h '(+ - * /)) (expand-arith (lambda (x) (exp1 x bound)) h (cdr e))]
-            [(eq? h 'string-append) (expand-string-append (lambda (x) (exp1 x bound))
-                                                          (cdr e))]
-            ;; `string=?` is n-ary in R7RS 6.7.  It joins the chain here rather than
-            ;; becoming a variadic prelude procedure (the route char=? took), because a
-            ;; prelude define of an integrable name shadows the primitive for EVERY
-            ;; arity -- the two-argument call would lose its bare primcall, and the
-            ;; compiler's own reader leans on it.
-            [(memq h '(= < > <= >= eq? eqv? string=?))
-              (expand-compare (lambda (x) (exp1 x bound)) h (cdr e))]
-            [else (exp* e bound)])))) ; if/begin/set!/apply/primcall/application
+    (if
+      (not (pair? e))
+      e ; atoms/symbols/literals unchanged
+      (let ([h (car e)])
+        (cond
+          [(eq? h 'quote) e] ; do not descend into quoted data
+          ;; The advertised feature list as a constant -- the body of (scheme base)'s
+          ;; `features` (change: portable-library-surface, design D10).
+          [(eq? h '%advertised-features) (list 'quote *advertised-features*)]
+          [(eq? h 'quasiquote) ; rewrite, then re-expand the unquoted holes
+            (exp1 (qq (cadr e) 1) bound)]
+          [(memq h '(unquote unquote-splicing))
+            (error 'expand "unquote/unquote-splicing outside quasiquote" e)]
+          [(macro-lookup h bound)
+            =>
+            (lambda (entry) (exp (apply-macro entry e bound) (+ depth 1) bound))]
+          ;; include / include-ci / cond-expand in EXPRESSION position behave as `begin`
+          ;; over what they contribute (R7RS 4.1.7, 4.2.1); a local binding of the
+          ;; keyword shadows it, as it shadows a macro.
+          [(and (splicing-form? e) (not (memq h bound)))
+            (let ([fs (splice-body-forms (list e)
+                                         bound
+                                         (lambda (k) (macro-lookup k bound)))])
+              (exp (if (null? fs) (quote (if #f #f)) (cons 'begin fs)) depth bound))]
+          [(eq? h 'lambda) `(lambda ,(cadr e)
+                              ,@(exp-body (cddr e) (add-formals (cadr e) bound)))]
+          [(eq? h 'let)
+            (if (symbol? (cadr e)) ; named let (overloads core `let`)
+                ;; the loop NAME is bound in the body: `rewrite-named-let` produces a
+                ;; letrec, so the arm below adds it -- no special case needed here
+                (exp1 (rewrite-named-let (cadr e) (caddr e) (cdddr e)) bound)
+                ;; initializers see the OUTER scope; only the body sees the names
+                `(let ,(map (lambda (b) (bind-exp b bound)) (cadr e))
+                      ,@(exp-body (cddr e)
+                                  (add-formals (map bind-name (cadr e)) bound))))]
+          ;; letrec and letrec* expand identically and are DISTINGUISHED here only
+          ;; so the post-expand dump still shows the form the user wrote; parse
+          ;; maps both to the one `letrec` IL node (see src/parse.ss).
+          ;; The names are in scope for the INITIALIZERS as well as the body.
+          [(memq h '(letrec letrec*))
+            (let ([inner (add-formals (map bind-name (cadr e)) bound)])
+              `(,h ,(map (lambda (b) (bind-exp b inner)) (cadr e))
+                   ,@(exp-body (cddr e) inner)))]
+          [(memq h '(+ - * /)) (expand-arith (lambda (x) (exp1 x bound)) h (cdr e))]
+          [(eq? h 'string-append) (expand-string-append (lambda (x) (exp1 x bound))
+                                                        (cdr e))]
+          ;; `string=?` is n-ary in R7RS 6.7.  It joins the chain here rather than
+          ;; becoming a variadic prelude procedure (the route char=? took), because a
+          ;; prelude define of an integrable name shadows the primitive for EVERY
+          ;; arity -- the two-argument call would lose its bare primcall, and the
+          ;; compiler's own reader leans on it.
+          [(memq h '(= < > <= >= eq? eqv? string=?))
+            (expand-compare (lambda (x) (exp1 x bound)) h (cdr e))]
+          [else (exp* e bound)])))) ; if/begin/set!/apply/primcall/application
 
   (define (bind-exp b bound) (list (car b) (exp1 (cadr b) bound)))
 

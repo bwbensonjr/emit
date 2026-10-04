@@ -66,18 +66,24 @@ not an independent gap, and counting it as one overstates the inventory.
 
 ## Current baseline
 
-Measured on 2026-08-25, after `support-pitch-r7rs-prerequisites`:
+Measured on 2026-10-04, after `portable-library-surface`:
 
 ```
-assertions: 973 passed, 0 failed;  forms: 975 run, 205 excluded
+assertions: 975 passed, 0 failed;  forms: 977 run, 203 excluded
 21 section/check groups passed, 0 failed
 ```
 
-The 205 exclusions, by reason class:
+That change removed the two 6.14 `(features)` forms' exclusions. Its import sets, `(library …)`
+requirements, and program-level and body-level `include`/`cond-expand` have no forms in this
+suite, which runs one program per section and never writes a library; they are covered by
+`test/import-set-tests.sh`. The previous baseline, measured on 2026-08-25 after
+`support-pitch-r7rs-prerequisites`, was 973 assertions from 975 forms, with 205 excluded.
+
+The 203 exclusions, by reason class:
 
 | Reason | Forms | What it is |
 |---|---|---|
-| `unimplemented` | 104 | `(scheme lazy)`, binary ports, derived syntax, `(scheme eval)`, ... |
+| `unimplemented` | 102 | `(scheme lazy)`, binary ports, derived syntax, `(scheme eval)`, ... |
 | `deliberate:#27` | 87 | exact rationals, bignums, complex numbers -- permanently absent |
 | `blocked-by:*` | 2 | a helper's defining form is excluded -- not independent gaps |
 | `deliberate:not-R7RS-small` | 8 | `1s2`/`1f2`-style exponent markers, which R7RS-small does not have |
@@ -85,7 +91,7 @@ The 205 exclusions, by reason class:
 | `issue-33` | 1 | `make-list` lacks its optional fill argument |
 | `deliberate:r7rs-lexical-conformance` | 1 | a chibi expectation is stricter than the R7RS peculiar-identifier grammar |
 
-This change removes 138 exclusions for `(scheme case-lambda)`, `(scheme char)`, continuable
+`support-pitch-r7rs-prerequisites` removed 138 exclusions for `(scheme case-lambda)`, `(scheme char)`, continuable
 exceptions, `(scheme process-context)`, `(scheme write)`, and checks blocked only by those roots.
 Characters and Strings now report zero exclusions; the completed library/exception forms have no
 remaining exclusion entry. `char-ready?` remains explicitly excluded under the streaming-I/O

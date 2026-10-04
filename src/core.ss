@@ -96,7 +96,8 @@
   (check-library-position forms)
   (reset-counter!)
   (set-import-calls! '()) ; no imports on this path (change: cross-unit-direct-calls)
-  (let* ([me+rf (collect-define-syntax forms)]
+  (note-unit-include-origins! forms)
+  (let* ([me+rf (collect-define-syntax (splice-toplevel-forms forms #f (quote ())))]
          [runtime-forms (cadr me+rf)]
          ;; a top-level define displaces a keyword of the same name (change:
          ;; binding-aware-expander, issue #103).  On THIS path `collect-toplevel` folds the
@@ -150,7 +151,12 @@
 ;;                           import of another MANIFEST library, since the core reads no files
 (define (compile-library-form form dump . opt)
   (let ([dl (parse-define-library form)] [tables (if (pair? opt) (car opt) '())])
-    (car (compile-library (car dl) (cadr dl) (caddr dl) (cadddr dl) tables dump))))
+    (car (compile-library (car dl)
+                          (dl-import-specs dl)
+                          (caddr dl)
+                          (cadddr dl)
+                          tables
+                          dump))))
 
 ;; convenience: source text -> IR text (no prelude, no header).  This is the
 ;; core's self-hosting-facing contract; the driver adds prelude/header/toolchain.
@@ -359,7 +365,7 @@
                [dl (parse-define-library (partition-library-form entry prelude-forms))]
                [imports (map (lambda (l) (table-of l tables)) (cadr dl))]
                [res (compile-library (car dl)
-                                     (cadr dl)
+                                     (dl-import-specs dl)
                                      (caddr dl)
                                      (cadddr dl)
                                      imports
@@ -584,7 +590,7 @@
 ;; else the whole form rendered.  Bounded on purpose -- a rejected declaration may carry
 ;; the library's entire body (a `cond-expand` wrapping everything), and a diagnostic
 ;; that reprints it is unreadable.  Import specs are named in full instead (see
-;; check-import-spec): they are small by construction and the transform is the point.
+;; malformed-import-set): they are small by construction and the transform is the point.
 (define (form-label f)
   (if (and (pair? f) (symbol? (car f))) (symbol->string (car f)) (render-datum f)))
 
@@ -600,25 +606,180 @@
 ;; (design D1) and raises the ordinary recoverable compile-time error the REPL already
 ;; catches, reports, and returns to the prompt from (design D6).
 
-;; The import-set transforms R7RS defines.  None is supported in this stage; `rename` is
-;; rejected only HERE, in import position, because `(rename internal external)` is legal
-;; in an `export` declaration (design D4).
+;; --- import sets (change: portable-library-surface, design D1/D2) -------------
+;; The import-set transforms R7RS defines.  `rename` is an import set only HERE, in import
+;; position, because `(rename internal external)` is an export specification in an
+;; `export` declaration (module-frontend-diagnostics, design D4).
+;;
+;; These used to be rejected by name, so that a set was never misread as a library name.
+;; They are now parsed instead -- by ONE parser, reached from both paths that turn an
+;; import spec into a library name, the program path (collect-imports) and the library
+;; path (parse-define-library), so a given form gets one meaning and one message
+;; wherever it was written.
 (define *import-set-keywords* (quote (only except prefix rename)))
 
 (define (import-set-spec? spec)
   (and (pair? spec) (symbol? (car spec)) (memq (car spec) *import-set-keywords*) #t))
 
-;; ONE validator, called by BOTH paths that turn an import spec into a library name --
-;; the program path (collect-imports) and the library path (parse-define-library) -- so
-;; the message for a given form cannot depend on where it was written (design D5).  The
-;; whole spec is named: it is what the user typed and it is short.
-(define (check-import-spec spec)
-  (when (import-set-spec? spec)
+;; Does any element of XS satisfy P?  (The prelude has `andmap` but no `ormap`.)
+(define (any-of? p xs) (and (pair? xs) (or (and (p (car xs)) #t) (any-of? p (cdr xs)))))
+
+;; A malformed set is named whole: it is what the user typed and it is short.
+(define (malformed-import-set spec)
+  (error 'import (string-append "malformed import set: " (render-datum spec))))
+
+;; Validate SPEC's shape and return the library it imports from.  A shape error is raised
+;; HERE, before anything reads the spec as a library name -- which is the failure
+;; module-frontend-diagnostics existed to prevent (a set reported as a missing manifest
+;; entry).
+(define (import-spec-library spec)
+  (cond
+    [(not (import-set-spec? spec)) spec]
+    [(not (pair? (cdr spec))) (malformed-import-set spec)]
+    [else
+      (let ([inner (cadr spec)] [args (cddr spec)])
+        (case (car spec)
+          [(only except) (unless (and (list? args) (andmap symbol? args))
+                           (malformed-import-set spec))]
+          [(prefix) (unless (and (pair? args) (null? (cdr args)) (symbol? (car args)))
+                      (malformed-import-set spec))]
+          [else (unless (and (list? args)
+                             (andmap (lambda (p)
+                                       (and (list? p)
+                                            (= (length p) 2)
+                                            (symbol? (car p))
+                                            (symbol? (cadr p))))
+                                     args))
+                  (malformed-import-set spec))])
+        (import-spec-library inner))]))
+
+;; The library names a list of import specs reaches, in first-occurrence order with no
+;; repeats -- what every host resolves, registers, and initializes.  One library imported
+;; through two sets is still ONE dependency.
+(define (import-specs->libraries specs)
+  (fold-left
+    (lambda (acc s)
+      (let ([l (import-spec-library s)]) (if (member l acc) acc (append acc (list l)))))
+    '()
+    specs))
+
+;; The names an import set makes visible, as an alist (VISIBLE . ORIGINAL) over the names
+;; NAMES the library publishes.  Pure: it never consults a table, so each transform is a
+;; rewrite of the alist its inner set produced.  A name `only`, `except`, or `rename`
+;; mentions that the inner set does not make visible is an error naming the whole set,
+;; since a silent no-op there is almost always a typo.
+(define (import-set-visible spec lib names)
+  (define (absent n)
     (error 'import
-           (string-append
-             "import sets are not supported: "
-             (render-datum spec)
-             " -- imports are whole-library, as (import (library name))"))))
+           (string-append (symbol->string n)
+                          " is not exported by "
+                          (render-datum lib)
+                          " in "
+                          (render-datum spec))))
+  (if (not (import-set-spec? spec))
+      (map (lambda (n) (cons n n)) names)
+      (let ([inner (import-set-visible (cadr spec) lib names)] [args (cddr spec)])
+        (case (car spec)
+          [(only) (for-each (lambda (n) (unless (assq n inner) (absent n))) args)
+                  (filter (lambda (p) (memq (car p) args)) inner)]
+          [(except) (for-each (lambda (n) (unless (assq n inner) (absent n))) args)
+                    (filter (lambda (p) (not (memq (car p) args))) inner)]
+          [(prefix)
+            (let ([pre (symbol->string (car args))])
+              (map (lambda (p)
+                     (cons (string->symbol (string-append pre (symbol->string (car p))))
+                           (cdr p)))
+                   inner))]
+          [else
+            (for-each (lambda (r) (unless (assq (car r) inner) (absent (car r)))) args)
+            (map (lambda (p)
+                   (let ([r (assq (car p) args)]) (if r (cons (cadr r) (cdr p)) p)))
+                 inner)]))))
+
+;; Names an R7RS standard library publishes that are not bindings in its export table: the
+;; core syntactic keywords and the primitives the compiler integrates (`car`, `+`, ...),
+;; which every unit sees under their own names whatever it imports, as under
+;; --no-prelude.  A set over a `(scheme ...)` library ACCEPTS them -- portable code writes
+;; `(only (scheme base) define car)` -- but cannot hide or rename them: they have no row to
+;; filter, so `except` leaves them visible and `prefix`/`rename` leave them under their
+;; own names.  That limit is stated in docs/MODULES.md rather than papered over.
+(define (universal-library-names lib)
+  (if (and (pair? lib) (eq? (car lib) 'scheme))
+      (append *core-keywords*
+              *extra-op-keywords*
+              (map car *integrable*)
+              (quote (define-record-type else => ... _)))
+      (quote ())))
+
+;; The export TABLE an import set sees (design D2): the library's own table with every
+;; public name filtered and renamed.  Downstream -- the environment, the macro
+;; environment, the direct-call alist -- consumes it exactly as it consumes a real table,
+;; so a set adds no code and changes no artifact.
+;;   runtime rows   renamed; the mangled target is untouched, so a call still reaches the
+;;                  same external global and the shake still keys on mangled names
+;;   call rows      renamed in lockstep, because a call row is found by external name
+;;   macro entries  the PUBLIC keyword is renamed or dropped.  An entry under a
+;;                  unit-qualified keyword is a private macro a template reaches, and it
+;;                  is kept whatever the set says: `resolve-exported-macros` already
+;;                  rewrote every sibling a template mentions to such a keyword, so a kept
+;;                  macro written on top of a hidden one still expands.
+(define (import-set-table spec table)
+  (let* ([lib (car table)]
+         [rows (cadr table)]
+         [h (table-ct-half table)]
+         [public-macros (filter (lambda (m) (not (unit-qualified? (car m))))
+                                (ct-macros h))]
+         [published (append (map car rows) (map car public-macros))]
+         [visible (import-set-visible
+                    spec
+                    lib
+                    (append published
+                            (filter (lambda (n) (not (memq n published)))
+                                    (universal-library-names lib))))])
+    (define (renamed original)
+      (filter (lambda (x) x)
+              (map (lambda (p) (and (eq? (cdr p) original) (car p))) visible)))
+    (define (rename-rows rs)
+      (apply append
+             (map (lambda (r) (map (lambda (n) (cons n (cdr r))) (renamed (car r))))
+                  rs)))
+    (export-table-datum
+      lib
+      (rename-rows rows)
+      (rename-rows (caddr table))
+      (make-ct-half
+        (append (rename-rows public-macros)
+                (filter (lambda (m) (unit-qualified? (car m))) (ct-macros h)))
+        (ct-own-refs h)
+        (ct-foreign-refs h)))))
+
+;; The tables a unit compiles against, given its import SPECS and the tables its host
+;; resolved, one per library.  A unit whose imports are all bare names gets TABLES back
+;; untouched, so everything that compiled before emits the same bytes.  Otherwise each
+;; table is replaced, in place, by one derived table per spec naming its library -- so a
+;; library imported through two sets contributes both views, and a table no spec names
+;; (a program's implicit (scheme base)) is kept whole.  Order is the hosts' order, which
+;; is what overlapping imports' first-import-wins precedence reads (design D5).
+(define (apply-import-specs specs tables)
+  (if
+    (not (any-of? import-set-spec? specs))
+    tables
+    (apply
+      append
+      (map
+        (lambda (t)
+          (let ([mine (filter (lambda (s) (equal? (import-spec-library s) (car t)))
+                              specs)])
+            (if (null? mine) (list t) (map (lambda (s) (import-set-table s t)) mine))))
+        tables))))
+
+;; Does SPECS import (scheme base) through a set?  Then that set is the program's whole
+;; view of it and the implicit import contributes no bindings (design D3).
+(define (scheme-base-import-set? specs)
+  (any-of?
+    (lambda (s)
+      (and (import-set-spec? s) (equal? (import-spec-library s) (quote (scheme base)))))
+    specs))
 
 ;; The `[else]` arm of parse-define-library's declaration `cond`.  It used to cons the
 ;; declaration onto the body, which is how `(cond-expand (else (begin (define (f x) x))))`
@@ -643,7 +804,7 @@
 ;; MORE declarations or MORE body forms before any other machinery runs, so they are
 ;; expanded away in one recursive pre-pass (design D1) and the parse loop below still sees
 ;; exactly three declaration kinds.  Running before that loop is what makes an `import`
-;; arriving through a `cond-expand` clause reach the same `check-import-spec` as one
+;; arriving through a `cond-expand` clause reach the same import-set parser as one
 ;; written in place.
 
 ;; The feature identifiers this implementation advertises (design D7).  R7RS forbids
@@ -659,15 +820,113 @@
 ;;                    resolving them against the host would be a lie the moment cross
 ;;                    compilation exists.  They want deriving from the target header.
 ;;   emit-<version> -- NOT YET: there is no version to name until the first tag.
-;; One declaration, consulted by every compilation path, so a feature requirement cannot answer
-;; differently depending on who is compiling.
-(define *advertised-features* (quote (r7rs emit ieee-float)))
+;;
+;; The SRFIs below are provided natively, and each was added only after a test showed the
+;; SRFI's specified behavior (change: portable-library-surface, design D11; the cases are
+;; `srfi-*` in test/import-set-tests.sh).  An identifier says the FEATURE is present; it
+;; does not promise a `(srfi N)` library, which is what `(library (srfi N))` asks:
+;;   srfi-0   cond-expand, in every R7RS position
+;;   srfi-6   string ports: open-input-string, open-output-string, get-output-string
+;;   srfi-9   define-record-type
+;;   srfi-16  case-lambda, from (scheme case-lambda)
+;;   srfi-23  error
+;;   srfi-30  nested #| ... |# block comments
+;;   srfi-39  make-parameter and parameterize, converter included
+;;   srfi-62  #; datum comments
+;;   srfi-87  => in case clauses
+;; And deliberately absent:
+;;   srfi-2 (and-let*), srfi-8 (receive) -- NO: not provided; a portable package's own
+;;                    fallback must be selected for them.
+;; One declaration, consulted by every compilation path and by `features`, so a feature
+;; requirement cannot answer differently depending on who is compiling.
+(define *advertised-features*
+  (quote (r7rs emit
+               ieee-float
+               srfi-0
+               srfi-6
+               srfi-9
+               srfi-16
+               srfi-23
+               srfi-30
+               srfi-39
+               srfi-62
+               srfi-87)))
 
-;; Is a cond-expand feature requirement satisfied?  Identifiers, `and`, `or`, `not` --
-;; and `(library ...)`, which is REFUSED rather than answered (design D8): answering it
-;; means asking whether a library is available, which is manifest resolution this parser
-;; does not have, and a wrong answer would silently select the other clause and report
-;; nothing.
+;; --- (library NAME) requirements (change: portable-library-surface, design D6) ------
+;; `(library NAME)` holds exactly when importing NAME in this compilation would resolve
+;; it.  The core does no resolution -- the hosts own the manifests and library roots -- so
+;; the answer comes from the host, by one of two routes:
+;;
+;;   a PREDICATE  a host whose resolver is Scheme in the same process installs one
+;;                (set-library-predicate!) and is asked directly: the Chez driver.
+;;   an ANSWER    a host whose resolver is on the other side of the mode protocol (the
+;;   TABLE        binary's C++) cannot be called back mid-compile.  A requirement it has not
+;;                answered yet is recorded as PENDING and taken as false for now; the host
+;;                collects the pending names after an imports query (mode 23), resolves
+;;                them with the resolver `import` uses, submits the answers (mode 24), and
+;;                asks again until nothing is pending.  Compilation runs only after that,
+;;                so it always reads a real answer -- see library-available?.
+;;
+;; A baked member is available without asking: it IS the implementation, and the baked
+;; set itself is compiled with no host at all (library-include-declarations, design D12).
+(define (no-library-predicate name) (quote unknown))
+(define *library-predicate* no-library-predicate)
+(define (set-library-predicate! p) (set! *library-predicate* p))
+
+;; ((NAME . #t-or-#f) ...), submitted by the host.  Rides the REPL session state.
+(define *library-answers* (quote ()))
+;; NAMEs asked about and not answered, newest first.
+(define *library-pending* (quote ()))
+;; Only an imports query may leave a requirement pending; anywhere else a missing answer
+;; means a host skipped the settle step, which must not quietly pick the other clause.
+(define *library-questions-open?* #f)
+;; Every (NAME . answer) consulted since the last reset: what the artifact cache records
+;; beside a unit's included files (design D7).
+(define *library-answers-used* (quote ()))
+(define (reset-library-answers-used!) (set! *library-answers-used* (quote ())))
+(define (library-answers-used) (reverse *library-answers-used*))
+
+(define (add-library-answers! answers)
+  (for-each (lambda (a)
+              (set! *library-answers* (cons a *library-answers*))
+              (set! *library-pending*
+                (filter (lambda (n) (not (equal? n (car a)))) *library-pending*)))
+            answers))
+
+;; A library name is a non-empty proper list of symbols and exact nonnegative integers.
+(define (library-name-datum? x)
+  (and (pair? x)
+       (list? x)
+       (andmap (lambda (c) (or (symbol? c) (and (integer? c) (exact? c) (>= c 0)))) x)))
+
+(define (library-available? name)
+  (let ([answer
+          (if (baked-member? name)
+              #t
+              (let ([p (*library-predicate* name)])
+                (if (not (eq? p (quote unknown)))
+                    p
+                    (let ([a (assoc name *library-answers*)])
+                      (cond
+                        [a (cdr a)]
+                        [*library-questions-open?*
+                          (unless (member name *library-pending*)
+                            (set! *library-pending* (cons name *library-pending*)))
+                          #f]
+                        [else (error 'cond-expand
+                                     (string-append
+                                       (render-datum (list (quote library) name))
+                                       " was not answered before compilation -- this "
+                                       "compiler host must settle library requirements "
+                                       "first"))])))))])
+    (unless (assoc name *library-answers-used*)
+      (set! *library-answers-used* (cons (cons name answer) *library-answers-used*)))
+    answer))
+
+;; Is a cond-expand feature requirement satisfied?  Identifiers, `and`, `or`, `not`, and
+;; `(library NAME)`, answered by the host's resolver (above).  It used to be REFUSED
+;; (library-include-declarations, design D8), because a wrong answer silently selects
+;; the other clause; the answer now comes from the resolver `import` itself uses.
 (define (feature-requirement-met? req)
   (cond
     [(symbol? req) (mem? req *advertised-features*)]
@@ -680,11 +939,11 @@
                  (string-append "(not ...) takes exactly one feature requirement: "
                                 (render-datum req))))]
     [(and (pair? req) (eq? (car req) 'library))
-      (error 'cond-expand
-             (string-append
-               (render-datum req)
-               " is an R7RS feature requirement this stage does not support"
-               " -- library availability is not resolved here"))]
+      (if (and (pair? (cdr req)) (null? (cddr req)) (library-name-datum? (cadr req)))
+          (library-available? (cadr req))
+          (error 'cond-expand
+                 (string-append "(library ...) takes exactly one library name: "
+                                (render-datum req))))]
     [else (error 'cond-expand
                  (string-append "not a feature requirement: " (render-datum req)))]))
 
@@ -753,7 +1012,9 @@
                                   (render-datum (car res))
                                   " includes itself, through "
                                   (render-token-chain stack)))
-            res))
+            ;; Every include written anywhere in this file resolves beside it, however
+            ;; deep in a body the expander later finds it (design D9).
+            (begin (note-include-origins! (cdr res) (cons (car res) stack)) res)))
       (error who
              (string-append "a filename must be a string: " (render-datum filename)))))
 
@@ -802,7 +1063,11 @@
 (define (expand-library-declaration d base stack)
   (cond
     [(not (and (pair? d) (symbol? (car d)))) (reject-library-declaration d)]
-    [(memq (car d) (quote (export import begin))) (list d)]
+    [(memq (car d) (quote (export import))) (list d)]
+    ;; A body's own top-level include and cond-expand forms splice too (change:
+    ;; portable-library-surface), with this declaration's file as their base.
+    [(eq? (car d) 'begin)
+      (list (cons 'begin (splice-toplevel-forms (cdr d) base stack)))]
     [(eq? (car d) 'cond-expand)
       (expand-library-declarations (cond-expand-declarations (cdr d)) base stack)]
     ;; Declarations, so the splice is re-expanded -- an included file may itself include,
@@ -810,9 +1075,9 @@
     ;; and so the only one that can build a cycle.
     [(eq? (car d) 'include-library-declarations)
       (expand-included-declarations (cdr d) base stack)]
-    ;; Body forms, spliced as if written in a `begin` here.  An `include` INSIDE an
-    ;; included body file is program-position `include` (R7RS 4.1.7), which this stage does
-    ;; not implement, so nothing recurses.
+    ;; Body forms, spliced as if written in a `begin` here.  An `include` or `cond-expand`
+    ;; at the top of an included body file is spliced in turn (included-body-forms), and
+    ;; one deeper in a body is left for the expander (change: portable-library-surface).
     [(eq? (car d) 'include)
       (list (cons 'begin (included-body-forms 'include (cdr d) base stack)))]
     ;; No fold flag: `who` travels to the path, which reads case-insensitively itself.
@@ -828,13 +1093,115 @@
         (append (expand-library-declarations (cdr res) (car res) (cons (car res) stack))
                 (expand-included-declarations (cdr filenames) base stack)))))
 
-;; The forms of each named file, in the order the filenames appear.  WHO reaches the path
-;; through read-included, and the path is what folds for include-ci.
+;; The forms of each named file, in the order the filenames appear, with every top-level
+;; include and cond-expand among them spliced too (change: portable-library-surface).
+;; WHO reaches the path through read-included, and the path is what folds for include-ci.
 (define (included-body-forms who filenames base stack)
   (if (null? filenames)
       (quote ())
-      (let ([res (read-included who (car filenames) base stack)])
-        (append (cdr res) (included-body-forms who (cdr filenames) base stack)))))
+      (let* ([res (read-included who (car filenames) base stack)] [tok (car res)])
+        (append (splice-toplevel-forms (cdr res) tok (cons tok stack))
+                (included-body-forms who (cdr filenames) base stack)))))
+
+;; --- include and cond-expand outside declarations (change: portable-library-surface) --
+;; R7RS 4.1.7 and 4.2.1 make `include`, `include-ci`, and `cond-expand` forms usable
+;; anywhere a definition or expression may appear, not only as library declarations.
+
+;; `splicing-form?` is the expander's (src/passes/expand.ss), which needs it on its own.
+
+;; FORMS with every TOP-LEVEL splicing form replaced by what it contributes, recursively
+;; (design D8).  This is the splice a program's top level, a REPL input, a library
+;; `begin`, and an included body file all get: an included file's forms are spliced
+;; with its own token as their base, so a nested include resolves beside that file.
+(define (splice-toplevel-forms forms base stack)
+  (if (null? forms)
+      (quote ())
+      (append (splice-toplevel-form (car forms) base stack)
+              (splice-toplevel-forms (cdr forms) base stack))))
+
+(define (splice-toplevel-form f base stack)
+  (cond
+    [(not (splicing-form? f)) (list f)]
+    [(eq? (car f) 'cond-expand)
+      (splice-toplevel-forms (cond-expand-declarations (cdr f)) base stack)]
+    [else (included-body-forms (car f) (cdr f) base stack)]))
+
+;; --- where an include deeper inside a form was written (design D9) ------------
+;; An `include` in a lambda body is reached by the EXPANDER, long after the file it was
+;; written in was read -- and by then forms carry no record of where they came from.  So
+;; whenever forms are read, each include-headed subform is noted here against the stack
+;; of files it was read from (innermost first), keyed by the pair's identity.  The
+;; expander looks a form up and resolves beside the file at the top of its stack; a form
+;; rebuilt by a macro template is not found and resolves against the source home.
+;;
+;; Entries are never removed.  They are keyed by identity, so a stale entry cannot
+;; answer for a different form, and there is one per include-headed subform of a file
+;; actually read -- a handful per unit.  Clearing them per unit would be wrong, besides:
+;; the Chez driver parses every library in a closure before it compiles any of them.
+(define *include-origins* (quote ()))
+
+(define (note-include-origins! x stack)
+  (when (pair? x)
+    (cond
+      [(memq (car x) (quote (quote quasiquote))) (if #f #f)]
+      [else (when (memq (car x) (quote (include include-ci)))
+              (set! *include-origins* (cons (cons x stack) *include-origins*)))
+            (let loop ([p x])
+              (when (pair? p) (note-include-origins! (car p) stack) (loop (cdr p))))])))
+
+(define (include-origin form)
+  (let ([e (assq form *include-origins*)]) (if e (cdr e) (quote ()))))
+
+;; The source a unit's OWN forms came from, as an include token.  The core is handed text,
+;; not a path, so the host says where that text lives -- the same source home the include
+;; reader resolves a #f base against.  Asked when the unit is PARSED, because a host may
+;; parse several units before compiling any (the Chez driver does), and the home has
+;; moved on by the time a body is expanded.  A host that installs nothing gets #f, and
+;; its includes resolve against whatever home is current.
+(define (no-source-home) #f)
+(define *source-home-reader* no-source-home)
+(define (set-source-home-reader! r) (set! *source-home-reader* r))
+
+;; Note the include-headed subforms of a unit's own FORMS against its source home.
+(define (note-unit-include-origins! forms)
+  (let ([home (*source-home-reader*)])
+    (when (and home (any-include-subform? forms))
+      (note-include-origins! forms (list home)))))
+
+;; A cheap pre-check so a unit with no include anywhere -- nearly all of them, the
+;; compiler's own source included -- is walked once without allocating.
+(define (any-include-subform? x)
+  (and (pair? x)
+       (not (memq (car x) (quote (quote quasiquote))))
+       (or (and (memq (car x) (quote (include include-ci))) #t)
+           (let loop ([p x])
+             (and (pair? p) (or (any-include-subform? (car p)) (loop (cdr p))))))))
+
+;; Splice the include and cond-expand forms of a BODY (design D9): a lambda, let-family,
+;; or define body, as the expander reaches it.  BOUND is the expander's set of lexically
+;; bound names -- a local binding of the keyword shadows it -- and MACRO? says whether a
+;; head names a macro in scope, which shadows it too.  Each include resolves beside the
+;; file it was written in (include-origin); spliced forms are spliced again, so an
+;; included file's own body-level includes and cond-expands are honored.
+(define (splice-body-forms forms bound macro?)
+  (if (null? forms)
+      (quote ())
+      (let ([f (car forms)])
+        (append
+          (if (and (splicing-form? f) (not (memq (car f) bound)) (not (macro? (car f))))
+              (splice-body-forms (body-splice-contribution f) bound macro?)
+              (list f))
+          (splice-body-forms (cdr forms) bound macro?)))))
+
+(define (body-splice-contribution f)
+  (if (eq? (car f) 'cond-expand)
+      (cond-expand-declarations (cdr f))
+      (let* ([stack (include-origin f)] [base (and (pair? stack) (car stack))])
+        (let loop ([names (cdr f)])
+          (if (null? names)
+              (quote ())
+              (let ([res (read-included (car f) (car names) base stack)])
+                (append (cdr res) (loop (cdr names)))))))))
 
 ;; Does any of FORMS declare a library?  Used only to tell a MISPLACED define-library
 ;; from a source that has none.
@@ -874,27 +1241,38 @@
       (cons (caddr spec) (cadr spec)) ; (external . internal)
       (cons spec spec)))              ; bare: external == internal
 
-;; (define-library (name ...) decl ...) -> (list name imports exports body-forms).
-;; decls: (export spec ...) | (import (L) ...) | (begin form ...).  Anything else is
+;; (define-library (name ...) decl ...)
+;;   -> (list name imported-libraries exports body-forms import-specs).
+;; decls: (export spec ...) | (import set ...) | (begin form ...).  Anything else is
 ;; REJECTED by name (reject-library-declaration) rather than absorbed into the body --
 ;; the `[else]` arm used to cons it on, which is what made an unsupported declaration
 ;; surface as somebody else's error (change: module-frontend-diagnostics, #18 item 3).
 ;; Each export is normalized to an (external . internal) pair (see normalize-export).
-;; Each import spec is checked here, so EVERY caller of this parser -- the batch paths,
-;; the REPL's library loader, the driver -- rejects an import set identically (design D5).
+;; Each import spec is parsed here (import-specs->libraries), so EVERY caller of this
+;; parser -- the batch paths, the REPL's library loader, the driver -- reads an import set
+;; identically.  The second element is the LIBRARIES the specs reach, which is what every
+;; host resolves; the fifth is the specs themselves, which only the compile consults
+;; (apply-import-specs, change: portable-library-surface).  Hosts pass the fifth as
+;; compile-library's IMPORTS argument (dl-import-specs).
 ;;
 ;; The four SPLICING declarations are expanded away first (change:
 ;; library-include-declarations, design D1), so the loop below still handles exactly three
 ;; kinds and an import that arrived through an `include-library-declarations` file or a
-;; `cond-expand` clause is validated by the same check as one written in place.
+;; `cond-expand` clause is parsed by the same code as one written in place.
 (define (parse-define-library form)
+  (note-unit-include-origins! form)
   (let ([name (cadr form)])
     (let loop ([ds (expand-library-declarations (cddr form) #f (quote ()))]
                [imps '()]
                [exps '()]
                [body '()])
       (if (null? ds)
-          (list name (reverse imps) (reverse exps) (reverse body))
+          (let ([specs (reverse imps)])
+            (list name
+                  (import-specs->libraries specs)
+                  (reverse exps)
+                  (reverse body)
+                  specs))
           (let ([d (car ds)])
             (cond
               [(and (pair? d) (eq? (car d) 'export))
@@ -903,22 +1281,28 @@
                       (append (reverse (map normalize-export (cdr d))) exps)
                       body)]
               [(and (pair? d) (eq? (car d) 'import))
-                (for-each check-import-spec (cdr d))
                 (loop (cdr ds) (append (reverse (cdr d)) imps) exps body)]
               [(and (pair? d) (eq? (car d) 'begin))
                 (loop (cdr ds) imps exps (append (reverse (cdr d)) body))]
               [else (reject-library-declaration d)]))))))
 
-;; Split a program's top-level forms into (list imported-libs runtime-forms);
-;; each imported-lib is a library name like (mylib).  An import SET is rejected here,
-;; before the spec is read as a library name -- by the same validator the library path
-;; calls, so one form gets one message on both (design D5).
-(define (collect-imports forms)
-  (let loop ([fs forms] [imps '()] [rt '()])
+;; The import specs of a parsed define-library, as written (see parse-define-library).
+(define (dl-import-specs dl) (cadr (cdddr dl)))
+
+;; Split a program's top-level forms into (list imported-libs runtime-forms import-specs);
+;; each imported-lib is a library name like (mylib), reached from the specs by the same
+;; parser the library path uses, so one form gets one meaning and one message on both.
+;;
+;; A program's top-level include and cond-expand forms are spliced FIRST (change:
+;; portable-library-surface, design D8), so an `import` one contributes is an ordinary
+;; import -- on every path, since every path that asks a program for its imports asks here.
+(define (collect-imports forms0)
+  (note-unit-include-origins! forms0)
+  (let loop ([fs (splice-toplevel-forms forms0 #f (quote ()))] [imps '()] [rt '()])
     (cond
-      [(null? fs) (list (reverse imps) (reverse rt))]
+      [(null? fs) (let ([specs (reverse imps)])
+                    (list (import-specs->libraries specs) (reverse rt) specs))]
       [(import-form? (car fs))
-        (for-each check-import-spec (cdr (car fs)))
         (loop (cdr fs) (append (reverse (cdr (car fs))) imps) rt)]
       [else (loop (cdr fs) imps (cons (car fs) rt))])))
 
@@ -1328,12 +1712,18 @@
 ;; -- byte-identical to before, so the REPL/JIT execution path and committed artifacts are
 ;; unaffected.  When a list of internal names, emit ONLY the bindings transitively
 ;; reachable from those roots (the closed-world AOT tree-shake).
+;;
+;; IMPORTS is the library's import SPECS as written (dl-import-specs), and IMPORT-TABLES
+;; the host's tables for the libraries they reach: the specs are applied here, once, so
+;; everything below sees the tables each import set makes visible (change:
+;; portable-library-surface, design D2).  Specs that are all bare names leave the tables
+;; untouched.
 (define (compile-library name imports exports body-forms import-tables dump . opt)
   (compile-library* name
                     imports
                     exports
                     body-forms
-                    import-tables
+                    (apply-import-specs imports import-tables)
                     dump
                     (if (pair? opt) (car opt) #f)))
 
@@ -1535,9 +1925,18 @@
   (let* ([imp+rt (collect-imports user-forms)]
          [imported-libs (car imp+rt)]
          [runtime-user (cadr imp+rt)]
+         [specs (caddr imp+rt)]
+         ;; The tables each import set makes visible (change: portable-library-surface,
+         ;; design D2); the host's tables untouched when every import is a bare name.
+         [import-tables (apply-import-specs specs import-tables)]
          [import-env-alist (import-tables->env-alist
                              import-tables)] ; (ext . mangled-sym)
-         [forms (with-prelude prelude-forms runtime-user)])
+         ;; A program that imports (scheme base) through a SET has that set as its whole
+         ;; view of it (design D3), so the prelude's raw transformers are not prepended:
+         ;; the derived forms then arrive only through the set's table, renamed or hidden
+         ;; with everything else, exactly as they reach a library that imports it.
+         [forms (with-prelude (if (scheme-base-import-set? specs) '() prelude-forms)
+                              runtime-user)])
     (reset-counter!)
     ;; a call matching one of these imports' exact/minimum arities lowers to a direct
     ;; call to its code label (changes: cross-unit-direct-calls,

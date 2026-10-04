@@ -675,6 +675,14 @@
                       (lambda () (handler obj))
                       (lambda () (set! *handlers* saved))))))
 
+;;; R7RS 6.14 `features`: the feature identifiers `cond-expand` tests, as a fresh list
+;;; (change: portable-library-surface, design D10).  `(%advertised-features)` is an
+;;; expander intrinsic that becomes the quoted list of the compiler's ONE declaration,
+;;; *advertised-features* in src/core.ss, so the procedure and `cond-expand` cannot
+;;; disagree.  It is captured when (scheme base) is compiled, which for the baked set is
+;;; when the compiler is built -- the same moment its own cond-expands are resolved.
+(define (features) (list-copy (%advertised-features)))
+
 ;;; R7RS error-object accessors over the runtime error-object representation.
 (define (error-object? x) (%error-object? x))
 (define (error-object-message x) (%error-object-message x))
