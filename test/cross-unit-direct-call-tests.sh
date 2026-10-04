@@ -237,6 +237,18 @@ want   "user library: the label is declared external" "$ll" \
 got="$(printf '(import (mylib)) (greet)\n' | $RUN --manifest "$MAN" 2>/dev/null)"
 [ "$got" = "142" ] && ok "user library: value unchanged (142)" || bad "user library: value $got"
 
+# --- an import set keeps the direct call (change: portable-library-surface) ----
+# A call row is found by EXTERNAL name, so `prefix` and `rename` must rename it in
+# lockstep with the runtime row; otherwise the call silently falls back to indirect.
+RUN_SAVED="$RUN"; RUN="$RUN -L test/import-sets/lib"
+ll="$(prog_ir '(import (prefix (iset a) a:)) (display (a:greet))')"
+want   "prefix: direct call to the renamed export" "$ll" \
+       'call fastcc i64 @"iset\.a:code:greet"\(i64 %t[0-9]+,'
+ll="$(prog_ir '(import (rename (iset a) (greet hello))) (display (hello))')"
+want   "rename: direct call to the renamed export" "$ll" \
+       'call fastcc i64 @"iset\.a:code:greet"\(i64 %t[0-9]+,'
+RUN="$RUN_SAVED"
+
 # --- REPL redefinition still resolves to the captured binding (design D4) -----
 # use-car captured (scheme base)'s car and must keep it; the redefined car is a
 # fresh program global that later forms see.

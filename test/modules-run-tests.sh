@@ -80,34 +80,40 @@ check_fail run-macro-dupname "$MOD/prog-macro-dupname.scm" "$MOD/emit-libs-macdu
 # the INTERNAL keyword of a renamed macro export stays invisible to the importer
 check_fail run-macro-hidden  "$MOD/prog-macro-rename-bad.scm" "$MAN" "unbound variable.*%swap"
 
-# --- an import SET is rejected by name, identically on every compilation path -
-# (change: module-frontend-diagnostics, issue #45.)  These cases live HERE rather than in
-# test/modules-tests.sh, which the tasks named: that suite is Chez-GATED and exits 0
+# --- a bad import SET is named, identically on every compilation path ---------
+# (changes: module-frontend-diagnostics, issue #45; portable-library-surface.)  These cases
+# live HERE rather than in test/modules-tests.sh: that suite is Chez-GATED and exits 0
 # without chez, so the assertions would not run on the Chez-free path these paths take.
 #
 # The property under test is not just "it fails" -- it is that ONE form gets ONE message.
-# Before this change an import set was read as a library NAME, so the program path
-# reported a missing manifest entry and the library path reported an unresolved or cyclic
-# import: two unrelated stories, neither naming the form.
-echo "emit run command: an import set is rejected by name, on both the program and library paths"
+# Before module-frontend-diagnostics an import set was read as a library NAME, so the
+# program path reported a missing manifest entry and the library path reported an
+# unresolved or cyclic import: two unrelated stories, neither naming the form.  Import
+# sets are supported now, so the forms below are the ones a set can still get wrong -- a
+# name the library does not export, and a set of the wrong shape -- and the property is
+# unchanged.  Accepted sets are covered by test/import-set-tests.sh.
+echo "emit run command: a bad import set is named, on both the program and library paths"
 
 # the message body, with each path's own prefix stripped -- the prefix is per-path by
 # design (a path's diagnostics name that path), the message must not be.
-is_msg () { sed -n 's/^.*\(import sets are not supported.*\)$/\1/p' "$1" | head -1; }
+is_msg () { sed -n 's/^.*\(import: .*\)$/\1/p' "$1" | head -1; }
 
-for spec in 'only (scheme base) car' 'except (scheme base) car' \
-            'prefix (scheme base) b:' 'rename (scheme base) (car hd)'; do
+for spec in 'only (scheme base) nope' 'except (scheme base) nope' \
+            'rename (scheme base) (nope hd)'; do
   kw="${spec%% *}"
   printf '(import (%s))\n(display 1)\n' "$spec" > "$TMP/is-$kw.scm"
   check_fail "import-set-$kw" "$TMP/is-$kw.scm" "$MAN" \
-    "import sets are not supported: \($kw "
+    "nope is not exported by \(scheme base\) in \($kw "
 done
+printf '(import (prefix (scheme base)))\n(display 1)\n' > "$TMP/is-prefix.scm"
+check_fail "import-set-prefix" "$TMP/is-prefix.scm" "$MAN" \
+  "malformed import set: \(prefix \(scheme base\)\)"
 
 # the SAME form inside a define-library, through emit lib, and the two messages must
-# match -- the property today's code does not have.
-printf '(define-library (isl)\n  (export f)\n  (import (only (scheme base) car))\n  (begin (define (f x) x)))\n' \
+# match.
+printf '(define-library (isl)\n  (export f)\n  (import (only (scheme base) nope))\n  (begin (define (f x) x)))\n' \
   > "$TMP/isl.sld"
-printf '(import (only (scheme base) car))\n(display 1)\n' > "$TMP/isp.scm"
+printf '(import (only (scheme base) nope))\n(display 1)\n' > "$TMP/isp.scm"
 $RUN --manifest "$MAN" < "$TMP/isp.scm" >/dev/null 2>"$TMP/isp.err"
 build/emit lib "$TMP/isl.sld" >/dev/null 2>"$TMP/isl.err"
 prog_msg="$(is_msg "$TMP/isp.err")"; lib_msg="$(is_msg "$TMP/isl.err")"
@@ -117,7 +123,7 @@ else
   echo "  [FAIL] import-set-same-message  (program: ${prog_msg:-<none>} / library: ${lib_msg:-<none>})"
   fail=$((fail+1))
 fi
-# and neither one still tells the old story about the manifest or a cycle.
+# and neither one tells the old story about the manifest or a cycle.
 if grep -Eq 'not found in the manifest|cyclic' "$TMP/isp.err" "$TMP/isl.err"; then
   echo "  [FAIL] import-set-no-stale-story  (still blaming the manifest or a cycle)"; fail=$((fail+1))
 else

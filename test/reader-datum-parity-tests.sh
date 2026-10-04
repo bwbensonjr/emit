@@ -226,10 +226,13 @@ echo
 echo "diagnostics name the datum they report (issue #52)"
 
 # An interactive import of a library that failed to load must name the LIBRARY, not `?`.
+# The library fails on an import set naming an export (scheme base) does not have; it used
+# to fail on any import set at all, until import sets were supported (change:
+# portable-library-surface).
 mkdir -p "$TMP/badproj"
 cat > "$TMP/badproj/bad.sld" <<'EOF'
 (define-library (bad)
-  (import (only (scheme base) car))
+  (import (only (scheme base) nope))
   (export f)
   (begin (define (f) 1)))
 EOF

@@ -223,6 +223,14 @@ carries no comments), removing ~33 KB from each of `embed.ll` and `embed-repl.ll
                   #33(b) §6 absence audit       ← additive; floats anywhere
 ```
 
+**Portable sources followed ②③** (change: `portable-library-surface`). It added import sets, an
+answered `(library ⟨name⟩)` feature requirement, `include`/`cond-expand` in program and body
+position, and `features`. It was measured against real packages: snow-fort.org's `(srfi 8)` and
+`(srfi 2)` compile unmodified (`test/snow/`). `(srfi 1)` does not yet, because it re-exports
+imported procedures (#121) and depends on `(srfi 227)`, whose exported macro reaches an imported
+non-baked macro through its template (#120). Those two issues are the next gap toward the
+snow-fort SRFI catalogue. Installing packages from snow-fort is not on the path at all yet.
+
 Step ① did not come from any of the three issues. It was the cheapest item with the widest reach,
 and it landed first (#35).
 

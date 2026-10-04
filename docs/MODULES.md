@@ -94,8 +94,10 @@ A library source is one `(define-library …)` form, conventionally in a `.sld` 
   A re-exported transformer travels with the resolution its **defining** library performed, so an
   importer two hops away still reaches that library's private bindings.
 
-`export`, `import`, and `begin` are the three declarations Emit recognizes. Anything else in
-declaration position is **rejected by name** rather than absorbed into the body — see
+Beside `export`, `import`, and `begin`, Emit recognizes the four R7RS splicing declarations,
+`include`, `include-ci`, `include-library-declarations`, and `cond-expand` (see
+[Semantics](#semantics) and [Portable sources](#portable-sources)). Anything else in declaration
+position is **rejected by name** rather than absorbed into the body — see
 [When you break a rule](#when-you-break-a-rule).
 
 ## Importing in a program
@@ -110,6 +112,135 @@ A program imports a library with a top-level `import` and then uses its exports:
 
 A name the program defines itself shadows an imported one of the same spelling (**user-wins
 shadowing**).
+
+### Import sets
+
+An import may select and rename what it brings in, with the four R7RS import sets, nested to any
+depth (change: `portable-library-surface`):
+
+```scheme
+;; test/import-sets/prog-nest.scm  => 42
+(import (prefix (only (iset a) greet) m:))
+(m:greet)
+```
+
+| set | visible names |
+|---|---|
+| `(only S id …)` | just the named ones |
+| `(except S id …)` | all but the named ones |
+| `(prefix S p)` | every name, spelled `p` + name |
+| `(rename S (from to) …)` | every name, with each `from` spelled `to` |
+
+- **A set is a compile-time view, not code.** It rewrites the imported library's export table in
+  the importer, and the library's `.ll` and `.exports` do not change. A renamed procedure still
+  reaches the same global, and a call to it is still a direct cross-unit call.
+- **Macros come along.** `(prefix (iset a) k:)` makes the macro `swap!` usable as `k:swap!`. A macro
+  that is hidden or renamed does not break another macro written on top of it, because the library
+  resolved that reference when it was compiled.
+- **Naming what is not there is an error.** `(only (iset a) nope)` reports
+  `import: nope is not exported by (iset a) in (only (iset a) nope)`, and a misshapen set such as
+  `(prefix (iset a))` reports `import: malformed import set: (prefix (iset a))`.
+- **One library through two sets gives both views.** It is still one dependency, resolved,
+  linked, and initialized once.
+- **Sets work everywhere `import` does**: in a program, in a `define-library`, and at the REPL
+  prompt, where a later import of the same library through another set adds names.
+- **An explicit `(scheme base)` set replaces the implicit import.** A program normally sees all of
+  `(scheme base)` without asking. If it imports `(scheme base)` through a set, that set is its whole
+  view: `(import (except (scheme base) map))` leaves `map` unbound, and
+  `(import (prefix (scheme base) b:))` turns `cond` into `b:cond`. A bare `(import (scheme base))`
+  changes nothing.
+- **Primitives and core keywords are outside every set.** The primitives the compiler integrates
+  (`car`, `+`, `eq?`, …) and the core syntactic keywords (`if`, `lambda`, `define`, `let`, `quote`,
+  `set!`, …) are not bindings in `(scheme base)`'s export table. Every unit sees them under their
+  own names, as under `--no-prelude`. A set over an R7RS `(scheme …)` library *accepts* them, so
+  portable code such as `(import (only (scheme base) define car))` compiles. But no set can hide or
+  rename them: `except` leaves them visible, and under `(prefix (scheme base) b:)` there is no
+  `b:car` (issue #119).
+
+### Overlapping imports
+
+When two imports make the same name visible with different bindings, **the first import wins**,
+for procedures and macros alike, and the same on every compilation path:
+
+```scheme
+;; test/import-sets/prog-overlap.scm  => (1 one)
+(import (iset over1))   ; f => 1, macro m => 'one
+(import (iset over2))   ; f => 2, macro m => 'two
+(list (f) (m))
+```
+
+R7RS calls this an error. Emit does not report it yet (issue #118); a set is the way to choose
+explicitly. A definition in the importing unit still wins over every import.
+
+## Portable sources
+
+R7RS lets one source serve several Schemes: `include` and `cond-expand` work in **every** position,
+and a source asks which implementation it is on with feature identifiers and `(library ⟨name⟩)`.
+This is how a snow-fort.org package, an SRFI's reference implementation for example, carries its
+per-implementation choices (change: `portable-library-surface`).
+
+**Everywhere, not only in `define-library`.** At a program's top level, at the REPL prompt, in a
+library `begin`, and inside any body, `include`, `include-ci`, and `cond-expand` splice their forms
+in place. An included definition is an ordinary definition there, internal to the body if it is in
+a body, and an `import` a top-level `cond-expand` selects is a real import. In expression position
+each behaves as `begin`. A local binding of `include` or `cond-expand`, or a macro of that name,
+shadows the keyword.
+
+```scheme
+;; test/import-sets/app/body-include.scm  => 10
+(define (g)
+  (include "helpers.scm")       ; defines helper2, internal to g
+  (helper2 1))
+(g)
+```
+
+A filename resolves **beside the file it is written in**, however deep: an include inside a lambda
+body in `sub/a.scm` reads `sub/b.scm`. Source from standard input resolves against the current
+directory. At the REPL a typed `(include "defs.scm")` runs its forms one at a time, as if typed, and
+the first one that fails stops the rest.
+
+**Feature identifiers.** `(features)` returns them, and `cond-expand` tests them. They come from one
+declaration in the compiler, so the two cannot disagree:
+
+| identifier | why it is true |
+|---|---|
+| `r7rs`, `emit` | the language and the implementation |
+| `ieee-float` | inexact numbers are IEEE 754 doubles |
+| `srfi-0` | `cond-expand` itself, in every position |
+| `srfi-6`, `srfi-9`, `srfi-16`, `srfi-23`, `srfi-30`, `srfi-39`, `srfi-62`, `srfi-87` | string ports, `define-record-type`, `case-lambda`, `error`, nested block comments, parameters, datum comments, `=>` in `case`: each provided natively, and each checked by a test of the SRFI's behavior |
+
+Deliberately absent: `exact-closed` (fixnum overflow traps rather than promoting), `full-unicode`,
+`ratios`, `exact-complex`, OS and CPU flags (they describe the target), and SRFIs Emit does not
+provide, such as `srfi-2` and `srfi-8`. An identifier says a *feature* is present. It does not
+promise a `(srfi N)` library; ask that with `(library (srfi N))`.
+
+**`(library ⟨name⟩)`** holds exactly when importing that name in the same compilation would resolve
+it, through the baked set, manifests, or library roots, by the resolver `import` uses. A library
+that is available is available whether or not it would compile, and the provider that satisfies
+the requirement is the one the import then gets:
+
+```scheme
+;; test/import-sets/lib/iset/needs8.sld
+(define-library (iset needs8)
+  (import (scheme base))
+  (export got)
+  (cond-expand
+    ((library (iset eight)) (import (iset eight)))
+    (else (begin (define (eight-val) (quote fallback)))))
+  (begin (define (got) (eight-val))))
+```
+
+With `-L test/import-sets/lib8` the first clause is taken. Without it the fallback is. A cached unit
+records the answers it was compiled under, so adding or removing a library recompiles the units
+that asked about it. That covers both the `emit` cache and the Chez driver's `.stamp`.
+
+The `emit` binary's resolver is C++ on the far side of the compiler's mode protocol, so it answers
+by query rather than by callback. The imports query (mode 12) leaves an unanswered requirement
+*pending*, the host reads the pending names (mode 23), resolves them, answers (mode 24), and asks
+again until nothing is pending. Answering one can expose another, for a `cond-expand` nested inside
+a selected clause. Compilation runs only after that, and a requirement still unanswered then is an
+error naming it, never a silent `#f`. `EMIT_VERBOSITY=verbose` narrates each answer
+(`answer (library (iset eight)) -> available`).
 
 ## Hybrid library resolution
 
@@ -689,16 +820,15 @@ REPL, and AOT paths. Build still prunes only after full-unit compilation.
     substrate carries no Unicode case tables, and `include-ci` exists for old case-folding Scheme,
     which is ASCII; closing this would mean shipping case tables for one caller.
   - `(include-library-declarations "d.scm" ...)` splices a file's forms as **declarations**, so a
-    shared `export` list or import block can live in its own file. It is the one that recurses: an
-    included declarations file may include further. An `include` inside an included *body* file is
-    program-position `include` (R7RS §4.1.7), which is not implemented.
+    shared `export` list or import block can live in its own file. An included declarations file
+    may include further. So may an included *body* file: its own top-level `include` and
+    `cond-expand` forms splice too, and one deeper inside a procedure body is spliced by the
+    expander (see [Portable sources](#portable-sources)).
   - `(cond-expand ⟨clause⟩ ...)` splices the declarations of the first clause whose feature
     requirement holds, or of a trailing `else`; nothing matching and no `else` contributes nothing.
-    Requirements are feature identifiers, `and`, `or`, `not`. Emit advertises **`r7rs`, `emit`, and
-    `ieee-float`** — and deliberately not `exact-closed` (fixnum overflow traps rather than
-    promoting), `full-unicode`, `ratios`, or any OS/CPU flag (those describe the target). A
-    `(library ⟨name⟩)` requirement is refused by name: answering it is library availability, which
-    this stage's parser does not resolve, and a wrong answer would silently pick the other clause.
+    Requirements are feature identifiers, `(library ⟨name⟩)`, `and`, `or`, and `not`. The
+    identifiers Emit advertises, and what `(library ⟨name⟩)` asks, are in
+    [Portable sources](#portable-sources).
   - **A filename resolves relative to the file that named it** — for a nested inclusion, beside the
     *including* file, not the `.sld` — which is the rule the manifest already applies to a library's
     `(source ...)`. Absolute filenames are used as written; source read from standard input resolves
@@ -805,8 +935,9 @@ second is what got reported — so the message sent you somewhere the mistake wa
 
 | what you write | what Emit reports |
 |---|---|
-| `(import (only (scheme base) car))`, or `except` / `prefix` / `rename` | `import: import sets are not supported: (only (scheme base) car) -- imports are whole-library, as (import (library name))` |
-| `(cond-expand ((library (scheme base)) …) …)` | `cond-expand: (library (scheme base)) is an R7RS feature requirement this stage does not support -- library availability is not resolved here` |
+| `(import (only (iset a) nope))`, a set naming a name the library does not export | `import: nope is not exported by (iset a) in (only (iset a) nope)` |
+| `(import (prefix (iset a)))`, a set of the wrong shape | `import: malformed import set: (prefix (iset a))` |
+| `(cond-expand ((library srfi-8) …) …)`, a requirement that does not hold one library name | `cond-expand: (library ...) takes exactly one library name: (library srfi-8)` |
 | `(include "nope.scm")` naming a file that is not there | `include: cannot read "nope.scm" (resolved to lib/nope.scm)` |
 | a file that includes itself | `include-library-declarations: include cycle: "lib/a.scm" includes itself, through "lib/b.scm" <- "lib/a.scm"` |
 | any other declaration, e.g. `(frobnicate 1 2 3)` | `define-library: frobnicate is not a library declaration -- a declaration is (export ...), (import ...), (begin ...), (include ...), (include-ci ...), (include-library-declarations ...) or (cond-expand ...)` |
@@ -816,13 +947,13 @@ second is what got reported — so the message sent you somewhere the mistake wa
 
 Two distinctions are deliberate:
 
-- **Recognized-but-unsupported is not the same as not-a-declaration.** All seven R7RS declarations
-  are implemented, so that class is now empty at the declaration level and only one R7RS form still
-  reports it: a `(library …)` feature requirement. Anything else in declaration position is reported
-  as not being a declaration at all. One is a feature you are waiting on, the other is a mistake in
-  your source, and your next move differs. Neither message promises a schedule.
-- **`rename` is rejected only in `import` position.** `(export (rename internal external))` stays
-  valid; the rejection keys on the declaration the form appears in, not on the keyword.
+- **Recognized-but-unsupported is gone.** All seven R7RS declarations are implemented, and the last
+  R7RS form that reported it, a `(library …)` feature requirement, is now answered. Anything else
+  in declaration position is reported as not being a declaration at all: a mistake in your source,
+  not a feature you are waiting on.
+- **`rename` means two things, by position.** In `import` it is an import set; in `export`,
+  `(rename internal external)` is an export specification. The meaning keys on the declaration the
+  form appears in, not on the keyword.
 
 The message body is the same whichever command compiled the form — `emit run`, `emit build`,
 `emit lib`, or the REPL — so only the command's own prefix differs. Every one of these is a
@@ -843,10 +974,19 @@ This is Modules v0:
   library on either path. See `docs/PERFORMANCE.md` P10 — the fix is backward propagation through
   the import DAG, not anything path-specific. (The path gap itself is closed: `emit build` shakes,
   change `chez-free-unit-pipeline`.)
-- Import specifiers are whole-library only — no `only`/`except`/`prefix`/`rename` import sets yet.
-  An import set is rejected by name; see [When you break a rule](#when-you-break-a-rule).
-- `include` and `cond-expand` are **library declarations only**. In program or body position
-  (R7RS §4.1.7, §4.2.1) they are not implemented, and neither is the `features` procedure.
+- **Overlapping imports are not an error.** The first import that binds a name wins (see
+  [Overlapping imports](#overlapping-imports)); R7RS's conflict error is issue #118.
+- **Import sets cannot rename or hide integrated primitives and core keywords** (`car`, `+`, `if`,
+  `lambda`, …), which stay visible under their own names whatever a unit imports (issue #119; see
+  [Import sets](#import-sets)).
+- **Two R7RS library forms that snow-fort packages use are still missing.** A library cannot
+  re-export a procedure it imports (issue #121). An exported macro whose template uses a macro
+  imported from a non-baked library expands to an unbound name in the importer (issue #120).
+  Together they keep `(srfi 1)` from compiling. `(srfi 8)` and `(srfi 2)` compile unmodified
+  (`test/snow/`).
+- **An `include` produced by a macro template resolves against the importing unit's home**, not
+  the file the template came from, because a rebuilt form carries no record of where it was
+  written. An include written in a file, at any depth, resolves beside that file.
 
 For the authoritative requirements and scenarios, see `openspec/specs/module-system/spec.md`; for
 the design rationale, `openspec/explorations/modules-v0-design.md`.

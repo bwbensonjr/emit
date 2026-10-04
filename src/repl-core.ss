@@ -175,6 +175,19 @@
                                 " -- a library is imported, named in the manifest"))]
         [(define-syntax-form? form) (repl-note-syntax! form)
                                     (cons (quote syntax) (symbol->string (cadr form)))]
+        ;; A top-level include, include-ci, or cond-expand at the prompt (change:
+        ;; portable-library-surface, design D8).  It may stand for any number of forms --
+        ;; definitions, imports, expressions -- and each must be compiled, run, and (for an
+        ;; import) initialized before the next, exactly as if it had been typed.  So the
+        ;; splice is QUEUED rather than compiled here, and the host drains the queue a form
+        ;; at a time through mode 22, handling each result as it handles one typed form.
+        ;; A session binding of the keyword shadows it, as a local binding does in a body.
+        [(and (splicing-form? form)
+              (not (assq (car form) *repl-macro-env*))
+              (not (assq (car form) (vector-ref *repl-env* 0))))
+          (note-unit-include-origins! (list form))
+          (set! *repl-pending* (splice-toplevel-forms (list form) #f (quote ())))
+          (cons (quote splice) (number->string (length *repl-pending*)))]
         [(import-form? form)
           ;; (import (L) ...): the unit is already registered (mode 4) so no module is
           ;; emitted here (change: module-artifacts-vertical-slice).  What IS emitted is
@@ -187,8 +200,11 @@
           ;; other way would bind a library's names and only then discover that its body
           ;; raises.  The libraries are all checked for registration before any symbol is
           ;; returned, so an unresolved import is still reported from this arm.
-          (let ([missing (filter (lambda (lib) (not (assoc lib *repl-libs*)))
-                                 (cdr form))])
+          ;; The libraries the import SETS reach (change: portable-library-surface):
+          ;; parsing them here is also where a malformed set is reported, before any
+          ;; library is resolved or initialized.
+          (let* ([libs (import-specs->libraries (cdr form))]
+                 [missing (filter (lambda (lib) (not (assoc lib *repl-libs*))) libs)])
             (if
               (pair? missing)
               ;; Directory providers are intentionally not enumerated at startup.  Ask the
@@ -199,8 +215,16 @@
               ;; libraries it imports define, and this is the emit run command's own ordering
               ;; (design D4), so a session and a delivered program initialize a closure
               ;; alike.
-              (cons (quote import)
-                    (baked-init-symbols (run-closure-order (cdr form))))))]
+              (begin
+                ;; Derive every set's table NOW, while a failure is still a compile-time
+                ;; error of this form: a set naming an absent export must be reported
+                ;; before any `__init` runs, not from the mode-6 merge after it.
+                (for-each
+                  (lambda (s)
+                    (when (import-set-spec? s)
+                      (import-set-table s (assoc (import-spec-library s) *repl-libs*))))
+                  (cdr form))
+                (cons (quote import) (baked-init-symbols (run-closure-order libs))))))]
         [else
           (let ([dn (define-name form)])
             ;; Every name this form binds: one define, or a record's whole family.  Both
@@ -322,6 +346,10 @@
   (set! *repl-calls* (quote ()))
   (set! *repl-lib-imports* (quote ()))
   (set! *repl-registration-transaction* #f)
+  (set! *repl-pending* (quote ()))
+  (set! *library-answers* (quote ()))
+  (set! *library-pending* (quote ()))
+  (set! *library-answers-used* (quote ()))
   (set! *repl-reader-fold?* #f)
   (set! *repl-reader-next-fold?* #f)
   ;; Stage 3 (module-prelude-scheme-base): the prelude's PROCEDURES now come from the
@@ -353,21 +381,30 @@
       (if (repl-import! (quote (scheme base)))
           (cons (quote ok) "")
           (cons (quote error) "(scheme base) not loaded (missing from manifest?)"))
-      (let loop ([libs (cdr (car (read-all-from-string text)))])
+      (let loop ([specs (cdr (car (read-all-from-string text)))])
         (cond
-          [(null? libs) (cons (quote ok) "")]
-          [(repl-import! (car libs)) (loop (cdr libs))]
+          [(null? specs) (cons (quote ok) "")]
+          [(repl-import! (car specs)) (loop (cdr specs))]
           [else (cons (quote error)
                       (string-append "imported library not loaded: "
-                                     (render-datum (car libs))))]))))
+                                     (render-datum (import-spec-library
+                                                     (car specs)))))]))))
 
 ;; --- library import (both-paths REPL half; change: module-artifacts-vertical-slice)
 ;; Merge a loaded library's exports into the session scope: each external name
 ;; maps to the exporter's mangled global symbol, so a later form resolves it to an
 ;; `external global` the JIT binds to the already-loaded unit (design D3).  Returns
 ;; #f if the named library was not loaded (mode 4) first.
-(define (repl-import! lib-name)
-  (let ([entry (assoc lib-name *repl-libs*)])
+;;
+;; SPEC is an import set or a bare library name (change: portable-library-surface,
+;; design D4).  The session record is the library's whole export table; a set merges
+;; the table it makes visible instead, which is the same derivation the batch paths
+;; compile against, so a prompt and a program see the same names.  Importing one library
+;; again through a different set adds the newly visible names, as successive imports
+;; always have.
+(define (repl-import! spec)
+  (let* ([lib (assoc (import-spec-library spec) *repl-libs*)]
+         [entry (and lib (if (import-set-spec? spec) (import-set-table spec lib) lib))])
     (and
       entry
       (begin
@@ -489,8 +526,10 @@
     ;; D7).  BEFORE parse-define-library, which is where the include family runs, and on
     ;; every attempt: a library that returns `deferred` is re-submitted after its
     ;; dependencies load, and the record must describe the attempt that succeeded rather
-    ;; than the union of all of them.  Mode 16 reads it back.
+    ;; than the union of all of them.  Mode 16 reads it back -- and the (library ...)
+    ;; answers the parse consults, for the same entry (change: portable-library-surface).
     (reset-includes-read!)
+    (reset-library-answers-used!)
     (let* ([forms (read-all-from-string text)]
            ;; A source that holds NO DATUM cannot yield the define-library this needs, and
            ;; (car '()) is unchecked -- it faulted the path instead of reporting (change:
@@ -526,7 +565,7 @@
             ;; A manifest library loaded to satisfy an import is not the unit under
             ;; inspection: level 3 (--dump-all) only, and named in its headers.
             (let ([res (compile-library (car dl)
-                                        (cadr dl)
+                                        (dl-import-specs dl)
                                         (caddr dl)
                                         (cadddr dl)
                                         tables
@@ -665,7 +704,16 @@
 ;; process, which is exactly the abort design D6 rules out.  A source whose imports
 ;; cannot be read simply has none to preload; the guarded compile that follows reports
 ;; it, once, through its path.
+;;
+;; It is also the one query that may leave a (library NAME) requirement PENDING (change:
+;; portable-library-surface, design D6): the host follows it with mode 23 and, while that
+;; names anything, answers through mode 24 and asks again.
 (define (repl-source-imports text)
+  (set! *library-pending* (quote ()))
+  (set! *library-questions-open?* #t)
+  (let ([r (repl-source-imports* text)]) (set! *library-questions-open?* #f) r))
+
+(define (repl-source-imports* text)
   (guard (e (#t (quote ())))
     (let* ([forms (read-all-from-string text)]
            [lib? (and (pair? forms)
@@ -676,6 +724,19 @@
                       (car (collect-imports forms)))])
       (map (lambda (name) (list name (mangle name "") (render-datum name))) names))))
 
+;; Mode 23 -- the (library NAME) requirements the last imports query could not answer, as
+;; records shaped like mode 12's, so the host reads them with the same code.
+(define (repl-library-pending)
+  (map (lambda (name) (list name (mangle name "") (render-datum name)))
+       (reverse *library-pending*)))
+
+;; Mode 24 -- the host's answers: text holding one list of (NAME . #t-or-#f).
+(define (repl-library-answers text)
+  (guard (e (#t (cons (quote error) (repl-error->string e))))
+    (let ([forms (read-all-from-string text)])
+      (add-library-answers! (if (pair? forms) (car forms) (quote ())))
+      (cons (quote ok) ""))))
+
 ;; Validate a directory provider's selected source before it is registered or cached.
 ;; The host supplies text and owns the selected path.  This query confirms that the text
 ;; is exactly one define-library form and returns its canonical key and rendered name;
@@ -685,7 +746,14 @@
     (let ([forms (read-all-from-string text)])
       (unless (and (pair? forms) (null? (cdr forms)) (define-library-form? (car forms)))
         (error (quote library) "source is not exactly one define-library form"))
+      ;; The declared NAME does not depend on any cond-expand clause, and this runs while
+      ;; the resolver is still choosing the source -- before its (library NAME)
+      ;; requirements can have been answered -- so an unanswered one is tolerated here and
+      ;; forgotten (change: portable-library-surface).
+      (set! *library-questions-open?* #t)
       (let ([name (car (parse-define-library (car forms)))])
+        (set! *library-questions-open?* #f)
+        (set! *library-pending* (quote ()))
         (cons (quote ok) (string-append (mangle name "") "\t" (render-datum name)))))))
 
 ;; Where the source the host is ABOUT to submit came from (change:
@@ -1007,10 +1075,28 @@
 (define (repl-library-sources-text)
   (guard (e (#t (cons (quote error) (repl-error->string e))))
     (let ([home (source-home)])
-      (cons (quote ok)
-            (fold-left (lambda (acc p) (string-append acc p "\n"))
-                       (if (string=? home "") "" (string-append home "\n"))
-                       (includes-read))))))
+      (cons
+        (quote ok)
+        (string-append
+          (fold-left (lambda (acc p) (string-append acc p "\n"))
+                     (if (string=? home "") "" (string-append home "\n"))
+                     (includes-read))
+          ;; ...then each (library NAME) answer the parse consulted, as
+          ;; "LIBRARY\t#t|#f\tKEY\tNAME" (change: portable-library-surface, design
+          ;; D7).  A cached unit chose its cond-expand clauses by these, so it is valid
+          ;; only while each still resolves the same way; the host re-asks its resolver.
+          (fold-left (lambda (acc a)
+                       (string-append acc
+                                      "LIBRARY\t"
+                                      (if (cdr a) "#t" "#f")
+                                      "\t"
+                                      (mangle (car a) "")
+                                      "\t"
+                                      (render-datum (car a))
+                                      "\n"))
+                     ""
+                     (filter (lambda (a) (not (baked-member? (car a))))
+                             (library-answers-used))))))))
 
 ;; --- the shipping path's tree-shake (change: chez-free-unit-pipeline, design D9) ---
 ;; Mode 17: recompile ONE registered library, keeping only the bindings a program's emitted
@@ -1126,6 +1212,7 @@
   ;; reports must describe THIS read and not the preload's -- the path caches the pruned
   ;; unit against the same source closure a full unit entry is keyed on.
   (reset-includes-read!)
+  (reset-library-answers-used!)
   (let* ([_ (shake-at! "parse")]
          [dl (if (baked-member? name)
                  (parse-define-library (partition-library-form
@@ -1144,7 +1231,7 @@
          [saved counter]
          [_ (shake-at! "compile")]
          [res (compile-library (car dl)
-                               (cadr dl)
+                               (dl-import-specs dl)
                                (caddr dl)
                                (cadddr dl)
                                (if tables tables (quote ()))
@@ -1256,7 +1343,7 @@
               ;; print every stage of `emit lib --dump` a second time.
               (let* ([dl (parse-define-library lib)]
                      [res (compile-library (car dl)
-                                           (cadr dl)
+                                           (dl-import-specs dl)
                                            (caddr dl)
                                            (cadddr dl)
                                            tables
@@ -1434,6 +1521,31 @@
               (set! *repl-reader-next-fold?* (rd-fold? *fc-reader-state*))
               result))))))
 
+;; --- the queue a spliced prompt form leaves (change: portable-library-surface) ---
+;; The forms an `include` or `cond-expand` typed at the prompt stands for, still to be
+;; compiled.  Rides the session state, because the host drains it over several calls.
+(define *repl-pending* (quote ()))
+
+;; Mode 22 -- compile the next queued form.  Returns what mode 3 returns for a typed form,
+;; or (done . "") when the queue is empty.  An IMPORT is handed back as its own TEXT
+;; instead, (text . "(import ...)"): the host's import handling -- resolve, register,
+;; initialize, then merge through mode 6 -- is driven by a form's text, and an import form
+;; holds only names, which render exactly.  The first form that fails empties the queue,
+;; so a broken included file stops where it broke rather than running on without the
+;; definitions it failed to make.
+(define (repl-next-pending)
+  (if (null? *repl-pending*)
+      (cons (quote done) "")
+      (let ([f (car *repl-pending*)])
+        (set! *repl-pending* (cdr *repl-pending*))
+        (if (import-form? f)
+            (guard (e (#t (set! *repl-pending* (quote ()))
+                          (cons (quote error) (repl-error->string e))))
+              (cons (quote text) (render-datum f)))
+            (let ([r (compile-one-form f)])
+              (when (eq? (car r) (quote error)) (set! *repl-pending* (quote ())))
+              r)))))
+
 ;; --- cross-call state persistence -------------------------------------------
 ;; The assembled program is one @scheme_entry, so *repl-env* etc. are locals
 ;; re-created on every host call.  Bundle them into a vector held in the runtime
@@ -1470,7 +1582,13 @@
       ;; the most recent completeness scan and committed when mode 3 reads it.
       (set! *repl-reader-fold?* (vector-ref s 10))
       (set! *repl-reader-next-fold?* (vector-ref s 11))
-      (set! *repl-registration-transaction* (vector-ref s 12)))))
+      (set! *repl-registration-transaction* (vector-ref s 12))
+      (set! *repl-pending* (vector-ref s 13))
+      ;; (library NAME) answers and questions span host calls: mode 12 records what is
+      ;; pending, 23 reports it, 24 answers, and every later parse reads the answers.
+      (set! *library-answers* (vector-ref s 14))
+      (set! *library-pending* (vector-ref s 15))
+      (set! *library-answers-used* (vector-ref s 16)))))
 (define (repl-save-state!)
   (repl-state-set! (vector *repl-env*
                            *repl-macro-env*
@@ -1484,7 +1602,11 @@
                            (includes-read)
                            *repl-reader-fold?*
                            *repl-reader-next-fold?*
-                           *repl-registration-transaction*)))
+                           *repl-registration-transaction*
+                           *repl-pending*
+                           *library-answers*
+                           *library-pending*
+                           *library-answers-used*)))
 
 ;; --- the dispatched embedded entry (design D2) -------------------------------
 ;; The host sets (repl-mode)/(repl-input) via rt_repl_set, then calls this ccc
@@ -1505,6 +1627,8 @@
 ;;  15 artifact cache: "" (baked set) or names -> the metadata datum to persist
 ;;  18 selected library source -> canonical key and rendered declared name
 ;;  19/20/21 begin, roll back, or commit an on-demand registration transaction
+;;  22 compile the next form a prompt include/cond-expand queued (mode 3 said `splice`)
+;;  23 the (library NAME) requirements mode 12 left pending   24 the host's answers
 ;; State is restored before and saved after each op (init modes seed it fresh).
 (define (repl-dispatch)
   (repl-restore-state!)
@@ -1544,6 +1668,10 @@
               [(= mode 19) (repl-registration-begin)]
               [(= mode 20) (repl-registration-rollback)]
               [(= mode 21) (repl-registration-commit)]
+              [(= mode 22) (repl-next-pending)] ; the prompt's queued spliced forms
+              [(= mode 23) (repl-library-pending)] ; unanswered (library NAME)s
+              [(= mode 24) (repl-library-answers
+                             (repl-input))] ; the host's answers to them
               [else (compile-one-form-text (repl-input))])])
       (repl-save-state!)
       result)))

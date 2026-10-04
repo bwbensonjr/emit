@@ -670,6 +670,17 @@
 #     `%ht-identity?`, `%ht-hash`, `%ht-key=?`) with no named removals.  Focused values
 #     stayed unchanged for the existing structural table and matched exactly through
 #     source, REPL, AOT, JIT, and bitcode for the new identity table.
+#   portable-library-surface -- `(scheme base)` gains `features` (R7RS 6.14), so every
+#     demo's linked base unit grows and every program unit declares the new export.  A
+#     before/after capture of all 82 demos (build/emit from the committed bootstrap at
+#     e5e4bd9 vs the regenerated tree), compared after normalizing every numeric suffix:
+#     NET REMOVALS zero; NET ADDITIONS 7,544 lines = 92 per demo, all of them the one new
+#     definition -- the `scheme.base:code:features` body, its global and `__init` chunk,
+#     the constant feature list it copies (12 interned symbols consed into a list), and one
+#     `@"scheme.base:features" = external global` per program unit.  Import sets, the
+#     include and cond-expand splices, and (library ...) answering emit nothing for a
+#     source that does not use them.  Demo values stayed 82/82 (`RUNNER=emit-run
+#     demos/run-tests.sh`).
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

@@ -233,6 +233,38 @@
 
 (set-include-reader! driver-include-reader)
 
+;; The unit's own source, read when the unit is PARSED (change: portable-library-surface,
+;; design D9): this driver parses every library in a closure before compiling any, so by
+;; the time a body's include is expanded *source-home* names some other file.
+(set-source-home-reader! (lambda () *source-home*))
+
+;; (library NAME) feature requirements, answered by THIS driver's resolver (change:
+;; portable-library-surface, design D6): available exactly when `manifest-lookup` -- the
+;; lookup an `import` of NAME takes -- resolves it, so a positive answer selects the same
+;; provider the import then uses (the lookup memoizes).  Not found is #f; any other
+;; failure (a source declaring a different name) is reported as it would be for an import.
+;;
+;; The lookup may validate a directory source, which PARSES it -- moving the source home
+;; and adding to the include record of the library being parsed right now.  Both are put
+;; back, so the asking library's own includes still resolve beside it and its record still
+;; describes only it.
+(define *driver-manifest* #f)
+(define (driver-manifest)
+  (unless *driver-manifest* (set! *driver-manifest* (read-manifest *manifest-path*)))
+  *driver-manifest*)
+(define (driver-library-available? name)
+  (let ([home *source-home*] [incs *includes-read*])
+    (dynamic-wind
+      (lambda () (if #f #f))
+      (lambda ()
+        (guard (e [(and (message-condition? e)
+                        (equal? (condition-message e)
+                                "library not found in manifests or library paths")) #f])
+          (manifest-lookup (driver-manifest) name)
+          #t))
+      (lambda () (set-source-home! home) (set! *includes-read* incs)))))
+(set-library-predicate! driver-library-available?)
+
 (define (dump stage form)
   (fprintf (current-error-port) ";; ==== after ~a ====\n" stage)
   (pretty-print form (current-error-port))
@@ -691,8 +723,16 @@
   (let ([path (cadr (manifest-lookup manifest name))])
     (set-source-home! path)
     (reset-includes-read!)
+    (reset-library-answers-used!)
     (let ([dl (parse-define-library (car (read-program path)))])
       (set! *library-includes* (cons (cons name (includes-read)) *library-includes*))
+      ;; ...and the (library NAME) answers its cond-expands consulted, which the unit's
+      ;; freshness also depends on (change: portable-library-surface, design D7).
+      (set! *library-answers-of*
+        (cons (cons name
+                    (filter (lambda (a) (not (baked-member? (car a))))
+                            (library-answers-used)))
+              *library-answers-of*))
       ;; "The source" is no longer one file, so say which files a unit was assembled from
       ;; -- at verbose only, since it is detail about an input rather than an outcome
       ;; (docs/OUTPUT.md).
@@ -706,6 +746,11 @@
 (define *library-includes* '())
 (define (library-includes name)
   (cond [(assoc name *library-includes*) => cdr] [else '()]))
+
+;; (library-name . ((required-name . #t-or-#f) ...))
+(define *library-answers-of* '())
+(define (library-answers-of name)
+  (cond [(assoc name *library-answers-of*) => cdr] [else '()]))
 
 ;; Topologically sort the transitive closure of `roots` (a list of library names).
 ;; Returns (values order dl-cache): `order` lists every library in the closure with
@@ -745,7 +790,8 @@
 ;; Version marker for the stamp FORMAT (D1): bump by hand to force a global
 ;; invalidation deliberately (e.g. if the stamp scheme itself changes).
 ;; Version 2: the sidecar gained the include list (D10).
-(define compiler-stamp-version 2)
+;; Version 3: ...and the (library NAME) answers (change: portable-library-surface, D7).
+(define compiler-stamp-version 3)
 
 ;; Exactly the (include ...) block at the top of this file PLUS this file itself,
 ;; in a fixed order -- the sources that turn library source -> IR in this path.
@@ -800,9 +846,19 @@
 ;; The identity is compared for equality; the include list is a set of extra
 ;; prerequisites.  A sidecar written before this change has no fourth element, which reads
 ;; as "no includes" -- and the version bump invalidates those anyway.
-(define (stamp-datum stamp includes) (append stamp (list includes)))
-(define (stamp-identity d) (if (and (pair? d) (= (length d) 4)) (list-head d 3) d))
-(define (stamp-includes d) (if (and (pair? d) (= (length d) 4)) (cadddr d) '()))
+;;
+;; Version 3 appends a fifth element (change: portable-library-surface, design D7): the
+;; (library NAME) answers the unit's cond-expands consulted, ((NAME . #t-or-#f) ...).  The
+;; unit is fresh only while each NAME still resolves the same way.
+(define (stamp-datum stamp includes answers) (append stamp (list includes answers)))
+(define (stamp-identity d) (if (and (pair? d) (>= (length d) 4)) (list-head d 3) d))
+(define (stamp-includes d) (if (and (pair? d) (>= (length d) 4)) (cadddr d) '()))
+(define (stamp-answers d) (if (and (pair? d) (= (length d) 5)) (list-ref d 4) '()))
+
+(define (answers-fresh? answers)
+  (or (null? answers)
+      (and (eq? (driver-library-available? (caar answers)) (cdar answers))
+           (answers-fresh? (cdr answers)))))
 
 ;; Is every recorded include no newer than the artifacts?  A missing one is NOT fresh:
 ;; the file the unit was built from is gone, so the unit cannot be trusted to describe it.
@@ -827,7 +883,8 @@
               (time<=? st (file-modification-time expf))))
        (let ([d (read-stamp stampf)])
          (and (equal? (stamp-identity d) stamp)
-              (includes-fresh? (stamp-includes d) ll expf)))))
+              (includes-fresh? (stamp-includes d) ll expf)
+              (answers-fresh? (stamp-answers d))))))
 
 ;; Why an artifact is being rebuilt, for narration (docs/OUTPUT.md): absent,
 ;; its source changed, a file its source included changed, or the compiler that
@@ -842,6 +899,8 @@
     [(not (equal? (stamp-identity (read-stamp stampf)) stamp)) "compiler changed"]
     [(not (includes-fresh? (stamp-includes (read-stamp stampf)) ll expf))
       "included source changed"]
+    [(not (answers-fresh? (stamp-answers (read-stamp stampf))))
+      "a (library ...) requirement's answer changed"]
     [else "stale"]))
 
 ;; Compile+link a program that imports libraries.  `exe` is the output path.
@@ -898,6 +957,10 @@
           (let* ([direct-tables (map (lambda (n) (cdr (assoc n tables)))
                                      direct-imports)]
                  [prog-ll (string-append out ".ll")] ; beside the exe, not the source
+                 ;; The libraries above each moved the source home to their own .sld, and
+                 ;; the program's top-level includes splice again inside the compile below
+                 ;; (change: portable-library-surface), so put it back on the program.
+                 [_ (set-source-home! src)]
                  ;; The program is the unit under inspection; the library units above
                  ;; keep no-dump, matching the shipped paths' default (design D7 --
                  ;; the driver has no --dump-all).
@@ -961,7 +1024,7 @@
                          [roots (program-root-internals root-text nm cands)]
                          [imp-t (map (lambda (n) (cdr (assoc n tables))) (cadr dl))]
                          [res (compile-library (car dl)
-                                               (cadr dl)
+                                               (dl-import-specs dl)
                                                (caddr dl)
                                                (cadddr dl)
                                                imp-t
@@ -1002,7 +1065,7 @@
               (let* ([reason (rebuild-reason (cadr entry) ll expf stampf stamp)]
                      [imp-tables (map (lambda (n) (cdr (assoc n tables))) (cadr dl))]
                      [res (compile-library (car dl)
-                                           (cadr dl)
+                                           (dl-import-specs dl)
                                            (caddr dl)
                                            (cadddr dl)
                                            imp-tables
@@ -1025,7 +1088,10 @@
                 ;; rebuild (D3); `write` (not display) so the digest string
                 ;; round-trips as a string, not a symbol.
                 (let ([o (open-output-file stampf 'replace)])
-                  (write (stamp-datum stamp (library-includes name)) o)
+                  (write (stamp-datum stamp
+                                      (library-includes name)
+                                      (library-answers-of name))
+                         o)
                   (newline o)
                   (close-port o))
                 ;; The macro count rides the existing metrics clause and only when

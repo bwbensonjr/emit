@@ -762,18 +762,21 @@ static LibraryName library_name_from_record(intptr_t record) {
 // Ask the compiler which libraries a source text imports (mode 12).  Each result keeps
 // both the canonical identity key and the original name components: keys are intentionally
 // not reversible, while directory providers need the components for safe path derivation.
-static std::vector<LibraryName> source_imports(const std::string &text,
-                                               const std::string &home) {
+static std::vector<LibraryName> library_records(intptr_t records) {
   std::vector<LibraryName> out;
-  set_source_home(home);
-  rt_repl_set(12, text.data(), (intptr_t)text.size());
-  intptr_t records = scheme_entry();
   while (rt_is_pair_value(records)) {
     LibraryName name = library_name_from_record(rt_car(records));
     if (!name.key.empty()) out.push_back(name);
     records = rt_cdr(records);
   }
   return out;
+}
+
+static std::vector<LibraryName> raw_source_imports(const std::string &text,
+                                                   const std::string &home) {
+  set_source_home(home);
+  rt_repl_set(12, text.data(), (intptr_t)text.size());
+  return library_records(scheme_entry());
 }
 
 // Preload the user libraries the PROGRAM NEEDS into `modules` (changes:
@@ -1124,6 +1127,66 @@ class LibraryResolver {
   std::map<std::string, std::string> selected_paths_;
 };
 
+// A source's imports, with its (library NAME) feature requirements settled first (change:
+// portable-library-surface, design D6).  The compiler cannot call this resolver mid-parse,
+// so it answers what it can, records the rest as pending, and the imports query reports
+// them (mode 23).  Each is resolved HERE, with the resolver `import` uses -- so the
+// provider that satisfies `(library (srfi 8))` is the one `(import (srfi 8))` then gets --
+// answered (mode 24), and the query repeats until nothing is pending.  Every round answers
+// at least one new name and a source names finitely many, so this terminates.  The
+// answers persist in the session, so the compile that follows reads them.
+static bool source_imports(const std::string &text, const std::string &home,
+                           LibraryResolver &resolver, std::vector<LibraryName> &out) {
+  for (;;) {
+    out = raw_source_imports(text, home);
+    rt_repl_set(23, "", 0);
+    std::vector<LibraryName> pending = library_records(scheme_entry());
+    if (pending.empty()) return true;
+    std::string answers = "(";
+    for (const LibraryName &name : pending) {
+      LibraryDescriptor descriptor;
+      std::string error;
+      ResolveResult result = resolver.resolve(name, descriptor, error);
+      if (result == ResolveResult::Error) {
+        std::cerr << "emit: " << error << "\n";
+        return false;
+      }
+      bool available = result == ResolveResult::Found;
+      vsay("answer (library " + name.label + ") -> " +
+           (available ? "available" : "not available"));
+      answers += "(" + name.label + (available ? " . #t)" : " . #f)");
+    }
+    answers += ")";
+    rt_repl_set(24, answers.data(), (intptr_t)answers.size());
+    scheme_entry();
+  }
+}
+
+// Re-ask the resolver about one recorded (library NAME) answer, for a cache entry's
+// validity check.  The label is the rendered name: symbols and nonnegative integers
+// separated by single spaces, which is all a library name can hold.
+static std::string resolver_answer(LibraryResolver &resolver, const std::string &key,
+                                   const std::string &label) {
+  if (label.size() < 2 || label.front() != '(' || label.back() != ')') return "";
+  if (!resolver.prepare()) return "";
+  LibraryName name;
+  name.key = key;
+  name.label = label;
+  std::istringstream parts(label.substr(1, label.size() - 2));
+  std::string part;
+  while (parts >> part) name.components.push_back(part);
+  if (name.components.empty()) return "";
+  for (const std::string &c : name.components)
+    if (c == "." || c == ".." || c.find('/') != std::string::npos ||
+        c.find('\\') != std::string::npos)
+      name.conventional = false;
+  LibraryDescriptor descriptor;
+  std::string error;
+  ResolveResult result = resolver.resolve(name, descriptor, error);
+  if (result == ResolveResult::Error) return "";
+  return result == ResolveResult::Found ? "1" : "0";
+}
+
 // The artifact cache is defined further down, beside the rest of the entry machinery, but
 // the two preloads are its first clients -- so its unit-level face is declared here.  A
 // read answers Hit, Miss, or Deferred: Deferred is a VALID entry whose imports are not
@@ -1150,7 +1213,8 @@ static bool preload_user_libraries(LibraryResolver &resolver,
   // core, which performs no I/O by design.
   std::set<std::string> needed;
   std::map<std::string, LibraryDescriptor> descriptors;
-  std::vector<LibraryName> work = source_imports(program_src, program_home);
+  std::vector<LibraryName> work;
+  if (!source_imports(program_src, program_home, resolver, work)) return false;
   while (!work.empty()) {
     LibraryName name = work.back();
     work.pop_back();
@@ -1169,8 +1233,9 @@ static bool preload_user_libraries(LibraryResolver &resolver,
     descriptors[name.key] = descriptor;
     // The .sld's own path is its home, so an import behind an included declarations
     // file is reached here rather than surfacing later as a missing dependency (D11).
-    std::vector<LibraryName> deps =
-        source_imports(read_file(descriptor.source), descriptor.source);
+    std::vector<LibraryName> deps;
+    if (!source_imports(read_file(descriptor.source), descriptor.source, resolver, deps))
+      return false;
     for (size_t i = 0; i < deps.size(); i++) work.push_back(deps[i]);
   }
 
@@ -1320,7 +1385,15 @@ static int resolve_program(const std::string &manifest, const std::string &name,
 //
 // 2: entries gained a KIND and an optional second key half, so the cache serves user
 // libraries and shaken units as well as the baked set (change: chez-free-unit-pipeline).
-static const int kCacheVersion = 2;
+// 3: a `.sources` record may hold LIBRARY lines, the (library NAME) answers a unit's
+// cond-expand consulted (change: portable-library-surface, design D7).
+static const int kCacheVersion = 3;
+
+// The resolver a cache entry's (library NAME) answers are re-checked against, when the
+// command has one: "1" available, "0" not, "" could not ask.  Set where each command
+// builds its resolver; a command without one refuses any entry that recorded an answer.
+static std::function<std::string(const std::string &key, const std::string &label)>
+    g_library_answerer;
 
 // FNV-1a, the hash the Chez driver's stamp already uses.  Non-cryptographic by intent: it
 // guards against accidental staleness, not adversarial collision, and adds no dependency.
@@ -1504,9 +1577,13 @@ static std::string file_digest(const std::string &path) {
 // "DIGEST\tPATH" per line, in the order the compiler read them.  "" if ANY of them cannot
 // be read, which disables caching for that library rather than keying it on a partial view
 // of its source.
+//
+// A "LIBRARY\t..." line is not a path: it is a (library NAME) answer the compile consulted
+// (mode 16), carried into the record verbatim and re-checked by sources_still_match.
 static std::string sources_manifest(const std::vector<std::string> &paths) {
   std::string out;
   for (const std::string &p : paths) {
+    if (p.compare(0, 8, "LIBRARY\t") == 0) { out += p; out += '\n'; continue; }
     std::string d = file_digest(p);
     if (d.empty()) return std::string();
     out += d;
@@ -1525,6 +1602,21 @@ static bool sources_still_match(const std::string &text) {
   std::string line;
   while (std::getline(lines, line)) {
     if (line.empty()) continue;
+    // A cond-expand clause chosen by (library NAME): still valid only while NAME resolves
+    // the way it did (change: portable-library-surface, design D7).
+    if (line.compare(0, 8, "LIBRARY\t") == 0) {
+      std::vector<std::string> f;
+      std::string::size_type at = 8, next;
+      while ((next = line.find('\t', at)) != std::string::npos) {
+        f.push_back(line.substr(at, next - at));
+        at = next + 1;
+      }
+      f.push_back(line.substr(at));
+      if (f.size() != 3 || !g_library_answerer) return false;
+      std::string now = g_library_answerer(f[1], f[2]);
+      if (now.empty() || now != (f[0] == "#t" ? "1" : "0")) return false;
+      continue;
+    }
     std::string::size_type tab = line.find('\t');
     if (tab == std::string::npos) return false;      // malformed: refuse the entry
     if (file_digest(line.substr(tab + 1)) != line.substr(0, tab)) return false;
@@ -2279,6 +2371,10 @@ static int emit_run(int argc, char **argv) {
 
   LibraryResolver resolver(manifests, project_manifest_for(manifest, manifests),
                            resolver_options);
+  // A cached unit's (library NAME) answers are re-checked against this resolver.
+  g_library_answerer = [&resolver](const std::string &k, const std::string &l) {
+    return resolver_answer(resolver, k, l);
+  };
 
   std::vector<std::string> modules, module_keys;
   std::string prog_ir;
@@ -2604,6 +2700,11 @@ static void preload_libraries(LibraryResolver &resolver, bool have_baked,
         progress = true;                     // drop it; do not retry an unreadable file
         continue;
       }
+      // This eager preload reaches mode 4 without the closure walk's imports query, so
+      // settle the library's (library NAME) requirements here (change:
+      // portable-library-surface, design D6).
+      std::vector<LibraryName> ignored;
+      if (!source_imports(src, p, resolver, ignored)) { progress = true; continue; }
       set_source_home(p);                    // includes resolve beside the .sld
       rt_repl_set(4, src.data(), (intptr_t)src.size());
       intptr_t r = scheme_entry();
@@ -2670,7 +2771,8 @@ static void preload_libraries(LibraryResolver &resolver, bool have_baked,
 // library tables while any ORC modules already added remain inert and unpublished.
 static bool register_repl_closure(const std::string &form, LibraryResolver &resolver,
                                   std::set<std::string> &registered) {
-  std::vector<LibraryName> roots = source_imports(form, "");
+  std::vector<LibraryName> roots;
+  if (!source_imports(form, "", resolver, roots)) return false;
   std::vector<LibraryDescriptor> order;
   std::set<std::string> visiting, planned;
   std::string failure;
@@ -2690,8 +2792,11 @@ static bool register_repl_closure(const std::string &form, LibraryResolver &reso
       return false;
     }
     if (result == ResolveResult::Error) { failure = error; return false; }
-    std::vector<LibraryName> deps =
-        source_imports(read_file(descriptor.source), descriptor.source);
+    std::vector<LibraryName> deps;
+    if (!source_imports(read_file(descriptor.source), descriptor.source, resolver, deps)) {
+      failure = "library " + name.label + ": a (library ...) requirement could not be answered";
+      return false;
+    }
     for (const LibraryName &dep : deps)
       if (!visit(dep)) return false;
     visiting.erase(name.key);
@@ -2799,8 +2904,7 @@ static bool register_repl_closure(const std::string &form, LibraryResolver &reso
 // A compile-time trap is reported as `error:` rather than `!trap:`: from the session's point
 // of view this IS a compile-time failure of the form, which is the channel the other
 // compile-time failures below already use.
-static void process_form(const std::string &form, LibraryResolver &resolver,
-                         std::set<std::string> &registered) {
+static bool compile_guarded(int mode, const std::string &text, intptr_t &out) {
   jmp_buf jb;
   jmp_buf *saved = rt_trap;
   // ...and the compiler's own raiser is current while the compiler runs, so a trap reaches
@@ -2815,12 +2919,50 @@ static void process_form(const std::string &form, LibraryResolver &resolver,
     rt_raiser_leave_host(raiser);
     rt_trap = saved;
     std::cerr << "error: compiler trap: " << rt_trap_msg << "\n";
-    return;
+    return false;
   }
-  rt_repl_set(3, form.data(), (intptr_t)form.size());
-  intptr_t r = scheme_entry();
+  rt_repl_set(mode, text.data(), (intptr_t)text.size());
+  out = scheme_entry();
   rt_raiser_leave_host(raiser);
   rt_trap = saved;
+  return true;
+}
+
+static void handle_form_result(const std::string &form, intptr_t r, LibraryResolver &resolver,
+                               std::set<std::string> &registered);
+
+static void process_form(const std::string &form, LibraryResolver &resolver,
+                         std::set<std::string> &registered) {
+  // A prompt form that mentions `library` may hold a (library NAME) requirement, which the
+  // compiler can only read once this resolver has answered it (design D6).  The query is
+  // a parse, so the test merely keeps it off every other form.
+  if (form.find("library") != std::string::npos) {
+    std::vector<LibraryName> ignored;
+    if (!source_imports(form, "", resolver, ignored)) return;
+  }
+  intptr_t r;
+  if (compile_guarded(3, form, r)) handle_form_result(form, r, resolver, registered);
+}
+
+// A prompt `include`, `include-ci`, or `cond-expand` stands for any number of forms, which
+// the compiler queued (status `splice`).  Drain the queue one form at a time through mode
+// 22, handling each result exactly as the result of a typed form, so a spliced definition
+// is defined and run before the next spliced form compiles (change:
+// portable-library-surface, design D8).  An import comes back as its own text and goes
+// through process_form, which owns resolving, registering, and initializing a library.
+static void drain_spliced_forms(LibraryResolver &resolver, std::set<std::string> &registered) {
+  for (;;) {
+    intptr_t r;
+    if (!compile_guarded(22, "", r)) return;  // a trap: stop, as on a compile error
+    std::string st = status_of(r);
+    if (st == "done") return;
+    if (st == "text") process_form(scm_str(rt_cdr(r)), resolver, registered);
+    else handle_form_result("", r, resolver, registered);
+  }
+}
+
+static void handle_form_result(const std::string &form, intptr_t r, LibraryResolver &resolver,
+                               std::set<std::string> &registered) {
   std::string st = status_of(r);
   if (st == "ok") {
     intptr_t payload = rt_cdr(r);           // (ir-text . entry-name)
@@ -2848,6 +2990,8 @@ static void process_form(const std::string &form, LibraryResolver &resolver,
   } else if (st == "resolve") {
     if (register_repl_closure(form, resolver, registered))
       process_form(form, resolver, registered);
+  } else if (st == "splice") {
+    drain_spliced_forms(resolver, registered);
   } else {                                  // "error": compile-time; session continues
     std::cerr << "error: " << scm_str(rt_cdr(r)) << "\n";
   }
@@ -2890,6 +3034,10 @@ static int emit_repl(int argc, char **argv) {
   if (bad_manifest) return 1;
   LibraryResolver resolver(manifests, project_manifest_for(manifest, manifests),
                            resolver_options);
+  // A cached unit's (library NAME) answers are re-checked against this resolver.
+  g_library_answerer = [&resolver](const std::string &k, const std::string &l) {
+    return resolver_answer(resolver, k, l);
+  };
   std::set<std::string> registered;
   // Per-form stage dumps for the whole session (change: emit-dump-stages).
   forward_dump_level(dump, dump_all);
@@ -3262,6 +3410,10 @@ static int emit_build(int argc, char **argv) {
   bool is_library = false;
   LibraryResolver resolver(manifests, project_manifest_for(manifest, manifests),
                            resolver_options);
+  // A cached unit's (library NAME) answers are re-checked against this resolver.
+  g_library_answerer = [&resolver](const std::string &k, const std::string &l) {
+    return resolver_answer(resolver, k, l);
+  };
   if (!compile_program(prog_src, resolver, no_prelude, modules, module_keys, prog_ir,
                        is_library, src))
     return 1;
@@ -3374,6 +3526,10 @@ static int emit_lib(int argc, char **argv) {
   std::vector<std::string> modules, module_keys;
   LibraryResolver resolver(manifests, project_manifest_for(manifest, manifests),
                            resolver_options);
+  // A cached unit's (library NAME) answers are re-checked against this resolver.
+  g_library_answerer = [&resolver](const std::string &k, const std::string &l) {
+    return resolver_answer(resolver, k, l);
+  };
   if (!seed_session(lib_src, resolver, /*no_prelude=*/false, modules, module_keys, src))
     return 1;
 
