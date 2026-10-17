@@ -92,6 +92,12 @@ sha256_of() {
 # generated, so adding a pass cannot require editing a list of names.
 is_covered_location() {
   local f=$1
+  # Third-party source bytes belong to their pinned archives. The SRFI port is
+  # still formatted; only files listed in the upstream digest guard are exempt.
+  if [ -f lib/srfi/upstream.sha256 ] && \
+     awk -v path="$f" '$2 == path { found=1 } END { exit !found }' lib/srfi/upstream.sha256; then
+    return 1
+  fi
   case "$f" in emit-libs.scm) return 0 ;; esac
   [[ $f =~ ^src/[^/]+\.(scm|ss)$ ]] && return 0
   [[ $f =~ ^src/passes/[^/]+\.ss$ ]] && return 0

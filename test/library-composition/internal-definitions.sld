@@ -1,0 +1,12 @@
+(define-library (composition internal definitions)
+  (import (scheme base))
+  (export internal-definition-results)
+  (begin
+    (define (internal-definition-results)
+      (define (callback . args) #f)
+      (define (dotted first . rest) (cons first rest))
+      (define (fixed when) (when 4))
+      (define (earlier x) (later x))
+      (define (later x) (+ x 1))
+      (list (callback) (callback 1 2) (dotted 1 2 3)
+            (fixed (lambda (x) (+ x 2))) (earlier 40)))))

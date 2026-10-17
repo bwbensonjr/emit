@@ -941,7 +941,13 @@
     (let ([data (read-all-from-string meta-text)])
       (if (null? data)
           (error 'cache "cache metadata holds no datum")
-          (let* ([rows (car data)]
+          (let* ([datum (one-artifact-datum meta-text)]
+                 [rows (if (and (pair? datum) (eq? (car datum) 'explicit))
+                           (begin
+                             (unless (and (list? datum) (= (length datum) 4))
+                               (error 'artifact "malformed registration request"))
+                             (explicit-unit-rows (cdr datum)))
+                           datum)]
                  [_ (check-cached-rows rows)]
                  [unmet (rows-unmet-import rows)])
             (if unmet
@@ -970,17 +976,28 @@
 ;; filed under -- a table paired with the wrong name would resolve imports to another
 ;; library's symbols, which is the one corruption that would not announce itself.
 (define (check-cached-rows rows)
-  (if
-    (null? rows)
-    #t
-    (let ([row (car rows)])
-      (if
-        (not (and (pair? row) (pair? (cdr row)) (pair? (cddr row)) (pair? (cdddr row))))
-        (error 'cache "malformed cache metadata row" row)
-        (let ([name (car row)] [table (caddr row)])
-          (if (not (and (pair? table) (equal? (car table) name)))
-              (error 'cache "cache metadata row's table does not match its name" name)
-              (check-cached-rows (cdr rows))))))))
+  (unless (list? rows) (error 'cache "metadata rows must be a proper list"))
+  (if (null? rows)
+      #t
+      (let ([row (car rows)])
+        (if (not (and (list? row)
+                      (= (length row) 4)
+                      (list? (car row))
+                      (pair? (car row))
+                      (list? (cadr row))
+                      (string? (cadddr row))
+                      (string=? (cadddr row) (mangle (car row) "__init"))))
+            (error 'cache "malformed cache metadata row" row)
+            (let ([name (car row)] [table (caddr row)])
+              (if
+                (not (and (list? table)
+                          (>= (length table) 3)
+                          (<= (length table) 4)
+                          (equal? (car table) name)
+                          (list? (cadr table))
+                          (list? (caddr table))))
+                (error 'cache "cache metadata row's table does not match its name" name)
+                (check-cached-rows (cdr rows))))))))
 
 ;; Publish each row.  An already-registered library is left alone rather than duplicated,
 ;; the same tolerance mode 4's `already` status provides: every compiler host registers the baked
@@ -1051,6 +1068,87 @@
 ;; partition declaration, so this serves a user library and a baked member identically.
 (define (cached-lib-imports name)
   (cond [(assoc name *repl-lib-imports*) => cdr] [else (quote ())]))
+
+;; Explicit artifacts keep I/O, hashing and publication in the native host.
+;; These queries parse and validate semantic payloads without registering them.
+(define (one-artifact-datum text)
+  (let ([forms (read-all-from-string text)])
+    (unless (and (pair? forms) (null? (cdr forms)))
+      (error 'artifact "expected exactly one datum"))
+    (car forms)))
+
+(define (explicit-unit-rows request)
+  (unless (and (list? request)
+               (= (length request) 3)
+               (string? (car request))
+               (string? (cadr request))
+               (string? (caddr request)))
+    (error 'artifact "malformed unit request"))
+  (let* ([key (car request)]
+         [exports (one-artifact-datum (cadr request))]
+         [rows (one-artifact-datum (caddr request))])
+    (unless (and (list? rows) (= (length rows) 1))
+      (error 'artifact "expected one full-unit registration row"))
+    (check-cached-rows rows)
+    (unless (and (string=? key (mangle (caar rows) ""))
+                 (equal? exports (caddr (car rows))))
+      (error 'artifact "library identity or exports disagree"))
+    rows))
+
+;; Mode 25 returns the non-baked dependency keys from an authenticated semantic
+;; pair. The host compares each dependency's full generation before mode 14.
+(define (repl-explicit-dependencies text)
+  (guard (e (#t (cons 'error (repl-error->string e))))
+    (let* ([rows (explicit-unit-rows (one-artifact-datum text))]
+           [deps (cadr (car rows))])
+      (cons 'ok
+            (fold-left
+              (lambda (out name)
+                (if (baked-member? name) out (string-append out (mangle name "") "\n")))
+              ""
+              deps)))))
+
+;; Mode 26 describes emit lib's separately compiled unit without compiling it a
+;; third time. Its source parse also records includes and consulted feature answers.
+(define (repl-publication-row text)
+  (guard (e (#t (cons 'error (repl-error->string e))))
+    (let ([request (one-artifact-datum text)])
+      (unless (and (list? request)
+                   (= (length request) 2)
+                   (string? (car request))
+                   (string? (cadr request)))
+        (error 'artifact "malformed publication request"))
+      (reset-includes-read!)
+      (reset-library-answers-used!)
+      (let* ([lib (one-artifact-datum (car request))]
+             [dl (parse-define-library lib)]
+             [exports (one-artifact-datum (cadr request))]
+             [rows (list (list (car dl) (cadr dl) exports (mangle (car dl) "__init")))])
+        (explicit-unit-rows
+          (list (mangle (car dl) "") (cadr request) (render-datum rows)))
+        (cons 'ok (render-datum rows))))))
+
+;; Mode 27 exposes manifest artifact locations using the existing grammar. Paths
+;; remain manifest-relative until the host resolves them, just like source paths.
+(define (repl-manifest-artifacts text)
+  (let loop ([entries (manifest-entries text)] [out ""])
+    (if (not (pair? entries))
+        out
+        (let* ([entry (car entries)]
+               [artifacts (and (pair? entry)
+                               (eq? (car entry) 'library)
+                               (assq 'artifacts (cddr entry)))])
+          (loop
+            (cdr entries)
+            (if artifacts
+                (string-append out (mangle (cadr entry) "") "\t" (cadr artifacts) "\n")
+                out))))))
+
+(define (repl-cached-export-text key)
+  (guard (e (#t (cons 'error (repl-error->string e))))
+    (let ([name (registered-name-of-key key)])
+      (unless name (error 'artifact "library is not registered" key))
+      (cons 'ok (render-datum (assoc name *repl-libs*))))))
 
 ;; Mode 16: the SOURCE FILES the most recent library registration read -- the library's own
 ;; source (the host named its path through mode 13) followed by every file the include
@@ -1628,6 +1726,9 @@
 ;;  19/20/21 begin, roll back, or commit an on-demand registration transaction
 ;;  22 compile the next form a prompt include/cond-expand queued (mode 3 said `splice`)
 ;;  23 the (library NAME) requirements mode 12 left pending   24 the host's answers
+;;  25 validate explicit payloads and return non-baked dependency keys
+;;  26 describe an emit lib publication   27 manifest artifact locations
+;;  28 serialize one registered library's export table without compilation
 ;; State is restored before and saved after each op (init modes seed it fresh).
 (define (repl-dispatch)
   (repl-restore-state!)
@@ -1671,6 +1772,10 @@
               [(= mode 23) (repl-library-pending)] ; unanswered (library NAME)s
               [(= mode 24) (repl-library-answers
                              (repl-input))] ; the host's answers to them
+              [(= mode 25) (repl-explicit-dependencies (repl-input))]
+              [(= mode 26) (repl-publication-row (repl-input))]
+              [(= mode 27) (repl-manifest-artifacts (repl-input))]
+              [(= mode 28) (repl-cached-export-text (repl-input))]
               [else (compile-one-form-text (repl-input))])])
       (repl-save-state!)
       result)))

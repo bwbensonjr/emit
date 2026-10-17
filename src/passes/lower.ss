@@ -214,7 +214,7 @@
   (cond
     [(not definition?) (lower e '() '() #f)]
     [(and (pair? e) (eq? (car e) 'seq))
-      `(seq ,(lower-top (cadr e) #t) ,(lower-top (caddr e) #t))]
+      (let* ([a (lower-top (cadr e) #t)] [b (lower-top (caddr e) #t)]) `(seq ,a ,b))]
     [(and (pair? e) (eq? (car e) 'global-set!))
       `(global-set! ,(cadr e) ,(lower-global-init (cadr e) (caddr e) '() '() #f))]
     [else (lower e '() '() #f)]))
@@ -235,12 +235,14 @@
           [else (error 'lower "unbound variable" x)])]
     [(global-ref ,s) `(global-ref ,s)]
     [(global-set! ,s ,rhs) `(global-set! ,s ,(L rhs))] ; NESTED: see lower-top
-    [(if ,a ,b ,c) `(if ,(L a) ,(L b) ,(L c))]
-    [(seq ,a ,b) `(seq ,(L a) ,(L b))]
-    [(primcall ,op . ,args) `(primcall ,op ,@(map L args))]
+    ;; Lowering allocates labels and hoists bodies. Pin compiler visitation,
+    ;; independently of the source language's operand evaluation rules.
+    [(if ,a ,b ,c) (let* ([a (L a)] [b (L b)] [c (L c)]) `(if ,a ,b ,c))]
+    [(seq ,a ,b) (let* ([a (L a)] [b (L b)]) `(seq ,a ,b))]
+    [(primcall ,op . ,args) `(primcall ,op ,@(map-lr L args))]
     [(let ,binds ,body)
       (let ([xs (map car binds)]
-            [es (map (lambda (b) (L (cadr b))) binds)]) ; rhs in current scope
+            [es (map-lr (lambda (b) (L (cadr b))) binds)]) ; rhs in current scope
         `(let ,(map list xs es) ,(lower body (append xs locals) fmap self)))]
     [(lambda ,params ,body) ; standalone -> make-closure
       (let* ([fvs (free-vars e)] [label (fresh-code-label)])
@@ -275,7 +277,7 @@
                  cbinds
                  labels)])
         `(closure-block ,entries ,(lower body locals2 fmap self)))]
-    [(apply ,f . ,args) `(apply-app ,(L f) ,(map L args))]
+    [(apply ,f . ,args) (let* ([f (L f)] [args (map-lr L args)]) `(apply-app ,f ,args))]
     [(call ,f . ,args)
       ;; B-self: a call whose operator is the enclosing function's own name, not
       ;; shadowed by a local binding, is a self-call -> a direct call to its code
@@ -296,10 +298,13 @@
                     (known-import (cadr f) (length args)))])
         (cond
           [(and self (symbol? f) (eq? f (car self)) (not (memq f locals)))
-            `(self-app ,(known-call-label self (length args)) ,(map L args))]
-          [k `(known-app ,(known-call-label k (length args)) ,(L f) ,(map L args))]
-          [g `(known-app ,g ,(L f) ,(map L args))]
-          [else `(app ,(L f) ,(map L args))]))]))
+            `(self-app ,(known-call-label self (length args)) ,(map-lr L args))]
+          [k (let* ([operator (L f)] [operands (map-lr L args)])
+               `(known-app ,(known-call-label k (length args)) ,operator ,operands))]
+          [g (let* ([operator (L f)] [operands (map-lr L args)])
+               `(known-app ,g ,operator ,operands))]
+          [else (let* ([operator (L f)] [operands (map-lr L args)])
+                  `(app ,operator ,operands))]))]))
 
 ;; The initializer of a top-level binding (change: cross-unit-direct-calls).  In a
 ;; LIBRARY unit a lambda initializer is hoisted under the stable, name-derived label

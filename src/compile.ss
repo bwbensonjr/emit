@@ -122,7 +122,7 @@
   (ensure-slash (or (getenv-ne "EMIT_LLVM_BIN")
                     (from-layer "EMIT_LLVM_BIN")
                     "/opt/homebrew/opt/llvm@22/bin")))
-;; libgc shared object for `lli -load=`: .dylib on macOS, .so elsewhere (fixes the JIT
+;; libgc shared object for `lli --dlopen=`: .dylib on macOS, .so elsewhere (fixes the JIT
 ;; backend off macOS, where the old hardcoded libgc.dylib does not exist).
 (define gc-dylib
   (or (getenv-ne "EMIT_GC_DYLIB")
@@ -438,7 +438,7 @@
                        " -o "
                        rbc))
     (sh "llvm-link" (string-append (tool "llvm-link") " " pbc " " rbc " -o " cbc))
-    (sh "lli" (string-append (tool "lli") " -load=" gc-dylib " " cbc))))
+    (sh "lli" (string-append (tool "lli") " --dlopen=" gc-dylib " " cbc))))
 
 (define (strip-ext s)
   (let ([i (let loop ([i (- (string-length s) 1)])
@@ -1164,7 +1164,7 @@
                        rbc))
     (sh "llvm-link"
         (string-append (tool "llvm-link") " " (lls->string bcs) rbc " -o " cbc))
-    (sh "lli" (string-append (tool "lli") " -load=" gc-dylib " " cbc))))
+    (sh "lli" (string-append (tool "lli") " --dlopen=" gc-dylib " " cbc))))
 
 ;; Bitcode: llvm-link the whole set into one program .bc (the inspectable/opt-able
 ;; artifact), then codegen that .bc + runtime to a native exe.

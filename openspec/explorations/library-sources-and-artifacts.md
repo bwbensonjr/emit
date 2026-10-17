@@ -10,6 +10,20 @@ Related:
 - `CLAUDE.md` design goals: standalone executables as a first-class deliverable; a module is the shared unit of compilation; R7RS-small as the module surface
 Captured: 2026-08-03 (against `main` at `ab5aa0d`)
 
+## Current implementation follow-up: srfi-ready-library-workflow
+
+The historical analysis below is retained as context. The active change makes
+`emit lib` publish a native-only `.ll`/`.exports`/`.artifact` unit and consumes it
+through the selected provider's `(artifacts DIR)` before private full-unit caches
+or source compilation. Publish dependencies individually; emitting a facade is
+not a dependency bundle. `docs/MODULES.md`, "Native explicit artifacts", gives
+the concrete manifest and command examples, metadata schema, and fallback rules.
+Sources/includes stay required. Matching executable identity plus runtime/target,
+source/feature/dependency and payload validation authorizes reuse, not the mere
+presence of a `.ll`/`.exports` pair. Chez remains an independent parity oracle
+with isolated legacy artifacts; there is no Chez/native interchange contract or
+new regeneration-owned compiler fingerprint. AOT may still compile pruned units.
+
 ## Why this note exists
 
 Three open issues each answer part of a question none of them asks on its own: **what is the

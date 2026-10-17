@@ -55,18 +55,25 @@ run_suite "demo values (AOT/chez)"      env RUNNER=aot demos/run-tests.sh
 run_suite "AOT tree-shaking"             test/aot-tree-shaking-tests.sh
 run_suite "backend equivalence"         demos/run-backends.sh
 run_suite "expander units"              chez --libdirs src --script test/expander-tests.ss
+run_suite "lowering visitation order"    chez --libdirs src --script test/lower-order-tests.ss
 run_suite "read-all reader"             chez --libdirs src --script test/read-all-tests.ss
 run_suite "render-datum units"          chez --libdirs src --script test/render-datum-tests.ss
 run_suite "import-set units"            chez --libdirs src --script test/import-set-core-tests.ss
 run_suite "mangle (symbol naming)"      chez --libdirs src --script test/mangle-tests.ss
 run_suite "simplify pass units"         chez --libdirs src --script test/simplify-tests.ss
 run_suite "artifact cache core"         chez --libdirs src --script test/artifact-cache-core-tests.ss
+run_suite "explicit artifact format"    bash test/explicit-artifact-format-tests.sh
+run_suite "explicit artifact reuse"     bash test/explicit-artifact-tests.sh
+run_suite "SRFI explicit artifacts"     bash test/srfi-artifact-tests.sh
+run_suite "installed SRFI sources"      bash test/srfi-install-tests.sh
 run_suite "native object cache"         test/native-object-cache-tests.sh
 run_suite "module vertical-slice (AOT)" test/modules-tests.sh
 run_suite "runtime and macro library composition (Chez source + native parity)" \
           env EMIT_COMPOSITION_HOST=both test/library-composition-tests.sh
 run_suite "snow-fort packages + cross-host artifact parity" \
           env EMIT_SNOW_HOST=both test/snow-package-tests.sh
+run_suite "complete upstream SRFI suites (native and Chez)" \
+          env EMIT_SNOW_HOST=both bash test/srfi-upstream-tests.sh
 run_suite "hybrid resolver (Chez backends)" test/hybrid-library-resolution-chez-tests.sh
 run_suite "(scheme base) gen guard"     test/scheme-base-gen-check.sh
 run_suite "(scheme base) auto-import (AOT)" test/prelude-base-tests.sh

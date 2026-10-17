@@ -179,7 +179,7 @@ build/runtime-host.o: src/runtime/runtime.c Makefile $(NATIVE_CONFIG) | build
 # produced an answer, which is the keg-only-LLVM case: nothing on PATH to find.  They
 # describe the BUILD MACHINE's toolchain, so they follow $(CC)/$(GC_*) and not
 # PREFIX/DESTDIR -- staging into a temporary root must not change them.
-build/emit.o: src/emit.cpp Makefile $(NATIVE_CONFIG) | build
+build/emit.o: src/emit.cpp src/native-cache.h src/explicit-artifact.h Makefile $(NATIVE_CONFIG) | build
 	$(CXX) $(CXXFLAGS) -DEMIT_PREFIX='"$(PREFIX)"' \
 	  -DEMIT_DEFAULT_CC='"$(CC)"' \
 	  -DEMIT_DEFAULT_GC_INC='"$(GC_INC)"' \
@@ -305,9 +305,13 @@ install-hooks:
 # Executable bit for the script, 644 for the sources it does not run.
 BINDIR   := $(DESTDIR)$(PREFIX)/bin
 SHAREDIR := $(DESTDIR)$(PREFIX)/share/emit
-LIBDIRS  := lib/scheme lib/emit
+LIBDIRS  := lib/scheme lib/emit lib/srfi
 SLDS     := $(foreach d,$(LIBDIRS),$(wildcard $(d)/*.sld))
-LIBDATA  := lib/scheme/char-data.scm
+LIBDATA  := lib/scheme/char-data.scm lib/srfi/1.scm lib/srfi/2.scm \
+            lib/srfi/8.scm lib/srfi/227.scm lib/srfi/64.scm \
+            lib/srfi/64/simple-runner.scm lib/srfi/64/source-info.scm \
+            lib/srfi/README.md lib/srfi/upstream.sha256
+LIBDATADIRS := $(sort $(foreach f,$(LIBDATA),$(dir $(f))))
 SUPPORT_EXEC := tools/llvm-env.sh tools/log.sh
 SUPPORT_DATA := src/runtime/runtime.c
 SUPPORT      := $(SUPPORT_EXEC) $(SUPPORT_DATA)
@@ -317,11 +321,12 @@ SUPPORTDIRS  := $(sort $(foreach f,$(SUPPORT),$(dir $(f))))
 install: $(EMIT)
 	@. tools/log.sh; say "install emit -> $(DESTDIR)$(PREFIX)  [prefix $(PREFIX)]"
 	@install -d "$(BINDIR)" $(foreach d,$(LIBDIRS),"$(SHAREDIR)/$(d)") \
+	  $(foreach d,$(LIBDATADIRS),"$(SHAREDIR)/$(d)") \
 	  $(foreach d,$(SUPPORTDIRS),"$(SHAREDIR)/$(d)")
 	@install -m 755 $(EMIT) "$(BINDIR)/emit"
 	@install -m 644 emit-libs.scm "$(SHAREDIR)/emit-libs.scm"
 	@$(foreach d,$(LIBDIRS),install -m 644 $(wildcard $(d)/*.sld) "$(SHAREDIR)/$(d)/";)
-	@install -m 644 $(LIBDATA) "$(SHAREDIR)/lib/scheme/"
+	@$(foreach f,$(LIBDATA),install -m 644 $(f) "$(SHAREDIR)/$(f)";)
 	@$(foreach f,$(SUPPORT_EXEC),install -m 755 $(f) "$(SHAREDIR)/$(f)";)
 	@$(foreach f,$(SUPPORT_DATA),install -m 644 $(f) "$(SHAREDIR)/$(f)";)
 	@. tools/log.sh; \

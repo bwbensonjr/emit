@@ -449,5 +449,30 @@
                base-known)
        '(w 1))
 
+;; Internal procedure signatures are never applications (#128). Their bodies
+;; must acquire formal bindings before a same-spelled macro can be considered.
+(check "internal rest-only procedure definition"
+       (expand-with '() '(lambda () (define (callback . args) #f) callback))
+       '(lambda () (define callback (lambda args #f)) callback))
+(check "internal dotted procedure definition"
+       (expand-with '() '(lambda () (define (f first . rest) rest) (f 1 2)))
+       '(lambda () (define f (lambda (first . rest) rest)) (f 1 2)))
+(check "internal fixed formal shadows a macro keyword"
+       (expand-with (list w-macro)
+                    '(lambda () (define (f w) (w 1)) f))
+       '(lambda () (define f (lambda (w) (w 1))) f))
+(check "internal rest formal shadows a macro keyword"
+       (expand-with (list w-macro)
+                    '(lambda () (define (f . w) (w 1)) f))
+       '(lambda () (define f (lambda w (w 1))) f))
+(check "an internal procedure name binds through preceding definitions"
+       (expand-with (list w-macro)
+                    '(lambda () (define (f) (w 1)) (define (w x) x) (f)))
+       '(lambda () (define f (lambda () (w 1))) (define w (lambda (x) x)) (f)))
+(check "malformed internal variable definition is rejected"
+       (guard (c [(message-condition? c) (condition-message c)])
+         (expand-with '() '(lambda () (define x 1 2) x)))
+       "malformed (define x e)")
+
 (printf "\n  ~a passed, ~a failed\n" pass fail)
 (exit (if (= fail 0) 0 1))

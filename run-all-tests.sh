@@ -53,6 +53,10 @@ run_suite "native build configuration"  test/native-build-config-tests.sh
 run_suite "demo values (emit run)"    env RUNNER=emit-run demos/run-tests.sh
 run_suite "module-scaffold byte-identity" test/module-scaffold-baseline.sh check
 run_suite "artifact cache (baked set)"  test/artifact-cache-tests.sh
+run_suite "explicit artifact format"   bash test/explicit-artifact-format-tests.sh
+run_suite "explicit artifact reuse"    bash test/explicit-artifact-tests.sh
+run_suite "SRFI explicit artifacts"    bash test/srfi-artifact-tests.sh
+run_suite "installed SRFI sources"     bash test/srfi-install-tests.sh
 run_suite "native object cache"       test/native-object-cache-tests.sh
 run_suite "REPL persistent host"      test/repl-host-tests.sh
 run_suite "define-record-type syntax" test/record-type-syntax-tests.sh
@@ -87,6 +91,7 @@ run_suite "import sets and portable sources" test/import-set-tests.sh
 run_suite "runtime and macro library composition" \
           env EMIT_COMPOSITION_HOST=native test/library-composition-tests.sh
 run_suite "snow-fort packages" env EMIT_SNOW_HOST=native test/snow-package-tests.sh
+run_suite "complete upstream SRFI suites" env EMIT_SNOW_HOST=native bash test/srfi-upstream-tests.sh
 run_suite "dynamic extent (call/cc)"  test/dynamic-extent-tests.sh
 run_suite "Pitch-facing R7RS prerequisites" test/pitch-prerequisites-tests.sh
 run_suite "filesystem access extension" test/filesystem-access-tests.sh

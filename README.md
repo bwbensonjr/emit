@@ -71,7 +71,7 @@ build/emit run --emit < demos/fact.scm > /tmp/fact.ll          # (the emit step 
 build/emit run --dump demos/fact.scm                           # 7 stages -> stderr
 build/emit repl --dump                                         # per-form, in the REPL
 
-# compile one library to its artifact (unit .ll + .exports), Chez-free:
+# compile one library to reusable .ll + .exports + .artifact files, Chez-free:
 build/emit lib test/modules/mylib.sld -o build/lib
 
 # Interactive REPL: the embedded compiler is linked into build/emit and
@@ -105,6 +105,12 @@ All four installed commands work from any directory. Projects normally use their
 repeatable `-L` / `--library-path` and `EMIT_LIBRARY_PATH` add roots, while
 `--no-library-paths` disables every directory provider.
 
+Optional `(srfi 1)`, `(srfi 2)`, `(srfi 8)`, `(srfi 227)`, and an explicitly
+documented `(srfi 64)` port ship as ordinary sources under `lib/srfi/`, not in the
+baked prelude. SRFI 64 supports portable test runners and real approximate
+comparisons; `test-read-eval-string` reports unsupported string evaluation.
+See [the SRFI support and artifact workflow](docs/MODULES.md#using-the-srfi-1-package).
+
 **Changing the compiler.** Edit the source, then regenerate the committed IR and relink —
 the compiled compiler recompiles itself. See
 [Regenerating the compiler](#regenerating-the-compiler-bootstrap) for how it works and the
@@ -117,6 +123,14 @@ make regen                 # reassemble source (cat) + self-compile IR + relink
 The Chez-gated developer/CI suite (backend equivalence, the self-hosting fixed point, the
 IL-level unit tests, and the trust-check) is `./run-dev-tests.sh`; it auto-skips when `chez`
 is absent.
+
+The Chez batch JIT backend loads libgc with `lli --dlopen`, supported by LLVM
+22 and 23. To check a selected installation, run
+`LLVM_CONFIG=/path/to/llvm-config demos/run-backends.sh` and
+`LLVM_CONFIG=/path/to/llvm-config test/modules-tests.sh`.
+Interactive regression cases require both expected stdout and a successful
+session exit; failures print the saved child status and stderr. Recoverable form
+errors still allow the session to finish successfully after evaluating later forms.
 
 ### Interactive REPL
 
@@ -193,7 +207,8 @@ library-structured source are frozen under `historical/genesis/`.
   dispatching four verbs to one shared compiler core: `run` (in-process compile-and-run; also
   `--emit` to write IR and `--resolve-program`), `repl` (persistent LLVM ORC/LLJIT interactive
   host), `build` (deliver a native exe from direct source or a manifest `(program …)` entry — emits IR in-process
-  and forks `clang`), and `lib` (compile one `define-library` to its `.ll` + `.exports` artifact).
+  and forks `clang`), and `lib` (compile one `define-library` to its `.ll`, `.exports`,
+  and `.artifact` files).
   All four A-link the committed embedded compiler (`bootstrap/embed-repl.ll` + the baked library
   set); `make emit` (re)builds it. With the prelude re-homed as a baked set the run/AOT paths emit
   one module per baked library and then the program, separated by boundary markers.
@@ -269,7 +284,9 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
   `call/cc` / `call-with-current-continuation`, `with-exception-handler`, `guard`, `raise`, and
   `error` with catchable error objects (`error-object?`/`-message`/`-irritants`, plus
   `read-error?`/`file-error?`). Runtime type and arity errors are catchable through the same
-  handler chain. `error` is a superset — `(error message ...)` (R7RS) or
+  handler chain. Live escape continuations deliver zero, one, or multiple values
+  to a `call-with-values` receiver; invoking one after its capturing call has
+  returned still reports a lifetime error. `error` is a superset — `(error message ...)` (R7RS) or
   `(error who message ...)`.
 - Arithmetic: n-ary `+ - *`. Comparisons: n-ary/chained `= < > <= >=`, `eq?` / `eqv?`, and
   structural `equal?`.

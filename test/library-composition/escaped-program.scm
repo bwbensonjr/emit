@@ -1,0 +1,5 @@
+(import (scheme base) (composition escaped))
+(unless (let ((xs (shared-message))) (eq? (car xs) (cadr xs)))
+  (error "shared escaped string identity was lost"))
+(write (map char->integer (string->list (escaped-message))))
+(newline)

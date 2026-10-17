@@ -1,0 +1,32 @@
+(import (scheme base))
+(define-syntax wide
+  (syntax-rules ()
+    ((_ f prefix ...)
+     (f prefix ...
+        (lambda () (lambda () 0)) (lambda () (lambda () 1))
+        (lambda () (lambda () 2)) (lambda () (lambda () 3))
+        (lambda () (lambda () 4)) (lambda () (lambda () 5))
+        (lambda () (lambda () 6)) (lambda () (lambda () 7))
+        (lambda () (lambda () 8)) (lambda () (lambda () 9))
+        (lambda () (lambda () 10)) (lambda () (lambda () 11))))))
+(define expected '(0 1 2 3 4 5 6 7 8 9 10 11))
+(define (results procs) (map (lambda (p) ((p))) procs))
+(define (collect . procs) (results procs))
+(define generic (wide (if #t collect collect)))
+(define known
+  (letrec ((local (lambda procs (results procs)))) (wide local)))
+(define self
+  (letrec ((local (lambda (n . procs)
+                   (if (= n 0) (results procs) (wide local 0)))))
+    (local 1)))
+(define applied (wide (lambda procs (apply collect procs))))
+(define primitive (results (vector->list (wide vector))))
+(define initializers
+  (let ((a (lambda () (lambda () 21)))
+        (b (lambda () (lambda () 22)))
+        (c (lambda () (lambda () 23))))
+    (results (list a b c))))
+(write (list (equal? generic expected) (equal? known expected)
+             (equal? self expected) (equal? applied expected)
+             (equal? primitive expected) (equal? initializers '(21 22 23))))
+(newline)

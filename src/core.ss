@@ -498,7 +498,7 @@
 
 (define (render-body* x loose)
   (cond
-    [(string? x) (string-append "\"" x "\"")]
+    [(string? x) (render-string x)]
     [(symbol? x) (symbol->string x)]
     [(null? x) "()"]
     [(pair? x) (string-append "(" (render-list-body* x loose) ")")]
@@ -544,6 +544,35 @@
               " -- R7RS #u8(...) is rejected by Chez's read, which the driver uses to"
               " reuse an export table; move it out of the macro template")))]
     [else "?"]))
+
+;; String literals use the common reader syntax, including a semicolon after
+;; hexadecimal escapes so a following hex digit cannot become part of the code.
+;; Accumulate pieces before joining, rather than repeatedly copying a prefix.
+;; Graph labels still belong to render-node*, including shared string objects.
+(define (render-string text)
+  (let ([n (string-length text)])
+    (let loop ([i 0] [pieces (list "\"")])
+      (if (= i n)
+          (apply string-append (reverse (cons "\"" pieces)))
+          (let* ([c (string-ref text i)]
+                 [code (char->integer c)]
+                 [piece (cond
+                          [(= code 34) "\\\""]
+                          [(= code 92) "\\\\"]
+                          [(= code 10) "\\n"]
+                          [(= code 13) "\\r"]
+                          [(= code 9) "\\t"]
+                          [(or (< code 32) (= code 127))
+                            (let ([digits "0123456789abcdef"])
+                              (string-append
+                                "\\x"
+                                (if (< code 16)
+                                    (string (string-ref digits code))
+                                    (string (string-ref digits (quotient code 16))
+                                            (string-ref digits (modulo code 16))))
+                                ";"))]
+                          [else (string c)])])
+            (loop (+ i 1) (cons piece pieces)))))))
 
 ;; Elements of a vector/bytevector, space separated.  One walker over an accessor rather
 ;; than one per type: the two differ only in their ref and length procedures.

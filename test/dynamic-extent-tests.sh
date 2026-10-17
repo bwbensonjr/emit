@@ -27,20 +27,38 @@
 # Run from the repo root:  test/dynamic-extent-tests.sh
 set -u
 cd "$(dirname "$0")/.."
+. tools/log.sh
 
-RUN="build/emit run"
-make emit >/dev/null 2>&1 || { echo "failed to build emit"; exit 1; }
+HOST="${EMIT_DYNAMIC_HOST:-native}"
+case "$HOST" in
+  native) make emit >/dev/null 2>&1 || { echo "failed to build emit"; exit 1; } ;;
+  chez) command -v chez >/dev/null || exit 1 ;;
+  *) echo "EMIT_DYNAMIC_HOST must be native or chez" >&2; exit 2 ;;
+esac
 
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 pass=0; fail=0
 ok ()  { echo "  [OK  ] $1"; pass=$((pass+1)); }
 bad () { echo "  [FAIL] $1"; fail=$((fail+1)); }
 
+run_program () {
+  if [ "$HOST" = chez ]; then
+    chez --libdirs src --script src/compile.ss "$1" -o "$TMP/program" \
+      >"$TMP/compile.out" 2>"$TMP/compile.err" || { cat "$TMP/compile.err" >&2; return 1; }
+    "$TMP/program"
+  else
+    build/emit run < "$1"
+  fi
+}
+
 check () {  # <name> <program-text> <expected stdout>
   printf '%s\n' "$2" > "$TMP/p.scm"
-  local got; got="$($RUN < "$TMP/p.scm" 2>"$TMP/e")"
-  if [ "$got" = "$3" ]; then ok "$1 => $got"
-  else bad "$1 => $got (expected $3)"; sed 's/^/         /' "$TMP/e"; fi
+  local got status start=$SECONDS
+  vsay "run $1 -> $TMP/p.scm [host=$HOST]"
+  got="$(run_program "$TMP/p.scm" 2>"$TMP/e")"; status=$?
+  if [ "$status" -eq 0 ] && [ "$got" = "$3" ]; then ok "$1 => $got"
+  else bad "$1 => $got (expected $3, exit $status)"; sed 's/^/         /' "$TMP/e"; fi
+  vsay "run $1 -> complete [exit $status, $((SECONDS-start))s]"
 }
 
 echo "dynamic extent: escape continuations, dynamic-wind, parameters"
@@ -54,11 +72,60 @@ check "early exit from a fold" \
   '(call/cc (lambda (k) (fold-left (lambda (a x) (if (> x 2) (k x) (+ a x))) 0 (list 1 2 3 4))))' '3'
 
 # --- the out-of-extent diagnostic (design D1/D5) -----------------------------
+check "escape with zero values" \
+  '(call-with-values (lambda () (call/cc (lambda (k) (k)))) list)' '()'
+check "escape with several values" \
+  '(call-with-values (lambda () (call/cc (lambda (k) (k 1 2 3)))) list)' '(1 2 3)'
+check "escape with more values than argument registers" \
+  '(call-with-values (lambda () (call/cc (lambda (k) (k 1 2 3 4 5 6 7 8 9 10)))) list)' \
+  '(1 2 3 4 5 6 7 8 9 10)'
+check "one list escape argument remains one value" \
+  '(call-with-values (lambda () (call/cc (lambda (k) (k (list 1 2))))) list)' '((1 2))'
+check "normal zero and multiple values survive call/cc" \
+  '(list (call-with-values (lambda () (call/cc (lambda (k) (values)))) list)
+         (call-with-values (lambda () (call/cc (lambda (k) (values 4 5)))) list))' \
+  '(() (4 5))'
+check "nested escape targets preserve multiple values" \
+  '(call-with-values
+     (lambda () (call/cc (lambda (outer)
+       (call/cc (lambda (inner) (outer (quote a) (quote b))))))) list)' '(a b)'
+check "multiple-value escape unwinds inner-first and restores parameters" \
+  '(begin
+     (define p (make-parameter 1))
+     (define log (quote ()))
+     (define result
+       (call-with-values
+         (lambda () (call/cc (lambda (k)
+           (dynamic-wind (lambda () #f)
+             (lambda ()
+               (parameterize ((p 9))
+                 (dynamic-wind (lambda () #f)
+                   (lambda () (k (p) 10))
+                   (lambda () (set! log (cons (list (quote inner) (p)) log))))))
+             (lambda () (set! log (cons (list (quote outer) (p)) log))))))) list))
+     (list result (p) (reverse log)))' '((9 10) 1 ((inner 9) (outer 1)))'
+
 check "invoking a continuation outside its extent is a diagnostic" \
   '(begin (define saved #f)
           (call/cc (lambda (k) (set! saved k) 0))
           (guard (e (#t (error-object-message e))) (saved 1)))' \
   '"call/cc: continuation invoked outside its extent"'
+
+check "expired continuations reject zero and many values without unwinding" \
+  '(begin
+     (define saved #f)
+     (define log (quote ()))
+     (define result #f)
+     (call/cc (lambda (k) (set! saved k) 0))
+     (set! result
+       (dynamic-wind (lambda () #f)
+         (lambda ()
+           (let ((zero (guard (e (else (error-object-message e))) (saved))))
+             (set! log (cons (quote between) log))
+             (list zero (guard (e (else (error-object-message e))) (saved 1 2)))))
+         (lambda () (set! log (cons (quote after) log)))))
+     (list result (reverse log)))' \
+  '(("call/cc: continuation invoked outside its extent" "call/cc: continuation invoked outside its extent") (between after))'
 
 # --- dynamic-wind ------------------------------------------------------------
 check "after runs on a normal return" \
@@ -172,7 +239,7 @@ check "error objects still flow through guard" \
 
 # an unhandled raise still renders and exits non-zero
 printf '(begin (display "before") (newline) (raise (quote nope)))\n' > "$TMP/u.scm"
-if $RUN < "$TMP/u.scm" >"$TMP/u.out" 2>"$TMP/u.err"; then
+if run_program "$TMP/u.scm" >"$TMP/u.out" 2>"$TMP/u.err"; then
   bad "an unhandled raise still exits non-zero (it succeeded)"
 else
   if grep -q "nope" "$TMP/u.err" && grep -q "before" "$TMP/u.out"; then

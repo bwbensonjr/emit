@@ -622,18 +622,19 @@
 ;;; frame.  Re-entrant continuations are rung 4 and are not supported.
 (define (call-with-current-continuation f)
   (let ((saved-winds *winds*))
-    (cdr (%run-guarded
-           (lambda ()
-             (let ((id (%escape-frame)))
-               (f (lambda (v)
-                    ;; Liveness FIRST.  Unwinding to a dead continuation's depth would
-                    ;; run the `after` thunks -- including the one that pops the very
-                    ;; handler meant to report this error -- for a transfer that cannot
-                    ;; happen.  When live, %escape-to does not return.
-                    (if (%escape-live? id)
-                        (begin (%unwind-to saved-winds) (%escape-to id v))
-                        #f)
-                    (error 'call/cc "continuation invoked outside its extent")))))))))
+    (cdr
+      (%run-guarded
+        (lambda ()
+          (let ((id (%escape-frame)))
+            (f (lambda vs
+                 ;; Liveness FIRST.  Unwinding to a dead continuation's depth would
+                 ;; run the `after` thunks -- including the one that pops the very
+                 ;; handler meant to report this error -- for a transfer that cannot
+                 ;; happen.  When live, %escape-to does not return.
+                 (if (%escape-live? id)
+                     (begin (%unwind-to saved-winds) (%escape-to id (apply values vs)))
+                     #f)
+                 (error 'call/cc "continuation invoked outside its extent")))))))))
 
 (define (call/cc f) (call-with-current-continuation f))
 
