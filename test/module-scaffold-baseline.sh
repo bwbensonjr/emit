@@ -689,6 +689,14 @@ cd "$(dirname "$0")/.."
 
 RUNNER="build/emit run"
 REF=test/module-scaffold-baseline.sha256
+# srfi-ready-library-workflow (#129): all 82 before/after captures retain
+# byte-identical substrate and program/ordinary-dependency modules. The uniform
+# scheme.base delta is 705489 -> 710739 bytes (+5250): the captured continuation
+# becomes variadic and packages its arguments through values, adding its empty-
+# rest minimum entry. Inspection after normalizing incidental SSA/label/constant
+# references isolates exactly that callback (561 -> 562 base function bodies).
+# Full independent Chez/native parity still compares raw core IR, not normalized
+# bodies. Captures and analysis are recorded in the change's task observations.
 
 # The shipped Chez-free front half emits the exact IR the JIT path would run.
 ensure_runner () {

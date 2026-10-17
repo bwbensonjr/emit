@@ -6,6 +6,7 @@
 # Run from the repo root: test/repl-interactive-tests.sh
 set -u
 cd "$(dirname "$0")/.."
+. tools/log.sh
 
 # Rebuild the host if the runtime/host sources changed (not just if it is
 # missing): make no-ops when it is already up to date.
@@ -14,21 +15,50 @@ make emit >/dev/null || { echo "host build failed"; exit 1; }
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 pass=0; fail=0
 
-check () {  # name  flags  expected-newline-joined  <<session
-  local name="$1" flags="$2" want="$3"
-  local got
-  got="$(chez --libdirs src --script src/compile.ss --repl $flags 2>/dev/null)"
-  if [ "$got" = "$want" ]; then
+check_command () {  # name expected-newline-joined command... <<session
+  local name="$1" want="$2"
+  shift 2
+  local got status start=$SECONDS
+  vsay "run REPL case $name -> $TMP/$name.{out,err,status}"
+  "$@" >"$TMP/$name.out" 2>"$TMP/$name.err"
+  status=$?
+  printf '%s\n' "$status" >"$TMP/$name.status"
+  got="$(<"$TMP/$name.out")"
+  if [ "$status" -eq 0 ] && [ "$got" = "$want" ]; then
     echo "  [OK  ] $name"; pass=$((pass+1))
+    vsay "run REPL case $name -> complete [exit $status, $((SECONDS-start))s]"
   else
     echo "  [FAIL] $name"
+    echo "         exit: $status (expected 0)"
     echo "         got:  $(printf '%s' "$got" | tr '\n' '|')"
     echo "         want: $(printf '%s' "$want" | tr '\n' '|')"
+    sed 's/^/         stderr: /' "$TMP/$name.err"
     fail=$((fail+1))
+    return 1
   fi
 }
 
+check () {  # name flags expected-newline-joined <<session
+  local name="$1" flags="$2" want="$3"
+  check_command "$name" "$want" \
+    chez --libdirs src --script src/compile.ss --repl $flags
+}
+
 echo "interactive REPL end-to-end tests"
+
+# Check the same capture/assertion helper with a child that prints the right
+# value but fails. Run in a subshell so the expected failure does not count as
+# a failed REPL case, and verify its diagnostic rather than only its status.
+failed_child () { printf '42\n'; printf 'child diagnostic\n' >&2; return 7; }
+if (check_command status-control 42 failed_child) >"$TMP/control.log" 2>&1; then
+  echo "  [FAIL] harness accepted a nonzero child"; fail=$((fail+1))
+elif grep -q 'exit: 7 (expected 0)' "$TMP/control.log" && \
+     grep -q 'stderr: child diagnostic' "$TMP/control.log" && \
+     [ "$(<"$TMP/status-control.status")" = 7 ]; then
+  echo "  [OK  ] harness rejects matching stdout with nonzero exit"; pass=$((pass+1))
+else
+  echo "  [FAIL] harness lost child evidence"; cat "$TMP/control.log"; fail=$((fail+1))
+fi
 
 # --- core model, no prelude (fast) ---
 # NB: a top-level `define` echoes NOTHING (change: unspecified-value -- its value is the
@@ -307,12 +337,9 @@ check multibyte-string-before-form "" "αβ3" <<'EOF'
 EOF
 
 # spec: end-of-input ends the session cleanly (exit code 0)
-printf '(+ 1 2)\n' | chez --libdirs src --script src/compile.ss --repl --no-prelude >/dev/null 2>&1
-if [ "$?" -eq 0 ]; then
-  echo "  [OK  ] eof-clean-exit"; pass=$((pass+1))
-else
-  echo "  [FAIL] eof-clean-exit (nonzero exit on EOF)"; fail=$((fail+1))
-fi
+check eof-clean-exit --no-prelude 3 <<'EOF'
+(+ 1 2)
+EOF
 
 echo
 echo "  $pass passed, $fail failed"

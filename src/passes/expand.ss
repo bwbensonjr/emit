@@ -537,7 +537,15 @@
                  (splice-body-forms forms0 bound (lambda (h) (macro-lookup h bound)))
                  forms0)]
            [b (add-body-defines forms bound)])
-      (exp* forms b)))
+      ;; A procedure signature is binding syntax, not an application to expand.
+      ;; Normalize internal defines so their initializer follows the lambda path
+      ;; with its formals bound, including dotted and rest-only signatures (#128).
+      (map-lr
+        (lambda (f)
+          (if (and (pair? f) (eq? (car f) 'define) (pair? (cdr f)))
+              (let ([nd (normalize-define f)]) `(define ,(car nd) ,(exp1 (cadr nd) b)))
+              (exp1 f b)))
+        forms)))
 
   (define (exp e depth bound)
     (when (> depth *macro-depth-limit*)

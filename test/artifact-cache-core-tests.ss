@@ -197,5 +197,53 @@
 (check "registration transaction rolls back" (car (repl-registration-rollback)) 'ok)
 (check "rolled-back library is no longer registered" (assoc '(temp) *repl-libs*) #f)
 
+;; Explicit payload validation must complete before publishing any registration.
+(init-session "")
+(define explicit-exports (render-datum compiled-table))
+(define (host-request datum)
+  (let ([port (open-output-string)])
+    (write datum port)
+    (get-output-string port)))
+(define explicit-request
+  (host-request (list "tlib:" explicit-exports (cdr meta))))
+(check "explicit dependency query validates without registering"
+       (repl-explicit-dependencies explicit-request) '(ok . ""))
+(check "explicit dependency query has no publication side effect"
+       (assoc '(tlib) *repl-libs*) #f)
+(check "explicit request rejects wrong library key"
+       (car (repl-explicit-dependencies
+              (host-request (list "wrong" explicit-exports (cdr meta))))) 'error)
+(check "explicit request rejects mismatched exports"
+       (car (repl-explicit-dependencies
+              (host-request (list "tlib:" "((wrong) () ())" (cdr meta))))) 'error)
+(check "explicit request rejects trailing export datum"
+       (car (repl-explicit-dependencies
+              (host-request (list "tlib:" (string-append explicit-exports " 1")
+                                 (cdr meta))))) 'error)
+(check "explicit request rejects malformed row list"
+       (car (repl-explicit-dependencies
+              (host-request (list "tlib:" explicit-exports "17")))) 'error)
+(check "explicit registration uses validated pair"
+       (car (repl-register-cached-libs
+              (string-append "(explicit " (substring explicit-request 1
+                                             (string-length explicit-request))))) 'ok)
+(check "registered export query returns the exact readable table"
+       (repl-cached-export-text "tlib:") (cons 'ok explicit-exports))
+(check "registered export query rejects unknown key"
+       (car (repl-cached-export-text "missing")) 'error)
+(check "manifest artifact paths remain source-provider relative"
+       (repl-manifest-artifacts
+         "((library (x) (source \"x.sld\") (artifacts \"saved\")) (program p (source \"p.scm\")))")
+       "x:\tsaved\n")
+(define publication
+  (repl-publication-row
+    (host-request
+      (list "(define-library (tlib) (export greet twice collect))" explicit-exports))))
+(check "publication descriptor is created without compiling" (car publication) 'ok)
+(check "publication row matches cached registration"
+       (and (eq? (car publication) 'ok)
+            (equal? (one-artifact-datum (cdr publication))
+                    (one-artifact-datum (cdr meta)))) #t)
+
 (printf "~a passed, ~a failed\n" pass fail)
 (exit (if (= fail 0) 0 1))

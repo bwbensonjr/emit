@@ -4,7 +4,7 @@
 # Run with EMIT_COMPOSITION_HOST=chez to exercise the current shared source core
 # before regen. The default runs the shipped compiler and also the Chez driver
 # when Chez is installed.
-set -u
+set -uo pipefail
 cd "$(dirname "$0")/.."
 . tools/log.sh
 
@@ -23,6 +23,8 @@ write_manifest () { # <manifest-path> <artifact-directory>
  (library (scheme base) (source "$PWD/lib/scheme/base.sld") (artifacts "$artifacts"))
  (library (scheme cxr) (source "$PWD/lib/scheme/cxr.sld") (artifacts "$artifacts"))
  (library (scheme case-lambda) (source "$PWD/lib/scheme/case-lambda.sld") (artifacts "$artifacts"))
+ (library (composition internal definitions) (source "$PWD/test/library-composition/internal-definitions.sld") (artifacts "$artifacts"))
+ (library (composition escaped) (source "$PWD/test/library-composition/escaped.sld") (artifacts "$artifacts"))
  (library (composition repro facade) (source "$PWD/test/library-composition/repro-121-facade.sld") (artifacts "$artifacts"))
  (library (composition repro macro source) (source "$PWD/test/library-composition/repro-120-source.sld") (artifacts "$artifacts"))
  (library (composition runtime owner) (source "$PWD/test/library-composition/runtime-owner.sld") (artifacts "$artifacts"))
@@ -131,6 +133,40 @@ for host in "${hosts[@]}"; do
     TABLE_DIR="$NATIVE_ARTIFACTS"
   fi
   run_one "$host" test/library-composition/repro-121.scm 3
+  run_one "$host" test/library-composition/escaped-program.scm '(34 92 10 9 13 0 1 127)'
+  run_one "$host" test/library-composition/escaped-program.scm '(34 92 10 9 13 0 1 127)'
+  if [ "$host" = chez ]; then
+    if grep -Fq 'reuse (composition escaped)' "$TMP/escaped-program.compile.err"; then
+      ok "Chez escaped macro interface reused on warm compilation"
+    else
+      bad "Chez escaped macro interface was not reused"
+      cat "$TMP/escaped-program.compile.err"
+    fi
+  fi
+  run_one "$host" test/library-composition/internal-definitions-program.scm \
+    '((#f #f (1 2 3) 6 41) (4 5))'
+  run_one "$host" test/library-composition/lower-order-program.scm '(#t #t #t #t #t #t)'
+  if [ "$host" = native ]; then
+    if build/emit build test/library-composition/internal-definitions-program.scm \
+        --manifest "$MAN" -o "$TMP/internal-definitions" \
+        >"$TMP/internal-definitions.build.out" 2>"$TMP/internal-definitions.build.err" && \
+       got="$("$TMP/internal-definitions" 2>"$TMP/internal-definitions.exe.err")" && \
+       [ "$got" = '((#f #f (1 2 3) 6 41) (4 5))' ]; then
+      ok "native internal definitions [delivered executable]"
+    else
+      bad "native internal definitions [delivered executable]"
+      cat "$TMP/internal-definitions.build.err" "$TMP/internal-definitions.exe.err" 2>/dev/null
+    fi
+    if got="$(build/emit repl --manifest "$MAN" \
+        < test/library-composition/internal-definitions-program.scm \
+        2>"$TMP/internal-definitions.repl.err" | awk 'NF{last=$0} END{print last}')" && \
+       [ "$got" = '((#f #f (1 2 3) 6 41) (4 5))' ]; then
+      ok "native internal definitions [REPL]"
+    else
+      bad "native internal definitions [REPL]"
+      cat "$TMP/internal-definitions.repl.err"
+    fi
+  fi
   run_one "$host" test/library-composition/runtime-program.scm '(4 5 101 21 (1 2) (1 2 3 4) (1 2 3))'
   if [ "$host" = chez ]; then
     runtime_ir="$TMP/runtime-program.ll"
@@ -203,6 +239,7 @@ if [[ " ${hosts[*]} " == *" native "* ]]; then
   native_sources=(
     lib/emit/internal.sld lib/scheme/base.sld lib/scheme/cxr.sld lib/scheme/case-lambda.sld
     test/library-composition/runtime-owner.sld
+    test/library-composition/escaped.sld
     test/library-composition/runtime-facade.sld
     test/library-composition/runtime-facade-two.sld
     test/library-composition/runtime-facade-left.sld
@@ -231,6 +268,7 @@ if [[ " ${hosts[*]} " == *" chez "* ]]; then TABLE_DIR="$CHEZ_ARTIFACTS"; else T
 if [[ " ${hosts[*]} " == *" native "* ]] && [[ " ${hosts[*]} " == *" chez "* ]]; then
   units=(
     emit.internal scheme.base scheme.cxr scheme.case-lambda
+    composition.escaped
     composition.repro.facade composition.repro.macro.source
     composition.runtime.owner composition.runtime.facade composition.runtime.facade.two
     composition.runtime.facade.left composition.runtime.facade.right
@@ -252,12 +290,6 @@ if [[ " ${hosts[*]} " == *" native "* ]] && [[ " ${hosts[*]} " == *" chez "* ]];
       ok "$unit full exports identical [Chez / emit lib]"
     else
       bad "$unit full exports differ [Chez / emit lib]"
-    fi
-    # The user explicitly deferred the unchanged-HEAD base lowering discrepancy.
-    # Keep its export interface in parity coverage without requiring its IR fix.
-    if [ "$unit" = scheme.base ]; then
-      say "compare scheme.base -> exports only [full IR ordering deferred: #125]"
-      continue
     fi
     sed '/^target datalayout = /d; /^target triple = /d' "$native_ll" \
       > "$TMP/$unit.native-core.ll"

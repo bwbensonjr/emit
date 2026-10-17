@@ -34,10 +34,12 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Error.h"
+#include "llvm/TargetParser/Host.h"
 
 #include <chrono>
 #include <cstdint>
@@ -63,6 +65,7 @@
 #include <gc/gc.h>
 
 #include "native-cache.h"
+#include "explicit-artifact.h"
 
 using namespace llvm;
 using namespace llvm::orc;
@@ -879,6 +882,7 @@ struct LibraryProvider {
   std::string identity;
   std::string root;
   std::map<std::string, std::string> exact;
+  std::map<std::string, std::string> artifacts;
 };
 
 enum class ResolveResult { Found, Missing, Error };
@@ -1032,7 +1036,8 @@ class LibraryResolver {
       answer.name = name;
       answer.source = source;
       answer.source_home = source;
-      answer.artifact_dir = "build/lib";
+      auto artifact = provider.artifacts.find(name.key);
+      answer.artifact_dir = artifact == provider.artifacts.end() ? "" : artifact->second;
       answer.provider_kind = provider.kind;
       answer.provider = provider.kind == ProviderKind::Manifest
                           ? provider.identity : provider.root;
@@ -1058,7 +1063,8 @@ class LibraryResolver {
         descriptor.name.label = library_label(entry.first);
         descriptor.source = entry.second;
         descriptor.source_home = entry.second;
-        descriptor.artifact_dir = "build/lib";
+        auto artifact = provider.artifacts.find(entry.first);
+        descriptor.artifact_dir = artifact == provider.artifacts.end() ? "" : artifact->second;
         descriptor.provider_kind = ProviderKind::Manifest;
         descriptor.provider = provider.identity;
         out.push_back(descriptor);
@@ -1078,6 +1084,15 @@ class LibraryResolver {
     provider.identity = manifest;
     std::map<std::string, std::string> from;
     manifest_library_index(std::vector<std::string>(1, manifest), provider.exact, from);
+    std::string artifact_index = manifest_mode_text(27, read_file(manifest), manifest);
+    std::istringstream lines(artifact_index);
+    std::string line;
+    while (std::getline(lines, line)) {
+      size_t tab = line.find('\t');
+      if (tab != std::string::npos)
+        provider.artifacts[line.substr(0, tab)] =
+            manifest_relative(manifest, line.substr(tab + 1));
+    }
     providers_.push_back(provider);
   }
 
@@ -1193,7 +1208,8 @@ static std::string resolver_answer(LibraryResolver &resolver, const std::string 
 // registered yet, which both preloads already know how to retry.
 enum class CacheRead { Hit, Miss, Deferred };
 static CacheRead cache_load_unit(const std::string &key, const std::string &path,
-                                 std::string &ir, std::string &init);
+                                 std::string &ir, std::string &init,
+                                 const std::string &artifact_dir = "");
 static void cache_store_unit(const std::string &key, const std::string &path,
                              const std::string &ir);
 
@@ -1254,7 +1270,7 @@ static bool preload_user_libraries(LibraryResolver &resolver,
       // valid but its imports are not registered yet, which is the same condition mode 4
       // reports and goes around the same fixpoint loop.
       std::string cached_ir, cached_init;
-      CacheRead cr = cache_load_unit(key, p, cached_ir, cached_init);
+      CacheRead cr = cache_load_unit(key, p, cached_ir, cached_init, descriptor.artifact_dir);
       if (cr == CacheRead::Deferred) { deferred.push_back(descriptor); continue; }
       if (cr == CacheRead::Hit) {
         modules.push_back(cached_ir);
@@ -1387,7 +1403,7 @@ static int resolve_program(const std::string &manifest, const std::string &name,
 // libraries and shaken units as well as the baked set (change: chez-free-unit-pipeline).
 // 3: a `.sources` record may hold LIBRARY lines, the (library NAME) answers a unit's
 // cond-expand consulted (change: portable-library-surface, design D7).
-static const int kCacheVersion = 3;
+static const int kCacheVersion = 4;
 
 // The resolver a cache entry's (library NAME) answers are re-checked against, when the
 // command has one: "1" available, "0" not, "" could not ask.  Set where each command
@@ -1541,7 +1557,8 @@ static bool cache_write_atomic(const std::string &path, const std::string &text)
     std::ofstream f(tmp.str(), std::ios::binary | std::ios::trunc);
     if (!f) return false;
     f.write(text.data(), (std::streamsize)text.size());
-    if (!f.good()) { f.close(); ::remove(tmp.str().c_str()); return false; }
+    f.close();
+    if (!f.good()) { ::remove(tmp.str().c_str()); return false; }
   }
   if (::rename(tmp.str().c_str(), path.c_str()) != 0) {
     ::remove(tmp.str().c_str());
@@ -1570,7 +1587,7 @@ static std::string canonical_path(const std::string &path) {
 // restores content and moves mtimes.  A few KB of FNV-1a is nothing beside the 2.6 ms the
 // executable digest already costs.
 static std::string file_digest(const std::string &path) {
-  if (file_bytes(path) < 0) return std::string();   // absent: not a source we can key on
+  if (file_bytes(path) < 0 || !file_readable(path)) return std::string();
   return fnv1a_hex(read_file(path));                // an EMPTY include is legal, and hashes
 }
 
@@ -1795,6 +1812,137 @@ static void cache_store_baked_set(const std::vector<std::string> &modules) {
 }
 
 // --- one library unit, compiled from disk (change: chez-free-unit-pipeline) ---
+// Generations describe the exact full unit and its transitive compilation inputs.
+// They are recorded even with caching disabled: an importer's validity cannot
+// depend on whether its dependencies happened to be written to disk.
+static std::map<std::string, std::string> g_unit_generations;
+
+static bool compiler_text_query(int mode, const std::string &input, std::string &output) {
+  rt_repl_set(mode, input.data(), (intptr_t)input.size());
+  intptr_t result = scheme_entry();
+  if (status_of(result) != "ok") return false;
+  output = scm_str(rt_cdr(result));
+  return true;
+}
+
+static std::string artifact_request(const std::string &key, const std::string &exports,
+                                    const std::string &registration) {
+  return "(" + artifact_quote(key) + " " + artifact_quote(exports) + " " +
+         artifact_quote(registration) + ")";
+}
+
+static bool dependency_generation(const std::string &keys, std::string &snapshot) {
+  snapshot.clear();
+  std::istringstream lines(keys);
+  std::string key;
+  while (std::getline(lines, key)) {
+    if (key.empty()) continue;
+    auto found = g_unit_generations.find(key);
+    if (found == g_unit_generations.end()) return false;
+    snapshot += key + "\t" + found->second + "\n";
+  }
+  return true;
+}
+
+static std::string artifact_runtime_abi() {
+  // The executable digest also covers the linked runtime implementation. This
+  // independent tag states the representation contract, not a source-tree hash.
+  return "emit-tagged-values-v1:" + std::to_string(sizeof(intptr_t) * 8);
+}
+
+static std::string artifact_target() { return sys::getDefaultTargetTriple(); }
+
+static bool artifact_ir_valid(const std::string &ir, const std::string &key) {
+  LLVMContext context;
+  SMDiagnostic diagnostic;
+  auto buffer = MemoryBuffer::getMemBuffer(ir, "explicit-artifact", false);
+  auto module = parseIR(buffer->getMemBufferRef(), diagnostic, context);
+  if (!module || verifyModule(*module, nullptr)) return false;
+  Function *init = module->getFunction(key + "__init");
+  return init && !init->isDeclaration();
+}
+
+static bool make_artifact(const std::string &key, const std::string &path,
+                          const std::string &ir, const std::string &exports,
+                          const std::string &registration, const std::string &sources,
+                          ExplicitArtifact &artifact) {
+  std::string keys, dependencies;
+  if (compiler_digest().empty() || sources.empty() ||
+      !compiler_text_query(25, artifact_request(key, exports, registration), keys) ||
+      !dependency_generation(keys, dependencies)) return false;
+  artifact.fields = {{"full", key, compiler_digest(), artifact_runtime_abi(),
+                      artifact_target(), canonical_path(path), sources, dependencies,
+                      fnv1a_hex(ir), fnv1a_hex(exports), registration}};
+  g_unit_generations[key] = fnv1a_hex(artifact_text(artifact));
+  return true;
+}
+
+static bool publish_artifact(const std::string &stem, const std::string &ir,
+                             const std::string &exports, const ExplicitArtifact &artifact) {
+  // The sidecar authenticates both complete payloads. Interleaved producers can
+  // cause a miss, but an old sidecar cannot admit a mixed generation.
+  return cache_write_atomic(stem + ".ll", ir) &&
+         cache_write_atomic(stem + ".exports", exports) &&
+         cache_write_atomic(stem + ".artifact", artifact_text(artifact)) &&
+         read_file(stem + ".ll") == ir && read_file(stem + ".exports") == exports &&
+         read_file(stem + ".artifact") == artifact_text(artifact);
+}
+
+static CacheRead load_artifact(const std::string &stem, const std::string &key,
+                               const std::string &path, bool explicit_location,
+                               std::string &ir, std::string &init) {
+  using A = ExplicitArtifact;
+  auto miss = [&](const std::string &reason) {
+    vsay(std::string(explicit_location ? "artifact: " : "cache: ") + "library " + key +
+         " rejected " + stem + ".artifact [" + reason + "]; compiling or trying fallback");
+    return CacheRead::Miss;
+  };
+  ExplicitArtifact artifact;
+  std::string metadata = read_file(stem + ".artifact");
+  if (metadata.empty() && !explicit_location) {
+    vsay("cache: no entry for library " + key + ", compiling it");
+    return CacheRead::Miss;
+  }
+  if (!artifact_parse(metadata, artifact))
+    return miss("missing, legacy, or malformed metadata");
+  const auto &f = artifact.fields;
+  std::string identity_error = artifact_identity_error(artifact, key, compiler_digest(),
+                                artifact_runtime_abi(), artifact_target(), canonical_path(path));
+  if (!identity_error.empty()) return miss(identity_error);
+  std::string own_source = file_digest(path) + "\t" + canonical_path(path) + "\n";
+  if (file_digest(path).empty() || f[A::Sources].compare(0, own_source.size(), own_source) != 0 ||
+      !sources_still_match(f[A::Sources])) {
+    if (!explicit_location) vsay("cache: source changed for library " + key + ", recompiling");
+    return miss("source, include, or feature answer changed");
+  }
+  std::string candidate = read_file(stem + ".ll");
+  std::string exports = read_file(stem + ".exports");
+  if (candidate.empty() || exports.empty() || fnv1a_hex(candidate) != f[A::IrDigest] ||
+      fnv1a_hex(exports) != f[A::ExportsDigest]) return miss("payload integrity");
+  std::string request = artifact_request(key, exports, f[A::Registration]);
+  std::string keys, dependencies;
+  if (!compiler_text_query(25, request, keys)) return miss("invalid exports or registration");
+  if (!dependency_generation(keys, dependencies)) return CacheRead::Deferred;
+  if (dependencies != f[A::Dependencies]) return miss("dependency generation changed");
+  // Explicit handoffs get full LLVM validation. A private entry already carries
+  // this executable's exact emitted payload digests: do not add an LLVM parse
+  // to the existing warm native-object path before its own object admission.
+  if (explicit_location && !artifact_ir_valid(candidate, key))
+    return miss("invalid LLVM IR or initializer");
+  // All host checks and semantic parsing precede this one transactional publish.
+  std::string registration = "(explicit " + request.substr(1);
+  rt_repl_set(14, registration.data(), (intptr_t)registration.size());
+  intptr_t result = scheme_entry();
+  if (status_of(result) == "deferred") return CacheRead::Deferred;
+  if (status_of(result) != "ok") return miss("registration refused");
+  init = scm_str(rt_cdr(result));
+  ir = candidate;
+  g_unit_generations[key] = fnv1a_hex(artifact_text(artifact));
+  vsay(std::string(explicit_location ? "artifact: " : "cache: ") + "library " + key +
+       " reused from " + stem + ".ll" + (explicit_location ? " [explicit full unit]" : ""));
+  return CacheRead::Hit;
+}
+
 // The half of the cache `baked-set-artifact-cache` deferred: a manifest library is
 // recompiled by every process that imports it, and unlike the baked set its source is on
 // disk, so the key needs a source half (design D5).
@@ -1804,18 +1952,16 @@ static void cache_store_baked_set(const std::vector<std::string> &modules) {
 // caller, whose fixpoint loop retries the library once its dependencies are in: the entry
 // is valid, it is simply too early to apply it.
 static CacheRead cache_load_unit(const std::string &key, const std::string &path,
-                                 std::string &ir, std::string &init) {
+                                 std::string &ir, std::string &init,
+                                 const std::string &artifact_dir) {
   if (cache_bypassed_for_dump()) return CacheRead::Miss;
-  std::string src_key = source_key_of(path);
-  std::vector<std::string> modules, inits;
-  CacheRead r = cache_load_entry(cache_entry_stem("unit", key, src_key), "library " + key,
-                                 "unit", key, src_key,
-                                 /*sources_required=*/true, modules, inits);
-  if (r != CacheRead::Hit) return r;
-  if (modules.size() != 1) return CacheRead::Miss;  // a unit entry holds exactly one module
-  ir = modules[0];
-  init = inits[0];
-  return CacheRead::Hit;
+  if (!artifact_dir.empty()) {
+    std::string base = key.empty() ? key : key.substr(0, key.size() - 1);
+    CacheRead result = load_artifact(artifact_dir + "/" + base, key, path, true, ir, init);
+    if (result != CacheRead::Miss) return result;
+  }
+  std::string stem = cache_entry_stem("unit", key, source_key_of(path));
+  return stem.empty() ? CacheRead::Miss : load_artifact(stem, key, path, false, ir, init);
 }
 
 // The source files the compiler just read for a library (mode 16): its own source plus its
@@ -1836,17 +1982,24 @@ static std::vector<std::string> library_sources_just_read() {
 // returned `ok`, while mode 16 still describes THIS library's read.
 static void cache_store_unit(const std::string &key, const std::string &path,
                              const std::string &ir) {
-  if (cache_bypassed_for_dump()) return;
-  std::string stem = cache_entry_stem("unit", key, source_key_of(path));
-  if (stem.empty()) return;
   std::vector<std::string> sources = library_sources_just_read();
   if (sources.empty()) return;
   std::string manifest_text = sources_manifest(sources);
   if (manifest_text.empty()) return;               // a source we cannot read: do not key on it
+  std::string exports, registration;
+  if (!compiler_text_query(28, key, exports) ||
+      !compiler_text_query(15, key + "\n", registration)) return;
+  exports += "\n";
+  ExplicitArtifact artifact;
+  if (!make_artifact(key, path, ir, exports, registration, manifest_text, artifact)) return;
+  if (cache_bypassed_for_dump()) return;
+  std::string stem = cache_entry_stem("unit", key, source_key_of(path));
+  if (stem.empty()) return;
   std::vector<std::string> modules;
   modules.push_back(ir);
   cache_store_entry(stem, "library " + key, "unit", key, source_key_of(path),
                     /*keys=*/key + "\n", manifest_text, modules);
+  publish_artifact(stem, ir, exports, artifact);
 }
 
 // --- target-specific native object cache -----------------------------------
@@ -1925,6 +2078,9 @@ public:
 
   void register_group(const std::string &stem, const std::string &identity,
                       const std::string &what, const std::vector<std::string> &ids) {
+    // No cache location means no capture. Otherwise every disabled group shares
+    // the empty key, so a single unit can replace the baked set's larger vector.
+    if (stem.empty()) return;
     Group group{stem, identity, what, std::vector<std::string>(ids.size())};
     groups[stem] = std::move(group);
     for (size_t i = 0; i < ids.size(); ++i) members[ids[i]] = std::make_pair(stem, i);
@@ -1933,7 +2089,9 @@ public:
   void notifyObjectCompiled(const Module *module, MemoryBufferRef object) override {
     auto member = members.find(module->getModuleIdentifier());
     if (member == members.end()) return;
-    Group &group = groups[member->second.first];
+    auto found = groups.find(member->second.first);
+    if (found == groups.end() || member->second.second >= found->second.objects.size()) return;
+    Group &group = found->second;
     group.objects[member->second.second] = object.getBuffer().str();
     for (const std::string &bytes : group.objects)
       if (bytes.empty()) return;
@@ -2191,7 +2349,7 @@ static void shake_units(std::vector<std::string> &modules,
     const std::string &key = module_keys[i];
     // Keyed on everything the roots are read out of, which is why it is computed per unit
     // inside the loop rather than once outside it.
-    std::string root_key = fnv1a_hex(root_text);
+    std::string root_key = fnv1a_hex(root_text + g_unit_generations[key]);
     std::map<std::string, std::string>::const_iterator it = path_of.find(key);
     // A baked member has no manifest entry and needs none: its source is compiled into this
     // binary, so mode 17 rebuilds it from *prelude-source* with no source text from us.  A
@@ -2676,7 +2834,7 @@ static void preload_libraries(LibraryResolver &resolver, bool have_baked,
       // all of them on every start -- 0.138 s for this repository's four non-baked
       // libraries, on top of the standard library the cache already covers.
       std::string cached_ir, cached_init;
-      CacheRead cr = cache_load_unit(key, p, cached_ir, cached_init);
+      CacheRead cr = cache_load_unit(key, p, cached_ir, cached_init, descriptor.artifact_dir);
       if (cr == CacheRead::Deferred) { deferred.push_back(descriptor); continue; }
       if (cr == CacheRead::Hit) {
         std::string err;
@@ -2812,6 +2970,7 @@ static bool register_repl_closure(const std::string &form, LibraryResolver &reso
     }
   if (order.empty()) return false;
 
+  const auto saved_generations = g_unit_generations;
   rt_repl_set(19, "", 0);
   intptr_t begin = scheme_entry();
   if (status_of(begin) != "ok") {
@@ -2826,7 +2985,7 @@ static bool register_repl_closure(const std::string &form, LibraryResolver &reso
     const std::string &path = descriptor.source;
     std::string ir, init;
     bool compiled = false;
-    CacheRead cached = cache_load_unit(key, path, ir, init);
+    CacheRead cached = cache_load_unit(key, path, ir, init, descriptor.artifact_dir);
     if (cached == CacheRead::Deferred) {
       failure = "library " + path + ": dependency was not registered";
       ok = false;
@@ -2877,6 +3036,7 @@ static bool register_repl_closure(const std::string &form, LibraryResolver &reso
   rt_repl_set(ok ? 21 : 20, "", 0);
   scheme_entry();
   if (!ok) {
+    g_unit_generations = saved_generations;
     std::cerr << "error: " << failure << "\n";
     return false;
   }
@@ -3563,16 +3723,35 @@ static int emit_lib(int argc, char **argv) {
     return 1;
   }
 
+  // Describe this unit's source closure and semantic interface without another
+  // compile. Capture mode 16 immediately after mode 26 reparses the declarations.
+  set_source_home(src);
+  std::string registration;
+  std::string publication = "(" + artifact_quote(lib_src) + " " +
+                            artifact_quote(exports_datum) + ")";
+  if (!compiler_text_query(26, publication, registration)) {
+    std::cerr << "emit lib: cannot describe publication for " << src << "\n";
+    return 1;
+  }
+  std::string sources = sources_manifest(library_sources_just_read());
+  exports_datum += "\n";
+  ExplicitArtifact artifact;
+  if (!make_artifact(base + ":", src, prog_ir, exports_datum, registration, sources, artifact)) {
+    std::cerr << "emit lib: cannot establish compiler/source/dependency identity for " << src << "\n";
+    return 1;
+  }
   ensure_parent_dir(dir + "/x");             // make DIR itself
   std::string ll_path = dir + "/" + base + ".ll";
   std::string exp_path = dir + "/" + base + ".exports";
-  if (!write_file(ll_path, prog_ir)) { std::cerr << "emit lib: cannot write " << ll_path << "\n"; return 1; }
-  // Match the Chez driver's .exports: the (name export-table) datum, newline-terminated.
-  if (!write_file(exp_path, exports_datum + "\n")) { std::cerr << "emit lib: cannot write " << exp_path << "\n"; return 1; }
+  if (!publish_artifact(dir + "/" + base, prog_ir, exports_datum, artifact)) {
+    std::cerr << "emit lib: cannot publish complete artifacts at " << dir + "/" + base << "\n";
+    return 1;
+  }
 
   say("lib " + src + " -> " + ll_path + "  [" +
       std::to_string(file_bytes(ll_path)) + " bytes]");
   vsay("exports " + exp_path);
+  vsay("artifact " + dir + "/" + base + ".artifact");
   return 0;
 }
 

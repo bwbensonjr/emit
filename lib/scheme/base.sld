@@ -274,7 +274,7 @@
     (define (%unwind-to target) (if (eq? *winds* target) #t (if (null? *winds*) #t (let ((entry (car *winds*))) (set! *winds* (cdr *winds*)) ((cdr entry)) (%unwind-to target)))))
     (define (unwind-all!) (%unwind-to (quote ())))
     (define (dynamic-wind before thunk after) (before) (set! *winds* (cons (cons before after) *winds*)) (call-with-values thunk (lambda results (set! *winds* (cdr *winds*)) (after) (apply values results))))
-    (define (call-with-current-continuation f) (let ((saved-winds *winds*)) (cdr (%run-guarded (lambda () (let ((id (%escape-frame))) (f (lambda (v) (if (%escape-live? id) (begin (%unwind-to saved-winds) (%escape-to id v)) #f) (error (quote call/cc) "continuation invoked outside its extent")))))))))
+    (define (call-with-current-continuation f) (let ((saved-winds *winds*)) (cdr (%run-guarded (lambda () (let ((id (%escape-frame))) (f (lambda vs (if (%escape-live? id) (begin (%unwind-to saved-winds) (%escape-to id (apply values vs))) #f) (error (quote call/cc) "continuation invoked outside its extent")))))))))
     (define (call/cc f) (call-with-current-continuation f))
     (define (with-exception-handler handler thunk) (let ((saved *handlers*)) (dynamic-wind (lambda () (set! *handlers* (cons handler saved))) thunk (lambda () (set! *handlers* saved)))))
     (define (raise obj) (if (null? *handlers*) (%raise obj) (let ((h (car *handlers*)) (saved *handlers*)) (set! *handlers* (cdr *handlers*)) (h obj) (set! *handlers* saved) (%raise obj))))

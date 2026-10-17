@@ -58,6 +58,38 @@
 (check "vector mixed"  (render-datum '#(a "s" #\c #t #f 1 () (p . q)))
        "#(a \"s\" #\\c #t #f 1 () (p . q))")
 
+;; #130: interfaces contain string literals inside exported macro templates.
+(check "string quotes and backslashes" (render-datum "a\"b\\c")
+       "\"a\\\"b\\\\c\"")
+(check "string named escapes" (render-datum "\n\r\t") "\"\\n\\r\\t\"")
+(check "empty string" (render-datum "") "\"\"")
+(check "hex escape is terminated before a hex digit"
+       (render-datum (string (integer->char 1) #\a)) "\"\\x1;a\"")
+(check "hexadecimal spelling is independent of host number formatting"
+       (render-datum (string (integer->char 127))) "\"\\x7f;\"")
+(let loop ([code 0])
+  (if (= code 128)
+      (ok "every ASCII character in a string round-trips in both modes")
+      (let* ([text (string (integer->char code))]
+             [encoded (render-datum text)]
+             [port (open-input-string encoded)]
+             [back (host-read port)])
+        (if (and (equal? back text) (eof-object? (host-read port))
+                 (string=? encoded (render-datum-loose text)))
+            (loop (+ code 1))
+            (bad (string-append "string round-trip failed at " (number->string code)))))))
+(let* ([text "a\"b\\c\n\t\r\x0;\x1;\x7f;"]
+       [datum (list 'syntax-rules '() (cons '(_) (vector text)))])
+  (if (equal? datum (host-read (open-input-string (render-datum datum))))
+      (ok "escaped strings nested in macro-like data round-trip")
+      (bad "escaped macro template changed")))
+(let* ([text (string-copy "a\"b\\c")]
+       [datum (list text text)]
+       [back (host-read (open-input-string (render-datum datum)))])
+  (if (and (equal? datum back) (eq? (car back) (cadr back)))
+      (ok "shared escaped string retains identity")
+      (bad "shared escaped string identity or contents changed")))
+
 (display "")
 (newline)
 (display "the two entry points agree except on an unrepresentable character")

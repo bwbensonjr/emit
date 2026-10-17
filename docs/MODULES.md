@@ -133,8 +133,14 @@ A program imports a library with a top-level `import` and then uses its exports:
 
 ### Using the SRFI 1 package
 
-The vendored, unmodified snow-fort SRFI 1 0.1.3 package is available from
-`test/snow/lib`. Prefix it when `(scheme base)` may provide overlapping names, so the source makes
+Procedure bodies in libraries support internal definitions with fixed, dotted,
+or rest-only formals, just as program bodies do. For example,
+`(define (callback . args) #f)` inside another procedure defines a variadic
+callback. All internal definitions share their body's scope, and each procedure's
+formals shadow imported macro keywords within that procedure's body.
+
+The vendored, unmodified snow-fort SRFI 1 0.1.3 package is available from the ordinary
+`lib/srfi/` hierarchy in checkouts and installations. Prefix it when `(scheme base)` may provide overlapping names, so the source makes
 clear which implementation each call uses. This representative example also exercises SRFI 227's
 `opt-lambda` dependency:
 
@@ -157,16 +163,44 @@ Run it through the embedded compiler from the repository root:
 
 ```sh
 build/emit run --no-manifest-chain --manifest emit-libs.scm \
-  -L test/snow/lib test/snow/srfi-1-smoke.scm
+  test/snow/srfi-1-smoke.scm
 # => (6 (2 4) (1 10 2 20 3 30) 3 (2 3 4 5) (x 9) (x 10))
 ```
 
-The same source is used for the Chez driver, `emit build`, and `emit repl` acceptance paths. The
-coverage is representative, not a full SRFI conformance claim: the smoke cases cover `fold`,
-`filter`, `append-map`, a re-exported accessor, optional arguments, and `opt-lambda` with omitted
-and supplied arguments. Together with the earlier SRFI 2 and SRFI 8 smoke coverage, these are
-selected package cases; the upstream SRFI 1 and SRFI 227 tests require `(srfi 64)`, which is not
-included.
+The same source is used for the Chez driver, `emit build`, and `emit repl` acceptance paths.
+The shipped sources are optional: they are compiled and registered only when imported,
+and project providers can override installed copies. Availability uses
+`(cond-expand ((library (srfi 64)) ...) (else ...))`, not new global SRFI features.
+External portable packages can still be supplied with `-L /path/to/packages`.
+
+| Library | Pinned version | Upstream package assertions |
+|---|---|---|
+| SRFI 1 | 0.1.3 | 147 passes |
+| SRFI 2 | 0.1.1 | 29 passes |
+| SRFI 8 | 0.1.2 | 2 passes |
+| SRFI 227 | 0.1.3 | 13 passes |
+| SRFI 64 Emit port | 0.1.7 | 47 passes, 2 upstream-declared expected failures |
+
+The four target package suites execute unchanged through source-driven Chez and
+native run/build/REPL acceptance. Their runner checks exact counts and completion
+before upstream `(exit 0)`; a successful process alone is not sufficient. This
+is evidence for those versions, not a blanket SRFI conformance claim. SRFI 64's
+port removes evaluator/complex dependencies, provides real absolute-error
+approximate comparison, and explicitly diagnoses `test-read-eval-string` as
+unsupported because `(scheme eval)` is absent. It adds no evaluator or fake
+implementation feature. See `test/snow/README.md` for provenance, the reproducible
+port patch, exact coverage, and the two expected-failure self-tests.
+
+Measured on macOS arm64 with LLVM 23.1.2 and the default native build profile,
+comparing the pre-change bootstrapped compiler with the regenerated compiler:
+
+| Delivered program | Before | After | Symbol check |
+|---|---:|---:|---|
+| `(write 42)` without SRFI imports | 35,152 bytes | 35,152 bytes | 58 symbols in both; no SRFI symbols |
+| `test/snow/srfi-1-smoke.scm` | 91,504 bytes | 91,536 bytes | 245 to 246 symbols; only `scheme.base:values` added |
+
+The 32-byte SRFI case increase accompanies multiple-value continuation delivery;
+installing optional sources does not add payload to the no-SRFI executable.
 
 A name the program defines itself shadows an imported one of the same spelling (**user-wins
 shadowing**).
@@ -784,8 +818,9 @@ Provider choice does not salt emitted semantics. Cache validation starts only af
 checks the selected source identity; the same source reached through an exact entry or a root
 therefore produces byte-identical full unit IR and compile-time interfaces on the Chez, run, lib,
 REPL, and AOT paths. Build still prunes only after full-unit compilation.
-The pre-existing generic-call lambda-hoisting order discrepancy in whole `(scheme base)`
-is tracked in issue #125: its cross-host full IR differs, while its export interface agrees.
+Effectful lowering visits operators, operands, branches, and initializers in an
+explicit compiler order, preserving cross-host label/body associations (#125).
+This does not add a source-language operand evaluation-order guarantee.
 
 ## Semantics
 
@@ -909,7 +944,7 @@ is tracked in issue #125: its cross-host full IR differs, while its export inter
     rather than at the importer's compile — for the baked set that is the correct reading, since
     those libraries *are* the implementation. Nothing shipped uses it today; issue #31 (baking
     `lib/scheme/base.sld`) inherits the commitment.
-- **Artifacts** — each library compiles to `<artifacts>/<name>.ll` plus a readable
+- **Chez artifacts** — the independent source driver compiles to `<artifacts>/<name>.ll` plus a readable
   `<name>.exports` table (`(NAME ((external . "mangled") …) ((external "label" arity [rest
   "minimum-label"]) …)
   [<compile-time-interface>])`) and a `<name>.stamp` sidecar
@@ -921,17 +956,67 @@ is tracked in issue #125: its cross-host full IR differs, while its export inter
   is untouched — the toolchain is part of the cache key, as in Rust (`.rlib` SVH), GHC (`.hi`
   version), Go, and Bazel (change: `artifact-compiler-stamp`).
 
-The Chez driver reuses artifacts from a manifest's `artifacts` directory only while the library
-source and its included files are no newer than the artifacts and the compiler stamp matches. Keep
-those sources available for freshness checks; this is not a source-free package format. The native
-`emit run`, `emit repl`, and `emit build` commands resolve library sources through manifests and
-library roots and use their own execution/build caches; they do not consume the `emit lib` output
-directory as that portable artifact cache. A delivered executable contains the linked runtime code
-and has no runtime dependency on the library sources or `.exports` files.
-Adding explicit artifact-directory consumption is tracked in issue #123; the SRFI acceptance
-checks serialized artifact equivalence and normal cache reuse.
-Cross-host acceptance compares full IR for the focused composition fixtures and SRFI
-units/supporting libraries, and retains export-only comparison for `(scheme base)` pending #125.
+### Native explicit artifacts
+
+`emit lib SRC -o DIR` publishes the requested full library as `.ll`, `.exports`,
+and `.artifact`. It does not publish its dependency closure. Publish each ordinary
+dependency separately and map the selected sources to that directory:
+
+```scheme
+((library (my util) (source "lib/my/util.sld") (artifacts "artifacts"))
+ (library (my facade) (source "lib/my/facade.sld") (artifacts "artifacts")))
+```
+
+```sh
+emit lib lib/my/util.sld --manifest emit-libs.scm -o artifacts
+emit lib lib/my/facade.sld --manifest emit-libs.scm -o artifacts
+EMIT_VERBOSITY=verbose emit run app.scm --manifest emit-libs.scm
+```
+
+Native run/build/repl commands and dependency loading for lib first try that
+provider's explicit full unit, then a compatible private cache, then source
+compilation. Provider precedence still selects the source; artifacts cannot
+redirect a library to another source. Sources and includes must remain available.
+Read-only explicit directories are supported; fallback writes only private caches
+and an unwritable cache is nonfatal. Requested publication failures are errors.
+
+The readable version-1 metadata is `(emit-artifact 1 STRING ...)`, with exactly
+eleven string fields, in order:
+
+| Field | Meaning |
+|---|---|
+| kind, key | `full`, canonical mangled library key (including its trailing colon) |
+| executable | FNV-1a digest of the actual producing Emit executable |
+| runtime ABI, target | tagged-value ABI/word width, host target triple |
+| source | canonical selected source path |
+| sources | source/include content digests and consulted library-availability answers |
+| dependencies | direct non-baked dependency keys and full generation digests |
+| IR digest, exports digest | integrity of the exact two published payloads |
+| registration | readable name/import/interface/initializer row |
+
+Dependency generations cover full IR, interfaces (including macros and call rows),
+source identity/content, and transitive dependency generations. Baked dependencies
+are covered by the executable identity. Digests detect accidental staleness and
+corruption, not malicious tampering. The entire pair is parsed/validated before
+registration; each payload is atomically replaced and metadata is published last.
+Interrupted, unknown-versioned, legacy, pruned, or incompatible sets are misses.
+Content changes invalidate even when mtimes are restored; timestamp-only touches
+do not. Rebuilding/relinking Emit can conservatively invalidate artifacts even
+when semantics are unchanged. No compiler-source fingerprint is needed or installed.
+
+The Chez driver's `.stamp` mechanism remains separate: it is an independent test
+oracle, not an interchange producer/consumer of native `.artifact` metadata.
+Parity tests use isolated output directories and compare full IR and readable
+interfaces, including `(scheme base)`, normalizing only target headers.
+Exported macro strings are escaped by the shared renderer, preserving quotes,
+backslashes, controls, and datum-label sharing through cold and warm loads.
+
+Verbose stderr distinguishes `artifact: ... [explicit full unit]`, private cache
+hits, and rejection reasons; quiet mode does not change stdout. `--dump-all`
+bypasses reuse to show actual library compilation stages. AOT first admits the
+full unit and may then recompile a distinct program-specific pruned unit; a full
+artifact hit does not promise elimination of pruning work. Delivered executables
+need neither source libraries nor compile-time artifacts at runtime.
 
 ### Portable and native cache tiers
 

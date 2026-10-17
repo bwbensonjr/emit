@@ -94,6 +94,21 @@ chmod 700 "$unwritable"
   && ok "an unwritable native cache leaves execution unchanged" \
   || bad "unwritable native cache fallback"
 
+# #131: an empty cache stem must not alias a two-module baked capture group
+# with a later one-module library. Every process must succeed, not just one retry.
+printf 'not a directory\n' > "$tmp/blocked-cache"
+blocked_ok=1
+for iteration in {1..10}; do
+  if ! run_fixture "blocked-$iteration" "$tmp/blocked-cache/child" -O1 || \
+     [ "$(cat "$tmp/blocked-$iteration.out")" != 142 ]; then
+    blocked_ok=0
+    cat "$tmp/blocked-$iteration.err"
+  fi
+done
+if [ "$blocked_ok" = 1 ]; then
+  ok "disabled capture preserves modular execution in all ten fresh processes"
+else bad "disabled cache capture group isolation"; fi
+
 echo "profiles, dump bypass, and lazy materialization"
 o0_cache="$tmp/o0-cache"
 run_fixture o0-cold "$o0_cache" -O0

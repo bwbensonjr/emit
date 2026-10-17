@@ -58,15 +58,17 @@ check_program () { # <name> <source> <expected>
 }
 
 echo "snow-fort packages: SRFI 2, 8, 1, and 227"
-say "verify $SNOW/sources.sha256 -> vendored sources [8 files]"
+bash test/snow-provenance-tests.sh || exit 1
+say "verify $SNOW/sources.sha256 -> vendored sources [$(wc -l < "$SNOW/sources.sha256" | tr -d ' ') files]"
 if (cd "$SNOW" && shasum -a 256 -c sources.sha256 >"$TMP/digests.out" 2>&1); then
-  ok "pinned SRFI 1/227 source digests"
+  ok "pinned upstream source digests"
 else bad "vendored source digests"; cat "$TMP/digests.out"; fi
 for f in 8.sld 8.scm 2.sld 2.scm 1.sld 1.scm 227.sld 227.scm; do
   [ -s "$SNOW/lib/srfi/$f" ] || bad "missing vendored $f"
 done
 check_program srfi-2-8 "$SNOW/smoke.scm" '(1 (2 3) 10 #f 2 1 #t "(a \"b\")")'
 check_program srfi-1-227 "$SNOW/srfi-1-smoke.scm" '(6 (2 4) (1 10 2 20 3 30) 3 (2 3 4 5) (x 9) (x 10))'
+check_program srfi-64 "$SNOW/srfi-64-smoke.scm" '(8 0)'
 
 if [ "$HOST" = both ]; then
   for command in run repl; do
@@ -93,8 +95,9 @@ fi
 # Compare emit lib's saved artifacts with independently Chez-compiled full units.
 # This checks serialization and host equivalence; artifact loading is separate.
 if [ "$HOST" = both ] && [ "$HAVE_CHEZ" = 1 ]; then
-  for unit in srfi.8 srfi.227 srfi.1 scheme.cxr scheme.case-lambda; do
+  for unit in scheme.case-lambda scheme.cxr scheme.read scheme.file scheme.process-context scheme.write srfi.8 srfi.227 srfi.1 srfi.2 srfi.64; do
     case "$unit" in
+      srfi.64) source="$ROOT/lib/srfi/64.sld" ;;
       srfi.*) source="$SNOW/lib/srfi/${unit#srfi.}.sld" ;;
       scheme.*) source="$ROOT/lib/scheme/${unit#scheme.}.sld" ;;
     esac

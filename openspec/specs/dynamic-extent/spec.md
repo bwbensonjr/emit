@@ -12,10 +12,10 @@ continuations entail.
 
 The language SHALL provide `call-with-current-continuation` and its abbreviation `call/cc`, taking a
 procedure of one argument and applying it to a **continuation object**. The continuation object SHALL
-be a procedure of one argument; invoking it SHALL cause `call/cc` to return that argument, abandoning
-whatever computation was in progress.
+be a procedure accepting zero or more arguments; invoking it SHALL cause `call/cc` to return those
+values in order, abandoning whatever computation was in progress.
 
-If the procedure returns normally instead, `call/cc` SHALL return its value.
+If the procedure returns normally instead, `call/cc` SHALL return all its values.
 
 The continuations provided SHALL be **escape continuations**: valid only within the dynamic extent of
 the `call/cc` that captured them. Invoking a continuation **after** that extent has ended SHALL raise
@@ -47,6 +47,27 @@ implementation's R7RS conformance notes.
   to return, and then invokes the stored continuation
 - **THEN** the program reports an error identifying that the continuation was invoked outside its
   extent, rather than resuming, crashing, or producing a wrong value
+
+#### Scenario: Zero and multiple escape values reach the receiver
+
+- **WHEN** a `call-with-values` producer invokes a live captured continuation with zero or several arguments
+- **THEN** its consumer receives exactly those values in order
+- **AND** passing one list as one argument continues to deliver a single list value
+
+#### Scenario: Normal multiple-value returns are preserved
+
+- **WHEN** the procedure passed to `call/cc` returns zero or several values without invoking its continuation
+- **THEN** the enclosing receiver gets the same values as an ordinary producer returning them
+
+#### Scenario: Multiple-value transfers preserve dynamic unwinding
+
+- **WHEN** a multiple-value escape crosses nested winds and a parameterized extent
+- **THEN** cleanup runs innermost first, parameters are restored, and the receiver gets every escape value
+
+#### Scenario: Expired continuations are rejected at every arity
+
+- **WHEN** a stored continuation is invoked after its extent with zero or several arguments
+- **THEN** it reports the lifetime error before any wind stack is unwound
 
 ### Requirement: dynamic-wind runs its after thunk on every exit
 
