@@ -250,10 +250,9 @@
 ;; left exactly as written.  Emit's hygiene is a name-set test with no syntax objects, so a
 ;; template-introduced temporary (`tmp` in `(let ((tmp a)) ...)`) and a reference to a name
 ;; nothing defines are indistinguishable here; leaving both alone means a macro that
-;; expands correctly today cannot be broken by this pass.  It is also the whole of design
-;; D5: a baked derived form (`when`, `cond`) falls through this arm and expands in the
-;; importer against the baked set every compiler host registers, so none of those transformers has
-;; to be copied into a user library's interface.
+;; expands correctly today cannot be broken by this pass. The optional import callback
+;; distinguishes an imported transformer from an unresolved identifier, records its
+;; dependency for forwarding, and returns the hidden keyword that the template uses.
 ;;
 ;; Returns the library's compile-time interface: (list <entries> <own-refs> <foreign-refs>).
 (define (universally-known-id? s)
@@ -264,12 +263,14 @@
       (eq? s *ellipsis*)
       (eq? s *wildcard*)))
 
-(define (resolve-exported-macros unit exports macro-env defined-names import-env-alist)
-  (let ([entries '()]  ; resolved (keyword literals . rules), reverse order
-        [seen '()]     ; OUTPUT keywords already queued (dup/cycle guard)
-        [queue '()]    ; (external-keyword . internal-keyword) still to resolve
-        [own '()]      ; this unit's own internal names the templates reach
-        [foreign '()]) ; other units' mangled symbols the templates reach, as strings
+(define (resolve-exported-macros unit exports macro-env defined-names import-env-alist
+         . opt)
+  (let ([entries '()] ; resolved (keyword literals . rules), reverse order
+        [seen '()]    ; OUTPUT keywords already queued (dup/cycle guard)
+        [queue '()]   ; (external-keyword . internal-keyword) still to resolve
+        [own '()]     ; this unit's own internal names the templates reach
+        [foreign '()] ; other units' mangled symbols the templates reach, as strings
+        [import-macro (if (pair? opt) (car opt) (lambda (s) #f))])
     ;; Keyed on the OUTPUT keyword, not the internal name: one internal macro may have to
     ;; travel under two keywords -- its external name (because it is exported) and its
     ;; unit-qualified spelling (because another template mentions it).  Keying on the
@@ -293,6 +294,7 @@
           ;; a private macro travels hidden under a unit-qualified KEYWORD, transitively,
           ;; so an exported macro may be written on top of one (design D3)
           (let ([k (string->symbol (mangle unit s))]) (enqueue! k s) k)]
+        [(import-macro s) => (lambda (k) k)]
         [else (let ([imp (assq s import-env-alist)])
                 (if imp
                     (begin (note-foreign! (cdr imp)) (cdr imp))
@@ -317,11 +319,12 @@
       (let ([literals (cadr entry)])
         (cons out
               (cons literals
-                    (map (lambda (r)
-                           (let* ([pat (car r)]
-                                  [pvars (map car (pattern-vars (cdr pat) literals))])
-                             (cons pat (resolve-template (cdr r) pvars literals))))
-                         (cddr entry))))))
+                    (map-lr
+                      (lambda (r)
+                        (let* ([pat (car r)]
+                               [pvars (map car (pattern-vars (cdr pat) literals))])
+                          (cons pat (resolve-template (cdr r) pvars literals))))
+                      (cddr entry))))))
     ;; seed from the exported macros: an export's EXTERNAL name is the keyword an
     ;; importer sees, so a renamed macro export needs nothing further (design D2).
     (for-each (lambda (e) (when (assq (cdr e) macro-env) (enqueue! (car e) (cdr e))))
@@ -519,7 +522,9 @@
                   (instantiate tmpl m pvars renames #f))))))))
 
   (define (exp1 e bound) (exp e 0 bound))
-  (define (exp* es bound) (map (lambda (x) (exp1 x bound)) es))
+  ;; Expansion allocates fresh names: host map visitation order must not leak
+  ;; into quoted introduced symbols, lambda order, or serialized artifacts.
+  (define (exp* es bound) (map-lr (lambda (x) (exp1 x bound)) es))
 
   ;; a body: its internal defines bind for the whole body, then each form expands
   ;; ...after its include and cond-expand forms are spliced (change:
@@ -569,7 +574,7 @@
                 ;; letrec, so the arm below adds it -- no special case needed here
                 (exp1 (rewrite-named-let (cadr e) (caddr e) (cdddr e)) bound)
                 ;; initializers see the OUTER scope; only the body sees the names
-                `(let ,(map (lambda (b) (bind-exp b bound)) (cadr e))
+                `(let ,(map-lr (lambda (b) (bind-exp b bound)) (cadr e))
                       ,@(exp-body (cddr e)
                                   (add-formals (map bind-name (cadr e)) bound))))]
           ;; letrec and letrec* expand identically and are DISTINGUISHED here only
@@ -578,7 +583,7 @@
           ;; The names are in scope for the INITIALIZERS as well as the body.
           [(memq h '(letrec letrec*))
             (let ([inner (add-formals (map bind-name (cadr e)) bound)])
-              `(,h ,(map (lambda (b) (bind-exp b inner)) (cadr e))
+              `(,h ,(map-lr (lambda (b) (bind-exp b inner)) (cadr e))
                    ,@(exp-body (cddr e) inner)))]
           [(memq h '(+ - * /)) (expand-arith (lambda (x) (exp1 x bound)) h (cdr e))]
           [(eq? h 'string-append) (expand-string-append (lambda (x) (exp1 x bound))
@@ -641,7 +646,7 @@
 ;; Identities: (+) -> 0, (*) -> 1, (- a) -> (- 0 a).  Two-operand forms reduce
 ;; to (op a b) unchanged.
 (define (expand-arith exp1 op args)
-  (let ([xs (map exp1 args)])
+  (let ([xs (map-lr exp1 args)])
     (case op
       [(+) (cond [(null? xs) 0] [(null? (cdr xs)) (car xs)] [else (fold-arith op xs)])]
       [(*) (cond [(null? xs) 1] [(null? (cdr xs)) (car xs)] [else (fold-arith op xs)])]
@@ -667,7 +672,7 @@
 ;; the old eta over the prelude's `%str-concat` was retired).  This only rewrites
 ;; the direct-call form the core uses pervasively in `emit.ss`.
 (define (expand-string-append exp1 args)
-  (let ([xs (map exp1 args)])
+  (let ([xs (map-lr exp1 args)])
     (cond
       [(null? xs) ""]
       [(null? (cdr xs)) (car xs)]
@@ -678,10 +683,10 @@
 ;; short-circuiting conjunction of adjacent pairwise tests is built.  Fewer than
 ;; two operands compare true.
 (define (expand-compare exp1 op args)
-  (let ([xs (map exp1 args)])
+  (let ([xs (map-lr exp1 args)])
     (if (or (null? xs) (null? (cdr xs)))
         #t
-        (let ([temps (map (lambda (x) (fresh-name 'cmp)) xs)])
+        (let ([temps (map-lr (lambda (x) (fresh-name 'cmp)) xs)])
           (bind-temps temps xs (compare-chain op temps))))))
 
 (define (bind-temps temps exprs body)

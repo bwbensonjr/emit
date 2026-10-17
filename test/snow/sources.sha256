@@ -1,0 +1,8 @@
+a16c0ab8a2b77cde3172f4ea14752653b5a1d3021f9553c4d8a6504c22827f3e  lib/srfi/1.sld
+8e62f730c99f5775007b2f7d649af889bd76b0c3203e97e0ee7990312069b961  lib/srfi/1.scm
+b7ef3b51194271f001c1c7df2ea526c414f2eddcba0b57053f49453631d902bf  lib/srfi/227.sld
+98ccd24d3f4319e9147fbf00ba93a5ba4b4bf29d6ea859157f6f0c04763ed997  lib/srfi/227.scm
+e4b962a3a776c25eabf55da5f5ed2f753b2ebc63e4b9aab7ca5b26c21c138bbd  packages/srfi-1-0.1.3/package.scm
+d3ad31d0f67fe6e136581174e4cf841dbcb4ebbef5d27914d4cc7f570a8202a3  packages/srfi-1-0.1.3/test.scm
+67d2ebcc9dbca22a292b398d58f79b1c2dd2df388e716a1c67c31c1f801aed4c  packages/srfi-227-0.1.3/package.scm
+c0a226cf8a6e5fb8ce8cef38425fece0bc2b1d26fcb1d743c47c1d16f7a5134b  packages/srfi-227-0.1.3/test.scm

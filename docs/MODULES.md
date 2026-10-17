@@ -94,6 +94,27 @@ A library source is one `(define-library …)` form, conventionally in a `.sld` 
   A re-exported transformer travels with the resolution its **defining** library performed, so an
   importer two hops away still reaches that library's private bindings.
 
+- **A library may re-export an imported runtime binding.** Its export row names the original
+  library's global location; the facade does not allocate a second slot or copy the value. Renaming
+  changes the public name only, and a later assignment by the owner remains visible through every
+  facade. Imported procedures also retain their source call descriptor when one exists:
+
+  ```scheme
+  (define-library (list-facade)
+    (import (only (scheme cxr) cadr))
+    (export (rename cadr second)))
+  ```
+
+  An importer sees `second`, while the artifact points to the original `(scheme cxr)` location.
+  The `only` set is intentional: an import set may hide or rename a binding before it is
+  re-exported, and only the visible spelling can be named by the facade.
+
+- **An exported macro may depend on an imported macro.** If a transformer defined in a library's
+  body invokes a transformer from an imported library, the compiler carries that imported
+  transformer and its reachable private macro dependencies in the compile-time interface. Their
+  original qualified names and runtime references are retained, so a downstream importer does not
+  need to import the helper library directly. Explicit macro re-exports use the same rule.
+
 Beside `export`, `import`, and `begin`, Emit recognizes the four R7RS splicing declarations,
 `include`, `include-ci`, `include-library-declarations`, and `cond-expand` (see
 [Semantics](#semantics) and [Portable sources](#portable-sources)). Anything else in declaration
@@ -109,6 +130,43 @@ A program imports a library with a top-level `import` and then uses its exports:
 (import (mylib))
 (greet)
 ```
+
+### Using the SRFI 1 package
+
+The vendored, unmodified snow-fort SRFI 1 0.1.3 package is available from
+`test/snow/lib`. Prefix it when `(scheme base)` may provide overlapping names, so the source makes
+clear which implementation each call uses. This representative example also exercises SRFI 227's
+`opt-lambda` dependency:
+
+```scheme
+;; test/snow/srfi-1-smoke.scm
+(import (prefix (srfi 1) s1:)
+        (srfi 227))
+
+(define optional-value (opt-lambda (x (y 9)) (list x y)))
+(list (s1:fold + 0 '(1 2 3))
+      (s1:filter even? '(1 2 3 4))
+      (s1:append-map (lambda (x) (list x (* 10 x))) '(1 2 3))
+      (s1:caddr '(1 2 3 4))
+      (s1:iota 4 2)
+      (optional-value 'x)
+      (optional-value 'x 10))
+```
+
+Run it through the embedded compiler from the repository root:
+
+```sh
+build/emit run --no-manifest-chain --manifest emit-libs.scm \
+  -L test/snow/lib test/snow/srfi-1-smoke.scm
+# => (6 (2 4) (1 10 2 20 3 30) 3 (2 3 4 5) (x 9) (x 10))
+```
+
+The same source is used for the Chez driver, `emit build`, and `emit repl` acceptance paths. The
+coverage is representative, not a full SRFI conformance claim: the smoke cases cover `fold`,
+`filter`, `append-map`, a re-exported accessor, optional arguments, and `opt-lambda` with omitted
+and supplied arguments. Together with the earlier SRFI 2 and SRFI 8 smoke coverage, these are
+selected package cases; the upstream SRFI 1 and SRFI 227 tests require `(srfi 64)`, which is not
+included.
 
 A name the program defines itself shadows an imported one of the same spelling (**user-wins
 shadowing**).
@@ -474,8 +532,9 @@ build/emit lib test/modules/mylib.sld -o build/lib
 ```
 
 The table has three parts: the library name, the **symbol** rows mapping each external name to its
-mangled global, and the **call** rows — for each export whose initializer is a lambda, its code
-label and accepted arity. A fixed procedure records `(name label exact-arity)`; a procedure with a
+global target, and the **call** rows — for each export with a stable procedure interface, its code
+label and accepted arity. A locally defined target is mangled to this library; a re-exported target
+keeps the original owner's symbol. A fixed procedure records `(name label exact-arity)`; a procedure with a
 rest parameter records `(name label minimum-arity rest minimum-label)`. The final field advertises
 the same-ABI empty-rest entry used only at exactly the minimum arity. A new compiler also accepts an
 older four-field variadic row `(name label minimum-arity rest)` and uses its ordinary label for all
@@ -486,6 +545,12 @@ to the library's source (changes: `cross-unit-direct-calls`,
 A call row is recorded only for a binding whose slot cannot move after `__init`. A binding the
 library **assigns** therefore gets a symbol row but no call row, however its initializer is shaped
 (change: `library-toplevel-set`) — see *Cross-unit direct calls* under Semantics.
+
+For a runtime re-export, the symbol row retains the imported target and a procedure's call row is
+copied from the interface that supplied that target. The row's public name may change, but its code
+label and arity information do not. These compile-time artifacts help later compilation paths;
+delivered executables contain the linked runtime code and do not need the `.sld` sources or
+`.exports` tables at run time.
 
 the four commands — `emit lib` / `emit build` / `emit run` / `emit repl` — are verbs of a single
 `emit` binary, the sole user-facing entry point (change: `emit-cli-unification`).
@@ -658,10 +723,10 @@ change `scheme-base-partition` (issue #33) it does not:
 | `(scheme read)` | `read` | 1 |
 | `(scheme file)` | `open-input-file` `open-output-file` `with-input-from-file` `with-output-to-file` `call-with-input-file` `call-with-output-file` … plus `file-exists?` and `delete-file` | 8 exported, 6 relocated |
 
-**Breaking**, with no deprecation window — not a preference: `compile-library*` rejects "export of a
-name the library does not define", and a unit's export table maps each external name to a symbol
-mangled *to that unit*, so `(scheme base)` cannot re-export what it imports without new re-export
-machinery. A clean break is what pre-`0.1.0` is for.
+**Breaking**, with no deprecation window — not a preference: names moved out of `(scheme base)` are no
+longer in its public interface. A library can re-export an imported binding under a chosen public
+name, but `(scheme base)` has not chosen to add such aliases back. A clean break is what pre-`0.1.0`
+is for.
 
 `(scheme cxr)` ships **complete**: all twenty-four compositions of three to four `car`/`cdr`
 operations, which is what R7RS specifies. Emit previously defined nine of them, so fifteen depth-4
@@ -719,6 +784,8 @@ Provider choice does not salt emitted semantics. Cache validation starts only af
 checks the selected source identity; the same source reached through an exact entry or a root
 therefore produces byte-identical full unit IR and compile-time interfaces on the Chez, run, lib,
 REPL, and AOT paths. Build still prunes only after full-unit compilation.
+The pre-existing generic-call lambda-hoisting order discrepancy in whole `(scheme base)`
+is tracked in issue #125: its cross-host full IR differs, while its export interface agrees.
 
 ## Semantics
 
@@ -854,6 +921,18 @@ REPL, and AOT paths. Build still prunes only after full-unit compilation.
   is untouched — the toolchain is part of the cache key, as in Rust (`.rlib` SVH), GHC (`.hi`
   version), Go, and Bazel (change: `artifact-compiler-stamp`).
 
+The Chez driver reuses artifacts from a manifest's `artifacts` directory only while the library
+source and its included files are no newer than the artifacts and the compiler stamp matches. Keep
+those sources available for freshness checks; this is not a source-free package format. The native
+`emit run`, `emit repl`, and `emit build` commands resolve library sources through manifests and
+library roots and use their own execution/build caches; they do not consume the `emit lib` output
+directory as that portable artifact cache. A delivered executable contains the linked runtime code
+and has no runtime dependency on the library sources or `.exports` files.
+Adding explicit artifact-directory consumption is tracked in issue #123; the SRFI acceptance
+checks serialized artifact equivalence and normal cache reuse.
+Cross-host acceptance compares full IR for the focused composition fixtures and SRFI
+units/supporting libraries, and retains export-only comparison for `(scheme base)` pending #125.
+
 ### Portable and native cache tiers
 
 `emit run` and `emit repl` keep LLVM IR authoritative but derive a second, local cache tier for
@@ -909,22 +988,27 @@ Three things to read out of that:
   can layer macros on its own private ones. It is not usable in the importer: no user writes that
   spelling.
 
+If an exported transformer defined by another library uses an imported macro, the export interface
+also carries that dependency's already-resolved transformer closure. For example, when a library
+defines an exported wrapper macro in terms of an imported `opt-lambda`, the interface preserves the
+original `opt-lambda` and any private macros it reaches. The consumer does not need to import those
+helper macros directly, and the carried entries do not become public exports.
+
 An identifier the pass cannot resolve is **left exactly as written** and hygienically renamed per
 expansion, as before. Emit's hygiene is a name-set test with no syntax objects, so a
 template-introduced temporary (`tmp`) and a reference to a name nothing defines are indistinguishable
-here; leaving both means a macro that expands correctly cannot be broken by resolution. It is also
-why the baked derived forms need no special case: `when` falls through this arm and expands in the
-importer against the baked set every path registers.
+here; leaving both means a macro that expands correctly cannot be broken by resolution. References
+the compiler identifies as imported macros are carried with their defining library's resolution,
+whether that library is baked or supplied as a user library.
 
 Two consequences worth knowing:
 
 - The AOT tree-shake nominates root candidates from a unit's exports **plus** the own bindings its
   templates reach, so `helper` survives when the program uses `twice` — and is still pruned when the
   program imports the library without using it.
-- A **library** importing a macro whose template uses a derived form (`when`, `cond`) hits a
-  pre-existing gap: a library body does not get the baked macro set at all, so `when` is unbound
-  there whether it came from a template or was typed directly (issue #55). Program importers are
-  unaffected.
+- A library can use a macro in its body only when that macro is in its imported compile-time
+  environment. When an exported transformer depends on an imported macro, that dependency is carried
+  transitively with its original resolution; baked and non-baked imports follow the same rule.
 
 ## When you break a rule
 
@@ -979,11 +1063,6 @@ This is Modules v0:
 - **Import sets cannot rename or hide integrated primitives and core keywords** (`car`, `+`, `if`,
   `lambda`, …), which stay visible under their own names whatever a unit imports (issue #119; see
   [Import sets](#import-sets)).
-- **Two R7RS library forms that snow-fort packages use are still missing.** A library cannot
-  re-export a procedure it imports (issue #121). An exported macro whose template uses a macro
-  imported from a non-baked library expands to an unbound name in the importer (issue #120).
-  Together they keep `(srfi 1)` from compiling. `(srfi 8)` and `(srfi 2)` compile unmodified
-  (`test/snow/`).
 - **An `include` produced by a macro template resolves against the importing unit's home**, not
   the file the template came from, because a rebuilt form carries no record of where it was
   written. An include written in a file, at any depth, resolves beside that file.

@@ -25,6 +25,27 @@
   (append *core-keywords* *extra-op-keywords*
           '(list cons car cdr null? pair? eq? equal? not append)))
 
+(define temporary-macro
+  '(define-syntax temporary
+     (syntax-rules () ((_ value) (lambda (tmp) value)))))
+
+(define (temporary-parameters forms)
+  (map (lambda (form) (caadr form)) forms))
+
+(define (binding-initializer-parameters form)
+  (map (lambda (binding) (car (cadr (cadr binding)))) (cadr form)))
+
+(define (visited-arguments expand-args args)
+  (let ([seen '()])
+    (expand-args (lambda (x) (set! seen (cons x seen)) x) args)
+    (reverse seen)))
+
+(define (compare-temporaries form)
+  (let loop ([form form] [names '()])
+    (if (and (pair? form) (eq? (car form) 'let))
+        (loop (caddr form) (append names (list (caar (cadr form)))))
+        names)))
+
 ;; expand FORM in an environment built from the given define-syntax forms.
 (define (expand-with dsx form)
   (expand form (map parse-define-syntax dsx) base-known))
@@ -92,6 +113,22 @@
 (check "an imported name resolves to the exporter's mangled symbol"
        (tmpl-of (resolve1 '(base-f a) '() '((base-f . scheme.base:base-f))))
        '(scheme.base:base-f a))
+
+(check "exported rules discover imported macros in source order"
+       (let ([seen '()])
+         (resolve-exported-macros
+           '(mylib) '((wrapped . wrapped))
+           (list (dsx 'wrapped
+                      '((_ (a x)) (ma x))
+                      '((_ (b x)) (mb x))
+                      '((_ (c x)) (mc x))
+                      '((_ (d x)) (md x))))
+           '() '()
+           (lambda (name)
+             (set! seen (cons name seen))
+             name))
+         (reverse seen))
+       '(ma mb mc md))
 
 (check "...and is recorded as a foreign-ref, as a string"
        (caddr (resolve1 '(base-f a) '() '((base-f . scheme.base:base-f))))
@@ -300,6 +337,70 @@
 (check "an unshadowed keyword still expands"
        (expand-with (list w-macro) '(let ((x 1)) (w x)))
        '(let ((x 1)) (quote expanded-the-macro)))
+
+;; The expander's side-effecting maps must visit operands in source order on both
+;; Chez and Emit. Four effectful operands expose Chez's non-source-order map schedule.
+(check "generic application expands operands in source order"
+       (let ([form '(list (temporary a) (temporary b) (temporary c) (temporary d))])
+         (reset-counter!)
+         (temporary-parameters
+           (cdr (expand-with (list temporary-macro) form))))
+       '(tmp.0 tmp.1 tmp.2 tmp.3))
+
+(check "let initializers expand in source order"
+       (let ([form '(let ((a (temporary 1))
+                          (b (temporary 2))
+                          (c (temporary 3))
+                          (d (temporary 4)))
+                      a)])
+         (reset-counter!)
+         (binding-initializer-parameters
+           (expand-with (list temporary-macro) form)))
+       '(tmp.0 tmp.1 tmp.2 tmp.3))
+
+(check "letrec initializers expand in source order"
+       (let ([form '(letrec ((a (temporary 1))
+                             (b (temporary 2))
+                             (c (temporary 3))
+                             (d (temporary 4)))
+                      a)])
+         (reset-counter!)
+         (binding-initializer-parameters
+           (expand-with (list temporary-macro) form)))
+       '(tmp.0 tmp.1 tmp.2 tmp.3))
+
+(check "letrec* initializers expand in source order"
+       (let ([form '(letrec* ((a (temporary 1))
+                              (b (temporary 2))
+                              (c (temporary 3))
+                              (d (temporary 4)))
+                       a)])
+         (reset-counter!)
+         (binding-initializer-parameters
+           (expand-with (list temporary-macro) form)))
+       '(tmp.0 tmp.1 tmp.2 tmp.3))
+
+(check "arithmetic operands expand in source order"
+       (visited-arguments
+         (lambda (visit args) (expand-arith visit '+ args))
+         '(a b c d))
+       '(a b c d))
+
+(check "string-append operands expand in source order"
+       (visited-arguments expand-string-append '(a b c d))
+       '(a b c d))
+
+(check "comparison operands expand in source order"
+       (visited-arguments
+         (lambda (visit args) (expand-compare visit '< args))
+         '(a b c d))
+       '(a b c d))
+
+(check "comparison temporaries allocate in source order"
+       (begin
+         (reset-counter!)
+         (compare-temporaries (expand-compare (lambda (x) x) '< '(a b c d))))
+       '(cmp.0 cmp.1 cmp.2 cmp.3))
 
 ;; a binding does NOT reach into quoted data, and the keyword there was never a use anyway
 (check "shadowing does not disturb quoted data"

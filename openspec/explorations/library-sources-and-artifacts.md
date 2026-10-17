@@ -226,10 +226,25 @@ carries no comments), removing ~33 KB from each of `embed.ll` and `embed-repl.ll
 **Portable sources followed ②③** (change: `portable-library-surface`). It added import sets, an
 answered `(library ⟨name⟩)` feature requirement, `include`/`cond-expand` in program and body
 position, and `features`. It was measured against real packages: snow-fort.org's `(srfi 8)` and
-`(srfi 2)` compile unmodified (`test/snow/`). `(srfi 1)` does not yet, because it re-exports
-imported procedures (#121) and depends on `(srfi 227)`, whose exported macro reaches an imported
-non-baked macro through its template (#120). Those two issues are the next gap toward the
-snow-fort SRFI catalogue. Installing packages from snow-fort is not on the path at all yet.
+Earlier acceptance established that `(srfi 8)` and `(srfi 2)` compile unmodified. The current
+composition acceptance adds `(srfi 1)` 0.1.3 and its `(srfi 227)` 0.1.3 dependency, also unmodified
+(`test/snow/`). The compiler preserves the original global target when a library re-exports an
+imported runtime binding, including its call descriptor when available. Exported transformers also
+carry imported macro dependencies with their original resolution and foreign runtime references, so
+the eventual importer does not need a direct import of the helper library. This closes the recorded
+composition gaps #120 and #121; it does not add package installation or Snow integration.
+
+The focused acceptance uses a prefixed import to avoid overlap with `(scheme base)`:
+
+```sh
+build/emit run --no-manifest-chain --manifest emit-libs.scm \
+  -L test/snow/lib test/snow/srfi-1-smoke.scm
+# => (6 (2 4) (1 10 2 20 3 30) 3 (2 3 4 5) (x 9) (x 10))
+```
+
+It checks SRFI 1 `fold`, `filter`, `append-map`, a re-exported accessor, and optional arguments,
+plus SRFI 227 `opt-lambda` with omitted and supplied arguments. It is representative acceptance, not a
+full SRFI conformance claim: the upstream tests require `(srfi 64)`, which is not included.
 
 Step ① did not come from any of the three issues. It was the cheapest item with the widest reach,
 and it landed first (#35).
@@ -251,10 +266,9 @@ protocol in that script's header requires.
    `<prefix>/share/emit/`, so #33 may relocate names freely. See the RESOLVED note in Finding 2.
 2. ~~**Does `(scheme base)` re-export relocated names during a deprecation window?**~~
    **ANSWERED** by `scheme-base-partition`: there is no window, and it was never a preference.
-   `compile-library*` (`src/core.ss`) rejects "export of a name the library does not define", and a
-   unit's export table maps each external name to a symbol mangled *to that unit* — so
-   `(scheme base)` cannot re-export what it imports without new re-export machinery (and plausibly
-   import sets, which do not exist). Clean break, which is what pre-`0.1.0` is for.
+   The module system now permits runtime re-exports, but `(scheme base)` does not publish aliases for
+   the relocated names; it has the deliberate smaller R7RS surface. Clean break, which is what
+   pre-`0.1.0` is for.
 3. Is the manifest the right long-term resolution mechanism, or should there be a library *path*
    with the manifest as one entry?
    **NARROWED** by `installed-emit-completeness` (issue #44), not answered. The symptom that made

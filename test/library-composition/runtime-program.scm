@@ -1,0 +1,8 @@
+(import (prefix (composition runtime facade two) r:)
+        (composition runtime shadow))
+(r:change! 4)
+(r:replace-dynamic!)
+(write (list r:value (r:renamed-fixed 1) (fixed 1) (r:dynamic 1)
+             (r:collect 1 2) (r:collect 1 2 3 4)
+             (apply r:collect '(1 2 3))))
+(newline)
