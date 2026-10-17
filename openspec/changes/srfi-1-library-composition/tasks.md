@@ -144,10 +144,14 @@ its own fixtures, test integration, and documentation.
       fix is needed afterward, complete the edit and repeat regen and both suites.
       Final runner results and targeted reruns are recorded below. No compiler
       source changed after the final regen; the two complete runners finished.
-- [ ] 5.3 Commit the completed implementation and regenerated artifacts with technical
+- [x] 5.3 Commit the completed implementation and regenerated artifacts with technical
       conventional commit messages referencing `Fixes #120` and `Fixes #121` as
       appropriate, then run `test/trust-check.sh`. Verify regenerated committed IR is
       byte-identical and the intended change is clean before marking this task complete.
+      Implementation commit: `1e2c627` (`feat(modules): compose SRFI library interfaces`),
+      with `Fixes #120`, `Fixes #121`, and `Fixes #124`. Post-commit trust-check passes
+      1/1: regeneration converges at iteration 1 in 235 seconds and reproduces every
+      committed bootstrap byte. The implementation worktree was clean afterward.
 
 ## Workflow follow-up
 
@@ -198,8 +202,8 @@ and supporting libraries, retaining base export comparison. The proposal, design
 delta spec, and task 4.3 record this explicit exclusion; #125 remains separate work.
 
 Both complete runners finished after the second regeneration without any further
-compiler-source edits. Integration verification is complete with the results below;
-the implementation commit and post-commit trust-check remain.
+compiler-source edits. Integration verification, the implementation commit, and the
+post-commit trust-check are complete, with detailed results below.
 
 Final default runner: 44/45 suites passed in 2392 seconds. The remaining printer
 assertion required `car: not a pair` for a malformed dotted `define-values` form;
