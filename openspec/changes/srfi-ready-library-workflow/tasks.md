@@ -278,10 +278,16 @@ of artifact consumption or successful package assertions.
       `run-all-final.log` and `run-dev-final.log` under
       `/private/tmp/emit-srfi-workflow.TW4WJU/`. Development trust-check correctly
       skips the dirty bootstrap; a real post-commit trust-check remains task 7.4.
-- [ ] 7.4 Commit completed implementation and bootstrap with conventional messages
+- [x] 7.4 Commit completed implementation and bootstrap with conventional messages
       referencing `Fixes #117`, `Fixes #123`, `Fixes #125`, `Fixes #126`, `Fixes #128`, `Fixes #129`, `Fixes #130`, and `Fixes #131` as
       appropriate. Run post-commit `test/trust-check.sh` and verify committed bootstrap
       bytes reproduce and the intended worktree is clean before marking complete.
+      Implementation/bootstrap commit: `8b22aac` (`feat: enable SRFI libraries and
+      native artifact reuse`), referencing all eight fixing issues. Post-commit
+      trust-check exits 0, regenerates to fixed-point iteration 1, and verifies
+      byte-identical committed bootstrap IR (272 seconds). Worktree was clean
+      after the check. Logs: `trust-check-final.log` and
+      `trust-check-regen-final.log` in the retained work directory above.
 
 ## Workflow follow-up
 
