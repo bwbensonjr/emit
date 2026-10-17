@@ -1224,8 +1224,7 @@
          [_ (shake-at! "imports")]
          [tables (repl-import-tables (cadr dl))]
          [_ (shake-at! "candidates")]
-         [cands (append (map cdr (caddr dl))
-                        (ct-own-refs (table-ct-half (assoc name *repl-libs*))))]
+         [cands (library-root-candidates name (caddr dl) (assoc name *repl-libs*))]
          [_ (shake-at! "roots")]
          [roots (program-root-internals root-ir name cands)]
          [saved counter]

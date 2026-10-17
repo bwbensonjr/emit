@@ -63,6 +63,10 @@ run_suite "simplify pass units"         chez --libdirs src --script test/simplif
 run_suite "artifact cache core"         chez --libdirs src --script test/artifact-cache-core-tests.ss
 run_suite "native object cache"         test/native-object-cache-tests.sh
 run_suite "module vertical-slice (AOT)" test/modules-tests.sh
+run_suite "runtime and macro library composition (Chez source + native parity)" \
+          env EMIT_COMPOSITION_HOST=both test/library-composition-tests.sh
+run_suite "snow-fort packages + cross-host artifact parity" \
+          env EMIT_SNOW_HOST=both test/snow-package-tests.sh
 run_suite "hybrid resolver (Chez backends)" test/hybrid-library-resolution-chez-tests.sh
 run_suite "(scheme base) gen guard"     test/scheme-base-gen-check.sh
 run_suite "(scheme base) auto-import (AOT)" test/prelude-base-tests.sh

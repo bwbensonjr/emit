@@ -1018,9 +1018,8 @@
                          [exps (caddr dl)]
                          ;; the unit's exports plus what its exported macros' templates
                          ;; reach (change: library-macro-export, design D6)
-                         [cands (append (map cdr exps)
-                                        (ct-own-refs (table-ct-half
-                                                       (cdr (assoc nm tables)))))]
+                         [cands
+                           (library-root-candidates nm exps (cdr (assoc nm tables)))]
                          [roots (program-root-internals root-text nm cands)]
                          [imp-t (map (lambda (n) (cdr (assoc n tables))) (cadr dl))]
                          [res (compile-library (car dl)

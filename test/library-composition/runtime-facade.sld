@@ -1,0 +1,5 @@
+(define-library (composition runtime facade)
+  (import (rename (only (composition runtime owner)
+                        value change! fixed collect dynamic replace-dynamic! init-count)
+                  (fixed renamed-fixed)))
+  (export value change! renamed-fixed collect dynamic replace-dynamic! init-count))

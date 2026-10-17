@@ -98,16 +98,17 @@ The compiler SHALL accept a `define-library` form naming a library `(p₁ … p�
 containing `(export …)` declarations and body definitions. Each `export` declaration lists
 either a bare name `<name>` or a rename pair `(rename <internal> <external>)`. The
 **internal** name (the bare name, or `<internal>` in a rename) MUST be a name the library
-defines at its top level **or a macro bound in its compile-time environment, including one that
-arrived from an import**; exporting a name that is neither SHALL be a compile-time error. The **external** name (the bare name, or `<external>` in a rename) is the
-spelling under which importers see the binding. `only`/`except`/`prefix` import-set transforms
-remain out of scope.
+defines at its top level, a runtime binding visible through its imports, **or a macro bound
+in its compile-time environment, including one that arrived from an import**; exporting a
+name absent from all three SHALL be a compile-time error. The **external** name (the bare name, or `<external>` in a rename) is the
+spelling under which importers see the binding. Import sets SHALL select and rename the
+bindings available for re-export under the ordinary import-set rules.
 
 **An export SHALL be a procedure, a value, or a macro.** A name bound by a `define-syntax` in the
 library body counts as a name the library defines, and MAY appear in an `export` declaration — as a
 bare name or as the `<internal>` of a rename. Its transformer travels in the library's compile-time
 export interface rather than in the emitted unit, and an exported name that is neither a top-level
-definition, nor a `define-syntax` binding, nor a macro the library imports SHALL still be reported
+definition, nor an imported runtime binding, nor a `define-syntax` binding, nor a macro the library imports SHALL still be reported
 as a name the library does not define.
 
 **The recognized declarations are the seven of R7RS §5.6.1** — `export`, `import`, `begin`,
@@ -150,7 +151,7 @@ unit, so that sibling body forms MAY reference them and the `export` declaration
 #### Scenario: Exporting an undefined name is an error
 
 - **WHEN** a `define-library` declares `(export missing)` (or `(export (rename missing m))`)
-  but defines no top-level `missing`
+  but neither defines nor imports `missing`
 - **THEN** compilation reports a compile-time error naming the undefined export
 
 #### Scenario: A library exports a macro it defines
@@ -685,13 +686,7 @@ resolves to in the exporting library:
   binding of that name;
 - a core keyword, a primitive, or an integrable intrinsic — these SHALL be classified **before** the
   library's own bindings, so a template's `(+ a b)` still reaches inline arithmetic in the importer
-  instead of becoming a call to a global named `+`;
-- a macro of the baked `(scheme base)` set **when the importing unit is a program**, which needs no
-  rule of its own: it falls under the leave-as-written case below and expands in the importer
-  against the baked set the program path merges. When the importing unit is a **library**, the
-  derived forms arrive instead through the compile-time interface of the library it imported them
-  from, already resolved, and are governed by the ordinary imported-transformer rule rather than by
-  this exception — so a template mentioning a derived form now works in a library importer too.
+  instead of becoming a call to a global named `+`.
 
 The rewritten spelling SHALL be the exporting unit's mangled symbol for one of its own top-level
 bindings, or the already-mangled symbol for a name the exporting library imports. A template MAY
@@ -706,7 +701,10 @@ macro that expands correctly today SHALL therefore not be altered by this resolu
 A macro keyword a template mentions SHALL be rewritten to a unit-qualified spelling and its
 transformer carried in the compile-time interface, transitively, whether or not that macro is also
 exported publicly. A library MAY therefore export a macro whose template uses one of its **private**
-macros.
+macros, or a macro it imports from another library. Imported transformers SHALL retain
+their defining library's resolved identifiers and transitive dependencies; carrying one
+SHALL NOT resolve its body again in the forwarding library's environment. This rule applies
+equally to baked and non-baked library imports.
 
 Because a macro keyword and a top-level binding would then share the unit-qualified spelling, a
 library that binds the same name with both `define` and `define-syntax` SHALL be a compile-time error
@@ -732,8 +730,15 @@ compile-time interface is byte-identical however and wherever it is compiled.
 #### Scenario: An exported template using a derived form needs no copy of it
 
 - **WHEN** a **program** imports a library whose exported macro's template uses `when` or `cond`
-- **THEN** the identifier is left unresolved in the compile-time interface and expands against the
-  baked `(scheme base)` macro set, with no copy of that transformer in the interface
+- **THEN** the program uses the dependency supplied through the library's compile-time interface
+  without defining a program-local copy of the transformer
+
+#### Scenario: An exported template using an imported derived form retains its dependency
+
+- **WHEN** a **program** imports a library whose exported macro's template uses `when` or `cond`
+  imported by that library from `(scheme base)`
+- **THEN** the dependency remains available through the compile-time interface and expands
+  against its defining library's bindings even when the program hides that public keyword
 
 #### Scenario: A recursive exported macro's self-reference is not captured by the importer
 
@@ -798,8 +803,9 @@ settled by this requirement; what is required here is that the current limit be 
 ### Requirement: Library artifact emission
 
 Compiling a `define-library` SHALL emit an LLVM module (the library unit) that:
-contains one external-linkage global per exported binding, named by the Stage 0 symbol namer
-(`@"p₁.….pₙ:x"`); contains an initialization function `@"L:__init"` that runs the library's
+contains external-linkage globals for its own runtime definitions, named by the Stage 0
+symbol namer (`@"p₁.….pₙ:x"`); represents a re-exported imported runtime binding through
+its original owner's symbol without allocating or initializing a duplicate location; contains an initialization function `@"L:__init"` that runs the library's
 top-level definitions to populate those globals and is guarded by a one-shot flag
 (`@"L:__inited"`) so repeated calls run the body at most once; names the library's internal
 top-levels and lifted code blocks through the same unit-qualified namer; and defines **no**
@@ -826,13 +832,15 @@ units carry the qualified names).
 ### Requirement: Library export table
 
 Alongside the library unit the compiler SHALL produce a readable export table mapping each
-export's **external** name to the **internal-name-based** mangled symbol. For a bare export the
-external name equals the internal name; for `(rename <internal> <external>)` the table key is
-`<external>` while the mangled symbol is derived from `<internal>`. A driver reading the table
+export's **external** name to its binding's mangled symbol. For a locally defined export,
+the symbol is derived from the exporting library and the internal name; for a re-exported
+imported runtime binding, it is the original symbol obtained from the import interface.
+For `(rename <internal> <external>)` the table key is `<external>` while the target is
+resolved through `<internal>` in the exporting library's environment. A driver reading the table
 together with the unit module SHALL have everything needed to resolve references into the library
 with no access to the library's source.
 
-For an export whose top-level initializer is a lambda, the table SHALL additionally record the
+For a locally defined export whose top-level initializer is a lambda, the table SHALL additionally record the
 binding's **code label** and accepted arity shape. A fixed-arity lambda SHALL record its exact arity.
 A lambda with a rest parameter SHALL record its minimum arity and SHALL be explicitly distinguished
 from a fixed-arity lambda with that arity. A program compiled against the table alone SHALL emit a
@@ -848,6 +856,10 @@ the property a cross-unit direct call depends on: an importer learns a callee's 
 this table, so withholding the label is what keeps a direct call from binding code that the slot no
 longer points to. The binding SHALL still be exported and callable.
 
+A re-exported imported procedure SHALL preserve its source interface's call descriptor,
+including any optional minimum-arity entry, under the new external name. No descriptor
+SHALL be invented for a binding whose source interface provides none.
+
 The table SHALL further carry a **compile-time interface** — the library's exported macro
 transformers, any private transformers those templates reach, and the mangled bindings the templates
 reference, split into the unit's own bindings and other units'. The interface SHALL be readable data
@@ -860,8 +872,9 @@ library that exports no macro, so that an artifact produced before this change i
 crashed on. It SHALL also interpret the existing three-field procedure call row as fixed arity, so
 previously produced library artifacts remain usable.
 
-A library that exports no macro SHALL produce an empty compile-time interface and an emitted unit
-byte-identical to the one it produced before this change.
+A library that exports no macro SHALL produce an empty compile-time interface. Existing
+libraries that do not re-export imported runtime bindings SHALL retain byte-identical emitted
+units unless another requirement explicitly changes their compilation.
 
 #### Scenario: Export table maps external name to mangled symbol
 
@@ -2266,7 +2279,7 @@ particular library name would reintroduce the two-tier privilege this capability
 
 #### Scenario: Re-exporting a name bound as neither is still an error
 
-- **WHEN** a library exports a name that is neither one of its own top-level definitions nor a macro
+- **WHEN** a library exports a name that is neither one of its own top-level definitions, nor an imported runtime binding, nor a macro
   in its compile-time environment
 - **THEN** compilation reports that the library does not define the name
 
@@ -2360,3 +2373,108 @@ artifacts.
   selects a different source for the same non-baked name
 - **THEN** the cache entry is reused only if its recorded source identity matches the selected
   source; otherwise the selected source is compiled
+
+### Requirement: Runtime re-exports preserve the original binding
+A library SHALL be able to re-export a visible imported runtime binding, under its
+visible name or an export rename. The re-export SHALL denote the original location,
+preserve valid call metadata, and remain an imported binding for assignment checks.
+Local definitions SHALL retain precedence. This SHALL hold transitively on every
+compilation path.
+
+#### Scenario: A facade re-exports an imported value and procedure
+- **WHEN** a facade imports a library's value and procedure and exports both without defining them
+- **THEN** an importing program uses both through the facade, and its references target the
+  original library's globals without duplicate facade globals
+
+#### Scenario: Import and export renames compose
+- **WHEN** a facade imports a procedure through nested selection and renaming sets, exports it
+  under another name, and a program imports that name with a prefix
+- **THEN** the final name denotes the original procedure, and excluded names remain unavailable
+
+#### Scenario: A local definition wins over an imported binding
+- **WHEN** a facade imports `f`, defines its own `f`, and exports `f`
+- **THEN** the export denotes the facade's definition and uses only that definition's call metadata
+
+#### Scenario: Re-exported state observes updates by its owner
+- **WHEN** a library exports a value and an operation that changes that value's binding, and a
+  facade re-exports both
+- **THEN** reads through the facade observe owner updates, including replacement of a procedure,
+  and assignment to that imported binding remains a compile-time error
+
+#### Scenario: Call metadata survives a chain of facades
+- **WHEN** a stable fixed or variadic procedure is re-exported through two facades
+- **THEN** valid direct calls retain the original label and arity descriptor, including an optional
+  minimum-arity entry, while a binding without a descriptor remains indirectly called
+
+#### Scenario: A diamond shares one binding and initialization
+- **WHEN** a program imports two facades over the same stateful owner library
+- **THEN** both facades denote the same owner location, and the owner's initialization runs once
+
+### Requirement: Imported macro dependencies survive library composition
+An exported macro whose template uses an imported macro SHALL carry that dependency
+and its transitive private transformers and runtime references in its compile-time
+interface. Their original resolution SHALL survive forwarding, re-exporting, import
+sets, and artifact serialization. Carried dependencies SHALL NOT become additional
+public exports or depend on matching names at the eventual use site.
+
+#### Scenario: A non-baked macro dependency reaches a third unit
+- **WHEN** library A defines a macro using its private macro and runtime helper, library B imports
+  A and exports a new macro using A's macro, and a program imports only B
+- **THEN** B's macro expands and calls A's helper with no extra imports in the program
+
+#### Scenario: Renamed and hidden macro dependencies retain their origin
+- **WHEN** B imports A's macro under a renamed keyword, exports a macro using it, and a program
+  imports only B's outer macro while defining a conflicting helper keyword
+- **THEN** expansion uses A's transformer and private helpers, and A's public keyword is not
+  introduced into the program's scope by carrying the dependency
+
+#### Scenario: Multi-hop forwarding preserves resolved identifiers
+- **WHEN** a facade re-exports B's outer macro and a program consumes the facade's saved artifact
+- **THEN** expansion still uses A's bindings without adding the facade's prefix to resolved names
+
+#### Scenario: Recursive helper dependencies are finite
+- **WHEN** reachable helper transformers refer to one another recursively
+- **THEN** the serialized interface contains a finite dependency closure and a terminating macro
+  use expands normally without repeated forwarding changing its bindings
+
+#### Scenario: Runtime helpers survive standalone compilation
+- **WHEN** a built program uses a macro whose imported dependency references a private runtime helper
+- **THEN** the linked executable retains the helper and any required closure environment, with
+  the same output as interactive execution
+
+### Requirement: Portable SRFI sources work through reusable library artifacts
+Emit SHALL compile pinned, unmodified SRFI 1 and SRFI 227 sources from a conventional
+library root. Uses SHALL agree through Chez, `emit run`, delivered `emit build`
+executables, and `emit repl`. Focused/SRFI artifacts and supporting libraries SHALL
+match Chez's full IR and readable interfaces, except that `(scheme base)` requires
+interface parity only (#125). Normal cache reuse SHALL preserve behavior.
+
+#### Scenario: SRFI 1 list procedures work through a prefixed import
+- **WHEN** a program imports `(prefix (srfi 1) s1:)` and exercises `s1:fold`, `s1:filter`,
+  `s1:append-map`, and a re-exported accessor
+- **THEN** every supported compilation path produces the same expected results from the
+  unmodified package sources
+
+#### Scenario: SRFI 227 optional arguments exercise imported macro dependencies
+- **WHEN** a program uses SRFI 227's `opt-lambda` with omitted and supplied optional arguments,
+  and uses a SRFI 1 procedure implemented with it
+- **THEN** all paths agree on default and supplied argument behavior without a package-local workaround
+
+#### Scenario: Normal cache reuse preserves package behavior
+- **WHEN** the SRFI acceptance program warms a dedicated native cache and is run and imported
+  at the REPL again from an unrelated working directory
+- **THEN** the existing unit-cache entries are reused and the output is unchanged
+
+#### Scenario: Hosts agree on the full library interface
+- **WHEN** the same source closure is compiled whole by the Chez driver and the embedded compiler
+- **THEN** each focused fixture, SRFI unit, and supporting library's full unit IR,
+  with host-added target headers normalized identically, and readable export
+  interface are byte-identical
+- **AND** `(scheme base)` has a byte-identical readable export interface; its full-IR
+  ordering discrepancy is tracked separately in #125
+
+#### Scenario: The delivered executable runs independently
+- **WHEN** the built acceptance executable is moved outside the source and artifact directories
+  and run without library search configuration
+- **THEN** it produces the expected output without Emit, Chez, package sources, or compile-time
+  interfaces being required at runtime

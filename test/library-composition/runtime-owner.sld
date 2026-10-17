@@ -1,0 +1,13 @@
+(define-library (composition runtime owner)
+  (import (scheme base))
+  (export value change! fixed collect dynamic replace-dynamic! init-count)
+  (begin
+    (define value 1)
+    (define init-count 0)
+    (set! init-count (+ init-count 1))
+    (define (change! next) (set! value next))
+    (define (fixed x) (+ x value))
+    (define dynamic (lambda (x) (+ x value)))
+    (define (replace-dynamic!) (set! dynamic (lambda (x) (+ x 20))))
+    (define (collect first second . rest)
+      (cons first (cons second rest)))))

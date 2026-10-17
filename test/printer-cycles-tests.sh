@@ -140,13 +140,14 @@ check char-roundtrip '(import (scheme read))
 echo "the REPL survives a trap inside the compiler (issue #97)"
 
 # `(define-values (x y . z) ...)` is the shortest form that makes the COMPILER trap (the
-# frontend destructures it with a bare car -- issue #91).  Before this the session exited 1
+# frontend destructures it with unchecked pair accessors -- issue #91).  Before this the session exited 1
 # and the following form was never read.  After it, compile-one-form's guard catches the
 # trap, which also means the session snapshot it holds is restored (repl-core design D3).
+# Which accessor encounters the malformed tail first is not the recovery contract.
 sess="$(printf '(define-values (x y . z) (values 1 2 3))\n(display (+ 40 2))\n' | $TO $HOST 2>&1)"
 sess_status=$?
 last="$(printf '%s' "$sess" | awk 'NF{v=$0} END{print v}')"
-if [ "$sess_status" -eq 0 ] && printf '%s' "$sess" | grep -q "car: not a pair" \
+if [ "$sess_status" -eq 0 ] && printf '%s' "$sess" | grep -Eq '(car|cdr): not a pair' \
    && printf '%s' "$last" | grep -q 42; then
   ok "repl-compiler-trap  (reported, session survived, next form ran)"
 else

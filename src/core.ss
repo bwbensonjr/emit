@@ -1498,7 +1498,16 @@
                 (append (ct-own-refs a) (ct-own-refs b))
                 (append (ct-foreign-refs a) (ct-foreign-refs b))))
 
-(define (reexported-macros exports own-macro-env import-tables)
+(define (import-macro-table key import-tables)
+  (let find ([tables import-tables])
+    (and (pair? tables)
+         (if (assq key (ct-macros (table-ct-half (car tables))))
+             (car tables)
+             (find (cdr tables))))))
+
+;; REQUESTS maps each output keyword to its visible imported keyword. Imported
+;; transformer bodies are already resolved; copy their dependency graph intact.
+(define (forwarded-macros requests import-tables)
   (let ([entries (quote ())] [foreign (quote ())] [seen (quote ())])
     (define (note-foreign! str)
       (unless (member str foreign) (set! foreign (cons str foreign))))
@@ -1512,19 +1521,39 @@
             (set! entries (cons (cons out (cdr e)) entries))
             (for-each (lambda (s) (when (assq s (ct-macros h)) (copy! tbl s s)))
                       (all-symbols (cddr e)))))))
-    (for-each
-      (lambda (e)
-        (unless (assq (cdr e) own-macro-env)
-          (for-each (lambda (tbl)
-                      (let ([h (table-ct-half tbl)])
-                        (when (assq (cdr e) (ct-macros h))
-                          (copy! tbl (car e) (cdr e))
-                          (for-each (lambda (n) (note-foreign! (mangle (car tbl) n)))
-                                    (ct-own-refs h))
-                          (for-each note-foreign! (ct-foreign-refs h)))))
-                    import-tables)))
-      exports)
+    (for-each (lambda (e)
+                (let ([tbl (import-macro-table (cdr e) import-tables)])
+                  (when tbl
+                    (let ([h (table-ct-half tbl)])
+                      (copy! tbl (car e) (cdr e))
+                      (for-each (lambda (n) (note-foreign! (mangle (car tbl) n)))
+                                (ct-own-refs h))
+                      (for-each note-foreign! (ct-foreign-refs h))))))
+              requests)
     (make-ct-half (reverse entries) (quote ()) (reverse foreign))))
+
+;; Resolve owned templates with a callback for imported macro references. The
+;; callback records hidden aliases; the same forwarding traversal also serves
+;; explicit macro re-exports, without resolving imported bodies a second time.
+(define (library-macro-interface name exports own-macros defined-names import-env
+         tables)
+  (let* ([requests (filter (lambda (e)
+                             (and (not (memq (cdr e) defined-names))
+                                  (not (assq (cdr e) own-macros))))
+                           exports)]
+         [owned (resolve-exported-macros
+                  name
+                  exports
+                  own-macros
+                  defined-names
+                  import-env
+                  (lambda (s)
+                    (and (import-macro-table s tables)
+                         (let ([key (string->symbol (mangle name s))])
+                           (unless (assq key requests)
+                             (set! requests (append requests (list (cons key s)))))
+                           key))))])
+    (ct-half-union owned (forwarded-macros requests tables))))
 
 ;; The direct-call view of the same tables (changes: cross-unit-direct-calls,
 ;; cross-unit-variadic-direct-calls): an alist of
@@ -1580,6 +1609,43 @@
                         (if (and (pair? (cdddr p)) (eq? (cadddr p) 'rest))
                             (list (car e) (cadr p) (caddr p) 'rest (cadr (cdddr p)))
                             (list (car e) (cadr p) (caddr p))))))
+               exports)))
+
+;; Classify exports once against the effective environment. Macros have no runtime
+;; row, and an absent binding is rejected before either emission path builds a table.
+(define (library-runtime-exports exports defined-names macro-env import-env)
+  (filter (lambda (e)
+            (cond
+              [(memq (cdr e) defined-names) #t]
+              [(assq (cdr e) macro-env) #f]
+              [(assq (cdr e) import-env) #t]
+              [else (error 'compile-library
+                           "export of a name the library does not define"
+                           (cdr e))]))
+          exports))
+
+;; A runtime re-export names the original location. Publication does not create a
+;; slot in this unit, and an export rename changes only the table key.
+(define (runtime-export-rows name exports defined-names import-env)
+  (map (lambda (e)
+         (cons (car e)
+               (if (memq (cdr e) defined-names)
+                   (mangle name (cdr e))
+                   (symbol->string (cdr (assq (cdr e) import-env))))))
+       exports))
+
+;; Stop at the table that supplied the binding, even when it has no call row:
+;; another table's same-spelled procedure must not lend it a stability promise.
+(define (reexport-call-rows exports defined-names import-tables)
+  (filter (lambda (r) r)
+          (map (lambda (e)
+                 (and (not (memq (cdr e) defined-names))
+                      (let find ([tables import-tables])
+                        (and (pair? tables)
+                             (if (assq (cdr e) (cadar tables))
+                                 (let ([row (assq (cdr e) (caddr (car tables)))])
+                                   (and row (cons (car e) (cdr row))))
+                                 (find (cdr tables)))))))
                exports)))
 
 ;; Compile a library's declarations into (list ir-text export-table).
@@ -1708,6 +1774,16 @@
     '()
     candidates))
 
+;; Only an export whose target belongs to this unit can nominate a local root.
+;; A facade's foreign targets are reached in their owners through accumulated IR.
+(define (library-root-candidates name exports table)
+  (append (map cdr
+               (filter (lambda (e)
+                         (let ([row (assq (car e) (cadr table))])
+                           (and row (string=? (cdr row) (mangle name (cdr e))))))
+                       exports))
+          (ct-own-refs (table-ct-half table))))
+
 ;; `keep-roots` (optional): when #f (default), compile the WHOLE library unchanged
 ;; -- byte-identical to before, so the REPL/JIT execution path and committed artifacts are
 ;; unaffected.  When a list of internal names, emit ONLY the bindings transitively
@@ -1767,7 +1843,8 @@
          ;; has no global, so it contributes no symbol row and no call row -- it travels
          ;; entirely in the compile-time interface below.  Everything downstream of here
          ;; that builds the runtime table reads `runtime-exports`, never `exports`.
-         [runtime-exports (filter (lambda (e) (memq (cdr e) defined-names)) exports)]
+         [runtime-exports
+           (library-runtime-exports exports defined-names macro-env import-env-alist)]
          [env (make-repl-env)])
     ;; A name bound at the library's top level by EITHER `define` or `define-syntax` is a
     ;; name the library defines, and either may be exported (change: library-macro-export,
@@ -1787,17 +1864,6 @@
                          "a library binds one name with both define and define-syntax"
                          (car m))))
               own-macro-env)
-    ;; A name bound as a macro in the MERGED environment counts, so a library may
-    ;; re-export a macro it imports (change: library-body-macro-scope).  `macro-env` is
-    ;; own-first plus every import's exported transformers, which is exactly the set of
-    ;; keywords this body could use -- and re-exporting is the ordinary R7RS act of
-    ;; passing one on.  A name in neither half is still the same error it always was.
-    (for-each (lambda (e)
-                (unless (or (memq (cdr e) defined-names) (assq (cdr e) macro-env))
-                  (error 'compile-library
-                         "export of a name the library does not define"
-                         (cdr e))))
-              exports)
     ;; seed the import environment FIRST, so the unit's own defines (registered
     ;; next, consed on top) shadow an imported name of the same spelling.
     (vector-set! env 0 import-env-alist)
@@ -1825,22 +1891,24 @@
                               (cadr st))))
                     (list 1 (quote ()))
                     body)))]
-            ;; export table keys on the EXTERNAL name; the symbol is the INTERNAL name
-            ;; mangled to this unit (rename is pure indirection).
-            [export-table (map (lambda (e) (cons (car e) (mangle name (cdr e))))
-                               runtime-exports)])
-        (list (emit-library-batch progs name)
-              (export-table-datum
-                name
-                export-table
-                (export-call-rows runtime-exports (unit-procs))
-                (ct-half-union
-                  (resolve-exported-macros name
-                                           exports
-                                           own-macro-env
-                                           defined-names
-                                           import-env-alist)
-                  (reexported-macros exports own-macro-env import-tables)))))
+            ;; Keys use external names; targets retain their defining unit's identity.
+            [export-table (runtime-export-rows name
+                                               runtime-exports
+                                               defined-names
+                                               import-env-alist)])
+        (list
+          (emit-library-batch progs name)
+          (export-table-datum
+            name
+            export-table
+            (append (export-call-rows runtime-exports (unit-procs))
+                    (reexport-call-rows runtime-exports defined-names import-tables))
+            (library-macro-interface name
+                                     exports
+                                     own-macro-env
+                                     defined-names
+                                     import-env-alist
+                                     import-tables))))
       ;; PRUNED PATH (closed-world AOT tree-shake): expand each body form ONCE,
       ;; compute the define->define reference graph, keep only what's reachable from
       ;; the roots, and lower/emit just those (in original order, so __init order is
@@ -1886,14 +1954,15 @@
                                                 acc))
                                         (quote ())
                                         kept))]
-             ;; the KEPT exports; both the symbol rows and the call rows are drawn
-             ;; from this one list, so the pruned table is exactly the full table
-             ;; restricted to what survived -- same names, same mangled symbols, and
-             ;; (because the labels are name-derived) the same labels.
-             [kept-exports (filter (lambda (e) (memq (cdr e) reachable))
+             ;; Prune local definitions by reachability, but keep foreign re-exports:
+             ;; they define no local code to prune. Both symbol and call rows retain
+             ;; the same owner targets and labels as the full interface.
+             [kept-exports (filter (lambda (e)
+                                     (or (not (memq (cdr e) defined-names))
+                                         (memq (cdr e) reachable)))
                                    runtime-exports)]
-             [export-table (map (lambda (e) (cons (car e) (mangle name (cdr e))))
-                                kept-exports)])
+             [export-table
+               (runtime-export-rows name kept-exports defined-names import-env-alist)])
         ;; The compile-time interface is NOT pruned: a transformer is not a binding the
         ;; reachability graph models, and an importer that reached the macro is exactly
         ;; what put its referenced bindings in `keep-roots` (design D6).  So the pruned
@@ -1902,14 +1971,14 @@
               (export-table-datum
                 name
                 export-table
-                (export-call-rows kept-exports (unit-procs))
-                (ct-half-union
-                  (resolve-exported-macros name
-                                           exports
-                                           own-macro-env
-                                           defined-names
-                                           import-env-alist)
-                  (reexported-macros exports own-macro-env import-tables))))))))
+                (append (export-call-rows kept-exports (unit-procs))
+                        (reexport-call-rows kept-exports defined-names import-tables))
+                (library-macro-interface name
+                                         exports
+                                         own-macro-env
+                                         defined-names
+                                         import-env-alist
+                                         import-tables)))))))
 
 ;; Compile a program that imports libraries.  import-tables is a list of the
 ;; program's DIRECT imports' export tables (as returned by compile-library); the
