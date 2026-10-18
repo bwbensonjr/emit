@@ -28,6 +28,15 @@ jobs:
           cmake --version
           ninja --version
           git --version
+          if ! command -v timeout >/dev/null 2>&1 && [ "$RUNNER_OS" = macOS ]; then
+            printf 'ci: prepare GNU timeout -> private test tools directory\n' >&2
+            command -v gtimeout >/dev/null 2>&1 || brew install coreutils >&2
+            mkdir -p "$RUNNER_TEMP/emit-test-tools"
+            ln -s "$(command -v gtimeout)" "$RUNNER_TEMP/emit-test-tools/timeout"
+            export PATH="$RUNNER_TEMP/emit-test-tools:$PATH"
+            printf '%s\n' "$RUNNER_TEMP/emit-test-tools" >> "$GITHUB_PATH"
+          fi
+          timeout --version
           /bin/bash test/ci-provision-logging-tests.sh
           /bin/bash test/ci-archive-isolation-tests.sh
       - name: Identify pinned dependency recipe

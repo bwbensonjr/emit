@@ -200,33 +200,69 @@ got="$(printf '%s\n' "$src" | $RUN 2>/dev/null)"
                    || bad "variadic self tail call: $got"
 
 # --- generated labels cannot alias legal Scheme procedure names -------------
-# This is intentionally compiled through the source driver so it guards task 4.7
-# before regeneration as well as the shipped compiler afterward.
+# Always exercise the shipped compiler: the default native suite must work without Chez.
+# The optional source-driver check below uses a separate manifest/artifact directory so its
+# cached artifacts cannot mask the source compiler's output.
 collision_man="$TMP/collision-libs.scm"
 collision_art="$TMP/collision-artifacts"
+mkdir -p "$collision_art"
 printf '((library (emit internal) (source "%s/lib/emit/internal.sld") (artifacts "%s"))\n (library (scheme base) (source "%s/lib/scheme/base.sld") (artifacts "%s"))\n (library (min-label-collision) (source "%s/test/modules/min-label-collision.sld") (artifacts "%s")))\n' \
   "$PWD" "$collision_art" "$PWD" "$collision_art" "$PWD" "$collision_art" > "$collision_man"
 printf '%s\n' '(import (scheme base) (min-label-collision))' \
   '(write (list (foo 7) (foo.min 8)))' '(newline)' > "$TMP/collision.scm"
-if chez --libdirs src --script src/compile.ss "$TMP/collision.scm" \
-     --manifest "$collision_man" -o "$TMP/collision" >"$TMP/collision.build" 2>&1; then
+if ! build/emit lib test/modules/min-label-collision.sld -o "$collision_art" \
+     >"$TMP/collision.lib" 2>&1; then
+  bad "collision namespace: shipped emit lib failed"
+  sed 's/^/         /' "$TMP/collision.lib"
+elif ! build/emit build "$TMP/collision.scm" --manifest "$collision_man" \
+       -o "$TMP/collision" >"$TMP/collision.build" 2>&1; then
+  bad "collision namespace: shipped emit build failed"
+  sed 's/^/         /' "$TMP/collision.build"
+else
   got="$("$TMP/collision" 2>/dev/null)"
   [ "$got" = "((7) 8)" ] \
-    && ok "collision namespace: foo and foo.min both link and run" \
-    || bad "collision namespace values: $got"
-else
-  bad "collision namespace: source-driver build failed"
-  sed 's/^/         /' "$TMP/collision.build"
+    && ok "collision namespace: shipped emit build links and runs foo and foo.min" \
+    || bad "collision namespace shipped build values: $got"
 fi
 collision_ll="$collision_art/min-label-collision.ll"
 fast_label='min-entry:$min-label-collision$ccode$cfoo'
 for label in 'min-label-collision:code:foo' \
              'min-label-collision:code:foo.min' "$fast_label"; do
   count="$(grep -Fc "define fastcc i64 @\"$label\"(" "$collision_ll" 2>/dev/null || true)"
+  count=${count:-0}
   [ "$count" -eq 1 ] \
-    && ok "collision namespace: one definition for $label" \
-    || bad "collision namespace: $count definitions for $label"
+    && ok "collision namespace shipped compiler: one definition for $label" \
+    || bad "collision namespace shipped compiler: $count definitions for $label"
 done
+
+if command -v chez >/dev/null 2>&1; then
+  source_man="$TMP/collision-source-libs.scm"
+  source_art="$TMP/collision-source-artifacts"
+  mkdir -p "$source_art"
+  printf '((library (emit internal) (source "%s/lib/emit/internal.sld") (artifacts "%s"))\n (library (scheme base) (source "%s/lib/scheme/base.sld") (artifacts "%s"))\n (library (min-label-collision) (source "%s/test/modules/min-label-collision.sld") (artifacts "%s")))\n' \
+    "$PWD" "$source_art" "$PWD" "$source_art" "$PWD" "$source_art" > "$source_man"
+  if chez --libdirs src --script src/compile.ss "$TMP/collision.scm" \
+       --manifest "$source_man" -o "$TMP/collision-source" >"$TMP/collision-source.build" 2>&1; then
+    got="$("$TMP/collision-source" 2>/dev/null)"
+    [ "$got" = "((7) 8)" ] \
+      && ok "collision namespace source driver: foo and foo.min both link and run" \
+      || bad "collision namespace source-driver values: $got"
+    source_ll="$source_art/min-label-collision.ll"
+    for label in 'min-label-collision:code:foo' \
+                 'min-label-collision:code:foo.min' "$fast_label"; do
+      count="$(grep -Fc "define fastcc i64 @\"$label\"(" "$source_ll" 2>/dev/null || true)"
+      count=${count:-0}
+      [ "$count" -eq 1 ] \
+        && ok "collision namespace source driver: one definition for $label" \
+        || bad "collision namespace source driver: $count definitions for $label"
+    done
+  else
+    bad "collision namespace: source-driver build failed"
+    sed 's/^/         /' "$TMP/collision-source.build"
+  fi
+else
+  echo "  [SKIP] optional Chez source-driver collision coverage (chez unavailable)"
+fi
 
 # --- a USER library gets the same treatment ----------------------------------
 ll="$(prog_ir '(import (mylib)) (display (greet))' "$MAN")"

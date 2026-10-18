@@ -24,6 +24,10 @@ directories or building anything. Bump the recipe identifier when changing CMake
 configuration or other dependency build semantics; logging edits do not require
 rebuilding LLVM. A completion stamp and actual compiler versions are checked on
 cache hits.
+Cache visibility follows [GitHub's ref isolation rules](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching#restrictions-for-accessing-a-cache):
+pull-request caches can warm reruns of that pull request, but not a release tag.
+A first tag may therefore build cold until the default branch has populated the
+same dependency keys. Tags still run every gate; cache access is not widened.
 Validated dependencies are saved before Emit tests so a later test failure does
 not discard the toolchain build. A missing release
 or wrong major fails the job. A cold LLVM build can take hours; link parallelism
@@ -74,7 +78,19 @@ The pins were checked against the official upstream release pages for
 The source recipe avoids assuming that a macOS binary distribution exists.
 
 To reproduce a cell, install Git, CMake, Ninja, a bootstrap C/C++ compiler, and
-the platform SDK, then run from the checkout:
+the platform SDK. The native test suite also requires GNU `timeout`. On macOS,
+install Homebrew `coreutils` and expose only its `gtimeout` command under that
+name, keeping the platform's other utilities unchanged:
+
+```sh
+brew install coreutils
+test_tools=$(mktemp -d)
+ln -s "$(command -v gtimeout)" "$test_tools/timeout"
+export PATH="$test_tools:$PATH"
+```
+
+CI prepares this alias automatically when `timeout` is absent and verifies its
+version before provisioning. Then run from the checkout:
 
 ```sh
 dependencies=$(mktemp -d)
