@@ -169,12 +169,14 @@ EOF
   if grep -qE "$5" "$TMP/f.err"; then ok "$1"
   else bad "$1 (failed, but not matching /$5/)"; sed 's/^/         /' "$TMP/f.err"; fi
 }
+# Contextual expansion resolves imported runtime targets before assignment lowering,
+# and rejects non-variable primitive targets directly at the set! form.
 fails_with "assigning an IMPORTED binding is still rejected" \
            mutbad "$MOD/mutbad.sld" "$MOD/prog-mutbad.scm" \
-           'cannot assign to an imported binding list-tail'
+           'cannot assign to an imported binding (scheme.base:)?list-tail'
 fails_with "assigning a PRIMITIVE is still rejected" \
            mutprim "$MOD/mutprim.sld" "$MOD/prog-mutprim.scm" \
-           'cannot assign to a primitive car'
+           'set! requires a variable car'
 
 echo
 echo "  $pass passed, $fail failed"

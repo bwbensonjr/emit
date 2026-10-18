@@ -1,4 +1,5 @@
 ;;; prog-base-procs.scm -- prelude PROCEDURES via auto-imported (scheme base),
-;;; no explicit import (change: module-prelude-scheme-base). => (4 16)
+;;; with list extensions imported explicitly. => (4 16)
+(import (emit list))
 (map (lambda (x) (* x x))
      (filter (lambda (x) (> x 0)) (list -1 2 -3 4)))

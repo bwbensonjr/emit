@@ -59,6 +59,13 @@ run_suite "lowering visitation order"    chez --libdirs src --script test/lower-
 run_suite "read-all reader"             chez --libdirs src --script test/read-all-tests.ss
 run_suite "render-datum units"          chez --libdirs src --script test/render-datum-tests.ss
 run_suite "import-set units"            chez --libdirs src --script test/import-set-core-tests.ss
+run_suite "import binding identities"   chez --libdirs src --script test/import-binding-context-tests.ss
+run_suite "lexical syntax contexts"     chez --libdirs src --script test/syntax-context-check.ss
+run_suite "contextual lowering boundaries" chez --libdirs src --script test/contextual-boundary-tests.ss
+run_suite "private macro binding views" chez --libdirs src --script test/private-macro-context-check.ss
+run_suite "import target namespace boundaries" chez --libdirs src --script test/import-target-boundary-tests.ss
+run_suite "binding context source parity" env EMIT_BINDING_HOST=chez bash test/binding-context-tests.sh
+run_suite "REPL import transactions"    chez --libdirs src --script test/repl-import-bindings-tests.ss
 run_suite "mangle (symbol naming)"      chez --libdirs src --script test/mangle-tests.ss
 run_suite "simplify pass units"         chez --libdirs src --script test/simplify-tests.ss
 run_suite "artifact cache core"         chez --libdirs src --script test/artifact-cache-core-tests.ss

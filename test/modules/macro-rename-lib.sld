@@ -7,6 +7,7 @@
 ;;; only the KEYWORD is renamed.  The internal keyword must not be usable in an
 ;;; importer.
 (define-library (macro-rename-lib)
+  (import (scheme base))
   (export (rename %swap swap!))
   (begin
     (define-syntax %swap

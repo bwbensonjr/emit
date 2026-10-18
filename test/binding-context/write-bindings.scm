@@ -1,0 +1,5 @@
+(import (scheme base) (scheme write) (prefix (scheme write) w:))
+(let ((port (open-output-string)))
+  (apply w:display (list "text" port))
+  (apply w:write (list '(1 2) port))
+  (get-output-string port))

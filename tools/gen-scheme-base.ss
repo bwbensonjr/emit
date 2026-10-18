@@ -77,18 +77,71 @@
 (define (binding-name f) (or (proc-name f) (syntax-name f)))
 (define binding-names (filter (lambda (x) x) (map binding-name forms)))
 
-;; the export list: defines in SOURCE ORDER kept when the partition assigns them to
-;; this library (change: scheme-base-partition).  Order comes from the prelude, so the
-;; arrangement of the declaration cannot move IR.  Mirrors library-export-names in
-;; src/core.ss, which reads the same declaration.
-(define export-names
-  (filter (lambda (n) (prelude-exports? '(scheme base) n)) binding-names))
-
 ;; The declaration must describe THIS prelude.  A rotted declaration would silently
 ;; emit a different surface, so fail loudly instead (issue #29).
 (define (die msg names)
   (fprintf (current-error-port) "gen-scheme-base: ~a: ~s~n" msg names)
   (exit 1))
+
+;; the export list: defines in SOURCE ORDER kept when the partition assigns them to
+;; this library (change: scheme-base-partition).  Order comes from the prelude, so the
+;; arrangement of the declaration cannot move IR.  Mirrors library-export-names in
+;; src/core.ss, which reads the same declaration.
+(define (library-export-names lib)
+  (let* ([prelude-exports (filter (lambda (n) (prelude-exports? lib n)) binding-names)]
+         [builtin-names (if (equal? lib '(scheme base))
+                            (map car (library-builtin-surface lib))
+                            '())])
+    (append prelude-exports
+            (filter (lambda (n) (not (memq n binding-names))) builtin-names))))
+(define export-names (library-export-names '(scheme base)))
+
+(let* ([surface (library-builtin-surface '(scheme base))]
+       [names (map car surface)]
+       [dups (let loop ([ns names] [seen '()] [out '()])
+               (cond
+                 [(null? ns) (reverse out)]
+                 [(memq (car ns) seen) (loop (cdr ns) seen (cons (car ns) out))]
+                 [else (loop (cdr ns) (cons (car ns) seen) out)]))]
+       [raw (filter (lambda (n)
+                      (and (symbol? n)
+                           (> (string-length (symbol->string n)) 0)
+                           (char=? (string-ref (symbol->string n) 0) #\%)))
+                    names)]
+       [malformed
+         (filter (lambda (row)
+                   (not (and (= (length row) 4)
+                             (memq (cadr row) '(primitive core auxiliary))
+                             (equal? (caddr row) (list 'builtin (cadr row) (car row)))
+                             (eq? (cadddr row) (car row)))))
+                 surface)]
+       [bad-extensions (filter (lambda (n) (not (memq n *base-primitive-names*)))
+                               *base-primitive-extension-names*)]
+       [bad-write-owner (filter (lambda (n) (not (memq n *base-primitive-names*)))
+                                *write-primitive-names*)]
+       [write-duplicates
+         (let loop ([ns *write-primitive-names*] [seen '()] [out '()])
+           (cond
+             [(null? ns) (reverse out)]
+             [(memq (car ns) seen) (loop (cdr ns) seen (cons (car ns) out))]
+             [else (loop (cdr ns) (cons (car ns) seen) out)]))]
+       [expected-write-surface
+         (map
+           (lambda (name) (list name 'primitive (list 'builtin 'primitive name) name))
+           *write-primitive-names*)]
+       [actual-write-surface (library-builtin-surface '(scheme write))])
+  (unless (null? dups) (die "duplicate builtin surface name" dups))
+  (unless (null? raw) (die "raw primitive names cannot be exported" raw))
+  (unless (null? malformed) (die "malformed builtin surface row" malformed))
+  (unless (null? bad-extensions)
+    (die "primitive extension is not a declared base primitive" bad-extensions))
+  (unless (null? bad-write-owner)
+    (die "(scheme write) primitive must alias a base builtin" bad-write-owner))
+  (unless (null? write-duplicates)
+    (die "duplicate (scheme write) primitive owner" write-duplicates))
+  (unless (equal? expected-write-surface actual-write-surface)
+    (die "(scheme write) must expose the declared base primitive identities"
+         actual-write-surface)))
 
 (let ([stale (filter (lambda (n) (not (memq n binding-names))) *scheme-base-private*)])
   (unless (null? stale)
@@ -171,7 +224,7 @@
 (define (write-library entry path)
   (let* ([lib (car entry)]
          [imports (caddr entry)]
-         [exports (filter (lambda (n) (prelude-exports? lib n)) binding-names)]
+         [exports (library-export-names lib)]
          [body (filter (lambda (f)
                          (let ([n (binding-name f)])
                            (and n (member lib (prelude-homes-of n)))))

@@ -263,8 +263,8 @@
       (eq? s *ellipsis*)
       (eq? s *wildcard*)))
 
-(define (resolve-exported-macros unit exports macro-env defined-names import-env-alist
-         . opt)
+(define (resolve-exported-macros-legacy unit exports macro-env defined-names
+         import-env-alist . opt)
   (let ([entries '()] ; resolved (keyword literals . rules), reverse order
         [seen '()]    ; OUTPUT keywords already queued (dup/cycle guard)
         [queue '()]   ; (external-keyword . internal-keyword) still to resolve
@@ -486,7 +486,7 @@
 ;; ---- the fixpoint driver -------------------------------------------------
 (define *macro-depth-limit* 1000)
 
-(define (expand e macro-env known)
+(define (expand-legacy e macro-env known)
   ;; A BINDING SHADOWS A KEYWORD (R7RS 4.2/5.3, issue #103).  A macro keyword is a
   ;; binding like any other, so an identifier bound as a variable at the point of use is
   ;; not a keyword there and the form is an ordinary application.
@@ -724,3 +724,1081 @@
     [(eq?) `(eq? ,x ,y)]
     [(eqv?) `(eqv? ,x ,y)]
     [(string=?) `(string=? ,x ,y)]))
+
+;; ---- contextual identifiers and transformers ----------------------------
+;; Identifier vectors occur only in compiler-created syntax. Reader vectors
+;; remain datum leaves. A key distinguishes an introduced name from a same-
+;; spelled source name; its fallback is the definition-site binding. Lexical
+;; environments contain an optional fifth field with the identifier key.
+(define (syntax-id? x)
+  (and (vector? x)
+       (= (vector-length x) 4)
+       (eq? (vector-ref x 0) '%syntax-identifier-v2)))
+(define (syntax-reader-vector? x)
+  (and (vector? x)
+       (= (vector-length x) 2)
+       (eq? (vector-ref x 0) '%syntax-reader-vector-v2)))
+(define (source-syntax x . options)
+  ;; Every reader vector is wrapped once at ingress, so a datum cannot forge an
+  ;; identifier by spelling its serialized tag. Saved transformer syntax is
+  ;; already trusted compiler output and does not cross this ingress again.
+  (let ([seen '()])
+    (let walk ([x x])
+      (cond
+        [(vector? x) (let ([old (assq x seen)])
+                       (if old
+                           (cdr old)
+                           (let* ([payload (make-vector (vector-length x))]
+                                  [out (vector '%syntax-reader-vector-v2 payload)])
+                             (set! seen (cons (cons x out) seen))
+                             (let loop ([i 0])
+                               (unless (= i (vector-length x))
+                                 (vector-set! payload i (walk (vector-ref x i)))
+                                 (loop (+ i 1))))
+                             out)))]
+        [(pair? x) (let ([old (assq x seen)])
+                     (if old
+                         (cdr old)
+                         (let ([out (cons #f #f)])
+                           (set! seen (cons (cons x out) seen))
+                           (when (pair? options) ((car options) out x))
+                           (set-car! out (walk (car x)))
+                           (set-cdr! out (walk (cdr x)))
+                           out)))]
+        [else x]))))
+(define (syntax-name x) (if (syntax-id? x) (vector-ref x 1) x))
+(define (syntax-key x) (if (syntax-id? x) (vector-ref x 2) x))
+(define (syntax-identifier? x) (or (symbol? x) (syntax-id? x)))
+(define (syntax-binding-key row)
+  (if (pair? (cdr (cdddr row))) (car (cdr (cdddr row))) (car row)))
+(define (syntax-lookup x bindings)
+  (and (syntax-identifier? x)
+       (let ([key (syntax-key x)])
+         (let loop ([bs bindings])
+           (cond
+             [(null? bs) (and (syntax-id? x) (vector-ref x 3))]
+             [(equal? key (syntax-binding-key (car bs))) (car bs)]
+             [else (loop (cdr bs))])))))
+(define (contextual-transformer? entry)
+  (and (pair? (cdr entry)) (eq? (cadr entry) '%contextual-transformer-v2)))
+(define (transformer-origin entry)
+  (if (contextual-transformer? entry) (caddr entry) #f))
+(define (transformer-literals entry)
+  (if (contextual-transformer? entry) (cadddr entry) (cadr entry)))
+(define (transformer-rules entry)
+  (if (contextual-transformer? entry) (car (cdr (cdddr entry))) (cddr entry)))
+(define (transformer-context entry)
+  (if (contextual-transformer? entry) (cadr (cdr (cdddr entry))) '()))
+(define (make-contextual-transformer name origin literals rules context)
+  (list name '%contextual-transformer-v2 origin literals rules context))
+
+;; Contexts refer to transformers by origin, never by a recursively embedded
+;; environment. The saved datum is consequently finite even for mutual recursion.
+(define (serialize-transformer-context bindings)
+  (map
+    (lambda (row)
+      (if (eq? (cadr row) 'macro)
+          (append (list (car row) 'macro (caddr row) (list 'macro-origin (caddr row)))
+                  (cdr (cdddr row)))
+          row))
+    bindings))
+(define (contextualize-macro-entry entry bindings unit)
+  (if (contextual-transformer? entry)
+      entry
+      (make-contextual-transformer (car entry)
+                                   (list 'macro unit (car entry))
+                                   (transformer-literals entry)
+                                   (transformer-rules entry)
+                                   (serialize-transformer-context bindings))))
+
+;; Export dependency discovery observes template binding positions. In particular,
+;; a temporary named like a global must not retain that global in an AOT image.
+(define (transformer-free-bindings entry)
+  (let ([env (transformer-context entry)] [refs '()])
+    (define (note x bound pvars)
+      (when (and (syntax-identifier? x)
+                 (not (member (syntax-key x) bound))
+                 (not (memq (syntax-key x) pvars)))
+        (let ([b (syntax-lookup x env)])
+          ;; A context needs every identifier key, even when several aliases
+          ;; denote one binding origin. Dependency rooting deduplicates later.
+          (when (and b
+                     (not (memp (lambda (r)
+                                  (and (equal? (syntax-binding-key b)
+                                               (syntax-binding-key r))
+                                       (equal? (caddr b) (caddr r))))
+                                refs)))
+            (set! refs (cons b refs))))))
+    (define (names x)
+      (cond
+        [(syntax-identifier? x) (list (syntax-key x))]
+        [(pair? x) (append (names (car x)) (names (cdr x)))]
+        [else '()]))
+    (define (walk t bound pvars)
+      (cond
+        [(syntax-identifier? t) (note t bound pvars)]
+        [(pair? t)
+          (let* ([b (syntax-lookup (car t) env)]
+                 [h (and b (eq? (cadr b) 'core) (cadddr b))])
+            (cond
+              [(eq? h 'quote) (note (car t) bound pvars)]
+              [(and (eq? h 'lambda) (pair? (cdr t)))
+                (note (car t) bound pvars)
+                (walk (cddr t) (append (names (cadr t)) bound) pvars)]
+              [(and (memq h '(let letrec letrec*))
+                    (pair? (cdr t))
+                    (syntax-proper-list? (cadr t)))
+                (note (car t) bound pvars)
+                (let* ([clauses (cadr t)]
+                       [inner (append (apply append
+                                             (map (lambda (c)
+                                                    (if (pair? c) (names (car c)) '()))
+                                                  clauses))
+                                      bound)])
+                  (for-each (lambda (c)
+                              (when (pair? c)
+                                (walk (cdr c) (if (eq? h 'let) bound inner) pvars)))
+                            clauses)
+                  (walk (cddr t) inner pvars))]
+              [else (walk (car t) bound pvars) (walk (cdr t) bound pvars)]))]
+        [else #f]))
+    (for-each (lambda (literal) (note literal '() '())) (transformer-literals entry))
+    (for-each
+      (lambda (r)
+        (walk (cdr r) '() (syntax-pattern-vars (cdar r) (transformer-literals entry))))
+      (transformer-rules entry))
+    (reverse refs)))
+
+(define (resolve-exported-macros unit exports macro-env defined-names import-env-alist
+         . options)
+  (if (not (memp contextual-transformer? macro-env))
+      (apply resolve-exported-macros-legacy
+             (append (list unit exports macro-env defined-names import-env-alist)
+                     options))
+      (let ([entries '()]
+            [own '()]
+            [foreign '()]
+            [seen '()]
+            [queue '()]
+            [reserved (map car exports)]
+            [private-keys '()]
+            [private-serial 0])
+        (define (queue! key entry)
+          (unless (memq key seen)
+            (set! seen (cons key seen))
+            (set! queue (append queue (list (cons key entry))))))
+        (define (find-origin origin)
+          (memp (lambda (m) (equal? (transformer-origin m) origin)) macro-env))
+        (define (queue-private! entry)
+          (let* ([origin (transformer-origin entry)] [old (assoc origin private-keys)])
+            (unless old
+              (let* ([base (mangle unit (car entry))]
+                     [key (let loop ([candidate (string->symbol base)])
+                            (if (memq candidate reserved)
+                                (let ([n private-serial])
+                                  (set! private-serial (+ n 1))
+                                  (loop (string->symbol (string-append base
+                                                                       ".private."
+                                                                       (number->string
+                                                                         n)))))
+                                candidate))])
+                (set! reserved (cons key reserved))
+                (set! private-keys (cons (cons origin key) private-keys))
+                (queue! key entry)))))
+        (define (owned-runtime-target row)
+          (let ([origin (caddr row)])
+            (and (eq? (cadr row) 'runtime)
+                 (pair? origin)
+                 (eq? (car origin) 'global)
+                 (equal? (cadr origin) unit)
+                 (memq (caddr origin) defined-names)
+                 (caddr origin))))
+        (define (export-row row)
+          (let ([own-target (owned-runtime-target row)])
+            (if own-target
+                (let ([target (string->symbol (mangle unit own-target))])
+                  ;; Published runtime origins use their actual global location,
+                  ;; matching the import table's reconstruction of that location.
+                  ;; Session contexts are finalized separately to REPL generations.
+                  (append (list (car row) (cadr row) (list 'runtime target) target)
+                          (cdr (cdddr row))))
+                row)))
+        (for-each
+          (lambda (e) (let ([m (assq (cdr e) macro-env)]) (when m (queue! (car e) m))))
+          exports)
+        (let loop ()
+          (unless (null? queue)
+            (let* ([job (car queue)] [m (cdr job)] [refs (transformer-free-bindings m)])
+              (set! queue (cdr queue))
+              (for-each
+                (lambda (r)
+                  (cond
+                    [(eq? (cadr r) 'macro)
+                      (let ([found (find-origin (caddr r))])
+                        (if found
+                            (queue-private! (car found))
+                            (when (pair? options) ((car options) (car r)))))]
+                    [(eq? (cadr r) 'runtime)
+                      (cond
+                        [(owned-runtime-target r) =>
+                                                  (lambda (target)
+                                                    (unless (memq target own)
+                                                      (set! own (cons target own))))]
+                        [(unit-qualified? (cadddr r))
+                          (let ([s (symbol->string (cadddr r))])
+                            (unless (member s foreign)
+                              (set! foreign (cons s foreign))))])]))
+                refs)
+              (set! entries
+                (cons (make-contextual-transformer (car job)
+                                                   (transformer-origin m)
+                                                   (transformer-literals m)
+                                                   (transformer-rules m)
+                                                   (map export-row refs))
+                      entries))
+              (loop))))
+        (list (reverse entries) (reverse own) (reverse foreign)))))
+
+(define (syntax-proper-list? x)
+  (let loop ([slow x] [fast x])
+    (cond
+      [(null? fast) #t]
+      [(not (pair? fast)) #f]
+      [(null? (cdr fast)) #t]
+      [(not (pair? (cdr fast))) #f]
+      [else (let ([next-slow (cdr slow)] [next-fast (cddr fast)])
+              (and (not (eq? next-slow next-fast)) (loop next-slow next-fast)))])))
+(define (syntax-check-list who x)
+  (unless (syntax-proper-list? x)
+    (error 'expand "expected a proper syntax list" who x)))
+(define (syntax-datum x)
+  (let ([seen '()])
+    (let walk ([x x])
+      (cond
+        [(syntax-reader-vector? x)
+          (let ([old (assq x seen)])
+            (if old
+                (cdr old)
+                (let* ([payload (vector-ref x 1)]
+                       [out (make-vector (vector-length payload))])
+                  (set! seen (cons (cons x out) seen))
+                  (let loop ([i 0])
+                    (unless (= i (vector-length payload))
+                      (vector-set! out i (walk (vector-ref payload i)))
+                      (loop (+ i 1))))
+                  out)))]
+        [(syntax-id? x) (syntax-name x)]
+        [(pair? x) (let ([old (assq x seen)])
+                     (if old
+                         (cdr old)
+                         (let ([out (cons #f #f)])
+                           (set! seen (cons (cons x out) seen))
+                           (set-car! out (walk (car x)))
+                           (set-cdr! out (walk (cdr x)))
+                           out)))]
+        [else x]))))
+(define (syntax-literal-member? id literals)
+  (and (syntax-identifier? id)
+       (memp (lambda (lit) (equal? (syntax-key id) (syntax-key lit))) literals)))
+(define (syntax-ellipsis? x literals)
+  (and (syntax-identifier? x)
+       (eq? (syntax-name x) '...)
+       (not (syntax-literal-member? x literals))))
+(define (syntax-pattern-vars pat literals)
+  (cond
+    [(syntax-literal-member? pat literals) '()]
+    [(syntax-identifier? pat)
+      (if (memq (syntax-name pat) '(_ ...)) '() (list (syntax-key pat)))]
+    [(pair? pat) (union (syntax-pattern-vars (car pat) literals)
+                        (syntax-pattern-vars (cdr pat) literals))]
+    [else '()]))
+(define (syntax-binding-equal? a ae b be)
+  (and (syntax-identifier? a)
+       (syntax-identifier? b)
+       (let ([ab (syntax-lookup a ae)] [bb (syntax-lookup b be)])
+         (if (and ab bb)
+             (equal? (caddr ab) (caddr bb))
+             (and (not ab) (not bb) (eq? (syntax-name a) (syntax-name b)))))))
+
+(define (syntax-match pat form literals definition-env use-env)
+  (cond
+    [(syntax-literal-member? pat literals)
+      (if (syntax-binding-equal? pat definition-env form use-env) '() no-match)]
+    [(and (syntax-identifier? pat) (eq? (syntax-name pat) '_)) '()]
+    [(syntax-identifier? pat) (list (cons (syntax-key pat) form))]
+    [(null? pat) (if (null? form) '() no-match)]
+    [(pair? pat)
+      (if
+        (and (pair? (cdr pat)) (syntax-ellipsis? (cadr pat) literals))
+        (let* ([sub (car pat)]
+               [tail (cddr pat)]
+               [n (- (proper-length form) (proper-length tail))])
+          (if (< n 0)
+              no-match
+              (let* ([ms (map-lr (lambda (f)
+                                   (syntax-match sub f literals definition-env use-env))
+                                 (take-n form n))]
+                     [mt (syntax-match tail
+                                       (list-tail form n)
+                                       literals
+                                       definition-env
+                                       use-env)])
+                (if (or (eq? mt no-match) (memp (lambda (m) (eq? m no-match)) ms))
+                    no-match
+                    (append
+                      (map (lambda (v)
+                             (cons v (make-ell (map (lambda (m) (cdr (assq v m))) ms))))
+                           (syntax-pattern-vars sub literals))
+                      mt)))))
+        (if
+          (pair? form)
+          (let ([a (syntax-match (car pat) (car form) literals definition-env use-env)]
+                [d (syntax-match (cdr pat) (cdr form) literals definition-env use-env)])
+            (if (or (eq? a no-match) (eq? d no-match)) no-match (append a d)))
+          no-match))]
+    [else (if (equal? pat form) '() no-match)]))
+
+;; The explicit binding view is authoritative. The legacy API remains available
+;; for low-level datum-expander clients while callers migrate their frontend.
+(define (expand e macro-env known . options)
+  (if (null? options)
+      (expand-legacy e macro-env known)
+      (let ([result (frontend-expand-forms
+                      (list e)
+                      macro-env
+                      known
+                      (car options)
+                      (if (pair? (cdr options)) (cadr options) '()))])
+        (let ([forms (car result)])
+          (cond
+            [(null? forms) '(if #f #f)]
+            [(null? (cdr forms)) (car forms)]
+            [else (cons 'begin forms)])))))
+
+(define (frontend-source-targets result) (car (caddr result)))
+(define (frontend-private-targets result) (cadr (caddr result)))
+(define (frontend-source-aliases result) (caddr (caddr result)))
+
+(define (frontend-expand-forms forms macro-env known bindings unit)
+  (let ([serial 0]
+        [target-serial 0]
+        [registry '()]
+        [public-macros '()]
+        [source-origins '()]
+        [reserved '()]
+        [source-targets '()]
+        [private-targets '()]
+        [source-aliases '()]
+        [top-targets '()]
+        [macro-targets '()])
+    (define (reserve-data! data)
+      (let ([seen '()])
+        (let walk ([x data])
+          (cond
+            [(symbol? x) (unless (memq x reserved) (set! reserved (cons x reserved)))]
+            [(or (pair? x) (vector? x)) (unless (memq x seen)
+                                          (set! seen (cons x seen))
+                                          (if (pair? x)
+                                              (begin (walk (car x)) (walk (cdr x)))
+                                              (let loop ([i 0])
+                                                (unless (= i (vector-length x))
+                                                  (walk (vector-ref x i))
+                                                  (loop (+ i 1))))))]
+            [else #f]))))
+    (define (read-syntax x)
+      (reserve-data! x)
+      (source-syntax x
+                     (lambda (copy original)
+                       (set! source-origins
+                         (cons (cons copy original) source-origins)))))
+    (define (new-key name)
+      (let loop ()
+        (let* ([n serial]
+               [candidate (string->symbol (string-append "%syntax."
+                                                         (mangle unit name)
+                                                         "."
+                                                         (number->string n)))])
+          (set! serial (+ n 1))
+          (if (memq candidate reserved)
+              (loop)
+              (begin (set! reserved (cons candidate reserved)) candidate)))))
+    ;; Keep canonical primitive references free even when source defines the
+    ;; same spelling; exported aliases still retain that source spelling.
+    (define (top-target name)
+      (let* ([key (syntax-key name)] [old (assoc key top-targets)])
+        (if old
+            (cdr old)
+            (let ([target (if (and (equal? key (syntax-name name))
+                                   (not (unit-qualified? (syntax-name name)))
+                                   (not (integrable? (syntax-name name)))
+                                   (not (memq (syntax-name name) known)))
+                              (syntax-name name)
+                              (new-target))])
+              (set! top-targets (cons (cons key target) top-targets))
+              target))))
+    ;; Lowered locals must not share the colon-bearing namespace of imported
+    ;; globals, including after alpha-renaming appends its numeric suffix.
+    (define (new-target)
+      (let loop ()
+        (let* ([n target-serial]
+               [candidate (string->symbol
+                            (string-append "%binding." (number->string n)))])
+          (set! target-serial (+ n 1))
+          (if (memq candidate reserved)
+              (loop)
+              (begin (set! reserved (cons candidate reserved)) candidate)))))
+    (define (note-top-target! name target)
+      (if (equal? (syntax-key name) (syntax-name name))
+          (begin
+            (unless (assq (syntax-name name) source-aliases)
+              (set! source-aliases
+                (cons (cons (syntax-name name) target) source-aliases)))
+            (unless (memq target source-targets)
+              (set! source-targets (cons target source-targets))))
+          (unless (memq target private-targets)
+            (set! private-targets (cons target private-targets)))))
+    (define (macro-row entry)
+      (list (car entry)
+            'macro
+            (transformer-origin entry)
+            (list 'macro-origin (transformer-origin entry))))
+    (define (remember! entry)
+      (unless (memp
+                (lambda (m) (equal? (transformer-origin m) (transformer-origin entry)))
+                registry)
+        (set! registry (cons entry registry)))
+      entry)
+    (define (find-macro row)
+      (let ([origin (caddr row)])
+        (let loop ([ms registry])
+          (cond
+            [(null? ms) (error 'expand "missing transformer context dependency" origin)]
+            [(equal? origin (transformer-origin (car ms))) (car ms)]
+            [else (loop (cdr ms))]))))
+    (define (kind x env) (let ([b (syntax-lookup x env)]) (and b (cadr b))))
+    (define (head-name f env)
+      (and (pair? f)
+           (let ([b (syntax-lookup (car f) env)])
+             (and b (memq (cadr b) '(core auxiliary)) (cadddr b)))))
+    (define (splice/context f h)
+      (let* ([original (assq f source-origins)]
+             [canonical (cons h (syntax-datum (cdr f)))])
+        (when original
+          (note-include-origins! canonical (include-origin (cdr original))))
+        (read-syntax (splice-body-forms (list canonical) '() (lambda (name) #f)))))
+    (define (form-size f minimum maximum who)
+      (unless (and (syntax-proper-list? f)
+                   (>= (length f) minimum)
+                   (or (not maximum) (<= (length f) maximum)))
+        (error 'expand "malformed syntax form" who (syntax-datum f))))
+    (define (identifier! x who)
+      (unless (syntax-identifier? x)
+        (error 'expand "expected identifier" who (syntax-datum x))))
+    (define (bind-variables ids env)
+      (let loop ([xs ids] [acc env] [seen '()])
+        (if
+          (null? xs)
+          acc
+          (let* ([x (car xs)] [key (syntax-key x)])
+            (identifier! x 'binding)
+            (when (member key seen) (error 'expand "duplicate binding" (syntax-name x)))
+            (let ([target (new-target)])
+              (loop
+                (cdr xs)
+                (cons
+                  (list (syntax-name x) 'runtime (list 'lexical unit target) target key)
+                  acc)
+                (cons key seen)))))))
+    (define (formal-ids f)
+      (cond
+        [(null? f) '()]
+        [(syntax-identifier? f) (list f)]
+        [(pair? f) (identifier! (car f) 'lambda) (cons (car f) (formal-ids (cdr f)))]
+        [else (error 'expand "malformed lambda formals" (syntax-datum f))]))
+    (define (lower-id x env)
+      (let ([b (syntax-lookup x env)])
+        (cond
+          [b (if (memq (cadr b) '(core auxiliary macro))
+                 (error 'expand "syntax identifier used as a value" (syntax-name x))
+                 (cadddr b))]
+          [else (error 'expand "unbound variable" (syntax-name x))])))
+    (define (lower-formals f env)
+      (cond
+        [(null? f) '()]
+        [(syntax-identifier? f) (lower-id f env)]
+        [else (cons (lower-id (car f) env) (lower-formals (cdr f) env))]))
+    (define (capture t env)
+      (cond
+        [(syntax-identifier? t)
+          (if (syntax-id? t)
+              t
+              (vector '%syntax-identifier-v2 t t (syntax-lookup t env)))]
+        [(pair? t)
+          ;; Quoted graphs are data; the quote head alone carries its context.
+          (if (eq? (head-name t env) 'quote)
+              (cons (capture (car t) env) (cdr t))
+              (cons (capture (car t) env) (capture (cdr t) env)))]
+        [else t]))
+    (define (template-vars/context t pvars)
+      (let ([seen '()])
+        (let walk ([t t])
+          (cond
+            [(syntax-identifier? t)
+              (if (memq (syntax-key t) pvars) (list (syntax-key t)) '())]
+            [(pair? t) (if (memq t seen)
+                           '()
+                           (begin
+                             (set! seen (cons t seen))
+                             (union (walk (car t)) (walk (cdr t)))))]
+            [else '()]))))
+    (define (instantiate/context tmpl matches pvars definition-env)
+      (let ([introduced '()])
+        (define (intro id)
+          (let* ([key (syntax-key id)] [old (assq key introduced)])
+            (if old
+                (cdr old)
+                (let ([id2 (vector '%syntax-identifier-v2
+                                   (syntax-name id)
+                                   (new-key (syntax-name id))
+                                   (syntax-lookup id definition-env))])
+                  (set! introduced (cons (cons key id2) introduced))
+                  id2))))
+        (define (walk t ms quoted? escaped?)
+          (cond
+            [(syntax-identifier? t)
+              (let ([v (assq (syntax-key t) ms)])
+                (cond
+                  [v (when (ell? (cdr v))
+                       (error 'expand
+                              "pattern variable used at wrong ellipsis depth"
+                              (syntax-name t)))
+                     (cdr v)]
+                  [quoted? (syntax-name t)]
+                  [(and escaped? (eq? (syntax-name t) '...)) t]
+                  [else (intro t)]))]
+            [(pair? t)
+              (cond
+                [(eq? (head-name t definition-env) 'quote)
+                  (if (and (null? (template-vars/context (cdr t) pvars))
+                           (not (template-ellipsis-escape? (syntax-datum (cdr t)))))
+                      (cons (intro (car t)) (cdr t))
+                      (cons (intro (car t)) (walk (cdr t) ms #t escaped?)))]
+                [(and (not escaped?)
+                      (syntax-identifier? (car t))
+                      (eq? (syntax-name (car t)) '...)
+                      (pair? (cdr t))
+                      (null? (cddr t))) (walk (cadr t) ms quoted? #t)]
+                [(and (not escaped?)
+                      (pair? (cdr t))
+                      (syntax-identifier? (cadr t))
+                      (eq? (syntax-name (cadr t)) '...))
+                  (let* ([vars (filter (lambda (v)
+                                         (let ([m (assq v ms)]) (and m (ell? (cdr m)))))
+                                       (template-vars/context (car t) pvars))])
+                    (when (null? vars)
+                      (error 'expand
+                             "ellipsis template has no matching pattern variable"
+                             (syntax-datum t)))
+                    (let* ([lists (map (lambda (v) (ell-list (cdr (assq v ms)))) vars)]
+                           [n (length (car lists))])
+                      (for-each (lambda (xs)
+                                  (unless (= n (length xs))
+                                    (error 'expand
+                                           "mismatched ellipsis match lengths"
+                                           (syntax-datum t))))
+                                lists)
+                      (append
+                        (let loop ([i 0] [acc '()])
+                          (if (= i n)
+                              (reverse acc)
+                              (loop (+ i 1)
+                                    (cons (walk (car t)
+                                                (append (map (lambda (v xs)
+                                                               (cons v (list-ref xs i)))
+                                                             vars
+                                                             lists)
+                                                        ms)
+                                                quoted?
+                                                escaped?)
+                                          acc))))
+                        (walk (cddr t) ms quoted? escaped?))))]
+                [else (cons (walk (car t) ms quoted? escaped?)
+                            (walk (cdr t) ms quoted? escaped?))])]
+            [else t]))
+        (walk tmpl matches #f #f)))
+    (define (apply/context entry form env depth)
+      (when (> depth *macro-depth-limit*)
+        (error 'expand
+               "macro expansion did not terminate (depth limit exceeded)"
+               (syntax-name (car form))))
+      (when (and (pair? (transformer-origin entry))
+                 (member 'case-lambda (transformer-origin entry)))
+        (syntax-check-list 'case-lambda form)
+        (for-each
+          (lambda (clause)
+            (unless (and (syntax-proper-list? clause) (>= (length clause) 2))
+              (error 'expand "malformed case-lambda clause" (syntax-datum clause)))
+            (let check ([f (car clause)] [seen '()])
+              (cond
+                [(null? f) #t]
+                [(syntax-identifier? f)
+                  (when (member (syntax-key f) seen)
+                    (error 'expand "duplicate case-lambda formal" (syntax-name f)))]
+                [(and (pair? f) (syntax-identifier? (car f)))
+                  (when (member (syntax-key (car f)) seen)
+                    (error 'expand
+                           "duplicate case-lambda formal"
+                           (syntax-name (car f))))
+                  (check (cdr f) (cons (syntax-key (car f)) seen))]
+                [else
+                  (error 'expand "malformed case-lambda formals" (syntax-datum f))])))
+          (cdr form)))
+      (let ([literals (transformer-literals entry)] [de (transformer-context entry)])
+        (let loop ([rules (transformer-rules entry)])
+          (when (null? rules)
+            (error 'expand
+                   "no matching syntax-rules pattern for macro use"
+                   (syntax-datum form)))
+          (let* ([r (car rules)]
+                 [m (syntax-match (cdar r) (cdr (capture form env)) literals de env)])
+            (if (eq? m no-match)
+                (loop (cdr rules))
+                (instantiate/context (cdr r)
+                                     m
+                                     (syntax-pattern-vars (cdar r) literals)
+                                     de))))))
+    (define (parse-transformer name spec env origin target)
+      (unless (and (pair? spec) (eq? (head-name spec env) 'syntax-rules))
+        (error 'expand
+               "define-syntax requires a syntax-rules transformer"
+               (syntax-datum spec)))
+      (form-size spec 3 #f 'syntax-rules)
+      (syntax-check-list 'syntax-rules (cadr spec))
+      (for-each (lambda (x) (identifier! x 'syntax-rules)) (cadr spec))
+      (let ([rules (map-lr
+                     (lambda (r)
+                       (form-size r 2 2 'syntax-rules)
+                       (unless (and (pair? (car r)) (syntax-identifier? (caar r)))
+                         (error 'expand
+                                "syntax-rules pattern must start with an identifier"
+                                (syntax-datum r)))
+                       (cons (car r) (cadr r)))
+                     (cddr spec))])
+        (remember! (make-contextual-transformer target
+                                                origin
+                                                (cadr spec)
+                                                rules
+                                                (serialize-transformer-context env)))))
+    (define (syntax-bindings clauses env recursive?)
+      (syntax-check-list (if recursive? 'letrec-syntax 'let-syntax) clauses)
+      (let ([names (map-lr
+                     (lambda (c)
+                       (form-size c 2 2 (if recursive? 'letrec-syntax 'let-syntax))
+                       (identifier! (car c) (if recursive? 'letrec-syntax 'let-syntax))
+                       (car c))
+                     clauses)])
+        (let* ([rows
+                 (map-lr
+                   (lambda (x)
+                     (let* ([origin (list 'macro unit (new-key (syntax-name x)))]
+                            [target (new-target)])
+                       (set! macro-targets (cons (cons origin target) macro-targets))
+                       (list (syntax-name x)
+                             'macro
+                             origin
+                             (list 'macro-origin origin)
+                             (syntax-key x))))
+                   names)]
+               [extended (append rows env)])
+          (let check ([xs names] [seen '()])
+            (unless (null? xs)
+              (when (member (syntax-key (car xs)) seen)
+                (error 'expand "duplicate let-syntax keyword" (syntax-name (car xs))))
+              (check (cdr xs) (cons (syntax-key (car xs)) seen))))
+          (for-each (lambda (clause row)
+                      (parse-transformer (car clause)
+                                         (cadr clause)
+                                         (if recursive? extended env)
+                                         (caddr row)
+                                         (cdr (assoc (caddr row) macro-targets))))
+                    clauses
+                    rows)
+          extended)))
+    ;; Prefix discovery registers all direct syntax declarations before expanding
+    ;; prefix uses. Discovered declarations share one mutable definition group;
+    ;; transformer contexts are finalized after the prefix is known.
+    (define (body fs env top? depth)
+      (syntax-check-list 'body fs)
+      (let ([group '()]
+            [declarations '()]
+            [runtime '()]
+            [pending fs]
+            [expressions? #f]
+            [registered '()]
+            [bindings-dirty? #f])
+        (define (environment) (append group env))
+        (define (declared-head f)
+          (let ([old (assq f declarations)])
+            (if old (cdr old) (head-name f (environment)))))
+        (define (register! f)
+          (let ([h (declared-head f)])
+            (when (and (memq h '(define define-syntax define-record-type))
+                       (not (assq f declarations)))
+              (set! declarations (cons (cons f h) declarations)))
+            (when (eq? h 'begin)
+              (syntax-check-list 'begin f)
+              (let ([prior registered])
+                (for-each register! (cdr f))
+                (when (and (not (eq? registered prior)) (not (assq f declarations)))
+                  (set! declarations (cons (cons f h) declarations)))))
+            (when (eq? h 'define-record-type)
+              (check-record-type-form (syntax-datum f))
+              (unless (memp (lambda (p) (eq? f (car p))) registered)
+                (let ([ids (cons (car (caddr f))
+                                 (cons (cadddr f)
+                                       (apply append
+                                              (map (lambda (field) (cdr field))
+                                                   (cdr (cdddr f))))))])
+                  (for-each
+                    (lambda (name)
+                      (let* ([target (if top? (top-target name) (new-target))]
+                             [row (list (syntax-name name)
+                                        'runtime
+                                        (list (if top? 'global 'lexical) unit target)
+                                        target
+                                        (syntax-key name))])
+                        (set! group (cons row group))
+                        (set! bindings-dirty? #t)
+                        (when top? (note-top-target! name target))
+                        (set! registered (cons (cons f row) registered))))
+                    ids))))
+            (when (memq h '(define define-syntax))
+              (form-size f 3 #f h)
+              (let* ([sig (cadr f)]
+                     [name (if (and (eq? h 'define) (pair? sig)) (car sig) sig)])
+                (identifier! name h)
+                (unless (memp (lambda (p) (eq? f (car p))) registered)
+                  (when (and top?
+                             (pair? unit)
+                             (memp
+                               (lambda (r)
+                                 (and (equal? (syntax-key name) (syntax-binding-key r))
+                                      (not (eq? (cadr r)
+                                                (if (eq? h 'define-syntax)
+                                                    'macro
+                                                    'runtime)))))
+                               group))
+                    (error 'expand
+                           "binding has both define and define-syntax"
+                           (syntax-name name)))
+                  (when (and (not top?)
+                             (memp (lambda (r)
+                                     (equal? (syntax-key name) (syntax-binding-key r)))
+                                   group))
+                    (error 'expand "duplicate internal definition" (syntax-name name)))
+                  (let* ([target (if top? (top-target name) (new-target))]
+                         [origin (if (eq? h 'define-syntax)
+                                     (list 'macro
+                                           unit
+                                           (syntax-name name)
+                                           (new-key (syntax-name name)))
+                                     (list (if top? 'global 'lexical) unit target))]
+                         [row (list (syntax-name name)
+                                    (if (eq? h 'define-syntax) 'macro 'runtime)
+                                    origin
+                                    (if (eq? h 'define-syntax)
+                                        (list 'macro-origin origin)
+                                        target)
+                                    (syntax-key name))])
+                    (set! group (cons row group))
+                    (set! bindings-dirty? #t)
+                    (when (eq? h 'define-syntax)
+                      (set! macro-targets (cons (cons origin target) macro-targets)))
+                    (when top? (note-top-target! name target))
+                    (set! registered (cons (cons f row) registered))))))))
+        (define (compile-declarations!)
+          (when bindings-dirty?
+            (set! bindings-dirty? #f)
+            (for-each (lambda (p)
+                        (when (eq? (cadr (cdr p)) 'macro)
+                          (let ([f (car p)] [r (cdr p)])
+                            ;; Replace a provisional transformer after group discovery.
+                            (set! registry
+                              (filter (lambda (m)
+                                        (not (equal? (transformer-origin m) (caddr r))))
+                                      registry))
+                            (parse-transformer (cadr f)
+                                               (caddr f)
+                                               (environment)
+                                               (caddr r)
+                                               (cdr (assoc (caddr r) macro-targets))))))
+                      (reverse registered))))
+        (for-each register! fs)
+        (compile-declarations!)
+        (let loop ()
+          (unless (null? pending)
+            (let* ([f (car pending)]
+                   [e (environment)]
+                   [h (declared-head f)]
+                   [binding (and (pair? f) (syntax-lookup (car f) e))])
+              (set! pending (cdr pending))
+              (cond
+                [(and (not (assq f declarations)) binding (eq? (cadr binding) 'macro))
+                  (set! pending
+                    (cons (apply/context (find-macro binding) f e depth) pending))
+                  (set! depth (+ depth 1))]
+                [(eq? h 'begin) (syntax-check-list 'begin f)
+                                (for-each register! (cdr f))
+                                (compile-declarations!)
+                                (set! pending (append (cdr f) pending))]
+                [(memq h '(include include-ci cond-expand))
+                  (let ([spliced (splice/context f h)])
+                    (for-each register! spliced)
+                    (compile-declarations!)
+                    (set! pending (append spliced pending)))]
+                [(memq h '(define define-syntax define-record-type))
+                  (when (and expressions? (not top?))
+                    (error 'expand
+                           "internal definition must precede body expressions"
+                           h))
+                  (register! f)
+                  (compile-declarations!)
+                  (unless (eq? h 'define-syntax) (set! runtime (cons f runtime)))]
+                [else (set! expressions? #t) (set! runtime (cons f runtime))])
+              (loop))))
+        (compile-declarations!)
+        (when top?
+          (set! public-macros
+            (append (map (lambda (p) (find-macro (cdr p)))
+                         (filter (lambda (p) (eq? (cadr (cdr p)) 'macro))
+                                 (reverse registered)))
+                    public-macros)))
+        (map-lr
+          (lambda (f)
+            (if (eq? (declared-head f) 'define)
+                (let* ([sig (cadr f)]
+                       [name (if (pair? sig) (car sig) sig)]
+                       [init (if (pair? sig)
+                                 (cons (core-id 'lambda) (cons (cdr sig) (cddr f)))
+                                 (begin (form-size f 3 3 'define) (caddr f)))])
+                  (list 'define
+                        (lower-id name (environment))
+                        (expr init (environment) 0)))
+                (expr (if (eq? (declared-head f) 'define-record-type)
+                          (cons (core-id 'define-record-type) (cdr f))
+                          f)
+                      (environment)
+                      0)))
+          (reverse runtime))))
+    (define (core-id name)
+      (vector '%syntax-identifier-v2
+              name
+              (list 'internal name)
+              (list name 'core (list 'builtin name) name)))
+    (define (constructor-id name)
+      (vector '%syntax-identifier-v2
+              name
+              (list 'constructor name)
+              (list name
+                    (if (eq? name 'cons) 'primitive 'runtime)
+                    (list 'builtin name)
+                    (if (eq? name 'cons)
+                        name
+                        (string->symbol (mangle '(scheme base) name))))))
+    (define (qq/context d level env)
+      (let ([h (and (pair? d) (head-name d env))])
+        (cond
+          [(and (memq h '(unquote unquote-splicing quasiquote))
+                (pair? (cdr d))
+                (null? (cddr d)))
+            (cond
+              [(eq? h 'unquote) (if (= level 1)
+                                    (cadr d)
+                                    (list (constructor-id 'list)
+                                          (list (core-id 'quote) 'unquote)
+                                          (qq/context (cadr d) (- level 1) env)))]
+              [(eq? h 'unquote-splicing)
+                (if (= level 1)
+                    (error 'expand "unquote-splicing not in list context")
+                    (list (constructor-id 'list)
+                          (list (core-id 'quote) 'unquote-splicing)
+                          (qq/context (cadr d) (- level 1) env)))]
+              [else (list (constructor-id 'list)
+                          (list (core-id 'quote) 'quasiquote)
+                          (qq/context (cadr d) (+ level 1) env))])]
+          [(and (pair? d)
+                (pair? (car d))
+                (eq? (head-name (car d) env) 'unquote-splicing)
+                (pair? (cdar d))
+                (null? (cddar d))
+                (= level 1))
+            (list (constructor-id 'append) (cadar d) (qq/context (cdr d) level env))]
+          [(pair? d) (list (constructor-id 'cons)
+                           (qq/context (car d) level env)
+                           (qq/context (cdr d) level env))]
+          [else (list (core-id 'quote) d)])))
+    (define (expr f env depth)
+      (when (> depth *macro-depth-limit*)
+        (error 'expand "macro expansion did not terminate (depth limit exceeded)"))
+      (cond
+        [(syntax-identifier? f) (lower-id f env)]
+        [(syntax-reader-vector? f) (syntax-datum f)]
+        [(not (pair? f)) f]
+        [else
+          (let* ([binding (syntax-lookup (car f) env)] [h (head-name f env)])
+            (cond
+              [(and binding (eq? (cadr binding) 'macro))
+                (expr (apply/context (find-macro binding) f env depth) env (+ depth 1))]
+              [(eq? h 'quote) (form-size f 2 2 'quote)
+                              (list 'quote (syntax-datum (cadr f)))]
+              [(eq? h '%advertised-features) (list 'quote *advertised-features*)]
+              [(eq? h 'define-record-type)
+                (check-record-type-form (syntax-datum f))
+                (cons 'define-record-type
+                      (cons (syntax-name (cadr f))
+                            (cons (cons (lower-id (car (caddr f)) env)
+                                        (syntax-datum (cdr (caddr f))))
+                                  (cons
+                                    (lower-id (cadddr f) env)
+                                    (map (lambda (field)
+                                           (cons (syntax-name (car field))
+                                                 (map (lambda (id) (lower-id id env))
+                                                      (cdr field))))
+                                         (cdr (cdddr f)))))))]
+              [(and (syntax-identifier? (car f))
+                    (eq? (syntax-name (car f)) 'define-values)
+                    (not binding)) (error 'expand
+                                          "define-values: unsupported binding shape"
+                                          (syntax-datum f))]
+              [(eq? h 'lambda) (form-size f 3 #f 'lambda)
+                               (let ([inner (bind-variables (formal-ids (cadr f)) env)])
+                                 (cons 'lambda
+                                       (cons (lower-formals (cadr f) inner)
+                                             (body (cddr f) inner #f depth))))]
+              [(memq h '(let-syntax letrec-syntax))
+                (form-size f 3 #f h)
+                (let* ([inner (syntax-bindings (cadr f) env (eq? h 'letrec-syntax))]
+                       [fs (body (cddr f) inner #f depth)])
+                  ;; An empty let preserves the scope of definitions in the body.
+                  (cons 'let (cons '() fs)))]
+              [(memq h '(let letrec letrec*))
+                (form-size f 3 #f h)
+                (if (and (eq? h 'let) (syntax-identifier? (cadr f)))
+                    (begin
+                      (form-size f 4 #f 'let)
+                      (let ([loop-name (cadr f)] [clauses (caddr f)])
+                        (syntax-check-list 'let clauses)
+                        (for-each (lambda (c) (form-size c 2 2 'let)) clauses)
+                        (expr
+                          (list (core-id 'letrec)
+                                (list (list loop-name
+                                            (cons (core-id 'lambda)
+                                                  (cons (map car clauses) (cdddr f)))))
+                                (cons loop-name (map cadr clauses)))
+                          env
+                          depth)))
+                    (let ([clauses (cadr f)])
+                      (syntax-check-list h clauses)
+                      (for-each (lambda (c) (form-size c 2 2 h)) clauses)
+                      (let ([inner (bind-variables (map car clauses) env)])
+                        (cons h
+                              (cons (map-lr (lambda (c)
+                                              (list (lower-id (car c) inner)
+                                                    (expr (cadr c)
+                                                          (if (eq? h 'let) env inner)
+                                                          0)))
+                                            clauses)
+                                    (body (cddr f) inner #f depth))))))]
+              [(eq? h 'begin)
+                (cons 'begin (map-lr (lambda (e) (expr e env 0)) (cdr f)))]
+              [(memq h '(include include-ci cond-expand))
+                (let ([expanded (body (splice/context f h) env #f depth)])
+                  (cons 'let (cons '() expanded)))]
+              [(eq? h 'if) (form-size f 3 4 'if)
+                           (cons 'if (map-lr (lambda (e) (expr e env 0)) (cdr f)))]
+              [(eq? h 'set!)
+                (form-size f 3 3 'set!)
+                (let ([b (syntax-lookup (cadr f) env)])
+                  (when (and b (not (eq? (cadr b) 'runtime)))
+                    (error 'expand "set! requires a variable" (syntax-name (cadr f))))
+                  (list 'set! (lower-id (cadr f) env) (expr (caddr f) env 0)))]
+              [(eq? h 'quasiquote)
+                (form-size f 2 2 'quasiquote)
+                ;; Generated constructors carry definition identities, while the
+                ;; unquoted holes retain the surrounding lexical environment.
+                (expr (qq/context (cadr f) 1 env) env depth)]
+              [(memq h '(unquote unquote-splicing))
+                (error 'expand "unquote/unquote-splicing outside quasiquote" h)]
+              [(memq h '(define define-syntax syntax-rules))
+                (error 'expand "definition or transformer in expression position" h)]
+              [(and binding
+                    (eq? (cadr binding) 'primitive)
+                    (memq (cadddr binding) '(+ - * /)))
+                (expand-arith (lambda (e) (expr e env 0)) (cadddr binding) (cdr f))]
+              [(and binding
+                    (eq? (cadr binding) 'primitive)
+                    (memq (cadddr binding) '(= < > <= >= eq? eqv? string=?)))
+                (expand-compare (lambda (e) (expr e env 0)) (cadddr binding) (cdr f))]
+              [(and binding
+                    (eq? (cadr binding) 'primitive)
+                    (eq? (cadddr binding) 'string-append))
+                (expand-string-append (lambda (e) (expr e env 0)) (cdr f))]
+              [(eq? h 'apply)
+                (cons 'apply (map-lr (lambda (e) (expr e env 0)) (cdr f)))]
+              [else
+                (syntax-check-list 'application f)
+                (let* ([operator (expr (car f) env 0)]
+                       [protected
+                         (if
+                           (and (symbol? operator)
+                                (not (and binding (eq? (cadr binding) 'primitive)))
+                                (or (memq operator *core-keywords*)
+                                    (memq operator '(define-record-type define-values))
+                                    (memq operator *prims*)))
+                           (list 'begin operator)
+                           operator)])
+                  (cons protected (map-lr (lambda (e) (expr e env 0)) (cdr f))))]))]))
+    (reserve-data! forms)
+    (reserve-data! bindings)
+    (reserve-data! known)
+    (reserve-data! macro-env)
+    (let* ([initial-macros
+             (map-lr (lambda (m)
+                       (contextualize-macro-entry
+                         (if (contextual-transformer? m) m (read-syntax m))
+                         bindings
+                         unit))
+                     macro-env)]
+           [macro-rows
+             (filter (lambda (row) row)
+                     (map-lr2
+                       (lambda (old m)
+                         (let ([public (assq (car m) bindings)])
+                           (and (or (and public
+                                         (eq? (cadr public) 'macro)
+                                         (equal? (caddr public) (transformer-origin m)))
+                                    (not (contextual-transformer? old)))
+                                (macro-row m))))
+                       macro-env
+                       initial-macros))]
+           [env (append bindings macro-rows)])
+      ;; Legacy entries need the combined definition environment, including their
+      ;; recursive siblings. Saved contextual entries already carry their owner.
+      (set! registry
+        (map-lr2
+          (lambda (old new)
+            (if (contextual-transformer? old)
+                new
+                (make-contextual-transformer (car new)
+                                             (transformer-origin new)
+                                             (transformer-literals new)
+                                             (transformer-rules new)
+                                             (serialize-transformer-context env))))
+          macro-env
+          initial-macros))
+      (let ([runtime (body (read-syntax forms) env #t 0)])
+        (list runtime
+              public-macros
+              (list (reverse source-targets)
+                    (reverse private-targets)
+                    (reverse source-aliases)))))))

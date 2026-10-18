@@ -1403,7 +1403,8 @@ static int resolve_program(const std::string &manifest, const std::string &name,
 // libraries and shaken units as well as the baked set (change: chez-free-unit-pipeline).
 // 3: a `.sources` record may hold LIBRARY lines, the (library NAME) answers a unit's
 // cond-expand consulted (change: portable-library-surface, design D7).
-static const int kCacheVersion = 4;
+// 5: compile-time interfaces carry binding origins and lexical syntax context.
+static const int kCacheVersion = 5;
 
 // The resolver a cache entry's (library NAME) answers are re-checked against, when the
 // command has one: "1" available, "0" not, "" could not ask.  Set where each command

@@ -11,6 +11,7 @@
 ;;; lib/ is reached with ../../.  That rule is what lets an INSTALLED manifest name
 ;;; lib/scheme/base.sld and find it beside itself; these fixtures exercise it.
 ((library (emit internal) (source "../../lib/emit/internal.sld"))
+ (library (emit list) (source "../../lib/emit/list.sld"))
  (library (scheme base)   (source "../../lib/scheme/base.sld"))
  (library (mylib)      (source "mylib.sld"))
  (library (liba)       (source "liba.sld"))

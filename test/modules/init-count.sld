@@ -5,6 +5,7 @@
 ;;; `display` so the test reads it as a value on stdout at a moment of its choosing,
 ;;; instead of depending on where init output interleaves with the prompt.
 (define-library (init-count)
+  (import (scheme base))
   (export ticks)
   (begin
     (define n 0)

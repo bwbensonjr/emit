@@ -64,7 +64,48 @@ the fixing commit deletes their entries. An exclusion is a claim, and the suite 
 `blocked-by` is separated out on purpose: a reference to a helper whose `define` was excluded is
 not an independent gap, and counting it as one overstates the inventory.
 
+## Local syntax source-stage checks
+
+On 2026-10-17, `correct-import-bindings-and-local-macros` reintroduced each of 13 excluded
+local-syntax forms separately using the unchanged harness and the runner's section assembly
+rule, compiled each program through the Chez source driver, and ran the resulting executable.
+Eleven forms completed with zero assertion failures, so their exclusions were removed:
+
+```
+e3186ed243c9d0e9  8e09b3f683651850  6ba57e98564594ef
+ceec5386af3e981c  5d192a304950ea70  dfa980c4325f657a
+c04f6b6c7747f4a0  33c8ccd239f209df  ab2f2e442db70d69
+f75a39d200832d5b  852c50e79c5cd4b8
+```
+
+The two remaining forms, `29a575b414f0a588` and `8f9db0e8df7a38fa`, require custom
+`syntax-rules` ellipsis identifiers and still fail compilation. The dotted `define-values`
+control, `b6943f59d4a03fe5`, reports `define-values: unsupported binding shape`; it remains
+excluded independently of local syntax support and no longer carries the fixed issue #91 tag.
+
+Three dependent assertions were then reintroduced separately with their newly accepted
+definitions present: `bd0ed41e5b05c1b8` (`sequence1`), `270cafeb4e4ccc5e` (`sequence2`), and
+`aa1874189477085c` (`mad-hatter`). Each program reported `pass=18`, `fail=0`; their exclusions
+were also removed. In total, 14 exclusions were removed after 17 source-stage probes: 14
+passed, while the two custom-ellipsis forms and dotted `define-values` remained unsupported.
+
+These source-stage probes were followed by the regenerated native section run below.
+The two custom-ellipsis controls and dotted `define-values` remain excluded.
+
 ## Current baseline
+
+Measured on 2026-10-17, after `correct-import-bindings-and-local-macros`, using the regenerated
+native compiler and `--sections-only`:
+
+```
+assertions: 986 passed, 0 failed;  forms: 991 run, 189 excluded
+21 section/check groups passed, 0 failed
+```
+
+The unchanged upstream forms now include the 14 recovered local-syntax/dependent forms above.
+This run checks all non-excluded sections; it does not claim a full stale-exclusion audit.
+
+## Previous baseline
 
 Measured on 2026-10-04, after `portable-library-surface`:
 

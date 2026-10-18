@@ -681,6 +681,24 @@
 #     include and cond-expand splices, and (library ...) answering emit nothing for a
 #     source that does not use them.  Demo values stayed 82/82 (`RUNNER=emit-run
 #     demos/run-tests.sh`).
+#   correct-import-bindings-and-local-macros / Emit list partition -- `(scheme base)`
+#     now has a declared builtin surface, import resolution uses canonical binding
+#     identities, and `filter`, `fold-right`, and `iota` move to `(emit internal)` with
+#     an opt-in `(emit list)` re-export.  A before/after capture of all 82 demos
+#     (existing `build/emit` before regen vs regenerated binary) changed all 82 raw
+#     snapshots (93,928,429 -> 93,932,730 bytes, +4,301).  After normalizing numeric
+#     SSA/label suffixes, the library prefix differs only by the three relocated
+#     procedures: their old `(scheme base)` function bodies and new `(emit internal)`
+#     bodies compare byte-identically after normalizing library/code-label ownership.
+#     In the program modules, after normalizing those three binding owners and removing
+#     their now-inapplicable `(scheme base)` external-global declarations, 79/82 are
+#     byte-identical.  The three residuals are exactly intended: `equal-list` imports
+#     `(emit list)` and calls the same canonical substrate bindings; `record-print` and
+#     `records` construct record field lists with two raw `rt_cons` calls instead of the
+#     public `list` procedure.  The aggregate named-function count moves 63,912 ->
+#     63,914 solely because `equal-list` adds the `(emit list)` init.  No other program
+#     module drift remains after normalization; the full source/native acceptance suites
+#     validate values and import behavior.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

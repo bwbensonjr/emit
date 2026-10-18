@@ -4,10 +4,9 @@
 #
 # src/prelude.scm says what (scheme base) CONTAINS; src/prelude-surface.scm says what
 # it EXPORTS.  The export list is the prelude's top-level defines in SOURCE ORDER minus
-# *scheme-base-private*.  This guard recomputes that list from the two sources with text
-# tools only and diffs it against the committed lib/scheme/base.sld -- so adding a
-# prelude helper without declaring it private FAILS HERE, forcing a visibility decision
-# instead of silently publishing the name.
+# *scheme-base-private* and *scheme-base-elsewhere*, followed by declared builtin names
+# not already defined by the prelude. This guard recomputes that list from the sources
+# with text tools only and diffs it against lib/scheme/base.sld.
 #
 # CHEZ-FREE on purpose: the generator's own guard (test/scheme-base-gen-check.sh) skips
 # when chez is absent, so it cannot be the gate.  This one runs in run-all-tests.sh.
@@ -78,6 +77,56 @@ decl_names '*scheme-base-private*'   > "$TMP/private"
 # assignments by tools/gen-scheme-base.ss, so this guard can stay a text diff rather than
 # parse home specs.
 decl_names '*scheme-base-elsewhere*' > "$TMP/elsewhere"
+decl_names '*base-primitive-names*'   > "$TMP/primitives"
+decl_names '*write-primitive-names*'  > "$TMP/write-primitives"
+decl_names '*base-core-names*'        > "$TMP/core"
+decl_names '*base-auxiliary-names*'   > "$TMP/auxiliary"
+cat "$TMP/primitives" "$TMP/core" "$TMP/auxiliary" > "$TMP/builtins"
+decl_names '*base-primitive-extension-names*' > "$TMP/primitive-extensions"
+if grep -v -x -F -f "$TMP/primitives" "$TMP/primitive-extensions" >/dev/null; then
+  bad "primitive extension names must also be declared as base primitives"
+else
+  ok "declared primitive extensions are part of the base primitive surface"
+fi
+
+# The primitive declaration must track the frontend's integrated bindings. This keeps
+# import selection aligned with the operations the compiler actually recognizes.
+awk '
+  /\(define \*integrable\*/ { grab = 1; next }
+  grab && /\(define \(integrable-lookup/ { grab = 0 }
+  grab {
+    sub(/;.*/, "")
+    s = $0
+    while (match(s, /\([[:alnum:]?!+*<=>\/-]+[ \t]/)) {
+      n = substr(s, RSTART + 1, RLENGTH - 2)
+      if (n != "") print n
+      s = substr(s, RSTART + RLENGTH - 1)
+    }
+  }' src/parse.ss | sort -u > "$TMP/integrable"
+cat "$TMP/primitives" "$TMP/write-primitives" | sort -u > "$TMP/all-library-primitives"
+if diff -q "$TMP/integrable" "$TMP/all-library-primitives" >/dev/null 2>&1; then
+  ok "declared primitive ownership matches src/parse.ss *integrable*"
+else
+  bad "declared primitive ownership differs from src/parse.ss *integrable*"
+  diff "$TMP/integrable" "$TMP/all-library-primitives" \
+    | sed -e 's/^</           integrable only: /' -e 's/^>/           declaration only: /' \
+    | grep -e 'only:' | head -30
+fi
+
+dups="$(sort "$TMP/builtins" | uniq -d)"
+if [ -z "$dups" ]; then
+  ok "primitive, core, and auxiliary builtin names are unique"
+else
+  bad "builtin names occur in multiple declared surfaces: $(echo $dups)"
+fi
+
+if grep -qx 'display' "$TMP/builtins" && grep -qx 'write' "$TMP/builtins" \
+  && grep -qx 'display' "$TMP/write-primitives" \
+  && grep -qx 'write' "$TMP/write-primitives"; then
+  ok "display and write are declared in both base and write builtin views"
+else
+  bad "display/write builtin aliases are missing from a declared view"
+fi
 
 # the committed export list, in file order
 awk 'f && /^    \)$/ { f = 0 } f { print $1 } /^  \(export$/ { f = 1 }' \
@@ -91,9 +140,10 @@ if [ -s "$TMP/not-in-base" ]; then
 else
   cp "$TMP/defines" "$TMP/expected"
 fi
+grep -v -x -F -f "$TMP/defines" "$TMP/builtins" >> "$TMP/expected" || true
 
 if diff -q "$TMP/expected" "$TMP/exports" >/dev/null 2>&1; then
-  ok "lib/scheme/base.sld exports the declared surface ($(wc -l < "$TMP/exports" | tr -d ' ') of $(wc -l < "$TMP/defines" | tr -d ' ') defines; $(wc -l < "$TMP/private" | tr -d ' ') private, $(wc -l < "$TMP/elsewhere" | tr -d ' ') in another library)"
+  ok "lib/scheme/base.sld exports the declared surface ($(wc -l < "$TMP/exports" | tr -d ' ') names: prelude definitions plus builtins)"
 else
   bad "lib/scheme/base.sld does NOT match the declared surface"
   echo "         a prelude definition is neither declared private nor assigned to another"
@@ -103,6 +153,19 @@ else
   diff "$TMP/exports" "$TMP/expected" \
     | sed -e 's/^</           committed only: /' -e 's/^>/           expected  only: /' \
     | grep -e 'only:' | head -20
+fi
+
+if grep -E '^(%|repl-mode$|repl-input$|repl-state-ref$|repl-state-set!$)' "$TMP/builtins" >/dev/null; then
+  bad "raw primitive or REPL state names leaked into the builtin surface"
+else
+  ok "raw primitive and REPL state names are absent from the builtin surface"
+fi
+
+if grep -q '^  (export display write ' lib/scheme/write.sld \
+  && grep -qx 'display' "$TMP/exports" && grep -qx 'write' "$TMP/exports"; then
+  ok "both (scheme base) and (scheme write) expose display/write"
+else
+  bad "display/write are missing from one of the standard library export lists"
 fi
 
 # --- 2. the declaration has not rotted -------------------------------------
@@ -136,6 +199,7 @@ check_moved lib/scheme/cxr.sld  caaar caadr cadar caddr cdaar cdadr cddar cdddr 
 check_moved lib/scheme/read.sld read
 check_moved lib/scheme/file.sld open-input-file open-output-file with-input-from-file \
             with-output-to-file call-with-input-file call-with-output-file
+check_moved lib/emit/list.sld filter fold-right iota
 
 # (scheme cxr) ships COMPLETE: all twenty-four compositions of three to four car/cdr
 # operations (design D9), not just the nine the compiler happened to need.

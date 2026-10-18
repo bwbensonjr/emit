@@ -23,6 +23,7 @@
 ;;; non-finite answer, and a NaN stays testable with `nan?` here where an
 ;;; uncatchable trap would not be.
 (define-library (scheme inexact)
+  (import (scheme base))
   (export finite? infinite? nan? exp log sin cos tan asin acos atan sqrt)
   (begin
     ;; Classification.  `finite?` is true of every exact integer as well as a finite

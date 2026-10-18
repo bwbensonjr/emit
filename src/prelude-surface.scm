@@ -35,8 +35,8 @@
 ;;;              other than (scheme base) -- the depth-3+ cxr forms are (scheme cxr),
 ;;;              `read` is (scheme read), the file procedures are (scheme file).
 ;;;              Recorded conformance debt; not re-litigated by this change.)
-;;;   extension  Emit additions with no R7RS home: filter, fold-left, fold-right,
-;;;              andmap, memp, iota, list-head, void, list->bytevector, port-closed?,
+;;;   extension  Emit additions with no R7RS home: fold-left, andmap, memp, list-head,
+;;;              void, list->bytevector, port-closed?,
 ;;;              read-from-string, read-all-from-string, with-parameters and the
 ;;;              hash-table-* family and the make-eq-hash-table constructor.
 ;;;              Published deliberately, with Emit's established hyphenated spelling.
@@ -101,16 +101,12 @@
 ;;; list because R7RS puts it there or because Emit publishes it deliberately, never
 ;;; because an internal consumer needs it.
 ;;;
-;;; (The other two names that once lived here were the helpers `guard` and `parameterize`
-;;; expand to.  A macro template is instantiated in the IMPORTER's scope, so every name it
-;;; mentions must be exported under exactly that spelling -- `rename` cannot hide one,
-;;; since it keys the import table by the EXTERNAL name and leaves the template's spelling
-;;; unresolvable.  Since they are published either way, they were renamed to honest public
-;;; spellings: `%with-handler` -> `with-exception-handler` (R7RS 6.11, a conformance gain)
-;;; and `%with-parameters` -> `with-parameters` (an extension).  A prelude macro template
-;;; that mentions a name still forces that name public; that is unchanged, and the
-;;; principled fix -- resolving template names hygienically against the library's INTERNAL
-;;; bindings -- is still the way to shrink it.)
+;;; The other two names that once lived here were the helpers `guard` and `parameterize`
+;;; expand to.  They were renamed to honest public spellings: `%with-handler` became
+;;; `with-exception-handler` (R7RS 6.11), and `%with-parameters` became `with-parameters`
+;;; (an extension).  Contextual transformer interfaces now retain definition-site
+;;; bindings for prelude macros too: a template dependency no longer forces a public
+;;; spelling, and hiding or renaming an export cannot capture that dependency.
 
 ;;; NOT exported.  In the library body -- the exported procedures call them -- but out
 ;;; of the export list, so they are not in scope in every user program and are not an
@@ -197,6 +193,50 @@
     ;; library-macro-export, design D3).
     %guard-clauses %do-step))
 
+;;; Builtin bindings visible through `(scheme base)`. These are separate from the
+;;; prelude's runtime definitions: primitive bindings lower to integrated operations,
+;;; while core and auxiliary syntax names are resolved by binding identity. Keep this
+;;; declaration explicit so `(only ...)` and the source/baked library interfaces agree.
+(define *base-primitive-names*
+  '(cons + - * / = < > <= >= eq? eqv? quotient remainder modulo car cdr null? pair?
+    set-car! set-cdr! equal? not flonum? number? real? inexact? exact->inexact
+    inexact->exact write-char char->integer integer->char string-length string-ref
+    string->symbol symbol->string list->string string-set! vector-ref vector-set!
+    vector-length vector? bytevector-u8-ref bytevector-u8-set! bytevector-length
+    bytevector? symbol? string? char? procedure? boolean? integer? exact? substring
+    string=? make-string string-copy make-vector make-bytevector read-all-stdin display
+    write newline write-string eof-object eof-object? string-append))
+
+;;; `(scheme write)` also exposes these same primitive bindings. Its other exports are
+;;; runtime procedures defined by lib/scheme/write.sld.
+(define *write-primitive-names* '(display write))
+
+;;; Emit additions among the integrated primitives above; they keep their public base
+;;; binding, but are documented as extensions rather than R7RS names.
+(define *base-primitive-extension-names* '(flonum? read-all-stdin write-string))
+
+(define *base-core-names*
+  '(quote if lambda let letrec letrec* begin set! define apply define-syntax
+    syntax-rules quasiquote unquote unquote-splicing let-syntax letrec-syntax
+    define-record-type include include-ci cond-expand))
+
+(define *base-auxiliary-names* '(else => ... _))
+
+(define (library-builtin-surface library)
+  (cond
+    [(equal? library '(scheme base))
+      (append
+        (map (lambda (name) (list name 'primitive (list 'builtin 'primitive name) name))
+             *base-primitive-names*)
+        (map (lambda (name) (list name 'core (list 'builtin 'core name) name))
+             *base-core-names*)
+        (map (lambda (name) (list name 'auxiliary (list 'builtin 'auxiliary name) name))
+             *base-auxiliary-names*))]
+    [(equal? library '(scheme write))
+      (map (lambda (name) (list name 'primitive (list 'builtin 'primitive name) name))
+           *write-primitive-names*)]
+    [else '()]))
+
 ;;; The libraries this prelude is partitioned into, in DEPENDENCY ORDER -- a member is
 ;;; emitted, linked and initialized after everything it imports.  Each entry:
 ;;;
@@ -218,7 +258,12 @@
 ;;; resolves (scheme base) from the manifest (src/emit.cpp, mode 5 -> mode 4), so
 ;;; base.sld's import of it has to resolve there too.
 ;;;
-;;; The last three are NOT baked: they are ordinary hybrid-resolved libraries, like
+;;; (emit list) is NOT baked: it is an ordinary hybrid-resolved library that re-exports
+;;; `filter`, `fold-right`, and `iota` from the substrate, keeping Emit's list helpers
+;;; out of the standard (scheme base) surface.
+;;;
+;;; The standard-library partition members below are NOT baked: they are ordinary
+;;; hybrid-resolved libraries, like
 ;;; (scheme inexact), reached only through an explicit import (change:
 ;;; scheme-base-partition, issue #33).  They hold the sixteen names R7RS-small places
 ;;; outside (scheme base), and they IMPORT the baked members -- (scheme base) for the
@@ -231,6 +276,7 @@
 ;;; library that owns it.
 (define *prelude-libraries*
   '(((emit internal) #t () "lib/emit/internal.sld")
+    ((emit list) #f ((emit internal)) "lib/emit/list.sld")
     ((scheme base) #t ((emit internal)) "lib/scheme/base.sld")
     ((scheme cxr) #f ((scheme base)) "lib/scheme/cxr.sld")
     ((scheme read) #f ((scheme base) (emit internal)) "lib/scheme/read.sld")
@@ -354,6 +400,10 @@
 (define *substrate-borrowed*
   '(caar cadr cdar cddr length list reverse list->vector list->bytevector))
 
+;;; Emit-specific list helpers: the compiler needs these in the baked substrate, while
+;;; users opt in through (emit list), which re-exports the substrate's single definitions.
+(define *emit-list-procs* '(filter fold-right iota))
+
 ;;; --- the RELOCATED sixteen (change: scheme-base-partition, issue #33) --------------
 ;;;
 ;;; `read` and the six file procedures leave (scheme base) for the libraries R7RS-small
@@ -458,6 +508,7 @@
     (prelude-assign* *substrate-macros* '((emit internal) ((scheme base) reexport)))
     (prelude-assign* *base-macros* '((scheme base)))
     (prelude-assign* *substrate-rehomed* '((emit internal)))
+    (prelude-assign* *emit-list-procs* '((emit internal) ((emit list) reexport)))
     (prelude-assign* *substrate-cxr* '((emit internal) (scheme cxr)))
     (prelude-assign* *cxr-depth4* '((scheme cxr)))
     (prelude-assign* *substrate-borrowed* '(((emit internal) private) (scheme base)))
@@ -503,7 +554,10 @@
     cddadr cdddar cddddr
     ;; NEW in (scheme file) (change: catchable-errors-with-kinds, design D8).  Also
     ;; additions, for the same reason: (scheme base) never had them to lose.
-    file-exists? delete-file))
+    file-exists? delete-file
+    ;; Emit-specific list helpers live in (emit internal) for compiler use and are
+    ;; re-exported by the opt-in (emit list), not by (scheme base).
+    filter fold-right iota))
 
 ;;; The library a HOME names, its marker (if any), and the two independent questions a
 ;;; home answers: does that library's BODY define the name, and does its EXPORT list

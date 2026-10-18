@@ -3,6 +3,7 @@
 ;;; internal name must NOT be visible to importers, and the emitted symbol is based
 ;;; on the INTERNAL name (@"rename.lib:%fast-map").
 (define-library (rename-lib)
+  (import (scheme base))
   (export (rename %fast-map fmap))
   (begin
     (define (%fast-map) 77)))

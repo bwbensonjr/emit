@@ -24,7 +24,7 @@ check () {  # <name> <input> <expected>
 }
 
 echo "(scheme base) auto-import (REPL)"
-check repl-procs  $'(map (lambda (x) (* x x)) (filter (lambda (x) (> x 0)) (list -1 2 -3 4)))\n' "(4 16)"
+check repl-procs  $'(import (emit list))\n(map (lambda (x) (* x x)) (filter (lambda (x) (> x 0)) (list -1 2 -3 4)))\n' "(4 16)"
 check repl-case   $'(case 2 ((1) (quote one)) ((2) 2) (else (quote x)))\n'                       2
 check repl-cond   $'(cond ((zero? 0) (quote z)) (else (quote n)))\n'                              z
 check repl-shadow $'(define (map f xs) (quote mine))\n(map car (list))\n'                         mine

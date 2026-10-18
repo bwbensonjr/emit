@@ -9,6 +9,7 @@
 ;;;     after them -- `log` records 1 then 2 with a define in between, and `bump`
 ;;;     (defined below the first command) is only callable by the second.
 (define-library (cmdlib)
+  (import (scheme base))
   (export get log-contents)
   (begin
     (define cell (%make-vector 1 0))

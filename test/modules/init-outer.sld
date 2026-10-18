@@ -2,6 +2,7 @@
 ;;; (init-count) first (change: defer-manifest-library-init).  The pair is the
 ;;; closure-order case: deepest dependency initialized before the library that needs it.
 (define-library (init-outer)
+  (import (scheme base))
   (import (init-count))
   (export outer-ticks)
   (begin

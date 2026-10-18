@@ -5,10 +5,10 @@
 ;;; template reaches macro-dup-a's PRIVATE helper -- so this also proves a resolved
 ;;; template reference works when the unit doing the expansion is itself a library.
 ;;;
-;;; Note what this fixture must NOT do: use a derived form (`when`, `cond`).  A library
-;;; body does not get the baked macro set at all (issue #55), which is a pre-existing gap
-;;; unrelated to macro export.
+;;; This fixture avoids derived forms (`when`, `cond`) so it stays focused on merging an
+;;; imported library macro into another library's compile-time environment.
 (define-library (macro-user-lib)
+  (import (scheme base))
   (import (macro-dup-a))
   (export dbl)
   (begin

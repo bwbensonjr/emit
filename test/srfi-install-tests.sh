@@ -88,7 +88,7 @@ if [ "$?" = 0 ] && [ "$(<"$TMP/unused.out")" = '(1 2)' ] && \
 else bad "unused SRFI loading"; cat "$TMP/unused.err"; fi
 printf '()\n' > emit-libs.scm
 mkdir -p lib/srfi
-printf '%s\n' '(define-library (srfi 2) (export and-let*) (begin (define-syntax and-let* (syntax-rules () ((_ any ...) (quote project))))))' > lib/srfi/2.sld
+printf '%s\n' '(define-library (srfi 2) (import (scheme base)) (export and-let*) (begin (define-syntax and-let* (syntax-rules () ((_ any ...) (quote project))))))' > lib/srfi/2.sld
 if got="$(printf '(import (srfi 2)) (and-let* ())\n' | "$EMIT" run 2>"$TMP/override.err")" && \
    [ "$got" = project ]; then
   ok "project SRFI source overrides the installed provider"

@@ -1,5 +1,6 @@
 (define-library (composition macro middle)
-  (import (prefix
+  (import (only (scheme base) define-syntax syntax-rules)
+          (prefix
             (rename (only (composition macro owner) seed) (seed seeded))
             m:))
   (export outer (rename m:seeded seeded))

@@ -32,6 +32,7 @@
   (string-append base (number->string lbl-n)))
 (define (start-bb name) (emit! (string-append name ":")) (set! current-bb name))
 (define (reset-emit!)
+  (set! *emit-owned-globals* '())
   (set! temp-n 0)
   (set! lbl-n 0)
   (set! emit-lines '())
@@ -1643,6 +1644,7 @@
 ;; global names are unchanged; Stage 1 sets it per library so a library's globals
 ;; carry its "L:" prefix.  Mirrors lower.ss's `*unit*` for code-block labels.
 (define *emit-unit* program-unit)
+(define *emit-owned-globals* '())
 
 ;; LLVM global operand for a (generation-mangled, possibly non-identifier)
 ;; top-level symbol, named through `mangle` against the current emit unit (the
@@ -1654,11 +1656,12 @@
 ;; must NOT be re-mangled against THIS unit -- else a library `(a)` referencing
 ;; `(b)`'s export would emit `@"a:b:add1"`.  A `:` is the unit separator (mirrors
 ;; label-has-colon? for code labels), so a symbol that already contains one is
-;; emitted verbatim.  A unit's own names never contain `:` (they are plain names or
-;; `x.gN` generations), so the program/single-unit cases stay byte-identical.
+;; emitted verbatim unless the unit actually defines that slot. Frontend lowering
+;; keeps ordinary local targets colon-free; generated backend helpers may still
+;; contain a separator, so library emission records ownership explicitly.
 (define (global-operand s)
   (let ([str (if (symbol? s) (symbol->string s) s)])
-    (if (label-has-colon? str)
+    (if (and (label-has-colon? str) (not (memq s *emit-owned-globals*)))
         (string-append "@\"" str "\"") ; imported: already qualified
         (string-append "@\"" (mangle *emit-unit* s) "\"")))) ; own: qualify to this unit
 
@@ -2000,6 +2003,10 @@
   (reset-emit!)
   (reset-symbols!)
   (set! *emit-unit* library-name)
+  ;; Ownership, not spelling, distinguishes local slots from imported targets.
+  ;; Hygienic introduced names and source identifiers may contain colons.
+  (set! *emit-owned-globals*
+    (apply append (map (lambda (p) (car (repl-scan-globals p))) progs)))
   (set! *arity* repl-arity)
   (for-each repl-check-arity progs)
   (let ([qop (lambda (nm)

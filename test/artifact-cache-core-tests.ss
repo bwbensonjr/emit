@@ -50,6 +50,27 @@
 (include "src/repl-core.ss")
 (set! make-dumper (lambda (name) no-dump))
 
+(define (read-source-text path)
+  (call-with-input-file path
+    (lambda (port)
+      (let loop ([chars '()])
+        (let ([c (read-char port)])
+          (if (eof-object? c)
+              (list->string (reverse chars))
+              (loop (cons c chars))))))))
+(set! *prelude-source* (read-source-text "src/prelude.scm"))
+
+(init-session "")
+(define baked-registration (run-register-baked-set))
+(unless (eq? (car baked-registration) 'ok)
+  (error 'artifact-cache-core-tests "could not register baked libraries" baked-registration))
+(define *test-baked-libs* *repl-libs*)
+(define *test-baked-imports* *repl-lib-imports*)
+(define (init-test-session)
+  (init-session "")
+  (set! *repl-libs* *test-baked-libs*)
+  (set! *repl-lib-imports* *test-baked-imports*))
+
 (define pass 0) (define fail 0)
 (define (check name got want)
   (if (equal? got want)
@@ -57,9 +78,9 @@
       (begin (set! fail (+ fail 1))
              (printf "  [FAIL] ~a\n         got:  ~s\n         want: ~s\n" name got want))))
 
-(init-session "")
+(init-test-session)
 (define r4 (repl-load-library-text
-  "(define-library (tlib) (export greet twice collect) (import) (begin (define (greet) 42) (define (twice x) (* x 2)) (define (collect a . rest) rest)))"))
+  "(define-library (tlib) (export greet twice collect) (import (scheme base)) (begin (define (greet) 42) (define (twice x) (* x 2)) (define (collect a . rest) rest)))"))
 (check "mode 4 compiled the library" (car r4) 'ok)
 (define compiled-table (assoc '(tlib) *repl-libs*))
 (define compiled-imports (cached-lib-imports '(tlib)))
@@ -122,7 +143,7 @@
 (check "mode 15 returned ok" (car meta) 'ok)
 (printf "  metadata: ~a\n" (cdr meta))
 
-(init-session "")
+(init-test-session)
 (check "fresh session has no tlib" (assoc '(tlib) *repl-libs*) #f)
 (define r14 (repl-register-cached-libs (cdr meta)))
 (check "mode 14 returned ok" (car r14) 'ok)
@@ -130,16 +151,16 @@
 (check "export table round-trips identically" (assoc '(tlib) *repl-libs*) compiled-table)
 (check "direct imports round-trip" (cached-lib-imports '(tlib)) compiled-imports)
 
-(init-session "")
+(init-test-session)
 (check "malformed row refused" (car (repl-register-cached-libs "((tlib) (junk))")) 'error)
 (check "  registers nothing"   (assoc '(tlib) *repl-libs*) #f)
-(init-session "")
+(init-test-session)
 (check "table/name mismatch refused"
        (car (repl-register-cached-libs "(((tlib) () ((OTHER) () ()) \"tlib:__init\"))")) 'error)
 (check "  registers nothing"   (assoc '(tlib) *repl-libs*) #f)
-(init-session "")
+(init-test-session)
 (check "empty metadata refused" (car (repl-register-cached-libs "")) 'error)
-(init-session "")
+(init-test-session)
 (check "unregistered key refused by mode 15" (car (repl-cached-libs-text "nope:\n")) 'error)
 
 ;; An entry whose imports are not registered yet is DEFERRED, not applied and not refused
@@ -147,7 +168,7 @@
 ;; exactly where compiling is not: the REPL runs each unit's __init as it adds it, so a
 ;; unit registered ahead of one it reads globals from would initialize against empty slots.
 ;; The host's fixpoint loop already retries this status -- it is mode 4's.
-(init-session "")
+(init-test-session)
 (check "a row whose import is unregistered is deferred"
        (car (repl-register-cached-libs "(((tlib) ((dep)) ((tlib) () ()) \"tlib:__init\"))"))
        'deferred)
@@ -155,7 +176,7 @@
 
 ;; ... and once that import IS registered, the same entry applies.  Two rows in one entry
 ;; satisfy each other in order, which is how the baked set's members do it.
-(init-session "")
+(init-test-session)
 (check "rows satisfy each other in dependency order"
        (car (repl-register-cached-libs
               (string-append "(((dep) () ((dep) () ()) \"dep:__init\")"
@@ -185,11 +206,11 @@
        'error)
 
 ;; On-demand registration is transactional in compiler state.
-(init-session "")
+(init-test-session)
 (check "registration transaction begins" (car (repl-registration-begin)) 'ok)
 (check "transactional library compiles"
        (car (repl-load-library-text
-              "(define-library (temp) (export value) (begin (define value 1)))"))
+              "(define-library (temp) (import (scheme base)) (export value) (begin (define value 1)))"))
        'ok)
 (check "transactional library is visible before rollback"
        (and (assoc '(temp) *repl-libs*) #t)
@@ -198,7 +219,7 @@
 (check "rolled-back library is no longer registered" (assoc '(temp) *repl-libs*) #f)
 
 ;; Explicit payload validation must complete before publishing any registration.
-(init-session "")
+(init-test-session)
 (define explicit-exports (render-datum compiled-table))
 (define (host-request datum)
   (let ([port (open-output-string)])
@@ -238,7 +259,8 @@
 (define publication
   (repl-publication-row
     (host-request
-      (list "(define-library (tlib) (export greet twice collect))" explicit-exports))))
+      (list "(define-library (tlib) (import (scheme base)) (export greet twice collect))"
+            explicit-exports))))
 (check "publication descriptor is created without compiling" (car publication) 'ok)
 (check "publication row matches cached registration"
        (and (eq? (car publication) 'ok)

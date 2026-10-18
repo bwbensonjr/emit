@@ -11,6 +11,7 @@
 ;;; it, and a shake that nominates roots from the export list alone would prune it
 ;;; into a link-time undefined symbol.
 (define-library (macro-helper-lib)
+  (import (scheme base))
   (export twice)
   (begin
     (define (helper x) (* x 3))

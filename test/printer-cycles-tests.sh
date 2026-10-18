@@ -137,21 +137,19 @@ check char-roundtrip '(import (scheme read))
 (display (map rt (list 0 1 7 8 9 10 13 27 31 32 65 127 128 159 955)))' \
   "(#t #t #t #t #t #t #t #t #t #t #t #t #t #t #t)"
 
-echo "the REPL survives a trap inside the compiler (issue #97)"
+echo "the REPL recovers from unsupported definition syntax (issues #91 and #97)"
 
-# `(define-values (x y . z) ...)` is the shortest form that makes the COMPILER trap (the
-# frontend destructures it with unchecked pair accessors -- issue #91).  Before this the session exited 1
-# and the following form was never read.  After it, compile-one-form's guard catches the
-# trap, which also means the session snapshot it holds is restored (repl-core design D3).
-# Which accessor encounters the malformed tail first is not the recovery contract.
+# Dotted define-values remains unsupported. The frontend names that syntax
+# instead of trapping through an unchecked accessor, and the session continues.
 sess="$(printf '(define-values (x y . z) (values 1 2 3))\n(display (+ 40 2))\n' | $TO $HOST 2>&1)"
 sess_status=$?
 last="$(printf '%s' "$sess" | awk 'NF{v=$0} END{print v}')"
-if [ "$sess_status" -eq 0 ] && printf '%s' "$sess" | grep -Eq '(car|cdr): not a pair' \
+if [ "$sess_status" -eq 0 ] && printf '%s' "$sess" | grep -q 'define-values: unsupported binding shape' \
+   && ! printf '%s' "$sess" | grep -Eq '(car|cdr): not a pair' \
    && printf '%s' "$last" | grep -q 42; then
-  ok "repl-compiler-trap  (reported, session survived, next form ran)"
+  ok "repl-definition-error  (named diagnostic, session survived, next form ran)"
 else
-  bad "repl-compiler-trap (status=$sess_status, last='$last')"
+  bad "repl-definition-error (status=$sess_status, last='$last')"
   printf '%s\n' "$sess" | sed 's/^/         /'
 fi
 

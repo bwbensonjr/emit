@@ -6,6 +6,7 @@
 ;;; captured by whatever the importer happens to bind `my-max` to.  Its template also calls
 ;;; the private `pick`, resolved to `macro-rec-lib:pick`.
 (define-library (macro-rec-lib)
+  (import (scheme base))
   (export my-max)
   (begin
     (define (pick a b) (if (< a b) b a))

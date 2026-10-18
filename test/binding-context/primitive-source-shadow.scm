@@ -1,0 +1,6 @@
+(import (prefix (scheme base) b:) (only (scope owner) outer))
+(b:define (car x) 99)
+(b:define (+ x y) 66)
+(b:write (b:list (outer (b:quote (41))) (car (b:quote (41))) (+ 1 2)
+                 (b:car (b:quote (7))) (b:map b:car (b:quote ((8))))
+                 (b:apply b:+ (b:quote (1 2 3)))))

@@ -33,9 +33,7 @@
     assq
     member
     assoc
-    filter
     fold-left
-    fold-right
     for-each
     andmap
     memp
@@ -46,7 +44,6 @@
     list-set!
     list-head
     make-list
-    iota
     max
     min
     complex?
@@ -172,6 +169,98 @@
     current-error-port
     current-input-port
     call-with-port
+    cons
+    +
+    -
+    *
+    /
+    =
+    <
+    >
+    <=
+    >=
+    eq?
+    eqv?
+    quotient
+    remainder
+    modulo
+    car
+    cdr
+    null?
+    pair?
+    set-car!
+    set-cdr!
+    equal?
+    not
+    flonum?
+    number?
+    real?
+    inexact?
+    exact->inexact
+    inexact->exact
+    write-char
+    char->integer
+    integer->char
+    string-length
+    string-ref
+    string->symbol
+    symbol->string
+    list->string
+    string-set!
+    vector-ref
+    vector-set!
+    vector-length
+    vector?
+    bytevector-u8-ref
+    bytevector-u8-set!
+    bytevector-length
+    bytevector?
+    symbol?
+    string?
+    char?
+    procedure?
+    boolean?
+    integer?
+    exact?
+    substring
+    string=?
+    make-string
+    string-copy
+    make-vector
+    make-bytevector
+    read-all-stdin
+    display
+    write
+    newline
+    write-string
+    eof-object
+    eof-object?
+    string-append
+    quote
+    if
+    lambda
+    let
+    letrec
+    letrec*
+    begin
+    set!
+    define
+    apply
+    define-syntax
+    syntax-rules
+    quasiquote
+    unquote
+    unquote-splicing
+    let-syntax
+    letrec-syntax
+    define-record-type
+    include
+    include-ci
+    cond-expand
+    else
+    =>
+    ...
+    _
     )
   (begin
     (define-syntax case (syntax-rules (else =>) ((_ (key ...) clause ...) (let ((k (key ...))) (case k clause ...))) ((_ k) (if #f #f)) ((_ k (else => f)) (f k)) ((_ k (else e ...)) (begin e ...)) ((_ k ((d ...) => f) clause ...) (if (memv k (quote (d ...))) (f k) (case k clause ...))) ((_ k ((d ...) e ...) clause ...) (if (memv k (quote (d ...))) (begin e ...) (case k clause ...)))))
@@ -197,9 +286,7 @@
     (define (member-by x xs same?) (if (null? xs) #f (if (same? x (car xs)) xs (member-by x (cdr xs) same?))))
     (define (assoc k xs . rest) (if (null? rest) (if (null? xs) #f (if (equal? k (car (car xs))) (car xs) (assoc k (cdr xs)))) (assoc-by k xs (car rest))))
     (define (assoc-by k xs same?) (if (null? xs) #f (if (same? k (car (car xs))) (car xs) (assoc-by k (cdr xs) same?))))
-    (define (filter p xs) (if (null? xs) (quote ()) (if (p (car xs)) (cons (car xs) (filter p (cdr xs))) (filter p (cdr xs)))))
     (define (fold-left f acc xs) (if (null? xs) acc (fold-left f (f acc (car xs)) (cdr xs))))
-    (define (fold-right f acc xs) (if (null? xs) acc (f (car xs) (fold-right f acc (cdr xs)))))
     (define (%for-each1 f xs) (if (null? xs) (if #f #f) (begin (f (car xs)) (%for-each1 f (cdr xs)))))
     (define (%for-eachn f ls) (if (%any-null? ls) (if #f #f) (begin (apply f (%map1 car ls)) (%for-eachn f (%map1 cdr ls)))))
     (define (for-each f xs . more) (if (null? more) (%for-each1 f xs) (%for-eachn f (cons xs more))))
@@ -212,7 +299,6 @@
     (define (list-set! xs n obj) (set-car! (list-tail xs n) obj))
     (define (list-head xs n) (if (zero? n) (quote ()) (cons (car xs) (list-head (cdr xs) (- n 1)))))
     (define (make-list n x) (if (zero? n) (quote ()) (cons x (make-list (- n 1) x))))
-    (define (iota n) (let loop ((i 0) (acc (quote ()))) (if (= i n) (reverse acc) (loop (+ i 1) (cons i acc)))))
     (define (%minmax-fold pick xs best inex) (if (null? xs) (if inex (exact->inexact best) best) (%minmax-fold pick (cdr xs) (pick best (car xs)) (if inex #t (inexact? (car xs))))))
     (define (%minmax pick a rest) (%minmax-fold pick rest a (inexact? a)))
     (define (max a . rest) (%minmax (lambda (x y) (if (< x y) y x)) a rest))

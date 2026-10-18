@@ -25,8 +25,8 @@ if [ "$HOST" != chez ]; then make emit >/dev/null || exit 1; fi
 COMMON=(--manifest "$ROOT/emit-libs.scm" --no-manifest-chain -L "$ROOT/lib")
 
 write_driver () { # destination suite source
-  # Select SRFI 1 before base's nonstandard fold-right extension. Upstream
-  # imports stay byte-identical; the existing first-import-wins rule is retained.
+  # Upstream imports remain byte-identical; overlapping re-exports denote the
+  # same original bindings and need no precedence rule.
   printf '%s\n' \
     '(import (srfi 1) (scheme base) (scheme file) (scheme write) (scheme process-context) (srfi 64))' \
     "(define acceptance-suite \"$2\")" \

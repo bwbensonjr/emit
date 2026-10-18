@@ -34,7 +34,7 @@ echo "AOT tree-shaking tests"
 # library away; one using map keeps map + its transitive deps.  Both < a full link.
 caronly="$(build caronly '(car (quote (1 2)))')"
 usemap="$(build usemap  '(map (lambda (x) (+ x 1)) (quote (1 2 3)))')"
-heavy="$(build heavy    '(list (map car (quote ((1)(2)))) (filter (lambda (x) (< x 3)) (quote (1 2 3))) (assoc 2 (quote ((1 . a)(2 . b)))) (fold-left (lambda (a b) (+ a b)) 0 (quote (1 2 3))))')"
+heavy="$(build heavy    '(import (emit list)) (list (map car (quote ((1)(2)))) (filter (lambda (x) (< x 3)) (quote (1 2 3))) (assoc 2 (quote ((1 . a)(2 . b)))) (fold-left (lambda (a b) (+ a b)) 0 (quote (1 2 3))))')"
 
 car_val="${caronly%%|*}";  car_sz="${caronly##*|}"
 map_val="${usemap%%|*}";   map_sz="${usemap##*|}"

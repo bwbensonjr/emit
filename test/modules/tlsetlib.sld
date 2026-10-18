@@ -12,6 +12,7 @@
 ;;; `g` is the control: same fixed-arity shape, never assigned, so it keeps its
 ;;; direct-call row while `f` loses its.
 (define-library (tlsetlib)
+  (import (scheme base))
   (export f g)
   (begin
     (define (f x) (%+ x 1))

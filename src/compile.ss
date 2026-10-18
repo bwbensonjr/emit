@@ -11,9 +11,8 @@
 ;;; cross-checks the self-hosted compiler against an implementation that shares
 ;;; none of its runtime.  That is what the Chez-gated suites do (./run-dev-tests.sh:
 ;;; self-emission equivalence, the self-hosting fixed point, --dump parity, and the
-;;; cross-path byte-identity checks); ./run-all-tests.sh needs none of it.  It also
-;;; still owns one capability the Chez-free path lacks -- the closed-world
-;;; tree-shaking AOT ship path (docs/MODULES.md, "Scope & limits").
+;;; cross-path byte-identity checks); ./run-all-tests.sh needs none of it. Both
+;;; hosts use the shared closed-world AOT tree-shaking implementation.
 ;;;
 ;;; Usage, when you do want it (run from the repo root; needs `chez` on PATH):
 ;;;   chez --libdirs src --script src/compile.ss SRC.scm [-o OUT] [--dump]
@@ -791,7 +790,8 @@
 ;; invalidation deliberately (e.g. if the stamp scheme itself changes).
 ;; Version 2: the sidecar gained the include list (D10).
 ;; Version 3: ...and the (library NAME) answers (change: portable-library-surface, D7).
-(define compiler-stamp-version 3)
+;; Version 4: origin identities and lexical transformer context are required.
+(define compiler-stamp-version 4)
 
 ;; Exactly the (include ...) block at the top of this file PLUS this file itself,
 ;; in a fixed order -- the sources that turn library source -> IR in this path.

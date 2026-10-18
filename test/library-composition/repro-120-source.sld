@@ -1,5 +1,6 @@
 (define-library (composition repro macro source)
-  (import (scheme case-lambda))
+  (import (only (scheme base) define-syntax syntax-rules)
+          (scheme case-lambda))
   (export with-case-lambda)
   (begin
     (define-syntax with-case-lambda

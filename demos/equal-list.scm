@@ -3,6 +3,7 @@
 ; equality-and-list-library.  equal? is the rt_equal primitive; the rest are
 ; prelude Scheme.  The result is a single list pinning down every case:
 ;   => (1 1 0 ((2) (3)) ("b" . 2) (2 3 4) -6 (1 2 3))
+(import (emit list))
 (list
  (if (equal? (list 1 (list 2 3)) (quote (1 (2 3)))) 1 0)  ; nested structure   -> 1
  (if (equal? (substring "xhello" 1 6) "hello") 1 0)       ; string by content  -> 1
