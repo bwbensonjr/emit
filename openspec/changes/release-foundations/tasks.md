@@ -37,4 +37,6 @@
 ## 6. Integration and first release
 
 - [x] 6.1 Complete integration checks on the final source: native suite, CLI/doctor/install checks, full compatibility matrix, and archive validation. If compatibility fixes touched compiler sources, finish those edits before `make regen`, then run both suites and the post-commit trust-check per project instructions. Verify committed bootstrap IR is coherent before tagging.
-- [ ] 6.2 Prepare and commit the `0.1.0` release state and changelog, create the matching `v0.1.0` tag, and complete the validated publication workflow. Verify the public release's archive checksum, source-build result, version identity, and notes match the tagged commit; record the release URL in the implementation handoff.
+- [x] 6.2 Prepare and commit the `0.1.0` release state and changelog, create the matching `v0.1.0` tag, and complete the validated publication workflow. Verify the public release's archive checksum, source-build result, version identity, and notes match the tagged commit; record the release URL in the implementation handoff.
+
+Published [Emit v0.1.0](https://github.com/bwbensonjr/emit/releases/tag/v0.1.0) from commit `3c59c6c4eea85c66c4120f161863a02ab673040c`. The [tag workflow](https://github.com/bwbensonjr/emit/actions/runs/39152320199) passed all ten compatibility cells and both offline archive jobs before publication. Public downloads matched the validated assets, checksum, source commit, and changelog notes; the downloaded archive passed an additional offline build and staged installation in 23 seconds.
