@@ -548,6 +548,12 @@ static bool file_readable(const std::string &p) {
   return f.good();
 }
 
+static bool regular_readable(const std::string &path) {
+  struct stat st;
+  return stat(path.c_str(), &st) == 0 && S_ISREG(st.st_mode) &&
+         access(path.c_str(), R_OK) == 0;
+}
+
 // --- support-file location (change: installed-emit-completeness; issue #36) -----
 // the emit build command needs two files that are not the binary and not a library:
 // tools/llvm-env.sh (toolchain discovery, which in turn sources tools/log.sh) and
@@ -576,11 +582,11 @@ static std::string support_file(const std::string &relpath) {
   std::string root = dir_of(bindir);              // the checkout root, or <prefix>
   if (root.empty()) root = ".";
   std::string cand = root + "/" + relpath;                          // candidate 1
-  if (file_readable(cand)) return cand;
+  if (regular_readable(cand)) return cand;
   cand = root + "/share/emit/" + relpath;                           // candidate 2
-  if (file_readable(cand)) return cand;
+  if (regular_readable(cand)) return cand;
   cand = std::string(EMIT_PREFIX) + "/share/emit/" + relpath;       // candidate 3
-  if (file_readable(cand)) return cand;
+  if (regular_readable(cand)) return cand;
   return "";
 }
 
@@ -918,12 +924,6 @@ struct LibraryProvider {
 };
 
 enum class ResolveResult { Found, Missing, Error };
-
-static bool regular_readable(const std::string &path) {
-  struct stat st;
-  return stat(path.c_str(), &st) == 0 && S_ISREG(st.st_mode) &&
-         access(path.c_str(), R_OK) == 0;
-}
 
 static std::string absolute_path(const std::string &path) {
   if (path.empty() || path[0] == '/') return path;

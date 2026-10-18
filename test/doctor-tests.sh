@@ -116,9 +116,11 @@ has "$TMP/err" "LLVM_CONFIG=$TMP/no-llvm-config"
 # healthy. This also exercises continued reporting after absent support files.
 mkdir -p "$TMP/detached/bin"
 cp "$EMIT" "$TMP/detached/bin/emit"
+mkdir -p "$TMP/detached/src/runtime/runtime.c"
 if "$TMP/detached/bin/emit" doctor >"$TMP/out" 2>"$TMP/err"; then fail "accepted missing payload"; fi
 has "$TMP/err" "shipped payload missing:"
 has "$TMP/out" "support src/runtime/runtime.c: missing"
+has "$TMP/err" "required support file missing: src/runtime/runtime.c"
 # Without a discovery script or overrides the native values come from the
 # compiled-default tier, even while the separate payload checks fail.
 if env -u CC -u GC_INC -u GC_LIB -u EMIT_GC_INC -u EMIT_GC_LIB \

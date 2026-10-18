@@ -17,8 +17,16 @@ upper bound.
 `tools/ci-provision.sh` pins each upstream release to its full Git commit and
 builds LLVM, clang, and libgc 8.2.8 from source. The same recipe works when a
 package manager no longer provides a historical major. Cache entries include
-platform, architecture, major, and the provisioning script's hash; a completion
-stamp and actual compiler versions are checked on cache hits. A missing release
+platform, architecture, major, and the pinned dependency recipe identity emitted
+by `tools/ci-provision.sh --identity <major>`. This read-only mode reports the
+LLVM version and revision, libgc revision, and recipe identifier without creating
+directories or building anything. Bump the recipe identifier when changing CMake
+configuration or other dependency build semantics; logging edits do not require
+rebuilding LLVM. A completion stamp and actual compiler versions are checked on
+cache hits. A temporary restore prefix migrates validated caches from the former
+script-hash keys; remove that prefix after migration and before final release.
+Validated dependencies are saved before Emit tests so a later test failure does
+not discard the toolchain build. A missing release
 or wrong major fails the job. A cold LLVM build can take hours; link parallelism
 is limited to control memory use. The distribution builds only clang, its resource
 headers, llvm-config, the shared LLVM library, and development headers for the
