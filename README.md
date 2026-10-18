@@ -105,6 +105,18 @@ All four installed commands work from any directory. Projects normally use their
 repeatable `-L` / `--library-path` and `EMIT_LIBRARY_PATH` add roots, while
 `--no-library-paths` disables every directory provider.
 
+`emit --version` reports the Emit release and the LLVM version used to build it.
+`emit doctor` reports the selected native toolchain, libgc, shipped source files,
+and library providers in lookup order. It makes no changes and exits nonzero when
+required checks fail. On macOS, an older Apple clang may be selected from PATH;
+set `CC=/path/to/llvm/bin/clang` to use a clang compatible with Emit's LLVM.
+Doctor cannot run if a missing dynamic library prevents Emit itself from loading.
+See [diagnostic fields and status](docs/DOCTOR.md) for details.
+See [installation and relocation](docs/INSTALLATION.md),
+[version policy](docs/RELEASES.md), and [source releases](docs/RELEASE-PIPELINE.md)
+for packager and release instructions. Source builds need no Git metadata, Chez,
+or network access once native build dependencies are installed.
+
 Optional `(srfi 1)`, `(srfi 2)`, `(srfi 8)`, `(srfi 227)`, and an explicitly
 documented `(srfi 64)` port ship as ordinary sources under `lib/srfi/`, not in the
 baked prelude. SRFI 64 supports portable test runners and real approximate

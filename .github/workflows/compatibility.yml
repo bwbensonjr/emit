@@ -1,0 +1,54 @@
+name: Source compatibility
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  source:
+    name: ${{ matrix.os }} / LLVM ${{ matrix.llvm }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+        llvm: [19, 20, 21, 22, 23]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Verify provisioning tools
+        run: |
+          cmake --version
+          ninja --version
+          git --version
+      - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ runner.temp }}/emit-deps
+          key: emit-deps-${{ runner.os }}-${{ runner.arch }}-${{ matrix.llvm }}-${{ hashFiles('tools/ci-provision.sh') }}
+      - name: Provision pinned LLVM and libgc
+        env:
+          LLVM_MAJOR: ${{ matrix.llvm }}
+        run: tools/ci-provision.sh "$LLVM_MAJOR" "$RUNNER_TEMP/emit-deps" >> "$GITHUB_ENV"
+      - name: Build and test committed bootstrap IR
+        env:
+          LLVM_MAJOR: ${{ matrix.llvm }}
+        run: |
+          set -o pipefail
+          tools/ci-check.sh "$LLVM_MAJOR" 2>&1 | tee "$RUNNER_TEMP/compatibility.log"
+      - name: Preserve diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: compatibility-${{ runner.os }}-${{ matrix.llvm }}
+          path: |
+            ${{ runner.temp }}/compatibility.log
+            build/native-config
+            build/llvm.mk
+          if-no-files-found: warn

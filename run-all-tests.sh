@@ -103,6 +103,8 @@ run_suite "hybrid library resolution" test/hybrid-library-resolution-tests.sh
 run_suite "emit build + program resolver" test/emit-build-tests.sh
 run_suite "unit pipeline (seeding, caching, shaking)" test/unit-pipeline-tests.sh
 run_suite "CLI interface (help + final value)" test/emit-cli-tests.sh
+run_suite "release version identity" test/version-tests.sh
+run_suite "installation diagnostics" test/doctor-tests.sh
 run_suite "JIT optimization profiles" test/jit-optimization-tests.sh
 run_suite "(scheme base) declared surface" test/scheme-base-surface-check.sh
 run_suite "Unicode data checksums + generated tables" test/unicode-data-gen-check.sh

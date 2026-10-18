@@ -61,6 +61,10 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <limits.h>
+#include <fcntl.h>
+#include <poll.h>
+#include <signal.h>
+#include <cerrno>
 
 #include <gc/gc.h>
 
@@ -305,6 +309,13 @@ static bool is_dump_flag(const std::string &a, bool &dump, bool &dump_all) {
 // --help/-h, prints its own usage, and exits 0.
 static bool is_help_flag(const std::string &a) { return a == "--help" || a == "-h"; }
 
+#ifndef EMIT_VERSION
+#define EMIT_VERSION "unknown"
+#endif
+#ifndef EMIT_SHIPPED_FILES
+#define EMIT_SHIPPED_FILES "emit-libs.scm lib/scheme/inexact.sld"
+#endif
+
 // Every usage writer takes a DESTINATION, because the same text has two of them
 // (design D1): usage printed because the user asked for it is the output they asked
 // for and goes to stdout, so `emit --help | head` works without redirection; usage
@@ -319,7 +330,7 @@ static bool is_help_flag(const std::string &a) { return a == "--help" || a == "-
 // by all five, so the repetition cannot drift.
 static void usage_shared(std::ostream &os) {
   os << "\n"
-        "options every verb accepts:\n"
+        "shared compilation options:\n"
         "  --no-manifest-chain   resolve libraries from only the first manifest\n"
         "  -L DIR, --library-path DIR\n"
         "               add a conventional library root (repeatable)\n"
@@ -341,6 +352,8 @@ static void usage(std::ostream &os) {
         "  emit repl [--manifest F] [--no-prelude]            interactive REPL\n"
         "  emit build [NAME|FILE] [--manifest F] [-o OUT] [--no-prelude]   deliver a native exe\n"
         "  emit lib  SRC [-o DIR] [--manifest F]              compile one library -> artifact\n"
+        "  emit doctor [options]                             inspect the installation\n"
+        "  emit --version                                    Emit and build-time LLVM versions\n"
         "  emit help [VERB]                                   this summary, or a verb's usage\n";
   usage_shared(os);
   os << "\n"
@@ -392,6 +405,22 @@ static void usage_lib(std::ostream &os) {
         "  -o DIR                    artifact directory (default build/lib)\n"
         "  --manifest F              manifest to resolve the library's imports against\n";
   usage_shared(os);
+}
+
+static void usage_doctor(std::ostream &os) {
+  os << "usage: emit doctor [options]       inspect the installation without changes\n"
+        "\n"
+        "  --manifest F              select a project manifest (or EMIT_MANIFEST)\n"
+        "  -L DIR, --library-path DIR add a library root (repeatable)\n"
+        "  --no-manifest-chain       stop at the first manifest\n"
+        "  --no-library-paths        disable conventional directory providers\n"
+        "  -q, -v                    quiet or verbose narration (EMIT_VERBOSITY)\n"
+        "  --help, -h                print this usage without running checks\n"
+        "\n"
+        "Reports build identity, cc/clang, libgc, support files and ordered library\n"
+        "providers on stdout; narration and errors use stderr. EMIT_LIBRARY_PATH\n"
+        "follows -L roots. Exit 0 means required checks pass; nonzero means failure.\n"
+        "Missing optional project roots and unused prefix fallbacks are informational.\n";
 }
 
 static long file_bytes(const std::string &p) {
@@ -814,7 +843,7 @@ static std::vector<LibraryName> raw_source_imports(const std::string &text,
 // Mode 10 needs none of this: it carries an (ok . _) / (error . MSG) pair and
 // resolve_program prints "manifest PATH ..." itself.
 static std::string manifest_mode_text(int mode, const std::string &mtext,
-                                      const std::string &manifest) {
+                                      const std::string &manifest, bool *bad = nullptr) {
   jmp_buf jb;
   jmp_buf *saved = rt_trap;
   rt_trap = &jb;
@@ -822,6 +851,7 @@ static std::string manifest_mode_text(int mode, const std::string &mtext,
     rt_guard_reset();          // a trap may have bypassed rt_run_guarded's frame pop
     rt_trap = saved;
     std::cerr << "emit: in manifest " << manifest << "\n";
+    if (bad) { *bad = true; return ""; }
     exit(1);
   }
   rt_repl_set(mode, mtext.data(), (intptr_t)mtext.size());
@@ -841,11 +871,13 @@ static std::string manifest_mode_text(int mode, const std::string &mtext,
 // have a source file -- which is what both the preload and the emit build command's shake want.
 static void manifest_library_index(const std::vector<std::string> &manifests,
                                    std::map<std::string, std::string> &path_of,
-                                   std::map<std::string, std::string> &from_of) {
+                                   std::map<std::string, std::string> &from_of,
+                                   bool *bad = nullptr) {
   for (size_t mi = 0; mi < manifests.size(); mi++) {
     const std::string &manifest = manifests[mi];
     std::string mtext = read_file(manifest);
-    std::string index = manifest_mode_text(9, mtext, manifest);   // "KEY\tPATH" per line
+    std::string index = manifest_mode_text(9, mtext, manifest, bad); // "KEY\tPATH" per line
+    if (bad && *bad) return;
     std::istringstream lines(index);
     std::string line;
     while (std::getline(lines, line)) {
@@ -957,11 +989,12 @@ class LibraryResolver {
  public:
   LibraryResolver(const std::vector<std::string> &manifests,
                   const std::string &project_manifest,
-                  const ResolverOptions &options)
-      : manifests_(manifests), project_manifest_(project_manifest), options_(options) {}
+                  const ResolverOptions &options, bool diagnostic = false)
+      : manifests_(manifests), project_manifest_(project_manifest), options_(options),
+        diagnostic_(diagnostic) {}
 
   bool prepare() {
-    if (prepared_) return true;
+    if (prepared_) return !provider_errors_;
     prepared_ = true;
 
     std::set<std::string> included;
@@ -1008,7 +1041,7 @@ class LibraryResolver {
           present = true;
       if (!present) add_manifest_provider(manifest);
     }
-    return true;
+    return !provider_errors_;
   }
 
   ResolveResult resolve(const LibraryName &name, LibraryDescriptor &answer,
@@ -1077,14 +1110,20 @@ class LibraryResolver {
     return selected_paths_;
   }
 
+  const std::vector<LibraryProvider> &providers() const { return providers_; }
+
  private:
   void add_manifest_provider(const std::string &manifest) {
     LibraryProvider provider;
     provider.kind = ProviderKind::Manifest;
     provider.identity = manifest;
     std::map<std::string, std::string> from;
-    manifest_library_index(std::vector<std::string>(1, manifest), provider.exact, from);
-    std::string artifact_index = manifest_mode_text(27, read_file(manifest), manifest);
+    bool bad = false;
+    bool *failure = diagnostic_ ? &bad : nullptr;
+    manifest_library_index(std::vector<std::string>(1, manifest), provider.exact, from, failure);
+    if (bad) { provider_errors_ = true; return; }
+    std::string artifact_index = manifest_mode_text(27, read_file(manifest), manifest, failure);
+    if (bad) { provider_errors_ = true; return; }
     std::istringstream lines(artifact_index);
     std::string line;
     while (std::getline(lines, line)) {
@@ -1135,6 +1174,8 @@ class LibraryResolver {
   std::vector<std::string> manifests_;
   std::string project_manifest_;
   ResolverOptions options_;
+  bool diagnostic_ = false;
+  bool provider_errors_ = false;
   bool prepared_ = false;
   std::vector<LibraryProvider> providers_;
   std::set<std::string> directory_identities_;
@@ -3371,11 +3412,81 @@ static int emit_repl(int argc, char **argv) {
 
 struct Toolchain {
   std::string cc, gc_inc, gc_lib;
+  std::string cc_origin, gc_inc_origin, gc_lib_origin;
   // The values that came from the compiled-in build-time defaults, as "K=V" pairs, so
   // a link failure can say WHERE a stale path came from rather than leaving the user
   // with clang's own error (spec: "a stale compiled-in default fails legibly").
   std::string baked;
 };
+
+// Native metadata probes never interpret paths as shell text. Bound output and time
+// so diagnostics cannot hang on a broken compiler or discovery script.
+struct NativeProbe {
+  std::string output;
+  bool ok = false;
+};
+
+static NativeProbe probe_native(const std::vector<std::string> &args) {
+  NativeProbe result;
+  if (args.empty() || args[0].empty()) return result;
+  int channel[2];
+  if (pipe(channel) != 0) return result;
+  pid_t pid = fork();
+  if (pid == 0) {
+    setpgid(0, 0);
+    close(channel[0]);
+    dup2(channel[1], STDOUT_FILENO);
+    close(channel[1]);
+    int null_fd = open("/dev/null", O_RDWR);
+    if (null_fd >= 0) {
+      dup2(null_fd, STDERR_FILENO);
+      dup2(null_fd, STDIN_FILENO);
+      close(null_fd);
+    }
+    std::vector<char *> argv;
+    for (const auto &arg : args) argv.push_back(const_cast<char *>(arg.c_str()));
+    argv.push_back(nullptr);
+    execvp(argv[0], argv.data());
+    _exit(127);
+  }
+  close(channel[1]);
+  if (pid < 0) { close(channel[0]); return result; }
+  setpgid(pid, pid);
+  fcntl(channel[0], F_SETFL, O_NONBLOCK);
+  auto deadline = SteadyClock::now() + std::chrono::seconds(5);
+  bool eof = false, exited = false, cancelled = false;
+  int status = 0;
+  while (!eof || !exited) {
+    char buf[4096];
+    ssize_t n;
+    while ((n = read(channel[0], buf, sizeof buf)) > 0) {
+      result.output.append(buf, (size_t)n);
+      if (result.output.size() > 65536) { cancelled = true; break; }
+    }
+    if (n == 0) eof = true;
+    if (!exited) {
+      pid_t waited = waitpid(pid, &status, WNOHANG);
+      if (waited == pid) exited = true;
+      else if (waited < 0 && errno != EINTR) { cancelled = true; break; }
+    }
+    if (SteadyClock::now() >= deadline) cancelled = true;
+    if (cancelled) break;
+    if (!eof || !exited) {
+      struct pollfd fd = {channel[0], POLLIN, 0};
+      poll(&fd, 1, 20);
+    }
+  }
+  close(channel[0]);
+  if (cancelled) {
+    kill(-pid, SIGKILL);
+    if (!exited) {
+      kill(pid, SIGKILL);
+      while (waitpid(pid, &status, 0) < 0 && errno == EINTR) {}
+    }
+  }
+  result.ok = !cancelled && exited && WIFEXITED(status) && WEXITSTATUS(status) == 0;
+  return result;
+}
 
 // Discover the C toolchain for the AOT link.  Three layers, highest first (design D6):
 //
@@ -3395,14 +3506,34 @@ static bool discover_toolchain(Toolchain &tc) {
   const char *gi = std::getenv("GC_INC"); if (!gi) gi = std::getenv("EMIT_GC_INC");
   const char *gl = std::getenv("GC_LIB"); if (!gl) gl = std::getenv("EMIT_GC_LIB");
   std::string ecc, egi, egl;
+  bool invalid_override = false;
   std::string script = (cc && gi && gl) ? std::string() : support_file("tools/llvm-env.sh");
   if (!script.empty()) {
-    std::string cmd = "'" + script + "' --print-env 2>/dev/null";
-    FILE *p = popen(cmd.c_str(), "r");
-    if (p) {
-      char buf[4096];
-      while (std::fgets(buf, sizeof buf, p)) {
-        std::string L(buf);
+    NativeProbe probe = probe_native({script, "--print-env"});
+    if (!probe.ok) {
+      // Discovery may fail later on libgc. Validate only the explicit LLVM
+      // selection before deciding whether compiled fallback would mask an error.
+      const char *bin = std::getenv("EMIT_LLVM_BIN");
+      const char *config = std::getenv("LLVM_CONFIG");
+      std::string name, value, bindir;
+      if (bin && *bin) {
+        name = "EMIT_LLVM_BIN"; value = bin; bindir = bin;
+      } else if (config && *config) {
+        name = "LLVM_CONFIG"; value = config;
+        NativeProbe anchor = probe_native({value, "--bindir"});
+        if (anchor.ok) bindir = anchor.output;
+        while (!bindir.empty() && (bindir.back() == '\n' || bindir.back() == '\r'))
+          bindir.pop_back();
+      }
+      if (!name.empty() && (bindir.empty() || access((bindir + "/clang").c_str(), X_OK) != 0)) {
+        invalid_override = true;
+        std::cerr << "emit: unusable toolchain override " << name << "=" << value << "\n";
+      }
+    }
+    if (probe.ok) {
+      std::istringstream lines(probe.output);
+      std::string L;
+      while (std::getline(lines, L)) {
         while (!L.empty() && (L.back() == '\n' || L.back() == '\r')) L.pop_back();
         auto eq = L.find('=');
         if (eq == std::string::npos) continue;
@@ -3411,22 +3542,25 @@ static bool discover_toolchain(Toolchain &tc) {
         else if (k == "EMIT_GC_INC") egi = v;
         else if (k == "EMIT_GC_LIB") egl = v;
       }
-      pclose(p);
     }
   }
   tc.cc = cc ? std::string(cc) : ecc;
   tc.gc_inc = gi ? std::string(gi) : egi;
   tc.gc_lib = gl ? std::string(gl) : egl;
+  tc.cc_origin = cc ? "override CC" : "discovery";
+  tc.gc_inc_origin = gi ? (std::getenv("GC_INC") ? "override GC_INC" : "override EMIT_GC_INC") : "discovery";
+  tc.gc_lib_origin = gl ? (std::getenv("GC_LIB") ? "override GC_LIB" : "override EMIT_GC_LIB") : "discovery";
 
   // Layer 3, per value: whatever the first two layers left empty.
-  struct { std::string *slot; const char *name, *baked; } fallbacks[] = {
-    { &tc.cc,     "CC",     EMIT_DEFAULT_CC },
-    { &tc.gc_inc, "GC_INC", EMIT_DEFAULT_GC_INC },
-    { &tc.gc_lib, "GC_LIB", EMIT_DEFAULT_GC_LIB },
+  struct { std::string *slot, *origin; const char *name, *baked; } fallbacks[] = {
+    { &tc.cc, &tc.cc_origin, "CC", EMIT_DEFAULT_CC },
+    { &tc.gc_inc, &tc.gc_inc_origin, "GC_INC", EMIT_DEFAULT_GC_INC },
+    { &tc.gc_lib, &tc.gc_lib_origin, "GC_LIB", EMIT_DEFAULT_GC_LIB },
   };
   for (size_t i = 0; i < sizeof fallbacks / sizeof *fallbacks; i++) {
     if (!fallbacks[i].slot->empty() || !*fallbacks[i].baked) continue;
     *fallbacks[i].slot = fallbacks[i].baked;
+    *fallbacks[i].origin = "compiled default";
     if (!tc.baked.empty()) tc.baked += " ";
     tc.baked += std::string(fallbacks[i].name) + "=" + fallbacks[i].baked;
   }
@@ -3441,7 +3575,7 @@ static bool discover_toolchain(Toolchain &tc) {
                 << EMIT_PREFIX << "/share/emit\n";
     return false;
   }
-  return true;
+  return !invalid_override;
 }
 
 // fork/exec clang to link the runtime + unit .ll files into the native exe, mirroring
@@ -3760,12 +3894,179 @@ static int emit_lib(int argc, char **argv) {
 // verb dispatch.
 // ===========================================================================
 
+static bool directory_readable(const std::string &path) {
+  struct stat st;
+  return stat(path.c_str(), &st) == 0 && S_ISDIR(st.st_mode) &&
+         access(path.c_str(), R_OK | X_OK) == 0;
+}
+
+static std::string executable_on_path(const std::string &name) {
+  if (name.empty()) return "";
+  if (name.find('/') != std::string::npos)
+    return access(name.c_str(), X_OK) == 0 ? canonical_path(absolute_path(name)) : "";
+  const char *path = std::getenv("PATH");
+  std::istringstream dirs(path ? path : "");
+  std::string dir;
+  while (std::getline(dirs, dir, ':')) {
+    std::string candidate = (dir.empty() ? "." : dir) + "/" + name;
+    if (access(candidate.c_str(), X_OK) == 0)
+      return canonical_path(absolute_path(candidate));
+  }
+  return "";
+}
+
+static std::string gc_header_version(const std::string &include) {
+  std::string header = include + "/gc/gc_version.h";
+  if (!regular_readable(header)) header = include + "/gc_version.h";
+  std::istringstream lines(read_file(header));
+  std::map<std::string, std::string> fields;
+  std::string line;
+  while (std::getline(lines, line)) {
+    std::istringstream words(line);
+    std::string define, name, value;
+    words >> define;
+    if (define == "#") { words >> define; define = "#" + define; }
+    if (words >> name >> value && define == "#define" &&
+        value.find_first_not_of("0123456789") == std::string::npos)
+      fields[name] = value;
+  }
+  for (const auto &part : {"MAJOR", "MINOR", "MICRO"}) {
+    std::string name = std::string("GC_VERSION_") + part;
+    std::string alternate = std::string("GC_TMP_VERSION_") + part;
+    if (!fields.count(name) && fields.count(alternate)) fields[name] = fields[alternate];
+  }
+  if (!fields.count("GC_VERSION_MAJOR") || !fields.count("GC_VERSION_MINOR") ||
+      !fields.count("GC_VERSION_MICRO")) return "unknown";
+  return fields["GC_VERSION_MAJOR"] + "." + fields["GC_VERSION_MINOR"] + "." +
+         fields["GC_VERSION_MICRO"];
+}
+
+static int emit_doctor(int argc, char **argv) {
+  std::string manifest;
+  bool chain = true;
+  ResolverOptions options;
+  for (int i = 1; i < argc; i++) {
+    std::string arg(argv[i]);
+    if (is_help_flag(arg)) { usage_doctor(std::cout); return 0; }
+    if (arg == "-q") g_level = 0;
+    else if (arg == "-v") g_level = 2;
+    else if (arg == "--no-manifest-chain") chain = false;
+    else if (arg == "--no-library-paths") options.library_paths = false;
+    else if (arg == "--manifest" && i + 1 < argc) manifest = argv[++i];
+    else if ((arg == "-L" || arg == "--library-path") && i + 1 < argc)
+      options.explicit_roots.push_back(argv[++i]);
+    else {
+      std::cerr << "emit doctor: unexpected argument " << arg << "\n";
+      return 2;
+    }
+  }
+  auto started = SteadyClock::now();
+  int failures = 0, checks = 0;
+  auto check = [&](bool good, const std::string &what) {
+    ++checks;
+    if (!good) {
+      ++failures;
+      std::cerr << "emit doctor: " << what << "\n";
+    }
+  };
+  std::cout << "emit " << EMIT_VERSION << " (LLVM " << LLVM_VERSION_STRING << ")\n"
+            << "executable: " << exe_path() << "\n"
+            << "prefix: " << EMIT_PREFIX << " [compiled fallback]\n";
+
+  Toolchain tc;
+  bool native = discover_toolchain(tc);
+  check(native, "native toolchain settings are incomplete");
+  std::string compiler = executable_on_path(tc.cc);
+  std::cout << "cc: " << (compiler.empty() ? tc.cc : compiler) << " ["
+            << tc.cc_origin << "]\n";
+  NativeProbe version = probe_native({compiler, "--version"});
+  std::string version_line = version.output.substr(0, version.output.find('\n'));
+  std::cout << "cc version: " << (version.ok ? version_line : "unavailable") << "\n";
+  check(version.ok, "selected compiler is unavailable or its version probe failed: " + tc.cc);
+  if (version.ok) {
+    size_t marker = version_line.find("clang version ");
+    if (marker != std::string::npos) {
+      int major = std::atoi(version_line.c_str() + marker + std::strlen("clang version "));
+      check(major >= LLVM_VERSION_MAJOR,
+            "AOT clang " + std::to_string(major) + " is older than build-time LLVM " +
+            std::to_string(LLVM_VERSION_MAJOR) + "; textual LLVM IR requires a compatible clang");
+    } else {
+      check(false, "selected compiler is not identifiable as clang; AOT consumes textual LLVM IR");
+    }
+  }
+  std::cout << "libgc include: " << tc.gc_inc << " [" << tc.gc_inc_origin << "]\n"
+            << "libgc library: " << tc.gc_lib << " [" << tc.gc_lib_origin << "]\n"
+            << "libgc version: " << gc_header_version(tc.gc_inc) << " [headers]\n";
+  check(!tc.gc_inc.empty() && regular_readable(tc.gc_inc + "/gc/gc.h"),
+        "libgc header unavailable: " + tc.gc_inc + "/gc/gc.h");
+  check(!tc.gc_lib.empty() && (regular_readable(tc.gc_lib + "/libgc.dylib") ||
+        regular_readable(tc.gc_lib + "/libgc.so") || regular_readable(tc.gc_lib + "/libgc.a")),
+        "libgc link library unavailable under " + tc.gc_lib);
+
+  for (const auto &relative : {"tools/llvm-env.sh", "tools/log.sh", "src/runtime/runtime.c"}) {
+    std::string path = support_file(relative);
+    std::cout << "support " << relative << ": " << (path.empty() ? "missing" : path) << "\n";
+    check(!path.empty(), std::string("required support file missing: ") + relative);
+  }
+  // The Makefile supplies its install closure. Check installation health independently
+  // of user-selected provider opt-outs, without compiling or caching any library.
+  std::istringstream payload(EMIT_SHIPPED_FILES);
+  std::string relative;
+  size_t payload_count = 0, missing_count = 0;
+  while (payload >> relative) {
+    ++payload_count;
+    if (support_file(relative).empty()) {
+      ++missing_count;
+      check(false, "shipped payload missing: " + relative);
+    }
+  }
+  std::cout << "shipped payload: " << (payload_count - missing_count) << "/" << payload_count
+            << " files available\n";
+
+  bool valid_env = !options.library_paths || parse_environment_roots(options, "doctor");
+  bool bad_manifest = false;
+  auto manifests = resolve_manifests(manifest, chain, bad_manifest);
+  if (!chain) std::cout << "manifest chain: disabled after first manifest\n";
+  if (!options.library_paths) std::cout << "directory providers: disabled\n";
+  if (!valid_env || bad_manifest) {
+    check(false, "provider report incomplete: invalid resolver configuration");
+    std::cout << "providers: incomplete\n";
+  } else {
+    GC_INIT();
+    LibraryResolver resolver(manifests, project_manifest_for(manifest, manifests), options, true);
+    if (!resolver.prepare()) {
+      check(false, "provider report incomplete: malformed manifest");
+      std::cout << "providers: incomplete\n";
+    }
+    size_t index = 0;
+    for (const auto &provider : resolver.providers()) {
+      std::cout << "provider " << ++index << ": ";
+      if (provider.kind == ProviderKind::Manifest)
+        std::cout << "manifest " << provider.identity << " ["
+                  << (provider.identity == project_manifest_for(manifest, manifests)
+                      ? "project" : "installed") << "]\n";
+      else
+        std::cout << "directory " << provider.root << " [" << provider.identity << "; "
+                  << (directory_readable(provider.root) ? "available" : "missing") << "]\n";
+    }
+    if (index == 0) std::cout << "providers: none (baked libraries only)\n";
+  }
+  for (const auto &candidate : installed_manifest_candidates())
+    std::cout << "installed candidate: " << candidate << " ["
+              << (regular_readable(candidate) ? "available" : "missing; optional fallback") << "]\n";
+  std::cout << "result: " << (failures ? "failed" : "ok") << "\n";
+  say("inspect installation -> doctor report  [" + std::to_string(checks) + " checks, " +
+      std::to_string(failures) + " failures, " + ms_text(elapsed_ms(started, SteadyClock::now())) + "]");
+  return failures ? 1 : 0;
+}
+
 // Print VERB's own usage to OS; false when VERB does not name a command.
 static bool usage_for_verb(const std::string &verb, std::ostream &os) {
   if      (verb == "run")   usage_run(os);
   else if (verb == "repl")  usage_repl(os);
   else if (verb == "build") usage_build(os);
   else if (verb == "lib")   usage_lib(os);
+  else if (verb == "doctor") usage_doctor(os);
   else return false;
   return true;
 }
@@ -3774,11 +4075,19 @@ int main(int argc, char **argv) {
   g_argv0 = argc > 0 ? argv[0] : "emit";
   init_verbosity();
   if (argc < 2) {
-    std::cerr << "emit: missing verb (known verbs: lib, build, run, repl)\n";
+    std::cerr << "emit: missing verb (known verbs: lib, build, run, repl, doctor)\n";
     usage(std::cerr);
     return 1;
   }
   std::string verb(argv[1]);
+  if (verb == "--version") {
+    if (argc != 2) {
+      std::cerr << "emit: --version takes no arguments\n";
+      return 2;
+    }
+    std::cout << "emit " << EMIT_VERSION << " (LLVM " << LLVM_VERSION_STRING << ")\n";
+    return 0;
+  }
   // Help before dispatch, so `--help` is never reported as an unknown verb.  It is a
   // request, so the answer goes to stdout and the exit is 0 (design D1).  `emit help
   // [VERB]` is the same answer spelled as a word, for the user who types what they
@@ -3787,7 +4096,7 @@ int main(int argc, char **argv) {
     std::string topic = (verb == "help" && argc > 2) ? std::string(argv[2]) : std::string();
     if (topic.empty()) { usage(std::cout); return 0; }
     if (usage_for_verb(topic, std::cout)) return 0;
-    std::cerr << "emit help: unknown verb '" << topic << "' (known verbs: lib, build, run, repl)\n";
+    std::cerr << "emit help: unknown verb '" << topic << "' (known verbs: lib, build, run, repl, doctor)\n";
     usage(std::cerr);
     return 2;
   }
@@ -3797,7 +4106,8 @@ int main(int argc, char **argv) {
   if (verb == "repl")  return emit_repl(argc - 1, argv + 1);
   if (verb == "build") return emit_build(argc - 1, argv + 1);
   if (verb == "lib")   return emit_lib(argc - 1, argv + 1);
-  std::cerr << "emit: unknown verb '" << verb << "' (known verbs: lib, build, run, repl)\n";
+  if (verb == "doctor") return emit_doctor(argc - 1, argv + 1);
+  std::cerr << "emit: unknown verb '" << verb << "' (known verbs: lib, build, run, repl, doctor)\n";
   usage(std::cerr);
   return 2;
 }
