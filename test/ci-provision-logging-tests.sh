@@ -20,6 +20,27 @@ if tools/ci-provision.sh --identity 24 > "$work/invalid.out" 2> "$work/invalid.e
 fi
 [ ! -s "$work/invalid.out" ]
 eval "$(awk '/^log_count=0$/ { capture=1 } capture && /^if \[ -f/ { exit } capture { print }' tools/ci-provision.sh)"
+mkdir -p "$work/sdk/usr/include" "$work/sdk/usr/lib"
+xcrun() {
+  [ "$*" = '--sdk macosx --show-sdk-path' ] || return 2
+  printf '%s\n' "$work/sdk"
+}
+unset SDKROOT
+select_darwin_sdk
+[ "$SDKROOT" = "$work/sdk" ]
+[ "$(bash -c 'printf "%s" "$SDKROOT"')" = "$work/sdk" ]
+SDKROOT="$work/sdk"
+xcrun() { return 9; }
+select_darwin_sdk
+SDKROOT="$work/missing-sdk"
+if select_darwin_sdk > "$work/sdk.out" 2> "$work/sdk.err"; then
+  printf 'test: missing SDK accepted\n' >&2; exit 1
+fi
+grep -q 'lacks native headers or libraries' "$work/sdk.err"
+unset SDKROOT
+status=0
+select_darwin_sdk > "$work/sdk.out" 2> "$work/sdk.err" || status=$?
+[ "$status" = 9 ]
 for level in quiet default verbose; do
   EMIT_VERBOSITY=$level
   . tools/log.sh
@@ -48,4 +69,4 @@ run_logged "test fixture -> expected failure" bash -c \
 [ ! -s "$work/failure.out" ]
 grep -q 'failure detail' "$work/failure.err"
 grep -q 'exit 7' "$work/failure.err"
-printf 'test provisioning -> metadata and logging checks  [10 checks]\n' >&2
+printf 'test provisioning -> metadata, SDK, and logging checks  [14 checks]\n' >&2

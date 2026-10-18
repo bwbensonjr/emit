@@ -35,6 +35,9 @@ static analyzer are excluded. Linux also builds and installs lld, including the
 `ld.lld` launcher, and configures clang to use it by default so Emit's `-flto`
 AOT links do not depend on a system LLVMgold plugin. macOS retains the SDK
 linker and installs the matching `libLTO.dylib` that clang supplies to it.
+Provisioning preserves an explicit `SDKROOT`, or selects the macOS SDK with
+`xcrun --sdk macosx --show-sdk-path`, validates its headers and libraries, and
+exports it for subsequent compiler probes, builds, and installed smoke tests.
 Every installation and cache hit compiles, links, and executes a small C program
 with `clang -flto` and implicit linker selection. Both libraries use an explicit `lib` directory.
 Runner images are selected by OS version but

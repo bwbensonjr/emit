@@ -12,7 +12,7 @@ cd "$(dirname "$0")/.."
 
 HOST="build/emit repl"
 RUN="build/emit run"
-CC=build/schemec
+SCHEMEC=build/schemec
 # Rebuild what the tests drive (no-ops when already up to date).
 make emit schemec >/dev/null 2>&1 || { echo "build failed"; exit 1; }
 
@@ -71,7 +71,7 @@ batch_rejects reported    "$RUN" "$BAD_REPORTED"
 batch_rejects no-accessor "$RUN" "$BAD_NOFIELDACC"
 
 echo " batch schemec rejects (clean non-zero):"
-batch_rejects reported    "$CC" "$BAD_REPORTED"
+batch_rejects reported    "$SCHEMEC" "$BAD_REPORTED"
 
 # --- well-formed record is unaffected ----------------------------------------
 echo " well-formed record still compiles:"

@@ -68,6 +68,20 @@ probe_version() {
   printf '%s\n' "$reported"
   printf '%s\n' "$reported" | head -n 1 | grep -Eq "$pattern"
 }
+select_darwin_sdk() {
+  if [ -z "${SDKROOT:-}" ]; then
+    SDKROOT=$(xcrun --sdk macosx --show-sdk-path) || return
+  fi
+  case "$SDKROOT" in
+    /*) ;;
+    *) printf 'ci: SDKROOT must be an absolute SDK path: %s\n' "$SDKROOT" >&2; return 1 ;;
+  esac
+  if [ ! -d "$SDKROOT/usr/include" ] || [ ! -d "$SDKROOT/usr/lib" ]; then
+    printf 'ci: SDKROOT lacks native headers or libraries: %s\n' "$SDKROOT" >&2
+    return 1
+  fi
+  export SDKROOT
+}
 if [ -f "$prefix/complete" ]; then
   [ "$(< "$prefix/complete")" = "$identity" ] || { printf 'ci: cached dependency identity differs\n' >&2; exit 1; }
   say "reuse LLVM $version + libgc 8.2.8 -> $prefix"
@@ -102,6 +116,10 @@ else
   run_logged "install libgc 8.2.8 -> $prefix/gc" cmake --install "$work/gc-build"
   printf '%s\n' "$identity" > "$prefix/complete"
 fi
+if [ "$(uname -s)" = Darwin ]; then
+  run_logged "select macOS SDK -> compiler environment" select_darwin_sdk
+  say "select macOS SDK -> $SDKROOT  [headers and libraries available]"
+fi
 run_logged "verify $prefix/llvm/bin/llvm-config -> LLVM $version" probe_version "$prefix/llvm/bin/llvm-config" "^${version//./\\.}$"
 for compiler in clang clang++; do
   run_logged "verify $prefix/llvm/bin/$compiler -> LLVM $major" probe_version "$prefix/llvm/bin/$compiler" "version $major[.]"
@@ -120,6 +138,6 @@ say "verify $prefix -> LLVM $version + libgc 8.2.8  [$(du -sk "$prefix" | awk '{
 # Workflow environment is the machine-consumable output.
 printf 'LLVM_CONFIG=%s/llvm/bin/llvm-config\nCC=%s/llvm/bin/clang\nCXX=%s/llvm/bin/clang++\nGC_INC=%s/gc/include\nGC_LIB=%s/gc/lib\n' "$prefix" "$prefix" "$prefix" "$prefix" "$prefix"
 case "$(uname -s)" in
-  Darwin) printf 'GC_DYLIB=%s/gc/lib/libgc.dylib\nDYLD_LIBRARY_PATH=%s/gc/lib:%s/llvm/lib\n' "$prefix" "$prefix" "$prefix" ;;
+  Darwin) printf 'GC_DYLIB=%s/gc/lib/libgc.dylib\nDYLD_LIBRARY_PATH=%s/gc/lib:%s/llvm/lib\nSDKROOT=%s\n' "$prefix" "$prefix" "$prefix" "$SDKROOT" ;;
   Linux) printf 'GC_DYLIB=%s/gc/lib/libgc.so\nLD_LIBRARY_PATH=%s/gc/lib:%s/llvm/lib\n' "$prefix" "$prefix" "$prefix" ;;
 esac
