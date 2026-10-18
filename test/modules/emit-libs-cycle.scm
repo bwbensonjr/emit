@@ -2,5 +2,7 @@
 ;;; module-generalize).  Kept SEPARATE from the main manifest so the REPL's eager
 ;;; preload of every manifest library does not trip over the deliberate cycle.
 ;;; Paths are relative to THIS FILE (change: manifest-search-path).
-((library (cyc-a) (source "cyc-a.sld"))
+((library (emit internal) (source "../../lib/emit/internal.sld"))
+ (library (scheme base) (source "../../lib/scheme/base.sld"))
+ (library (cyc-a) (source "cyc-a.sld"))
  (library (cyc-b) (source "cyc-b.sld")))

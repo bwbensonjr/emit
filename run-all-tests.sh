@@ -108,6 +108,7 @@ run_suite "(scheme base) declared surface" test/scheme-base-surface-check.sh
 run_suite "Unicode data checksums + generated tables" test/unicode-data-gen-check.sh
 run_suite "flat top-level name hazards" test/flat-name-check.sh
 run_suite "binding shadows a keyword"   test/binding-shadowing-tests.sh
+run_suite "binding contexts and local macros" env EMIT_BINDING_HOST=native bash test/binding-context-tests.sh
 run_suite "(scheme base) auto-import (REPL)" test/prelude-base-repl-tests.sh
 run_suite "(scheme base) re-home (emit run/build)" test/prelude-base-run-tests.sh
 run_suite "R7RS library partition"      test/library-partition-tests.sh

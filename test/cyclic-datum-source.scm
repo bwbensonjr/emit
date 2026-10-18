@@ -1,5 +1,6 @@
 (import (scheme base))
 (import (scheme read))
+(import (emit list))
 
 (define-syntax cyclic-template
   (syntax-rules ()

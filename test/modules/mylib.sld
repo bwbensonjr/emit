@@ -1,7 +1,8 @@
 ;;; mylib.sld -- Stage 1 vertical-slice library (change: module-artifacts-vertical-slice).
-;;; A trivial library exporting one procedure.  Primitives/core only (Stage 1
-;;; libraries do not share the prelude -- that is Stage 3, (scheme base)).
+;;; A trivial library exporting one procedure.  Its primitives and core forms come
+;;; from the explicit (scheme base) import.
 (define-library (mylib)
+  (import (scheme base))
   (export greet)
   (begin
     ;; an internal helper (not exported) plus a lifted closure, so the unit has a

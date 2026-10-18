@@ -7,6 +7,7 @@
 ;;; its resolution intact, so the expansion in a program two hops away still reaches
 ;;; macro-helper-lib's PRIVATE `helper` and PRIVATE macro `%inc`.
 (define-library (reexport-lib)
+  (import (scheme base))
   (import (macro-helper-lib))
   (export twice (rename twice thrice))
   (begin

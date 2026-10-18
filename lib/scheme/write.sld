@@ -3,10 +3,8 @@
   (import (scheme base))
   (export display write write-simple write-shared)
   (begin
-    (define (display obj . port)
-      (if (null? port) (%display obj) (%display-port obj (car port))))
-    (define (write obj . port)
-      (if (null? port) (%write obj) (%write-port obj (car port))))
+    ;; Re-export the integrated bindings rather than minting different locations
+    ;; for the same procedures. Base also publishes these as Emit extensions.
     (define (write-simple obj . port)
       (if (null? port) (%write-simple obj) (%write-simple-port obj (car port))))
     (define (write-shared obj . port)

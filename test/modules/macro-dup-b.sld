@@ -2,6 +2,7 @@
 ;;; (change: library-macro-export, risk R3).  See macro-dup-a.sld: same private
 ;;; spelling, different meaning.
 (define-library (macro-dup-b)
+  (import (scheme base))
   (export mb)
   (begin
     (define (helper x) (+ x 100))

@@ -3,8 +3,7 @@
   (import (scheme base))
   (export case-lambda)
   (begin
-    ;; Kept at library scope because Emit intentionally has no letrec-syntax yet.
-    ;; Hygiene carries this private transformer into the public expansion.
+    ;; Hygiene carries this private dispatcher into the public expansion.
     (define-syntax case-lambda-dispatch
       (syntax-rules ()
         ((_ args argc) (error 'case-lambda "no matching clause" argc))

@@ -34,7 +34,7 @@ check () {  # <name> <src> <expected>
 }
 
 echo "(scheme base) auto-import (AOT path)"
-check base-procs  "$MOD/prog-base-procs.scm"  "(4 16)"      # map/filter via (scheme base), no import
+check base-procs  "$MOD/prog-base-procs.scm"  "(4 16)"      # base map with explicit list extensions
 check base-macros "$MOD/prog-base-macros.scm" "(yes 2 7)"   # cond/case/when derived-form macros
 check base-shadow "$MOD/prog-base-shadow.scm" mine          # user map shadows the (scheme base) export
 check base-both   "$MOD/prog-base-both.scm"   143           # auto-import + explicit (mylib) import

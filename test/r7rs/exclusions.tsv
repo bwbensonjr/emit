@@ -57,15 +57,13 @@
 2577a8c62e814ef9	deliberate:#27	(scheme complex) stays absent
 257f734d0de6a1c7	unimplemented	binary ports and bytevector I/O
 26100631dccc741c	deliberate:#27	no exact rationals / bignums
-270cafeb4e4ccc5e	unimplemented	unbound sequence2
 2767d6348524de8f	deliberate:#27	(scheme complex) stays absent
 2874199613df0087	unimplemented	(scheme time)
 2954f7f922a8ea3a	deliberate:#27	(scheme complex) stays absent
-29a575b414f0a588	unimplemented	derived syntax / non-top-level define-syntax
+29a575b414f0a588	unimplemented	custom syntax-rules ellipsis identifier
 2b47e4fb1e526bd0	deliberate:#27	no exact rationals / bignums
 2d90b95af1139533	deliberate:#27	no exact rationals / bignums
 2f214f6a901e2b33	deliberate:#27	no exact rationals / bignums
-33c8ccd239f209df	unimplemented	derived syntax / non-top-level define-syntax
 357bdf7440b38f21	deliberate:r7rs-lexical-conformance	write spells |+NaN.0abc| bare; R7RS 7.1.1 makes it a peculiar identifier (+ . N . aN.0abc) so the bare form is legal AND round-trips -- chibi is stricter than the report
 35fa323833e5dabf	deliberate:#27	no exact rationals / bignums
 3925ea4056ca28e0	unimplemented	(scheme time)
@@ -90,7 +88,6 @@
 57b623b3e0c3de3f	unimplemented	arity: optional or n-ary form
 59535760144b75f2	deliberate:#27	no exact rationals / bignums
 5bbbdeeeb475ed71	deliberate:#27	no exact rationals / bignums
-5d192a304950ea70	unimplemented	derived syntax / non-top-level define-syntax
 5d671f24d82bbc9f	unimplemented	wrong answer: FAIL (pair? ls.155) #t #f
 623067338b090c60	unimplemented	derived syntax / non-top-level define-syntax
 632775cdf7dece4a	deliberate:#27	(scheme complex) stays absent
@@ -101,7 +98,6 @@
 68ae45abb9b0e161	unimplemented	(scheme lazy) -- prelude macros once #79 is fixed
 6990ea423eb709b0	deliberate:#27	(scheme complex) stays absent
 6b23279a255d7185	deliberate:#27	(scheme complex) stays absent
-6ba57e98564594ef	issue-91	letrec-syntax: frontend reports car: not a pair
 6c2781cd8df36abe	unimplemented	binary ports and bytevector I/O
 6cd2d7d0121ccbac	deliberate:#27	no exact rationals / bignums
 6f850489ba2493bd	unimplemented	(scheme eval)
@@ -113,7 +109,6 @@
 839d48c31261461e	unimplemented	derived syntax / non-top-level define-syntax
 84457163cdcb4bd6	deliberate:#27	no exact rationals / bignums
 85140155019fdb88	deliberate:#27	complex or rational literal read as a variable
-852c50e79c5cd4b8	unimplemented	derived syntax / non-top-level define-syntax
 86a87464fe38bd9a	unimplemented	(scheme eval)
 878a9edcc2e76bdc	deliberate:#27	needs exact rationals
 88ad836fd43473de	deliberate:#27	no exact rationals / bignums
@@ -122,10 +117,9 @@
 8b4cd83b3b58ecc9	unimplemented	binary ports and bytevector I/O
 8bc0afc685edbdc8	deliberate:#27	needs exact rationals
 8d387702b1bfdb97	deliberate:#27	no exact rationals / bignums
-8e09b3f683651850	unimplemented	derived syntax / non-top-level define-syntax
 8ed993224fc4e0bc	unimplemented	unbound sequence3
 8f281afd5736ae66	unimplemented	wrong answer: FAIL (guard (exn (else #t)) (read (open-input-string str)) #f) #t #f
-8f9db0e8df7a38fa	unimplemented	derived syntax / non-top-level define-syntax
+8f9db0e8df7a38fa	unimplemented	custom syntax-rules ellipsis identifier
 9056b20a015f824d	deliberate:#27	no exact rationals / bignums
 905a3fc5d0170266	unimplemented	binary ports and bytevector I/O
 91e785880ada3be8	deliberate:#27	complex or rational literal read as a variable
@@ -146,9 +140,7 @@ a70fd75ca39fbd7f	unimplemented	derived syntax / non-top-level define-syntax
 a8ae272f19b6c077	unimplemented	(scheme lazy) -- prelude macros once #79 is fixed
 a96b8be48ba96f24	issue-33	make-list requires the fill argument (optional-arity gap)
 a9b7fe2f84bedd4d	deliberate:#27	no exact rationals / bignums
-aa1874189477085c	unimplemented	unbound mad-hatter
 aa946d3f693e3c7c	unimplemented	wrong answer: FAIL (guard (exn (else #t)) (read (open-input-string str)) #f) #t #f
-ab2f2e442db70d69	unimplemented	derived syntax / non-top-level define-syntax
 ab7afd3c2dd3d97c	deliberate:#27	complex or rational literal read as a variable
 ad20a5558f53ad2c	unimplemented	emit: unresolved import (not baked, not in the manifest): (s
 aeded30821ea29c7	deliberate:#27	no exact rationals / bignums
@@ -162,18 +154,16 @@ b2dd8c46599cdf11	unimplemented	non-top-level define
 b41a2f9297785fb4	unimplemented	derived syntax / non-top-level define-syntax
 b41ebe667c03de0b	unimplemented	binary ports and bytevector I/O
 b546246e2e5056da	deliberate:#27	no exact rationals / bignums
-b6943f59d4a03fe5	issue-91	define-values dotted formals: frontend reports car: not a pair
+b6943f59d4a03fe5	unimplemented	unsupported define-values dotted-formals shape
 b6d8665df81a14cf	deliberate:#27	(scheme complex) stays absent
 b7ce01d4ad066540	deliberate:#27	(scheme complex) stays absent
 bae6f23791da773f	unimplemented	(scheme lazy) -- prelude macros once #79 is fixed
 bbd0d1c938af2a24	unimplemented	binary ports and bytevector I/O
 bc550775c0975c84	deliberate:#27	no exact rationals / bignums
 bcbafbf9ba17c3f8	deliberate:not-R7RS-small	exponent markers s/f/d/l are not in R7RS-small
-bd0ed41e5b05c1b8	unimplemented	unbound sequence1
 bd39ddbbb31e9f99	deliberate:#27	needs exact rationals
 bd8929c571beab7f	unimplemented	non-top-level define
 beb2b08c8c5bd97c	deliberate:#27	no exact rationals / bignums
-c04f6b6c7747f4a0	unimplemented	derived syntax / non-top-level define-syntax
 c192106a835b6042	unimplemented	arity: optional or n-ary form
 c1ce722a6e5aa158	unimplemented	binary ports and bytevector I/O
 c6a57bfb99972ea3	deliberate:#27	complex or rational literal read as a variable
@@ -183,7 +173,6 @@ cc03b4df8fc8568c	unimplemented	binary ports and bytevector I/O
 cc3840a696450e17	deliberate:#27	(scheme complex) stays absent
 cd17c31df8c405fe	deliberate:#27	(scheme complex) stays absent
 cd527de2bfc254e4	unimplemented	derived syntax / non-top-level define-syntax
-ceec5386af3e981c	unimplemented	derived syntax / non-top-level define-syntax
 d0bc7a810c918c1d	unimplemented	arity: optional or n-ary form
 d35640868f9f0991	unimplemented	wrong answer: FAIL (pair? ls.155) #t #f
 d374c47fef965ceb	deliberate:#27	(scheme complex) stays absent
@@ -200,9 +189,7 @@ da1d95b7996501b2	deliberate:#27	(scheme complex) stays absent
 dda6669f6490d986	deliberate:#27	no exact rationals / bignums
 de9db050c2271674	deliberate:#27	(scheme complex) stays absent
 dfa1769859476f78	deliberate:#27	complex or rational literal read as a variable
-dfa980c4325f657a	unimplemented	derived syntax / non-top-level define-syntax
 e1c2612da6b06d1d	unimplemented	binary ports and bytevector I/O
-e3186ed243c9d0e9	unimplemented	derived syntax / non-top-level define-syntax
 e46c7cf8502ee0b1	deliberate:#27	needs exact rationals
 e482e04168fcc00f	deliberate:#27	(scheme complex) stays absent
 e97059c9d04aa3b3	unimplemented	binary ports and bytevector I/O
@@ -215,7 +202,6 @@ f006fa5de025f1eb	unimplemented	missing (scheme base) name
 f1f219d0e3284f04	unimplemented	(scheme lazy) -- prelude macros once #79 is fixed
 f5e4bffdcdaafcc6	deliberate:#27	(scheme complex) stays absent
 f6d9784e21c5b6e7	deliberate:#27	complex or rational literal read as a variable
-f75a39d200832d5b	unimplemented	derived syntax / non-top-level define-syntax
 f76377adbe8f54d5	deliberate:#27	no exact rationals / bignums
 f891f1aae6a75f46	unimplemented	binary ports and bytevector I/O
 fa8f6c6fecb10021	unimplemented	binary ports and bytevector I/O

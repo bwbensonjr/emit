@@ -5,6 +5,7 @@
 ;;; diverged between the Chez-hosted driver and the shipped self-hosted paths.
 ;;; Keep at least one variadic export here, and one that uses `apply`.
 (define-library (varlib)
+  (import (scheme base))
   (export tail-of pass-through collect)
   (begin
     (define (tail-of . xs) (cdr xs))              ; rest params -> emit-build-rest

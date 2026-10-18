@@ -9,13 +9,19 @@
 # file naming it would fail.
 #
 # Run from anywhere:  test/import-set-tests.sh
+# EMIT_IMPORT_SET_HOST=chez runs source-stage checks before regeneration.
 set -u
 cd "$(dirname "$0")/.."
 . tools/log.sh
 ROOT="$(pwd)"
 FIX="$ROOT/test/import-sets"
 LIBROOT="$FIX/lib"
-make emit >/dev/null 2>&1 || { echo "failed to build emit"; exit 1; }
+HOST="${EMIT_IMPORT_SET_HOST:-both}"
+case "$HOST" in
+  both) make emit >/dev/null 2>&1 || { echo "failed to build emit"; exit 1; } ;;
+  chez) command -v chez >/dev/null 2>&1 || exit 1 ;;
+  *) echo "EMIT_IMPORT_SET_HOST must be chez or both" >&2; exit 2 ;;
+esac
 EMIT="$ROOT/build/emit"
 HAVE_CHEZ=0; command -v chez >/dev/null 2>&1 && HAVE_CHEZ=1
 
@@ -54,6 +60,7 @@ check () {
     else bad "$name [chez] => $got  (expected $want)"
          sed 's/^/         /' "$TMP/$name.chez.build" | tail -5; fi
   fi
+  [ "$HOST" = chez ] && return
   got="$(run_emit "$name" "$src")"
   if [ "$got" = "$want" ]; then ok "$name [emit run] => $got"
   else bad "$name [emit run] => $got  (expected $want)"
@@ -69,14 +76,15 @@ check_fail () {
     else bad "$name [chez] (failed, but not matching /$re/)"
          sed 's/^/         /' "$TMP/$name.chez.build" | tail -5; fi
   fi
+  [ "$HOST" = chez ] && return
   if run_emit "$name" "$src" >/dev/null; then bad "$name [emit run] (expected failure)"
   elif grep -qE "$re" "$TMP/$name.emit.err"; then ok "$name [emit run] (rejected)"
   else bad "$name [emit run] (failed, but not matching /$re/)"
        sed 's/^/         /' "$TMP/$name.emit.err" | tail -5; fi
 }
 
-echo "overlapping imports: the first import wins (design D5)"
-check overlap "$FIX/prog-overlap.scm" "(1 one)"
+echo "overlapping imports: distinct bindings are rejected (#118)"
+check_fail overlap "$FIX/prog-overlap.scm" "conflicting imported binding (f|m)"
 
 UNB="unbound variable( with irritant)?"
 
@@ -113,10 +121,13 @@ check_fail base-prefix-hidden "$FIX/prog-base-prefix-hidden.scm" "$UNB map"
 check      base-bare          "$FIX/prog-base-bare.scm"          "(2 3)"
 # a set over (scheme base) may name core keywords and integrated primitives
 check      base-only-prims    "$FIX/prog-base-only-prims.scm"    "(1 2)"
+check      emit-list          "$FIX/prog-emit-list.scm"          "((2 4) (1 2 3) (0 1 2))"
+check_fail base-list-hidden   "$FIX/prog-base-list-hidden.scm"   "$UNB filter"
 
 echo "the REPL imports through a set (design D4)"
 # repl_check <name> <input> <expected last stdout line>
 repl_check () {
+  [ "$HOST" = chez ] && return
   local got
   got="$(cd "$TMP" && printf '%s' "$2" | "$EMIT" repl --no-manifest-chain \
            --manifest "$ROOT/emit-libs.scm" -L "$LIBROOT" ${EXTRA[@]+"${EXTRA[@]}"} \
@@ -128,6 +139,7 @@ repl_check () {
 }
 # repl_err <name> <input> <regex expected on stderr>
 repl_err () {
+  [ "$HOST" = chez ] && return
   (cd "$TMP" && printf '%s' "$2" | "$EMIT" repl --no-manifest-chain \
      --manifest "$ROOT/emit-libs.scm" -L "$LIBROOT" >/dev/null 2>"$TMP/$1.repl.err")
   if grep -qE "$3" "$TMP/$1.repl.err"; then ok "$1 [emit repl] (reported)"
@@ -153,10 +165,12 @@ check      top-include-ci  "$FIX/app/include-ci.scm"    9
 check      top-cond-import "$FIX/prog-cond-import.scm"  42
 check_fail top-cycle       "$FIX/app/cycle.scm"         "include cycle"
 # standard input has no file, so its includes resolve against the working directory
+if [ "$HOST" != chez ]; then
 got="$(cd "$FIX/app" && "$EMIT" run --no-manifest-chain --manifest "$ROOT/emit-libs.scm" \
          < main.scm 2>"$TMP/stdin.err")"
 if [ "$got" = 42 ]; then ok "top-include-stdin [emit run] => 42"
 else bad "top-include-stdin [emit run] => $got  (expected 42)"; tail -3 "$TMP/stdin.err"; fi
+fi
 
 echo "include and cond-expand in a body and in expression position (design D9)"
 check      body-include    "$FIX/app/body-include.scm"       10
@@ -178,6 +192,7 @@ echo "both hosts read included files into the same program (design risk: two rea
 # reader-parity suite owns exotic syntax.
 ir_parity () {
   local name="$1" src="$2"
+  [ "$HOST" = chez ] && return
   [ "$HAVE_CHEZ" = 1 ] || return 0
   if ! run_chez "$name" "$src" >/dev/null; then bad "$name [parity] (chez build failed)"; return; fi
   (cd "$TMP" && "$EMIT" run --no-manifest-chain --manifest "$ROOT/emit-libs.scm" \
@@ -224,6 +239,7 @@ echo "a cached unit is invalid once a (library NAME) answer changes (design D7)"
 # entry keyed on files alone would serve the first answer forever.
 CACHE="$TMP/cache"
 cached () { EMIT_CACHE="$CACHE" run_emit "$@"; }
+if [ "$HOST" != chez ]; then
 a="$(cached cache-1 "$FIX/prog-needs8.scm")"
 EXTRA=(-L "$FIX/lib8")
 b="$(cached cache-2 "$FIX/prog-needs8.scm")"
@@ -234,6 +250,7 @@ if [ "$a/$b/$c/$d" = "fallback/8/fallback/fallback" ]; then
   ok "cache follows the answer (fallback/8/fallback/fallback)"
 else
   bad "cache follows the answer (got $a/$b/$c/$d)"
+fi
 fi
 
 # The Chez driver keys its build/lib units on a .stamp sidecar, which records the answers
@@ -265,16 +282,17 @@ check srfi-87 "$FIX/srfi/srfi-87.scm" "(10 10)"
 # `features` and cond-expand cannot disagree: every listed identifier selects its clause,
 # and an absent one does not.
 printf '(features)\n' > "$TMP/features.scm"
-feats="$(run_emit features-list "$TMP/features.scm" | tr -d '()')"
+if [ "$HOST" = chez ]; then FEATURE_RUN=run_chez; else FEATURE_RUN=run_emit; fi
+feats="$($FEATURE_RUN features-list "$TMP/features.scm" | tr -d '()')"
 agree=1
 for id in $feats srfi-2; do
   printf "(cond-expand (%s (quote yes)) (else (quote no)))\n" "$id" > "$TMP/fe.scm"
   want=yes; [ "$id" = srfi-2 ] && want=no
-  got="$(run_emit "fe-$id" "$TMP/fe.scm")"
+  got="$($FEATURE_RUN "fe-$id" "$TMP/fe.scm")"
   [ "$got" = "$want" ] || { agree=0; echo "         $id: cond-expand says $got, features says $want"; }
 done
-if [ "$agree" = 1 ] && [ -n "$feats" ]; then ok "features agrees with cond-expand [emit run] ($feats)"
-else bad "features agrees with cond-expand [emit run]"; fi
+if [ "$agree" = 1 ] && [ -n "$feats" ]; then ok "features agrees with cond-expand [$FEATURE_RUN] ($feats)"
+else bad "features agrees with cond-expand [$FEATURE_RUN]"; fi
 
 echo
 echo "import-set tests: $pass passed, $fail failed"

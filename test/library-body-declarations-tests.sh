@@ -203,6 +203,7 @@ fi
 # defined names, so "a name the library does not define" described that lifting.
 cat > "$TMP/macx.sld" <<'EOF'
 (define-library (macx)
+  (import (scheme base))
   (export swap!)
   (begin
     (define-syntax swap!
@@ -234,6 +235,7 @@ fi
 # silent: the export took the procedure and the transformer was discarded without a word.
 cat > "$TMP/macdup.sld" <<'EOF'
 (define-library (macdup-lib)
+  (import (scheme base))
   (export f)
   (begin
     (define (f x) (+ x 1))
@@ -248,6 +250,7 @@ reject_lib "macro-double-binding" "$TMP/macdup.sld" \
 # definition nor a macro (the spec scenario that pins it).
 cat > "$TMP/undef.sld" <<'EOF'
 (define-library (undef-lib)
+  (import (scheme base))
   (export missing)
   (begin (define (f x) x)))
 EOF

@@ -97,19 +97,23 @@
   (reset-counter!)
   (set-import-calls! '()) ; no imports on this path (change: cross-unit-direct-calls)
   (note-unit-include-origins! forms)
-  (let* ([me+rf (collect-define-syntax (splice-toplevel-forms forms #f (quote ())))]
-         [runtime-forms (cadr me+rf)]
+  (let* ([front (frontend-expand-forms (splice-toplevel-forms forms #f '())
+                                       '()
+                                       '()
+                                       (compiler-builtin-bindings)
+                                       program-unit)]
+         [runtime-forms (car front)]
          ;; a top-level define displaces a keyword of the same name (change:
          ;; binding-aware-expander, issue #103).  On THIS path `collect-toplevel` folds the
          ;; top level into a letrec first, so `exp` would shadow the keyword anyway; the
          ;; prune is here so all three compilation paths state the rule the same way rather than one of
          ;; them relying on a downstream form.  `known` is computed from the pruned env, so
          ;; a displaced keyword is not also announced as a macro to hygiene.
-         [macro-env (prune-shadowed-macros (car me+rf)
+         [macro-env (prune-shadowed-macros (cadr front)
                                            (toplevel-define-names runtime-forms))])
     (let* ([known (compute-known macro-env runtime-forms)]
            [top (collect-toplevel runtime-forms)]
-           [expd (expand top macro-env known)]
+           [expd top]
            [core (inline-primitives (rename-program (parse-program expd)))]
            [a (recognize-let core)]
            [b (convert-assignments a)]
@@ -221,8 +225,9 @@
 ;; marker, and why the two functions now ask two different questions of the same
 ;; declaration rather than sharing one.
 (define (library-export-names lib prelude-forms)
-  (filter (lambda (n) (and n (prelude-exports? lib n)))
-          (map toplevel-binding-name prelude-forms)))
+  (union (filter (lambda (n) (and n (prelude-exports? lib n)))
+                 (map toplevel-binding-name prelude-forms))
+         (map car (builtin-library-bindings lib))))
 
 ;; The forms LIB's body holds: exactly the prelude definitions -- procedures AND
 ;; transformers alike -- the partition homes in LIB.
@@ -725,20 +730,29 @@
                    (let ([r (assq (car p) args)]) (if r (cons (cadr r) (cdr p)) p)))
                  inner)]))))
 
-;; Names an R7RS standard library publishes that are not bindings in its export table: the
-;; core syntactic keywords and the primitives the compiler integrates (`car`, `+`, ...),
-;; which every unit sees under their own names whatever it imports, as under
-;; --no-prelude.  A set over a `(scheme ...)` library ACCEPTS them -- portable code writes
-;; `(only (scheme base) define car)` -- but cannot hide or rename them: they have no row to
-;; filter, so `except` leaves them visible and `prefix`/`rename` leave them under their
-;; own names.  That limit is stated in docs/MODULES.md rather than papered over.
-(define (universal-library-names lib)
-  (if (and (pair? lib) (eq? (car lib) 'scheme))
-      (append *core-keywords*
-              *extra-op-keywords*
-              (map car *integrable*)
-              (quote (define-record-type else => ... _)))
-      (quote ())))
+;; Public builtin bindings come from the same declaration as generated sources.
+(define (builtin-library-bindings lib) (library-builtin-surface lib))
+
+;; The prelude-free compiler environment is deliberate. Ordinary import views
+;; never consult this fallback, so hiding a public builtin remains effective.
+(define (compiler-builtin-bindings)
+  (append (builtin-library-bindings '(scheme base))
+          (list (list '%advertised-features
+                      'core
+                      '(builtin core %advertised-features)
+                      '%advertised-features))
+          (map (lambda (n) (list n 'primitive (list 'builtin 'primitive n) n))
+               *prims*)))
+
+(define (library-body-bindings name tables)
+  (append (import-tables->bindings tables)
+          ;; Baked implementation units define the builtins rather than importing
+          ;; themselves. Other libraries receive only public imports and raw backend
+          ;; operators, which are never added to their public interface.
+          (if (or (equal? name '(scheme base)) (equal? name '(emit internal)))
+              (compiler-builtin-bindings)
+              (map (lambda (n) (list n 'primitive (list 'builtin 'primitive n) n))
+                   *prims*))))
 
 ;; The export TABLE an import set sees (design D2): the library's own table with every
 ;; public name filtered and renamed.  Downstream -- the environment, the macro
@@ -748,7 +762,7 @@
 ;;                  same external global and the shake still keys on mangled names
 ;;   call rows      renamed in lockstep, because a call row is found by external name
 ;;   macro entries  the PUBLIC keyword is renamed or dropped.  An entry under a
-;;                  unit-qualified keyword is a private macro a template reaches, and it
+;;                  registry-only keyword is a private macro a template reaches, and it
 ;;                  is kept whatever the set says: `resolve-exported-macros` already
 ;;                  rewrote every sibling a template mentions to such a keyword, so a kept
 ;;                  macro written on top of a hidden one still expands.
@@ -756,15 +770,10 @@
   (let* ([lib (car table)]
          [rows (cadr table)]
          [h (table-ct-half table)]
-         [public-macros (filter (lambda (m) (not (unit-qualified? (car m))))
-                                (ct-macros h))]
-         [published (append (map car rows) (map car public-macros))]
-         [visible (import-set-visible
-                    spec
-                    lib
-                    (append published
-                            (filter (lambda (n) (not (memq n published)))
-                                    (universal-library-names lib))))])
+         [public-macros (ct-public-macros h)]
+         [published
+           (append (map car rows) (map car public-macros) (map car (ct-bindings h)))]
+         [visible (import-set-visible spec lib published)])
     (define (renamed original)
       (filter (lambda (x) x)
               (map (lambda (p) (and (eq? (cdr p) original) (car p))) visible)))
@@ -772,15 +781,25 @@
       (apply append
              (map (lambda (r) (map (lambda (n) (cons n (cdr r))) (renamed (car r))))
                   rs)))
-    (export-table-datum
-      lib
-      (rename-rows rows)
-      (rename-rows (caddr table))
-      (make-ct-half
-        (append (rename-rows public-macros)
-                (filter (lambda (m) (unit-qualified? (car m))) (ct-macros h)))
-        (ct-own-refs h)
-        (ct-foreign-refs h)))))
+    (define transformed-public (rename-rows public-macros))
+    (define reserved
+      (append (map car transformed-public) (map car (ct-private-macros h))))
+    (define hidden
+      (map-lr (lambda (m)
+                (let ([key (if (memq (car m) (map car transformed-public))
+                               (private-macro-key (car m) reserved)
+                               (car m))])
+                  (set! reserved (cons key reserved))
+                  (cons key (cdr m))))
+              (ct-private-macros h)))
+    (export-table-datum lib
+                        (rename-rows rows)
+                        (rename-rows (caddr table))
+                        (make-ct-half (append transformed-public hidden)
+                                      (ct-own-refs h)
+                                      (ct-foreign-refs h)
+                                      (rename-rows (ct-bindings h))
+                                      (map car transformed-public)))))
 
 ;; The tables a unit compiles against, given its import SPECS and the tables its host
 ;; resolved, one per library.  A unit whose imports are all bare names gets TABLES back
@@ -1446,6 +1465,10 @@
   (append
     (map (lambda (p) (cons (car p) (string->symbol (cdr p))))
          (apply append (map cadr import-tables)))
+    ;; Contextual expansion has already selected the owner's identity. Keep
+    ;; those targets addressable as well as each public import spelling.
+    (map (lambda (p) (let ([target (string->symbol (cdr p))]) (cons target target)))
+         (apply append (map cadr import-tables)))
     ;; ...plus the bindings an imported macro's template reaches (change:
     ;; library-macro-export, design D7).  These are keyed by the ALREADY-MANGLED symbol
     ;; the exporting library resolved the template to, mapping to itself, so a template's
@@ -1461,17 +1484,31 @@
 ;;
 ;;     ((<entry> ...) (<own-internal-name> ...) ("<foreign-mangled>" ...))
 ;;
-;; where <entry> is exactly `parse-define-syntax`'s shape, `(keyword literals (pat . tmpl)
-;; ...)`, so neither side converts anything.  <own-refs> are THIS unit's internal names the
+;; Current interfaces append `(binding-context-v2 builtin-bindings public-macro-names)`
+;; to this half. Entries retain contextual transformer origins and finite binding
+;; contexts; public keyword spelling is independent of private registry keys.
+;; <own-refs> are THIS unit's internal names the
 ;; templates reach (the tree-shake wants internal names, design D6); <foreign-refs> are
 ;; other units' mangled symbols, as strings, matching the runtime rows' convention.
 ;;
 ;; The field is OPTIONAL in both directions.  A table written before this change has three
-;; fields and must be READ, not crashed on -- a stale `.exports` in an existing build/lib
-;; is ordinary (risk R1).  And a library that exports no macro writes no fourth field at
-;; all, so every artifact that exists today is byte-identical after this change.
-(define (make-ct-half macros own-refs foreign-refs) (list macros own-refs foreign-refs))
-(define (ct-half-empty? h) (and (null? (car h)) (null? (cadr h)) (null? (caddr h))))
+;; fields and remains readable when runtime-only. Insufficient legacy macro context
+;; requires rebuilding. A builtin-only interface may retain its two-field extension.
+(define (make-ct-half macros own-refs foreign-refs . opt)
+  (let ([bindings (if (pair? opt) (car opt) '())]
+        [public
+          (if (and (pair? opt) (pair? (cdr opt)))
+              (cadr opt)
+              (map car (filter (lambda (m) (not (unit-qualified? (car m)))) macros)))])
+    (if
+      (and (null? bindings) (null? macros) (null? public))
+      (list macros own-refs foreign-refs)
+      (list macros own-refs foreign-refs (list 'binding-context-v2 bindings public)))))
+(define (ct-half-empty? h)
+  (and (null? (ct-macros h))
+       (null? (ct-own-refs h))
+       (null? (ct-foreign-refs h))
+       (null? (ct-bindings h))))
 
 ;; An export table, with the compile-time interface appended only when there is one.  A
 ;; library that exports no macro therefore writes the three-field datum it always wrote,
@@ -1483,6 +1520,123 @@
 (define (ct-macros h) (car h))
 (define (ct-own-refs h) (cadr h))
 (define (ct-foreign-refs h) (caddr h))
+
+;; Builtin exports are compile-time bindings, never fictitious runtime globals.
+;; Keep the three legacy fields and runtime/call row layouts readable.
+(define (ct-bindings h)
+  (if (null? (cdddr h))
+      '()
+      (let ([extension (cadddr h)])
+        (unless (and (list? extension)
+                     (or (= (length extension) 2) (= (length extension) 3))
+                     (eq? (car extension) 'binding-context-v2)
+                     (list? (cadr extension)))
+          (error 'import "unsupported binding interface; rebuild library"))
+        (cadr extension))))
+
+;; Public spelling is explicit: prefixes and export aliases may contain colons,
+;; just as registry-only dependency keys do. The fallback serves internal legacy
+;; three-field halves; imported macro interfaces require the visibility field.
+(define (ct-public-macro-names h)
+  (if (and (pair? (cdddr h)) (= (length (cadddr h)) 3))
+      (caddr (cadddr h))
+      (map car (filter (lambda (m) (not (unit-qualified? (car m)))) (ct-macros h)))))
+(define (ct-public-macros h)
+  (filter (lambda (m) (memq (car m) (ct-public-macro-names h))) (ct-macros h)))
+(define (ct-private-macros h)
+  (filter (lambda (m) (not (memq (car m) (ct-public-macro-names h)))) (ct-macros h)))
+
+(define (private-macro-key base reserved)
+  (let loop ([candidate base] [n 0])
+    (if (memq candidate reserved)
+        (loop (string->symbol
+                (string-append (symbol->string base) ".private." (number->string n)))
+              (+ n 1))
+        candidate)))
+
+(define (validate-library-interface table)
+  (let ([h (table-ct-half table)])
+    (unless (and (list? h)
+                 (>= (length h) 3)
+                 (<= (length h) 4)
+                 (list? (ct-macros h))
+                 (list? (ct-own-refs h))
+                 (list? (ct-foreign-refs h)))
+      (error 'import "malformed compile-time interface; rebuild library" (car table)))
+    (unless (or (null? (ct-macros h))
+                (and (= (length h) 4) (list? (cadddr h)) (= (length (cadddr h)) 3)))
+      (error 'import "incompatible macro visibility; rebuild library" (car table)))
+    (for-each
+      (lambda (m)
+        (unless (and (list? m)
+                     (= (length m) 6)
+                     (symbol? (car m))
+                     (contextual-transformer? m)
+                     (transformer-origin m)
+                     (list? (transformer-literals m))
+                     (list? (transformer-rules m))
+                     (list? (transformer-context m)))
+          (error 'import "incompatible macro context; rebuild library" (car table))))
+      (ct-macros h))
+    (for-each (lambda (b)
+                (unless (and (list? b)
+                             (= (length b) 4)
+                             (symbol? (car b))
+                             (memq (cadr b) '(primitive core auxiliary))
+                             (list? (caddr b))
+                             (symbol? (cadddr b)))
+                  (error 'import
+                         "malformed builtin binding interface; rebuild library"
+                         (car table))))
+              (ct-bindings h))
+    (unless (and (list? (ct-public-macro-names h))
+                 (not (any-of? (lambda (name)
+                                 (not (and (symbol? name) (assq name (ct-macros h)))))
+                               (ct-public-macro-names h))))
+      (error 'import "malformed public macro interface; rebuild library" (car table)))
+    table))
+
+;; One namespace for all public binding kinds. Runtime origins name locations;
+;; aliases and forwarding never change them. Hidden macro dependencies remain
+;; available to definition contexts without entering this public namespace.
+(define (import-table-bindings table)
+  (let ([lib (car table)] [h (table-ct-half table)])
+    (append (map (lambda (r)
+                   (let ([target (string->symbol (cdr r))])
+                     (list (car r) 'runtime (list 'runtime target) target)))
+                 (cadr table))
+            (ct-bindings h)
+            (map (lambda (m)
+                   (list (car m)
+                         'macro
+                         (or (transformer-origin m) (list 'legacy-macro lib (car m)))
+                         m))
+                 (ct-public-macros h)))))
+
+(define (import-tables->bindings tables)
+  (apply append (map import-table-bindings tables)))
+
+(define (validate-import-tables tables)
+  (let ([seen '()])
+    (for-each
+      (lambda (table)
+        (validate-library-interface table)
+        (for-each
+          (lambda (b)
+            (let ([prior (assq (car b) seen)])
+              (if prior
+                  (unless (equal? (caddr b) (cadr prior))
+                    (error 'import
+                           (string-append "conflicting imported binding "
+                                          (symbol->string (car b))
+                                          " from "
+                                          (render-datum (caddr prior))
+                                          " and "
+                                          (render-datum (car table)))))
+                  (set! seen (cons (list (car b) (caddr b) (car table)) seen)))))
+          (import-table-bindings table)))
+      tables)
+    tables))
 
 ;; Every imported library's exported transformers, ready to cons onto a macro-env.
 (define (import-tables->macro-env import-tables)
@@ -1525,19 +1679,29 @@
 (define (ct-half-union a b)
   (make-ct-half (append (ct-macros a) (ct-macros b))
                 (append (ct-own-refs a) (ct-own-refs b))
-                (append (ct-foreign-refs a) (ct-foreign-refs b))))
+                (append (ct-foreign-refs a) (ct-foreign-refs b))
+                (append (ct-bindings a) (ct-bindings b))
+                (append (ct-public-macro-names a) (ct-public-macro-names b))))
 
 (define (import-macro-table key import-tables)
   (let find ([tables import-tables])
     (and (pair? tables)
-         (if (assq key (ct-macros (table-ct-half (car tables))))
+         (if (assq key (ct-public-macros (table-ct-half (car tables))))
              (car tables)
              (find (cdr tables))))))
 
 ;; REQUESTS maps each output keyword to its visible imported keyword. Imported
 ;; transformer bodies are already resolved; copy their dependency graph intact.
 (define (forwarded-macros requests import-tables)
-  (let ([entries (quote ())] [foreign (quote ())] [seen (quote ())])
+  (let ([entries (quote ())]
+        [foreign (quote ())]
+        [seen (quote ())]
+        [private-origins '()]
+        [reserved
+          (append (map car requests)
+                  (apply append
+                         (map (lambda (t) (map car (ct-macros (table-ct-half t))))
+                              import-tables)))])
     (define (note-foreign! str)
       (unless (member str foreign) (set! foreign (cons str foreign))))
     ;; copy KEY out of TBL's compile-time half under output keyword OUT, then follow the
@@ -1548,8 +1712,29 @@
         (let* ([h (table-ct-half tbl)] [e (assq key (ct-macros h))])
           (when e
             (set! entries (cons (cons out (cdr e)) entries))
-            (for-each (lambda (s) (when (assq s (ct-macros h)) (copy! tbl s s)))
-                      (all-symbols (cddr e)))))))
+            (if (contextual-transformer? e)
+                (for-each
+                  (lambda (binding)
+                    (when (eq? (cadr binding) 'macro)
+                      (let ([found
+                              (memp (lambda (m)
+                                      (equal? (transformer-origin m) (caddr binding)))
+                                    (ct-macros h))])
+                        (when found
+                          (let* ([key (caar found)]
+                                 [origin (transformer-origin (car found))]
+                                 [prior (assoc origin private-origins)])
+                            (unless prior
+                              (let ([hidden (private-macro-key
+                                              (string->symbol (mangle (car tbl) key))
+                                              reserved)])
+                                (set! reserved (cons hidden reserved))
+                                (set! private-origins
+                                  (cons (cons origin hidden) private-origins))
+                                (copy! tbl hidden key))))))))
+                  (transformer-context e))
+                (for-each (lambda (s) (when (assq s (ct-macros h)) (copy! tbl s s)))
+                          (all-symbols (cddr e))))))))
     (for-each (lambda (e)
                 (let ([tbl (import-macro-table (cdr e) import-tables)])
                   (when tbl
@@ -1559,13 +1744,17 @@
                                 (ct-own-refs h))
                       (for-each note-foreign! (ct-foreign-refs h))))))
               requests)
-    (make-ct-half (reverse entries) (quote ()) (reverse foreign))))
+    (make-ct-half (reverse entries)
+                  (quote ())
+                  (reverse foreign)
+                  '()
+                  (map car requests))))
 
 ;; Resolve owned templates with a callback for imported macro references. The
 ;; callback records hidden aliases; the same forwarding traversal also serves
 ;; explicit macro re-exports, without resolving imported bodies a second time.
-(define (library-macro-interface name exports own-macros defined-names import-env
-         tables)
+(define (library-macro-interface name exports own-macros defined-names import-env tables
+         . opt)
   (let* ([requests (filter (lambda (e)
                              (and (not (memq (cdr e) defined-names))
                                   (not (assq (cdr e) own-macros))))
@@ -1578,11 +1767,52 @@
                   import-env
                   (lambda (s)
                     (and (import-macro-table s tables)
-                         (let ([key (string->symbol (mangle name s))])
+                         (let ([key (private-macro-key (string->symbol (mangle name s))
+                                                       (append (map car exports)
+                                                               (map car requests)
+                                                               (map car own-macros)))])
                            (unless (assq key requests)
                              (set! requests (append requests (list (cons key s)))))
                            key))))])
-    (ct-half-union owned (forwarded-macros requests tables))))
+    (let ([combined
+            (ct-half-union
+              (ct-half-union owned (forwarded-macros requests tables))
+              (make-ct-half
+                '()
+                '()
+                '()
+                (filter
+                  (lambda (b) b)
+                  (map
+                    (lambda (e)
+                      (and (not (memq (cdr e) defined-names))
+                           (not (assq (cdr e) own-macros))
+                           (let ([b (assq (cdr e) (library-body-bindings name tables))])
+                             (and b
+                                  (memq (cadr b) '(primitive core auxiliary))
+                                  (cons (car e) (cdr b))))))
+                    exports))))])
+      (let* ([public (if (pair? opt)
+                         (car opt)
+                         (filter (lambda (key) (assq key (ct-macros combined)))
+                                 (map car exports)))]
+             [reserved (append public (map car (ct-macros combined)))]
+             [seen '()]
+             [entries
+               (map-lr (lambda (entry)
+                         (let* ([name (car entry)]
+                                [key (if (and (memq name seen) (not (memq name public)))
+                                         (private-macro-key name reserved)
+                                         name)])
+                           (set! seen (cons key seen))
+                           (set! reserved (cons key reserved))
+                           (cons key (cdr entry))))
+                       (ct-macros combined))])
+        (make-ct-half entries
+                      (ct-own-refs combined)
+                      (ct-foreign-refs combined)
+                      (ct-bindings combined)
+                      public)))))
 
 ;; The direct-call view of the same tables (changes: cross-unit-direct-calls,
 ;; cross-unit-variadic-direct-calls): an alist of
@@ -1642,12 +1872,13 @@
 
 ;; Classify exports once against the effective environment. Macros have no runtime
 ;; row, and an absent binding is rejected before either emission path builds a table.
-(define (library-runtime-exports exports defined-names macro-env import-env)
+(define (library-runtime-exports exports defined-names macro-env import-env . opt)
   (filter (lambda (e)
             (cond
               [(memq (cdr e) defined-names) #t]
               [(assq (cdr e) macro-env) #f]
               [(assq (cdr e) import-env) #t]
+              [(and (pair? opt) (assq (cdr e) (car opt))) #f]
               [else (error 'compile-library
                            "export of a name the library does not define"
                            (cdr e))]))
@@ -1806,12 +2037,18 @@
 ;; Only an export whose target belongs to this unit can nominate a local root.
 ;; A facade's foreign targets are reached in their owners through accumulated IR.
 (define (library-root-candidates name exports table)
-  (append (map cdr
-               (filter (lambda (e)
-                         (let ([row (assq (car e) (cadr table))])
-                           (and row (string=? (cdr row) (mangle name (cdr e))))))
-                       exports))
-          (ct-own-refs (table-ct-half table))))
+  (let* ([prefix (mangle name "")] [size (string-length prefix)])
+    (append
+      (filter (lambda (target) target)
+              (map (lambda (e)
+                     (let ([row (assq (car e) (cadr table))])
+                       (and row
+                            (>= (string-length (cdr row)) size)
+                            (string=? prefix (substring (cdr row) 0 size))
+                            (string->symbol
+                              (substring (cdr row) size (string-length (cdr row)))))))
+                   exports))
+      (ct-own-refs (table-ct-half table)))))
 
 ;; `keep-roots` (optional): when #f (default), compile the WHOLE library unchanged
 ;; -- byte-identical to before, so the REPL/JIT execution path and committed artifacts are
@@ -1828,7 +2065,7 @@
                     imports
                     exports
                     body-forms
-                    (apply-import-specs imports import-tables)
+                    (validate-import-tables (apply-import-specs imports import-tables))
                     dump
                     (if (pair? opt) (car opt) #f)))
 
@@ -1838,14 +2075,24 @@
   (reset-unit-assigned!) ; ...minus what it assigns (library-toplevel-set)
   (set-import-calls! (import-tables->call-alist
                        import-tables)) ; calls INTO its dependencies
-  (let* ([me+rf (collect-define-syntax body-forms)]
+  (let* ([front (frontend-expand-forms body-forms
+                                       (import-tables->macro-env import-tables)
+                                       '()
+                                       (library-body-bindings name import-tables)
+                                       name)]
+         ;; Public spellings remain stable even when their local lowering target
+         ;; must be fresh to stay disjoint from imported global locations.
+         [exports (map (lambda (e)
+                         (let ([alias (assq (cdr e) (frontend-source-aliases front))])
+                           (cons (car e) (if alias (cdr alias) (cdr e)))))
+                       exports)]
          ;; the library's OWN transformers, plus every macro its imports export
          ;; (change: library-macro-export, design D7).  Its own come FIRST, and
          ;; `macro-lookup` is an `assq`, so a local `define-syntax` shadows an imported
          ;; keyword of the same spelling -- the user-wins shadowing the runtime
          ;; environment already gives a define.
-         [own-macro-env (car me+rf)]
-         [runtime (cadr me+rf)]
+         [own-macro-env (cadr front)]
+         [runtime (car front)]
          ;; ...and a body `define` displaces a keyword of that name outright (change:
          ;; binding-aware-expander, issue #103).  A library NEEDS the prune rather than
          ;; inheriting it: `expand-unit-form` expands each body define's initializer on its
@@ -1868,12 +2115,28 @@
          [known (union (compute-known macro-env body) (map car import-env-alist))]
          [defined-names (map (lambda (p) (car (normalize-define p)))
                              (filter define-form? body))]
+         [source-defined-names
+           (filter (lambda (n) (memq n (frontend-source-targets front))) defined-names)]
+         [source-macro-env
+           (prune-shadowed-macros
+             (append (filter (lambda (m) (memq (car m) (frontend-source-targets front)))
+                             own-macro-env)
+                     (map cadddr
+                          (filter (lambda (b) (eq? (cadr b) 'macro))
+                                  (library-body-bindings name import-tables))))
+             defined-names)]
+         [public-macro-names
+           (map car (filter (lambda (e) (assq (cdr e) source-macro-env)) exports))]
          ;; Exports split by what they name (change: library-macro-export).  A macro export
          ;; has no global, so it contributes no symbol row and no call row -- it travels
          ;; entirely in the compile-time interface below.  Everything downstream of here
          ;; that builds the runtime table reads `runtime-exports`, never `exports`.
-         [runtime-exports
-           (library-runtime-exports exports defined-names macro-env import-env-alist)]
+         [runtime-exports (library-runtime-exports
+                            exports
+                            source-defined-names
+                            source-macro-env
+                            import-env-alist
+                            (library-body-bindings name import-tables))]
          [env (make-repl-env)])
     ;; A name bound at the library's top level by EITHER `define` or `define-syntax` is a
     ;; name the library defines, and either may be exported (change: library-macro-export,
@@ -1909,17 +2172,20 @@
       ;; DEFAULT PATH (dev/REPL/JIT + committed artifacts): whole unit, unchanged.
       ;; The fold carries the form's 1-based position alongside the accumulator, so a
       ;; command (which has no name) can be tagged positionally in the dump.
-      (let ([progs
-              (reverse
-                (cadr
-                  (fold-left
-                    (lambda (st f)
-                      (list (+ (car st) 1)
-                            (cons
-                              (unit-def-lcode env f macro-env known name dump (car st))
-                              (cadr st))))
-                    (list 1 (quote ()))
-                    body)))]
+      (let ([progs (reverse
+                     (cadr (fold-left
+                             (lambda (st f)
+                               (list (+ (car st) 1)
+                                     (cons (unit-lcode-tagged
+                                             env
+                                             f
+                                             name
+                                             dump
+                                             (body-form-tag (body-form-name f) (car st))
+                                             (and (define-form? f) #t))
+                                           (cadr st))))
+                             (list 1 (quote ()))
+                             body)))]
             ;; Keys use external names; targets retain their defining unit's identity.
             [export-table (runtime-export-rows name
                                                runtime-exports
@@ -1937,7 +2203,8 @@
                                      own-macro-env
                                      defined-names
                                      import-env-alist
-                                     import-tables))))
+                                     import-tables
+                                     public-macro-names))))
       ;; PRUNED PATH (closed-world AOT tree-shake): expand each body form ONCE,
       ;; compute the define->define reference graph, keep only what's reachable from
       ;; the roots, and lower/emit just those (in original order, so __init order is
@@ -1951,10 +2218,7 @@
                  (cadr (fold-left
                          (lambda (st f)
                            (list (+ (car st) 1)
-                                 (cons (list (body-form-name f)
-                                             (car st)
-                                             (expand-unit-form f macro-env known))
-                                       (cadr st))))
+                                 (cons (list (body-form-name f) (car st) f) (cadr st))))
                          (list 1 (quote ()))
                          body)))]
              [unit-refs (lambda (ne) ; this unit's own names the form mentions
@@ -2007,7 +2271,8 @@
                                          own-macro-env
                                          defined-names
                                          import-env-alist
-                                         import-tables)))))))
+                                         import-tables
+                                         public-macro-names)))))))
 
 ;; Compile a program that imports libraries.  import-tables is a list of the
 ;; program's DIRECT imports' export tables (as returned by compile-library); the
@@ -2026,21 +2291,36 @@
          [specs (caddr imp+rt)]
          ;; The tables each import set makes visible (change: portable-library-surface,
          ;; design D2); the host's tables untouched when every import is a bare name.
-         [import-tables (apply-import-specs specs import-tables)]
+         [import-tables (validate-import-tables
+                          (apply-import-specs specs import-tables))]
          [import-env-alist (import-tables->env-alist
                              import-tables)] ; (ext . mangled-sym)
          ;; A program that imports (scheme base) through a SET has that set as its whole
          ;; view of it (design D3), so the prelude's raw transformers are not prepended:
          ;; the derived forms then arrive only through the set's table, renamed or hidden
          ;; with everything else, exactly as they reach a library that imports it.
-         [forms (with-prelude (if (scheme-base-import-set? specs) '() prelude-forms)
+         [forms (with-prelude (if (or (scheme-base-import-set? specs)
+                                      (assoc '(scheme base) import-tables))
+                                  '()
+                                  prelude-forms)
                               runtime-user)])
     (reset-counter!)
     ;; a call matching one of these imports' exact/minimum arities lowers to a direct
     ;; call to its code label (changes: cross-unit-direct-calls,
     ;; cross-unit-variadic-direct-calls).
     (set-import-calls! (import-tables->call-alist import-tables))
-    (let* ([me+rf (collect-define-syntax forms)]
+    (let* ([front (frontend-expand-forms
+                    forms
+                    (import-tables->macro-env import-tables)
+                    '()
+                    (append (import-tables->bindings import-tables)
+                            (if (assoc '(scheme base) import-tables)
+                                '()
+                                (compiler-builtin-bindings))
+                            (map (lambda (n)
+                                   (list n 'primitive (list 'builtin 'primitive n) n))
+                                 *prims*))
+                    program-unit)]
            ;; the program's own transformers (and the baked prelude's, prepended into
            ;; `forms`), plus every macro its imports export -- the program half of the
            ;; same merge compile-library* does (change: library-macro-export, design D7).
@@ -2053,16 +2333,16 @@
            ;; which is safe precisely because only the prelude's TRANSFORMERS are prepended
            ;; here: its procedures were compiled in the baked unit, with their own macro
            ;; environment, so a program cannot un-expand a prelude body (design D3).
-           [runtime (cadr me+rf)]
+           [runtime (car front)]
            [macro-env (prune-shadowed-macros
-                        (append (car me+rf) (import-tables->macro-env import-tables))
+                        (append (cadr front) (import-tables->macro-env import-tables))
                         (toplevel-define-names runtime))]
            ;; Imported external names are "known" bindings too, so a derived-form
            ;; macro (e.g. `case`) may introduce a reference to one (e.g. `memv`)
            ;; without hygiene renaming it away (change: module-prelude-scheme-base).
            [known (union (compute-known macro-env runtime) (map car import-env-alist))]
            [top (collect-toplevel runtime)]
-           [expd (expand top macro-env known)]
+           [expd top]
            [core0 (rename-program (parse-program expd))]
            [core (inline-primitives
                    (if (null? import-env-alist)

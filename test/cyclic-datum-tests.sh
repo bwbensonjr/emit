@@ -48,7 +48,7 @@ check vector-and-mixed-cycles \
                   (equal? pa pb) (equal? pa pc) (equal? pa va))))' \
   '(#t #f #t #f #f)'
 check large-acyclic \
-  '(write (equal? (iota 4000) (iota 4000)))' \
+  '(import (emit list)) (write (equal? (iota 4000) (iota 4000)))' \
   '#t'
 check cyclic-hash \
   '(let ((a (list 1)) (b (list 1)) (va (vector #f)) (vb (vector #f)))
@@ -143,6 +143,7 @@ else bad "REPL directives + labelled constant => [$got]"; sed 's/^/         /' "
 
 cat > "$TMP/emit-libs.scm" <<EOF
 ((library (emit internal) (source "$PWD/lib/emit/internal.sld"))
+ (library (emit list) (source "$PWD/lib/emit/list.sld"))
  (library (scheme base) (source "$PWD/lib/scheme/base.sld"))
  (library (scheme read) (source "$PWD/lib/scheme/read.sld"))
  (program cyclic-app (source "$PWD/test/cyclic-datum-source.scm")))

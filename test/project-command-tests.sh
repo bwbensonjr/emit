@@ -464,7 +464,7 @@ fi
 #     dropped entry surfaced as an unresolved import naming (b) -- blaming the program for a
 #     mistake in the manifest, which is the part that made this expensive to diagnose.
 printf '(import (b))\n(display 1)\n' > "$BARE/needs-b.scm"
-printf '(define-library (b) (export g) (begin (define (g) 1)))\n' > "$BARE/b.sld"
+printf '(define-library (b) (import (scheme base)) (export g) (begin (define (g) 1)))\n' > "$BARE/b.sld"
 printf '((library (a) (source "a.sld")))\n((library (b) (source "b.sld")))\n' \
   > "$BARE/emit-libs.scm"
 (cd "$BARE" && "$EMITABS" run needs-b.scm) >"$TMP/e37.log" 2>&1

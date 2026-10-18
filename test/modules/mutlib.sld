@@ -12,6 +12,7 @@
 ;;; it too must withhold its call row.  `g` is the control: same fixed-arity shape,
 ;;; never assigned, so it keeps its call row.
 (define-library (mutlib)
+  (import (scheme base))
   (export f bump call-f h bump-h g v bump-v call-v)
   (begin
     (define (bump) (set! f (lambda (x) (+ x 100))))

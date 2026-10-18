@@ -1,5 +1,6 @@
 ;;; dia-a.sld -- diamond left arm (change: module-generalize).
 (define-library (dia-a)
+  (import (scheme base))
   (import (dia-c))
   (export a-val)
   (begin

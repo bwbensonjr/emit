@@ -2,6 +2,7 @@
 ;;; Defines an internal `helper` and a lifted closure of the SAME spelling as
 ;;; libb, to prove unit-qualified symbols do not collide at link.
 (define-library (liba)
+  (import (scheme base))
   (export a-val)
   (begin
     (define (helper x) (+ x 1))

@@ -1,6 +1,7 @@
 ;;; chain-a.sld -- transitive-chain middle (change: module-generalize).
 ;;; A library that itself imports another library (chain-b) and uses its export.
 (define-library (chain-a)
+  (import (scheme base))
   (import (chain-b))
   (export a-plus)
   (begin

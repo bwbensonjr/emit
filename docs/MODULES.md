@@ -241,28 +241,70 @@ depth (change: `portable-library-surface`):
   view: `(import (except (scheme base) map))` leaves `map` unbound, and
   `(import (prefix (scheme base) b:))` turns `cond` into `b:cond`. A bare `(import (scheme base))`
   changes nothing.
-- **Primitives and core keywords are outside every set.** The primitives the compiler integrates
-  (`car`, `+`, `eq?`, …) and the core syntactic keywords (`if`, `lambda`, `define`, `let`, `quote`,
-  `set!`, …) are not bindings in `(scheme base)`'s export table. Every unit sees them under their
-  own names, as under `--no-prelude`. A set over an R7RS `(scheme …)` library *accepts* them, so
-  portable code such as `(import (only (scheme base) define car))` compiles. But no set can hide or
-  rename them: `except` leaves them visible, and under `(prefix (scheme base) b:)` there is no
-  `b:car` (issue #119).
+- **Primitives and syntax follow sets too.** Integrated primitives (`car`, `+`, `eq?`) and
+  core/auxiliary syntax (`if`, `lambda`, `define`, `else`, `=>`) have explicit compile-time
+  exports. Under `(prefix (scheme base) b:)`, write `(b:car (b:quote (1 2)))`; bare `car` and
+  `quote` are unavailable. Primitive values such as `b:car` still work as arguments to `b:map`.
+  A different standard library does not publish these names merely because its name starts
+  with `scheme`. The explicit `--no-prelude` compiler environment retains builtins for low-level
+  compiler inputs; it does not restore hidden names in an ordinary import view.
 
 ### Overlapping imports
 
-When two imports make the same name visible with different bindings, **the first import wins**,
-for procedures and macros alike, and the same on every compilation path:
+When two imports expose different bindings under the same visible name, compilation fails
+with a diagnostic naming the identifier and both libraries. This applies across procedures,
+macros, primitives, and syntax, including collisions introduced within one `rename` set:
 
 ```scheme
-;; test/import-sets/prog-overlap.scm  => (1 one)
+;; test/import-sets/prog-overlap.scm: rejected import conflict
 (import (iset over1))   ; f => 1, macro m => 'one
 (import (iset over2))   ; f => 2, macro m => 'two
 (list (f) (m))
 ```
 
-R7RS calls this an error. Emit does not report it yet (issue #118); a set is the way to choose
-explicitly. A definition in the importing unit still wins over every import.
+Use selection or renaming to choose explicitly. Re-importing the same original binding is
+legal, including through re-exports and diamonds; identical transformer text from independent
+definitions does not make them the same binding. A local definition wins over a valid import
+view, but cannot conceal a conflict between imports. At the REPL, the complete import is
+validated before initialization or publication, so a rejected import preserves the previous view.
+
+### Lexical macros and compile-time interfaces
+
+`let-syntax`, `letrec-syntax`, and internal `define-syntax` support `syntax-rules` transformers.
+`let-syntax` transformer specifications see the enclosing environment; `letrec-syntax`
+specifications see all keywords in their recursive group. Internal syntax definitions share
+the body definition group with variables, including definitions exposed by prefix macros and
+splicing `begin`. These local scopes do not publish names outside their bodies.
+
+Templates preserve definition-site references and the lexical context of substituted source.
+Introduced binders are fresh even when they share a spelling with a known global or keyword.
+Literal matching compares original binding identities, including imported aliases. This keeps
+private helpers working under user bindings with the same spelling, including `%do-step`,
+while a user-written reference to a shadowing procedure still calls that procedure.
+
+Source names and lowered storage names are separate. Generated local targets cannot collide
+with qualified imported globals, and colon-bearing source names retain their original public
+spellings through exports and REPL registration. Primitive-shadowing source definitions likewise
+receive distinct storage, so imported macro references retain their original primitive binding.
+A later source definition also cannot overwrite
+a private slot retained by an earlier transformer merely by guessing its generated spelling.
+
+The readable export interface retains runtime symbol rows and call descriptors and adds tagged
+compile-time binding metadata. Primitive/core/auxiliary exports carry kinds and origin identities;
+transformers carry origin identities and finite definition contexts. Forwarding and renaming
+retain those origins. Context is absent from the runtime unit and delivered executable.
+Full interfaces are deterministic across Chez and native compilation. Older runtime-only
+tables and existing fixed/variadic call descriptors remain readable. Macro artifacts lacking
+the required context must be rebuilt: source-backed caches invalidate automatically, and an
+incompatible artifact supplied without source reports a rebuild diagnostic.
+
+`display` and `write` retain their established base extension bindings. `(scheme write)`
+re-exports those same primitive identities, so importing both libraries is legal and prefixed
+aliases still denote the same binding. First-class calls preserve the optional output port.
+
+Malformed local bindings, transformers, and `case-lambda` clauses report the offending syntax
+rather than a compiler-internal pair-access error. Dotted `define-values` remains unsupported
+and is reported by name. A rejected REPL form leaves earlier valid definitions usable.
 
 ## Portable sources
 
@@ -547,10 +589,12 @@ build/emit build --manifest my-project.scm
 - **Delivery** is the in-binary Chez-free AOT path: `emit build` emits the program IR in-process
   (the `--emit` path) and forks `clang` to link the runtime and units into the executable — byte-
   for-behavior identical to emitting the resolved source's IR and linking it directly. It
-  **tree-shakes** (change: `chez-free-unit-pipeline`): each prunable unit is recompiled to the
-  bindings the program's emitted IR actually reaches, by the same `compile-library*` pass the Chez
-  driver's ship path uses, and the pruned unit is cached against the program that produced it. The
-  output path comes from the entry's `output`, an `-o` override, or the default `build/<NAME>`.
+  **tree-shakes** (changes: `chez-free-unit-pipeline`, `import-dag-tree-shaking`): units are
+  finalized in reverse dependency order. Each unit's roots come from the program IR plus the IR of
+  importers already finalized, so a dependency keeps exactly the bindings those importers retain.
+  A full-unit artifact may be reused as an input, but AOT recompiles a distinct root-specific unit
+  from source and caches that pruned result. The output path comes from the entry's `output`, an
+  `-o` override, or the default `build/<NAME>`.
 
 ### `emit lib` — compile one library to its artifact
 
@@ -586,12 +630,12 @@ label and arity information do not. These compile-time artifacts help later comp
 delivered executables contain the linked runtime code and do not need the `.sld` sources or
 `.exports` tables at run time.
 
-the four commands — `emit lib` / `emit build` / `emit run` / `emit repl` — are verbs of a single
+The four commands — `emit lib` / `emit build` / `emit run` / `emit repl` — belong to a single
 `emit` binary, the sole user-facing entry point (change: `emit-cli-unification`).
 
 ## `(scheme base)`
 
-The prelude — `map`, `filter`, `append`, `fold-left`, the character comparisons, the reader, the
+The prelude — `map`, `append`, `fold-left`, the character comparisons, the reader, the
 derived-form macros (`cond`/`case`/`when`/…), etc. — is the library `(scheme base)`, generated from
 `src/prelude.scm` into `lib/scheme/base.sld`. It is **auto-imported into every program and REPL
 session** (and into the compiler's own build), as if the source began with `(import (scheme base))`.
@@ -607,11 +651,12 @@ session** (and into the compiler's own build), as if the source began with `(imp
 
 `src/prelude.scm` says what `(scheme base)` **contains**; `src/prelude-surface.scm` says what it
 **exports** (change: `scheme-base-declared-surface`, GitHub issue #29). The export list is the
-prelude's top-level defines in *source order* minus `*scheme-base-private*` — 136 of 213 today. A
+partition's published runtime definitions in *source order*, followed by its declared primitive
+and core/auxiliary syntax bindings. A
 private helper stays in the library **body**, where the exported procedures still call it; it is
 simply not in scope in a program that imports the library, and not an API commitment. Because the
 auto-import is universal, that distinction is the difference between a namespace and a published
-interface: before this, all 77 helpers (`%map1`, `rd-atom`, `%port-buf`, `*winds*`, …) were in scope
+interface: before declaration-based curation, helpers (`%map1`, `rd-atom`, `%port-buf`, `*winds*`, …) were in scope
 in every program, unasked.
 
 Both derivations of the export list read that one declaration — `tools/gen-scheme-base.ss` (which
@@ -625,7 +670,12 @@ The exported surface has two tiers:
 | Tier | What it means |
 |---|---|
 | **R7RS** | names R7RS-small defines, and that it places in `(scheme base)`. The sixteen it places elsewhere are no longer here — see *The relocated sixteen* below. |
-| **extension** | Emit additions with no R7RS home: `filter`, `fold-left`, `fold-right`, `andmap`, `memp`, `iota`, `list-head`, `void`, `list->bytevector`, `port-closed?`, `read-from-string`, `read-all-from-string`, `with-parameters`, `make-eq-hash-table`, and the `hash-table-*` family. Published deliberately, with Emit's established hyphenated spelling. |
+| **extension** | Emit additions with no R7RS home: `fold-left`, `andmap`, `memp`, `list-head`, `void`, `list->bytevector`, `port-closed?`, `read-from-string`, `read-all-from-string`, `with-parameters`, `make-eq-hash-table`, and the `hash-table-*` family. Published deliberately, with Emit's established hyphenated spelling. |
+
+`filter`, `fold-right`, and `iota` are provided by `(emit list)`, not `(scheme base)`.
+Import `(emit list)` explicitly when using Emit's versions. This separation lets unchanged
+programs import `(scheme base)` with `(srfi 1)` without conflicting list bindings. The Emit
+and SRFI versions remain distinct bindings: select or prefix them when importing both.
 
 There used to be a third, **unstable**: names exported *only* because something outside the library
 had to resolve them. It held exactly two, `rd-skip-ws` and `rd-token-end`, and that something was the
@@ -634,22 +684,11 @@ drift. The tier is **retired** (change: `scheme-base-partition`, issue #32): tho
 internal substrate, which the compiler imports directly, so nothing reaches a public export list by
 being needed internally any more.
 
-Two mechanics follow from how macros expand, and are worth knowing before curating further:
-
-- A macro's template is instantiated in the **importer's** scope, so every name it mentions must be
-  exported under exactly that spelling — which is why `guard` and `parameterize` reach
-  `with-exception-handler` and `with-parameters` as public names.
-- `(rename internal external)` cannot be used to hide such a name: it keys the importer's table by
-  the *external* name, leaving the template's spelling unresolvable.
-
-Both apply to a **program** importing this library and not to a user library's exported macros: on
-the program path the baked set is merged as source and so really is resolved in the importer, whereas
-an exported macro's template is resolved in the library that defines it (see [How an exported macro
-travels](#how-an-exported-macro-travels)). A **library** importer takes the second path even for the
-derived forms — since `library-body-macro-scope` they arrive through `(scheme base)`'s compile-time
-export interface like any other imported transformer, already resolved. Curating `(scheme base)`'s
-surface still has to obey the
-two rules above; a user library does not.
+Prelude transformers use the same definition-site context interface as user-library transformers
+on every compilation path. Their references do not require public helper spellings: import sets
+may hide or rename a dependency without breaking a macro that already captured its binding.
+Changing the public surface therefore does not change the private references of `guard` or
+`parameterize` (see [How an exported macro travels](#how-an-exported-macro-travels)).
 
 `lib/scheme/base.sld`'s export list is a committed golden, one name per line, so a surface change is
 a reviewable one-line diff. `test/scheme-base-surface-check.sh` (Chez-free, in `run-all-tests.sh`)
@@ -661,6 +700,7 @@ published fails the default suite, so adding a helper forces a visibility decisi
 | library | source | reached by | resolved |
 |---|---|---|---|
 | `(emit internal)` | generated from `src/prelude.scm` | explicit import; **not API** | **baked** + manifest |
+| `(emit list)` | generated from `src/prelude.scm` | `(import (emit list))` | installed root / exact manifest |
 | `(emit filesystem)` | hand-written | `(import (emit filesystem))` | installed root / exact manifest |
 | `(scheme base)` | generated from `src/prelude.scm` | auto-imported everywhere | **baked** + manifest |
 | `(scheme cxr)` | generated from `src/prelude.scm` | `(import (scheme cxr))` | installed root / exact manifest |
@@ -1050,28 +1090,28 @@ A transformer cannot ride in the emitted IR — it is consumed at compile time, 
 in a fourth field of the `.exports` table, the library's **compile-time interface** (change:
 `library-macro-export`, issue #48):
 
-```scheme
-;; build/lib/macro-helper-lib.exports  (line-broken here; the file is one line)
-((macro-helper-lib) () ()
- (((twice () ((_ e) macro-helper-lib:helper (macro-helper-lib:%inc e)))
-   (macro-helper-lib:%inc () ((_ e) + e 1)))     ; the PRIVATE macro, carried hidden
-  (helper)                                       ; own bindings the templates reach
-  ()))                                           ; other units' bindings they reach
-```
+The table retains `(library-name runtime-rows call-rows compile-time-half)`. The
+compile-time half contains transformer entries, own runtime references, foreign runtime
+references, and a `(binding-context-v2 builtin-bindings public-macro-names)` extension
+(required when transformers are present). Public names are explicit, including prefixed or
+renamed names containing colons; private registry keys do not enter the source namespace. Each transformer
+has the readable shape `(keyword %contextual-transformer-v2 origin literals rules context)`.
+Its context records binding kinds, original identities, and targets; transformer dependencies
+refer to origins rather than recursively embedding other environments.
 
 Three things to read out of that:
 
 - **The runtime rows are empty.** A macro export has no global, so it contributes no symbol row and
   no call row. `(macro-helper-lib)` exports one name and emits no public binding at all.
-- **`helper` became `macro-helper-lib:helper`.** Each template's free identifiers are resolved *in
+- **`helper` retains target `macro-helper-lib:helper`.** Each template's free identifiers are resolved *in
   the exporting library* before the transformer leaves it. A library's private top-level bindings are
   already externally linkable mangled globals, so the importer reaches one the same way it reaches
   any imported name — an `external global i64` the linker resolves. This is why a template may use a
   private helper without the library exporting it, and why `(rename …)` is safe on a macro export:
   the template no longer depends on the importer resolving any spelling.
 - **`%inc` travels hidden**, under the unit-qualified keyword `macro-helper-lib:%inc`, so a library
-  can layer macros on its own private ones. It is not usable in the importer: no user writes that
-  spelling.
+  can layer macros on its own private ones. That dependency is registry-only, so writing its
+  hidden key in importing source does not expose it. Keys are disambiguated when an alias collides.
 
 If an exported transformer defined by another library uses an imported macro, the export interface
 also carries that dependency's already-resolved transformer closure. For example, when a library
@@ -1079,12 +1119,11 @@ defines an exported wrapper macro in terms of an imported `opt-lambda`, the inte
 original `opt-lambda` and any private macros it reaches. The consumer does not need to import those
 helper macros directly, and the carried entries do not become public exports.
 
-An identifier the pass cannot resolve is **left exactly as written** and hygienically renamed per
-expansion, as before. Emit's hygiene is a name-set test with no syntax objects, so a
-template-introduced temporary (`tmp`) and a reference to a name nothing defines are indistinguishable
-here; leaving both means a macro that expands correctly cannot be broken by resolution. References
-the compiler identifies as imported macros are carried with their defining library's resolution,
-whether that library is baked or supplied as a user library.
+An unresolved free identifier retains its definition context and reports an unbound variable
+when expansion requires that reference. It cannot capture a same-spelled importing variable.
+Introduced binders receive fresh identities independently of whether their names also identify
+globals. Imported transformer dependencies retain the contexts of their original definitions,
+whether the defining library is baked or supplied as a user library.
 
 Two consequences worth knowing:
 
@@ -1132,22 +1171,18 @@ The message body is the same whichever command compiled the form — `emit run`,
 
 This is Modules v0:
 
-- **Exported macros are `syntax-rules` only, at a body's top level.** `let-syntax`,
-  `letrec-syntax`, inner `define-syntax`, `syntax-case`, and procedural/identifier transformers are
-  all out of scope. A typo inside an exported template is reported in the importer rather than at the
-  library (issue #56) — a consequence of hygiene being a name-set test with no syntax objects.
-- **A unit another unit imports is never tree-shaken.** Both shipping paths prune only a unit that no
-  other unit in the closure imports, because an importer kept whole could reference a binding the
-  pruned one dropped. `(scheme base)` imports the substrate, so the substrate always ships whole;
-  and a program importing a user library that imports `(scheme base)` ships the whole standard
-  library on either path. See `docs/PERFORMANCE.md` P10 — the fix is backward propagation through
-  the import DAG, not anything path-specific. (The path gap itself is closed: `emit build` shakes,
-  change `chez-free-unit-pipeline`.)
-- **Overlapping imports are not an error.** The first import that binds a name wins (see
-  [Overlapping imports](#overlapping-imports)); R7RS's conflict error is issue #118.
-- **Import sets cannot rename or hide integrated primitives and core keywords** (`car`, `+`, `if`,
-  `lambda`, …), which stay visible under their own names whatever a unit imports (issue #119; see
-  [Import sets](#import-sets)).
+- **Transformers are `syntax-rules` only.** Lexical syntax bindings and internal syntax
+  definitions are supported; `syntax-case` and procedural/identifier transformers remain outside
+  the supported surface. An unresolved free template reference retains its definition context
+  rather than capturing a same-spelled importing binding.
+- **AOT pruning is closed-world; `emit run` and the REPL are open-world.** The Chez AOT driver and
+  `emit build` propagate roots backward through the import DAG, finalizing units in reverse
+  dependency order. A unit is shaken against the program and the finalized IR of its importers,
+  including transitive importers, so an imported unit and the substrate do not need to ship whole.
+  This root-specific AOT compilation is separate from reuse of a full-unit artifact. `emit run` and
+  the REPL retain full units so later execution or imports can use any binding. See
+  [`docs/PERFORMANCE.md` P10](PERFORMANCE.md#p10--a-library-another-unit-imports-is-never-tree-shaken-the-substrate-ships-whole)
+  for the implementation outcome and historical measurements.
 - **An `include` produced by a macro template resolves against the importing unit's home**, not
   the file the template came from, because a rebuilt form carries no record of where it was
   written. An include written in a file, at any depth, resolves beside that file.

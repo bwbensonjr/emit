@@ -1,6 +1,7 @@
 ;;; libb.sld -- no-collision fixture B (change: module-artifacts-vertical-slice).
 ;;; Same-spelled internal `helper` + lifted closure as liba; distinct values.
 (define-library (libb)
+  (import (scheme base))
   (export b-val)
   (begin
     (define (helper x) (+ x 2))

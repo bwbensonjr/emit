@@ -92,18 +92,38 @@
          (lambda () (import-set-table '(except (only (t lib) greet) helper) table)))
        "helper is not exported by (t lib) in (except (only (t lib) greet) helper)")
 
-;; universal-library-names reads the expander's and parser's keyword tables, which this
-;; suite does not include; stand-ins keep the case self-contained.
-(define *core-keywords* '(define if lambda))
-(define *extra-op-keywords* '(>))
-(define *integrable* '((car %car 1)))
-(let ([base (list '(scheme base) '((map . "scheme.base:map")) '())])
-  (check "only over a (scheme ...) library accepts a core keyword and a primitive"
+;; Builtins are published interface rows, rather than synthesized from the
+;; library name. Keep this transform-only fixture independent of the expander.
+(define base
+  (export-table-datum
+    '(scheme base) '((map . "scheme.base:map")) '()
+    (make-ct-half '() '() '()
+                  '((define core (builtin core define) define)
+                    (if core (builtin core if) if)
+                    (car primitive (builtin primitive car) car)))))
+(let ()
+  (check "only accepts published core syntax and primitive bindings"
          (rows (import-set-table '(only (scheme base) define car map) base))
          '((map . "scheme.base:map")))
-  (check "except over a (scheme ...) library accepts a primitive, which stays universal"
-         (rows (import-set-table '(except (scheme base) car) base))
-         '((map . "scheme.base:map"))))
+  (check "only retains selected builtin metadata"
+         (map car (ct-bindings
+                    (table-ct-half (import-set-table '(only (scheme base) define car map) base))))
+         '(define car))
+  (check "except removes a primitive binding"
+         (map car (ct-bindings (table-ct-half (import-set-table '(except (scheme base) car) base))))
+         '(define if))
+  (check "prefix preserves primitive identity while changing its visible name"
+         (assq 'b:car
+               (ct-bindings (table-ct-half (import-set-table '(prefix (scheme base) b:) base))))
+         '(b:car primitive (builtin primitive car) car))
+  (check "rename preserves core syntax identity"
+         (assq 'def
+               (ct-bindings (table-ct-half (import-set-table '(rename (scheme base) (define def)) base))))
+         '(def core (builtin core define) define)))
+(check "a different Scheme library does not synthesize base exports"
+       (raised-message
+         (lambda () (import-set-table '(only (scheme inexact) car) '((scheme inexact) () ()))))
+       "car is not exported by (scheme inexact) in (only (scheme inexact) car)")
 (check "a user library does not publish primitives"
        (raised-message (lambda () (import-set-table '(only (t lib) car) table)))
        "car is not exported by (t lib) in (only (t lib) car)")

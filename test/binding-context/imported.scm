@@ -1,0 +1,11 @@
+(import (prefix (scheme base) b:)
+        (only (scope owner) outer read-state bump!)
+        (only (scope facade) outer read-state bump! literal aliases token
+              generated-state core-shadow-value)
+        (only (rename (scope owner) (outer scope.owner:private)) scope.owner:private))
+(b:define state 100)
+(b:define private (b:lambda (x) 200))
+(b:define first (outer (b:quote (41))))
+(bump!)
+(b:list first (outer (b:quote (41))) (read-state) (literal token) (aliases)
+        (generated-state) (core-shadow-value) (scope.owner:private (b:quote (41))))

@@ -6,6 +6,7 @@
 ;;; @"macro.dup.b:helper") differ, and both must survive hygiene in the one importer
 ;;; whose `known` set they compose into.
 (define-library (macro-dup-a)
+  (import (scheme base))
   (export ma)
   (begin
     (define (helper x) (+ x 1))

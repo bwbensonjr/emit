@@ -24,7 +24,10 @@
     cdadr
     cddar
     cdddr
+    filter
+    fold-right
     cadddr
+    iota
     %digit-in-radix
     %radix-digits
     %string->int
@@ -129,7 +132,10 @@
     (define (cdddr x) (cdr (cddr x)))
     (define (length xs) (let loop ((xs xs) (n 0)) (if (null? xs) n (loop (cdr xs) (+ n 1)))))
     (define (reverse xs) (let loop ((xs xs) (acc (quote ()))) (if (null? xs) acc (loop (cdr xs) (cons (car xs) acc)))))
+    (define (filter p xs) (if (null? xs) (quote ()) (if (p (car xs)) (cons (car xs) (filter p (cdr xs))) (filter p (cdr xs)))))
+    (define (fold-right f acc xs) (if (null? xs) acc (f (car xs) (fold-right f acc (cdr xs)))))
     (define (cadddr x) (car (cdddr x)))
+    (define (iota n) (let loop ((i 0) (acc (quote ()))) (if (= i n) (reverse acc) (loop (+ i 1) (cons i acc)))))
     (define (%digit-in-radix c r) (let ((v (let ((k (char->integer c))) (cond ((and (< 47 k) (< k 58)) (- k 48)) ((and (< 96 k) (< k 123)) (- k 87)) ((and (< 64 k) (< k 91)) (- k 55)) (else 99))))) (if (< v r) v #f)))
     (define (%radix-digits s i m r acc) (if (< i m) (let ((d (%digit-in-radix (string-ref s i) r))) (if d (%radix-digits s (+ i 1) m r (- (* acc r) d)) #f)) acc))
     (define (%string->int s r) (let ((m (string-length s))) (if (= m 0) #f (let ((c0 (char->integer (string-ref s 0)))) (if (= c0 45) (if (< 1 m) (%radix-digits s 1 m r 0) #f) (let ((start (if (= c0 43) 1 0))) (if (< start m) (let ((neg (%radix-digits s start m r 0))) (if neg (- 0 neg) #f)) #f)))))))

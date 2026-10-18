@@ -28,6 +28,18 @@
 ;; hygiene "known bindings" set
 (define *repl-known* (quote ()))
 
+;; Import views are kept separately from session definitions so replacing the
+;; implicit base view can remove names without disturbing earlier compiled code.
+(define *repl-import-specs* (quote ()))
+(define *repl-import-views* (quote ()))
+(define *repl-implicit-base?* #f)
+(define *repl-own-names* (quote ()))
+(define *repl-own-macros* (quote ()))
+(define *repl-source-names* (quote ()))
+(define *repl-source-aliases* (quote ()))
+(define *repl-owned-globals* (quote ()))
+(define *repl-syntax-n* 0)
+
 ;; per-form thunk counter (@__repl_N)
 (define *repl-n* 0)
 
@@ -75,7 +87,11 @@
 
 ;; register a define-syntax in the session (mirrors run-repl's note-syntax!)
 (define (repl-note-syntax! form)
-  (set! *repl-macro-env* (cons (parse-define-syntax form) *repl-macro-env*))
+  (set! *repl-source-names* (cons (cadr form) *repl-source-names*))
+  (repl-merge-source-aliases! (list (cons (cadr form) (cadr form))))
+  (let ([entry (parse-define-syntax form)])
+    (set! *repl-own-macros* (cons entry *repl-own-macros*))
+    (set! *repl-macro-env* (cons entry *repl-macro-env*)))
   (set! *repl-known* (cons (cadr form) *repl-known*)))
 
 ;; Register the names a definition form binds: known identifiers for hygiene, and -- since
@@ -86,10 +102,14 @@
 ;; per form here.  Both are session state, restored with the rest of the snapshot when a
 ;; form's compile fails.
 (define (repl-note-defines! names)
-  (for-each (lambda (n)
-              (set! *repl-known* (cons n *repl-known*))
-              (set! *repl-macro-env* (prune-shadowed-macros *repl-macro-env* (list n))))
-            names))
+  (for-each
+    (lambda (n)
+      (unless (memq n *repl-own-names*)
+        (set! *repl-own-names* (cons n *repl-own-names*)))
+      (set! *repl-known* (cons n *repl-known*))
+      (set! *repl-own-macros* (prune-shadowed-macros *repl-own-macros* (list n)))
+      (set! *repl-macro-env* (prune-shadowed-macros *repl-macro-env* (list n))))
+    names))
 
 ;; expand a define's INIT (not its raw signature -- expanding the raw form would
 ;; treat a dotted param list like `(f . xs)` as an application), then rebuild a
@@ -153,11 +173,23 @@
         [s1 (vector-ref *repl-env* 1)]
         [sme *repl-macro-env*]
         [sk *repl-known*]
+        [son *repl-own-names*]
+        [som *repl-own-macros*]
+        [ssrc *repl-source-names*]
+        [ssaliases *repl-source-aliases*]
+        [sog *repl-owned-globals*]
+        [ssn *repl-syntax-n*]
         [sn *repl-n*])
     (guard (e (#t (vector-set! *repl-env* 0 s0)
                   (vector-set! *repl-env* 1 s1)
                   (set! *repl-macro-env* sme)
                   (set! *repl-known* sk)
+                  (set! *repl-own-names* son)
+                  (set! *repl-own-macros* som)
+                  (set! *repl-source-names* ssrc)
+                  (set! *repl-source-aliases* ssaliases)
+                  (set! *repl-owned-globals* sog)
+                  (set! *repl-syntax-n* ssn)
                   (set! *repl-n* sn)
                   (cons (quote error) (repl-error->string e))))
       (cond
@@ -173,8 +205,6 @@
                  (string-append "libraries are not defined at the prompt: "
                                 (render-datum (cadr form))
                                 " -- a library is imported, named in the manifest"))]
-        [(define-syntax-form? form) (repl-note-syntax! form)
-                                    (cons (quote syntax) (symbol->string (cadr form)))]
         ;; A top-level include, include-ci, or cond-expand at the prompt (change:
         ;; portable-library-surface, design D8).  It may stand for any number of forms --
         ;; definitions, imports, expressions -- and each must be compiled, run, and (for an
@@ -182,12 +212,12 @@
         ;; splice is QUEUED rather than compiled here, and the host drains the queue a form
         ;; at a time through mode 22, handling each result as it handles one typed form.
         ;; A session binding of the keyword shadows it, as a local binding does in a body.
-        [(and (splicing-form? form)
-              (not (assq (car form) *repl-macro-env*))
-              (not (assq (car form) (vector-ref *repl-env* 0))))
-          (note-unit-include-origins! (list form))
-          (set! *repl-pending* (splice-toplevel-forms (list form) #f (quote ())))
-          (cons (quote splice) (number->string (length *repl-pending*)))]
+        [(repl-source-splicing-form form)
+          =>
+          (lambda (splicing)
+            (note-unit-include-origins! (list splicing))
+            (set! *repl-pending* (splice-toplevel-forms (list splicing) #f (quote ())))
+            (cons (quote splice) (number->string (length *repl-pending*))))]
         [(import-form? form)
           ;; (import (L) ...): the unit is already registered (mode 4) so no module is
           ;; emitted here (change: module-artifacts-vertical-slice).  What IS emitted is
@@ -219,51 +249,118 @@
                 ;; Derive every set's table NOW, while a failure is still a compile-time
                 ;; error of this form: a set naming an absent export must be reported
                 ;; before any `__init` runs, not from the mode-6 merge after it.
-                (for-each
-                  (lambda (s)
-                    (when (import-set-spec? s)
-                      (import-set-table s (assoc (import-spec-library s) *repl-libs*))))
-                  (cdr form))
+                (repl-candidate-import-views (append *repl-import-specs* (cdr form)))
                 (cons (quote import) (baked-init-symbols (run-closure-order libs))))))]
-        [else
-          (let ([dn (define-name form)])
-            ;; Every name this form binds: one define, or a record's whole family.  Both
-            ;; halves matter (change: binding-aware-expander).  #79: `define-name` answers
-            ;; #f for define-record-type, so a template mentioning the constructor was
-            ;; renamed per expansion and then unbound -- `compute-known` does the same for
-            ;; the batch paths, and the two must agree or dev->ship fidelity fails on a
-            ;; macro over a record.  #103: a define at the prompt DISPLACES a keyword of
-            ;; that name, and each REPL form is expanded on its own with no enclosing
-            ;; letrec to make the name a lexical binding, so the session's macro
-            ;; environment is where that shadowing has to happen (design D3).
-            (repl-note-defines!
-              (cond
-                [dn (list dn)]
-                [(record-type-form? form) (record-type-binding-names form)]
-                [else (quote ())]))
-            ;; --dump in the REPL: the entered form IS the unit under inspection, and
-            ;; every stage is tagged with the form's identity -- its define name, else
-            ;; its session index -- since these passes run once per form (design D8,
-            ;; change: emit-dump-stages).
-            (let* ([d (dump-tagged
-                        (make-dumper #f)
-                        (if dn
-                            (string-append "define " (symbol->string dn))
-                            (string-append "form " (number->string (+ *repl-n* 1)))))]
-                   ;; the slots the session already has, snapshotted BEFORE this form
-                   ;; registers its own define -- so a `set!` of an existing global
-                   ;; references its slot instead of re-defining it (issue #5).
-                   [prior (map cdr (vector-ref *repl-env* 0))]
-                   [il (repl-lower-form *repl-env* (repl-expand-form form))])
-              (d "parse+rename" il)
-              ;; the session's imported procedures are direct-callable from this form
-              ;; (change: cross-unit-direct-calls); set per form, so nothing an earlier
-              ;; library load left behind can leak into a session with no imports.
-              (set-import-calls! *repl-calls*)
-              (let ([lc (repl-lcode il d)])
-                (let ([m (emit-repl-module lc (+ *repl-n* 1) prior)])
-                  (set! *repl-n* (+ *repl-n* 1))
-                  (cons (quote ok) (cons (car m) (cadr m)))))))]))))
+        [else (repl-compile-source-form form)]))))
+
+(define (repl-source-splicing-form form)
+  (and (pair? form)
+       (let ([binding (assq (car form) (repl-session-bindings))])
+         (and binding
+              (eq? (cadr binding) 'core)
+              (let ([canonical (cons (cadddr binding) (cdr form))])
+                (and (splicing-form? canonical) canonical))))))
+
+;; The shared frontend recognizes syntax by binding before the REPL discovers
+;; definitions. A renamed define or define-syntax therefore follows the same
+;; path as its ordinary spelling, and generated definition groups persist.
+(define (repl-compile-source-form form)
+  (let* ([old-macros *repl-macro-env*]
+         [expanded (frontend-expand-forms (list form)
+                                          old-macros
+                                          *repl-known*
+                                          (repl-session-bindings)
+                                          (list 'repl *repl-syntax-n*))]
+         [forms (car expanded)]
+         [macros (cadr expanded)])
+    ;; Only binders originating in source are visible to later source forms.
+    ;; Introduced globals and transformers remain in the protected registry.
+    (set! *repl-source-names*
+      (union *repl-source-names* (frontend-source-targets expanded)))
+    (repl-merge-source-aliases! (frontend-source-aliases expanded))
+    (set! *repl-syntax-n* (+ *repl-syntax-n* 1))
+    (set! *repl-macro-env*
+      (append macros (filter (lambda (m) (not (assq (car m) macros))) old-macros)))
+    (set! *repl-own-macros*
+      (append macros
+              (filter (lambda (m) (not (assq (car m) macros))) *repl-own-macros*)))
+    (set! *repl-own-names* (filter (lambda (n) (not (assq n macros))) *repl-own-names*))
+    (vector-set! *repl-env*
+                 0
+                 (filter (lambda (p) (not (assq (car p) macros)))
+                         (vector-ref *repl-env* 0)))
+    (set! *repl-known* (union *repl-known* (map car macros)))
+    (if
+      (null? forms)
+      (cons (quote syntax) (if (pair? form) (render-datum (cadr form)) ""))
+      (let* ([dn (and (null? (cdr forms)) (define-name (car forms)))]
+             [d (dump-tagged
+                  (make-dumper #f)
+                  (if dn
+                      (string-append "define " (symbol->string dn))
+                      (string-append "form " (number->string (+ *repl-n* 1)))))]
+             [prior (map cdr (vector-ref *repl-env* 0))]
+             [group? (pair? (cdr forms))])
+        (for-each
+          (lambda (f)
+            (repl-note-defines! (cond
+                                  [(define-name f) => list]
+                                  [(record-type-form? f) (record-type-binding-names f)]
+                                  [else (quote ())]))
+            (when (and group? (define-form? f)) (repl-register-define! *repl-env* f)))
+          forms)
+        (let* ([ils (map-lr (lambda (f) (repl-lower-form* *repl-env* f (not group?)))
+                            forms)]
+               [il (let loop ([es ils])
+                     (if (null? (cdr es))
+                         (car es)
+                         (list 'seq (car es) (loop (cdr es)))))])
+          ;; Keep prior generations addressable by definition-site references
+          ;; captured in transformers even after the public name is redefined.
+          (for-each
+            (lambda (n)
+              (let ([sym (repl-env-lookup *repl-env* n)])
+                (unless (memq sym *repl-owned-globals*)
+                  (set! *repl-owned-globals* (cons sym *repl-owned-globals*)))
+                (unless (assq sym (vector-ref *repl-env* 0))
+                  (vector-set! *repl-env*
+                               0
+                               (cons (cons sym sym) (vector-ref *repl-env* 0))))))
+            *repl-own-names*)
+          (repl-finalize-transformer-globals! (list 'repl (- *repl-syntax-n* 1)))
+          (d "expand" forms)
+          (d "parse+rename" il)
+          (set-import-calls! *repl-calls*)
+          (let* ([lc (repl-lcode il d)] [m (emit-repl-module lc (+ *repl-n* 1) prior)])
+            (set! *repl-n* (+ *repl-n* 1))
+            (cons (quote ok) (cons (car m) (cadr m)))))))))
+
+;; A frontend definition group names globals before the REPL allocates their
+;; persistent generations. Freeze those references once registration is complete.
+(define (repl-finalize-transformer-globals! unit)
+  (define (resolve-row row)
+    (let ([origin (caddr row)])
+      (if (and (eq? (cadr row) 'runtime)
+               (pair? origin)
+               (eq? (car origin) 'global)
+               (equal? (cadr origin) unit)
+               (memq (caddr origin) *repl-own-names*))
+          (let ([target (repl-env-lookup *repl-env* (caddr origin))])
+            (append (list (car row) 'runtime (list 'session target) target)
+                    (cdr (cdddr row))))
+          row)))
+  (set! *repl-own-macros*
+    (map (lambda (m)
+           (if (contextual-transformer? m)
+               (make-contextual-transformer (car m)
+                                            (transformer-origin m)
+                                            (transformer-literals m)
+                                            (transformer-rules m)
+                                            (map resolve-row (transformer-context m)))
+               m))
+         *repl-own-macros*))
+  (set! *repl-macro-env*
+    (map (lambda (m) (or (assq (car m) *repl-own-macros*) m)) *repl-macro-env*)))
 
 ;; text -> (status . payload).  Read exactly one form from the host-supplied text
 ;; (the host already sliced it to one complete form via form-complete?), then
@@ -302,6 +399,8 @@
           ;; prelude name is both a define and a keyword, which
           ;; test/macro-shadow-check.sh keeps true -- and the point is that it stays a
           ;; checked property rather than an assumption buried in this loop.
+          (set! *repl-source-names* (cons (define-name f) *repl-source-names*))
+          (repl-merge-source-aliases! (list (cons (define-name f) (define-name f))))
           (repl-note-defines! (list (define-name f)))
           (repl-register-define! *repl-env* f)]
         [else (if #f #f)]))
@@ -342,6 +441,15 @@
   (set! *repl-known*
     (union* (list *core-keywords* *prims* *extra-op-keywords* (map car *integrable*))))
   (set! *repl-n* 0)
+  (set! *repl-import-specs* (quote ()))
+  (set! *repl-import-views* (quote ()))
+  (set! *repl-implicit-base?* (not (string=? prelude-src "")))
+  (set! *repl-own-names* (quote ()))
+  (set! *repl-own-macros* (quote ()))
+  (set! *repl-source-names* (quote ()))
+  (set! *repl-source-aliases* (quote ()))
+  (set! *repl-owned-globals* (quote ()))
+  (set! *repl-syntax-n* 0)
   (set! *repl-libs* (quote ()))
   (set! *repl-calls* (quote ()))
   (set! *repl-lib-imports* (quote ()))
@@ -357,9 +465,7 @@
   ;; it into the session scope.  init only merges the derived-form MACROS (the
   ;; compile-time half), emitting NO procedure batch, so it returns "".  --no-prelude
   ;; passes "" here, so no macros are merged and no auto-import happens.
-  (let ([forms (read-all-from-string prelude-src)])
-    (for-each (lambda (f) (when (define-syntax-form? f) (repl-note-syntax! f))) forms)
-    ""))
+  "")
 
 ;; Mode 6 -- merge a registered library's exports into the session scope, so later forms
 ;; resolve its names to the loaded unit's external globals.  Two callers, told apart by
@@ -377,18 +483,81 @@
 ;;
 ;; Returns (ok . "") or (error . msg) so the host can warn if a library was not registered.
 (define (repl-autoimport text)
-  (if (string=? text "")
-      (if (repl-import! (quote (scheme base)))
-          (cons (quote ok) "")
-          (cons (quote error) "(scheme base) not loaded (missing from manifest?)"))
-      (let loop ([specs (cdr (car (read-all-from-string text)))])
-        (cond
-          [(null? specs) (cons (quote ok) "")]
-          [(repl-import! (car specs)) (loop (cdr specs))]
-          [else (cons (quote error)
-                      (string-append "imported library not loaded: "
-                                     (render-datum (import-spec-library
-                                                     (car specs)))))]))))
+  (guard (e (#t (cons (quote error) (repl-error->string e))))
+    (let* ([specs (if (string=? text "")
+                      *repl-import-specs*
+                      (append *repl-import-specs* (cdr (one-artifact-datum text))))]
+           [views (repl-candidate-import-views specs)])
+      ;; Derivation and validation finish before any session field is changed.
+      (repl-install-import-views! specs views)
+      (cons (quote ok) ""))))
+
+;; Resolve each explicit view independently, retaining its source library for
+;; diagnostics. An explicit base view replaces the startup view as one unit.
+(define (repl-candidate-import-views specs)
+  (let* ([explicit-base?
+           (any-of? (lambda (s) (equal? (import-spec-library s) (quote (scheme base))))
+                    specs)]
+         [effective (if (and *repl-implicit-base?* (not explicit-base?))
+                        (cons (quote (scheme base)) specs)
+                        specs)]
+         [views (map-lr
+                  (lambda (spec)
+                    (let ([table (assoc (import-spec-library spec) *repl-libs*)])
+                      (unless table
+                        (error 'import
+                               "imported library not loaded"
+                               (import-spec-library spec)))
+                      (if (import-set-spec? spec) (import-set-table spec table) table)))
+                  effective)])
+    (validate-import-tables views)))
+
+(define (repl-merge-source-aliases! aliases)
+  (set! *repl-source-aliases*
+    (append aliases
+            (filter (lambda (old) (not (assq (car old) aliases)))
+                    *repl-source-aliases*))))
+
+;; Source spellings are public aliases, while storage and transformer registries
+;; retain actual targets. A new alias never changes a previously captured slot.
+(define (repl-session-bindings)
+  (append (map (lambda (alias)
+                 (let ([m (assq (cdr alias) *repl-own-macros*)])
+                   (list (car alias) 'macro (transformer-origin m) m)))
+               (filter (lambda (alias)
+                         (and (memq (cdr alias) *repl-source-names*)
+                              (assq (cdr alias) *repl-own-macros*)))
+                       *repl-source-aliases*))
+          (map (lambda (alias)
+                 (let ([sym (repl-env-lookup *repl-env* (cdr alias))])
+                   (list (car alias) 'runtime (list 'session sym) sym)))
+               (filter (lambda (alias)
+                         (and (memq (cdr alias) *repl-source-names*)
+                              (memq (cdr alias) *repl-own-names*)))
+                       *repl-source-aliases*))
+          (import-tables->bindings *repl-import-views*)
+          (if *repl-implicit-base?* (quote ()) (compiler-builtin-bindings))))
+
+(define (repl-install-import-views! specs views)
+  (let* ([own-env (filter (lambda (p)
+                            (or (memq (car p) *repl-own-names*)
+                                (memq (car p) *repl-owned-globals*)))
+                          (vector-ref *repl-env* 0))]
+         [macro-env (prune-shadowed-macros
+                      (append *repl-own-macros* (import-tables->macro-env views))
+                      *repl-own-names*)]
+         [env (append own-env (import-tables->env-alist views))]
+         [calls (import-tables->call-alist views)]
+         [known (union* (list *repl-own-names*
+                              (map car macro-env)
+                              (map car env)
+                              (map car (import-tables->bindings views))))])
+    (vector-set! *repl-env* 0 env)
+    (set! *repl-macro-env* macro-env)
+    (set! *repl-known* known)
+    (set! *repl-calls* calls)
+    (set! *repl-import-specs* specs)
+    (set! *repl-import-views* views)))
 
 ;; --- library import (both-paths REPL half; change: module-artifacts-vertical-slice)
 ;; Merge a loaded library's exports into the session scope: each external name
@@ -403,50 +572,11 @@
 ;; again through a different set adds the newly visible names, as successive imports
 ;; always have.
 (define (repl-import! spec)
-  (let* ([lib (assoc (import-spec-library spec) *repl-libs*)]
-         [entry (and lib (if (import-set-spec? spec) (import-set-table spec lib) lib))])
-    (and
-      entry
-      (begin
-        (for-each (lambda (e) ; e = (external-name . mangled-string)
-                    (vector-set! *repl-env*
-                                 0
-                                 (cons (cons (car e) (string->symbol (cdr e)))
-                                       (vector-ref *repl-env* 0)))
-                    ;; the imported name is a "known" binding, so a derived-form macro
-                    ;; may introduce a reference to it (e.g. `case` -> `memv`) without
-                    ;; hygiene renaming it away (change: module-prelude-scheme-base).
-                    (set! *repl-known* (cons (car e) *repl-known*)))
-                  (cadr entry))
-        ;; and its direct-callable procedures, keyed by the same mangled symbol a
-        ;; later form will resolve to (change: cross-unit-direct-calls).  A
-        ;; redefinition does not disturb these: it binds the NAME to a fresh
-        ;; program global (x.gN), which is not in this table, so the redefined
-        ;; name goes back to an indirect call while forms compiled earlier keep
-        ;; direct-calling the library slot they captured.
-        (set! *repl-calls*
-          (append (import-tables->call-alist (list entry)) *repl-calls*))
-        ;; ...and its compile-time interface (change: library-macro-export, design D7):
-        ;; the exported transformers join the session's macro environment so a LATER
-        ;; form may use an imported macro, and the mangled bindings their templates
-        ;; reference join the environment (mapping to themselves, so they lower as
-        ;; external globals) and the known set.  All three are session state, so an
-        ;; imported macro persists across forms exactly as an imported procedure does,
-        ;; and is restored with the rest of the state when a form's compile fails.
-        (let ([refs (import-tables->macro-refs (list entry))])
-          ;; appended, not consed: a `define-syntax` entered at the prompt goes on the
-          ;; FRONT (repl-note-syntax!), so the session's own macro shadows an imported
-          ;; keyword of the same spelling.
-          (set! *repl-macro-env*
-            (append *repl-macro-env* (import-tables->macro-env (list entry))))
-          (for-each (lambda (k) (set! *repl-known* (cons k *repl-known*)))
-                    (import-tables->macro-keywords (list entry)))
-          (for-each
-            (lambda (s)
-              (vector-set! *repl-env* 0 (cons (cons s s) (vector-ref *repl-env* 0)))
-              (set! *repl-known* (cons s *repl-known*)))
-            refs))
-        #t))))
+  (and (assoc (import-spec-library spec) *repl-libs*)
+       (let* ([specs (append *repl-import-specs* (list spec))]
+              [views (repl-candidate-import-views specs)])
+         (repl-install-import-views! specs views)
+         #t)))
 
 ;; Assemble the import tables (list (name export-alist call-rows) ...) for a library's
 ;; direct imports from the already-loaded units in *repl-libs* (change:
@@ -997,7 +1127,9 @@
                           (list? (cadr table))
                           (list? (caddr table))))
                 (error 'cache "cache metadata row's table does not match its name" name)
-                (check-cached-rows (cdr rows))))))))
+                (begin
+                  (validate-library-interface table)
+                  (check-cached-rows (cdr rows)))))))))
 
 ;; Publish each row.  An already-registered library is left alone rather than duplicated,
 ;; the same tolerance mode 4's `already` status provides: every compiler host registers the baked
@@ -1685,7 +1817,16 @@
       ;; pending, 23 reports it, 24 answers, and every later parse reads the answers.
       (set! *library-answers* (vector-ref s 14))
       (set! *library-pending* (vector-ref s 15))
-      (set! *library-answers-used* (vector-ref s 16)))))
+      (set! *library-answers-used* (vector-ref s 16))
+      (set! *repl-import-specs* (vector-ref s 17))
+      (set! *repl-import-views* (vector-ref s 18))
+      (set! *repl-implicit-base?* (vector-ref s 19))
+      (set! *repl-own-names* (vector-ref s 20))
+      (set! *repl-own-macros* (vector-ref s 21))
+      (set! *repl-owned-globals* (vector-ref s 22))
+      (set! *repl-syntax-n* (vector-ref s 23))
+      (set! *repl-source-names* (vector-ref s 24))
+      (set! *repl-source-aliases* (vector-ref s 25)))))
 (define (repl-save-state!)
   (repl-state-set! (vector *repl-env*
                            *repl-macro-env*
@@ -1703,7 +1844,16 @@
                            *repl-pending*
                            *library-answers*
                            *library-pending*
-                           *library-answers-used*)))
+                           *library-answers-used*
+                           *repl-import-specs*
+                           *repl-import-views*
+                           *repl-implicit-base?*
+                           *repl-own-names*
+                           *repl-own-macros*
+                           *repl-owned-globals*
+                           *repl-syntax-n*
+                           *repl-source-names*
+                           *repl-source-aliases*)))
 
 ;; --- the dispatched embedded entry (design D2) -------------------------------
 ;; The host sets (repl-mode)/(repl-input) via rt_repl_set, then calls this ccc

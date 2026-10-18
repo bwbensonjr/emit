@@ -23,6 +23,11 @@
 ;;; entry those paths would have no standard library.  It is ordered first for readability;
 ;;; the loader is fixpoint-driven and does not depend on manifest order.
 ;;;
+;;; (emit list) is a PUBLIC but non-standard ordinary library.  It exposes Emit's
+;;; `filter`, `fold-right`, and `iota` helpers without making them part of (scheme base).
+;;; The definitions stay in (emit internal) for compiler use; this library re-exports
+;;; those same bindings.
+;;;
 ;;; (emit filesystem) is a PUBLIC but non-standard ordinary library.  Its four narrow
 ;;; host operations are explicit imports so directory traversal and atomic replacement
 ;;; do not leak into (scheme base) or the R7RS (scheme file) surface.
@@ -34,6 +39,7 @@
 ;;; the baked members: (scheme base) for the ordinary procedures they stand on, and
 ;;; (emit internal) for the private port/reader machinery.
 ((library (emit internal) (source "lib/emit/internal.sld"))
+  (library (emit list) (source "lib/emit/list.sld"))
   (library (emit filesystem) (source "lib/emit/filesystem.sld"))
   (library (scheme base) (source "lib/scheme/base.sld"))
   (library (scheme inexact) (source "lib/scheme/inexact.sld"))

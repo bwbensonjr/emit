@@ -275,8 +275,10 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
   multi-form programs.
 - Derived forms: `cond` (with `else`/`=>`/bare-test clauses), `and`, `or`, `when`, `unless`,
   `let*` — realized as `syntax-rules` macros in the prelude; named `let` (hand-written).
-- **Macros**: `define-syntax` + `syntax-rules` (literals, `_`, ellipsis), a fixpoint
-  `expand` stage, hygienic for macro-introduced identifiers. A library may **export** a macro
+- **Macros**: `define-syntax` + `syntax-rules` (literals, `_`, ellipsis), lexical
+  `let-syntax`/`letrec-syntax`, internal syntax definitions, and a fixpoint `expand` stage.
+  Expansion preserves definition-site bindings and the context of substituted source, with
+  fresh introduced binders and binding-aware literals. A library may **export** a macro
   (change: `library-macro-export`, issue #48) — the `.exports` artifact carries a compile-time half,
   and a template's free identifiers are resolved in the *defining* library, so an exported macro may
   reach the library's private procedures and private macros without widening its public surface.
@@ -325,8 +327,9 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
 - A prelude re-homed as the library `(scheme base)`, auto-imported into every program on all
   three compilation paths — the Chez driver, the REPL, and the Chez-free embedded runner
   (`emit run`/`emit build`) — with user-wins shadowing and `--no-prelude` to opt out:
-  `list length reverse append map memq assq member assoc filter fold-left fold-right`,
+  `list length reverse append map memq assq member assoc fold-left`,
   the n-ary character comparisons `char=? char<? char>? char<=? char>=?`, and `string->list`.
+  Emit's `filter`, `fold-right`, and `iota` require an explicit `(import (emit list))`.
   `(scheme base)` is now **library zero** for the compiler's own build too: the compiler
   binaries link the baked library set and reference its exports rather than inlining the
   prelude (change: `compiler-bootstrap-rehome`).
@@ -371,9 +374,7 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
 ## Not yet done
 
 **Larger language features**
-- **Macros (follow-ons)** — `let-syntax`/`letrec-syntax` (local macros), procedural /
-  `syntax-case` macros, and full referential-transparency hygiene (the current expander is
-  hygienic for macro-introduced identifiers only).
+- **Macros (follow-ons)** — procedural / `syntax-case` macros and identifier transformers.
 - **Numeric tower** — fixnums + inexact reals (flonums), with fixnum/flonum contagion on
   `+ - * /` and the comparisons, real division `/`, and `modulo`; still no bignums or exact
   rationals. Exact integers span `[-2^60, 2^60)`; a result outside that range is a

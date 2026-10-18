@@ -203,10 +203,21 @@
 ;; lambda `(lambda gs ...)` collects all call args into the list `gs`, which serves
 ;; BOTH `(map + xs ys)` (args passed individually) and `(apply + ns)` (a list).
 (define (eta-integrable entry) ; (name raw arity [fold-kind]) -> value-position lambda
-  (if (and (pair? (cdddr entry)) (cadddr entry))
-      (fold-eta (cadr entry) (cadddr entry))
-      (let ([ps (fresh-syms (caddr entry))])
-        `(lambda ,ps (primcall ,(cadr entry) ,@ps)))))
+  (cond
+    ;; The standard write library re-exports these same integrated bindings.
+    ;; Preserve its optional-port procedure behavior in value position too.
+    [(memq (car entry) '(display write))
+      (let* ([obj (fresh-name 'obj)]
+             [ports (fresh-name 'ports)]
+             [port-op (if (eq? (car entry) 'display) '%display-port '%write-port)])
+        `(lambda (,obj . ,ports)
+           (if (primcall %null? ,ports)
+               (primcall ,(cadr entry) ,obj)
+               (primcall ,port-op ,obj (primcall %car ,ports)))))]
+    [else (if (and (pair? (cdddr entry)) (cadddr entry))
+              (fold-eta (cadr entry) (cadddr entry))
+              (let ([ps (fresh-syms (caddr entry))])
+                `(lambda ,ps (primcall ,(cadr entry) ,@ps))))]))
 
 ;; a left-fold `(lambda gs (loop IDENT gs))` where loop threads ACC over gs with
 ;; `(primcall RAW acc (car rest))`.  Used for `+`(0) `*`(1) `string-append`("").
@@ -385,6 +396,12 @@
 (define (parse-program sexp) (parse-expr sexp))
 
 (define (parse-expr e)
+  (when (and (pair? e) (eq? (car e) 'define-values))
+    (error 'parse
+           (if (and (pair? (cdr e)) (not (list? (cadr e))))
+               "define-values: dotted binding lists are not supported"
+               "define-values: not supported")
+           e))
   (cond
     [(and (integer? e) (exact? e)) `(const ,e)]
     [(boolean? e) `(const ,e)]
@@ -452,7 +469,10 @@
     [(and (real? e) (not (exact? e))) `(const ,e)]
     [else (error 'parse "bad expression" e)]))
 
-(define (parse-bind b) (list (car b) (parse-expr (cadr b))))
+(define (parse-bind b)
+  (unless (and (list? b) (= (length b) 2) (symbol? (car b)))
+    (error 'parse "binding: expected an identifier and initializer" b))
+  (list (car b) (parse-expr (cadr b))))
 
 (define (parse-body body) ; non-empty list of source forms -> one core expr
   (if (and (pair? body) (define-form? (car body)))
@@ -625,16 +645,17 @@
          [ctor (car ctor-spec)]
          [ctor-fields (cdr ctor-spec)]
          [field-names (map car field-specs)]
+         ;; Generated record storage must not depend on the public `list` binding:
+         ;; it may be hidden by an import set or shadowed by user source.
+         [field-values
+           (fold-right (lambda (fn tail)
+                         (list '%cons (if (memq fn ctor-fields) fn '(quote ())) tail))
+                       '(quote ())
+                       field-names)]
          [rtd (fresh-name 'rtd)]
          [o (fresh-name 'r)])
     (cons (list rtd `(%make-record-type ,(symbol->string tyname)))
-          (cons (list ctor
-                      `(lambda ,ctor-fields
-                         (%make-record
-                           ,rtd
-                           (list ,@(map (lambda (fn)
-                                          (if (memq fn ctor-fields) fn '(quote ())))
-                                        field-names)))))
+          (cons (list ctor `(lambda ,ctor-fields (%make-record ,rtd ,field-values)))
                 (cons (list pred `(lambda (,o) (%record-of-type? ,o ,rtd)))
                       (record-field-bindings field-specs 0))))))
 

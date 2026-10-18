@@ -6,6 +6,7 @@
 ;;; the ambiguity was silent: collect-define-syntax lifted the transformer out and the
 ;;; export check saw only whichever one it looked for first.
 (define-library (macro-dupname-lib)
+  (import (scheme base))
   (export f)
   (begin
     (define (f x) (+ x 1))
