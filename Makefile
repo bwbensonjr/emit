@@ -88,10 +88,20 @@ DESTDIR     ?=
 # changed content, cross one timestamp tick so even an immediately repeated configuration change
 # leaves this prerequisite strictly newer than native outputs from the preceding invocation.
 NATIVE_CONFIG := build/native-config
+VERSION := $(strip $(shell sed -n '1p' VERSION 2>/dev/null))
 
-$(NATIVE_CONFIG): FORCE Makefile | build
+# Read VERSION as data in the stamp recipe; never interpolate its contents into shell source.
+$(NATIVE_CONFIG): FORCE Makefile VERSION | build
 	@tmp="$@.$$$$.tmp"; trap 'rm -f "$$tmp"' EXIT HUP INT TERM; \
-	  { printf '%s\n' \
+	  version=""; IFS= read -r version < VERSION; \
+	  if [ "$$(wc -l < VERSION | tr -d ' ')" -ne 1 ] || \
+	     ! printf '%s\n' "$$version" | cmp -s - VERSION || \
+	     ! printf '%s\n' "$$version" | LC_ALL=C grep -Eq '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$$'; then \
+	    printf '%s\n' 'configure invalid VERSION (expected one SemVer line) -> VERSION' >&2; exit 2; \
+	  fi; \
+	  { printf 'VERSION=%s\n' "$$version"; \
+	    printf '%s\n' \
+	      'SHIPPED_FILES=$(SLDS) $(LIBDATA) $(SUPPORT) emit-libs.scm' \
 	      'CC=$(CC)' \
 	      'CXX=$(CXX)' \
 	      'LLVM_CONFIG=$(LLVM_CONFIG)' \
@@ -180,7 +190,9 @@ build/runtime-host.o: src/runtime/runtime.c Makefile $(NATIVE_CONFIG) | build
 # describe the BUILD MACHINE's toolchain, so they follow $(CC)/$(GC_*) and not
 # PREFIX/DESTDIR -- staging into a temporary root must not change them.
 build/emit.o: src/emit.cpp src/native-cache.h src/explicit-artifact.h Makefile $(NATIVE_CONFIG) | build
-	$(CXX) $(CXXFLAGS) -DEMIT_PREFIX='"$(PREFIX)"' \
+	$(CXX) $(CXXFLAGS) -DEMIT_VERSION='"$(VERSION)"' \
+	  -DEMIT_SHIPPED_FILES='"$(SLDS) $(LIBDATA) $(SUPPORT) emit-libs.scm"' \
+	  -DEMIT_PREFIX='"$(PREFIX)"' \
 	  -DEMIT_DEFAULT_CC='"$(CC)"' \
 	  -DEMIT_DEFAULT_GC_INC='"$(GC_INC)"' \
 	  -DEMIT_DEFAULT_GC_LIB='"$(GC_LIB)"' \

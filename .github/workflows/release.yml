@@ -1,0 +1,105 @@
+name: Source release
+on:
+  pull_request:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compatibility:
+    if: github.event_name != 'pull_request'
+    uses: ./.github/workflows/compatibility.yml
+  package:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check identity and package exact commit
+        env:
+          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+        run: |
+          /bin/bash test/ci-provision-logging-tests.sh
+          /bin/bash test/ci-archive-isolation-tests.sh
+          tag="${RELEASE_TAG:-v$(< VERSION)}"
+          tools/release-source.sh HEAD "$RUNNER_TEMP/assets" "$tag"
+          tools/release-source.sh HEAD "$RUNNER_TEMP/repeated" "$tag"
+          diff -r "$RUNNER_TEMP/assets" "$RUNNER_TEMP/repeated"
+          test/release-source-tests.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: source-release
+          path: ${{ runner.temp }}/assets/*
+          if-no-files-found: error
+  archive:
+    needs: package
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: source-release
+          path: ${{ runner.temp }}/assets
+      - name: Identify pinned dependency recipe
+        id: recipe
+        run: |
+          identity=$(tools/ci-provision.sh --identity 23)
+          printf 'identity=%s\n' "$identity" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        id: deps
+        with:
+          path: ${{ runner.temp }}/emit-deps
+          key: emit-deps-${{ runner.os }}-${{ runner.arch }}-23-${{ steps.recipe.outputs.identity }}
+      - name: Provision pinned dependencies
+        run: tools/ci-provision.sh 23 "$RUNNER_TEMP/emit-deps" >> "$GITHUB_ENV"
+      - name: Save validated dependencies before archive tests
+        if: steps.deps.outputs.cache-hit != 'true'
+        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ runner.temp }}/emit-deps
+          key: ${{ steps.deps.outputs.cache-primary-key }}
+      - name: Build exact archive with network and checkout denied
+        run: |
+          set -o pipefail
+          tools/ci-archive.sh "$RUNNER_TEMP/assets" 2>&1 | tee "$RUNNER_TEMP/archive.log"
+      - name: Preserve archive diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: archive-${{ runner.os }}
+          path: ${{ runner.temp }}/archive.log
+  publish:
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    needs: [compatibility, package, archive]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    concurrency:
+      group: source-release-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: source-release
+          path: ${{ runner.temp }}/assets
+      - name: Publish previously validated bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: tools/release-publish.sh "$RELEASE_TAG" "$RUNNER_TEMP/assets"

@@ -1,0 +1,79 @@
+name: Source compatibility
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  source:
+    name: ${{ matrix.os }} / LLVM ${{ matrix.llvm }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+        llvm: [19, 20, 21, 22, 23]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Verify provisioning tools
+        run: |
+          cmake --version
+          ninja --version
+          git --version
+          if ! command -v timeout >/dev/null 2>&1 && [ "$RUNNER_OS" = macOS ]; then
+            printf 'ci: prepare GNU timeout -> private test tools directory\n' >&2
+            command -v gtimeout >/dev/null 2>&1 || brew install coreutils >&2
+            mkdir -p "$RUNNER_TEMP/emit-test-tools"
+            ln -s "$(command -v gtimeout)" "$RUNNER_TEMP/emit-test-tools/timeout"
+            export PATH="$RUNNER_TEMP/emit-test-tools:$PATH"
+            printf '%s\n' "$RUNNER_TEMP/emit-test-tools" >> "$GITHUB_PATH"
+          fi
+          timeout --version
+          /bin/bash test/ci-provision-logging-tests.sh
+          /bin/bash test/ci-archive-isolation-tests.sh
+      - name: Identify pinned dependency recipe
+        id: recipe
+        env:
+          LLVM_MAJOR: ${{ matrix.llvm }}
+        run: |
+          identity=$(tools/ci-provision.sh --identity "$LLVM_MAJOR")
+          printf 'identity=%s\n' "$identity" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        id: deps
+        with:
+          path: ${{ runner.temp }}/emit-deps
+          key: emit-deps-${{ runner.os }}-${{ runner.arch }}-${{ matrix.llvm }}-${{ steps.recipe.outputs.identity }}
+      - name: Provision pinned LLVM and libgc
+        env:
+          LLVM_MAJOR: ${{ matrix.llvm }}
+        run: tools/ci-provision.sh "$LLVM_MAJOR" "$RUNNER_TEMP/emit-deps" >> "$GITHUB_ENV"
+      - name: Save validated dependencies before compatibility tests
+        if: steps.deps.outputs.cache-hit != 'true'
+        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ runner.temp }}/emit-deps
+          key: ${{ steps.deps.outputs.cache-primary-key }}
+      - name: Build and test committed bootstrap IR
+        env:
+          LLVM_MAJOR: ${{ matrix.llvm }}
+        run: |
+          set -o pipefail
+          tools/ci-check.sh "$LLVM_MAJOR" 2>&1 | tee "$RUNNER_TEMP/compatibility.log"
+      - name: Preserve diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: compatibility-${{ runner.os }}-${{ matrix.llvm }}
+          path: |
+            ${{ runner.temp }}/compatibility.log
+            build/native-config
+            build/llvm.mk
+          if-no-files-found: warn

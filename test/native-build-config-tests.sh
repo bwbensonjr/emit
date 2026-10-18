@@ -18,7 +18,8 @@ trap restore EXIT HUP INT TERM
 pass=0; fail=0
 ok  () { echo "  [OK  ] $1"; pass=$((pass+1)); }
 bad () { echo "  [FAIL] $1"; fail=$((fail+1)); }
-mtime () { stat -f %m "$1" 2>/dev/null || stat -c %Y "$1"; }
+# GNU stat's -f selects filesystem output, so try its unambiguous format option first.
+mtime () { stat -c %Y "$1" 2>/dev/null || stat -f %m "$1"; }
 
 if ! . tools/llvm-env.sh >/dev/null 2>&1; then
   echo "  [FAIL] could not discover the real toolchain"

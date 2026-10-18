@@ -737,6 +737,121 @@ iro="$(EMIT_VERBOSITY=quiet EMIT_CACHE=/nonexistent/cannot/create "$EMIT" run "$
 [ "$iro" = "42" ] && ok "installed emit works with no usable cache location => $iro" \
   || bad "installed emit, unusable cache location => [$iro]"
 
+# --- move the complete prefix and make its old location unavailable ------------
+# This is the relocation contract: the executable-relative payload must supply
+# libraries and build support after the compiled-prefix fallback has disappeared.
+echo
+echo "relocated install from an unrelated directory"
+MOVED="$TMP/moved-prefix"
+mv "$PREFIX" "$MOVED"
+if [ ! -e "$PREFIX" ] && [ -f "$MOVED/share/emit/emit-libs.scm" ]; then
+  ok "the old prefix is unavailable and the complete payload moved"
+else
+  bad "could not isolate the moved prefix"
+fi
+PREFIX="$MOVED"
+EMIT="$PREFIX/bin/emit"
+RPREFIX="$(cd "$PREFIX" && pwd -P)"
+RELOCATED_CWD="$TMP/relocated-cwd"
+mkdir -p "$RELOCATED_CWD" "$TMP/external-bin"
+ln -s "$EMIT" "$TMP/external-bin/emit"
+EXTERNAL_EMIT="$TMP/external-bin/emit"
+cd "$RELOCATED_CWD"
+
+cat > relocated-run.scm <<'EOF'
+(import (scheme inexact))
+(display (sqrt 2.0))
+EOF
+relocated_run="$(EMIT_VERBOSITY=quiet "$EXTERNAL_EMIT" run relocated-run.scm \
+  2>"$TMP/relocated-run.err")"
+if [ "$relocated_run" = "$want" ]; then
+  ok "moved executable resolves a non-baked library from an unrelated cwd"
+else
+  bad "moved executable run => [$relocated_run]"
+  sed 's/^/         /' "$TMP/relocated-run.err"
+fi
+
+relocated_repl="$(printf '%s\n' '(import (scheme inexact))' '(display (sqrt 2.0))' \
+  | EMIT_VERBOSITY=quiet "$EXTERNAL_EMIT" repl 2>"$TMP/relocated-repl.err")"
+if printf '%s\n' "$relocated_repl" | grep -Fq "$want"; then
+  ok "external symlink starts scripted REPL with a non-baked library"
+else
+  bad "relocated scripted REPL did not produce $want"
+  sed 's/^/         /' "$TMP/relocated-repl.err"
+fi
+
+cat > relocated-lib.sld <<'EOF'
+(define-library (relocated check)
+  (import (scheme base) (scheme inexact))
+  (export answer)
+  (begin (define answer (sqrt 4.0))))
+EOF
+if EMIT_VERBOSITY=quiet "$EXTERNAL_EMIT" lib relocated-lib.sld \
+     -o relocated-artifacts >"$TMP/relocated-lib.out" 2>"$TMP/relocated-lib.err" \
+   && [ -s relocated-artifacts/relocated.check.ll ] \
+   && [ -s relocated-artifacts/relocated.check.exports ]; then
+  ok "external symlink compiles a library with a non-baked import"
+else
+  bad "relocated emit lib failed"
+  sed 's/^/         /' "$TMP/relocated-lib.err"
+fi
+
+mkdir -p "$TMP/relocated-project"
+cat > "$TMP/relocated-project/app.scm" <<'EOF'
+(import (scheme inexact))
+(display (sqrt 9.0))
+EOF
+if (cd "$RELOCATED_CWD" && EMIT_VERBOSITY=quiet "$EXTERNAL_EMIT" build \
+      "$TMP/relocated-project/app.scm" -o "$TMP/relocated-project/app") \
+      >"$TMP/relocated-build.out" 2>"$TMP/relocated-build.err" \
+   && [ "$(cd "$RELOCATED_CWD" && "$TMP/relocated-project/app")" = "3.0" ]; then
+  ok "moved install builds and executes AOT code using a non-baked library"
+else
+  bad "relocated emit build or delivered executable failed"
+  sed 's/^/         /' "$TMP/relocated-build.err"
+fi
+
+# A project library is still searched before the moved installation's provider.
+PRECEDENCE="$TMP/precedence"
+mkdir -p "$PRECEDENCE/lib/scheme"
+cat > "$PRECEDENCE/lib/scheme/inexact.sld" <<'EOF'
+(define-library (scheme inexact)
+  (import (scheme base))
+  (export sqrt)
+  (begin (define (sqrt value) 77)))
+EOF
+cat > "$PRECEDENCE/probe.scm" <<'EOF'
+(import (scheme inexact))
+(display (sqrt 2.0))
+EOF
+precedence_got="$(cd "$PRECEDENCE" && EMIT_VERBOSITY=quiet \
+  "$EXTERNAL_EMIT" run probe.scm 2>"$TMP/relocated-precedence.err")"
+if [ "$precedence_got" = "77" ]; then
+  ok "project library provider takes precedence over the relocated installation"
+else
+  bad "project provider did not override installed library => [$precedence_got]"
+  sed 's/^/         /' "$TMP/relocated-precedence.err"
+fi
+
+if EMIT_VERBOSITY=quiet "$EMIT" doctor >"$TMP/relocated-doctor.out" \
+     2>"$TMP/relocated-doctor.err"; then
+  if grep -Fq "executable: $RPREFIX/bin/emit" "$TMP/relocated-doctor.out" \
+     && grep -Fq "support tools/llvm-env.sh: $RPREFIX/share/emit/tools/llvm-env.sh" \
+          "$TMP/relocated-doctor.out" \
+     && grep -Fq "support src/runtime/runtime.c: $RPREFIX/share/emit/src/runtime/runtime.c" \
+          "$TMP/relocated-doctor.out" \
+     && grep -Fq "provider " "$TMP/relocated-doctor.out" \
+     && grep -Fq "$RPREFIX/share/emit/emit-libs.scm" "$TMP/relocated-doctor.out"; then
+    ok "doctor reports the relocated executable, manifest, and support files"
+  else
+    bad "doctor omitted relocated paths"
+    sed 's/^/         /' "$TMP/relocated-doctor.out" "$TMP/relocated-doctor.err"
+  fi
+else
+  bad "doctor failed for a healthy relocated install"
+  sed 's/^/         /' "$TMP/relocated-doctor.err"
+fi
+
 echo
 echo "  $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

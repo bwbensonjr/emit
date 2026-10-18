@@ -28,7 +28,12 @@ file can be edited and changed to reflect decision and priority changes.
   across LLVM majors.
 - `emit build` writes textual IR and forks `clang`, so the user's `clang` must
   be at least as new as the LLVM linked into `emit`.
-- Library lookup uses a `PREFIX` baked in at build time.
+- Library and support-file lookup follows the running executable's resolved
+  location first, using `../share/emit`; the build-time `PREFIX` is the
+  fallback. This lets a complete installed prefix move without rebuilding.
+  The executable still dynamically depends on the LLVM and libgc libraries
+  against which it was linked, and `emit build` uses clang and the system C
+  toolchain available at runtime.
 - `make install` already honors `PREFIX` and `DESTDIR`, and toolchain
   discovery honors `LLVM_CONFIG`.
 - There are no tagged releases or binary artifacts yet.
@@ -137,6 +142,9 @@ ones.
   for compatibility.
 - Cut the first tagged `0.x` release with a source tarball, checksums, and a
   changelog.
+
+See [Installation](INSTALLATION.md) for the current source-build, install,
+relocation, and runtime dependency contract.
 
 ### 2. Low-cost channels
 
