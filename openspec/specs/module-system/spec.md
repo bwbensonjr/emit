@@ -15,12 +15,13 @@ readable manifest.
 ## Requirements
 ### Requirement: Typed binding resolution
 
-Free-identifier resolution SHALL classify every resolved binding by a kind — `local` (the
-current unit's own top-level definition), `imported` (another unit's export), or `primitive`
-(a built-in operator/keyword) — resolving lexical locals first, then the unit's own
-top-level definitions, then imported bindings, then primitives, and otherwise reporting an
-unbound-variable error. In this change no imported bindings exist yet; the resolution
-results for any program that imports no library SHALL be identical to the prior flat model.
+Identifier resolution SHALL distinguish lexical and unit-owned variables, imported runtime
+bindings, integrated primitives, core syntax, auxiliary syntax, and transformers by binding
+identity. Lexical bindings and the unit's own definitions SHALL take precedence over a valid
+import environment. In ordinary source, primitive and syntax bindings SHALL be available only
+through that environment, including the implicit base import; spelling alone SHALL NOT restore
+hidden bindings. The explicit no-prelude compiler environment SHALL retain its built-in
+primitive and core syntax facilities.
 
 #### Scenario: A program's own top-level define resolves as local
 
@@ -30,13 +31,28 @@ results for any program that imports no library SHALL be identical to the prior 
 
 #### Scenario: A primitive resolves as primitive
 
-- **WHEN** a program references a built-in operator or keyword (e.g. `car`, `if`)
+- **WHEN** a program references an available integrated primitive such as `car`
 - **THEN** resolution classifies it as `primitive` and emits the same intrinsic as before
+
+#### Scenario: A core keyword resolves as syntax
+
+- **WHEN** an identifier resolves to the imported core syntax binding for `if`
+- **THEN** it is classified as core syntax and lowered as a conditional, not as a runtime variable
 
 #### Scenario: An unbound identifier still errors
 
-- **WHEN** a program references a name that is neither local, imported, nor primitive
+- **WHEN** a program references a name with no available variable, primitive, syntax, or transformer binding
 - **THEN** resolution reports an unbound-variable error, as it did before
+
+#### Scenario: A hidden built-in does not reappear through fallback
+
+- **WHEN** a program imports `(except (scheme base) car)` and references `car` without defining it
+- **THEN** resolution reports an unbound identifier rather than restoring the integrated primitive
+
+#### Scenario: Local bindings shadow syntax aliases
+
+- **WHEN** a program imports core syntax under an alias and binds that alias as a lexical procedure
+- **THEN** its use in that lexical scope calls the procedure rather than invoking core syntax
 
 ### Requirement: Deterministic module-qualified symbol naming
 
@@ -98,17 +114,17 @@ The compiler SHALL accept a `define-library` form naming a library `(p₁ … p�
 containing `(export …)` declarations and body definitions. Each `export` declaration lists
 either a bare name `<name>` or a rename pair `(rename <internal> <external>)`. The
 **internal** name (the bare name, or `<internal>` in a rename) MUST be a name the library
-defines at its top level, a runtime binding visible through its imports, **or a macro bound
-in its compile-time environment, including one that arrived from an import**; exporting a
-name absent from all three SHALL be a compile-time error. The **external** name (the bare name, or `<external>` in a rename) is the
+defines at its top level, a runtime binding visible through its imports, an imported primitive
+or core/auxiliary syntax binding, **or a macro bound in its compile-time environment, including
+one that arrived from an import**; exporting a name absent from these categories SHALL be a compile-time error. The **external** name (the bare name, or `<external>` in a rename) is the
 spelling under which importers see the binding. Import sets SHALL select and rename the
 bindings available for re-export under the ordinary import-set rules.
 
-**An export SHALL be a procedure, a value, or a macro.** A name bound by a `define-syntax` in the
+**An export SHALL denote a runtime binding, a primitive, core or auxiliary syntax, or a macro.** A name bound by a `define-syntax` in the
 library body counts as a name the library defines, and MAY appear in an `export` declaration — as a
 bare name or as the `<internal>` of a rename. Its transformer travels in the library's compile-time
 export interface rather than in the emitted unit, and an exported name that is neither a top-level
-definition, nor an imported runtime binding, nor a `define-syntax` binding, nor a macro the library imports SHALL still be reported
+definition, nor an imported runtime binding, nor a `define-syntax` binding, nor any imported primitive, syntax, or macro binding SHALL still be reported
 as a name the library does not define.
 
 **The recognized declarations are the seven of R7RS §5.6.1** — `export`, `import`, `begin`,
@@ -131,8 +147,9 @@ A `define-record-type` in a library body SHALL introduce its whole group of bind
 constructor, predicate, accessors, and modifiers) as mutually visible top-level bindings of that
 unit, so that sibling body forms MAY reference them and the `export` declaration MAY export them.
 
-`define-syntax` SHALL remain recognized only at a library body's top level. An inner `define-syntax`,
-`let-syntax`, and `letrec-syntax` remain out of scope.
+Library bodies SHALL support internal `define-syntax`, `let-syntax`, and `letrec-syntax` with
+the lexical scope and hygiene specified by `macro-system`. Local syntax bindings SHALL NOT
+become public exports merely because they occur inside a library body.
 
 #### Scenario: A library exports a procedure it defines
 
@@ -528,9 +545,9 @@ for a stale artifact SHALL distinguish a changed source from a changed compiler 
 The compiler SHALL accept `(import ⟨import set⟩ …)`, where an import set is a library name or one of
 the R7RS transforms `only`, `except`, `prefix`, and `rename` applied to another import set. A bare
 library name SHALL make every export of the library visible in the importing unit under its
-external name: a runtime export resolved as an `imported` binding, and a **macro** export merged
-into the importing compile's macro environment as a transformer keyed on that external name. A
-transform SHALL select and rename those same exports without changing what each one denotes.
+external name, preserving whether it denotes a runtime binding, integrated primitive,
+core or auxiliary syntax, or macro transformer. A transform SHALL select and rename those
+same exports without changing their original binding identities.
 
 `rename` SHALL have its import-set meaning only in **import** position. `(rename <internal>
 <external>)` remains an `export` specification in an `export` declaration — for a macro export as
@@ -571,9 +588,11 @@ alone.
 
 `(only s id …)` SHALL keep just the named exports of `s`, `(except s id …)` SHALL drop them,
 `(prefix s p)` SHALL prepend `p` to every name, and `(rename s (a b) …)` SHALL rename `a` to `b`.
-Sets SHALL nest. A transform SHALL apply to runtime and macro exports alike, SHALL run in the
-importer over the library's existing compile-time interface, and SHALL NOT change any library
-artifact. Every path SHALL produce the same bindings for a given import set.
+Sets SHALL nest. A transform SHALL apply to runtime, primitive, core syntax, auxiliary syntax,
+and macro exports alike, SHALL run in the importer over the library's existing compile-time
+interface, and SHALL NOT change any library artifact. Every path SHALL produce the same bindings
+for a given import set. An absent name SHALL be rejected against the actual library's published
+surface; belonging to the `(scheme ...)` namespace SHALL NOT publish unrelated built-ins.
 
 #### Scenario: `except` hides a name
 
@@ -621,19 +640,72 @@ artifact. Every path SHALL produce the same bindings for a given import set.
 - **THEN** the call returns what the batch path returns, and a later reference to `helper` is
   reported as unbound
 
+#### Scenario: Prefixed primitives work in call and value positions
+
+- **WHEN** a program imports `(prefix (scheme base) b:)` and evaluates `(b:car (b:quote (1 2)))`, `(b:map b:car (b:quote ((1) (2))))`, and `(b:apply b:+ (b:quote (1 2 3)))`
+- **THEN** the results are `1`, `(1 2)`, and `6`, retaining primitive call and first-class value behavior
+- **AND** unprefixed `car` and `+` are unavailable unless introduced separately
+
+#### Scenario: Core definition and binding forms can be renamed
+
+- **WHEN** a program imports `(prefix (scheme base) b:)` and uses `b:define`, `b:lambda`, `b:let`, `b:if`, `b:set!`, and `b:quote`
+- **THEN** they behave as their original bindings, including definition discovery and assignment checks
+- **AND** unprefixed core keywords do not become usable through spelling alone
+
+#### Scenario: Quoted symbols are data
+
+- **WHEN** a program with a prefixed base import evaluates `(b:quote (car if b:car))`
+- **THEN** the datum is exactly `(car if b:car)`, without imported aliases rewriting its symbols
+
+#### Scenario: Auxiliary syntax follows binding identity
+
+- **WHEN** a program renames `cond`, `else`, and `=>` through an import set and uses the aliases together
+- **THEN** the clauses retain their original meaning, and a distinct lexical binding of an auxiliary alias does not match that literal
+
+#### Scenario: A different standard library does not publish base syntax
+
+- **WHEN** a source imports `(only (scheme inexact) define car)`
+- **THEN** the import is rejected because those names are not exported by `(scheme inexact)`
+
+#### Scenario: Primitive and syntax bindings can be re-exported
+
+- **WHEN** a facade imports renamed base primitive and core syntax bindings, exports them under new names, and an importer consumes its saved artifact
+- **THEN** the final aliases denote the original primitive and syntax bindings without runtime wrapper globals
+
 ### Requirement: Overlapping imports resolve deterministically
 
-When two imports in one unit make the same name visible with different bindings, the compiler SHALL
-choose one by a single documented precedence rule that is identical on every path, and SHALL NOT
-report an error. A definition in the importing unit SHALL take precedence over every import, as
-today.
+After import transforms, exposing different bindings under the same visible identifier SHALL
+be a compile-time error naming the identifier and both contributing libraries/import views,
+independent of import order or binding kind. Repeated imports of the same original binding SHALL
+be legal. Conflicts SHALL be checked before local-definition precedence, including collisions
+created within one import set. Every compilation path SHALL enforce this rule.
 
 #### Scenario: Two libraries export one name
 
 - **WHEN** a program imports `(liba)` and `(libb)`, both export `f` with different definitions, and
   the program calls `f`
-- **THEN** the call resolves to the same library's `f` on every path, and that library is the one
-  `docs/MODULES.md` says the precedence rule selects
+- **THEN** compilation fails with an import-conflict diagnostic naming `f`, `(liba)`, and `(libb)`, including when the unit also defines its own `f`
+
+#### Scenario: A diamond imports one original binding twice
+
+- **WHEN** two facades re-export the same owner's runtime binding or transformer, including through renames, and both expose it under one final name
+- **THEN** the imports are accepted and initialization remains once-only
+
+#### Scenario: Equal transformer text does not imply the same binding
+
+- **WHEN** two libraries independently define identical `syntax-rules` transformers and expose them under the same imported keyword
+- **THEN** the imports conflict, even though their transformer data is structurally equal
+
+#### Scenario: Cross-kind and within-set conflicts are rejected
+
+- **WHEN** a procedure and macro, or primitive and core syntax, receive the same visible name, or a rename maps an export onto a different retained binding's name
+- **THEN** the compiler reports an import conflict before expansion or execution
+
+#### Scenario: A rejected REPL import preserves session state
+
+- **WHEN** an import conflicts with an existing explicit session import
+- **THEN** the REPL rejects the complete import transaction before initializing the requested closure or publishing names
+- **AND** earlier bindings, transformers, call metadata, and initialization state remain usable
 
 ### Requirement: An exported macro is usable in an importing unit
 
@@ -674,29 +746,16 @@ mistaken for an application of an unbound variable, and so another macro's templ
 
 ### Requirement: A macro that leaves its library is resolved in the library that defines it
 
-An exported macro is instantiated in the **importer's** scope, so the names its templates mention
-SHALL be resolved before the transformer leaves the exporting library. For each exported macro the
-compiler SHALL rewrite every template identifier that is none of the following to the spelling it
-resolves to in the exporting library:
+An exported transformer SHALL preserve the binding identity and lexical context of its
+definition-site references, including runtime bindings, primitives, core syntax, auxiliary
+syntax, literal identifiers, and private or imported transformers. Template binders SHALL be
+distinguished from free references, and pattern substitutions SHALL retain their use-site
+context. A template's lexical binding SHALL take precedence over a same-spelled library global
+or built-in. Unbound free references SHALL remain unbound rather than capturing importer bindings.
 
-- a pattern variable of that rule's pattern, the ellipsis, the wildcard, or an identifier under
-  `quote`;
-- a **literal** of that rule's `syntax-rules` literal list, which is matched by identity against the
-  use site and SHALL therefore survive verbatim even when the library also defines a top-level
-  binding of that name;
-- a core keyword, a primitive, or an integrable intrinsic — these SHALL be classified **before** the
-  library's own bindings, so a template's `(+ a b)` still reaches inline arithmetic in the importer
-  instead of becoming a call to a global named `+`.
-
-The rewritten spelling SHALL be the exporting unit's mangled symbol for one of its own top-level
-bindings, or the already-mangled symbol for a name the exporting library imports. A template MAY
-therefore reference a binding the library does **not** export, and doing so SHALL NOT add that
-binding to the library's public export surface.
-
-An identifier the compiler cannot resolve SHALL be left as written and renamed per expansion by the
-existing hygiene rule, unchanged. Emit's hygiene is a name-set test with no syntax objects, so a
-template-introduced temporary and a reference to a name nothing defines are indistinguishable; a
-macro that expands correctly today SHALL therefore not be altered by this resolution.
+Private references SHALL NOT widen the public surface. Quoted data SHALL preserve its source
+symbols. Literal identifiers SHALL compare by binding identity at definition and use sites,
+including aliases of the same binding and equal-spelled identifiers with different bindings.
 
 A macro keyword a template mentions SHALL be rewritten to a unit-qualified spelling and its
 transformer carried in the compile-time interface, transitively, whether or not that macro is also
@@ -710,8 +769,9 @@ Because a macro keyword and a top-level binding would then share the unit-qualif
 library that binds the same name with both `define` and `define-syntax` SHALL be a compile-time error
 naming that name.
 
-Resolution SHALL be a pure structural rewrite with no fresh-name generation, so a library's
-compile-time interface is byte-identical however and wherever it is compiled.
+Compile-time interfaces SHALL preserve deterministic origin identities and lexical context,
+so identical full-library inputs produce byte-identical interfaces across hosts and fresh
+processes. Expansion-local fresh identities SHALL NOT become nondeterministic serialized state.
 
 #### Scenario: An exported template calls a private helper
 
@@ -752,8 +812,7 @@ compile-time interface is byte-identical however and wherever it is compiled.
 
 - **WHEN** an exported macro's `syntax-rules` literal list names `else`, its template mentions
   `else`, and the library also defines a top-level `else`
-- **THEN** the template's `else` is unchanged in the compile-time interface, so a use of the macro
-  matching on `else` still matches in the importer
+- **THEN** the literal retains that library's `else` binding identity, matches an alias of that binding, and does not match a different binding merely spelled `else`
 
 #### Scenario: A template's introduced temporary is still hygienic
 
@@ -831,14 +890,13 @@ units carry the qualified names).
 
 ### Requirement: Library export table
 
-Alongside the library unit the compiler SHALL produce a readable export table mapping each
-export's **external** name to its binding's mangled symbol. For a locally defined export,
-the symbol is derived from the exporting library and the internal name; for a re-exported
-imported runtime binding, it is the original symbol obtained from the import interface.
-For `(rename <internal> <external>)` the table key is `<external>` while the target is
-resolved through `<internal>` in the exporting library's environment. A driver reading the table
-together with the unit module SHALL have everything needed to resolve references into the library
-with no access to the library's source.
+Alongside the library unit the compiler SHALL produce a readable export interface.
+Runtime export rows SHALL map external names to original owner globals; locally defined
+runtime exports use the defining unit's mangled symbols, while re-exports retain the original
+target. Renaming changes the key only. Primitive, core syntax, and auxiliary syntax exports
+SHALL instead record their binding kinds and original identities in compile-time metadata,
+without inventing runtime globals. An importer SHALL resolve every binding kind from the
+interface without access to the library's source.
 
 For a locally defined export whose top-level initializer is a lambda, the table SHALL additionally record the
 binding's **code label** and accepted arity shape. A fixed-arity lambda SHALL record its exact arity.
@@ -867,12 +925,14 @@ requiring no evaluation, SHALL be written only to the export artifact and never 
 unit, so that a standalone executable carries no compile-time payload, and SHALL be deterministic, so
 that a library's interface is byte-identical however and wherever it is compiled.
 
-A reader SHALL accept an export table written without a compile-time interface, treating it as a
-library that exports no macro, so that an artifact produced before this change is read rather than
-crashed on. It SHALL also interpret the existing three-field procedure call row as fixed arity, so
-previously produced library artifacts remain usable.
+A reader SHALL accept a legacy runtime-only export table without a compile-time interface,
+treating it as a library that exports no macros or explicit primitive/syntax metadata.
+Existing three-field procedure call rows SHALL retain their fixed-arity meaning and existing
+variadic descriptors SHALL retain their meaning. An older macro interface lacking the context
+needed for hygienic expansion SHALL be rebuilt from source or rejected with a named rebuild
+diagnostic, never interpreted using guessed binding identities.
 
-A library that exports no macro SHALL produce an empty compile-time interface. Existing
+A library that exports no macro, primitive, or syntax binding SHALL need no transformer or syntax payload in its compile-time interface. Existing
 libraries that do not re-export imported runtime bindings SHALL retain byte-identical emitted
 units unless another requirement explicitly changes their compilation.
 
@@ -2028,10 +2088,10 @@ consumer and a standard library without either re-exporting the other's binding.
 
 Which library's **body defines** a name and which library's **export list publishes** it SHALL be
 separate questions, decidable independently **per library**: the declaration SHALL be able to assign a
-definition to a library that defines it without exporting it. This is required because a library or
-program may import two members of the set at once, and one name offered by two imports resolves
-silently to whichever is found first rather than being reported — so a member that needs a name only
-for its own body SHALL be able to keep it out of its export list.
+definition to a library that defines it without exporting it. A library or program may import two members at once, and distinct bindings exposed under one
+name SHALL conflict, so a member that needs a name only for its own body SHALL be able to keep it
+out of its export list. Integrated primitive and core/auxiliary syntax publication SHALL also
+have explicit library ownership, without inventing runtime definitions for those bindings.
 
 Every derivation of an export list SHALL read that one declaration, so the Chez-hosted driver (which
 resolves the committed `.sld` files) and the Chez-free portable derivation (which builds the baked
@@ -2051,6 +2111,22 @@ R7RS-small defines, and **extensions**, which Emit adds with no R7RS home. A nam
 because some consumer outside the library must resolve it SHALL record the reason it is exported;
 the compiler is not such a consumer, since it imports the internal substrate directly rather than
 reaching internals through `(scheme base)`.
+
+The non-R7RS list extensions `filter`, `fold-right`, and `iota` SHALL be exported by
+`(emit list)`, not by `(scheme base)`. The compiler SHALL retain its internal access
+without adding these extensions to the implicit user environment.
+
+#### Scenario: Emit list extensions require an explicit import
+
+- **WHEN** a program imports `(scheme base)` and `(emit list)`
+- **THEN** `filter`, `fold-right`, and `iota` retain their existing Emit behavior
+- **AND** those names are not exported by `(scheme base)` alone
+
+#### Scenario: Standard base and SRFI 1 imports do not conflict
+
+- **WHEN** an unchanged pinned package imports `(scheme base)` and `(srfi 1)`
+- **THEN** the three list names denote the SRFI 1 bindings without an import conflict
+- **AND** importing distinct Emit and SRFI 1 versions under the same visible names still conflicts
 
 #### Scenario: An internal helper is not in scope in a user program
 
@@ -2106,9 +2182,9 @@ source with no filesystem access, so the runner re-homes rather than prepends. A
 program defines itself SHALL take precedence over the auto-imported one (user-wins shadowing, per
 the Stage 0 resolution order).
 
-When a program's own imports include an import set whose innermost library is `(scheme base)`,
-that import set SHALL be the program's whole view of `(scheme base)`: the implicit import SHALL
-NOT also make the library's other exports visible. `(scheme base)` is still linked or loaded and
+When a program's own imports include explicit views of `(scheme base)`, their union SHALL be
+the program's whole view of `(scheme base)`: the implicit import SHALL NOT also make the
+library's other exports visible. `(scheme base)` is still linked or loaded and
 initialized exactly as for the implicit import. A bare `(import (scheme base))` is the same view as
 the implicit one and changes nothing.
 
@@ -2135,7 +2211,8 @@ the implicit one and changes nothing.
 
 - **WHEN** a program is compiled `--no-prelude` (on any path, including the embedded runner)
 - **THEN** `(scheme base)` is not auto-imported, the derived-form macros are not merged, and a
-  reference to a prelude name (procedure or macro) is an unbound/undefined error
+  reference to a runtime prelude procedure or derived macro is an unbound/undefined error
+- **AND** the explicit compiler environment retains core syntax and integrated primitives
 
 #### Scenario: The embedded runner re-homes the prelude like the Chez driver
 
@@ -2154,11 +2231,20 @@ the implicit one and changes nothing.
 #### Scenario: A prefixed (scheme base) is the program's only spelling
 
 - **WHEN** a program contains `(import (prefix (scheme base) b:))` and evaluates
-  `(b:map (lambda (x) (+ x 1)) '(1 2))`
+  `(b:map (b:lambda (x) (b:+ x 1)) (b:quote (1 2)))`
 - **THEN** the program produces `(2 3)`, and an unprefixed reference to `map` is reported as unbound
-- **AND** a primitive the compiler integrates, such as `car`, and a core syntactic keyword, such as
-  `if` or `lambda`, stay visible under their own names, as they are under `--no-prelude`, because
-  neither is a binding `(scheme base)` exports
+- **AND** integrated primitives and core syntax are available under their prefixed names only, unless another import or local binding supplies a bare name
+
+#### Scenario: Explicit base views replace the implicit view together
+
+- **WHEN** a program explicitly imports multiple sets over `(scheme base)`
+- **THEN** the union of those explicit views replaces the implicit binding view, with duplicate and conflicting names checked normally
+
+#### Scenario: A REPL replaces its implicit base view
+
+- **WHEN** a session's first explicit base import uses a prefix or selection set
+- **THEN** its complete explicit view replaces the implicit view for subsequent forms while existing compiled procedures retain their resolved bindings
+- **AND** additional explicit imports accumulate subject to conflict validation
 
 ### Requirement: (scheme base) links or loads exactly once
 
@@ -2279,7 +2365,7 @@ particular library name would reintroduce the two-tier privilege this capability
 
 #### Scenario: Re-exporting a name bound as neither is still an error
 
-- **WHEN** a library exports a name that is neither one of its own top-level definitions, nor an imported runtime binding, nor a macro
+- **WHEN** a library exports a name that is neither one of its own top-level definitions, nor an imported runtime, primitive, or core/auxiliary syntax binding, nor a macro
   in its compile-time environment
 - **THEN** compilation reports that the library does not define the name
 
@@ -2577,3 +2663,27 @@ passes, and no unapproved skipped or expected-failure cases.
 
 - **WHEN** a REPL test child prints the expected value and then exits nonzero
 - **THEN** the harness fails that case and reports its saved status and stderr
+
+### Requirement: Compile-time interfaces preserve original binding identity
+
+Library artifacts SHALL retain the original identity and required definition context of every
+published binding, independently of alias spelling and forwarding library. Macro origin identity
+SHALL distinguish independent definitions and survive re-exports and artifact round trips.
+Compile-time context SHALL remain absent from delivered runtime payloads.
+
+#### Scenario: Artifact-only imports retain identity
+
+- **WHEN** facades are compiled, their interfaces are saved, and a fresh compiler consumes those interfaces
+- **THEN** same-origin re-exports remain equal bindings and independently defined bindings remain distinct
+- **AND** macro literals and private helper references resolve as they did before serialization
+
+#### Scenario: Repeated compilation is deterministic
+
+- **WHEN** Chez and the native compiler compile the same full library closure in fresh processes
+- **THEN** their readable compile-time interfaces and normalized full unit IR are byte-identical
+
+#### Scenario: Older interface formats fail safely when context is insufficient
+
+- **WHEN** an older interface lacks the origin or lexical context needed for a macro
+- **THEN** the compiler rebuilds it from available source or reports a named incompatibility requiring rebuild
+- **AND** it does not guess binding equality or silently expand using the importer's scope

@@ -59,6 +59,9 @@
   with matching source/bootstrap hashes. The post-commit trust check explicitly
   skipped because bootstrap artifacts are uncommitted; this is not trust-check success.
   Independent self-hosting fixed-point and self-emission checks passed.
+- After commit `a827002`, `bash test/trust-check.sh` passed: regeneration completed
+  in 509 seconds and reproduced the committed bootstrap IR byte-for-byte, leaving
+  a clean working tree before the spec-sync and archive operation.
 - `EMIT_BINDING_HOST=both bash test/binding-context-tests.sh`: 88 checks passed,
   including saved interfaces, normalized unit IR parity, runtime-payload absence,
   primitive shadowing, and REPL recovery.
