@@ -1,5 +1,6 @@
 name: Source release
 on:
+  pull_request:
   push:
     tags: ['v*']
   workflow_dispatch:
@@ -7,6 +8,7 @@ permissions:
   contents: read
 jobs:
   compatibility:
+    if: github.event_name != 'pull_request'
     uses: ./.github/workflows/compatibility.yml
   package:
     runs-on: ubuntu-24.04

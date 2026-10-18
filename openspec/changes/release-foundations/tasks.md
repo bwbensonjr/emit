@@ -32,7 +32,7 @@
 - [ ] 5.2 Add Linux and macOS archive-validation jobs that build the exact extracted payload with documented dependencies, no Git metadata, no Chez, no checkout lookup, and network access denied after provisioning. Verify `make`, staged `make install PREFIX=/usr/local DESTDIR=<staging>`, and installed command smoke tests pass.
 - [ ] 5.3 Add tag-driven release automation checking tag/VERSION/changelog consistency, all ten compatibility cells for the exact tagged commit, and exact archive validation before public publication. Verify mismatched identity and failed checks prevent publication using local checks or non-publishing workflow tests.
 - [ ] 5.4 Publish the already validated archive, checksum file, and matching changelog notes with narrowly scoped workflow write permissions and SHA-pinned Actions. Verify a non-publishing rehearsal transfers the exact bytes and retry logic preserves public assets or fails on differing payloads.
-- [ ] 5.5 Document local preparation, offline source build inputs, checksum verification, release workflow and failure recovery in release documentation and README. Verify the commands against the release candidate archive and distinguish source releases from deferred binary/provenance deliverables.
+- [x] 5.5 Document local preparation, offline source build inputs, checksum verification, release workflow and failure recovery in release documentation and README. Verify the commands against the release candidate archive and distinguish source releases from deferred binary/provenance deliverables.
 
 ## 6. Integration and first release
 

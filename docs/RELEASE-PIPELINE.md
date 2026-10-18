@@ -58,8 +58,10 @@ scripted REPL, library compilation, and an AOT executable. Its temporary
 workspace is retained for inspection. Native dependencies must live outside
 the checkout that the sandbox hides.
 
-`.github/workflows/release.yml` handles `v*` tags. A manual dispatch rehearses
-the same validation without publishing. For the exact triggering commit it:
+`.github/workflows/release.yml` handles `v*` tags. Pull requests rehearse source
+packaging and both offline archive builds before any tag exists, alongside the
+separate compatibility workflow. A manual dispatch rehearses the complete gate
+without publishing. For the exact release commit it:
 
 1. Requires every Linux/macOS and LLVM 19-23 compatibility cell.
 2. Rejects tag/version/changelog mismatches and packages once, comparing a

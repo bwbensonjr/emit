@@ -18,12 +18,12 @@ esac
 gc_revision=ee59af3722e56de8404de6cd0c21c2493cc4d855
 projects=clang
 components="clang;clang-resource-headers;llvm-config;LLVM;llvm-headers"
-linker_options=()
+default_linker=""
 case "$(uname -s)" in
   Linux)
     projects="clang;lld"
     components="$components;lld"
-    linker_options=(-DCLANG_DEFAULT_LINKER=lld)
+    default_linker=lld
     ;;
   Darwin)
     # Clang passes its adjacent libLTO.dylib to the SDK linker for -flto.
@@ -53,7 +53,7 @@ else
     -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$prefix/llvm" \
     -DCMAKE_INSTALL_LIBDIR=lib -DLLVM_LIBDIR_SUFFIX= \
     -DLLVM_ENABLE_PROJECTS="$projects" -DLLVM_TARGETS_TO_BUILD=Native \
-    -DLLVM_DISTRIBUTION_COMPONENTS="$components" "${linker_options[@]}" \
+    -DLLVM_DISTRIBUTION_COMPONENTS="$components" -DCLANG_DEFAULT_LINKER="$default_linker" \
     -DLLVM_BUILD_LLVM_DYLIB=ON -DLLVM_LINK_LLVM_DYLIB=ON \
     -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF \
     -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_ENABLE_ASSERTIONS=OFF \

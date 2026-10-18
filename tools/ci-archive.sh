@@ -15,6 +15,7 @@ say "extract $assets/$archive -> $work  [fresh source tree]"
 tar -xzf "$assets/$archive" -C "$work"
 source_tree="$work/${archive%.tar.gz}"
 script="$source_tree/tools/ci-archive-build.sh"
+cd "$source_tree"
 case "$(uname -s)" in
   Linux)
     # Mount hiding prevents fallback to any source in the Actions checkout.
