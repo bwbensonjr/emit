@@ -95,27 +95,58 @@
 
 ## Build Workflow
 
-**`make regen` is a barrier.** Finish every compiler-source edit before starting
-it, and make no more until the test suites have finished. The files that matter
-are the ones `tools/regen.sh` concatenates into the three programs it compiles: `CORE_FLAT`
-(`src/match.scm`, `src/util.scm`, `src/parse.ss`, `src/passes/*.ss`,
-`src/emit.ss`, `src/prelude-surface.scm`, `src/core.ss`, `src/dump.ss`,
-`src/import-substrate.scm`), plus `src/repl-core.ss`, `src/prelude.scm` (baked in
-as the `*prelude-source*` constant), and `src/entry-*.scm`. `src/emit.cpp` is host
-C++ — it reaches the binaries through plain `make`, not regen.
+**`make regen` is an explicit barrier, not an automatic build step.** Finish
+compiler-source edits before regenerating, and do not edit those inputs again
+until their validation finishes. `bash tools/compiler-inputs.sh --list` is the
+authoritative ordered assembly/generator inventory shared by regeneration,
+classification, source fingerprints, and independent-host verification. It
+includes the flat core, entry programs, REPL core, baked prelude, partition
+declaration, generated partition members, and assembly/generation scripts.
+`src/emit.cpp` is native host C++; it reaches binaries through plain `make`, not
+regen. `src/compile.ss` is the Chez driver, not an assembled compiler input;
+editing it requires source units/reference checks, not native IR regeneration.
 
-Two things go wrong when that barrier is crossed, both expensive:
+Choose validation by the changed inputs, not an unconditional whole-developer
+suite after every edit:
 
-- `run-dev-tests.sh` ends with `test/trust-check.sh`, which regenerates and
-  requires `git diff bootstrap/` to be empty. A source edit made after the last
-  regen guarantees a failure ~14 minutes into a 23-suite run.
-- Killing a regen mid-flight leaves `bootstrap/` **mixed-source** — one `.ll`
-  from the new source, the others from the old. Recover with
-  `git checkout -- bootstrap/` if the tree is committed, or by running regen to
-  convergence if it is not.
+- During compiler iteration, `bash tools/test.sh units` exercises current source
+  directly under Chez before regeneration. `chez --libdirs src --script
+  src/compile.ss` also remains available for the direct source edit/test loop.
+- `bash tools/test.sh dev --changed BASE` provides focused native feedback. It
+  is not comprehensive, and native feedback alone never proves an edited Scheme
+  compiler was regenerated. Inspect the plan and its current-source label.
+- After compiler/partition/assembly changes, explicitly run `make regen`, full
+  native regression (`bash tools/test.sh full`), source units, the classified
+  targeted reference suites, and `bash tools/test.sh source`. Compiler acceptance
+  requires the source check even when a local fingerprint matches.
+- Host/runtime/library changes need their classified native checks and CI gates;
+  they do not require compiler regeneration unless they also change an assembly
+  input. Documentation-only changes use lightweight validation, not LLVM builds.
+- `bash tools/test.sh reference` retains complete independent-host verification.
+  It runs once for releases and weekly/manual validation, rather than per LLVM
+  matrix cell. `./run-dev-tests.sh` remains the explicit aggregate of units,
+  source consistency, and complete reference verification. Explicit Chez-based
+  requests fail if Chez is missing; native and source profiles need no Chez.
 
-So: edit → `make regen` (~4 min) → `./run-all-tests.sh` (~10 min) →
-`./run-dev-tests.sh` (~14 min).
+The source profile and its legacy `test/trust-check.sh` entry point regenerate
+an isolated git-clean snapshot of the current working-tree inputs, including
+uncommitted edits and deletions, and compare every declared bootstrap module.
+They never rewrite the developer checkout and never turn dirty bootstrap files
+into a success skip. A matching uncommitted source/IR pair can be verified before
+commit. Missing, extra, or stale modules fail.
+
+A successful explicit regeneration records `build/source-fingerprint.json`.
+`python3 tools/source-fingerprint.py --status` reports content-bound source,
+bootstrap, and toolchain/options digests. Missing or mismatched hints label
+native results as unverified for current compiler source; they do not trigger
+regen automatically or replace the source comparison. Proof outputs may be
+reused only within one validated invocation with matching inputs, toolchain,
+and options; source consistency and independent-host proof are distinct.
+
+Killing explicit regeneration mid-flight can leave `bootstrap/` mixed-source.
+Recover by running it to convergence before accepting native feedback. The
+isolated source check instead retains failure diagnostics in its temporary
+workspace without modifying the original bootstrap files.
 
 **Budget regen by its self-compile count, not by a wall-clock figure.** Nearly all of it is the
 compiler compiling itself — one `--emit` over ~400 KB of assembled Scheme, currently **~57 s**
@@ -145,15 +176,6 @@ work, and it went from ~268 s to ~57 s; the same three fixes took pitch's format
 from 480 s to 78 s. Re-measure this table after a comparable runtime change rather than trusting
 the row.
 
-- **Iterate without regen** via `chez --libdirs src --script src/compile.ss`,
-  which `include`s the source directly. Use it for the whole edit/test loop and
-  regen once at the end.
-- **`src/compile.ss` is exempt** — it is the Chez driver, not in `CORE_FLAT`, so
-  it needs no regen. It does change the artifact-cache stamp, which merely forces
-  `build/lib` to rebuild.
-- **`test/trust-check.sh` is a post-commit check.** It `[SKIP]`s while
-  `bootstrap/` is dirty, by design: it compares *regenerated* IR against
-  *committed* IR. Commit first, then run it.
-- Long suites can outlive an agent's command timeout. Run them individually
-  rather than as one batch when that happens; `run-dev-tests.sh`'s suites are
-  independent.
+Long suites can outlive an agent's command timeout. Select stable suite IDs with
+`bash tools/test.sh --suite ID`, preserve their reports, and poll long-running
+commands rather than weakening coverage or treating timeouts as passes.

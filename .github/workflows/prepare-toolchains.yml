@@ -1,0 +1,50 @@
+name: Prepare candidate toolchains
+on:
+  workflow_call:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  prepare:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15]
+        llvm: [22, 23]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Identify dependency inputs
+        id: recipe
+        run: |
+          printf 'identity=%s\n' "$(tools/ci-provision.sh --identity ${{ matrix.llvm }})" >> "$GITHUB_OUTPUT"
+          identity=$(python3 tools/ci-bundle.py identity ${{ matrix.llvm }} "$RUNNER_TEMP/emit-deps")
+          printf 'digest=%s\n' "$(printf '%s' "$identity" | shasum -a 256 | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        id: deps
+        with:
+          path: ${{ runner.temp }}/emit-deps
+          key: emit-deps-${{ runner.os }}-${{ runner.arch }}-${{ steps.recipe.outputs.identity }}-${{ steps.recipe.outputs.digest }}
+      - name: Resolve approved bundle or build exact recipe once
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LLVM_MAJOR: ${{ matrix.llvm }}
+        run: tools/ci-prepare.sh "$LLVM_MAJOR" "$RUNNER_TEMP/emit-deps" "$RUNNER_TEMP/bundle"
+      - uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        if: steps.deps.outputs.cache-hit != 'true'
+        with:
+          path: ${{ runner.temp }}/emit-deps
+          key: ${{ steps.deps.outputs.cache-primary-key }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: toolchain-${{ runner.os }}-${{ runner.arch }}-${{ matrix.llvm }}
+          path: ${{ runner.temp }}/bundle/*
+          retention-days: 30
+          if-no-files-found: error

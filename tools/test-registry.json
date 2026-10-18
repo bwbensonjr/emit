@@ -1,0 +1,2338 @@
+{
+  "schema": 1,
+  "baseline_commit": "a6238520b38551b1042e9f35a5768e0bcdd29d36",
+  "suites": [
+    {
+      "id": "llvm-toolchain-discovery",
+      "label": "LLVM toolchain discovery",
+      "command": [
+        "test/llvm-discovery-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "host"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "llvm-toolchain-discovery"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "LLVM toolchain discovery"
+        }
+      ]
+    },
+    {
+      "id": "native-build-configuration",
+      "label": "native build configuration",
+      "command": [
+        "test/native-build-config-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "host"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "native-build-configuration"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "native build configuration"
+        }
+      ]
+    },
+    {
+      "id": "demo-values-emit-run",
+      "label": "demo values (emit run)",
+      "command": [
+        "env",
+        "RUNNER=emit-run",
+        "demos/run-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "runtime"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "demo-values-emit-run"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "demo values (emit run)"
+        }
+      ]
+    },
+    {
+      "id": "module-scaffold-byte-identity",
+      "label": "module-scaffold byte-identity",
+      "command": [
+        "test/module-scaffold-baseline.sh",
+        "check"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "library",
+        "infrastructure"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "module-scaffold-byte-identity"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "module-scaffold byte-identity"
+        }
+      ]
+    },
+    {
+      "id": "artifact-cache-baked-set",
+      "label": "artifact cache (baked set)",
+      "command": [
+        "test/artifact-cache-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "artifact-cache-baked-set"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "artifact cache (baked set)"
+        }
+      ]
+    },
+    {
+      "id": "explicit-artifact-format",
+      "label": "explicit artifact format",
+      "command": [
+        "bash",
+        "test/explicit-artifact-format-tests.sh"
+      ],
+      "profiles": [
+        "full",
+        "reference"
+      ],
+      "categories": [
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "explicit-artifact-format"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "explicit artifact format"
+        },
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "explicit artifact format"
+        }
+      ]
+    },
+    {
+      "id": "explicit-artifact-reuse",
+      "label": "explicit artifact reuse",
+      "command": [
+        "bash",
+        "test/explicit-artifact-tests.sh"
+      ],
+      "profiles": [
+        "full",
+        "reference",
+        "compat"
+      ],
+      "categories": [
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "explicit-artifact-reuse"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "explicit artifact reuse"
+        },
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "explicit artifact reuse"
+        }
+      ]
+    },
+    {
+      "id": "srfi-explicit-artifacts",
+      "label": "SRFI explicit artifacts",
+      "command": [
+        "bash",
+        "test/srfi-artifact-tests.sh"
+      ],
+      "profiles": [
+        "full",
+        "reference"
+      ],
+      "categories": [
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "srfi-explicit-artifacts"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "SRFI explicit artifacts"
+        },
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "SRFI explicit artifacts"
+        }
+      ]
+    },
+    {
+      "id": "installed-srfi-sources",
+      "label": "installed SRFI sources",
+      "command": [
+        "bash",
+        "test/srfi-install-tests.sh"
+      ],
+      "profiles": [
+        "full",
+        "reference"
+      ],
+      "categories": [
+        "library",
+        "host"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "installed-srfi-sources"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "installed SRFI sources"
+        },
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "installed SRFI sources"
+        }
+      ]
+    },
+    {
+      "id": "native-object-cache",
+      "label": "native object cache",
+      "command": [
+        "test/native-object-cache-tests.sh"
+      ],
+      "profiles": [
+        "full",
+        "reference"
+      ],
+      "categories": [
+        "runtime"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "native-object-cache"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "native object cache"
+        },
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "native object cache"
+        }
+      ]
+    },
+    {
+      "id": "repl-persistent-host",
+      "label": "REPL persistent host",
+      "command": [
+        "test/repl-host-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "runtime"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "repl-persistent-host"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "REPL persistent host"
+        }
+      ]
+    },
+    {
+      "id": "define-record-type-syntax",
+      "label": "define-record-type syntax",
+      "command": [
+        "test/record-type-syntax-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "compiler"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "define-record-type-syntax"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "define-record-type syntax"
+        }
+      ]
+    },
+    {
+      "id": "inline-arith-self-call-ir",
+      "label": "inline arith + self-call IR",
+      "command": [
+        "test/inline-arith-self-call-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "runtime"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "inline-arith-self-call-ir"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "inline arith + self-call IR"
+        }
+      ]
+    },
+    {
+      "id": "fixnum-overflow-traps",
+      "label": "fixnum overflow traps",
+      "command": [
+        "test/fixnum-overflow-tests.sh"
+      ],
+      "profiles": [
+        "full",
+        "compat"
+      ],
+      "categories": [
+        "runtime"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "fixnum-overflow-traps"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "fixnum overflow traps"
+        }
+      ]
+    },
+    {
+      "id": "indexed-access-bounds",
+      "label": "indexed access bounds",
+      "command": [
+        "test/indexed-access-tests.sh"
+      ],
+      "profiles": [
+        "full",
+        "compat"
+      ],
+      "categories": [
+        "runtime"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "indexed-access-bounds"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "indexed access bounds"
+        }
+      ]
+    },
+    {
+      "id": "r7rs-numeric-conformance",
+      "label": "R7RS numeric conformance",
+      "command": [
+        "test/numeric-conformance-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "runtime",
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "r7rs-numeric-conformance"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "R7RS numeric conformance"
+        }
+      ]
+    },
+    {
+      "id": "r7rs-small-suite-vendored-sections-only",
+      "label": "R7RS-small suite (vendored, sections only)",
+      "command": [
+        "test/r7rs-suite-tests.sh",
+        "--sections-only"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "r7rs-small-suite-vendored-sections-only"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "R7RS-small suite (vendored, sections only)"
+        }
+      ]
+    },
+    {
+      "id": "cross-unit-direct-calls",
+      "label": "cross-unit direct calls",
+      "command": [
+        "test/cross-unit-direct-call-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "runtime"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "cross-unit-direct-calls"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "cross-unit direct calls"
+        }
+      ]
+    },
+    {
+      "id": "library-top-level-set",
+      "label": "library top-level set!",
+      "command": [
+        "test/library-toplevel-set-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "library-top-level-set"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "library top-level set!"
+        }
+      ]
+    },
+    {
+      "id": "library-body-declarations",
+      "label": "library body declarations",
+      "command": [
+        "test/library-body-declarations-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "library-body-declarations"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "library body declarations"
+        }
+      ]
+    },
+    {
+      "id": "library-include-declarations",
+      "label": "library include declarations",
+      "command": [
+        "test/library-include-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "library-include-declarations"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "library include declarations"
+        }
+      ]
+    },
+    {
+      "id": "import-sets-and-portable-sources",
+      "label": "import sets and portable sources",
+      "command": [
+        "test/import-set-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "runtime",
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "import-sets-and-portable-sources"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "import sets and portable sources"
+        }
+      ]
+    },
+    {
+      "id": "runtime-and-macro-library-composition",
+      "label": "runtime and macro library composition",
+      "command": [
+        "env",
+        "EMIT_COMPOSITION_HOST=native",
+        "test/library-composition-tests.sh"
+      ],
+      "profiles": [
+        "full",
+        "compat"
+      ],
+      "categories": [
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "runtime-and-macro-library-composition"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "runtime and macro library composition"
+        }
+      ]
+    },
+    {
+      "id": "snow-fort-packages",
+      "label": "snow-fort packages",
+      "command": [
+        "env",
+        "EMIT_SNOW_HOST=native",
+        "test/snow-package-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "snow-fort-packages"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "snow-fort packages"
+        }
+      ]
+    },
+    {
+      "id": "complete-upstream-srfi-suites",
+      "label": "complete upstream SRFI suites",
+      "command": [
+        "env",
+        "EMIT_SNOW_HOST=native",
+        "bash",
+        "test/srfi-upstream-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "complete-upstream-srfi-suites"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "complete upstream SRFI suites"
+        }
+      ]
+    },
+    {
+      "id": "dynamic-extent-call-cc",
+      "label": "dynamic extent (call/cc)",
+      "command": [
+        "test/dynamic-extent-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "runtime"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "dynamic-extent-call-cc"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "dynamic extent (call/cc)"
+        }
+      ]
+    },
+    {
+      "id": "pitch-facing-r7rs-prerequisites",
+      "label": "Pitch-facing R7RS prerequisites",
+      "command": [
+        "test/pitch-prerequisites-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "pitch-facing-r7rs-prerequisites"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "Pitch-facing R7RS prerequisites"
+        }
+      ]
+    },
+    {
+      "id": "filesystem-access-extension",
+      "label": "filesystem access extension",
+      "command": [
+        "test/filesystem-access-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "runtime"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "filesystem-access-extension"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "filesystem access extension"
+        }
+      ]
+    },
+    {
+      "id": "catchable-errors-kinds",
+      "label": "catchable errors + kinds",
+      "command": [
+        "test/catchable-errors-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "runtime"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "catchable-errors-kinds"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "catchable errors + kinds"
+        }
+      ]
+    },
+    {
+      "id": "io-ports-eof-object",
+      "label": "io ports + eof object",
+      "command": [
+        "test/io-ports-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "runtime"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "io-ports-eof-object"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "io ports + eof object"
+        }
+      ]
+    },
+    {
+      "id": "module-vertical-slice-repl",
+      "label": "module vertical-slice (REPL)",
+      "command": [
+        "test/modules-repl-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "runtime",
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "module-vertical-slice-repl"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "module vertical-slice (REPL)"
+        }
+      ]
+    },
+    {
+      "id": "module-emit-run-command-emit-run",
+      "label": "module emit run command (emit run)",
+      "command": [
+        "test/modules-run-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "module-emit-run-command-emit-run"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "module emit run command (emit run)"
+        }
+      ]
+    },
+    {
+      "id": "hybrid-library-resolution",
+      "label": "hybrid library resolution",
+      "command": [
+        "test/hybrid-library-resolution-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "hybrid-library-resolution"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "hybrid library resolution"
+        }
+      ]
+    },
+    {
+      "id": "emit-build-program-resolver",
+      "label": "emit build + program resolver",
+      "command": [
+        "test/emit-build-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "host"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "emit-build-program-resolver"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "emit build + program resolver"
+        }
+      ]
+    },
+    {
+      "id": "unit-pipeline-seeding-caching-shaking",
+      "label": "unit pipeline (seeding, caching, shaking)",
+      "command": [
+        "test/unit-pipeline-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "compiler"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "unit-pipeline-seeding-caching-shaking"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "unit pipeline (seeding, caching, shaking)"
+        }
+      ]
+    },
+    {
+      "id": "cli-interface-help-final-value",
+      "label": "CLI interface (help + final value)",
+      "command": [
+        "test/emit-cli-tests.sh"
+      ],
+      "profiles": [
+        "full",
+        "dev",
+        "compat"
+      ],
+      "categories": [
+        "host"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "cli-interface-help-final-value"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "CLI interface (help + final value)"
+        }
+      ]
+    },
+    {
+      "id": "release-version-identity",
+      "label": "release version identity",
+      "command": [
+        "test/version-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "host",
+        "infrastructure"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "release-version-identity"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "release version identity"
+        }
+      ]
+    },
+    {
+      "id": "installation-diagnostics",
+      "label": "installation diagnostics",
+      "command": [
+        "test/doctor-tests.sh"
+      ],
+      "profiles": [
+        "full",
+        "dev"
+      ],
+      "categories": [
+        "host"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "installation-diagnostics"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "installation diagnostics"
+        }
+      ]
+    },
+    {
+      "id": "jit-optimization-profiles",
+      "label": "JIT optimization profiles",
+      "command": [
+        "test/jit-optimization-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "runtime"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "jit-optimization-profiles"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "JIT optimization profiles"
+        }
+      ]
+    },
+    {
+      "id": "scheme-base-declared-surface",
+      "label": "(scheme base) declared surface",
+      "command": [
+        "test/scheme-base-surface-check.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "scheme-base-declared-surface"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "(scheme base) declared surface"
+        }
+      ]
+    },
+    {
+      "id": "unicode-data-checksums-generated-tables",
+      "label": "Unicode data checksums + generated tables",
+      "command": [
+        "test/unicode-data-gen-check.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "infrastructure"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "unicode-data-checksums-generated-tables"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "Unicode data checksums + generated tables"
+        }
+      ]
+    },
+    {
+      "id": "flat-top-level-name-hazards",
+      "label": "flat top-level name hazards",
+      "command": [
+        "test/flat-name-check.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "infrastructure"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "flat-top-level-name-hazards"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "flat top-level name hazards"
+        }
+      ]
+    },
+    {
+      "id": "binding-shadows-a-keyword",
+      "label": "binding shadows a keyword",
+      "command": [
+        "test/binding-shadowing-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "compiler"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "binding-shadows-a-keyword"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "binding shadows a keyword"
+        }
+      ]
+    },
+    {
+      "id": "binding-contexts-and-local-macros",
+      "label": "binding contexts and local macros",
+      "command": [
+        "env",
+        "EMIT_BINDING_HOST=native",
+        "bash",
+        "test/binding-context-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "compiler"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "binding-contexts-and-local-macros"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "binding contexts and local macros"
+        }
+      ]
+    },
+    {
+      "id": "scheme-base-auto-import-repl",
+      "label": "(scheme base) auto-import (REPL)",
+      "command": [
+        "test/prelude-base-repl-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "runtime",
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "scheme-base-auto-import-repl"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "(scheme base) auto-import (REPL)"
+        }
+      ]
+    },
+    {
+      "id": "scheme-base-re-home-emit-run-build",
+      "label": "(scheme base) re-home (emit run/build)",
+      "command": [
+        "test/prelude-base-run-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "scheme-base-re-home-emit-run-build"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "(scheme base) re-home (emit run/build)"
+        }
+      ]
+    },
+    {
+      "id": "r7rs-library-partition",
+      "label": "R7RS library partition",
+      "command": [
+        "test/library-partition-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "r7rs-library-partition"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "R7RS library partition"
+        }
+      ]
+    },
+    {
+      "id": "dump-stages-all-commands",
+      "label": "--dump stages (all commands)",
+      "command": [
+        "test/dump-stages-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "infrastructure"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "dump-stages-all-commands"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "--dump stages (all commands)"
+        }
+      ]
+    },
+    {
+      "id": "installed-layout-libraries-support-files",
+      "label": "installed layout (libraries + support files)",
+      "command": [
+        "test/install-layout-tests.sh"
+      ],
+      "profiles": [
+        "full",
+        "compat"
+      ],
+      "categories": [
+        "runtime",
+        "host"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "installed-layout-libraries-support-files"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "installed layout (libraries + support files)"
+        }
+      ]
+    },
+    {
+      "id": "reader-datum-parity-vector-consts-rendering",
+      "label": "reader datum parity (vector consts + rendering)",
+      "command": [
+        "test/reader-datum-parity-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "compiler",
+        "infrastructure"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "reader-datum-parity-vector-consts-rendering"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "reader datum parity (vector consts + rendering)"
+        }
+      ]
+    },
+    {
+      "id": "cyclic-datum-read-compare-write-round-trip",
+      "label": "cyclic datum read/compare/write round trip",
+      "command": [
+        "test/cyclic-datum-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "host"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "cyclic-datum-read-compare-write-round-trip"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "cyclic datum read/compare/write round trip"
+        }
+      ]
+    },
+    {
+      "id": "printer-cycles-char-names-trap-delivery",
+      "label": "printer cycles + char names + trap delivery",
+      "command": [
+        "test/printer-cycles-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "runtime"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "printer-cycles-char-names-trap-delivery"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "printer cycles + char names + trap delivery"
+        }
+      ]
+    },
+    {
+      "id": "every-command-in-a-user-project",
+      "label": "every command in a user project",
+      "command": [
+        "test/project-command-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "host"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "every-command-in-a-user-project"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "every command in a user project"
+        }
+      ]
+    },
+    {
+      "id": "demo-values-aot-chez-native",
+      "label": "demo values (AOT/chez)",
+      "command": [
+        "env",
+        "RUNNER=aot",
+        "demos/run-tests.sh"
+      ],
+      "profiles": [
+        "reference"
+      ],
+      "categories": [
+        "runtime"
+      ],
+      "isolation": "workspace",
+      "chez": true,
+      "coverage": [
+        "demo-values-aot-chez-native"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "demo values (AOT/chez)"
+        }
+      ]
+    },
+    {
+      "id": "aot-tree-shaking-native",
+      "label": "AOT tree-shaking",
+      "command": [
+        "test/aot-tree-shaking-tests.sh"
+      ],
+      "profiles": [
+        "reference"
+      ],
+      "categories": [
+        "runtime"
+      ],
+      "isolation": "workspace",
+      "chez": true,
+      "coverage": [
+        "aot-tree-shaking-native"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "AOT tree-shaking"
+        }
+      ]
+    },
+    {
+      "id": "backend-equivalence-native",
+      "label": "backend equivalence",
+      "command": [
+        "demos/run-backends.sh"
+      ],
+      "profiles": [
+        "reference"
+      ],
+      "categories": [
+        "infrastructure"
+      ],
+      "isolation": "workspace",
+      "chez": true,
+      "coverage": [
+        "backend-equivalence-native"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "backend equivalence"
+        }
+      ]
+    },
+    {
+      "id": "expander-units-chez",
+      "label": "expander units",
+      "command": [
+        "chez",
+        "--libdirs",
+        "src",
+        "--script",
+        "test/expander-tests.ss"
+      ],
+      "profiles": [
+        "units"
+      ],
+      "categories": [
+        "compiler"
+      ],
+      "isolation": "readonly",
+      "chez": true,
+      "coverage": [
+        "expander-units-chez"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "expander units"
+        }
+      ]
+    },
+    {
+      "id": "lowering-visitation-order-chez",
+      "label": "lowering visitation order",
+      "command": [
+        "chez",
+        "--libdirs",
+        "src",
+        "--script",
+        "test/lower-order-tests.ss"
+      ],
+      "profiles": [
+        "units"
+      ],
+      "categories": [
+        "compiler"
+      ],
+      "isolation": "readonly",
+      "chez": true,
+      "coverage": [
+        "lowering-visitation-order-chez"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "lowering visitation order"
+        }
+      ]
+    },
+    {
+      "id": "read-all-reader-chez",
+      "label": "read-all reader",
+      "command": [
+        "chez",
+        "--libdirs",
+        "src",
+        "--script",
+        "test/read-all-tests.ss"
+      ],
+      "profiles": [
+        "units"
+      ],
+      "categories": [
+        "compiler"
+      ],
+      "isolation": "readonly",
+      "chez": true,
+      "coverage": [
+        "read-all-reader-chez"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "read-all reader"
+        }
+      ]
+    },
+    {
+      "id": "render-datum",
+      "label": "render-datum units",
+      "command": [
+        "chez",
+        "--libdirs",
+        "src",
+        "--script",
+        "test/render-datum-tests.ss"
+      ],
+      "profiles": [
+        "units"
+      ],
+      "categories": [
+        "runtime"
+      ],
+      "isolation": "readonly",
+      "chez": true,
+      "coverage": [
+        "render-datum"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "render-datum units"
+        }
+      ]
+    },
+    {
+      "id": "import-set-units-chez",
+      "label": "import-set units",
+      "command": [
+        "chez",
+        "--libdirs",
+        "src",
+        "--script",
+        "test/import-set-core-tests.ss"
+      ],
+      "profiles": [
+        "units"
+      ],
+      "categories": [
+        "runtime",
+        "library"
+      ],
+      "isolation": "readonly",
+      "chez": true,
+      "coverage": [
+        "import-set-units-chez"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "import-set units"
+        }
+      ]
+    },
+    {
+      "id": "import-binding-identities-chez",
+      "label": "import binding identities",
+      "command": [
+        "chez",
+        "--libdirs",
+        "src",
+        "--script",
+        "test/import-binding-context-tests.ss"
+      ],
+      "profiles": [
+        "units"
+      ],
+      "categories": [
+        "compiler",
+        "runtime",
+        "library"
+      ],
+      "isolation": "readonly",
+      "chez": true,
+      "coverage": [
+        "import-binding-identities-chez"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "import binding identities"
+        }
+      ]
+    },
+    {
+      "id": "lexical-syntax-contexts-chez",
+      "label": "lexical syntax contexts",
+      "command": [
+        "chez",
+        "--libdirs",
+        "src",
+        "--script",
+        "test/syntax-context-check.ss"
+      ],
+      "profiles": [
+        "units"
+      ],
+      "categories": [
+        "compiler"
+      ],
+      "isolation": "readonly",
+      "chez": true,
+      "coverage": [
+        "lexical-syntax-contexts-chez"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "lexical syntax contexts"
+        }
+      ]
+    },
+    {
+      "id": "contextual-lowering-boundaries-chez",
+      "label": "contextual lowering boundaries",
+      "command": [
+        "chez",
+        "--libdirs",
+        "src",
+        "--script",
+        "test/contextual-boundary-tests.ss"
+      ],
+      "profiles": [
+        "units"
+      ],
+      "categories": [
+        "compiler"
+      ],
+      "isolation": "readonly",
+      "chez": true,
+      "coverage": [
+        "contextual-lowering-boundaries-chez"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "contextual lowering boundaries"
+        }
+      ]
+    },
+    {
+      "id": "private-macro-binding-views-chez",
+      "label": "private macro binding views",
+      "command": [
+        "chez",
+        "--libdirs",
+        "src",
+        "--script",
+        "test/private-macro-context-check.ss"
+      ],
+      "profiles": [
+        "units"
+      ],
+      "categories": [
+        "compiler"
+      ],
+      "isolation": "readonly",
+      "chez": true,
+      "coverage": [
+        "private-macro-binding-views-chez"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "private macro binding views"
+        }
+      ]
+    },
+    {
+      "id": "import-target-namespace-boundaries-chez",
+      "label": "import target namespace boundaries",
+      "command": [
+        "chez",
+        "--libdirs",
+        "src",
+        "--script",
+        "test/import-target-boundary-tests.ss"
+      ],
+      "profiles": [
+        "units"
+      ],
+      "categories": [
+        "runtime",
+        "library"
+      ],
+      "isolation": "readonly",
+      "chez": true,
+      "coverage": [
+        "import-target-namespace-boundaries-chez"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "import target namespace boundaries"
+        }
+      ]
+    },
+    {
+      "id": "binding-context-source-parity-chez",
+      "label": "binding context source parity",
+      "command": [
+        "env",
+        "EMIT_BINDING_HOST=chez",
+        "bash",
+        "test/binding-context-tests.sh"
+      ],
+      "profiles": [
+        "reference"
+      ],
+      "categories": [
+        "compiler",
+        "infrastructure"
+      ],
+      "isolation": "workspace",
+      "chez": true,
+      "coverage": [
+        "binding-context-source-parity-chez"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "binding context source parity"
+        }
+      ]
+    },
+    {
+      "id": "repl-import-transactions-chez",
+      "label": "REPL import transactions",
+      "command": [
+        "chez",
+        "--libdirs",
+        "src",
+        "--script",
+        "test/repl-import-bindings-tests.ss"
+      ],
+      "profiles": [
+        "units"
+      ],
+      "categories": [
+        "runtime",
+        "library"
+      ],
+      "isolation": "readonly",
+      "chez": true,
+      "coverage": [
+        "repl-import-transactions-chez"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "REPL import transactions"
+        }
+      ]
+    },
+    {
+      "id": "mangle-symbol-naming-chez",
+      "label": "mangle (symbol naming)",
+      "command": [
+        "chez",
+        "--libdirs",
+        "src",
+        "--script",
+        "test/mangle-tests.ss"
+      ],
+      "profiles": [
+        "units"
+      ],
+      "categories": [
+        "compiler"
+      ],
+      "isolation": "readonly",
+      "chez": true,
+      "coverage": [
+        "mangle-symbol-naming-chez"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "mangle (symbol naming)"
+        }
+      ]
+    },
+    {
+      "id": "simplify-pass-units-chez",
+      "label": "simplify pass units",
+      "command": [
+        "chez",
+        "--libdirs",
+        "src",
+        "--script",
+        "test/simplify-tests.ss"
+      ],
+      "profiles": [
+        "units"
+      ],
+      "categories": [
+        "compiler"
+      ],
+      "isolation": "readonly",
+      "chez": true,
+      "coverage": [
+        "simplify-pass-units-chez"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "simplify pass units"
+        }
+      ]
+    },
+    {
+      "id": "artifact-cache-core-chez",
+      "label": "artifact cache core",
+      "command": [
+        "chez",
+        "--libdirs",
+        "src",
+        "--script",
+        "test/artifact-cache-core-tests.ss"
+      ],
+      "profiles": [
+        "units"
+      ],
+      "categories": [
+        "library"
+      ],
+      "isolation": "readonly",
+      "chez": true,
+      "coverage": [
+        "artifact-cache-core-chez"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "artifact cache core"
+        }
+      ]
+    },
+    {
+      "id": "module-vertical-slice-aot-native",
+      "label": "module vertical-slice (AOT)",
+      "command": [
+        "test/modules-tests.sh"
+      ],
+      "profiles": [
+        "reference"
+      ],
+      "categories": [
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": true,
+      "coverage": [
+        "module-vertical-slice-aot-native"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "module vertical-slice (AOT)"
+        }
+      ]
+    },
+    {
+      "id": "runtime-and-macro-library-composition-chez-source-native-parity-both",
+      "label": "runtime and macro library composition (Chez source + native parity)",
+      "command": [
+        "env",
+        "EMIT_COMPOSITION_HOST=both",
+        "test/library-composition-tests.sh"
+      ],
+      "profiles": [
+        "reference"
+      ],
+      "categories": [
+        "library",
+        "infrastructure"
+      ],
+      "isolation": "workspace",
+      "chez": true,
+      "coverage": [
+        "runtime-and-macro-library-composition-chez-source-native-parity-both"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "runtime and macro library composition (Chez source + native parity)"
+        }
+      ]
+    },
+    {
+      "id": "snow-fort-packages-cross-host-artifact-parity-both",
+      "label": "snow-fort packages + cross-host artifact parity",
+      "command": [
+        "env",
+        "EMIT_SNOW_HOST=both",
+        "test/snow-package-tests.sh"
+      ],
+      "profiles": [
+        "reference"
+      ],
+      "categories": [
+        "library",
+        "infrastructure"
+      ],
+      "isolation": "workspace",
+      "chez": true,
+      "coverage": [
+        "snow-fort-packages-cross-host-artifact-parity-both"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "snow-fort packages + cross-host artifact parity"
+        }
+      ]
+    },
+    {
+      "id": "complete-upstream-srfi-suites-native-and-chez-both",
+      "label": "complete upstream SRFI suites (native and Chez)",
+      "command": [
+        "env",
+        "EMIT_SNOW_HOST=both",
+        "bash",
+        "test/srfi-upstream-tests.sh"
+      ],
+      "profiles": [
+        "reference"
+      ],
+      "categories": [
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": true,
+      "coverage": [
+        "complete-upstream-srfi-suites-native-and-chez-both"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "complete upstream SRFI suites (native and Chez)"
+        }
+      ]
+    },
+    {
+      "id": "hybrid-resolver-chez-backends-native",
+      "label": "hybrid resolver (Chez backends)",
+      "command": [
+        "test/hybrid-library-resolution-chez-tests.sh"
+      ],
+      "profiles": [
+        "reference"
+      ],
+      "categories": [
+        "host",
+        "infrastructure"
+      ],
+      "isolation": "workspace",
+      "chez": true,
+      "coverage": [
+        "hybrid-resolver-chez-backends-native"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "hybrid resolver (Chez backends)"
+        }
+      ]
+    },
+    {
+      "id": "scheme-base-gen-guard-native",
+      "label": "(scheme base) gen guard",
+      "command": [
+        "test/scheme-base-gen-check.sh"
+      ],
+      "profiles": [
+        "reference"
+      ],
+      "categories": [
+        "library",
+        "infrastructure"
+      ],
+      "isolation": "workspace",
+      "chez": true,
+      "coverage": [
+        "scheme-base-gen-guard-native"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "(scheme base) gen guard"
+        }
+      ]
+    },
+    {
+      "id": "scheme-base-auto-import-aot-native",
+      "label": "(scheme base) auto-import (AOT)",
+      "command": [
+        "test/prelude-base-tests.sh"
+      ],
+      "profiles": [
+        "reference"
+      ],
+      "categories": [
+        "runtime",
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": true,
+      "coverage": [
+        "scheme-base-auto-import-aot-native"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "(scheme base) auto-import (AOT)"
+        }
+      ]
+    },
+    {
+      "id": "process-i-o-primitives-native",
+      "label": "process-I/O primitives",
+      "command": [
+        "test/io-primitives-tests.sh"
+      ],
+      "profiles": [
+        "reference"
+      ],
+      "categories": [
+        "runtime"
+      ],
+      "isolation": "workspace",
+      "chez": true,
+      "coverage": [
+        "process-i-o-primitives-native"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "process-I/O primitives"
+        }
+      ]
+    },
+    {
+      "id": "string-port-scaling-p21-native",
+      "label": "string-port scaling (P21)",
+      "command": [
+        "test/string-port-scaling-tests.sh"
+      ],
+      "profiles": [
+        "reference"
+      ],
+      "categories": [
+        "runtime"
+      ],
+      "isolation": "workspace",
+      "chez": true,
+      "coverage": [
+        "string-port-scaling-p21-native"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "string-port scaling (P21)"
+        }
+      ]
+    },
+    {
+      "id": "self-emission",
+      "label": "self-emission equivalence",
+      "command": [
+        "bash",
+        "-c",
+        "make build/schemec >/dev/null 2>&1 && test/self-emit-equiv.sh"
+      ],
+      "profiles": [
+        "reference"
+      ],
+      "categories": [
+        "infrastructure"
+      ],
+      "isolation": "workspace",
+      "chez": true,
+      "coverage": [
+        "self-emission"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "self-emission equivalence"
+        }
+      ]
+    },
+    {
+      "id": "self-hosting-fixed-point-native",
+      "label": "self-hosting fixed point",
+      "command": [
+        "test/self-host-fixpoint.sh"
+      ],
+      "profiles": [
+        "reference"
+      ],
+      "categories": [
+        "infrastructure"
+      ],
+      "isolation": "workspace",
+      "chez": true,
+      "coverage": [
+        "self-hosting-fixed-point-native"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "self-hosting fixed point"
+        }
+      ]
+    },
+    {
+      "id": "embedded-runner-vs-aot-native",
+      "label": "embedded runner vs AOT",
+      "command": [
+        "demos/run-embedded.sh"
+      ],
+      "profiles": [
+        "reference"
+      ],
+      "categories": [
+        "runtime"
+      ],
+      "isolation": "workspace",
+      "chez": true,
+      "coverage": [
+        "embedded-runner-vs-aot-native"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "embedded runner vs AOT"
+        }
+      ]
+    },
+    {
+      "id": "repl-front-end-units-chez",
+      "label": "REPL front-end units",
+      "command": [
+        "chez",
+        "--libdirs",
+        "src",
+        "--script",
+        "test/repl-frontend.ss"
+      ],
+      "profiles": [
+        "units"
+      ],
+      "categories": [
+        "runtime"
+      ],
+      "isolation": "readonly",
+      "chez": true,
+      "coverage": [
+        "repl-front-end-units-chez"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "REPL front-end units"
+        }
+      ]
+    },
+    {
+      "id": "repl-interactive-repl-native",
+      "label": "REPL interactive (--repl)",
+      "command": [
+        "test/repl-interactive-tests.sh"
+      ],
+      "profiles": [
+        "reference"
+      ],
+      "categories": [
+        "runtime"
+      ],
+      "isolation": "workspace",
+      "chez": true,
+      "coverage": [
+        "repl-interactive-repl-native"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "REPL interactive (--repl)"
+        }
+      ]
+    },
+    {
+      "id": "repl-vs-batch-equivalence-native",
+      "label": "REPL vs batch equivalence",
+      "command": [
+        "test/repl-equiv-tests.sh"
+      ],
+      "profiles": [
+        "reference"
+      ],
+      "categories": [
+        "runtime",
+        "infrastructure"
+      ],
+      "isolation": "workspace",
+      "chez": true,
+      "coverage": [
+        "repl-vs-batch-equivalence-native"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "REPL vs batch equivalence"
+        }
+      ]
+    },
+    {
+      "id": "repl-persistent-globals-batch-native",
+      "label": "REPL persistent-globals batch",
+      "command": [
+        "test/repl-batch-tests.sh"
+      ],
+      "profiles": [
+        "reference"
+      ],
+      "categories": [
+        "runtime"
+      ],
+      "isolation": "workspace",
+      "chez": true,
+      "coverage": [
+        "repl-persistent-globals-batch-native"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "REPL persistent-globals batch"
+        }
+      ]
+    },
+    {
+      "id": "dump-parity",
+      "label": "--dump parity vs chez",
+      "command": [
+        "test/dump-parity-tests.sh"
+      ],
+      "profiles": [
+        "reference"
+      ],
+      "categories": [
+        "infrastructure"
+      ],
+      "isolation": "workspace",
+      "chez": true,
+      "coverage": [
+        "dump-parity"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "--dump parity vs chez"
+        }
+      ]
+    },
+    {
+      "id": "r7rs-stale-exclusions",
+      "label": "R7RS-small suite (vendored, stale exclusions)",
+      "command": [
+        "test/r7rs-suite-tests.sh"
+      ],
+      "profiles": [
+        "conformance"
+      ],
+      "categories": [
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "r7rs-stale-exclusions"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "R7RS-small suite (vendored, + stale exclusions)"
+        }
+      ]
+    },
+    {
+      "id": "source-consistency",
+      "label": "Chez-free source consistency",
+      "command": [
+        "bash",
+        "tools/test-source.sh"
+      ],
+      "profiles": [
+        "source"
+      ],
+      "categories": [
+        "compiler",
+        "infrastructure"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "source-bootstrap-byte-consistency"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "anti-stale trust-check"
+        }
+      ]
+    },
+    {
+      "id": "native-feedback",
+      "label": "focused native execution paths",
+      "command": [
+        "bash",
+        "test/native-feedback-tests.sh"
+      ],
+      "profiles": [
+        "dev",
+        "compat"
+      ],
+      "categories": [
+        "compiler",
+        "runtime",
+        "host",
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "focused-run-repl-aot-library-error"
+      ],
+      "legacy": []
+    }
+  ]
+}

@@ -22,7 +22,7 @@ file can be edited and changed to reflect decision and priority changes.
 
 ## Current state
 
-- The committed `bootstrap/*.ll` means a source build needs only LLVM 19+,
+- The committed `bootstrap/*.ll` means a source build needs only LLVM 22+,
   libgc, and a C/C++ compiler. No bootstrap binary is required.
 - `emit` links the LLVM C++ ORC/LLJIT API dynamically. That API is not stable
   across LLVM majors.

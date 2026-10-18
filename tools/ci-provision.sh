@@ -15,15 +15,11 @@ else
   prefix=$2
 fi
 case "$major" in
-  19) version=19.1.7; revision=cd708029e0b2869e80abe31ddb175f7c35361f90 ;;
-  20) version=20.1.8; revision=87f0227cb60147a26a1eeb4fb06e3b505e9c7261 ;;
-  21) version=21.1.0; revision=3623fe661ae35c6c80ac221f14d85be76aa870f1 ;;
   22) version=22.1.0; revision=4434dabb69916856b824f68a64b029c67175e532 ;;
   23) version=23.1.0; revision=ea7d852a70e8bdfaf601d6626a760f9771b2c4b4 ;;
   *) printf 'ci: unsupported matrix major: %s\n' "$major" >&2; exit 2 ;;
 esac
 gc_revision=ee59af3722e56de8404de6cd0c21c2493cc4d855
-previous_identity="$version $revision $gc_revision recipe-4"
 identity="$version $revision $gc_revision recipe-5"
 if [ "$identity_only" = 1 ]; then
   printf '%s\n' "${identity// /-}"
@@ -84,7 +80,7 @@ select_darwin_sdk() {
   export SDKROOT
 }
 validate_cached_identity() {
-  if [ "$1" != "$identity" ] && [ "$1" != "$previous_identity" ]; then
+  if [ "$1" != "$identity" ]; then
     printf 'ci: cached dependency identity differs\n' >&2
     return 1
   fi
@@ -217,7 +213,7 @@ if [ "$(uname -s)" = Darwin ]; then
 fi
 run_logged "verify $prefix/llvm/bin/llvm-config -> LLVM $version" probe_version "$prefix/llvm/bin/llvm-config" "^${version//./\\.}$"
 for compiler in clang clang++; do
-  run_logged "verify $prefix/llvm/bin/$compiler -> LLVM $major" probe_version "$prefix/llvm/bin/$compiler" "version $major[.]"
+  run_logged "verify $prefix/llvm/bin/$compiler -> LLVM $version" probe_version "$prefix/llvm/bin/$compiler" "version ${version//./\\.}([[:space:]]|$)"
 done
 case "$(uname -s)" in
   Linux)
@@ -241,6 +237,10 @@ run_logged "run $work/llvm-check -> LLVM verification through system Bash withou
 run_logged "compile src/runtime/runtime.c -> $work/runtime-check.o" "$prefix/llvm/bin/clang" -std=gnu11 -O2 -DRT_NO_MAIN -I"$prefix/gc/include" -c src/runtime/runtime.c -o "$work/runtime-check.o"
 run_logged "link runtime object -> $work/runtime-check  [libgc and LTO]" "$prefix/llvm/bin/clang" -flto "$work/runtime-check.o" -x c - -L"$prefix/gc/lib" -lgc -lm -o "$work/runtime-check" <<< 'int main(void) { return 0; }'
 run_logged "run $work/runtime-check -> native runtime verification through system Bash without DYLD overrides" run_native_probe "$work/runtime-check"
+run_logged "link libgc headers + shared library -> $work/gc-version-check  [8.2.8]" "$prefix/llvm/bin/clang" -std=c11 -I"$prefix/gc/include" -x c - -L"$prefix/gc/lib" -lgc -o "$work/gc-version-check" <<< '#include <gc/gc.h>
+_Static_assert(GC_VERSION_MAJOR == 8 && GC_VERSION_MINOR == 2 && GC_VERSION_MICRO == 8, "libgc headers differ from 8.2.8");
+int main(void) { return GC_get_version() == ((8u << 16) | (2u << 8) | 8u) ? 0 : 1; }'
+run_logged "run $work/gc-version-check -> exact libgc shared-library version verification" run_native_probe "$work/gc-version-check"
 printf '%s\n' "$identity" > "$prefix/complete"
 say "verify $prefix -> LLVM $version + libgc 8.2.8  [$(du -sk "$prefix" | awk '{ print $1 }') KiB, ${SECONDS}s]"
 # Workflow environment is the machine-consumable output.

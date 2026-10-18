@@ -70,13 +70,15 @@ mode=default
 case "${1:-}" in
   --help|-h)
     cat <<'USAGE'
-usage: test/r7rs-suite-tests.sh [--sections-only | --discover]
+usage: test/r7rs-suite-tests.sh [--sections-only | --discover | --check-assembly | --measure-assembly]
 
 Run the vendored R7RS-small suite against emit run, one program per section.
 
   (no flag)        run every section, then check the exclusion manifest for staleness
   --sections-only  run the sections only -- catches regressions, not stale exclusions
   --discover       probe every form and rewrite test/r7rs/exclusions.tsv (slow)
+  --check-assembly compare generated section programs with the previous assembler (test-only)
+  --measure-assembly measure three setup-only old/new samples and emit JSON (no Emit/LLVM)
 
 Environment: EMIT_JOBS (parallelism, default = CPU count), EMIT_VERBOSITY,
              EMIT_FORM_TIMEOUT (seconds per form in the staleness pass, default 120).
@@ -86,6 +88,8 @@ USAGE
     exit 0 ;;
   --sections-only) mode=sections ;;
   --discover)      mode=discover ;;
+  --check-assembly) mode=assembly-check ;;
+  --measure-assembly) mode=assembly-measure ;;
   "")              ;;
   *) echo "r7rs-suite: unknown option: $1 (try --help)" >&2; exit 2 ;;
 esac
@@ -95,7 +99,7 @@ for f in "$SUITE" "$SUMS" "$FORMS" "$HARNESS"; do
 done
 [ -f "$EXCL" ] || : > "$EXCL"          # --discover bootstraps from an empty manifest
 
-if [ ! -x build/emit ]; then
+if [ "$mode" != assembly-check ] && [ "$mode" != assembly-measure ] && [ ! -x build/emit ]; then
   make emit >/dev/null 2>&1 || { echo "  [FAIL] could not build build/emit"; exit 1; }
 fi
 
@@ -147,6 +151,34 @@ emit_program () {
     NR==FNR { excluded[$1]=1; next }
     $2==sec && (!($1 in excluded) || $1==extra) { print $3"\t"$4 }
   ' "$TMP/excl-keys-only" "$TMP/forms" > "$out.ranges"
+  awk -F'\t' '
+    FILENAME == ARGV[1] {
+      count++
+      start[count]=$1
+      end[count]=$2
+      next
+    }
+    { source[FNR]=$0 }
+    END {
+      for (range=1; range<=count; range++) {
+        for (line=start[range]; line<=end[range]; line++) print source[line]
+        print ""
+      }
+    }
+  ' "$out.ranges" "$SUITE" >> "$out"
+  printf '(hx-summary)\n' >> "$out"
+}
+
+# Keep the old range-by-range assembly available only to the fixture below. The
+# byte comparison proves that the one-AWK implementation preserves each generated
+# program, including source ordering and blank separators.
+emit_program_reference () {
+  local out="$1" section="$2" extra="${3:-}"
+  cat "$HARNESS" > "$out"
+  awk -F'\t' -v sec="$section" -v extra="$extra" '
+    NR==FNR { excluded[$1]=1; next }
+    $2==sec && (!($1 in excluded) || $1==extra) { print $3"\t"$4 }
+  ' "$TMP/excl-keys-only" "$TMP/forms" > "$out.ranges"
   while IFS=$'\t' read -r s e; do
     sed -n "${s},${e}p" "$SUITE" >> "$out"
     printf '\n' >> "$out"
@@ -159,6 +191,89 @@ emit_program () {
 # that report "0 pass" and look like success.
 cut -f1 "$TMP/excl" > "$TMP/excl-keys-only"
 [ -s "$TMP/excl-keys-only" ] || echo "__no_exclusions__" > "$TMP/excl-keys-only"
+
+if [ "$mode" = assembly-check ] || [ "$mode" = assembly-measure ]; then
+  if [ "$mode" = assembly-measure ]; then
+    : > "$TMP/old-times"
+    : > "$TMP/new-times"
+    TIMEFORMAT='%R'
+    for sample in 1 2 3; do
+      { time {
+        while read -r section; do
+          key="$(echo "$section" | tr -c 'A-Za-z0-9' '_')"
+          emit_program_reference "$TMP/old-$key" "$section"
+        done < "$TMP/sections"
+      } } 2> "$TMP/old-time"
+      read -r elapsed < "$TMP/old-time"
+      printf '%s\n' "$elapsed" >> "$TMP/old-times"
+      { time {
+        while read -r section; do
+          key="$(echo "$section" | tr -c 'A-Za-z0-9' '_')"
+          emit_program "$TMP/new-$key" "$section"
+        done < "$TMP/sections"
+      } } 2> "$TMP/new-time"
+      read -r elapsed < "$TMP/new-time"
+      printf '%s\n' "$elapsed" >> "$TMP/new-times"
+      while read -r section; do
+        key="$(echo "$section" | tr -c 'A-Za-z0-9' '_')"
+        if ! cmp -s "$TMP/old-$key" "$TMP/new-$key"; then
+          echo "[FAIL] generated program differs for section: $section" >&2
+          diff -u "$TMP/old-$key" "$TMP/new-$key" | head -40 >&2
+          exit 1
+        fi
+      done < "$TMP/sections"
+    done
+    old_sed=$(( $(wc -l < "$TMP/forms" | tr -d ' ') - $(wc -l < "$TMP/excl-keys" | tr -d ' ') ))
+    new_slices=$(wc -l < "$TMP/sections" | tr -d ' ')
+    python3 - "$TMP/old-times" "$TMP/new-times" "$old_sed" "$new_slices" <<'PY'
+import json
+import pathlib
+import sys
+
+old_times = [float(value) for value in pathlib.Path(sys.argv[1]).read_text().split()]
+new_times = [float(value) for value in pathlib.Path(sys.argv[2]).read_text().split()]
+print(json.dumps({
+    "schema": 1,
+    "scope": "setup-only; no Emit or LLVM invoked",
+    "samples": 3,
+    "sections_byte_identical_each_sample": 21,
+    "old_setup_seconds": old_times,
+    "new_setup_seconds": new_times,
+    "old_range_materialization_processes": int(sys.argv[3]),
+    "new_slice_processes": int(sys.argv[4]),
+}, indent=2, sort_keys=True))
+PY
+    exit 0
+  fi
+  checked=0
+  while read -r section; do
+    key="$(echo "$section" | tr -c 'A-Za-z0-9' '_')"
+    emit_program "$TMP/new-$key" "$section"
+    emit_program_reference "$TMP/old-$key" "$section"
+    if ! cmp -s "$TMP/old-$key" "$TMP/new-$key"; then
+      echo "[FAIL] generated program differs for section: $section" >&2
+      diff -u "$TMP/old-$key" "$TMP/new-$key" | head -40 >&2
+      exit 1
+    fi
+    checked=$((checked + 1))
+
+    extra="$(awk -F'\t' -v sec="$section" '
+      NR==FNR { excluded[$1]=1; next }
+      $2==sec && ($1 in excluded) { print $1; exit }
+    ' "$TMP/excl-keys-only" "$TMP/forms")"
+    if [ -n "$extra" ]; then
+      emit_program "$TMP/new-extra-$key" "$section" "$extra"
+      emit_program_reference "$TMP/old-extra-$key" "$section" "$extra"
+      if ! cmp -s "$TMP/old-extra-$key" "$TMP/new-extra-$key"; then
+        echo "[FAIL] extra excluded form differs for section: $section ($extra)" >&2
+        diff -u "$TMP/old-extra-$key" "$TMP/new-extra-$key" | head -40 >&2
+        exit 1
+      fi
+    fi
+  done < "$TMP/sections"
+  echo "[PASS] $checked section programs match the reference assembler byte-for-byte"
+  exit 0
+fi
 
 # run_program <file> -> stdout captured to <file>.out; exit status is emit's
 run_program () { $RUN "$1" > "$1.out" 2> "$1.err"; }

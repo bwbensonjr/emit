@@ -19,3 +19,6 @@ CLAUDE.local.md
 # untagged errors instead of the curated reasons, so the two disagree by design, and every
 # discovery run rewrites it.
 test/r7rs/exclusions.tsv.draft
+# Python validation tools use no installed dependencies.
+__pycache__/
+*.pyc

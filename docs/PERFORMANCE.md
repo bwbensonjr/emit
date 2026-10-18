@@ -38,6 +38,7 @@ speed items in this list.
 | [P21](#p21--an-output-string-port-is-a-libc-file-and-an-unclosed-one-costs-every-later-port) | An output string port is a libc `FILE`, and an unclosed one costs every later port | speed | med | med–high | `buffer-backed-string-ports` | ☑ |
 | [P22](#p22--a-string-ports-buffer-is-retained-for-the-life-of-the-process) | A string port's buffer is retained for the life of the process | memory | low–med | med | — | ☐ |
 | [P23](#p23--the-repl-materializes-every-manifest-library-at-startup-imported-or-not) | The REPL materializes every manifest library at startup, imported or not | startup speed | **high** | low–med | `defer-manifest-library-init` (fix 1) | ☐ |
+| [P24](#p24--validation-repeats-setup-and-coverage-across-local-and-ci-runs) | Validation repeats setup and coverage across local and CI runs | developer feedback + CI build time | high | med | `streamline-build-and-test` | ☐ |
 
 Legend — **Value**: benefit if fixed. **Cost**: rough implementation effort/risk. These are
 estimates to aid sequencing, not commitments.
@@ -2427,6 +2428,20 @@ The adapter uses APIs with the same public signatures across LLVM 19-22: `Object
 remain explicit release-matrix work rather than inferred successes.
 
 ---
+
+## P24 — Validation repeats setup and coverage across local and CI runs
+
+**Kind:** developer feedback and CI build time · **Value:** high · **Cost:** med · **OpenSpec change:** `streamline-build-and-test` · ☐
+
+**Symptom.** At baseline commit `a6238520b38551b1042e9f35a5768e0bcdd29d36`, the full Chez-free native runner executed 53 suites in **2466 s (41:06)** with LLVM 23.1.2 and no Chez. The archived suite log records 0 failures. Six suites account for most elapsed time: R7RS sections, library partition, upstream SRFIs, import sets, installed layout, and binding contexts. The design investigation separately measured three direct Chez unit suites at 0.12, 0.18, and 0.22 s. The two classes of feedback have very different cost and should not be one unconditional developer obligation.
+
+The release tag workflow recorded 144 minutes elapsed, with 755 aggregate compatibility provisioning minutes and 277 aggregate native build/test minutes. Those are sums across jobs, not one wall-clock test duration. A cold Linux archive job also built the same LLVM 23 recipe as the compatibility job. Existing ref-scoped caches help but do not guarantee a reusable trusted toolchain on cold refs.
+
+**Cause.** `run-all-tests.sh` and `run-dev-tests.sh` group native integration, direct compiler units, cross-host checks, and source/bootstrap proof into broad aggregates. CI repeats every native suite across ten cells. Build-mutating tests share the checkout today, which prevents safely running them all in parallel. CI cold provisioning and test execution have historically been discussed as one wait despite being separate costs.
+
+**Possible fix.** The `streamline-build-and-test` change introduces one versioned registry for the legacy assertions, selectable profiles, and an inspectable change classifier. First establish the exact suite/assertion inventory and repeatable baseline. Then route ordinary edits to the smallest claim-appropriate profile, isolate mutating suites before bounded scheduling, provision the four maintained LLVM/platform combinations through verified reusable artifacts, and retain equal-coverage full-run measurements. Keep source consistency, source units, and independent-host evidence as distinct claims. Do not call a profile reduction a speedup of unchanged coverage.
+
+**Measurement limits and acceptance.** The 2466-second historical log does not preserve machine model, cache state, queue delay, or dependency provisioning time. Those values are unknown, not zero. The release run's job-aggregate minutes overlap and cannot be directly compared with local test execution. [docs/VALIDATION-BASELINE.md](VALIDATION-BASELINE.md) gives the isolated snapshot procedure and requires separate queue, provisioning, build, and test figures; the exact assertion inventory is [docs/VALIDATION-COVERAGE.md](VALIDATION-COVERAGE.md) and [tools/test-registry.json](../tools/test-registry.json). Acceptance needs paired same-machine samples for compiler, runtime, native-host, and prose edits, plus at least two equal-coverage full runs before and after. Report median and range, actual invocation counts only when observable, and any unmet equal-coverage target. No before/after speedup is claimed by this baseline entry.
 
 ## Maintaining this file
 

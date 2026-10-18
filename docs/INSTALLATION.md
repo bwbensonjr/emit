@@ -1,7 +1,10 @@
 # Installation
 
 Emit source builds use the committed `bootstrap/*.ll`; Chez is not needed for
-the normal build. The native build requires LLVM 19 or newer, libgc, and a C/C++
+the normal build. The tested native build floor is LLVM 22, with LLVM 22 and 23
+maintained on Linux and macOS. Newer majors remain discoverable; older majors warn
+and continue without maintained CI coverage (`EMIT_LLVM_MIN` overrides that warning
+floor). The build also requires libgc and a C/C++
 toolchain. Run `make`, then install with `make install`. `PREFIX` selects the
 logical install prefix and `DESTDIR` stages that prefix for packaging:
 

@@ -88,7 +88,7 @@ LLVM through a C/C++ FFI shim for exactly this in-process-JIT purpose.
 ### Install (development)
 
 The toolchain is discovered via `llvm-config` + `pkg-config bdw-gc` (`tools/llvm-env.sh`),
-so any reasonably recent LLVM works — LLVM 19+ is expected (older warns, set `EMIT_LLVM_MIN`
+so any reasonably recent LLVM works — LLVM 22+ is expected (older warns, set `EMIT_LLVM_MIN`
 to change), with no upper bound.
 
 ```sh
