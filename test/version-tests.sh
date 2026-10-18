@@ -72,6 +72,19 @@ else
   else
     ok "Makefile rejects multiple VERSION lines"
   fi
+  marker="$TMP/version-command-ran"
+  printf '0.1.0$(touch "%s")\n' "$marker" > "$FIXTURE/VERSION"
+  if make -C "$FIXTURE" emit >/dev/null 2>&1; then
+    bad "Makefile rejects shell metacharacters in VERSION"
+  else
+    ok "Makefile rejects shell metacharacters in VERSION"
+  fi
+  if [ -e "$marker" ]; then
+    bad "VERSION validation evaluated command substitution"
+    rm -f "$marker"
+  else
+    ok "VERSION validation treats command substitution as data"
+  fi
 
   printf '0.1.1\n' > "$FIXTURE/VERSION"
   if make -C "$FIXTURE" emit >/dev/null 2>&1 \

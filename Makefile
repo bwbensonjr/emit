@@ -90,15 +90,17 @@ DESTDIR     ?=
 NATIVE_CONFIG := build/native-config
 VERSION := $(strip $(shell sed -n '1p' VERSION 2>/dev/null))
 
+# Read VERSION as data in the stamp recipe; never interpolate its contents into shell source.
 $(NATIVE_CONFIG): FORCE Makefile VERSION | build
 	@tmp="$@.$$$$.tmp"; trap 'rm -f "$$tmp"' EXIT HUP INT TERM; \
+	  version=""; IFS= read -r version < VERSION; \
 	  if [ "$$(wc -l < VERSION | tr -d ' ')" -ne 1 ] || \
-	     [ "$$(cat VERSION)" != "$(VERSION)" ] || \
-	     ! printf '%s\n' "$(VERSION)" | grep -Eq '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$$'; then \
+	     ! printf '%s\n' "$$version" | cmp -s - VERSION || \
+	     ! printf '%s\n' "$$version" | grep -Eq '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$$'; then \
 	    printf '%s\n' 'configure invalid VERSION (expected one SemVer line) -> VERSION' >&2; exit 2; \
 	  fi; \
-	  { printf '%s\n' \
-	      'VERSION=$(VERSION)' \
+	  { printf 'VERSION=%s\n' "$$version"; \
+	    printf '%s\n' \
 	      'SHIPPED_FILES=$(SLDS) $(LIBDATA) $(SUPPORT) emit-libs.scm' \
 	      'CC=$(CC)' \
 	      'CXX=$(CXX)' \
