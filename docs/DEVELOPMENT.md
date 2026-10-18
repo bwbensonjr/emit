@@ -59,7 +59,9 @@ See [retained coverage](VALIDATION-COVERAGE.md) and [CI policy](RELEASE-PIPELINE
 
 The runner snapshots the current Git input set once, including uncommitted bytes
 and nonignored untracked files. Deleted files stay deleted. It makes a fresh
-workspace, build configuration, cache, and temporary directory for every suite.
+workspace, build configuration, home, XDG cache/config/data, and temporary
+directory for every suite. Ambient `DESTDIR` and recursive Make override flags
+are removed so fixture installs cannot be redirected outside their workspace.
 No test changes the developer checkout. External symlinks are rejected. Native
 profiles build an immutable seed once; workers copy its binaries/objects with
 preserved timestamps, but never share mutable outputs or caches. Configuration,
@@ -76,7 +78,8 @@ Use `--jobs 1` for constrained memory or serial reproduction; each Emit compiler
 process can consume substantial memory and child builds add parallel work.
 Nested fixture parallelism defaults to one (`EMIT_TEST_CHILD_JOBS`); an explicit
 `EMIT_JOBS` remains authoritative. Seed and fixture Make builds can use two jobs.
-Cancellation signals process groups, escalates termination, waits for workers,
+Cancellation signals private process sessions (including GNU `timeout`'s
+separate process groups), escalates termination, waits for workers,
 and fails the aggregate. A failed suite does not hide other suite outcomes.
 Logs and proof JSON remain in the printed temporary report directory; disposable
 workspaces are removed. Remove retained log directories when no longer needed.

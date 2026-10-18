@@ -3,6 +3,7 @@
 
 import argparse
 import concurrent.futures
+import ctypes
 import hashlib
 import importlib.util
 import json
@@ -41,7 +42,85 @@ def narrate(message, error=False):
 def validation_environment():
     # Inherited Git hook/worktree variables must not redirect private fixture
     # Git operations back into the developer's repository or index.
-    return {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+    return {key: value for key, value in os.environ.items()
+            if not key.startswith("GIT_") and key not in
+            {"DESTDIR", "MAKEFLAGS", "MFLAGS", "MAKEOVERRIDES"}}
+
+
+def workspace_environment(environment, target):
+    env = environment.copy()
+    locations = {"HOME": "home", "XDG_CACHE_HOME": "cache", "XDG_CONFIG_HOME": "config",
+                 "XDG_DATA_HOME": "data", "XDG_STATE_HOME": "state", "TMPDIR": "tmp"}
+    for key, directory in locations.items():
+        path = target / directory
+        path.mkdir(parents=True, exist_ok=True)
+        env[key] = str(path)
+    env["TMP"] = env["TEMP"] = env["TMPDIR"]
+    env["EMIT_CACHE"] = str(target / "emit-cache")
+    env.setdefault("EMIT_JOBS", os.environ.get("EMIT_TEST_CHILD_JOBS", "1"))
+    return env
+
+
+def session_members(session):
+    """Find same-user session members, including GNU timeout's other groups."""
+    if sys.platform == "darwin":
+        library = ctypes.CDLL("/usr/lib/libproc.dylib", use_errno=True)
+        library.proc_listpids.argtypes = [ctypes.c_uint32, ctypes.c_uint32,
+                                         ctypes.c_void_p, ctypes.c_int]
+        library.proc_listpids.restype = ctypes.c_int
+        # PROC_UID_ONLY = 4. proc_listpids returns bytes, not a PID count.
+        capacity = 1024
+        while True:
+            buffer = (ctypes.c_int * capacity)()
+            size = library.proc_listpids(4, os.getuid(), buffer, ctypes.sizeof(buffer))
+            if size < 0:
+                raise OSError(ctypes.get_errno(), "cannot enumerate validation processes")
+            if size < ctypes.sizeof(buffer):
+                pids = list(buffer)[:size // ctypes.sizeof(ctypes.c_int)]
+                break
+            capacity *= 2
+    elif sys.platform.startswith("linux"):
+        pids = [int(path.name) for path in Path("/proc").iterdir() if path.name.isdigit()]
+    else:
+        raise RuntimeError("validation process cleanup requires macOS or Linux")
+    members = set()
+    for pid in pids:
+        if not pid:
+            continue
+        try:
+            if os.getsid(pid) == session:
+                members.add(pid)
+        except (ProcessLookupError, PermissionError):
+            # Other users' Linux processes may be inaccessible; own children
+            # must remain discoverable, checked before any command is started.
+            continue
+    return members
+
+
+def signal_session(session, number):
+    if session == os.getsid(0):
+        raise RuntimeError("refusing to signal the validation runner's own session")
+    members = session_members(session)
+    if number == signal.SIGKILL:
+        # Freeze before killing: otherwise a shell/timeout can fork between the
+        # inventory and signal, leaving an orphan in a different process group.
+        stopped = set()
+        while members - stopped:
+            for pid in members - stopped:
+                try:
+                    os.kill(pid, signal.SIGSTOP)
+                except ProcessLookupError:
+                    pass
+            stopped.update(members)
+            members = session_members(session)
+        members |= stopped
+    for pid in members:
+        try:
+            # Recheck membership so a recycled PID never targets another job.
+            if os.getsid(pid) == session:
+                os.kill(pid, number)
+        except ProcessLookupError:
+            pass
 
 
 def registry(path):
@@ -205,18 +284,15 @@ class Executor:
         self.environment = validation_environment()
         self.telemetry = None
         self.interrupted = False
+        if os.getpid() not in session_members(os.getsid(0)):
+            raise RuntimeError("cannot enumerate own validation processes safely")
 
     def stop(self, *received_signal):
         if received_signal:
             self.interrupted = True
         self.cancelled.set()
-        with self.lock:
-            processes = list(self.processes)
-        for process in processes:
-            try:
-                os.killpg(process.pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
+        # Each command thread cleans its whole private session. Keep the signal
+        # handler nonblocking and do not signal a parent before finding children.
 
     def command(self, argv, cwd, log, env):
         if self.cancelled.is_set():
@@ -226,31 +302,23 @@ class Executor:
                                        stderr=subprocess.STDOUT, start_new_session=True)
             with self.lock:
                 self.processes.add(process)
-                # Close the spawn/cancel race.
-                if self.cancelled.is_set():
-                    os.killpg(process.pid, signal.SIGTERM)
             deadline = None
             try:
                 while True:
+                    if self.cancelled.is_set():
+                        if deadline is None:
+                            signal_session(process.pid, signal.SIGTERM)
+                            deadline = time.monotonic() + 2
+                        elif time.monotonic() >= deadline:
+                            signal_session(process.pid, signal.SIGKILL)
                     try:
                         return process.wait(timeout=0.2)
                     except subprocess.TimeoutExpired:
-                        if self.cancelled.is_set():
-                            if deadline is None:
-                                deadline = time.monotonic() + 2
-                            elif time.monotonic() >= deadline:
-                                try:
-                                    os.killpg(process.pid, signal.SIGKILL)
-                                except ProcessLookupError:
-                                    pass
-            finally:
-                # A script may exit while a child ignores SIGTERM. Kill the
-                # remaining process group before releasing this worker slot.
-                if self.cancelled.is_set():
-                    try:
-                        os.killpg(process.pid, signal.SIGKILL)
-                    except ProcessLookupError:
                         pass
+            finally:
+                # Also clean trailing children after normal shell exit. Private
+                # sessions, not just groups, contain GNU timeout descendants.
+                signal_session(process.pid, signal.SIGKILL)
                 process.wait()
                 with self.lock:
                     self.processes.discard(process)
@@ -273,14 +341,10 @@ class Executor:
                 result["isolation"] = "shared-readonly-source"
             else:
                 shutil.copytree(seed, target, symlinks=True, copy_function=shutil.copy2)
-            env = self.environment.copy()
-            env["EMIT_CACHE"] = str(target / "build" / "validation-cache")
-            env.setdefault("EMIT_JOBS", os.environ.get("EMIT_TEST_CHILD_JOBS", "1"))
-            env["TMPDIR"] = str(target / "build" / "tmp")
+            env = workspace_environment(self.environment, target / "build" / "environment")
             trace_log = self.work / (name + ".invocations.jsonl")
             if self.telemetry:
                 env["EMIT_TEST_TRACE_LOG"] = str(trace_log)
-            Path(env["TMPDIR"]).mkdir(parents=True, exist_ok=True)
             command = list(suite["command"])
             proof_report = self.work / (name + ".proof.json")
             if name == "source-consistency":
@@ -419,6 +483,7 @@ def main():
             ["git", "status", "--porcelain", "--untracked-files=normal"], cwd=ROOT,
             env=validation_environment()))
         initialize_git(seed)
+        executor.environment = workspace_environment(executor.environment, work / "seed-environment")
         build_start = time.monotonic()
         native = any(s.get("needs_build", s.get("isolation") != "readonly") and
                      s["id"] != "source-consistency" for s in suites)

@@ -5,6 +5,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+from pathlib import PurePosixPath
 import subprocess
 import sys
 
@@ -30,7 +31,7 @@ def classify_paths(paths, inputs=(), error=None, executable=()):
     source = units = archive = False
     paths = sorted(set(paths))
     for path in paths:
-        if documentation(path) and path not in executable:
+        if documentation(path) and path not in executable and path not in inputs:
             categories.add("documentation")
         elif path.startswith("src/runtime/"):
             categories.add("runtime")
@@ -74,6 +75,76 @@ def classify_paths(paths, inputs=(), error=None, executable=()):
                                  else "empty comparison: conservative full validation")}
 
 
+def tree_entries(raw):
+    entries = {}
+    for record in raw.split(b"\0"):
+        if record:
+            metadata, name = record.split(b"\t", 1)
+            entries[name.decode()] = metadata.split()[0].decode()
+    return entries
+
+
+def resolve_alias(name, links, dependencies=None):
+    # Resolve components before '..': normalizing first misses aliases such as
+    # a -> '.', b -> 'a/a/../../outside'. No checkout of old inputs is needed.
+    pending = list(PurePosixPath(name).parts)
+    resolved = []
+    expansions = 0
+    while pending:
+        part = pending.pop(0)
+        if part == ".":
+            continue
+        if part == "..":
+            if not resolved:
+                raise ValueError("dependency alias escapes the repository: " + name)
+            resolved.pop()
+            continue
+        candidate = "/".join([*resolved, part])
+        if candidate not in links:
+            resolved.append(part)
+            continue
+        if dependencies is not None:
+            dependencies.add(candidate)
+        target = PurePosixPath(links[candidate])
+        if target.is_absolute():
+            raise ValueError("absolute dependency alias: " + candidate)
+        expansions += 1
+        if expansions > 40:
+            raise ValueError("cyclic dependency alias: " + name)
+        pending = list(target.parts) + pending
+    return "/".join(resolved)
+
+
+def dependency_aliases(root, paths, revisions, ci, inputs=(), executable=()):
+    """Find code aliases whose current or historical targets changed."""
+    aliases = set()
+    views = []
+    for revision, entries in revisions:
+        links = {name: git(root, "cat-file", "blob", revision + ":" + name).decode()
+                 for name, mode in entries.items() if mode == "120000"}
+        views.append((entries, links))
+    if not ci:
+        names = set(paths)
+        for _, entries in revisions:
+            names.update(entries)
+        links = {name: os.readlink(root / name) for name in names if (root / name).is_symlink()}
+        present = {name for name in names if (root / name).exists() or (root / name).is_symlink()}
+        views.append((present, links))
+    for entries, links in views:
+        for name in links:
+            # Pure documentation-to-documentation links establish no code
+            # dependency. Root instructions and all non-prose paths still do.
+            if documentation(name) and name not in inputs and name not in executable:
+                continue
+            dependencies = set()
+            target = resolve_alias(name, links, dependencies)
+            if target not in entries and not any(path.startswith(target + "/") for path in entries):
+                raise ValueError("dangling dependency alias: " + name)
+            if any(path in dependencies or path == target or path.startswith(target + "/") for path in paths):
+                aliases.add(name)
+    return aliases
+
+
 def classify(root, base, ci=False, direct=False):
     try:
         resolved = git(root, "rev-parse", "--verify", base + "^{commit}").decode().strip()
@@ -83,7 +154,8 @@ def classify(root, base, ci=False, direct=False):
         paths = set(git(root, "diff", "--name-only", "--no-renames", "-z",
                         resolved, "HEAD").decode().rstrip("\0").split("\0"))
         if not ci:
-            for args in (("diff", "--name-only", "--no-renames", "-z", "HEAD"),
+            for args in (("diff", "--cached", "--name-only", "--no-renames", "-z", "HEAD"),
+                         ("diff", "--name-only", "--no-renames", "-z"),
                          ("ls-files", "--others", "--exclude-standard", "-z")):
                 paths.update(git(root, *args).decode().rstrip("\0").split("\0"))
         paths.discard("")
@@ -91,14 +163,24 @@ def classify(root, base, ci=False, direct=False):
                                    cwd=root, capture_output=True, text=True)
         if inventory.returncode:
             raise ValueError("regeneration input inventory unavailable")
-        modes = (git(root, "ls-tree", "-rz", "HEAD") +
-                 git(root, "ls-tree", "-rz", resolved)).split(b"\0")
-        executable = {record.split(b"\t", 1)[1].decode() for record in modes
-                      if record.startswith(b"100755 ")}
+        revisions = [(revision, tree_entries(git(root, "ls-tree", "-rz", revision)))
+                     for revision in ("HEAD", resolved)]
+        executable = {name for _, entries in revisions for name, mode in entries.items()
+                      if mode == "100755"}
         if not ci:
+            executable.update(name for name, mode in tree_entries(
+                git(root, "ls-files", "--stage", "-z")).items() if mode == "100755")
             executable.update(path for path in paths if (root / path).is_file()
                               and (root / path).stat().st_mode & 0o111)
-        return classify_paths(paths, inventory.stdout.splitlines(), executable=executable)
+        inputs = inventory.stdout.splitlines()
+        try:
+            aliases = dependency_aliases(root, paths, revisions, ci, inputs, executable)
+        except (OSError, ValueError, subprocess.CalledProcessError) as error:
+            return classify_paths(paths, inputs, error="dependency aliases unavailable: " + str(error),
+                                  executable=executable)
+        result = classify_paths(paths | aliases, inputs, executable=executable)
+        result["dependency_aliases"] = sorted(aliases)
+        return result
     except (OSError, subprocess.CalledProcessError, ValueError) as error:
         return classify_paths([], error="comparison unavailable: " + str(error))
 

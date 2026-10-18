@@ -23,6 +23,16 @@ quiet host or comparing isolated single best samples.
 
 ## Completed checks
 
+- The first pre-change full-native baseline passed all 53 suites without Chez:
+  2,553.87 s wall (2,435.81 s user, 47.46 s system), with dependencies already
+  installed. A second baseline and paired new-runner samples are still pending;
+  this single sample does not establish an equal-coverage improvement.
+- Runner regressions cover GNU `timeout` descendants in separate process
+  groups, a SIGTERM-ignoring child, failed aggregate reports on interruption,
+  private home/cache roots, and inherited install-destination overrides.
+- Classifier regressions retain independent staged/unstaged obligations and
+  compiler dependencies aliased into otherwise allowlisted Markdown. Source
+  fingerprints include internal symlink target bytes and reject unsafe aliases.
 - The three selected native configuration, VERSION, and installation suites
   passed concurrently with two workers: 79.248 s wall, 4.410 s seed build,
   72.475 s worker execution. No tracked compiler/bootstrap bytes changed.

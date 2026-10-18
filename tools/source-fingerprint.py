@@ -36,13 +36,35 @@ def file_digest(path):
 
 def content_digest(paths, root=ROOT):
     digest = hashlib.sha256()
+    canonical_root = root.resolve()
     for name in sorted(set(paths)):
         path = root / name
         digest.update(name.encode() + b"\0")
-        if path.is_symlink():
-            digest.update(b"link\0" + os.readlink(path).encode())
-        elif path.is_file():
-            digest.update(b"file\0" + path.read_bytes())
+        # A missing leaf below a dangling/cyclic alias must not be treated as
+        # an ordinary absent input and recorded as a successful local hint.
+        for parent in path.parents:
+            if parent == root.parent:
+                break
+            if parent.is_symlink():
+                try:
+                    directory = parent.resolve(strict=True)
+                except (OSError, RuntimeError) as error:
+                    raise ValueError("invalid fingerprint input parent symlink: " + name) from error
+                if not directory.is_relative_to(canonical_root) or not directory.is_dir():
+                    raise ValueError("fingerprint input parent target is not an internal directory: " + name)
+        if path.is_symlink() or path.is_file():
+            try:
+                target = path.resolve(strict=True)
+            except (OSError, RuntimeError) as error:
+                raise ValueError("invalid fingerprint input symlink: " + name) from error
+            if not target.is_relative_to(canonical_root) or not target.is_file():
+                raise ValueError("fingerprint input target is not an internal regular file: " + name)
+            if path.is_symlink():
+                digest.update(b"link\0" + os.readlink(path).encode() + b"\0")
+                digest.update(str(target.relative_to(canonical_root)).encode() + b"\0")
+            else:
+                digest.update(b"file\0")
+            digest.update(target.read_bytes())
         else:
             digest.update(b"missing\0")
         digest.update(b"\0")
@@ -141,7 +163,10 @@ def main():
     action.add_argument("--record", action="store_true")
     parser.add_argument("--file", type=Path, default=ROOT / "build/source-fingerprint.json")
     args = parser.parse_args()
-    current = fingerprint()
+    try:
+        current = fingerprint()
+    except (OSError, ValueError, RuntimeError) as error:
+        parser.error(str(error))
     if args.record:
         if current["toolchain"]["discovery_status"] != 0:
             parser.error("cannot record successful regeneration with unavailable toolchain")

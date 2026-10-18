@@ -44,6 +44,8 @@ class ClassifierTests(unittest.TestCase):
                                              ["lib/new-partition.sld"])["source"])
         self.assertFalse(policy.classify_paths(["src/emit.cpp"])["source"])
         self.assertTrue(policy.classify_paths(["bootstrap/removed.ll"])["source"])
+        self.assertTrue(policy.classify_paths(["docs/compiler-input.md"],
+                                             ["docs/compiler-input.md"])["source"])
 
     def test_real_git_local_ci_rename_and_delete(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -77,6 +79,137 @@ class ClassifierTests(unittest.TestCase):
             self.assertTrue({"src/core.ss", "docs.md"} <= set(committed["paths"]))
             self.assertIn("unknown", committed["categories"])
             self.assertTrue(policy.classify(root, "nonexistent", ci=True)["source"])
+
+
+class AliasClassifierTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory(prefix="emit-classifier-alias-")
+        self.root = Path(self.temporary.name)
+        for name in ("src", "tools", "docs"):
+            (self.root / name).mkdir()
+        (self.root / "docs/core.md").write_text("compiler source\n")
+        (self.root / "src/core.ss").symlink_to("../docs/core.md")
+        (self.root / "tools/compiler-inputs.sh").write_text("printf '%s\\n' src/core.ss\n")
+        self.git("init", "-q")
+        self.git("config", "user.name", "fixture")
+        self.git("config", "user.email", "fixture@invalid")
+        self.git("config", "commit.gpgsign", "false")
+        self.commit()
+        self.base = self.git("rev-parse", "HEAD")
+
+    def tearDown(self):
+        self.temporary.cleanup()
+
+    def git(self, *arguments):
+        return subprocess.check_output(["git", "-c", "core.hooksPath=/dev/null", *arguments],
+                                       cwd=self.root, stderr=subprocess.PIPE, text=True).strip()
+
+    def commit(self):
+        self.git("add", "--all")
+        self.git("commit", "-qm", "fixture")
+
+    def test_current_compiler_target_is_not_prose(self):
+        (self.root / "docs/core.md").write_text("edited compiler source\n")
+        result = policy.classify(self.root, self.base)
+        self.assertTrue(result["source"])
+        self.assertFalse(result["docs_only"])
+        self.assertIn("src/core.ss", result["dependency_aliases"])
+        self.assertIn("docs/core.md", result["paths"])
+
+    def test_ci_compiler_target_is_not_prose(self):
+        (self.root / "docs/core.md").write_text("edited compiler source\n")
+        self.commit()
+        result = policy.classify(self.root, self.base, ci=True, direct=True)
+        self.assertTrue(result["source"])
+        self.assertIn("src/core.ss", result["dependency_aliases"])
+
+    def test_native_header_target_selects_host_not_prose(self):
+        (self.root / "docs/header.md").write_text("host header\n")
+        (self.root / "src/native.h").symlink_to("../docs/header.md")
+        self.commit()
+        base = self.git("rev-parse", "HEAD")
+        (self.root / "docs/header.md").write_text("new host header\n")
+        result = policy.classify(self.root, base)
+        self.assertEqual(result["categories"], ["documentation", "host"])
+        self.assertFalse(result["source"])
+        self.assertIn("src/native.h", result["dependency_aliases"])
+
+    def test_historical_alias_removal_keeps_target_obligation(self):
+        (self.root / "src/core.ss").unlink()
+        (self.root / "docs/core.md").write_text("edited old target\n")
+        self.commit()
+        result = policy.classify(self.root, self.base, ci=True, direct=True)
+        self.assertTrue(result["source"])
+        self.assertIn("src/core.ss", result["dependency_aliases"])
+
+    def test_renamed_target_and_alias_preserve_both_paths(self):
+        self.git("mv", "docs/core.md", "docs/renamed.md")
+        (self.root / "src/core.ss").unlink()
+        (self.root / "src/core.ss").symlink_to("../docs/renamed.md")
+        self.commit()
+        result = policy.classify(self.root, self.base, ci=True, direct=True)
+        self.assertTrue(result["source"])
+        self.assertTrue({"docs/core.md", "docs/renamed.md", "src/core.ss"} <= set(result["paths"]))
+
+    def test_intermediate_alias_retargeting_is_source_change(self):
+        (self.root / "docs/other.md").write_text("different compiler source\n")
+        (self.root / "docs/intermediate.md").symlink_to("core.md")
+        (self.root / "src/core.ss").unlink()
+        (self.root / "src/core.ss").symlink_to("../docs/intermediate.md")
+        self.commit()
+        base = self.git("rev-parse", "HEAD")
+        (self.root / "docs/intermediate.md").unlink()
+        (self.root / "docs/intermediate.md").symlink_to("other.md")
+        result = policy.classify(self.root, base)
+        self.assertTrue(result["source"])
+        self.assertIn("src/core.ss", result["dependency_aliases"])
+
+    def test_deleted_target_is_conservative_and_visible(self):
+        (self.root / "docs/core.md").unlink()
+        result = policy.classify(self.root, self.base)
+        self.assertTrue(result["source"])
+        self.assertFalse(result["docs_only"])
+        self.assertIn("docs/core.md", result["paths"])
+        self.assertIn("aliases unavailable", result["reason"])
+
+    def test_cycles_and_external_aliases_are_conservative(self):
+        path = self.root / "src/core.ss"
+        for target in ("core.ss", "/external/source"):
+            path.unlink()
+            path.symlink_to(target)
+            (self.root / "docs/core.md").write_text("edited\n")
+            result = policy.classify(self.root, self.base)
+            self.assertTrue(result["source"])
+            self.assertIn("unknown", result["categories"])
+
+    def test_plain_documentation_alias_stays_documentation_only(self):
+        (self.root / "docs/linked.md").symlink_to("plain.md")
+        (self.root / "docs/plain.md").write_text("prose\n")
+        self.commit()
+        base = self.git("rev-parse", "HEAD")
+        (self.root / "docs/plain.md").write_text("new prose\n")
+        result = policy.classify(self.root, base)
+        self.assertTrue(result["docs_only"])
+
+    def test_staged_source_edit_cancelled_in_worktree_is_still_selected(self):
+        original = (self.root / "docs/core.md").read_text()
+        (self.root / "docs/core.md").write_text("staged compiler source\n")
+        self.git("add", "docs/core.md")
+        (self.root / "docs/core.md").write_text(original)
+        (self.root / "README.md").write_text("new prose\n")
+        result = policy.classify(self.root, self.base)
+        self.assertIn("docs/core.md", result["paths"])
+        self.assertTrue(result["source"])
+        self.assertFalse(result["docs_only"])
+
+    def test_staged_executable_mode_cannot_be_hidden_by_worktree_mode(self):
+        path = self.root / "README.md"
+        path.write_text("executable prose fixture\n")
+        path.chmod(0o755)
+        self.git("add", "README.md")
+        path.chmod(0o644)
+        result = policy.classify(self.root, self.base)
+        self.assertFalse(result["docs_only"])
 
 
 if __name__ == "__main__":

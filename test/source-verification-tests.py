@@ -151,6 +151,55 @@ class SourceProofTests(unittest.TestCase):
             result = self.run_tool("source-fingerprint.py", "--status")
             self.assertEqual(json.loads(result.stdout)["status"], "mismatch", name)
 
+    def test_symlink_target_edits_invalidate_source_bootstrap_and_host_proofs(self):
+        for name in ("src/core.ss", "bootstrap/embed.ll", "src/emit.cpp", "src/host.h"):
+            path = self.repo / name
+            if path.exists():
+                path.unlink()
+            target = path.with_name(path.name + ".target")
+            target.write_text("first target bytes\n")
+            path.symlink_to(target.name)
+            recorded = self.run_tool("source-fingerprint.py", "--record")
+            self.assertEqual(recorded.returncode, 0, recorded.stderr)
+            target.write_text("changed target bytes\n")
+            current = self.run_tool("source-fingerprint.py", "--status")
+            self.assertEqual(current.returncode, 0, current.stderr)
+            self.assertEqual(json.loads(current.stdout)["status"], "mismatch", name)
+
+    def test_symlink_chains_bind_final_target_bytes(self):
+        path = self.repo / "src/core.ss"
+        path.unlink()
+        path.symlink_to("middle.ss")
+        (self.repo / "src/middle.ss").symlink_to("target.ss")
+        target = self.repo / "src/target.ss"
+        target.write_text("original\n")
+        self.assertEqual(self.run_tool("source-fingerprint.py", "--record").returncode, 0)
+        target.write_text("changed\n")
+        self.assertEqual(json.loads(self.run_tool("source-fingerprint.py", "--status").stdout)["status"], "mismatch")
+
+    def test_external_dangling_and_cyclic_symlinks_cannot_claim_matching(self):
+        path = self.repo / "src/core.ss"
+        path.unlink()
+        for target in (str(ROOT / "src/core.ss"), "absent.ss", "core.ss"):
+            path.symlink_to(target)
+            for action in ("--record", "--status"):
+                result = self.run_tool("source-fingerprint.py", action)
+                self.assertNotEqual(result.returncode, 0, (target, action))
+                self.assertNotIn('"status": "matching"', result.stdout)
+                self.assertIn("fingerprint input", result.stderr)
+            path.unlink()
+
+    def test_invalid_symlink_parents_cannot_be_recorded_as_missing_inputs(self):
+        source = self.repo / "src"
+        source.rename(self.repo / "saved-src")
+        for target in ("missing-source", "src", str(ROOT / "src")):
+            source.symlink_to(target)
+            for action in ("--record", "--status"):
+                result = self.run_tool("source-fingerprint.py", action)
+                self.assertNotEqual(result.returncode, 0, (target, action))
+                self.assertNotIn('"status": "matching"', result.stdout)
+            source.unlink()
+
     def test_timestamp_only_edits_do_not_invalidate_content_hint(self):
         self.run_tool("source-fingerprint.py", "--record")
         os.utime(self.repo / "src/core.ss", (1, 1))
