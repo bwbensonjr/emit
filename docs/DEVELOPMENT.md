@@ -42,7 +42,7 @@ after explicit regeneration; native feedback alone cannot establish freshness.
 | --- | --- | --- |
 | `dev` | Focused committed-native feedback | Small baseline plus changed-category checks |
 | `full` | Complete native regression inventory | All 53 baseline native groups, Chez-free |
-| `compat` | Representative LLVM-sensitive behavior | Native paths, closures, trap/bounds, macro libraries, explicit artifacts, installed relocation |
+| `compat` | Representative LLVM-sensitive behavior | Native paths, closures, trap/bounds, macro libraries, explicit artifacts, installed version identity and relocation |
 | `source` | Current source reproduces every bootstrap module | Isolated Chez-free regeneration and exact byte comparison |
 | `units` | Current-source compiler unit behavior | Direct Chez source units; no regeneration |
 | `reference` | Cross-host and independent-host correctness | All unique legacy developer integration, parity, fixed-point, scaling assertions |

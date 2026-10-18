@@ -87,20 +87,13 @@ def load_telemetry():
     return module
 
 
-def traced_run(argv, cwd, stdout_path, trace_path, logs_root, telemetry):
-    wrapper_directory = pathlib.Path(tempfile.mkdtemp(prefix="wrappers-", dir=logs_root))
-    try:
-        trace_path.touch()
-        environment = telemetry.setup(wrapper_directory, {
-            **clean_git_environment(os.environ),
-            "EMIT_TEST_TRACE_LOG": str(trace_path),
-        })
-        with stdout_path.open("w") as stdout_file:
-            result = run(argv, cwd=cwd, env=environment, stdout=stdout_file,
-                         stderr=subprocess.STDOUT)
-    finally:
-        shutil.rmtree(wrapper_directory, ignore_errors=True)
-    return result, telemetry.summarize(trace_path)
+def traced_run(argv, cwd, stdout_path, trace_path, environment):
+    trace_path.touch()
+    phase_environment = {**environment, "EMIT_TEST_TRACE_LOG": str(trace_path)}
+    with stdout_path.open("w") as stdout_file:
+        result = run(argv, cwd=cwd, env=phase_environment, stdout=stdout_file,
+                     stderr=subprocess.STDOUT)
+    return result
 
 
 def observed_emit_cpp_compiles(trace_path):
@@ -158,6 +151,12 @@ def main():
     logs_root = pathlib.Path(tempfile.mkdtemp(prefix="emit-validation-baseline-logs-"))
     report_logs = {"root": str(logs_root)}
     telemetry = load_telemetry() if args.trace_compilers else None
+    trace_environment = None
+    if telemetry is not None:
+        wrapper_directory = logs_root / "wrappers"
+        wrapper_directory.mkdir()
+        trace_environment = telemetry.setup(wrapper_directory, clean_git_environment(os.environ))
+        report_logs["wrappers"] = str(wrapper_directory)
 
     print("baseline snapshot -> temporary checkout  [tracked files only]", file=__import__("sys").stderr)
     report = {
@@ -232,8 +231,9 @@ def main():
             test_log = logs_root / "full-native.log"
             start = time.monotonic()
             if args.trace_compilers:
-                build, build_counts = traced_run(["make", "all"], snapshot, build_log,
-                                                 build_trace, logs_root, telemetry)
+                build = traced_run(["make", "all"], snapshot, build_log,
+                                   build_trace, trace_environment)
+                build_counts = telemetry.summarize(build_trace)
             else:
                 with build_log.open("w") as stdout_file:
                     build = run(["make", "all"], cwd=snapshot, stdout=stdout_file, stderr=subprocess.STDOUT)
@@ -254,8 +254,9 @@ def main():
                     start = time.monotonic()
                     if args.trace_compilers:
                         test_trace = logs_root / "full-native.trace.jsonl"
-                        test, test_counts = traced_run(["bash", "run-all-tests.sh"], snapshot,
-                                                       test_log, test_trace, logs_root, telemetry)
+                        test = traced_run(["bash", "run-all-tests.sh"], snapshot,
+                                          test_log, test_trace, trace_environment)
+                        test_counts = telemetry.summarize(test_trace)
                         report["test_tool_counts"] = test_counts
                         report["compiler_invocations"] += test_counts["compiler_invocations"]
                         report_logs["full_native_trace"] = str(test_trace)
@@ -274,10 +275,9 @@ def main():
                     suite_trace = logs_root / ("suite-" + suite_id + ".trace.jsonl")
                     start = time.monotonic()
                     if args.trace_compilers:
-                        with suite_log.open("w") as stdout_file:
-                            suite_result, suite_counts = traced_run(
-                                suite["command"], snapshot, suite_log, suite_trace,
-                                logs_root, telemetry)
+                        suite_result = traced_run(suite["command"], snapshot, suite_log,
+                                                  suite_trace, trace_environment)
+                        suite_counts = telemetry.summarize(suite_trace)
                         report_logs["suite_trace_" + suite_id] = str(suite_trace)
                     else:
                         with suite_log.open("w") as stdout_file:

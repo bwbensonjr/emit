@@ -38,6 +38,9 @@ class CoverageTests(unittest.TestCase):
                 self.assertFalse(suite["chez"], suite["id"])
         for name in ("dev", "compat"):
             self.assertLess(len([s for s in suites if name in s["profiles"]]), 15)
+        compatibility = {s["id"] for s in suites if "compat" in s["profiles"]}
+        self.assertIn("release-version-identity", compatibility)
+        self.assertIn("installed-layout-libraries-support-files", compatibility)
 
 
 if __name__ == "__main__":

@@ -37,6 +37,8 @@ class BaselineHarnessTests(unittest.TestCase):
             {"id": "native-ok", "chez": False, "command": ["bash", "test/ok.sh"]},
             {"id": "native-fail", "chez": False, "command": ["bash", "test/fail.sh"]},
             {"id": "native-missing", "chez": False, "command": ["bash", "test/missing.sh"]},
+            {"id": "config-one", "chez": False, "command": ["bash", "test/config.sh", "one"]},
+            {"id": "config-two", "chez": False, "command": ["bash", "test/config.sh", "two"]},
             {"id": "chez-only", "chez": True, "command": ["chez", "test/unit.ss"]},
         ]}))
         subprocess.run(["git", "add", "--all"], cwd=self.repo, check=True)
@@ -65,9 +67,16 @@ class BaselineHarnessTests(unittest.TestCase):
         (self.repo / "src/passes/lower.ss").write_text("fixture\n")
         (self.repo / "src/runtime/runtime.c").write_text("fixture\n")
         (self.repo / "docs/DISTRIBUTION.md").write_text("fixture\n")
-        (self.repo / "Makefile").write_text("all:\n\t$(CXX) -c src/emit.cpp\n")
+        (self.repo / "Makefile").write_text(
+            "all:\n"
+            "\t@if [ -n \"$$CONFIG_RECORD_DIR\" ]; then printf '%s\\n%s\\n' \"$$CC\" \"$$CXX\" > \"$$CONFIG_RECORD_DIR/build\"; fi\n"
+            "\t$(CXX) -c src/emit.cpp\n")
         (self.repo / "test/ok.sh").write_text("#!/bin/sh\nexit 0\n")
         (self.repo / "test/fail.sh").write_text("#!/bin/sh\nexit 23\n")
+        (self.repo / "test/config.sh").write_text(
+            "#!/bin/sh\n"
+            "printf '%s\\n%s\\n' \"$CC\" \"$CXX\" > \"$CONFIG_RECORD_DIR/$1\"\n"
+            "test -x \"$CC\" && test -x \"$CXX\"\n")
 
     def invoke(self, arguments, environment=None):
         stdout = io.StringIO()
@@ -121,8 +130,28 @@ class BaselineHarnessTests(unittest.TestCase):
         self.assertEqual(report["observed_emit_cpp_compile_commands"], 1)
         self.assertEqual(report["suite_results"][0]["exit_code"], 0)
         self.assertEqual(report["suite_results"][0]["tool_counts"]["total_invocations"], 0)
+        self.assertTrue((Path(report["logs"]["wrappers"]) / "cxx").is_file())
         for key in ("build", "build_trace", "suite_native-ok", "suite_trace_native-ok"):
             self.assertTrue(Path(report["logs"][key]).is_file())
+
+    def test_trace_keeps_compiler_identity_stable_across_build_and_two_suites(self):
+        compiler = self.work / "fake-compiler"
+        compiler.write_text("#!/bin/sh\nexit 0\n")
+        compiler.chmod(0o700)
+        records = self.work / "configuration-records"
+        records.mkdir()
+        status, report, _ = self.invoke(
+            ["--suite", "config-one", "--suite", "config-two", "--trace-compilers"],
+            {"CC": str(compiler), "CXX": str(compiler), "CONFIG_RECORD_DIR": str(records),
+             "PATH": os.environ["PATH"]})
+        self.assertEqual(status, 0)
+        expected = [str(Path(report["logs"]["wrappers"]) / "cc"),
+                    str(Path(report["logs"]["wrappers"]) / "cxx")]
+        for name in ("build", "one", "two"):
+            record = (records / name).read_text().splitlines()
+            self.assertEqual(record, expected)
+        self.assertTrue(Path(expected[0]).is_file())
+        self.assertTrue(Path(expected[1]).is_file())
 
     def test_scenario_command_selection_for_old_and_new_snapshots(self):
         (self.repo / "tools/test.sh").write_text("#!/bin/sh\nexit 0\n")

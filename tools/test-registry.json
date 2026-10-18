@@ -924,7 +924,8 @@
         "test/version-tests.sh"
       ],
       "profiles": [
-        "full"
+        "full",
+        "compat"
       ],
       "categories": [
         "host",
