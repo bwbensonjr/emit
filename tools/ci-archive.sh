@@ -3,6 +3,17 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 . tools/log.sh
+run_linux_archive() {
+  # The loader removes LD_LIBRARY_PATH before sudo starts. Carry values as
+  # arguments and restore them after privilege elevation, before unshare.
+  sudo /usr/bin/env \
+    "LLVM_CONFIG=${LLVM_CONFIG:?}" "CC=${CC:?}" "CXX=${CXX:?}" \
+    "GC_INC=${GC_INC:?}" "GC_LIB=${GC_LIB:?}" "GC_DYLIB=${GC_DYLIB:?}" \
+    "LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-}" "EMIT_VERBOSITY=${EMIT_VERBOSITY:-default}" \
+    unshare --mount --net -- /bin/bash -c \
+    'set -e; mount --make-rprivate /; mount --bind "$1" "$2"; exec /bin/bash "$3"' \
+    archive "$work/empty" "$checkout" "$script"
+}
 if [ "${1:-}" = --help ]; then printf 'Usage: tools/ci-archive.sh ASSET_DIRECTORY\n'; exit 0; fi
 if [ "$#" != 1 ]; then printf 'Usage: tools/ci-archive.sh ASSET_DIRECTORY\n' >&2; exit 2; fi
 assets=$(cd "$1" && pwd -P)
@@ -19,10 +30,7 @@ cd "$source_tree"
 case "$(uname -s)" in
   Linux)
     # Mount hiding prevents fallback to any source in the Actions checkout.
-    sudo --preserve-env=LLVM_CONFIG,CC,CXX,GC_INC,GC_LIB,GC_DYLIB,LD_LIBRARY_PATH,EMIT_VERBOSITY \
-      unshare --mount --net -- /bin/bash -c \
-      'mount --make-rprivate /; mount --bind "$1" "$2"; exec /bin/bash "$3"' \
-      archive "$work/empty" "$checkout" "$script"
+    run_linux_archive
     ;;
   Darwin)
     # sandbox-exec applies to the complete subprocess tree, including clang/make.

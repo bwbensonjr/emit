@@ -29,6 +29,7 @@ jobs:
           ninja --version
           git --version
           /bin/bash test/ci-provision-logging-tests.sh
+          /bin/bash test/ci-archive-isolation-tests.sh
       - name: Identify pinned dependency recipe
         id: recipe
         env:

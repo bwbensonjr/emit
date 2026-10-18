@@ -22,6 +22,7 @@ jobs:
           RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
         run: |
           /bin/bash test/ci-provision-logging-tests.sh
+          /bin/bash test/ci-archive-isolation-tests.sh
           tag="${RELEASE_TAG:-v$(< VERSION)}"
           tools/release-source.sh HEAD "$RUNNER_TEMP/assets" "$tag"
           tools/release-source.sh HEAD "$RUNNER_TEMP/repeated" "$tag"
