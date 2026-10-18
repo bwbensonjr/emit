@@ -37,11 +37,14 @@ jobs:
         run: |
           identity=$(tools/ci-provision.sh --identity "$LLVM_MAJOR")
           printf 'identity=%s\n' "$identity" >> "$GITHUB_OUTPUT"
+          printf 'previous=%s-recipe-4\n' "${identity%-recipe-5}" >> "$GITHUB_OUTPUT"
       - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         id: deps
         with:
           path: ${{ runner.temp }}/emit-deps
           key: emit-deps-${{ runner.os }}-${{ runner.arch }}-${{ matrix.llvm }}-${{ steps.recipe.outputs.identity }}
+          # Temporary migration; provisioning validates and repairs recipe 4.
+          restore-keys: emit-deps-${{ runner.os }}-${{ runner.arch }}-${{ matrix.llvm }}-${{ steps.recipe.outputs.previous }}
       - name: Provision pinned LLVM and libgc
         env:
           LLVM_MAJOR: ${{ matrix.llvm }}

@@ -27,7 +27,7 @@ cache hits.
 Validated dependencies are saved before Emit tests so a later test failure does
 not discard the toolchain build. A missing release
 or wrong major fails the job. A cold LLVM build can take hours; link parallelism
-is limited to control memory use. Recipe 4 explicitly installs clang and its
+is limited to control memory use. Recipe 5 explicitly installs clang and its
 required `clang-cpp` shared library, resource headers, llvm-config, the shared LLVM
 library, and development headers for the
 native target; unused tool executables, other target backends, and the clang
@@ -38,9 +38,23 @@ linker and installs the matching `libLTO.dylib` that clang supplies to it.
 Provisioning preserves an explicit `SDKROOT`, or selects the macOS SDK with
 `xcrun --sdk macosx --show-sdk-path`, validates its headers and libraries, and
 exports it for subsequent compiler probes, builds, and installed smoke tests.
+Private macOS LLVM and libgc libraries are given absolute install IDs within
+their existing dependency prefix and ad-hoc signed after modification. IDs and
+signatures are verified on fresh installs and cache reuse. Symlinks are resolved
+to regular files inside the canonical private prefix before modification;
+external targets are rejected. This makes newly
+linked Emit and AOT programs independent of `DYLD_LIBRARY_PATH`, which system
+Bash and other protected macOS tools discard. The LLVM library is selected from
+`llvm-config --libnames --link-shared`; the libgc ID retains its installed
+versioned filename. Only the exact preceding recipe 4 identity with identical
+source pins and CMake flags can migrate without recompilation; unrelated cache
+identities fail. The recipe 5 completion stamp is written after every probe
+succeeds. Linux migration revalidates the same native dependency installation.
 Every installation and cache hit compiles, links, and executes a small C program
 with `clang -flto` and implicit linker selection, a C++ standard-library program,
-and a complete native Emit runtime object linked with libgc. The latter retains
+an LLVM C-API program, and a complete native Emit runtime object linked with libgc.
+The LLVM and runtime probes execute through system Bash with DYLD overrides
+removed. The latter retains
 all runtime functions so unused code cannot hide missing builtin dependencies.
 Darwin's compiler driver permits absent compiler-rt builtins for this native
 configuration; the current Emit runtime links using SDK system libraries without

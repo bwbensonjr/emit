@@ -12,7 +12,7 @@ for pair in 19:19.1.7 20:20.1.8 21:21.1.0 22:22.1.0 23:23.1.0; do
   identity=$(PATH="$work/forbidden:$PATH" TMPDIR="$work/no-such-directory" \
     tools/ci-provision.sh --identity "$major" 2> "$work/identity.err")
   [ ! -s "$work/identity.err" ]
-  printf '%s\n' "$identity" | grep -Eq "^${version//./\\.}-[0-9a-f]{40}-[0-9a-f]{40}-recipe-4$"
+  printf '%s\n' "$identity" | grep -Eq "^${version//./\\.}-[0-9a-f]{40}-[0-9a-f]{40}-recipe-5$"
 done
 [ ! -e "$work/no-such-directory" ]
 if tools/ci-provision.sh --identity 24 > "$work/invalid.out" 2> "$work/invalid.err"; then
@@ -22,6 +22,48 @@ fi
 grep -Eq '^components="([^"]*;)?clang-cpp(;[^"]*)?"$' tools/ci-provision.sh
 grep -F -- '-DCLANG_LINK_CLANG_DYLIB=ON' tools/ci-provision.sh >/dev/null
 eval "$(awk '/^log_count=0$/ { capture=1 } capture && /^if \[ -f/ { exit } capture { print }' tools/ci-provision.sh)"
+identity='23.1.0 ea7d852a70e8bdfaf601d6626a760f9771b2c4b4 ee59af3722e56de8404de6cd0c21c2493cc4d855 recipe-5'
+previous_identity=${identity%recipe-5}recipe-4
+validate_cached_identity "$identity"
+validate_cached_identity "$previous_identity"
+if validate_cached_identity "${identity%recipe-5}recipe-3" > "$work/cache.out" 2> "$work/cache.err"; then
+  printf 'test: unsupported cache recipe accepted\n' >&2; exit 1
+fi
+if validate_cached_identity "${previous_identity/23.1.0/22.1.0}" > "$work/cache.out" 2> "$work/cache.err"; then
+  printf 'test: different pinned cache accepted\n' >&2; exit 1
+fi
+prefix="$work/private"
+mkdir "$prefix"
+touch "$prefix/library.dylib" "$work/external.dylib"
+mock_id='@rpath/library.dylib'
+mock_signed=1
+mock_changes=0
+otool() { printf '%s:\n%s\n' "$2" "$mock_id"; }
+install_name_tool() { [ "$1" = -id ]; mock_id=$2; mock_signed=0; mock_changes=$((mock_changes + 1)); }
+codesign() {
+  case "$1" in
+    --force) mock_signed=1 ;;
+    --verify) [ "$mock_signed" = 1 ] ;;
+    *) return 2 ;;
+  esac
+}
+normalize_dylib_id "$prefix/library.dylib" "$prefix/library.dylib"
+[ "$mock_id" = "$prefix/library.dylib" ] && [ "$mock_signed" = 1 ] && [ "$mock_changes" = 1 ]
+normalize_dylib_id "$prefix/library.dylib" "$prefix/library.dylib"
+[ "$mock_changes" = 1 ]
+mock_signed=0
+normalize_dylib_id "$prefix/library.dylib" "$prefix/library.dylib"
+[ "$mock_signed" = 1 ] && [ "$mock_changes" = 1 ]
+ln -s "$work/external.dylib" "$prefix/escape.dylib"
+if normalize_dylib_id "$prefix/escape.dylib" "$prefix/escape.dylib" > "$work/escape.out" 2> "$work/escape.err"; then
+  printf 'test: external dylib symlink accepted\n' >&2; exit 1
+fi
+grep -q 'escapes private prefix' "$work/escape.err"
+[ "$mock_changes" = 1 ]
+ln -s library.dylib "$prefix/internal.dylib"
+canonical_private_library "$prefix/internal.dylib"
+[ "$private_library_target" = "$(cd "$prefix" && pwd -P)/library.dylib" ]
+unset -f otool install_name_tool codesign
 mkdir -p "$work/sdk/usr/include" "$work/sdk/usr/lib"
 xcrun() {
   [ "$*" = '--sdk macosx --show-sdk-path' ] || return 2
@@ -71,4 +113,4 @@ run_logged "test fixture -> expected failure" bash -c \
 [ ! -s "$work/failure.out" ]
 grep -q 'failure detail' "$work/failure.err"
 grep -q 'exit 7' "$work/failure.err"
-printf 'test provisioning -> metadata, closure, SDK, and logging checks  [16 checks]\n' >&2
+printf 'test provisioning -> metadata, migration, dylib, SDK, and logging checks  [25 checks]\n' >&2

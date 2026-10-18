@@ -23,7 +23,8 @@ case "$major" in
   *) printf 'ci: unsupported matrix major: %s\n' "$major" >&2; exit 2 ;;
 esac
 gc_revision=ee59af3722e56de8404de6cd0c21c2493cc4d855
-identity="$version $revision $gc_revision recipe-4"
+previous_identity="$version $revision $gc_revision recipe-4"
+identity="$version $revision $gc_revision recipe-5"
 if [ "$identity_only" = 1 ]; then
   printf '%s\n' "${identity// /-}"
   exit 0
@@ -82,8 +83,98 @@ select_darwin_sdk() {
   fi
   export SDKROOT
 }
+validate_cached_identity() {
+  if [ "$1" != "$identity" ] && [ "$1" != "$previous_identity" ]; then
+    printf 'ci: cached dependency identity differs\n' >&2
+    return 1
+  fi
+}
+select_llvm_shared_library() {
+  llvm_shared_name=$("$prefix/llvm/bin/llvm-config" --libnames --link-shared) || return
+  case "$llvm_shared_name" in
+    ""|*[!0-9A-Za-z._-]*) printf 'ci: unsafe LLVM shared library name: %s\n' "$llvm_shared_name" >&2; return 1 ;;
+  esac
+  case "$llvm_shared_name" in
+    libLLVM*.dylib|libLLVM*.so*) ;;
+    *) printf 'ci: unexpected LLVM shared library name: %s\n' "$llvm_shared_name" >&2; return 1 ;;
+  esac
+  [ -f "$prefix/llvm/lib/$llvm_shared_name" ]
+}
+dylib_id() {
+  local report
+  report=$(otool -D "$1") || return
+  case "$report" in
+    *$'\n'*) printf '%s\n' "${report#*$'\n'}" ;;
+    *) printf 'ci: no dylib ID: %s\n' "$1" >&2; return 1 ;;
+  esac
+}
+canonical_private_library() {
+  local candidate=$1 directory target canonical_prefix count=0
+  canonical_prefix=$(cd "$prefix" && pwd -P) || return
+  [ "$canonical_prefix" != / ] || return 1
+  while :; do
+    directory=$(cd "$(dirname "$candidate")" && pwd -P) || return
+    candidate="$directory/$(basename "$candidate")"
+    [ -L "$candidate" ] || break
+    count=$((count + 1))
+    [ "$count" -le 40 ] || { printf 'ci: excessive dylib symlinks: %s\n' "$1" >&2; return 1; }
+    target=$(readlink "$candidate") || return
+    case "$target" in
+      /*) candidate=$target ;;
+      *) candidate="$directory/$target" ;;
+    esac
+  done
+  case "$candidate" in
+    "$canonical_prefix/"*) ;;
+    *) printf 'ci: dylib target escapes private prefix: %s\n' "$candidate" >&2; return 1 ;;
+  esac
+  [ -f "$candidate" ] || { printf 'ci: dylib target is not a regular file: %s\n' "$candidate" >&2; return 1; }
+  private_library_target=$candidate
+}
+normalize_dylib_id() {
+  local library=$1 expected=$2 current target
+  canonical_private_library "$library" || return
+  target=$private_library_target
+  canonical_private_library "$expected" || return
+  [ "$private_library_target" = "$target" ] || return 1
+  current=$(dylib_id "$target") || return
+  if [ "$current" != "$expected" ]; then
+    install_name_tool -id "$expected" "$target" || return
+  fi
+  if [ "$current" != "$expected" ] || ! codesign --verify --strict "$target"; then
+    codesign --force --sign - "$target" || return
+  fi
+  [ "$(dylib_id "$target")" = "$expected" ] || return 1
+  codesign --verify --strict "$target"
+}
+normalize_darwin_libraries() {
+  local gc_id gc_name
+  normalize_dylib_id "$prefix/llvm/lib/$llvm_shared_name" "$prefix/llvm/lib/$llvm_shared_name" || return
+  gc_id=$(dylib_id "$prefix/gc/lib/libgc.dylib") || return
+  gc_name=${gc_id##*/}
+  case "$gc_name" in
+    ""|*[!0-9A-Za-z._-]*) printf 'ci: unsafe libgc dylib ID: %s\n' "$gc_id" >&2; return 1 ;;
+  esac
+  case "$gc_name" in
+    libgc.*.dylib) ;;
+    *) printf 'ci: unexpected libgc dylib ID: %s\n' "$gc_id" >&2; return 1 ;;
+  esac
+  case "$gc_id" in
+    "@rpath/$gc_name"|"$prefix/gc/lib/$gc_name") ;;
+    *) printf 'ci: unexpected libgc dylib location: %s\n' "$gc_id" >&2; return 1 ;;
+  esac
+  normalize_dylib_id "$prefix/gc/lib/libgc.dylib" "$prefix/gc/lib/$gc_name"
+}
+run_native_probe() {
+  if [ "$(uname -s)" = Darwin ]; then
+    /bin/bash -c 'unset LD_LIBRARY_PATH DYLD_LIBRARY_PATH DYLD_FALLBACK_LIBRARY_PATH DYLD_FRAMEWORK_PATH DYLD_FALLBACK_FRAMEWORK_PATH; exec "$1"' probe "$1"
+  else
+    env "LD_LIBRARY_PATH=$prefix/gc/lib:$prefix/llvm/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+      /bin/bash -c 'unset DYLD_LIBRARY_PATH DYLD_FALLBACK_LIBRARY_PATH; exec "$1"' probe "$1"
+  fi
+}
 if [ -f "$prefix/complete" ]; then
-  [ "$(< "$prefix/complete")" = "$identity" ] || { printf 'ci: cached dependency identity differs\n' >&2; exit 1; }
+  validate_cached_identity "$(< "$prefix/complete")"
   say "reuse LLVM $version + libgc 8.2.8 -> $prefix"
 else
   fetch() {
@@ -115,11 +206,14 @@ else
     -DBUILD_SHARED_LIBS=ON -Denable_docs=OFF -Denable_tests=OFF
   run_logged "build libgc 8.2.8 -> $work/gc-build" cmake --build "$work/gc-build" --parallel "${EMIT_CI_JOBS:-2}"
   run_logged "install libgc 8.2.8 -> $prefix/gc" cmake --install "$work/gc-build"
-  printf '%s\n' "$identity" > "$prefix/complete"
 fi
 if [ "$(uname -s)" = Darwin ]; then
   run_logged "select macOS SDK -> compiler environment" select_darwin_sdk
   say "select macOS SDK -> $SDKROOT  [headers and libraries available]"
+fi
+run_logged "select shared LLVM -> installed library" select_llvm_shared_library
+if [ "$(uname -s)" = Darwin ]; then
+  run_logged "normalize private LLVM + libgc -> absolute dylib IDs and ad-hoc signatures" normalize_darwin_libraries
 fi
 run_logged "verify $prefix/llvm/bin/llvm-config -> LLVM $version" probe_version "$prefix/llvm/bin/llvm-config" "^${version//./\\.}$"
 for compiler in clang clang++; do
@@ -139,14 +233,15 @@ run_logged "link clang++ -> $work/cxx-check  [native standard library]" "$prefix
 #include <string>
 int main() { std::cout << "" << std::flush; return std::string("emit").size() == 4 ? 0 : 1; }'
 run_logged "run $work/cxx-check -> C++ verification" "$work/cxx-check"
+run_logged "link LLVM C API -> $work/llvm-check" "$prefix/llvm/bin/clang" -I"$prefix/llvm/include" -x c - -x none "$prefix/llvm/lib/$llvm_shared_name" -o "$work/llvm-check" <<< '#include <llvm-c/Core.h>
+int main(void) { LLVMContextRef context = LLVMContextCreate(); LLVMContextDispose(context); return 0; }'
+run_logged "run $work/llvm-check -> LLVM verification through system Bash without DYLD overrides" run_native_probe "$work/llvm-check"
 # Retain the complete native runtime object at link time, so unused functions
 # cannot hide missing compiler builtins or native-library dependencies.
 run_logged "compile src/runtime/runtime.c -> $work/runtime-check.o" "$prefix/llvm/bin/clang" -std=gnu11 -O2 -DRT_NO_MAIN -I"$prefix/gc/include" -c src/runtime/runtime.c -o "$work/runtime-check.o"
 run_logged "link runtime object -> $work/runtime-check  [libgc and LTO]" "$prefix/llvm/bin/clang" -flto "$work/runtime-check.o" -x c - -L"$prefix/gc/lib" -lgc -lm -o "$work/runtime-check" <<< 'int main(void) { return 0; }'
-run_logged "run $work/runtime-check -> native runtime verification" env \
-  "LD_LIBRARY_PATH=$prefix/gc/lib:$prefix/llvm/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
-  "DYLD_LIBRARY_PATH=$prefix/gc/lib:$prefix/llvm/lib${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}" \
-  "$work/runtime-check"
+run_logged "run $work/runtime-check -> native runtime verification through system Bash without DYLD overrides" run_native_probe "$work/runtime-check"
+printf '%s\n' "$identity" > "$prefix/complete"
 say "verify $prefix -> LLVM $version + libgc 8.2.8  [$(du -sk "$prefix" | awk '{ print $1 }') KiB, ${SECONDS}s]"
 # Workflow environment is the machine-consumable output.
 printf 'LLVM_CONFIG=%s/llvm/bin/llvm-config\nCC=%s/llvm/bin/clang\nCXX=%s/llvm/bin/clang++\nGC_INC=%s/gc/include\nGC_LIB=%s/gc/lib\n' "$prefix" "$prefix" "$prefix" "$prefix" "$prefix"
