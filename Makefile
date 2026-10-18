@@ -96,7 +96,7 @@ $(NATIVE_CONFIG): FORCE Makefile VERSION | build
 	  version=""; IFS= read -r version < VERSION; \
 	  if [ "$$(wc -l < VERSION | tr -d ' ')" -ne 1 ] || \
 	     ! printf '%s\n' "$$version" | cmp -s - VERSION || \
-	     ! printf '%s\n' "$$version" | grep -Eq '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$$'; then \
+	     ! printf '%s\n' "$$version" | LC_ALL=C grep -Eq '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$$'; then \
 	    printf '%s\n' 'configure invalid VERSION (expected one SemVer line) -> VERSION' >&2; exit 2; \
 	  fi; \
 	  { printf 'VERSION=%s\n' "$$version"; \

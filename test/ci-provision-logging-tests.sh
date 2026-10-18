@@ -12,13 +12,15 @@ for pair in 19:19.1.7 20:20.1.8 21:21.1.0 22:22.1.0 23:23.1.0; do
   identity=$(PATH="$work/forbidden:$PATH" TMPDIR="$work/no-such-directory" \
     tools/ci-provision.sh --identity "$major" 2> "$work/identity.err")
   [ ! -s "$work/identity.err" ]
-  printf '%s\n' "$identity" | grep -Eq "^${version//./\\.}-[0-9a-f]{40}-[0-9a-f]{40}-recipe-3$"
+  printf '%s\n' "$identity" | grep -Eq "^${version//./\\.}-[0-9a-f]{40}-[0-9a-f]{40}-recipe-4$"
 done
 [ ! -e "$work/no-such-directory" ]
 if tools/ci-provision.sh --identity 24 > "$work/invalid.out" 2> "$work/invalid.err"; then
   printf 'test: unsupported provisioning identity accepted\n' >&2; exit 1
 fi
 [ ! -s "$work/invalid.out" ]
+grep -Eq '^components="([^"]*;)?clang-cpp(;[^"]*)?"$' tools/ci-provision.sh
+grep -F -- '-DCLANG_LINK_CLANG_DYLIB=ON' tools/ci-provision.sh >/dev/null
 eval "$(awk '/^log_count=0$/ { capture=1 } capture && /^if \[ -f/ { exit } capture { print }' tools/ci-provision.sh)"
 mkdir -p "$work/sdk/usr/include" "$work/sdk/usr/lib"
 xcrun() {
@@ -69,4 +71,4 @@ run_logged "test fixture -> expected failure" bash -c \
 [ ! -s "$work/failure.out" ]
 grep -q 'failure detail' "$work/failure.err"
 grep -q 'exit 7' "$work/failure.err"
-printf 'test provisioning -> metadata, SDK, and logging checks  [14 checks]\n' >&2
+printf 'test provisioning -> metadata, closure, SDK, and logging checks  [16 checks]\n' >&2

@@ -42,8 +42,6 @@ jobs:
         with:
           path: ${{ runner.temp }}/emit-deps
           key: emit-deps-${{ runner.os }}-${{ runner.arch }}-${{ matrix.llvm }}-${{ steps.recipe.outputs.identity }}
-          # Temporary migration from validated caches keyed by the script hash.
-          restore-keys: emit-deps-${{ runner.os }}-${{ runner.arch }}-${{ matrix.llvm }}-
       - name: Provision pinned LLVM and libgc
         env:
           LLVM_MAJOR: ${{ matrix.llvm }}

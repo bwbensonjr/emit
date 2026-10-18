@@ -62,8 +62,6 @@ jobs:
         with:
           path: ${{ runner.temp }}/emit-deps
           key: emit-deps-${{ runner.os }}-${{ runner.arch }}-23-${{ steps.recipe.outputs.identity }}
-          # Temporary migration from validated caches keyed by the script hash.
-          restore-keys: emit-deps-${{ runner.os }}-${{ runner.arch }}-23-
       - name: Provision pinned dependencies
         run: tools/ci-provision.sh 23 "$RUNNER_TEMP/emit-deps" >> "$GITHUB_ENV"
       - name: Save validated dependencies before archive tests

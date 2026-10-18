@@ -23,13 +23,13 @@ LLVM version and revision, libgc revision, and recipe identifier without creatin
 directories or building anything. Bump the recipe identifier when changing CMake
 configuration or other dependency build semantics; logging edits do not require
 rebuilding LLVM. A completion stamp and actual compiler versions are checked on
-cache hits. A temporary restore prefix migrates validated caches from the former
-script-hash keys; remove that prefix after migration and before final release.
+cache hits.
 Validated dependencies are saved before Emit tests so a later test failure does
 not discard the toolchain build. A missing release
 or wrong major fails the job. A cold LLVM build can take hours; link parallelism
-is limited to control memory use. The distribution builds only clang, its resource
-headers, llvm-config, the shared LLVM library, and development headers for the
+is limited to control memory use. Recipe 4 explicitly installs clang and its
+required `clang-cpp` shared library, resource headers, llvm-config, the shared LLVM
+library, and development headers for the
 native target; unused tool executables, other target backends, and the clang
 static analyzer are excluded. Linux also builds and installs lld, including the
 `ld.lld` launcher, and configures clang to use it by default so Emit's `-flto`
@@ -39,7 +39,13 @@ Provisioning preserves an explicit `SDKROOT`, or selects the macOS SDK with
 `xcrun --sdk macosx --show-sdk-path`, validates its headers and libraries, and
 exports it for subsequent compiler probes, builds, and installed smoke tests.
 Every installation and cache hit compiles, links, and executes a small C program
-with `clang -flto` and implicit linker selection. Both libraries use an explicit `lib` directory.
+with `clang -flto` and implicit linker selection, a C++ standard-library program,
+and a complete native Emit runtime object linked with libgc. The latter retains
+all runtime functions so unused code cannot hide missing builtin dependencies.
+Darwin's compiler driver permits absent compiler-rt builtins for this native
+configuration; the current Emit runtime links using SDK system libraries without
+that resource archive. Sanitizer and profiling runtimes are outside this recipe.
+Both libraries use an explicit `lib` directory.
 Runner images are selected by OS version but
 their bundled bootstrap compiler, CMake, Ninja, and system SDK still receive
 runner maintenance updates.

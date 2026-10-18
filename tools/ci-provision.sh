@@ -23,13 +23,13 @@ case "$major" in
   *) printf 'ci: unsupported matrix major: %s\n' "$major" >&2; exit 2 ;;
 esac
 gc_revision=ee59af3722e56de8404de6cd0c21c2493cc4d855
-identity="$version $revision $gc_revision recipe-3"
+identity="$version $revision $gc_revision recipe-4"
 if [ "$identity_only" = 1 ]; then
   printf '%s\n' "${identity// /-}"
   exit 0
 fi
 projects=clang
-components="clang;clang-resource-headers;llvm-config;LLVM;llvm-headers"
+components="clang;clang-cpp;clang-resource-headers;llvm-config;LLVM;llvm-headers"
 default_linker=""
 case "$(uname -s)" in
   Linux)
@@ -100,6 +100,7 @@ else
     -DLLVM_ENABLE_PROJECTS="$projects" -DLLVM_TARGETS_TO_BUILD=Native \
     -DLLVM_DISTRIBUTION_COMPONENTS="$components" -DCLANG_DEFAULT_LINKER="$default_linker" \
     -DLLVM_BUILD_LLVM_DYLIB=ON -DLLVM_LINK_LLVM_DYLIB=ON \
+    -DCLANG_LINK_CLANG_DYLIB=ON \
     -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF \
     -DLLVM_INCLUDE_EXAMPLES=OFF -DLLVM_ENABLE_ASSERTIONS=OFF \
     -DCLANG_ENABLE_STATIC_ANALYZER=OFF -DCLANG_ENABLE_ARCMT=OFF \
@@ -134,6 +135,18 @@ esac
 # Exercise the same implicit linker selection used by Emit's -flto AOT path.
 run_logged "link clang -flto -> $work/lto-check  [default platform linker]" "$prefix/llvm/bin/clang" -flto -x c - -o "$work/lto-check" <<< 'int main(void) { return 0; }'
 run_logged "run $work/lto-check -> LTO verification" "$work/lto-check"
+run_logged "link clang++ -> $work/cxx-check  [native standard library]" "$prefix/llvm/bin/clang++" -std=c++17 -x c++ - -o "$work/cxx-check" <<< '#include <iostream>
+#include <string>
+int main() { std::cout << "" << std::flush; return std::string("emit").size() == 4 ? 0 : 1; }'
+run_logged "run $work/cxx-check -> C++ verification" "$work/cxx-check"
+# Retain the complete native runtime object at link time, so unused functions
+# cannot hide missing compiler builtins or native-library dependencies.
+run_logged "compile src/runtime/runtime.c -> $work/runtime-check.o" "$prefix/llvm/bin/clang" -std=gnu11 -O2 -DRT_NO_MAIN -I"$prefix/gc/include" -c src/runtime/runtime.c -o "$work/runtime-check.o"
+run_logged "link runtime object -> $work/runtime-check  [libgc and LTO]" "$prefix/llvm/bin/clang" -flto "$work/runtime-check.o" -x c - -L"$prefix/gc/lib" -lgc -lm -o "$work/runtime-check" <<< 'int main(void) { return 0; }'
+run_logged "run $work/runtime-check -> native runtime verification" env \
+  "LD_LIBRARY_PATH=$prefix/gc/lib:$prefix/llvm/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+  "DYLD_LIBRARY_PATH=$prefix/gc/lib:$prefix/llvm/lib${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}" \
+  "$work/runtime-check"
 say "verify $prefix -> LLVM $version + libgc 8.2.8  [$(du -sk "$prefix" | awk '{ print $1 }') KiB, ${SECONDS}s]"
 # Workflow environment is the machine-consumable output.
 printf 'LLVM_CONFIG=%s/llvm/bin/llvm-config\nCC=%s/llvm/bin/clang\nCXX=%s/llvm/bin/clang++\nGC_INC=%s/gc/include\nGC_LIB=%s/gc/lib\n' "$prefix" "$prefix" "$prefix" "$prefix" "$prefix"
