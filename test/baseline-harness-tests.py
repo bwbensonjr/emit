@@ -84,7 +84,11 @@ class BaselineHarnessTests(unittest.TestCase):
         old_environment = os.environ.copy()
         try:
             if environment:
-                os.environ.update(environment)
+                for key, value in environment.items():
+                    if value is None:
+                        os.environ.pop(key, None)
+                    else:
+                        os.environ[key] = value
             with patch.object(sys, "argv", ["test-baseline.py", *arguments]), \
                     contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
                 status = baseline.main()
@@ -100,6 +104,48 @@ class BaselineHarnessTests(unittest.TestCase):
             with self.subTest(arguments=arguments), self.assertRaises(SystemExit) as failure:
                 self.invoke(list(arguments))
             self.assertEqual(failure.exception.code, 2)
+
+    def test_metadata_records_explicit_cache_and_gc_paths_without_claiming_warmth(self):
+        cache = self.work / "cache"
+        home = self.work / "home"
+        xdg_cache = self.work / "xdg-cache"
+        for path in (cache, home, xdg_cache):
+            path.mkdir()
+        status, report, _ = self.invoke([], {
+            "EMIT_CACHE": str(cache), "HOME": str(home),
+            "XDG_CACHE_HOME": str(xdg_cache), "GC_INC": "/toolchain/include",
+            "GC_LIB": "/toolchain/lib",
+        })
+        self.assertEqual(status, 0)
+        self.assertEqual(report["cache_state"], "caller-supplied locations recorded; contents unmeasured")
+        for name, path in (("EMIT_CACHE", cache), ("HOME", home), ("XDG_CACHE_HOME", xdg_cache)):
+            self.assertEqual(report["cache_configuration"]["variables"][name], str(path))
+            self.assertTrue(report["cache_configuration"]["path_state"][name]["exists"])
+        self.assertEqual(report["toolchain"]["gc_inc"], "/toolchain/include")
+        self.assertEqual(report["toolchain"]["gc_lib"], "/toolchain/lib")
+        self.assertEqual(report["environment"]["GC_INC"], "/toolchain/include")
+        self.assertEqual(report["environment"]["GC_LIB"], "/toolchain/lib")
+        self.assertEqual(report["harness_commit"], report["baseline_commit"])
+
+    def test_metadata_marks_unset_cache_paths_unknown_and_keeps_harness_commit(self):
+        status, report, _ = self.invoke([], {
+            "EMIT_CACHE": None, "HOME": None, "XDG_CACHE_HOME": None,
+            "GC_INC": None, "GC_LIB": None,
+        })
+        self.assertEqual(status, 0)
+        self.assertEqual(report["cache_state"], "caller-supplied locations recorded; contents unmeasured")
+        for name in ("EMIT_CACHE", "HOME", "XDG_CACHE_HOME"):
+            self.assertIsNone(report["cache_configuration"]["variables"][name])
+            self.assertIsNone(report["cache_configuration"]["path_state"][name]["exists"])
+        self.assertIsNone(report["toolchain"]["gc_inc"])
+        self.assertIsNone(report["toolchain"]["gc_lib"])
+        self.assertRegex(report["harness_commit"], r"^[0-9a-f]{40}$")
+
+    def test_inaccessible_cache_metadata_is_unknown_not_a_failed_benchmark(self):
+        with patch.object(Path, "exists", side_effect=PermissionError("cache denied")):
+            configuration = baseline.cache_configuration({"EMIT_CACHE": "/inaccessible"})
+        self.assertIsNone(configuration["path_state"]["EMIT_CACHE"]["exists"])
+        self.assertIn("cache denied", configuration["path_state"]["EMIT_CACHE"]["error"])
 
     def test_selected_suite_failure_is_reported_and_logs_are_retained(self):
         before = {path.relative_to(self.repo): path.read_bytes()

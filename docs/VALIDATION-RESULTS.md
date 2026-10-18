@@ -21,12 +21,28 @@ for the retained baseline logs. Lightweight implementation checks overlapped
 parts of the baseline; record the observed variation rather than assuming a
 quiet host or comparing isolated single best samples.
 
+### Cache-state correction
+
+The first two legacy samples used the ambient macOS user-cache location, outside
+the sandbox's writable roots. The new runner instead supplies writable isolated
+caches. Large per-suite differences exposed this mismatch (for example, import
+sets took 197-200 s in those legacy samples versus 35.380 s in the first new
+sample, with the same 74 passing assertions). These initial legacy samples are
+ambient-sandbox evidence, not the accepted equal-coverage speed comparison.
+
+Controlled legacy samples must explicitly provide a fresh writable `EMIT_CACHE`
+per invocation. The legacy runner may share that cache across its suites, while
+the new runner deliberately isolates suites; both begin with writable empty
+caches. Record this policy difference, which favors legacy cross-suite reuse,
+and do not attribute cache availability to scheduling improvement.
+
 ## Completed checks
 
-- The first pre-change full-native baseline passed all 53 suites without Chez:
-  2,553.87 s wall (2,435.81 s user, 47.46 s system), with dependencies already
-  installed. A second baseline and paired new-runner samples are still pending;
-  this single sample does not establish an equal-coverage improvement.
+- Both pre-change full-native baselines passed all 53 suites without Chez:
+  2,553.87 and 2,410.48 s wall (median 2,482.175 s, range 2,410.48-2,553.87 s),
+  with dependencies already installed. User/system times were 2,435.81/47.46 s
+  and 2,338.88/38.74 s. Paired new-runner samples are still pending; these
+  baselines alone do not establish an equal-coverage improvement.
 - Runner regressions cover GNU `timeout` descendants in separate process
   groups, a SIGTERM-ignoring child, failed aggregate reports on interruption,
   private home/cache roots, and inherited install-destination overrides.

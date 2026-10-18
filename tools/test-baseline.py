@@ -110,6 +110,22 @@ def observed_emit_cpp_compiles(trace_path):
     return count
 
 
+def cache_configuration(environment):
+    variables = ("EMIT_CACHE", "HOME", "XDG_CACHE_HOME")
+    paths = {}
+    for name in variables:
+        value = environment.get(name)
+        try:
+            paths[name] = {"path": value, "exists": pathlib.Path(value).exists() if value else None}
+        except OSError as error:
+            paths[name] = {"path": value, "exists": None, "error": str(error)}
+    return {
+        "variables": {name: environment.get(name) for name in variables},
+        "path_state": paths,
+        "contents": "unmeasured; no recursive cache scan",
+    }
+
+
 FIXTURES = {
     "compiler": ("src/passes/lower.ss", "\n; validation timing fixture\n"),
     "runtime": ("src/runtime/runtime.c", "\n/* validation timing fixture */\n"),
@@ -159,9 +175,11 @@ def main():
         report_logs["wrappers"] = str(wrapper_directory)
 
     print("baseline snapshot -> temporary checkout  [tracked files only]", file=__import__("sys").stderr)
+    harness_commit = output(["git", "rev-parse", "HEAD"])
     report = {
         "schema": 1,
         "baseline_commit": output(["git", "rev-parse", "HEAD"]),
+        "harness_commit": harness_commit,
         "snapshot_kind": "tracked working tree" if args.working_tree else "HEAD archive",
         "platform": platform.platform(),
         "machine": platform.machine(),
@@ -172,9 +190,14 @@ def main():
             "clangxx": output([os.environ.get("CXX", "clang++"), "--version"]),
             "chez": output(["chez", "--version"]),
             "libgc": os.environ.get("GC_PREFIX", "not explicitly set"),
+            "gc_inc": os.environ.get("GC_INC"),
+            "gc_lib": os.environ.get("GC_LIB"),
         },
-        "environment": {key: os.environ.get(key) for key in ("LLVM_CONFIG", "CC", "CXX", "GC_PREFIX", "EMIT_VERBOSITY")},
-        "cache_state": "existing host caches; snapshot build outputs begin absent",
+        "environment": {key: os.environ.get(key) for key in
+                         ("LLVM_CONFIG", "CC", "CXX", "GC_PREFIX", "GC_INC", "GC_LIB",
+                          "EMIT_VERBOSITY", "EMIT_CACHE", "HOME", "XDG_CACHE_HOME")},
+        "cache_state": "caller-supplied locations recorded; contents unmeasured",
+        "cache_configuration": cache_configuration(os.environ),
         "queue_seconds": None,
         "provision_seconds": None,
         "build_seconds": None,

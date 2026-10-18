@@ -67,6 +67,8 @@ profiles build an immutable seed once; workers copy its binaries/objects with
 preserved timestamps, but never share mutable outputs or caches. Configuration,
 VERSION, install, cold-cache, invalidation, and process-recovery assertions remain
 unchanged. Negative tests are not batched into stateful sessions.
+Workspace isolation prevents fixture interference; it is not a security sandbox
+for arbitrary test code.
 
 Audited direct Chez source units share the immutable source snapshot with private
 temporary/cache directories. The runner hashes the seed before and after worker

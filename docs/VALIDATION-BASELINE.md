@@ -23,10 +23,21 @@ python3 tools/test-baseline.py --output /tmp/emit-validation-metadata.json
 To capture the complete native baseline, run it on a quiet machine with the intended LLVM and libgc already provisioned:
 
 ```sh
+baseline_cache=$(mktemp -d "${TMPDIR:-/tmp}/emit-baseline-cache.XXXXXX")
+EMIT_CACHE="$baseline_cache" \
 LLVM_CONFIG=/path/to/llvm-config \
 CC=/path/to/clang CXX=/path/to/clang++ GC_PREFIX=/path/to/gc \
 python3 tools/test-baseline.py --full-native --output /tmp/emit-validation-full.json
 ```
+
+Create a fresh writable cache for each controlled timing invocation. Do not
+assume an ambient user cache is writable inside a restricted agent environment:
+silent cache fallback can dominate the result. The legacy runner shares its
+invocation cache across suites; the new runner deliberately supplies per-suite
+caches. Record that difference and any deliberate warm-cache reuse. Reports
+capture supplied cache paths and shallow existence checks, not cache warmth or
+writeability; the caller establishes those conditions. `harness_commit` identifies
+the measurement helper separately from the archived subject's `baseline_commit`.
 
 The harness reports the isolated snapshot build and test durations separately. Local queue and dependency provisioning are reported as unavailable (`null`): they do not occur inside this local invocation. Record CI queue and provisioning measurements from workflow timestamps and provisioning logs as separate fields. Without `--trace-compilers`, compiler process counts are unavailable; a make invocation is not a compiler invocation. Preserve the raw report and logs with each measurement set.
 
@@ -37,7 +48,7 @@ and `--suite` cannot be combined with `--full-native`. For example:
 
 ```sh
 python3 tools/test-baseline.py --revision a6238520b38551b1042e9f35a5768e0bcdd29d36 \
-  --suite r7rs-sections --suite library-partition \
+  --suite r7rs-small-suite-vendored-sections-only --suite r7rs-library-partition \
   --output /tmp/emit-validation-selected.json
 ```
 
