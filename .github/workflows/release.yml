@@ -50,12 +50,19 @@ jobs:
         with:
           name: source-release
           path: ${{ runner.temp }}/assets
-      - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+      - uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        id: deps
         with:
           path: ${{ runner.temp }}/emit-deps
           key: emit-deps-${{ runner.os }}-${{ runner.arch }}-23-${{ hashFiles('tools/ci-provision.sh') }}
       - name: Provision pinned dependencies
         run: tools/ci-provision.sh 23 "$RUNNER_TEMP/emit-deps" >> "$GITHUB_ENV"
+      - name: Save validated dependencies before archive tests
+        if: steps.deps.outputs.cache-hit != 'true'
+        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: ${{ runner.temp }}/emit-deps
+          key: ${{ steps.deps.outputs.cache-primary-key }}
       - name: Build exact archive with network and checkout denied
         run: |
           set -o pipefail
