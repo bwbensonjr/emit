@@ -24,6 +24,13 @@ for input in VERSION CHANGELOG.md LICENSE Makefile AGENTS.md CLAUDE.md bootstrap
 done
 version=$(tar -xOf "$assets/$archive" "$root/VERSION")
 [ "$root" = "emit-$version" ]
+tar -xOf "$assets/$archive" "$root/CHANGELOG.md" > "$work/changelog"
+awk -v version="$version" '
+  /^## / { if (found) exit; if ($0 == "## [" version "]" || $0 == "## " version || index($0, "## [" version "] - ") == 1) { found=1; next } }
+  found { print; if ($0 ~ /[^[:space:]]/) content=1 }
+  END { if (!found || !content) exit 1 }
+' "$work/changelog" > "$work/notes" || { printf 'release: missing or empty archived changelog section for %s\n' "$version" >&2; exit 1; }
+cmp "$work/notes" "$assets/RELEASE-NOTES.md" || { printf 'release: notes differ from archived changelog\n' >&2; exit 1; }
 # Corruption must be rejected by the same checksum verifier.
 cp "$assets/$archive" "$work/$archive"
 cp "$assets/SHA256SUMS" "$work/SHA256SUMS"
