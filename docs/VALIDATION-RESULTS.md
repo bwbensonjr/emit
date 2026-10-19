@@ -2,8 +2,9 @@
 
 This is an acceptance record in progress, not a claim that all change tasks are
 complete. The controlled equal-coverage comparison and four-cell native matrix
-pass; complete reference verification fails. Integrated acceptance remains open
-pending the issues and scope decision recorded below.
+pass at the earlier checkpoint; complete reference verification failed there.
+The user approved the canonicalization/prerequisite fixes and explicit
+regeneration. Integrated acceptance remains open pending corrected validation.
 
 ## Local environment
 
@@ -338,15 +339,77 @@ A smaller direct compilation produces identical bytes; compilation/cache
 history exposes the difference. The existing byte comparison has not been
 weakened or removed.
 
-Canonicalizing compiler-owned interface metadata would extend this tooling
-change into compiler-core work and require the explicit regeneration barrier.
-Changing the comparison to structural equality would instead revise a retained
-acceptance contract. Tasks 6.4, 7.2 and 7.3 remain unchecked pending that scope
-decision and a successful corrected rehearsal.
+The user approved extending this change to canonicalize compiler-owned
+interface metadata and cross the explicit regeneration barrier. The retained
+byte comparison remains unchanged. Tasks 6.4, 7.2 and 7.3 remain unchecked
+pending a successful corrected rehearsal.
 
 Failed reference reports are retained at
 `/private/tmp/emit-apply-rehearsal.8CqMWt/final-proofs`; the complete job log is
 `/private/tmp/emit-apply-reference.log`. The retained local full-suite fixture is
 `/private/tmp/emit-exports-parity.KzQv0Z`, with its failed native interface under
 the printed temporary directory in `full.log`. The original compiler/bootstrap
-sources remain unchanged.
+sources remained unchanged at that checkpoint.
+
+### Approved acceptance fixes
+
+The shared export renderer now rebuilds schema-owned metadata without
+incidental spine sharing and interns complete binding descriptors, including
+their spelling and lexical keys. Transformer aliases share a payload by origin;
+user syntax graphs retain explicit identity and cycles, without structural
+hash-consing of user datums. Both retained mismatching SRFI 227 artifacts render
+as the same 8,229-byte canonical datum under Chez. Added unit assertions cover
+allocation/restoration history, idempotence, distinct lexical keys/aliases,
+identifier fallbacks, forged reader-vector tags, and user pair/string sharing
+and cycles. Existing full-suite export byte comparisons are unchanged.
+
+Recipe 6 adds exact-version `llvm-as`, `llvm-link`, and `lli`, plus a two-module
+assembly/link/JIT execution probe on every provision/restore. Failure-injection
+tests exercise all four subprocess steps; the real probe also passes with local
+LLVM 23.1.2. Relative-root joining no longer requires Chez's newer `path-build`;
+the actual driver helpers are tested by the binding source units.
+
+Pre-regeneration validation passed all 15 direct source-unit suites (5.932 s)
+and the Chez-only Snow package checks (4/4). Reports/logs are retained at
+`/private/tmp/emit-fix-pre-regen-final-units.json` and
+`/private/tmp/emit-fix-pre-regen-snow.log`. These are current-source checks, not
+evidence that native bootstrap artifacts include the fixes.
+
+Explicit `make regen` then completed in 472 s, with four self-compiles and a
+fixed point at iteration 1 (234 s fixed-point stage, 231 s final emission stage).
+All five declared bootstrap modules were regenerated or verified stable;
+the two baked modules stayed byte-identical. The resulting `build/emit` is
+2,857,352 bytes and `build/schemec` is 963,768 bytes. The log is retained at
+`/private/tmp/emit-fix-regen.log`. Compiler inputs were frozen before regeneration
+and remain unchanged during subsequent acceptance validation.
+
+Post-regeneration source units passed 15/15 in 6.341 s. The full cross-host Snow
+suite passed 39/39, including the unchanged SRFI 227 export byte comparison;
+complete backend equivalence also passed. Native, source, and reference
+acceptance profiles run concurrently for correctness evidence, not as additional
+samples of the controlled performance comparison above.
+
+All required local post-regeneration profiles passed:
+
+| Profile | Result | Runner elapsed |
+| --- | --- | ---: |
+| Full native, without Chez | 53/53 suites | 768.047 s |
+| Direct source units | 15/15 suites | 6.341 s |
+| Isolated source consistency, without Chez | All five modules identical | 673.206 s |
+| Complete reference | 25/25 suites | 797.905 s |
+
+The reference fixed-point group independently re-derived the committed modules
+from Chez; the source profile separately reproduced all five bootstrap modules,
+including the matching uncommitted source/IR pair. Native cyclic-datum and printer
+regressions also passed. Compiler/bootstrap inputs and isolated seeds stayed
+unchanged throughout validation. Raw JSON reports are retained as
+`/private/tmp/emit-fix-{full,units,source,reference}.json`, with corresponding logs.
+
+The restricted Chez-free PATH selected LLVM clang 23.1.2 rather than the Apple
+clang default used for the initial regeneration. Accordingly, those native
+reports conservatively retain a toolchain-mismatched local fingerprint label;
+the successful independent source comparison, not that hint, establishes current
+source/bootstrap consistency. CI will use its explicit pinned CC/CXX throughout.
+Policy, bundle, version, runner, classification, coverage, source/fingerprint,
+telemetry, measurement-harness, prerequisite, archive-isolation, discovery, and
+range-assembly self-tests all passed. Strict OpenSpec validation also passed.

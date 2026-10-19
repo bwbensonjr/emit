@@ -103,3 +103,9 @@ CI SHALL reuse immutable dependency installations identified by OS, architecture
 
 - **WHEN** dependency verification fails or no matching artifact exists
 - **THEN** the invalid installation is not used and CI either provisions the exact documented recipe or fails visibly without substituting a major or skipping checks
+
+#### Scenario: Reference backend prerequisites are exercised
+
+- **WHEN** a toolchain is provisioned or restored for verification
+- **THEN** its pinned `llvm-as`, `llvm-link`, and `lli` assemble, link, and execute a bitcode probe, in addition to native embedding probes
+- **AND** the Chez driver resolves relative library roots on the CI Chez version without relying on unavailable host procedures

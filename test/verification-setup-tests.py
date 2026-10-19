@@ -13,6 +13,50 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 class VerificationSetupTests(unittest.TestCase):
+    def test_bitcode_probe_runs_all_tools_and_propagates_each_failure(self):
+        provision = (ROOT / "tools/ci-provision.sh").read_text()
+        helpers = provision.split("log_count=0\n", 1)[1].split(
+            'if [ -f "$prefix/complete" ]; then', 1)[0]
+        for failed_step in range(5):
+            with self.subTest(failed_step=failed_step), tempfile.TemporaryDirectory(
+                    prefix="emit backend probe ") as temporary:
+                work = Path(temporary)
+                binaries = work / "llvm/bin"
+                binaries.mkdir(parents=True)
+                fixture = work / "backend"
+                fixture.write_text("""#!/usr/bin/env python3
+import os
+from pathlib import Path
+import sys
+state = Path(os.environ["PROBE_STATE"])
+step = int(state.read_text()) + 1 if state.exists() else 1
+state.write_text(str(step))
+if step == int(os.environ["FAIL_STEP"]):
+    sys.exit(19)
+tool = Path(sys.argv[0]).name
+if tool == "llvm-as":
+    Path(sys.argv[sys.argv.index("-o") + 1]).write_text(sys.stdin.read())
+elif tool == "llvm-link":
+    text = "".join(Path(path).read_text() for path in sys.argv[1:3])
+    Path(sys.argv[sys.argv.index("-o") + 1]).write_text(text)
+elif tool == "lli":
+    text = Path(sys.argv[1]).read_text()
+    assert "define i32 @main()" in text and "define i32 @probe_value()" in text
+else:
+    sys.exit(18)
+""")
+                fixture.chmod(0o700)
+                for name in ("llvm-as", "llvm-link", "lli"):
+                    (binaries / name).symlink_to(fixture)
+                environment = {**os.environ, "PROBE_STATE": str(work / "state"),
+                               "FAIL_STEP": str(failed_step), "PROBE_PREFIX": str(work)}
+                result = subprocess.run(
+                    ["bash", "-c", helpers + '\nprefix=$PROBE_PREFIX\n'
+                     'probe_bitcode "$PROBE_PREFIX"'], env=environment,
+                    capture_output=True, text=True)
+                self.assertEqual(result.returncode, 19 if failed_step else 0, result.stderr)
+                self.assertEqual(int((work / "state").read_text()), failed_step or 4)
+
     def test_backend_driver_does_not_replace_inherited_native_cc(self):
         with tempfile.TemporaryDirectory(prefix="emit backend compiler ") as temporary:
             work = Path(temporary)

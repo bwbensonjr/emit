@@ -58,3 +58,9 @@ Every capability needed to build, run, inspect, or debug a program SHALL remain 
 - **WHEN** source-unit validation runs after a compiler pass is edited and before regeneration
 - **THEN** it tests the current source under Chez without first running the native regression or bootstrap suites
 - **AND** its result does not claim that the committed native compiler incorporates those edits
+
+#### Scenario: Export metadata is independent of compilation history
+
+- **WHEN** fresh and artifact-restored dependencies supply equal binding identities to the two compiler hosts
+- **THEN** their complete export interfaces are byte-identical, including compiler-owned graph labels
+- **AND** explicit sharing and cycles in user macro literal/template data remain preserved

@@ -47,8 +47,14 @@
 - [ ] 7.2 Complete the non-publishing integrated rehearsal: all four full LLVM/platform cells, separate source/reference verification, both offline archives, and verified candidate bundle reuse on a cold consumer. Verify committed bootstrap coherence and no public tag or release mutation; run regen and the required current suites only if implementation changed compiler-source inputs.
 - [ ] 7.3 Reconcile coverage-map ownership, reports, contributor instructions, and CI-required checks against the delta specs. Verify strict OpenSpec validation, runner/classifier/provisioning self-tests, clean tracked source after verification, and documented rollback/fallback paths.
 
+## 8. Approved acceptance fixes
+
+- [x] 8.1 Implement the approved compiler-owned export metadata canonicalization for #136, with history-independent byte-parity regressions and preservation of explicit user datum sharing/cycles.
+- [x] 8.2 Complete the pinned LLVM backend distribution and probe it on provision/restore; fix Chez relative-root compatibility and add prerequisite regressions for #137.
+- [ ] 8.3 Finish and format compiler edits, run explicit regeneration, then full native, source units, mandatory isolated source consistency, and complete reference verification. Retain reports and reconcile the integrated rehearsal evidence before closing acceptance tasks 6.4, 7.2, and 7.3.
+
 ## Workflow follow-up
 
-- Acceptance tasks 6.4, 7.2, and 7.3 remain open for [#136](https://github.com/bwbensonjr/emit/issues/136) and [#137](https://github.com/bwbensonjr/emit/issues/137). Extending implementation into compiler interface canonicalization requires a scope decision; the retained byte-parity assertion has not been narrowed.
+- The user approved extending implementation into compiler interface canonicalization, regeneration, and revalidation. The retained byte-parity assertion must not be narrowed.
 - After review and merge, seed the trusted default-branch dependency channel and verify a subsequent PR/tag consumer restores its approved bundles; do not publish trusted main artifacts from PR-controlled runs to simulate this rollout.
 - Archive after implementation and review are complete. No new public Emit release or retagging is required by this change.

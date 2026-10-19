@@ -20,13 +20,13 @@ case "$major" in
   *) printf 'ci: unsupported matrix major: %s\n' "$major" >&2; exit 2 ;;
 esac
 gc_revision=ee59af3722e56de8404de6cd0c21c2493cc4d855
-identity="$version $revision $gc_revision recipe-5"
+identity="$version $revision $gc_revision recipe-6"
 if [ "$identity_only" = 1 ]; then
   printf '%s\n' "${identity// /-}"
   exit 0
 fi
 projects=clang
-components="clang;clang-cpp;clang-resource-headers;llvm-config;LLVM;llvm-headers"
+components="clang;clang-cpp;clang-resource-headers;llvm-config;LLVM;llvm-headers;lli;llvm-as;llvm-link"
 default_linker=""
 case "$(uname -s)" in
   Linux)
@@ -64,6 +64,22 @@ probe_version() {
   reported=$("$tool" --version) || return
   printf '%s\n' "$reported"
   printf '%s\n' "$reported" | head -n 1 | grep -Eq "$pattern"
+}
+probe_llvm_version() {
+  local tool=$1 reported
+  reported=$("$tool" --version) || return
+  printf '%s\n' "$reported"
+  # LLVM utilities put their exact version after a banner, unlike clang.
+  printf '%s\n' "$reported" | grep -Eq "^[[:space:]]*LLVM version ${version//./\\.}([[:space:]]|$)"
+}
+probe_bitcode() {
+  local directory=$1
+  "$prefix/llvm/bin/llvm-as" -o "$directory/probe-main.bc" <<< 'declare i32 @probe_value()
+define i32 @main() { %value = call i32 @probe_value()
+ret i32 %value }' || return
+  "$prefix/llvm/bin/llvm-as" -o "$directory/probe-value.bc" <<< 'define i32 @probe_value() { ret i32 0 }' || return
+  "$prefix/llvm/bin/llvm-link" "$directory/probe-main.bc" "$directory/probe-value.bc" -o "$directory/probe-linked.bc" || return
+  "$prefix/llvm/bin/lli" "$directory/probe-linked.bc"
 }
 select_darwin_sdk() {
   if [ -z "${SDKROOT:-}" ]; then
@@ -215,6 +231,10 @@ run_logged "verify $prefix/llvm/bin/llvm-config -> LLVM $version" probe_version 
 for compiler in clang clang++; do
   run_logged "verify $prefix/llvm/bin/$compiler -> LLVM $version" probe_version "$prefix/llvm/bin/$compiler" "version ${version//./\\.}([[:space:]]|$)"
 done
+for backend in lli llvm-as llvm-link; do
+  run_logged "verify $prefix/llvm/bin/$backend -> LLVM $version" probe_llvm_version "$prefix/llvm/bin/$backend"
+done
+run_logged "assemble + link + execute bitcode -> LLVM backend verification" probe_bitcode "$work"
 case "$(uname -s)" in
   Linux)
     [ -x "$prefix/llvm/bin/ld.lld" ]

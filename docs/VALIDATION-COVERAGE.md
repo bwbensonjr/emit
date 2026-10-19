@@ -15,6 +15,15 @@ Rows that are byte-for-byte the same command and host are represented once with 
 
 `coverage` is an auditable group identifier for every legacy suite. The group currently includes all assertions emitted by that existing script; the script remains the assertion source of truth. The registry retains the three direct performance/scaling groups (`string-port-scaling-p21`, the P21 native-object cache and artifact/cache checks), the complete native R7RS sections, and the Chez/native parity groups. R7RS stale exclusions remain deliberately opt-in because they are conformance bookkeeping, not the everyday regression sections.
 
+The canonicalization extension adds allocation-history, restored-artifact,
+idempotence, binding-key/spelling, identifier-fallback, and user graph identity
+checks to `import-binding-identities-chez`. The unchanged Snow cross-host suite
+retains full `.exports` byte comparisons, including the SRFI 227 reproducer.
+Provisioning self-tests verify exact backend utility versions and failure
+propagation at each assemble/link/execute step; real recipe probes run for both
+fresh installations and restored bundles. The same binding unit checks the Chez
+driver's relative-root helper on the CI host.
+
 ## Isolation
 
 Direct Chez `.ss` units run in `units`. The larger Chez binding-context

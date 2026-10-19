@@ -1521,6 +1521,113 @@
 (define (ct-own-refs h) (cadr h))
 (define (ct-foreign-refs h) (caddr h))
 
+;; Artifact restoration preserves the saved graph, whereas fresh import views
+;; can allocate equal binding rows independently. Neither allocation history is
+;; part of a binding's identity (#136). Canonicalize only schema-owned metadata
+;; before rendering, not the arbitrary datum graph handled by render-datum.
+;; Rebuild metadata spines without incidental tail sharing and intern complete
+;; binding rows (including spelling and lexical key, not just their origin).
+;; Transformer aliases use one payload per origin. User syntax is copied by
+;; identity, retaining explicit sharing/cycles without merging equal datums.
+(define (canonical-export-table table)
+  (let ([bindings '()] [payloads '()] [syntax-seen '()])
+    (define (metadata x)
+      (cond
+        [(pair? x) (cons (metadata (car x)) (metadata (cdr x)))]
+        [(string? x) (string-copy x)]
+        [else x]))
+    (define (binding row)
+      (let ([old (assoc row bindings)])
+        (if
+          old
+          (cdr old)
+          (let ([out (cons (car row) '())])
+            (set! bindings (cons (cons row out) bindings))
+            (set-cdr! out
+                      (cons (cadr row)
+                            (cons (metadata (caddr row))
+                                  (cons (if (and (eq? (cadr row) 'macro)
+                                                 (contextual-transformer? (cadddr row)))
+                                            (transformer (cadddr row))
+                                            (metadata (cadddr row)))
+                                        (metadata (cdr (cdddr row)))))))
+            out))))
+    (define (reader-vector payload)
+      (let ([old (assq payload syntax-seen)])
+        (if old
+            (cdr old)
+            (let ([out (make-vector (vector-length payload))])
+              (set! syntax-seen (cons (cons payload out) syntax-seen))
+              (let loop ([i 0])
+                (unless (= i (vector-length payload))
+                  (vector-set! out i (syntax (vector-ref payload i)))
+                  (loop (+ i 1))))
+              out))))
+    (define (syntax x)
+      (let ([old (and (render-labelable? x) (assq x syntax-seen))])
+        (cond
+          [old (cdr old)]
+          [(pair? x) (let ([out (cons #f #f)])
+                       (set! syntax-seen (cons (cons x out) syntax-seen))
+                       (set-car! out (syntax (car x)))
+                       (set-cdr! out (syntax (cdr x)))
+                       out)]
+          [(vector? x)
+            (let ([out (make-vector (vector-length x))])
+              (set! syntax-seen (cons (cons x out) syntax-seen))
+              ;; Reader vectors are wrapped, so user data cannot forge this
+              ;; compiler-owned identifier tag. Its key/fallback are metadata.
+              (cond
+                [(syntax-reader-vector? x)
+                  (vector-set! out 0 (vector-ref x 0))
+                  (vector-set! out 1 (reader-vector (vector-ref x 1)))]
+                [(syntax-id? x)
+                  (vector-set! out 0 (vector-ref x 0))
+                  (vector-set! out 1 (vector-ref x 1))
+                  (vector-set! out 2 (metadata (vector-ref x 2)))
+                  (vector-set! out 3 (and (vector-ref x 3) (binding (vector-ref x 3))))]
+                [else (let loop ([i 0])
+                        (unless (= i (vector-length x))
+                          (vector-set! out i (syntax (vector-ref x i)))
+                          (loop (+ i 1))))])
+              out)]
+          [(string? x) (let ([out (string-copy x)])
+                         (set! syntax-seen (cons (cons x out) syntax-seen))
+                         out)]
+          [else x])))
+    (define (transformer m)
+      (let* ([origin (transformer-origin m)]
+             [old (assoc origin payloads)]
+             [payload (if old
+                          (cdr old)
+                          (let ([out (list (syntax (transformer-literals m))
+                                           (syntax (transformer-rules m))
+                                           (map-lr binding (transformer-context m)))])
+                            (set! payloads (cons (cons origin out) payloads))
+                            out))])
+        (make-contextual-transformer (car m)
+                                     (metadata origin)
+                                     (car payload)
+                                     (cadr payload)
+                                     (caddr payload))))
+    (let ([head (metadata (list (car table) (cadr table) (caddr table)))])
+      (if (null? (cdddr table))
+          head
+          (let* ([h (table-ct-half table)]
+                 [macros (map-lr transformer (ct-macros h))]
+                 [extension (if (null? (cdddr h))
+                                '()
+                                (list (cons (car (cadddr h))
+                                            (cons (map-lr binding (ct-bindings h))
+                                                  (metadata (cddr (cadddr h)))))))])
+            (append head
+                    (list (append (list macros
+                                        (metadata (ct-own-refs h))
+                                        (metadata (ct-foreign-refs h)))
+                                  extension))))))))
+
+(define (render-export-table table) (render-datum (canonical-export-table table)))
+
 ;; Builtin exports are compile-time bindings, never fictitious runtime globals.
 ;; Keep the three legacy fields and runtime/call row layouts readable.
 (define (ct-bindings h)

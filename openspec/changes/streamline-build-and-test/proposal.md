@@ -13,6 +13,7 @@ Emit needs a short, trustworthy source-edit-to-feedback loop: the recent native 
 - Keep Chez out of ordinary native testing and installation. Retain inexpensive source-level Chez units separately; run expensive independent-host re-derivation once for release verification and on scheduled/manual reference runs, with targeted cross-host checks for relevant PRs.
 - Reuse verified toolchain installations from trusted, immutable CI artifacts; use source provisioning for refresh/fallback rather than recompiling LLVM on every cold validation job. Cache misses must not silently change versions or reduce coverage.
 - Reuse the same profiles for four-cell release regression coverage and both exact offline archive validations; retain publication gating, checksums, immutable assets, and tag/source identity checks.
+- Fix cross-host export canonicalization exposed by retained reference coverage: normalize compiler-owned binding metadata without changing explicit user datum sharing or cycles. Regenerate bootstrap modules and revalidate the compiler. Provision all pinned LLVM backend commands and retain compatibility with the CI Chez host.
 
 ## Capabilities
 
@@ -28,4 +29,4 @@ Emit needs a short, trustworthy source-edit-to-feedback loop: the recent native 
 
 ## Impact
 
-Test runners and fixtures, CI workflows, dependency provisioning, bootstrap verification, build/test documentation, and project contributor instructions change. The shared compiler core, language semantics, user-facing Emit commands, generated bootstrap format, and published v0.1.0 assets are not redesign targets. Performance evidence and remaining speed debt belong in `docs/PERFORMANCE.md`; implementation must update the current build-workflow instructions rather than leaving contradictory test obligations. No implementation or new public release is part of this proposal step.
+Test runners and fixtures, CI workflows, dependency provisioning, bootstrap verification, build/test documentation, and project contributor instructions change. The approved acceptance extension also changes compiler-owned export metadata canonicalization and regenerates bootstrap modules; language semantics, user-facing Emit commands, generated bootstrap format, and published v0.1.0 assets are not redesign targets. Performance evidence and remaining speed debt belong in `docs/PERFORMANCE.md`; implementation must update the current build-workflow instructions rather than leaving contradictory test obligations. No new public release is part of this change.

@@ -22,7 +22,7 @@ Goals:
 
 Non-goals:
 
-- No compiler algorithm, runtime representation, artifact format, or language redesign. Any measured residual compiler-performance debt is recorded in `docs/PERFORMANCE.md` rather than folded into this tooling change.
+- No compiler algorithm, runtime representation, artifact format, or language redesign. The approved exception is canonicalization of compiler-owned export metadata needed for retained cross-host byte parity. Any measured residual compiler-performance debt is recorded in `docs/PERFORMANCE.md` rather than folded into this tooling change.
 - No removal of Chez or frozen genesis, new public Emit binary distribution, automatic LLVM upgrades, upper discovery limit, or hard rejection below the tested floor.
 - No silent reduction of exact release archive checks, no reuse of another commit's native correctness result as a release result, and no modification of v0.1.0 assets or tag.
 
@@ -113,6 +113,12 @@ Use paired runs on the same machine/configuration, at least three samples for sh
 Absolute minute budgets are not promised before baseline measurement. Publish measured results and the coverage/latency trade-off in development documentation and `docs/PERFORMANCE.md`. If equal-coverage execution cannot be improved without losing assertions, report that unmet acceptance criterion for a scope decision rather than deleting tests or declaring the matrix reduction a local full-suite speedup.
 
 ## Risks / Trade-offs
+
+### Acceptance extension: deterministic export metadata and complete prerequisites
+
+Reference acceptance exposed #136: structurally equal binding descriptors have different incidental sharing after fresh compilation versus artifact restoration. Normalize metadata at the shared export-table boundary, using binding identity and schema-defined positions rather than hash-consing arbitrary user data. Preserve explicit pair/vector/string sharing and cycles in macro literals and templates. Keep byte-for-byte artifact comparisons; add focused sharing-history regressions, explicitly regenerate all bootstrap modules, then run full native, units, source consistency, and complete reference verification.
+
+For #137, extend the exact LLVM distribution recipe with `lli`, `llvm-as`, and `llvm-link`, bump its identity, and assemble/link/execute a bitcode probe for both freshly built and restored installations. Avoid the newer Chez-only `path-build` in the driver: join relative library roots using the existing portable path conventions, with a regression for the CI host. These changes do not permit skipped reference assertions or substituted toolchain versions.
 
 - Focused floor testing can miss LLVM-specific edge cases: retain full LLVM 22 coverage weekly and on every release, with all four cells required then.
 - Change classification can hide obligations: allowlist documentation narrowly, union mixed changes, test renames/deletions/history failures, and make unknown inputs conservative.
