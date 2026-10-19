@@ -39,22 +39,23 @@
 - [x] 6.1 Wire classification into PR and main gates: two full LLVM 23 cells, two focused LLVM 22 cells, and zero LLVM provisioning for allowlisted documentation-only changes. Test expected job plans for all edit categories, required-check aggregation, unexpected skips/failures, and manual full-coverage overrides; document the trigger matrix.
 - [x] 6.2 Add same-PR supersession cancellation with independent workflow/PR groups and separate release handling. Verify fixture groups distinguish different PRs, main, and tags, and that cancellation cannot turn an incomplete required gate into success.
 - [x] 6.3 Add one canonical source/unit/targeted-reference job for relevant changes and weekly/manual full/reference validation. Verify actual compiler/bootstrap/assembly fixtures select source consistency, ordinary host edits do not, and missing verification prerequisites fail their required gates; update local contributor examples accordingly.
-- [ ] 6.4 Reuse full profiles for all four tagged cells, require source and one reference proof, and retain both exact offline archive validations. Exercise non-publishing release/packaging rehearsals and failure-injection fixtures showing identity, native, source, reference, archive, or missing-result failures prevent publication; preserve immutable-asset retry tests and document the release gate.
+- [x] 6.4 Reuse full profiles for all four tagged cells, require source and one reference proof, and retain both exact offline archive validations. Exercise non-publishing release/packaging rehearsals and failure-injection fixtures showing identity, native, source, reference, archive, or missing-result failures prevent publication; preserve immutable-asset retry tests and document the release gate.
 
 ## 7. Integrated acceptance
 
 - [x] 7.1 Re-run representative compiler/runtime/host/documentation local scenarios and compare against group 1 baselines using the agreed sampling protocol. Verify faster focused feedback, recorded equal-coverage improvement, no documentation compiler work, preserved assertions, and explicit separation of queued/provision/build/test time.
-- [ ] 7.2 Complete the non-publishing integrated rehearsal: all four full LLVM/platform cells, separate source/reference verification, both offline archives, and verified candidate bundle reuse on a cold consumer. Verify committed bootstrap coherence and no public tag or release mutation; run regen and the required current suites only if implementation changed compiler-source inputs.
-- [ ] 7.3 Reconcile coverage-map ownership, reports, contributor instructions, and CI-required checks against the delta specs. Verify strict OpenSpec validation, runner/classifier/provisioning self-tests, clean tracked source after verification, and documented rollback/fallback paths.
+- [x] 7.2 Complete the non-publishing integrated rehearsal: all four full LLVM/platform cells, separate source/reference verification, both offline archives, and verified candidate bundle reuse on a cold consumer. Verify committed bootstrap coherence and no public tag or release mutation; run regen and the required current suites only if implementation changed compiler-source inputs.
+- [x] 7.3 Reconcile coverage-map ownership, reports, contributor instructions, and CI-required checks against the delta specs. Verify strict OpenSpec validation, runner/classifier/provisioning self-tests, clean tracked source after verification, and documented rollback/fallback paths.
 
 ## 8. Approved acceptance fixes
 
 - [x] 8.1 Implement the approved compiler-owned export metadata canonicalization for #136, with history-independent byte-parity regressions and preservation of explicit user datum sharing/cycles.
 - [x] 8.2 Complete the pinned LLVM backend distribution and probe it on provision/restore; fix Chez relative-root compatibility and add prerequisite regressions for #137.
-- [ ] 8.3 Finish and format compiler edits, run explicit regeneration, then full native, source units, mandatory isolated source consistency, and complete reference verification. Retain reports and reconcile the integrated rehearsal evidence before closing acceptance tasks 6.4, 7.2, and 7.3.
+- [x] 8.3 Finish and format compiler edits, run explicit regeneration, then full native, source units, mandatory isolated source consistency, and complete reference verification. Retain reports and reconcile the integrated rehearsal evidence before closing acceptance tasks 6.4, 7.2, and 7.3.
 
 ## Workflow follow-up
 
 - The user approved extending implementation into compiler interface canonicalization, regeneration, and revalidation. The retained byte-parity assertion must not be narrowed.
+- Acceptance passed on `112d9a7` in [non-publishing rehearsal 39243651510](https://github.com/bwbensonjr/emit/actions/runs/39243651510): four 53/53 native cells, all five source modules, 15/15 units, 25/25 reference suites, both offline archives, and the required aggregate. Compiler/bootstrap inputs remained unchanged after regeneration; publication was skipped. See `docs/VALIDATION-RESULTS.md` for retained evidence.
 - After review and merge, seed the trusted default-branch dependency channel and verify a subsequent PR/tag consumer restores its approved bundles; do not publish trusted main artifacts from PR-controlled runs to simulate this rollout.
 - Archive after implementation and review are complete. No new public Emit release or retagging is required by this change.

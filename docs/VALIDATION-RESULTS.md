@@ -1,10 +1,10 @@
 # Validation implementation evidence
 
-This is an acceptance record in progress, not a claim that all change tasks are
-complete. The controlled equal-coverage comparison and four-cell native matrix
-pass at the earlier checkpoint; complete reference verification failed there.
-The user approved the canonicalization/prerequisite fixes and explicit
-regeneration. Integrated acceptance remains open pending corrected validation.
+Implementation acceptance is complete. The controlled equal-coverage comparison,
+corrected four-cell full-native rehearsal, source/unit/reference proofs, and both
+offline archives pass. Earlier failed checkpoints below are retained as historical
+evidence; the approved canonicalization/prerequisite fixes and explicit
+regeneration are validated in the final section.
 
 ## Local environment
 
@@ -413,3 +413,65 @@ source/bootstrap consistency. CI will use its explicit pinned CC/CXX throughout.
 Policy, bundle, version, runner, classification, coverage, source/fingerprint,
 telemetry, measurement-harness, prerequisite, archive-isolation, discovery, and
 range-assembly self-tests all passed. Strict OpenSpec validation also passed.
+
+### Corrected non-publishing CI rehearsal
+
+[Run 39243651510](https://github.com/bwbensonjr/emit/actions/runs/39243651510)
+tests commit `112d9a7a11345f8004aa96fe49756da1a939ed89`. Recipe 6 invalidated
+the previous installations, so each tuple performed one exact source build.
+All four preparations passed their native and new bitcode backend probes:
+
+| Tuple | LLVM source build | Provision through probes | Bundle bytes |
+| --- | ---: | ---: | ---: |
+| Linux LLVM 22.1.0 | 6,033 s | 6,104 s | 74,893,709 |
+| Linux LLVM 23.1.0 | 6,449 s | 6,510 s | 76,321,143 |
+| macOS LLVM 22.1.0 | 4,071 s | 4,175 s | 49,444,456 |
+| macOS LLVM 23.1.0 | 3,264 s | 3,371 s | 51,330,837 |
+
+These are cold dependency costs, not Emit test durations or speedup samples.
+Provisioning includes fetch/configure/install/probes; bundle packaging, upload,
+runner setup, and queue time are separate. Logs are retained at
+`/private/tmp/emit-fix-ci-{linux,macos}{22,23}-prepare.log`.
+
+Both exact offline archive jobs passed. Isolated Linux/macOS consumers restored
+the new LLVM 23 candidate bundles in 2.48/3.58 s, reran the backend probes, and
+performed no LLVM source build. The offline source builds took 46/65 s,
+respectively, with network and checkout reads denied. Logs are retained at
+`/private/tmp/emit-fix-ci-{linux,macos}-archive.log`.
+
+All four full-native cells passed 53/53 suites, with unchanged bootstrap inputs
+and isolated seeds:
+
+| Tuple | Runner elapsed | Seed build | Suite execution |
+| --- | ---: | ---: | ---: |
+| Linux LLVM 22 | 1,232.290 s | 11.774 s | 1,217.898 s |
+| Linux LLVM 23 | 1,208.401 s | 11.125 s | 1,194.626 s |
+| macOS LLVM 22 | 1,390.256 s | 10.602 s | 1,374.426 s |
+| macOS LLVM 23 | 1,266.751 s | 7.730 s | 1,255.172 s |
+
+The complete CI proof set passed on LLVM 23.1.0 and Ubuntu Chez 9.5.8:
+
+| Proof | Result | Runner elapsed |
+| --- | --- | ---: |
+| Chez-free source consistency | All five bootstrap modules identical | 907.062 s |
+| Direct source units | 15/15 suites | 6.685 s |
+| Complete reference | 25/25 suites | 1,254.145 s |
+
+The independent-host fixed-point group passed in 468.226 s. All five previously
+failing reference groups passed, including the complete Snow cross-host artifact
+parity suite (89.441 s); its byte comparisons remain unchanged. The source and
+bootstrap digests match the locally validated inputs, and every report retains
+unchanged-seed/input checks. This verifies both canonicalization and the backend
+prerequisite/older-Chez fixes on the actual CI host.
+
+`Required validation` passed. The manual rehearsal's `publish` job was skipped;
+it created no public tag or release. All 29 OpenSpec implementation tasks are
+complete. Trusted default-branch channel seeding remains the documented
+post-merge rollout, not a simulated publication from this branch.
+
+Native reports/logs and source/unit/reference reports are retained under
+`/private/tmp/emit-fix-ci-evidence.nqlO0L/{compatibility-*,compiler-verification}`.
+The verification job log is `/private/tmp/emit-fix-ci-verification.log`; final
+run/gate metadata is `/private/tmp/emit-fix-ci-final.json`. The tested compiler
+and bootstrap remain committed at `112d9a7`; subsequent acceptance bookkeeping
+changes only documentation and task status.
