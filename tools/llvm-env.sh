@@ -19,7 +19,7 @@
 #   EMIT_LLVM_BIN   an explicit LLVM tool directory (the Chez driver's override; honored here too)
 #   CC / CXX        explicit C / C++ compilers
 #   GC_INC / GC_LIB / GC_DYLIB   explicit libgc include dir / lib dir / shared-object path
-#   EMIT_LLVM_MIN   minimum tested LLVM major version (default 19; warn-only below it)
+#   EMIT_LLVM_MIN   minimum tested LLVM major version (default 22; warn-only below it)
 #
 # The EMIT_LLVM_* mirrors (EMIT_LLVM_BIN/EMIT_GC_INC/EMIT_GC_LIB/EMIT_GC_DYLIB) are the override
 # interface consumed by the Chez driver src/compile.ss, which cannot source this shell layer.
@@ -146,7 +146,7 @@ fi
 # --- 4. Version floor (warn only) -----------------------------------------------------------
 _llvm_ver=$("$LLVM_CONFIG" --version 2>/dev/null || true)
 _llvm_major=${_llvm_ver%%.*}
-_llvm_floor=${EMIT_LLVM_MIN:-19}
+_llvm_floor=${EMIT_LLVM_MIN:-22}
 if [ -n "$_llvm_major" ] && [ "$_llvm_major" -lt "$_llvm_floor" ] 2>/dev/null; then
   say "llvm-env: warning: LLVM $_llvm_ver is below the tested floor $_llvm_floor (set EMIT_LLVM_MIN to change)"
 fi

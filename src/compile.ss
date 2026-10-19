@@ -576,7 +576,11 @@
         [else (loop (+ i 1) start acc)]))))
 
 (define (absolute-library-root path)
-  (if (path-absolute? path) path (path-build (current-directory) path)))
+  ;; path-build is absent in the CI Chez 9.5 host. Root joining needs no newer
+  ;; host API: both supported platforms use slash-separated absolute paths.
+  (if (path-absolute? path)
+      path
+      (string-append (ensure-slash (current-directory)) path)))
 
 (define (dedupe-library-roots roots)
   (let loop ([roots roots] [seen (quote ())] [out (quote ())])
@@ -1053,60 +1057,58 @@
                  [ll (string-append art-dir "/" base ".ll")]
                  [expf (string-append art-dir "/" base ".exports")]
                  [stampf (string-append art-dir "/" base ".stamp")])
-            (if
-              (artifacts-fresh? (cadr entry) ll expf stampf stamp)
-              ;; reuse: read the export table back from the artifact
-              (let ([table (car (read-program expf))])
-                (note "reuse ~s -> ~a  [fresh]\n" name ll)
-                (loop (cdr libs) (cons (cons name table) tables) (cons ll lls)))
-              ;; rebuild: import env comes from this lib's already-built deps.
-              ;; Capture the reason BEFORE writing (the writes make it fresh again).
-              (let* ([reason (rebuild-reason (cadr entry) ll expf stampf stamp)]
-                     [imp-tables (map (lambda (n) (cdr (assoc n tables))) (cadr dl))]
-                     [res (compile-library (car dl)
-                                           (dl-import-specs dl)
-                                           (caddr dl)
-                                           (cadddr dl)
-                                           imp-tables
-                                           no-dump)]
-                     [ll-text (string-append header (car res))])
-                (sh "mkdir" (string-append "mkdir -p " art-dir))
-                (write-text ll ll-text)
-                ;; `render-datum`, not `write`: the export datum now carries a
-                ;; library's compile-time interface, whose templates may hold
-                ;; characters that Chez's `write` and Emit's own reader spell
-                ;; differently.  One renderer on every compilation path is what makes emit lib's
-                ;; artifact byte-identical to the driver's (change:
-                ;; library-macro-export) -- and it is byte-identical to `write` for
-                ;; every table that exists today, which is measured, not assumed.
-                (let ([o (open-output-file expf 'replace)])
-                  (display (render-datum (cadr res)) o)
-                  (newline o)
-                  (close-port o))
-                ;; write the .stamp LAST so a torn write fails safe toward
-                ;; rebuild (D3); `write` (not display) so the digest string
-                ;; round-trips as a string, not a symbol.
-                (let ([o (open-output-file stampf 'replace)])
-                  (write (stamp-datum stamp
-                                      (library-includes name)
-                                      (library-answers-of name))
-                         o)
-                  (newline o)
-                  (close-port o))
-                ;; The macro count rides the existing metrics clause and only when
-                ;; there is one, so a library that exports no macro narrates exactly
-                ;; what it always did (change: library-macro-export; docs/OUTPUT.md).
-                (note
-                  "compile ~s -> ~a  [~a bytes~a, recompile: ~a]\n"
-                  name
-                  ll
-                  (string-length ll-text)
-                  (let ([n (length (ct-macros (table-ct-half (cadr res))))])
-                    (if (= n 0) "" (string-append ", " (number->string n) " macros")))
-                  reason)
-                (loop (cdr libs)
-                      (cons (cons name (cadr res)) tables)
-                      (cons ll lls))))))))))
+            (if (artifacts-fresh? (cadr entry) ll expf stampf stamp)
+                ;; reuse: read the export table back from the artifact
+                (let ([table (car (read-program expf))])
+                  (note "reuse ~s -> ~a  [fresh]\n" name ll)
+                  (loop (cdr libs) (cons (cons name table) tables) (cons ll lls)))
+                ;; rebuild: import env comes from this lib's already-built deps.
+                ;; Capture the reason BEFORE writing (the writes make it fresh again).
+                (let* ([reason (rebuild-reason (cadr entry) ll expf stampf stamp)]
+                       [imp-tables (map (lambda (n) (cdr (assoc n tables))) (cadr dl))]
+                       [res (compile-library (car dl)
+                                             (dl-import-specs dl)
+                                             (caddr dl)
+                                             (cadddr dl)
+                                             imp-tables
+                                             no-dump)]
+                       [ll-text (string-append header (car res))])
+                  (sh "mkdir" (string-append "mkdir -p " art-dir))
+                  (write-text ll ll-text)
+                  ;; `render-export-table`, not `write`: the export datum carries a
+                  ;; library's compile-time interface, whose templates may hold
+                  ;; characters that Chez's `write` and Emit's own reader spell
+                  ;; differently. Canonical metadata and one graph renderer on
+                  ;; every compilation path keep emit lib's artifact byte-identical
+                  ;; to the driver's, independently of fresh/restored dependencies.
+                  (let ([o (open-output-file expf 'replace)])
+                    (display (render-export-table (cadr res)) o)
+                    (newline o)
+                    (close-port o))
+                  ;; write the .stamp LAST so a torn write fails safe toward
+                  ;; rebuild (D3); `write` (not display) so the digest string
+                  ;; round-trips as a string, not a symbol.
+                  (let ([o (open-output-file stampf 'replace)])
+                    (write (stamp-datum stamp
+                                        (library-includes name)
+                                        (library-answers-of name))
+                           o)
+                    (newline o)
+                    (close-port o))
+                  ;; The macro count rides the existing metrics clause and only when
+                  ;; there is one, so a library that exports no macro narrates exactly
+                  ;; what it always did (change: library-macro-export; docs/OUTPUT.md).
+                  (note
+                    "compile ~s -> ~a  [~a bytes~a, recompile: ~a]\n"
+                    name
+                    ll
+                    (string-length ll-text)
+                    (let ([n (length (ct-macros (table-ct-half (cadr res))))])
+                      (if (= n 0) "" (string-append ", " (number->string n) " macros")))
+                    reason)
+                  (loop (cdr libs)
+                        (cons (cons name (cadr res)) tables)
+                        (cons ll lls))))))))))
 
 ;; --- modular-set backend consumers (change: driver-backend-rehome) ---------
 ;; Each takes the unit .ll's (link order) + the program .ll and drives one exit.

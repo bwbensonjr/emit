@@ -15,6 +15,25 @@
   (set! checks (+ checks 1)))
 (define (rejects thunk)
   (guard (e [else #t]) (thunk) #f))
+;; Load only the driver's root-joining helpers, not its effectful CLI. These
+;; assertions also execute on CI's older Chez, where path-build is unbound.
+(call-with-input-file "src/compile.ss"
+  (lambda (port)
+    (let loop ([form (read port)])
+      (unless (eof-object? form)
+        (when (and (pair? form) (eq? (car form) 'define)
+                   (pair? (cadr form))
+                   (memq (caadr form) '(ensure-slash absolute-library-root)))
+          (eval form (interaction-environment)))
+        (loop (read port))))))
+(check "relative root with spaces is joined on the Chez host"
+       (absolute-library-root "lib with spaces")
+       (string-append (ensure-slash (current-directory)) "lib with spaces"))
+(check "absolute root is unchanged" (absolute-library-root "/tmp/libraries")
+       "/tmp/libraries")
+(check "root joining retains a trailing separator"
+       (absolute-library-root "relative/")
+       (string-append (ensure-slash (current-directory)) "relative/"))
 (define (runtime-table name target)
   (export-table-datum name (list (cons 'f target)) '() (make-ct-half '() '() '())))
 (define (macro-table name)
@@ -92,5 +111,92 @@
                      (validate-library-interface
                        (list '(legacy-builtins) '() '() legacy-builtin-half))))
        (builtin-library-bindings '(scheme base)))
+
+;; #136: a freshly rebuilt binding and an artifact-restored one may be equal
+;; without sharing the same allocation. Do not let that history label exports.
+(define (history-table shared?)
+  (let* ([unit (list 'history)]
+         [origin (list 'macro unit 'm)]
+         [row (list 'lambda 'core (list 'builtin 'core 'lambda) 'lambda)]
+         [rules (list (list '(_) 'lambda 'x 'x))]
+         [entry (make-contextual-transformer 'm origin '() rules (list row))]
+         [alias (make-contextual-transformer 'history:m
+                   (if shared? origin (list 'macro (list 'history) 'm))
+                   '() (if shared? rules (list (list '(_) 'lambda 'x 'x)))
+                   (list (if shared? row
+                             (list 'lambda 'core (list 'builtin 'core 'lambda)
+                                   'lambda))))])
+    (export-table-datum unit '() '()
+      (make-ct-half (list entry alias) '() '() (list row) '(m)))))
+(define shared-history (history-table #t))
+(define separate-history (history-table #f))
+(check "history fixture has equal contents" shared-history separate-history)
+(check "history fixture exposes different original labels"
+       (string=? (render-datum shared-history) (render-datum separate-history)) #f)
+(check "binding allocation history does not change artifact bytes"
+       (render-export-table shared-history) (render-export-table separate-history))
+(check "restored metadata renders identically"
+       (render-export-table (read (open-input-string (render-datum separate-history))))
+       (render-export-table shared-history))
+(check "canonicalization is idempotent"
+       (render-export-table (canonical-export-table shared-history))
+       (render-export-table shared-history))
+(check "canonicalization preserves values"
+       (canonical-export-table shared-history) shared-history)
+(let* ([origin '(builtin core lambda)]
+       [a (list 'lambda 'core origin 'lambda 'first-key)]
+       [b (list 'lambda 'core origin 'lambda 'second-key)]
+       [alias (list 'alias 'core origin 'lambda 'first-key)]
+       [table (export-table-datum '(keys) '() '()
+                (make-ct-half
+                  (list (make-contextual-transformer 'm '(macro (keys) m) '() '()
+                          (list a b alias)))
+                  '() '()))]
+       [rows (transformer-context
+               (car (ct-macros (table-ct-half (canonical-export-table table)))))])
+  (check "same-origin bindings retain distinct lexical keys"
+         (eq? (car rows) (cadr rows)) #f)
+  (check "same-origin aliases retain distinct spellings"
+         (eq? (car rows) (caddr rows)) #f))
+(define (datum-table rules)
+  (export-table-datum '(data) '() '()
+    (make-ct-half
+      (list (make-contextual-transformer 'm '(macro (data) m) '() rules '()))
+      '() '())))
+(let* ([spoof (vector '%syntax-identifier-v2 'x 'x 'not-a-binding)]
+       [rules (source-syntax (list (list '(_) (list 'quote spoof))))]
+       [table (datum-table rules)])
+  (check "reader vector cannot forge a compiler identifier during canonicalization"
+         (canonical-export-table table) table))
+(let* ([row (list 'lambda 'core (list 'builtin 'core 'lambda) 'lambda)]
+       [id (vector '%syntax-identifier-v2 'lambda '(key lambda) row)]
+       [table (export-table-datum '(identifier) '() '()
+                (make-ct-half
+                  (list (make-contextual-transformer 'm '(macro (identifier) m) '()
+                          (list id) (list row)))
+                  '() '()))]
+       [back (read (open-input-string (render-export-table table)))]
+       [m (car (ct-macros (table-ct-half back)))])
+  (check "identifier fallback shares the canonical binding row"
+         (eq? (vector-ref (car (transformer-rules m)) 3)
+              (car (transformer-context m))) #t))
+(let* ([leaf (list 'lambda 'core '(builtin core lambda) 'lambda)]
+       [text (string-copy "shared")]
+       [cycle (cons 'cycle '())]
+       [v (vector leaf leaf (list 'lambda 'core '(builtin core lambda) 'lambda)
+                  text text cycle)]
+       [rules (list (list '(_) (list 'quote v)))])
+  (set-cdr! cycle cycle)
+  (let* ([encoded (render-export-table (datum-table rules))]
+         [back (read (open-input-string encoded))]
+         [saved (cadr (cadr (car (transformer-rules
+                                  (car (ct-macros (table-ct-half back)))))))])
+    (check "user pair sharing survives" (eq? (vector-ref saved 0) (vector-ref saved 1)) #t)
+    (check "equal user lists are not merged"
+           (eq? (vector-ref saved 0) (vector-ref saved 2)) #f)
+    (check "user string sharing survives"
+           (eq? (vector-ref saved 3) (vector-ref saved 4)) #t)
+    (check "user cycle survives"
+           (eq? (vector-ref saved 5) (cdr (vector-ref saved 5))) #t)))
 (unless (equal? (getenv "EMIT_VERBOSITY") "quiet")
   (fprintf (current-error-port) "test import binding contexts -> assertions [~a passed]~n" checks))

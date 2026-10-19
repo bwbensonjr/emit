@@ -147,52 +147,61 @@ prepending the prelude.
   `(scheme base)`, the binaries relink against `scheme.base.ll`, and a program exercising the change
   compiles with the new behavior — all with no Chez process
 
-### Requirement: A Chez-gated check guarantees the committed IR is not stale
+### Requirement: Source consistency and independent-host verification are separate checks
 
-Because the default build links committed IR and does not auto-regenerate on source change, there
-SHALL be a check — permitted to require Chez, and intended for CI — that regenerates the compiler
-IR from the current source in a clean tree and asserts it is byte-identical to the committed IR.
-This check SHALL fail if a compiler-source change was not accompanied by regeneration, and SHALL
-serve as an independent (second-host) re-derivation of the self-hosting fixed point.
+A Chez-free check SHALL regenerate current compiler sources in an isolated clean checkout and compare every committed bootstrap module byte-for-byte. It SHALL run once for compiler/bootstrap/assembly-input changes and every release, failing on stale IR. Separately, Chez-seeded re-derivation SHALL verify the independent-host fixed point once per release and on scheduled/manual reference runs; absence of Chez SHALL NOT suppress source consistency.
 
 #### Scenario: Un-regenerated compiler change is caught
 
-- **WHEN** the compiler source is changed but the committed IR is not regenerated, and the
-  trust-check runs
-- **THEN** the check regenerates the IR and reports a mismatch against the committed IR, failing
+- **WHEN** compiler source changes without matching regenerated bootstrap IR
+- **THEN** source-consistency validation reports a mismatch and fails even with Chez absent
+- **AND** the developer's checkout and bootstrap files are not modified
 
 #### Scenario: An independent host reproduces the fixed point
 
-- **WHEN** the trust-check rebuilds the compiler from the frozen genesis source under Chez
-- **THEN** it reaches the same committed byte-identical fixed point, confirming the committed IR
-  is faithfully derived from source
+- **WHEN** reference validation builds the current compiler source under Chez and then self-compiles it
+- **THEN** the resulting stable compiler and baked modules match committed IR
+- **AND** this is reported separately from Chez-free source consistency without requiring a rebuild of frozen genesis
+
+#### Scenario: Host-only edits do not trigger compiler regeneration
+
+- **WHEN** a change touches only native host integration and no compiler, bootstrap, or assembly inputs
+- **THEN** classification does not require source-consistency regeneration and native host validation still runs
+
+#### Scenario: Required verification is unavailable
+
+- **WHEN** a required source-consistency or independent-host check cannot execute
+- **THEN** its gate fails rather than treating a missing tool or skipped check as success
 
 ### Requirement: No developer-facing compiler capability requires Chez
 
-Every capability a developer needs in order to build, run, inspect, or debug a program with
-this compiler SHALL be reachable from the shipped binary with no Chez Scheme present. This
-includes per-pass intermediate-language inspection, which was previously available only
-through the Chez driver. Chez SHALL be required only for **verification** — the anti-stale
-trust-check, the independent-host fixed-point re-derivation, and the rest of the Chez-gated
-developer suite — and for the frozen **genesis** under `historical/genesis/`.
+Every capability needed to build, run, inspect, or debug a program SHALL remain reachable through shipped binaries without Chez, including per-pass inspection and bootstrap regeneration. Chez SHALL remain an independent verification and frozen-genesis host, not a native test prerequisite. Source units and targeted cross-host checks SHALL be separately selectable; the developer verification entry point SHALL retain source consistency, reference parity, and independent-host checks.
 
 #### Scenario: A Chez-free machine can inspect the pipeline
 
-- **WHEN** a developer with no `chez` on `PATH` builds the compiler, runs a program, starts
-  the REPL, and inspects the IL after each pass
+- **WHEN** a developer with no `chez` on PATH builds the compiler, runs a program, starts the REPL, and inspects the IL after each pass
 - **THEN** all four succeed through the shipped binary, and no step reports a missing Chez
 
 #### Scenario: Chez remains the verification host
 
-- **WHEN** the Chez-gated developer suite runs
-- **THEN** it still verifies the committed IR is not stale, re-derives the self-hosting
-  fixed point from an independent host, and checks the shipped compiler's stage dump against
-  the Chez driver's dump
+- **WHEN** the complete developer verification entry point runs with Chez available
+- **THEN** it verifies source/bootstrap consistency, independent-host fixed-point re-derivation, and shipped stage-dump parity against the Chez driver
+- **AND** those obligations remain individually selectable with separately reported costs
 
 #### Scenario: The Chez driver's dump is retained as the reference
 
-- **WHEN** the shipped binary's stage dump and the Chez driver's stage dump are produced for
-  the same program
-- **THEN** the two agree on the stage names, their order, and the intermediate form at each
-  stage, compared structurally rather than byte-for-byte
+- **WHEN** the shipped binary's stage dump and the Chez driver's stage dump are produced for the same program
+- **THEN** the two agree on the stage names, their order, and intermediate forms, compared structurally rather than byte-for-byte
+
+#### Scenario: Fast units exercise edited source directly
+
+- **WHEN** source-unit validation runs after a compiler pass is edited and before regeneration
+- **THEN** it tests the current source under Chez without first running the native regression or bootstrap suites
+- **AND** its result does not claim that the committed native compiler incorporates those edits
+
+#### Scenario: Export metadata is independent of compilation history
+
+- **WHEN** fresh and artifact-restored dependencies supply equal binding identities to the two compiler hosts
+- **THEN** their complete export interfaces are byte-identical, including compiler-owned graph labels
+- **AND** explicit sharing and cycles in user macro literal/template data remain preserved
 

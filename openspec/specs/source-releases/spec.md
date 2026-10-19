@@ -27,13 +27,14 @@ Emit SHALL use a committed semantic version independent of Git availability. Rel
 
 ### Requirement: Source compatibility is checked across the supported matrix
 
-CI SHALL build from committed bootstrap IR without Chez for each LLVM major 19 through 23 on both Linux and macOS. Each cell SHALL select and report its intended LLVM major and verify installed command behavior. A missing toolchain or failed cell SHALL fail the check rather than silently reduce coverage. Tested coverage SHALL NOT impose an LLVM upper bound on discovery.
+CI SHALL build committed bootstrap IR without Chez using LLVM 22 and 23 on Linux and macOS. Code PRs and main builds SHALL run full native regression on LLVM 23 and focused compatibility checks on LLVM 22 on both platforms. Release commits SHALL run full native regression in all four cells. Each required cell SHALL verify its intended tools and installed commands; missing tools or failures SHALL fail the gate. Discovery SHALL retain no upper bound.
 
 #### Scenario: Every supported combination is exercised
 
-- **WHEN** compatibility CI runs for a proposed change or release commit
-- **THEN** all ten platform/LLVM combinations build and test with the selected matching headers, libraries, and tools
-- **AND** bootstrap IR is consumed as committed, without regeneration
+- **WHEN** compatibility CI runs for a code change or release commit
+- **THEN** all four platform/LLVM combinations build with matching headers, libraries, clang, and clang++
+- **AND** code changes use the documented full/focused profiles while releases use full regression in every cell
+- **AND** bootstrap IR is consumed as committed, without regeneration in these cells
 
 #### Scenario: Installed commands are exercised
 
@@ -44,6 +45,17 @@ CI SHALL build from committed bootstrap IR without Chez for each LLVM major 19 t
 
 - **WHEN** a required LLVM major is unavailable to a matrix job
 - **THEN** that cell fails visibly and release publication remains blocked
+
+#### Scenario: Documentation-only validation avoids the matrix
+
+- **WHEN** conservative change classification identifies only non-executable documentation changes
+- **THEN** PR and main validation run lightweight checks instead of provisioning compatibility toolchains
+- **AND** this exception never reduces a tagged release's required coverage
+
+#### Scenario: Focused compatibility exercises execution and delivery
+
+- **WHEN** the LLVM 22 PR profile runs
+- **THEN** it checks representative JIT evaluation, persistent REPL state, macro-bearing library import and reuse, AOT execution, primitive/runtime behavior, installation diagnostics, and relocated library lookup
 
 ### Requirement: Source archives contain an offline build and install closure
 
@@ -57,12 +69,12 @@ A release SHALL include `emit-<VERSION>.tar.gz` with one `emit-<VERSION>/` root,
 
 ### Requirement: Tagged publication validates and identifies its exact payload
 
-Release automation SHALL reject a tag/version/changelog mismatch, validate the extracted source archive, and require compatibility checks for the tagged commit before publication. It SHALL publish that validated archive, a SHA-256 checksum file, and notes from the matching changelog section. Workflow actions SHALL be pinned by commit SHA. Published versions SHALL NOT be silently overwritten with different payloads.
+Release automation SHALL reject tag/version/changelog mismatches, require full regression on all four supported platform/LLVM cells, source/bootstrap consistency, one independent-host reference run, and both exact offline archive validations for the tagged commit. It SHALL publish only the validated archive, SHA-256 checksums, and matching changelog notes. Actions SHALL be SHA-pinned; published assets SHALL NOT be silently overwritten with different bytes.
 
 #### Scenario: Valid tag produces a complete release
 
-- **WHEN** `v0.1.0` matches the committed version and changelog and all release checks pass
-- **THEN** publication provides `emit-0.1.0.tar.gz`, `SHA256SUMS`, and the `0.1.0` release notes
+- **WHEN** a version tag matches the committed version and changelog and all release checks pass
+- **THEN** publication provides the versioned source archive, SHA256SUMS, and matching release notes
 - **AND** the checksum verifies the exact archive that passed validation
 
 #### Scenario: Invalid identity or failed validation stops publication
@@ -74,3 +86,8 @@ Release automation SHALL reject a tag/version/changelog mismatch, validate the e
 
 - **WHEN** publication is retried for an already published version
 - **THEN** existing published assets are preserved and differing bytes cause a visible failure
+
+#### Scenario: Bootstrap or reference validation fails
+
+- **WHEN** tagged source/bootstrap consistency or independent-host verification fails or is unavailable
+- **THEN** publication remains blocked even if the native compatibility cells pass

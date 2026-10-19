@@ -37,7 +37,8 @@ brew install llvm bdw-gc
 sudo apt-get install llvm-22 clang-22 libgc-dev
 ```
 
-LLVM 19+ is expected (older warns but is not blocked; set `EMIT_LLVM_MIN` to change the floor).
+LLVM 22+ is expected (older warns but is not blocked; set `EMIT_LLVM_MIN` to change the floor).
+Maintained CI covers LLVM 22 and 23 on Linux and macOS; discovery has no upper bound.
 If discovery picks the wrong toolchain, point it explicitly: `LLVM_CONFIG=/path/to/llvm-config`
 (or `EMIT_LLVM_BIN=/path/to/llvm/bin`) and `GC_INC` / `GC_LIB` for libgc.
 
@@ -199,12 +200,18 @@ bootstrap seed — it cannot resolve the `(scheme base)` import.
 Because the default build does not auto-regenerate (design D4 — this deliberately **reverses**
 the earlier `fix-stale-repl-host-rebuild` auto-rebuild-on-source-change, so the committed IR
 is authoritative and never silently rebuilt), a **trust-check** guards against stale IR:
-`test/trust-check.sh` (run by `run-dev-tests.sh`) regenerates from a clean tree and asserts
-`git diff --exit-code bootstrap/` — a compiler edit that forgot `make regen` fails loudly in
-CI. `test/self-host-fixpoint.sh` doubles as an **independent-host** re-derivation: Chez rebuilds
+`tools/test.sh source` (also retained through `test/trust-check.sh` and
+`run-dev-tests.sh`) regenerates in an isolated clean checkout and compares every
+committed bootstrap module byte-for-byte. A compiler edit that forgot `make regen`
+fails loudly in CI without changing the developer checkout or requiring Chez.
+`test/self-host-fixpoint.sh` doubles as an **independent-host** re-derivation: Chez rebuilds
 the compiler from the current flat source and must reach the *same committed* fixed point.
 
-Chez is otherwise needed only for the developer/CI suite; the pre-flattening Chez assembler and
+Chez is needed only for explicit source-unit and independent-host verification,
+not native `dev`/`full`/`compat` or source-consistency profiles. Code PRs run full
+LLVM 23 and focused LLVM 22 validation on both platforms; prose-only changes avoid
+the compiler matrix. See [toolchain CI](docs/TOOLCHAIN.md) and the shared
+`tools/test.sh` profiles. The pre-flattening Chez assembler and
 library-structured source are frozen under `historical/genesis/`.
 
 ## Layout

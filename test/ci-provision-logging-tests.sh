@@ -6,27 +6,49 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 mkdir "$work/forbidden"
 for tool in mkdir mktemp git cmake ninja; do ln -s /usr/bin/false "$work/forbidden/$tool"; done
-for pair in 19:19.1.7 20:20.1.8 21:21.1.0 22:22.1.0 23:23.1.0; do
+for pair in 22:22.1.0 23:23.1.0; do
   major=${pair%%:*}
   version=${pair#*:}
   identity=$(PATH="$work/forbidden:$PATH" TMPDIR="$work/no-such-directory" \
     tools/ci-provision.sh --identity "$major" 2> "$work/identity.err")
   [ ! -s "$work/identity.err" ]
-  printf '%s\n' "$identity" | grep -Eq "^${version//./\\.}-[0-9a-f]{40}-[0-9a-f]{40}-recipe-5$"
+  printf '%s\n' "$identity" | grep -Eq "^${version//./\\.}-[0-9a-f]{40}-[0-9a-f]{40}-recipe-6$"
 done
 [ ! -e "$work/no-such-directory" ]
-if tools/ci-provision.sh --identity 24 > "$work/invalid.out" 2> "$work/invalid.err"; then
-  printf 'test: unsupported provisioning identity accepted\n' >&2; exit 1
-fi
-[ ! -s "$work/invalid.out" ]
+for unsupported in 19 20 21 24; do
+  if tools/ci-provision.sh --identity "$unsupported" > "$work/invalid.out" 2> "$work/invalid.err"; then
+    printf 'test: unsupported provisioning identity accepted: %s\n' "$unsupported" >&2; exit 1
+  fi
+  [ ! -s "$work/invalid.out" ]
+done
 grep -Eq '^components="([^"]*;)?clang-cpp(;[^"]*)?"$' tools/ci-provision.sh
 grep -F -- '-DCLANG_LINK_CLANG_DYLIB=ON' tools/ci-provision.sh >/dev/null
+for backend in lli llvm-as llvm-link; do
+  grep -Eq "^components=\"([^\"]*;)?$backend(;[^\"]*)?\"$" tools/ci-provision.sh
+done
 eval "$(awk '/^log_count=0$/ { capture=1 } capture && /^if \[ -f/ { exit } capture { print }' tools/ci-provision.sh)"
-identity='23.1.0 ea7d852a70e8bdfaf601d6626a760f9771b2c4b4 ee59af3722e56de8404de6cd0c21c2493cc4d855 recipe-5'
-previous_identity=${identity%recipe-5}recipe-4
+fixture_compiler() { printf 'clang version %s (fixture)\n' "$fixture_version"; }
+fixture_version=23.1.0
+probe_version fixture_compiler 'version 23\.1\.0([[:space:]]|$)' > "$work/version.out"
+fixture_version=23.1.1
+if probe_version fixture_compiler 'version 23\.1\.0([[:space:]]|$)' > "$work/version.out"; then
+  printf 'test: wrong clang patch version accepted\n' >&2; exit 1
+fi
+fixture_llvm() { printf 'LLVM (fixture):\n  LLVM version %s\n  Optimized build.\n' "$fixture_version"; }
+fixture_version=23.1.0
+version=23.1.0
+probe_llvm_version fixture_llvm > "$work/version.out"
+fixture_version=23.1.1
+if probe_llvm_version fixture_llvm > "$work/version.out"; then
+  printf 'test: wrong LLVM utility patch version accepted\n' >&2; exit 1
+fi
+identity='23.1.0 ea7d852a70e8bdfaf601d6626a760f9771b2c4b4 ee59af3722e56de8404de6cd0c21c2493cc4d855 recipe-6'
+previous_identity=${identity%recipe-6}recipe-5
 validate_cached_identity "$identity"
-validate_cached_identity "$previous_identity"
-if validate_cached_identity "${identity%recipe-5}recipe-3" > "$work/cache.out" 2> "$work/cache.err"; then
+if validate_cached_identity "$previous_identity" > "$work/cache.out" 2> "$work/cache.err"; then
+  printf 'test: previous recipe identity accepted\n' >&2; exit 1
+fi
+if validate_cached_identity "${identity%recipe-6}recipe-3" > "$work/cache.out" 2> "$work/cache.err"; then
   printf 'test: unsupported cache recipe accepted\n' >&2; exit 1
 fi
 if validate_cached_identity "${previous_identity/23.1.0/22.1.0}" > "$work/cache.out" 2> "$work/cache.err"; then
@@ -113,4 +135,4 @@ run_logged "test fixture -> expected failure" bash -c \
 [ ! -s "$work/failure.out" ]
 grep -q 'failure detail' "$work/failure.err"
 grep -q 'exit 7' "$work/failure.err"
-printf 'test provisioning -> metadata, migration, dylib, SDK, and logging checks  [25 checks]\n' >&2
+printf 'test provisioning -> metadata, backend inventory, exact identity/version, dylib, SDK, and logging checks  [32 checks]\n' >&2

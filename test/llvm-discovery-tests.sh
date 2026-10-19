@@ -117,6 +117,24 @@ else
   bad "LLVM_CONFIG override resolved $got (expected $(dirname "$OVERRIDE"))"
 fi
 
+for version in 19.1.7 20.1.8 21.1.0 22.1.0 23.1.0 30.0.0; do
+  fake_full_config "$OVERRIDE" "$version"
+  env -u EMIT_LLVM_BIN -u EMIT_LLVM_MIN LLVM_CONFIG="$OVERRIDE" \
+    GC_INC="$TMP/gc/include" GC_LIB="$TMP/gc/lib" CC=/usr/bin/true CXX=/usr/bin/true \
+    EMIT_VERBOSITY=default tools/llvm-env.sh --print-env > "$TMP/floor.out" 2> "$TMP/floor.err"
+  if [ "${version%%.*}" -lt 22 ]; then
+    if [ "$(grep -c 'below the tested floor 22' "$TMP/floor.err")" = 1 ]; then
+      ok "LLVM $version warns once below floor 22"
+    else bad "LLVM $version failed floor warning"; fi
+  elif grep -q 'below the tested floor' "$TMP/floor.err"; then
+    bad "LLVM $version unexpectedly warned"
+  else ok "LLVM $version accepted without floor warning"; fi
+done
+fake_full_config "$OVERRIDE" 21.1.0
+env -u EMIT_LLVM_BIN LLVM_CONFIG="$OVERRIDE" EMIT_LLVM_MIN=21 \
+  GC_INC="$TMP/gc/include" GC_LIB="$TMP/gc/lib" CC=/usr/bin/true CXX=/usr/bin/true \
+  tools/llvm-env.sh --print-env > "$TMP/floor.out" 2> "$TMP/floor.err"
+if grep -q 'below the tested floor' "$TMP/floor.err"; then bad "floor override ignored"; else ok "floor override remains effective"; fi
 echo
 echo "  $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

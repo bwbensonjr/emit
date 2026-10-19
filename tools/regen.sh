@@ -46,12 +46,7 @@ cd "$(dirname "$0")/.."
 # include block -- so both ride the Chez-free assembly only, and the driver keeps its own
 # independent implementation of each (emit-dump-stages D5/D10;
 # library-include-declarations D2).
-CORE_FLAT="src/match.scm src/util.scm src/parse.ss \
-           src/passes/expand.ss src/passes/recognize-let.ss \
-           src/passes/convert-assignments.ss src/passes/simplify.ss \
-           src/passes/convert-closures.ss \
-           src/passes/lower.ss src/emit.ss src/prelude-surface.scm src/core.ss \
-           src/dump.ss src/include-reader.ss src/import-substrate.scm"
+. tools/compiler-inputs.sh
 
 mkdir -p build bootstrap
 
@@ -63,7 +58,7 @@ mkdir -p build bootstrap
 #
 # BAKED_LL is the committed IR of the baked set, in the SAME dependency order the
 # declaration gives -- which is the order the linker and the __init chain want.
-BAKED_LL="bootstrap/emit.internal.ll bootstrap/scheme.base.ll"
+# BAKED_LL is supplied by tools/compiler-inputs.sh.
 
 # the LAST part: the program module
 prog_module () { awk '/^; ==EMIT-UNIT-BOUNDARY==$/ { n = 0; delete L; next } { L[++n] = $0 }
@@ -231,3 +226,6 @@ done
 say "   bootstrap/schemec.ll     -> $(bytes bootstrap/schemec.ll) bytes"
 say "   bootstrap/embed.ll       -> $(bytes bootstrap/embed.ll) bytes"
 say "   bootstrap/embed-repl.ll  -> $(bytes bootstrap/embed-repl.ll) bytes"
+# A local content-bound hint, written only after every regeneration step passed.
+# Native validation reports this separately from the isolated source proof.
+python3 tools/source-fingerprint.py --record >/dev/null

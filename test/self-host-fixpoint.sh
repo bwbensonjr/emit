@@ -37,13 +37,12 @@ cd "$(dirname "$0")/.."
 # Discover the toolchain (CC/CXX/LLVM_CONFIG/GC_INC/GC_LIB/LDFLAGS) once, single-sourced.
 . tools/llvm-env.sh || exit 1
 
-# KEEP IN SYNC with tools/regen.sh's CORE_FLAT (see the note there on src/dump.ss).
-CORE_FLAT="src/match.scm src/util.scm src/parse.ss \
-           src/passes/expand.ss src/passes/recognize-let.ss \
-           src/passes/convert-assignments.ss src/passes/simplify.ss \
-           src/passes/convert-closures.ss \
-           src/passes/lower.ss src/emit.ss src/prelude-surface.scm src/core.ss \
-           src/dump.ss src/include-reader.ss src/import-substrate.scm"
+# The independent host uses the exact same assembly inventory as regeneration.
+. tools/compiler-inputs.sh
+command -v chez >/dev/null 2>&1 || {
+  echo "self-host-fixpoint: Chez is required for independent-host verification" >&2
+  exit 1
+}
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
@@ -52,7 +51,7 @@ trap 'rm -rf "$work"' EXIT
 # The baked standard library is a PARTITION, so a stream is one module per baked member in
 # dependency order and then the program: N+1 parts, not 2.  KEEP IN SYNC with the same
 # helpers in tools/regen.sh, and with BAKED_LL there and in the Makefile.
-BAKED_LL="bootstrap/emit.internal.ll bootstrap/scheme.base.ll"
+# BAKED_LL comes from tools/compiler-inputs.sh.
 
 prog_module () { awk '/^; ==EMIT-UNIT-BOUNDARY==$/ { n = 0; delete L; next } { L[++n] = $0 }
                       END { for (i = 1; i <= n; i++) print L[i] }' "$1"; }
@@ -161,7 +160,11 @@ if [ "$n2" != "$i" ]; then
 fi
 for pair in $pairs; do
   s="${pair%%:*}"; c="${pair##*:}"
-  if [ ! -f "$c" ]; then echo "  [WARN] $c absent -- skipping"; continue; fi
+  if [ ! -f "$c" ]; then
+    echo "  [FAIL] committed module $c absent -- independent-host proof unavailable"
+    fail=1
+    continue
+  fi
   if cmp -s "$work/$s" "$c"; then
     echo "  [OK  ] stage-2 == committed $c -- INDEPENDENT-HOST re-derivation"
   else

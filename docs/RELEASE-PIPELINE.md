@@ -58,12 +58,15 @@ scripted REPL, library compilation, and an AOT executable. Its temporary
 workspace is retained for inspection. Native dependencies must live outside
 the checkout that the sandbox hides.
 
-`.github/workflows/release.yml` handles `v*` tags. Pull requests rehearse source
-packaging and both offline archive builds before any tag exists, alongside the
-separate compatibility workflow. A manual dispatch rehearses the complete gate
+`.github/workflows/release.yml` handles `v*` tags. Classified release/packaging/
+installation infrastructure PRs rehearse source packaging and both offline
+archive builds in the shared compatibility workflow before any tag exists.
+Documentation-only PRs provision no toolchain. A manual release dispatch rehearses the complete gate
 without publishing. For the exact release commit it:
 
-1. Requires every Linux/macOS and LLVM 19-23 compatibility cell.
+1. Requires full native regression in all four Linux/macOS and LLVM 22/23 cells,
+   plus one canonical Chez-free source/bootstrap consistency proof and one
+   complete independent-host reference proof (with direct source units).
 2. Rejects tag/version/changelog mismatches and packages once, comparing a
    second local package for determinism.
 3. Transfers that archive and checksums to Linux and macOS archive validators.
@@ -76,7 +79,17 @@ All external Actions use full commit SHA pins verified from their official
 release pages. Only the publication job receives `contents: write`; checkout
 does not retain credentials. Publication jobs for one tag are serialized.
 
-A failed matrix or archive check leaves no public release. Retry the failed
+A failed native, source, reference, identity, archive, or missing-result gate
+leaves no public release. The final required-check aggregate rejects unexpected
+skips and cancellation. Every tag tests its actual committed source even if its
+parent already passed. Shared candidate toolchains are prepared once per tuple
+and consumed by native/reference/archive jobs after validation; they are not
+reused correctness results. Trusted default-branch toolchain bundles and exact
+source fallback are documented in [toolchain CI](TOOLCHAIN.md).
+
+Release concurrency never cancels publication for PR activity. This workflow
+does not create a tag during a rehearsal, and manual dispatch cannot publish.
+Retry the failed
 workflow after addressing the failure. A draft may be inspected before retry;
 the script accepts only matching notes and existing asset bytes. For an already
 public release, a retry verifies both assets and leaves them untouched. Missing

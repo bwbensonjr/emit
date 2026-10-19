@@ -1579,16 +1579,15 @@
                                            no-dump)]
                      ;; (name export-table call-rows [compile-time-interface]) -- the
                      ;; fourth field appears only for a library that exports a macro
-                     ;; (change: library-macro-export).  `render-datum` renders whatever
-                     ;; compile-library returns, and the Chez driver writes its artifact
-                     ;; through the SAME renderer, so the two paths' bytes agree by
-                     ;; construction rather than by two implementations agreeing.
+                     ;; (change: library-macro-export). Both hosts canonicalize
+                     ;; compiler-owned metadata before the shared graph renderer;
+                     ;; fresh and restored dependency graphs produce the same bytes.
                      [nt (cadr res)]
                      [name (car nt)])
                 (cons (quote ok)
                       (string-append (lib-name->basename name)
                                      "\n"
-                                     (render-datum nt))))))))))
+                                     (render-export-table nt))))))))))
 
 ;; --- the input-completeness probe (design D4(b); archived OpenSpec change
 ;;     repl-embedded-incremental) ---------------------------------------------

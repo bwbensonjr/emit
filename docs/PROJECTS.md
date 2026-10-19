@@ -10,7 +10,7 @@ default test suite fails.
 
 ## What you need
 
-- A recent **LLVM** (19+) and **Boehm GC** (`libgc`). Emit finds them through `llvm-config` and
+- A recent **LLVM** (22+; maintained coverage is 22 and 23) and **Boehm GC** (`libgc`). Emit finds them through `llvm-config` and
   `pkg-config bdw-gc`:
 
   ```sh
@@ -20,8 +20,9 @@ default test suite fails.
 
   If discovery picks the wrong toolchain, point at it: `LLVM_CONFIG=/path/to/llvm-config` (or
   `EMIT_LLVM_BIN=/path/to/llvm/bin`), and `GC_INC` / `GC_LIB` for libgc.
-- **No Chez Scheme.** Chez is needed only to regenerate the compiler from source
-  (`make regen`) and for the developer test suite. Building and using Emit needs neither.
+- **No Chez Scheme.** Building, using, regenerating, and native-testing Emit need
+  no Chez. Explicit compiler source-unit and independent-host reference checks use
+  Chez; they are verification tools, not requirements for an Emit project.
 
 ## Build the compiler
 

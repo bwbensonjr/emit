@@ -38,6 +38,7 @@ speed items in this list.
 | [P21](#p21--an-output-string-port-is-a-libc-file-and-an-unclosed-one-costs-every-later-port) | An output string port is a libc `FILE`, and an unclosed one costs every later port | speed | med | med–high | `buffer-backed-string-ports` | ☑ |
 | [P22](#p22--a-string-ports-buffer-is-retained-for-the-life-of-the-process) | A string port's buffer is retained for the life of the process | memory | low–med | med | — | ☐ |
 | [P23](#p23--the-repl-materializes-every-manifest-library-at-startup-imported-or-not) | The REPL materializes every manifest library at startup, imported or not | startup speed | **high** | low–med | `defer-manifest-library-init` (fix 1) | ☐ |
+| [P24](#p24--validation-repeats-setup-and-coverage-across-local-and-ci-runs) | Validation repeats setup and coverage across local and CI runs | developer feedback + CI build time | high | med | `streamline-build-and-test` | ☐ |
 
 Legend — **Value**: benefit if fixed. **Cost**: rough implementation effort/risk. These are
 estimates to aid sequencing, not commitments.
@@ -2427,6 +2428,57 @@ The adapter uses APIs with the same public signatures across LLVM 19-22: `Object
 remain explicit release-matrix work rather than inferred successes.
 
 ---
+
+## P24 — Validation repeats setup and coverage across local and CI runs
+
+**Kind:** developer feedback and CI build time · **Value:** high · **Cost:** med · **OpenSpec change:** `streamline-build-and-test` · ☐
+
+**Symptom.** At baseline commit `a6238520b38551b1042e9f35a5768e0bcdd29d36`, the full Chez-free native runner executed 53 suites in **2466 s (41:06)** with LLVM 23.1.2 and no Chez. The archived suite log records 0 failures. Six suites account for most elapsed time: R7RS sections, library partition, upstream SRFIs, import sets, installed layout, and binding contexts. The design investigation separately measured three direct Chez unit suites at 0.12, 0.18, and 0.22 s. The two classes of feedback have very different cost and should not be one unconditional developer obligation.
+
+The release tag workflow recorded 144 minutes elapsed, with 755 aggregate compatibility provisioning minutes and 277 aggregate native build/test minutes. Those are sums across jobs, not one wall-clock test duration. A cold Linux archive job also built the same LLVM 23 recipe as the compatibility job. Existing ref-scoped caches help but do not guarantee a reusable trusted toolchain on cold refs.
+
+**Cause.** `run-all-tests.sh` and `run-dev-tests.sh` group native integration, direct compiler units, cross-host checks, and source/bootstrap proof into broad aggregates. CI repeats every native suite across ten cells. Build-mutating tests share the checkout today, which prevents safely running them all in parallel. CI cold provisioning and test execution have historically been discussed as one wait despite being separate costs.
+
+**Possible fix.** The `streamline-build-and-test` change introduces one versioned registry for the legacy assertions, selectable profiles, and an inspectable change classifier. First establish the exact suite/assertion inventory and repeatable baseline. Then route ordinary edits to the smallest claim-appropriate profile, isolate mutating suites before bounded scheduling, provision the four maintained LLVM/platform combinations through verified reusable artifacts, and retain equal-coverage full-run measurements. Keep source consistency, source units, and independent-host evidence as distinct claims. Do not call a profile reduction a speedup of unchanged coverage.
+
+**Measurement limits and acceptance.** The 2466-second historical log does not preserve machine model, cache state, queue delay, or dependency provisioning time. Those values are unknown, not zero. The release run's job-aggregate minutes overlap and cannot be directly compared with local test execution. [docs/VALIDATION-BASELINE.md](VALIDATION-BASELINE.md) gives the isolated snapshot procedure and requires separate queue, provisioning, build, and test figures; the exact assertion inventory is [docs/VALIDATION-COVERAGE.md](VALIDATION-COVERAGE.md) and [tools/test-registry.json](../tools/test-registry.json). Acceptance needs paired same-machine samples for compiler, runtime, native-host, and prose edits, plus at least two equal-coverage full runs before and after. Report median and range, actual invocation counts only when observable, and any unmet equal-coverage target. No before/after speedup is claimed by this baseline entry.
+
+**Controlled local result (2026-10-18).** With initially empty writable caches,
+two legacy full-native samples passed all 53 suites in 977.047 and 960.798 s;
+two new samples passed the same inventory in 675.108 and 675.300 s of worker
+execution. Median test time falls from 968.9225 to 675.204 s (30.31%), with
+nonoverlapping sample ranges. Builds remain separate (3.824-4.084 s), and local
+queue/provisioning are not applicable. The earlier ambient-cache samples are
+excluded. This establishes a local equal-coverage improvement, while integrated
+CI acceptance and detailed compiler invocation measurements remain open. See
+[the acceptance record](VALIDATION-RESULTS.md) for revisions, cache-policy
+differences, full wall times, and retained raw reports.
+
+**Remaining CPU/setup cost.** The same controlled runs use 939.085 s median
+user+system CPU in the legacy harness versus 1,296.305 s in the new harness
+(38.04% more), despite shorter elapsed feedback. Parallelism and per-suite
+checkout/cache isolation trade CPU and copying for wall time and correctness.
+Do not count the local wall-time result as an aggregate CPU saving. Prioritize
+measured immutable setup reuse before adding workers; keep PREFIX/VERSION,
+cache invalidation, error, and recovery fixtures isolated. The present evidence
+does not apportion that CPU increase between copying, cold caches, extra seed
+targets, and subprocess scheduling, so profile those separately before choosing
+the next optimization.
+
+**Remaining cold-seeding overlap.** Shared candidate preparation removes duplicate
+LLVM source builds among native, source, and archive consumers *within one
+validation workflow*. It does not coordinate two independent workflow runs.
+On the first merge introducing the trusted channel, or a later recipe/workflow
+update, both main compatibility and trusted dependency preparation can start
+with empty caches before either producer finishes. Each may then build the same
+four tuples. This is a trigger-graph inference, not an observed rehearsal timing;
+do not hide it in a claimed provisioning reduction. Subsequent consumers use
+approved bundles or caches. A future optimization should sequence trusted
+publication after successful main validation, or coordinate exact-identity
+preparation across workflows, while preserving producer/ref/success validation
+and required-check behavior. Measure first-seed and recipe-update runs before
+changing that sequencing; it is separate from the current within-workflow
+deduplication and ordinary warmed development loop.
 
 ## Maintaining this file
 

@@ -139,6 +139,11 @@ check char-roundtrip '(import (scheme read))
 
 echo "the REPL recovers from unsupported definition syntax (issues #91 and #97)"
 
+# Keep cold startup compilation outside the 30-second recovery assertions.
+# The legacy runner supplied an already populated cache from preceding suites.
+. tools/test-repl-setup.sh
+prepare_repl_cache "$TMP" || exit 1
+
 # Dotted define-values remains unsupported. The frontend names that syntax
 # instead of trapping through an unchecked accessor, and the session continues.
 sess="$(printf '(define-values (x y . z) (values 1 2 3))\n(display (+ 40 2))\n' | $TO $HOST 2>&1)"

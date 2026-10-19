@@ -6,16 +6,19 @@ that IR and never runs a Scheme host.
 
 | tool | required | example on a machine | note |
 |------|----------|----------------------|------|
-| LLVM **development** install | LLVM 19+ (22 tested) | Homebrew `llvm`, apt `llvm-NN` | headers + `llvm-config`; ORC/LLJIT is linked into `build/emit` |
+| LLVM **development** install | LLVM 22+ (22 and 23 maintained) | Homebrew `llvm`, apt `llvm-NN` | headers + `llvm-config`; ORC/LLJIT is linked into `build/emit` |
 | libgc (Boehm) | any | 8.2.x (`pkg-config bdw-gc`) | headers `gc.h` / `gc/gc.h` |
 | clang (AOT link) | recent | Apple clang 21 / apt clang 22 | a system `clang` is preferred; else the discovered LLVM one |
-| Chez Scheme | **no** — verification only | 10.4.1 | `./run-dev-tests.sh` and `src/compile.ss`; auto-skipped when absent |
+| Chez Scheme | **no** — verification only | 10.4.1 | explicit `units`/`reference` profiles and optional `src/compile.ss` |
 | llc | — | not installed | not needed; `clang foo.ll` compiles IR directly |
 
-`./run-all-tests.sh` (the default suite) is Chez-free. `./run-dev-tests.sh` uses
-Chez as an independent second host — the anti-stale trust-check, the fixed-point
-re-derivation, and the reference the shipped `--dump` is checked against — and
-exits 0 with a skip notice if `chez` is not on `PATH`.
+`./run-all-tests.sh` (the complete native suite) and `tools/test.sh source`
+(isolated source/bootstrap consistency) are Chez-free. `tools/test.sh units`
+tests edited source directly under Chez; `tools/test.sh reference` checks the
+independent-host fixed point and parity, including shipped stage dumps.
+`./run-dev-tests.sh` aggregates source, units, and reference verification.
+Explicitly requested Chez verification fails clearly if `chez` is missing;
+absence never creates a passing proof. See [the CI policy](../docs/TOOLCHAIN.md).
 
 ## Toolchain discovery for the JIT/bitcode backends
 
@@ -33,7 +36,7 @@ tools; `libgc` is loaded into `lli` via `-load=<libdir>/libgc.<ext>` where `<ext
 
 Discovery is overridable at every step: `LLVM_CONFIG` / `EMIT_LLVM_BIN` select the LLVM
 tools, `CC` selects the AOT compiler, `GC_INC` / `GC_LIB` / `GC_DYLIB` select libgc, and
-`EMIT_LLVM_MIN` (default 19) sets the warn-only version floor. `require-llvm-tools` fails
+`EMIT_LLVM_MIN` (default 22) sets the warn-only version floor. `require-llvm-tools` fails
 with a platform-neutral message (naming the `apt`/`brew` packages and `EMIT_LLVM_BIN`) if
 a needed tool is missing.
 
