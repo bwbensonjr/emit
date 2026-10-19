@@ -2443,6 +2443,32 @@ The release tag workflow recorded 144 minutes elapsed, with 755 aggregate compat
 
 **Measurement limits and acceptance.** The 2466-second historical log does not preserve machine model, cache state, queue delay, or dependency provisioning time. Those values are unknown, not zero. The release run's job-aggregate minutes overlap and cannot be directly compared with local test execution. [docs/VALIDATION-BASELINE.md](VALIDATION-BASELINE.md) gives the isolated snapshot procedure and requires separate queue, provisioning, build, and test figures; the exact assertion inventory is [docs/VALIDATION-COVERAGE.md](VALIDATION-COVERAGE.md) and [tools/test-registry.json](../tools/test-registry.json). Acceptance needs paired same-machine samples for compiler, runtime, native-host, and prose edits, plus at least two equal-coverage full runs before and after. Report median and range, actual invocation counts only when observable, and any unmet equal-coverage target. No before/after speedup is claimed by this baseline entry.
 
+**Controlled local result (2026-10-18).** With initially empty writable caches,
+two legacy full-native samples passed all 53 suites in 977.047 and 960.798 s;
+two new samples passed the same inventory in 675.108 and 675.300 s of worker
+execution. Median test time falls from 968.9225 to 675.204 s (30.31%), with
+nonoverlapping sample ranges. Builds remain separate (3.824-4.084 s), and local
+queue/provisioning are not applicable. The earlier ambient-cache samples are
+excluded. This establishes a local equal-coverage improvement, while integrated
+CI acceptance and detailed compiler invocation measurements remain open. See
+[the acceptance record](VALIDATION-RESULTS.md) for revisions, cache-policy
+differences, full wall times, and retained raw reports.
+
+**Remaining cold-seeding overlap.** Shared candidate preparation removes duplicate
+LLVM source builds among native, source, and archive consumers *within one
+validation workflow*. It does not coordinate two independent workflow runs.
+On the first merge introducing the trusted channel, or a later recipe/workflow
+update, both main compatibility and trusted dependency preparation can start
+with empty caches before either producer finishes. Each may then build the same
+four tuples. This is a trigger-graph inference, not an observed rehearsal timing;
+do not hide it in a claimed provisioning reduction. Subsequent consumers use
+approved bundles or caches. A future optimization should sequence trusted
+publication after successful main validation, or coordinate exact-identity
+preparation across workflows, while preserving producer/ref/success validation
+and required-check behavior. Measure first-seed and recipe-update runs before
+changing that sequencing; it is separate from the current within-workflow
+deduplication and ordinary warmed development loop.
+
 ## Maintaining this file
 
 - When an OpenSpec change is proposed for an item, fill its **OpenSpec change** line and the

@@ -217,6 +217,62 @@ class BaselineHarnessTests(unittest.TestCase):
         self.assertEqual(status, 0)
         self.assertEqual(report["scenario_command"], ["bash", "run-all-tests.sh"])
 
+    def scenario_runner(self, payload):
+        (self.repo / "tools/test.sh").write_text(
+            "#!/bin/sh\nexec python3 tools/scenario-fixture.py \"$@\"\n")
+        (self.repo / "tools/scenario-fixture.py").write_text(
+            "import json,sys\nfrom pathlib import Path\n"
+            "payload = " + repr(payload) + "\n"
+            "payload[\"argv\"] = sys.argv[1:]\n"
+            "Path(sys.argv[sys.argv.index(\"--report\") + 1]).write_text(json.dumps(payload))\n")
+        subprocess.run(["git", "add", "tools/test.sh", "tools/scenario-fixture.py"],
+                       cwd=self.repo, check=True)
+
+    def test_scenario_retains_separate_build_test_and_tool_counts(self):
+        counts = {"compiler_work_invocations": 3}
+        self.scenario_runner({"status": "passed", "build_seconds": 2.5,
+                              "test_seconds": 7.25, "selected": ["native-ok"],
+                              "build_external_tool_invocations": counts,
+                              "results": [{"id": "native-ok", "external_tool_invocations": counts}]})
+        compiler = self.work / "compiler"
+        compiler.write_text("#!/bin/sh\nexit 0\n")
+        compiler.chmod(0o700)
+        status, report, _ = self.invoke(
+            ["--working-tree", "--scenario", "runtime", "--run-scenario", "--samples", "1",
+             "--trace-compilers"], {"CC": str(compiler), "CXX": str(compiler)})
+        self.assertEqual(status, 0)
+        sample = report["scenario_samples"][0]
+        self.assertEqual(sample["build_seconds"], 2.5)
+        self.assertEqual(sample["test_seconds"], 7.25)
+        self.assertIsNone(sample["queue_seconds"])
+        self.assertIsNone(sample["provision_seconds"])
+        self.assertEqual(sample["selected"], ["native-ok"])
+        self.assertEqual(sample["suite_external_tool_invocations"], {"native-ok": counts})
+        child = json.loads(Path(report["logs"]["scenario_report_0"]).read_text())
+        self.assertIn("--trace-compilers", child["argv"])
+
+    def test_documentation_scenario_records_no_compiler_work(self):
+        self.scenario_runner({"status": "documentation-only", "suites": []})
+        status, report, _ = self.invoke(
+            ["--working-tree", "--scenario", "documentation", "--run-scenario", "--samples", "1"])
+        self.assertEqual(status, 0)
+        sample = report["scenario_samples"][0]
+        self.assertEqual((sample["build_seconds"], sample["test_seconds"], sample["selected"]), (0, 0, []))
+
+    def test_success_without_scenario_report_is_unavailable_measurement(self):
+        (self.repo / "tools/test.sh").write_text("#!/bin/sh\nexit 0\n")
+        subprocess.run(["git", "add", "tools/test.sh"], cwd=self.repo, check=True)
+        status, report, _ = self.invoke(
+            ["--working-tree", "--scenario", "runtime", "--run-scenario", "--samples", "1"])
+        self.assertEqual(status, 1)
+        self.assertIn("report_error", report["scenario_samples"][0])
+        self.assertIsNone(report["scenario_samples"][0]["build_seconds"])
+
+    def test_source_unit_scenario_rejects_native_instrumentation(self):
+        with self.assertRaises(SystemExit) as raised:
+            self.invoke(["--scenario", "compiler", "--run-scenario", "--trace-compilers"])
+        self.assertEqual(raised.exception.code, 2)
+
 
 if __name__ == "__main__":
     unittest.main()

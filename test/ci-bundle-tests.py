@@ -11,6 +11,7 @@ sys.dont_write_bytecode = True
 import tarfile
 import tempfile
 import shutil
+import subprocess
 import unittest
 from unittest.mock import patch
 
@@ -237,6 +238,59 @@ class ResolverTests(unittest.TestCase):
         trusted = (ROOT / ".github/workflows/dependency-preparation.yml").read_text()
         self.assertIn("github.ref == 'refs/heads/main'", trusted)
         self.assertIn("github.event_name != 'pull_request'", trusted)
+
+
+class PreparationTests(unittest.TestCase):
+    def test_forced_miss_builds_each_recipe_once_and_consumers_only_restore_and_probe(self):
+        for major in ("22", "23"):
+            with self.subTest(major=major), tempfile.TemporaryDirectory(prefix="emit preparation ") as temporary:
+                work = Path(temporary)
+                tools = work / "tools"
+                tools.mkdir()
+                for name in ("ci-prepare.sh", "ci-bundle.py", "log.sh"):
+                    shutil.copy2(ROOT / "tools" / name, tools / name)
+                # Stub only the external resolution/build boundary. Exercise the
+                # actual prerequisite, identity, packaging and restoration code.
+                (tools / "ci-resolve.py").write_text("import sys\nsys.exit(3)\n")
+                source = SOURCE.replace("23.1.0", major + ".1.0")
+                stamp = STAMP.replace("23.1.0", major + ".1.0")
+                provision = tools / "ci-provision.sh"
+                provision.write_text(
+                    "#!/usr/bin/env bash\nset -eu\n"
+                    "if [ \"$1\" = --identity ]; then printf '%s\\n' \"$FIXTURE_SOURCE\"; exit 0; fi\n"
+                    "if [ ! -f \"$2/complete\" ]; then\n"
+                    " printf 'build %s\\n' \"$1\" >> \"$FIXTURE_EVENTS\"\n"
+                    " mkdir -p \"$2/llvm/bin\" \"$2/gc/include\"\n"
+                    " printf 'compiler fixture\\n' > \"$2/llvm/bin/clang\"\n"
+                    " printf '%s' \"$FIXTURE_STAMP\" > \"$2/complete\"\nfi\n"
+                    "test \"$(cat \"$2/complete\")\" = \"${FIXTURE_STAMP%$'\\n'}\"\n"
+                    "printf 'probe %s\\n' \"$1\" >> \"$FIXTURE_EVENTS\"\n")
+                provision.chmod(0o700)
+                events = work / "events"
+                environment = {**os.environ, "FIXTURE_SOURCE": source,
+                               "FIXTURE_STAMP": stamp, "FIXTURE_EVENTS": str(events),
+                               "EMIT_VERBOSITY": "quiet"}
+                prefix = work / "deps"
+                artifact = work / "artifact"
+                result = subprocess.run(["bash", str(tools / "ci-prepare.sh"), major,
+                                         str(prefix), str(artifact)], env=environment,
+                                        capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                prefix.rename(work / "producer-install")
+                for consumer in ("native", "archive", "verification"):
+                    # The identical private prefix is initially absent on each
+                    # runner. No cache or producer installation is available.
+                    self.assertFalse(prefix.exists(), consumer)
+                    result = subprocess.run([sys.executable, str(tools / "ci-bundle.py"),
+                                             "restore", major, str(prefix), str(artifact)],
+                                            env=environment, capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    subprocess.run([str(provision), major, str(prefix)],
+                                   env=environment, check=True)
+                    self.assertEqual((prefix / "complete").read_text(), stamp)
+                    shutil.rmtree(prefix)
+                self.assertEqual(events.read_text().splitlines(),
+                                 ["build " + major] + ["probe " + major] * 4)
 
 
 if __name__ == "__main__":

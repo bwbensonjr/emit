@@ -73,6 +73,7 @@ jobs:
           bash test/r7rs-range-assembly-tests.sh
           python3 test/compiler-telemetry-tests.py
           python3 test/baseline-harness-tests.py
+          python3 test/verification-setup-tests.py
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -173,7 +174,10 @@ jobs:
             sudo apt-get update
             sudo apt-get install -y chezscheme
             mkdir -p "$RUNNER_TEMP/emit-reference-tools"
-            ln -s "$(command -v scheme)" "$RUNNER_TEMP/emit-reference-tools/chez"
+            # Chez selects its boot file using argv[0]; a renamed symlink
+            # searches for chez.boot instead of Debian's scheme.boot.
+            printf '#!/usr/bin/env bash\nexec %q "$@"\n' "$(command -v scheme)" > "$RUNNER_TEMP/emit-reference-tools/chez"
+            chmod +x "$RUNNER_TEMP/emit-reference-tools/chez"
             printf '%s\n' "$RUNNER_TEMP/emit-reference-tools" >> "$GITHUB_PATH"
           fi
 

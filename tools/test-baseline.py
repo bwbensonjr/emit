@@ -154,6 +154,8 @@ def main():
         parser.error("positive --samples and --scenario are required for scenario execution")
     if args.working_tree and args.revision != "HEAD":
         parser.error("--working-tree cannot select a committed --revision")
+    if args.trace_compilers and args.run_scenario and args.scenario == "compiler":
+        parser.error("compiler scenarios use source units, which do not support native compiler tracing")
     registry = load_registry()
     selected_suites = []
     for suite_id in args.suite:
@@ -237,12 +239,42 @@ def main():
                 for sample in range(args.samples):
                     log = logs_root / ("scenario-" + str(sample) + ".log")
                     report_logs["scenario_" + str(sample)] = str(log)
+                    sample_command = list(command)
+                    child_report = logs_root / ("scenario-" + str(sample) + ".json")
+                    if modern:
+                        sample_command.extend(["--report", str(child_report)])
+                        if args.trace_compilers:
+                            sample_command.append("--trace-compilers")
                     started = time.monotonic()
                     with log.open("w") as output_file:
-                        result = run(command, cwd=snapshot, stdout=output_file, stderr=subprocess.STDOUT)
-                    report["scenario_samples"].append({"seconds": round(time.monotonic() - started, 3),
-                                                       "exit_code": result.returncode})
-                    if result.returncode:
+                        result = run(sample_command, cwd=snapshot, stdout=output_file, stderr=subprocess.STDOUT)
+                    sample_result = {"seconds": round(time.monotonic() - started, 3),
+                                     "exit_code": result.returncode, "command": sample_command,
+                                     "build_seconds": None, "test_seconds": None,
+                                     "queue_seconds": None, "provision_seconds": None}
+                    if modern:
+                        try:
+                            measured = json.loads(child_report.read_text())
+                            if not isinstance(measured, dict):
+                                raise ValueError("runner report must be an object")
+                            report_logs["scenario_report_" + str(sample)] = str(child_report)
+                            docs_only = measured.get("status") == "documentation-only"
+                            sample_result.update(
+                                build_seconds=0 if docs_only else measured.get("build_seconds"),
+                                test_seconds=0 if docs_only else measured.get("test_seconds"),
+                                selected=measured.get("selected", []),
+                                status=measured.get("status"))
+                            sample_result["build_external_tool_invocations"] = measured.get(
+                                "build_external_tool_invocations")
+                            sample_result["suite_external_tool_invocations"] = {
+                                item["id"]: item["external_tool_invocations"]
+                                for item in measured.get("results", [])
+                                if "external_tool_invocations" in item}
+                        except (OSError, ValueError, TypeError) as error:
+                            sample_result.update(exit_code=result.returncode or 1,
+                                                 report_error=str(error))
+                    report["scenario_samples"].append(sample_result)
+                    if sample_result["exit_code"]:
                         report["scenario_log_tail"] = log.read_text(errors="replace").splitlines()[-40:]
                         break
                 durations = [entry["seconds"] for entry in report["scenario_samples"]]

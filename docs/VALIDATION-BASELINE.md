@@ -76,6 +76,20 @@ selection/rebuild overhead, not a semantic compiler change or its correctness.
 Do not accidentally request three complete legacy runs when only a plan is
 needed; the two paired full baseline samples provide the equal-coverage record.
 
+Each executed modern scenario also retains its runner JSON as
+`logs.scenario_report_N`. Its sample records project `build_seconds`, worker
+`test_seconds`, selected suite IDs, status, and separate unavailable local
+queue/provisioning fields. Documentation-only policy records zero build/test
+work and no selected suites. Missing runner reports fail measurement instead
+of inventing phase durations. Legacy scenario phase times remain unknown;
+use the explicit full-native procedure above for separated legacy build/test
+measurements.
+
+For a separate native counting run, add `--trace-compilers` to a runtime or host
+scenario. The child runner's build and per-suite external invocation counts
+remain attached to each sample. Compiler scenarios run direct source units and
+reject native instrumentation. Keep counting runs separate from timing samples.
+
 ## Edit fixtures and before/after protocol
 
 For each fixture below, save the exact diff, classifier plan, selected suite IDs, toolchain identity, cache state, build duration, and test duration. Use the same host and toolchain for paired before/after runs. Take at least three samples for short selections and two complete samples for full native coverage; report median and range. Report equal-coverage execution separately from a reduced test selection.

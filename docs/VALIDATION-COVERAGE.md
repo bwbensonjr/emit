@@ -23,7 +23,19 @@ on weekly/manual runs and releases. Targeted PR reference IDs are self-emission,
 dump parity, and datum rendering; native binding-context regressions remain in
 every full native profile. This is an explicit frequency split, not deletion.
 
-All scripts other than direct Chez `.ss` unit invocations are initially marked `workspace`. This conservative classification covers tests that run `make`, alter configuration or installation state, exercise caches, or invoke integration scripts whose writes have not yet been proven isolated. Only direct `chez --script ... .ss` source-unit invocations are `readonly`. The later runner implementation must isolate workspace-classified rows before it schedules them concurrently.
+All scripts other than direct Chez `.ss` unit invocations are marked `workspace`.
+This conservative classification covers tests that run `make`, alter configuration
+or installation state, exercise caches, or invoke integration scripts. Each gets
+a private copy of the immutable native seed, home, cache, and temporary roots
+before concurrent scheduling. Only direct `chez --script ... .ss` source-unit
+invocations are `readonly`; they share source inputs while retaining private
+temporary/cache roots, and the runner verifies the seed is unchanged.
+
+The cyclic-datum and printer suites explicitly prepare their private REPL caches
+before the existing 30-second hang/recovery checks. This restores the warm setup
+previously supplied by earlier legacy suites without sharing mutable state. All
+18 cyclic-datum and 21 printer assertions remain in their existing full-native
+groups; setup failure also fails the suite.
 
 ## Auditing changes
 

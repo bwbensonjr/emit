@@ -133,6 +133,10 @@ else
   sed 's/^/         /' "$TMP/dump.err"
 fi
 
+# The isolated runner starts with an empty cache. Compile startup libraries
+# before the 30-second cycle-termination assertion, as legacy shared caches did.
+. tools/test-repl-setup.sh
+prepare_repl_cache "$TMP" || exit 1
 got="$(printf '%s\n' '#!fold-case' "'ABC" "'DEF" '#!no-fold-case' "'GHI" \
   '(list (quote A) #!fold-case (quote B))' "'C" \
   '(let ((x (quote #0=(a . #0#)))) (eq? x (cdr x)))' \

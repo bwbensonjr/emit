@@ -70,6 +70,12 @@ unchanged. Negative tests are not batched into stateful sessions.
 Workspace isolation prevents fixture interference; it is not a security sandbox
 for arbitrary test code.
 
+The cyclic-datum and printer recovery suites prepare their private REPL library
+cache before applying their 30-second regression deadlines. Cold setup has its
+own 180-second bound when a timeout command is available; a failed setup fails
+the suite and prints its captured diagnostics. This preserves the legacy
+warm-start hang assertions without relying on another suite's cache.
+
 Audited direct Chez source units share the immutable source snapshot with private
 temporary/cache directories. The runner hashes the seed before and after worker
 execution and fails if any worker changes it. All other suites remain in separate
