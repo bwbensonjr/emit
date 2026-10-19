@@ -248,6 +248,7 @@ def main():
                     started = time.monotonic()
                     with log.open("w") as output_file:
                         result = run(sample_command, cwd=snapshot, stdout=output_file, stderr=subprocess.STDOUT)
+                    report["test_runner_invocations"] += 1
                     sample_result = {"seconds": round(time.monotonic() - started, 3),
                                      "exit_code": result.returncode, "command": sample_command,
                                      "build_seconds": None, "test_seconds": None,
@@ -348,6 +349,7 @@ def main():
                         result_entry["observed_emit_cpp_compile_commands"] = observed_emit_cpp_compiles(suite_trace)
                         report["compiler_invocations"] += suite_counts["compiler_invocations"]
                     report["suite_results"].append(result_entry)
+                    report["test_runner_invocations"] += 1
                     if suite_result.returncode:
                         break
 

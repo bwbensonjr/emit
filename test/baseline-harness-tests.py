@@ -174,6 +174,7 @@ class BaselineHarnessTests(unittest.TestCase):
             {"CC": str(compiler), "CXX": str(compiler), "PATH": os.environ["PATH"]})
         self.assertEqual(status, 0)
         self.assertEqual(report["observed_emit_cpp_compile_commands"], 1)
+        self.assertEqual(report["test_runner_invocations"], 1)
         self.assertEqual(report["suite_results"][0]["exit_code"], 0)
         self.assertEqual(report["suite_results"][0]["tool_counts"]["total_invocations"], 0)
         self.assertTrue((Path(report["logs"]["wrappers"]) / "cxx").is_file())
@@ -242,6 +243,7 @@ class BaselineHarnessTests(unittest.TestCase):
              "--trace-compilers"], {"CC": str(compiler), "CXX": str(compiler)})
         self.assertEqual(status, 0)
         sample = report["scenario_samples"][0]
+        self.assertEqual(report["test_runner_invocations"], 1)
         self.assertEqual(sample["build_seconds"], 2.5)
         self.assertEqual(sample["test_seconds"], 7.25)
         self.assertIsNone(sample["queue_seconds"])
