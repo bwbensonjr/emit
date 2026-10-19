@@ -13,6 +13,24 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 class VerificationSetupTests(unittest.TestCase):
+    def test_backend_driver_does_not_replace_inherited_native_cc(self):
+        with tempfile.TemporaryDirectory(prefix="emit backend compiler ") as temporary:
+            work = Path(temporary)
+            executable = work / "chez"
+            executable.write_text(
+                "#!/bin/sh\nprintf '%s\\n' \"$CC\" >> \"$OBSERVED_CC\"\nexit 19\n")
+            executable.chmod(0o700)
+            observed = work / "observed"
+            native_cc = str(work / "native compiler")
+            environment = {**os.environ, "CC": native_cc, "OBSERVED_CC": str(observed),
+                           "PATH": str(work) + os.pathsep + os.environ["PATH"]}
+            result = subprocess.run(["bash", str(ROOT / "demos/run-backends.sh")],
+                                    env=environment, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            calls = observed.read_text().splitlines()
+            self.assertTrue(calls)
+            self.assertEqual(set(calls), {native_cc})
+
     def test_ci_chez_wrapper_preserves_boot_name_and_arguments(self):
         workflow = (ROOT / ".github/workflows/compatibility.yml").read_text()
         command = next(line.strip() for line in workflow.splitlines()

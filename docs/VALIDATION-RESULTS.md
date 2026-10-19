@@ -1,8 +1,9 @@
 # Validation implementation evidence
 
 This is an acceptance record in progress, not a claim that all change tasks are
-complete. The controlled equal-coverage comparison passes; the non-publishing
-CI rehearsal must still pass before integrated acceptance is complete.
+complete. The controlled equal-coverage comparison and four-cell native matrix
+pass; complete reference verification fails. Integrated acceptance remains open
+pending the issues and scope decision recorded below.
 
 ## Local environment
 
@@ -215,3 +216,137 @@ legacy unobserved phase values and local queue/provisioning remain unknown.
 Native tracing is rejected for direct source-unit scenarios.
 Scenario and selected-suite runner invocations are counted explicitly, and
 quiet metadata runs preserve JSON while suppressing stderr narration.
+
+## Representative edit feedback
+
+Fresh three-sample runs use immutable implementation commit
+`c754dc58dc67edd8c2646d0d6f48ad5fb701f47a` and the same machine/dependencies
+recorded above. Each disposable snapshot receives the harness's exact recorded
+comment/prose fixture. The compiler scenario alone includes Chez on PATH;
+runtime, host and prose scenarios exclude it. Every invocation starts a fresh
+runner seed and private suite caches. All 12 samples pass. Some native samples
+overlap the separate compiler-counting runs; these are observed local feedback
+times, not quiet-host component benchmarks.
+
+| Fixture | Wall samples (s) | Wall median (range), s | Median build / worker test (s) | Selection |
+| --- | --- | --- | --- | --- |
+| Compiler pass comment | 6.616, 6.395, 6.421 | 6.421 (6.395-6.616) | 0 / 3.123 | 15 direct current-source units |
+| Runtime C comment | 74.223, 74.813, 72.789 | 74.223 (72.789-74.813) | 4.033 / 66.712 | 9 focused runtime/execution/CLI groups |
+| Native host comment | 97.978, 95.659, 102.228 | 97.978 (95.659-102.228) | 4.056 / 90.569 | 6 discovery/configuration/install/CLI/execution groups |
+| Prose addition | 0.282, 0.265, 0.271 | 0.271 (0.265-0.282) | 0 / 0 | Policy only; zero suites and no LLVM work |
+
+Each scenario report records three runner invocations. Raw reports are
+`/private/tmp/emit-apply-scenario-{compiler,runtime,host,documentation}.json`;
+each retains the exact fixture, command, runner JSON and logs for every sample.
+Local queue/provisioning remain `null` independently of build/test phases.
+Wall time also includes snapshot, fingerprint, cleanup and command overhead;
+it is not simply build plus worker time.
+
+All four retained pre-change fixture plans select `bash run-all-tests.sh`.
+The two controlled complete legacy invocations above take 966.74-983.05 s wall
+(median 974.895 s). Those measure the common old native obligation, not twelve
+additional fixture-specific baseline runs; compiler acceptance previously also
+required developer verification. Every focused sample is shorter than the
+fastest complete legacy run, but the selections establish narrower claims.
+Compiler units are pre-regen feedback, not acceptance of a semantic compiler
+change; source/native/reference obligations still follow the contributor
+workflow. Harmless comment fixtures measure selection/build overhead, not the
+correctness of a changed compiler algorithm.
+
+The separate controlled 53-suite comparison establishes the equal-coverage
+elapsed improvement. Neither this smaller selection nor moving reference
+checks to different triggers is counted as that speedup. Documentation policy
+fixtures and CI plan tests establish zero toolchain provisioning, while ordinary
+code policy selects two LLVM 23 full and two LLVM 22 focused cells. Cold
+dependency consumption is covered separately by candidate transfer and the
+forced-miss transport fixtures.
+
+Separate one-sample native counting runs at commit `3558d9b` exercise the same
+runtime and host fixtures with transparent proxies. They are not timing samples.
+The runtime selection observes four seed compiler-work calls plus five suite
+calls, 11 compiler queries, and ten Make calls total; `src/emit.cpp` and
+`src/runtime/runtime.c` each compile once. The host selection observes four
+seed compiler-work calls plus 21 suite calls, 12 queries, and 15 Make calls;
+each of those source files compiles five times across the seed and intentional
+configuration/prefix fixtures. These are observed external calls/object
+compiles, not in-process Scheme/LLVM counts or inferred rebuilds from Make.
+The source-unit profile launches no native build, and documentation launches
+neither a build nor suites. Uninstrumented counts stay unknown in timing runs.
+Raw counting reports are `/private/tmp/emit-apply-count-runtime.json` and
+`/private/tmp/emit-apply-count-host.json`, with retained child reports and raw
+JSONL paths. A missing trace file for a zero-observed-call suite is the
+telemetry contract's zero, not a failed build or a silently omitted assertion.
+
+## Integrated non-publishing rehearsal
+
+[Run 39182790264](https://github.com/bwbensonjr/emit/actions/runs/39182790264)
+manually validates commit `c754dc58dc67edd8c2646d0d6f48ad5fb701f47a` on the
+change branch. All four cells run `full`, not the ordinary LLVM 22 focused
+profile. Each report records 53 selected/passing suites, unchanged immutable
+seed and proof inputs, and no failures.
+
+| Cell | LLVM version | Seed build (s) | Native worker execution (s) | Native runner wall (s) |
+| --- | --- | ---: | ---: | ---: |
+| Linux x86_64 / 22 | 22.1.0 | 8.814 | 1,243.933 | 1,254.995 |
+| Linux x86_64 / 23 | 23.1.0 | 11.242 | 1,240.967 | 1,254.735 |
+| macOS arm64 / 22 | 22.1.0 | 6.814 | 1,084.161 | 1,094.206 |
+| macOS arm64 / 23 | 23.1.0 | 9.913 | 1,185.870 | 1,200.573 |
+
+These are runner phases, not whole-job timings: checkout, dependency restore
+and probes, and the CI entry point's preliminary build remain separate.
+Workflow creation at 00:53:23 UTC and policy start at 00:55:03 UTC on
+2026-10-19 give 100 s initial queue/concurrency wait; later dependency waits
+are not counted as native execution. All four preparation jobs and all
+consumer restore/probe steps pass. Producer caches are warm; consumers use
+the transferred immutable candidates without rebuilding LLVM.
+
+Packaging identity/determinism/retry guards and both exact Linux/macOS offline
+archive validations pass. The isolated canonical source workflow step passes
+in 842 s (841.126 s runner report), followed by all 15 direct Chez units in
+6.410 s. Complete reference verification finishes in 1,099.042 s with 20/25
+groups passing. Its independent-host fixed-point group passes in 449.446 s,
+but five other groups fail, so the required aggregate fails and publication is
+skipped. Manual dispatch creates no tag.
+
+Reports are retained under
+`/private/tmp/emit-apply-rehearsal.8CqMWt/final-native/compatibility-*`.
+Later commit `3558d9b` changes only baseline narration, its local regression
+test, and CPU-cost documentation; all 14 baseline-harness checks pass locally.
+It changes no native/compiler/bootstrap/library code or archive/reference
+validation commands. The rehearsed source archive remains the exact `c754dc5`
+payload; any future tag must validate its own exact payload.
+
+### Remaining acceptance blockers
+
+[Issue #137](https://github.com/bwbensonjr/emit/issues/137) records the incomplete
+reference prerequisites: the LLVM distribution omits backend commands used by
+the Chez driver, and Debian's installed Chez lacks `path-build`. The binding
+parity suite passes locally with Chez 10.4.1. The demo backend harness also
+overwrote inherited/exported `CC` with its Scheme driver; it now uses a dedicated
+argument array, preserving the native compiler environment. All five local
+verification-setup tests pass, including that exported-CC regression. The LLVM
+distribution and compatible CI Chez provisioning still need correction.
+
+[Issue #136](https://github.com/bwbensonjr/emit/issues/136) records the SRFI 227
+interface mismatch reproduced on Linux and local Chez 10.4.1. The full suite
+passes 38 checks but fails export byte parity; its runtime values, cache checks
+and emitted IR agree. Retaining a full-suite fixture shows 7,068 native export
+bytes versus 6,944 Chez bytes, with `equal?` returning `#t` for the parsed data.
+Compiler-owned `(lambda core (builtin core lambda) lambda)` descriptors have
+different aliasing, so the shared renderer assigns different graph labels.
+A smaller direct compilation produces identical bytes; compilation/cache
+history exposes the difference. The existing byte comparison has not been
+weakened or removed.
+
+Canonicalizing compiler-owned interface metadata would extend this tooling
+change into compiler-core work and require the explicit regeneration barrier.
+Changing the comparison to structural equality would instead revise a retained
+acceptance contract. Tasks 6.4, 7.2 and 7.3 remain unchecked pending that scope
+decision and a successful corrected rehearsal.
+
+Failed reference reports are retained at
+`/private/tmp/emit-apply-rehearsal.8CqMWt/final-proofs`; the complete job log is
+`/private/tmp/emit-apply-reference.log`. The retained local full-suite fixture is
+`/private/tmp/emit-exports-parity.KzQv0Z`, with its failed native interface under
+the printed temporary directory in `full.log`. The original compiler/bootstrap
+sources remain unchanged.

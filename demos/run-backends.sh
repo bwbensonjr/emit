@@ -9,7 +9,7 @@ cd "$(dirname "$0")/.."
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-CC="chez --libdirs src --script src/compile.ss"
+compiler_driver=(chez --libdirs src --script src/compile.ss)
 pass=0; fail=0
 
 run3 () {  # name  source  expected
@@ -17,19 +17,19 @@ run3 () {  # name  source  expected
   local aot jit bc
 
   # AOT: textual IR -> native exe (system clang), then run
-  if ! $CC "$src" -o "$TMP/${name}_aot" >/dev/null 2>"$TMP/$name.aot.err"; then
+  if ! "${compiler_driver[@]}" "$src" -o "$TMP/${name}_aot" >/dev/null 2>"$TMP/$name.aot.err"; then
     echo "  [FAIL] $name  (aot compile)"; sed 's/^/         /' "$TMP/$name.aot.err"; fail=$((fail+1)); return
   fi
   aot="$(timeout 90 "$TMP/${name}_aot")"
 
   # Bitcode: OUT.ll -> OUT.bc -> native exe (LLVM 22 clang), then run
-  if ! $CC "$src" -o "$TMP/${name}_bc" --backend bitcode >/dev/null 2>"$TMP/$name.bc.err"; then
+  if ! "${compiler_driver[@]}" "$src" -o "$TMP/${name}_bc" --backend bitcode >/dev/null 2>"$TMP/$name.bc.err"; then
     echo "  [FAIL] $name  (bitcode compile)"; sed 's/^/         /' "$TMP/$name.bc.err"; fail=$((fail+1)); return
   fi
   bc="$(timeout 90 "$TMP/${name}_bc")"
 
   # JIT: driver links the runtime in and runs via lli; its stdout is the value
-  jit="$(timeout 90 $CC "$src" -o "$TMP/${name}_jit" --backend jit 2>"$TMP/$name.jit.err")"
+  jit="$(timeout 90 "${compiler_driver[@]}" "$src" -o "$TMP/${name}_jit" --backend jit 2>"$TMP/$name.jit.err")"
 
   if [ "$aot" = "$want" ] && [ "$jit" = "$want" ] && [ "$bc" = "$want" ]; then
     echo "  [OK  ] $name => $want   (aot = jit = bitcode)"; pass=$((pass+1))
@@ -42,18 +42,18 @@ run3_fail () {  # name  source  -- expects a non-zero run under all three exits
   local name="$1" src="$2"
   local arc brc jrc
 
-  if ! $CC "$src" -o "$TMP/${name}_aot" >/dev/null 2>"$TMP/$name.aot.err"; then
+  if ! "${compiler_driver[@]}" "$src" -o "$TMP/${name}_aot" >/dev/null 2>"$TMP/$name.aot.err"; then
     echo "  [FAIL] $name  (aot compile)"; sed 's/^/         /' "$TMP/$name.aot.err"; fail=$((fail+1)); return
   fi
   timeout 90 "$TMP/${name}_aot" >/dev/null 2>&1; arc=$?
 
-  if ! $CC "$src" -o "$TMP/${name}_bc" --backend bitcode >/dev/null 2>"$TMP/$name.bc.err"; then
+  if ! "${compiler_driver[@]}" "$src" -o "$TMP/${name}_bc" --backend bitcode >/dev/null 2>"$TMP/$name.bc.err"; then
     echo "  [FAIL] $name  (bitcode compile)"; sed 's/^/         /' "$TMP/$name.bc.err"; fail=$((fail+1)); return
   fi
   timeout 90 "$TMP/${name}_bc" >/dev/null 2>&1; brc=$?
 
   # JIT compiles and runs in one step; a non-zero program exit makes it fail.
-  timeout 90 $CC "$src" -o "$TMP/${name}_jit" --backend jit >/dev/null 2>&1; jrc=$?
+  timeout 90 "${compiler_driver[@]}" "$src" -o "$TMP/${name}_jit" --backend jit >/dev/null 2>&1; jrc=$?
 
   if [ "$arc" -ne 0 ] && [ "$brc" -ne 0 ] && [ "$jrc" -ne 0 ]; then
     echo "  [OK  ] $name => non-zero exit (aot=$arc jit=$jrc bitcode=$brc)"; pass=$((pass+1))

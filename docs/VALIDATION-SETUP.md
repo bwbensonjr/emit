@@ -67,3 +67,51 @@ reports compiler counts as unmeasured (`null`). These are observed external
 CC/CXX and Make calls, not counts of in-process LLVM/Scheme compilation. Keep
 counting runs separate from uninstrumented timing samples because proxy startup
 adds observer overhead.
+
+## Observed six-suite counting runs
+
+Measured on the environment in [the acceptance record](VALIDATION-RESULTS.md).
+Both runs passed all six suites without Chez. The legacy snapshot is immutable
+commit `a6238520b38551b1042e9f35a5768e0bcdd29d36`; it starts with one empty,
+writable invocation cache. The current runner snapshots the working tree during
+the startup corrections (report commit `f1ee629`, `working_tree_dirty: true`,
+with its exact `input_digest`) and gives every suite a fresh private cache.
+The underlying compiler sources/bootstrap are unchanged. Current counting runs
+partly overlap the representative scenario runs. These instrumented elapsed
+times describe the counting runs; use the separate controlled full samples for
+speedup claims.
+
+| Suite | Legacy elapsed | Current elapsed | External compiler work, before/after | Make calls, before/after | Retained assertions |
+| --- | ---: | ---: | ---: | ---: | --- |
+| R7RS sections | 32.849 s | 31.242 s | 0 / 0 | 0 / 0 | 986 passing assertions; 991 forms, 189 exclusions, 21 section groups |
+| Library partition | 44.519 s | 62.131 s | 16 / 16 | 1 / 1 | 78 passing checks, including run/AOT/REPL and unavailable names |
+| Upstream SRFIs | 198.140 s | 207.491 s | 8 / 8 | 1 / 1 | 24 passing host/control groups, including failed/missing completion and nonzero status |
+| Import sets | 15.725 s | 37.618 s | 0 / 0 | 1 / 1 | 74 passing checks, including cold/invalidation and REPL recovery |
+| Installed layout | 63.555 s | 71.698 s | 9 / 9 | 4 / 4 | 79 passing checks, including relocated install, cold/warm/unavailable caches and precedence |
+| Binding contexts | 51.435 s | 57.815 s | 12 / 12 | 0 / 0 | 61 passing checks, including errors, frontend recovery and warm artifact reuse |
+
+The install suite also makes one compiler query in each run. It recompiles
+`src/emit.cpp` exactly once in each trace for its prefix-sensitive configuration;
+the other five suites record no such recompilation. These observations preserve
+the intentional prefix rebuild and repeated-install no-rebuild assertions.
+The legacy seed build records three external compiler-work calls and one Make;
+the current seed records four and one because it additionally builds `schemec`.
+Seed build times are 6.021 and 4.264 s and are separate from suite execution.
+Compiler-work calls include linking/preprocessing, not in-process Scheme/LLVM
+compilation. Zero proxied compiler calls never means zero Scheme compilation.
+
+The measured setup optimization remains the byte-identical R7RS assembler above:
+991 slicing processes become 21, with the 21 selection processes and every
+accepted/excluded form retained. The other five suites retain their commands
+and external compiler counts. Their configuration, cold-cache, negative and
+stateful recovery contracts do not justify batching them into shared sessions.
+Private setup can cost more per suite; bounded scheduling supplies the measured
+full-profile elapsed improvement. No per-suite compiler speedup is inferred.
+
+Raw reports are `/private/tmp/emit-apply-six-before.json` and
+`/private/tmp/emit-apply-six-after.json`; each retains per-suite logs and JSONL
+compiler traces. The latter also passes both corrected REPL suites, with 18
+cyclic-datum and 21 printer assertions. The historical baseline helper's
+selected-suite runner counter was zero despite six completed suite records;
+commit `c754dc5` corrects that bookkeeping. The six per-suite records and raw
+tool traces, not that old aggregate field, establish the counts above.

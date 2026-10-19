@@ -3,7 +3,7 @@
 ## 1. Baselines and retained coverage
 
 - [x] 1.1 Inventory the current 53 native suites and all developer-suite assertion groups, hosts, shared mutations, and invocation triggers. Deliver a versioned coverage map with no unexplained omitted group, including performance checks and optional conformance bookkeeping.
-- [ ] 1.2 Add a repeatable measurement procedure for compiler, runtime, native-host, and documentation edit fixtures; record current local build/test durations, invocation/rebuild counts, hardware, toolchains, and cache state. Verify cold provisioning, queue time, and test execution are reported separately.
+- [x] 1.2 Add a repeatable measurement procedure for compiler, runtime, native-host, and documentation edit fixtures; record current local build/test durations, invocation/rebuild counts, hardware, toolchains, and cache state. Verify cold provisioning, queue time, and test execution are reported separately.
 - [x] 1.3 Document baseline evidence and the proposed before/after comparison protocol in development documentation and docs/PERFORMANCE.md. Verify the commands reproduce a baseline without modifying tracked compiler/bootstrap files.
 
 ## 2. Shared validation profiles and change selection
@@ -16,7 +16,7 @@
 ## 3. Equal-coverage execution improvements
 
 - [x] 3.1 Isolate configuration/version/install/bootstrap-mutating fixtures and cache state; remove shared fixed temporary log paths. Verify concurrent PREFIX/VERSION/configuration fixtures do not change the developer checkout or each other's binaries and document isolation classifications.
-- [ ] 3.2 Measure setup and compiler invocations in the six dominant suites; share redundant immutable setup or batch independent positive fixtures where justified. Verify retained assertion mappings, cold/invalidation behavior, and failure/REPL recovery isolation for each optimization, with per-suite before/after evidence.
+- [x] 3.2 Measure setup and compiler invocations in the six dominant suites; share redundant immutable setup or batch independent positive fixtures where justified. Verify retained assertion mappings, cold/invalidation behavior, and failure/REPL recovery isolation for each optimization, with per-suite before/after evidence.
 - [x] 3.3 Implement bounded scheduling and cancellation with serial fallback and captured worker diagnostics. Verify serial and parallel assertion outcomes agree, an injected failure fails the aggregate, cancelled children are reaped, and memory/concurrency settings are documented.
 - [x] 3.4 Run paired equal-coverage full-native measurements under the design protocol. Verify repeatable improvement beyond observed variation without omitted assertion groups; record results and remaining performance debt rather than counting profile reduction as equal-coverage speedup.
 
@@ -43,11 +43,12 @@
 
 ## 7. Integrated acceptance
 
-- [ ] 7.1 Re-run representative compiler/runtime/host/documentation local scenarios and compare against group 1 baselines using the agreed sampling protocol. Verify faster focused feedback, recorded equal-coverage improvement, no documentation compiler work, preserved assertions, and explicit separation of queued/provision/build/test time.
+- [x] 7.1 Re-run representative compiler/runtime/host/documentation local scenarios and compare against group 1 baselines using the agreed sampling protocol. Verify faster focused feedback, recorded equal-coverage improvement, no documentation compiler work, preserved assertions, and explicit separation of queued/provision/build/test time.
 - [ ] 7.2 Complete the non-publishing integrated rehearsal: all four full LLVM/platform cells, separate source/reference verification, both offline archives, and verified candidate bundle reuse on a cold consumer. Verify committed bootstrap coherence and no public tag or release mutation; run regen and the required current suites only if implementation changed compiler-source inputs.
 - [ ] 7.3 Reconcile coverage-map ownership, reports, contributor instructions, and CI-required checks against the delta specs. Verify strict OpenSpec validation, runner/classifier/provisioning self-tests, clean tracked source after verification, and documented rollback/fallback paths.
 
 ## Workflow follow-up
 
+- Acceptance tasks 6.4, 7.2, and 7.3 remain open for [#136](https://github.com/bwbensonjr/emit/issues/136) and [#137](https://github.com/bwbensonjr/emit/issues/137). Extending implementation into compiler interface canonicalization requires a scope decision; the retained byte-parity assertion has not been narrowed.
 - After review and merge, seed the trusted default-branch dependency channel and verify a subsequent PR/tag consumer restores its approved bundles; do not publish trusted main artifacts from PR-controlled runs to simulate this rollout.
 - Archive after implementation and review are complete. No new public Emit release or retagging is required by this change.
