@@ -275,6 +275,12 @@ class BaselineHarnessTests(unittest.TestCase):
             self.invoke(["--scenario", "compiler", "--run-scenario", "--trace-compilers"])
         self.assertEqual(raised.exception.code, 2)
 
+    def test_quiet_metadata_suppresses_narration_and_preserves_json(self):
+        status, report, stderr = self.invoke([], {"EMIT_VERBOSITY": "quiet"})
+        self.assertEqual(status, 0)
+        self.assertEqual(stderr, "")
+        self.assertEqual(report["schema"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

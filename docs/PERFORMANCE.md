@@ -2454,6 +2454,17 @@ CI acceptance and detailed compiler invocation measurements remain open. See
 [the acceptance record](VALIDATION-RESULTS.md) for revisions, cache-policy
 differences, full wall times, and retained raw reports.
 
+**Remaining CPU/setup cost.** The same controlled runs use 939.085 s median
+user+system CPU in the legacy harness versus 1,296.305 s in the new harness
+(38.04% more), despite shorter elapsed feedback. Parallelism and per-suite
+checkout/cache isolation trade CPU and copying for wall time and correctness.
+Do not count the local wall-time result as an aggregate CPU saving. Prioritize
+measured immutable setup reuse before adding workers; keep PREFIX/VERSION,
+cache invalidation, error, and recovery fixtures isolated. The present evidence
+does not apportion that CPU increase between copying, cold caches, extra seed
+targets, and subprocess scheduling, so profile those separately before choosing
+the next optimization.
+
 **Remaining cold-seeding overlap.** Shared candidate preparation removes duplicate
 LLVM source builds among native, source, and archive consumers *within one
 validation workflow*. It does not coordinate two independent workflow runs.

@@ -10,6 +10,7 @@ import pathlib
 import platform
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 
@@ -17,6 +18,11 @@ import time
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 REGISTRY = ROOT / "tools/test-registry.json"
 TELEMETRY = ROOT / "tools/test-telemetry.py"
+
+
+def narrate(message):
+    if os.environ.get("EMIT_VERBOSITY", "default") not in {"quiet", "q", "0"}:
+        print(message, file=sys.stderr)
 
 
 def run(argv, cwd=None, env=None, stdout=None, stderr=None):
@@ -176,7 +182,7 @@ def main():
         trace_environment = telemetry.setup(wrapper_directory, clean_git_environment(os.environ))
         report_logs["wrappers"] = str(wrapper_directory)
 
-    print("baseline snapshot -> temporary checkout  [tracked files only]", file=__import__("sys").stderr)
+    narrate("baseline snapshot -> temporary checkout  [tracked files only]")
     harness_commit = output(["git", "rev-parse", "HEAD"])
     report = {
         "schema": 1,
@@ -356,7 +362,7 @@ def main():
     encoded = json.dumps(report, indent=2, sort_keys=True) + "\n"
     if args.output:
         args.output.write_text(encoded)
-        print("baseline report -> " + str(args.output) + "  [JSON]", file=__import__("sys").stderr)
+        narrate("baseline report -> " + str(args.output) + "  [JSON]")
     else:
         print(encoded, end="")
     return 0 if (report.get("test_returncode", 0) == 0 and report.get("build_returncode", 0) == 0

@@ -104,6 +104,8 @@ The inventory consistency check retains every legacy native group.
 | Project build | 3.910 s | 3.824 s | 4.084 s | 3.865 s |
 | Full-native test execution | 977.047 s | 960.798 s | 675.108 s | 675.300 s |
 | External invocation wall time | 983.05 s | 966.74 s | 682.90 s | 683.08 s |
+| User CPU time | 915.24 s | 897.09 s | 1,200.32 s | 1,202.62 s |
+| System CPU time | 33.79 s | 32.05 s | 95.15 s | 94.52 s |
 
 Full-native test execution has a legacy median of 968.9225 s (range
 960.798-977.047 s) and a new median of 675.204 s (range 675.108-675.300 s):
@@ -115,6 +117,13 @@ profile reduction. Each sample builds once and invokes one full runner.
 External compiler counts were not instrumented in these timing runs and remain
 unknown; separate telemetry runs must not be mixed into this timing comparison.
 Local queue and dependency provisioning are not applicable (`null` in reports).
+
+The wall-time gain has a CPU cost: median user+system CPU rises from 939.085 to
+1,296.305 s (38.04%). The new runner uses two workers and private suite copies
+and caches, while legacy suites share a checkout and invocation cache. These
+measurements establish shorter elapsed feedback, not lower aggregate CPU use.
+Further safe setup reuse needs separate measurement and must preserve isolation
+and invalidation assertions.
 
 Raw controlled reports are `/private/tmp/emit-streamline-controlled-baseline-1.json`
 and `-2.json`; each identifies its retained build and full-native logs. New
@@ -198,9 +207,11 @@ Trusted default-branch seeding remains the documented post-merge follow-up in
 
 ## Measurement report checks
 
-All 13 baseline-harness checks pass. Scenario runs now retain the child runner
+All 14 baseline-harness checks pass. Scenario runs now retain the child runner
 report and its separate project-build/test phases, selected coverage and native
 telemetry, rather than only an aggregate wall time. Missing child reports fail
 measurement. Documentation policy explicitly records no build or tests, while
 legacy unobserved phase values and local queue/provisioning remain unknown.
 Native tracing is rejected for direct source-unit scenarios.
+Scenario and selected-suite runner invocations are counted explicitly, and
+quiet metadata runs preserve JSON while suppressing stderr narration.
