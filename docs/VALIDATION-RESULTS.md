@@ -475,3 +475,66 @@ The verification job log is `/private/tmp/emit-fix-ci-verification.log`; final
 run/gate metadata is `/private/tmp/emit-fix-ci-final.json`. The tested compiler
 and bootstrap remain committed at `112d9a7`; subsequent acceptance bookkeeping
 changes only documentation and task status.
+
+## Distribution channels: first release 0.1.1
+
+Change `low-cost-distribution-channels`, recorded 2026-10-23.
+
+**Source release.** Tag `v0.1.1` is on merge commit `4d7ac42`. Release run
+[39951247509](https://github.com/bwbensonjr/emit/actions/runs/39951247509)
+passed all four full native cells, source, units, and reference verification,
+and both offline archives. It published
+[v0.1.1](https://github.com/bwbensonjr/emit/releases/tag/v0.1.1):
+`emit-0.1.1.tar.gz`, SHA-256
+`882be3ccca53f9cd8c61d8825bcff38ee09ad72c13898b309ac2f8e745440e5c`. `v0.1.0`
+is unchanged.
+
+**Channel promotion.** That release's success triggered channel run
+[39956760742](https://github.com/bwbensonjr/emit/actions/runs/39956760742).
+Promotion was single-step, which the maintainer chose: each channel runs its own
+acceptance against the published archive, and only then promotes.
+
+- Attempt 1 passed identity, both Nix systems, and OCI. It failed in two pull
+  request steps, both caused by permission settings:
+  - The tap token had read-only Contents, so the push was rejected with 403.
+  - The repository did not allow Actions to create pull requests, so PR
+    creation failed after the branch was pushed. That PR was opened by hand
+    from the same branch.
+- Attempt 2 reran only the failed jobs, after the token was granted
+  Contents: Read and write and the Actions setting was enabled. Every job
+  passed, and the reruns were idempotent: the OCI job was not rerun, and the
+  flake job found its existing branch and pull request.
+
+| Channel | Promotion | Merged |
+| --- | --- | --- |
+| OCI | `ghcr.io/bwbensonjr/emit:0.1.1` and `:latest`, digest `sha256:3c5308b898f01a63308556c276a94b95c57d0a91350bd5edc9bd35a85c2b5278`, publicly pullable | (direct push) |
+| Homebrew | `Formula/emit.rb` for the release URL and SHA-256 above; `brew test-bot` passed on `macos-26` and Ubuntu | [homebrew-emit#2](https://github.com/bwbensonjr/homebrew-emit/pull/2) |
+| Nix | `packaging/release.json` pinning `v0.1.1` | [emit#143](https://github.com/bwbensonjr/emit/pull/143) |
+
+**Installed checks from the public channels, after merge:**
+
+| Channel | Command | Result |
+| --- | --- | --- |
+| Homebrew | `brew install bwbensonjr/emit/emit` (Apple Silicon, maintainer's Mac) | installs and runs; a stale `~/.local` source install first had to be removed with the new `make uninstall` |
+| OCI | fresh `docker pull --platform linux/amd64 ghcr.io/bwbensonjr/emit:0.1.1` | digest `sha256:3c5308b…`; labels version `0.1.1`, revision `4d7ac42`; `emit 0.1.1 (LLVM 22.1.2)`; doctor ok with the pinned `/usr/lib/llvm-22/bin/clang`; `tools/channel-accept.sh` 11/11 with `--network none --read-only --user 12345:12345` |
+| Nix | `nix run github:bwbensonjr/emit -- --version` on `x86_64-linux` (emulated) | `emit 0.1.1 (LLVM 22.1.8)`; `packages.x86_64-linux.default.version` is `0.1.1`; doctor ok with the pinned Nix clang; acceptance 11/11 outside any shell with networking unshared |
+
+**Documented rehearsal dispatch.** `gh workflow run channels.yml -f tag=v0.1.1
+-f publish=false`, as written in `docs/RELEASE-PIPELINE.md`, produced run
+[40011418618](https://github.com/bwbensonjr/emit/actions/runs/40011418618).
+Identity, Homebrew, both Nix systems, and OCI passed against the published
+archive. `nix-promote` and every promotion step were skipped. No tap or emit
+pull request was created, and no image tag was pushed.
+
+**Findings fixed during the rollout:**
+
+- The OCI promotion now pushes from an unpacked `oci:` layout, because
+  `skopeo`'s `oci-archive:` transport needs root to unpack.
+- The Homebrew formula test now clears inherited compiler variables.
+
+**Open follow-up:**
+
+- The Homebrew credential preflight checks `permissions.push`, which reports
+  the account's role rather than the fine-grained token's scope. It passed for
+  a token that could not push. An authenticated `git push --dry-run` would
+  catch this before building.

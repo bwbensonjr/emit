@@ -3,7 +3,7 @@
 ## 1. Prerequisite confirmation
 
 - [x] 1.1 Confirm external dependency availability and record it in design.md's Open Questions resolution. Check that Homebrew publishes `llvm@22` and `bdw-gc` for Apple Silicon, that the locked nixpkgs revision has `llvmPackages_22` (including an lld-default clang on `x86_64-linux`) and `boehmgc` for both systems, and that the chosen digest-pinned Ubuntu base ships `clang-22`/`lld-22`/`llvm-22` (otherwise use apt.llvm.org pinned packages per D6). Verify by recording each package name, version, and base-image digest; if `llvm@22` is unavailable, pause per the design's risk entry.
-- [ ] 1.2 Verify publication access without publishing. Confirm with `gh auth status` that `bwbensonjr` owns or can create `bwbensonjr/homebrew-emit`, that a fine-grained `HOMEBREW_TAP_TOKEN` scoped to that repository can be configured, and that this repository's workflow token can write `ghcr.io/bwbensonjr/emit`. Verify by recording the result. Repository creation and secret setup are maintainer actions; ask before creating anything.
+- [x] 1.2 Verify publication access without publishing. Confirm with `gh auth status` that `bwbensonjr` owns or can create `bwbensonjr/homebrew-emit`, that a fine-grained `HOMEBREW_TAP_TOKEN` scoped to that repository can be configured, and that this repository's workflow token can write `ghcr.io/bwbensonjr/emit`. Verify by recording the result. Repository creation and secret setup are maintainer actions; ask before creating anything.
 
 ## 2. Installed toolchain pin (D1)
 
@@ -51,7 +51,7 @@
   - a pull request in this repository updating `packaging/release.json`.
 
   Verify with a registry fixture (local `registry:2`) and a GitHub mock that a retry is idempotent, a conflicting digest fails visibly, and one channel's failure leaves the others' results intact.
-- [ ] 8.4 Document the channel workflow in docs/RELEASE-PIPELINE.md: triggers, the build-once/promote-exact rule, the per-channel retry procedure, and rollback (tap or flake revert, re-pointing `latest`, never retagging). Verify the documented rehearsal dispatch command runs as written.
+- [x] 8.4 Document the channel workflow in docs/RELEASE-PIPELINE.md: triggers, the build-once/promote-exact rule, the per-channel retry procedure, and rollback (tap or flake revert, re-pointing `latest`, never retagging). Verify the documented rehearsal dispatch command runs as written.
 
 ## 9. User and maintainer documentation
 
@@ -68,8 +68,8 @@
 ## 10. Channel release and promotion
 
 - [x] 10.1 Choose the next version under the SemVer policy from the changes since `v0.1.0`, and prepare `VERSION` and its `CHANGELOG.md` section. Verify `tools/release-source.sh HEAD` plus `tools/release-check.sh` pass locally and that the `v0.1.0` tag and its assets are unchanged. Confirm the version, and get approval to tag, from the maintainer before pushing.
-- [ ] 10.2 After the maintainer-approved tag publishes through `release.yml`, run `channels.yml` in rehearsal mode against the tag. Verify all channel reports pass against the exact published digest.
-- [ ] 10.3 Run promotion and get the tap and flake pull requests reviewed and merged. Verify:
+- [x] 10.2 After the maintainer-approved tag publishes through `release.yml`, run `channels.yml` in rehearsal mode against the tag. Verify all channel reports pass against the exact published digest.
+- [x] 10.3 Run promotion and get the tap and flake pull requests reviewed and merged. Verify:
   - `brew install bwbensonjr/emit/emit` on a clean Apple Silicon host;
   - `nix run github:bwbensonjr/emit -- --version` on both systems;
   - `docker run ghcr.io/bwbensonjr/emit:X.Y.Z --version`;
