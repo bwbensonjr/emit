@@ -27,7 +27,39 @@ def suite(name, script):
             "needs_build": False, "isolation": "workspace"}
 
 
+def cancelled_child_stopped(child):
+    try:
+        os.kill(child, 0)
+    except ProcessLookupError:
+        return True
+    # Only procfs hosts can infer disappearance from a missing status file.
+    if sys.platform.startswith("linux") and Path("/proc").is_dir():
+        try:
+            status = (Path("/proc") / str(child) / "stat").read_text()
+        except (FileNotFoundError, ProcessLookupError):
+            return True
+        return status.split(")", 1)[1].split()[0] == "Z"
+    return False
+
+
 class RunnerTests(unittest.TestCase):
+    def test_cancelled_child_status_disappears_during_read(self):
+        with mock.patch.object(os, "kill"), mock.patch.object(sys, "platform", "linux"), \
+                mock.patch.object(Path, "is_dir", return_value=True):
+            for error in (FileNotFoundError, ProcessLookupError):
+                with self.subTest(error=error), mock.patch.object(Path, "read_text", side_effect=error):
+                    self.assertTrue(cancelled_child_stopped(123))
+            for state, stopped in (("S", False), ("Z", True)):
+                with mock.patch.object(Path, "read_text", return_value="123 (child) " + state):
+                    self.assertEqual(cancelled_child_stopped(123), stopped)
+            with mock.patch.object(Path, "read_text", side_effect=PermissionError):
+                with self.assertRaises(PermissionError):
+                    cancelled_child_stopped(123)
+        with mock.patch.object(os, "kill"), mock.patch.object(sys, "platform", "darwin"):
+            self.assertFalse(cancelled_child_stopped(123))
+        with mock.patch.object(os, "kill", side_effect=ProcessLookupError):
+            self.assertTrue(cancelled_child_stopped(123))
+
     def test_private_git_environment_ignores_ambient_worktree_redirects(self):
         with mock.patch.dict(os.environ, {"GIT_DIR": "/unrelated", "GIT_INDEX_FILE": "/unrelated-index",
                                           "GITHUB_WORKFLOW": "validation"}):
@@ -255,12 +287,7 @@ class RunnerTests(unittest.TestCase):
             # reap. It is no longer running or capable of writing fixture data.
             deadline = time.monotonic() + 3
             while time.monotonic() < deadline:
-                try:
-                    os.kill(child, 0)
-                except ProcessLookupError:
-                    break
-                status = Path("/proc") / str(child) / "stat"
-                if status.exists() and status.read_text().split(")", 1)[1].split()[0] == "Z":
+                if cancelled_child_stopped(child):
                     break
                 time.sleep(.01)
             else:
