@@ -21,6 +21,10 @@
 #   GC_INC / GC_LIB / GC_DYLIB   explicit libgc include dir / lib dir / shared-object path
 #   EMIT_LLVM_MIN   minimum tested LLVM major version (default 22; warn-only below it)
 #
+# Between the overrides and discovery sits an installed package's toolchain pin,
+# ../package/toolchain.env (section 0); --print-env reports which one chose LLVM as
+# EMIT_TOOLCHAIN_ORIGIN=override|package|discovery.
+#
 # The EMIT_LLVM_* mirrors (EMIT_LLVM_BIN/EMIT_GC_INC/EMIT_GC_LIB/EMIT_GC_DYLIB) are the override
 # interface consumed by the Chez driver src/compile.ss, which cannot source this shell layer.
 
@@ -76,9 +80,53 @@ _llvm_discover_config() {
   fi
 }
 
+# --- 0. Package toolchain pin (change: low-cost-distribution-channels, design D1) ------------
+# `make install TOOLCHAIN_PIN=1` records the toolchain a package was built with in
+# share/emit/package/toolchain.env, beside this script's own tools/ directory.  A checkout has no
+# package/ directory, so a source build never sees one.  The file is PARSED, never sourced: only
+# the known keys below are read.  Precedence is explicit environment > pin > discovery; the pin's
+# LLVM directory and CC apply only when no LLVM override is set, its libgc values per value.
+_llvm_pin_file="$_llvm_env_dir/../package/toolchain.env"
+_llvm_pin=""
+_pin_major="" _pin_bin="" _pin_cc="" _pin_gc_inc="" _pin_gc_lib="" _pin_gc_dylib=""
+if [ -f "$_llvm_pin_file" ]; then
+  _llvm_pin="$(CDPATH= cd -- "$(dirname -- "$_llvm_pin_file")" && pwd -P)/toolchain.env"
+  while IFS= read -r _l || [ -n "$_l" ]; do
+    case "$_l" in
+      EMIT_LLVM_MAJOR=*) _pin_major=${_l#*=} ;;
+      EMIT_LLVM_BIN=*)   _pin_bin=${_l#*=} ;;
+      CC=*)              _pin_cc=${_l#*=} ;;
+      GC_INC=*)          _pin_gc_inc=${_l#*=} ;;
+      GC_LIB=*)          _pin_gc_lib=${_l#*=} ;;
+      GC_DYLIB=*)        _pin_gc_dylib=${_l#*=} ;;
+    esac
+  done < "$_llvm_pin_file"
+fi
+
+# The major a clang reports ("clang version 22.1.8", "Ubuntu clang version 22.1.2 (...)").
+_llvm_clang_major() {
+  "$1" --version 2>/dev/null | sed -n '1s/.*clang version \([0-9][0-9]*\).*/\1/p'
+}
+
 # --- 1. Resolve the LLVM tool directory (LLVM_BIN) and an llvm-config for flags -------------
 _llvm_override=""
-if [ -n "${EMIT_LLVM_BIN:-}" ]; then
+EMIT_TOOLCHAIN_ORIGIN=discovery
+if [ -n "${EMIT_LLVM_BIN:-}" ] || [ -n "${LLVM_CONFIG:-}" ]; then EMIT_TOOLCHAIN_ORIGIN=override; fi
+if [ -n "$_llvm_pin" ] && [ "$EMIT_TOOLCHAIN_ORIGIN" = discovery ]; then
+  # A package pin that cannot deliver its recorded LLVM major fails here, naming the file:
+  # silently falling through to discovery would link with a toolchain the package never declared.
+  [ -n "$_pin_major" ] && [ -n "$_pin_bin" ] && [ -n "$_pin_cc" ] \
+    || { _llvm_env_die "toolchain pin $_llvm_pin is incomplete (needs EMIT_LLVM_MAJOR, EMIT_LLVM_BIN, CC)"; return 1 2>/dev/null || exit 1; }
+  [ -x "$_pin_cc" ] \
+    || { _llvm_env_die "toolchain pin $_llvm_pin names CC=$_pin_cc, which is not executable (reinstall the package, or set EMIT_LLVM_BIN / CC to override)"; return 1 2>/dev/null || exit 1; }
+  _pin_cc_major=$(_llvm_clang_major "$_pin_cc")
+  [ "$_pin_cc_major" = "$_pin_major" ] \
+    || { _llvm_env_die "toolchain pin $_llvm_pin expects LLVM $_pin_major but $_pin_cc reports '${_pin_cc_major:-no clang version}' (reinstall the package, or set EMIT_LLVM_BIN / CC to override)"; return 1 2>/dev/null || exit 1; }
+  EMIT_TOOLCHAIN_ORIGIN=package
+  LLVM_BIN=${_pin_bin%/}
+  [ -x "$LLVM_BIN/llvm-config" ] && LLVM_CONFIG="$LLVM_BIN/llvm-config"
+  CC=${CC:-$_pin_cc}
+elif [ -n "${EMIT_LLVM_BIN:-}" ]; then
   _llvm_override="EMIT_LLVM_BIN"
   LLVM_BIN=${EMIT_LLVM_BIN%/}
   [ -z "${LLVM_CONFIG:-}" ] && [ -x "$LLVM_BIN/llvm-config" ] && LLVM_CONFIG="$LLVM_BIN/llvm-config"
@@ -102,8 +150,8 @@ if [ -n "$_llvm_override" ] && [ ! -x "${LLVM_BIN:-}/clang" ]; then
 fi
 
 # --- 2. libgc: pkg-config bdw-gc, then prefix fallback --------------------------------------
-GC_INC=${GC_INC:-${EMIT_GC_INC:-}}
-GC_LIB=${GC_LIB:-${EMIT_GC_LIB:-}}
+GC_INC=${GC_INC:-${EMIT_GC_INC:-$_pin_gc_inc}}
+GC_LIB=${GC_LIB:-${EMIT_GC_LIB:-$_pin_gc_lib}}
 if [ -z "$GC_INC" ] || [ -z "$GC_LIB" ]; then
   if command -v pkg-config >/dev/null 2>&1 && pkg-config --exists bdw-gc 2>/dev/null; then
     [ -z "$GC_INC" ] && GC_INC=$(pkg-config --variable=includedir bdw-gc 2>/dev/null || true)
@@ -124,7 +172,7 @@ fi
 
 # Shared-object extension is platform-dependent: .dylib on macOS, .so elsewhere.
 case "$(uname -s)" in Darwin) _gc_ext=dylib ;; *) _gc_ext=so ;; esac
-GC_DYLIB=${GC_DYLIB:-${EMIT_GC_DYLIB:-$GC_LIB/libgc.$_gc_ext}}
+GC_DYLIB=${GC_DYLIB:-${EMIT_GC_DYLIB:-${_pin_gc_dylib:-$GC_LIB/libgc.$_gc_ext}}}
 
 # --- 3. Compilers + flags -------------------------------------------------------------------
 # AOT/C compiler (D6): explicit CC wins; else use the override's clang; else prefer a system clang
@@ -144,7 +192,8 @@ if [ -x "${LLVM_CONFIG:-}" ] || command -v "${LLVM_CONFIG:-}" >/dev/null 2>&1; t
 fi
 
 # --- 4. Version floor (warn only) -----------------------------------------------------------
-_llvm_ver=$("$LLVM_CONFIG" --version 2>/dev/null || true)
+_llvm_ver=$("${LLVM_CONFIG:-}" --version 2>/dev/null || true)
+[ -z "$_llvm_ver" ] && [ "$EMIT_TOOLCHAIN_ORIGIN" = package ] && _llvm_ver="$_pin_major (pinned)"
 _llvm_major=${_llvm_ver%%.*}
 _llvm_floor=${EMIT_LLVM_MIN:-22}
 if [ -n "$_llvm_major" ] && [ "$_llvm_major" -lt "$_llvm_floor" ] 2>/dev/null; then
@@ -160,6 +209,7 @@ export EMIT_LLVM_BIN="$LLVM_BIN" EMIT_GC_INC="$GC_INC" EMIT_GC_LIB="$GC_LIB" EMI
 
 # Narrate what was resolved (concise at default; per-var detail when verbose).
 say  "llvm-env: $LLVM_BIN  (llvm ${_llvm_ver:-unknown})  libgc $GC_LIB"
+[ "$EMIT_TOOLCHAIN_ORIGIN" = package ] && vsay "llvm-env:   toolchain pin $_llvm_pin"
 vsay "llvm-env:   CC=$CC  CXX=$CXX"
 vsay "llvm-env:   GC_INC=$GC_INC  GC_DYLIB=$GC_DYLIB"
 
@@ -172,6 +222,8 @@ if [ "$_llvm_env_sourced" = "0" ] && [ "${1:-}" = "--print-env" ]; then
   printf 'EMIT_GC_LIB=%s\n'   "$GC_LIB"
   printf 'EMIT_GC_DYLIB=%s\n' "$GC_DYLIB"
   printf 'CC=%s\n'            "$CC"
+  printf 'EMIT_TOOLCHAIN_ORIGIN=%s\n' "$EMIT_TOOLCHAIN_ORIGIN"
+  [ -n "$_llvm_pin" ] && printf 'EMIT_TOOLCHAIN_PIN=%s\n' "$_llvm_pin"
 fi
 # --print-make: Make-syntax assignments for the Makefile to -include.
 if [ "$_llvm_env_sourced" = "0" ] && [ "${1:-}" = "--print-make" ]; then

@@ -329,6 +329,17 @@ SUPPORT_DATA := src/runtime/runtime.c
 SUPPORT      := $(SUPPORT_EXEC) $(SUPPORT_DATA)
 SUPPORTDIRS  := $(sort $(foreach f,$(SUPPORT),$(dir $(f))))
 
+# THE PACKAGE TOOLCHAIN PIN (change: low-cost-distribution-channels, design D1).  Installed
+# Emit rediscovers its AOT toolchain at run time, which follows a source-build user's LLVM
+# upgrades but lets a package that declared one LLVM major link with whatever clang is on
+# PATH.  `make install TOOLCHAIN_PIN=1` records the toolchain this build used in
+# share/emit/package/toolchain.env, which tools/llvm-env.sh prefers over discovery (explicit
+# environment overrides still win).  The values are recorded as given, never resolved, so a
+# recipe passes stable paths (Homebrew opt/, Nix store) as build inputs.  CC defaults to the
+# LLVM directory's clang rather than a bare `clang` from PATH, which would pin nothing.
+TOOLCHAIN_PIN ?=
+PIN_CC := $(if $(TOOLCHAIN_INPUT_CC),$(CC),$(LLVM_BIN)/clang)
+
 .PHONY: install
 install: $(EMIT)
 	@. tools/log.sh; say "install emit -> $(DESTDIR)$(PREFIX)  [prefix $(PREFIX)]"
@@ -345,6 +356,22 @@ install: $(EMIT)
 	  say "install $(EMIT) -> $(BINDIR)/emit  [$$(bytes $(BINDIR)/emit) bytes]"; \
 	  say "install emit-libs.scm + $(words $(SLDS)) library source(s) + $(words $(LIBDATA)) include(s) -> $(SHAREDIR)"; \
 	  say "install $(words $(SUPPORT)) support file(s) -> $(SHAREDIR)  [$(SUPPORT)]"
+ifneq ($(TOOLCHAIN_PIN),)
+	@. tools/log.sh; \
+	  pin_cc='$(PIN_CC)'; \
+	  case "$$pin_cc" in /*) ;; *) say "install: TOOLCHAIN_PIN needs an absolute CC, got '$$pin_cc'" >&2; exit 2 ;; esac; \
+	  major=$$('$(LLVM_CONFIG)' --version 2>/dev/null); major=$${major%%.*}; \
+	  [ -n "$$major" ] || { say "install: TOOLCHAIN_PIN cannot read the LLVM version from '$(LLVM_CONFIG)'" >&2; exit 2; }; \
+	  install -d "$(SHAREDIR)/package"; \
+	  { printf '%s\n' '# Package toolchain pin written by make install TOOLCHAIN_PIN=1.' \
+	      '# Read (never sourced) by tools/llvm-env.sh; explicit environment overrides still win.'; \
+	    printf 'EMIT_LLVM_MAJOR=%s\n' "$$major"; \
+	    printf '%s\n' 'EMIT_LLVM_BIN=$(LLVM_BIN)' "CC=$$pin_cc" \
+	      'GC_INC=$(GC_INC)' 'GC_LIB=$(GC_LIB)' 'GC_DYLIB=$(GC_DYLIB)'; \
+	  } > "$(SHAREDIR)/package/toolchain.env"; \
+	  chmod 644 "$(SHAREDIR)/package/toolchain.env"; \
+	  say "install toolchain pin -> $(SHAREDIR)/package/toolchain.env  [LLVM $$major, CC $$pin_cc]"
+endif
 
 # build/ is a real directory (order-only prerequisite), not a phony target.
 build:
