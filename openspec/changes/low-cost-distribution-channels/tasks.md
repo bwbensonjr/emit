@@ -67,7 +67,7 @@
 
 ## 10. Channel release and promotion
 
-- [ ] 10.1 Choose the next version under the SemVer policy from the changes since `v0.1.0`, and prepare `VERSION` and its `CHANGELOG.md` section. Verify `tools/release-source.sh HEAD` plus `tools/release-check.sh` pass locally and that the `v0.1.0` tag and its assets are unchanged. Confirm the version, and get approval to tag, from the maintainer before pushing.
+- [x] 10.1 Choose the next version under the SemVer policy from the changes since `v0.1.0`, and prepare `VERSION` and its `CHANGELOG.md` section. Verify `tools/release-source.sh HEAD` plus `tools/release-check.sh` pass locally and that the `v0.1.0` tag and its assets are unchanged. Confirm the version, and get approval to tag, from the maintainer before pushing.
 - [ ] 10.2 After the maintainer-approved tag publishes through `release.yml`, run `channels.yml` in rehearsal mode against the tag. Verify all channel reports pass against the exact published digest.
 - [ ] 10.3 Run promotion and get the tap and flake pull requests reviewed and merged. Verify:
   - `brew install bwbensonjr/emit/emit` on a clean Apple Silicon host;
