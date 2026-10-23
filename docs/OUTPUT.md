@@ -82,7 +82,19 @@ EMIT_VERBOSITY=verbose make regen      # per-step timing and detail
 
 ## Library resolution
 
-Hybrid resolution is narration, never program data. At default verbosity a successful non-baked
+REPL startup reports one library-source summary on stderr at default verbosity:
+
+```text
+resolve libraries -> emit-libs.scm, /work/app/lib, /usr/local/share/emit/emit-libs.scm, /usr/local/share/emit/lib
+```
+
+The summary names effective providers in lookup order, with physical duplicates
+removed. Without filesystem providers it names the baked-in set. Individual
+manifest, chained-provider, and library-resolution lines are verbose-only during
+startup. Quiet suppresses the summary, while errors remain visible. Explicit
+interactive imports after startup keep their ordinary provenance narration.
+
+Outside REPL startup, hybrid resolution is narration, never program data. At default verbosity a successful non-baked
 selection names the requested library, source, and provider kind:
 
 ```text

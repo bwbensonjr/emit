@@ -282,8 +282,9 @@ static void init_verbosity() {
 }
 static void say(const std::string &m)  { if (g_level >= 1) std::cerr << m << "\n"; }
 static void vsay(const std::string &m) { if (g_level >= 2) std::cerr << m << "\n"; }
+static bool g_repl_startup = false;
 static void say_resolution(const std::string &m) {
-  if (g_warming) vsay(m);
+  if (g_repl_startup || g_warming) vsay(m);
   else say(m);
 }
 
@@ -3241,6 +3242,7 @@ static void handle_form_result(const std::string &form, intptr_t r, LibraryResol
 }
 
 static int emit_repl(int argc, char **argv) {
+  g_repl_startup = true;
   bool prelude = true;
   bool manifest_chain = true;
   bool dump = false, dump_all = false;
@@ -3252,6 +3254,8 @@ static int emit_repl(int argc, char **argv) {
     std::string a(argv[i]);
     bool opt_ok = true;
     if (is_help_flag(a)) { usage_repl(std::cout); return 0; }
+    else if (a == "-q") g_level = 0;
+    else if (a == "-v") g_level = 2;
     else if (parse_jit_opt(a, "repl", jit_opt, jit_opt_flag, opt_ok)) {
       if (!opt_ok) return 2;
     }
@@ -3378,8 +3382,16 @@ static int emit_repl(int argc, char **argv) {
   }
 
   // Preload manifest libraries so interactive (import (L)) forms can resolve them.
+  if (!resolver.prepare()) return 1;
+  std::string sources;
+  for (const LibraryProvider &provider : resolver.providers()) {
+    if (!sources.empty()) sources += ", ";
+    sources += provider.kind == ProviderKind::Manifest ? provider.identity : provider.root;
+  }
+  say("resolve libraries -> " + (sources.empty() ? "baked-in libraries only" : sources));
   say_manifest(manifests);
   preload_libraries(resolver, /*have_baked=*/prelude, registered);
+  g_repl_startup = false;
 
   // The prelude's procedures live in the now-registered (scheme base) library;
   // auto-import it into the session scope (mode 6) so later forms resolve prelude

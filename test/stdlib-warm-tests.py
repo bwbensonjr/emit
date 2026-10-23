@@ -116,6 +116,52 @@ class WarmTests(unittest.TestCase):
             self.assertIn("incompatible", result.stderr)
         self.assertFalse((self.work / "a.out").exists())
 
+    def test_repl_startup_summary_and_verbose_provenance(self):
+        self.warm()
+        manifest = str(self.payload / "emit-libs.scm")
+        for level in ("quiet", "default", "verbose"):
+            env = dict(self.env, EMIT_VERBOSITY=level)
+            result = self.command("repl", env=env)
+            self.assertEqual(result.stdout, "")
+            if level == "quiet":
+                self.assertNotIn("resolve ", result.stderr)
+            else:
+                self.assertEqual(result.stderr.count("resolve libraries ->"), 1)
+                self.assertIn(manifest, result.stderr)
+            if level == "default":
+                self.assertNotIn("resolve library ", result.stderr)
+                self.assertNotIn("resolve manifest ", result.stderr)
+                self.assertNotIn("chain ", result.stderr)
+            if level == "verbose":
+                self.assertIn("resolve library warm.dep ->", result.stderr)
+        # CLI flags select the same startup narration policy.
+        self.assertNotIn("resolve ", self.command("repl", "-q").stderr)
+        self.assertIn("resolve library warm.dep ->", self.command("repl", "-v").stderr)
+        project = self.work / "project-manifest.scm"
+        project.write_text("()\n")
+        chain = self.command("repl", "--manifest", str(project), env=dict(
+            self.env, EMIT_VERBOSITY="default"))
+        summary = next(line for line in chain.stderr.splitlines()
+                       if line.startswith("resolve libraries ->"))
+        # A requested manifest keeps the caller's spelling; installed paths derive from
+        # the real executable, so either may name a symlinked temporary directory.
+        def position(path):
+            spellings = [str(path), str(path.resolve())]
+            return min(summary.index(s) for s in spellings if s in summary)
+        self.assertLess(position(project), position(self.payload / "emit-libs.scm"))
+        self.assertNotIn("resolve library ", chain.stderr)
+        output = []
+        for level in ("quiet", "default", "verbose"):
+            session = subprocess.run([str(self.emit), "repl"], cwd=self.work,
+                                     env=dict(self.env, EMIT_VERBOSITY=level),
+                                     input="(import (warm dep)) (answer)\n",
+                                     text=True, capture_output=True, timeout=15)
+            self.assertEqual(session.returncode, 0, session.stderr)
+            output.append(session.stdout)
+        self.assertEqual(output, ["INIT42\n"] * 3)
+        (self.payload / "dep.sld").unlink()
+        self.assertIn("cannot read library source", self.command("repl", "-q").stderr)
+
 
 if __name__ == "__main__":
     print("test installed stdlib -> preparation, reuse, persistence, initialization", flush=True)
