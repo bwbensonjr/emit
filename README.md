@@ -109,8 +109,10 @@ repeatable `-L` / `--library-path` and `EMIT_LIBRARY_PATH` add roots, while
 `emit --version` reports the Emit release and the LLVM version used to build it.
 `emit doctor` reports the selected native toolchain, libgc, shipped source files,
 and library providers in lookup order. It makes no changes and exits nonzero when
-required checks fail. On macOS, an older Apple clang may be selected from PATH;
-set `CC=/path/to/llvm/bin/clang` to use a clang compatible with Emit's LLVM.
+required checks fail. On macOS, Apple clang may be selected from PATH. Doctor
+reports its textual-IR compatibility as unverified because Apple's vendor version
+does not identify an upstream LLVM major. An older upstream clang still fails the
+check; set `CC=/path/to/llvm/bin/clang` to select the LLVM installation's compiler.
 Doctor cannot run if a missing dynamic library prevents Emit itself from loading.
 See [diagnostic fields and status](docs/DOCTOR.md) for details.
 See [installation and relocation](docs/INSTALLATION.md),

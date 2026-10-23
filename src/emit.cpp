@@ -4000,7 +4000,9 @@ static int emit_doctor(int argc, char **argv) {
   check(version.ok, "selected compiler is unavailable or its version probe failed: " + tc.cc);
   if (version.ok) {
     size_t marker = version_line.find("clang version ");
-    if (marker != std::string::npos) {
+    if (version_line.find("Apple clang version ") != std::string::npos) {
+      std::cout << "AOT compatibility: unverified (Apple clang uses vendor version numbers)\n";
+    } else if (marker != std::string::npos) {
       int major = std::atoi(version_line.c_str() + marker + std::strlen("clang version "));
       check(major >= LLVM_VERSION_MAJOR,
             "AOT clang " + std::to_string(major) + " is older than build-time LLVM " +

@@ -17,8 +17,11 @@ together), `package` (an installed toolchain pin), or `discovery`. The
 a package pin, shared discovery, or a compiled default. The libgc version comes from the selected
 include directory's headers; unavailable metadata is reported as unknown and is
 informational. Missing headers or link libraries fail the check. The current AOT
-pipeline consumes textual LLVM IR, so the selected compiler must be clang at least
-as new as the LLVM used to build Emit.
+pipeline consumes textual LLVM IR. An upstream clang older than the LLVM used to
+build Emit fails the check. Apple clang uses vendor version numbers, so doctor
+reports its textual-IR compatibility as `unverified` without failing solely for
+that version. This status does not prove that every emitted program will compile;
+use the LLVM installation's clang through `CC` for a matching upstream compiler.
 
 Support fields name the discovery script, its logging dependency, and the runtime
 C source. The shipped payload count checks the build's installation inventory,

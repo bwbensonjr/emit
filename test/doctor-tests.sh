@@ -100,6 +100,23 @@ if CC="$old_cc" "$EMIT" doctor >"$TMP/out" 2>"$TMP/err"; then fail "accepted old
 has "$TMP/err" "older than build-time LLVM"
 has "$TMP/out" "cc version: clang version 1.0.0"
 
+printf '#!/bin/sh\nprintf "Apple clang version 21.0.0\\n"\n' >"$TMP/apple-clang"
+chmod +x "$TMP/apple-clang"
+for level in quiet default verbose; do
+  CC="$TMP/apple-clang" EMIT_VERBOSITY="$level" "$EMIT" doctor \
+    >"$TMP/apple-$level" 2>"$TMP/err" || fail "rejected Apple vendor major"
+  has "$TMP/apple-$level" "AOT compatibility: unverified"
+done
+cmp "$TMP/apple-quiet" "$TMP/apple-default"
+cmp "$TMP/apple-quiet" "$TMP/apple-verbose"
+if CC="$TMP/apple-clang" GC_INC="$TMP/no-headers" "$EMIT" doctor \
+    >"$TMP/out" 2>"$TMP/err"; then fail "Apple clang hid a missing dependency"; fi
+has "$TMP/err" "libgc header unavailable"
+printf '#!/bin/sh\nprintf "clang version 999.0.0\\n"\n' >"$TMP/new-clang"
+chmod +x "$TMP/new-clang"
+CC="$TMP/new-clang" "$EMIT" doctor >"$TMP/out" 2>"$TMP/err" \
+  || fail "rejected newer upstream clang"
+
 printf '#!/bin/sh\nexec sleep 30\n' >"$TMP/stuck-compiler"
 chmod +x "$TMP/stuck-compiler"
 probe_started=$SECONDS
