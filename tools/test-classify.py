@@ -14,6 +14,14 @@ ROOT = Path(__file__).resolve().parent.parent
 REFERENCE = ["self-emission", "dump-parity", "render-datum"]
 DOC_NAMES = {"README.md", "LLVM.md", "LICENSE",
              "CONTRIBUTING.md", "CHANGELOG.md"}
+# Inputs of the distribution channels (change: low-cost-distribution-channels, design D7): a
+# change to any of them rehearses the Homebrew, Nix, and OCI channels.
+CHANNEL_PREFIXES = ("packaging/", "test/channel-accept/", "tools/channel-")
+CHANNEL_NAMES = {"flake.nix", "flake.lock", "tools/offline-run.sh", ".github/workflows/channels.yml"}
+
+
+def channel_input(path):
+    return path in CHANNEL_NAMES or path.startswith(CHANNEL_PREFIXES)
 
 
 def git(root, *args):
@@ -28,10 +36,14 @@ def documentation(path):
 
 def classify_paths(paths, inputs=(), error=None, executable=()):
     categories = set()
-    source = units = archive = False
+    source = units = archive = channels = False
     paths = sorted(set(paths))
     for path in paths:
-        if documentation(path) and path not in executable and path not in inputs:
+        channels |= channel_input(path)
+        if path.startswith("packaging/") or path in {"flake.nix", "flake.lock"}:
+            # Recipes outside the source archive: no compiler, archive, or native-build input.
+            categories.add("packaging")
+        elif documentation(path) and path not in executable and path not in inputs:
             categories.add("documentation")
         elif path.startswith("src/runtime/"):
             categories.add("runtime")
@@ -61,15 +73,15 @@ def classify_paths(paths, inputs=(), error=None, executable=()):
             source = units = True
         else:
             categories.add("unknown")
-            source = units = archive = True
+            source = units = archive = channels = True
     if error or not paths:
         categories.add("unknown")
-        source = units = archive = True
+        source = units = archive = channels = True
     docs_only = bool(paths) and categories == {"documentation"} and not error
     reference = REFERENCE if source or units else []
     return {"schema": 1, "categories": sorted(categories), "paths": paths,
             "docs_only": docs_only, "source": source, "units": units,
-            "reference": reference, "archive": archive, "code": not docs_only,
+            "reference": reference, "archive": archive, "channels": channels, "code": not docs_only,
             "reason": error or ("allowlisted non-executable documentation only" if docs_only
                                  else "union of changed-input obligations" if paths
                                  else "empty comparison: conservative full validation")}

@@ -28,6 +28,24 @@ class ClassifierTests(unittest.TestCase):
         self.assertTrue(result["archive"])
         self.assertFalse(result["docs_only"])
 
+    def test_channel_inputs_rehearse_channels_only(self):
+        # change: low-cost-distribution-channels, design D7.
+        for path in ("flake.nix", "flake.lock", "packaging/oci/Containerfile",
+                     "packaging/homebrew/emit.rb.in", "packaging/release.json"):
+            result = policy.classify_paths([path])
+            self.assertEqual(result["categories"], ["packaging"], path)
+            self.assertTrue(result["channels"], path)
+            self.assertFalse(result["source"] or result["units"] or result["archive"], path)
+            self.assertFalse(result["docs_only"], path)
+        for path in ("tools/channel-accept.sh", "tools/channel-identity.sh", "tools/offline-run.sh",
+                     "test/channel-accept/smoke.scm", ".github/workflows/channels.yml"):
+            self.assertTrue(policy.classify_paths([path])["channels"], path)
+        for path in ("src/passes/lower.ss", "src/emit.cpp", "lib/srfi/1.sld", "docs/INSTALLATION.md",
+                     "tools/test-classify.py", "VERSION"):
+            self.assertFalse(policy.classify_paths([path])["channels"], path)
+        self.assertTrue(policy.classify_paths(["surprise"])["channels"])
+        self.assertTrue(policy.classify_paths([], error="missing history")["channels"])
+
     def test_allowlist_exceptions_and_missing_history(self):
         for path in ("README.md", "docs/DISTRIBUTION.md", "openspec/specs/a/spec.md"):
             self.assertTrue(policy.classify_paths([path])["docs_only"])

@@ -1,0 +1,337 @@
+name: Distribution channels
+# Homebrew, Nix, and OCI channel rehearsal and promotion (change: low-cost-distribution-channels,
+# design D7).  Each channel job is independent: one channel's failure never blocks, retags, or
+# undoes another.  Rehearsals (pull requests, dispatch without publish) have no write permission
+# and no tap token.  Promotion runs only for a published source release, after that channel's own
+# acceptance passed, and promotes exactly what was tested.
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published release tag (for example v0.2.0); empty rehearses a candidate from this ref
+        type: string
+        default: ''
+      publish:
+        description: Promote the tested channel candidates (requires tag)
+        type: boolean
+        default: false
+  workflow_run:
+    workflows: [Source release]
+    types: [completed]
+permissions:
+  contents: read
+concurrency:
+  group: channels-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  identity:
+    runs-on: ubuntu-24.04
+    # A Source release run counts only when it published from a tag push.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    outputs:
+      run: ${{ steps.plan.outputs.run }}
+      publish: ${{ steps.plan.outputs.publish }}
+      version: ${{ steps.identity.outputs.version }}
+      tag: ${{ steps.identity.outputs.tag }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Decide whether channels run and whether they publish
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          TAG: ${{ inputs.tag || github.event.workflow_run.head_branch || '' }}
+          PUBLISH: ${{ inputs.publish || github.event_name == 'workflow_run' }}
+        run: |
+          run=true
+          if [ "$EVENT" = pull_request ]; then
+            tools/test.sh --classify "${BASE:-unavailable}" --ci > "$RUNNER_TEMP/classification.json"
+            plan=$(python3 tools/ci-policy.py plan --classification "$(cat "$RUNNER_TEMP/classification.json")" --event "$EVENT")
+            run=$(jq -r .channels <<< "$plan")
+          fi
+          promote=false
+          if [ "$PUBLISH" = true ]; then
+            [ -n "$TAG" ] || { echo "channels: publishing requires a release tag" >&2; exit 1; }
+            promote=true
+          fi
+          printf 'run=%s\npublish=%s\n' "$run" "$promote" | tee -a "$GITHUB_OUTPUT"
+      - name: Channel tooling regression checks
+        if: steps.plan.outputs.run == 'true'
+        run: |
+          test/release-source-tests.sh
+          # Promotion against a throwaway registry:2 and local git remotes; publishes nothing.
+          test/channel-promote-tests.sh
+      - name: Identify the published release or package a candidate
+        id: identity
+        if: steps.plan.outputs.run == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.event.workflow_run.head_branch || '' }}
+        run: |
+          assets=/tmp/emit-channel-assets
+          mkdir -p "$assets"
+          if [ -n "$TAG" ]; then
+            # The exact published bytes; never a branch checkout or a rebuilt archive.
+            gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir "$assets" \
+              --pattern 'emit-*.tar.gz' --pattern SHA256SUMS
+            (cd "$assets" && sha256sum -c SHA256SUMS)
+            version=${TAG#v}
+            commit=$(git rev-list -n1 "$TAG")
+            url="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/emit-$version.tar.gz"
+            tools/channel-identity.sh describe "$assets/emit-$version.tar.gz" --tag "$TAG" --commit "$commit" --url "$url" > "$assets/identity.json"
+            tools/channel-identity.sh verify "$assets/identity.json" "$assets/emit-$version.tar.gz"
+          else
+            # A rehearsal candidate packaged from this ref, served from the same path on every job.
+            version=$(< VERSION)
+            TAG="v$version"
+            tools/release-source.sh HEAD "$assets" "$TAG"
+            tools/channel-identity.sh describe "$assets/emit-$version.tar.gz" --tag "$TAG" --commit "$(git rev-parse HEAD)" \
+              --url "file://$assets/emit-$version.tar.gz" > "$assets/identity.json"
+            tools/channel-identity.sh verify "$assets/identity.json" "$assets/emit-$version.tar.gz" --allow-file-url
+          fi
+          printf 'version=%s\ntag=%s\n' "$version" "$TAG" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: steps.plan.outputs.run == 'true'
+        with:
+          name: channel-identity
+          path: /tmp/emit-channel-assets/*
+          if-no-files-found: error
+
+  homebrew:
+    needs: identity
+    if: needs.identity.outputs.run == 'true'
+    runs-on: macos-15
+    timeout-minutes: 120
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+      HOMEBREW_NO_ANALYTICS: 1
+      HOMEBREW_NO_INSTALL_CLEANUP: 1
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: channel-identity
+          path: /tmp/emit-channel-assets
+      - name: Preflight the tap credential before building
+        if: needs.identity.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          [ -n "$GH_TOKEN" ] || { echo "channels: HOMEBREW_TAP_TOKEN is not configured" >&2; exit 1; }
+          [ "$(gh api repos/bwbensonjr/homebrew-emit --jq .permissions.push)" = true ] \
+            || { echo "channels: HOMEBREW_TAP_TOKEN cannot push to bwbensonjr/homebrew-emit" >&2; exit 1; }
+      - name: Render the formula into a throwaway local tap
+        run: |
+          brew install bdw-gc llvm@22
+          tools/channel-render.sh homebrew /tmp/emit-channel-assets/identity.json "$RUNNER_TEMP/emit.rb"
+          brew tap-new --no-git emit-ci/local
+          cp "$RUNNER_TEMP/emit.rb" "$(brew --repository)/Library/Taps/emit-ci/homebrew-local/Formula/emit.rb"
+          brew style emit-ci/local/emit
+          brew audit --strict --formula emit-ci/local/emit
+      - name: Build from source and run the formula test
+        run: |
+          brew install --build-from-source emit-ci/local/emit
+          brew test emit-ci/local/emit
+      - name: Installed acceptance, offline, with the checkout hidden
+        env:
+          VERSION: ${{ needs.identity.outputs.version }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/accept/test"
+          cp -R tools "$RUNNER_TEMP/accept/tools"
+          cp -R test/channel-accept "$RUNNER_TEMP/accept/test/channel-accept"
+          digest=$(jq -r .sha256 /tmp/emit-channel-assets/identity.json)
+          # Only Homebrew's bin and the system directories: the llvm@22 keg is not on PATH.
+          env -i HOME="$HOME" PATH="$(brew --prefix)/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
+            tools/offline-run.sh --hide "$GITHUB_WORKSPACE" -- \
+            /bin/bash "$RUNNER_TEMP/accept/tools/channel-accept.sh" --emit "$(brew --prefix)/bin/emit" \
+              --expect-version "$VERSION" --source-digest "$digest" \
+              --report "$RUNNER_TEMP/homebrew-accept.json" --label "homebrew macos-15 arm64"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: channel-homebrew
+          path: |
+            ${{ runner.temp }}/emit.rb
+            ${{ runner.temp }}/homebrew-accept.json
+          if-no-files-found: warn
+      - name: Open the tap pull request
+        if: needs.identity.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          TAG: ${{ needs.identity.outputs.tag }}
+        run: |
+          tools/channel-promote.sh tap "$TAG" "$RUNNER_TEMP/emit.rb"
+
+  nix:
+    needs: identity
+    if: needs.identity.outputs.run == 'true'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            system: x86_64-linux
+          - os: macos-15
+            system: aarch64-darwin
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: channel-identity
+          path: /tmp/emit-channel-assets
+      - uses: DeterminateSystems/nix-installer-action@3138316df39ed29be04236d7ffc686fa525866aa # v23
+        with:
+          extra-conf: |
+            sandbox = true
+      - name: Build the package and its sandboxed acceptance check
+        env:
+          TAG: ${{ needs.identity.outputs.tag }}
+          PUBLISHED: ${{ inputs.tag || github.event.workflow_run.head_branch || '' }}
+        run: |
+          if [ -n "$PUBLISHED" ]; then
+            # The release identity a promotion would commit, read through a path: flake so the
+            # uncommitted packaging/release.json is visible.
+            cp /tmp/emit-channel-assets/identity.json packaging/release.json
+            nix build -L "path:$PWD#packages.${{ matrix.system }}.default" -o "$RUNNER_TEMP/result"
+          else
+            nix build -L "path:$PWD#packages.${{ matrix.system }}.candidate" -o "$RUNNER_TEMP/result"
+            nix build -L "path:$PWD#checks.${{ matrix.system }}.candidate-accept" -o "$RUNNER_TEMP/sandbox-accept"
+            cp "$RUNNER_TEMP/sandbox-accept" "$RUNNER_TEMP/nix-sandbox-accept.json"
+          fi
+          nix-store -qR "$RUNNER_TEMP/result" | grep -E 'clang|boehm' | tee "$RUNNER_TEMP/nix-closure.txt"
+      - name: Installed acceptance outside any shell, offline, with the checkout hidden
+        env:
+          VERSION: ${{ needs.identity.outputs.version }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/accept/test"
+          cp -R tools "$RUNNER_TEMP/accept/tools"
+          cp -R test/channel-accept "$RUNNER_TEMP/accept/test/channel-accept"
+          digest=$(jq -r .sha256 /tmp/emit-channel-assets/identity.json)
+          env -i HOME="$HOME" PATH=/usr/bin:/bin:/usr/sbin:/sbin \
+            tools/offline-run.sh --hide "$GITHUB_WORKSPACE" -- \
+            /bin/bash "$RUNNER_TEMP/accept/tools/channel-accept.sh" --emit "$(readlink "$RUNNER_TEMP/result")/bin/emit" \
+              --expect-version "$VERSION" --source-digest "$digest" \
+              --report "$RUNNER_TEMP/nix-accept.json" --label "nix ${{ matrix.system }}"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: channel-nix-${{ matrix.system }}
+          path: |
+            ${{ runner.temp }}/nix-accept.json
+            ${{ runner.temp }}/nix-sandbox-accept.json
+            ${{ runner.temp }}/nix-closure.txt
+          if-no-files-found: warn
+
+  nix-promote:
+    # One pull request for both systems, only after both accepted the release.
+    needs: [identity, nix]
+    if: needs.identity.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: channel-identity
+          path: /tmp/emit-channel-assets
+      - name: Open the flake release pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.identity.outputs.tag }}
+        run: |
+          tools/channel-promote.sh flake "$TAG" /tmp/emit-channel-assets/identity.json
+
+  oci:
+    needs: identity
+    if: needs.identity.outputs.run == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: channel-identity
+          path: /tmp/emit-channel-assets
+      - name: Preflight the registry credential before building
+        if: needs.identity.outputs.publish == 'true'
+        env:
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ github.token }}
+        run: |
+          printf '%s' "$REGISTRY_TOKEN" | skopeo login ghcr.io --username "$REGISTRY_USER" --password-stdin
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build the image once, to an archive
+        env:
+          VERSION: ${{ needs.identity.outputs.version }}
+        run: |
+          identity=/tmp/emit-channel-assets/identity.json
+          docker buildx build --platform linux/amd64 -f packaging/oci/Containerfile \
+            --build-arg EMIT_VERSION="$VERSION" \
+            --build-arg EMIT_SHA256="$(jq -r .sha256 "$identity")" \
+            --build-arg EMIT_REVISION="$(jq -r .commit "$identity")" \
+            --output "type=docker,name=emit-candidate:$VERSION,dest=$RUNNER_TEMP/emit-image.tar" \
+            /tmp/emit-channel-assets
+          docker load -i "$RUNNER_TEMP/emit-image.tar"
+          skopeo inspect --format '{{.Digest}}' "oci-archive:$RUNNER_TEMP/emit-image.tar" | tee "$RUNNER_TEMP/oci-digest.txt"
+      - name: Installed acceptance inside the image, offline, as an arbitrary user
+        env:
+          VERSION: ${{ needs.identity.outputs.version }}
+        run: |
+          work="$RUNNER_TEMP/oci-work"
+          mkdir -p "$work" && chmod 777 "$work"
+          docker run --rm --network none --read-only --user 12345:12345 \
+            --tmpfs /cache:mode=1777 --tmpfs /tmp:mode=1777 -v "$work:/work" \
+            -v "$PWD/tools:/accept/tools:ro" -v "$PWD/test/channel-accept:/accept/test/channel-accept:ro" \
+            --entrypoint bash "emit-candidate:$VERSION" /accept/tools/channel-accept.sh \
+            --emit /opt/emit/bin/emit --expect-version "$VERSION" \
+            --source-digest "$(jq -r .sha256 /tmp/emit-channel-assets/identity.json)" \
+            --report /work/oci-accept.json --label "oci linux/amd64" --workspace /work/accept
+          cp "$work/oci-accept.json" "$RUNNER_TEMP/oci-accept.json"
+          # The default entrypoint forwards arguments and the program's exit status.
+          printf '(import (scheme base) (scheme process-context))\n(exit 3)\n' > "$work/exit3.scm"
+          docker run --rm --network none --read-only --user 4242:4242 --tmpfs /cache --tmpfs /tmp \
+            -v "$work:/work" "emit-candidate:$VERSION" --version | grep -q "^emit $VERSION "
+          status=0
+          docker run --rm --network none --read-only --user 4242:4242 --tmpfs /cache --tmpfs /tmp \
+            -v "$work:/work" "emit-candidate:$VERSION" run exit3.scm || status=$?
+          [ "$status" = 3 ] || { echo "oci: entrypoint returned $status for (exit 3)" >&2; exit 1; }
+          if docker run --rm --entrypoint sh "emit-candidate:$VERSION" -c 'command -v chez || command -v git || command -v python3 || [ -e /src ]'; then
+            echo "oci: image carries Chez, Git, Python, or the source tree" >&2; exit 1
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: channel-oci
+          path: |
+            ${{ runner.temp }}/oci-accept.json
+            ${{ runner.temp }}/oci-digest.txt
+          if-no-files-found: warn
+      - name: Promote the tested image digest
+        if: needs.identity.outputs.publish == 'true'
+        env:
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.identity.outputs.tag }}
+        run: |
+          tools/channel-promote.sh oci "$TAG" "$RUNNER_TEMP/emit-image.tar" "ghcr.io/${GITHUB_REPOSITORY,,}"

@@ -88,6 +88,15 @@ class PolicyTests(unittest.TestCase):
             records.append(record["group"])
         self.assertEqual(len(set(records)), len(records))
 
+    def test_channel_rehearsal_follows_channel_inputs(self):
+        self.assertTrue(policy.plan(classification(channels=True), "pull_request")["channels"])
+        self.assertFalse(policy.plan(classification(channels=False), "pull_request")["channels"])
+        # An older classification without the flag, a dispatch, a tag, or a rehearsal: conservative.
+        self.assertTrue(policy.plan(classification(), "pull_request")["channels"])
+        for event in ["workflow_dispatch", "tag"]:
+            self.assertTrue(policy.plan(classification(channels=False), event)["channels"])
+        self.assertTrue(policy.plan(classification(channels=False), "pull_request", rehearsal=True)["channels"])
+
     def test_workflow_contract(self):
         workflow = (ROOT / ".github/workflows/compatibility.yml").read_text()
         self.assertIn("llvm: [22, 23]", workflow)
@@ -99,6 +108,25 @@ class PolicyTests(unittest.TestCase):
         self.assertIn("rehearsal: true", release)
         self.assertIn("needs: validation", release)
         self.assertNotIn("pull_request:", release)
+
+    def test_channel_workflow_contract(self):
+        # change: low-cost-distribution-channels, design D7.
+        workflow = (ROOT / ".github/workflows/channels.yml").read_text()
+        top = workflow.split("\njobs:\n", 1)[0]
+        self.assertIn("permissions:\n  contents: read\n", top)
+        self.assertNotIn(": write", top)
+        # Write permissions appear only on the two promoting jobs, and the tap token only in
+        # steps gated on publish.
+        self.assertEqual(workflow.count("packages: write"), 1)
+        self.assertEqual(workflow.count("contents: write"), 1)
+        self.assertEqual(workflow.count("pull-requests: write"), 1)
+        for segment in workflow.split("secrets.HOMEBREW_TAP_TOKEN")[:-1]:
+            step = segment.rsplit("- name:", 1)[1]
+            self.assertIn("if: needs.identity.outputs.publish == 'true'", step)
+        for promote in ("channel-promote.sh tap", "channel-promote.sh oci", "channel-promote.sh flake"):
+            self.assertIn(promote, workflow)
+        self.assertIn("if: needs.identity.outputs.publish == 'true'", workflow.split("nix-promote:", 1)[1])
+        self.assertIn("--preserve-digests", (ROOT / "tools/channel-promote.sh").read_text())
 
 
 if __name__ == "__main__":

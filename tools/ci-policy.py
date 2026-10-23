@@ -23,9 +23,12 @@ def plan(classification, event, force_full=False, rehearsal=False):
     if not all(item in {"self-emission", "dump-parity", "render-datum"} for item in reference):
         raise ValueError("unknown required reference suite")
     archive = rehearsal or event == "tag" or classification["archive"]
+    # Channel rehearsal (channels.yml): a missing flag from an older classifier is conservative.
+    channels = rehearsal or event in {"tag", "workflow_dispatch"} or classification.get("channels", True) is not False
     verification = source or units or bool(reference) or comprehensive
     return {"code": code, "source": source, "units": units, "verification": verification,
             "reference": reference, "reference_full": comprehensive, "archive": archive,
+            "channels": channels,
             "mode": "full" if comprehensive else "normal", "classification": classification,
             "required": ["policy"] + (["prepare", "native"] if code else [])
             + (["verification"] if verification else []) + (["package", "archive"] if archive else [])}
