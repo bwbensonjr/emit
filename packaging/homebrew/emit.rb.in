@@ -33,6 +33,9 @@ class Emit < Formula
   end
 
   test do
+    # Homebrew's test environment exports compiler variables, which Emit honors as explicit
+    # overrides of the installed toolchain pin; test what a user gets by default.
+    %w[CC CXX LLVM_CONFIG EMIT_LLVM_BIN GC_INC GC_LIB GC_DYLIB].each { |name| ENV.delete(name) }
     assert_match "emit #{version} (LLVM 22.", shell_output("#{bin}/emit --version")
     assert_match "toolchain: package", shell_output("#{bin}/emit doctor")
     (testpath/"answer.scm").write <<~SCHEME
