@@ -699,6 +699,15 @@
 #     63,914 solely because `equal-list` adds the `(emit list)` init.  No other program
 #     module drift remains after normalization; the full source/native acceptance suites
 #     validate values and import behavior.
+#   fix-recent-correctness-and-startup-issues (issue #140) -- non-final program
+#     expressions become ordered `toplevel-effect` bindings, and `convert-assignments`
+#     no longer hoists an impure initializer past an earlier boxed one.  A preserved
+#     82-demo before/after capture (main vs this change) differs in exactly four
+#     modules.  `ports`, `unspecified-value`, and `write-char` differ only in one
+#     closure code label, renumbered by the generated binding names.  `macro-user`
+#     boxes and fills its top-level value bindings in source order.  The other 78
+#     are byte-identical, and `RUNNER=emit-run demos/run-tests.sh` reports 82/82 with
+#     identical results on both trees.
 #
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u

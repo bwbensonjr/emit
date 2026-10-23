@@ -102,6 +102,17 @@ make install PREFIX=$HOME/.local  # a different prefix (also baked in as the fal
 make install PREFIX=/usr/local DESTDIR=/tmp/stage   # stage for a packager
 ```
 
+Unprivileged source installation prepares the standard-library cache after copying
+the payload. To prepare it explicitly, run `emit build --stdlib`. This compiles the
+shipped manifest's libraries and default `-O1` native objects without running their
+initializers. `EMIT_CACHE` selects the destination; otherwise Emit uses
+`$XDG_CACHE_HOME/emit`, `~/Library/Caches/emit` on macOS, or `~/.cache/emit` on Linux.
+Repeated preparation reuses valid entries. Set `WARM_STDLIB=0` to defer it during
+installation. Staged and root installs defer preparation to the eventual user.
+Homebrew prepares from its post-install hook; Nix and OCI users run the command in
+their own environment. An automatic preparation failure reports a retry command
+and leaves the source installation usable; explicit preparation exits nonzero on failure.
+
 All four installed commands work from any directory. Projects normally use their own `./lib`;
 repeatable `-L` / `--library-path` and `EMIT_LIBRARY_PATH` add roots, while
 `--no-library-paths` disables every directory provider.
@@ -109,8 +120,10 @@ repeatable `-L` / `--library-path` and `EMIT_LIBRARY_PATH` add roots, while
 `emit --version` reports the Emit release and the LLVM version used to build it.
 `emit doctor` reports the selected native toolchain, libgc, shipped source files,
 and library providers in lookup order. It makes no changes and exits nonzero when
-required checks fail. On macOS, an older Apple clang may be selected from PATH;
-set `CC=/path/to/llvm/bin/clang` to use a clang compatible with Emit's LLVM.
+required checks fail. On macOS, Apple clang may be selected from PATH. Doctor
+reports its textual-IR compatibility as unverified because Apple's vendor version
+does not identify an upstream LLVM major. An older upstream clang still fails the
+check; set `CC=/path/to/llvm/bin/clang` to select the LLVM installation's compiler.
 Doctor cannot run if a missing dynamic library prevents Emit itself from loading.
 See [diagnostic fields and status](docs/DOCTOR.md) for details.
 See [installation and relocation](docs/INSTALLATION.md),
@@ -291,7 +304,9 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
 
 **Language**
 - Core: `lambda`, `if`, `let`/`letrec`, `begin`, `set!`, application, top-level `define`,
-  multi-form programs.
+  multi-form programs. Program definition initializers and intervening expressions
+  execute in source order, so later definitions observe earlier mutations. Internal
+  definitions must still precede expressions in their body.
 - Derived forms: `cond` (with `else`/`=>`/bare-test clauses), `and`, `or`, `when`, `unless`,
   `let*` — realized as `syntax-rules` macros in the prelude; named `let` (hand-written).
 - **Macros**: `define-syntax` + `syntax-rules` (literals, `_`, ellipsis), lexical

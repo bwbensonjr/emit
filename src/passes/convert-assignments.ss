@@ -73,8 +73,17 @@
 ;; before any box is filled.  Referencing an earlier plain binding is therefore
 ;; fine and anything else in the group is not.  A binding that fails the test is
 ;; boxed, which is always correct -- the rule only ever trades precision away.
+;;
+;; Hoisting outside also moves an initializer AHEAD of every earlier boxed one, so
+;; letrec* order (issue #140) allows it only while no binding has been boxed yet.
+;; After that, a non-lambda stays plain only if its initializer cannot have an
+;; effect: a constant, or a reference that no earlier initializer can change.
 (define (classify-letrec binds assigned)
   (let ([names (map car binds)])
+    (define (unready? x plain) (and (mem? x names) (not (mem? x (map car plain)))))
+    (define (effect-free? e plain)
+      (or (and (pair? e) (eq? (car e) 'const))
+          (and (symbol? e) (not (unready? e plain)) (not (mem? e assigned)))))
     (let loop ([bs binds] [plain '()] [boxed '()] [keep '()])
       (if (null? bs)
           (list (reverse plain) (reverse boxed) (reverse keep))
@@ -82,9 +91,10 @@
             (cond
               [(mem? (car b) assigned) (loop (cdr bs) plain (cons b boxed) keep)]
               [(il-lambda? (cadr b)) (loop (cdr bs) plain boxed (cons b keep))]
-              [(null? (filter
-                        (lambda (x) (and (mem? x names) (not (mem? x (map car plain)))))
-                        (il-refs (cadr b)))) (loop (cdr bs) (cons b plain) boxed keep)]
+              [(if (null? boxed)
+                   (null? (filter (lambda (x) (unready? x plain)) (il-refs (cadr b))))
+                   (effect-free? (cadr b) plain))
+                (loop (cdr bs) (cons b plain) boxed keep)]
               [else (loop (cdr bs) plain (cons b boxed) keep)]))))))
 
 ;; the letrec bindings that end up boxed, program-wide -- these need `unbox` at

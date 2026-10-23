@@ -22,6 +22,22 @@ libraries, and AOT support files under `share/emit`. `make uninstall` with the s
 ```sh
 make uninstall PREFIX="$HOME/.local"
 ```
+
+An unprivileged install without `DESTDIR` then runs the installed
+`emit build --stdlib` to prepare portable IR, compile-time interfaces, and native
+objects for the default `-O1` profile in the installing user's cache. It uses the
+installed payload even when make runs from a checkout. This does not add compiled
+files to the prefix. Repeated preparation reuses valid entries; a changed compiler,
+library input, target, or JIT profile may need fresh entries.
+
+Use `make install WARM_STDLIB=0` to defer this step. Staged and privileged installs
+always defer it and name the end-user command. Homebrew's post-install hook prepares
+the current user's cache, including bottle installs. Nix and OCI builds disable
+preparation: run `emit build --stdlib` after entering the user environment or
+container, with a writable user cache. An automatic preparation failure leaves the
+source installation usable and reports how to retry; the explicit command returns
+nonzero if compilation or persistence fails. Relocation may invalidate cached paths
+and ordinary commands rebuild them as needed.
  A complete prefix can be
 moved after installation. Emit resolves its real executable path (including
 when started through a symlink), checks for `../share/emit` beside that binary,

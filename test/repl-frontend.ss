@@ -102,5 +102,74 @@
     (check-pred "lowers to a program with global-ref"
                 lc (lambda (t) (and (eq? (car t) 'program) (mentions? 'g.g0 t))))))
 
+;; Evaluate the collected source with Chez's explicit letrec* spelling. This checks
+;; the frontend's binding order only; `convert-assignments` must then keep that
+;; order, which the classify-letrec checks below cover.
+(define (eval-toplevel forms)
+  (reset-counter!)
+  (let ([program (collect-toplevel forms)])
+    (eval (cond
+            [(and (pair? program) (eq? (car program) 'letrec))
+             (cons 'letrec* (cdr program))]
+            ;; Emit accepts repeated placeholders in this fallback and resolves
+            ;; them to one location. Chez requires that binder to appear once.
+            [(and (pair? program) (eq? (car program) 'let))
+             (cons 'let
+                   (cons (let loop ([bs (cadr program)] [seen '()])
+                           (cond [(null? bs) '()]
+                                 [(memq (caar bs) seen) (loop (cdr bs) seen)]
+                                 [else (cons (car bs) (loop (cdr bs) (cons (caar bs) seen)))]))
+                         (cddr program)))]
+            [else program])
+          (environment '(chezscheme)))))
+(check "program mutation before definition"
+       (eval-toplevel '((define x 1) (set! x 2) (define y x) y)) 2)
+(check "program parameter update before definition"
+       (eval-toplevel '((define p (make-parameter #f)) (p 5) (define r (p)) r)) 5)
+(check "program effects before first definition"
+       (with-output-to-string
+         (lambda () (eval-toplevel '((display "start")
+                                    (define x (begin (display "init") 42))
+                                    (display "end")))))
+       "startinitend")
+(check "program interleaved redefinition"
+       (with-output-to-string
+         (lambda () (eval-toplevel '((define x 1) (display x)
+                                    (define x 2) (display x))))) "12")
+(check "program mutual procedure scope"
+       (eval-toplevel '((define (even n) (if (= n 0) #t (odd (- n 1))))
+                        (define (odd n) (if (= n 0) #f (even (- n 1))))
+                        (even 10))) #t)
+(check "program ignores intermediate values"
+       (eval-toplevel '((+ 1 2) (define x 42) x)) 42)
+(check "program generated binding avoids source name"
+       (eval-toplevel '((define toplevel-effect.0 7)
+                        (set! toplevel-effect.0 8)
+                        (define y toplevel-effect.0) y)) 8)
+(check-raises "program effect exception precedes later initializer"
+              (lambda () (eval-toplevel '((error 'test "stop")
+                                         (define x 42) x))))
+(check "program quoted cycles are not lexical names"
+       (eval-toplevel '((display "") (define q '#0=(a . #0#)) (eq? q (cdr q)))) #t)
+(check-raises "internal definitions still precede expressions"
+              (lambda () (build-body '((display 1) (define x 2) x))))
+
+;; classify-letrec returns (plain boxed keep).  Plain bindings run before every
+;; boxed fill, so an impure one written after a boxed one must be boxed too.
+(define (classified binds)
+  (map (lambda (part) (map car part)) (classify-letrec binds '())))
+(check "letrec plain prefix before a boxed binding is unchanged"
+       (classified '((x (call (global-ref g))) (f (lambda () (const 1)))
+                     (y (call f)) (z (const 2))))
+       '((x z) (y) (f)))
+(check "letrec impure binding after a boxed one keeps source order"
+       (classified '((f (lambda () (const 1))) (a (call f))
+                     (b (call (global-ref g))) (c (const 3)) (d x) (e c)))
+       '((c d e) (a b) (f)))
+(check "letrec assigned outer reference after a boxed one keeps source order"
+       (map (lambda (part) (map car part))
+            (classify-letrec '((f (lambda () (const 1))) (a (call f)) (b x)) '(x)))
+       '(() (a b) (f)))
+
 (printf "\n~a passed, ~a failed\n" pass fail)
 (exit (if (zero? fail) 0 1))

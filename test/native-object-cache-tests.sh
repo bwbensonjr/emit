@@ -168,6 +168,26 @@ grep -q '^3$' "$tmp/transaction.out" \
   && ok "failed mixed registration publishes no import and the REPL recovers" \
   || bad "mixed registration transaction recovery"
 
+# Explicit preparation must force ORC materialization without an import or initializer call.
+if EMIT_CACHE="$tmp/stdlib" EMIT_VERBOSITY=verbose build/emit build --stdlib \
+    >"$tmp/stdlib.out" 2>"$tmp/stdlib.err" \
+   && [ ! -s "$tmp/stdlib.out" ] \
+   && grep -q 'native object generated for library scheme.char: -O1' "$tmp/stdlib.err"; then
+  ok "stdlib preparation materializes lazy full units without program output"
+else bad "stdlib preparation"; cat "$tmp/stdlib.err"; fi
+if EMIT_CACHE="$tmp/stdlib" EMIT_VERBOSITY=verbose build/emit build --stdlib \
+    >"$tmp/stdlib2.out" 2>"$tmp/stdlib2.err" \
+   && grep -q 'portable 11 reused/0 generated, native 11 reused/0 generated' "$tmp/stdlib2.err"; then
+  ok "a second preparation reuses every portable and native group"
+else bad "stdlib repeated preparation"; cat "$tmp/stdlib2.err"; fi
+printf '(import (scheme char)) (display (char-upcase #\\a))\n' >"$tmp/stdlib.scm"
+if EMIT_CACHE="$tmp/stdlib" EMIT_VERBOSITY=verbose build/emit run "$tmp/stdlib.scm" \
+    >"$tmp/stdlib-run.out" 2>"$tmp/stdlib-run.err" \
+   && [ "$(cat "$tmp/stdlib-run.out")" = A ] \
+   && grep -q 'native object reused for library scheme.char: -O1' "$tmp/stdlib-run.err"; then
+  ok "first execution after preparation reuses native standard libraries"
+else bad "prepared stdlib execution"; cat "$tmp/stdlib-run.err"; fi
+
 echo
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]

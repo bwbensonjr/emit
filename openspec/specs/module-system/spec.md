@@ -1482,7 +1482,13 @@ Relative paths in each manifest SHALL continue to resolve against that manifest'
 relative explicit library root SHALL resolve against the invocation's current directory, while
 environment roots SHALL follow the same rule. Every selected provider and successful non-baked
 resolution SHALL be narrated on standard error according to `EMIT_VERBOSITY`, naming whether the
-source came from a manifest or a conventional root; narration SHALL never alter standard output.
+source came from a manifest or a conventional root. At default verbosity, REPL startup SHALL
+aggregate provider information into one line identifying the effective manifest and conventional
+root locations in precedence order, or identifying the baked-only case, without per-library
+resolution lines. Verbose startup SHALL retain manifest, root, chained-provider, and per-library
+detail. Interactive resolutions after startup and other commands SHALL retain their existing
+narration. Quiet SHALL suppress informational resolution output; narration SHALL never alter
+standard output or suppress errors.
 
 #### Scenario: An exact manifest entry overrides a conventional file
 
@@ -1532,9 +1538,27 @@ source came from a manifest or a conventional root; narration SHALL never alter 
 
 #### Scenario: The selected provider is narrated
 
-- **WHEN** a non-baked library resolves at default verbosity
+- **WHEN** a non-baked library resolves at default verbosity outside REPL startup
 - **THEN** stderr names the library, source, and provider kind, quiet verbosity omits the narration,
   and stdout is unchanged
+
+#### Scenario: REPL startup summarizes its library sources
+
+- **WHEN** `emit repl` starts with a project manifest and chained installed providers at default verbosity
+- **THEN** stderr contains exactly one library-source summary line identifying effective manifest and root locations in order
+- **AND** it prints no individual library-resolution lines or separate chained-provider listing
+- **AND** the normal banner, prompt, and importable library set retain their behavior
+
+#### Scenario: Detailed startup provenance is available on request
+
+- **WHEN** the same REPL starts with `EMIT_VERBOSITY=verbose` or `-v`
+- **THEN** stderr additionally names manifests, conventional roots, and individual selected library sources and provider kinds
+
+#### Scenario: Quiet startup and missing sources remain distinguishable
+
+- **WHEN** the same REPL starts at quiet verbosity
+- **THEN** it prints no informational library-resolution output and still reports resolution errors
+- **AND** default startup with no filesystem providers names the baked-only source in its single summary
 
 #### Scenario: Manifest resolves a library name to its source
 
@@ -1633,8 +1657,9 @@ source came from a manifest or a conventional root; narration SHALL never alter 
 #### Scenario: The resolved manifest is narrated
 
 - **WHEN** one or more manifests participate at default verbosity
-- **THEN** stderr names them in order, including chained suppliers, while quiet mode omits the lines
-  and stdout remains unchanged
+- **THEN** stderr names them in order, including chained suppliers, using the single source summary during REPL startup and the existing individual lines elsewhere
+- **AND** quiet mode omits informational resolution output and stdout remains unchanged
+
 ### Requirement: A manifest containing no datum is an empty manifest
 
 A manifest file that exists and is readable but contains no datum — a zero-byte file, a file of

@@ -127,6 +127,27 @@
       ]
     },
     {
+      "id": "stdlib-precompilation",
+      "label": "standard-library precompilation",
+      "command": [
+        "python3",
+        "test/stdlib-warm-tests.py"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "host",
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "stdlib-precompilation"
+      ],
+      "legacy": []
+    },
+    {
       "id": "explicit-artifact-format",
       "label": "explicit artifact format",
       "command": [
@@ -2332,6 +2353,49 @@
       "chez": false,
       "coverage": [
         "focused-run-repl-aot-library-error"
+      ],
+      "legacy": []
+    },
+    {
+      "id": "program-toplevel-order-native",
+      "label": "program top-level source order native",
+      "command": [
+        "bash",
+        "test/toplevel-order-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "compiler",
+        "host"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "program-toplevel-order-native"
+      ],
+      "legacy": []
+    },
+    {
+      "id": "program-toplevel-order-source",
+      "label": "program top-level source order source",
+      "command": [
+        "bash",
+        "test/toplevel-order-tests.sh",
+        "--source"
+      ],
+      "profiles": [
+        "reference"
+      ],
+      "categories": [
+        "compiler",
+        "host"
+      ],
+      "isolation": "workspace",
+      "chez": true,
+      "coverage": [
+        "program-toplevel-order-source"
       ],
       "legacy": []
     }
