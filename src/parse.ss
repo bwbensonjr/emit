@@ -725,20 +725,35 @@
       [else (let ([rev (reverse fs)])
               (build-program (reverse binds) (reverse (cdr rev)) (car rev)))])))
 
+;; Generated effect bindings must not capture a source spelling, even when the
+;; program deliberately uses a name from the deterministic fresh-name sequence.
+(define (toplevel-name-used? name datum)
+  (cond
+    [(symbol? datum) (eq? name datum)]
+    ;; Quoted data has no lexical references and may contain cyclic pairs.
+    [(and (pair? datum) (eq? (car datum) 'quote)) #f]
+    [(pair? datum) (or (toplevel-name-used? name (car datum))
+                       (toplevel-name-used? name (cdr datum)))]
+    [else #f]))
+
+(define (fresh-toplevel-effect forms)
+  (let loop ([name (fresh-name 'toplevel-effect)])
+    (if (toplevel-name-used? name forms) (loop (fresh-name 'toplevel-effect)) name)))
+
 (define (collect-toplevel forms)
   (when (null? forms) (error 'collect-toplevel "empty program: no top-level forms"))
-  (let loop ([fs forms] [binds '()] [pre '()])
+  (let loop ([fs forms] [binds '()])
     (cond
       [(null? fs) (error 'collect-toplevel
                          "program must end in an expression, not a definition")]
-      [(define-form? (car fs))
-        (loop (cdr fs) (cons (normalize-define (car fs)) binds) pre)]
+      [(define-form? (car fs)) (loop (cdr fs) (cons (normalize-define (car fs)) binds))]
       [(record-type-form? (car fs))
-        (loop (cdr fs) (append (reverse (record-type-bindings (car fs))) binds) pre)]
+        (loop (cdr fs) (append (reverse (record-type-bindings (car fs))) binds))]
       [(null? (cdr fs)) ; final form = the program's value
-        (build-program (reverse binds) (reverse pre) (car fs))]
+        (build-program (reverse binds) '() (car fs))]
       [else ; a non-final top-level expression
-        (loop (cdr fs) binds (cons (car fs) pre))])))
+        ;; Binding initializers lower in order, including the duplicate-name path.
+        (loop (cdr fs) (cons (list (fresh-toplevel-effect forms) (car fs)) binds))])))
 
 ;; ---- REPL top-level model: persistent global definitions -----------------
 ;; Batch `collect-toplevel` folds a whole program into one letrec.  The REPL
@@ -973,12 +988,12 @@
     [(if ,a ,b ,c) `(if ,(R a) ,(R b) ,(R c))]
     [(seq ,a ,b) `(seq ,(R a) ,(R b))]
     [(set! ,x ,rhs) `(set! ,(look x) ,(R rhs))]
-    [(primcall ,op . ,args) `(primcall ,op ,@(map R args))]
-    [(apply ,f . ,args) `(apply ,(R f) ,@(map R args))]
-    [(call ,f . ,args) `(call ,(R f) ,@(map R args))]
+    [(primcall ,op . ,args) `(primcall ,op ,@(map-lr R args))]
+    [(apply ,f . ,args) `(apply ,(R f) ,@(map-lr R args))]
+    [(call ,f . ,args) `(call ,(R f) ,@(map-lr R args))]
     [(lambda ,params ,body) ; params may be variadic
       (let* ([names (param-names params)]
-             [new (map fresh-name names)]
+             [new (map-lr fresh-name names)]
              [amap (map cons names new)]
              [env2 (append amap env)]
              [nfixed (map (lambda (x) (cdr (assq x amap))) (param-fixed params))]
@@ -986,13 +1001,13 @@
         `(lambda ,(rebuild-params nfixed nrest) ,(rename body env2)))]
     [(let ,binds ,body)
       (let* ([xs (map car binds)]
-             [es (map (lambda (b) (R (cadr b))) binds)] ; rhs in outer env
-             [new (map fresh-name xs)]
+             [es (map-lr (lambda (b) (R (cadr b))) binds)] ; rhs in outer env
+             [new (map-lr fresh-name xs)]
              [env2 (append (map cons xs new) env)])
         `(let ,(map list new es) ,(rename body env2)))]
     [(letrec ,binds ,body)
       (let* ([xs (map car binds)]
-             [new (map fresh-name xs)]
+             [new (map-lr fresh-name xs)]
              [env2 (append (map cons xs new) env)]
-             [es (map (lambda (b) (rename (cadr b) env2)) binds)]) ; rhs in new env
+             [es (map-lr (lambda (b) (rename (cadr b) env2)) binds)]) ; rhs in new env
         `(letrec ,(map list new es) ,(rename body env2)))]))

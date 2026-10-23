@@ -304,7 +304,9 @@ prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `must
 
 **Language**
 - Core: `lambda`, `if`, `let`/`letrec`, `begin`, `set!`, application, top-level `define`,
-  multi-form programs.
+  multi-form programs. Program definition initializers and intervening expressions
+  execute in source order, so later definitions observe earlier mutations. Internal
+  definitions must still precede expressions in their body.
 - Derived forms: `cond` (with `else`/`=>`/bare-test clauses), `and`, `or`, `when`, `unless`,
   `let*` — realized as `syntax-rules` macros in the prelude; named `let` (hand-written).
 - **Macros**: `define-syntax` + `syntax-rules` (literals, `_`, ellipsis), lexical
