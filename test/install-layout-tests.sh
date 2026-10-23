@@ -935,6 +935,22 @@ elif grep -Fq "needs an absolute CC" "$TMP/pin-bad.log"; then
   ok "TOOLCHAIN_PIN rejects a relative CC that would pin nothing"
 else bad "relative-CC failure unclear"; sed 's/^/         /' "$TMP/pin-bad.log"; fi
 
+# make uninstall removes exactly what make install wrote, keeps the shared bin/ and share/
+# directories, and reports (never deletes) a file it did not install.
+UNINSTALL_STAGE="$TMP/uninstall-stage"
+make install PREFIX="$BUILT_PREFIX" DESTDIR="$UNINSTALL_STAGE" TOOLCHAIN_PIN=1 >/dev/null 2>&1
+printf 'user file\n' > "$UNINSTALL_STAGE$BUILT_PREFIX/share/emit/lib/scheme/mine.sld"
+if make uninstall PREFIX="$BUILT_PREFIX" DESTDIR="$UNINSTALL_STAGE" >"$TMP/uninstall.out" 2>"$TMP/uninstall.err" \
+   && [ "$(find "$UNINSTALL_STAGE" -type f)" = "$UNINSTALL_STAGE$BUILT_PREFIX/share/emit/lib/scheme/mine.sld" ] \
+   && [ -d "$UNINSTALL_STAGE$BUILT_PREFIX/bin" ] \
+   && grep -Fq "mine.sld" "$TMP/uninstall.err"; then
+  rm "$UNINSTALL_STAGE$BUILT_PREFIX/share/emit/lib/scheme/mine.sld"
+  make uninstall PREFIX="$BUILT_PREFIX" DESTDIR="$UNINSTALL_STAGE" >/dev/null 2>&1
+  if [ ! -e "$UNINSTALL_STAGE$BUILT_PREFIX/share/emit" ]; then
+    ok "make uninstall removes the installed payload and keeps only files it did not install"
+  else bad "make uninstall left an empty share/emit"; fi
+else bad "make uninstall"; sed 's/^/         /' "$TMP/uninstall.err"; find "$UNINSTALL_STAGE" -type f | sed 's/^/         /'; fi
+
 # Explicit build inputs are recorded verbatim -- a recipe's stable path (Homebrew opt/,
 # Nix store), not what it resolves to.  This reconfigures the native build, so it runs last.
 ln -s "$LLVM_BIN_BUILT" "$TMP/stable-llvm-bin"
