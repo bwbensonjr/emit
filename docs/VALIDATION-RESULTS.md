@@ -538,3 +538,29 @@ pull request was created, and no image tag was pushed.
   the account's role rather than the fine-grained token's scope. It passed for
   a token that could not push. An authenticated `git push --dry-run` would
   catch this before building.
+
+### Spec scenario reconciliation (task 11.1)
+
+Each of the 18 scenarios in the `distribution` delta, with the evidence that
+satisfies it:
+
+| Scenario | Evidence |
+| --- | --- |
+| Initial channel metadata is prepared | The first channel release is `v0.1.1`, newer than `v0.1.0`. It passed the unchanged source-release gates (run 39951247509). The `v0.1.0` tag and assets are unchanged. |
+| Package source identity disagrees | `tools/channel-identity.sh verify` rejects a wrong digest, a different version, a missing field, a missing file, and a `file://` URL outside rehearsal (`test/release-source-tests.sh`). `emit.nix` checks `VERSION`. The Containerfile checks `sha256sum -c` and `VERSION`. Homebrew verifies the formula's `sha256`. None of them falls back to a branch. |
+| A package build has another clang on PATH | The installed toolchain pin selects LLVM 22. The local Homebrew rehearsal picked `llvm@22` clang with `llvm` 23 installed. `test/llvm-discovery-tests.sh` shows the pin beating a different-major clang and `llvm-config` on PATH. |
+| Independent verification is requested | `bash tools/test.sh units` without Chez fails with "requested units/reference verification requires chez on PATH". Every channel's acceptance ran with Chez absent or hidden. |
+| A user installs through the tap | homebrew-emit#2 installs the binary, libraries, support files, `LICENSE`, and the Unicode license. `brew test` and the maintainer's `brew install bwbensonjr/emit/emit` pass through the linked command. |
+| The LLVM keg is not on PATH | CI Homebrew acceptance runs with PATH limited to Homebrew `bin` and the system directories: 11/11, with `cc` set to `llvm@22/bin/clang-22 [package pin]`. |
+| A sandbox builds the package | CI `nix build` of `packages.<system>.default` and `.candidate` on `x86_64-linux` and `aarch64-darwin`. It uses a `path:` source (no Git metadata), has no Chez, and builds from committed bootstrap IR. The Linux sandbox has no network. |
+| An installed Nix package runs outside a development shell | `channel-accept.sh` passes 11/11 against the store path outside any shell, offline, on both advertised systems (CI) and from `nix run github:bwbensonjr/emit` on `x86_64-linux`. |
+| A developer selects a shell | `devShells.default` has no `chez`, builds, and can `emit build`. `devShells.verify` adds `chez` and passes `tools/test.sh units` 15/15. `bootstrap/` is unchanged afterwards. Verified on `aarch64-linux` and, from `main`, on `x86_64-linux`. |
+| A user runs the final image offline | The published `ghcr.io/bwbensonjr/emit:0.1.1` passes 11/11 with `--network none` and no checkout mounted, including a non-baked import and AOT build and run. The image has no Chez, Git, Python, or source tree. |
+| A caller supplies a host user identity | The image runs as UID 12345 with `--read-only`, writable `/work` and `/cache`, and an unchanged payload digest. The entrypoint forwards `--version` and a program's `(exit 3)` status. |
+| A package candidate is tested | Every channel report records the source digest, platform, `emit --version` (including LLVM), the toolchain selection, `cc` version and libgc version, all 11 checks, and the result. Source and build directories were hidden or absent, and networking was denied. |
+| A package tries to write beside installed sources | The payload-unchanged check covers the read-only prefix (`ci-installed-smoke.sh`), the Nix store, and `--read-only` images. A wrapper that writes into the payload is caught (`test/install-layout-tests.sh`). |
+| A rehearsal completes | PR rehearsals and dispatch run 40011418618 (`publish=false`) produced reports and no tap PR, flake PR, or image tag. |
+| An OCI publication is retried | `test/channel-promote-tests.sh`: a same-digest retry succeeds unchanged, and a different digest for an existing version fails visibly. On the real rerun, the OCI job was not repeated. |
+| One channel update fails | Run 39956760742 attempt 1: Homebrew and flake PR creation failed while OCI promoted. `gh run rerun --failed` retried only those jobs, with no retag and no OCI change. Rollback re-points `latest` only (`oci-latest`, tested) or reverts a tap or flake PR. |
+| A downstream maintainer packages a release | `docs/PACKAGING.md`'s offline build, staging, and smoke sequence ran as written under `tools/offline-run.sh` from an extracted archive, without Chez or network. Chez-requiring checks have their own section and fail when Chez is missing. |
+| A user chooses a channel | The channel sections in `docs/INSTALLATION.md` give each channel's release identity check (`emit --version`), its platform, and its dependency model. They link the current limitations and state that no channel produces standalone static executables. |

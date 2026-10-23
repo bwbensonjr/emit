@@ -79,7 +79,7 @@
 
 ## 11. Integrated acceptance
 
-- [ ] 11.1 Reconcile the delivered behavior against every scenario in `specs/distribution/spec.md`. Verify with `openspec validate low-cost-distribution-channels --strict`, a clean tracked tree after verification, no `make regen` input changes (`bash tools/compiler-inputs.sh --list` against the diff), and the classified native checks for the touched host, install, and tool files.
+- [x] 11.1 Reconcile the delivered behavior against every scenario in `specs/distribution/spec.md`. Verify with `openspec validate low-cost-distribution-channels --strict`, a clean tracked tree after verification, no `make regen` input changes (`bash tools/compiler-inputs.sh --list` against the diff), and the classified native checks for the touched host, install, and tool files.
 
 ## Workflow follow-up
 
