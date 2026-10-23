@@ -1,27 +1,22 @@
 #!/usr/bin/env bash
+# ci-installed-smoke.sh -- installed command checks for a staged source-release prefix.
+#
+# A thin caller of tools/channel-accept.sh (change: low-cost-distribution-channels, design D3),
+# so source-release validation and channel validation run the same checks.  The prefix is made
+# read-only for the duration: an installed Emit must compile and run without writing beside its
+# payload.  EMIT_ACCEPT_REPORT names a report path to keep; otherwise it is discarded.
 set -euo pipefail
 source_root=$(cd "$(dirname "$0")/.." && pwd -P)
 . "$source_root/tools/log.sh"
 if [ "${1:-}" = --help ]; then printf 'Usage: tools/ci-installed-smoke.sh INSTALLED_PREFIX\n'; exit 0; fi
 if [ "$#" != 1 ]; then printf 'Usage: tools/ci-installed-smoke.sh INSTALLED_PREFIX\n' >&2; exit 2; fi
 prefix=$(cd "$1" && pwd -P)
-emit="$prefix/bin/emit"
 work=$(mktemp -d)
-trap 'rm -rf "$work"' EXIT
-say "stage $prefix -> $work installed command checks"
-cp "$source_root/test/release-smoke.scm" "$work/smoke.scm"
-cp "$source_root/test/release-smoke.sld" "$work/smoke.sld"
+restore() { chmod -R u+w "$prefix"; rm -rf "$work"; }
+trap restore EXIT
 version=$(< "$source_root/VERSION")
-cd "$work"
-unset EMIT_MANIFEST EMIT_LIBRARY_PATH EMIT_LIB_PATH EMIT_NO_INSTALLED_ROOT EMIT_NO_MANIFEST_CHAIN
-version_pattern=$(printf '%s\n' "$version" | sed 's/[.+]/\\&/g')
-"$emit" --version | grep -Eq "^emit $version_pattern [(]LLVM [^)]+[)]$"
-"$emit" doctor
-[ "$("$emit" run smoke.scm)" = 42 ]
-printf '(import (scheme inexact))\n(+ 19 23)\n' | "$emit" repl > repl.out
-grep -Eq '(^|[[:space:]])42[[:space:]]*$' repl.out
-"$emit" lib smoke.sld -o artifacts
-[ -s artifacts/release-smoke.ll ]
-"$emit" build smoke.scm -o smoke
-[ "$(./smoke)" = 42 ]
-say "test $emit -> installed commands  [5 commands, ${SECONDS}s]"
+say "stage $prefix -> read-only installed command checks"
+chmod -R a-w "$prefix"
+"$source_root/tools/channel-accept.sh" --emit "$prefix/bin/emit" --expect-version "$version" \
+  --report "${EMIT_ACCEPT_REPORT:-$work/report.json}" --label "staged $prefix" --workspace "$work/accept"
+say "test $prefix/bin/emit -> installed commands  [${SECONDS}s]"
