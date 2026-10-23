@@ -144,7 +144,8 @@
       "chez": false,
       "coverage": [
         "stdlib-precompilation"
-      ]
+      ],
+      "legacy": []
     },
     {
       "id": "explicit-artifact-format",
@@ -2373,7 +2374,8 @@
       "chez": false,
       "coverage": [
         "program-toplevel-order-native"
-      ]
+      ],
+      "legacy": []
     },
     {
       "id": "program-toplevel-order-source",
@@ -2394,7 +2396,8 @@
       "chez": true,
       "coverage": [
         "program-toplevel-order-source"
-      ]
+      ],
+      "legacy": []
     }
   ]
 }

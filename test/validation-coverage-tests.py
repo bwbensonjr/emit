@@ -26,7 +26,10 @@ class CoverageTests(unittest.TestCase):
                             if item["runner"] == runner)
             self.assertEqual(len(labels), count)
             self.assertEqual(hashlib.sha256("\n".join(labels).encode()).hexdigest(), digest)
-        self.assertEqual(len([s for s in suites if "full" in s["profiles"]]), 53)
+        # The full profile is the 53 baseline groups plus suites added later, each
+        # without a legacy label: stdlib-precompilation (#148, #149) and
+        # program-toplevel-order-native (#140).
+        self.assertEqual(len([s for s in suites if "full" in s["profiles"]]), 55)
         units = {s["id"] for s in suites if "units" in s["profiles"]}
         self.assertEqual(len(units), 15)
         self.assertEqual(units, {s["id"] for s in suites if s["isolation"] == "readonly"})
