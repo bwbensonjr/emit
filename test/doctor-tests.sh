@@ -51,6 +51,8 @@ cmp "$TMP/quiet" "$TMP/verbose"
 [ ! -s "$TMP/quiet.err" ] || fail "quiet emitted narration"
 has "$TMP/quiet" "result: ok"
 has "$TMP/quiet" "override CC"
+has "$TMP/quiet" "toolchain: override [LLVM selection]"
+has "$TMP/quiet" "toolchain pin: none"
 has "$TMP/quiet" "provider 1: manifest emit-libs.scm [project]"
 has "$TMP/quiet" "provider 2: directory $TMP/first [command line; available]"
 has "$TMP/quiet" "provider 3: directory $TMP/second [command line; available]"
@@ -138,4 +140,23 @@ env -u CC -u GC_INC -u GC_LIB -u EMIT_GC_INC -u EMIT_GC_LIB \
   "$TMP/detached/bin/emit" doctor >"$TMP/valid-anchor" 2>"$TMP/err" || true
 has "$TMP/valid-anchor" "[compiled default]"
 if grep -q 'unusable toolchain override' "$TMP/err"; then fail "misdiagnosed valid LLVM anchor"; fi
+# An installed package toolchain pin (change: low-cost-distribution-channels) is reported as
+# the LLVM selection and the origin of CC and libgc; an explicit CC still wins over it.
+llvm_bin="$(sed -n 's/^LLVM_BIN := //p' "$REPO/build/llvm.mk")"
+llvm_major="$("$llvm_config" --version)"; llvm_major="${llvm_major%%.*}"
+mkdir -p "$TMP/pinned/bin" "$TMP/pinned/share/emit/tools" "$TMP/pinned/share/emit/package"
+cp "$EMIT" "$TMP/pinned/bin/emit"
+cp "$REPO/tools/llvm-env.sh" "$REPO/tools/log.sh" "$TMP/pinned/share/emit/tools/"
+printf '%s\n' "EMIT_LLVM_MAJOR=$llvm_major" "EMIT_LLVM_BIN=$llvm_bin" "CC=$llvm_bin/clang" \
+  "GC_INC=$gc_inc" "GC_LIB=$gc_lib" >"$TMP/pinned/share/emit/package/toolchain.env"
+env -u CC -u GC_INC -u GC_LIB -u EMIT_GC_INC -u EMIT_GC_LIB -u LLVM_CONFIG -u EMIT_LLVM_BIN \
+  "$TMP/pinned/bin/emit" doctor >"$TMP/pinned.out" 2>"$TMP/err" || true
+has "$TMP/pinned.out" "toolchain: package [LLVM selection]"
+has "$TMP/pinned.out" "toolchain pin: $TMP/pinned/share/emit/package/toolchain.env"
+grep -q "^cc: .* \[package pin\]$" "$TMP/pinned.out" || fail "pinned CC origin not reported"
+has "$TMP/pinned.out" "libgc library: $gc_lib [package pin]"
+env -u GC_INC -u GC_LIB -u EMIT_GC_INC -u EMIT_GC_LIB -u LLVM_CONFIG -u EMIT_LLVM_BIN \
+  CC="$old_cc" "$TMP/pinned/bin/emit" doctor >"$TMP/pinned.out" 2>"$TMP/err" || true
+has "$TMP/pinned.out" "[override CC]"
+has "$TMP/pinned.out" "toolchain: package [LLVM selection]"
 say "test doctor -> passed  [$((SECONDS - started))s]"

@@ -98,3 +98,87 @@ published tag or replace its payload: correct a public release with a new patch
 version and changelog section. Before publication, fixes require a fresh
 validated release commit. Record the resulting release URL and checksum in the
 implementation handoff after successful publication.
+
+## Distribution channels
+
+`.github/workflows/channels.yml` builds, tests, and promotes the Homebrew, Nix,
+and OCI channels ([Installation](INSTALLATION.md#distribution-channels)). It
+consumes a published source release and never changes it. Each channel promotes
+exactly the artifact it tested.
+
+| Trigger | Source | Publishes |
+| --- | --- | --- |
+| Pull request touching channel inputs (`packaging/`, `flake.*`, `tools/channel-*.sh`, `tools/offline-run.sh`, `test/channel-accept/`, the workflow) | candidate archive packaged from the PR head | nothing |
+| Manual dispatch, `tag` empty | candidate archive from the dispatched ref | nothing |
+| Manual dispatch, `tag` set, `publish` off | that release's published archive | nothing |
+| Manual dispatch, `tag` set, `publish` on; or a successful tag-push run of "Source release" | that release's published archive | each channel that passed |
+
+The **identity** job runs the release-source and promotion regression tests. It
+then downloads the release archive and `SHA256SUMS`, verifies them, and writes
+the release identity with `tools/channel-identity.sh` (version, tag, commit,
+URL, SHA-256). For a rehearsal, it packages a candidate archive instead. Every
+channel job verifies that identity before building, and there is no fallback
+to a branch checkout.
+
+The three channel jobs are independent:
+
+- **homebrew** (`macos-15`) renders `packaging/homebrew/emit.rb.in` into a
+  throwaway local tap. It runs `brew style` and `brew audit --strict`, builds
+  from source, and runs `brew test`.
+- **nix** (`x86_64-linux` on `ubuntu-24.04`, `aarch64-darwin` on `macos-15`)
+  builds `packages.candidate`, or `packages.default` from the release identity.
+  It also runs the flake's sandboxed acceptance check.
+- **oci** (`ubuntu-24.04`) builds `packaging/oci/Containerfile` once for
+  `linux/amd64`, into an image archive. It loads that archive and checks
+  argument and exit-status forwarding through the entrypoint.
+
+Each channel then runs `tools/channel-accept.sh` against its installed command,
+with the network denied (`tools/offline-run.sh`, or `--network none`) and the
+checkout hidden. Every job uploads its JSON report.
+
+Promotion uses `tools/channel-promote.sh` and is safe to retry:
+
+- **OCI** pushes the tested archive with `skopeo --preserve-digests`, so the
+  registry digest is the tested digest. The version tag is created only if it
+  is absent. A version tag that already resolves to the tested digest succeeds
+  unchanged. One that resolves to a different digest fails, and the version tag
+  is never overwritten. `latest` moves last.
+- **Homebrew** opens or reuses a pull request on `bwbensonjr/homebrew-emit`
+  that sets `Formula/emit.rb`.
+- **Nix** opens or reuses a pull request in this repository that sets
+  `packaging/release.json`, after both systems passed.
+
+Both pull requests are reviewed and merged by a maintainer.
+
+Permissions:
+
+- Only the oci job holds `packages: write`.
+- Only `nix-promote` holds `contents: write` and `pull-requests: write`.
+- The `HOMEBREW_TAP_TOKEN` secret, a fine-grained token limited to the tap
+  repository, reaches only publish-gated steps. Each promoting job first checks
+  its credential, before building.
+
+`test/ci-policy-tests.py` pins these properties.
+
+Retry and rollback:
+
+- **A failed channel** is retried alone, by dispatching the workflow with the
+  same `tag` and `publish` on. Channels that already promoted see their own
+  results unchanged. The source release is never retagged.
+- **OCI rollback** re-points `latest` to a previously validated digest:
+  `tools/channel-promote.sh oci-latest ghcr.io/bwbensonjr/emit sha256:...`.
+  Digests are recorded in each run's `channel-oci` artifact.
+- **Homebrew and Nix rollback** reverts the promotion pull request's commit,
+  which restores the previous formula or `packaging/release.json`.
+- **A broken release** is never repaired in place. Ship a new patch release,
+  and let the channels follow it.
+
+Rehearse a published release without publishing (the workflow must be on the
+default branch):
+
+```sh
+gh workflow run channels.yml -f tag=vX.Y.Z -f publish=false
+```
+
+`v0.1.0` predates the toolchain pin and the shared acceptance fixtures, so the
+first channel release is the release after it.

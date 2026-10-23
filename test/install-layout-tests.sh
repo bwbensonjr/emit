@@ -852,6 +852,102 @@ else
   sed 's/^/         /' "$TMP/relocated-doctor.err"
 fi
 
+
+# --- package toolchain pin (change: low-cost-distribution-channels, design D1) ---------------
+echo "toolchain pin"
+# The relocation section moved PREFIX and the working directory; the binary was built for
+# the original prefix, so staging under it rebuilds nothing.
+cd "$REPO"
+BUILT_PREFIX="$TMP/prefix"
+if [ ! -e "$PREFIX/share/emit/package/toolchain.env" ]; then
+  ok "a plain install writes no toolchain pin"
+else bad "a plain install wrote share/emit/package/toolchain.env"; fi
+
+# Stage under DESTDIR with the SAME PREFIX so nothing rebuilds.  An explicit CC in the
+# environment is a build input and is pinned verbatim; otherwise the LLVM directory's clang.
+PIN_STAGE="$TMP/pin-stage"
+if make install PREFIX="$BUILT_PREFIX" DESTDIR="$PIN_STAGE" TOOLCHAIN_PIN=1 \
+     >"$TMP/pin-install.log" 2>&1; then
+  PIN_FILE="$PIN_STAGE$BUILT_PREFIX/share/emit/package/toolchain.env"
+  LLVM_BIN_BUILT="$(sed -n 's/^LLVM_BIN := //p' build/llvm.mk)"
+  if [ -f "$PIN_FILE" ] && ! grep -Fq "$PIN_STAGE" "$PIN_FILE" \
+     && grep -qx 'EMIT_LLVM_MAJOR=[0-9][0-9]*' "$PIN_FILE" \
+     && grep -Fqx "CC=${CC:-$LLVM_BIN_BUILT/clang}" "$PIN_FILE"; then
+    ok "TOOLCHAIN_PIN=1 records this build's LLVM clang without the DESTDIR"
+  else bad "pin missing or wrong"; sed 's/^/         /' "$PIN_FILE" 2>/dev/null; fi
+else bad "make install TOOLCHAIN_PIN=1 failed"; sed 's/^/         /' "$TMP/pin-install.log"; fi
+
+# The pinned install links through its pinned clang even with no clang on PATH.
+PIN_PREFIX="$TMP/pin-prefix"
+mv "$PIN_STAGE$BUILT_PREFIX" "$PIN_PREFIX"
+mkdir -p "$TMP/pin-work"
+printf '(display (+ 40 2))\n' > "$TMP/pin-work/p.scm"
+if (cd "$TMP/pin-work" && env -u CC -u GC_INC -u GC_LIB -u EMIT_LLVM_BIN -u LLVM_CONFIG \
+      PATH=/usr/bin:/bin EMIT_VERBOSITY=quiet "$PIN_PREFIX/bin/emit" build p.scm -o p) \
+      >"$TMP/pin-build.out" 2>"$TMP/pin-build.err" \
+   && [ "$("$TMP/pin-work/p")" = 42 ]; then
+  ok "a pinned install builds an AOT program without any toolchain on PATH"
+else bad "pinned emit build failed"; sed 's/^/         /' "$TMP/pin-build.err"; fi
+
+# --- shared installed acceptance (tools/channel-accept.sh, design D3) ------------------------
+# The pinned install is what a package delivers: accept it read-only from outside the checkout.
+VERSION_EXPECTED="$(sed -n 1p VERSION)"
+chmod -R a-w "$PIN_PREFIX"
+if (cd "$TMP" && "$REPO/tools/channel-accept.sh" --emit "$PIN_PREFIX/bin/emit" \
+      --expect-version "$VERSION_EXPECTED" --report "$TMP/accept.json" --label pinned) \
+      >"$TMP/accept.out" 2>"$TMP/accept.err" \
+   && grep -q '"result": "passed"' "$TMP/accept.json" \
+   && [ "$(grep -c '"outcome": "passed"' "$TMP/accept.json")" = 11 ]; then
+  ok "installed acceptance passes all 11 checks against a read-only pinned install"
+else bad "installed acceptance failed"; sed 's/^/         /' "$TMP/accept.err" "$TMP/accept.json" 2>/dev/null; fi
+chmod -R u+w "$PIN_PREFIX"
+
+# One run proves failures are recorded rather than hidden: a wrong expected version, a broken
+# fixture, and a launcher that writes into the installed payload must each fail their own
+# check while every other check still runs and passes.
+ACCEPT_TREE="$TMP/accept-tree"
+mkdir -p "$ACCEPT_TREE/tools" "$ACCEPT_TREE/test"
+cp "$REPO/tools/channel-accept.sh" "$REPO/tools/log.sh" "$ACCEPT_TREE/tools/"
+cp -R "$REPO/test/channel-accept" "$ACCEPT_TREE/test/"
+printf '(display 41)\n' > "$ACCEPT_TREE/test/channel-accept/smoke.scm"
+mv "$PIN_PREFIX/bin/emit" "$PIN_PREFIX/bin/emit-real"
+printf '#!/usr/bin/env bash\n[ "${1:-}" = doctor ] && : > "%s/share/emit/stray"\nexec "%s/bin/emit-real" "$@"\n' \
+  "$PIN_PREFIX" "$PIN_PREFIX" > "$PIN_PREFIX/bin/emit"
+chmod +x "$PIN_PREFIX/bin/emit"
+if (cd "$TMP" && "$ACCEPT_TREE/tools/channel-accept.sh" --emit "$PIN_PREFIX/bin/emit" \
+      --expect-version 0.0.0-wrong --report "$TMP/reject.json") >"$TMP/reject.out" 2>"$TMP/reject.err"; then
+  bad "installed acceptance passed a broken candidate"
+else
+  failed_ids="$(sed -n 's/.*"id": "\([^"]*\)", "outcome": "failed".*/\1/p' "$TMP/reject.json" | tr '\n' ' ')"
+  if [ "$failed_ids" = "version jit-run aot-build payload-unchanged " ] \
+     && [ "$(grep -c '"outcome": "passed"' "$TMP/reject.json")" = 7 ] \
+     && grep -q '"result": "failed"' "$TMP/reject.json"; then
+    ok "installed acceptance records version, fixture, and payload-write failures and still runs the rest"
+  else bad "unexpected acceptance failures: [$failed_ids]"; sed 's/^/         /' "$TMP/reject.json"; fi
+fi
+rm -f "$PIN_PREFIX/share/emit/stray"
+mv "$PIN_PREFIX/bin/emit-real" "$PIN_PREFIX/bin/emit"
+
+if make install PREFIX="$BUILT_PREFIX" DESTDIR="$TMP/pin-bad" TOOLCHAIN_PIN=1 CC=clang \
+     >"$TMP/pin-bad.log" 2>&1; then
+  bad "TOOLCHAIN_PIN accepted a relative CC"
+elif grep -Fq "needs an absolute CC" "$TMP/pin-bad.log"; then
+  ok "TOOLCHAIN_PIN rejects a relative CC that would pin nothing"
+else bad "relative-CC failure unclear"; sed 's/^/         /' "$TMP/pin-bad.log"; fi
+
+# Explicit build inputs are recorded verbatim -- a recipe's stable path (Homebrew opt/,
+# Nix store), not what it resolves to.  This reconfigures the native build, so it runs last.
+ln -s "$LLVM_BIN_BUILT" "$TMP/stable-llvm-bin"
+GC_INC_BUILT="$(sed -n 's/^GC_INC := //p' build/llvm.mk)"
+ln -s "$GC_INC_BUILT" "$TMP/stable-gc-inc"
+if make install PREFIX="$BUILT_PREFIX" DESTDIR="$TMP/pin-verbatim" TOOLCHAIN_PIN=1 \
+     EMIT_LLVM_BIN="$TMP/stable-llvm-bin" GC_INC="$TMP/stable-gc-inc" \
+     >"$TMP/pin-verbatim.log" 2>&1 \
+   && grep -Fqx "EMIT_LLVM_BIN=$TMP/stable-llvm-bin" "$TMP/pin-verbatim$BUILT_PREFIX/share/emit/package/toolchain.env" \
+   && grep -Fqx "CC=${CC:-$TMP/stable-llvm-bin/clang}" "$TMP/pin-verbatim$BUILT_PREFIX/share/emit/package/toolchain.env" \
+   && grep -Fqx "GC_INC=$TMP/stable-gc-inc" "$TMP/pin-verbatim$BUILT_PREFIX/share/emit/package/toolchain.env"; then
+  ok "explicit EMIT_LLVM_BIN and GC_INC build inputs are pinned verbatim"
+else bad "explicit inputs were resolved or dropped"; sed 's/^/         /' "$TMP/pin-verbatim.log"; fi
 echo
 echo "  $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

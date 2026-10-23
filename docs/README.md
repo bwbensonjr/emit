@@ -4,6 +4,7 @@
 - [A summary of system complexity based on lines of code](COMPLEXITY.md)
 - [An snapshot of compiler transformation steps for a small example](counter-transform.md)
 - [A guide to developing and compiling your own Scheme project with Emit](PROJECTS.md)
+- [Packaging an Emit release for a distribution: inputs, offline build, checks](PACKAGING.md)
 - [A description of the Emit compiler module and library structure](MODULES.md)
 - [A description of the principles for the Emit compiler's output logging](OUTPUT.md)
 - [A catalog of known and fixed performance issues](PERFORMANCE.md)

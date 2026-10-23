@@ -1,0 +1,11 @@
+;;; Installed acceptance: shipped SRFI 1 and SRFI 64 (with its nested includes).
+(import (scheme base) (scheme write) (srfi 1) (srfi 64))
+(define runner (test-runner-null))
+(test-runner-current runner)
+(test-begin "channel")
+(test-equal "fold" 42 (fold + 0 (iota 3 13)))
+(test-assert "any" (any odd? (list 2 4 5)))
+(test-end "channel")
+(display (if (and (= (test-runner-pass-count runner) 2) (= (test-runner-fail-count runner) 0))
+             (fold + 0 (iota 3 13))
+             (list 'failed (test-runner-pass-count runner) (test-runner-fail-count runner))))

@@ -1,0 +1,49 @@
+# Rendered by tools/channel-render.sh from a release identity (packaging/release.json);
+# edit the template in bwbensonjr/emit, not the tap copy.
+class Emit < Formula
+  desc "Scheme compiler with a JIT REPL and standalone native executables"
+  homepage "https://github.com/bwbensonjr/emit"
+  url "@ARCHIVE_URL@"
+  sha256 "@SHA256@"
+  license "MIT"
+
+  depends_on arch: :arm64
+  depends_on "bdw-gc"
+  depends_on "llvm@22"
+  depends_on :macos
+
+  def install
+    llvm = Formula["llvm@22"]
+    gc = Formula["bdw-gc"]
+    # Every toolchain input is an explicit opt/ path: superenv shims never reach the
+    # build, and the installed toolchain pin survives patch upgrades of either keg.
+    args = %W[
+      PREFIX=#{prefix}
+      LLVM_CONFIG=#{llvm.opt_bin}/llvm-config
+      EMIT_LLVM_BIN=#{llvm.opt_bin}
+      CC=#{llvm.opt_bin}/clang
+      CXX=#{llvm.opt_bin}/clang++
+      GC_INC=#{gc.opt_include}
+      GC_LIB=#{gc.opt_lib}
+      GC_DYLIB=#{gc.opt_lib}/libgc.dylib
+    ]
+    system "make", *args
+    system "make", "install", "TOOLCHAIN_PIN=1", *args
+    doc.install "vendor/unicode/17.0.0/LICENSE.txt" => "UNICODE-LICENSE.txt"
+  end
+
+  test do
+    # Homebrew's test environment exports compiler variables, which Emit honors as explicit
+    # overrides of the installed toolchain pin; test what a user gets by default.
+    %w[CC CXX LLVM_CONFIG EMIT_LLVM_BIN GC_INC GC_LIB GC_DYLIB].each { |name| ENV.delete(name) }
+    assert_match "emit #{version} (LLVM 22.", shell_output("#{bin}/emit --version")
+    assert_match "toolchain: package", shell_output("#{bin}/emit doctor")
+    (testpath/"answer.scm").write <<~SCHEME
+      (import (scheme base) (scheme inexact) (scheme write))
+      (display (exact (round (* (sqrt 4.0) 21))))
+    SCHEME
+    assert_equal "42", shell_output("#{bin}/emit run answer.scm").strip
+    system bin/"emit", "build", "answer.scm", "-o", "answer"
+    assert_equal "42", shell_output("./answer").strip
+  end
+end

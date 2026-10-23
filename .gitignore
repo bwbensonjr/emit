@@ -22,3 +22,8 @@ test/r7rs/exclusions.tsv.draft
 # Python validation tools use no installed dependencies.
 __pycache__/
 *.pyc
+
+# `make install TOOLCHAIN_PIN=1` writes share/emit/package/toolchain.env; tools/llvm-env.sh
+# reads ../package/toolchain.env beside itself, so a stray copy in a checkout must never be
+# committed (it would pin every developer build).
+/package/

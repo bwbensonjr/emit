@@ -1,7 +1,7 @@
 # Distribution and Installation
 
-Status: exploration. Input to the OpenSpec design/change process; each
-step in the sequence below is intended to become its own change. This
+Status: distribution roadmap. Completed steps record shipped behavior;
+remaining steps are input to the OpenSpec design/change process. This
 file can be edited and changed to reflect decision and priority changes.
 
 ## Goals
@@ -22,8 +22,11 @@ file can be edited and changed to reflect decision and priority changes.
 
 ## Current state
 
-- The committed `bootstrap/*.ll` means a source build needs only LLVM 22+,
-  libgc, and a C/C++ compiler. No bootstrap binary is required.
+- Source builds use committed `bootstrap/*.ll` with LLVM, libgc, and a
+  C/C++ compiler, without Chez or a bootstrap binary. LLVM 22 and 23 are
+  maintained on Linux and macOS. Discovery has no upper bound; versions
+  below the default floor of 22 warn and continue without maintained CI
+  coverage. `EMIT_LLVM_MIN` overrides the warning floor.
 - `emit` links the LLVM C++ ORC/LLJIT API dynamically. That API is not stable
   across LLVM majors.
 - `emit build` writes textual IR and forks `clang`, so the user's `clang` must
@@ -36,7 +39,9 @@ file can be edited and changed to reflect decision and priority changes.
   toolchain available at runtime.
 - `make install` already honors `PREFIX` and `DESTDIR`, and toolchain
   discovery honors `LLVM_CONFIG`.
-- There are no tagged releases or binary artifacts yet.
+- [Emit v0.1.0](https://github.com/bwbensonjr/emit/releases/tag/v0.1.0)
+  is published with a source tarball, SHA-256 checksums, and release notes.
+  Prebuilt binary bundles remain future work.
 
 ## Key tradeoffs
 
@@ -126,34 +131,69 @@ notarized (paid Apple Developer account).
 
 ## Suggested sequence
 
-Each step is a candidate OpenSpec change. Later steps assume the earlier
-ones.
+Completed work is recorded below; remaining steps are candidates for OpenSpec
+changes. Later steps assume the earlier ones.
 
-### 1. Release foundations
+### 1. Release foundations (completed)
 
-- Establish semantic versioning for Emit and make `emit --version`
-  report the Emit version and the LLVM version it was built with.
-- Locate the library root relative to the executable, with the baked
-  `PREFIX` as fallback.
-- Add `emit doctor`, which prints the LLVM version, cc/clang, libgc, and the
-  library search paths in effect.
-- Add a CI matrix that builds from source against each supported LLVM major
-  (19–23) on Linux and macOS, so the committed `bootstrap/*.ll` is checked
-  for compatibility.
-- Cut the first tagged `0.x` release with a source tarball, checksums, and a
-  changelog.
+Delivered by `release-foundations` and updated by `streamline-build-and-test`:
 
-See [Installation](INSTALLATION.md) for the current source-build, install,
-relocation, and runtime dependency contract.
+- Emit has a committed semantic version; `emit --version` reports both the
+  Emit version and the LLVM version it was built with. Before 1.0,
+  incompatible language or public CLI changes increment the minor version;
+  compatible fixes increment the patch version.
+- Installed library and support-file lookup uses the resolved executable's
+  location, with the baked `PREFIX` as fallback. Relocation tests exercise
+  all four compilation commands and an external executable symlink.
+- `emit doctor` reports build identity, the effective native toolchain,
+  libgc, and ordered library providers.
+- CI builds committed bootstrap IR without Chez using LLVM 22 and 23 on
+  Linux and macOS. Code PRs and main builds run full native regression on
+  LLVM 23 and focused compatibility checks on LLVM 22. Documentation-only
+  changes use lightweight checks without provisioning LLVM. Tagged releases
+  require full native regression in all four cells.
+- Releases also require a Chez-free source/bootstrap consistency proof,
+  direct source units, one complete independent-host reference proof, and
+  validation of the exact source archive offline on Linux and macOS.
+  Missing or failed required checks block publication.
+- CI verifies reusable toolchain artifacts and retains an exact-recipe
+  source fallback. Dependency reuse does not replace correctness checks.
+- The first tagged release, `v0.1.0`, is published with a source tarball,
+  SHA-256 checksums, and changelog notes. Publication validates
+  tag/version/changelog identity and preserves existing published assets.
 
-### 2. Low-cost channels
+See [Installation](INSTALLATION.md) for build and relocation contracts,
+[Toolchain CI](TOOLCHAIN.md) for maintained coverage and dependency reuse,
+and [Source release preparation](RELEASE-PIPELINE.md) for release gates and
+publication.
 
-- Create a Homebrew tap (`bwbensonjr/homebrew-emit`) that builds from source
-  and depends on a pinned `llvm@N` and `bdw-gc`.
-- Add a Nix flake exposing `packages.default` and a dev shell.
-- Publish a `ghcr.io/bwbensonjr/emit` image built in CI.
-- Write a packaging note for downstream maintainers covering the build
-  inputs, the offline test suite, and how to run with Chez optional.
+### 2. Low-cost channels (delivered)
+
+Delivered by `low-cost-distribution-channels`:
+
+- A Homebrew tap (`bwbensonjr/homebrew-emit`, formula `bwbensonjr/emit/emit`)
+  builds a release from source on Apple Silicon against `llvm@22` and
+  `bdw-gc`.
+- A locked Nix flake exposes `packages.default` (the release named by
+  `packaging/release.json`) and a `candidate` package for `aarch64-darwin`
+  and `x86_64-linux`. It also exposes a Chez-free `devShells.default` and a
+  `devShells.verify` shell that adds Chez.
+- A `ghcr.io/bwbensonjr/emit` image for `linux/amd64` runs every command
+  offline as any user ID.
+- `make install TOOLCHAIN_PIN=1` records a package's declared toolchain, so
+  `emit build` cannot pick up another clang from `PATH`.
+- One installed acceptance script, `tools/channel-accept.sh`, gates every
+  channel and the source-release archive checks.
+- The channel workflow rehearses on pull requests. It promotes only a
+  published release's exact tested artifacts, through reviewable tap and
+  flake pull requests and a digest-preserving image push, with per-channel
+  retry and rollback.
+
+See [Installation](INSTALLATION.md#distribution-channels) for users,
+[Packaging](PACKAGING.md) for downstream maintainers, and
+[Source release preparation](RELEASE-PIPELINE.md#distribution-channels) for
+the channel workflow. Bottles, Linuxbrew, `linux/arm64` images, and
+homebrew-core remain open.
 
 ### 3. Decouple AOT from `clang`
 

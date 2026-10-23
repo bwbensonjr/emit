@@ -3413,6 +3413,10 @@ static int emit_repl(int argc, char **argv) {
 struct Toolchain {
   std::string cc, gc_inc, gc_lib;
   std::string cc_origin, gc_inc_origin, gc_lib_origin;
+  // Which layer of tools/llvm-env.sh chose LLVM (override, package, or discovery), and
+  // the installed package toolchain pin it read, if any (change:
+  // low-cost-distribution-channels, design D1).  Both stay empty without discovery.
+  std::string llvm_origin, pin;
   // The values that came from the compiled-in build-time defaults, as "K=V" pairs, so
   // a link failure can say WHERE a stale path came from rather than leaving the user
   // with clang's own error (spec: "a stale compiled-in default fails legibly").
@@ -3541,15 +3545,23 @@ static bool discover_toolchain(Toolchain &tc) {
         if (k == "CC") ecc = v;
         else if (k == "EMIT_GC_INC") egi = v;
         else if (k == "EMIT_GC_LIB") egl = v;
+        else if (k == "EMIT_TOOLCHAIN_ORIGIN") tc.llvm_origin = v;
+        else if (k == "EMIT_TOOLCHAIN_PIN") tc.pin = v;
       }
     }
   }
   tc.cc = cc ? std::string(cc) : ecc;
   tc.gc_inc = gi ? std::string(gi) : egi;
   tc.gc_lib = gl ? std::string(gl) : egl;
-  tc.cc_origin = cc ? "override CC" : "discovery";
-  tc.gc_inc_origin = gi ? (std::getenv("GC_INC") ? "override GC_INC" : "override EMIT_GC_INC") : "discovery";
-  tc.gc_lib_origin = gl ? (std::getenv("GC_LIB") ? "override GC_LIB" : "override EMIT_GC_LIB") : "discovery";
+  // Explicit CC, GC_INC, and GC_LIB together skip discovery entirely.
+  if (script.empty()) tc.llvm_origin = "override";
+  // A value the script supplied came from the package pin when the pin chose LLVM (CC) or
+  // merely exists (libgc, which the pin supplies per value whatever chose LLVM).
+  std::string found_cc = tc.llvm_origin == "package" ? "package pin" : "discovery";
+  std::string found_gc = tc.pin.empty() ? "discovery" : "package pin";
+  tc.cc_origin = cc ? "override CC" : found_cc;
+  tc.gc_inc_origin = gi ? (std::getenv("GC_INC") ? "override GC_INC" : "override EMIT_GC_INC") : found_gc;
+  tc.gc_lib_origin = gl ? (std::getenv("GC_LIB") ? "override GC_LIB" : "override EMIT_GC_LIB") : found_gc;
 
   // Layer 3, per value: whatever the first two layers left empty.
   struct { std::string *slot, *origin; const char *name, *baked; } fallbacks[] = {
@@ -3976,6 +3988,9 @@ static int emit_doctor(int argc, char **argv) {
   Toolchain tc;
   bool native = discover_toolchain(tc);
   check(native, "native toolchain settings are incomplete");
+  std::cout << "toolchain: " << (tc.llvm_origin.empty() ? "unavailable" : tc.llvm_origin)
+            << " [LLVM selection]\n"
+            << "toolchain pin: " << (tc.pin.empty() ? "none" : tc.pin) << "\n";
   std::string compiler = executable_on_path(tc.cc);
   std::cout << "cc: " << (compiler.empty() ? tc.cc : compiler) << " ["
             << tc.cc_origin << "]\n";

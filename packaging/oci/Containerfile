@@ -1,0 +1,67 @@
+# Emit development image (change: low-cost-distribution-channels, design D6).
+#
+# Build context: a directory holding the verified source archive emit-<version>.tar.gz.
+#   docker buildx build --platform linux/amd64 -f packaging/oci/Containerfile \
+#     --build-arg EMIT_VERSION=... --build-arg EMIT_SHA256=... --build-arg EMIT_REVISION=... \
+#     --output type=oci,dest=emit.oci ASSET_DIRECTORY
+#
+# Both stages start from the same Ubuntu 26.04 image index, pinned by digest (it fixes every
+# platform's manifest; the published image is linux/amd64), and install LLVM 22 and libgc at exact
+# package versions.  The final image holds the installed Emit payload
+# and the native toolchain `emit build` needs -- no Chez, Git, Python, or source tree.
+ARG BASE=ubuntu:26.04@sha256:c098726dd9b9733f3e885f8de0ef375206a311b0a317eadc40d347b1115fb944
+ARG LLVM_PACKAGE_VERSION=1:22.1.2-1ubuntu1
+ARG GC_PACKAGE_VERSION=1:8.2.12-1
+
+FROM ${BASE} AS builder
+ARG LLVM_PACKAGE_VERSION
+ARG GC_PACKAGE_VERSION
+ARG EMIT_VERSION
+ARG EMIT_SHA256
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      clang-22=${LLVM_PACKAGE_VERSION} llvm-22-dev=${LLVM_PACKAGE_VERSION} \
+      libgc-dev=${GC_PACKAGE_VERSION} libc6-dev make \
+ && rm -rf /var/lib/apt/lists/*
+COPY emit-${EMIT_VERSION}.tar.gz /src/
+# The archive must be the one its identity names; a mismatch stops the build.
+RUN cd /src \
+ && printf '%s  %s\n' "${EMIT_SHA256}" "emit-${EMIT_VERSION}.tar.gz" | sha256sum -c - \
+ && tar -xzf "emit-${EMIT_VERSION}.tar.gz" \
+ && cd "emit-${EMIT_VERSION}" \
+ && [ "$(head -n1 VERSION)" = "${EMIT_VERSION}" ] \
+ && set -- LLVM_CONFIG=/usr/lib/llvm-22/bin/llvm-config EMIT_LLVM_BIN=/usr/lib/llvm-22/bin \
+      GC_INC=/usr/include GC_LIB="/usr/lib/$(uname -m)-linux-gnu" \
+      GC_DYLIB="/usr/lib/$(uname -m)-linux-gnu/libgc.so" \
+ && make -j"$(nproc)" "$@" PREFIX=/opt/emit \
+ && make install "$@" PREFIX=/opt/emit TOOLCHAIN_PIN=1
+
+# emit build links with clang -flto.  Without lld as clang's default linker, GNU ld would need
+# the LLVMgold plugin, so clang.cfg (read beside clang's own executable) selects lld.  /work and
+# /cache are world-writable with the sticky bit, so an arbitrary non-root UID can work and cache.
+FROM ${BASE}
+ARG LLVM_PACKAGE_VERSION
+ARG GC_PACKAGE_VERSION
+ARG EMIT_VERSION
+ARG EMIT_REVISION
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      clang-22=${LLVM_PACKAGE_VERSION} lld-22=${LLVM_PACKAGE_VERSION} \
+      libllvm22=${LLVM_PACKAGE_VERSION} \
+      libgc1=${GC_PACKAGE_VERSION} libgc-dev=${GC_PACKAGE_VERSION} libc6-dev \
+ && rm -rf /var/lib/apt/lists/* \
+ && printf -- '-fuse-ld=lld\n' > /usr/lib/llvm-22/bin/clang.cfg \
+ && mkdir -p /work /cache && chmod 1777 /work /cache
+COPY --from=builder /opt/emit /opt/emit
+ENV HOME=/work EMIT_CACHE=/cache
+WORKDIR /work
+LABEL org.opencontainers.image.title="emit" \
+      org.opencontainers.image.description="Emit Scheme compiler: run, repl, lib, and build with LLVM 22" \
+      org.opencontainers.image.source="https://github.com/bwbensonjr/emit" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.version="${EMIT_VERSION}" \
+      org.opencontainers.image.revision="${EMIT_REVISION}" \
+      io.github.bwbensonjr.emit.llvm="${LLVM_PACKAGE_VERSION}" \
+      io.github.bwbensonjr.emit.libgc="${GC_PACKAGE_VERSION}"
+ENTRYPOINT ["/opt/emit/bin/emit"]
+CMD ["--help"]
