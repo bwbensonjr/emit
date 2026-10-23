@@ -9,8 +9,12 @@ network. Native version and discovery probes are bounded to five seconds each.
 
 The first line gives Emit and build-time LLVM versions. Executable and compiled
 prefix fields distinguish the running installation from its fallback location.
+The `toolchain` field names the layer that selected LLVM for the AOT link:
+`override` (`EMIT_LLVM_BIN`/`LLVM_CONFIG`, or explicit `CC`/`GC_INC`/`GC_LIB`
+together), `package` (an installed toolchain pin), or `discovery`. The
+`toolchain pin` field gives the pin file's path, or `none`.
 `cc` and libgc fields give effective values and origins: an explicit override,
-shared discovery, or a compiled default. The libgc version comes from the selected
+a package pin, shared discovery, or a compiled default. The libgc version comes from the selected
 include directory's headers; unavailable metadata is reported as unknown and is
 informational. Missing headers or link libraries fail the check. The current AOT
 pipeline consumes textual LLVM IR, so the selected compiler must be clang at least
