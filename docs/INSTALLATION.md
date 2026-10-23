@@ -15,7 +15,14 @@ make install PREFIX=/usr/local DESTDIR="$PWD/stage"
 ```
 
 The install places the command at `bin/emit` and the library manifest, shipped
-libraries, and AOT support files under `share/emit`. A complete prefix can be
+libraries, and AOT support files under `share/emit`. `make uninstall` with the same
+`PREFIX` (and `DESTDIR`) removes exactly those files, prunes the empty directories under
+`share/emit`, and reports, rather than deletes, any file there that it did not install:
+
+```sh
+make uninstall PREFIX="$HOME/.local"
+```
+ A complete prefix can be
 moved after installation. Emit resolves its real executable path (including
 when started through a symlink), checks for `../share/emit` beside that binary,
 and then uses the compiled-in `PREFIX` as a fallback. The fallback supports a

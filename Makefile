@@ -373,6 +373,27 @@ ifneq ($(TOOLCHAIN_PIN),)
 	  say "install toolchain pin -> $(SHAREDIR)/package/toolchain.env  [LLVM $$major, CC $$pin_cc]"
 endif
 
+# UNINSTALL removes exactly what `make install` writes under the same PREFIX/DESTDIR: bin/emit,
+# the manifest, library sources, includes, support files, and an optional toolchain pin.  It then
+# prunes directories under share/emit only when they are empty, so a file it did not install --
+# one from a different release's file list, or one a user added -- is reported and left in place.
+# It builds nothing.
+INSTALLED_SHARE := emit-libs.scm $(SLDS) $(LIBDATA) $(SUPPORT) package/toolchain.env
+
+.PHONY: uninstall
+uninstall:
+	@. tools/log.sh; \
+	  removed=0; \
+	  for f in "$(BINDIR)/emit" $(foreach f,$(INSTALLED_SHARE),"$(SHAREDIR)/$(f)"); do \
+	    if [ -e "$$f" ] || [ -L "$$f" ]; then rm -f "$$f" && removed=$$((removed + 1)); fi; \
+	  done; \
+	  if [ -d "$(SHAREDIR)" ]; then find "$(SHAREDIR)" -depth -type d -empty -exec rmdir {} \; ; fi; \
+	  say "uninstall emit <- $(DESTDIR)$(PREFIX)  [$$removed file(s) removed]"; \
+	  if [ -d "$(SHAREDIR)" ]; then \
+	    say "uninstall: left $(SHAREDIR) in place; it holds files this checkout did not install:" >&2; \
+	    find "$(SHAREDIR)" -type f | sed 's/^/  /' >&2; \
+	  fi
+
 # build/ is a real directory (order-only prerequisite), not a phony target.
 build:
 	mkdir -p build
