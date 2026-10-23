@@ -293,7 +293,9 @@ jobs:
             --output "type=docker,name=emit-candidate:$VERSION,dest=$RUNNER_TEMP/emit-image.tar" \
             /tmp/emit-channel-assets
           docker load -i "$RUNNER_TEMP/emit-image.tar"
-          skopeo inspect --format '{{.Digest}}' "oci-archive:$RUNNER_TEMP/emit-image.tar" | tee "$RUNNER_TEMP/oci-digest.txt"
+          # The tested digest, read exactly as tools/channel-promote.sh reads it before pushing.
+          mkdir "$RUNNER_TEMP/emit-image" && tar -xf "$RUNNER_TEMP/emit-image.tar" -C "$RUNNER_TEMP/emit-image"
+          skopeo inspect --format '{{.Digest}}' "oci:$RUNNER_TEMP/emit-image" | tee "$RUNNER_TEMP/oci-digest.txt"
       - name: Installed acceptance inside the image, offline, as an arbitrary user
         env:
           VERSION: ${{ needs.identity.outputs.version }}

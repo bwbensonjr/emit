@@ -4,9 +4,10 @@
 #
 #   oci TAG IMAGE_ARCHIVE REPOSITORY
 #       Push the tested image archive (docker exporter tarball, which is also an OCI layout) by
-#       digest: skopeo --preserve-digests never re-encodes it.  REPOSITORY:<version> is created
-#       only if absent; an existing tag must already resolve to the tested digest, otherwise the
-#       promotion fails visibly.  The moving `latest` tag is updated last.
+#       digest: it is unpacked to an oci: layout, and skopeo --preserve-digests never re-encodes
+#       it.  REPOSITORY:<version> is created only if absent; an existing tag must already
+#       resolve to the tested digest, otherwise the promotion fails visibly.  The moving `latest`
+#       tag is updated last.
 #   oci-latest REPOSITORY DIGEST
 #       Roll back: re-point `latest` to a previously validated digest.  Version tags never move.
 #   tap TAG FORMULA
@@ -95,7 +96,12 @@ case "${1:-}" in
     [ "$#" = 4 ] || { usage >&2; exit 2; }
     tag=$2 archive=$3 repository=$4 version=${2#v}
     [ -f "$archive" ] || die "no image archive $archive"
-    digest=$(skopeo inspect --format '{{.Digest}}' "oci-archive:$archive")
+    # Unpack as the current user and push from the oci: directory transport.  skopeo's
+    # oci-archive: transport replays the archive's root ownership, which fails without root.
+    layout=$(mktemp -d)
+    trap 'rm -rf "$layout"' EXIT
+    tar -xf "$archive" -C "$layout"
+    digest=$(skopeo inspect --format '{{.Digest}}' "oci:$layout")
     [ -n "$digest" ] || die "cannot read the tested digest from $archive"
     existing=$(remote_digest "$repository:$version")
     if [ "$existing" = "$digest" ]; then
@@ -103,10 +109,10 @@ case "${1:-}" in
     elif [ -n "$existing" ]; then
       die "$repository:$version already resolves to $existing, not the tested $digest; refusing to overwrite (publish a new patch version)"
     else
-      push_exact "oci-archive:$archive" "$repository:$version" "$digest"
+      push_exact "oci:$layout" "$repository:$version" "$digest"
       say "promote $archive -> $repository:$version  [$digest]"
     fi
-    push_exact "oci-archive:$archive" "$repository:latest" "$digest"
+    push_exact "oci:$layout" "$repository:latest" "$digest"
     say "promote $repository:latest -> $digest  [$tag]"
     ;;
   oci-latest)
