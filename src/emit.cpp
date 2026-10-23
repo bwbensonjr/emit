@@ -132,6 +132,8 @@ struct JitMetrics {
 };
 
 static JitMetrics g_jit_metrics;
+static bool g_warming = false;
+static size_t g_portable_hits = 0, g_portable_generated = 0, g_cache_bytes = 0;
 
 // Defined with the shared narration helpers below; declared here so the JIT setup
 // can announce its selected profile without owning a second output path.
@@ -280,6 +282,10 @@ static void init_verbosity() {
 }
 static void say(const std::string &m)  { if (g_level >= 1) std::cerr << m << "\n"; }
 static void vsay(const std::string &m) { if (g_level >= 2) std::cerr << m << "\n"; }
+static void say_resolution(const std::string &m) {
+  if (g_warming) vsay(m);
+  else say(m);
+}
 
 // --- stage-dump level, forwarded to the embedded compiler (change: emit-dump-stages)
 // The compiler cannot see our argv, so --dump rides an environment variable it probes
@@ -389,12 +395,15 @@ static void usage_repl(std::ostream &os) {
 
 static void usage_build(std::ostream &os) {
   os << "usage: emit build [NAME|FILE] [options]   deliver a native executable\n"
+        "       emit build --stdlib [-q|-v]        prepare shipped libraries in the user cache\n"
         "\n"
         "  NAME                      manifest (program NAME) entry; the sole entry when omitted\n"
         "  FILE                      .scm or path-shaped source; no program entry required\n"
         "  --manifest F              manifest to resolve the program and its libraries against\n"
         "  -o OUT                    output path, overriding the entry's own\n"
         "  --no-prelude              do not bake or imply (scheme base)\n";
+  os << "  --stdlib                  cache full portable IR and default -O1 native libraries\n"
+        "                            uses EMIT_CACHE or the platform user cache; no program runs\n";
   usage_shared(os);
 }
 
@@ -715,9 +724,9 @@ static void say_manifest(const std::vector<std::string> &manifests) {
     vsay("resolve manifest -> none found (baked-in libraries only)");
     return;
   }
-  say("resolve manifest -> " + manifests[0]);
+  say_resolution("resolve manifest -> " + manifests[0]);
   for (size_t i = 1; i < manifests.size(); i++)
-    say("resolve manifest -> " + manifests[i] + "  [chained]");
+    say_resolution("resolve manifest -> " + manifests[i] + "  [chained]");
 }
 
 // Narrate what a LATER manifest in the chain actually supplied -- one line per
@@ -732,7 +741,7 @@ static void say_chained(const std::string &manifest, const std::vector<std::stri
     if (i) names += " ";
     names += library_label(keys[i]);
   }
-  say("chain " + manifest + " -> " + names + "  [" + std::to_string(keys.size()) +
+  say_resolution("chain " + manifest + " -> " + names + "  [" + std::to_string(keys.size()) +
       (keys.size() == 1 ? " library]" : " libraries]"));
 }
 
@@ -1076,7 +1085,7 @@ class LibraryResolver {
                           ? provider.identity : provider.root;
       memo_[name.key] = answer;
       selected_paths_[name.key] = source;
-      say("resolve library " + name.label + " -> " + source + "  [" +
+      say_resolution("resolve library " + name.label + " -> " + source + "  [" +
           (provider.kind == ProviderKind::Manifest ? "manifest " : "directory ") +
           answer.provider + "]");
       return ResolveResult::Found;
@@ -1251,7 +1260,7 @@ enum class CacheRead { Hit, Miss, Deferred };
 static CacheRead cache_load_unit(const std::string &key, const std::string &path,
                                  std::string &ir, std::string &init,
                                  const std::string &artifact_dir = "");
-static void cache_store_unit(const std::string &key, const std::string &path,
+static bool cache_store_unit(const std::string &key, const std::string &path,
                              const std::string &ir);
 
 // The REPL host deliberately stays EAGER: a session is an open world where the user may
@@ -1262,7 +1271,8 @@ static bool preload_user_libraries(LibraryResolver &resolver,
                                    std::vector<std::string> &modules,
                                    std::vector<std::string> &module_keys,
                                    const std::string &program_src,
-                                   const std::string &program_home) {
+                                   const std::string &program_home,
+                                   bool all_manifest_libraries = false) {
   if (!resolver.prepare()) return false;
 
   // The closure walk: start at the program's imports and follow each reached .sld's
@@ -1271,7 +1281,10 @@ static bool preload_user_libraries(LibraryResolver &resolver,
   std::set<std::string> needed;
   std::map<std::string, LibraryDescriptor> descriptors;
   std::vector<LibraryName> work;
-  if (!source_imports(program_src, program_home, resolver, work)) return false;
+  if (all_manifest_libraries) {
+    for (const auto &descriptor : resolver.exact_descriptors())
+      work.push_back(descriptor.name);
+  } else if (!source_imports(program_src, program_home, resolver, work)) return false;
   while (!work.empty()) {
     LibraryName name = work.back();
     work.pop_back();
@@ -1314,6 +1327,7 @@ static bool preload_user_libraries(LibraryResolver &resolver,
       CacheRead cr = cache_load_unit(key, p, cached_ir, cached_init, descriptor.artifact_dir);
       if (cr == CacheRead::Deferred) { deferred.push_back(descriptor); continue; }
       if (cr == CacheRead::Hit) {
+        ++g_portable_hits;
         modules.push_back(cached_ir);
         module_keys.push_back(key);
         progress = true;
@@ -1347,7 +1361,12 @@ static bool preload_user_libraries(LibraryResolver &resolver,
       module_keys.push_back(key);
       // Store BEFORE anything else compiles: mode 16 describes the most recent
       // registration, so the window in which it still describes this one is right here.
-      cache_store_unit(key, p, ir);
+      bool persisted = cache_store_unit(key, p, ir);
+      ++g_portable_generated;
+      if (all_manifest_libraries && !persisted) {
+        std::cerr << "emit build: cannot persist library " << key << " -> " << p << "\n";
+        return false;
+      }
       progress = true;
     }
     if (!progress) {                         // every remaining unit is stuck
@@ -1814,16 +1833,16 @@ static CacheRead cache_load_entry(const std::string &stem, const std::string &wh
 // baked set (mode 15's "" case, in dependency order), otherwise the unit keys of the modules
 // being written, in the same order.  `sources` is the `.sources` text for a disk-sourced
 // entry and empty for the baked set.
-static void cache_store_entry(const std::string &stem, const std::string &what,
+static bool cache_store_entry(const std::string &stem, const std::string &what,
                               const std::string &kind, const std::string &label,
                               const std::string &extra,
                               const std::string &keys,
                               const std::string &sources,
                               const std::vector<std::string> &modules) {
-  if (stem.empty()) return;
+  if (stem.empty()) return false;
   rt_repl_set(15, keys.data(), (intptr_t)keys.size());
   intptr_t r = scheme_entry();
-  if (status_of(r) != "ok") return;
+  if (status_of(r) != "ok") return false;
   std::string meta = scm_str(rt_cdr(r));
   std::string joined;
   for (size_t i = 0; i < modules.size(); i++) {
@@ -1831,11 +1850,13 @@ static void cache_store_entry(const std::string &stem, const std::string &what,
     joined += modules[i];
   }
   // Stamp LAST: it is the completeness witness the reader checks first.
-  if (!cache_write_atomic(stem + ".ll", joined)) return;
-  if (!cache_write_atomic(stem + ".meta", meta)) return;
-  if (!sources.empty() && !cache_write_atomic(stem + ".sources", sources)) return;
-  if (!cache_write_atomic(stem + ".stamp", cache_stamp_text(kind, label, extra))) return;
+  if (!cache_write_atomic(stem + ".ll", joined)) return false;
+  if (!cache_write_atomic(stem + ".meta", meta)) return false;
+  if (!sources.empty() && !cache_write_atomic(stem + ".sources", sources)) return false;
+  if (!cache_write_atomic(stem + ".stamp", cache_stamp_text(kind, label, extra))) return false;
+  g_cache_bytes += joined.size() + meta.size() + sources.size();
   vsay("cache: " + what + " stored -> " + stem + ".ll");
+  return true;
 }
 
 // The baked set is stored in dependency order and registers before anything else, so a
@@ -1848,8 +1869,8 @@ static bool cache_load_baked_set(std::vector<std::string> &modules,
                           /*sources_required=*/false, modules, inits) == CacheRead::Hit;
 }
 
-static void cache_store_baked_set(const std::vector<std::string> &modules) {
-  cache_store_entry(cache_stem(), "baked set", "baked", "", "",
+static bool cache_store_baked_set(const std::vector<std::string> &modules) {
+  return cache_store_entry(cache_stem(), "baked set", "baked", "", "",
                     /*keys=*/"", /*sources=*/"", modules);
 }
 
@@ -2022,26 +2043,26 @@ static std::vector<std::string> library_sources_just_read() {
 
 // Persist a library unit just compiled into this session.  Called immediately after mode 4
 // returned `ok`, while mode 16 still describes THIS library's read.
-static void cache_store_unit(const std::string &key, const std::string &path,
+static bool cache_store_unit(const std::string &key, const std::string &path,
                              const std::string &ir) {
   std::vector<std::string> sources = library_sources_just_read();
-  if (sources.empty()) return;
+  if (sources.empty()) return false;
   std::string manifest_text = sources_manifest(sources);
-  if (manifest_text.empty()) return;               // a source we cannot read: do not key on it
+  if (manifest_text.empty()) return false;               // a source we cannot read: do not key on it
   std::string exports, registration;
   if (!compiler_text_query(28, key, exports) ||
-      !compiler_text_query(15, key + "\n", registration)) return;
+      !compiler_text_query(15, key + "\n", registration)) return false;
   exports += "\n";
   ExplicitArtifact artifact;
-  if (!make_artifact(key, path, ir, exports, registration, manifest_text, artifact)) return;
-  if (cache_bypassed_for_dump()) return;
+  if (!make_artifact(key, path, ir, exports, registration, manifest_text, artifact)) return false;
+  if (cache_bypassed_for_dump()) return false;
   std::string stem = cache_entry_stem("unit", key, source_key_of(path));
-  if (stem.empty()) return;
+  if (stem.empty()) return false;
   std::vector<std::string> modules;
   modules.push_back(ir);
   cache_store_entry(stem, "library " + key, "unit", key, source_key_of(path),
                     /*keys=*/key + "\n", manifest_text, modules);
-  publish_artifact(stem, ir, exports, artifact);
+  return publish_artifact(stem, ir, exports, artifact);
 }
 
 // --- target-specific native object cache -----------------------------------
@@ -2142,6 +2163,7 @@ public:
       ++g_jit_metrics.native_generated;
       size_t bytes = 0;
       for (const std::string &object_bytes : group.objects) bytes += object_bytes.size();
+      g_cache_bytes += bytes;
       vsay("native object generated for " + group.what + " " +
            g_native_signature.optimization_profile + " [" + std::to_string(bytes) +
            " bytes, " + ms_text(elapsed_ms(begin, SteadyClock::now())) + "] -> " +
@@ -2150,6 +2172,20 @@ public:
   }
 
   std::unique_ptr<MemoryBuffer> getObject(const Module *) override { return nullptr; }
+
+  bool verify_persisted() const {
+    for (const auto &entry : groups) {
+      const Group &group = entry.second;
+      std::vector<std::string> objects;
+      if (!native_entry_load(group.stem, group.identity, group.objects.size(), objects) ||
+          objects != group.objects) {
+        std::cerr << "emit build: cannot persist native " << group.what
+                  << " -> " << group.stem << "\n";
+        return false;
+      }
+    }
+    return true;
+  }
 
 private:
   std::map<std::string, Group> groups;
@@ -2271,7 +2307,7 @@ static Expected<std::unique_ptr<LLJIT>> create_emit_jit(JitOptLevel level) {
 // through to compiling and then stores the result for the next process.
 static bool register_baked_set(std::vector<std::string> &modules,
                                std::vector<std::string> &inits) {
-  if (cache_load_baked_set(modules, inits)) return true;
+  if (cache_load_baked_set(modules, inits)) { ++g_portable_hits; return true; }
   rt_repl_set(8, "", 0);
   intptr_t r = scheme_entry();
   if (status_of(r) != "ok") {
@@ -2285,7 +2321,12 @@ static bool register_baked_set(std::vector<std::string> &modules,
   std::string sym;
   while (std::getline(isyms, sym))
     if (!sym.empty()) inits.push_back(sym);
-  cache_store_baked_set(modules);
+  bool persisted = cache_store_baked_set(modules);
+  ++g_portable_generated;
+  if (g_warming && !persisted) {
+    std::cerr << "emit build: cannot persist baked library set\n";
+    return false;
+  }
   return true;
 }
 
@@ -2862,7 +2903,7 @@ static void preload_libraries(LibraryResolver &resolver, bool have_baked,
   if (!resolver.prepare()) return;
   std::vector<LibraryDescriptor> pending = resolver.exact_descriptors();
   for (const LibraryDescriptor &descriptor : pending)
-    say("resolve library " + descriptor.name.label + " -> " + descriptor.source +
+    say_resolution("resolve library " + descriptor.name.label + " -> " + descriptor.source +
         "  [manifest " + descriptor.provider + "]");
 
   while (!pending.empty()) {
@@ -3645,7 +3686,108 @@ static void ensure_parent_dir(const std::string &path) {
   (void)rc;
 }
 
+// Prepare the same full units consumed by run/repl, without executing their bodies.
+static int warm_stdlib() {
+  auto started = SteadyClock::now();
+  g_warming = true;
+  std::string manifest = support_file(kManifestName);
+  if (manifest.empty()) {
+    std::cerr << "emit build: cannot locate shipped " << kManifestName << "\n";
+    return 1;
+  }
+  std::string destination = cache_dir();
+  if (destination.empty()) {
+    const char *requested = std::getenv("EMIT_CACHE");
+    std::cerr << "emit build: cannot prepare library cache -> "
+              << (requested && *requested ? requested : "platform user cache (unavailable)") << "\n";
+    return 1;
+  }
+  if (cache_bypassed_for_dump()) {
+    std::cerr << "emit build: --stdlib cannot persist entries with library dumps enabled\n";
+    return 1;
+  }
+  say("compile stdlib " + manifest + " -> " + destination + "  [-O1]");
+  ResolverOptions options;
+  options.library_paths = false;
+  LibraryResolver resolver({manifest}, manifest, options);
+  g_library_answerer = [&resolver](const std::string &k, const std::string &l) {
+    return resolver_answer(resolver, k, l);
+  };
+  GC_INIT();
+  rt_repl_set(1, "", 0);
+  scheme_entry();
+  std::vector<std::string> baked, inits, baked_keys, units, keys;
+  if (!register_baked_set(baked, inits) ||
+      !preload_user_libraries(resolver, units, keys, "", "", true)) return 1;
+  for (const std::string &sym : inits)
+    baked_keys.push_back(sym.substr(0, sym.find(':') + 1));
+
+  InitializeNativeTarget();
+  InitializeNativeTargetAsmPrinter();
+  InitializeNativeTargetAsmParser();
+  auto jit = create_emit_jit(JitOptLevel::O1);
+  if (!jit) {
+    std::cerr << "emit build: " << toString(jit.takeError()) << "\n";
+    return 1;
+  }
+  JIT = std::move(*jit);
+  install_jit_transform(*JIT, JitOptLevel::O1);
+  auto generator = DynamicLibrarySearchGenerator::GetForCurrentProcess(
+      JIT->getDataLayout().getGlobalPrefix());
+  if (!generator) {
+    std::cerr << "emit build: " << toString(generator.takeError()) << "\n";
+    return 1;
+  }
+  JIT->getMainJITDylib().addGenerator(std::move(*generator));
+  std::string error;
+  if (!add_native_baked_set(baked, baked_keys, error)) {
+    std::cerr << "emit build: baked libraries: " << error << "\n";
+    return 1;
+  }
+  for (size_t i = 0; i < units.size(); ++i) {
+    if (!add_native_unit(units[i], keys[i], error)) {
+      std::cerr << "emit build: library " << keys[i] << ": " << error << "\n";
+      return 1;
+    }
+    inits.push_back(keys[i] + "__init");
+  }
+  // ORC materializes a module at lookup; looking up never invokes the initializer.
+  for (const std::string &symbol : inits) {
+    auto address = jit_lookup(symbol);
+    if (!address) {
+      std::cerr << "emit build: library " << symbol << ": "
+                << toString(address.takeError()) << "\n";
+      return 1;
+    }
+  }
+  if (!g_native_adapter->verify_persisted()) return 1;
+  say("compile stdlib -> " + destination + "  [portable " +
+      std::to_string(g_portable_hits) + " reused/" + std::to_string(g_portable_generated) +
+      " generated, native " + std::to_string(g_jit_metrics.native_hits) + " reused/" +
+      std::to_string(g_jit_metrics.native_generated) + " generated, " +
+      std::to_string(g_cache_bytes) + " bytes, " +
+      ms_text(elapsed_ms(started, SteadyClock::now())) + "]");
+  return 0;
+}
+
 static int emit_build(int argc, char **argv) {
+  bool stdlib = false;
+  for (int i = 1; i < argc; ++i) {
+    if (is_help_flag(argv[i])) { usage_build(std::cout); return 0; }
+    if (std::string(argv[i]) == "--stdlib") stdlib = true;
+  }
+  if (stdlib) {
+    for (int i = 1; i < argc; ++i) {
+      std::string arg(argv[i]);
+      if (arg == "-q") g_level = 0;
+      else if (arg == "-v") g_level = 2;
+      else if (arg != "--stdlib") {
+        std::cerr << "emit build: --stdlib is incompatible with " << arg << "\n";
+        return 2;
+      }
+    }
+    return warm_stdlib();
+  }
   std::string name, manifest, out;
   ResolverOptions resolver_options;
   bool no_prelude = false;

@@ -54,7 +54,7 @@ stdenv.mkDerivation {
 
   makeFlags = toolchain ++ [ "PREFIX=${placeholder "out"}" ];
   enableParallelBuilding = true;
-  installFlags = [ "TOOLCHAIN_PIN=1" ];
+  installFlags = [ "TOOLCHAIN_PIN=1" "WARM_STDLIB=0" ];
 
   # Installed tools/llvm-env.sh runs at `emit build` time; it needs only POSIX utilities and bash.
   postFixup = ''

@@ -34,7 +34,7 @@ RUN cd /src \
       GC_INC=/usr/include GC_LIB="/usr/lib/$(uname -m)-linux-gnu" \
       GC_DYLIB="/usr/lib/$(uname -m)-linux-gnu/libgc.so" \
  && make -j"$(nproc)" "$@" PREFIX=/opt/emit \
- && make install "$@" PREFIX=/opt/emit TOOLCHAIN_PIN=1
+ && make install "$@" PREFIX=/opt/emit TOOLCHAIN_PIN=1 WARM_STDLIB=0
 
 # emit build links with clang -flto.  Without lld as clang's default linker, GNU ld would need
 # the LLVMgold plugin, so clang.cfg (read beside clang's own executable) selects lld.  /work and

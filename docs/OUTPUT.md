@@ -112,6 +112,13 @@ verbosity: that is diagnostic detail, while the selected provider is a principal
 
 ## Native object cache
 
+`emit build --stdlib` prepares the shipped manifest's full libraries without running
+initializers. Its default stderr output names the manifest and cache destination,
+then portable/native reused and generated counts, output bytes, and elapsed time.
+Per-library resolution and cache details are verbose-only. Quiet leaves only errors;
+stdout is empty at every level. The explicit command fails if requested cache
+entries cannot persist, while normal execution retains best-effort cache fallback.
+
 Native cache detail is verbose-only and always goes to stderr. Miss, generation, and reuse name
 the library and JIT profile; successful operations also report object bytes and timing:
 

@@ -102,6 +102,17 @@ make install PREFIX=$HOME/.local  # a different prefix (also baked in as the fal
 make install PREFIX=/usr/local DESTDIR=/tmp/stage   # stage for a packager
 ```
 
+Unprivileged source installation prepares the standard-library cache after copying
+the payload. To prepare it explicitly, run `emit build --stdlib`. This compiles the
+shipped manifest's libraries and default `-O1` native objects without running their
+initializers. `EMIT_CACHE` selects the destination; otherwise Emit uses
+`$XDG_CACHE_HOME/emit`, `~/Library/Caches/emit` on macOS, or `~/.cache/emit` on Linux.
+Repeated preparation reuses valid entries. Set `WARM_STDLIB=0` to defer it during
+installation. Staged and root installs defer preparation to the eventual user.
+Homebrew prepares from its post-install hook; Nix and OCI users run the command in
+their own environment. An automatic preparation failure reports a retry command
+and leaves the source installation usable; explicit preparation exits nonzero on failure.
+
 All four installed commands work from any directory. Projects normally use their own `./lib`;
 repeatable `-L` / `--library-path` and `EMIT_LIBRARY_PATH` add roots, while
 `--no-library-paths` disables every directory provider.

@@ -340,6 +340,8 @@ SUPPORTDIRS  := $(sort $(foreach f,$(SUPPORT),$(dir $(f))))
 TOOLCHAIN_PIN ?=
 PIN_CC := $(if $(TOOLCHAIN_INPUT_CC),$(CC),$(LLVM_BIN)/clang)
 
+WARM_STDLIB ?= 1
+
 .PHONY: install
 install: $(EMIT)
 	@. tools/log.sh; say "install emit -> $(DESTDIR)$(PREFIX)  [prefix $(PREFIX)]"
@@ -372,6 +374,16 @@ ifneq ($(TOOLCHAIN_PIN),)
 	  chmod 644 "$(SHAREDIR)/package/toolchain.env"; \
 	  say "install toolchain pin -> $(SHAREDIR)/package/toolchain.env  [LLVM $$major, CC $$pin_cc]"
 endif
+	@. tools/log.sh; \
+	  if [ -n "$(DESTDIR)" ]; then reason='DESTDIR staging'; \
+	  elif [ "$(WARM_STDLIB)" = 0 ]; then reason='WARM_STDLIB=0'; \
+	  elif [ "$$(id -u)" = 0 ]; then reason='privileged install'; \
+	  else reason=; fi; \
+	  if [ -n "$$reason" ]; then \
+	    say "install: defer library preparation ($$reason); run emit build --stdlib as the end user"; \
+	  elif ! "$(BINDIR)/emit" build --stdlib; then \
+	    printf '%s\n' 'install: library preparation failed; retry emit build --stdlib as the end user' >&2; \
+	  fi
 
 # UNINSTALL removes exactly what `make install` writes under the same PREFIX/DESTDIR: bin/emit,
 # the manifest, library sources, includes, support files, and an optional toolchain pin.  It then

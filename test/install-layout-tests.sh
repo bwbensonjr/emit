@@ -40,6 +40,8 @@ cd "$(dirname "$0")/.."
 
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 REPO="$PWD"
+# All installation caches stay private; most layout fixtures defer warming.
+export EMIT_CACHE="$TMP/install-cache" WARM_STDLIB=0
 PREFIX="$TMP/prefix"
 EMIT="$PREFIX/bin/emit"
 pass=0; fail=0
@@ -51,7 +53,7 @@ bad () { echo "  [FAIL] $1"; fail=$((fail+1)); }
 # Start with the checkout's existing build. PREFIX is part of native-config, so this
 # one install must rebuild emit.o and relink before copying the binary whose fallback
 # is the new prefix.
-if ! make install PREFIX="$PREFIX" >"$TMP/install.log" 2>&1; then
+if ! make install PREFIX="$PREFIX" WARM_STDLIB=1 >"$TMP/install.log" 2>&1; then
   echo "  [FAIL] make install"; sed 's/^/         /' "$TMP/install.log"; exit 1
 fi
 if grep -q -- '-c src/emit.cpp -o build/emit.o' "$TMP/install.log" \
@@ -66,6 +68,46 @@ fi
 # platform where the temp dir is a symlink (/var -> /private/var on macOS) those lines
 # carry the resolved prefix, not $PREFIX.  Match against this one.
 RPREFIX="$(cd "$PREFIX" && pwd -P)"
+
+if [ "$(id -u)" != 0 ]; then
+  if grep -Fq "compile stdlib $RPREFIX/share/emit/emit-libs.scm" "$TMP/install.log" \
+     && grep -q 'native 0 reused/11 generated' "$TMP/install.log"; then
+    ok "user install prepares the installed payload in a private cache"
+  else bad "user install preparation"; cat "$TMP/install.log"; fi
+  EMIT_VERBOSITY=verbose "$EMIT" build --stdlib >"$TMP/warmed.out" 2>"$TMP/warmed.err"
+  grep -q 'portable 11 reused/0 generated, native 11 reused/0 generated' "$TMP/warmed.err" \
+    && ok "installed preparation reuses every entry" || bad "installed preparation reuse"
+  EMIT_VERBOSITY=verbose make install PREFIX="$PREFIX" WARM_STDLIB=1 \
+    >"$TMP/install-warm2.log" 2>&1
+  grep -q 'portable 11 reused/0 generated, native 11 reused/0 generated' "$TMP/install-warm2.log" \
+    && ok "repeated user installation reuses prepared entries" || bad "repeated install preparation"
+  printf 'blocked\n' >"$TMP/blocked-cache"
+  if EMIT_CACHE="$TMP/blocked-cache" make install PREFIX="$PREFIX" WARM_STDLIB=1 \
+       >"$TMP/install-warm-failure.log" 2>&1 \
+     && grep -q 'library preparation failed; retry emit build --stdlib' "$TMP/install-warm-failure.log"; then
+    ok "failed automatic preparation retains a usable source installation"
+  else bad "automatic preparation failure handling"; fi
+fi
+
+make install PREFIX="$PREFIX" WARM_STDLIB=0 >"$TMP/install-deferred.log" 2>&1
+grep -q 'defer library preparation (WARM_STDLIB=0)' "$TMP/install-deferred.log" \
+  && ok "explicit opt-out explains deferred preparation" || bad "preparation opt-out"
+EMIT_CACHE="$TMP/stage-cache" make install PREFIX="$PREFIX" DESTDIR="$TMP/stage" \
+  WARM_STDLIB=1 >"$TMP/install-staged.log" 2>&1
+if grep -q 'defer library preparation (DESTDIR staging)' "$TMP/install-staged.log" \
+   && [ ! -e "$TMP/stage-cache" ]; then
+  ok "staging neither executes preparation nor writes a user cache"
+else bad "staged preparation deferral"; fi
+# Simulate only the identity probe; no privilege change or root writes occur.
+mkdir -p "$TMP/root-probe"
+printf '#!/bin/sh\nprintf "0\\n"\n' >"$TMP/root-probe/id"
+chmod +x "$TMP/root-probe/id"
+PATH="$TMP/root-probe:$PATH" EMIT_CACHE="$TMP/root-cache" \
+  make install PREFIX="$PREFIX" WARM_STDLIB=1 >"$TMP/install-root.log" 2>&1
+if grep -q 'defer library preparation (privileged install)' "$TMP/install-root.log" \
+   && [ ! -e "$TMP/root-cache" ]; then
+  ok "privileged identity defers preparation without inferring a user"
+else bad "privileged preparation deferral"; fi
 
 echo "installed layout"
 # The support files land at their REPO-RELATIVE SUBPATHS under share/emit, the same
@@ -720,8 +762,8 @@ itwo="$(EMIT_VERBOSITY=quiet EMIT_CACHE="$ICACHE" "$EMIT" run "$TMP/one.scm" 2>/
 [ "$itwo" = "42" ] && ok "installed emit reuses its cache => $itwo" \
   || bad "installed emit, warm cache => [$itwo]"
 
-# The install contract is unchanged: a cache entry exists only because a path ran, never
-# because something was installed.
+# Compiled entries belong to the user cache, including those prepared during install;
+# the prefix payload remains source-only.
 if find "$PREFIX" -type f \( -name '*.ll' -o -name '*.bc' -o -name '*.o' -o -name 'baked-*' \) \
      | grep -q .; then
   bad "the installed tree ships a compiled artifact"

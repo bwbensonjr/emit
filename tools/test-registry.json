@@ -127,6 +127,26 @@
       ]
     },
     {
+      "id": "stdlib-precompilation",
+      "label": "standard-library precompilation",
+      "command": [
+        "python3",
+        "test/stdlib-warm-tests.py"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "host",
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "stdlib-precompilation"
+      ]
+    },
+    {
       "id": "explicit-artifact-format",
       "label": "explicit artifact format",
       "command": [

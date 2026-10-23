@@ -28,8 +28,14 @@ class Emit < Formula
       GC_DYLIB=#{gc.opt_lib}/libgc.dylib
     ]
     system "make", *args
-    system "make", "install", "TOOLCHAIN_PIN=1", *args
+    system "make", "install", "TOOLCHAIN_PIN=1", "WARM_STDLIB=0", *args
     doc.install "vendor/unicode/17.0.0/LICENSE.txt" => "UNICODE-LICENSE.txt"
+  end
+
+  def post_install
+    system bin/"emit", "build", "--stdlib"
+  rescue ErrorDuringExecution
+    opoo "Library preparation failed; retry emit build --stdlib as your user."
   end
 
   test do

@@ -329,6 +329,18 @@ got="$("$EMIT" run "$WELL" 2>/dev/null </dev/null)"; rc=$?
   && ok "the well-formed counterparts still run" \
   || bad "well-formed source (exit $rc) => $(printf '%s' "$got" | tr '\n' '|')"
 
+for argument in input.scm --manifest -o -O1 --dump --no-prelude; do
+  if "$EMIT" build --stdlib "$argument" >"$TMP/stdlib.out" 2>"$TMP/stdlib.err"; then
+    bad "stdlib accepted $argument"
+  elif grep -q 'emit build: --stdlib is incompatible' "$TMP/stdlib.err" \
+       && [ ! -s "$TMP/stdlib.out" ]; then
+    ok "stdlib rejects $argument before compiling"
+  else bad "stdlib conflict diagnostic for $argument"; fi
+done
+"$EMIT" build --help >"$TMP/stdlib-help"
+grep -q -- --stdlib "$TMP/stdlib-help" && ok "build help documents stdlib preparation" \
+  || bad "build help lacks stdlib preparation"
+
 echo
 echo "  $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
