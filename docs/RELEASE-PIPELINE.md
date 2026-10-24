@@ -9,7 +9,10 @@ build. LLVM and libgc remain dynamic system dependencies. These releases do
 not provide binary bundles, signatures, attestations, or installers.
 
 Prepare `VERSION` and the matching nonempty `CHANGELOG.md` section, complete
-integration checks, and commit the release state before tagging. The changelog
+integration checks, and commit the release state before tagging. Normally the
+version bump arrives in a pull request and merging it to `main` creates the tag
+([automatic release tagging](#automatic-release-tagging)); the commands below
+package and check a commit by hand. The changelog
 heading is `## <VERSION>` or `## [<VERSION>]` (the latter may be followed by
 ` - <date>`). The first
 release identity is `0.1.0` and tag `v0.1.0`. From a checkout, package a concrete
@@ -98,6 +101,72 @@ published tag or replace its payload: correct a public release with a new patch
 version and changelog section. Before publication, fixes require a fresh
 validated release commit. Record the resulting release URL and checksum in the
 implementation handoff after successful publication.
+
+## Automatic release tagging
+
+`.github/workflows/release-tag.yml` turns a merged version bump into a release,
+so no step depends on a maintainer pushing a tag
+([version policy](RELEASES.md#bumping-the-version)):
+
+1. A push to `main` that changes `VERSION` starts it (`paths: [VERSION]`).
+2. It checks that the `RELEASE_TAG_TOKEN` secret is present and can push to this
+   repository, with an authenticated `git push --dry-run`. A missing or
+   read-only token fails here, naming the secret, before any tag exists.
+3. `tools/release-tag.sh plan` decides. It prints `skip=unchanged` when
+   `VERSION` equals the previous `main`, `skip=tagged` when `v<VERSION>`
+   already exists, and otherwise runs `check`: a plain `MAJOR.MINOR.PATCH`
+   version greater than every `v*` release tag, with a nonempty changelog
+   section. A version that fails `check` fails the run and creates no tag.
+4. It creates the annotated tag `v<VERSION>` at the pushed commit and pushes
+   that one ref with the token, never forced, so an existing tag is never moved.
+
+The tag push is an ordinary `push` from a credential other than `GITHUB_TOKEN`.
+GitHub starts no workflow from a tag pushed with `GITHUB_TOKEN`, which is why
+the token exists. The push starts **Source release** above, which runs every
+gate and publishes, and its successful run starts **Distribution channels**
+below. Neither workflow changes, and neither can be started into publishing
+any other way. The Homebrew tap and Nix promotion pull requests still need a
+maintainer merge.
+
+Pull requests get the same decision early: when `VERSION` changes, the policy
+job of `compatibility.yml` runs `tools/release-tag.sh check HEAD` against the
+fetched tags. The push-time `plan` remains authoritative, because two version
+pull requests can both pass and only the first to merge still advances.
+
+**The token.** `RELEASE_TAG_TOKEN` is a fine-grained personal access token
+limited to `bwbensonjr/emit`, with **Contents: Read and write** and nothing else.
+`GITHUB_TOKEN` in this workflow stays `contents: read`, the checkout keeps no
+credentials, and only the preflight and push steps see the secret.
+`test/ci-policy-tests.py` pins those properties. To create or rotate it:
+
+1. In GitHub settings, under Developer settings > Fine-grained tokens, generate
+   a token for the repository owner with repository access limited to
+   `bwbensonjr/emit`, permission Contents: Read and write, and an expiry.
+2. Store it: `gh secret set RELEASE_TAG_TOKEN --repo bwbensonjr/emit`, which
+   reads the value from standard input.
+3. Confirm the name is listed: `gh secret list --repo bwbensonjr/emit`.
+4. Revoke the old token after the next run's preflight passes.
+
+**Retry.** If the run failed before tagging, for example because the secret was
+missing or expired, fix the cause and dispatch the workflow on `main`:
+
+```sh
+gh workflow run release-tag.yml --ref main
+```
+
+Dispatch tags the current `main` when its `VERSION` is untagged and passes
+`check`, and otherwise reports `skip=tagged`. If commits landed on `main` after
+the bump, dispatch tags the current head rather than the bump commit. A tag
+pushed by hand at the bump commit, `git tag -a vX.Y.Z <commit>` and
+`git push origin vX.Y.Z`, remains equivalent.
+
+**Failed gates.** Once the tag exists, Source release owns the outcome. A
+transient failure is rerun on the same tag. A defect is fixed forward by
+merging a later version: the tag is never moved or deleted, and no public
+release or channel promotion occurs for the failed version.
+
+**Rollback.** Disabling or deleting `release-tag.yml` returns releases to
+manual tag pushes. Nothing else depends on it.
 
 ## Distribution channels
 

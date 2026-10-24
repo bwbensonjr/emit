@@ -11,7 +11,7 @@ mkdir "$work/repository"
 git archive HEAD | tar -xf - -C "$work/repository"
 # Overlay release inputs so this test also works before their first commit.
 for input in VERSION CHANGELOG.md tools/release-source.sh tools/release-check.sh tools/release-publish.sh \
-             tools/channel-identity.sh; do
+             tools/channel-identity.sh tools/changelog-section.awk; do
   cp "$input" "$work/repository/$input"
 done
 # Channel recipes live in the repository but never in a source archive: a released archive must

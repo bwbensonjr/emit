@@ -18,6 +18,11 @@ pass=0; fail=0
 ok ()  { echo "  [OK  ] $1"; pass=$((pass+1)); }
 bad () { echo "  [FAIL] $1"; fail=$((fail+1)); }
 
+# The REPL banner names the versions `emit --version` reports; compare against that,
+# never a literal (change: version-discipline-and-auto-release).
+BANNER="$("$EMIT" --version \
+  | sed -E 's/^emit ([^ ]+) \(LLVM ([^)]+)\)$/Emit \1 (embedded compiler, ORC\/LLJIT, LLVM \2).  ^D to exit./')"
+
 # capture STEM COMMAND...; CAP_RC is the command's status and the two channels are
 # $TMP/STEM.out and $TMP/STEM.err.  capture_file additionally feeds a named stdin file.
 capture () {
@@ -41,7 +46,7 @@ capture_mismatches () {
   [ "$got_out" = "$want_out" ] || echo stdout
   case "$stderr_policy" in
     empty) [ ! -s "$TMP/$stem.err" ] || echo stderr ;;
-    repl)  grep -q 'Emit (embedded compiler, ORC/LLJIT)' "$TMP/$stem.err" || echo stderr
+    repl)  grep -Fxq "$BANNER" "$TMP/$stem.err" || echo stderr
            grep -Eq '(^|[[:space:]])(error:|!trap:)' "$TMP/$stem.err" && echo stderr ;;
     any)   : ;;
   esac

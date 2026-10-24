@@ -31,21 +31,34 @@ pass=0; fail=0
 ok ()  { echo "  [OK  ] $1"; pass=$((pass+1)); }
 bad () { echo "  [FAIL] $1"; fail=$((fail+1)); }
 
+# The banner and top-level help are compared against `emit --version`, never a literal,
+# so a version bump cannot break them (change: version-discipline-and-auto-release).
+VERSION_LINE="$("$EMIT" --version)"
+BANNER="$(printf '%s\n' "$VERSION_LINE" \
+  | sed -E 's/^emit ([^ ]+) \(LLVM ([^)]+)\)$/Emit \1 (embedded compiler, ORC\/LLJIT, LLVM \2).  ^D to exit./')"
+
 # ---------------------------------------------------------------------------
 # 1. help is a request: stdout, exit 0, nothing on stderr.
 # ---------------------------------------------------------------------------
 echo "help is answered, on stdout, with a success exit"
 
-# NAME  then the argv to pass.  Asserts exit 0, a "usage:" first line on stdout, and
-# an EMPTY stderr -- the last is what distinguishes a request from a diagnostic.
+# NAME  then the argv to pass.  Asserts exit 0, a "usage:" line on stdout, and an
+# EMPTY stderr -- the last is what distinguishes a request from a diagnostic.  The
+# top-level summary (`emit --help`, `-h`, bare `help`) starts with the `emit --version`
+# line before its usage; a verb's own help carries no version line at all.
 help_ok () {
   local name="$1"; shift
-  local out err rc
+  local out err rc body top=no
   out="$("$EMIT" "$@" 2>"$TMP/err" </dev/null)"; rc=$?
   err="$(cat "$TMP/err")"
+  case "$#:$1" in 1:--help|1:-h|1:help) top=yes ;; esac
+  body="$out"
+  [ "$top" = no ] || body="${out#"$VERSION_LINE"$'\n'}"
   if   [ "$rc" -ne 0 ];              then bad "$name (exit $rc, want 0)"
   elif [ -n "$err" ];                then bad "$name (stderr not empty: [$err])"
-  elif [ "${out#usage: emit}" = "$out" ]; then bad "$name (stdout not usage: [${out%%$'\n'*}])"
+  elif [ "$top" = yes ] && [ "$body" = "$out" ]; then bad "$name (first line not the version: [${out%%$'\n'*}])"
+  elif [ "$top" = no ] && printf '%s\n' "$out" | grep -Fxq "$VERSION_LINE"; then bad "$name (verb help has a version line)"
+  elif [ "${body#usage: emit}" = "$body" ]; then bad "$name (stdout not usage: [${body%%$'\n'*}])"
   else ok "$name"
   fi
 }
@@ -103,9 +116,18 @@ done
 
 # The point of D1: pipeable without redirection.  `head` closes the pipe, so this also
 # checks we do not die on SIGPIPE before writing anything.
-[ "$("$EMIT" --help 2>/dev/null | head -1)" = "usage: emit <verb> [args]" ] \
+[ "$("$EMIT" --help 2>/dev/null | head -2)" = "$VERSION_LINE"$'\n'"usage: emit <verb> [args]" ] \
   && ok "emit --help | head works without redirection" \
   || bad "emit --help | head"
+
+# Only the top-level summary and the REPL banner name the version; a program's own
+# output and the run narration gain no version line.
+printf '(display 42)\n(newline)\n' > "$TMP/version-free.scm"
+"$EMIT" run "$TMP/version-free.scm" >"$TMP/o" 2>"$TMP/e"; rc=$?
+[ "$rc" -eq 0 ] && [ "$(cat "$TMP/o")" = 42 ] \
+  && ! grep -Fq -e "${VERSION_LINE#emit }" -e "$BANNER" "$TMP/o" "$TMP/e" \
+  && ok "emit run output and narration carry no version line" \
+  || bad "emit run (exit $rc, stdout [$(cat "$TMP/o")], stderr [$(cat "$TMP/e")])"
 
 # ---------------------------------------------------------------------------
 # 2. errors: stderr, non-zero, usage alongside the diagnostic.
@@ -203,7 +225,7 @@ for level in -O0 -O1 -O2; do
   EMIT_VERBOSITY=quiet "$EMIT" repl "$level" --no-prelude <"$TMP/profile-repl.scm" \
     >"$TMP/o" 2>"$TMP/e"; rc=$?
   [ "$rc" -eq 0 ] && [ "$(cat "$TMP/o")" = 42 ] \
-    && grep -q 'Emit (embedded compiler, ORC/LLJIT)' "$TMP/e" \
+    && grep -Fxq "$BANNER" "$TMP/e" \
     && ok "emit repl $level selects a working profile" \
     || bad "emit repl $level (exit $rc, stdout [$(cat "$TMP/o")])"
 done

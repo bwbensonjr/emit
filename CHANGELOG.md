@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.2.0
+
+Standard-library precompilation, source-order program evaluation, quieter REPL startup, and
+automatic releases. The top-level evaluation order of programs changes, as described below.
+
+- Adds `emit build --stdlib`, which precompiles the installation's standard libraries
+  (portable IR, compile-time interfaces, and `-O1` native objects) so later commands start
+  faster. `make install` runs it after an unprivileged, non-staged install, and defers it for
+  `DESTDIR`, root, and `WARM_STDLIB=0`, naming the command to run. Homebrew prepares it in
+  `post_install` (#148).
+- Evaluates a program's top-level forms in source order. An expression between definitions now
+  runs at its position, so later initializers observe earlier mutations and parameter updates,
+  under `emit run`, `emit build`, and the REPL. Programs that relied on every definition
+  initializing before any top-level expression ran see the new order (#140).
+- Summarizes REPL library sources in one `resolve libraries ->` startup line; per-manifest and
+  per-library startup lines move to verbose. `emit repl` now accepts `-q` and `-v` (#149).
+- The REPL banner and top-level `emit --help` name the Emit and build-time LLVM versions,
+  matching `emit --version`. Per-verb help and program output are unchanged.
+- `emit doctor` reports Apple clang's textual-IR compatibility as unverified instead of
+  rejecting the default macOS compiler (#139).
+- Adds `make uninstall`, which removes exactly the files `make install` wrote under the same
+  `PREFIX` and `DESTDIR`.
+- Releases automatically: merging a `VERSION` change to `main` tags it, and the existing gated
+  source release and distribution channels follow. Every non-trivial change now bumps the
+  version under the policy in `docs/RELEASES.md`, and pull requests that change `VERSION` must
+  advance past every release tag.
+- Fixes a race in the test runner's cancellation check with `/proc` entry removal (#146).
+
 ## 0.1.1
 
 Distribution channels and validation fixes. No incompatible language or CLI changes.

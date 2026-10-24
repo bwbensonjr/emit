@@ -28,6 +28,15 @@ class ClassifierTests(unittest.TestCase):
         self.assertTrue(result["archive"])
         self.assertFalse(result["docs_only"])
 
+    def test_only_version_selects_the_release_version_check(self):
+        # change: version-discipline-and-auto-release. The PR policy job runs
+        # tools/release-tag.sh check exactly when "release" is a category.
+        self.assertIn("release", policy.classify_paths(["VERSION", "src/emit.cpp"])["categories"])
+        for path in ("CHANGELOG.md", "Makefile", "tools/release-tag.sh", "tools/release-source.sh",
+                     ".github/workflows/release.yml", ".github/workflows/release-tag.yml",
+                     "docs/RELEASES.md", "CLAUDE.md"):
+            self.assertNotIn("release", policy.classify_paths([path])["categories"], path)
+
     def test_channel_inputs_rehearse_channels_only(self):
         # change: low-cost-distribution-channels, design D7.
         for path in ("flake.nix", "flake.lock", "packaging/oci/Containerfile",
