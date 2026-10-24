@@ -20,11 +20,7 @@ work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 say "check $commit -> $tag release identity"
 git show "$commit:CHANGELOG.md" > "$work/changelog"
-awk -v version="$version" '
-  /^## / { if (found) exit; if ($0 == "## [" version "]" || $0 == "## " version || index($0, "## [" version "] - ") == 1) { found=1; next } }
-  found { print; if ($0 ~ /[^[:space:]]/) content=1 }
-  END { if (!found || !content) exit 1 }
-' "$work/changelog" > "$work/RELEASE-NOTES.md" || { printf 'release: missing or empty changelog section for %s\n' "$version" >&2; exit 1; }
+awk -v version="$version" -f tools/changelog-section.awk "$work/changelog" > "$work/RELEASE-NOTES.md" || { printf 'release: missing or empty changelog section for %s\n' "$version" >&2; exit 1; }
 # Keep developer account configuration and unrelated history out of the payload.
 # A missing required path fails git archive, rather than reducing the closure.
 inputs=(VERSION CHANGELOG.md LICENSE LLVM.md Makefile README.md AGENTS.md CLAUDE.md
