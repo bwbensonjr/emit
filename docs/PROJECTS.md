@@ -196,7 +196,7 @@ emit repl
 ```
 ```
 resolve manifest -> emit-libs.scm
-Emit (embedded compiler, ORC/LLJIT).  ^D to exit.
+Emit 0.2.0 (embedded compiler, ORC/LLJIT, LLVM 22.1.0).  ^D to exit.
 > (import (my report))
 > (describe (list 1.0 2.0 3.0))
 (n 3 mean 2.0 rms 2.160246899469287)

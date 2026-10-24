@@ -323,6 +323,13 @@ static bool is_help_flag(const std::string &a) { return a == "--help" || a == "-
 #define EMIT_SHIPPED_FILES "emit-libs.scm lib/scheme/inexact.sld"
 #endif
 
+// The one version line.  `emit --version`, the first line of top-level usage, and
+// `emit doctor` all print it, so they cannot disagree; the REPL banner names the same
+// two versions (change: version-discipline-and-auto-release).
+static std::string version_line() {
+  return std::string("emit ") + EMIT_VERSION + " (LLVM " + LLVM_VERSION_STRING + ")";
+}
+
 // Every usage writer takes a DESTINATION, because the same text has two of them
 // (design D1): usage printed because the user asked for it is the output they asked
 // for and goes to stdout, so `emit --help | head` works without redirection; usage
@@ -354,7 +361,8 @@ static void usage_shared(std::ostream &os) {
 }
 
 static void usage(std::ostream &os) {
-  os << "usage: emit <verb> [args]\n"
+  os << version_line() << "\n"
+        "usage: emit <verb> [args]\n"
         "  emit run  [FILE] [--manifest F] [--no-prelude]     compile and run a program\n"
         "  emit repl [--manifest F] [--no-prelude]            interactive REPL\n"
         "  emit build [NAME|FILE] [--manifest F] [-o OUT] [--no-prelude]   deliver a native exe\n"
@@ -3403,7 +3411,8 @@ static int emit_repl(int argc, char **argv) {
       std::cerr << "warning: auto-import (scheme base): " << scm_str(rt_cdr(r)) << "\n";
   }
 
-  std::cerr << "Emit (embedded compiler, ORC/LLJIT).  ^D to exit.\n";
+  std::cerr << "Emit " << EMIT_VERSION << " (embedded compiler, ORC/LLJIT, LLVM "
+            << LLVM_VERSION_STRING << ").  ^D to exit.\n";
 
   // Accumulate stdin and drive the compiler.  After each line, ask the compiler
   // (form-complete?) whether the buffer starts with a complete form; when it does,
@@ -4135,7 +4144,7 @@ static int emit_doctor(int argc, char **argv) {
       std::cerr << "emit doctor: " << what << "\n";
     }
   };
-  std::cout << "emit " << EMIT_VERSION << " (LLVM " << LLVM_VERSION_STRING << ")\n"
+  std::cout << version_line() << "\n"
             << "executable: " << exe_path() << "\n"
             << "prefix: " << EMIT_PREFIX << " [compiled fallback]\n";
 
@@ -4149,15 +4158,15 @@ static int emit_doctor(int argc, char **argv) {
   std::cout << "cc: " << (compiler.empty() ? tc.cc : compiler) << " ["
             << tc.cc_origin << "]\n";
   NativeProbe version = probe_native({compiler, "--version"});
-  std::string version_line = version.output.substr(0, version.output.find('\n'));
-  std::cout << "cc version: " << (version.ok ? version_line : "unavailable") << "\n";
+  std::string cc_line = version.output.substr(0, version.output.find('\n'));
+  std::cout << "cc version: " << (version.ok ? cc_line : "unavailable") << "\n";
   check(version.ok, "selected compiler is unavailable or its version probe failed: " + tc.cc);
   if (version.ok) {
-    size_t marker = version_line.find("clang version ");
-    if (version_line.find("Apple clang version ") != std::string::npos) {
+    size_t marker = cc_line.find("clang version ");
+    if (cc_line.find("Apple clang version ") != std::string::npos) {
       std::cout << "AOT compatibility: unverified (Apple clang uses vendor version numbers)\n";
     } else if (marker != std::string::npos) {
-      int major = std::atoi(version_line.c_str() + marker + std::strlen("clang version "));
+      int major = std::atoi(cc_line.c_str() + marker + std::strlen("clang version "));
       check(major >= LLVM_VERSION_MAJOR,
             "AOT clang " + std::to_string(major) + " is older than build-time LLVM " +
             std::to_string(LLVM_VERSION_MAJOR) + "; textual LLVM IR requires a compatible clang");
@@ -4256,7 +4265,7 @@ int main(int argc, char **argv) {
       std::cerr << "emit: --version takes no arguments\n";
       return 2;
     }
-    std::cout << "emit " << EMIT_VERSION << " (LLVM " << LLVM_VERSION_STRING << ")\n";
+    std::cout << version_line() << "\n";
     return 0;
   }
   // Help before dispatch, so `--help` is never reported as an unknown verb.  It is a
