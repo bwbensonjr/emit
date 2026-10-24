@@ -57,6 +57,23 @@
   historical identifier such as `run-door-user-libraries` or an accurate
   quotation.
 
+## Versioning and releases
+
+- **Every non-trivial change bumps `VERSION`** under SemVer and adds a matching,
+  nonempty `CHANGELOG.md` section in the same pull request: before 1.0, a new
+  feature or an incompatible change takes a minor bump, a fix a patch bump. One
+  bump per pull request, at the highest level any part of it warrants.
+- **Trivial changes take no bump.** A change is trivial when it leaves shipped
+  behavior, the installed payload, and the source-release build unchanged:
+  documentation, comments, layout-only formatting, tests, CI configuration, and
+  OpenSpec planning artifacts.
+- **The requester can override.** If told to defer the bump or to use another
+  level, do so; a deferred change goes under `## Unreleased` in `CHANGELOG.md`
+  for the next version to absorb.
+- **Merging a `VERSION` change to `main` releases it**, with no manual tag. The
+  policy of record is `docs/RELEASES.md`; the pipeline is
+  `docs/RELEASE-PIPELINE.md`.
+
 ## Scheme code formatting 
 
 - Most comments should occur before the code they are describing,

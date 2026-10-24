@@ -1,0 +1,62 @@
+name: Release tag
+# Tag v<VERSION> when a push to main changes VERSION (change: version-discipline-and-auto-release,
+# design D3).  The tag is pushed with RELEASE_TAG_TOKEN rather than GITHUB_TOKEN, because GitHub
+# starts no workflow from a tag pushed with GITHUB_TOKEN; the push therefore starts Source release,
+# whose gates publish the release, and Distribution channels then promotes it.  Neither of those
+# workflows changes.  tools/release-tag.sh makes the decision, the same one the pull-request check
+# makes, and never moves an existing tag.  Dispatch retries tagging the current main.
+on:
+  push:
+    branches: [main]
+    paths: [VERSION]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: release-tag
+  cancel-in-progress: false
+jobs:
+  tag:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # Prove the token can push here, not just that the account could: the permissions API
+      # reports the account's role, not a fine-grained token's scope.
+      - name: Preflight the tagging credential
+        env:
+          RELEASE_TAG_TOKEN: ${{ secrets.RELEASE_TAG_TOKEN }}
+        run: |
+          [ -n "$RELEASE_TAG_TOKEN" ] || { echo "release-tag: secret RELEASE_TAG_TOKEN is not configured" >&2; exit 1; }
+          git push --dry-run --quiet "https://x-access-token:${RELEASE_TAG_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            "${GITHUB_SHA}:refs/tags/release-tag-preflight" \
+            || { echo "release-tag: RELEASE_TAG_TOKEN cannot push to ${GITHUB_REPOSITORY}" >&2; exit 1; }
+          echo "preflight RELEASE_TAG_TOKEN -> ${GITHUB_REPOSITORY}  [push permitted]" >&2
+      - name: Decide whether this commit is tagged
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          # A push compares VERSION with the previous main; dispatch tags any untagged VERSION.
+          base=(--no-base)
+          if [ "$EVENT" = push ] && git cat-file -e "${BEFORE:-0}^{commit}" 2>/dev/null; then
+            base=(--base "$BEFORE")
+          fi
+          decision=$(tools/release-tag.sh plan "${base[@]}" "$GITHUB_SHA")
+          printf '%s\n' "$decision" | tee -a "$GITHUB_OUTPUT"
+      - name: Push the release tag
+        if: steps.plan.outputs.tag != ''
+        env:
+          RELEASE_TAG_TOKEN: ${{ secrets.RELEASE_TAG_TOKEN }}
+          TAG: ${{ steps.plan.outputs.tag }}
+        run: |
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            tag -a "$TAG" -m "Emit ${TAG#v}" "$GITHUB_SHA"
+          # One ref, never forced: an existing remote tag rejects the push instead of moving.
+          git push "https://x-access-token:${RELEASE_TAG_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            "refs/tags/${TAG}:refs/tags/${TAG}"
+          echo "tag ${GITHUB_SHA} -> ${TAG}  [pushed; Source release starts from it]" >&2

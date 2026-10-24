@@ -171,6 +171,56 @@ abort "missing retry instruction" unless formula.warning.include?("retry emit bu
         self.assertIn("if: needs.identity.outputs.publish == 'true'", workflow.split("nix-promote:", 1)[1])
         self.assertIn("--preserve-digests", (ROOT / "tools/channel-promote.sh").read_text())
 
+    def test_release_tag_workflow_contract(self):
+        # change: version-discipline-and-auto-release, design D3.
+        workflow = (ROOT / ".github/workflows/release-tag.yml").read_text()
+        top, jobs = workflow.split("\njobs:\n", 1)
+        self.assertIn("on:\n  push:\n    branches: [main]\n    paths: [VERSION]\n  workflow_dispatch:\n", top)
+        self.assertNotIn("pull_request", top)
+        # GITHUB_TOKEN stays read-only; only the repository-scoped secret can push.
+        self.assertIn("permissions:\n  contents: read\n", top)
+        self.assertNotIn(": write", workflow)
+        self.assertNotIn("github.token", workflow)
+        self.assertIn("cancel-in-progress: false", top)
+        self.assertIn("if: github.ref == 'refs/heads/main'", jobs)
+        self.assertIn("persist-credentials: false", jobs)
+        steps = jobs.split("      - ")[1:]
+        holders = [step.split("\n", 1)[0] for step in steps if "secrets.RELEASE_TAG_TOKEN" in step]
+        self.assertEqual(holders, ["name: Preflight the tagging credential", "name: Push the release tag"])
+        preflight, push = [step for step in steps if "secrets.RELEASE_TAG_TOKEN" in step]
+        self.assertIn("git push --dry-run", preflight)
+        self.assertIn("is not configured", preflight)
+        # The push step is gated on the shared decision tool and pushes one tag ref, unforced.
+        self.assertIn("tools/release-tag.sh plan", workflow)
+        self.assertIn("if: steps.plan.outputs.tag != ''", push)
+        self.assertEqual(push.count("git push"), 1)
+        self.assertIn('"refs/tags/${TAG}:refs/tags/${TAG}"', push)
+        for flag in ("--force", "-f ", "--tags", "--mirror", "--all", "--delete", "+refs"):
+            self.assertNotIn(flag, push, flag)
+        self.assertEqual(workflow.count("git push"), 2)
+        for line in workflow.splitlines():
+            if "uses:" in line:
+                self.assertRegex(line, r"uses: [\w./-]+@[0-9a-f]{40} # v", line)
+
+    def test_release_tag_leaves_release_and_channels_unchanged(self):
+        # The automatic tag reaches publication only through the existing tag-push conditions.
+        release = (ROOT / ".github/workflows/release.yml").read_text()
+        self.assertIn("on:\n  push:\n    tags: ['v*']\n  workflow_dispatch:\n", release)
+        self.assertIn("if: github.event_name == 'push' && github.ref_type == 'tag'", release)
+        channels = (ROOT / ".github/workflows/channels.yml").read_text()
+        self.assertIn("  workflow_run:\n    workflows: [Source release]\n    types: [completed]\n", channels)
+        self.assertIn("(github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')",
+                      channels)
+        self.assertIn("RELEASE_TAG_TOKEN", (ROOT / "docs/RELEASE-PIPELINE.md").read_text())
+        # The pull-request check uses the same tool, only for VERSION changes.
+        compatibility = (ROOT / ".github/workflows/compatibility.yml").read_text()
+        check = compatibility.split("- name: Check a changed VERSION advances past every release tag", 1)[1]
+        check = check.split("      - name:", 1)[0]
+        self.assertIn("if: github.event_name == 'pull_request'", check)
+        self.assertIn("index(\"release\")", check)
+        self.assertIn("tools/release-tag.sh check HEAD", check)
+        self.assertNotIn("secrets.", check)
+
 
 if __name__ == "__main__":
     unittest.main()

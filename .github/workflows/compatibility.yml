@@ -57,9 +57,21 @@ jobs:
           for key in code source units verification archive mode reference_full; do
             printf '%s=%s\n' "$key" "$(jq -r ".$key" <<< "$plan")" >> "$GITHUB_OUTPUT"
           done
+      # A pull request that changes VERSION must name an untagged version past every release tag
+      # (change: version-discipline-and-auto-release). release-tag.yml re-decides at push time.
+      # The fetch-depth: 0 checkout above already fetched every tag.
+      - name: Check a changed VERSION advances past every release tag
+        if: github.event_name == 'pull_request'
+        run: |
+          if jq -e '.categories | index("release")' "$RUNNER_TEMP/classification.json" > /dev/null; then
+            tools/release-tag.sh check HEAD
+          else
+            echo "release-tag: VERSION unchanged; no version check" >&2
+          fi
       - name: Lightweight policy and transport regression checks
         run: |
           python3 test/ci-policy-tests.py
+          bash test/release-tag-tests.sh
           python3 test/ci-bundle-tests.py
           python3 test/ci-version-probes-tests.py
           bash test/ci-provision-logging-tests.sh
