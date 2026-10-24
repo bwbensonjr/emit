@@ -15,6 +15,8 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 record="$state/$(printf '%s' "$repo/$head" | tr '/' '_')"
+# Every call, so tests can assert that a promotion made none.
+printf '%s %s %s\n' "$operation" "$repo" "$head" >> "$state.calls"
 case "$operation" in
   list) [ -f "$record" ] && printf 'https://github.com/%s/pull/1\n' "$repo" || true ;;
   create)

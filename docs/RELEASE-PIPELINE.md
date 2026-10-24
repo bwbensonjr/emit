@@ -191,15 +191,26 @@ to a branch checkout.
 
 The three channel jobs are independent:
 
-- **homebrew** (`macos-15`) renders `packaging/homebrew/emit.rb.in` into a
-  throwaway local tap. It runs `brew style` and `brew audit --strict`, builds
-  from source, and runs `brew test`.
+- **homebrew** (`macos-15`) first runs `brew update` and narrates the Homebrew
+  version, because the tap's own `brew test-bot` lints with current Homebrew and
+  the runner image's copy lags it (a new style rule once passed here and failed
+  in the tap, #153). It then renders `packaging/homebrew/emit.rb.in` into a
+  throwaway local tap, runs `brew style` and `brew audit --strict`, builds from
+  source, and runs `brew test`. Auto-update stays off after the explicit update.
 - **nix** (`x86_64-linux` on `ubuntu-24.04`, `aarch64-darwin` on `macos-15`)
   builds `packages.candidate`, or `packages.default` from the release identity.
   It also runs the flake's sandboxed acceptance check.
-- **oci** (`ubuntu-24.04`) builds `packaging/oci/Containerfile` once for
-  `linux/amd64`, into an image archive. It loads that archive and checks
-  argument and exit-status forwarding through the entrypoint.
+- **oci** (`ubuntu-24.04`) first resolves the release's version tag in
+  `ghcr.io/bwbensonjr/emit` (`tools/channel-promote.sh oci-resolve`).
+  - **The version is already published:** it copies that digest byte for byte
+    and tests it, instead of rebuilding. An image rebuild is not bit-reproducible,
+    so a rebuilt image could never be promoted over the published tag.
+  - **Otherwise, including every candidate archive:** it builds
+    `packaging/oci/Containerfile` once for `linux/amd64`, into an image archive.
+
+  Either way, it loads the image and checks argument and exit-status forwarding
+  through the entrypoint. The `channel-oci` artifact records the digest and
+  whether it was `built` or `published`.
 
 Each channel then runs `tools/channel-accept.sh` against its installed command,
 with the network denied (`tools/offline-run.sh`, or `--network none`) and the
@@ -211,11 +222,17 @@ Promotion uses `tools/channel-promote.sh` and is safe to retry:
   registry digest is the tested digest. The version tag is created only if it
   is absent. A version tag that already resolves to the tested digest succeeds
   unchanged. One that resolves to a different digest fails, and the version tag
-  is never overwritten. `latest` moves last.
+  is never overwritten. `latest` moves last, and never to an older release than
+  the one its image's version label names (`[superseded]`).
 - **Homebrew** opens or reuses a pull request on `bwbensonjr/homebrew-emit`
   that sets `Formula/emit.rb`.
 - **Nix** opens or reuses a pull request in this repository that sets
   `packaging/release.json`, after both systems passed.
+- Both pull-request promotions check the target's `main` first:
+  - an identical file there is `[already merged]` and needs nothing;
+  - a newer release there makes the candidate `[superseded]`, and no
+    downgrade pull request is opened;
+  - a leftover branch with no open pull request restarts from `main`.
 
 Both pull requests are reviewed and merged by a maintainer.
 
@@ -231,9 +248,13 @@ Permissions:
 
 Retry and rollback:
 
-- **A failed channel** is retried alone, by dispatching the workflow with the
-  same `tag` and `publish` on. Channels that already promoted see their own
-  results unchanged. The source release is never retagged.
+- **A failed channel** is retried by dispatching the workflow with the same
+  `tag` and `publish` on. Channels that already promoted succeed unchanged:
+  - OCI re-tests the published digest and reports `[unchanged]`;
+  - Homebrew and Nix report `[already merged]` once their pull request merged.
+
+  The source release is never retagged. Retrying an older release is safe
+  too: it never moves `latest`, the tap formula, or the Nix pin backward.
 - **OCI rollback** re-points `latest` to a previously validated digest:
   `tools/channel-promote.sh oci-latest ghcr.io/bwbensonjr/emit sha256:...`.
   Digests are recorded in each run's `channel-oci` artifact.
