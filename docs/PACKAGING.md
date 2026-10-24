@@ -50,14 +50,24 @@ pin). Add the release's `LICENSE` and
 `vendor/unicode/17.0.0/LICENSE.txt` (Unicode data behind
 `lib/scheme/char-data.scm`) to your package's license notices.
 
+A staged install defers the shared library cache
+([Installation](INSTALLATION.md#the-shared-library-cache)). Its entries record the binary's
+digest and the libraries' installed paths, so prepare it where the payload finally lives:
+with `emit build --stdlib --shared` in your package's post-install step, or in the build step
+if that already runs at the final path, as Homebrew's and Nix's do. Run it after any step that
+rewrites `bin/emit`, such as stripping. Remove `share/emit/library-cache` on uninstall.
+Without the cache the package still works; each user compiles the standard libraries once.
+
 ## Check the staged package (no network, no Chez)
 
 ```sh
 tools/ci-installed-smoke.sh "$PWD/stage/usr"
 ```
 
-This runs `tools/channel-accept.sh` against the staged command, with private
-caches and the payload made read-only. It checks the version, doctor, JIT `run`,
+This first prepares the shared library cache in the staged prefix, which a
+`DESTDIR` install defers. It then runs `tools/channel-accept.sh` against the staged
+command, with private caches and the payload made read-only. It checks the
+version, doctor, the shared cache, JIT `run`,
 a persistent REPL session, shipped SRFIs and libraries, a macro-exporting
 library through `emit lib`, and AOT executables. It also verifies that nothing
 was written into the payload. The `dev` and `full` native profiles

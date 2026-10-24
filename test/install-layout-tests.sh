@@ -69,25 +69,41 @@ fi
 # carry the resolved prefix, not $PREFIX.  Match against this one.
 RPREFIX="$(cd "$PREFIX" && pwd -P)"
 
-if [ "$(id -u)" != 0 ]; then
-  if grep -Fq "compile stdlib $RPREFIX/share/emit/emit-libs.scm" "$TMP/install.log" \
-     && grep -q 'native 0 reused/11 generated' "$TMP/install.log"; then
-    ok "user install prepares the installed payload in a private cache"
-  else bad "user install preparation"; cat "$TMP/install.log"; fi
-  EMIT_VERBOSITY=verbose "$EMIT" build --stdlib >"$TMP/warmed.out" 2>"$TMP/warmed.err"
-  grep -q 'portable 11 reused/0 generated, native 11 reused/0 generated' "$TMP/warmed.err" \
-    && ok "installed preparation reuses every entry" || bad "installed preparation reuse"
-  EMIT_VERBOSITY=verbose make install PREFIX="$PREFIX" WARM_STDLIB=1 \
-    >"$TMP/install-warm2.log" 2>&1
-  grep -q 'portable 11 reused/0 generated, native 11 reused/0 generated' "$TMP/install-warm2.log" \
-    && ok "repeated user installation reuses prepared entries" || bad "repeated install preparation"
-  printf 'blocked\n' >"$TMP/blocked-cache"
-  if EMIT_CACHE="$TMP/blocked-cache" make install PREFIX="$PREFIX" WARM_STDLIB=1 \
-       >"$TMP/install-warm-failure.log" 2>&1 \
-     && grep -q 'library preparation failed; retry emit build --stdlib' "$TMP/install-warm-failure.log"; then
-    ok "failed automatic preparation retains a usable source installation"
-  else bad "automatic preparation failure handling"; fi
-fi
+# Installation prepares the SHARED library cache under the prefix, never a user's cache
+# (change: prebuilt-shared-stdlib-cache).  EMIT_CACHE names a private user cache that must
+# still be absent after it.
+SHARED="$RPREFIX/share/emit/library-cache"
+# make names the destination by its PREFIX spelling; the binary resolves the manifest's real path.
+if grep -Fq "compile stdlib $RPREFIX/share/emit/emit-libs.scm -> $PREFIX/share/emit/library-cache (shared)" \
+     "$TMP/install.log" \
+   && grep -q 'native 0 reused/11 generated' "$TMP/install.log" \
+   && grep -Fq "install shared library cache -> $PREFIX/share/emit/library-cache" "$TMP/install.log" \
+   && [ ! -e "$EMIT_CACHE" ]; then
+  ok "install prepares the shared library cache and writes no user cache"
+else bad "install shared preparation"; cat "$TMP/install.log"; fi
+"$EMIT" doctor >"$TMP/doctor-shared.out" 2>/dev/null
+grep -Fqx "shared cache: $SHARED [installation; 22 entries, matches this executable]" \
+    "$TMP/doctor-shared.out" \
+  && ok "the installed doctor reports a matching shared cache" \
+  || { bad "installed doctor shared cache"; grep cache "$TMP/doctor-shared.out"; }
+EMIT_VERBOSITY=verbose "$EMIT" build --stdlib >"$TMP/warmed.out" 2>"$TMP/warmed.err"
+grep -q 'portable 11 reused/0 generated (11 shared), native 11 reused/0 generated (11 shared)' \
+    "$TMP/warmed.err" \
+  && [ -z "$(find "$EMIT_CACHE" -name 'baked-*' -o -name 'unit-*' -o -name 'native-*' 2>/dev/null)" ] \
+  && ok "installed user preparation reuses every shared entry" || bad "installed preparation reuse"
+make install PREFIX="$PREFIX" WARM_STDLIB=1 >"$TMP/install-warm2.log" 2>&1
+grep -q 'portable 0 reused/11 generated' "$TMP/install-warm2.log" \
+  && [ "$(ls "$SHARED" | grep -c '\.stamp$')" = 22 ] \
+  && [ -z "$(ls "$PREFIX/share/emit" | grep '^library-cache\.')" ] \
+  && ok "repeated installation rebuilds one executable's shared cache" \
+  || bad "repeated install preparation"
+if EMIT_DUMP_LEVEL=3 make install PREFIX="$PREFIX" WARM_STDLIB=1 \
+     >"$TMP/install-warm-failure.log" 2>&1 \
+   && grep -q 'library preparation failed; retry emit build --stdlib --shared' \
+     "$TMP/install-warm-failure.log" \
+   && [ "$(ls "$SHARED" | grep -c '\.stamp$')" = 22 ]; then
+  ok "failed automatic preparation keeps the install and the previous shared cache"
+else bad "automatic preparation failure handling"; cat "$TMP/install-warm-failure.log"; fi
 
 make install PREFIX="$PREFIX" WARM_STDLIB=0 >"$TMP/install-deferred.log" 2>&1
 grep -q 'defer library preparation (WARM_STDLIB=0)' "$TMP/install-deferred.log" \
@@ -95,19 +111,20 @@ grep -q 'defer library preparation (WARM_STDLIB=0)' "$TMP/install-deferred.log" 
 EMIT_CACHE="$TMP/stage-cache" make install PREFIX="$PREFIX" DESTDIR="$TMP/stage" \
   WARM_STDLIB=1 >"$TMP/install-staged.log" 2>&1
 if grep -q 'defer library preparation (DESTDIR staging)' "$TMP/install-staged.log" \
-   && [ ! -e "$TMP/stage-cache" ]; then
-  ok "staging neither executes preparation nor writes a user cache"
+   && [ ! -e "$TMP/stage-cache" ] && [ ! -e "$TMP/stage$PREFIX/share/emit/library-cache" ]; then
+  ok "staging neither executes preparation nor writes any cache"
 else bad "staged preparation deferral"; fi
-# Simulate only the identity probe; no privilege change or root writes occur.
+# A privileged install prepares the shared cache like any other: only the identity probe is
+# simulated, so no privilege change or root writes occur.
 mkdir -p "$TMP/root-probe"
 printf '#!/bin/sh\nprintf "0\\n"\n' >"$TMP/root-probe/id"
 chmod +x "$TMP/root-probe/id"
 PATH="$TMP/root-probe:$PATH" EMIT_CACHE="$TMP/root-cache" \
   make install PREFIX="$PREFIX" WARM_STDLIB=1 >"$TMP/install-root.log" 2>&1
-if grep -q 'defer library preparation (privileged install)' "$TMP/install-root.log" \
+if grep -Fq "install shared library cache -> $PREFIX/share/emit/library-cache" "$TMP/install-root.log" \
    && [ ! -e "$TMP/root-cache" ]; then
-  ok "privileged identity defers preparation without inferring a user"
-else bad "privileged preparation deferral"; fi
+  ok "a privileged install prepares the shared cache and no user's cache"
+else bad "privileged shared preparation"; cat "$TMP/install-root.log"; fi
 
 echo "installed layout"
 # The support files land at their REPO-RELATIVE SUBPATHS under share/emit, the same
@@ -745,32 +762,34 @@ fi
 # --- the artifact cache works from an install (change: baked-set-artifact-cache) ------
 # The cache must not be a checkout-only feature: an installed emit has no writable install
 # tree and no build/lib, so it needs a user-writable location, and the install must still
-# ship no compiled artifact of its own.  EMIT_CACHE points at a scratch directory so this
-# neither reads nor writes the developer's real cache.
+# keep every compiled artifact of its own in the shared library cache.  EMIT_CACHE points at
+# a scratch directory so this neither reads nor writes the developer's real cache, and the
+# shared tier is disabled so these runs exercise the user cache itself.
 echo
 echo "installed emit, artifact cache"
 ICACHE="$TMP/icache"
 printf '(display (+ 40 2))\n' > "$TMP/one.scm"
 
-ione="$(EMIT_VERBOSITY=quiet EMIT_CACHE="$ICACHE" "$EMIT" run "$TMP/one.scm" 2>"$TMP/ec1")"
+ione="$(EMIT_VERBOSITY=quiet EMIT_CACHE="$ICACHE" EMIT_SHARED_CACHE= "$EMIT" run "$TMP/one.scm" 2>"$TMP/ec1")"
 [ "$ione" = "42" ] && ok "installed emit runs with a cold cache => $ione" \
   || { bad "installed emit, cold cache => [$ione]"; sed 's/^/         /' "$TMP/ec1"; }
 n=$(ls "$ICACHE" 2>/dev/null | grep -c '^baked-' || true)
 [ "$n" -ge 3 ] && ok "installed emit populates a user-writable cache ($n files)" \
   || bad "installed emit left $n cache file(s)"
-itwo="$(EMIT_VERBOSITY=quiet EMIT_CACHE="$ICACHE" "$EMIT" run "$TMP/one.scm" 2>/dev/null)"
+itwo="$(EMIT_VERBOSITY=quiet EMIT_CACHE="$ICACHE" EMIT_SHARED_CACHE= "$EMIT" run "$TMP/one.scm" 2>/dev/null)"
 [ "$itwo" = "42" ] && ok "installed emit reuses its cache => $itwo" \
   || bad "installed emit, warm cache => [$itwo]"
 
-# Compiled entries belong to the user cache, including those prepared during install;
-# the prefix payload remains source-only.
-if find "$PREFIX" -type f \( -name '*.ll' -o -name '*.bc' -o -name '*.o' -o -name 'baked-*' \) \
+# Compiled entries belong to a cache: the user's, or the shared library cache installation
+# prepares.  Everywhere else the prefix payload remains source-only.
+if find "$PREFIX" -path "$PREFIX/share/emit/library-cache" -prune -o -type f \
+     \( -name '*.ll' -o -name '*.bc' -o -name '*.o' -o -name 'baked-*' \) -print \
      | grep -q .; then
   bad "the installed tree ships a compiled artifact"
   find "$PREFIX" -type f \( -name '*.ll' -o -name '*.bc' -o -name '*.o' -o -name 'baked-*' \) \
     | sed 's/^/         /'
 else
-  ok "the installed tree ships no compiled library unit"
+  ok "the installed tree ships no compiled library unit outside its shared cache"
 fi
 
 # And with no writable cache location at all, an installed emit still works.
@@ -933,14 +952,18 @@ else bad "pinned emit build failed"; sed 's/^/         /' "$TMP/pin-build.err"; 
 
 # --- shared installed acceptance (tools/channel-accept.sh, design D3) ------------------------
 # The pinned install is what a package delivers: accept it read-only from outside the checkout.
+# A staged payload carries no shared cache; prepare it at its final path, as a package recipe does.
 VERSION_EXPECTED="$(sed -n 1p VERSION)"
+EMIT_SHARED_CACHE="$PIN_PREFIX/share/emit/library-cache" "$PIN_PREFIX/bin/emit" \
+  build --stdlib --shared -q >"$TMP/pin-shared.log" 2>&1 \
+  || { bad "pinned shared cache preparation"; sed 's/^/         /' "$TMP/pin-shared.log"; }
 chmod -R a-w "$PIN_PREFIX"
 if (cd "$TMP" && "$REPO/tools/channel-accept.sh" --emit "$PIN_PREFIX/bin/emit" \
       --expect-version "$VERSION_EXPECTED" --report "$TMP/accept.json" --label pinned) \
       >"$TMP/accept.out" 2>"$TMP/accept.err" \
    && grep -q '"result": "passed"' "$TMP/accept.json" \
-   && [ "$(grep -c '"outcome": "passed"' "$TMP/accept.json")" = 11 ]; then
-  ok "installed acceptance passes all 11 checks against a read-only pinned install"
+   && [ "$(grep -c '"outcome": "passed"' "$TMP/accept.json")" = 13 ]; then
+  ok "installed acceptance passes all 13 checks against a read-only pinned install"
 else bad "installed acceptance failed"; sed 's/^/         /' "$TMP/accept.err" "$TMP/accept.json" 2>/dev/null; fi
 chmod -R u+w "$PIN_PREFIX"
 
@@ -962,7 +985,7 @@ if (cd "$TMP" && "$ACCEPT_TREE/tools/channel-accept.sh" --emit "$PIN_PREFIX/bin/
 else
   failed_ids="$(sed -n 's/.*"id": "\([^"]*\)", "outcome": "failed".*/\1/p' "$TMP/reject.json" | tr '\n' ' ')"
   if [ "$failed_ids" = "version jit-run aot-build payload-unchanged " ] \
-     && [ "$(grep -c '"outcome": "passed"' "$TMP/reject.json")" = 7 ] \
+     && [ "$(grep -c '"outcome": "passed"' "$TMP/reject.json")" = 9 ] \
      && grep -q '"result": "failed"' "$TMP/reject.json"; then
     ok "installed acceptance records version, fixture, and payload-write failures and still runs the rest"
   else bad "unexpected acceptance failures: [$failed_ids]"; sed 's/^/         /' "$TMP/reject.json"; fi
@@ -982,6 +1005,12 @@ else bad "relative-CC failure unclear"; sed 's/^/         /' "$TMP/pin-bad.log";
 UNINSTALL_STAGE="$TMP/uninstall-stage"
 make install PREFIX="$BUILT_PREFIX" DESTDIR="$UNINSTALL_STAGE" TOOLCHAIN_PIN=1 >/dev/null 2>&1
 printf 'user file\n' > "$UNINSTALL_STAGE$BUILT_PREFIX/share/emit/lib/scheme/mine.sld"
+# A staged install prepares no shared cache, so plant one (and an interrupted preparation's
+# sibling): uninstall removes the derived directories whole.
+mkdir -p "$UNINSTALL_STAGE$BUILT_PREFIX/share/emit/library-cache" \
+  "$UNINSTALL_STAGE$BUILT_PREFIX/share/emit/library-cache.tmp-123"
+touch "$UNINSTALL_STAGE$BUILT_PREFIX/share/emit/library-cache/baked-v5-0.stamp" \
+  "$UNINSTALL_STAGE$BUILT_PREFIX/share/emit/library-cache.tmp-123/baked-v5-0.ll"
 if make uninstall PREFIX="$BUILT_PREFIX" DESTDIR="$UNINSTALL_STAGE" >"$TMP/uninstall.out" 2>"$TMP/uninstall.err" \
    && [ "$(find "$UNINSTALL_STAGE" -type f)" = "$UNINSTALL_STAGE$BUILT_PREFIX/share/emit/lib/scheme/mine.sld" ] \
    && [ -d "$UNINSTALL_STAGE$BUILT_PREFIX/bin" ] \

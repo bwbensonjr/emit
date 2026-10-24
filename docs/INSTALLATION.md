@@ -23,24 +23,55 @@ libraries, and AOT support files under `share/emit`. `make uninstall` with the s
 make uninstall PREFIX="$HOME/.local"
 ```
 
-An unprivileged install without `DESTDIR` then runs the installed
-`emit build --stdlib` to prepare portable IR, compile-time interfaces, and native
-objects for the default `-O1` profile in the installing user's cache. It uses the
-installed payload even when make runs from a checkout. This does not add compiled
-files to the prefix. Repeated preparation reuses valid entries; a changed compiler,
-library input, target, or JIT profile may need fresh entries.
+## The shared library cache
 
-Use `make install WARM_STDLIB=0` to defer this step. Staged and privileged installs
-always defer it and name the end-user command. Homebrew, Nix, and OCI builds disable
-preparation, since none of them can write the end user's cache: Homebrew runs its
-post-install work sandboxed with a temporary `HOME`. Run `emit build --stdlib` after
-installing, or after entering the user environment or container, with a writable user
-cache; Homebrew's caveats name the command. An automatic preparation failure leaves the
-source installation usable and reports how to retry; the explicit command returns
-nonzero if compilation or persistence fails. Relocation may invalidate cached paths
-and ordinary commands rebuild them as needed.
- A complete prefix can be
-moved after installation. Emit resolves its real executable path (including
+An install without `DESTDIR` then runs the installed `emit build --stdlib --shared`. This
+command prepares the **shared library cache** at `share/emit/library-cache`, about 8 MB. It
+holds portable IR, compile-time interfaces, and native objects for the default `-O1` profile.
+
+- **Who it serves.** Every user of the installation reads it before their own cache. The first
+  `emit run` or `emit repl` therefore starts without compiling the standard libraries. Without
+  the cache, that first start takes about 20 s.
+- **Who writes it.** Only the installation step. Ordinary commands write new entries to the
+  user's own cache, never into the prefix.
+- **Validity.** Entries are tied to the binary that prepared them and to the shipped sources at
+  their installed paths. After a rebuild, a different CPU, a different optimization profile, or
+  a moved prefix, an entry simply misses. Emit then uses the user's cache, or compiles.
+- **Repreparing.** Each preparation builds the whole cache afresh and swaps it in complete.
+  Repeating the install leaves only the current binary's entries, and an interrupted preparation
+  never leaves a partial cache.
+- **Removing it.** Deleting the directory is always safe, and `make uninstall` removes it.
+
+`emit doctor` reports both caches, and whether the shared cache matches the running binary:
+
+```text
+user cache: /Users/me/Library/Caches/emit [platform user cache]
+shared cache: /usr/local/share/emit/library-cache [installation; 22 entries, matches this executable]
+```
+
+`EMIT_SHARED_CACHE` overrides the location, and setting it to the empty string disables the
+shared cache. A checkout build has no shared cache unless the variable names one.
+
+**When installation defers preparation.** `make install WARM_STDLIB=0` skips the step, and a
+staged `DESTDIR` install always defers it: entries record final paths that a staging root does
+not have yet. Run `emit build --stdlib --shared` once the payload is in place, or let each user
+run `emit build --stdlib` for their own cache. A failed automatic preparation leaves the source
+installation usable and reports how to retry. The explicit command exits nonzero if compilation,
+persistence, or the final swap fails.
+
+**Channel builds ship the cache.** Homebrew, Nix, and OCI prepare it in their build step, against
+the binary they install:
+- **Homebrew** prepares it in the keg during `make install`.
+- **Nix** prepares it after its fixup phase has stripped and wrapped the binary.
+- **OCI** prepares it in the builder stage at the image's final `/opt/emit` path.
+
+There is nothing to run after `brew install`. An image's native objects record the CPU of the
+runner that built it, so on another host they are regenerated once into the user's cache. Its
+portable entries serve every host.
+
+## Relocating an installation
+
+A complete prefix can be moved after installation. Emit resolves its real executable path (including
 when started through a symlink), checks for `../share/emit` beside that binary,
 and then uses the compiled-in `PREFIX` as a fallback. The fallback supports a
 detached executable when no executable-relative payload is present. Project
@@ -64,7 +95,9 @@ available to the operating system's loader. `emit build` also invokes clang on
 textual LLVM IR and uses the installed runtime source and C linker; clang must
 be compatible with the LLVM version used to build Emit. Moving only the
 executable without its `share/emit` payload uses the compiled-prefix fallback
-for data and support files.
+for data and support files. A moved prefix keeps its shared library cache, but its entries
+for libraries read from disk record the old paths and miss; the baked standard library, which
+has no source path, is still served.
 
 ## Package toolchain pin
 
@@ -141,6 +174,8 @@ emit doctor             # toolchain: package [LLVM selection]
 The formula builds Emit from source against the `llvm@22` keg. It works even
 though Homebrew keeps that keg off `PATH`, and it ignores any other clang
 (Apple's, or a newer `llvm`). Upgrade with `brew upgrade bwbensonjr/emit/emit`.
+The keg includes the prepared shared library cache, so the first command starts without
+compiling the standard libraries; `emit doctor` should report it as `matches this executable`.
 Remove with `brew uninstall emit && brew untap bwbensonjr/emit`, then optionally
 `rm -rf ~/Library/Caches/emit` for compiled library caches.
 
@@ -180,7 +215,10 @@ docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/work" -v emit-cache:/cache 
 The entrypoint is `emit`, so arguments and the exit status pass through
 unchanged. The working directory is `/work`, and compiled library caches go to
 `/cache`. Both directories are writable by any user ID, and the installed
-payload under `/opt/emit` is read-only. The image works without network access
+payload under `/opt/emit` is read-only. It includes the shared library cache,
+which serves the standard libraries' portable IR to every container. Native
+objects for a CPU other than the build runner's are generated once into `/cache`,
+so mounting a persistent volume there keeps them across runs. The image works without network access
 and contains no Chez, Git, or source tree.
 
 An executable built in the container is a `linux/amd64` program linked against

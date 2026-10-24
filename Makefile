@@ -340,6 +340,12 @@ SUPPORTDIRS  := $(sort $(foreach f,$(SUPPORT),$(dir $(f))))
 TOOLCHAIN_PIN ?=
 PIN_CC := $(if $(TOOLCHAIN_INPUT_CC),$(CC),$(LLVM_BIN)/clang)
 
+# THE SHARED LIBRARY CACHE (change: prebuilt-shared-stdlib-cache, design D4).  Once the
+# payload is in place, the installed binary prepares share/emit/library-cache: the shipped
+# libraries compiled by THIS executable, readable by every user and consulted before their
+# own cache.  It needs the final location -- entries record their source paths and the
+# binary's digest -- so a DESTDIR stage defers it, as does WARM_STDLIB=0.  Failure is
+# reported and never fails the install; the payload is complete without the cache.
 WARM_STDLIB ?= 1
 
 .PHONY: install
@@ -377,19 +383,21 @@ endif
 	@. tools/log.sh; \
 	  if [ -n "$(DESTDIR)" ]; then reason='DESTDIR staging'; \
 	  elif [ "$(WARM_STDLIB)" = 0 ]; then reason='WARM_STDLIB=0'; \
-	  elif [ "$$(id -u)" = 0 ]; then reason='privileged install'; \
 	  else reason=; fi; \
 	  if [ -n "$$reason" ]; then \
 	    say "install: defer library preparation ($$reason); run emit build --stdlib as the end user"; \
-	  elif ! "$(BINDIR)/emit" build --stdlib; then \
-	    printf '%s\n' 'install: library preparation failed; retry emit build --stdlib as the end user' >&2; \
+	  elif ! EMIT_SHARED_CACHE="$(SHAREDIR)/library-cache" "$(BINDIR)/emit" build --stdlib --shared; then \
+	    printf '%s\n' 'install: library preparation failed; retry emit build --stdlib --shared, or emit build --stdlib as the end user' >&2; \
+	  else \
+	    say "install shared library cache -> $(SHAREDIR)/library-cache  [$$(du -sk "$(SHAREDIR)/library-cache" | cut -f1) KB]"; \
 	  fi
 
 # UNINSTALL removes exactly what `make install` writes under the same PREFIX/DESTDIR: bin/emit,
 # the manifest, library sources, includes, support files, and an optional toolchain pin.  It then
 # prunes directories under share/emit only when they are empty, so a file it did not install --
 # one from a different release's file list, or one a user added -- is reported and left in place.
-# It builds nothing.
+# The shared library cache is the exception: it is wholly derived, so its directory goes whole,
+# along with any temporary sibling an interrupted preparation left.  It builds nothing.
 INSTALLED_SHARE := emit-libs.scm $(SLDS) $(LIBDATA) $(SUPPORT) package/toolchain.env
 
 .PHONY: uninstall
@@ -398,6 +406,10 @@ uninstall:
 	  removed=0; \
 	  for f in "$(BINDIR)/emit" $(foreach f,$(INSTALLED_SHARE),"$(SHAREDIR)/$(f)"); do \
 	    if [ -e "$$f" ] || [ -L "$$f" ]; then rm -f "$$f" && removed=$$((removed + 1)); fi; \
+	  done; \
+	  for d in "$(SHAREDIR)"/library-cache "$(SHAREDIR)"/library-cache.tmp-* \
+	           "$(SHAREDIR)"/library-cache.old-*; do \
+	    if [ -d "$$d" ]; then rm -rf "$$d" && removed=$$((removed + 1)); fi; \
 	  done; \
 	  if [ -d "$(SHAREDIR)" ]; then find "$(SHAREDIR)" -depth -type d -empty -exec rmdir {} \; ; fi; \
 	  say "uninstall emit <- $(DESTDIR)$(PREFIX)  [$$removed file(s) removed]"; \

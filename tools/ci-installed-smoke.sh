@@ -15,6 +15,11 @@ work=$(mktemp -d)
 restore() { chmod -R u+w "$prefix"; rm -rf "$work"; }
 trap restore EXIT
 version=$(< "$source_root/VERSION")
+# A DESTDIR stage defers the shared library cache, which records its final paths.  These checks
+# run the payload where it sits, so that is its final location here: prepare the cache as a
+# package does once its payload is in place (change: prebuilt-shared-stdlib-cache).
+say "prepare $prefix/share/emit/library-cache -> shared library cache"
+EMIT_SHARED_CACHE="$prefix/share/emit/library-cache" "$prefix/bin/emit" build --stdlib --shared
 say "stage $prefix -> read-only installed command checks"
 chmod -R a-w "$prefix"
 "$source_root/tools/channel-accept.sh" --emit "$prefix/bin/emit" --expect-version "$version" \

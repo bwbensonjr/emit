@@ -60,6 +60,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
+#include <dirent.h>
 #include <limits.h>
 #include <fcntl.h>
 #include <poll.h>
@@ -127,6 +128,7 @@ struct JitMetrics {
   size_t transformed = 0;
   size_t parsed = 0;
   size_t native_hits = 0;
+  size_t native_shared_hits = 0;
   size_t native_generated = 0;
   uint64_t native_load_ns = 0;
 };
@@ -405,6 +407,7 @@ static void usage_repl(std::ostream &os) {
 static void usage_build(std::ostream &os) {
   os << "usage: emit build [NAME|FILE] [options]   deliver a native executable\n"
         "       emit build --stdlib [-q|-v]        prepare shipped libraries in the user cache\n"
+        "       emit build --stdlib --shared       prepare this installation's shared cache\n"
         "\n"
         "  NAME                      manifest (program NAME) entry; the sole entry when omitted\n"
         "  FILE                      .scm or path-shaped source; no program entry required\n"
@@ -412,7 +415,10 @@ static void usage_build(std::ostream &os) {
         "  -o OUT                    output path, overriding the entry's own\n"
         "  --no-prelude              do not bake or imply (scheme base)\n";
   os << "  --stdlib                  cache full portable IR and default -O1 native libraries\n"
-        "                            uses EMIT_CACHE or the platform user cache; no program runs\n";
+        "                            uses EMIT_CACHE or the platform user cache; no program runs\n"
+        "  --shared                  with --stdlib: rebuild share/emit/library-cache (or\n"
+        "                            EMIT_SHARED_CACHE) from scratch for this executable;\n"
+        "                            every user reads it before their own cache\n";
   usage_shared(os);
 }
 
@@ -1526,31 +1532,83 @@ static bool mkdirs(const std::string &path) {
   return stat(path.c_str(), &st) == 0 && S_ISDIR(st.st_mode);   // lost a create race
 }
 
-// Where entries live (design D4): $EMIT_CACHE, else the platform user cache directory,
-// else "" for no caching at all.
+// Where the user cache lives (design D4): $EMIT_CACHE, else the platform user cache
+// directory, else "".  `origin` names which rule answered.  Resolution only -- nothing is
+// created, so `emit doctor` can report the location without touching it.
+static std::string user_cache_location(std::string *origin = nullptr) {
+  const char *env = std::getenv("EMIT_CACHE");
+  if (env && *env) {
+    if (origin) *origin = "EMIT_CACHE";
+    return env;
+  }
+  const char *xdg = std::getenv("XDG_CACHE_HOME");
+  const char *home = std::getenv("HOME");
+  if (origin) *origin = "platform user cache";
+  if (xdg && *xdg) {
+    if (origin) *origin = "XDG_CACHE_HOME";
+    return std::string(xdg) + "/emit";
+  }
+#ifdef __APPLE__
+  if (home && *home) return std::string(home) + "/Library/Caches/emit";
+#else
+  if (home && *home) return std::string(home) + "/.cache/emit";
+#endif
+  if (origin) *origin = "unavailable";
+  return "";
+}
+
+// `emit build --stdlib --shared` writes into a fresh directory of its own and must not
+// read the shared cache it is about to replace (change: prebuilt-shared-stdlib-cache,
+// design D3).  Both are set once, before the first cache lookup.
+static std::string g_cache_dir_override;
+static bool g_shared_tier_disabled = false;
+
+// Where entries are WRITTEN, and the second place they are read: the user cache, or the
+// --shared preparation directory.
 //
 // ONE resolution for a checkout and an install alike -- deliberately NOT `build/lib`, so
 // that no code path exists only for installed users.  The directory is created on demand;
 // if it cannot be, the answer is "" and every command simply compiles from source.
 static std::string cache_dir() {
+  if (!g_cache_dir_override.empty()) return g_cache_dir_override;
   static std::string memo;
   static bool done = false;
   if (done) return memo;
   done = true;
-  const char *env = std::getenv("EMIT_CACHE");
-  std::string base = (env && *env) ? std::string(env) : std::string();
-  if (base.empty()) {
-    const char *xdg = std::getenv("XDG_CACHE_HOME");
-    const char *home = std::getenv("HOME");
-    if (xdg && *xdg)        base = std::string(xdg) + "/emit";
-#ifdef __APPLE__
-    else if (home && *home) base = std::string(home) + "/Library/Caches/emit";
-#else
-    else if (home && *home) base = std::string(home) + "/.cache/emit";
-#endif
-  }
+  std::string base = user_cache_location();
   if (base.empty() || !mkdirs(base)) return memo;   // memo is still ""
   memo = base;
+  return memo;
+}
+
+// Where an installation's shared cache lives (design D2): $EMIT_SHARED_CACHE when set (the
+// empty string disables it), else `library-cache` beside the shipped manifest this
+// executable resolves.  In a checkout that is `<repo>/library-cache`, which does not exist,
+// so a checkout build has no shared tier unless the variable names one.
+static std::string shared_cache_location(std::string *origin = nullptr) {
+  const char *env = std::getenv("EMIT_SHARED_CACHE");
+  if (env) {
+    if (origin) *origin = *env ? "EMIT_SHARED_CACHE" : "disabled by EMIT_SHARED_CACHE";
+    return env;
+  }
+  if (origin) *origin = "installation";
+  std::string manifest = support_file(kManifestName);
+  return manifest.empty() ? std::string() : dir_of(manifest) + "/library-cache";
+}
+
+// The shared tier entries are READ from, before the user cache; never written by an
+// ordinary command.  "" when there is none -- disabled, not installed, or not a directory
+// -- in which case lookups skip it without a word.
+static std::string shared_cache_dir() {
+  if (g_shared_tier_disabled) return "";
+  static std::string memo;
+  static bool done = false;
+  if (done) return memo;
+  done = true;
+  std::string location = shared_cache_location();
+  struct stat st;
+  if (!location.empty() && stat(location.c_str(), &st) == 0 && S_ISDIR(st.st_mode))
+    memo = location;
   return memo;
 }
 
@@ -1580,9 +1638,12 @@ static std::string cache_dir() {
 // INSIDE the entry (its `.sources` file) and are what validity is checked against.  One
 // stem per (library, compiler) therefore holds the latest content, rather than accumulating
 // a file per edit.
-static std::string cache_entry_stem(const std::string &kind, const std::string &label,
-                                    const std::string &extra) {
-  std::string dir = cache_dir();
+//
+// `dir` is the tier: cache_entry_stem is the user (write) tier, shared_entry_stem the
+// read-only shared one.  An entry's name is the same in either, so one preparation's
+// output is valid wherever it is put -- as long as the sources sit where they did.
+static std::string cache_entry_stem_in(const std::string &dir, const std::string &kind,
+                                       const std::string &label, const std::string &extra) {
   if (dir.empty()) return std::string();
   std::string dig = compiler_digest();
   if (dig.empty()) return std::string();
@@ -1594,7 +1655,21 @@ static std::string cache_entry_stem(const std::string &kind, const std::string &
   return s.str();
 }
 
+static std::string cache_entry_stem(const std::string &kind, const std::string &label,
+                                    const std::string &extra) {
+  std::string dir = cache_dir();
+  return cache_entry_stem_in(dir, kind, label, extra);
+}
+
+static std::string shared_entry_stem(const std::string &kind, const std::string &label,
+                                     const std::string &extra) {
+  return cache_entry_stem_in(shared_cache_dir(), kind, label, extra);
+}
+
 static std::string cache_stem() { return cache_entry_stem("baked", "", ""); }
+
+// Entries reused from the shared tier, for the `--stdlib` summary's "(K shared)".
+static size_t g_portable_shared_hits = 0;
 
 // The stamp file is written LAST and is the entry's completeness witness: a torn or
 // interrupted write leaves no stamp, so the entry reads as absent rather than as corrupt
@@ -1762,13 +1837,20 @@ static bool cache_bypassed_for_dump() {
 // cannot leave a half-seeded session that the from-source fallback would compile on top of.
 // It answers `deferred` for a valid entry whose imports are not registered yet, which is
 // NOT a miss: the caller retries it in the same fixpoint loop that orders from-source loads.
+//
+// `shared` marks a read from the shared tier (design D1): a miss there is not a recompile
+// but a fall-through to the user cache, and is narrated as one.  A shared tier that does not
+// exist has an empty stem and says nothing.
 static CacheRead cache_load_entry(const std::string &stem, const std::string &what,
                                   const std::string &kind, const std::string &label,
                                   const std::string &extra, bool sources_required,
                                   std::vector<std::string> &modules,
-                                  std::vector<std::string> &inits) {
+                                  std::vector<std::string> &inits, bool shared = false) {
+  const std::string then = shared ? ", trying the user cache" : ", recompiling";
+  const std::string tier = shared ? " [shared]" : "";
   if (stem.empty()) {
-    vsay("cache: unavailable (no writable location, or cannot identify this binary)");
+    if (!shared)
+      vsay("cache: unavailable (no writable location, or cannot identify this binary)");
     return CacheRead::Miss;
   }
   // The stamp is the completeness witness, so all three of "no entry yet", "written by a
@@ -1777,21 +1859,23 @@ static CacheRead cache_load_entry(const std::string &stem, const std::string &wh
   // the interesting case: it means the compiler moved.
   std::string stamp = read_file(stem + ".stamp");
   if (stamp.empty()) {
-    vsay("cache: no entry for " + what + ", compiling it");
+    vsay(shared ? "cache: no shared entry for " + what + then
+                : "cache: no entry for " + what + ", compiling it");
     return CacheRead::Miss;
   }
   if (stamp != cache_stamp_text(kind, label, extra)) {
-    vsay("cache: entry for " + what + " is stale (changed compiler or entry format), recompiling");
+    vsay("cache: entry for " + what + tier +
+         " is stale (changed compiler or entry format)" + then);
     return CacheRead::Miss;
   }
   if (sources_required && !sources_still_match(read_file(stem + ".sources"))) {
-    vsay("cache: source changed for " + what + ", recompiling");
+    vsay("cache: source changed for " + what + tier + then);
     return CacheRead::Miss;
   }
   std::string joined = read_file(stem + ".ll");
   std::string meta   = read_file(stem + ".meta");
   if (joined.empty() || meta.empty()) {
-    vsay("cache: entry for " + what + " incomplete, recompiling");
+    vsay("cache: entry for " + what + tier + " incomplete" + then);
     return CacheRead::Miss;
   }
   // Does the IR still look like the unit modules it claims to be?  A stamp says the entry
@@ -1804,7 +1888,7 @@ static CacheRead cache_load_entry(const std::string &stem, const std::string &wh
   split_modules(joined, mods);
   for (const std::string &m : mods) {
     if (m.find(":__init\"") == std::string::npos) {
-      vsay("cache: entry for " + what + " is not the IR it claims to be, recompiling");
+      vsay("cache: entry for " + what + tier + " is not the IR it claims to be" + then);
       return CacheRead::Miss;
     }
   }
@@ -1814,8 +1898,8 @@ static CacheRead cache_load_entry(const std::string &stem, const std::string &wh
   std::string st = status_of(r);
   if (st == "deferred") return CacheRead::Deferred;    // valid, but not yet: retry later
   if (st != "ok") {
-    vsay("cache: entry for " + what + " refused (" + normalize_compiler_message(scm_str(rt_cdr(r))) +
-         "), recompiling");
+    vsay("cache: entry for " + what + tier + " refused (" +
+         normalize_compiler_message(scm_str(rt_cdr(r))) + ")" + then);
     return CacheRead::Miss;
   }
   std::istringstream isyms(scm_str(rt_cdr(r)));
@@ -1826,12 +1910,13 @@ static CacheRead cache_load_entry(const std::string &stem, const std::string &wh
   // The metadata and the modules are stored together and must describe each other; if they
   // do not, the entry is inconsistent and is refused rather than half-applied.
   if (mods.size() != got.size()) {
-    vsay("cache: entry for " + what + " inconsistent (modules/inits disagree), recompiling");
+    vsay("cache: entry for " + what + tier + " inconsistent (modules/inits disagree)" + then);
     return CacheRead::Miss;
   }
   modules = mods;
   inits = got;
-  vsay("cache: " + what + " reused from " + stem + ".ll");
+  if (shared) ++g_portable_shared_hits;
+  vsay("cache: " + what + " reused from " + stem + ".ll" + (shared ? " [shared]" : " [user]"));
   return CacheRead::Hit;
 }
 
@@ -1874,6 +1959,10 @@ static bool cache_store_entry(const std::string &stem, const std::string &what,
 static bool cache_load_baked_set(std::vector<std::string> &modules,
                                  std::vector<std::string> &inits) {
   if (cache_bypassed_for_dump()) return false;
+  if (cache_load_entry(shared_entry_stem("baked", "", ""), "baked set", "baked", "", "",
+                       /*sources_required=*/false, modules, inits,
+                       /*shared=*/true) == CacheRead::Hit)
+    return true;
   return cache_load_entry(cache_stem(), "baked set", "baked", "", "",
                           /*sources_required=*/false, modules, inits) == CacheRead::Hit;
 }
@@ -1962,7 +2051,7 @@ static bool publish_artifact(const std::string &stem, const std::string &ir,
 
 static CacheRead load_artifact(const std::string &stem, const std::string &key,
                                const std::string &path, bool explicit_location,
-                               std::string &ir, std::string &init) {
+                               std::string &ir, std::string &init, bool shared = false) {
   using A = ExplicitArtifact;
   auto miss = [&](const std::string &reason) {
     vsay(std::string(explicit_location ? "artifact: " : "cache: ") + "library " + key +
@@ -1972,7 +2061,8 @@ static CacheRead load_artifact(const std::string &stem, const std::string &key,
   ExplicitArtifact artifact;
   std::string metadata = read_file(stem + ".artifact");
   if (metadata.empty() && !explicit_location) {
-    vsay("cache: no entry for library " + key + ", compiling it");
+    vsay(shared ? "cache: no shared entry for library " + key + ", trying the user cache"
+                : "cache: no entry for library " + key + ", compiling it");
     return CacheRead::Miss;
   }
   if (!artifact_parse(metadata, artifact))
@@ -1984,7 +2074,9 @@ static CacheRead load_artifact(const std::string &stem, const std::string &key,
   std::string own_source = file_digest(path) + "\t" + canonical_path(path) + "\n";
   if (file_digest(path).empty() || f[A::Sources].compare(0, own_source.size(), own_source) != 0 ||
       !sources_still_match(f[A::Sources])) {
-    if (!explicit_location) vsay("cache: source changed for library " + key + ", recompiling");
+    if (!explicit_location)
+      vsay("cache: source changed for library " + key +
+           (shared ? " [shared], trying the user cache" : ", recompiling"));
     return miss("source, include, or feature answer changed");
   }
   std::string candidate = read_file(stem + ".ll");
@@ -2010,8 +2102,10 @@ static CacheRead load_artifact(const std::string &stem, const std::string &key,
   init = scm_str(rt_cdr(result));
   ir = candidate;
   g_unit_generations[key] = fnv1a_hex(artifact_text(artifact));
+  if (shared) ++g_portable_shared_hits;
   vsay(std::string(explicit_location ? "artifact: " : "cache: ") + "library " + key +
-       " reused from " + stem + ".ll" + (explicit_location ? " [explicit full unit]" : ""));
+       " reused from " + stem + ".ll" +
+       (explicit_location ? " [explicit full unit]" : shared ? " [shared]" : " [user]"));
   return CacheRead::Hit;
 }
 
@@ -2030,6 +2124,13 @@ static CacheRead cache_load_unit(const std::string &key, const std::string &path
   if (!artifact_dir.empty()) {
     std::string base = key.empty() ? key : key.substr(0, key.size() - 1);
     CacheRead result = load_artifact(artifact_dir + "/" + base, key, path, true, ir, init);
+    if (result != CacheRead::Miss) return result;
+  }
+  // Shared tier, then user tier (design D1).  A Deferred shared entry is valid and simply
+  // early, so it goes back to the caller's fixpoint rather than on to the user cache.
+  std::string shared = shared_entry_stem("unit", key, source_key_of(path));
+  if (!shared.empty()) {
+    CacheRead result = load_artifact(shared, key, path, false, ir, init, /*shared=*/true);
     if (result != CacheRead::Miss) return result;
   }
   std::string stem = cache_entry_stem("unit", key, source_key_of(path));
@@ -2083,13 +2184,25 @@ static std::string native_stamp(const std::string &identity) {
          g_native_signature.key() + "\n" + identity + "\n";
 }
 
-static std::string native_stem(const std::string &kind, const std::string &label,
-                               const std::string &identity) {
-  std::string dir = cache_dir();
+// `dir` is the tier, as for cache_entry_stem_in: native_stem writes, shared_native_stem is
+// read-only.
+static std::string native_stem_in(const std::string &dir, const std::string &kind,
+                                  const std::string &label, const std::string &identity) {
   if (dir.empty() || compiler_digest().empty() || g_native_signature.key().empty()) return "";
   return dir + "/native-" + kind + (label.empty() ? "" : "-" + label) + "-v" +
          std::to_string(kNativeCacheVersion) + "-" + identity + "-" +
          g_native_signature.key();
+}
+
+static std::string native_stem(const std::string &kind, const std::string &label,
+                               const std::string &identity) {
+  std::string dir = cache_dir();
+  return native_stem_in(dir, kind, label, identity);
+}
+
+static std::string shared_native_stem(const std::string &kind, const std::string &label,
+                                      const std::string &identity) {
+  return native_stem_in(shared_cache_dir(), kind, label, identity);
 }
 
 static bool native_object_valid(const std::string &bytes) {
@@ -2208,12 +2321,14 @@ static bool native_cache_bypassed() {
   return level && std::atoi(level) >= 3;
 }
 
+// `shared` names the tier in narration; a shared miss falls through to the user tier.
 static bool native_admit(const std::string &stem, const std::string &identity, size_t count,
-                         const std::string &what, std::string &error) {
+                         const std::string &what, std::string &error, bool shared = false) {
   std::vector<std::string> objects;
   auto begin = SteadyClock::now();
   if (!native_entry_load(stem, identity, count, objects)) {
-    vsay("native object miss for " + what + " " + g_native_signature.optimization_profile);
+    vsay("native object miss for " + what + " " + g_native_signature.optimization_profile +
+         (shared ? " [shared], trying the user cache" : ""));
     return false;
   }
   ResourceTrackerSP tracker = JIT->getMainJITDylib().createResourceTracker();
@@ -2230,11 +2345,22 @@ static bool native_admit(const std::string &stem, const std::string &identity, s
       SteadyClock::now() - begin).count();
   g_jit_metrics.native_load_ns += duration;
   ++g_jit_metrics.native_hits;
+  if (shared) ++g_jit_metrics.native_shared_hits;
   size_t bytes = 0;
   for (const std::string &object : objects) bytes += object.size();
   vsay("native object reused for " + what + " " + g_native_signature.optimization_profile +
-       " [" + std::to_string(bytes) + " bytes, " + ms_text(nanos_ms(duration)) + "]");
+       " [" + std::to_string(bytes) + " bytes, " + ms_text(nanos_ms(duration)) +
+       (shared ? ", shared]" : ", user]"));
   return true;
+}
+
+// Shared tier first, then user (design D1).  An absent shared tier is skipped silently, so
+// a checkout's narration is what it always was.
+static bool native_admit_tiers(const std::string &shared, const std::string &stem,
+                               const std::string &identity, size_t count,
+                               const std::string &what, std::string &error) {
+  if (!shared.empty() && native_admit(shared, identity, count, what, error, true)) return true;
+  return native_admit(stem, identity, count, what, error);
 }
 
 static bool add_native_unit(const std::string &ir, const std::string &key,
@@ -2242,7 +2368,9 @@ static bool add_native_unit(const std::string &ir, const std::string &key,
   if (native_cache_bypassed()) return add_ir(ir, "<unit>", error);
   std::string identity = fnv1a_hex(ir);
   std::string stem = native_stem("unit", key, identity);
-  if (native_admit(stem, identity, 1, "library " + key, error)) return true;
+  if (native_admit_tiers(shared_native_stem("unit", key, identity), stem, identity, 1,
+                         "library " + key, error))
+    return true;
   std::string identifier = "emit-native-" + identity + "-" + g_native_signature.key();
   g_native_adapter->register_group(stem, identity, "library " + key, {identifier});
   return add_ir(ir, "<unit>", error, identifier);
@@ -2260,7 +2388,9 @@ static bool add_native_baked_set(const std::vector<std::string> &modules,
   for (const std::string &module : modules) joined += fnv1a_hex(module) + "\n";
   std::string identity = fnv1a_hex(joined);
   std::string stem = native_stem("baked", "", identity);
-  if (native_admit(stem, identity, modules.size(), "baked set", error)) return true;
+  if (native_admit_tiers(shared_native_stem("baked", "", identity), stem, identity,
+                         modules.size(), "baked set", error))
+    return true;
   std::vector<std::string> identifiers;
   for (size_t i = 0; i < modules.size(); ++i)
     identifiers.push_back("emit-native-baked-" + identity + "-" + std::to_string(i) + "-" +
@@ -2449,11 +2579,21 @@ static void shake_units(std::vector<std::string> &modules,
     std::string sld = (it == path_of.end()) ? std::string() : it->second;
     std::string src_id = sld.empty() ? std::string("baked") : source_key_of(sld);
 
+    // Preparation never writes `shake-` entries, so the shared tier will normally miss here;
+    // it is consulted anyway, so every kind of entry is looked up the same way (design D1).
     std::vector<std::string> got, inits;
-    if (cache_load_entry(cache_entry_stem("shake", key, src_id + "-" + root_key),
-                         "pruned " + key, "shake", key, src_id + "-" + root_key,
-                         /*sources_required=*/!sld.empty(), got, inits) == CacheRead::Hit &&
-        got.size() == 1) {
+    const std::string extra = src_id + "-" + root_key;
+    bool hit = cache_load_entry(shared_entry_stem("shake", key, extra), "pruned " + key, "shake",
+                                key, extra, /*sources_required=*/!sld.empty(), got, inits,
+                                /*shared=*/true) == CacheRead::Hit;
+    if (!hit) {
+      got.clear();
+      inits.clear();
+      hit = cache_load_entry(cache_entry_stem("shake", key, extra), "pruned " + key, "shake",
+                             key, extra, /*sources_required=*/!sld.empty(), got, inits) ==
+            CacheRead::Hit;
+    }
+    if (hit && got.size() == 1) {
       modules[i] = got[0];
       root_text += got[0];                    // a hit is this unit's final text, like any other
       continue;
@@ -3707,8 +3847,40 @@ static void ensure_parent_dir(const std::string &path) {
   (void)rc;
 }
 
+// Remove a cache directory and the files directly in it.  Cache directories are flat, so a
+// subdirectory is left alone and makes the final rmdir fail -- which the caller reports.
+static bool remove_flat_dir(const std::string &path) {
+  DIR *dir = opendir(path.c_str());
+  if (!dir) return errno == ENOENT;
+  while (struct dirent *entry = readdir(dir)) {
+    std::string name = entry->d_name;
+    if (name != "." && name != "..") ::unlink((path + "/" + name).c_str());
+  }
+  closedir(dir);
+  return ::rmdir(path.c_str()) == 0;
+}
+
+// Remove `<name>.tmp-*` and `<name>.old-*` siblings an interrupted preparation left behind.
+static void remove_stale_preparations(const std::string &destination) {
+  std::string parent = dir_of(destination);
+  std::string base = destination.substr(destination.find_last_of('/') + 1);
+  DIR *dir = opendir(parent.c_str());
+  if (!dir) return;
+  std::vector<std::string> stale;
+  while (struct dirent *entry = readdir(dir)) {
+    std::string name = entry->d_name;
+    if (name.compare(0, base.size() + 5, base + ".tmp-") == 0 ||
+        name.compare(0, base.size() + 5, base + ".old-") == 0)
+      stale.push_back(parent + "/" + name);
+  }
+  closedir(dir);
+  for (const std::string &path : stale) remove_flat_dir(path);
+}
+
 // Prepare the same full units consumed by run/repl, without executing their bodies.
-static int warm_stdlib() {
+// `destination` is what narration names; entries go wherever cache_dir() resolves, which
+// --shared has pointed at a fresh directory beside it.
+static int warm_stdlib_into(const std::string &destination) {
   auto started = SteadyClock::now();
   g_warming = true;
   std::string manifest = support_file(kManifestName);
@@ -3716,11 +3888,8 @@ static int warm_stdlib() {
     std::cerr << "emit build: cannot locate shipped " << kManifestName << "\n";
     return 1;
   }
-  std::string destination = cache_dir();
-  if (destination.empty()) {
-    const char *requested = std::getenv("EMIT_CACHE");
-    std::cerr << "emit build: cannot prepare library cache -> "
-              << (requested && *requested ? requested : "platform user cache (unavailable)") << "\n";
+  if (cache_dir().empty()) {
+    std::cerr << "emit build: cannot prepare library cache -> " << destination << "\n";
     return 1;
   }
   if (cache_bypassed_for_dump()) {
@@ -3782,32 +3951,95 @@ static int warm_stdlib() {
     }
   }
   if (!g_native_adapter->verify_persisted()) return 1;
+  // "(K shared)" counts the entries the shared tier satisfied; the counts before it keep
+  // their shape, so `portable N reused/M generated` still reads the same.
+  auto shared_note = [](size_t count) {
+    return count ? " (" + std::to_string(count) + " shared)" : std::string();
+  };
   say("compile stdlib -> " + destination + "  [portable " +
       std::to_string(g_portable_hits) + " reused/" + std::to_string(g_portable_generated) +
-      " generated, native " + std::to_string(g_jit_metrics.native_hits) + " reused/" +
-      std::to_string(g_jit_metrics.native_generated) + " generated, " +
+      " generated" + shared_note(g_portable_shared_hits) + ", native " +
+      std::to_string(g_jit_metrics.native_hits) + " reused/" +
+      std::to_string(g_jit_metrics.native_generated) + " generated" +
+      shared_note(g_jit_metrics.native_shared_hits) + ", " +
       std::to_string(g_cache_bytes) + " bytes, " +
       ms_text(elapsed_ms(started, SteadyClock::now())) + "]");
   return 0;
 }
 
+static int warm_stdlib() {
+  std::string origin;
+  std::string destination = user_cache_location(&origin);
+  return warm_stdlib_into(destination.empty() ? "platform user cache (unavailable)"
+                                              : destination);
+}
+
+// `emit build --stdlib --shared` (design D3): prepare the shared cache for THIS executable
+// in a fresh sibling directory, readable by everyone, and swap it in only once it is
+// complete.  It neither reads nor reuses the user cache or the shared cache it replaces, so
+// the result holds exactly one executable's entries.  Any failure removes the new directory
+// and leaves the previous shared cache where it was.
+static int warm_shared_stdlib() {
+  std::string destination = shared_cache_location();
+  if (destination.empty()) {
+    std::cerr << "emit build: --shared has no shared cache location "
+                 "(EMIT_SHARED_CACHE is empty, or the shipped manifest is missing)\n";
+    return 1;
+  }
+  remove_stale_preparations(destination);
+  std::string fresh = destination + ".tmp-" + std::to_string((long)getpid());
+  ::umask(022);
+  if (::mkdir(fresh.c_str(), 0755) != 0) {
+    std::cerr << "emit build: cannot prepare shared library cache -> " << destination << " ("
+              << std::strerror(errno) << ")\n";
+    return 1;
+  }
+  g_shared_tier_disabled = true;
+  g_cache_dir_override = fresh;
+  int status = warm_stdlib_into(destination + " (shared)");
+  if (status != 0) {
+    remove_flat_dir(fresh);
+    return status;
+  }
+  std::string previous = destination + ".old-" + std::to_string((long)getpid());
+  struct stat st;
+  bool had_previous = ::stat(destination.c_str(), &st) == 0;
+  if ((had_previous && ::rename(destination.c_str(), previous.c_str()) != 0) ||
+      ::rename(fresh.c_str(), destination.c_str()) != 0) {
+    std::cerr << "emit build: cannot replace shared library cache -> " << destination << " ("
+              << std::strerror(errno) << ")\n";
+    if (had_previous) ::rename(previous.c_str(), destination.c_str());
+    remove_flat_dir(fresh);
+    return 1;
+  }
+  if (had_previous && !remove_flat_dir(previous))
+    std::cerr << "emit build: could not remove the replaced shared cache " << previous << "\n";
+  say("replace shared library cache -> " + destination);
+  return 0;
+}
+
 static int emit_build(int argc, char **argv) {
-  bool stdlib = false;
+  bool stdlib = false, shared = false;
   for (int i = 1; i < argc; ++i) {
     if (is_help_flag(argv[i])) { usage_build(std::cout); return 0; }
     if (std::string(argv[i]) == "--stdlib") stdlib = true;
+    if (std::string(argv[i]) == "--shared") shared = true;
+  }
+  if (shared && !stdlib) {
+    std::cerr << "emit build: --shared requires --stdlib\n";
+    return 2;
   }
   if (stdlib) {
     for (int i = 1; i < argc; ++i) {
       std::string arg(argv[i]);
       if (arg == "-q") g_level = 0;
       else if (arg == "-v") g_level = 2;
-      else if (arg != "--stdlib") {
+      else if (arg != "--stdlib" && arg != "--shared") {
         std::cerr << "emit build: --stdlib is incompatible with " << arg << "\n";
         return 2;
       }
     }
-    return warm_stdlib();
+    return shared ? warm_shared_stdlib() : warm_stdlib();
   }
   std::string name, manifest, out;
   ResolverOptions resolver_options;
@@ -4116,6 +4348,37 @@ static std::string gc_header_version(const std::string &include) {
          fields["GC_VERSION_MICRO"];
 }
 
+// The two cache tiers, with where each location came from (change: prebuilt-shared-
+// stdlib-cache, design D6).  Informational only: no state of either fails doctor.  It reads
+// directory entries and one stamp name, and creates nothing.
+static void report_cache_locations() {
+  std::string origin;
+  std::string user = user_cache_location(&origin);
+  std::cout << "user cache: " << (user.empty() ? "unavailable" : user) << " [" << origin
+            << "]\n";
+  std::string shared = shared_cache_location(&origin);
+  if (shared.empty()) {
+    std::cout << "shared cache: none [" << origin << "]\n";
+    return;
+  }
+  DIR *dir = opendir(shared.c_str());
+  if (!dir) {
+    std::cout << "shared cache: " << shared << " [" << origin << "; absent]\n";
+    return;
+  }
+  size_t entries = 0;
+  while (struct dirent *entry = readdir(dir)) {
+    std::string name = entry->d_name;
+    if (name.size() > 6 && name.compare(name.size() - 6, 6, ".stamp") == 0) ++entries;
+  }
+  closedir(dir);
+  // The baked set is in every preparation and its name carries the executable digest, so
+  // its stamp answers "was this cache prepared by me?" for the whole directory.
+  bool matches = regular_readable(cache_entry_stem_in(shared, "baked", "", "") + ".stamp");
+  std::cout << "shared cache: " << shared << " [" << origin << "; " << entries << " entries, "
+            << (matches ? "matches this executable" : "built by another executable") << "]\n";
+}
+
 static int emit_doctor(int argc, char **argv) {
   std::string manifest;
   bool chain = true;
@@ -4202,6 +4465,7 @@ static int emit_doctor(int argc, char **argv) {
   }
   std::cout << "shipped payload: " << (payload_count - missing_count) << "/" << payload_count
             << " files available\n";
+  report_cache_locations();
 
   bool valid_env = !options.library_paths || parse_environment_roots(options, "doctor");
   bool bad_manifest = false;
