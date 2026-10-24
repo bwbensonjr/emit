@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.1
+
+Corrects how Homebrew prepares the standard libraries, and makes distribution-channel retries
+safe. No language or CLI changes.
+
+- Homebrew no longer prepares the standard-library cache during installation. The 0.2.0 notes
+  said `post_install` prepared it, but Homebrew runs post-install work in a sandbox with a
+  temporary `HOME`, so the cache it filled was discarded. The formula's caveats now name
+  `emit build --stdlib`; without it, the first command after installing compiles the libraries
+  itself, which takes about a minute (#154).
+- Re-running distribution-channel promotion for a published release succeeds for channels that
+  already promoted it. An OCI retry re-tests the published image instead of rebuilding it, and
+  no channel moves back to an older release (#153, #155, #156).
+
 ## 0.2.0
 
 Standard-library precompilation, source-order program evaluation, quieter REPL startup, and
