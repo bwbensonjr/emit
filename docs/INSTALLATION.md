@@ -31,10 +31,11 @@ files to the prefix. Repeated preparation reuses valid entries; a changed compil
 library input, target, or JIT profile may need fresh entries.
 
 Use `make install WARM_STDLIB=0` to defer this step. Staged and privileged installs
-always defer it and name the end-user command. Homebrew's post-install hook prepares
-the current user's cache, including bottle installs. Nix and OCI builds disable
-preparation: run `emit build --stdlib` after entering the user environment or
-container, with a writable user cache. An automatic preparation failure leaves the
+always defer it and name the end-user command. Homebrew, Nix, and OCI builds disable
+preparation, since none of them can write the end user's cache: Homebrew runs its
+post-install work sandboxed with a temporary `HOME`. Run `emit build --stdlib` after
+installing, or after entering the user environment or container, with a writable user
+cache; Homebrew's caveats name the command. An automatic preparation failure leaves the
 source installation usable and reports how to retry; the explicit command returns
 nonzero if compilation or persistence fails. Relocation may invalidate cached paths
 and ordinary commands rebuild them as needed.

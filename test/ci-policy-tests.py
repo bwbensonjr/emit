@@ -3,7 +3,6 @@
 from importlib.machinery import SourceFileLoader
 import json
 from pathlib import Path
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -28,37 +27,12 @@ class PolicyTests(unittest.TestCase):
             subprocess.run([str(ROOT / "tools/channel-render.sh"), "homebrew",
                             str(ROOT / "packaging/release.json"), str(rendered)], check=True)
             formula = rendered.read_text()
-            self.assertIn('"WARM_STDLIB=0"', formula.split("def post_install", 1)[0])
-            hook = formula.split("def post_install", 1)[1].split("\n  test do", 1)[0]
-            self.assertIn('system bin/"emit", "build", "--stdlib"', hook)
-            self.assertIn("rescue ErrorDuringExecution", hook)
-            self.assertIn("opoo", hook)
-            self.assertIn("def post_install", formula)
-            if shutil.which("ruby"):
-                # Exercise the formula hook without installing a tap or dependencies.
-                subprocess.run(["ruby", "-e", """
-require "pathname"
-class ErrorDuringExecution < StandardError; end
-class Formula
-  def self.method_missing(*); end
-  def self.test; end
-  attr_reader :calls, :warning
-  attr_accessor :fail_prepare
-  def bin; Pathname.new("/fixture/bin"); end
-  def system(*args)
-    @calls = args.map(&:to_s)
-    raise ErrorDuringExecution if fail_prepare
-  end
-  def opoo(message); @warning = message; end
-end
-load ARGV.fetch(0)
-formula = Emit.new
-formula.post_install
-abort "wrong preparation command" unless formula.calls == ["/fixture/bin/emit", "build", "--stdlib"]
-formula.fail_prepare = true
-formula.post_install
-abort "missing retry instruction" unless formula.warning.include?("retry emit build --stdlib")
-""", str(rendered)], check=True)
+            self.assertIn('"WARM_STDLIB=0"', formula)
+            # Homebrew runs post-install work sandboxed with a temporary HOME, which cannot reach
+            # the user's cache, and its style cop rejects a post_install method.
+            self.assertNotIn("post_install", formula)
+            caveats = formula.split("def caveats", 1)[1].split("\n  test do", 1)[0]
+            self.assertIn("emit build --stdlib", caveats)
         self.assertIn('"WARM_STDLIB=0"', (ROOT / "packaging/nix/emit.nix").read_text())
         self.assertIn("TOOLCHAIN_PIN=1 WARM_STDLIB=0",
                       (ROOT / "packaging/oci/Containerfile").read_text())
