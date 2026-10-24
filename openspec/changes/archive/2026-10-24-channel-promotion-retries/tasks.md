@@ -19,8 +19,8 @@
 
 ## 4. OCI re-tests a published version instead of rebuilding (#156, design D3)
 
-- [ ] 4.1 In the `oci` job, add a step that resolves `ghcr.io/<repo>:<version>` when the identity has a release tag. On a hit, copy that digest with `skopeo copy --preserve-digests` into `$RUNNER_TEMP/emit-image.tar` in the form the later steps read, and load it as `emit-candidate:<version>`. On "not found", build as today. Fail on any other inspection error. Narrate the branch taken and the digest. Verify by reading the job, and by a rehearsal dispatch with `tag=v0.2.0 publish=false` reporting the published digest `sha256:9e9e01ee…` under test.
-- [ ] 4.2 Confirm `docker load` accepts the copied archive and that `oci-digest.txt` and the promote step read the same digest as the registry; verify in that rehearsal run's log that the tested and published digests match
+- [x] 4.1 In the `oci` job, add a step that resolves `ghcr.io/<repo>:<version>` when the identity has a release tag. On a hit, copy that digest with `skopeo copy --preserve-digests` into `$RUNNER_TEMP/emit-image.tar` in the form the later steps read, and load it as `emit-candidate:<version>`. On "not found", build as today. Fail on any other inspection error. Narrate the branch taken and the digest. Verify by reading the job, and by a rehearsal dispatch with `tag=v0.2.0 publish=false` reporting the published digest `sha256:9e9e01ee…` under test.
+- [x] 4.2 Confirm `docker load` accepts the copied archive and that `oci-digest.txt` and the promote step read the same digest as the registry; verify in that rehearsal run's log that the tested and published digests match
 - [x] 4.3 Add a `test/ci-policy-tests.py` case pinning that the `oci` job resolves the published tag before its build step and builds only in the not-found branch, and that the resolve step holds no write credential beyond the job's existing ones; verify `python3 test/ci-policy-tests.py` passes
 - [x] 4.4 Rewrite the oci bullet and the "Retry and rollback" list in `docs/RELEASE-PIPELINE.md`, covering:
   - a published version is re-tested, not rebuilt;
@@ -32,8 +32,8 @@
 ## 5. Integration
 
 - [x] 5.1 Run the lightweight policy suites (`python3 test/ci-policy-tests.py`, `python3 test/test-classify-tests.py`, `bash test/release-tag-tests.sh`) and `openspec validate channel-promotion-retries --strict`; verify all pass
-- [ ] 5.2 Open the pull request and confirm its channel rehearsal passes, including the narrated Homebrew version and an OCI candidate build (a pull request has no release tag, so it builds)
-- [ ] 5.3 After merge, dispatch `gh workflow run channels.yml -f tag=v0.2.0 -f publish=true`; verify every job succeeds. Homebrew and Nix should report `[already merged]`, and `oci` should report `[unchanged]` for the published digest. Close #153, #155, and #156 with the run link.
+- [x] 5.2 Open the pull request and confirm its channel rehearsal passes, including the narrated Homebrew version and an OCI candidate build (a pull request has no release tag, so it builds)
+- [x] 5.3 After merge, dispatch `gh workflow run channels.yml -f tag=v0.2.0 -f publish=true`; verify every job succeeds. Homebrew and Nix should report `[already merged]`, and `oci` should report `[unchanged]` for the published digest. Close #153, #155, and #156 with the run link.
 
 ## Workflow follow-up
 
