@@ -370,7 +370,7 @@ Documentation SHALL describe supported channel platforms, exact installation and
 
 ### Requirement: User installation prepares the first standard-library invocation
 
-An unprivileged non-staged source install SHALL invoke the installed `emit build --stdlib` after its payload and toolchain configuration are complete. Homebrew SHALL warm from an end-user post-install hook. Installation SHALL offer `WARM_STDLIB=0` to defer warming. Automatic warming SHALL be best-effort, with failure reported and the explicit retry command shown; a complete source installation SHALL remain usable.
+An unprivileged non-staged source install SHALL invoke the installed `emit build --stdlib` after its payload and toolchain configuration are complete. Homebrew, Nix, and OCI recipes SHALL disable warming and name the end-user command, because their install phases cannot write the end user's cache. Installation SHALL offer `WARM_STDLIB=0` to defer warming. Automatic warming SHALL be best-effort, with failure reported and the explicit retry command shown; a complete source installation SHALL remain usable.
 
 #### Scenario: Normal user installation warms its installed executable
 
@@ -392,9 +392,9 @@ An unprivileged non-staged source install SHALL invoke the installed `emit build
 
 #### Scenario: Sandboxed packaging defers user-local work
 
-- **WHEN** Nix or OCI builds the distribution payload in a sandbox or image build
+- **WHEN** Homebrew, Nix, or OCI builds the distribution payload in a sandbox or image build
 - **THEN** its recipe disables warming and documents the end-user command
-- **AND** the Homebrew recipe defers build-stage warming to its post-install hook
+- **AND** the Homebrew recipe runs no post-install warming, whose sandbox has only a temporary `HOME`, and names the command in its caveats
 
 #### Scenario: Warming is unavailable or explicitly deferred
 

@@ -109,8 +109,7 @@ initializers. `EMIT_CACHE` selects the destination; otherwise Emit uses
 `$XDG_CACHE_HOME/emit`, `~/Library/Caches/emit` on macOS, or `~/.cache/emit` on Linux.
 Repeated preparation reuses valid entries. Set `WARM_STDLIB=0` to defer it during
 installation. Staged and root installs defer preparation to the eventual user.
-Homebrew prepares from its post-install hook; Nix and OCI users run the command in
-their own environment. An automatic preparation failure reports a retry command
+Homebrew, Nix, and OCI users run the command in their own environment. An automatic preparation failure reports a retry command
 and leaves the source installation usable; explicit preparation exits nonzero on failure.
 
 All four installed commands work from any directory. Projects normally use their own `./lib`;

@@ -32,10 +32,13 @@ class Emit < Formula
     doc.install "vendor/unicode/17.0.0/LICENSE.txt" => "UNICODE-LICENSE.txt"
   end
 
-  def post_install
-    system bin/"emit", "build", "--stdlib"
-  rescue ErrorDuringExecution
-    opoo "Library preparation failed; retry emit build --stdlib as your user."
+  # Homebrew runs post-install work in its sandbox with a temporary HOME, so it cannot reach
+  # the user's cache; the user prepares it, or the first command fills it.
+  def caveats
+    <<~EOS
+      To precompile the standard libraries so the first command starts faster, run:
+        emit build --stdlib
+    EOS
   end
 
   test do
