@@ -128,6 +128,14 @@ jobs:
           [ -n "$GH_TOKEN" ] || { echo "channels: HOMEBREW_TAP_TOKEN is not configured" >&2; exit 1; }
           [ "$(gh api repos/bwbensonjr/homebrew-emit --jq .permissions.push)" = true ] \
             || { echo "channels: HOMEBREW_TAP_TOKEN cannot push to bwbensonjr/homebrew-emit" >&2; exit 1; }
+      # The tap's brew test-bot updates Homebrew first, so lint and build with the same rules
+      # rather than the runner image's copy (issue #153).  Auto-update stays off afterwards, so
+      # every later step sees this one Homebrew.
+      - name: Update Homebrew to the release the tap's CI uses
+        run: |
+          before=$(brew --version | head -n1)
+          brew update --quiet
+          echo "homebrew update ${before#Homebrew } -> $(brew --version | head -n1 | sed 's/^Homebrew //')" >&2
       - name: Render the formula into a throwaway local tap
         run: |
           brew install bdw-gc llvm@22
@@ -280,8 +288,51 @@ jobs:
           REGISTRY_TOKEN: ${{ github.token }}
         run: |
           printf '%s' "$REGISTRY_TOKEN" | skopeo login ghcr.io --username "$REGISTRY_USER" --password-stdin
+      # A published release whose version tag already exists re-tests that exact image instead of
+      # rebuilding, because a rebuild is not bit-reproducible and could never be promoted
+      # (change: channel-promotion-retries, design D3, issue #156).  A candidate archive (file://
+      # identity) always builds, even when its VERSION matches a published one.
+      - name: Resolve the published image for this release
+        id: resolve
+        env:
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.identity.outputs.version }}
+        run: |
+          case "$(jq -r .archive_url /tmp/emit-channel-assets/identity.json)" in
+            https://*) digest=$(tools/channel-promote.sh oci-resolve "ghcr.io/${GITHUB_REPOSITORY,,}" "$VERSION") ;;
+            *) digest=""; echo "resolve candidate $VERSION -> build  [not a published release]" >&2 ;;
+          esac
+          printf 'digest=%s\n' "$digest" >> "$GITHUB_OUTPUT"
+      - name: Copy the published image to an archive
+        if: steps.resolve.outputs.digest != ''
+        env:
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.identity.outputs.version }}
+          DIGEST: ${{ steps.resolve.outputs.digest }}
+        run: |
+          source="docker://ghcr.io/${GITHUB_REPOSITORY,,}@$DIGEST"
+          creds=(--src-creds "$REGISTRY_USER:$REGISTRY_TOKEN")
+          # Byte-exact by digest for promotion, and the same image into Docker for acceptance.
+          skopeo copy --preserve-digests "${creds[@]}" "$source" "oci-archive:$RUNNER_TEMP/emit-image.tar"
+          skopeo copy "${creds[@]}" "$source" "docker-daemon:emit-candidate:$VERSION"
+          mkdir "$RUNNER_TEMP/emit-image" && tar -xf "$RUNNER_TEMP/emit-image.tar" -C "$RUNNER_TEMP/emit-image"
+          skopeo inspect --format '{{.Digest}}' "oci:$RUNNER_TEMP/emit-image" | tee "$RUNNER_TEMP/oci-digest.txt"
+          [ "$(cat "$RUNNER_TEMP/oci-digest.txt")" = "$DIGEST" ] \
+            || { echo "oci: copied archive is not $DIGEST" >&2; exit 1; }
+          # Docker's image ID is the config digest, or the manifest digest with the containerd store.
+          config=$(skopeo inspect --raw "oci:$RUNNER_TEMP/emit-image" | jq -r .config.digest)
+          case "$(docker image inspect --format '{{.Id}}' "emit-candidate:$VERSION")" in
+            "$config"|"$DIGEST") ;;
+            *) echo "oci: the image loaded for acceptance is not $DIGEST" >&2; exit 1 ;;
+          esac
+          echo published > "$RUNNER_TEMP/oci-source.txt"
+          echo "copy $source -> emit-candidate:$VERSION  [published; re-testing, not rebuilding]" >&2
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        if: steps.resolve.outputs.digest == ''
       - name: Build the image once, to an archive
+        if: steps.resolve.outputs.digest == ''
         env:
           VERSION: ${{ needs.identity.outputs.version }}
         run: |
@@ -296,6 +347,7 @@ jobs:
           # The tested digest, read exactly as tools/channel-promote.sh reads it before pushing.
           mkdir "$RUNNER_TEMP/emit-image" && tar -xf "$RUNNER_TEMP/emit-image.tar" -C "$RUNNER_TEMP/emit-image"
           skopeo inspect --format '{{.Digest}}' "oci:$RUNNER_TEMP/emit-image" | tee "$RUNNER_TEMP/oci-digest.txt"
+          echo built > "$RUNNER_TEMP/oci-source.txt"
       - name: Installed acceptance inside the image, offline, as an arbitrary user
         env:
           VERSION: ${{ needs.identity.outputs.version }}
@@ -328,6 +380,7 @@ jobs:
           path: |
             ${{ runner.temp }}/oci-accept.json
             ${{ runner.temp }}/oci-digest.txt
+            ${{ runner.temp }}/oci-source.txt
           if-no-files-found: warn
       - name: Promote the tested image digest
         if: needs.identity.outputs.publish == 'true'

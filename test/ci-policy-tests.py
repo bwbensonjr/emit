@@ -145,6 +145,45 @@ class PolicyTests(unittest.TestCase):
         self.assertIn("if: needs.identity.outputs.publish == 'true'", workflow.split("nix-promote:", 1)[1])
         self.assertIn("--preserve-digests", (ROOT / "tools/channel-promote.sh").read_text())
 
+    def test_homebrew_rehearsal_updates_before_linting(self):
+        # change: channel-promotion-retries, design D1 (#153).
+        workflow = (ROOT / ".github/workflows/channels.yml").read_text()
+        job = workflow.split("\n  homebrew:\n", 1)[1].split("\n  nix:\n", 1)[0]
+        self.assertIn("HOMEBREW_NO_AUTO_UPDATE: 1", job)
+        # Positions of command lines only, so narration that mentions a command cannot match.
+        commands = [line.strip() for line in job.splitlines()]
+        def first(command):
+            return next(i for i, line in enumerate(commands) if line.startswith(command))
+        update = first("brew update")
+        for later in ("brew install", "brew style", "brew audit --strict"):
+            self.assertLess(update, first(later), later)
+
+    def test_oci_retests_a_published_version_instead_of_rebuilding(self):
+        # change: channel-promotion-retries, design D3 (#156).
+        workflow = (ROOT / ".github/workflows/channels.yml").read_text()
+        job = workflow.split("\n  oci:\n", 1)[1]
+        steps = job.split("      - ")[1:]
+        def step(name):
+            return next(s for s in steps if s.startswith(f"name: {name}"))
+        names = [s.split("\n", 1)[0] for s in steps]
+        resolve = names.index("name: Resolve the published image for this release")
+        copy = names.index("name: Copy the published image to an archive")
+        build = names.index("name: Build the image once, to an archive")
+        accept = names.index("name: Installed acceptance inside the image, offline, as an arbitrary user")
+        self.assertLess(resolve, copy)
+        self.assertLess(copy, build)
+        self.assertLess(build, accept)
+        # Only a published release (an https archive URL) resolves; a candidate always builds.
+        self.assertIn("https://*) digest=$(tools/channel-promote.sh oci-resolve", step("Resolve the published"))
+        self.assertIn("if: steps.resolve.outputs.digest != ''", step("Copy the published"))
+        self.assertIn("if: steps.resolve.outputs.digest == ''", step("Build the image once"))
+        self.assertIn("skopeo copy --preserve-digests", step("Copy the published"))
+        # The new steps read with the job's existing token and add no secret or write grant.
+        for name in ("Resolve the published", "Copy the published"):
+            self.assertNotIn("secrets.", step(name))
+            self.assertIn("REGISTRY_TOKEN: ${{ github.token }}", step(name))
+        self.assertEqual(workflow.count("packages: write"), 1)
+
     def test_release_tag_workflow_contract(self):
         # change: version-discipline-and-auto-release, design D3.
         workflow = (ROOT / ".github/workflows/release-tag.yml").read_text()
