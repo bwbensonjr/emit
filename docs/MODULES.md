@@ -1070,9 +1070,24 @@ Native identity includes the portable unit's IR identity, native format, Emit ex
 LLVM version, target triple and data layout, CPU and normalized target features, relocation and
 code models, and `-O0`, `-O1`, or `-O2` profile. Object digests and LLVM structural parsing reject
 corruption before admission. Files are written atomically beneath `EMIT_CACHE`, or the platform
-user cache when it is unset; an installed Emit derives them there and never modifies its install
-prefix. The cache is disposable. After confirming the resolved cache path, removing either its
-`native-` entries or the whole Emit cache is safe and only makes the next execution compile again.
+user cache when it is unset; an ordinary command never modifies the install prefix. The cache is
+disposable. After confirming the resolved cache path, removing either its `native-` entries or the
+whole Emit cache is safe and only makes the next execution compile again.
+
+**The shared tier.** An installation may also carry a read-only **shared cache**,
+`share/emit/library-cache` (change: prebuilt-shared-stdlib-cache). The installed binary prepares
+it with `emit build --stdlib --shared` when it is installed.
+
+- **Lookup order.** Both tiers are searched in order, shared then user. Every kind of entry is
+  looked up the same way.
+- **Validity.** A shared entry passes exactly the checks a user entry does, so one prepared by a
+  different executable, for another CPU, or for another profile is a miss. The lookup then
+  continues to the user cache.
+- **Writes.** They go only to the user cache.
+- **`EMIT_SHARED_CACHE`.** It relocates the shared tier, and set to the empty string it disables
+  it.
+- **Narration.** Verbose output names the tier of every reuse, `[shared]` or `[user]`.
+- **Doctor.** `emit doctor` reports whether the shared tier was prepared by the running binary.
 
 An exact REPL manifest entry may have a native object admitted at startup, but ORC does not link
 or initialize it until the first import looks up its initializer. Dependencies still initialize

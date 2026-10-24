@@ -54,12 +54,17 @@ stdenv.mkDerivation {
 
   makeFlags = toolchain ++ [ "PREFIX=${placeholder "out"}" ];
   enableParallelBuilding = true;
+  # The shared library cache is keyed on the binary's bytes, which fixup's strip and patchelf
+  # still change after installPhase, so make install defers it and postFixup prepares it.
   installFlags = [ "TOOLCHAIN_PIN=1" "WARM_STDLIB=0" ];
 
   # Installed tools/llvm-env.sh runs at `emit build` time; it needs only POSIX utilities and bash.
+  # The library cache comes last, from the final binary at its final path; wrapProgram only
+  # renames it, which leaves its digest alone.
   postFixup = ''
     wrapProgram $out/bin/emit \
       --suffix PATH : ${lib.makeBinPath [ bash coreutils gnused gnugrep ]}
+    EMIT_SHARED_CACHE=$out/share/emit/library-cache $out/bin/emit build --stdlib --shared
   '';
 
   meta = {

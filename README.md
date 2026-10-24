@@ -102,15 +102,20 @@ make install PREFIX=$HOME/.local  # a different prefix (also baked in as the fal
 make install PREFIX=/usr/local DESTDIR=/tmp/stage   # stage for a packager
 ```
 
-Unprivileged source installation prepares the standard-library cache after copying
-the payload. To prepare it explicitly, run `emit build --stdlib`. This compiles the
-shipped manifest's libraries and default `-O1` native objects without running their
-initializers. `EMIT_CACHE` selects the destination; otherwise Emit uses
+Installation prepares a shared library cache after copying the payload, in
+`share/emit/library-cache`. It holds the shipped manifest's libraries and their default
+`-O1` native objects, compiled by the installed binary. Every user reads it before their
+own cache, so the first command starts without compiling the standard libraries. The
+Homebrew, Nix, and OCI packages ship it too. A staged `DESTDIR` install, or
+`WARM_STDLIB=0`, defers it; run `emit build --stdlib --shared` once the payload is in
+place. `emit doctor` reports whether it matches the running binary. Deleting it is always
+safe; see [docs/INSTALLATION.md](docs/INSTALLATION.md#the-shared-library-cache).
+
+New entries go to the user's cache. `EMIT_CACHE` selects it; otherwise Emit uses
 `$XDG_CACHE_HOME/emit`, `~/Library/Caches/emit` on macOS, or `~/.cache/emit` on Linux.
-Repeated preparation reuses valid entries. Set `WARM_STDLIB=0` to defer it during
-installation. Staged and root installs defer preparation to the eventual user.
-Homebrew, Nix, and OCI users run the command in their own environment. An automatic preparation failure reports a retry command
-and leaves the source installation usable; explicit preparation exits nonzero on failure.
+`emit build --stdlib` prepares it explicitly. That command skips entries the shared cache
+already provides, and exits nonzero on failure. An automatic preparation failure during
+installation reports a retry command and leaves the installation usable.
 
 All four installed commands work from any directory. Projects normally use their own `./lib`;
 repeatable `-L` / `--library-path` and `EMIT_LIBRARY_PATH` add roots, while

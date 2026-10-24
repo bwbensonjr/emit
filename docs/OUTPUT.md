@@ -137,7 +137,7 @@ the library and JIT profile; successful operations also report object bytes and 
 ```text
 native object miss for library mylib: -O1
 native object generated for library mylib: -O1 [3176 bytes, 0.5ms] -> CACHE/native-unit-...o
-native object reused for library mylib: -O1 [3176 bytes, 0.1ms]
+native object reused for library mylib: -O1 [3176 bytes, 0.1ms, user]
 jit -O1 program -> execute  [1/4 modules, parse 1, ..., native 2 reused/0 generated, load 3.1ms]
 ```
 
@@ -145,6 +145,26 @@ Default output remains concise. `EMIT_VERBOSITY=quiet` suppresses these lines co
 changes program stdout. Portable IR narration continues to use `cache:`; `native object` therefore
 distinguishes the two tiers without making filenames part of program data. `--dump-all` prints the
 requested library stages and produces no native miss, generation, or reuse narration.
+
+### The shared cache
+
+An installation can carry a read-only shared cache, consulted before the user cache (see
+`docs/INSTALLATION.md`). Every reuse line names the cache it came from, `[shared]` or `[user]`
+for portable IR and a trailing `shared` or `user` inside the native brackets. A shared miss is
+narrated as a fall-through to the user cache, not as a recompile. Entries are only ever written
+to the user cache:
+
+```text
+cache: library scheme.char: reused from PREFIX/share/emit/library-cache/unit-...ll [shared]
+native object reused for library scheme.char: -O1 [1485392 bytes, 10.1ms, shared]
+native object miss for library scheme.char: -O2 [shared], trying the user cache
+cache: no shared entry for library mylib:, trying the user cache
+```
+
+`emit build --stdlib` appends `(K shared)` to a count when the shared cache supplied K of those
+entries, so the `portable N reused/M generated` shape is unchanged. `emit build --stdlib --shared`
+names its destination with `(shared)` and ends with one `replace shared library cache -> DIR`
+line once the new cache is in place.
 
 ## Stage dumps (`--dump`)
 

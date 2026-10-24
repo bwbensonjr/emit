@@ -27,15 +27,22 @@ class PolicyTests(unittest.TestCase):
             subprocess.run([str(ROOT / "tools/channel-render.sh"), "homebrew",
                             str(ROOT / "packaging/release.json"), str(rendered)], check=True)
             formula = rendered.read_text()
-            self.assertIn('"WARM_STDLIB=0"', formula)
-            # Homebrew runs post-install work sandboxed with a temporary HOME, which cannot reach
-            # the user's cache, and its style cop rejects a post_install method.
+            # make install prepares the shared library cache in the keg; Homebrew's post-install
+            # step runs sandboxed with a temporary HOME, and its style cop rejects one.
+            self.assertNotIn("WARM_STDLIB", formula)
             self.assertNotIn("post_install", formula)
-            caveats = formula.split("def caveats", 1)[1].split("\n  test do", 1)[0]
-            self.assertIn("emit build --stdlib", caveats)
-        self.assertIn('"WARM_STDLIB=0"', (ROOT / "packaging/nix/emit.nix").read_text())
-        self.assertIn("TOOLCHAIN_PIN=1 WARM_STDLIB=0",
-                      (ROOT / "packaging/oci/Containerfile").read_text())
+            self.assertNotIn("caveats", formula)
+            self.assertIn("matches this executable", formula.split("\n  test do", 1)[1])
+        # Nix fixup strips and wraps bin/emit, so preparation must follow it, not make install.
+        nix = (ROOT / "packaging/nix/emit.nix").read_text()
+        self.assertIn('"WARM_STDLIB=0"', nix)
+        fixup = nix.split("postFixup = ''", 1)[1].split("'';", 1)[0]
+        self.assertIn("build --stdlib --shared", fixup)
+        self.assertLess(fixup.index("wrapProgram"), fixup.index("build --stdlib --shared"))
+        # The OCI builder installs at the final /opt/emit, so make install prepares it there.
+        containerfile = (ROOT / "packaging/oci/Containerfile").read_text()
+        self.assertNotIn("WARM_STDLIB", containerfile)
+        self.assertIn("PREFIX=/opt/emit TOOLCHAIN_PIN=1", containerfile)
 
     def test_documentation_has_no_toolchains(self):
         plan = policy.plan(classification(docs_only=True, code=False), "pull_request")

@@ -9,6 +9,9 @@
 # platform's manifest; the published image is linux/amd64), and install LLVM 22 and libgc at exact
 # package versions.  The final image holds the installed Emit payload
 # and the native toolchain `emit build` needs -- no Chez, Git, Python, or source tree.
+# make install prepares /opt/emit/share/emit/library-cache in the builder at the same path the
+# final stage uses.  Its native objects record the build runner's CPU, so a different host
+# regenerates those into its own cache; the portable entries serve every host.
 ARG BASE=ubuntu:26.04@sha256:c098726dd9b9733f3e885f8de0ef375206a311b0a317eadc40d347b1115fb944
 ARG LLVM_PACKAGE_VERSION=1:22.1.2-1ubuntu1
 ARG GC_PACKAGE_VERSION=1:8.2.12-1
@@ -34,7 +37,7 @@ RUN cd /src \
       GC_INC=/usr/include GC_LIB="/usr/lib/$(uname -m)-linux-gnu" \
       GC_DYLIB="/usr/lib/$(uname -m)-linux-gnu/libgc.so" \
  && make -j"$(nproc)" "$@" PREFIX=/opt/emit \
- && make install "$@" PREFIX=/opt/emit TOOLCHAIN_PIN=1 WARM_STDLIB=0
+ && make install "$@" PREFIX=/opt/emit TOOLCHAIN_PIN=1
 
 # emit build links with clang -flto.  Without lld as clang's default linker, GNU ld would need
 # the LLVMgold plugin, so clang.cfg (read beside clang's own executable) selects lld.  /work and

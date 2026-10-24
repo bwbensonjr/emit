@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.3.0
+
+Installations ship a prebuilt standard library, so the first command after installing no longer
+compiles it. On an Apple Silicon laptop, a first `emit run` importing `(scheme char)` takes 0.26 s
+instead of 17.7 s, and a first `emit repl` starts in 0.16 s instead of 16.9 s. `make install`
+behaves differently, as described below.
+
+- An installation now carries a read-only shared library cache in `share/emit/library-cache`:
+  the shipped libraries' portable IR, compile-time interfaces, and `-O1` native objects, compiled
+  by the installed binary. Every user's `emit run`, `emit repl`, and `emit build` reads it before
+  their own cache, and new entries still go only to the user's cache. A shared entry that does
+  not match the running binary, the library sources, the CPU, LLVM, or the optimization profile
+  is a miss, and the command falls back to the user's cache or compiles. Deleting the directory
+  is always safe.
+- Adds `emit build --stdlib --shared`, which rebuilds the shared cache from scratch for the
+  invoked binary and swaps it into place only once it is complete. `EMIT_SHARED_CACHE` relocates
+  the shared cache, or disables it when set to the empty string.
+- `make install` without `DESTDIR` now prepares the shared cache, about 8 MB in the prefix,
+  instead of warming the installing user's cache, and privileged installs prepare it too.
+  Staged installs and `WARM_STDLIB=0` still defer. `make uninstall` removes the shared cache.
+- The Homebrew formula, the Nix package, and the OCI image ship the shared cache. The Homebrew
+  caveat asking users to run `emit build --stdlib` is gone. An image's native objects match the
+  CPU of the runner that built it; on other hosts they are generated once into the user's
+  cache, while the portable entries still serve every host.
+- `emit doctor` reports the user and shared cache locations, and whether the shared cache was
+  prepared by the running binary. Verbose cache narration names the cache each reuse came from,
+  `[shared]` or `[user]`, and `emit build --stdlib` reports how many entries the shared cache
+  supplied.
+
 ## 0.2.1
 
 Corrects how Homebrew prepares the standard libraries, and makes distribution-channel retries

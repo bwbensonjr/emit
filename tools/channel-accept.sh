@@ -5,8 +5,11 @@
 # Drives an INSTALLED emit command from a fresh workspace, never the checkout: version identity,
 # doctor, JIT run, a persistent REPL session, shipped SRFIs, shipped libraries outside the baked
 # set, a macro-exporting user library compiled with `emit lib` and imported under run and build,
-# and AOT executables.  Every check runs even after a failure, and the installed share/emit payload
-# must be byte-identical afterwards.  The JSON report records the identity, platform, toolchain,
+# and AOT executables.  The payload's shared library cache must have been prepared by the installed
+# binary, and must serve every portable standard-library entry to an empty private user cache
+# (change: prebuilt-shared-stdlib-cache); native counts are not asserted, since a re-tested image
+# may run on a CPU other than its build host's.  Every check runs even after a failure, and the
+# installed share/emit payload must be byte-identical afterwards.  The JSON report records the identity, platform, toolchain,
 # each check's outcome, and the overall result; a check without a recorded pass is a failure.
 #
 # The script runs where emit runs: on the host for Homebrew, Nix, and source archives, and inside
@@ -102,9 +105,21 @@ macro_library() {
     && [ -s artifacts/accept.macros.ll ] && [ -s artifacts/accept.macros.exports ]
 }
 payload_unchanged() { [ "$(payload_digest)" = "$payload_before" ]; }
+shared_cache_matches() {
+  "$emit" doctor | grep -E '^shared cache: .* entries, matches this executable\]$'
+}
+# Before any other check fills the private cache, so every reuse must come from the shared tier.
+shared_cache_serves() {
+  local line
+  line=$(EMIT_VERBOSITY=normal "$emit" build --stdlib 2>&1 >/dev/null) || return 1
+  printf '%s\n' "$line"
+  printf '%s\n' "$line" | grep -q 'portable \([0-9][0-9]*\) reused/0 generated (\1 shared)'
+}
 
 check version version_matches
 check doctor "$emit" doctor
+check shared-cache-matches shared_cache_matches
+check shared-cache-serves shared_cache_serves
 check jit-run expect_42 "$emit" run smoke.scm
 check repl-persistent-state repl_session
 check srfi-1-64 expect_42 "$emit" run srfi.scm
@@ -122,7 +137,7 @@ json_string() {
   printf '"%s"' "$s"
 }
 doctor_field() { sed -n "s/^$1: //p" "$workspace/doctor.out" | head -n1; }
-expected_checks=11
+expected_checks=13
 result=passed
 [ "$failures" -eq 0 ] && [ "${#ids[@]}" -eq "$expected_checks" ] || result=failed
 mkdir -p "$(dirname "$report")"

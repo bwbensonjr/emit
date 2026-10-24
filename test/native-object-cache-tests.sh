@@ -4,8 +4,10 @@ set -u
 cd "$(dirname "$0")/.."
 
 make emit >/dev/null 2>&1 || { echo "failed to build build/emit"; exit 1; }
+# A checkout has no shared tier unless this names one; the shared section below sets it.
+unset EMIT_SHARED_CACHE
 tmp="$(mktemp -d)"
-trap 'rm -rf "$tmp"' EXIT
+trap 'chmod -R u+rwx "$tmp" 2>/dev/null; rm -rf "$tmp"' EXIT
 pass=0
 fail=0
 ok() { echo "  [OK  ] $1"; pass=$((pass + 1)); }
@@ -187,6 +189,148 @@ if EMIT_CACHE="$tmp/stdlib" EMIT_VERBOSITY=verbose build/emit run "$tmp/stdlib.s
    && grep -q 'native object reused for library scheme.char: -O1' "$tmp/stdlib-run.err"; then
   ok "first execution after preparation reuses native standard libraries"
 else bad "prepared stdlib execution"; cat "$tmp/stdlib-run.err"; fi
+
+# --- the shared tier (change: prebuilt-shared-stdlib-cache) ----------------------------
+# One --shared preparation serves every case; each case copies it when it must damage it.
+echo
+echo "shared library cache"
+! grep -q 'shared' "$tmp/cold.err" "$tmp/stdlib.err" "$tmp/stdlib-run.err" \
+  && build/emit doctor 2>/dev/null | grep -q '^shared cache: .*/library-cache \[installation; absent\]$' \
+  && ok "a checkout has no shared tier by default and narrates none" \
+  || bad "checkout shared tier default"
+
+shared="$tmp/share/library-cache"
+mkdir -p "$tmp/share"
+if (umask 077; EMIT_SHARED_CACHE="$shared" build/emit build --stdlib --shared \
+      >"$tmp/shared-prep.out" 2>"$tmp/shared-prep.err") \
+   && [ ! -s "$tmp/shared-prep.out" ] \
+   && grep -q "portable 0 reused/11 generated, native 0 reused/11 generated" "$tmp/shared-prep.err" \
+   && grep -q "replace shared library cache -> $shared" "$tmp/shared-prep.err" \
+   && [ -z "$(find "$shared" -type f ! -perm 644)" ] \
+   && [ -n "$(find "$shared" -maxdepth 0 -perm 755)" ] \
+   && [ -z "$(ls "$tmp/share" | grep -v '^library-cache$')" ]; then
+  ok "shared preparation builds a world-readable cache under umask 077 and swaps it in"
+else bad "shared preparation"; cat "$tmp/shared-prep.err"; fi
+digest="$(ls "$shared" | sed -n 's/^baked-v[0-9]*-\([0-9a-f]*\)\.stamp$/\1/p')"
+
+shared_run() {   # NAME USER-CACHE SHARED [emit run options...]
+  local name="$1" user="$2" share="$3"; shift 3
+  env EMIT_CACHE="$user" EMIT_SHARED_CACHE="$share" EMIT_VERBOSITY=verbose \
+    build/emit run "$@" "$tmp/stdlib.scm" >"$tmp/$name.out" 2>"$tmp/$name.err"
+}
+tree_digest() { (cd "$1" && find . -type f | LC_ALL=C sort | xargs cksum) | cksum; }
+
+before="$(tree_digest "$shared")"
+shared_run shared-hit "$tmp/user-hit" "$shared"
+[ "$(cat "$tmp/shared-hit.out")" = A ] \
+  && grep -q "cache: library scheme.char: reused from $shared/.* \[shared\]" "$tmp/shared-hit.err" \
+  && grep -q 'native object reused for library scheme.char: -O1 \[.*, shared\]' "$tmp/shared-hit.err" \
+  && ! grep -q 'native object generated' "$tmp/shared-hit.err" \
+  && [ -z "$(find "$tmp/user-hit" -name 'baked-*' -o -name 'unit-*' -o -name 'native-*')" ] \
+  && ok "a first run with an empty user cache is served from the shared tier" \
+  || { bad "shared tier first run"; cat "$tmp/shared-hit.err"; }
+
+env EMIT_CACHE="$tmp/user-warm" EMIT_SHARED_CACHE="$shared" build/emit build --stdlib \
+  >"$tmp/shared-warm.out" 2>"$tmp/shared-warm.err"
+grep -q 'portable 11 reused/0 generated (11 shared), native 11 reused/0 generated (11 shared)' \
+    "$tmp/shared-warm.err" \
+  && [ -z "$(find "$tmp/user-warm" -name 'baked-*' -o -name 'unit-*' -o -name 'native-*')" ] \
+  && ok "plain --stdlib counts shared entries as reused and duplicates none" \
+  || { bad "plain --stdlib over a shared cache"; cat "$tmp/shared-warm.err"; }
+
+shared_run shared-off "$tmp/user-off" ""
+cmp -s "$tmp/shared-hit.out" "$tmp/shared-off.out" && ! grep -q 'shared' "$tmp/shared-off.err" \
+  && ok "EMIT_SHARED_CACHE= disables the tier without changing stdout" \
+  || bad "disabled shared tier"
+env EMIT_CACHE="$tmp/user-quiet" EMIT_SHARED_CACHE="$shared" EMIT_VERBOSITY=quiet \
+  build/emit run "$tmp/stdlib.scm" >"$tmp/shared-quiet.out" 2>"$tmp/shared-quiet.err"
+[ "$(cat "$tmp/shared-quiet.out")" = A ] && [ ! -s "$tmp/shared-quiet.err" ] \
+  && ok "quiet mode prints no shared-tier narration" || bad "quiet shared narration"
+
+shared_run shared-o2 "$tmp/user-o2" "$shared" -O2
+shared_run shared-o2-again "$tmp/user-o2" "$shared" -O2
+grep -q 'native object miss for library scheme.char: -O2 \[shared\], trying the user cache' \
+    "$tmp/shared-o2.err" \
+  && grep -q "native object generated for library scheme.char: -O2 .* -> $tmp/user-o2/" \
+    "$tmp/shared-o2.err" \
+  && grep -q 'native object reused for library scheme.char: -O2 \[.*, user\]' "$tmp/shared-o2-again.err" \
+  && ok "a profile the shared tier lacks is generated into and reused from the user cache" \
+  || { bad "shared miss filled in the user cache"; cat "$tmp/shared-o2.err"; }
+
+shared_run shared-dump "$tmp/user-dump" "$shared" --dump-all
+grep -q 'after parse+rename.*\[unit (scheme char)\]' "$tmp/shared-dump.err" \
+  && ! grep -q '\[shared\]\|shared entry\|, shared\]' "$tmp/shared-dump.err" \
+  && ok "dump-all bypasses the shared tier and shows library stages" \
+  || bad "dump-all shared bypass"
+[ "$(tree_digest "$shared")" = "$before" ] \
+  && ok "ordinary commands leave the shared cache byte-identical" \
+  || bad "an ordinary command wrote into the shared cache"
+
+# Fallthrough: every damaged shared tier still yields the right answer and no error.
+# Another executable is simulated by renaming both of its identities: the digest portable
+# entries carry, and the native signature key (a hash covering the digest) native ones end in.
+cp -R "$shared" "$tmp/stale"
+signature="$(ls "$shared" | sed -n 's/^native-baked-v[0-9]*-[0-9a-f]*-\([0-9a-f]*\)\.stamp$/\1/p')"
+for f in "$tmp/stale"/*; do
+  g="${f//$digest/0123456789abcdef}"
+  mv "$f" "${g//$signature/fedcba9876543210}"
+done
+shared_run shared-stale "$tmp/user-stale" "$tmp/stale"
+[ -n "$digest" ] && [ -n "$signature" ] && [ "$(cat "$tmp/shared-stale.out")" = A ] \
+  && grep -q 'no shared entry for library scheme.char:, trying the user cache' "$tmp/shared-stale.err" \
+  && ! grep -q '\[shared\]$\|, shared\]' "$tmp/shared-stale.err" \
+  && ok "a shared cache from another executable is never reused" \
+  || bad "stale shared cache"
+cp -R "$shared" "$tmp/trunc"
+for f in "$tmp/trunc"/unit-scheme.char*.ll; do head -c 200 "$f" >"$f.cut" && mv "$f.cut" "$f"; done
+shared_run shared-trunc "$tmp/user-trunc" "$tmp/trunc"
+[ "$(cat "$tmp/shared-trunc.out")" = A ] \
+  && grep -q "library scheme.char: rejected $tmp/trunc/.*\[payload integrity\]" "$tmp/shared-trunc.err" \
+  && ok "a truncated shared entry is refused and the library recompiled" \
+  || bad "truncated shared entry"
+cp -R "$shared" "$tmp/locked" && chmod 000 "$tmp/locked"
+shared_run shared-locked "$tmp/user-locked" "$tmp/locked"; rc=$?
+chmod 755 "$tmp/locked"
+[ "$rc" -eq 0 ] && [ "$(cat "$tmp/shared-locked.out")" = A ] \
+  && ok "an unreadable shared cache is transparent" || bad "unreadable shared cache (exit $rc)"
+
+# Re-preparation keeps one executable's entries; failure leaves the old cache in place.
+touch "$shared/baked-v5-0123456789abcdef.stamp"
+EMIT_SHARED_CACHE="$shared" build/emit build --stdlib --shared -q 2>"$tmp/shared-again.err"; rc=$?
+[ "$rc" -eq 0 ] && [ ! -e "$shared/baked-v5-0123456789abcdef.stamp" ] \
+  && [ "$(ls "$shared" | grep -c '\.stamp$')" = 22 ] \
+  && [ -z "$(ls "$tmp/share" | grep -v '^library-cache$')" ] \
+  && ok "re-preparation discards entries it did not produce" \
+  || { bad "shared re-preparation (exit $rc)"; cat "$tmp/shared-again.err"; }
+mkdir -p "$tmp/ro/library-cache" && touch "$tmp/ro/library-cache/marker" && chmod 555 "$tmp/ro"
+EMIT_SHARED_CACHE="$tmp/ro/library-cache" build/emit build --stdlib --shared -q \
+  >/dev/null 2>"$tmp/shared-ro.err"; rc=$?
+chmod 755 "$tmp/ro"
+[ "$rc" -ne 0 ] && grep -q "cannot prepare shared library cache -> $tmp/ro/library-cache" \
+    "$tmp/shared-ro.err" \
+  && [ -e "$tmp/ro/library-cache/marker" ] \
+  && ok "an unwritable destination fails, names it, and keeps the previous cache" \
+  || { bad "unwritable shared destination (exit $rc)"; cat "$tmp/shared-ro.err"; }
+
+# Doctor: every state is reported and none changes doctor's status or the cache.
+doctor_shared() { env EMIT_SHARED_CACHE="$1" build/emit doctor >"$tmp/doctor.out" 2>/dev/null; echo $?; }
+baseline="$(doctor_shared "")"
+grep -q '^shared cache: none \[disabled by EMIT_SHARED_CACHE\]$' "$tmp/doctor.out" \
+  && grep -q '^user cache: ' "$tmp/doctor.out" \
+  && ok "doctor labels a disabled shared cache" || bad "doctor disabled shared cache"
+before="$(tree_digest "$shared")"
+[ "$(doctor_shared "$shared")" = "$baseline" ] \
+  && grep -q "^shared cache: $shared \[EMIT_SHARED_CACHE; 22 entries, matches this executable\]$" \
+    "$tmp/doctor.out" \
+  && [ "$(tree_digest "$shared")" = "$before" ] \
+  && ok "doctor reports a matching shared cache without touching it" \
+  || { bad "doctor matching shared cache"; grep cache "$tmp/doctor.out"; }
+[ "$(doctor_shared "$tmp/stale")" = "$baseline" ] \
+  && grep -q 'entries, built by another executable\]$' "$tmp/doctor.out" \
+  && ok "doctor reports a stale shared cache without failing" || bad "doctor stale shared cache"
+[ "$(doctor_shared "$tmp/missing")" = "$baseline" ] \
+  && grep -q "^shared cache: $tmp/missing \[EMIT_SHARED_CACHE; absent\]$" "$tmp/doctor.out" \
+  && ok "doctor reports an absent shared cache without failing" || bad "doctor absent shared cache"
 
 echo
 echo "$pass passed, $fail failed"

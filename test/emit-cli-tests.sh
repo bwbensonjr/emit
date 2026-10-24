@@ -363,6 +363,20 @@ done
 grep -q -- --stdlib "$TMP/stdlib-help" && ok "build help documents stdlib preparation" \
   || bad "build help lacks stdlib preparation"
 
+# --shared prepares the installation's shared cache (change: prebuilt-shared-stdlib-cache).
+grep -q -- '--stdlib --shared' "$TMP/stdlib-help" && grep -q 'EMIT_SHARED_CACHE' "$TMP/stdlib-help" \
+  && ok "build help documents shared preparation" || bad "build help lacks --shared"
+"$EMIT" help build >"$TMP/stdlib-help2"
+cmp -s "$TMP/stdlib-help" "$TMP/stdlib-help2" && ok "help build matches build --help" \
+  || bad "help build differs from build --help"
+"$EMIT" build --shared >"$TMP/shared.out" 2>"$TMP/shared.err"; rc=$?
+[ "$rc" -ne 0 ] && grep -q 'emit build: --shared requires --stdlib' "$TMP/shared.err" \
+  && [ ! -s "$TMP/shared.out" ] \
+  && ok "--shared without --stdlib is rejected" || bad "--shared alone (exit $rc)"
+"$EMIT" build --stdlib --shared -o x >"$TMP/shared.out" 2>"$TMP/shared.err"; rc=$?
+[ "$rc" -ne 0 ] && grep -q 'emit build: --stdlib is incompatible with -o' "$TMP/shared.err" \
+  && ok "--stdlib --shared still rejects -o" || bad "--stdlib --shared -o (exit $rc)"
+
 echo
 echo "  $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
