@@ -30,8 +30,11 @@ def git(root, *args):
 
 
 def documentation(path):
+    # A change's .openspec.yaml is planning metadata (schema and creation date), read only by
+    # the openspec CLI; without it every change or archive move would need full validation.
     return (path in DOC_NAMES or
-            (path.startswith(("docs/", "openspec/")) and path.endswith(".md")))
+            (path.startswith(("docs/", "openspec/")) and path.endswith(".md")) or
+            (path.startswith("openspec/changes/") and path.endswith("/.openspec.yaml")))
 
 
 def classify_paths(paths, inputs=(), error=None, executable=()):
