@@ -56,10 +56,13 @@ class ClassifierTests(unittest.TestCase):
         self.assertTrue(policy.classify_paths([], error="missing history")["channels"])
 
     def test_allowlist_exceptions_and_missing_history(self):
-        for path in ("README.md", "docs/DISTRIBUTION.md", "openspec/specs/a/spec.md"):
+        for path in ("README.md", "docs/DISTRIBUTION.md", "openspec/specs/a/spec.md",
+                     "openspec/changes/a/.openspec.yaml",
+                     "openspec/changes/archive/2026-01-01-a/.openspec.yaml"):
             self.assertTrue(policy.classify_paths([path])["docs_only"])
         for path in ("lib/srfi/README.md", "test/input.md", "CLAUDE.md", "AGENTS.md",
-                     ".github/workflows/test.yml", "tools/readme.md"):
+                     ".github/workflows/test.yml", "tools/readme.md", "openspec/config.yaml",
+                     "openspec/changes/a/harness.scm", "openspec/explorations/a/split.py"):
             self.assertFalse(policy.classify_paths([path])["docs_only"], path)
         self.assertTrue(policy.classify_paths([], error="missing history")["code"])
         self.assertTrue(policy.classify_paths([])["source"])
