@@ -46,7 +46,7 @@ run_program () { # label command cache expected
   local label="$1" command="$2" cache="$3" expected="$4" status
   export EMIT_CACHE="$cache"
   case "$command" in
-    run) EMIT_VERBOSITY=verbose "$EMIT" run "$TMP/sources/program.scm" "${COMMON[@]}" \
+    run) EMIT_VERBOSITY=verbose "$EMIT" run "${COMMON[@]}" "$TMP/sources/program.scm" \
            >"$TMP/$label.out" 2>"$TMP/$label.err"; status=$? ;;
     repl) EMIT_VERBOSITY=verbose "$EMIT" repl "${COMMON[@]}" < "$TMP/sources/program.scm" \
            >"$TMP/$label.out" 2>"$TMP/$label.err"; status=$? ;;
@@ -233,11 +233,11 @@ if command -v chez >/dev/null; then
 else say "skip independent Chez parity [Chez unavailable; native artifact coverage retained]"; fi
 
 EMIT_CACHE="$TMP/quiet-cache" EMIT_VERBOSITY=quiet "$EMIT" run \
-  "$TMP/sources/program.scm" "${COMMON[@]}" > "$TMP/quiet.out" 2> "$TMP/quiet.err"
+  "${COMMON[@]}" "$TMP/sources/program.scm" > "$TMP/quiet.out" 2> "$TMP/quiet.err"
 if [ "$?" = 0 ] && [ "$(<"$TMP/quiet.out")" = "$WANT" ] && [ ! -s "$TMP/quiet.err" ]; then
   ok "quiet artifact consumption preserves stdout without narration"
 else bad "quiet/stdout contract"; cat "$TMP/quiet.err"; fi
-EMIT_CACHE="$TMP/dump-cache" "$EMIT" run --dump-all "$TMP/sources/program.scm" "${COMMON[@]}" \
+EMIT_CACHE="$TMP/dump-cache" "$EMIT" run --dump-all "${COMMON[@]}" "$TMP/sources/program.scm" \
   >"$TMP/dump.out" 2>"$TMP/dump.err"
 if [ "$?" = 0 ] && [ "$(<"$TMP/dump.out")" = "$WANT" ] && \
    ! grep -Fq 'artifact: library artifact.dep: reused' "$TMP/dump.err" && \

@@ -66,8 +66,8 @@ cat > "$TMP/project/same-manifest.scm" <<'EOF'
 EOF
 (cd "$TMP/project" && EMIT_VERBOSITY=quiet "$EMIT" run --emit basic.scm) \
   >"$TMP/path.ir" 2>"$TMP/path-ir.err"
-(cd "$TMP/project" && EMIT_VERBOSITY=quiet "$EMIT" run --emit basic.scm \
-  --manifest same-manifest.scm --no-manifest-chain) \
+(cd "$TMP/project" && EMIT_VERBOSITY=quiet "$EMIT" run --emit \
+  --manifest same-manifest.scm --no-manifest-chain basic.scm) \
   >"$TMP/manifest.ir" 2>"$TMP/manifest-ir.err"
 cmp -s "$TMP/path.ir" "$TMP/manifest.ir" \
   && ok "manifest and path providers produce byte-identical IR" \

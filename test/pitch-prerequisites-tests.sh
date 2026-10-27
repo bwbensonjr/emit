@@ -12,7 +12,7 @@ bad () { echo "  [FAIL] $1"; fail=$((fail+1)); }
 echo "Pitch-facing R7RS prerequisites"
 
 got="$(EMIT_VERBOSITY=quiet EMIT_PITCH_TEST=present build/emit run \
-        test/pitch-prerequisites-check.scm -- --check '' -x 2>"$TMP/run.err")"
+        test/pitch-prerequisites-check.scm --check '' -x 2>"$TMP/run.err")"
 [ "$got" = "pitch prerequisites: ok" ] \
   && ok "combined fixture passes through emit run" \
   || { bad "combined fixture through emit run => [$got]"; sed 's/^/         /' "$TMP/run.err"; }
@@ -52,8 +52,8 @@ cat > "$TMP/user-manifest.scm" <<EOF
  (library (scheme write) (source "$PWD/lib/scheme/write.sld"))
  (library (pitch prerequisite dispatch) (source "$TMP/dispatch.sld")))
 EOF
-ugot="$(EMIT_VERBOSITY=quiet EMIT_PITCH_TEST=present build/emit run "$TMP/use-dispatch.scm" \
-          --manifest "$TMP/user-manifest.scm" 2>"$TMP/user.err")"
+ugot="$(EMIT_VERBOSITY=quiet EMIT_PITCH_TEST=present build/emit run \
+          --manifest "$TMP/user-manifest.scm" "$TMP/use-dispatch.scm" 2>"$TMP/user.err")"
 [ "$ugot" = '((1 2 3) "strasse" Zs "(1 2)" () "present" #t)' ] \
   && ok "a user library re-exports the prerequisite behavior" \
   || { bad "user-library prerequisites => [$ugot]"; sed 's/^/         /' "$TMP/user.err"; }
@@ -94,33 +94,38 @@ else
   bad "building the combined fixture"; sed 's/^/         /' "$TMP/build.err"
 fi
 
-# stdin is the logical command name '-', while tokens after -- are untouched.
+# stdin is the logical command name '-', and every token after FILE is untouched.
 printf '%s\n' '(import (scheme process-context)) (command-line)' > "$TMP/argv.scm"
-agot="$(EMIT_VERBOSITY=quiet build/emit run - -- --check '' \
+agot="$(EMIT_VERBOSITY=quiet build/emit run - --check '' \
           < "$TMP/argv.scm" 2>"$TMP/argv.err")"
 [ "$agot" = '("-" "--check" "")' ] && ok "run forwards option-like and empty arguments" \
   || { bad "stdin command line => [$agot]"; sed 's/^/         /' "$TMP/argv.err"; }
 
+# A -- after FILE is the program's, exactly as a built executable would receive it.
+sgot="$(EMIT_VERBOSITY=quiet build/emit run "$TMP/argv.scm" -- -x 2>"$TMP/sep.err")"
+[ "$sgot" = "(\"$TMP/argv.scm\" \"--\" \"-x\")" ] && ok "run forwards a separator after FILE verbatim" \
+  || { bad "separator after FILE => [$sgot]"; sed 's/^/         /' "$TMP/sep.err"; }
+
 if build/emit run --bogus test/pitch-prerequisites.scm >"$TMP/o" 2>"$TMP/e"; then
-  bad "unknown pre-separator option was accepted"
-elif grep -q -- '--bogus' "$TMP/e"; then ok "unknown pre-separator option is rejected"
+  bad "unknown option before FILE was accepted"
+elif grep -q -- '--bogus' "$TMP/e"; then ok "unknown option before FILE is rejected"
 else bad "unknown-option error did not name the option"; fi
 
-if build/emit run test/pitch-prerequisites.scm test/pitch-prerequisites-check.scm \
-     >"$TMP/o" 2>"$TMP/e"; then
-  bad "multiple source files were accepted"
-elif grep -q 'multiple source files' "$TMP/e"; then ok "multiple source files are rejected"
-else bad "multiple-source error was unclear"; fi
+# A second positional token is the program's first argument, not another source.
+pgot="$(EMIT_VERBOSITY=quiet build/emit run "$TMP/argv.scm" second.scm 2>"$TMP/pos.err")"
+[ "$pgot" = "(\"$TMP/argv.scm\" \"second.scm\")" ] \
+  && ok "a second positional token is a program argument" \
+  || { bad "second positional => [$pgot]"; sed 's/^/         /' "$TMP/pos.err"; }
 
-if build/emit run --emit test/pitch-prerequisites.scm -- value >"$TMP/o" 2>"$TMP/e"; then
+if build/emit run --emit test/pitch-prerequisites.scm value >"$TMP/o" 2>"$TMP/e"; then
   bad "program arguments were accepted with --emit"
 elif [ ! -s "$TMP/o" ] && grep -q 'require execution' "$TMP/e"; then
   ok "non-executing modes reject program arguments without emitting IR"
 else bad "--emit/program-argument conflict output was wrong"; fi
 
 if build/emit run --help >"$TMP/help" 2>"$TMP/help.err" \
-   && grep -q '\[-- ARG \.\.\.\]' "$TMP/help" && [ ! -s "$TMP/help.err" ]; then
-  ok "run help documents the separator grammar on stdout"
+   && grep -q '\[FILE \[ARG \.\.\.\]\]' "$TMP/help" && [ ! -s "$TMP/help.err" ]; then
+  ok "run help documents the FILE ARG grammar on stdout"
 else bad "run help stream or grammar"; fi
 
 # Child processes pin status mapping and the cleanup distinction.

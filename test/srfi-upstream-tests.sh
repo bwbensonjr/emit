@@ -47,7 +47,7 @@ run_driver () { # host driver stem
       [ "$status" -eq 0 ] || return "$status"
       "$stem.exe" >"$stem.out" 2>"$stem.err" ;;
     run)
-      "$EMIT" run "$driver" "${COMMON[@]}" >"$stem.out" 2>"$stem.err" ;;
+      "$EMIT" run "${COMMON[@]}" "$driver" >"$stem.out" 2>"$stem.err" ;;
     repl)
       "$EMIT" repl "${COMMON[@]}" < "$driver" >"$stem.out" 2>"$stem.err" ;;
     build)

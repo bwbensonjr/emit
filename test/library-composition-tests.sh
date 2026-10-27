@@ -65,7 +65,7 @@ run_one () { # <host> <program-file> <expected>
       return
     fi
   else
-    if ! got="$(build/emit run "$program" --manifest "$MAN" 2>"$TMP/$name.native.err")"; then
+    if ! got="$(build/emit run --manifest "$MAN" "$program" 2>"$TMP/$name.native.err")"; then
       bad "$host $name (execution failed)"
       sed 's/^/         /' "$TMP/$name.native.err"
       return
@@ -93,7 +93,7 @@ reject_compile () { # <host> <name> <source-text> <diagnostic-regex>
       sed 's/^/         /' "$TMP/$name.err"
     fi
   else
-    if build/emit run "$TMP/$name.scm" --manifest "$MAN" >"$TMP/$name.out" 2>"$TMP/$name.err"; then
+    if build/emit run --manifest "$MAN" "$TMP/$name.scm" >"$TMP/$name.out" 2>"$TMP/$name.err"; then
       bad "$host $name (unexpectedly compiled)"
     elif grep -Eq "$pattern" "$TMP/$name.err"; then
       ok "$host $name (rejected by expected diagnostic)"
@@ -172,8 +172,8 @@ for host in "${hosts[@]}"; do
     runtime_ir="$TMP/runtime-program.ll"
   else
     runtime_ir="$TMP/runtime-program.native.ll"
-    if ! build/emit run test/library-composition/runtime-program.scm --manifest "$MAN" \
-        --emit >"$runtime_ir" 2>"$TMP/runtime-program.native.err"; then
+    if ! build/emit run --manifest "$MAN" --emit \
+        test/library-composition/runtime-program.scm >"$runtime_ir" 2>"$TMP/runtime-program.native.err"; then
       bad "$host runtime-program IR (emit failed)"
       sed 's/^/         /' "$TMP/runtime-program.native.err"
       runtime_ir=""
@@ -219,7 +219,7 @@ for host in "${hosts[@]}"; do
       bad "$host wrong-arity (wrong diagnostic)"
       cat "$TMP/wrong-arity.err"
     fi
-  elif build/emit run "$TMP/wrong-arity.scm" --manifest "$MAN" \
+  elif build/emit run --manifest "$MAN" "$TMP/wrong-arity.scm" \
       >"$TMP/wrong-arity.out" 2>"$TMP/wrong-arity.err"; then
     bad "$host wrong-arity (unexpectedly succeeded)"
   elif grep -Fq 'arity error: expected 2 argument(s), got 1' "$TMP/wrong-arity.err"; then

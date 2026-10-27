@@ -378,10 +378,12 @@ static void usage(std::ostream &os) {
 }
 
 static void usage_run(std::ostream &os) {
-  os << "usage: emit run [options] [FILE] [-- ARG ...]  compile and run a program\n"
+  os << "usage: emit run [options] [FILE [ARG ...]]  compile and run a program\n"
         "\n"
         "  FILE                      program source; stdin when FILE is omitted or -\n"
-        "  -- ARG ...                pass remaining tokens to the Scheme program\n"
+        "  ARG ...                   every token after FILE goes to the Scheme program\n"
+        "                            unchanged; options must come before FILE\n"
+        "  --                        end options; the next token is FILE\n"
         "  --manifest F              manifest to resolve libraries and programs against\n"
         "  --no-prelude              do not bake or imply (scheme base)\n"
         "  -O0                       unoptimized JIT profile\n"
@@ -2654,11 +2656,20 @@ static void shake_units(std::vector<std::string> &modules,
 // IR, in-process -- the shared front half of emit run, `emit run --emit`, and
 // emit build (spec: no second compilation path).  Seed, then compile: the same mode
 // sequence in the same order as before it was split, so the emitted IR does not move.
-static bool compile_program(const std::string &prog_src, LibraryResolver &resolver,
+static bool compile_program(const std::string &src_text, LibraryResolver &resolver,
                             bool no_prelude, std::vector<std::string> &modules,
                             std::vector<std::string> &module_keys,
                             std::string &prog_ir, bool &is_library,
                             const std::string &source_home) {
+  // An interpreter line (`#!/...` or `#! ...`) opening a program is dropped here, host
+  // side, so a script compiles to the same program as its source without the line.
+  // Its newline stays, so every later line keeps its number.  Chez's compile-file uses
+  // the same test, which can never match a reader directive such as #!fold-case
+  // (change: shebang-scripts).
+  std::string prog_src = src_text;
+  if (prog_src.size() >= 3 && prog_src[0] == '#' && prog_src[1] == '!' &&
+      (prog_src[2] == '/' || prog_src[2] == ' '))
+    prog_src.erase(0, std::min(prog_src.find('\n'), prog_src.size()));
   if (!seed_session(prog_src, resolver, no_prelude, modules, module_keys, source_home))
     return false;
   return compile_unit(prog_src, modules, module_keys, prog_ir, is_library, source_home);
@@ -2676,12 +2687,20 @@ static int emit_run(int argc, char **argv) {
   std::string manifest;
   ResolverOptions resolver_options;
   std::string prog_file;                       // positional FILE (else stdin)
-  std::vector<std::string> program_args;       // tokens after the mandatory separator
+  std::vector<std::string> program_args;       // every token after FILE, verbatim
+  // Option parsing stops at FILE, as in sh or python3: a shebang line puts the script
+  // path before the user's arguments, and the script must see exactly the tail its
+  // `emit build` executable would (change: shebang-scripts).  `--` before FILE only
+  // ends option parsing, so the next token is FILE even when it starts with `-`.
+  auto take_file = [&](int &i) {
+    prog_file = argv[i];
+    for (++i; i < argc; i++) program_args.emplace_back(argv[i]);
+  };
   for (int i = 1; i < argc; i++) {
     std::string a(argv[i]);
     bool opt_ok = true;
     if (a == "--") {
-      for (++i; i < argc; i++) program_args.emplace_back(argv[i]);
+      if (++i < argc) take_file(i);
       break;
     }
     else if (is_help_flag(a)) { usage_run(std::cout); return 0; }
@@ -2701,11 +2720,8 @@ static int emit_run(int argc, char **argv) {
       if (i + 1 < argc && argv[i + 1][0] != '-') resolve_name = argv[++i];
     }
     else if (a == "-" || (!a.empty() && a[0] != '-')) {
-      if (!prog_file.empty()) {
-        std::cerr << "emit run: multiple source files: " << prog_file << " and " << a << "\n";
-        return 2;
-      }
-      prog_file = a;
+      take_file(i);
+      break;
     }
     else { std::cerr << "emit run: unknown option " << a << "\n"; return 2; }
   }

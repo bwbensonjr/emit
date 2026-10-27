@@ -24,7 +24,7 @@ echo "filesystem access: listing, links, errors, atomic replacement"
 RUN_TREE="$TMP/run-tree"
 setup_tree "$RUN_TREE"
 run_got="$(EMIT_VERBOSITY=quiet build/emit run test/filesystem-access-check.scm \
-             -- "$RUN_TREE" 2>"$TMP/run.err")"
+             "$RUN_TREE" 2>"$TMP/run.err")"
 if [ "$run_got" = "filesystem access: ok" ] \
    && [ ! -e "$RUN_TREE/replacement.tmp" ] \
    && [ "$(sed -n '1p' "$RUN_TREE/target.scm")" = replacement ]; then
@@ -43,7 +43,7 @@ chmod 000 "$TMP/blocked"
 if [ ! -e "$TMP/blocked/child" ]; then
   blocked_got="$(EMIT_VERBOSITY=quiet build/emit run \
                    test/filesystem-classification-error-check.scm \
-                   -- "$TMP/blocked/child" 2>"$TMP/blocked.err")"
+                   "$TMP/blocked/child" 2>"$TMP/blocked.err")"
   [ "$blocked_got" = '#t' ] \
     && ok "an inaccessible classification raises a catchable file error" \
     || { bad "inaccessible classification => [$blocked_got]"; sed 's/^/         /' "$TMP/blocked.err"; }
@@ -113,8 +113,8 @@ cat > "$TMP/user-manifest.scm" <<EOF
 ((library (emit filesystem) (source "$PWD/lib/emit/filesystem.sld"))
  (library (filesystem user) (source "$TMP/fs-user.sld")))
 EOF
-user_got="$(EMIT_VERBOSITY=quiet build/emit run "$TMP/use-fs-user.scm" \
-              --manifest "$TMP/user-manifest.scm" 2>"$TMP/user.err")"
+user_got="$(EMIT_VERBOSITY=quiet build/emit run \
+              --manifest "$TMP/user-manifest.scm" "$TMP/use-fs-user.scm" 2>"$TMP/user.err")"
 [ "$user_got" = '#t' ] \
   && ok "a user library imports and re-exports filesystem behavior" \
   || { bad "user-library filesystem probe => [$user_got]"; sed 's/^/         /' "$TMP/user.err"; }

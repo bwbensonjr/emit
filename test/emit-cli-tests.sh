@@ -282,7 +282,7 @@ EOF
 if ! "$EMIT" build agree --manifest "$MAN" >/dev/null 2>"$TMP/build.err" </dev/null; then
   bad "emit build agree"; sed 's/^/         /' "$TMP/build.err"
 else
-  a="$("$EMIT" run "$SRC" --manifest "$MAN" 2>/dev/null </dev/null)"
+  a="$("$EMIT" run --manifest "$MAN" "$SRC" 2>/dev/null </dev/null)"
   b="$("$TMP/agree" 2>/dev/null </dev/null)"
   [ "$a" = "$b" ] && [ "$a" = "$(printf 'alpha\nbeta')" ] \
     && ok "byte-identical stdout, no trailing value ($(printf '%q' "$a"))" \
@@ -301,7 +301,7 @@ EOF
 if ! "$EMIT" build agree2 --manifest "$TMP/agree2-manifest.scm" >/dev/null 2>"$TMP/build2.err" </dev/null; then
   bad "emit build agree2"; sed 's/^/         /' "$TMP/build2.err"
 else
-  a="$("$EMIT" run "$SRC2" --manifest "$TMP/agree2-manifest.scm" 2>/dev/null </dev/null)"
+  a="$("$EMIT" run --manifest "$TMP/agree2-manifest.scm" "$SRC2" 2>/dev/null </dev/null)"
   b="$("$TMP/agree2" 2>/dev/null </dev/null)"
   [ "$a" = "$b" ] && [ "$a" = "$(printf 'x\n(1 2 3)')" ] \
     && ok "byte-identical stdout, final value printed ($(printf '%q' "$a"))" \
@@ -376,6 +376,68 @@ cmp -s "$TMP/stdlib-help" "$TMP/stdlib-help2" && ok "help build matches build --
 "$EMIT" build --stdlib --shared -o x >"$TMP/shared.out" 2>"$TMP/shared.err"; rc=$?
 [ "$rc" -ne 0 ] && grep -q 'emit build: --stdlib is incompatible with -o' "$TMP/shared.err" \
   && ok "--stdlib --shared still rejects -o" || bad "--stdlib --shared -o (exit $rc)"
+
+# ---------------------------------------------------------------------------
+echo
+echo "a program runs as a shebang script (change: shebang-scripts, issue #166)"
+
+# `emit` on PATH is this checkout's binary; the scripts run with $PWD at the repo root,
+# so the standard library resolves exactly as it does for `$EMIT run` above.
+mkdir -p "$TMP/bin"
+ln -sf "$PWD/$EMIT" "$TMP/bin/emit"
+TOOL="$TMP/tool.scm"
+printf '#!/usr/bin/env -S emit run\n(import (scheme process-context))\n(write (command-line))\n(newline)\n' \
+  > "$TOOL"
+chmod +x "$TOOL"
+got="$(EMIT_VERBOSITY=quiet PATH="$TMP/bin:$PATH" "$TOOL" --check a.scm 2>"$TMP/sb.err" </dev/null)"
+[ "$got" = "(\"$TOOL\" \"--check\" \"a.scm\")" ] && ok "a #!/usr/bin/env -S emit run script receives its arguments" \
+  || { bad "shebang script => [$got]"; sed 's/^/         /' "$TMP/sb.err"; }
+
+# The script and its delivered executable see the same tail, -- included.
+TAIL="$TMP/tail.scm"
+printf '#!/usr/bin/env -S emit run\n(import (scheme process-context))\n(write (cdr (command-line)))\n(newline)\n' \
+  > "$TAIL"
+chmod +x "$TAIL"
+if ! EMIT_VERBOSITY=quiet "$EMIT" build "$TAIL" -o "$TMP/tail" >/dev/null 2>"$TMP/tb.err" </dev/null; then
+  bad "emit build of a shebang source"; sed 's/^/         /' "$TMP/tb.err"
+else
+  a="$(EMIT_VERBOSITY=quiet PATH="$TMP/bin:$PATH" "$TAIL" -- -x 2>/dev/null </dev/null)"
+  b="$("$TMP/tail" -- -x 2>/dev/null </dev/null)"
+  [ "$a" = "$b" ] && [ "$a" = '("--" "-x")' ] \
+    && ok "script and built executable receive the same arguments ($a)" \
+    || bad "script=[$a] exe=[$b]"
+fi
+
+# `#! ` (with a space) is an interpreter line too.
+printf '#! /usr/bin/env -S emit run\n(display "spaced")\n' > "$TMP/spaced.scm"
+got="$(EMIT_VERBOSITY=quiet "$EMIT" run "$TMP/spaced.scm" 2>"$TMP/sp.err" </dev/null)"
+[ "$got" = spaced ] && ok "a '#! ' first line is an interpreter line" \
+  || { bad "spaced interpreter line => [$got]"; sed 's/^/         /' "$TMP/sp.err"; }
+
+# A leading reader directive keeps its meaning: it never starts with '/' or ' '.
+printf "#!fold-case\n(display 'ABC)\n" > "$TMP/fold.scm"
+got="$(EMIT_VERBOSITY=quiet "$EMIT" run "$TMP/fold.scm" 2>"$TMP/fold.err" </dev/null)"
+[ "$got" = abc ] && ok "a leading #!fold-case is still a directive" \
+  || { bad "leading #!fold-case => [$got]"; sed 's/^/         /' "$TMP/fold.err"; }
+
+# Only the first line is an interpreter line.
+printf '(display "x")\n#!/usr/bin/env\n' > "$TMP/late.scm"
+if EMIT_VERBOSITY=quiet "$EMIT" run "$TMP/late.scm" >"$TMP/o" 2>"$TMP/e" </dev/null; then
+  bad "a #!/ line after the first was accepted"
+elif grep -q 'unrecognized syntax #!/usr/bin/env' "$TMP/e"; then
+  ok "a #!/ line after the first is still a read error"
+else bad "late #!/ line error"; sed 's/^/         /' "$TMP/e"; fi
+
+# Stdin source accepts the line, and the line changes nothing in the emitted program.
+got="$(EMIT_VERBOSITY=quiet "$EMIT" run - a <"$TOOL" 2>"$TMP/si.err")"
+[ "$got" = '("-" "a")' ] && ok "stdin source accepts an interpreter line" \
+  || { bad "stdin interpreter line => [$got]"; sed 's/^/         /' "$TMP/si.err"; }
+tail -n +2 "$TOOL" > "$TMP/bare.scm"
+EMIT_VERBOSITY=quiet "$EMIT" run --emit "$TOOL" >"$TMP/with.ll" 2>/dev/null </dev/null
+EMIT_VERBOSITY=quiet "$EMIT" run --emit "$TMP/bare.scm" >"$TMP/without.ll" 2>/dev/null </dev/null
+[ -s "$TMP/with.ll" ] && cmp -s "$TMP/with.ll" "$TMP/without.ll" \
+  && ok "the interpreter line leaves the emitted IR byte-identical" \
+  || bad "IR differs with the interpreter line"
 
 echo
 echo "  $pass passed, $fail failed"
