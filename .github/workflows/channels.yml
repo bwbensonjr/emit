@@ -141,6 +141,8 @@ jobs:
           brew install bdw-gc llvm@22
           tools/channel-render.sh homebrew /tmp/emit-channel-assets/identity.json "$RUNNER_TEMP/emit.rb"
           brew tap-new --no-git emit-ci/local
+          # Homebrew 7.0.10 refuses to load formulae from a tap it has not been told to trust.
+          brew trust emit-ci/local
           cp "$RUNNER_TEMP/emit.rb" "$(brew --repository)/Library/Taps/emit-ci/homebrew-local/Formula/emit.rb"
           brew style emit-ci/local/emit
           brew audit --strict --formula emit-ci/local/emit
