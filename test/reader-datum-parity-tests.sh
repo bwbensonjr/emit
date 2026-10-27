@@ -179,7 +179,7 @@ cat > "$TMP/proj/usemac.scm" <<'EOF'
 (import (veclib))
 (display (vmac))
 EOF
-got="$(cd "$TMP/proj" && "$EMITABS" run usemac.scm --manifest emit-libs2.scm 2>"$TMP/usemac.err")"
+got="$(cd "$TMP/proj" && "$EMITABS" run --manifest emit-libs2.scm usemac.scm 2>"$TMP/usemac.err")"
 [ "$got" = "#(1 2)" ] && ok "importer expands the macro to the real vector => $got" \
   || { bad "macro expansion => [$got]"; sed 's/^/         /' "$TMP/usemac.err"; }
 
@@ -214,7 +214,7 @@ if (cd "$TMP/proj" && EMIT_VERBOSITY=quiet "$EMITABS" lib cyclelib.sld -o build/
   else
     bad "export table lost cyclic/shared labels"; sed 's/^/         /' "$T"
   fi
-  got="$(cd "$TMP/proj" && "$EMITABS" run usecycle.scm --manifest emit-libs3.scm \
+  got="$(cd "$TMP/proj" && "$EMITABS" run --manifest emit-libs3.scm usecycle.scm \
           2>"$TMP/usecycle.err")"
   [ "$got" = "(#t #t)" ] && ok "imported macro constants retain graph identity => $got" \
     || { bad "imported cyclic macro constants => [$got]"; sed 's/^/         /' "$TMP/usecycle.err"; }

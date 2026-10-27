@@ -255,7 +255,7 @@ fi
 
 # 21. the emit run command reports it when the program imports the missing library, and exits non-zero.
 printf '(import (ghost))\n(quote x)\n' > "$PROJ/ghost.scm"
-if (cd "$PROJ" && "$EMITABS" run ghost.scm --manifest typo.scm) >"$TMP/g.log" 2>&1; then
+if (cd "$PROJ" && "$EMITABS" run --manifest typo.scm ghost.scm) >"$TMP/g.log" 2>&1; then
   bad "emit run should fail on an unreadable library source"
 else
   grep -q 'cannot read library source nowhere.sld' "$TMP/g.log" \

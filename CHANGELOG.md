@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.4.0
+
+A Scheme program can now run as an executable script with `#!/usr/bin/env -S emit run` (#166).
+To make that work, `emit run` now reads program arguments the way `sh` and `python3` do, which
+is an incompatible change to how it parses its command line.
+
+- **Incompatible:** `emit run` stops parsing options at the source file, and every token after
+  the file goes to the program unchanged, including `--` and anything that looks like an Emit
+  option. The synopsis is `emit run [options] [FILE [ARG ...]]`. To migrate:
+  - Write program arguments directly after the file: `emit run f.scm a` instead of
+    `emit run f.scm -- a`. A `--` after the file now reaches the program, so the old form passes
+    an extra `--` without any error.
+  - For source on stdin, name it `-`: `emit run - a` instead of `emit run -- a`, which now
+    treats `a` as the source file.
+  - Put Emit options before the file: `emit run --manifest m.scm app.scm` instead of
+    `emit run app.scm --manifest m.scm`. An option after the file is now a program argument,
+    which usually shows up as an `unresolved import` error.
+  - A second source file is no longer a usage error; it is the program's first argument.
+  A `--` before the file still ends Emit's options, for a source whose name starts with `-`.
+  `--emit` and `--resolve-program` still reject program arguments.
+- `emit run` and `emit build` ignore a program source's first line when it starts with `#!/` or
+  `#! `, so the same file runs as a script and builds into an executable that receives the same
+  arguments. A first-line reader directive such as `#!fold-case` keeps its meaning, and `#!/`
+  anywhere else is still a read error. `docs/PROJECTS.md` shows how to write a script.
+
 ## 0.3.0
 
 Installations ship a prebuilt standard library, so the first command after installing no longer

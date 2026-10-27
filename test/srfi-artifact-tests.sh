@@ -47,7 +47,7 @@ for input in srfi-1-smoke srfi-64-smoke; do
     export EMIT_CACHE="$stem-cache"
     status=0
     case "$command" in
-      run) EMIT_VERBOSITY=verbose "$EMIT" run "$ROOT/test/snow/$input.scm" "${COMMON[@]}" \
+      run) EMIT_VERBOSITY=verbose "$EMIT" run "${COMMON[@]}" "$ROOT/test/snow/$input.scm" \
              >"$stem.out" 2>"$stem.err" || status=$? ;;
       repl) EMIT_VERBOSITY=verbose "$EMIT" repl "${COMMON[@]}" < "$ROOT/test/snow/$input.scm" \
              >"$stem.out" 2>"$stem.err" || status=$? ;;

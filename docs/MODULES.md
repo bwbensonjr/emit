@@ -1010,7 +1010,7 @@ dependency separately and map the selected sources to that directory:
 ```sh
 emit lib lib/my/util.sld --manifest emit-libs.scm -o artifacts
 emit lib lib/my/facade.sld --manifest emit-libs.scm -o artifacts
-EMIT_VERBOSITY=verbose emit run app.scm --manifest emit-libs.scm
+EMIT_VERBOSITY=verbose emit run --manifest emit-libs.scm app.scm
 ```
 
 Native run/build/repl commands and dependency loading for lib first try that

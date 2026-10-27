@@ -39,7 +39,7 @@ invocation depends on them.
 
 ### Requirement: `emit run` runs a program in-process (Chez-free)
 
-`emit run [FILE] [--manifest F] [--no-prelude]` SHALL compile and run a whole program
+`emit run [--manifest F] [--no-prelude] [FILE]` SHALL compile and run a whole program
 in-process without Chez, resolving user-library imports through the manifest, with
 behavior identical to the prior `scheme-run`. The program source SHALL be read from
 `FILE` when given, otherwise from stdin. `emit run --emit` SHALL write the emitted IR
@@ -400,34 +400,100 @@ option SHALL be a usage error rather than a successful invocation that ignored t
 - **THEN** the invocation reports the conflicting options on standard error, writes no resolved
   paths to stdout, and exits non-zero
 
-### Requirement: emit run separates tool options from program arguments
+### Requirement: emit run stops option parsing at the program source
 
-The executing form of the `emit run` command SHALL accept `emit run [OPTIONS] [FILE] [-- ARG ...]`. Before
-`--`, existing Emit options SHALL retain their meanings, at most one positional source file SHALL be
-accepted, and unknown options SHALL still be rejected. After `--`, every token SHALL be forwarded to
-the Scheme program unchanged and SHALL NOT be interpreted by Emit. Program arguments SHALL be a
-usage error with a non-executing mode such as `--emit` or `--resolve-program`.
+The executing form of `emit run` SHALL accept `emit run [OPTIONS] [FILE [ARG ...]]` and SHALL stop
+option parsing at the first positional FILE (`-` names stdin). Before FILE, Emit options SHALL retain
+their meanings, unknown options SHALL be rejected, and `--` SHALL end option parsing so the next token
+is FILE. Every token after FILE, including `--`, SHALL be forwarded to the Scheme program unchanged.
 
 #### Scenario: A dash-prefixed program argument is forwarded
 
-- **WHEN** `emit run cli.scm -- --check input.scm` is invoked
+- **WHEN** `emit run cli.scm --check input.scm` is invoked
 - **THEN** `--check` and `input.scm` reach the Scheme process context in order and neither is treated
   as an Emit option
 
+#### Scenario: A separator after FILE is forwarded verbatim
+
+- **WHEN** `emit run cli.scm -- -x` is invoked
+- **THEN** the program receives `--` and `-x` as its arguments, in that order
+
+#### Scenario: Stdin source receives arguments
+
+- **WHEN** `emit run - --check ''` is invoked with a program on standard input
+- **THEN** the program's command line is `("-" "--check" "")`
+
 #### Scenario: An unknown tool option remains an error
 
-- **WHEN** `emit run --bogus cli.scm` is invoked without a separator
+- **WHEN** `emit run --bogus cli.scm` is invoked
 - **THEN** the command reports `--bogus` as an unknown Emit option and exits non-zero
 
-#### Scenario: Multiple source files are rejected
+#### Scenario: A separator before FILE ends option parsing
 
-- **WHEN** two positional source files appear before `--`
-- **THEN** the command reports a usage error rather than silently using the last file
+- **WHEN** `emit run -- -odd.scm a` is invoked and `-odd.scm` is a program source
+- **THEN** `-odd.scm` is compiled and run as the program and receives `a` as its one argument
+
+#### Scenario: An Emit option after FILE is a program argument
+
+- **WHEN** `emit run app.scm --manifest m.scm` is invoked
+- **THEN** `--manifest` and `m.scm` reach the program as its arguments and no manifest is loaded from
+  them
+
+#### Scenario: A second positional token is a program argument
+
+- **WHEN** `emit run first.scm second.scm` is invoked
+- **THEN** `first.scm` is the program and `second.scm` is its first argument, not a second source
+
+### Requirement: Non-executing run modes reject program arguments
+
+`emit run --emit` and `emit run --resolve-program` SHALL treat any program argument (a token after
+FILE) as a usage error, reporting that program arguments require execution, and SHALL write nothing
+to stdout.
 
 #### Scenario: Arguments conflict with emit-only mode
 
-- **WHEN** `emit run --emit cli.scm -- value` is invoked
+- **WHEN** `emit run --emit cli.scm value` is invoked
 - **THEN** the command reports that program arguments require execution and emits no IR
+
+### Requirement: A program source may begin with an interpreter line
+
+When `emit run` or `emit build` compiles a program source whose first line begins with `#!/` or
+`#! `, that line SHALL be ignored up to and including its line terminator, as if it were a comment.
+No other line, and no other `#!` spelling, SHALL be treated this way; reader directives such as
+`#!fold-case` keep their meaning on every line. The same source SHALL produce the same program with
+or without the interpreter line.
+
+#### Scenario: A shebang script runs with arguments
+
+- **WHEN** an executable file beginning `#!/usr/bin/env -S emit run` and printing `(command-line)` is
+  invoked as `./tool.scm --check a.scm`
+- **THEN** it prints `("./tool.scm" "--check" "a.scm")` and exits zero
+
+#### Scenario: Script and executable see the same arguments
+
+- **WHEN** the same source is invoked once as a shebang script and once as its `emit build`
+  executable, each with the arguments `-- -x`
+- **THEN** both programs receive `--` and `-x` after their command name
+
+#### Scenario: A space after the bang is an interpreter line
+
+- **WHEN** a program source begins with `#! /usr/bin/env -S emit run`
+- **THEN** `emit run` ignores the first line and runs the program
+
+#### Scenario: A leading case directive is still a directive
+
+- **WHEN** a program source begins with the line `#!fold-case` followed by `(display 'ABC)`
+- **THEN** the directive applies and the program prints `abc`
+
+#### Scenario: An interpreter line is recognized only on the first line
+
+- **WHEN** a program source contains `#!/usr/bin/env` on a line other than its first
+- **THEN** compilation reports a read error, as it does today
+
+#### Scenario: Standard input sources accept the line too
+
+- **WHEN** a program beginning with `#!/usr/bin/env -S emit run` is piped to `emit run -`
+- **THEN** the first line is ignored and the program runs
 
 ### Requirement: Every library-aware command accepts conventional library roots
 

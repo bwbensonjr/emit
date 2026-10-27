@@ -75,16 +75,43 @@ hi
 That is the same rule the REPL follows, and a delivered executable follows it too — so a program's
 output is identical however you run it. `emit run` also reads stdin, so `emit run < main.scm` works.
 
-Pass program arguments after a mandatory separator:
+Pass program arguments after the source file:
 
 ```sh
-emit run formatter.scm -- --check input.scm
+emit run formatter.scm --check input.scm
 ```
 
-Before `--`, Emit parses its own options and accepts at most one source file. After it, every token
-is forwarded unchanged; `(command-line)` sees `formatter.scm`, `--check`, and `input.scm`. Source
-read from stdin uses `-` as its logical command name. Non-executing modes such as `--emit` reject
-program arguments.
+Emit's own options go before the source file. Everything after the file, including `--` and
+anything that looks like an Emit option, is forwarded unchanged: `(command-line)` sees
+`formatter.scm`, `--check`, and `input.scm`, exactly what a delivered `formatter` executable would
+see for `formatter --check input.scm`. For source on stdin, name it `-`: `emit run - --check
+input.scm < formatter.scm`, whose command name is `-`. A `--` before the file ends Emit's options,
+for a source whose name starts with `-`. Non-executing modes such as `--emit` reject program
+arguments.
+
+### Running a program as a script
+
+Because arguments follow the file, a program can be an executable script. Start it with an
+interpreter line and mark it executable:
+
+```sh
+cat > greet.scm <<'EOF'
+#!/usr/bin/env -S emit run
+(import (scheme process-context))
+(display (string-append "hello, " (cadr (command-line))))
+(newline)
+EOF
+chmod +x greet.scm
+./greet.scm world
+```
+```
+hello, world
+```
+
+`emit run` and `emit build` ignore a first line that starts with `#!/` or `#! `, so the same file
+also builds into an executable. A first-line directive such as `#!fold-case` is still a directive.
+The `-S` is what lets `env` pass `run` as a separate argument; it is available on macOS and in GNU
+coreutils 8.30 and later.
 
 the `emit run` command uses LLVM's `-O1` JIT profile by default. Use `emit run -O0 main.scm` for the old
 unoptimized diagnostic/baseline path, or `emit run -O2 main.scm` when a longer-running program can
