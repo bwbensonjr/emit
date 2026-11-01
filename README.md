@@ -147,7 +147,7 @@ Hello, world!
 "Hello, Alice!"
 ```
 
-You can also run without the REPL and thenb build into a executable:
+You can also run without the REPL or build into a small, standalone executable:
 
 ```sh
 $ emit run main.scm
