@@ -1,69 +1,73 @@
 # Design Principles
 
-The core design principles of the Emit Scheme system, gathered from the project
-`CLAUDE.md`, the top-level `README.md`, and [`PIPELINE.md`](PIPELINE.md). Those sources
-remain authoritative; this page summarizes them in one place.
+Emit is a small, readable Scheme compiler and runtime system that
+leverages LLVM to provide efficient code, separate compilation, and
+identical behavior across the JIT-based read-eval-print loop and the
+generation of small, stand-alone executables.
 
-The common thread: Emit is a small, readable compiler where the same code produces the
-same result whether you run it in the REPL or as a shipped executable.
+## A simple, transparent compiler
 
-## 1. A simple, transparent compiler
+- The compiler aims to be as simple and easy to understand as
+  possible: clear control flow, separate stages, logging, and
+  visibility into what each stage does.
+- The frontend does only the top third of a classic Scheme compiler:
+  read, expand, core, assignment conversion, closure conversion,
+  lambda lifting, then emits textual LLVM IR.  Everything below that
+  (calling conventions, instruction selection, register allocation) is
+  left to LLVM (see [`PIPELINE.md`](PIPELINE.md)).
+- We experimented with using the nifty
+  [nanopass framework](https://nanopass.org/) for frontend
+  transformation passes, but settled on hand-written passes for
+  greater overall simplicity (see
+  [`RESULTS.md`](../openspec/changes/archive/2026-07-10-spike-nanopass-translation/RESULTS.md)).
 
-- The compiler aims to be as simple and easy to understand as possible: clear control
-  flow, separate stages, logging, and visibility into what each stage does.
-- The frontend does only the top third of a classic Scheme compiler: read, expand, core,
-  assignment conversion, closure conversion, lambda lifting, then emit textual LLVM IR.
-  Everything below that (calling conventions, instruction selection, register
-  allocation) is left to LLVM (see [`PIPELINE.md`](PIPELINE.md)).
-- The passes are hand-written. The project tried the nanopass framework against
-  hand-written passes and recorded the comparison in the archived OpenSpec change
-  `spike-nanopass-translation`.
+## Self-hosting with a verifiable fixed point
 
-## 2. Self-hosting with a verifiable fixed point
-
-- The compiler is written in Scheme and was first built with Chez Scheme. It now
-  compiles its own source to a byte-identical fixed point.
-- Day-to-day work needs only LLVM and libgc. Chez is kept only to verify: the
-  independent-host re-derivation of the fixed point and the trust check against stale
-  bootstrap files.
+- The compiler is written in Scheme and was bootstrapped with
+  [Chez Scheme](https://github.com/cisco/chezscheme). It now compiles
+  its own source to a byte-identical fixed point.
+- The resulting compiler is committed as LLVM IR under [`bootstrap/`](../bootstrap)
+  and can be built and used on any system with a supported LLVM tool chain.
+  No installed Scheme system is required.
 - `make regen` is a deliberate step you run when you choose, not an automatic build
   step. Changes to the compiler are proven by comparing the generated IR, which is why
   reformatting commits are kept separate from other edits.
 
-## 3. Standalone executables come first
+## Standalone executables come first
 
 - Building small, clean, self-contained native executables is a defining goal.
 - Binary size is a design concern. It favors compiling libraries separately over
   shipping a large prelude.
 - The three backends (AOT, JIT, bitcode) are checked to agree byte for byte.
 
-## 4. The REPL is the main development loop, and it matches the shipped build
+## The read-eval-print loop (REPL) uses the same compiler
 
-- Code you develop and debug in the REPL must compile to an executable that behaves
-  identically.
-- The REPL and the batch compiler share one compiler core, embedded in-process on a
-  persistent LLVM ORC/LLJIT host. That shared core is the main argument for embedding
-  the compiler.
+- Code developed and debugged dynamically in the REPL must compile to
+  an executable that behaves identically.
+- To achieve this, the REPL and the batch compiler are the same.
+- In the case of the REPL, the compiler is embedded in-process on a
+  persistent LLVM ORC/LLJIT host.
 
-## 5. The module is the shared unit of compilation
+## The module is the shared unit of compilation
 
-- A library compiles once to an artifact: IR or object code plus a compile-time export
-  interface.
-- That same artifact loads into the REPL and links into a static executable.
-- The prelude is treated as "library zero."
-- Exporting macros requires a compile-time interface kept separate by phase, not just
-  IR.
+- A module compiles as a library with an `.ll` LLVM IR file and an
+  `.exports` file containing information about the exported globals
+  and exported macro definitions, if any.
+- That compiled library can either load into the REPL or be used to
+  link into a static executable.
+- Exported macros are made available to the compiler when imported and are expanded
+  by the compiler 
 - The module syntax follows R7RS-small (`define-library`, `import`, `export`). See
   [`MODULES.md`](MODULES.md).
 
-## 6. Tools report what they do
+## Tools report what they do
 
 - Every tool, script and pipeline stage announces its action, names its inputs and
   outputs, and reports metrics such as sizes, durations and counts.
 - Output is concise by default and controlled by `EMIT_VERBOSITY`. Narration goes to
   stderr and data to stdout (see [`OUTPUT.md`](OUTPUT.md)).
 
-## 7. Process rules that support the above
+## Process rules that support the above
 
 - **Planning:** OpenSpec holds designs and work being started (`openspec/`).
 - **Bugs and performance debt:** correctness bugs go in GitHub Issues. Speed, memory

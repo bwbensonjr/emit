@@ -1,6 +1,9 @@
 # Emit
 
-A Scheme to LLVM compiler
+Emit is a small, readable Scheme compiler and runtime system that
+leverages LLVM to provide efficient code, separate compilation, and
+identical behavior across the JIT-based read-eval-print loop and the
+generation of small, stand-alone executables.
 
 Emit is a **self-hosting Scheme→LLVM compiler**: a hand-rolled
 frontend pipeline that emits textual LLVM IR, a small C runtime under
