@@ -489,5 +489,111 @@ else
 fi
 
 echo
+echo "emit build --static-gc (change: static-gc-link)"
+
+# The libgc library directory emit build resolves, read back from emit doctor so the test
+# follows the same override/discovery/default precedence the link does.
+GCLIB="$("$EMITABS" doctor 2>/dev/null | sed -n 's/^libgc library: \(.*\) \[.*\]$/\1/p')"
+
+# A binary's dynamic libgc dependencies, one per line; empty when it has none.
+gc_deps () {
+  case "$(uname -s)" in
+    Darwin) otool -L "$1" | tail -n +2 | grep -i 'libgc' ;;
+    *)      readelf -d "$1" | grep NEEDED | grep -i 'libgc' ;;
+  esac
+}
+
+if [ -z "$GCLIB" ] || [ ! -f "$GCLIB/libgc.a" ]; then
+  echo "  [SKIP] no libgc static archive at ${GCLIB:-<unresolved>}/libgc.a; static cases not run"
+else
+  # 39. A direct-source static build has no libgc dependency and prints what the default build
+  #     prints.
+  (cd "$BARE" && rm -f emit-libs.scm \
+     && EMIT_VERBOSITY=quiet "$EMITABS" build hello.scm -o dyn-hello \
+     && EMIT_VERBOSITY=quiet "$EMITABS" build --static-gc hello.scm -o sta-hello) \
+    >"$TMP/s39.log" 2>&1
+  rc=$?
+  if [ "$rc" -eq 0 ] && [ -n "$(gc_deps "$BARE/dyn-hello")" ] \
+     && [ -z "$(gc_deps "$BARE/sta-hello")" ] \
+     && [ "$("$BARE/sta-hello")" = "$("$BARE/dyn-hello")" ]; then
+    ok "--static-gc drops the libgc dependency and runs to the same output"
+  else
+    bad "--static-gc direct build (exit $rc)"; sed 's/^/         /' "$TMP/s39.log"
+    gc_deps "$BARE/sta-hello" | sed 's/^/         still needs: /'
+  fi
+
+  # 40. The static executable starts where libgc cannot be loaded.  On macOS the control is
+  #     the default build with its libgc load path rewritten to a missing file: it must fail to
+  #     start, while the static build -- which has no such load command -- runs in the same
+  #     stripped environment.  Elsewhere the NEEDED check in 39 is the evidence, plus a run
+  #     with an empty environment.
+  mkdir -p "$TMP/nogc"
+  cp "$BARE/sta-hello" "$TMP/nogc/sta-hello"
+  if [ "$(uname -s)" = Darwin ]; then
+    cp "$BARE/dyn-hello" "$TMP/nogc/dyn-hello"
+    lib="$(gc_deps "$TMP/nogc/dyn-hello" | awk '{ print $1 }' | head -1)"
+    # A short path: a longer one would not fit the executable's load-command padding.
+    install_name_tool -change "$lib" /var/empty/no-libgc.dylib "$TMP/nogc/dyn-hello" 2>/dev/null
+    codesign -f -s - "$TMP/nogc/dyn-hello" >/dev/null 2>&1
+    if (cd "$TMP/nogc" && env -i ./dyn-hello) >/dev/null 2>&1; then control=started
+    else control=failed; fi
+  else
+    control=failed
+  fi
+  got="$(cd "$TMP/nogc" && env -i ./sta-hello 2>/dev/null)"
+  if [ "$control" = failed ] && [ "$got" = "3" ]; then
+    ok "a --static-gc executable runs where libgc cannot be loaded"
+  else
+    bad "no-libgc run (control $control, static printed [$got])"
+  fi
+
+  # 41. A manifest program built with --static-gc lands at its entry's output path.
+  (cd "$PROJ" && rm -f build/myproj \
+     && EMIT_VERBOSITY=quiet "$EMITABS" build myproj --static-gc) >"$TMP/s41.log" 2>&1
+  rc=$?
+  if [ "$rc" -eq 0 ] && [ -x "$PROJ/build/myproj" ] && [ -z "$(gc_deps "$PROJ/build/myproj")" ] \
+     && [ "$("$PROJ/build/myproj" 2>/dev/null)" = "$VALUE" ]; then
+    ok "a manifest program builds with --static-gc at its output path"
+  else
+    bad "--static-gc manifest program (exit $rc)"; sed 's/^/         /' "$TMP/s41.log"
+  fi
+
+  # 42. The default narration names the link mode; quiet says nothing.  Apple's linker warns
+  #     about deprecated symbol flags inside a source-built libgc 8.2.8 archive (the CI
+  #     toolchain's); those lines are clang's, not Emit's narration, so they are set aside.
+  (cd "$BARE" && "$EMITABS" build --static-gc hello.scm -o sta-hello) >"$TMP/s42.log" 2>&1
+  q="$(cd "$BARE" && EMIT_VERBOSITY=quiet "$EMITABS" build --static-gc hello.scm -o sta-hello 2>&1 \
+       | grep -v '^ld: warning:')"
+  if grep -q "\[libgc static $GCLIB/libgc.a\]" "$TMP/s42.log" && [ -z "$q" ]; then
+    ok "emit build narrates the static libgc link, and quiet stays quiet"
+  else
+    bad "static link narration"; sed 's/^/         /' "$TMP/s42.log"
+  fi
+fi
+
+# 43. Without an archive, --static-gc names the path, exits non-zero, writes nothing, and does
+#     not fall back to the shared link.  Needs no archive of its own, so it always runs.
+mkdir -p "$TMP/shared-only"
+(cd "$BARE" && rm -f no-static \
+   && GC_LIB="$TMP/shared-only" "$EMITABS" build --static-gc hello.scm -o no-static) \
+  >"$TMP/s43.log" 2>&1
+rc=$?
+if [ "$rc" -ne 0 ] && [ "$rc" -lt 128 ] && [ ! -e "$BARE/no-static" ] \
+   && grep -q "libgc static archive not found at $TMP/shared-only/libgc.a" "$TMP/s43.log"; then
+  ok "--static-gc without an archive reports the path and writes nothing (exit $rc)"
+else
+  bad "--static-gc missing archive (exit $rc)"; sed 's/^/         /' "$TMP/s43.log"
+fi
+
+# 44. --static-gc is a delivery option, not a cache-warming one.
+"$EMITABS" build --static-gc --stdlib >"$TMP/s44.log" 2>&1
+rc=$?
+if [ "$rc" -eq 2 ] && grep -q 'incompatible with --static-gc' "$TMP/s44.log"; then
+  ok "--static-gc with --stdlib is a usage error"
+else
+  bad "--static-gc --stdlib (exit $rc)"; sed 's/^/         /' "$TMP/s44.log"
+fi
+
+echo
 echo "  $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

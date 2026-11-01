@@ -33,7 +33,7 @@ independently of cache visibility. Tags still run every gate; cache access is no
 Validated dependencies are saved before Emit tests so a later test failure does
 not discard the toolchain build. A missing release
 or wrong major fails the job. A cold LLVM build can take hours; link parallelism
-is limited to control memory use. Recipe 6 explicitly installs clang and its
+is limited to control memory use. The recipe explicitly installs clang and its
 required `clang-cpp` shared library, resource headers, llvm-config, the shared LLVM
 library, development headers, and the `llvm-as`, `llvm-link`, and `lli` backend
 commands for the native target; unused tool executables, other target backends, and the clang
@@ -54,7 +54,7 @@ Bash and other protected macOS tools discard. The LLVM library is selected from
 `llvm-config --libnames --link-shared`; the libgc ID retains its installed
 versioned filename. Only the exact current recipe completion identity is reused;
 older recipe stamps are rejected, never silently relabeled as current. The recipe
-6 completion stamp is written after every probe succeeds. The bundle manifest
+completion stamp is written after every probe succeeds. The bundle manifest
 must also match that exact completion stamp before packaging and after extraction.
 Every installation and cache hit compiles, links, and executes a small C program
 with `clang -flto` and implicit linker selection, a C++ standard-library program,
@@ -66,6 +66,11 @@ restore assembles two modules, links their bitcode, and executes it with `lli`;
 native embedding success alone cannot mask missing backend commands. An
 additional C probe asserts libgc 8.2.8 in both headers and `GC_get_version()`
 from the linked shared library, not just a compatible ABI or directory name.
+Recipe 7 also builds libgc as a static archive and installs it first into the
+same prefix, so `libgc.a` sits beside the shared library for
+`emit build --static-gc` while the later shared install's CMake and pkg-config
+metadata is what remains. A further probe links the runtime object against
+`libgc.a` and runs it without libgc's shared library.
 The LLVM and runtime probes execute through system Bash with DYLD overrides
 removed. The latter retains
 all runtime functions so unused code cannot hide missing builtin dependencies.

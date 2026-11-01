@@ -257,7 +257,8 @@ emit build main.scm
 ```
 ```
 build main.scm -> build/main  [source main.scm]
-wrote build/main  [155768 bytes exe]
+link 6 unit(s) + runtime -> build/main  [libgc shared /opt/homebrew/Cellar/bdw-gc/8.2.12/lib]
+wrote build/main  [70808 bytes exe]
 ```
 
 ```sh
@@ -279,6 +280,33 @@ open-world per-module JIT optimization. The missing tree shake in this path was 
 A `.scm`-suffixed or path-shaped operand is always direct source; `-o PATH` overrides its
 `build/<basename>` default. A bare operand remains a manifest program name. If a manifest has
 exactly one `(program …)` entry you can still omit the name (`emit build`).
+
+### Shipping without a libgc dependency
+
+By default the executable links the Boehm garbage collector (libgc) as a shared library, so it
+runs only where libgc is installed at the path it was linked against. `--static-gc` links libgc's
+static archive instead, and the executable then needs nothing beyond the platform's C library:
+
+```sh
+emit build --static-gc main.scm
+```
+```
+build main.scm -> build/main  [source main.scm]
+link 6 unit(s) + runtime -> build/main  [libgc static /opt/homebrew/Cellar/bdw-gc/8.2.12/lib/libgc.a]
+wrote build/main  [147080 bytes exe]
+```
+
+Check the result with `otool -L build/main` on macOS or `ldd build/main` on Linux: no libgc
+appears. The archive adds about 75-95 KB to these examples (link-time optimization drops the
+parts of libgc a program never reaches). It must sit beside the shared
+library, in the libgc directory `emit doctor` reports on its `libgc static archive` line;
+Homebrew's `bdw-gc` and Debian/Ubuntu's `libgc-dev` ship it. When it is missing, `emit build
+--static-gc` names the path it looked for and stops rather than falling back to a shared link; set
+`GC_LIB` to a libgc directory that holds `libgc.a`. libgc's MIT-style license permits static
+linking; include its copyright notice when you redistribute the binary.
+
+Only libgc becomes static. The executable still links the platform C library and libm
+dynamically, as every macOS program must.
 
 ## Compiling one library
 

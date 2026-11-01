@@ -17,7 +17,7 @@ network access. Declare these dependencies:
 | --- | --- |
 | build and run (`emit` links it dynamically) | LLVM 22 shared library, headers, and `llvm-config` |
 | build the host binary | clang/clang++ from the same LLVM, a C++ standard library |
-| run (`emit` links it dynamically) and AOT links | Boehm GC (`libgc`) library and headers |
+| run (`emit` links it dynamically) and AOT links | Boehm GC (`libgc`) library and headers; also its static archive `libgc.a`, in the same directory, for `emit build --static-gc` |
 | `emit build` at run time | that LLVM's clang, a C linker that can link `-flto` output (lld, or GNU ld with the LLVMgold plugin), libc development files |
 | build | GNU make, bash, POSIX utilities |
 
