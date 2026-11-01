@@ -138,10 +138,9 @@ From the `hello/` directory you can load the program into the REPL for testing:
 
 ```sh
 $ emit repl
-resolve libraries -> /private/tmp/hello/lib, /opt/homebrew/Cellar/em...
 Emit 0.4.0 (embedded compiler, ORC/LLJIT, LLVM 22.1.8).  ^D to exit.
 > (include "main.scm")
-resolve library (hello greeting) -> /private/tmp/hello/lib/hello/greeting.sld  [directory /private/tmp/hello/lib]
+resolve library (hello greeting) -> lib/hello/greeting.sld
 Hello, world!
 > (greeting "Alice")
 "Hello, Alice!"
@@ -155,10 +154,10 @@ Hello, world!
 $ emit build main.scm -o build/hello
 resolve manifest -> /opt/homebrew/Cellar/emit/0.4.0/share/emit/emit-libs.scm
 build main.scm -> build/hello  [source main.scm]
-resolve library (hello greeting) -> /private/tmp/hello/lib/hello/greeting.sld  [directory /private/tmp/hello/lib]
-resolve library (scheme base) -> /opt/homebrew/Cellar/emit/0.4.0/share/emit/lib/scheme/base.sld  [directory /opt/homebrew/Cellar/emit/0.4.0/share/emit/lib]
-resolve library (emit internal) -> /opt/homebrew/Cellar/emit/0.4.0/share/emit/lib/emit/internal.sld  [directory /opt/homebrew/Cellar/emit/0.4.0/share/emit/lib]
-resolve library (scheme write) -> /opt/homebrew/Cellar/emit/0.4.0/share/emit/lib/scheme/write.sld  [manifest /opt/homebrew/Cellar/emit/0.4.0/share/emit/emit-libs.scm]
+resolve library (hello greeting) -> lib/hello/greeting.sld
+resolve library (scheme base) -> /opt/homebrew/Cellar/emit/0.4.0/share/emit/lib/scheme/base.sld
+resolve library (emit internal) -> /opt/homebrew/Cellar/emit/0.4.0/share/emit/lib/emit/internal.sld
+resolve library (scheme write) -> /opt/homebrew/Cellar/emit/0.4.0/share/emit/lib/scheme/write.sld
 wrote build/hello  [52840 bytes exe]
 $ ./build/hello
 Hello, world!
