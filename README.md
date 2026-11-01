@@ -24,7 +24,7 @@ Emit 0.4.0 (embedded compiler, ORC/LLJIT, LLVM 22.1.8).  ^D to exit.
 1156
 ```
 
-## Package install
+## Package-based install
 
 ### Homebrew - macOS
 
@@ -39,7 +39,7 @@ nix profile upgrade emit
 nix profile remove emit
 ```
 
-## Install from source
+## Source-based install
 
 **LLVM and Boehm GC**
 
