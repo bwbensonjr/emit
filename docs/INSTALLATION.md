@@ -23,6 +23,22 @@ libraries, and AOT support files under `share/emit`. `make uninstall` with the s
 make uninstall PREFIX="$HOME/.local"
 ```
 
+## Native build configuration
+
+Each Make invocation refreshes toolchain discovery and checks `build/native-config`.
+It records the effective compilers, LLVM selection, libgc paths, native compile/link
+flags, `PREFIX`, version, and installed-file inventory. Changed configuration
+invalidates the dependent native objects and binaries before they are used or
+installed. With unchanged inputs, repeating `make` does no native rebuild beyond
+the discovery/configuration check.
+
+For example, `make LLVM_CONFIG=/path/to/other/llvm-config` selects another LLVM
+installation and rebuilds the native outputs that depend on that configuration.
+Use compatible clang and clang++ overrides as described in [toolchain setup](TOOLCHAIN.md).
+`DESTDIR` is excluded because it only stages installation. Configuration changes
+never invoke `make regen` or modify the committed `bootstrap/*.ll`; compiler-source
+changes need [explicit regeneration](DEVELOPMENT.md#regenerating-the-compiler).
+
 ## The shared library cache
 
 An install without `DESTDIR` then runs the installed `emit build --stdlib --shared`. This
@@ -161,7 +177,7 @@ links `emit` dynamically against LLVM and libgc. `emit build` needs that
 package's clang, headers, and linker, which each channel supplies. A delivered
 executable links libgc dynamically, so it runs where libgc is available. None of
 these channels produces standalone static executables. For what the language
-does not support yet, see the [README](../README.md#not-yet-done).
+does not support yet, see the [project restrictions](PROJECTS.md#limits-you-will-hit).
 
 ### Homebrew
 

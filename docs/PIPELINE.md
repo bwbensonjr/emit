@@ -63,9 +63,9 @@ The first production slice (`src/`) implements the spine as hand-rolled `match` 
 one observable intermediate language per stage (`--dump`):
 
 ```
-read (host) → prepend prelude → collect-toplevel → expand → parse+rename → inline-primitives
-            → recognize-let → convert-assignments → simplify → convert-closures → lambda-lift+lower
-            → emit .ll → clang(+runtime,+libgc)
+read source -> collect-toplevel -> expand -> parse+rename+imports -> inline-primitives
+            -> recognize-let -> convert-assignments -> simplify -> convert-closures -> lambda-lift+lower
+            -> emit .ll -> clang(+units,+runtime,+libgc)
 ```
 
 **Prelude.** `src/prelude.scm` is a small standard library (`not`, `list`, `length`, `reverse`,
@@ -76,8 +76,9 @@ the Chez driver, the REPL, and the Chez-free embedded runner — and, since
 `scheme.base:*` externals against a linked `scheme.base.ll`; the derived-form macros are merged
 compile-time). **User-wins shadowing** still holds (a user define of the same name beats the
 import). `--no-prelude` skips the auto-import and macro merge, so prelude names and derived forms
-are unavailable. (The `prepend prelude` box above is the historical model; the current mechanism
-is the `(scheme base)` auto-import — see the module-system spec.)
+are unavailable unless explicitly imported. The library set is compiled into
+separate units, linked or JIT-loaded alongside the program. See [the module
+reference](MODULES.md) and [bootstrap regeneration](DEVELOPMENT.md#regenerating-the-compiler).
 
 **Simplify.** `simplify` (change: `simplify-known-calls`) is the ladder's only *optimizing*
 pass — every other stage is a translation that changes representation and hands on the same
@@ -101,7 +102,7 @@ restrictions keep it honest:
   separate recursion test.
 - **A conservative folding window.** Folding is confined to operands within ±(2^30 − 1),
   the range in which no `+`, `-`, or `*` can leave the 61-bit fixnum range. The compiler is
-  self-hosted and emit's own fixnums wrap silently, so a fold may not compute first and
+  self-hosted and out-of-range fixnum arithmetic reports an error, so a fold may not compute first and
   range-check afterwards. A folded result must also survive being *emitted*; that was briefly
   the tighter constraint, because `encode-const` overflowed at 2^57 (issue #7, since fixed). Constant *propagation* has no window (copying computes
   nothing) but is restricted to **immediates** — a string or pair constant materializes at run
@@ -160,16 +161,17 @@ supplies the names. The branching/binding derived forms (`cond` — with `else`/
 tests — `and`, `or`, `when`, `unless`, `let*`) are ordinary prelude macros; **named `let`**
 is still hand-written in `expand.ss` because it overloads the core `let` keyword, as are the
 arity-driven n-ary arithmetic (`+ - *`) and comparison (`= < > <= >= eq? eqv?`) desugarings.
-A depth guard reports non-terminating macros instead of looping. Deferred: `let-syntax`,
-procedural macros, and full referential-transparency hygiene.
+A depth guard reports non-terminating macros instead of looping. Lexical
+`let-syntax`/`letrec-syntax` and internal syntax definitions are supported, with
+definition-site references and binding-aware literals. Procedural and identifier
+transformers remain unsupported. See [lexical macro semantics](MODULES.md#lexical-macros-and-compile-time-interfaces).
 
-**Reader (`read`).** The `read (host)` box above is still Chez's `read`, which turns the
-*source file* into forms at compile time. But the pipeline's own `read` now also exists **in
-Scheme**: `src/prelude.scm` defines `read-from-string`, a recursive-descent reader (integers,
-symbols, lists, `#t`/`#f`, `#\char`, `"strings"`, `'`-quote sugar, `;` comments) that any
-compiled program can call to parse text into data. Replacing the host `read` at the front of
-the pipeline with this Scheme reader is the concrete self-hosting milestone it sets up; string
-escapes, dotted pairs, quasiquote, and the wider number tower are noted follow-ons.
+**Reader (`read`).** The shipped compiler reads source with the Scheme reader
+implemented in `src/prelude.scm`, which also supplies `read-from-string` and the
+port-based `(scheme read)` library. It supports string escapes, dotted pairs,
+quasiquote, vectors, bytevectors, datum labels, and the supported numeric syntax.
+The independent Chez driver uses Chez's reader for source input. See
+[project lexical syntax and numeric restrictions](PROJECTS.md#limits-you-will-hit).
 
 **Inlining primitives (`inline-primitives`).** A universal core→core pass run in every
 compile path (`compile-forms`, `compile-program-with-imports`, `repl-lower-form`) right after

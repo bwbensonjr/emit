@@ -307,9 +307,13 @@ what lets an importing program call it directly instead of through its closure.
 ## What is in scope without an import
 
 `(scheme base)` is auto-imported into every program and session. It holds the procedures you would
-expect — `map`, `filter`, `append`, `fold-left`, `assoc`, the string and character operations,
+expect — `map`, `append`, `fold-left`, `assoc`, the string and character operations,
 vectors, bytevectors, hash tables, records — plus the derived forms `cond`, `case`, `when`,
 `unless`, `let*`, `do`, `guard`, and named `let`.
+
+Emit's `filter`, `fold-right`, and `iota` require `(import (emit list))`.
+SRFI implementations are also available through explicit imports; see
+[the shipped SRFIs](MODULES.md#using-the-srfi-1-package).
 
 R7RS-small puts sixteen names **outside** `(scheme base)`, and so does Emit. These need an explicit
 import:
@@ -399,24 +403,48 @@ values, which are the last resort.
 Nothing installed refers back into the tree it was built from, so the checkout can be deleted
 afterwards.
 
+## Language support
+
+Emit implements a subset of R7RS-small with explicit extensions. The reference
+standard under `docs/r7rs/` describes Scheme, not a claim that every feature is
+implemented. The main supported facilities are:
+
+| Area | Supported surface |
+| --- | --- |
+| Core language | Procedures with fixed, dotted, or rest-only parameters; application and `apply`; lexical bindings, mutation, recursion, proper tail calls, and multi-form programs. Program definition initializers and intervening expressions execute in source order. Internal definitions precede expressions in their body. |
+| Macros | Hygienic `syntax-rules`, `define-syntax`, lexical `let-syntax` and `letrec-syntax`, internal syntax definitions, and exported library macros with definition-site binding context. |
+| Data | Bounded exact integers, inexact real numbers, booleans, pairs/lists, interned symbols, Unicode characters and strings, mutable vectors and bytevectors, records, and Emit's hash-table extensions. |
+| Multiple values | `values` and `call-with-values`, including zero or many values. Live escape continuations and continuable exception handlers can also deliver multiple values. |
+| Control and errors | `dynamic-wind`, escape-only `call/cc`, `with-exception-handler`, `raise`, `raise-continuable`, `guard`, and catchable error objects. |
+| Libraries and portable source | R7RS `define-library`, imports and exports, nested `only`/`except`/`prefix`/`rename` import sets, `include`, `include-ci`, and `cond-expand`. |
+| I/O and processes | Textual file/string ports, datum reading and writing, command-line arguments, environment access, and process exit. |
+
+[Modules and libraries](MODULES.md) lists the shipped libraries and extensions.
+[LLVM conventions](../LLVM.md#ir-conventions-used-by-this-project) describes tagged
+values, the uniform calling convention, and runtime representation.
+
 ## Limits you will hit
 
 Emit is a real compiler with a deliberately small surface. The ones most likely to affect a
 project:
 
-- **An exported macro is `syntax-rules` only, at the body's top level.** `(export twice)` over a
+- **Transformers are `syntax-rules` only.** `(export twice)` over a
   `define-syntax` is supported, bare or renamed, and its template may reach the library's private
-  names — see [`MODULES.md`](MODULES.md#how-an-exported-macro-travels). But `let-syntax`,
-  `letrec-syntax`, `define-syntax` at an inner scope, `syntax-case`, and procedural transformers are
-  not. A typo inside an exported template is reported in the importing program rather than at the
-  library ([#56](https://github.com/bwbensonjr/emit/issues/56)).
-- **Imports are whole-library.** No `only`, `except`, `prefix`, or `rename` on the import side.
+  names. Lexical syntax bindings and internal syntax definitions also work;
+  `syntax-case` and procedural/identifier transformers are unsupported. See
+  [lexical macros and compile-time interfaces](MODULES.md#lexical-macros-and-compile-time-interfaces).
+- **Imports must resolve to available libraries.** `only`, `except`, `prefix`, and
+  `rename` work in programs, libraries, and the REPL. Conflicting bindings require
+  selection or renaming; an import set naming an absent export is an error. See
+  [import sets](MODULES.md#import-sets).
 - **A library may be assembled from several files.** `(include "f.scm" ...)` splices a file's forms
   into the body, `(include-ci ...)` does the same case-folded, `(include-library-declarations
   "d.scm")` splices *declarations* (a shared `export` list, an `import` block), and `(cond-expand
   ...)` selects declarations by feature. A filename resolves **beside the file that named it**, so a
-  library directory carries its own pieces. `include` in *program* position is not implemented — the
-  four are library declarations only.
+  library directory carries its own pieces. `include`, `include-ci`, and
+  `cond-expand` also work in programs, at the REPL, and in bodies;
+  `include-library-declarations` is for library declarations. See
+  [portable sources](MODULES.md#portable-sources).
 - **A library using `define-record-type` must import `(scheme base)`** — the constructor it lowers
   to builds its field vector with `list`.
 - **Numbers**: fixnums and flonums. Exact integers span `[-2^60, 2^60)` and an out-of-range result
@@ -443,36 +471,50 @@ project:
   backslash before a line break is the R7RS **line continuation** — the break and the next line's
   indentation contribute nothing. `#!fold-case` / `#!no-fold-case` persist through a source or
   input port, and `#0=` / `#0#` datum labels reconstruct shared and circular pairs and vectors.
-- **Control**: `call/cc` and `dynamic-wind` work. The exception surface you should use is `guard`,
-  `raise`, and `error` — `with-exception-handler` is bound, because it is the installer `guard`
-  expands to, but it does not give R7RS's resumable behavior (a `raise` inside it still aborts) and
-  `raise-continuable` resumes with all values returned by the current handler.
+- **Continuations have dynamic extent.** `call/cc` supports non-local exit while
+  its capturing call is live, including delivery of zero or multiple values.
+  Invoking it after that call returns raises a lifetime error. Unlimited-extent,
+  re-entrant continuations for generators, coroutines, or backtracking are not
+  implemented. `dynamic-wind` runs cleanup during escapes.
+- **Exception handlers distinguish continuable delivery.** `with-exception-handler`
+  installs a handler for the dynamic extent of its thunk. A handler invoked by
+  `raise` must escape; returning from it reaches the unhandled-error path.
+  `raise-continuable` instead resumes with all values returned by the handler.
+  A non-matching `guard` re-raises in the guard's dynamic environment, after
+  intervening cleanup, rather than in the original `raise` environment.
 - **A runtime-detected error is a condition you can catch.** A wrong-typed argument, an
   out-of-range index, a negative size, an exact-integer overflow, a division by zero, and `apply`
   with an improper last argument all raise into the same handler chain `raise` uses, so a `guard`
   around them works and the diagnostic arrives as the error object's message with no irritants.
-  Uncaught, they report and abort exactly as they did before. What stays **fatal**, and is not
-  delivered to any handler, is a violation of the runtime's own invariants: an arity mismatch,
-  exhausting the escape/guard frame stack, escaping to a frame that is no longer live, and
-  allocation failure. The line is that a condition about *data* leaves the machinery intact for a
-  handler to run on, and these say the machinery itself is unsound.
+  Runtime arity mismatches from indirect or `apply` calls are catchable too;
+  known-arity direct calls can be rejected during compilation instead.
+  Uncaught runtime errors report and abort. Exhausting the escape/guard frame
+  stack and allocation failure remain fatal runtime failures.
 - **`read-error?` and `file-error?` answer for their own sources.** A malformed `read` raises a read
   error, an unopenable file or a failed `delete-file` raises a file error, `error` raises neither,
   and a caught runtime trap is an `error-object?` of neither kind. There is no `error-object-kind`
   — R7RS-small has none, and these two predicates are the whole of the surface.
-- **An unsupported import set fails confusingly.** `(import (only (scheme inexact) sqrt))` reports
-  `program imports a library not found in the manifest`, because `(only …)` is read as a library
-  name. Use whole-library imports.
+- **Ports are textual and buffered in memory.** Binary ports, bytevector I/O,
+  and `char-ready?` are unsupported. Input files are read completely when opened;
+  standard input is read on its first use. Input operations require an explicit
+  port, for example `(read (current-input-port))` or
+  `(read-char (current-input-port))`. See [input-port restrictions](PRIMITIVES.md#documented-limitation--input-ports-slurp-at-open).
+- **Some standard libraries are absent.** `(scheme eval)`, `(scheme lazy)`,
+  `(scheme load)`, `(scheme repl)`, `(scheme time)`, and `(scheme r5rs)` are not
+  implemented. `(scheme complex)` is outside the real-only numeric surface.
 - **The final value is printed**, as shown above.
 
 ## If you are also changing the compiler
 
-The library sources under `lib/` are **generated** from `src/prelude.scm` (except
-`lib/scheme/inexact.sld`, which is hand-written) — do not edit them by hand. And note that the
-baked `(scheme base)` in the binary wins over a manifest entry for it, so editing
-`lib/scheme/base.sld` does not change what any command sees until you run `make regen`. That is the
-same rule for every command: the committed IR under `bootstrap/` is authoritative and is never
-silently rebuilt.
+Some library sources under `lib/` are generated from `src/prelude.scm` and the
+partition declarations in `src/prelude-surface.scm`; their headers identify them
+as generated. Other libraries are hand-authored or vendored. Edit the generator
+inputs for generated files. The baked `(scheme base)` in the binary wins over a
+manifest entry, so editing `lib/scheme/base.sld` does not change what a command
+sees until regeneration. Committed IR under `bootstrap/` is never silently rebuilt.
+
+See [compiler development](DEVELOPMENT.md#regenerating-the-compiler) for the
+source map, explicit regeneration procedure, and required validation.
 
 ## Where to go next
 

@@ -416,16 +416,18 @@ Three things are worth knowing about how these behave:
   on every rebinding, including the restore leg. The emitted IR is unchanged; the cost is one
   global load per call.
 
-### Two error channels, deliberately
+### Catchable port errors
 
-Port errors come back two different ways, and the split is intentional:
+Port errors use the same handler chain as other catchable runtime errors:
 
 - **Prelude-level errors are catchable R7RS error objects** — a nonexistent file, a closed
   port, `get-output-string` on a file port. `(guard (e (#t …)) (open-input-file "/nope"))`
   works.
-- **A port-directed primitive handed a non-port aborts with a diagnostic**, exactly as
-  `(+ 1 "a")` does. It is a primitive type error, not a condition; it is memory-safe and
-  reports, but `guard` does not catch it.
+- **Primitive type errors are catchable too.** A port-directed primitive handed
+  an invalid port and an arithmetic call such as `(+ 1 "a")` deliver runtime
+  error objects to an installed handler. Without a handler they report and abort.
+  Runtime arity errors from indirect calls use the same mechanism. Allocation
+  failure and exhaustion of the escape/guard frame stack remain fatal.
 
 ### Documented limitation — input ports slurp at open
 
@@ -451,8 +453,10 @@ all go through it, so refilling a buffer would be one accessor's business.
 - **Binary ports are out of scope** (`read-u8`, `write-u8`, `open-input-bytevector`, …).
   Bytevectors exist, so this is feasible; a second port flavour just doubles the surface with
   no current payer. Textual only.
-- **`(scheme file)` operations are a separate change** — `file-exists?`, `delete-file`, and
-  directory operations. Adjacent, not included.
+- **Filesystem operations have separate library homes.** `(scheme file)` supplies
+  standard file operations, including `file-exists?` and `delete-file`.
+  Directory listing, path classification, and atomic replacement require the
+  explicit `(emit filesystem)` extension; see [the filesystem library](MODULES.md#emit-filesystem--the-narrow-public-host-edge).
 - **The input operations require their port argument.** R7RS lets it default to
   `(current-input-port)`; here `(read-char p)` is the only spelling.
 

@@ -58,6 +58,22 @@ if that already runs at the final path, as Homebrew's and Nix's do. Run it after
 rewrites `bin/emit`, such as stripping. Remove `share/emit/library-cache` on uninstall.
 Without the cache the package still works; each user compiles the standard libraries once.
 
+## License notices and vendored sources
+
+Emit is released under the [MIT License](../LICENSE). Third-party sources retain
+their own licenses and notices:
+
+| Material | License and notice location |
+| --- | --- |
+| `test/r7rs/r7rs-tests.scm`, the chibi-scheme R7RS-small conformance suite | BSD 3-clause; [test/r7rs/LICENSE.chibi-scheme](../test/r7rs/LICENSE.chibi-scheme). Retain it when redistributing the test suite. |
+| `vendor/unicode/17.0.0/`, the inputs behind generated character tables | Unicode Data Files and Software License; [vendor/unicode/17.0.0/LICENSE.txt](../vendor/unicode/17.0.0/LICENSE.txt). Include it with packages carrying the derived tables. |
+| Optional sources under `lib/srfi/` | MIT or MIT-0 notices retained in the sources; [SRFI provenance and port notes](../lib/srfi/README.md). |
+
+Vendored inputs pinned to upstream bytes stay unchanged; where adding a source
+header would break that identity, keep attribution and license text beside the
+file. The SRFI 64 port has a recorded patch rather than a claim of unchanged
+upstream bytes. Preserve these accompanying notices in source redistributions.
+
 ## Check the staged package (no network, no Chez)
 
 ```sh
@@ -82,9 +98,9 @@ tools/offline-run.sh --hide "$HOME/src/emit-checkout" -- tools/ci-installed-smok
 
 ## Optional independent verification (needs Chez)
 
-The source checks and the independent-host checks re-derive the compiler with
-Chez Scheme. They are for maintainers who want that proof, and they are not
-needed to package or run Emit:
+Source consistency is Chez-free (`bash tools/test.sh source`). Direct source
+units and independent-host checks use Chez Scheme. These verification commands
+are for maintainers and are not needed to package or run Emit:
 
 ```sh
 bash tools/test.sh units        # direct source units under Chez

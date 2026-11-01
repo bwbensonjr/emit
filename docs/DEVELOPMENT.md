@@ -1,4 +1,89 @@
-# Development validation
+# Compiler development
+
+## Source and component map
+
+| Location | Role |
+| --- | --- |
+| `src/*.scm`, `src/*.ss`, `src/passes/` | Flat Scheme compiler sources: reader, expander, parser, passes, emitter, and shared compiler core. Entry programs select batch, embedded, or interactive operation. |
+| `src/prelude.scm`, `src/prelude-surface.scm`, `lib/` | Standard-library implementation, partition/export declarations, and generated or hand-authored R7RS library sources. |
+| `src/repl-core.ss` | Interactive compilation state and per-form orchestration, sharing the batch compiler core. |
+| `src/emit.cpp` | Native command host for `emit run`, `emit repl`, `emit build`, and `emit lib`; embeds the compiler, manages ORC/LLJIT, and invokes clang for executable delivery. |
+| `src/runtime/` | C runtime, tagged values, allocation under Boehm GC, and host I/O edges. See [LLVM conventions](../LLVM.md#ir-conventions-used-by-this-project). |
+| `src/run-boot.cpp` | Minimal batch host used by regeneration; it is not the installed command. |
+| `bootstrap/` | Committed compiler and baked-library LLVM IR used by normal native builds. |
+| `tools/compiler-inputs.sh`, `tools/regen.sh` | Authoritative assembly/input inventory and self-hosted regenerator. |
+| `test/`, `demos/`, `tools/test-registry.json` | Unit/regression tests, example programs, and the validation inventory. |
+| `historical/genesis/` | Frozen Chez assembler and earlier library-structured sources, retained for provenance. |
+| `openspec/` | Current specifications, active changes, archived designs, and explorations. |
+
+See [the complexity catalogue](COMPLEXITY.md) for component sizes and generated,
+vendored, and hand-authored classifications; [the pipeline](PIPELINE.md) explains
+the compiler stages.
+
+## Regenerating the compiler
+
+Normal `make` links the committed `bootstrap/*.ll` inputs. Editing Scheme compiler
+source does not silently regenerate them. After finishing a compiler-source edit,
+run `make regen` explicitly; regeneration itself needs LLVM and libgc, without Chez.
+
+The bootstrap artifacts have distinct roles:
+
+| Artifact | Consumer |
+| --- | --- |
+| `bootstrap/embed.ll` | The minimal `build/emit-boot` batch runner that drives self-compilation. |
+| `bootstrap/embed-repl.ll` | The mode-dispatched embedded compiler linked into the shipped `emit` host, serving all four commands. |
+| `bootstrap/schemec.ll` | The optional `build/schemec` source-to-IR filter. It does not resolve library imports and is not the regeneration seed. |
+| `bootstrap/emit.internal.ll`, `bootstrap/scheme.base.ll` | The baked substrate and standard library linked with the compiler artifacts. |
+
+`make regen` runs [tools/regen.sh](../tools/regen.sh), then relinks the native
+binaries. Its three stages are:
+
+1. Assemble the flat compiler sources in the order declared by
+   [tools/compiler-inputs.sh](../tools/compiler-inputs.sh). The embedded targets
+   carry the prelude source as a string; the prelude is not prepended as program
+   definitions. Compiler sources use the baked library set.
+2. Link `build/emit-boot` from the committed batch compiler and baked libraries.
+   Use it to compile the assembled batch compiler, producing both the baked
+   modules and compiler IR. Relink the runner and repeat until every module is
+   byte-identical across successive generations. This is the self-hosting fixed
+   point; Chez does not participate.
+3. Use the converged runner to emit `schemec.ll` and `embed-repl.ll`, publish the
+   bootstrap modules, and record a content-bound source fingerprint. The Make
+   target then rebuilds `emit` and `schemec` from those modules.
+
+Use `bash tools/compiler-inputs.sh --list` for the current regeneration-input
+inventory and `--bootstrap` for the declared output modules. Do not maintain a
+second assembly list in documentation.
+
+Regeneration is a barrier: finish those input edits first, then keep them fixed
+until validation completes. Compiler acceptance requires direct source units,
+full native regression, classified targeted reference checks, and the isolated
+source comparison:
+
+```sh
+bash tools/test.sh units       # current Scheme source, before regeneration
+make regen
+bash tools/test.sh full
+bash tools/test.sh units
+bash tools/test.sh source
+```
+
+Also run the targeted reference suites selected by
+`bash tools/test.sh --classify BASE --ci` for the change, replacing `BASE` with
+its comparison revision. `bash tools/test.sh reference` runs the complete
+independent-host inventory when needed. Chez is required for units and reference
+checks, but not for regeneration, native checks, or source consistency.
+
+The `source` profile regenerates an isolated snapshot of the current working-tree
+inputs, including uncommitted changes and deletions, and compares every declared
+bootstrap module. It never rewrites this checkout. Independent-host verification
+instead re-derives the compiler under Chez; it proves a separate claim. A local
+fingerprint is only a freshness hint and replaces neither proof.
+
+If explicit regeneration is interrupted, rerun it to convergence before relying
+on native results: `bootstrap/` may contain modules from different generations.
+
+## Development validation
 
 `tools/test.sh dev` is focused feedback, not comprehensive verification. It checks
 CLI/help, diagnostics, closures, runtime errors, persistent REPL state, AOT, and

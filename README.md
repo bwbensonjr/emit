@@ -1,62 +1,67 @@
 # Emit
 
-Emit is a small, readable Scheme compiler and runtime system that
+Emit is a small  Scheme compiler and runtime system that
 leverages LLVM to provide efficient code, separate compilation, and
 identical behavior across the JIT-based read-eval-print loop and the
 generation of small, stand-alone executables.
 
-Emit is a **self-hosting Scheme→LLVM compiler**: a hand-rolled
-frontend pipeline that emits textual LLVM IR, a small C runtime under
-Boehm GC, and **three backends** (AOT, JIT, bitcode) that are checked
-to agree byte-for-byte. There is an **interactive REPL** on a
-persistent LLVM ORC/LLJIT host, where each form is compiled by the
-**embedded compiler in-process** into a long-lived session. The
-compiler is written in Scheme and compiles its own source to a
-**byte-identical fixed point** — so the day-to-day build, run, REPL,
-inspect (`--dump`), and recompile loop needs **only a recent LLVM +
-libgc**. The ability to host with Chez Scheme survives as the historical
-genesis (`historical/genesis/`) and as the **verification** host: the
-anti-stale trust-check, the independent-host re-derivation of the fixed
-point, and the reference the shipped stage dump is checked against. The
-implementation prioritizes simple, transparent stages (see
-`CLAUDE.md`); development is OpenSpec-driven, tracked under
-`openspec/`. There is a high-level architectural goal of generating
-standalone native-code executables while also supporting incremental
-REPL-based development and debugging.
+```
+$ emit --help
+emit 0.4.0 (LLVM 22.1.8)
+usage: emit <verb> [args]
+  emit run  [FILE] [--manifest F] [--no-prelude]     compile and run a program
+  emit repl [--manifest F] [--no-prelude]            interactive REPL
+  emit build [NAME|FILE] [--manifest F] [-o OUT] [--no-prelude]   deliver a native exe
+  emit lib  SRC [-o DIR] [--manifest F]              compile one library -> artifact
+  emit doctor [options]                              inspect the installation
+  emit --version                                     Emit and build-time LLVM versions
+  emit help [VERB]                                   this summary, or a verb's usage
+$ emit repl
+resolve libraries -> /Users/bwb/lib, /opt/homebrew/Cellar/emit/0.4.0/share/emit/em...
+Emit 0.4.0 (embedded compiler, ORC/LLJIT, LLVM 22.1.8).  ^D to exit.
+> (define (square n) (* n n))
+> (square 34)
+1156
+```
 
-## Quick start
+## Package install
 
-**Writing your own project?** [`docs/PROJECTS.md`](docs/PROJECTS.md) is the guide: conventional
-`lib/<components>.sld` libraries, optional manifests, the `emit repl` development loop, and `emit build` for a delivered
-executable. The quick start below is the compiler's own build.
+### Homebrew - macOS
 
-**Install a recent LLVM + libgc.** The toolchain is discovered via `llvm-config` and
-`pkg-config bdw-gc` (see `tools/llvm-env.sh`), so any reasonably recent install works:
+```sh
+brew install bwbensonjr/emit/emit
+```
+
+### Nix - Linux/x86, macOS/x86
+
+```sh
+nix profile upgrade emit
+nix profile remove emit
+```
+
+## Install from source
+
+**LLVM and Boehm GC**
 
 ```sh
 # macOS (Homebrew)
 brew install llvm bdw-gc
+
 # Debian/Ubuntu (apt) -- e.g. LLVM 22; clang provides the AOT compiler
 sudo apt-get install llvm-22 clang-22 libgc-dev
 ```
 
-LLVM 22+ is expected (older warns but is not blocked; set `EMIT_LLVM_MIN` to change the floor).
-Maintained CI covers LLVM 22 and 23 on Linux and macOS; discovery has no upper bound.
-If discovery picks the wrong toolchain, point it explicitly: `LLVM_CONFIG=/path/to/llvm-config`
-(or `EMIT_LLVM_BIN=/path/to/llvm/bin`) and `GC_INC` / `GC_LIB` for libgc.
-
-Each Make invocation refreshes discovery and records the effective compilers, LLVM identity,
-libgc paths, native flags, and `PREFIX` in `build/native-config`. If one of those values changes,
-the native host objects and binaries rebuild before they are used or installed; an unchanged
-invocation is a no-op apart from the discovery check. For example, run `make` twice to exercise
-the no-op case, then use `make LLVM_CONFIG=/other/llvm-config` to exercise configuration
-invalidation. This does not run `make regen` or modify the committed `bootstrap/*.ll` inputs.
-`DESTDIR` is intentionally absent from the signature because it only stages an install.
+**Emit**
 
 ```sh
-# build the single shipped binary from the committed compiler LLVM IR
-make                       # -> build/emit  (verbs: run / repl / build / lib)
+git clone https://github.com/bwbensonjr/emit.git
+make
+make install PREFIX=~/.local
+```
 
+**Testing**
+
+```sh
 # In-process compile-and-run. The compiled compiler is linked into
 # build/emit; `emit run` compiles the program to IR in-process and JITs
 # it via ORC/LLJIT.
@@ -94,387 +99,149 @@ cat src/prelude.scm demos/fact.scm | build/schemec > /tmp/fact.ll   # source tex
 ./run-all-tests.sh
 ```
 
-**Installing.** `make install` puts `emit` on a prefix together with the library sources it
-needs beside it. `(scheme base)` and `(emit internal)` are baked; every other shipped library
-occupies its conventional `<prefix>/share/emit/lib/<components>.sld` path. The compatibility
-manifest remains available for exact mappings:
+## Building a project
+
+Keep the program's entry point in a `.scm` file and reusable code in R7RS
+libraries under `lib/`. For example, a small greeting program:
+
+```text
+hello/
+  main.scm
+  lib/
+    hello/
+      greeting.sld
+```
+
+In `lib/hello/greeting.sld`, define a library and export its public procedures:
+
+```scheme
+(define-library (hello greeting)
+  (import (scheme base))
+  (export greeting)
+  (begin
+    (define (greeting name)
+      (string-append "Hello, " name "!"))))
+```
+
+In `main.scm`, import the library and use it:
+
+```scheme
+(import (scheme base)
+        (scheme write)
+        (hello greeting))
+
+(display (greeting "world"))
+(newline)
+```
+
+From the `hello/` directory, run the program during development, then compile
+it into a native executable:
 
 ```sh
-make install                      # -> /usr/local/bin/emit + /usr/local/share/emit/
-make install PREFIX=$HOME/.local  # a different prefix (also baked in as the fallback)
-make install PREFIX=/usr/local DESTDIR=/tmp/stage   # stage for a packager
+emit run main.scm                 # Hello, world!
+emit build main.scm -o build/hello
+./build/hello                    # Hello, world!
 ```
 
-Installation prepares a shared library cache after copying the payload, in
-`share/emit/library-cache`. It holds the shipped manifest's libraries and their default
-`-O1` native objects, compiled by the installed binary. Every user reads it before their
-own cache, so the first command starts without compiling the standard libraries. The
-Homebrew, Nix, and OCI packages ship it too. A staged `DESTDIR` install, or
-`WARM_STDLIB=0`, defers it; run `emit build --stdlib --shared` once the payload is in
-place. `emit doctor` reports whether it matches the running binary. Deleting it is always
-safe; see [docs/INSTALLATION.md](docs/INSTALLATION.md#the-shared-library-cache).
+Emit finds `(hello greeting)` at `lib/hello/greeting.sld`, compiles its
+dependencies, and links the libraries the program uses. No manifest or separate
+library build is needed for this layout. Use `-L DIR` to add other library roots.
+The executable runs without Emit installed; it still needs Boehm GC (`libgc`)
+available on the target system.
 
-New entries go to the user's cache. `EMIT_CACHE` selects it; otherwise Emit uses
-`$XDG_CACHE_HOME/emit`, `~/Library/Caches/emit` on macOS, or `~/.cache/emit` on Linux.
-`emit build --stdlib` prepares it explicitly. That command skips entries the shared cache
-already provides, and exits nonzero on failure. An automatic preparation failure during
-installation reports a retry command and leaves the installation usable.
+For a named build target, add an `emit-libs.scm` file at the project root:
 
-All four installed commands work from any directory. Projects normally use their own `./lib`;
-repeatable `-L` / `--library-path` and `EMIT_LIBRARY_PATH` add roots, while
-`--no-library-paths` disables every directory provider.
+```scheme
+((program hello (source "main.scm") (output "build/hello")))
+```
 
-`emit --version` reports the Emit release and the LLVM version used to build it.
-`emit doctor` reports the selected native toolchain, libgc, shipped source files,
-and library providers in lookup order. It makes no changes and exits nonzero when
-required checks fail. On macOS, Apple clang may be selected from PATH. Doctor
-reports its textual-IR compatibility as unverified because Apple's vendor version
-does not identify an upstream LLVM major. An older upstream clang still fails the
-check; set `CC=/path/to/llvm/bin/clang` to select the LLVM installation's compiler.
-Doctor cannot run if a missing dynamic library prevents Emit itself from loading.
-See [diagnostic fields and status](docs/DOCTOR.md) for details.
-See [installation and relocation](docs/INSTALLATION.md),
-[version policy](docs/RELEASES.md), and [source releases](docs/RELEASE-PIPELINE.md)
-for packager and release instructions. Source builds need no Git metadata, Chez,
-or network access once native build dependencies are installed.
+Then `emit build hello` builds the same executable. With just one program entry,
+`emit build` is enough. Paths in the manifest are relative to the manifest file.
+See [Modules and libraries](docs/MODULES.md) for more on library layout,
+manifests, and separate compilation.
 
-Optional `(srfi 1)`, `(srfi 2)`, `(srfi 8)`, `(srfi 227)`, and an explicitly
-documented `(srfi 64)` port ship as ordinary sources under `lib/srfi/`, not in the
-baked prelude. SRFI 64 supports portable test runners and real approximate
-comparisons; `test-read-eval-string` reports unsupported string evaluation.
-See [the SRFI support and artifact workflow](docs/MODULES.md#using-the-srfi-1-package).
+## Using SRFIs
 
-**Changing the compiler.** Edit the source, then regenerate the committed IR and relink —
-the compiled compiler recompiles itself. See
-[Regenerating the compiler](#regenerating-the-compiler-bootstrap) for how it works and the
-anti-stale trust-check.
+Emit ships optional source libraries for SRFI 1 (lists), 2 (`and-let*`),
+8 (`receive`), 64 (testing), and 227 (`opt-lambda`). Import them by number;
+they are available in both checkouts and installations without a separate
+download.
+
+For example, save this as `sum-evens.scm`:
+
+```scheme
+(import (scheme base)
+        (scheme write)
+        (prefix (srfi 1) s1:))
+
+(define numbers (s1:iota 10 1))
+(display (s1:fold + 0 (s1:filter even? numbers)))
+(newline)
+```
 
 ```sh
-make regen                 # reassemble source (cat) + self-compile IR + relink
+emit run sum-evens.scm                        # 30
+emit build sum-evens.scm -o build/sum-evens
+./build/sum-evens                             # 30
 ```
 
-The Chez-gated developer/CI suite (backend equivalence, the self-hosting fixed point, the
-IL-level unit tests, and the trust-check) is `./run-dev-tests.sh`; it auto-skips when `chez`
-is absent.
+The `prefix` import gives SRFI 1's exports names such as `s1:fold` and
+`s1:filter`, keeping them distinct from other imported bindings. You can also
+import a library directly, as in `(import (srfi 8))`, or select particular
+exports with `(import (only (srfi 1) iota fold))`. The same imports work in
+`emit repl` and inside a `define-library` declaration.
 
-The Chez batch JIT backend loads libgc with `lli --dlopen`, supported by LLVM
-22 and 23. To check a selected installation, run
-`LLVM_CONFIG=/path/to/llvm-config demos/run-backends.sh` and
-`LLVM_CONFIG=/path/to/llvm-config test/modules-tests.sh`.
-Interactive regression cases require both expected stdout and a successful
-session exit; failures print the saved child status and stderr. Recoverable form
-errors still allow the session to finish successfully after evaluating later forms.
-
-### Interactive REPL
-
-`emit repl` is a read-eval-print loop backed by a **persistent
-LLVM ORC/LLJIT host** (the `repl` verb of `src/emit.cpp`, built by `make
-emit`). The host **A-links the embedded compiler** (the committed
-`bootstrap/embed-repl.ll`) and compiles each entered form **in-process
-— no per-form subprocess**. Each form is compiled to its own module
-and added to a long-lived JIT in which the GC heap, symbol table, and
-runtime stay alive, so definitions, closures, and heap values persist
-across forms and top-level names can be redefined. A bad form's
-compile error is reported and the session state rolled back (via
-in-language `guard`), and runtime traps (e.g. arity errors) are
-isolated, so the session continues; `^D` (end of input)
-exits. References resolve to earlier forms only — mutual top-level
-recursion (which the whole-program batch `letrec` supports) is not
-available interactively. (A Chez Scheme launcher, `chez --libdirs src
---script src/compile.ss --repl`, builds and execs the same host.)
-
-## Regenerating the compiler (bootstrap)
-
-The binaries are linked from **committed compiler IR** under `bootstrap/` — host-agnostic
-stage-0 artifacts that are the **favored, authoritative form**:
-
-- `bootstrap/schemec.ll` — the batch text→IR filter compiler
-- `bootstrap/embed.ll` — the in-process runner's embedded compiler
-- `bootstrap/embed-repl.ll` — the interactive REPL's embedded compiler
-- `bootstrap/scheme.base.ll` and `bootstrap/emit.internal.ll` — the prelude re-homed as a
-  **baked library set**: the standard library plus the internal substrate it imports, which all
-  three binaries link (the compiler is re-homed on them too, so its IR references `scheme.base:*`
-  and `emit.internal:*` externals instead of inlining the prelude — see "Changing the compiler")
-
-These are produced by the **compiled compiler itself** (the self-hosting fixed point), so they
-regenerate. The default `make` treats them as **checked-in inputs**: it links
-them with LLVM only and never regenerates them. To rebuild them after a compiler-source change:
+To use another SRFI supplied as portable R7RS source, put its library and any
+included files under your project's `lib/` directory, preserving their relative
+paths. For example, `(srfi 42)` resolves to `lib/srfi/42.sld`. Alternatively,
+point Emit at a directory containing that hierarchy:
 
 ```sh
-make regen                 # see tools/regen.sh
+emit run -L /path/to/libraries main.scm
+emit build -L /path/to/libraries main.scm -o build/app
 ```
 
-`regen` (1) **assembles** the flat source by ordered `cat` — the
-source files are already concatenation-ready (flat
-`match.scm`/`util.scm`, `core.ss` with no `include`s, per-target
-`entry-*.scm`), **without prepending the prelude** — and (2) **compiles**
-with the module-aware compiler, which auto-imports `(scheme base)`
-into the compiler sources and iterates the fixed point over
-`{scheme.base.ll, embed.ll}` (emitting `scheme.base.ll` from
-`lib/scheme/base.sld`) before emitting `schemec.ll` / `embed-repl.ll`.
-The fixed point is driven by a minimal batch runner (`build/emit-boot`,
-`src/run-boot.cpp`), relinked each iteration; the shipped `emit` binary
-is relinked afterward by `make all`. The `schemec` filter is no longer the
-bootstrap seed — it cannot resolve the `(scheme base)` import.
+External libraries must use features Emit supports. See the
+[shipped SRFI notes](lib/srfi/README.md) for versions and limitations, including
+the SRFI 64 port.
 
-Because the default build does not auto-regenerate (design D4 — this deliberately **reverses**
-the earlier `fix-stale-repl-host-rebuild` auto-rebuild-on-source-change, so the committed IR
-is authoritative and never silently rebuilt), a **trust-check** guards against stale IR:
-`tools/test.sh source` (also retained through `test/trust-check.sh` and
-`run-dev-tests.sh`) regenerates in an isolated clean checkout and compares every
-committed bootstrap module byte-for-byte. A compiler edit that forgot `make regen`
-fails loudly in CI without changing the developer checkout or requiring Chez.
-`test/self-host-fixpoint.sh` doubles as an **independent-host** re-derivation: Chez rebuilds
-the compiler from the current flat source and must reach the *same committed* fixed point.
+## Compiler transformations
 
-Chez is needed only for explicit source-unit and independent-host verification,
-not native `dev`/`full`/`compat` or source-consistency profiles. Code PRs run full
-LLVM 23 and focused LLVM 22 validation on both platforms; prose-only changes avoid
-the compiler matrix. See [toolchain CI](docs/TOOLCHAIN.md) and the shared
-`tools/test.sh` profiles. The pre-flattening Chez assembler and
-library-structured source are frozen under `historical/genesis/`.
+You can view the various front-end compiler transformations using the
+`--dump` argument with `repl`, `run`, etc.
 
-## Layout
+```sh
+$ echo "(define (square n) (* n n)) (square 34)" | emit run --dump
+resolve manifest -> /opt/homebrew/Cellar/emit/0.4.0/share/emit/emit-libs.scm
+;; ==== after collect-toplevel ====
+(letrec ((square (lambda (%binding.0) (* %binding.0 %binding.0)))) (square 34))
 
-- `src/` — the **flat, concatenation-ready** compiler source (the single source of truth):
-  `match.scm` (pattern matcher), `util.scm` (helpers), `parse.ss`, `passes/`, `emit.ss`,
-  `core.ss` (the pure forms→IR core; no `include`s — the passes are concatenated ahead of it),
-  `prelude.scm` (standard library), `repl-core.ss` (interactive orchestration), and the
-  per-target entries `entry-{schemec,embed,repl}.scm`. `compile.ss` is the Chez driver, which
-  `(include ...)`s the same flat files (no separate library tree).
-- `src/emit.cpp` — the **unified front-end** (`build/emit`), the sole user-facing entry point,
-  dispatching four verbs to one shared compiler core: `run` (in-process compile-and-run; also
-  `--emit` to write IR and `--resolve-program`), `repl` (persistent LLVM ORC/LLJIT interactive
-  host), `build` (deliver a native exe from direct source or a manifest `(program …)` entry — emits IR in-process
-  and forks `clang`), and `lib` (compile one `define-library` to its `.ll`, `.exports`,
-  and `.artifact` files).
-  All four A-link the committed embedded compiler (`bootstrap/embed-repl.ll` + the baked library
-  set); `make emit` (re)builds it. With the prelude re-homed as a baked set the run/AOT paths emit
-  one module per baked library and then the program, separated by boundary markers.
-- `src/run-boot.cpp` — a minimal **batch bootstrap runner** (`build/emit-boot`) used only by
-  `tools/regen.sh` to drive the self-hosting fixed point; not a shipped path.
-- `bootstrap/` — committed host-agnostic stage-0 IR (the authoritative form): `schemec.ll`
-  (batch filter), `embed.ll` (batch runner), `embed-repl.ll` (the mode-dispatched compiler `emit`
-  links), and the baked library set `scheme.base.ll` + `emit.internal.ll` (the prelude re-homed as
-  `(scheme base)` and the substrate it imports, linked into all); regenerate with `make regen`.
-- `tools/regen.sh` — the regenerator (ordered-`cat` assembly + self-hosted compile).
-- `historical/genesis/` — the frozen pre-flattening genesis: the Chez Scheme assembler
-  (`assemble-core.ss`) and library-structured `match.sls`/`util.ss` (provenance; not maintained).
-- `demos/` — example programs and the `run-tests.sh` (`RUNNER=emit-run|aot`) / `run-backends.sh`
-  / `run-embedded.sh` harnesses.
-- `test/` — REPL harnesses, the front-end unit tests, `self-host-fixpoint.sh`, and `trust-check.sh`.
-- `run-all-tests.sh` — the default suite (shipped binaries); `run-dev-tests.sh`
-  — the **Chez-gated** developer/CI suite (backends, self-host, IL units, trust-check).
-- `openspec/` — specs (`specs/`), archived changes (`changes/archive/`), and forward-looking
-  notes (`explorations/`).
-- `LLVM.md`, `docs/PIPELINE.md` — value representation / calling convention, and the pass
-  ladder.
-- `docs/PRIMITIVES.md` — the primitive layer: how every primitive is an ordinary, shadowable,
-  universal procedure, and how the `inline-primitives` pass recovers bare-metal codegen.
-- `docs/MODULES.md` — using the module system: writing a `define-library`, `import`/`export`, the
-  manifest (`emit-libs.scm`), building/running an importing program on each path, and `(scheme base)`.
-- `docs/OUTPUT.md` — the tool-output convention: message format, stderr/stdout discipline,
-  the `EMIT_VERBOSITY` control that every build/compile/regen/test tool honors, and the
-  `--dump` / `--dump-all` stage dumps.
-- `tools/log.sh` — the shared `say`/`vsay`/`bytes` helpers that implement that convention.
-- [`docs/COMPLEXITY.md`](docs/COMPLEXITY.md) — a catalogue of the tree by component, role, and
-  language, separating the hand-authored system from generated IR, vendored code, and OpenSpec
-  tracking. Regenerate with `make catalogue`.
+;; ==== after expand ====
+(letrec ((square (lambda (%binding.0) (* %binding.0 %binding.0)))) (square 34))
 
-## Pipeline
+;; ==== after parse+rename+imports ====
+(letrec
+  ((square.0 (lambda (%binding.0.1) (primcall %* %binding.0.1 %binding.0.1))))
+  (call square.0 (const 34)))
 
-Hand-rolled `match` passes, one observable intermediate language per `--dump` stage:
+;; ==== after recognize-let ====
+(letrec
+  ((square.0 (lambda (%binding.0.1) (primcall %* %binding.0.1 %binding.0.1))))
+  (call square.0 (const 34)))
 
+;; ==== after convert-assignments ====
+(letrec
+  ((square.0 (lambda (%binding.0.1) (primcall %* %binding.0.1 %binding.0.1))))
+  (call square.0 (const 34)))
+
+;; ==== after simplify ====
+(const 1156)
+
+;; ==== after convert-closures ====
+(const 1156)
+
+;; ==== after lower ====
+(program () (const 1156))
+
+1156
 ```
-read source → collect-toplevel → expand → parse+rename+imports → inline-primitives
-            → recognize-let → convert-assignments → simplify → convert-closures
-            → lambda-lift+lower → emit .ll → clang (+ units, + runtime, + libgc)
-```
-
-The standard library is not prepended: it is the auto-imported module `(scheme base)`, compiled to
-its own unit and linked (or JIT-loaded) alongside the program, together with the internal substrate
-`(emit internal)` it imports. The implemented standard-library surface outside `(scheme base)`
-lives in `(scheme cxr)`, `(scheme read)`, `(scheme file)`, and `(scheme inexact)`, which are **not**
-auto-imported — see [`docs/MODULES.md`](docs/MODULES.md).
-
-Values are tagged 64-bit words. All 8 tags are assigned: fixnum, boolean, nil, pair,
-closure, box, symbol (interned), and an extended/header-word object (tag 7) hosting strings
-(UTF-8), vectors, bytevectors, records, hash tables, multiple-values bundles, and **flonums**
-(inexact reals — a boxed IEEE double, `HDR_FLONUM`; a double needs all 64 bits, so it cannot
-be an immediate). The boolean tag `001` is a misc-immediate family (a 5-bit subtype selects
-boolean vs. character vs. reserved singletons), so characters are **immediate** words carrying
-their Unicode codepoint — no heap object, no interning. Every Scheme function shares one `fastcc`
-prototype `(self, argc, a0…a{K-1}, overflow)`, so tail calls are emitted `musttail`
-(bounded stack verified at 10M iterations).
-
-## Accomplished
-
-**Language**
-- Core: `lambda`, `if`, `let`/`letrec`, `begin`, `set!`, application, top-level `define`,
-  multi-form programs. Program definition initializers and intervening expressions
-  execute in source order, so later definitions observe earlier mutations. Internal
-  definitions must still precede expressions in their body.
-- Derived forms: `cond` (with `else`/`=>`/bare-test clauses), `and`, `or`, `when`, `unless`,
-  `let*` — realized as `syntax-rules` macros in the prelude; named `let` (hand-written).
-- **Macros**: `define-syntax` + `syntax-rules` (literals, `_`, ellipsis), lexical
-  `let-syntax`/`letrec-syntax`, internal syntax definitions, and a fixpoint `expand` stage.
-  Expansion preserves definition-site bindings and the context of substituted source, with
-  fresh introduced binders and binding-aware literals. A library may **export** a macro
-  (change: `library-macro-export`, issue #48) — the `.exports` artifact carries a compile-time half,
-  and a template's free identifiers are resolved in the *defining* library, so an exported macro may
-  reach the library's private procedures and private macros without widening its public surface.
-- **Control and exceptions (restricted R7RS-small subset)**: `dynamic-wind`, escape-only
-  `call/cc` / `call-with-current-continuation`, `with-exception-handler`, `guard`, `raise`, and
-  `error` with catchable error objects (`error-object?`/`-message`/`-irritants`, plus
-  `read-error?`/`file-error?`). Runtime type and arity errors are catchable through the same
-  handler chain. Live escape continuations deliver zero, one, or multiple values
-  to a `call-with-values` receiver; invoking one after its capturing call has
-  returned still reports a lifetime error. `error` is a superset — `(error message ...)` (R7RS) or
-  `(error who message ...)`.
-- Arithmetic: n-ary `+ - *`. Comparisons: n-ary/chained `= < > <= >=`, `eq?` / `eqv?`, and
-  structural `equal?`.
-- Variadic `lambda`, dotted rest parameters, `apply`, and runtime arity checking — on the
-  uniform `argc`+`overflow` calling convention, preserving `musttail`.
-- **Multiple values**: `values` and `call-with-values` (R7RS). `(values x)` of one argument
-  is the identity, so single-value code is untouched; zero or many values ride a disjoint heap
-  bundle that `call-with-values` spreads into its consumer via `apply`. Shipped **independently
-  of `call/cc`** — multiple values need no continuation capture (see
-  `openspec/explorations/continuations-and-control.md`).
-- `quote` of symbols and arbitrary nested structure; `quasiquote` (`` ` ``/`,`/`,@`) over
-  list structure with nesting-level tracking — a built-in expander transformer that lowers
-  to `cons`/`append`/`list`/`quote`.
-
-**Data & runtime**
-- Fixnums, booleans, `()`, pairs, closures, boxes; **interned symbols** (`eq?` / `eqv?` by
-  identity) and **immediate characters** (the codepoint encoded in the tagged word, so equal
-  codepoints are the same word — `eq?` / `eqv?` hold with no heap object or intern table);
-  **strings** that are Unicode-capable (UTF-8
-  storage, codepoint-indexed operations, in-place `string-set!`); **vectors** (mutable,
-  fixed-length, `#(...)` syntax); **bytevectors** (mutable, fixed-length, packed bytes,
-  `#u8(...)` syntax); **hash tables** (mutable, auto-growing, `equal?`-keyed through
-  `make-hash-table` or `eq?`-keyed through `make-eq-hash-table`, built on vectors plus
-  `%hash`/`%eq-hash` primitives); **records** (R7RS `define-record-type` — disjoint
-  types, constructor/predicate/accessors/mutators, identity equality, opaque `#<record …>`).
-- Primitives: `+ - * / = < cons car cdr null? pair? eq? eqv? equal? not quotient remainder
-  modulo char->integer integer->char string-length string-ref substring string->symbol
-  string=? string-append symbol->string list->string make-string string-set! string-copy
-  make-bytevector bytevector-u8-ref bytevector-u8-set! bytevector-length bytevector?
-  number? real? integer? exact? inexact? flonum? exact->inexact inexact->exact`, the I/O
-  ops `display` / `write` / `write-char` / `newline`, and the `do` iteration macro.
-- C runtime under Boehm GC; a tag-walking value printer shared by `display` (display
-  style) and the final-value printer (write style: quoted strings, `#\`-prefixed chars).
-
-**Library & reader**
-- A prelude re-homed as the library `(scheme base)`, auto-imported into every program on all
-  three compilation paths — the Chez driver, the REPL, and the Chez-free embedded runner
-  (`emit run`/`emit build`) — with user-wins shadowing and `--no-prelude` to opt out:
-  `list length reverse append map memq assq member assoc fold-left`,
-  the n-ary character comparisons `char=? char<? char>? char<=? char>=?`, and `string->list`.
-  Emit's `filter`, `fold-right`, and `iota` require an explicit `(import (emit list))`.
-  `(scheme base)` is now **library zero** for the compiler's own build too: the compiler
-  binaries link the baked library set and reference its exports rather than inlining the
-  prelude (change: `compiler-bootstrap-rehome`).
-- The implemented R7RS-small **library partition** (change: `scheme-base-partition`, issue #33):
-  `(scheme cxr)` is complete with all twenty-four `car`/`cdr` compositions, while `(scheme read)`
-  and `(scheme file)` export their implemented standard procedures; each is an ordinary
-  ordinarily path-resolved library. **Breaking** — a program using `caddr`, `read` or the file procedures
-  must now import the library that owns it. `caar`/`cadr`/`cdar`/`cddr` stay in `(scheme base)`.
-  The private port and reader machinery they share lives in `(emit internal)`, which is baked but
-  not auto-imported, so it is out of scope in an ordinary program.
-- The explicit non-standard `(emit filesystem)` extension provides the four host-edge operations
-  R7RS-small omits: `directory-list`, `file-directory?`, `file-symbolic-link?`, and atomic
-  same-filesystem `replace-file`. Listings contain unsorted bare entry names without `.` or `..`;
-  the directory predicate follows a final symbolic link while the link predicate inspects it.
-  Failures are catchable file errors, and no name is visible without importing the extension.
-- `read-from-string` — a recursive-descent Scheme reader (integers, symbols, lists,
-  dotted/improper lists, `#t`/`#f`, characters incl. named `#\newline`/`#\space`/…,
-  `"strings"` with `\n`/`\t`/`\r`/`\\`/`\"`/`\xHH;` escapes, `#(...)` vectors, `'`-quote
-  and `` ` ``/`,`/`,@` quasiquote sugar, `;` comments).
-
-**Backends & process**
-- AOT / JIT / bitcode from the same emitted modular artifact set (program + its linked
-  libraries, including the auto-imported `(scheme base)`), with a 3-way equivalence harness. All
-  three backends re-home the prelude and resolve `import`s identically — one compilation path.
-  (`--emit-ir` is the exception: a single-module raw core-IR filter for piping/self-hosting.)
-- **In-process embedded run** (`emit run`, Path A — mechanism): the compiled
-  compiler is linked into a JIT host (`src/emit.cpp`); its ccc `scheme_entry` reads the
-  program, returns the emitted IR as a string, and the host JITs and runs it — a whole
-  program compiled *and* run in one process.
-  A parity harness checks the runner agrees with AOT on every demo (dev→ship fidelity). The
-  compiler IR is a committed, host-agnostic stage-0 artifact (`bootstrap/embed.ll`).
-- **Interactive REPL** (`--repl`) on a persistent LLVM ORC/LLJIT host, driven by the
-  **embedded compiler in-process** (Path A for the REPL — **no per-form
-  subprocess**; `bootstrap/embed-repl.ll` A-linked into the host): per-form modules added to
-  a long-lived JIT with a shared GC heap / symbol table / runtime, so definitions, closures,
-  heap values, and redefinition persist across forms; compile errors roll back (in-language
-  `guard`) and runtime traps (arity errors) are isolated so the session survives. A
-  REPL-vs-batch equivalence harness checks the two agree on final values — the same compiler
-  core drives both (dev→ship fidelity).
-- OpenSpec-driven changes; decisions (framework, calling convention) backed by spikes.
-
-## Not yet done
-
-**Larger language features**
-- **Macros (follow-ons)** — procedural / `syntax-case` macros and identifier transformers.
-- **Numeric tower** — fixnums + inexact reals (flonums), with fixnum/flonum contagion on
-  `+ - * /` and the comparisons, real division `/`, and `modulo`; still no bignums or exact
-  rationals. Exact integers span `[-2^60, 2^60)`; a result outside that range is a
-  **diagnostic**, not a wrapped value. R7RS §6.2.3 permits an implementation with a bounded
-  exact range but allows only two outcomes when the bound is reached — report the violation of
-  an implementation restriction, or coerce to inexact — and Emit reports. This is an
-  implementation restriction, not a permanent language limitation: arbitrary-precision integers
-  would make these traps unreachable without changing the result of any program that produces a
-  value today, and the inline fast path is already wired so that change lands in the `rt_*`
-  runtime alone. Flonums are boxed doubles today; keeping intermediates unboxed in registers is
-  a planned codegen follow-on (see `openspec/explorations/flonum-unboxing.md`).
-- **Control and exceptions** — full unlimited-extent, re-entrant continuations. The current
-  `call/cc` is an escape continuation valid only within its
-  creating extent, and a non-matching `guard` re-raises in the guard's dynamic environment rather
-  than the original `raise` environment.
-- **I/O follow-ons** — binary ports and bytevector I/O, plus `char-ready?`. Textual ports, files,
-  `read`, and the output procedures ship, but input operations require an explicit port and input
-  files are read completely when opened rather than streamed.
-- **Remaining standard libraries** — `(scheme eval)`, `(scheme lazy)`, `(scheme load)`,
-  `(scheme repl)`, `(scheme time)`, and `(scheme r5rs)` are not implemented. `(scheme complex)` is not provided
-  under the deliberate real-only numeric restriction.
-
-The Pitch prerequisites now shipped are `(scheme case-lambda)`, Unicode 17.0.0
-`(scheme char)` (including Emit's `char-general-category` extension), continuable exceptions,
-`(scheme process-context)`, `(scheme write)`, and the
-narrow `(emit filesystem)` host extension.
-The later Pitch port still owns its non-R7RS adaptations: R6RS condition composition,
-record protocols/inheritance, R6RS hash tables, sorting, bitwise/fixnum APIs, the filesystem host
-adapter and traversal policy, and numeric lexemes outside Emit's bounded real-only tower.
-
-**Self-hosting (the north star)**
-- The compiler compiles itself to a byte-identical fixed point, and there are now three
-  Chez-free ways to *use* it: the batch `schemec` filter (Path C, subprocess), the in-process
-  `emit run` (Path A — mechanism, whole program compiled and JIT-run in one process),
-  and the **interactive `--repl`**, whose stateful, incremental orchestration (persistent env,
-  per-form modules, compile-error rollback via in-language `guard`) is now **ported into the
-  embedded compiler** (`src/repl-core.ss`, A-linked as `bootstrap/embed-repl.ll`) and runs
-  in-process — completing Path A for the REPL (change: `repl-embedded-incremental`). Chez
-  remains only as the **bootstrap** that regenerates the committed embedded IR from source.
-  See `openspec/explorations/modules-and-embedding.md` and `…/chez-free-repl.md` for the
-  roadmap.
-
-**Performance / cleanup (deferred by design)**
-- Tracked in [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md): dead-code elimination for library
-  units, immediate (non-heap) characters, precompiled library objects, and O(n) codepoint
-  string indexing — each with cause, fix sketch, its OpenSpec change (once one exists), and a
-  remediation check-off.
-
-## License
-
-Emit is released under the [MIT License](LICENSE).
-
-Third-party code vendored into this repository keeps its own license, recorded beside it rather
-than in a source header (a vendored file is kept byte-identical to upstream, so no header can be
-added to it). Vendored today:
-
-- `test/r7rs/r7rs-tests.scm` — the R7RS-small conformance suite, from
-  [chibi-scheme](https://github.com/ashinn/chibi-scheme); BSD 3-clause, see
-  [`test/r7rs/LICENSE.chibi-scheme`](test/r7rs/LICENSE.chibi-scheme).
-- `vendor/unicode/17.0.0/` — the Unicode 17.0.0 Character Database inputs used
-  to generate `(scheme char)` tables; Unicode Data Files and Software License,
-  see [`vendor/unicode/17.0.0/LICENSE.txt`](vendor/unicode/17.0.0/LICENSE.txt).
