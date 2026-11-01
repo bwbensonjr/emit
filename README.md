@@ -134,31 +134,39 @@ In `main.scm`, import the library and use it:
 (newline)
 ```
 
-From the `hello/` directory, run the program during development, then compile
-it into a native executable:
+From the `hello/` directory you can load the program into the REPL for testing:
 
 ```sh
-emit run main.scm                 # Hello, world!
-emit build main.scm -o build/hello
-./build/hello                    # Hello, world!
+resolve libraries -> /private/tmp/hello/lib, /opt/homebrew/Cellar/emit/0.4.0/share/emit/emit-libs.scm, /opt/homebrew/Cellar/emit/0.4.0/share/emit/lib
+Emit 0.4.0 (embedded compiler, ORC/LLJIT, LLVM 22.1.8).  ^D to exit.
+> (include "main.scm")
+resolve library (hello greeting) -> /private/tmp/hello/lib/hello/greeting.sld  [directory /private/tmp/hello/lib]
+Hello, world!
+> (greeting "Alice")
+"Hello, Alice!"
+```
+
+You can also run without the REPL and thenb build into a executable:
+
+```sh
+$ emit run main.scm
+Hello, world!
+$ emit build main.scm -o build/hello
+resolve manifest -> /opt/homebrew/Cellar/emit/0.4.0/share/emit/emit-libs.scm
+build main.scm -> build/hello  [source main.scm]
+resolve library (hello greeting) -> /private/tmp/hello/lib/hello/greeting.sld  [directory /private/tmp/hello/lib]
+resolve library (scheme base) -> /opt/homebrew/Cellar/emit/0.4.0/share/emit/lib/scheme/base.sld  [directory /opt/homebrew/Cellar/emit/0.4.0/share/emit/lib]
+resolve library (emit internal) -> /opt/homebrew/Cellar/emit/0.4.0/share/emit/lib/emit/internal.sld  [directory /opt/homebrew/Cellar/emit/0.4.0/share/emit/lib]
+resolve library (scheme write) -> /opt/homebrew/Cellar/emit/0.4.0/share/emit/lib/scheme/write.sld  [manifest /opt/homebrew/Cellar/emit/0.4.0/share/emit/emit-libs.scm]
+wrote build/hello  [52840 bytes exe]
+$ ./build/hello
+Hello, world!
 ```
 
 Emit finds `(hello greeting)` at `lib/hello/greeting.sld`, compiles its
 dependencies, and links the libraries the program uses. No manifest or separate
 library build is needed for this layout. Use `-L DIR` to add other library roots.
-The executable runs without Emit installed; it still needs Boehm GC (`libgc`)
-available on the target system.
-
-For a named build target, add an `emit-libs.scm` file at the project root:
-
-```scheme
-((program hello (source "main.scm") (output "build/hello")))
-```
-
-Then `emit build hello` builds the same executable. With just one program entry,
-`emit build` is enough. Paths in the manifest are relative to the manifest file.
-See [Modules and libraries](docs/MODULES.md) for more on library layout,
-manifests, and separate compilation.
+The executable runs without Emit installed.
 
 ## Using SRFIs
 
