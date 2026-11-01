@@ -137,7 +137,8 @@ In `main.scm`, import the library and use it:
 From the `hello/` directory you can load the program into the REPL for testing:
 
 ```sh
-resolve libraries -> /private/tmp/hello/lib, /opt/homebrew/Cellar/emit/0.4.0/share/emit/emit-libs.scm, /opt/homebrew/Cellar/emit/0.4.0/share/emit/lib
+$ emit repl
+resolve libraries -> /private/tmp/hello/lib, /opt/homebrew/Cellar/em...
 Emit 0.4.0 (embedded compiler, ORC/LLJIT, LLVM 22.1.8).  ^D to exit.
 > (include "main.scm")
 resolve library (hello greeting) -> /private/tmp/hello/lib/hello/greeting.sld  [directory /private/tmp/hello/lib]
