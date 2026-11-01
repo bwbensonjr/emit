@@ -3,6 +3,7 @@
 - [History of system complexity as line count CSV](complexity-history.csv)
 - [A summary of system complexity based on lines of code](COMPLEXITY.md)
 - [An snapshot of compiler transformation steps for a small example](counter-transform.md)
+- [The core design principles of the Emit Scheme system](DESIGN-PRINCIPLES.md)
 - [A guide to developing and compiling your own Scheme project with Emit](PROJECTS.md)
 - [Packaging an Emit release for a distribution: inputs, offline build, checks](PACKAGING.md)
 - [A description of the Emit compiler module and library structure](MODULES.md)
