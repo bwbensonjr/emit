@@ -90,7 +90,7 @@ A baked `PREFIX` breaks tarballs, version managers, and Nix store paths.
 | Static tarball + `install.sh` | Best first-run experience | LLVM CI build time; macOS signing |
 | Version manager (`emitup`, mise/asdf plugin) | Multiple versions and channels | Not worth it until users need multiple versions |
 | Distro packages (AUR, Debian, Fedora) | Native installs | Usually downstream volunteers; upstream's job is to make it easy |
-| Windows | Broader reach | Toolchain and linker work; defer (WSL only for now) |
+| Windows | Broader reach | Toolchain and linker work; defer (WSL only for now). See [WINDOWS.md](WINDOWS.md) |
 
 ### macOS signing
 
@@ -218,5 +218,5 @@ homebrew-core remain open.
 - A mise/asdf plugin; build `emitup` only if multi-version demand appears.
 - Submit to homebrew-core once Emit meets the notability threshold.
 - Support distro packaging efforts (AUR first).
-- Windows support and macOS notarization.
+- Windows support (assessed in [WINDOWS.md](WINDOWS.md)) and macOS notarization.
 
