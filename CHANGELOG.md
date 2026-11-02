@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.5.0
+
+`emit build --static-gc` delivers an executable that does not need the Boehm garbage collector
+(libgc) installed to run. It links libgc's static archive in place of the shared library, so the
+executable depends only on the platform C library. The default build is unchanged.
+
+- `emit build --static-gc` links `libgc.a` from the libgc directory `emit build` already resolves
+  (`GC_LIB`, discovery, or the build-time default). On macOS arm64 it adds 76-93 KB to the
+  measured examples. It works for manifest programs and direct source files.
+- When that directory has no `libgc.a`, `emit build --static-gc` names the path it looked for,
+  writes nothing, and exits non-zero. It never falls back to the shared link.
+- `emit build` now prints a `link` line naming the libgc link mode (`shared` with its directory, or
+  `static` with the archive), before the `wrote` line.
+- `emit doctor` reports whether the static archive is available. A missing archive is information,
+  not a failed check.
+- The CI toolchain recipe builds and verifies a static libgc archive beside the shared library
+  (recipe 7), which invalidates cached toolchains.
+
 ## 0.4.0
 
 A Scheme program can now run as an executable script with `#!/usr/bin/env -S emit run` (#166).

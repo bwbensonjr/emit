@@ -175,8 +175,11 @@ These are the platforms the [channel workflow](RELEASE-PIPELINE.md#distribution-
 tests; other platforms build from source as described above. Every channel
 links `emit` dynamically against LLVM and libgc. `emit build` needs that
 package's clang, headers, and linker, which each channel supplies. A delivered
-executable links libgc dynamically, so it runs where libgc is available. None of
-these channels produces standalone static executables. For what the language
+executable links libgc dynamically by default, so it runs where libgc is
+available; `emit build --static-gc` links libgc's static archive instead, where
+the channel's libgc provides one (`emit doctor` reports it), so the executable
+needs no libgc to run. No channel produces fully static executables: the
+platform C library stays dynamic. For what the language
 does not support yet, see the [project restrictions](PROJECTS.md#limits-you-will-hit).
 
 ### Homebrew
@@ -238,6 +241,7 @@ so mounting a persistent volume there keeps them across runs. The image works wi
 and contains no Chez, Git, or source tree.
 
 An executable built in the container is a `linux/amd64` program linked against
-the image's libgc. Run it in the image, or on a system with a compatible libgc.
+the image's libgc. Run it in the image, or on a system with a compatible libgc,
+or build it with `emit build --static-gc` to carry libgc inside the executable.
 Version tags never move. `latest` follows the most recent promoted release and
 may be rolled back to an earlier tested digest.

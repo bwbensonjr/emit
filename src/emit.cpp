@@ -415,7 +415,9 @@ static void usage_build(std::ostream &os) {
         "  FILE                      .scm or path-shaped source; no program entry required\n"
         "  --manifest F              manifest to resolve the program and its libraries against\n"
         "  -o OUT                    output path, overriding the entry's own\n"
-        "  --no-prelude              do not bake or imply (scheme base)\n";
+        "  --no-prelude              do not bake or imply (scheme base)\n"
+        "  --static-gc               link libgc's static archive (GC_LIB/libgc.a), so the\n"
+        "                            executable does not need libgc installed to run\n";
   os << "  --stdlib                  cache full portable IR and default -O1 native libraries\n"
         "                            uses EMIT_CACHE or the platform user cache; no program runs\n"
         "  --shared                  with --stdlib: rebuild share/emit/library-cache (or\n"
@@ -3808,10 +3810,21 @@ static bool discover_toolchain(Toolchain &tc) {
   return !invalid_override;
 }
 
+// The libgc static archive `emit build --static-gc` links (change: static-gc-link, design
+// D2).  It lives beside the shared library in the GC_LIB that discovery resolved, so every
+// override and default layer applies to it and headers and archive come from one install.
+static std::string gc_static_archive(const Toolchain &tc) {
+  return tc.gc_lib + "/libgc.a";
+}
+
 // fork/exec clang to link the runtime + unit .ll files into the native exe, mirroring
-// bin/scheme-compile's flags exactly.  Returns true on a zero exit.
+// bin/scheme-compile's flags exactly.  Returns true on a zero exit.  With STATIC_GC the
+// libgc archive is linked by its path in place of -lgc (change: static-gc-link, design D1):
+// both ld64 and GNU ld prefer the shared library for -lgc when both sit in GC_LIB, and ld64
+// has no -Bstatic.  Without it the link line is unchanged.
 static bool link_clang(const Toolchain &tc, const std::string &runtime_c,
-                       const std::vector<std::string> &unit_files, const std::string &out) {
+                       const std::vector<std::string> &unit_files, const std::string &out,
+                       bool static_gc) {
   std::vector<std::string> args;
   args.push_back(tc.cc);
   args.push_back("-Wno-override-module");
@@ -3828,12 +3841,25 @@ static bool link_clang(const Toolchain &tc, const std::string &runtime_c,
   args.push_back("-L" + tc.gc_lib);
   args.push_back(runtime_c);
   for (const std::string &u : unit_files) args.push_back(u);
-  args.push_back("-lgc");
+  if (static_gc) {
+    args.push_back(gc_static_archive(tc));
+#ifdef __linux__
+    // An archive carries no dependency list; libgc is built threaded (design D5).
+    args.push_back("-lpthread");
+#endif
+  } else {
+    args.push_back("-lgc");
+  }
   // The runtime's numeric prims (rt_sqrt, rt_atan2, ...) call libm, which is a separate
   // library on glibc; every link line that includes runtime.c needs this.
   args.push_back("-lm");
   args.push_back("-o");
   args.push_back(out);
+  if (g_level >= 2) {
+    std::string line = "link:";
+    for (const std::string &a : args) line += " " + a;
+    vsay(line);
+  }
 
   std::vector<char *> cargs;
   for (std::string &a : args) cargs.push_back(const_cast<char *>(a.c_str()));
@@ -4060,11 +4086,13 @@ static int emit_build(int argc, char **argv) {
   std::string name, manifest, out;
   ResolverOptions resolver_options;
   bool no_prelude = false;
+  bool static_gc = false;
   bool manifest_chain = true;
   bool dump = false, dump_all = false;
   for (int i = 1; i < argc; i++) {
     std::string a(argv[i]);
     if (is_help_flag(a)) { usage_build(std::cout); return 0; }
+    else if (a == "--static-gc") static_gc = true;
     else if (a == "--manifest" && i + 1 < argc) manifest = argv[++i];
     else if (a == "--no-manifest-chain") manifest_chain = false;
     else if ((a == "-L" || a == "--library-path") && i + 1 < argc)
@@ -4172,8 +4200,25 @@ static int emit_build(int argc, char **argv) {
     return 1;
   }
 
+  // A static GC link needs the archive; say so by path before linking, and never fall
+  // back to the shared library the user asked to be rid of (design D4).
+  if (static_gc) {
+    std::string archive = gc_static_archive(tc);
+    if (!regular_readable(archive)) {
+      std::cerr << "emit build: --static-gc: libgc static archive not found at " << archive
+                << " (GC_LIB from " << tc.gc_lib_origin << "); install a libgc that provides "
+                   "libgc.a or set GC_LIB to a directory that holds one\n";
+      std::string rm = "rm -rf '" + dir + "'";
+      int rc = std::system(rm.c_str()); (void)rc;
+      return 1;
+    }
+  }
+  // Name the libgc link mode so the delivered executable's dependency shape is visible.
+  say("link " + std::to_string(unit_files.size()) + " unit(s) + runtime -> " + out + "  [libgc " +
+      (static_gc ? "static " + gc_static_archive(tc) : "shared " + tc.gc_lib) + "]");
+
   ensure_parent_dir(out);
-  if (!link_clang(tc, runtime_c, unit_files, out)) {
+  if (!link_clang(tc, runtime_c, unit_files, out, static_gc)) {
     std::cerr << "emit build: link failed\n";
     // A toolchain value that came from the compiled-in build-time defaults is the
     // stalest thing in the link line: say so, rather than leaving the user with
@@ -4461,6 +4506,11 @@ static int emit_doctor(int argc, char **argv) {
   check(!tc.gc_lib.empty() && (regular_readable(tc.gc_lib + "/libgc.dylib") ||
         regular_readable(tc.gc_lib + "/libgc.so") || regular_readable(tc.gc_lib + "/libgc.a")),
         "libgc link library unavailable under " + tc.gc_lib);
+  // Informational only (change: static-gc-link, design D6): the shared link is the default,
+  // so a missing archive limits `emit build --static-gc` without making the install unhealthy.
+  std::cout << "libgc static archive: " << gc_static_archive(tc) << " ["
+            << (regular_readable(gc_static_archive(tc)) ? "available" : "unavailable")
+            << " for emit build --static-gc]\n";
 
   for (const auto &relative : {"tools/llvm-env.sh", "tools/log.sh", "src/runtime/runtime.c"}) {
     std::string path = support_file(relative);

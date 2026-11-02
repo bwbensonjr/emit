@@ -20,7 +20,7 @@ case "$major" in
   *) printf 'ci: unsupported matrix major: %s\n' "$major" >&2; exit 2 ;;
 esac
 gc_revision=ee59af3722e56de8404de6cd0c21c2493cc4d855
-identity="$version $revision $gc_revision recipe-6"
+identity="$version $revision $gc_revision recipe-7"
 if [ "$identity_only" = 1 ]; then
   printf '%s\n' "${identity// /-}"
   exit 0
@@ -212,6 +212,15 @@ else
   run_logged "build LLVM $version -> $work/llvm-build" cmake --build "$work/llvm-build" --target distribution --parallel "${EMIT_CI_JOBS:-2}"
   run_logged "install LLVM $version -> $prefix/llvm" cmake --build "$work/llvm-build" --target install-distribution
   run_logged "fetch bdwgc/bdwgc@$gc_revision -> $work/gc" fetch bdwgc/bdwgc "$gc_revision" "$work/gc"
+  # The static archive for emit build --static-gc (change: static-gc-link).  CMake builds one
+  # kind of library per configure, so the archive is a separate build into the same prefix,
+  # installed FIRST so the shared build's CMake and pkg-config metadata is what remains.
+  run_logged "configure libgc 8.2.8 static -> $work/gc-static-build" cmake -S "$work/gc" -B "$work/gc-static-build" -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$prefix/gc" \
+    -DCMAKE_INSTALL_LIBDIR=lib \
+    -DBUILD_SHARED_LIBS=OFF -Denable_docs=OFF -Denable_tests=OFF
+  run_logged "build libgc 8.2.8 static -> $work/gc-static-build" cmake --build "$work/gc-static-build" --parallel "${EMIT_CI_JOBS:-2}"
+  run_logged "install libgc 8.2.8 static -> $prefix/gc/lib/libgc.a" cmake --install "$work/gc-static-build"
   run_logged "configure libgc 8.2.8 -> $work/gc-build" cmake -S "$work/gc" -B "$work/gc-build" -G Ninja \
     -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$prefix/gc" \
     -DCMAKE_INSTALL_LIBDIR=lib \
@@ -261,6 +270,11 @@ run_logged "link libgc headers + shared library -> $work/gc-version-check  [8.2.
 _Static_assert(GC_VERSION_MAJOR == 8 && GC_VERSION_MINOR == 2 && GC_VERSION_MICRO == 8, "libgc headers differ from 8.2.8");
 int main(void) { return GC_get_version() == ((8u << 16) | (2u << 8) | 8u) ? 0 : 1; }'
 run_logged "run $work/gc-version-check -> exact libgc shared-library version verification" run_native_probe "$work/gc-version-check"
+# The archive emit build --static-gc links: the runtime against it must run with no libgc
+# shared library loaded (change: static-gc-link).
+[ -f "$prefix/gc/lib/libgc.a" ]
+run_logged "link runtime object -> $work/runtime-static-check  [libgc.a and LTO]" "$prefix/llvm/bin/clang" -flto "$work/runtime-check.o" -x c - -x none "$prefix/gc/lib/libgc.a" $([ "$(uname -s)" = Linux ] && echo -lpthread) -lm -o "$work/runtime-static-check" <<< 'int main(void) { return 0; }'
+run_logged "run $work/runtime-static-check -> static libgc verification" run_native_probe "$work/runtime-static-check"
 printf '%s\n' "$identity" > "$prefix/complete"
 say "verify $prefix -> LLVM $version + libgc 8.2.8  [$(du -sk "$prefix" | awk '{ print $1 }') KiB, ${SECONDS}s]"
 # Workflow environment is the machine-consumable output.
