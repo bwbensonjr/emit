@@ -142,7 +142,12 @@ toolchain cache is bumped in the same change.
 None required: the option is new and the default is unchanged. Rolling back means removing the
 option; executables already built keep working because they no longer depend on libgc.
 
-## Open Questions
+## Resolved Questions
 
-- Which extra Linux libraries, if any, Debian/Ubuntu `libgc.a` needs beyond `-lpthread`. Answered by
-  the first Linux CI run of the new test case; affects only the D5 flag list.
+- Which extra Linux libraries Debian/Ubuntu-style `libgc.a` needs beyond `-lpthread`: none. On
+  PR #171 CI (Ubuntu 24.04, LLVM 22 and 23, source-built libgc 8.2.8) the provisioning probe
+  linked and ran the runtime against `libgc.a` with only `-lpthread -lm`, and the
+  `every-command-in-a-user-project` suite, which builds with `emit build --static-gc`, passed on
+  Linux and macOS. On macOS the same archive produces three ld64 deprecation warnings about
+  libgc's own exception-handler symbols; they are harmless and the quiet-mode test ignores
+  `ld: warning:` lines.

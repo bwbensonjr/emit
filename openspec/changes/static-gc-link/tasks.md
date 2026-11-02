@@ -21,8 +21,8 @@
 
 ## 4. CI toolchain
 
-- [ ] 4.1 In `tools/ci-provision.sh`, add a second libgc 8.2.8 configure/build/install with `-DBUILD_SHARED_LIBS=OFF` into the same `$prefix/gc` so `libgc.a` sits beside the shared library, add a verification step that links a probe against the archive, and bump the toolchain identity from `recipe-6` to `recipe-7`; verify the provision script runs to completion and the cache key changes.
-- [ ] 4.2 Confirm the new test cases run (not skip) on the Linux and macOS CI cells; if the Linux link needs libraries beyond `-lpthread`, add them to the D5 list and record the answer in `design.md`'s Open Questions.
+- [x] 4.1 In `tools/ci-provision.sh`, add a second libgc 8.2.8 configure/build/install with `-DBUILD_SHARED_LIBS=OFF` into the same `$prefix/gc` so `libgc.a` sits beside the shared library, add a verification step that links a probe against the archive, and bump the toolchain identity from `recipe-6` to `recipe-7`; verify the provision script runs to completion and the cache key changes.
+- [x] 4.2 Confirm the new test cases run (not skip) on the Linux and macOS CI cells; if the Linux link needs libraries beyond `-lpthread`, add them to the D5 list and record the answer in `design.md`'s Open Questions.
 
 ## 5. Documentation and release
 
