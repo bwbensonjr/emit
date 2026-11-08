@@ -36,7 +36,7 @@
   (if (message-condition? e) (condition-message e) "error"))
 (define (error-object-irritants e)
   (if (irritants-condition? e) (condition-irritants e) '()))
-(define *prelude-source* "")
+(define *baked-library-source* "")
 ;; The include reader's half (change: chez-free-unit-pipeline): mode 4 resets this record
 ;; before parsing and the session state carries it between host calls.  No library here
 ;; includes anything, so an empty record is the whole of what these need.
@@ -58,7 +58,9 @@
           (if (eof-object? c)
               (list->string (reverse chars))
               (loop (cons c chars))))))))
-(set! *prelude-source* (read-source-text "src/prelude.scm"))
+(set! *baked-library-source*
+  (apply string-append
+    (map (lambda (entry) (read-source-text (cadddr entry))) (baked-library-entries))))
 
 (init-session "")
 (define baked-registration (run-register-baked-set))

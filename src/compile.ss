@@ -695,14 +695,9 @@
   (let ([o (open-output-file path 'replace)]) (display text o) (close-port o)))
 
 ;; --- prelude as (scheme base) (change: module-prelude-scheme-base, Stage 3) ---
-;; The prelude's RUNTIME half is the library (scheme base) (auto-imported); its
-;; COMPILE-TIME half is the derived-form macros, obtained by filtering the prelude
-;; source for define-syntax and merged into a user program's macro-env (no separate
-;; baked constant -- the prelude source is the single source of truth).
+;; Runtime and macro bindings both arrive through generated library interfaces.
+;; Raw prelude reads above remain only for the explicit legacy flat/filter paths.
 (define scheme-base-lib '(scheme base))
-(define (prelude-macro-forms)
-  (filter (lambda (f) (and (pair? f) (eq? (car f) 'define-syntax)))
-          (read-program prelude-path)))
 ;; a program's imports plus an implicit (scheme base) when the prelude is enabled
 ;; (deduped, so an explicit (import (scheme base)) is not doubled).
 (define (with-scheme-base imports prelude?)
@@ -945,7 +940,7 @@
          ;; as prelude-forms (compile-time).  --no-prelude adds neither.
          [direct-imports (with-scheme-base (car (collect-imports user-forms)) prelude?)]
          [manifest (read-manifest *manifest-path*)]
-         [prelude-forms (if prelude? (prelude-macro-forms) '())]
+         [prelude-forms '()]
          [header (host-target-header)]
          ;; compiler identity, computed ONCE per build (D4) and compared to each
          ;; unit's recorded .stamp in artifacts-fresh? (change: artifact-compiler-stamp).

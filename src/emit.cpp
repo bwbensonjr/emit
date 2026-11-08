@@ -1464,7 +1464,7 @@ static int resolve_program(const std::string &manifest, const std::string &name,
 
 // --- artifact cache for the baked standard library (change: baked-set-artifact-cache) ---
 //
-// The baked set is recompiled from this binary's own `*prelude-source*` at every process
+// The baked set is recompiled from this binary's own `*baked-library-source*` at every process
 // start: 1.72s of a 1.80s trivial emit run, and ~74% of the default suite's wall clock
 // (docs/PERFORMANCE.md P3).  Nothing about it varies with the program being compiled, so
 // it is compiled once and reused by every later process.
@@ -2578,7 +2578,7 @@ static void shake_units(std::vector<std::string> &modules,
     std::string root_key = fnv1a_hex(root_text + g_unit_generations[key]);
     std::map<std::string, std::string>::const_iterator it = path_of.find(key);
     // A baked member has no manifest entry and needs none: its source is compiled into this
-    // binary, so mode 17 rebuilds it from *prelude-source* with no source text from us.  A
+    // binary, so mode 17 rebuilds it from *baked-library-source* with no source text from us.  A
     // user library needs its .sld read back, because a cache-seeded session never read it.
     std::string sld = (it == path_of.end()) ? std::string() : it->second;
     std::string src_id = sld.empty() ? std::string("baked") : source_key_of(sld);

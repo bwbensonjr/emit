@@ -22,11 +22,13 @@ class SourceProofTests(unittest.TestCase):
         (self.repo / "tools").mkdir(parents=True)
         (self.repo / "src").mkdir()
         (self.repo / "bootstrap").mkdir()
+        (self.repo / "test").mkdir()
+        (self.repo / "lib/scheme").mkdir(parents=True)
         for name in ("source-fingerprint.py", "test-source.py", "test-source.sh"):
             shutil.copy2(ROOT / "tools" / name, self.repo / "tools" / name)
         (self.repo / "tools/compiler-inputs.sh").write_text(
             "#!/usr/bin/env bash\ncase \"$1\" in\n"
-            " --list) printf \"%s\\n\" src/core.ss tools/compiler-inputs.sh tools/regen.sh ;;\n"
+            " --list) printf \"%s\\n\" src/core.ss src/prelude.scm tools/compiler-inputs.sh tools/regen.sh lib/scheme/base.sld ;;\n"
             " --bootstrap) printf \"%s\\n\" " + " ".join("bootstrap/" + name for name in MODULES) + " ;;\nesac\n")
         (self.repo / "tools/llvm-env.sh").write_text(
             "export CC=/usr/bin/true CXX=/usr/bin/true LLVM_CONFIG=/usr/bin/true\n"
@@ -35,8 +37,15 @@ class SourceProofTests(unittest.TestCase):
             "#!/usr/bin/env bash\nset -eu\n"
             "if command -v chez >/dev/null 2>&1; then exit 77; fi\n"
             "cat src/core.ss > bootstrap/embed.ll\n"
+            "mkdir -p build\ncat src/prelude.scm > build/generated-base.sld\n"
             "python3 tools/source-fingerprint.py --record >/dev/null\n")
+        (self.repo / "test/scheme-base-gen-check.sh").write_text(
+            "#!/usr/bin/env bash\nset -eu\nroot=\"$PWD\"\n"
+            "while [ \"$#\" -gt 0 ]; do case \"$1\" in --tree) root=$2; shift 2 ;; *) exit 2 ;; esac; done\n"
+            "cmp -s \"$root/lib/scheme/base.sld\" \"$root/build/generated-base.sld\"\n")
         (self.repo / "src/core.ss").write_text("ir\n")
+        (self.repo / "src/prelude.scm").write_text("library body\n")
+        (self.repo / "lib/scheme/base.sld").write_text("library body\n")
         for name in MODULES:
             (self.repo / "bootstrap" / name).write_text("ir\n")
         subprocess.run(["git", "init", "-q"], cwd=self.repo, check=True)
@@ -47,7 +56,7 @@ class SourceProofTests(unittest.TestCase):
         # Only the commands needed by the hermetic proof, explicitly no Chez.
         path = self.workspace / "bin"
         path.mkdir()
-        for command in ("bash", "git", "python3", "cat"):
+        for command in ("bash", "git", "python3", "cat", "cmp", "mkdir"):
             (path / command).symlink_to(shutil.which(command))
         self.environment = {**os.environ, "PATH": str(path), "EMIT_VERBOSITY": "quiet"}
 
@@ -98,6 +107,18 @@ class SourceProofTests(unittest.TestCase):
             (self.repo / name).write_text("matching working-tree edits\n")
         result, _ = self.proof()
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_stale_generated_library_fails_source_proof(self):
+        (self.repo / "lib/scheme/base.sld").write_text("stale library\n")
+        result, report = self.proof()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotEqual(report["generated_library_check_exit_code"], 0)
+
+    def test_missing_generated_library_fails_source_proof(self):
+        (self.repo / "lib/scheme/base.sld").unlink()
+        result, report = self.proof()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotEqual(report["generated_library_check_exit_code"], 0)
 
     def test_untracked_new_inputs_included(self):
         (self.repo / "src/new.ss").write_text("new input\n")
@@ -247,7 +268,9 @@ class InventoryTests(unittest.TestCase):
         paths = result.splitlines()
         for name in ("src/prelude.scm", "src/prelude-surface.scm", "src/include-reader.ss",
                      "src/repl-core.ss", "src/entry-repl.scm", "tools/gen-scheme-base.ss",
-                     "tools/regen.sh", "tools/compiler-inputs.sh", "lib/scheme/base.sld"):
+                     "tools/gen-scheme-base.sh", "tools/gen-scheme-base-body.ss",
+                     "tools/bake-libraries.sh", "tools/regen.sh", "tools/compiler-inputs.sh",
+                     "lib/scheme/base.sld"):
             self.assertIn(name, paths)
         self.assertEqual(len(paths), len(set(paths)))
         self.assertTrue(all((ROOT / name).is_file() for name in paths))

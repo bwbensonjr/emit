@@ -24,6 +24,26 @@ propagation at each assemble/link/execute step; real recipe probes run for both
 fresh installations and restored bundles. The same binding unit checks the Chez
 driver's relative-root helper on the CI host.
 
+## Coverage added after the baseline
+
+New suites use their profile membership and stable coverage IDs, with an empty
+`legacy` list. The historical label counts and hashes remain unchanged.
+
+| Added suite | Profiles | Coverage |
+| --- | --- | --- |
+| `stdlib-precompilation` | full | Explicit standard-library cache preparation |
+| `program-toplevel-order-native` | full | Program definition and command order |
+| `scheme-base-generator-native` | full | Declaration guards, serialization, and whole-file freshness |
+| `scheme-base-generator-reference` | reference | Emit/Chez generation and diagnostic parity |
+| `baked-library-source-chez` | units, reference | Baked membership, imports, and complete IR/interfaces |
+| `bake-libraries-contracts` | full, reference | Wrapped declaration rows and CLI contracts |
+
+The existing `scheme-base-gen-guard-native` also joins the full profile now that
+it runs without Chez. It retains its original developer-runner label and reference
+profile. The full profile contains 58 suites and the units profile contains 16.
+The baker contracts run in a private workspace, preserving the rule that only
+direct Chez source units share read-only source inputs.
+
 ## Isolation
 
 Direct Chez `.ss` units run in `units`. The larger Chez binding-context

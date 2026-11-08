@@ -14,7 +14,7 @@
 ;; and its stages appear only at the all-units level (design D7).
 (if (%no-prelude?)
     (compile-source-string (read-all-stdin) (make-dumper #f))
-    (compile-source-rehomed *prelude-source*
+    (compile-source-rehomed *baked-library-source*
                             (read-all-stdin)
                             (make-dumper #f)
                             (make-dumper (quote (scheme base)))))

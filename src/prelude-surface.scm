@@ -2,14 +2,9 @@
 ;;; (change: scheme-base-declared-surface, GitHub issue #29).
 ;;;
 ;;; src/prelude.scm is the source of truth for what (scheme base) CONTAINS.  This
-;;; file is the source of truth for what it EXPORTS.  Both derivations of the export
-;;; list read THIS file, so they cannot disagree:
-;;;
-;;;   tools/gen-scheme-base.ss   (Chez) writes the committed lib/**/*.sld, which the Chez
-;;;                              driver and the REPL resolve via the manifest
-;;;   partition-library-form     (src/core.ss) the portable derivation used by
-;;;   + compile-baked-set        emit run / emit build / the emit run command, from the
-;;;                              baked-in prelude source with no filesystem
+;;; file is the source of truth for what it EXPORTS. One portable generator reads
+;;; this declaration and writes the partition members. Compiler hosts consume those
+;;; generated forms from committed files or their embedded baked-library collection.
 ;;;
 ;;; The export list is the prelude's top-level defines in SOURCE ORDER minus
 ;;; *scheme-base-private*.  Order therefore comes from the prelude, not from here:

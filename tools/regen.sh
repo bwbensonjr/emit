@@ -14,11 +14,9 @@
 # decision X).  The shipped `emit` binary is relinked afterward by `make all`.
 #
 # Three Chez-free steps:
-#   1. ASSEMBLE the flat sources by ordered `cat` -- NO prelude prepend.  The baked
-#      `*prelude-source*` constant (embed / embed-repl need it to synthesize
-#      (scheme base) at runtime for the USER programs they compile) is produced by a
-#      shell escaper (\ -> \\, " -> \", newlines literal).  schemec bakes none (it is
-#      a prelude-free filter).
+#   1. Generate the declared baked library sources with the committed seed, then assemble
+#      those named forms into embed/embed-repl source.  schemec remains a prelude-free
+#      filter.
 #   2. FIXED POINT over {the baked set, embed.ll}: seed the batch runner from the
 #      committed IR, emit the baked library modules AND embed.ll (the re-homed program
 #      module) from ONE --emit of the flat source, relink, and iterate until every one is
@@ -103,15 +101,19 @@ link_emit_boot () { # <embed.ll> <out> <baked.ll>...
 }
 
 t0=$(date +%s)
-say "regen [1/3] assemble flat source (ordered cat; no prelude prepend)"
-# the baked *prelude-source* constant (embed/embed-repl synthesize (scheme base)
-# from it at runtime for the user programs they compile); schemec bakes none.
-{ printf '(define *prelude-source* "'
-  sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' src/prelude.scm
-  printf '")\n'; } > build/prelude-source.scm
+say "regen [1/3] generate and assemble baked library sources"
+# The generator is compiled and run by the committed seed compiler before the
+# compiler source below can depend on the generated-form interface. This keeps
+# generation outside the fixed-point bootstrap cycle.
+make emit >/dev/null
+mkdir -p build/generated-libraries
+EMIT_BINARY=build/emit bash tools/gen-scheme-base.sh build/generated-libraries \
+  --host emit --prelude src/prelude.scm --declaration src/prelude-surface.scm \
+  --output-root build/generated-libraries
+bash tools/bake-libraries.sh build/generated-libraries build/baked-library-source.scm
 cat $CORE_FLAT src/entry-schemec.scm                                        > build/schemec.scm
-cat $CORE_FLAT build/prelude-source.scm src/entry-embed.scm                 > build/embed.scm
-cat $CORE_FLAT src/repl-core.ss build/prelude-source.scm src/entry-repl.scm > build/embed-repl.scm
+cat $CORE_FLAT build/baked-library-source.scm src/entry-embed.scm            > build/embed.scm
+cat $CORE_FLAT src/repl-core.ss build/baked-library-source.scm src/entry-repl.scm > build/embed-repl.scm
 # host objects for linking the bootstrap runner during the fixed-point loop
 make build/run-boot.o build/runtime-host.o >/dev/null
 say "regen [1/3] done  [$(($(date +%s) - t0))s]"
