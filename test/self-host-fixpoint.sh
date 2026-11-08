@@ -93,8 +93,17 @@ units_of () {  # <prefix> <n>  -> the module paths, in dependency order
 echo "self-hosting fixed-point (triple) test + independent-host trust-check (re-homed)"
 
 echo "  [1/7] assemble the flat embed program (ordered cat; no prelude prepend)"
-{ printf '(define *prelude-source* "'; sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' src/prelude.scm; printf '")\n'; } > "$work/prelude-source.scm"
-cat $CORE_FLAT "$work/prelude-source.scm" src/entry-embed.scm > "$work/embed.scm"
+make emit >/dev/null 2>&1 || { echo "  [FAIL] could not build seed compiler"; exit 1; }
+mkdir -p "$work/generated-libraries"
+EMIT_BINARY=build/emit bash tools/gen-scheme-base.sh "$work/generated-libraries" \
+  --host emit --prelude src/prelude.scm --declaration src/prelude-surface.scm \
+  --output-root "$work/generated-libraries" || {
+    echo "  [FAIL] could not generate baked library sources"; exit 1;
+  }
+bash tools/bake-libraries.sh "$work/generated-libraries" "$work/baked-library-source.scm" || {
+  echo "  [FAIL] could not assemble baked library sources"; exit 1;
+}
+cat $CORE_FLAT "$work/baked-library-source.scm" src/entry-embed.scm > "$work/embed.scm"
 make build/run-boot.o build/runtime-host.o >/dev/null 2>&1 || { echo "  [FAIL] could not build host objects"; exit 1; }
 
 echo "  [2/7] stage-1 = chez(embed.scm) via compile.ss (auto-imports (scheme base))"

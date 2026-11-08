@@ -659,11 +659,20 @@ auto-import is universal, that distinction is the difference between a namespace
 interface: before declaration-based curation, helpers (`%map1`, `rd-atom`, `%port-buf`, `*winds*`, …) were in scope
 in every program, unasked.
 
-Both derivations of the export list read that one declaration — `tools/gen-scheme-base.ss` (which
-writes the committed `.sld` for the Chez driver) and `scheme-base-export-names` in `src/core.ss` (the
-portable derivation used by `emit run`/`emit build`/the `emit run` command, from the baked-in prelude source) —
-so the two paths cannot disagree. Order comes from the prelude, not from the declaration, so
-regrouping the declaration cannot move emitted IR.
+One generator reads the declaration and writes every partition member. Compiler hosts consume
+those generated forms from files or the embedded `*baked-library-source*` collection; the core
+no longer reconstructs their export lists and bodies. Order comes from the prelude, not from
+the declaration, so regrouping the declaration cannot move emitted IR.
+
+Run `bash tools/gen-scheme-base.sh --output-root DIR` to generate with Emit, or add `--host chez`
+for independent-host verification. `--prelude PATH` and `--declaration PATH` select isolated
+inputs. The whole-file guard and invalid-declaration fixtures run without Chez in the native
+suite; reference verification compares output bytes and diagnostic cases under both hosts.
+After changing the prelude or declaration, run `bash tools/gen-scheme-base.sh` to update the
+committed generated files, then explicitly run `make regen`. Regeneration independently generates
+into a temporary build tree and embeds its declared baked members; it does not repair committed
+library files. The native freshness guard and isolated source proof reject stale committed files.
+Ordinary `make` builds from committed bootstrap IR and does not regenerate libraries.
 
 The exported surface has two tiers:
 
@@ -725,11 +734,11 @@ imported.
 The prelude partition members are generated because `src/prelude.scm` is their single source of
 truth for what those procedures *are* — relocating a name must not fork its definition. The
 partition in `src/prelude-surface.scm` says which library gets which definition;
-`tools/gen-scheme-base.ss` writes one `.sld` per member and `test/scheme-base-gen-check.sh` diffs
+`tools/gen-scheme-base.sh` writes one `.sld` per member and `test/scheme-base-gen-check.sh` diffs
 every one of them.
 
 **Baked vs manifest.** `(scheme base)` and `(emit internal)` are compiled into the compiler binaries
-from the baked-in prelude source, so a program that imports nothing — or only `(scheme base)` — runs
+from the generated baked library forms, so a program that imports nothing — or only `(scheme base)` — runs
 with **no manifest present at all**. That guarantee is why the substrate had to be baked too:
 `(scheme base)` imports it, and anything `(scheme base)` depends on inherits the requirement. The
 Every remaining library in the table is ordinary: a program reaches it through the hybrid
@@ -829,7 +838,7 @@ is hand-written where they are generated:
 |---|---|---|
 | source | generated from `src/prelude.scm` | hand-written `lib/scheme/inexact.sld` |
 | reached by | auto-imported everywhere | an explicit `(import (scheme inexact))` |
-| how it is found | baked into the compiler (`*prelude-source*`) | conventional installed root or exact manifest |
+| how it is found | baked into the compiler (`*baked-library-source*`) | conventional installed root or exact manifest |
 
 Being ordinary is the point: it makes Emit's second standard library a *demonstration that the
 module system works* rather than a second special case, and it keeps `sqrt`/`sin`/`log` out of

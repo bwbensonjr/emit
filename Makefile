@@ -435,7 +435,7 @@ clean:
 	      build/emit-boot build/emit-boot-next \
 	      build/schemec build/schemec-next \
 	      build/schemec.scm build/embed.scm build/embed-repl.scm \
-	      build/prelude-source.scm build/T-*.scm \
+	      build/baked-library-source.scm build/T-*.scm \
 	      build/schemec.ll build/schemec.ll.check build/llvm.mk $(NATIVE_CONFIG)
 	@echo "note: committed bootstrap/*.ll are checked-in inputs, left in place"
 	@echo "      (rebuild from source with 'make regen')"

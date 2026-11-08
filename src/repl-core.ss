@@ -428,9 +428,9 @@
     ;; host's JIT->lookup to find THIS module.  Kept in sync with host.cpp.
     (emit-repl-batch-named (reverse progs) "__repl_prelude")))
 
-;; Initialize a fresh session and return the prelude batch IR (or "" when
-;; PRELUDE-SRC is empty, i.e. --no-prelude).  Seeds the base known-names set
-;; exactly as run-repl did.  Called once by the host at startup.
+;; Initialize a fresh session. The source string's emptiness selects implicit base
+;; imports; generated libraries and their compile-time interfaces are registered by
+;; the host afterward. Called once by the host at startup.
 (define (init-session prelude-src)
   (reset-counter!) ; monotonic gensym for @code_N labels
   (set! *repl-env* (make-repl-env))
@@ -460,11 +460,8 @@
   (set! *library-answers-used* (quote ()))
   (set! *repl-reader-fold?* #f)
   (set! *repl-reader-next-fold?* #f)
-  ;; Stage 3 (module-prelude-scheme-base): the prelude's PROCEDURES now come from the
-  ;; (scheme base) library -- the host preloads it and then calls mode 6 to auto-import
-  ;; it into the session scope.  init only merges the derived-form MACROS (the
-  ;; compile-time half), emitting NO procedure batch, so it returns "".  --no-prelude
-  ;; passes "" here, so no macros are merged and no auto-import happens.
+  ;; Runtime procedures and transformers arrive through the registered libraries.
+  ;; Initialization emits no module; the host registers and auto-imports afterward.
   "")
 
 ;; Mode 6 -- merge a registered library's exports into the session scope, so later forms
@@ -988,7 +985,7 @@
 (define (run-closure-order roots)
   (reverse (run-visit-libs roots (quote ()) (quote ()))))
 
-;; Mode 8: build the BAKED SET from the baked-in prelude source and register every member
+;; Mode 8: build the BAKED SET from the generated baked library forms and register every member
 ;; as a loaded unit (its export table + its declared imports), returning
 ;; (ok . (ir . init-symbol)) so the host JIT-adds the modules WITHOUT running any __init --
 ;; the program's @scheme_entry inits them in topo order, exactly as a fresh AOT executable
@@ -1009,9 +1006,9 @@
 ;; the cdr leaves it untouched.
 (define (run-register-baked-set)
   (guard (e (#t (cons (quote error) (repl-error->string e))))
-    (let* ([prelude-forms (read-forms-from-string *prelude-source*)]
+    (let* ([library-forms (read-baked-library-forms *baked-library-source*)]
            ;; the auto-imported standard library: incidental to the program, level 3 only.
-           [baked (compile-baked-set prelude-forms
+           [baked (compile-baked-set library-forms
                                      (make-dumper (quote (scheme base))))])
       (for-each
         (lambda (p) ; p = (LIBRARY-NAME . EXPORT-TABLE)
@@ -1340,7 +1337,7 @@
 ;;   <mangled unit key>\n            which library, in the same "scheme.base" key mode 9
 ;;                                   hands the host, so no library-name parsing in C++
 ;;   <library source text>           for a user library; EMPTY for a baked member, whose
-;;                                   source is *prelude-source* and needs no host-supplied text
+;;                                   source is *baked-library-source* and needs no host-supplied text
 ;;   ; ==EMIT-UNIT-BOUNDARY==\n      the marker the host already splits module streams on
 ;;   <the ROOT IR>                   what the roots are read out of
 ;;
@@ -1445,9 +1442,9 @@
   (reset-library-answers-used!)
   (let* ([_ (shake-at! "parse")]
          [dl (if (baked-member? name)
-                 (parse-define-library (partition-library-form
-                                         (assoc name *prelude-libraries*)
-                                         (read-forms-from-string *prelude-source*)))
+                 (parse-define-library (baked-library-form name
+                                                           (read-baked-library-forms
+                                                             *baked-library-source*)))
                  (if (string=? src "")
                      (error "no source text for library" name)
                      (parse-define-library (car (read-all-from-string src)))))]
@@ -1510,8 +1507,7 @@
                 (cons (quote error) (unresolved-imports-msg direct))
                 (cons (quote ok)
                       (cons (compile-program-with-imports
-                              (prelude-macro-forms (read-forms-from-string
-                                                     *prelude-source*))
+                              '()
                               user-forms
                               tables
                               (run-closure-order direct)
@@ -1858,7 +1854,7 @@
 ;; The host sets (repl-mode)/(repl-input) via rt_repl_set, then calls this ccc
 ;; `scheme_entry` (the assembled program's trailing expression).  One entry, four
 ;; operations, so the existing single-scheme_entry emission is reused unchanged:
-;;   0 init-session no prelude   1 init-session with the baked-in *prelude-source*
+;;   0 init-session no prelude   1 init-session with the baked-in *baked-library-source*
 ;;   2 form-complete?            3 compile-one-form
 ;;   4 load-library (source text -> unit IR + __init)   5 manifest text -> source paths
 ;;   6 merge a library into the session: "" = (scheme base) at startup, else an import
@@ -1885,7 +1881,7 @@
     (let ([result
             (cond
               [(= mode 0) (init-session "")]
-              [(= mode 1) (init-session *prelude-source*)]
+              [(= mode 1) (init-session *baked-library-source*)]
               [(= mode 2) (form-complete-code (repl-input))]
               [(= mode 4) (repl-load-library-text (repl-input))] ; load a library unit
               ;; 5 is RETIRED (chez-free-unit-pipeline): every command uses mode 9.

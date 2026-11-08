@@ -1992,20 +1992,20 @@
         "test/scheme-base-gen-check.sh"
       ],
       "profiles": [
-        "reference"
+        "full"
       ],
       "categories": [
         "library",
         "infrastructure"
       ],
       "isolation": "workspace",
-      "chez": true,
+      "chez": false,
       "coverage": [
         "scheme-base-gen-guard-native"
       ],
       "legacy": [
         {
-          "runner": "run-dev-tests.sh",
+          "runner": "run-all-tests.sh",
           "label": "(scheme base) gen guard"
         }
       ]
@@ -2396,6 +2396,109 @@
       "chez": true,
       "coverage": [
         "program-toplevel-order-source"
+      ],
+      "legacy": []
+    },
+    {
+      "id": "scheme-base-generator-native",
+      "label": "standard-library generator guards and freshness",
+      "command": [
+        "test/scheme-base-generator-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "library",
+        "infrastructure"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "scheme-base-generator-native"
+      ],
+      "legacy": [
+        {
+          "runner": "run-all-tests.sh",
+          "label": "standard-library generator guards and freshness"
+        }
+      ]
+    },
+    {
+      "id": "scheme-base-generator-reference",
+      "label": "standard-library generator independent-host parity",
+      "command": [
+        "test/scheme-base-generator-tests.sh",
+        "--reference",
+        "--skip-freshness"
+      ],
+      "profiles": [
+        "reference"
+      ],
+      "categories": [
+        "library",
+        "infrastructure"
+      ],
+      "isolation": "workspace",
+      "chez": true,
+      "coverage": [
+        "scheme-base-generator-reference"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "standard-library generator independent-host parity"
+        }
+      ]
+    },
+    {
+      "id": "baked-library-source-chez",
+      "label": "generated baked-library source validation",
+      "command": [
+        "chez",
+        "--libdirs",
+        "src",
+        "--script",
+        "test/baked-library-source-tests.ss"
+      ],
+      "profiles": [
+        "units",
+        "reference"
+      ],
+      "categories": [
+        "compiler",
+        "library"
+      ],
+      "isolation": "readonly",
+      "chez": true,
+      "coverage": [
+        "baked-library-source-chez"
+      ],
+      "legacy": [
+        {
+          "runner": "run-dev-tests.sh",
+          "label": "generated baked-library source validation"
+        }
+      ]
+    },
+    {
+      "id": "bake-libraries-contracts",
+      "label": "baked-library assembly layout and CLI contracts",
+      "command": [
+        "test/bake-libraries-tests.sh"
+      ],
+      "profiles": [
+        "full",
+        "reference"
+      ],
+      "categories": [
+        "compiler",
+        "infrastructure"
+      ],
+      "isolation": "readonly",
+      "chez": false,
+      "coverage": [
+        "bake-libraries-contracts"
       ],
       "legacy": []
     }

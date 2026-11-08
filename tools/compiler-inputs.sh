@@ -11,6 +11,7 @@ BAKED_LL="bootstrap/emit.internal.ll bootstrap/scheme.base.ll"
 COMPILER_INPUTS="$CORE_FLAT src/prelude.scm src/repl-core.ss \
 src/entry-schemec.scm src/entry-embed.scm src/entry-repl.scm \
 tools/compiler-inputs.sh tools/regen.sh tools/gen-scheme-base.ss"
+COMPILER_INPUTS="$COMPILER_INPUTS tools/gen-scheme-base.sh tools/gen-scheme-base-body.ss tools/bake-libraries.sh"
 
 compiler_inputs_list () {
   printf '%s\n' $COMPILER_INPUTS

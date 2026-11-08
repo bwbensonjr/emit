@@ -16,12 +16,11 @@
 ;;; reserves for the standard precisely to say so, and nothing auto-imports it, so listing
 ;;; it here does not put a single name into a user program's scope.
 ;;;
-;;; It is listed because the manifest-driven paths need it, not for a user's benefit.  The
-;;; paths that build the baked set from the compiler's baked-in prelude source resolve both
-;;; it and (scheme base) with no files at all; the REPL and the Chez driver resolve
-;;; (scheme base) from THIS manifest, and base.sld imports the substrate, so without an
-;;; entry those paths would have no standard library.  It is ordered first for readability;
-;;; the loader is fixpoint-driven and does not depend on manifest order.
+;;; Native commands register baked members from their embedded generated forms before
+;;; consulting filesystem providers. These entries therefore resolve to the existing
+;;; baked members without loading a second copy. The Chez driver consumes the same
+;;; generated library files. The substrate is ordered first for readability; its
+;;; dependency on initialization order is declared by each library.
 ;;;
 ;;; (emit list) is a PUBLIC but non-standard ordinary library.  It exposes Emit's
 ;;; `filter`, `fold-right`, and `iota` helpers without making them part of (scheme base).

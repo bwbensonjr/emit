@@ -90,16 +90,27 @@ def main():
                                     stdout=output, stderr=subprocess.STDOUT,
                                     env={key: value for key, value in os.environ.items()
                                          if not key.startswith("GIT_")})
+        generation_check = None
+        if result.returncode == 0:
+            with log.open("ab") as output:
+                generation_check = subprocess.run(
+                    ["bash", "test/scheme-base-gen-check.sh", "--tree", str(checkout)],
+                    cwd=checkout, stdout=output, stderr=subprocess.STDOUT,
+                    env={key: value for key, value in os.environ.items()
+                         if not key.startswith("GIT_")})
         after = bootstrap_bytes(checkout)
         changed = sorted(name for name in before.keys() | after.keys()
                          if before.get(name) != after.get(name))
-        success = result.returncode == 0 and not changed
+        success = (result.returncode == 0 and generation_check is not None
+                   and generation_check.returncode == 0 and not changed)
         report = {"proof": "source-consistency", "status": "passed" if success else "failed",
                   "source_digest": identity["source_digest"],
                   "bootstrap_digest": identity["bootstrap_digest"],
                   "toolchain_digest": identity["toolchain_digest"],
                   "bootstrap_modules": sorted(before), "changed_modules": changed,
                   "regen_exit_code": result.returncode,
+                  "generated_library_check_exit_code": (generation_check.returncode
+                                                         if generation_check else None),
                   "duration_seconds": round(time.monotonic() - started, 3)}
         if args.report:
             args.report.parent.mkdir(parents=True, exist_ok=True)

@@ -22,7 +22,7 @@
   (if (message-condition? e) (condition-message e) "error"))
 (define (error-object-irritants e)
   (if (irritants-condition? e) (condition-irritants e) '()))
-(define *prelude-source* "")
+(define *baked-library-source* "")
 (define saved-session-state #f)
 (define (repl-state-set! state) (set! saved-session-state state))
 (define (repl-state-ref) saved-session-state)

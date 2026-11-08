@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.1
+
+- Embed generated standard-library forms instead of reconstructing their exports and bodies
+  inside the compiler (#31). Generation and whole-file freshness checks run without Chez.
+- Exercise declaration guards with isolated invalid fixtures and specific diagnostic checks,
+  with Emit/Chez generation parity and valid private-macro controls (#40).
+
 ## 0.5.0
 
 `emit build --static-gc` delivers an executable that does not need the Boehm garbage collector
