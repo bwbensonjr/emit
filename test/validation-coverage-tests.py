@@ -26,12 +26,23 @@ class CoverageTests(unittest.TestCase):
                             if item["runner"] == runner)
             self.assertEqual(len(labels), count)
             self.assertEqual(hashlib.sha256("\n".join(labels).encode()).hexdigest(), digest)
-        # The full profile is the 53 baseline groups plus suites added later, each
-        # without a legacy label: stdlib-precompilation (#148, #149) and
-        # program-toplevel-order-native (#140).
-        self.assertEqual(len([s for s in suites if "full" in s["profiles"]]), 55)
+        # New suites extend profiles without changing the historical label pins.
+        # The 53 baseline groups plus five additions form the full profile.
+        self.assertEqual(len([s for s in suites if "full" in s["profiles"]]), 58)
+        additions = {
+            "stdlib-precompilation": {"full"},
+            "program-toplevel-order-native": {"full"},
+            "scheme-base-generator-native": {"full"},
+            "scheme-base-generator-reference": {"reference"},
+            "baked-library-source-chez": {"units", "reference"},
+            "bake-libraries-contracts": {"full", "reference"},
+        }
+        by_id = {suite["id"]: suite for suite in suites}
+        for name, profiles in additions.items():
+            self.assertEqual(set(by_id[name]["profiles"]), profiles)
+            self.assertEqual(by_id[name]["legacy"], [])
         units = {s["id"] for s in suites if "units" in s["profiles"]}
-        self.assertEqual(len(units), 15)
+        self.assertEqual(len(units), 16)
         self.assertEqual(units, {s["id"] for s in suites if s["isolation"] == "readonly"})
         for suite in suites:
             self.assertTrue(suite["coverage"], suite["id"])

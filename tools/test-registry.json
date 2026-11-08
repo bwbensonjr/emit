@@ -1992,7 +1992,8 @@
         "test/scheme-base-gen-check.sh"
       ],
       "profiles": [
-        "full"
+        "full",
+        "reference"
       ],
       "categories": [
         "library",
@@ -2005,7 +2006,7 @@
       ],
       "legacy": [
         {
-          "runner": "run-all-tests.sh",
+          "runner": "run-dev-tests.sh",
           "label": "(scheme base) gen guard"
         }
       ]
@@ -2417,12 +2418,7 @@
       "coverage": [
         "scheme-base-generator-native"
       ],
-      "legacy": [
-        {
-          "runner": "run-all-tests.sh",
-          "label": "standard-library generator guards and freshness"
-        }
-      ]
+      "legacy": []
     },
     {
       "id": "scheme-base-generator-reference",
@@ -2444,12 +2440,7 @@
       "coverage": [
         "scheme-base-generator-reference"
       ],
-      "legacy": [
-        {
-          "runner": "run-dev-tests.sh",
-          "label": "standard-library generator independent-host parity"
-        }
-      ]
+      "legacy": []
     },
     {
       "id": "baked-library-source-chez",
@@ -2474,12 +2465,7 @@
       "coverage": [
         "baked-library-source-chez"
       ],
-      "legacy": [
-        {
-          "runner": "run-dev-tests.sh",
-          "label": "generated baked-library source validation"
-        }
-      ]
+      "legacy": []
     },
     {
       "id": "bake-libraries-contracts",
@@ -2495,7 +2481,7 @@
         "compiler",
         "infrastructure"
       ],
-      "isolation": "readonly",
+      "isolation": "workspace",
       "chez": false,
       "coverage": [
         "bake-libraries-contracts"
