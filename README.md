@@ -168,6 +168,57 @@ dependencies, and links the libraries the program uses. No manifest or separate
 library build is needed for this layout. Use `-L DIR` to add other library roots.
 The executable runs without Emit installed.
 
+### Loading Scheme files
+
+For sequential runtime evaluation, import the one-argument `load` procedure from
+`(scheme load)` explicitly. For example, with this layout:
+
+```text
+hello/
+  main.scm
+  steps/
+    first.scm
+    nested/
+      second.scm
+```
+
+`main.scm`:
+
+```scheme
+(import (scheme load))
+(load "steps/first.scm")
+```
+
+`steps/first.scm`:
+
+```scheme
+(import (scheme base) (scheme load))
+(display "First step")
+(newline)
+(load "nested/second.scm")
+```
+
+`steps/nested/second.scm`:
+
+```scheme
+(import (scheme base))
+(display "Nested step")
+(newline)
+```
+
+Each loaded file is evaluated one form at a time. The first filename is relative to the working
+directory; nested filenames are relative to the source file currently being loaded. `emit repl`
+loads into its existing interactive scope. `emit run` uses a separate persistent interaction
+scope, so loaded files cannot see variables from the batch program's top level. Completed forms
+keep their effects if a later form fails. Load failures are Scheme exceptions and can be caught
+with `guard`. A non-local `call/cc` escape closes open source files and restores nested loader
+state.
+
+`load` accepts only a filename string; the optional R7RS environment argument is not supported.
+Standalone executables expose the binding but raise a catchable unsupported-host error when it is
+called, because they do not include the compiler. Use libraries and `include` for source that
+must be compiled into a standalone executable.
+
 ## Using SRFIs
 
 Emit ships optional source libraries for SRFI 1 (lists), 2 (`and-let*`),

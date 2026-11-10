@@ -142,13 +142,13 @@ else
   bad "empty EMIT_LIBRARY_PATH diagnostic"
 fi
 
-(cd "$TMP/project" && "$EMIT" run --manifest empty-manifest.scm \
+(cd "$TMP/project" && EMIT_VERBOSITY=verbose "$EMIT" run --manifest empty-manifest.scm \
   --no-manifest-chain basic.scm) >"$TMP/narration.out" 2>"$TMP/narration.err"
 if grep -q 'resolve library (my stats).*\[directory ' "$TMP/narration.err" \
   && [ "$(cat "$TMP/narration.out")" = "44" ]; then
-  ok "default resolver narration names library, source, and provider"
+  ok "verbose resolver narration names library, source, and provider"
 else
-  bad "default resolver narration"
+  bad "verbose resolver narration"
 fi
 (cd "$TMP/project" && EMIT_VERBOSITY=verbose "$EMIT" run \
   --manifest empty-manifest.scm --no-manifest-chain basic.scm) \
@@ -163,6 +163,13 @@ if [ ! -s "$TMP/quiet.err" ] && cmp -s "$TMP/quiet.out" "$TMP/narration.out"; th
   ok "quiet omits resolver narration without changing stdout"
 else
   bad "quiet resolver narration or stdout"
+fi
+(cd "$TMP/project" && "$EMIT" run --manifest empty-manifest.scm \
+  --no-manifest-chain basic.scm) >"$TMP/default.out" 2>"$TMP/default.err"
+if [ ! -s "$TMP/default.err" ] && cmp -s "$TMP/default.out" "$TMP/narration.out"; then
+  ok "default run omits resolver narration without changing stdout"
+else
+  bad "default resolver narration or stdout"
 fi
 
 # The selected path must declare the requested name.

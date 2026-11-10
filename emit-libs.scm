@@ -48,4 +48,5 @@
   (library (scheme write) (source "lib/scheme/write.sld"))
   (library (scheme cxr) (source "lib/scheme/cxr.sld"))
   (library (scheme read) (source "lib/scheme/read.sld"))
-  (library (scheme file) (source "lib/scheme/file.sld")))
+  (library (scheme file) (source "lib/scheme/file.sld"))
+  (library (scheme load) (source "lib/scheme/load.sld")))

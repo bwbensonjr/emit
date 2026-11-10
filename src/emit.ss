@@ -522,7 +522,8 @@
     (%filesystem-directory-list "rt_filesystem_directory_list")
     (%filesystem-directory-status "rt_filesystem_directory_status")
     (%filesystem-symlink-status "rt_filesystem_symlink_status")
-    (%filesystem-replace-file "rt_filesystem_replace_file")))
+    (%filesystem-replace-file "rt_filesystem_replace_file")
+    (%load-request "rt_load_request") (%load-invoke "rt_load_invoke")))
 
 ;; --- string helpers ---
 (define (comma-join lst)
@@ -1447,6 +1448,8 @@
     "declare i64 @rt_no_prelude_p()\n"
     "declare i64 @rt_dump_level()\n"
     "declare i64 @rt_stderr_write(i64, i64)\n"
+    "declare i64 @rt_load_request(i64, i64, i64)\n"
+    "declare i64 @rt_load_invoke(i64)\n"
     "declare i64 @rt_repl_mode()\n"
     "declare i64 @rt_repl_input()\n"
     "declare i64 @rt_repl_state_ref()\n"

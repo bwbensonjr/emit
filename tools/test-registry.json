@@ -323,6 +323,29 @@
       ]
     },
     {
+      "id": "source-load-interaction-host",
+      "label": "source loading interaction host",
+      "command": [
+        "test/source-load-tests.sh"
+      ],
+      "profiles": [
+        "dev",
+        "full",
+        "reference"
+      ],
+      "categories": [
+        "runtime",
+        "host",
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "source-load-interaction-run-repl-escape-error-static"
+      ],
+      "legacy": []
+    },
+    {
       "id": "define-record-type-syntax",
       "label": "define-record-type syntax",
       "command": [

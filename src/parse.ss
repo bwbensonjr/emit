@@ -62,7 +62,7 @@
     ;; change: add-filesystem-access -- the private raw edge behind
     ;; the ordinary non-standard (emit filesystem) library.
     %filesystem-directory-list %filesystem-directory-status %filesystem-symlink-status
-    %filesystem-replace-file))
+    %filesystem-replace-file %load-request %load-invoke))
 (define (prim? op) (and (memq op *prims*) #t))
 
 ;; ---- primitives as first-class values ----

@@ -40,6 +40,9 @@ cd "$(dirname "$0")/.."
 
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 REPO="$PWD"
+manifest_libraries="$(awk 'index($0, "((library ") == 1 || index($0, "  (library ") == 1 { n++ } END { print n + 0 }' emit-libs.scm)"
+stdlib_groups=$((manifest_libraries - 1))
+stdlib_stamps=$((stdlib_groups * 2))
 # All installation caches stay private; most layout fixtures defer warming.
 export EMIT_CACHE="$TMP/install-cache" WARM_STDLIB=0
 PREFIX="$TMP/prefix"
@@ -76,24 +79,24 @@ SHARED="$RPREFIX/share/emit/library-cache"
 # make names the destination by its PREFIX spelling; the binary resolves the manifest's real path.
 if grep -Fq "compile stdlib $RPREFIX/share/emit/emit-libs.scm -> $PREFIX/share/emit/library-cache (shared)" \
      "$TMP/install.log" \
-   && grep -q 'native 0 reused/11 generated' "$TMP/install.log" \
+   && grep -Fq "native 0 reused/$stdlib_groups generated" "$TMP/install.log" \
    && grep -Fq "install shared library cache -> $PREFIX/share/emit/library-cache" "$TMP/install.log" \
    && [ ! -e "$EMIT_CACHE" ]; then
   ok "install prepares the shared library cache and writes no user cache"
 else bad "install shared preparation"; cat "$TMP/install.log"; fi
 "$EMIT" doctor >"$TMP/doctor-shared.out" 2>/dev/null
-grep -Fqx "shared cache: $SHARED [installation; 22 entries, matches this executable]" \
+grep -Fqx "shared cache: $SHARED [installation; $stdlib_stamps entries, matches this executable]" \
     "$TMP/doctor-shared.out" \
   && ok "the installed doctor reports a matching shared cache" \
   || { bad "installed doctor shared cache"; grep cache "$TMP/doctor-shared.out"; }
 EMIT_VERBOSITY=verbose "$EMIT" build --stdlib >"$TMP/warmed.out" 2>"$TMP/warmed.err"
-grep -q 'portable 11 reused/0 generated (11 shared), native 11 reused/0 generated (11 shared)' \
+grep -Fq "portable $stdlib_groups reused/0 generated ($stdlib_groups shared), native $stdlib_groups reused/0 generated ($stdlib_groups shared)" \
     "$TMP/warmed.err" \
   && [ -z "$(find "$EMIT_CACHE" -name 'baked-*' -o -name 'unit-*' -o -name 'native-*' 2>/dev/null)" ] \
   && ok "installed user preparation reuses every shared entry" || bad "installed preparation reuse"
 make install PREFIX="$PREFIX" WARM_STDLIB=1 >"$TMP/install-warm2.log" 2>&1
-grep -q 'portable 0 reused/11 generated' "$TMP/install-warm2.log" \
-  && [ "$(ls "$SHARED" | grep -c '\.stamp$')" = 22 ] \
+grep -Fq "portable 0 reused/$stdlib_groups generated" "$TMP/install-warm2.log" \
+  && [ "$(ls "$SHARED" | grep -c '\.stamp$')" = "$stdlib_stamps" ] \
   && [ -z "$(ls "$PREFIX/share/emit" | grep '^library-cache\.')" ] \
   && ok "repeated installation rebuilds one executable's shared cache" \
   || bad "repeated install preparation"
@@ -101,7 +104,7 @@ if EMIT_DUMP_LEVEL=3 make install PREFIX="$PREFIX" WARM_STDLIB=1 \
      >"$TMP/install-warm-failure.log" 2>&1 \
    && grep -q 'library preparation failed; retry emit build --stdlib --shared' \
      "$TMP/install-warm-failure.log" \
-   && [ "$(ls "$SHARED" | grep -c '\.stamp$')" = 22 ]; then
+   && [ "$(ls "$SHARED" | grep -c '\.stamp$')" = "$stdlib_stamps" ]; then
   ok "failed automatic preparation keeps the install and the previous shared cache"
 else bad "automatic preparation failure handling"; cat "$TMP/install-warm-failure.log"; fi
 
@@ -151,7 +154,7 @@ mkdir -p "$TMP/detached/bin" "$TMP/detached-cwd"
 cp "$EMIT" "$TMP/detached/bin/emit"
 detached_got="$(cd "$TMP/detached-cwd" \
   && printf '(import (scheme inexact)) (display (+ 19 23))\n' \
-     | "$TMP/detached/bin/emit" run 2>"$TMP/detached.err")"
+     | EMIT_VERBOSITY=verbose "$TMP/detached/bin/emit" run 2>"$TMP/detached.err")"
 if [ "$detached_got" = 42 ] \
    && grep -q "resolve manifest -> $PREFIX/share/emit/emit-libs.scm" "$TMP/detached.err"; then
   ok "a detached installed binary resolves the newly compiled-in PREFIX => $detached_got"
@@ -417,8 +420,8 @@ grep -q "$PREFIX" emit-libs.scm \
   && bad "the project manifest names the install prefix" \
   || ok "the project manifest needs no path into the install prefix"
 
-# The chain and selected provider are narrated.
-"$EMIT" run hello.scm >/dev/null 2>"$TMP/e5"
+# Verbose execution narrates the chain and selected provider.
+EMIT_VERBOSITY=verbose "$EMIT" run hello.scm >/dev/null 2>"$TMP/e5"
 if grep -q 'resolve manifest -> emit-libs.scm' "$TMP/e5" \
    && grep -q "resolve manifest -> $RPREFIX/share/emit/emit-libs.scm  \[chained\]" "$TMP/e5" \
    && grep -q "resolve library (scheme inexact).*\[manifest $RPREFIX/share/emit/emit-libs.scm\]" "$TMP/e5"; then
@@ -510,10 +513,10 @@ egot="$(cd "$CALLER" && EMIT_VERBOSITY=quiet "$EMIT" run \
   && ok "an explicit project manifest chains installed libraries from an unrelated cwd => $egot" \
   || { bad "explicit chained run => [$egot] (expected [$want])"; sed 's/^/         /' "$TMP/e7"; }
 
-# The same explicit chain is transparent at default verbosity: project first, install
+# Verbose execution exposes the same explicit chain: project first, install
 # second, and the supplying installed manifest named.  The hostile CWD manifest must
 # not appear anywhere.
-(cd "$CALLER" && "$EMIT" run --manifest "$PROJ/emit-libs.scm" \
+(cd "$CALLER" && EMIT_VERBOSITY=verbose "$EMIT" run --manifest "$PROJ/emit-libs.scm" \
    "$PROJ/hello.scm" >/dev/null 2>"$TMP/e7n")
 if [ "$(grep -c '^resolve manifest ->' "$TMP/e7n" || true)" = 2 ] \
    && sed -n '1p' "$TMP/e7n" | grep -q "resolve manifest -> $PROJ/emit-libs.scm" \
@@ -607,7 +610,7 @@ fi
 
 # If the explicit file IS the installed manifest, candidates 4 and 5 identify the
 # same physical file and must not preload or narrate it again.
-(cd "$CALLER" && "$EMIT" run --manifest "$RPREFIX/share/emit/emit-libs.scm" \
+(cd "$CALLER" && EMIT_VERBOSITY=verbose "$EMIT" run --manifest "$RPREFIX/share/emit/emit-libs.scm" \
    "$PROJ/hello.scm" >/dev/null 2>"$TMP/e7dedup")
 if [ "$(grep -c '^resolve manifest ->' "$TMP/e7dedup" || true)" = 1 ] \
    && ! grep -q '\[chained\]' "$TMP/e7dedup"; then
@@ -684,7 +687,7 @@ sgot="$(echo '(import (scheme inexact)) (display (sqrt 2.0))' \
 echo
 echo "the repo manifest outranks an installed one"
 cd "$REPO"
-line="$(echo '(display 1)' | "$EMIT" run 2>&1 >/dev/null | grep 'resolve manifest' | head -1)"
+line="$(echo '(display 1)' | EMIT_VERBOSITY=verbose "$EMIT" run 2>&1 >/dev/null | grep 'resolve manifest' | head -1)"
 case "$line" in
   *"resolve manifest -> emit-libs.scm") ok "in-repo invocation prefers ./emit-libs.scm" ;;
   *) bad "in-repo invocation resolved [$line] (expected ./emit-libs.scm)" ;;
@@ -693,7 +696,7 @@ esac
 # Chaining must not weaken that.  The repository's own manifest names EVERY library it
 # ships, so nothing may be supplied by the installed one -- a `chain ... ->` line from
 # an in-repo command would mean a resolution silently reached outside the checkout.
-"$REPO/build/emit" run demos/fact.scm >/dev/null 2>"$TMP/e9" || true
+EMIT_VERBOSITY=verbose "$REPO/build/emit" run demos/fact.scm >/dev/null 2>"$TMP/e9" || true
 grep -q '^chain ' "$TMP/e9" \
   && { bad "an in-repo command resolved a library from outside the checkout"
        sed 's/^/         /' "$TMP/e9"; } \
@@ -715,18 +718,20 @@ else
 fi
 
 # --- narration is suppressible -------------------------------------------------
-# The resolved manifest is named at default verbosity and absent at quiet, and stdout
-# is identical either way (narration is stderr, so no path's data output shifts).
+# Ordinary run is quiet at default and quiet verbosity; verbose execution retains the
+# manifest narration. Stdout is identical at all levels.
 echo
 echo "manifest narration"
 out_d="$(echo '(+ 1 2)' | "$EMIT" run 2>"$TMP/n1")"
 out_q="$(echo '(+ 1 2)' | EMIT_VERBOSITY=quiet "$EMIT" run 2>"$TMP/n2")"
-if grep -q 'resolve manifest ->' "$TMP/n1" && ! grep -q 'resolve manifest' "$TMP/n2" \
-   && [ "$out_d" = "$out_q" ]; then
-  ok "manifest narration: present by default, absent at quiet, stdout unchanged"
+out_v="$(echo '(+ 1 2)' | EMIT_VERBOSITY=verbose "$EMIT" run 2>"$TMP/nv")"
+if [ ! -s "$TMP/n1" ] && [ ! -s "$TMP/n2" ] \
+   && grep -q 'resolve manifest ->' "$TMP/nv" \
+   && [ "$out_d" = "$out_q" ] && [ "$out_d" = "$out_v" ]; then
+  ok "manifest narration is default-quiet and verbose-visible; stdout is unchanged"
 else
-  bad "manifest narration/quiet"; sed 's/^/         default: /' "$TMP/n1"
-  sed 's/^/         quiet:   /' "$TMP/n2"
+  bad "manifest narration levels"; sed 's/^/         default: /' "$TMP/n1"
+  sed 's/^/         quiet:   /' "$TMP/n2"; sed 's/^/         verbose: /' "$TMP/nv"
 fi
 
 # --- --manifest outranks the environment variable ------------------------------
@@ -738,7 +743,7 @@ mkdir -p "$TMP/lib/scheme"
 cp "$PREFIX/share/emit/lib/scheme/"*.sld "$TMP/lib/scheme/"
 cp "$PREFIX/share/emit/lib/scheme/char-data.scm" "$TMP/lib/scheme/"
 line="$(EMIT_MANIFEST="$PREFIX/share/emit/emit-libs.scm" \
-        "$EMIT" run --manifest "$TMP/flag-man.scm" <<< '(+ 1 2)' 2>&1 >/dev/null \
+        EMIT_VERBOSITY=verbose "$EMIT" run --manifest "$TMP/flag-man.scm" <<< '(+ 1 2)' 2>&1 >/dev/null \
         | grep 'resolve manifest' | head -1)"
 case "$line" in
   *"$TMP/flag-man.scm") ok "--manifest wins over EMIT_MANIFEST" ;;
