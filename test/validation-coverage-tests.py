@@ -27,9 +27,11 @@ class CoverageTests(unittest.TestCase):
             self.assertEqual(len(labels), count)
             self.assertEqual(hashlib.sha256("\n".join(labels).encode()).hexdigest(), digest)
         # New suites extend profiles without changing the historical label pins.
-        # The 53 baseline groups plus five additions form the full profile.
-        self.assertEqual(len([s for s in suites if "full" in s["profiles"]]), 58)
+        # Source loading extends the existing 58-suite full profile; historical
+        # label ownership above remains unchanged.
+        self.assertEqual(len([s for s in suites if "full" in s["profiles"]]), 59)
         additions = {
+            "source-load-interaction-host": {"dev", "full", "reference"},
             "stdlib-precompilation": {"full"},
             "program-toplevel-order-native": {"full"},
             "scheme-base-generator-native": {"full"},

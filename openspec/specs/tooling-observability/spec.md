@@ -19,6 +19,8 @@ writes. Silent success (an action that produces no describing output) SHALL NOT 
 default behavior for any action that reads or writes a file, links a binary, or runs a
 compilation.
 
+Ordinary `emit run` execution SHALL suppress host and compiler narration at default and quiet verbosity, including manifest resolution, cache, compilation, and loading progress. Verbose execution SHALL retain narration on stderr. Diagnostics, explicit dump requests, program output, existing final-value reporting, and `--emit` data behavior SHALL remain available. This command-specific exception SHALL take precedence over the general default-narration rule.
+
 #### Scenario: A build step names its output artifact
 
 - **WHEN** a `Makefile` target links a binary or the driver emits an IR file
@@ -37,7 +39,7 @@ compilation.
 
 - **WHEN** a tool reads or writes a file, links a binary, or compiles a program
 - **THEN** it produces at least one message describing that action unless the active
-  verbosity level is `quiet`
+  verbosity level is `quiet` or the command is ordinary `emit run` execution at default verbosity
 
 ### Requirement: Actions report relevant metrics
 
@@ -111,6 +113,8 @@ consistent control, without changing the tool's data contract. The concise defau
 be informative enough to follow the work but SHALL NOT flood the terminal with per-item
 detail.
 
+Ordinary `emit run` execution SHALL suppress host and compiler narration at default and quiet verbosity, including manifest resolution, cache, compilation, and loading progress. Verbose execution SHALL retain narration on stderr. Diagnostics, explicit dump requests, program output, existing final-value reporting, and `--emit` data behavior SHALL remain available. This command-specific exception SHALL take precedence over the general default-narration rule.
+
 #### Scenario: Quiet suppresses narration
 
 - **WHEN** a tool is run at the `quiet` level
@@ -123,7 +127,7 @@ detail.
 
 #### Scenario: Default is concise
 
-- **WHEN** a tool is run with no verbosity override
+- **WHEN** a tool other than ordinary `emit run` execution is run with no verbosity override
 - **THEN** it announces its principal actions and headline metrics but not every
   per-item step
 
@@ -148,11 +152,13 @@ well as from the Chez driver: at `verbose` verbosity each path SHALL announce ea
 pass by name in the order it runs. (The tool list previously named `bin/scheme-compile`,
 which was removed when the commands were unified behind `emit <verb>`.)
 
+Ordinary `emit run` execution SHALL suppress host and compiler narration at default and quiet verbosity, including manifest resolution, cache, compilation, and loading progress. Verbose execution SHALL retain narration on stderr. Diagnostics, explicit dump requests, program output, existing final-value reporting, and `--emit` data behavior SHALL remain available. This command-specific exception SHALL take precedence over the general default-narration rule.
+
 #### Scenario: Each listed tool announces action, inputs/outputs, and metrics
 
 - **WHEN** any of `Makefile` targets, an `emit` command, `schemec`, `tools/regen.sh`,
   `tools/format.sh`, `run-all-tests.sh`, `run-dev-tests.sh`, or the compiler driver runs at
-  the default level
+  the default level, except ordinary `emit run` execution
 - **THEN** it announces the action it performs, names its inputs and outputs, and reports
   the metrics relevant to that action
 
@@ -178,6 +184,16 @@ which was removed when the commands were unified behind `emit <verb>`.)
 - **WHEN** the commit-time formatting gate runs and the formatter is unavailable
 - **THEN** it reports the skip and names what it looked for, rather than exiting silently
 
+#### Scenario: Script execution is quiet by default
+
+- **WHEN** a successful script prints `Hello world` and runs through `emit run` or its shebang with verbosity unset
+- **THEN** stdout contains the program output and stderr contains no manifest, compilation, cache, or loading narration
+
+#### Scenario: Quiet execution retains failures and verbose observation
+
+- **WHEN** the script is run at verbose verbosity or fails at default verbosity
+- **THEN** verbose progress is on stderr without changing stdout, and failures remain visible with a nonzero exit status
+
 ### Requirement: The Chez-free paths honor the project verbosity control
 
 Every command of the shipped compiler SHALL honor the project's single verbosity control at
@@ -196,4 +212,3 @@ standard-output bytes.
 - **WHEN** a command that writes a data payload to standard output is run at each verbosity
   level in turn
 - **THEN** the standard-output bytes are identical at every level
-

@@ -104,6 +104,42 @@ extern "C" {
   // reaches the COMPILER's handler chain rather than a JIT'd session's (issue #97).
   intptr_t rt_raiser_enter_host(void);
   void rt_raiser_leave_host(intptr_t token);
+  intptr_t rt_guard_checkpoint(void);
+  void rt_guard_restore(intptr_t token);
+  intptr_t rt_repl_mode(void);
+  intptr_t rt_repl_input(void);
+  intptr_t rt_cons(intptr_t, intptr_t);
+  intptr_t rt_intern(const char *);
+  intptr_t rt_make_string(const char *, intptr_t);
+  intptr_t rt_null_value(void);
+  intptr_t rt_make_load_entry(void *);
+  void rt_set_load_request(intptr_t (*)(intptr_t, intptr_t, intptr_t));
+}
+
+static bool g_load_request_active = false;
+
+// Compiler evaluation can be nested inside a guest load request. Isolate every
+// raw compiler call at this immediate boundary: a compiler trap crosses only its
+// Scheme/C frames, never the resolver/cache C++ objects above this function.
+static intptr_t compiler_entry() {
+  // Existing command queries have different result shapes and retain their
+  // established fatal-trap behavior. Only loader callbacks use status failures.
+  if (!g_load_request_active) return scheme_entry();
+  jmp_buf jb;
+  jmp_buf *saved = rt_trap;
+  intptr_t checkpoint = rt_guard_checkpoint();
+  intptr_t raiser = rt_raiser_enter_host();
+  rt_trap = &jb;
+  intptr_t result;
+  if (setjmp(jb) == 0) result = scheme_entry();
+  else {
+    rt_guard_restore(checkpoint);
+    intptr_t message = rt_make_string(rt_trap_msg, (intptr_t)std::strlen(rt_trap_msg));
+    result = rt_cons(rt_intern("error"), message);
+  }
+  rt_raiser_leave_host(raiser);
+  rt_trap = saved;
+  return result;
 }
 
 typedef intptr_t (*entry_t)(void);
@@ -275,6 +311,7 @@ static const std::string kBoundary = "; ==EMIT-UNIT-BOUNDARY==\n";
 // Narration to stderr, controllable via EMIT_VERBOSITY (quiet|q|0 silences it,
 // verbose|v|2 shows detail).  stdout stays reserved for machine data.
 static int g_level = 1;
+static bool g_suppress_run_narration = false;
 static void init_verbosity() {
   const char *v = std::getenv("EMIT_VERBOSITY");
   std::string s = v ? v : "";
@@ -282,7 +319,10 @@ static void init_verbosity() {
   else if (s == "verbose" || s == "v" || s == "2") g_level = 2;
   else g_level = 1;
 }
-static void say(const std::string &m)  { if (g_level >= 1) std::cerr << m << "\n"; }
+static void say(const std::string &m)  {
+  if (g_level >= 1 && !((g_suppress_run_narration || g_load_request_active) && g_level < 2))
+    std::cerr << m << "\n";
+}
 static void vsay(const std::string &m) { if (g_level >= 2) std::cerr << m << "\n"; }
 static bool g_repl_startup = false;
 static void say_resolution(const std::string &m) {
@@ -296,7 +336,7 @@ static void say_resolution(const std::string &m) {
 // channel").  Levels (design D1): 0 off, 1 stage names only, 2 full per-pass IL dump,
 // 3 = 2 plus library units.  The precedence mirrors the Chez driver's
 // (src/compile.ss): an explicit --dump wins, else EMIT_VERBOSITY=verbose gives the
-// concise stage trace, else off.  MUST be called before the first scheme_entry().
+// concise stage trace, else off.  MUST be called before the first compiler_entry().
 //
 // Narration goes to stderr on both sides, so this never changes a command's stdout: `emit
 // run --emit --dump` writes the same IR bytes as without it.
@@ -777,7 +817,7 @@ static void say_chained(const std::string &manifest, const std::vector<std::stri
 // came from stdin); every other submission names its file.
 static void set_source_home(const std::string &path) {
   rt_repl_set(13, path.data(), (intptr_t)path.size());
-  scheme_entry();
+  compiler_entry();
 }
 
 // Ask the compiler which libraries a source text imports (mode 12), as canonical
@@ -842,7 +882,7 @@ static std::vector<LibraryName> raw_source_imports(const std::string &text,
                                                    const std::string &home) {
   set_source_home(home);
   rt_repl_set(12, text.data(), (intptr_t)text.size());
-  return library_records(scheme_entry());
+  return library_records(compiler_entry());
 }
 
 // Preload the user libraries the PROGRAM NEEDS into `modules` (changes:
@@ -889,7 +929,7 @@ static std::string manifest_mode_text(int mode, const std::string &mtext,
     exit(1);
   }
   rt_repl_set(mode, mtext.data(), (intptr_t)mtext.size());
-  std::string out = scm_str(scheme_entry());
+  std::string out = scm_str(compiler_entry());
   rt_trap = saved;
   return out;
 }
@@ -1180,7 +1220,7 @@ class LibraryResolver {
     std::string text = read_file(source);
     set_source_home(source);
     rt_repl_set(18, text.data(), (intptr_t)text.size());
-    intptr_t result = scheme_entry();
+    intptr_t result = compiler_entry();
     if (status_of(result) != "ok") {
       error = "library " + requested.label + " from " + source + ": " +
               normalize_compiler_message(scm_str(rt_cdr(result)));
@@ -1224,7 +1264,7 @@ static bool source_imports(const std::string &text, const std::string &home,
   for (;;) {
     out = raw_source_imports(text, home);
     rt_repl_set(23, "", 0);
-    std::vector<LibraryName> pending = library_records(scheme_entry());
+    std::vector<LibraryName> pending = library_records(compiler_entry());
     if (pending.empty()) return true;
     std::string answers = "(";
     for (const LibraryName &name : pending) {
@@ -1242,7 +1282,7 @@ static bool source_imports(const std::string &text, const std::string &home,
     }
     answers += ")";
     rt_repl_set(24, answers.data(), (intptr_t)answers.size());
-    scheme_entry();
+    compiler_entry();
   }
 }
 
@@ -1367,7 +1407,7 @@ static bool preload_user_libraries(LibraryResolver &resolver,
       }
       set_source_home(p);                    // includes resolve beside the .sld
       rt_repl_set(4, src.data(), (intptr_t)src.size());
-      intptr_t r = scheme_entry();
+      intptr_t r = compiler_entry();
       std::string st = status_of(r);
       if (st == "deferred") { deferred.push_back(descriptor); continue; }
       if (st == "already") { progress = true; continue; }  // e.g. baked (scheme base): no module
@@ -1424,7 +1464,7 @@ static int resolve_program(const std::string &manifest, const std::string &name,
   }
   std::string mtext = read_file(manifest);
   rt_repl_set(10, mtext.data(), (intptr_t)mtext.size());
-  intptr_t r = scheme_entry();
+  intptr_t r = compiler_entry();
   if (status_of(r) != "ok") {          // (2) found, but holds no datum at all
     std::cerr << "emit: manifest " << manifest << " " << normalize_compiler_message(scm_str(rt_cdr(r)))
               << "\n";
@@ -1898,7 +1938,7 @@ static CacheRead cache_load_entry(const std::string &stem, const std::string &wh
   }
 
   rt_repl_set(14, meta.data(), (intptr_t)meta.size());
-  intptr_t r = scheme_entry();
+  intptr_t r = compiler_entry();
   std::string st = status_of(r);
   if (st == "deferred") return CacheRead::Deferred;    // valid, but not yet: retry later
   if (st != "ok") {
@@ -1939,7 +1979,7 @@ static bool cache_store_entry(const std::string &stem, const std::string &what,
                               const std::vector<std::string> &modules) {
   if (stem.empty()) return false;
   rt_repl_set(15, keys.data(), (intptr_t)keys.size());
-  intptr_t r = scheme_entry();
+  intptr_t r = compiler_entry();
   if (status_of(r) != "ok") return false;
   std::string meta = scm_str(rt_cdr(r));
   std::string joined;
@@ -1984,7 +2024,7 @@ static std::map<std::string, std::string> g_unit_generations;
 
 static bool compiler_text_query(int mode, const std::string &input, std::string &output) {
   rt_repl_set(mode, input.data(), (intptr_t)input.size());
-  intptr_t result = scheme_entry();
+  intptr_t result = compiler_entry();
   if (status_of(result) != "ok") return false;
   output = scm_str(rt_cdr(result));
   return true;
@@ -2100,7 +2140,7 @@ static CacheRead load_artifact(const std::string &stem, const std::string &key,
   // All host checks and semantic parsing precede this one transactional publish.
   std::string registration = "(explicit " + request.substr(1);
   rt_repl_set(14, registration.data(), (intptr_t)registration.size());
-  intptr_t result = scheme_entry();
+  intptr_t result = compiler_entry();
   if (status_of(result) == "deferred") return CacheRead::Deferred;
   if (status_of(result) != "ok") return miss("registration refused");
   init = scm_str(rt_cdr(result));
@@ -2147,7 +2187,7 @@ static CacheRead cache_load_unit(const std::string &key, const std::string &path
 static std::vector<std::string> library_sources_just_read() {
   std::vector<std::string> out;
   rt_repl_set(16, "", 0);
-  intptr_t r = scheme_entry();
+  intptr_t r = compiler_entry();
   if (status_of(r) != "ok") return out;
   std::istringstream lines(scm_str(rt_cdr(r)));
   std::string p;
@@ -2452,7 +2492,7 @@ static bool register_baked_set(std::vector<std::string> &modules,
                                std::vector<std::string> &inits) {
   if (cache_load_baked_set(modules, inits)) { ++g_portable_hits; return true; }
   rt_repl_set(8, "", 0);
-  intptr_t r = scheme_entry();
+  intptr_t r = compiler_entry();
   if (status_of(r) != "ok") {
     std::cerr << "emit: (scheme base): " << normalize_compiler_message(scm_str(rt_cdr(r))) << "\n";
     return false;
@@ -2491,7 +2531,7 @@ static bool seed_session(const std::string &prog_src, LibraryResolver &resolver,
                          std::vector<std::string> &module_keys,
                          const std::string &source_home) {
   rt_repl_set(no_prelude ? 0 : 1, "", 0);    // init-session
-  scheme_entry();
+  compiler_entry();
   modules.clear();
   module_keys.clear();
 
@@ -2507,6 +2547,8 @@ static bool seed_session(const std::string &prog_src, LibraryResolver &resolver,
   return preload_user_libraries(resolver, modules, module_keys, prog_src, source_home);
 }
 
+static void install_source_loader(LibraryResolver &, const std::vector<std::string> &);
+
 // Compile a whole program (or a lone define-library) against the seeded session (mode 7).
 // On success fills `prog_ir` and returns true; `is_library` is set when the source was a
 // lone define-library (then `modules` is cleared and `prog_ir` is that single unit).
@@ -2516,7 +2558,7 @@ static bool compile_unit(const std::string &prog_src, std::vector<std::string> &
                          const std::string &source_home) {
   set_source_home(source_home);
   rt_repl_set(7, prog_src.data(), (intptr_t)prog_src.size());   // compile program
-  intptr_t pr = scheme_entry();
+  intptr_t pr = compiler_entry();
   std::string pst = status_of(pr);
   if (pst != "ok" && pst != "library") {
     std::cerr << "emit: " << normalize_compiler_message(scm_str(rt_cdr(pr))) << "\n";
@@ -2614,7 +2656,7 @@ static void shake_units(std::vector<std::string> &modules,
     input += kBoundary;
     input += root_text;
     rt_repl_set(17, input.data(), (intptr_t)input.size());
-    intptr_t r = scheme_entry();
+    intptr_t r = compiler_entry();
     std::string st = status_of(r);
     if (st != "ok") {
       // Sound, and now the ONLY way a unit stays whole: the core no longer answers `keep`,
@@ -2740,6 +2782,10 @@ static int emit_run(int argc, char **argv) {
               << (emit ? "--emit" : "--resolve-program") << "\n";
     return 2;
   }
+  // Ordinary execution keeps program output readable by suppressing informational
+  // host narration at default and quiet levels.  --emit remains a diagnostic/data
+  // workflow with its established narration; verbose and explicit dumps also remain.
+  g_suppress_run_narration = !emit && !resolve;
   // Manifest resolution: the shared ordered lookup (change: manifest-search-path),
   // now a chain over the searched candidates (change: installed-emit-completeness).
   bool bad_manifest = false;
@@ -2753,7 +2799,7 @@ static int emit_run(int argc, char **argv) {
   if (resolve) {
     GC_INIT();
     rt_repl_set(0, "", 0);                     // init-session (no prelude needed)
-    scheme_entry();
+    compiler_entry();
     std::string src, out;
     if (resolve_program(first_manifest(manifests), resolve_name, src, out)) return 1;
     std::cout << src << "\n" << out << "\n";
@@ -2761,7 +2807,7 @@ static int emit_run(int argc, char **argv) {
   }
 
   // Forward --no-prelude to the embedded compiler (read via %no-prelude?): skip
-  // baking/implying (scheme base).  Must be set before any scheme_entry() call.
+  // baking/implying (scheme base).  Must be set before any compiler_entry() call.
   if (no_prelude) setenv("EMIT_NO_PRELUDE", "1", 1);
   forward_dump_level(dump, dump_all);
 
@@ -2856,6 +2902,7 @@ static int emit_run(int argc, char **argv) {
     std::cerr << "emit run: lookup error: " << toString(sym.takeError()) << "\n";
     return 1;
   }
+  install_source_loader(resolver, module_keys);
   uint64_t transform_before_run = g_jit_metrics.transform_ns;
   entry_t fn = sym->toPtr<entry_t>();
 
@@ -2925,46 +2972,43 @@ static int emit_run(int argc, char **argv) {
 
 typedef intptr_t (*thunk_t)(void);
 
-// Look up an entry thunk by name, run it under trap isolation, and print the value
-// (stdout) or "!trap: <msg>" (stdout).  A runtime trap longjmps back here so the
-// session survives; conservative GC needs no unwinding of the JIT'd frames.
-static void run_thunk(const std::string &name) {
-  Expected<ExecutorAddr> sym = jit_lookup(name);
-  if (!sym) {
-    std::cout << "!lookup error: " << toString(sym.takeError()) << "\n" << std::flush;
-    return;
-  }
+// Prompt execution is an adapter over a result-returning operation. The loader
+// uses C runtime entry invocation instead, so guest escapes never cross C++.
+struct ThunkResult {
+  bool ok;
+  bool lookup_error;
+  intptr_t value;
+  std::string error;
+};
+static ThunkResult execute_thunk(const std::string &name) {
+  auto sym = jit_lookup(name);
+  if (!sym) return {false, true, 0, toString(sym.takeError())};
   thunk_t fn = sym->toPtr<thunk_t>();
   jmp_buf jb;
+  jmp_buf *saved_trap = rt_trap;
+  intptr_t checkpoint = rt_guard_checkpoint();
   rt_trap = &jb;
-  auto execute_begin = SteadyClock::now();
-  if (setjmp(jb) == 0) {
-    intptr_t r = fn();
-    // Echo suppression (change: unspecified-value, decision 6): a form whose result is
-    // THE unspecified value prints nothing at all -- no value, no newline -- so
-    // side-effecting forms stay quiet at the prompt, as in Chez's waiter and Racket's
-    // REPL.  This is a REPL DISPLAY policy, not a property of the value: the guard lives
-    // here and NOT in print_val, so an explicit (write (if #f #f)) still prints
-    // #<unspecified>.  Only the unspecified value is suppressed -- #f and () are
-    // legitimate results and still echo, which is why the value must be distinct from
-    // both.  emit_run above and the runtime's main apply the SAME rule to a whole
-    // program's final value (change: emit-cli-front-door): the two paths agree, which
-    // is the dev->ship fidelity the batch report existed to protect -- what changed is
-    // only what they agree on.
-    if (!rt_is_unspec(r)) {
-      rt_write(r);
-      std::printf("\n");
-      std::fflush(stdout);
-    }
-  } else {
-    rt_guard_reset();
-    std::cout << "!trap: " << rt_trap_msg << "\n" << std::flush;
-  }
-  auto execute_end = SteadyClock::now();
+  auto begin = SteadyClock::now();
+  intptr_t value = 0;
+  bool ok = setjmp(jb) == 0;
+  if (ok) value = fn();
+  else rt_guard_restore(checkpoint);
+  rt_trap = saved_trap;
   g_jit_metrics.execute_ns +=
-      (uint64_t)std::chrono::duration_cast<std::chrono::nanoseconds>(
-          execute_end - execute_begin).count();
-  rt_trap = nullptr;
+    (uint64_t)std::chrono::duration_cast<std::chrono::nanoseconds>(
+      SteadyClock::now() - begin).count();
+  return {ok, false, value, ok ? "" : rt_trap_msg};
+}
+static void run_thunk(const std::string &name) {
+  ThunkResult result = execute_thunk(name);
+  if (!result.ok) {
+    std::cout << (result.lookup_error ? "!lookup error: " : "!trap: ")
+              << result.error << "\n" << std::flush;
+  } else if (!rt_is_unspec(result.value)) {
+    rt_write(result.value);
+    std::printf("\n");
+    std::fflush(stdout);
+  }
 }
 
 // The library `__init` thunks this PROCESS has already run (change:
@@ -3115,7 +3159,7 @@ static void preload_libraries(LibraryResolver &resolver, bool have_baked,
       if (!source_imports(src, p, resolver, ignored)) { progress = true; continue; }
       set_source_home(p);                    // includes resolve beside the .sld
       rt_repl_set(4, src.data(), (intptr_t)src.size());
-      intptr_t r = scheme_entry();
+      intptr_t r = compiler_entry();
       std::string st = status_of(r);
       if (st == "deferred") { deferred.push_back(descriptor); continue; }
       // Already registered -- a manifest entry naming a member of the baked set, which this
@@ -3222,7 +3266,7 @@ static bool register_repl_closure(const std::string &form, LibraryResolver &reso
 
   const auto saved_generations = g_unit_generations;
   rt_repl_set(19, "", 0);
-  intptr_t begin = scheme_entry();
+  intptr_t begin = compiler_entry();
   if (status_of(begin) != "ok") {
     std::cerr << "error: " << scm_str(rt_cdr(begin)) << "\n";
     return false;
@@ -3250,7 +3294,7 @@ static bool register_repl_closure(const std::string &form, LibraryResolver &reso
       }
       set_source_home(path);
       rt_repl_set(4, source.data(), (intptr_t)source.size());
-      intptr_t result = scheme_entry();
+      intptr_t result = compiler_entry();
       std::string status = status_of(result);
       if (status == "deferred") {
         failure = "library " + path + ": dependency was not registered";
@@ -3284,7 +3328,7 @@ static bool register_repl_closure(const std::string &form, LibraryResolver &reso
   }
 
   rt_repl_set(ok ? 21 : 20, "", 0);
-  scheme_entry();
+  compiler_entry();
   if (!ok) {
     g_unit_generations = saved_generations;
     std::cerr << "error: " << failure << "\n";
@@ -3323,16 +3367,17 @@ static bool compile_guarded(int mode, const std::string &text, intptr_t &out) {
   // form that failed mid-compile leaves its partial mutations behind.  The setjmp below
   // stays as the backstop for a trap raised where the compiler installed no guard.
   intptr_t raiser = rt_raiser_enter_host();
+  intptr_t guard_checkpoint = rt_guard_checkpoint();
   rt_trap = &jb;
   if (setjmp(jb) != 0) {
-    rt_guard_reset();
+    rt_guard_restore(guard_checkpoint);
     rt_raiser_leave_host(raiser);
     rt_trap = saved;
     std::cerr << "error: compiler trap: " << rt_trap_msg << "\n";
     return false;
   }
   rt_repl_set(mode, text.data(), (intptr_t)text.size());
-  out = scheme_entry();
+  out = compiler_entry();
   rt_raiser_leave_host(raiser);
   rt_trap = saved;
   return true;
@@ -3394,7 +3439,7 @@ static void handle_form_result(const std::string &form, intptr_t r, LibraryResol
     // is simply not reached.
     if (run_init_list(scm_str(rt_cdr(r)))) {
       rt_repl_set(6, form.data(), (intptr_t)form.size());
-      intptr_t m = scheme_entry();
+      intptr_t m = compiler_entry();
       if (status_of(m) != "ok") std::cerr << "error: " << scm_str(rt_cdr(m)) << "\n";
     }
   } else if (st == "resolve") {
@@ -3405,6 +3450,142 @@ static void handle_form_result(const std::string &form, intptr_t r, LibraryResol
   } else {                                  // "error": compile-time; session continues
     std::cerr << "error: " << scm_str(rt_cdr(r)) << "\n";
   }
+}
+
+// Source loading never executes guest code in C++. A request compiles/adopts code
+// and returns native entry handles. Scheme owns reading, dynamic-wind cleanup,
+// initializer execution and import commit, so an escape crosses only C frames.
+static LibraryResolver *g_load_resolver = nullptr;
+static std::set<std::string> g_load_registered;
+static bool g_load_run_scope = false;
+struct LoadMetrics {
+  std::string path;
+  SteadyClock::time_point begin;
+  size_t forms = 0;
+};
+static std::vector<LoadMetrics> g_load_metrics;
+
+static intptr_t load_string(const std::string &s) {
+  return rt_make_string(s.data(), (intptr_t)s.size());
+}
+static intptr_t load_result(const char *status, intptr_t payload) {
+  return rt_cons(rt_intern(status), payload);
+}
+static intptr_t load_error(const std::string &message) {
+  return load_result("error", load_string(message));
+}
+static intptr_t load_entry(const std::string &name, std::string &error) {
+  auto symbol = jit_lookup(name);
+  if (!symbol) { error = toString(symbol.takeError()); return 0; }
+  return rt_make_load_entry(symbol->toPtr<void *>());
+}
+
+static intptr_t source_load_request(intptr_t op, intptr_t text_value, intptr_t path_value) {
+  // The compiler request channel is not the caller's source port. Restore its
+  // previous input after every request; persistent session updates remain committed.
+  intptr_t saved_mode = rt_fixnum_value(rt_repl_mode());
+  std::string saved_input = scm_str(rt_repl_input());
+  std::string text = scm_str(text_value), path = scm_str(path_value);
+  auto request = [&]() -> intptr_t {
+    if (!g_load_resolver) return load_error("load: unsupported host");
+    if (op == 0 && g_load_run_scope) {
+      // Batch compilation left an empty incremental environment and its final
+      // gensym counter. Auto-import base without resetting that counter or the
+      // registered library tables, avoiding batch/JIT symbol collisions.
+      intptr_t result;
+      if (!compile_guarded(6, "", result)) return load_error("load: initialize interaction scope");
+      if (status_of(result) != "ok") return result;
+      g_load_run_scope = false;
+    }
+    if (op == 0 || op == 5) {
+      intptr_t result;
+      if (!compile_guarded(op == 0 ? 29 : 30, path, result))
+        return load_error("load: source context failure");
+      if (status_of(result) != "error") {
+        if (op == 0) g_load_metrics.push_back({path, SteadyClock::now(), 0});
+        else if (!g_load_metrics.empty()) {
+          LoadMetrics metrics = g_load_metrics.back();
+          g_load_metrics.pop_back();
+          vsay("load " + metrics.path + " -> interaction scope [" +
+               std::to_string(metrics.forms) + " forms, " +
+               ms_text(elapsed_ms(metrics.begin, SteadyClock::now())) + "]");
+        }
+      }
+      return result;
+    }
+    if (op == 3) {
+      g_inits_run.insert(text);
+      return load_result("syntax", load_string(""));
+    }
+    if (op == 2) {
+      intptr_t result;
+      if (!compile_guarded(6, text, result)) return load_error("load: import merge failed");
+      if (status_of(result) == "ok") return load_result("syntax", load_string(""));
+      return result;
+    }
+    if (op != 1 && op != 4) return load_error("load: invalid request");
+    if (op == 1 && !g_load_metrics.empty()) ++g_load_metrics.back().forms;
+    if (op == 1 && text.find("library") != std::string::npos) {
+      std::vector<LibraryName> ignored;
+      if (!source_imports(text, path, *g_load_resolver, ignored))
+        return load_error("load: library requirement resolution failed");
+      set_source_home(path);
+    }
+    intptr_t result;
+    if (!compile_guarded(op == 1 ? 3 : 22, text, result))
+      return load_error("load: compiler trap");
+    std::string status = status_of(result);
+    if (status == "resolve") {
+      if (!register_repl_closure(text, *g_load_resolver, g_load_registered))
+        return load_error("load: import resolution failed");
+      set_source_home(path);
+      if (!compile_guarded(3, text, result)) return load_error("load: compiler trap");
+      status = status_of(result);
+    }
+    if (status == "ok") {
+      intptr_t payload = rt_cdr(result);
+      std::string ir = scm_str(rt_car(payload)), name = scm_str(rt_cdr(payload)), error;
+      if (!add_ir(ir, path.c_str(), error)) return load_error(error);
+      intptr_t entry = load_entry(name, error);
+      return entry ? load_result("ok", entry) : load_error(error);
+    }
+    if (status == "import") {
+      std::istringstream names(scm_str(rt_cdr(result)));
+      std::vector<std::string> entries;
+      std::string name, error;
+      while (std::getline(names, name)) {
+        if (name.empty() || g_inits_run.count(name)) continue;
+        entries.push_back(name);
+      }
+      intptr_t list = rt_null_value();
+      for (auto i = entries.rbegin(); i != entries.rend(); ++i) {
+        intptr_t entry = load_entry(*i, error);
+        if (!entry) return load_error(error);
+        list = rt_cons(rt_cons(load_string(*i), entry), list);
+      }
+      return load_result("import", list);
+    }
+    return result;
+  };
+  bool previous_loading = g_load_request_active;
+  g_load_request_active = true;
+  intptr_t result = request();
+  g_load_request_active = previous_loading;
+  rt_repl_set(saved_mode, saved_input.data(), (intptr_t)saved_input.size());
+  return result;
+}
+
+static void install_source_loader(LibraryResolver &resolver,
+                                  const std::vector<std::string> &keys) {
+  g_load_resolver = &resolver;
+  g_load_run_scope = true;
+  for (const auto &key : keys) {
+    g_load_registered.insert(key);
+    g_repl_added_units.insert(key);
+    // Initializers may still be in progress when library code calls load.
+    // Their generated one-shot guards, rather than admission, prove execution.
+  }
+  rt_set_load_request(source_load_request);
 }
 
 static int emit_repl(int argc, char **argv) {
@@ -3480,7 +3661,7 @@ static int emit_repl(int argc, char **argv) {
   // (entry @__repl_prelude, distinct from the compiler's @scheme_entry); add it and
   // run that thunk once to populate the prelude's global slots.  --no-prelude skips.
   rt_repl_set(prelude ? 1 : 0, "", 0);
-  std::string prelude_ir = scm_str(scheme_entry());
+  std::string prelude_ir = scm_str(compiler_entry());
   if (!prelude_ir.empty()) {
     std::string err;
     if (!add_ir(prelude_ir, "<repl>", err)) {
@@ -3558,13 +3739,17 @@ static int emit_repl(int argc, char **argv) {
   say_manifest(manifests);
   preload_libraries(resolver, /*have_baked=*/prelude, registered);
   g_repl_startup = false;
+  g_load_resolver = &resolver;
+  g_load_registered = registered;
+  g_load_run_scope = false;
+  rt_set_load_request(source_load_request);
 
   // The prelude's procedures live in the now-registered (scheme base) library;
   // auto-import it into the session scope (mode 6) so later forms resolve prelude
   // names to it -- unless --no-prelude.
   if (prelude) {
     rt_repl_set(6, "", 0);
-    intptr_t r = scheme_entry();
+    intptr_t r = compiler_entry();
     if (status_of(r) != "ok")
       std::cerr << "warning: auto-import (scheme base): " << scm_str(rt_cdr(r)) << "\n";
   }
@@ -3582,7 +3767,7 @@ static int emit_repl(int argc, char **argv) {
     buf += "\n";
     for (;;) {
       rt_repl_set(2, buf.data(), (intptr_t)buf.size());
-      intptr_t code = rt_fixnum_value(scheme_entry());
+      intptr_t code = rt_fixnum_value(compiler_entry());
       if (code == -1) break;                // incomplete: read more input
       if (code == -2) {                     // malformed: report and drop the buffer
         std::cerr << "error: malformed input\n";
@@ -3947,7 +4132,7 @@ static int warm_stdlib_into(const std::string &destination) {
   };
   GC_INIT();
   rt_repl_set(1, "", 0);
-  scheme_entry();
+  compiler_entry();
   std::vector<std::string> baked, inits, baked_keys, units, keys;
   if (!register_baked_set(baked, inits) ||
       !preload_user_libraries(resolver, units, keys, "", "", true)) return 1;
@@ -4126,7 +4311,7 @@ static int emit_build(int argc, char **argv) {
   } else {
     // Resolve the (program NAME) entry from the first manifest only.
     rt_repl_set(0, "", 0);
-    scheme_entry();
+    compiler_entry();
     if (resolve_program(first_manifest(manifests), name, src, entry_out)) return 1;
   }
 
@@ -4300,7 +4485,7 @@ static int emit_lib(int argc, char **argv) {
   // The home is re-set because seeding submitted other sources in between.
   set_source_home(src);
   rt_repl_set(11, lib_src.data(), (intptr_t)lib_src.size());
-  intptr_t er = scheme_entry();
+  intptr_t er = compiler_entry();
   if (status_of(er) != "ok") {
     std::cerr << "emit lib: " << normalize_compiler_message(scm_str(rt_cdr(er))) << "\n";
     return 1;

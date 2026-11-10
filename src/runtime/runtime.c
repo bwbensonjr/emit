@@ -108,6 +108,8 @@ static int rt_trap_in_flight = 0;
                             * live in the rt_* arithmetic, so the emitter's inline fixnum fast
                             * path routes any non-fixnum operand here automatically. */
 
+#define HDR_LOAD_ENTRY 9  /* opaque ccc entry address; executable only through rt_load_invoke */
+
 #define FIX(n)     ((val)(((intptr_t)(n)) << 3))
 #define UNFIX(v)   (((intptr_t)(v)) >> 3)
 #define FALSE_V    ((val)TAG_BOOL)                     /* 1   (subtype BOOL, payload 0) */
@@ -180,6 +182,7 @@ static int is_bytevector(val v) { return is_ext(v, HDR_BYTEVECTOR); }
 static int is_record(val v)     { return is_ext(v, HDR_RECORD); }
 static int is_hashtable(val v)  { return is_ext(v, HDR_HASHTABLE); }
 static int is_mv(val v)         { return is_ext(v, HDR_MV); }
+static int is_load_entry(val v) { return is_ext(v, HDR_LOAD_ENTRY); }
 static int is_error_obj(val v)  { return is_ext(v, HDR_ERROR); }
 
 /* The type a value HAS, for the diagnostic.  A fixed string per tag/header rather
@@ -214,6 +217,7 @@ static const char *rt_type_name(val v) {
         case HDR_RECORD_TYPE: return "a record type";
         case HDR_MV:          return "a values bundle";
         case HDR_FLONUM:      return "a flonum";
+        case HDR_LOAD_ENTRY:  return "a load entry";
       }
       return "a heap object";
   }
@@ -1461,6 +1465,7 @@ intptr_t rt_is_pair_value(val v)   { return is_pair(v) ? 1 : 0; }
 intptr_t rt_is_symbol_value(val v) { return is_symbol(v) ? 1 : 0; }
 intptr_t rt_is_fixnum_value(val v) { return is_fixnum(v) ? 1 : 0; }
 intptr_t rt_is_null_value(val v)   { return v == NIL_V ? 1 : 0; }
+val rt_null_value(void) { return NIL_V; }
 
 /* Is v THE unspecified value?  A host accessor, so UNSPEC_V's bit pattern stays defined
  * in exactly one place (this file) instead of being duplicated in the C++ host -- silent
@@ -1468,6 +1473,38 @@ intptr_t rt_is_null_value(val v)   { return v == NIL_V ? 1 : 0; }
  * to suppress the echo of an uninteresting result (src/emit.cpp).  Deliberately NOT a
  * Scheme-visible predicate: it has no prim-table entry, so no Scheme binding exists. */
 intptr_t rt_is_unspec(val v) { return is_unspec(v) ? 1 : 0; }
+
+/* Source loading keeps compilation and execution on opposite sides of the C++
+ * boundary.  A request may compile and admit code but MUST return before that
+ * code runs.  Scheme owns the loading loop and its dynamic-wind cleanup; invoking
+ * an escape continuation therefore crosses only C runtime/JIT frames, never live
+ * C++ objects.  The null callback is the standalone executable's explicit host
+ * restriction and introduces no compiler or LLVM link dependency. */
+typedef val (*rt_load_request_t)(intptr_t, val, val);
+static rt_load_request_t rt_load_request_fn = NULL;
+void rt_set_load_request(rt_load_request_t fn) { rt_load_request_fn = fn; }
+
+val rt_load_request(val opcode, val text, val path) {
+  CHECK_TAG("load", opcode, is_fixnum, "an integer operation");
+  CHECK_TAG("load", text, is_string, "a string");
+  CHECK_TAG("load", path, is_string, "a string");
+  if (!rt_load_request_fn) rt_fatal("load: unsupported host (requires emit run or emit repl)");
+  return rt_load_request_fn(UNFIX(opcode), text, path);
+}
+
+/* Host-produced handles cannot be forged by supplying an integer address.  Entry
+ * thunks use the existing ccc zero-argument ABI, not the fastcc closure ABI. */
+val rt_make_load_entry(void *fn) {
+  val *p = (val *)GC_MALLOC_ATOMIC(2 * sizeof(val));
+  p[0] = HDR_LOAD_ENTRY;
+  p[1] = (val)fn;
+  return tag_ptr(p, TAG_EXT);
+}
+val rt_load_invoke(val entry) {
+  CHECK_TAG("load", entry, is_load_entry, "a load entry");
+  val (*fn)(void) = (val (*)(void))as_ptr(entry)[1];
+  return fn();
+}
 
 /* Persistent-global root set (change: repl-embedded-incremental).  In the REPL a
  * top-level define stores its value into a JIT'd module's global slot, and those
@@ -2542,6 +2579,17 @@ static int      rt_guard_depth = 0;
 /* Reset the frame stack; a host calls this after catching an outermost trap so a
  * longjmp that bypassed rt_run_guarded's pop does not leave stale frames. */
 void rt_guard_reset(void) { rt_guard_depth = 0; rt_trap_in_flight = 0; }
+
+/* A nested compiler call owns only frames above its entry checkpoint.  Restoring
+ * this depth retains the caller's live guard/continuation frames and trap-delivery
+ * state, whereas the top-level reset would invalidate them. */
+intptr_t rt_guard_checkpoint(void) {
+  return ((intptr_t)rt_guard_depth << 1) | rt_trap_in_flight;
+}
+void rt_guard_restore(intptr_t token) {
+  rt_guard_depth = (int)(token >> 1);
+  rt_trap_in_flight = (int)(token & 1);
+}
 
 /* The innermost live frame's id, for the thunk that was just entered under
  * rt_run_guarded -- this is how `call/cc` learns which frame is its own. */

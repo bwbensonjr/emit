@@ -709,6 +709,18 @@
 #     are byte-identical, and `RUNNER=emit-run demos/run-tests.sh` reports 82/82 with
 #     identical results on both trees.
 #
+#   implement-load (#177, #176) -- the private host-request and native-entry
+#     invocation primitives add exactly two declarations to each module header:
+#     @rt_load_request(i64, i64, i64) and @rt_load_invoke(i64). Verified against
+#     all 82 demos captured from an isolated git archive of HEAD 3260efc, linked
+#     from its original committed bootstrap IR, and the regenerated working tree.
+#     The before captures reproduce all 82 committed reference hashes. Across
+#     250 module headers, the after captures add exactly 500 declaration lines,
+#     with no removals or numeric renumbering: removing only those exact two
+#     declarations makes every after capture byte-identical to its before file.
+#     No function body, initializer, constant, or demo name changes; the program
+#     modules differ only by those same header declarations.
+#
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u
 cd "$(dirname "$0")/.."

@@ -275,7 +275,9 @@
     ((scheme base) #t ((emit internal)) "lib/scheme/base.sld")
     ((scheme cxr) #f ((scheme base)) "lib/scheme/cxr.sld")
     ((scheme read) #f ((scheme base) (emit internal)) "lib/scheme/read.sld")
-    ((scheme file) #f ((scheme base) (emit internal)) "lib/scheme/file.sld")))
+    ((scheme file) #f ((scheme base) (emit internal)) "lib/scheme/file.sld")
+    ((scheme load) #f ((scheme base) (scheme read) (scheme file))
+     "lib/scheme/load.sld")))
 
 ;;; Assignment EXCEPTIONS to the default of (scheme base); see the partition notes in
 ;;; the header.  Each entry is (NAME HOME ...), one HOME per library whose BODY defines
@@ -408,6 +410,12 @@
 ;;; catchable-errors-with-kinds, design D8).  Unlike the six they are ADDITIONS -- new
 ;;; names (scheme base) never exported -- so they widen (scheme file) rather than
 ;;; relocating anything out of (scheme base).
+;;; Source loading has its own opt-in R7RS library.  Its state and orchestration
+;;; helpers are private to that library, including the active nested source path.
+(define *scheme-load-private*
+  '(%load-path %load-resolve %load-check %load-render %load-result %load-evaluate
+    %load-reraise))
+
 (define *scheme-read-procs* '(read))
 (define *scheme-file-procs*
   '(open-input-file open-output-file with-input-from-file with-output-to-file
@@ -509,6 +517,8 @@
     (prelude-assign* *substrate-borrowed* '(((emit internal) private) (scheme base)))
     (prelude-assign* *scheme-read-procs* '((scheme read)))
     (prelude-assign* *scheme-file-procs* '((scheme file)))
+    (prelude-assign* '(load) '((scheme load)))
+    (prelude-assign* *scheme-load-private* '(((scheme load) private)))
     (prelude-assign* *port-guards-shared-with-read*
                      '(((scheme base) private) ((scheme read) private)))
     (prelude-assign* *reader-report-shared-with-read*
@@ -550,6 +560,9 @@
     ;; NEW in (scheme file) (change: catchable-errors-with-kinds, design D8).  Also
     ;; additions, for the same reason: (scheme base) never had them to lose.
     file-exists? delete-file
+    ;; Source-loading procedure and its library-private implementation.
+    load %load-path %load-resolve %load-check %load-render %load-result %load-evaluate
+    %load-reraise
     ;; Emit-specific list helpers live in (emit internal) for compiler use and are
     ;; re-exported by the opt-in (emit list), not by (scheme base).
     filter fold-right iota))

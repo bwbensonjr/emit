@@ -455,6 +455,7 @@
   (set! *repl-lib-imports* (quote ()))
   (set! *repl-registration-transaction* #f)
   (set! *repl-pending* (quote ()))
+  (set! *repl-load-contexts* (quote ()))
   (set! *library-answers* (quote ()))
   (set! *library-pending* (quote ()))
   (set! *library-answers-used* (quote ()))
@@ -1770,6 +1771,35 @@
               (when (eq? (car r) (quote error)) (set! *repl-pending* (quote ())))
               r)))))
 
+;; Loading owns only transient source/reader/splice context. Definitions and the
+;; monotonic counters committed by nested forms deliberately survive a pop.
+(define *repl-load-contexts* (quote ()))
+(define (repl-load-begin path)
+  (set! *repl-load-contexts*
+    (cons (vector (source-home)
+                  (includes-read)
+                  *repl-reader-fold?*
+                  *repl-reader-next-fold?*
+                  *repl-pending*)
+          *repl-load-contexts*))
+  (set-source-home! path)
+  (set-includes-read! (quote ()))
+  (set! *repl-reader-fold?* #f)
+  (set! *repl-reader-next-fold?* #f)
+  (set! *repl-pending* (quote ()))
+  (cons (quote syntax) ""))
+(define (repl-load-end)
+  (if (null? *repl-load-contexts*)
+      (cons (quote error) "load context stack is empty")
+      (let ([s (car *repl-load-contexts*)])
+        (set! *repl-load-contexts* (cdr *repl-load-contexts*))
+        (set-source-home! (vector-ref s 0))
+        (set-includes-read! (vector-ref s 1))
+        (set! *repl-reader-fold?* (vector-ref s 2))
+        (set! *repl-reader-next-fold?* (vector-ref s 3))
+        (set! *repl-pending* (vector-ref s 4))
+        (cons (quote syntax) ""))))
+
 ;; --- cross-call state persistence -------------------------------------------
 ;; The assembled program is one @scheme_entry, so *repl-env* etc. are locals
 ;; re-created on every host call.  Bundle them into a vector held in the runtime
@@ -1821,7 +1851,8 @@
       (set! *repl-owned-globals* (vector-ref s 22))
       (set! *repl-syntax-n* (vector-ref s 23))
       (set! *repl-source-names* (vector-ref s 24))
-      (set! *repl-source-aliases* (vector-ref s 25)))))
+      (set! *repl-source-aliases* (vector-ref s 25))
+      (set! *repl-load-contexts* (vector-ref s 26)))))
 (define (repl-save-state!)
   (repl-state-set! (vector *repl-env*
                            *repl-macro-env*
@@ -1848,7 +1879,8 @@
                            *repl-owned-globals*
                            *repl-syntax-n*
                            *repl-source-names*
-                           *repl-source-aliases*)))
+                           *repl-source-aliases*
+                           *repl-load-contexts*)))
 
 ;; --- the dispatched embedded entry (design D2) -------------------------------
 ;; The host sets (repl-mode)/(repl-input) via rt_repl_set, then calls this ccc
@@ -1921,6 +1953,8 @@
               [(= mode 26) (repl-publication-row (repl-input))]
               [(= mode 27) (repl-manifest-artifacts (repl-input))]
               [(= mode 28) (repl-cached-export-text (repl-input))]
+              [(= mode 29) (repl-load-begin (repl-input))]
+              [(= mode 30) (repl-load-end)]
               [else (compile-one-form-text (repl-input))])])
       (repl-save-state!)
       result)))

@@ -306,6 +306,62 @@ Malformed local bindings, transformers, and `case-lambda` clauses report the off
 rather than a compiler-internal pair-access error. Dotted `define-values` remains unsupported
 and is reported by name. A rejected REPL form leaves earlier valid definitions usable.
 
+## Loading source files
+
+`load` is an ordinary, first-class procedure exported by `(scheme load)`. Import it explicitly;
+it is not part of the automatically imported `(scheme base)` surface. This release supports one
+filename string and returns the unspecified value. The optional R7RS environment argument is not
+implemented.
+
+```scheme
+;; main.scm
+(import (scheme load))
+(load "steps/first.scm")
+```
+
+```scheme
+;; steps/first.scm
+(import (scheme base) (scheme load))
+(display "First step")
+(newline)
+(load "nested/second.scm")
+```
+
+```scheme
+;; steps/nested/second.scm
+(import (scheme base))
+(display "Nested step")
+(newline)
+```
+
+Run the entry source from its project directory:
+
+```sh
+emit run main.scm
+# First step
+# Nested step
+```
+
+The outer filename is resolved from the process working directory. A nested `load` resolves its
+filename beside the source file currently being loaded, so the second file above is found relative to
+`steps/first.scm`. Loaded files are read and evaluated one form at a time. In `emit repl`, they
+share the existing REPL interaction scope: definitions, macros, imports, and redefinitions from a
+loaded file persist for later prompt forms and later loads. In `emit run`, loading uses its own
+persistent interaction scope, seeded with the standard library. It is separate from the batch
+program's top-level and lexical bindings; loaded code cannot capture variables defined by the batch
+source. Put reusable code in a library when the batch program needs to import and call it directly.
+
+Each completed form keeps its effects. If a later form fails, loading stops and raises a catchable
+error that identifies the file; earlier definitions and runtime effects are not rolled back. A
+failure inside a nested load also stops the enclosing load unless Scheme code catches it. A
+non-local escape with `call/cc` closes the active source ports and restores the loader's nested
+context, while preserving forms that already completed.
+
+The `(scheme load)` binding is also available to standalone executables, but those executables do
+not carry the compiler. Calling `load` there raises a catchable unsupported-host error. For code
+that must run in a standalone executable, use libraries and `include` so the source is compiled
+ahead of time.
+
 ## Portable sources
 
 R7RS lets one source serve several Schemes: `include` and `cond-expand` work in **every** position,

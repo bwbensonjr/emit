@@ -322,4 +322,20 @@
        (car (frontend-expand-forms '((read-secret-slot)) *repl-macro-env*
                                    *repl-known* (repl-session-bindings) '(probe)))
        (list private-slot-generation))
+
+;; Nested load scopes restore only transient state, keeping successful definitions.
+(set! *repl-pending* (quote (outer-pending)))
+(set! *repl-reader-fold?* #t)
+(repl-load-begin "outer.scm")
+(check "load starts with a private splice queue" *repl-pending* (quote ()))
+(set! *repl-pending* (quote (inner-pending)))
+(repl-load-begin "inner.scm")
+(check "nested load compiles a definition" (car (compile-one-form (quote (define load-test-value 7)))) (quote ok))
+(repl-load-end)
+(check "nested load restores outer queue" *repl-pending* (quote (inner-pending)))
+(repl-load-end)
+(check "load restores caller queue" *repl-pending* (quote (outer-pending)))
+(check "load restores caller reader mode" *repl-reader-fold?* #t)
+(check "load retains committed definition" (and (repl-env-lookup *repl-env* (quote load-test-value)) #t) #t)
+
 (printf "repl import bindings: ~a checks passed\n" checks)

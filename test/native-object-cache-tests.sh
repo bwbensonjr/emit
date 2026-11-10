@@ -13,6 +13,12 @@ fail=0
 ok() { echo "  [OK  ] $1"; pass=$((pass + 1)); }
 bad() { echo "  [FAIL] $1"; fail=$((fail + 1)); }
 
+# The shipped manifest has two baked members, which share one prepared cache group.
+# Derive the ordinary groups and both cache tiers' stamp count from the manifest.
+manifest_libraries="$(awk 'index($0, "((library ") == 1 || index($0, "  (library ") == 1 { n++ } END { print n + 0 }' emit-libs.scm)"
+stdlib_groups=$((manifest_libraries - 1))
+stdlib_stamps=$((stdlib_groups * 2))
+
 echo "native key and LLVM adapter probes"
 test/native-cache-signature-tests.sh >/dev/null \
   && ok "canonical native signature probe" || bad "canonical native signature probe"
@@ -59,9 +65,9 @@ env EMIT_CACHE="$cache" EMIT_VERBOSITY=quiet build/emit run -O1 \
   || bad "quiet native narration"
 env EMIT_CACHE="$cache" build/emit run -O1 --manifest test/modules/emit-libs.scm \
   test/modules/prog-mylib.scm >"$tmp/default.out" 2>"$tmp/default.err"
-[ "$(cat "$tmp/default.out")" = 142 ] && ! grep -q 'native object' "$tmp/default.err" \
-  && ok "default output remains concise" \
-  || bad "default native narration"
+[ "$(cat "$tmp/default.out")" = 142 ] && [ ! -s "$tmp/default.err" ] \
+  && ok "default emit run preserves output and suppresses narration" \
+  || bad "default run narration"
 
 echo "native corruption falls back before admission"
 cp "$stem.0.o" "$tmp/good.o"
@@ -179,7 +185,7 @@ if EMIT_CACHE="$tmp/stdlib" EMIT_VERBOSITY=verbose build/emit build --stdlib \
 else bad "stdlib preparation"; cat "$tmp/stdlib.err"; fi
 if EMIT_CACHE="$tmp/stdlib" EMIT_VERBOSITY=verbose build/emit build --stdlib \
     >"$tmp/stdlib2.out" 2>"$tmp/stdlib2.err" \
-   && grep -q 'portable 11 reused/0 generated, native 11 reused/0 generated' "$tmp/stdlib2.err"; then
+   && grep -Fq "portable $stdlib_groups reused/0 generated, native $stdlib_groups reused/0 generated" "$tmp/stdlib2.err"; then
   ok "a second preparation reuses every portable and native group"
 else bad "stdlib repeated preparation"; cat "$tmp/stdlib2.err"; fi
 printf '(import (scheme char)) (display (char-upcase #\\a))\n' >"$tmp/stdlib.scm"
@@ -204,7 +210,7 @@ mkdir -p "$tmp/share"
 if (umask 077; EMIT_SHARED_CACHE="$shared" build/emit build --stdlib --shared \
       >"$tmp/shared-prep.out" 2>"$tmp/shared-prep.err") \
    && [ ! -s "$tmp/shared-prep.out" ] \
-   && grep -q "portable 0 reused/11 generated, native 0 reused/11 generated" "$tmp/shared-prep.err" \
+   && grep -Fq "portable 0 reused/$stdlib_groups generated, native 0 reused/$stdlib_groups generated" "$tmp/shared-prep.err" \
    && grep -q "replace shared library cache -> $shared" "$tmp/shared-prep.err" \
    && [ -z "$(find "$shared" -type f ! -perm 644)" ] \
    && [ -n "$(find "$shared" -maxdepth 0 -perm 755)" ] \
@@ -232,7 +238,7 @@ shared_run shared-hit "$tmp/user-hit" "$shared"
 
 env EMIT_CACHE="$tmp/user-warm" EMIT_SHARED_CACHE="$shared" build/emit build --stdlib \
   >"$tmp/shared-warm.out" 2>"$tmp/shared-warm.err"
-grep -q 'portable 11 reused/0 generated (11 shared), native 11 reused/0 generated (11 shared)' \
+grep -Fq "portable $stdlib_groups reused/0 generated ($stdlib_groups shared), native $stdlib_groups reused/0 generated ($stdlib_groups shared)" \
     "$tmp/shared-warm.err" \
   && [ -z "$(find "$tmp/user-warm" -name 'baked-*' -o -name 'unit-*' -o -name 'native-*')" ] \
   && ok "plain --stdlib counts shared entries as reused and duplicates none" \
@@ -298,7 +304,7 @@ chmod 755 "$tmp/locked"
 touch "$shared/baked-v5-0123456789abcdef.stamp"
 EMIT_SHARED_CACHE="$shared" build/emit build --stdlib --shared -q 2>"$tmp/shared-again.err"; rc=$?
 [ "$rc" -eq 0 ] && [ ! -e "$shared/baked-v5-0123456789abcdef.stamp" ] \
-  && [ "$(ls "$shared" | grep -c '\.stamp$')" = 22 ] \
+  && [ "$(ls "$shared" | grep -c '\.stamp$')" = "$stdlib_stamps" ] \
   && [ -z "$(ls "$tmp/share" | grep -v '^library-cache$')" ] \
   && ok "re-preparation discards entries it did not produce" \
   || { bad "shared re-preparation (exit $rc)"; cat "$tmp/shared-again.err"; }
@@ -320,7 +326,7 @@ grep -q '^shared cache: none \[disabled by EMIT_SHARED_CACHE\]$' "$tmp/doctor.ou
   && ok "doctor labels a disabled shared cache" || bad "doctor disabled shared cache"
 before="$(tree_digest "$shared")"
 [ "$(doctor_shared "$shared")" = "$baseline" ] \
-  && grep -q "^shared cache: $shared \[EMIT_SHARED_CACHE; 22 entries, matches this executable\]$" \
+  && grep -Fq "shared cache: $shared [EMIT_SHARED_CACHE; $stdlib_stamps entries, matches this executable]" \
     "$tmp/doctor.out" \
   && [ "$(tree_digest "$shared")" = "$before" ] \
   && ok "doctor reports a matching shared cache without touching it" \

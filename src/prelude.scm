@@ -2435,3 +2435,90 @@
   (if (%delete-file path)
       (if #f #f)
       (%file-error 'delete-file "cannot delete file" path)))
+
+;;; Source loading is a Scheme loop over a dedicated port.  The host callback
+;;; only compiles/adopts code; every user entry is invoked AFTER it returns, in
+;;; rt_load_invoke's C frame.  This lets dynamic-wind close the port and restore
+;;; source contexts even when loaded code escapes to its caller via call/cc.
+(define %load-path "")
+
+(define (%load-resolve filename)
+  (if (or (string=? filename "") (char=? (string-ref filename 0) #\/))
+      filename
+      (let loop ((i (- (string-length %load-path) 1)))
+        (cond
+          ((< i 0) filename)
+          ((char=? (string-ref %load-path i) #\/)
+            (string-append (substring %load-path 0 (+ i 1)) filename))
+          (else (loop (- i 1)))))))
+
+(define (%load-check result path)
+  (if (eq? (car result) 'error)
+      (error 'load (string-append path ": " (cdr result)))
+      (cdr result)))
+
+(define (%load-render form)
+  (let ((out (open-output-string)))
+    (call-with-port out (lambda (p) (write form p) (get-output-string p)))))
+
+(define (%load-result result text path)
+  (let ((status (car result)))
+    (cond
+      ((eq? status 'ok) (%load-invoke (cdr result)) (if #f #f))
+      ((eq? status 'syntax) (if #f #f))
+      ((eq? status 'import)
+        (for-each
+          (lambda (entry)
+            ;; Record an initialization attempt before entering its body, matching
+            ;; the host's existing at-most-once policy even after partial effects.
+            (%load-check (%load-request 3 (car entry) path) path)
+            (%load-invoke (cdr entry)))
+          (cdr result))
+        (%load-check (%load-request 2 text path) path)
+        (if #f #f))
+      ((eq? status 'splice) (let drain ()
+                              (let ((next (%load-request 4 "" path)))
+                                (if (eq? (car next) 'done)
+                                    (if #f #f)
+                                    (begin
+                                      (if (eq? (car next) 'text)
+                                          (%load-evaluate (cdr next) path)
+                                          (%load-result next "" path))
+                                      (drain))))))
+      (else (%load-check result path) (if #f #f)))))
+
+(define (%load-evaluate text path) (%load-result (%load-request 1 text path) text path))
+
+(define (%load-reraise path obj)
+  ;; Error kinds survive file context, while arbitrary raised Scheme values keep
+  ;; their identity.  A caller may deliberately use a symbol or heap object as an
+  ;; exception protocol rather than an error object.
+  (raise (if (error-object? obj)
+             (%make-error-object/kind
+               (string-append "load: " path ": " (error-object-message obj))
+               (error-object-irritants obj)
+               (%error-object-kind obj))
+             obj)))
+
+(define (load . args)
+  (if (not (= (length args) 1))
+      (error 'load "expected one filename; environment argument unsupported")
+      (if (not (string? (car args)))
+          (error 'load "filename must be a string" (car args))
+          (let ((path (%load-resolve (car args))) (saved-path %load-path) (port #f))
+            (guard (obj (else (%load-reraise path obj)))
+              (dynamic-wind
+                (lambda ()
+                  (%load-check (%load-request 0 "" path) path)
+                  (set! %load-path path))
+                (lambda ()
+                  (set! port (open-input-file path))
+                  (let loop ()
+                    (let ((form (read port)))
+                      (if (eof-object? form)
+                          (if #f #f)
+                          (begin (%load-evaluate (%load-render form) path) (loop))))))
+                (lambda ()
+                  (if port (close-input-port port))
+                  (set! %load-path saved-path)
+                  (%load-check (%load-request 5 "" path) path))))))))

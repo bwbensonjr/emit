@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.6.0
+
+- Add the explicitly imported `(scheme load)` library with sequential, one-argument file loading in
+  `emit run` and `emit repl`. REPL loads share the prompt's interaction scope; `emit run` loads use
+  a separate persistent interaction scope. Nested paths resolve beside the active file, completed
+  forms retain their effects after a later error, and non-local escapes clean up loader state.
+- Standalone executables provide a catchable unsupported-host error for `load`; use libraries and
+  `include` for source compiled into a standalone executable. The optional R7RS environment
+  argument is not implemented.
+- Ordinary `emit run` execution no longer mixes manifest, resolver, cache, compilation, or loading
+  narration with program output at default verbosity. `EMIT_VERBOSITY=verbose` retains progress;
+  diagnostics, explicit dumps, final-value reporting, and `--emit` behavior remain available.
+
 ## 0.5.1
 
 - Embed generated standard-library forms instead of reconstructing their exports and bodies

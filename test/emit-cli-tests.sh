@@ -129,6 +129,91 @@ printf '(display 42)\n(newline)\n' > "$TMP/version-free.scm"
   && ok "emit run output and narration carry no version line" \
   || bad "emit run (exit $rc, stdout [$(cat "$TMP/o")], stderr [$(cat "$TMP/e")])"
 
+# Ordinary execution leaves stderr for diagnostics.  Exercise repeat runs so a cache
+# hit has the same quiet default as the first run; verbose still exposes progress.
+printf '(display "Hello world")\n' > "$TMP/greeting.scm"
+for pass_kind in cold warm; do
+  for level in default quiet; do
+    if [ "$level" = default ]; then
+      "$EMIT" run "$TMP/greeting.scm" >"$TMP/o" 2>"$TMP/e" </dev/null; rc=$?
+    else
+      EMIT_VERBOSITY=quiet "$EMIT" run "$TMP/greeting.scm" >"$TMP/o" 2>"$TMP/e" </dev/null; rc=$?
+    fi
+    [ "$rc" -eq 0 ] && [ "$(cat "$TMP/o")" = "Hello world" ] && [ ! -s "$TMP/e" ] \
+      && ok "emit run greeting is quiet at $level verbosity ($pass_kind)" \
+      || bad "emit run greeting at $level/$pass_kind (exit $rc, stdout [$(cat "$TMP/o")], stderr [$(cat "$TMP/e")])"
+  done
+done
+EMIT_VERBOSITY=verbose "$EMIT" run "$TMP/greeting.scm" >"$TMP/o" 2>"$TMP/e" </dev/null; rc=$?
+[ "$rc" -eq 0 ] && [ "$(cat "$TMP/o")" = "Hello world" ] && [ -s "$TMP/e" ] \
+  && ok "emit run greeting retains verbose narration" \
+  || bad "emit run verbose greeting (exit $rc, stderr [$(cat "$TMP/e")])"
+
+printf '(define)\n' > "$TMP/run-error.scm"
+if "$EMIT" run "$TMP/run-error.scm" >"$TMP/o" 2>"$TMP/e" </dev/null; then
+  bad "emit run errors still fail at default verbosity"
+elif [ ! -s "$TMP/o" ] && grep -q 'error\|syntax\|invalid\|not a pair' "$TMP/e"; then
+  ok "emit run errors remain visible at default verbosity"
+else
+  bad "emit run error output (stdout [$(cat "$TMP/o")], stderr [$(cat "$TMP/e")])"
+fi
+
+# Runtime-loaded forms use the interaction scope, print their own effects, and suppress
+# expression-value echoes.  Give each verbosity level a private cache so cold and warm
+# observations are independent of the user's installed cache.
+printf '(import (scheme load))\n(load "%s/loaded-greeting.scm")\n' "$TMP" > "$TMP/loaded-main.scm"
+printf '(import (scheme base))\n(display "Hello world")\n(newline)\n(+ 1 2)\n' \
+  > "$TMP/loaded-greeting.scm"
+printf 'Hello world\n' > "$TMP/loaded-expected.out"
+for level in default quiet verbose; do
+  load_cache="$TMP/load-cache-$level"
+  mkdir -p "$load_cache"
+  for pass_kind in cold warm; do
+    if [ "$level" = default ]; then
+      EMIT_CACHE="$load_cache" EMIT_SHARED_CACHE="" \
+        "$EMIT" run "$TMP/loaded-main.scm" >"$TMP/o" 2>"$TMP/e" </dev/null; rc=$?
+    else
+      EMIT_VERBOSITY="$level" EMIT_CACHE="$load_cache" EMIT_SHARED_CACHE="" \
+        "$EMIT" run "$TMP/loaded-main.scm" >"$TMP/o" 2>"$TMP/e" </dev/null; rc=$?
+    fi
+    if [ "$rc" -ne 0 ] || ! cmp -s "$TMP/o" "$TMP/loaded-expected.out"; then
+      bad "loaded greeting $level/$pass_kind (exit $rc, stdout [$(cat "$TMP/o")])"
+    elif [ "$level" != verbose ] && [ -s "$TMP/e" ]; then
+      bad "loaded greeting $level/$pass_kind wrote stderr: [$(cat "$TMP/e")]"
+    elif [ "$level" = verbose ] \
+      && { ! grep -Fq "load $TMP/loaded-greeting.scm -> interaction scope" "$TMP/e" \
+           || ! grep -Eq '\[[0-9]+ forms, [0-9.]+ms\]' "$TMP/e"; }; then
+      bad "loaded greeting verbose narration lacks load/forms/time: [$(cat "$TMP/e")]"
+    else
+      ok "loaded greeting preserves output and verbosity contract ($level/$pass_kind)"
+    fi
+  done
+done
+
+printf '(import (scheme base))\n(display "before")\n(newline)\n(error "load failure")\n(display "after")\n' \
+  > "$TMP/loaded-failure.scm"
+printf '(import (scheme base) (scheme load))\n(guard (e (else (display "caught") (newline)))\n  (load "%s/loaded-failure.scm"))\n' "$TMP" \
+  > "$TMP/loaded-caught.scm"
+EMIT_CACHE="$TMP/load-cache-errors" EMIT_SHARED_CACHE="" \
+  "$EMIT" run "$TMP/loaded-caught.scm" >"$TMP/o" 2>"$TMP/e" </dev/null; rc=$?
+printf 'before\ncaught\n' > "$TMP/loaded-caught-expected.out"
+[ "$rc" -eq 0 ] && cmp -s "$TMP/o" "$TMP/loaded-caught-expected.out" && [ ! -s "$TMP/e" ] \
+  && ok "a caught load failure preserves prior output and keeps run quiet" \
+  || bad "caught load failure (exit $rc, stdout [$(cat "$TMP/o")], stderr [$(cat "$TMP/e")])"
+# Keep the filename short so the runtime's bounded unhandled-error printer
+# can show it even when the test workspace itself has a long absolute path.
+printf '(import (scheme load))\n(load "loaded-failure.scm")\n' > "$TMP/loaded-uncaught.scm"
+load_emit="$PWD/$EMIT"
+load_manifest="$PWD/emit-libs.scm"
+if (cd "$TMP" && EMIT_CACHE="$TMP/load-cache-errors" EMIT_SHARED_CACHE="" \
+  "$load_emit" run --manifest "$load_manifest" "$TMP/loaded-uncaught.scm") >"$TMP/o" 2>"$TMP/e" </dev/null; then
+  bad "an uncaught load failure did not fail emit run"
+elif [ "$(cat "$TMP/o")" = before ] && grep -q 'load:.*loaded-failure.scm' "$TMP/e"; then
+  ok "an uncaught load failure is visible and stops later forms"
+else
+  bad "uncaught load failure (stdout [$(cat "$TMP/o")], stderr [$(cat "$TMP/e")])"
+fi
+
 # ---------------------------------------------------------------------------
 # 2. errors: stderr, non-zero, usage alongside the diagnostic.
 # ---------------------------------------------------------------------------
@@ -392,6 +477,14 @@ chmod +x "$TOOL"
 got="$(EMIT_VERBOSITY=quiet PATH="$TMP/bin:$PATH" "$TOOL" --check a.scm 2>"$TMP/sb.err" </dev/null)"
 [ "$got" = "(\"$TOOL\" \"--check\" \"a.scm\")" ] && ok "a #!/usr/bin/env -S emit run script receives its arguments" \
   || { bad "shebang script => [$got]"; sed 's/^/         /' "$TMP/sb.err"; }
+got="$(PATH="$TMP/bin:$PATH" "$TOOL" --check a.scm 2>"$TMP/sb-default.err" </dev/null)"
+[ "$got" = "(\"$TOOL\" \"--check\" \"a.scm\")" ] && [ ! -s "$TMP/sb-default.err" ] \
+  && ok "shebang emit run is quiet at default verbosity" \
+  || bad "default shebang output [$got], stderr [$(cat "$TMP/sb-default.err")]"
+got="$(EMIT_VERBOSITY=verbose PATH="$TMP/bin:$PATH" "$TOOL" --check a.scm 2>"$TMP/sb-verbose.err" </dev/null)"
+[ "$got" = "(\"$TOOL\" \"--check\" \"a.scm\")" ] && [ -s "$TMP/sb-verbose.err" ] \
+  && ok "shebang emit run retains verbose narration" \
+  || bad "verbose shebang output [$got], stderr [$(cat "$TMP/sb-verbose.err")]"
 
 # The script and its delivered executable see the same tail, -- included.
 TAIL="$TMP/tail.scm"
@@ -438,6 +531,10 @@ EMIT_VERBOSITY=quiet "$EMIT" run --emit "$TMP/bare.scm" >"$TMP/without.ll" 2>/de
 [ -s "$TMP/with.ll" ] && cmp -s "$TMP/with.ll" "$TMP/without.ll" \
   && ok "the interpreter line leaves the emitted IR byte-identical" \
   || bad "IR differs with the interpreter line"
+"$EMIT" run --emit "$TMP/bare.scm" >"$TMP/default.ll" 2>"$TMP/default-emit.err" </dev/null
+[ -s "$TMP/default-emit.err" ] && cmp -s "$TMP/default.ll" "$TMP/without.ll" \
+  && ok "emit run --emit retains narration and byte-identical IR" \
+  || bad "default --emit narration or IR changed"
 
 echo
 echo "  $pass passed, $fail failed"

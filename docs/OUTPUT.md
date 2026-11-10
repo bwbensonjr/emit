@@ -122,6 +122,11 @@ Resolver errors name the library and, once a source has been selected, its path.
 mismatch names the requested name and the declaration. Do not print roots considered at default
 verbosity: that is diagnostic detail, while the selected provider is a principal input.
 
+Ordinary `emit run` execution is quiet at default and quiet verbosity so the program's own
+output is not mixed with manifest, resolver, cache, compilation, or loading narration. Verbose
+mode retains that narration. Diagnostics and explicit `--dump`/`--dump-all` output remain
+available, and `emit run --emit` keeps its existing narration and IR stdout behavior.
+
 ## Native object cache
 
 `emit build --stdlib` prepares the shipped manifest's full libraries without running
