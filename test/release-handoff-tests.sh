@@ -14,6 +14,9 @@ pass() { checks=$((checks + 1)); }
 fail() { printf 'release-handoff test: %s\n' "$1" >&2; exit 1; }
 key() { printf '%s' "$*" | LC_ALL=C tr -c 'A-Za-z0-9._-' '_'; }
 git_id=(-c user.name="Handoff Tests" -c user.email=handoff-tests@example.invalid)
+# Annotated tags need an identity too, and a CI runner has none to guess from.
+export GIT_AUTHOR_NAME="Handoff Tests" GIT_AUTHOR_EMAIL=handoff-tests@example.invalid
+export GIT_COMMITTER_NAME="Handoff Tests" GIT_COMMITTER_EMAIL=handoff-tests@example.invalid
 mkdir -p "$work/bin" "$work/fx"
 cp test/gh-fixture-mock.sh "$work/bin/gh"
 # openspec stub: `validate` exits with the status in $OPENSPEC_STUB_STATUS (default 0).
