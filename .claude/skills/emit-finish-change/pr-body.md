@@ -19,5 +19,3 @@
 ## Release
 
 {{RELEASE_LINE}}
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
