@@ -37,6 +37,22 @@ class ClassifierTests(unittest.TestCase):
                      "docs/RELEASES.md", "CLAUDE.md"):
             self.assertNotIn("release", policy.classify_paths([path])["categories"], path)
 
+    def test_agent_configuration_is_infrastructure_without_payload_obligations(self):
+        # issue #183: .claude/ is outside the source archive and read by no build, proof, or
+        # channel, so it must not fall through to "unknown" (which forces a VERSION bump and
+        # every gate). It is still code, not documentation-only.
+        for path in (".claude/skills/emit-finish-change/SKILL.md", ".claude/settings.json",
+                     ".claude/skills/emit-finish-change/pr-body.md"):
+            result = policy.classify_paths([path])
+            self.assertEqual(result["categories"], ["infrastructure"], path)
+            self.assertFalse(result["source"] or result["units"] or result["archive"] or result["channels"], path)
+            self.assertEqual(result["reference"], [], path)
+            self.assertFalse(result["docs_only"], path)
+            self.assertTrue(result["code"], path)
+        self.assertIn("unknown", policy.classify_paths([".claudeignore"])["categories"])
+        mixed = policy.classify_paths([".claude/settings.json", "src/runtime/runtime.c"])
+        self.assertEqual(mixed["categories"], ["infrastructure", "runtime"])
+
     def test_channel_inputs_rehearse_channels_only(self):
         # change: low-cost-distribution-channels, design D7.
         for path in ("flake.nix", "flake.lock", "packaging/oci/Containerfile",

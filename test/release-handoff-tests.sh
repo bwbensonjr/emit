@@ -172,6 +172,17 @@ expect version ok "trivial change (documentation)"
 expect bootstrap ok "no compiler input changed"
 expect validation ok "documentation only"
 pass
+# An agent-skill change is infrastructure, not unknown: no bump and no native suite owed (#183).
+git switch -q -c skillonly main
+git checkout -q feature -- openspec/changes/demo
+mkdir -p .claude/skills/demo
+printf -- '---\nname: demo\n---\nA skill.\n' > .claude/skills/demo/SKILL.md
+commit "chore: add a skill"
+preflight demo --no-fetch || true
+expect version ok "trivial change (documentation,infrastructure)"
+expect validation owed "CI Required validation"
+! line validation | grep -q "tools/test.sh full" || fail "a skill-only change owes the native suite: $(line validation)"
+pass
 git switch -q feature
 
 # Bootstrap: a stale fingerprint fails, a missing one is owed, uncommitted IR is owed.

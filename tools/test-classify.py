@@ -74,6 +74,10 @@ def classify_paths(paths, inputs=(), error=None, executable=()):
         elif path in {"run-all-tests.sh", "run-dev-tests.sh", ".gitignore", "CLAUDE.md", "AGENTS.md"}:
             categories.add("infrastructure")
             source = units = True
+        elif path.startswith(".claude/"):
+            # Agent skills and settings: tools/release-source.sh leaves them out of the source
+            # archive, and no build, proof, or channel reads them (issue #183).
+            categories.add("infrastructure")
         else:
             categories.add("unknown")
             source = units = archive = channels = True
