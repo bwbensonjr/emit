@@ -100,7 +100,8 @@ or differing public assets fail instead of being overwritten. Never move a
 published tag or replace its payload: correct a public release with a new patch
 version and changelog section. Before publication, fixes require a fresh
 validated release commit. Record the resulting release URL and checksum in the
-implementation handoff after successful publication.
+implementation handoff after successful publication; `tools/release-handoff.sh follow`
+reports both ([release lifecycle](RELEASES.md#release-lifecycle)).
 
 ## Automatic release tagging
 
@@ -125,8 +126,9 @@ GitHub starts no workflow from a tag pushed with `GITHUB_TOKEN`, which is why
 the token exists. The push starts **Source release** above, which runs every
 gate and publishes, and its successful run starts **Distribution channels**
 below. Neither workflow changes, and neither can be started into publishing
-any other way. The Homebrew tap and Nix promotion pull requests still need a
-maintainer merge.
+any other way. The Homebrew tap and Nix promotion pull requests then merge
+automatically once verified and checked ([verified
+auto-merge](#verified-auto-merge-of-promotion-pull-requests)).
 
 Pull requests get the same decision early: when `VERSION` changes, the policy
 job of `compatibility.yml` runs `tools/release-tag.sh check HEAD` against the
@@ -225,33 +227,125 @@ Promotion uses `tools/channel-promote.sh` and is safe to retry:
   is never overwritten. `latest` moves last, and never to an older release than
   the one its image's version label names (`[superseded]`).
 - **Homebrew** opens or reuses a pull request on `bwbensonjr/homebrew-emit`
-  that sets `Formula/emit.rb`.
+  that sets `Formula/emit.rb`, with `HOMEBREW_TAP_TOKEN`.
 - **Nix** opens or reuses a pull request in this repository that sets
-  `packaging/release.json`, after both systems passed.
+  `packaging/release.json`, after both systems passed, with `NIX_PIN_TOKEN`.
+  GitHub starts no workflow for a pull request that `GITHUB_TOKEN` opens, so
+  a pin opened that way would wait for a maintainer to approve its CI run;
+  one opened with `NIX_PIN_TOKEN` starts `Required validation` on its own.
+- Both print `head=<sha>`, the pull request head they pushed or reused, or an
+  empty value when there is nothing to merge.
 - Both pull-request promotions check the target's `main` first:
   - an identical file there is `[already merged]` and needs nothing;
   - a newer release there makes the candidate `[superseded]`, and no
     downgrade pull request is opened;
   - a leftover branch with no open pull request restarts from `main`.
 
-Both pull requests are reviewed and merged by a maintainer.
+### Verified auto-merge of promotion pull requests
+
+After opening or reusing its pull request, each promoting job requests
+automatic merge only for the generated pull request it just verified
+(`tools/channel-promote.sh tap-merge` and `flake-merge`, change
+automate-release-handoff). The checks, all of which must pass:
+
+1. **Policy.** The target enforces its aggregate check on `main` with no
+   bypass actor, and allows auto-merge (`tools/repo-policy.sh`, below). The tap
+   requires `Required tap checks`; Emit requires `Required validation`.
+2. **Target.** The pull request targets `main`.
+3. **Head.** Its head is the commit the promotion step reported, not
+   whichever commit is newest.
+4. **Files.** It changes only the generated file, `Formula/emit.rb` or
+   `packaging/release.json`.
+5. **Bytes.** That file is byte-identical to what the channel tested. For
+   Homebrew, the formula's `url` and `sha256` must also equal the release
+   identity.
+
+GitHub's auto-merge, pinned to that head with `--match-head-commit`, then
+merges once the required check passes. Each run reports one of:
+
+| Report | Meaning |
+| --- | --- |
+| `[auto-merge requested]` | verified; the merge waits for the required check |
+| `[auto-merge pending]` | already requested for this head on an earlier run |
+| `[already merged]` | `main` already has the identical file |
+| `[nothing to merge]` | `main` names a newer release, so the promotion was superseded |
+| `[manual merge: <reason>]` | a check failed; the pull request stays open for a maintainer |
+
+A manual merge is not a failed release: the step succeeds, names the reason,
+and adds it to the job summary. A hand-written change to the formula or the
+pin never takes this path, so it keeps maintainer review. A required check
+that fails leaves the pull request unmerged, and that channel is not
+available for the release until it is fixed.
 
 Permissions:
 
-- Only the oci job holds `packages: write`.
-- Only `nix-promote` holds `contents: write` and `pull-requests: write`.
-- The `HOMEBREW_TAP_TOKEN` secret, a fine-grained token limited to the tap
-  repository, reaches only publish-gated steps. Each promoting job first checks
-  its credential, before building.
+- Only the oci job holds `packages: write`. No channels job holds
+  `contents: write` or `pull-requests: write`; `nix-promote` reads only.
+- `HOMEBREW_TAP_TOKEN` is a fine-grained token limited to
+  `bwbensonjr/homebrew-emit`, with **Contents** and **Pull requests**: Read and
+  write.
+- `NIX_PIN_TOKEN` is a fine-grained token limited to `bwbensonjr/emit`, with
+  **Contents** and **Pull requests**: Read and write. It is separate from
+  `RELEASE_TAG_TOKEN`, which stays Contents-only.
+- Both tokens reach only publish-gated steps. Each promoting job proves its
+  token before building (`tools/channel-promote.sh preflight`): an
+  authenticated `git push --dry-run` and a pull-request read, the operations
+  themselves, since the permissions API reports the account's role rather
+  than the token's scope. A token missing pull-request *write* cannot be
+  probed without a side effect; it fails at the create or merge step, naming
+  the secret.
 
 `test/ci-policy-tests.py` pins these properties.
 
-Retry and rollback:
+To create or rotate either token, follow the [`RELEASE_TAG_TOKEN`
+steps](#automatic-release-tagging) with the repository and permissions above,
+then store it, for example `gh secret set NIX_PIN_TOKEN --repo bwbensonjr/emit`
+(which reads the value from standard input). Both tokens are stored in
+`bwbensonjr/emit`, where the channels workflow runs.
+
+### Merge policy
+
+Automatic promotion merging depends on two repository settings, which a maintainer applies and
+`tools/repo-policy.sh check` verifies without changing anything:
+
+- each repository allows auto-merge;
+- an active ruleset on `main` requires the aggregate check, `Required validation` in Emit and
+  `Required tap checks` in the tap, with **no bypass actor**.
+
+The promotion tokens act as the maintainer's account, so a maintainer bypass would exempt the
+automation too: a bug or leaked token could merge past the check. For an emergency push to
+`main`, an admin disables the ruleset, pushes, and re-enables it. That is one deliberate,
+audit-logged step. The tag workflow pushes tags only, which a branch ruleset does not cover.
+
+```sh
+# Run once per repository: R=bwbensonjr/emit CHECK="Required validation",
+# then R=bwbensonjr/homebrew-emit CHECK="Required tap checks".
+gh api -X PATCH "repos/$R" -F allow_auto_merge=true
+jq -n --arg check "$CHECK" '{name: "main", target: "branch", enforcement: "active",
+  conditions: {ref_name: {include: ["~DEFAULT_BRANCH"], exclude: []}}, bypass_actors: [],
+  rules: [{type: "required_status_checks", parameters: {strict_required_status_checks_policy: false,
+    required_status_checks: [{context: $check}]}}]}' | gh api -X POST "repos/$R/rulesets" --input -
+tools/repo-policy.sh check
+```
+
+`repo-policy.sh` prints one `policy=<auto-merge|required-check|bypass> repo=<repo>
+status=<ok|fail> reason=<text>` line per setting and fails when a setting cannot be read: an
+unknown state never counts as compliant. The tap's aggregate job, `Required tap checks`, lives
+in the tap's `.github/workflows/tests.yml` and fails unless every `brew test-bot` leg succeeded.
+
+### Retry and rollback
 
 - **A failed channel** is retried by dispatching the workflow with the same
   `tag` and `publish` on. Channels that already promoted succeed unchanged:
   - OCI re-tests the published digest and reports `[unchanged]`;
-  - Homebrew and Nix report `[already merged]` once their pull request merged.
+  - Homebrew and Nix report `[already merged]` once their pull request merged,
+    or `[auto-merge pending]` while it waits for its check.
+- **A manual merge** is resolved by a maintainer: merge the pull request after
+  review, or fix the cause (for example a policy setting) and retry the
+  channel, which re-verifies and requests auto-merge.
+- **Turning auto-merge off** for a repository (or deleting its ruleset)
+  returns that channel to manual merges with no code change: the next
+  promotion reports `[manual merge: policy: ...]`.
 
   The source release is never retagged. Retrying an older release is safe
   too: it never moves `latest`, the tap formula, or the Nix pin backward.

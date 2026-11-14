@@ -67,6 +67,7 @@ jobs:
           test/release-source-tests.sh
           # Promotion against a throwaway registry:2 and local git remotes; publishes nothing.
           test/channel-promote-tests.sh
+          test/channel-merge-tests.sh
       - name: Identify the published release or package a candidate
         id: identity
         if: steps.plan.outputs.run == 'true'
@@ -120,14 +121,14 @@ jobs:
         with:
           name: channel-identity
           path: /tmp/emit-channel-assets
+      # Exercise the operations themselves: the permissions API reports the account's role, not
+      # a fine-grained token's scope (change: automate-release-handoff, design D6).
       - name: Preflight the tap credential before building
         if: needs.identity.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
-          [ -n "$GH_TOKEN" ] || { echo "channels: HOMEBREW_TAP_TOKEN is not configured" >&2; exit 1; }
-          [ "$(gh api repos/bwbensonjr/homebrew-emit --jq .permissions.push)" = true ] \
-            || { echo "channels: HOMEBREW_TAP_TOKEN cannot push to bwbensonjr/homebrew-emit" >&2; exit 1; }
+          tools/channel-promote.sh preflight bwbensonjr/homebrew-emit HOMEBREW_TAP_TOKEN
       # The tap's brew test-bot updates Homebrew first, so lint and build with the same rules
       # rather than the runner image's copy (issue #153).  Auto-update stays off afterwards, so
       # every later step sees this one Homebrew.
@@ -173,12 +174,24 @@ jobs:
             ${{ runner.temp }}/homebrew-accept.json
           if-no-files-found: warn
       - name: Open the tap pull request
+        id: tap
         if: needs.identity.outputs.publish == 'true'
         env:
           GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           TAG: ${{ needs.identity.outputs.tag }}
         run: |
-          tools/channel-promote.sh tap "$TAG" "$RUNNER_TEMP/emit.rb"
+          set -o pipefail
+          tools/channel-promote.sh tap "$TAG" "$RUNNER_TEMP/emit.rb" | tee -a "$GITHUB_OUTPUT"
+      # Auto-merge only the verified generated pull request, pinned to the head just promoted;
+      # any doubt leaves it for a maintainer (change: automate-release-handoff, design D4).
+      - name: Request verified auto-merge of the tap pull request
+        if: needs.identity.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          TAG: ${{ needs.identity.outputs.tag }}
+          HEAD: ${{ steps.tap.outputs.head }}
+        run: |
+          tools/channel-promote.sh tap-merge "$TAG" "$RUNNER_TEMP/emit.rb" /tmp/emit-channel-assets/identity.json "$HEAD"
 
   nix:
     needs: identity
@@ -201,6 +214,14 @@ jobs:
         with:
           name: channel-identity
           path: /tmp/emit-channel-assets
+      # A publishing run proves the pin credential before either system builds (change:
+      # automate-release-handoff, design D6); nix-promote runs only after both built.
+      - name: Preflight the Nix pin credential before building
+        if: needs.identity.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.NIX_PIN_TOKEN }}
+        run: |
+          tools/channel-promote.sh preflight "$GITHUB_REPOSITORY" NIX_PIN_TOKEN
       - uses: DeterminateSystems/nix-installer-action@3138316df39ed29be04236d7ffc686fa525866aa # v23
         with:
           extra-conf: |
@@ -249,9 +270,11 @@ jobs:
     needs: [identity, nix]
     if: needs.identity.outputs.publish == 'true'
     runs-on: ubuntu-24.04
+    # The pull request is opened with NIX_PIN_TOKEN, not GITHUB_TOKEN: GitHub starts no workflow
+    # for a pull request GITHUB_TOKEN opens, so its required check would never report (change:
+    # automate-release-handoff, design D7).  GITHUB_TOKEN here needs nothing beyond reading.
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -261,11 +284,20 @@ jobs:
           name: channel-identity
           path: /tmp/emit-channel-assets
       - name: Open the flake release pull request
+        id: flake
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.NIX_PIN_TOKEN }}
           TAG: ${{ needs.identity.outputs.tag }}
         run: |
-          tools/channel-promote.sh flake "$TAG" /tmp/emit-channel-assets/identity.json
+          set -o pipefail
+          tools/channel-promote.sh flake "$TAG" /tmp/emit-channel-assets/identity.json | tee -a "$GITHUB_OUTPUT"
+      - name: Request verified auto-merge of the flake release pull request
+        env:
+          GH_TOKEN: ${{ secrets.NIX_PIN_TOKEN }}
+          TAG: ${{ needs.identity.outputs.tag }}
+          HEAD: ${{ steps.flake.outputs.head }}
+        run: |
+          tools/channel-promote.sh flake-merge "$TAG" /tmp/emit-channel-assets/identity.json "$HEAD"
 
   oci:
     needs: identity

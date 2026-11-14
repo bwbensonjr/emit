@@ -2,6 +2,7 @@
 """CI plan, required-proof failure injection, and concurrency fixtures."""
 from importlib.machinery import SourceFileLoader
 import json
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -139,17 +140,43 @@ class PolicyTests(unittest.TestCase):
         top = workflow.split("\njobs:\n", 1)[0]
         self.assertIn("permissions:\n  contents: read\n", top)
         self.assertNotIn(": write", top)
-        # Write permissions appear only on the two promoting jobs, and the tap token only in
-        # steps gated on publish.
+        # Only the OCI job holds a write permission; the tap and Nix pull requests are opened
+        # with their own fine-grained tokens (change: automate-release-handoff, design D7).
         self.assertEqual(workflow.count("packages: write"), 1)
-        self.assertEqual(workflow.count("contents: write"), 1)
-        self.assertEqual(workflow.count("pull-requests: write"), 1)
-        for segment in workflow.split("secrets.HOMEBREW_TAP_TOKEN")[:-1]:
-            step = segment.rsplit("- name:", 1)[1]
-            self.assertIn("if: needs.identity.outputs.publish == 'true'", step)
-        for promote in ("channel-promote.sh tap", "channel-promote.sh oci", "channel-promote.sh flake"):
+        self.assertNotIn("contents: write", workflow)
+        self.assertNotIn("pull-requests: write", workflow)
+        # Each promotion token reaches only steps gated on publish: a step-level gate, or any
+        # step of a job gated as a whole (nix-promote).
+        jobs = workflow.split("\njobs:\n", 1)[1]
+        blocks = {}
+        for block in re.split(r"\n(?=  [a-z][a-z-]*:\n)", "\n" + jobs):
+            if block.strip():
+                blocks[block.strip().split(":", 1)[0]] = block
+        gate = "if: needs.identity.outputs.publish == 'true'"
+        nix_promote = blocks["nix-promote"]
+        self.assertIn("\n    " + gate + "\n", nix_promote)
+        for secret in ("secrets.HOMEBREW_TAP_TOKEN", "secrets.NIX_PIN_TOKEN"):
+            holders = [name for name, block in blocks.items() if secret in block]
+            self.assertTrue(holders, secret)
+            for name in holders:
+                job_gated = ("\n    " + gate + "\n") in blocks[name]
+                for step in blocks[name].split("\n      - ")[1:]:
+                    if secret in step:
+                        self.assertTrue(job_gated or gate in step, f"{secret} in an ungated {name} step")
+        for promote in ("channel-promote.sh tap ", "channel-promote.sh oci ", "channel-promote.sh flake ",
+                        "channel-promote.sh tap-merge ", "channel-promote.sh flake-merge ",
+                        "channel-promote.sh preflight bwbensonjr/homebrew-emit HOMEBREW_TAP_TOKEN",
+                        'channel-promote.sh preflight "$GITHUB_REPOSITORY" NIX_PIN_TOKEN'):
             self.assertIn(promote, workflow)
-        self.assertIn("if: needs.identity.outputs.publish == 'true'", workflow.split("nix-promote:", 1)[1])
+        # Merges are requested only on publish, for the head the promotion step reported.
+        homebrew = blocks["homebrew"]
+        merge_step = homebrew.split("channel-promote.sh tap-merge", 1)[0].rsplit("- name:", 1)[1]
+        self.assertIn("if: needs.identity.outputs.publish == 'true'", merge_step)
+        self.assertIn("HEAD: ${{ steps.tap.outputs.head }}", merge_step)
+        self.assertIn("HEAD: ${{ steps.flake.outputs.head }}", nix_promote)
+        # A failing promotion is not masked by the tee that records its head.
+        for job in (homebrew, nix_promote):
+            self.assertIn("set -o pipefail\n", job)
         self.assertIn("--preserve-digests", (ROOT / "tools/channel-promote.sh").read_text())
 
     def test_homebrew_rehearsal_updates_before_linting(self):
