@@ -54,3 +54,55 @@ not regenerate bootstrap IR.
 The top-level command reports the version embedded at build time with `emit --version`. The LLVM
 version in that output is also the LLVM used to build the binary; runtime tool discovery does not
 change that identity.
+
+## Finishing a versioned change
+
+A completed change reaches review as **one pull request** carrying the implementation, the updated
+main specifications under `openspec/specs/`, the archived change under `openspec/changes/archive/`,
+`VERSION`, and its changelog section. Archiving never needs a later cleanup pull request or a
+second bump. The entry point is the `emit-finish-change` agent skill. It does the judgment work
+and drives `tools/release-handoff.sh` for every check and GitHub operation (change
+automate-release-handoff):
+
+```sh
+tools/release-handoff.sh preflight CHANGE   # stage=<name> status=<ok|owed|fail> lines; writes nothing
+tools/release-handoff.sh pr CHANGE --title "feat: ..." --body-file BODY [--draft | --ready]
+tools/release-handoff.sh status [PR]        # the Required validation check and the next action
+tools/release-handoff.sh follow SHA [--wait] # after the merge: tag, release, and channels
+```
+
+`preflight` checks six stages:
+
+- **base**: a feature branch containing current `main`;
+- **tasks**: every task checked; checked boxes are claims, judged against validation;
+- **specs**: `openspec validate --strict`, and each delta against the *live* main spec, so a
+  MODIFIED requirement cannot silently drop a scenario added since it was written;
+- **version**: an advancing bump with its changelog section, or a trivial change, or a deferral
+  under `## Unreleased`;
+- **bootstrap**: when a compiler input changed, `bootstrap/` corresponds to the current source;
+- **validation**: the checks the diff obliges, and whether `Required validation` passed on the
+  pull request.
+
+When only documentation, such as the sync-and-archive commit, follows a passing validation,
+nothing is rerun. `pr` reuses the branch's open pull request and edits it in place, and refuses
+`--ready` until the archive is committed. Nothing in the handoff merges: **merging the reviewed
+versioned pull request is the release approval.**
+
+## Release lifecycle
+
+Reports from the handoff and from `follow` use these stages, and never report a later stage early:
+
+| Stage | Means |
+| --- | --- |
+| implementation complete | tasks done; validation owed or passed |
+| ready for review | archived and committed; pull request ready; checks reported |
+| merged | the pull request is on `main` |
+| tagged | `v<VERSION>` exists at the merge commit ([automatic tagging](RELEASE-PIPELINE.md#automatic-release-tagging)) |
+| source published | the GitHub release has the validated archive and `SHA256SUMS` |
+| channel available | per channel: the tap formula, the Nix pin on `main`, or the OCI version tag names the release |
+
+A published source release is not yet a Homebrew release: Homebrew is available only once the
+tap's `main` formula names the release archive and checksum. `follow` selects every workflow run
+by the merge commit and tag, never the latest run, and names the first failed stage with its
+remedy. Its identity lines are the archive, pull request, merge commit, tag, release URL, archive
+SHA-256, tap and Nix pull requests, and OCI digest.

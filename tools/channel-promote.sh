@@ -19,6 +19,22 @@
 #       Open (or find) a pull request on the Homebrew tap that sets Formula/emit.rb.
 #   flake TAG IDENTITY_JSON
 #       Open (or find) a pull request in this repository that sets packaging/release.json.
+#   Both print head=<sha> on stdout: the pull request head they pushed or reused, or an empty
+#   value when the base branch already has the file or a newer release (nothing to merge).
+#   preflight REPOSITORY SECRET_NAME
+#       Prove GH_TOKEN (the secret named SECRET_NAME) is set, can push to REPOSITORY (an
+#       authenticated `git push --dry-run`), and can read its pull requests -- the operations
+#       themselves, because the permissions API reports the account's role, not a fine-grained
+#       token's scope.  A missing write permission on pull requests cannot be probed without a
+#       side effect; it fails visibly at the create or merge step instead.
+#   tap-merge TAG FORMULA IDENTITY_JSON HEAD
+#   flake-merge TAG IDENTITY_JSON HEAD
+#       Request automatic merge of the generated pull request for HEAD, only after verifying it
+#       (change: automate-release-handoff, design D4): the target enforces its required check
+#       with no bypass and allows auto-merge (tools/repo-policy.sh); the pull request targets
+#       the base branch, its head is HEAD, it changes only the generated file, and that file is
+#       byte-identical to what was tested.  Any doubt leaves the pull request open for a
+#       maintainer and reports [manual merge: <reason>]; the step still succeeds.
 #
 # Environment: REGISTRY_USER/REGISTRY_TOKEN (registry credentials), CHANNEL_REGISTRY_INSECURE=1
 # (plain-HTTP fixture registry), GH_TOKEN (pull requests), CHANNEL_TAP_REMOTE / CHANNEL_REPO_REMOTE
@@ -30,8 +46,12 @@ usage() {
                 '       tools/channel-promote.sh oci-resolve REPOSITORY VERSION' \
                 '       tools/channel-promote.sh oci-latest REPOSITORY DIGEST' \
                 '       tools/channel-promote.sh tap TAG FORMULA' \
-                '       tools/channel-promote.sh flake TAG IDENTITY_JSON'
+                '       tools/channel-promote.sh flake TAG IDENTITY_JSON' \
+                '       tools/channel-promote.sh preflight REPOSITORY SECRET_NAME' \
+                '       tools/channel-promote.sh tap-merge TAG FORMULA IDENTITY_JSON HEAD' \
+                '       tools/channel-promote.sh flake-merge TAG IDENTITY_JSON HEAD'
 }
+tools_dir=$(cd "$(dirname "$0")" && pwd -P)
 die() { printf 'channel-promote: %s\n' "$1" >&2; exit 1; }
 
 # Registry options as plain arrays (macOS runners may have bash 3.2: no namerefs), expanded with
@@ -120,11 +140,13 @@ open_pull_request() {
   if [ -f "$path" ]; then
     if cmp -s "$path" "$source"; then
       say "promote $path -> $base  [already merged]"
+      printf 'head=\n'
       return 0
     fi
     current=$(file_version "$path") candidate=$(file_version "$source")
     if version_newer "$current" "$candidate"; then
       say "promote $path -> $base stays at $current  [superseded; $candidate is older]"
+      printf 'head=\n'
       return 0
     fi
   fi
@@ -156,8 +178,74 @@ open_pull_request() {
   if [ -n "$existing" ]; then
     say "promote $path -> existing pull request $existing"
   else
-    gh pr create --repo "$repo" --head "$branch" --title "$title" --body "$body"
+    # gh prints the new pull request's URL; stdout carries only the head= line.
+    say "promote $path -> pull request $(gh pr create --repo "$repo" --head "$branch" --title "$title" --body "$body")"
   fi
+  printf 'head=%s\n' "$(git rev-parse HEAD)"
+}
+
+# Leave a promotion pull request for a maintainer, saying why, without failing the job: a
+# divergent or unenforced pull request is a review matter, not a failed release.
+manual_merge() {
+  local what=$1 reason=$2
+  say "promote-merge $what  [manual merge: $reason]"
+  if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+    printf -- '- **%s** left for a maintainer: %s\n' "$what" "$reason" >> "$GITHUB_STEP_SUMMARY"
+  fi
+  printf 'merge=manual\n'
+}
+
+# Request automatic merge of the generated pull request on BRANCH for HEAD after verifying it
+# (change: automate-release-handoff, design D4).  CHECK is the target's required aggregate check.
+merge_generated() {
+  local remote=$1 repo=$2 branch=$3 path=$4 source=$5 head=$6 check=$7 work base pr number url
+  local pr_head pr_base auto changed policy
+  work=$(mktemp -d)
+  git clone -q "$remote" "$work/checkout"
+  cd "$work/checkout"
+  base=$(git symbolic-ref --short HEAD)
+  if [ -f "$path" ] && cmp -s "$path" "$source"; then
+    say "promote-merge $path -> $base  [already merged]"
+    printf 'merge=merged\n'
+    return 0
+  fi
+  pr=$(gh pr list --repo "$repo" --head "$branch" --state open \
+         --json number,url,headRefOid,baseRefName,autoMergeRequest --jq '.[0] // empty')
+  if [ -z "$pr" ]; then
+    if [ -z "$head" ]; then
+      say "promote-merge $path -> $base  [nothing to merge]"
+      printf 'merge=none\n'
+    else
+      manual_merge "$repo $branch" "no open pull request for $branch"
+    fi
+    return 0
+  fi
+  number=$(jq -r .number <<< "$pr") url=$(jq -r .url <<< "$pr")
+  pr_head=$(jq -r .headRefOid <<< "$pr") pr_base=$(jq -r .baseRefName <<< "$pr")
+  [ -n "$head" ] || { manual_merge "$url" "the promotion reported no head commit"; return 0; }
+  if ! policy=$("$tools_dir/repo-policy.sh" check --repo "$repo" --check "$check" 2>/dev/null); then
+    manual_merge "$url" "policy: $(printf '%s\n' "$policy" | sed -n 's/.*status=fail reason=//p' | head -n1)"
+    return 0
+  fi
+  [ "$pr_base" = "$base" ] || { manual_merge "$url" "targets $pr_base, not $base"; return 0; }
+  [ "$pr_head" = "$head" ] || { manual_merge "$url" "head is $pr_head, not the promoted $head"; return 0; }
+  git fetch -q origin "$branch" || { manual_merge "$url" "cannot fetch $branch"; return 0; }
+  [ "$(git rev-parse FETCH_HEAD)" = "$head" ] \
+    || { manual_merge "$url" "branch $branch is at $(git rev-parse FETCH_HEAD), not $head"; return 0; }
+  changed=$(git diff --name-only --no-renames "$(git merge-base "$base" "$head")" "$head")
+  [ "$changed" = "$path" ] \
+    || { manual_merge "$url" "changes $(printf '%s' "$changed" | tr '\n' ' ' | sed 's/ $//'), not only $path"; return 0; }
+  git show "$head:$path" | cmp -s - "$source" \
+    || { manual_merge "$url" "$path differs from the tested file"; return 0; }
+  auto=$(jq -r '.autoMergeRequest // empty' <<< "$pr")
+  if [ -n "$auto" ]; then
+    say "promote-merge $url at ${head:0:12} -> waits for \"$check\"  [auto-merge pending]"
+    printf 'merge=pending\n'
+    return 0
+  fi
+  gh pr merge "$number" --repo "$repo" --auto --merge --match-head-commit "$head" >&2
+  say "promote-merge $url at ${head:0:12} -> waits for \"$check\"  [auto-merge requested]"
+  printf 'merge=requested\n'
 }
 
 case "${1:-}" in
@@ -227,6 +315,39 @@ case "${1:-}" in
       || die "$identity does not describe $tag"
     open_pull_request "$remote" "$repo" "channels/release-$tag" packaging/release.json "$identity" \
       "chore: pin Nix flake to Emit $tag" "Sets packaging/release.json to the published $tag archive after both Nix systems accepted it."
+    ;;
+  preflight)
+    [ "$#" = 3 ] || { usage >&2; exit 2; }
+    repo=$2 secret=$3
+    [ -n "${GH_TOKEN:-}" ] || die "secret $secret is not configured"
+    remote=${CHANNEL_PREFLIGHT_REMOTE:-https://x-access-token:${GH_TOKEN}@github.com/$repo.git}
+    git push --dry-run --quiet "$remote" "$(git rev-parse HEAD):refs/heads/channel-preflight" 2>/dev/null \
+      || die "$secret cannot push to $repo (needs Contents: Read and write)"
+    gh pr list --repo "$repo" --state all --limit 1 --json number > /dev/null 2>&1 \
+      || die "$secret cannot read pull requests on $repo (needs Pull requests: Read and write)"
+    say "preflight $secret -> $repo  [push and pull-request read permitted]"
+    ;;
+  tap-merge)
+    [ "$#" = 5 ] || { usage >&2; exit 2; }
+    tag=$2 formula=$(cd "$(dirname "$3")" && pwd -P)/$(basename "$3") identity=$4 head=$5
+    repo=${CHANNEL_TAP_REPO:-bwbensonjr/homebrew-emit}
+    remote=${CHANNEL_TAP_REMOTE:-https://x-access-token:${GH_TOKEN:?}@github.com/$repo.git}
+    expected_url=$(jq -r .archive_url "$identity") expected_sha=$(jq -r .sha256 "$identity")
+    [ "$(jq -r .tag "$identity")" = "$tag" ] || die "$identity does not describe $tag"
+    if ! grep -qxF "  url \"$expected_url\"" "$formula" || ! grep -qxF "  sha256 \"$expected_sha\"" "$formula"; then
+      manual_merge "$repo emit-$tag" "$formula does not name the release URL and SHA-256"
+      exit 0
+    fi
+    merge_generated "$remote" "$repo" "emit-$tag" Formula/emit.rb "$formula" "$head" "Required tap checks"
+    ;;
+  flake-merge)
+    [ "$#" = 4 ] || { usage >&2; exit 2; }
+    tag=$2 identity=$(cd "$(dirname "$3")" && pwd -P)/$(basename "$3") head=$4
+    repo=${CHANNEL_REPO:-${GITHUB_REPOSITORY:-bwbensonjr/emit}}
+    remote=${CHANNEL_REPO_REMOTE:-https://x-access-token:${GH_TOKEN:?}@github.com/$repo.git}
+    [ "$(jq -r .tag "$identity")" = "$tag" ] || die "$identity does not describe $tag"
+    merge_generated "$remote" "$repo" "channels/release-$tag" packaging/release.json "$identity" "$head" \
+      "Required validation"
     ;;
   --help) usage ;;
   *) usage >&2; exit 2 ;;

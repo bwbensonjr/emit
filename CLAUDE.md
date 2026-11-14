@@ -73,6 +73,10 @@
 - **Merging a `VERSION` change to `main` releases it**, with no manual tag. The
   policy of record is `docs/RELEASES.md`; the pipeline is
   `docs/RELEASE-PIPELINE.md`.
+- **Finish a completed change with the `emit-finish-change` skill**, which syncs
+  and archives it into the same pull request and drives `tools/release-handoff.sh`
+  (`preflight`, `pr`, `status`, `follow`). Preparing a pull request never merges
+  it; merging the reviewed versioned pull request is the release approval.
 
 ## Scheme code formatting 
 

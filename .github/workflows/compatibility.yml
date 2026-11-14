@@ -72,6 +72,9 @@ jobs:
         run: |
           python3 test/ci-policy-tests.py
           bash test/release-tag-tests.sh
+          bash test/repo-policy-tests.sh
+          bash test/channel-merge-tests.sh
+          bash test/release-handoff-tests.sh
           python3 test/ci-bundle-tests.py
           python3 test/ci-version-probes-tests.py
           bash test/ci-provision-logging-tests.sh
