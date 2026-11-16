@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0
+
+- Let explicit program imports replace overlapping implicit base defaults, while
+  preserving strict conflict checks among explicit imports.
+- Let successive REPL import declarations replace earlier imported bindings;
+  conflicts within a declaration remain errors.
+
 ## 0.7.0
 
 - Add the explicitly imported `(malt learner)` library: nested-vector tensors,

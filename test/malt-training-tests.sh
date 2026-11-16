@@ -63,5 +63,35 @@ else
   "$TMP/unprefixed" > "$TMP/unprefixed.aot.out"
   tail -n 1 "$TMP/unprefixed.aot.out" | grep -Fxq '(malt-unprefixed 6.0)'
 fi
+say "verify direct learner import -> run, REPL, standalone"
+if [ "${MALT_SOURCE_DRIVEN:-0}" != 1 ]; then
+  "$EMIT" run -L "$ROOT/lib" "$ROOT/test/malt-reference/direct.scm" > "$TMP/direct.run.out" 2> "$TMP/direct.run.err" || { cat "$TMP/direct.run.err" >&2; exit 1; }
+  "$EMIT" repl -L "$ROOT/lib" < "$ROOT/test/malt-reference/direct.scm" > "$TMP/direct.repl.out" 2> "$TMP/direct.repl.err" || { cat "$TMP/direct.repl.err" >&2; exit 1; }
+  "$EMIT" build -L "$ROOT/lib" "$ROOT/test/malt-reference/direct.scm" -o "$TMP/direct" > "$TMP/direct.build.out" 2> "$TMP/direct.build.err" || { cat "$TMP/direct.build.err" >&2; exit 1; }
+  "$TMP/direct" > "$TMP/direct.aot.out"
+  for path in run repl aot; do
+    tail -n 1 "$TMP/direct.$path.out" | grep -Fxq '(malt-direct 6.0)'
+  done
+else
+  chez --libdirs src --script src/compile.ss -q -L "$ROOT/lib" "$ROOT/test/malt-reference/direct.scm" -o "$TMP/direct" > "$TMP/direct.build.out" 2> "$TMP/direct.build.err" || { cat "$TMP/direct.build.err" >&2; exit 1; }
+  "$TMP/direct" > "$TMP/direct.aot.out"
+  tail -n 1 "$TMP/direct.aot.out" | grep -Fxq '(malt-direct 6.0)'
+fi
+say "verify explicit base and learner imports conflict"
+cat > "$TMP/conflict.scm" <<'EOF'
+(import (scheme base))
+(import (malt learner))
+(gradient (lambda (x) (* x x)) 3.0)
+EOF
+if [ "${MALT_SOURCE_DRIVEN:-0}" != 1 ]; then
+  if "$EMIT" run -L "$ROOT/lib" "$TMP/conflict.scm" > "$TMP/conflict.out" 2> "$TMP/conflict.err"; then
+    echo "explicit base and learner imports unexpectedly succeeded" >&2; exit 1
+  fi
+else
+  if chez --libdirs src --script src/compile.ss -q -L "$ROOT/lib" "$TMP/conflict.scm" -o "$TMP/conflict" > "$TMP/conflict.out" 2> "$TMP/conflict.err"; then
+    echo "explicit base and learner imports unexpectedly succeeded" >&2; exit 1
+  fi
+fi
+if ! grep -qi 'conflict' "$TMP/conflict.err"; then cat "$TMP/conflict.err" >&2; exit 1; fi
 say "verify Malt training -> completion [$((SECONDS-start))s, 77 checks per path]"
 printf 'Malt training acceptance passed\n'

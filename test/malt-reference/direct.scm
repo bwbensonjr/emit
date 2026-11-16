@@ -1,0 +1,5 @@
+(import (malt learner))
+(define derivative (gradient (lambda (x) (* x x)) 3.0))
+(if (not (= derivative 6.0)) (error "direct learner import failed" derivative))
+(write (list 'malt-direct derivative))
+(newline)

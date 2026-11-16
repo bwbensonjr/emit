@@ -73,6 +73,46 @@
 (define base
   (export-table-datum '(scheme base) '() '()
     (make-ct-half '() '() '() (builtin-library-bindings '(scheme base)))))
+(define alternative
+  (export-table-datum '(alternative) '((car . "alternative:car"))
+    '((car "alternative:code:car" 1)) (make-ct-half '() '() '())))
+(define (program-bindings specs)
+  (import-tables->bindings (program-import-tables specs (list base alternative))))
+(check "explicit runtime replaces implicit primitive"
+       (cadr (assq 'car (program-bindings '((alternative))))) 'runtime)
+(check "unrelated implicit core survives"
+       (cadr (assq 'if (program-bindings '((alternative))))) 'core)
+(check "explicit base overlap remains an error"
+       (rejects (lambda () (program-bindings '((scheme base) (alternative))))) #t)
+(check "explicit exclusion accepts replacement"
+       (cadr (assq 'car (program-bindings '((except (scheme base) car) (alternative)))))
+       'runtime)
+(check "prefix leaves original default"
+       (cadr (assq 'car (program-bindings '((prefix (alternative) a:))))) 'primitive)
+(check "prefix adds alternative spelling"
+       (cadr (assq 'a:car (program-bindings '((prefix (alternative) a:))))) 'runtime)
+(check "rename replaces final visible core name"
+       (cadr (assq 'if (program-bindings '((rename (alternative) (car if)))))) 'runtime)
+(check "except leaves default primitive"
+       (cadr (assq 'car (program-bindings '((except (alternative) car))))) 'primitive)
+(check "no defaults synthesized without base table"
+       (assq 'if (import-tables->bindings
+                   (program-import-tables '((alternative)) (list alternative)))) #f)
+(check "two explicit imports still conflict over defaults"
+       (rejects (lambda ()
+         (program-import-tables '((alternative) (another))
+           (list base alternative
+             (export-table-datum '(another) '((car . "another:car")) '()
+               (make-ct-half '() '() '())))))) #t)
+(check "overlay discards stale call metadata"
+       (assq 'car (import-tables->call-alist
+                   (overlay-import-tables (list base) (list alternative)))) #f)
+(define macro-default-views
+  (program-import-tables '((rename (mac) (m if)))
+    (list base (macro-table '(mac)))))
+(check "macro replaces default core"
+       (cadr (assq 'if (import-tables->bindings macro-default-views))) 'macro)
+
 (define prefixed (import-set-table '(prefix (scheme base) b:) base))
 (check "primitive prefix preserves origin"
        (cdr (assq 'b:car (ct-bindings (table-ct-half prefixed))))

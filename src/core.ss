@@ -1721,6 +1721,35 @@
       tables)
     tables))
 
+;; Remove public spellings while retaining the interface's private transformer
+;; registry and definition-site references. Import-set views also filter call rows.
+(define (import-tables-without-names tables names)
+  (map
+    (lambda (table)
+      (import-set-table (cons 'only
+                              (cons (car table)
+                                    (filter (lambda (name) (not (memq name names)))
+                                            (map car (import-table-bindings table)))))
+                        table))
+    tables))
+
+;; One explicit declaration must be unambiguous before it replaces older views.
+(define (overlay-import-tables newer older)
+  (validate-import-tables newer)
+  (append newer
+          (import-tables-without-names older
+                                       (map car (import-tables->bindings newer)))))
+
+;; Only a program receives implicit defaults. A library's tables are always
+;; explicit, and any explicit base view replaces the implicit view as a whole.
+(define (program-import-tables specs tables)
+  (let ([views (apply-import-specs specs tables)])
+    (if (member '(scheme base) (import-specs->libraries specs))
+        (validate-import-tables views)
+        (overlay-import-tables
+          (filter (lambda (table) (not (equal? (car table) '(scheme base)))) views)
+          (filter (lambda (table) (equal? (car table) '(scheme base))) views)))))
+
 ;; Every imported library's exported transformers, ready to cons onto a macro-env.
 (define (import-tables->macro-env import-tables)
   (apply append (map (lambda (t) (ct-macros (table-ct-half t))) import-tables)))
@@ -2374,8 +2403,7 @@
          [specs (caddr imp+rt)]
          ;; The tables each import set makes visible (change: portable-library-surface,
          ;; design D2); the host's tables untouched when every import is a bare name.
-         [import-tables (validate-import-tables
-                          (apply-import-specs specs import-tables))]
+         [import-tables (program-import-tables specs import-tables)]
          [import-env-alist (import-tables->env-alist
                              import-tables)] ; (ext . mangled-sym)
          ;; A program that imports (scheme base) through a SET has that set as its whole
