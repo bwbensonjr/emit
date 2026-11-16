@@ -258,7 +258,7 @@ depth (change: `portable-library-surface`):
 
 ### Overlapping imports
 
-When two imports expose different bindings under the same visible name, compilation fails
+When two explicit program or library imports expose different bindings under the same visible name, compilation fails
 with a diagnostic naming the identifier and both libraries. This applies across procedures,
 macros, primitives, and syntax, including collisions introduced within one `rename` set:
 
@@ -272,8 +272,16 @@ macros, primitives, and syntax, including collisions introduced within one `rena
 Use selection or renaming to choose explicitly. Re-importing the same original binding is
 legal, including through re-exports and diamonds; identical transformer text from independent
 definitions does not make them the same binding. A local definition wins over a valid import
-view, but cannot conceal a conflict between imports. At the REPL, the complete import is
-validated before initialization or publication, so a rejected import preserves the previous view.
+view, but cannot conceal a conflict between explicit imports. Explicit program imports
+replace overlapping implicit base defaults; unrelated defaults remain available. This
+implicit default is an Emit extension, so portable programs should explicitly import base
+and exclude or rename overlapping bindings.
+
+At the REPL, successive import declarations replace earlier imported bindings under the
+same visible name. Previously compiled procedures retain their original bindings, and
+session definitions retain precedence. Each declaration is validated as a whole before
+initialization or publication; a conflict within it or failed initialization preserves the
+previous view. Effects already performed by a failing initializer are not rolled back.
 
 ### Lexical macros and compile-time interfaces
 

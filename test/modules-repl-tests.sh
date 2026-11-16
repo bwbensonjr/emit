@@ -29,6 +29,24 @@ check repl-import   $'(import (mylib))\n(greet)\n'                       142
 check repl-both     $'(import (liba))\n(import (libb))\n(+ (a-val) (b-val))\n' 43
 check repl-shadow   $'(import (mylib))\n(define (greet) 99)\n(greet)\n'  99
 
+echo "successive imports replace bindings (REPL)"
+RHOST="build/emit repl --no-manifest-chain -L test/import-sets/lib"
+replacement_input=$'(import (iset over1))\n(define (old) (f))\n(import (iset over2))\n(list (old) (f) (m))\n(import (iset over1))\n(list (old) (f) (m))\n'
+replacement_out="$(printf '%s' "$replacement_input" | $RHOST 2>/dev/null)"
+if echo "$replacement_out" | grep -Fxq '(1 2 two)' && echo "$replacement_out" | grep -Fxq '(1 1 one)'; then
+  echo "  [OK  ] replacement-and-restoration"; pass=$((pass+1))
+else
+  echo "  [FAIL] replacement-and-restoration ($replacement_out)"; fail=$((fail+1))
+fi
+conflict_input=$'(import (iset over1))\n(import (iset over1) (iset over2))\n(list (f) (m))\n'
+conflict_err="$(printf '%s' "$conflict_input" | $RHOST 2>&1 >/dev/null)"
+conflict_out="$(printf '%s' "$conflict_input" | $RHOST 2>/dev/null)"
+if echo "$conflict_err" | grep -qi 'conflict' && echo "$conflict_out" | grep -Fxq '(1 one)'; then
+  echo "  [OK  ] declaration-conflict-preserves-view"; pass=$((pass+1))
+else
+  echo "  [FAIL] declaration-conflict-preserves-view ($conflict_err; $conflict_out)"; fail=$((fail+1))
+fi
+
 echo "generalize: transitive imports, rename, diamond (REPL)"
 # (chain-a) transitively imports (chain-b); the fixpoint preload loads chain-b first
 # even though the manifest lists chain-a earlier (topological, not manifest, order).

@@ -66,6 +66,68 @@ got="$(cd "$TMP" && "$RUNABS" run < plain.scm 2>/dev/null)"    # run from a dir 
 if [ "$got" = "(1 4 9)" ]; then echo "  [OK  ] run-no-manifest => $got"; pass=$((pass+1))
 else echo "  [FAIL] run-no-manifest => $got  (expected (1 4 9))"; fail=$((fail+1)); fi
 
+echo "explicit imports replace implicit defaults"
+mkdir -p "$TMP/alt"
+cat > "$TMP/alt/arithmetic.sld" <<'EOF'
+(define-library (alt arithmetic)
+  (export *)
+  (import (except (scheme base) *))
+  (begin (define (* x y) 42)))
+EOF
+cat > "$TMP/override.scm" <<'EOF'
+(import (alt arithmetic))
+(list (* 2 3) (map (lambda (x) (+ x 1)) '(1 2)))
+EOF
+cat > "$TMP/prefix.scm" <<'EOF'
+(import (prefix (alt arithmetic) alt:))
+(list (* 2 3) (alt:* 2 3))
+EOF
+cat > "$TMP/rename.scm" <<'EOF'
+(import (rename (alt arithmetic) (* alt:*)))
+(list (* 2 3) (alt:* 2 3))
+EOF
+cat > "$TMP/explicit-conflict.scm" <<'EOF'
+(import (scheme base))
+(import (alt arithmetic))
+(* 2 3)
+EOF
+cat > "$TMP/no-prelude.scm" <<'EOF'
+(import (alt arithmetic))
+(map (lambda (x) x) '(1 2))
+EOF
+for case_name in override prefix rename; do
+  case "$case_name" in override) expected='(42 (2 3))' ;; *) expected='(6 42)' ;; esac
+  got="$($RUN -L "$TMP" < "$TMP/$case_name.scm" 2> "$TMP/$case_name.err")"
+  if [ "$got" = "$expected" ]; then
+    echo "  [OK  ] default-$case_name => $got"; pass=$((pass+1))
+  else
+    echo "  [FAIL] default-$case_name => $got (expected $expected)"; cat "$TMP/$case_name.err"; fail=$((fail+1))
+  fi
+  if command -v chez >/dev/null 2>&1; then
+    if chez --libdirs src --script src/compile.ss -q -L "$TMP" "$TMP/$case_name.scm" -o "$TMP/source-$case_name" > "$TMP/source-$case_name.out" 2> "$TMP/source-$case_name.err" && [ "$("$TMP/source-$case_name")" = "$expected" ]; then
+      echo "  [OK  ] source-default-$case_name"; pass=$((pass+1))
+    else
+      echo "  [FAIL] source-default-$case_name"; cat "$TMP/source-$case_name.err"; fail=$((fail+1))
+    fi
+  fi
+done
+for case_name in explicit-conflict no-prelude; do
+  options=(); pattern=conflict
+  if [ "$case_name" = no-prelude ]; then options=(--no-prelude); pattern='unbound|undefined'; fi
+  if $RUN ${options[@]+"${options[@]}"} -L "$TMP" < "$TMP/$case_name.scm" > "$TMP/$case_name.out" 2> "$TMP/$case_name.err" || ! grep -qiE "$pattern" "$TMP/$case_name.err"; then
+    echo "  [FAIL] default-$case_name"; cat "$TMP/$case_name.err"; fail=$((fail+1))
+  else
+    echo "  [OK  ] default-$case_name"; pass=$((pass+1))
+  fi
+  if command -v chez >/dev/null 2>&1; then
+    if chez --libdirs src --script src/compile.ss -q ${options[@]+"${options[@]}"} -L "$TMP" "$TMP/$case_name.scm" -o "$TMP/source-$case_name" > "$TMP/source-$case_name.out" 2> "$TMP/source-$case_name.err" || ! grep -qiE "$pattern" "$TMP/source-$case_name.err"; then
+      echo "  [FAIL] source-default-$case_name"; cat "$TMP/source-$case_name.err"; fail=$((fail+1))
+    else
+      echo "  [OK  ] source-default-$case_name"; pass=$((pass+1))
+    fi
+  fi
+done
+
 echo "emit run command: import errors are reported and exit non-zero"
 check_fail run-cycle   "$MOD/prog-cycle.scm"   "$MOD/emit-libs-cycle.scm" "cyclic|unresolved"
 # the emit run command NAMES the unresolved library now, as emit lib always did -- it used to

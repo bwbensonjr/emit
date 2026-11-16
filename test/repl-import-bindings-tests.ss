@@ -61,17 +61,66 @@
 (define prior-env (vector-ref *repl-env* 0))
 (define prior-specs *repl-import-specs*)
 (check "conflicting whole transaction rejected"
-       (car (repl-autoimport "(import (only (scheme base) car) (b))")) 'error)
+       (car (repl-autoimport "(import (a) (b))")) 'error)
 (check "failed merge preserves environment" (vector-ref *repl-env* 0) prior-env)
 (check "failed merge preserves import views" *repl-import-specs* prior-specs)
 (check "same-origin facade accepted" (car (repl-autoimport "(import (alias))")) 'ok)
-(check "pre-init conflict rejected" (car (compile-one-form '(import (b)))) 'error)
+(check "pre-init conflict rejected" (car (compile-one-form '(import (a) (b)))) 'error)
+(check "later declaration replaces import" (car (repl-autoimport "(import (b))")) 'ok)
+(check "replacement selects new target" (cdr (assq 'f (vector-ref *repl-env* 0))) 'b:f)
+(check "reimport restores prior target" (car (repl-autoimport "(import (a))")) 'ok)
+(check "restored target is visible" (cdr (assq 'f (vector-ref *repl-env* 0))) 'a:f)
 (repl-note-defines! '(map))
 (repl-env-define! *repl-env* 'map)
 (define own-map (repl-env-lookup *repl-env* 'map))
 (check "subsequent import succeeds"
        (car (repl-autoimport "(import (only (scheme base) car))")) 'ok)
 (check "session generation survives view rebuild" (repl-env-lookup *repl-env* 'map) own-map)
+
+(set! make-dumper (lambda (name) no-dump))
+
+;; Exercise changing kinds and captured definition-site runtime bindings.
+(define callable-table
+  (export-table-datum '(callable) '((f . "callable:f"))
+                      '((f "callable:code:f" 0)) (make-ct-half '() '() '())))
+(define syntax-table
+  (export-table-datum '(syntax) '() '()
+    (make-ct-half
+      (list (make-contextual-transformer 'f '(macro (syntax) f) '()
+              '(((_) . 42)) '())) '() '())))
+(define capture-table
+  (export-table-datum '(capture) '() '()
+    (make-ct-half
+      (list (make-contextual-transformer 'read-f '(macro (capture) read-f) '()
+              '(((_) . (f)))
+              '((f runtime (runtime "callable:f") callable:f)))) '() '("callable:f"))))
+(init-session "enabled")
+(set! *repl-libs* (list base-table callable-table syntax-table capture-table b-table))
+(check "kind test imports base" (car (repl-autoimport "")) 'ok)
+(check "procedure import succeeds" (car (repl-autoimport "(import (callable))")) 'ok)
+(check "procedure call metadata exists" (and (assq 'callable:f *repl-calls*) #t) #t)
+(check "procedure invocation compiles" (car (compile-one-form '(f))) 'ok)
+(check "capturing macro import succeeds" (car (repl-autoimport "(import (capture))")) 'ok)
+(check "macro replacement succeeds" (car (repl-autoimport "(import (syntax))")) 'ok)
+(check "macro replaces procedure binding" (cadr (assq 'f (repl-session-bindings))) 'macro)
+(check "old call metadata is removed" (assq 'callable:f *repl-calls*) #f)
+(check "replacement macro expands" (car (frontend-expand-forms '((f)) *repl-macro-env*
+                                     *repl-known* (repl-session-bindings) '(probe))) '(42))
+(check "captured macro retains old procedure reference"
+       (str-contains? (car (cdr (compile-one-form '(read-f)))) "callable:f") #t)
+(check "procedure replaces macro" (car (repl-autoimport "(import (b))")) 'ok)
+(check "new procedure binding is visible" (cadr (assq 'f (repl-session-bindings))) 'runtime)
+(check "old public macro is removed" (assq 'f *repl-macro-env*) #f)
+(check "new procedure invocation targets new library"
+       (str-contains? (car (cdr (compile-one-form '(f)))) "b:f") #t)
+(check "captured macro still targets old procedure"
+       (str-contains? (car (cdr (compile-one-form '(read-f)))) "callable:f") #t)
+(check "local definition compiles" (car (compile-one-form '(define (f) 17))) 'ok)
+(define local-f (cadddr (assq 'f (repl-session-bindings))))
+(check "import after local definition succeeds" (car (repl-autoimport "(import (syntax))")) 'ok)
+(check "local definition retains precedence"
+       (cadddr (assq 'f (repl-session-bindings))) local-f)
+(check "local definition remains callable" (car (compile-one-form '(f))) 'ok)
 
 (set! make-dumper (lambda (name) no-dump))
 (init-session "")
@@ -95,6 +144,18 @@
 (check "failed expansion is recoverable"
        (car (compile-one-form '(let-syntax ((m (syntax-rules () ((_ ) 1)))) (m 2)))) 'error)
 (check "failed expansion restores origin generation" *repl-syntax-n* syntax-generation)
+
+(init-session "enabled")
+(set! *repl-libs* (list base-table a-table b-table))
+(check "initial base installs" (car (repl-autoimport "")) 'ok)
+(check "first alternative installs" (car (repl-autoimport "(import (a))")) 'ok)
+(check "second alternative replaces it" (car (repl-autoimport "(import (b))")) 'ok)
+(check "explicit base selection installs"
+       (car (repl-autoimport "(import (only (scheme base) map))")) 'ok)
+(check "explicit base transition retains latest alternative"
+       (cdr (assq 'f (vector-ref *repl-env* 0))) 'b:f)
+(check "explicit base transition removes other defaults"
+       (assq 'car (repl-session-bindings)) #f)
 
 (init-session "enabled")
 (set! *repl-libs* (list base-table a-table))

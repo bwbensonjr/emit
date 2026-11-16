@@ -30,6 +30,7 @@
 
 ;; Import views are kept separately from session definitions so replacing the
 ;; implicit base view can remove names without disturbing earlier compiled code.
+;; Each entry holds the import sets from one committed declaration.
 (define *repl-import-specs* (quote ()))
 (define *repl-import-views* (quote ()))
 (define *repl-implicit-base?* #f)
@@ -249,7 +250,8 @@
                 ;; Derive every set's table NOW, while a failure is still a compile-time
                 ;; error of this form: a set naming an absent export must be reported
                 ;; before any `__init` runs, not from the mode-6 merge after it.
-                (repl-candidate-import-views (append *repl-import-specs* (cdr form)))
+                (repl-candidate-import-views
+                  (append *repl-import-specs* (list (cdr form))))
                 (cons (quote import) (baked-init-symbols (run-closure-order libs))))))]
         [else (repl-compile-source-form form)]))))
 
@@ -484,7 +486,8 @@
   (guard (e (#t (cons (quote error) (repl-error->string e))))
     (let* ([specs (if (string=? text "")
                       *repl-import-specs*
-                      (append *repl-import-specs* (cdr (one-artifact-datum text))))]
+                      (append *repl-import-specs*
+                              (list (cdr (one-artifact-datum text)))))]
            [views (repl-candidate-import-views specs)])
       ;; Derivation and validation finish before any session field is changed.
       (repl-install-import-views! specs views)
@@ -492,23 +495,29 @@
 
 ;; Resolve each explicit view independently, retaining its source library for
 ;; diagnostics. An explicit base view replaces the startup view as one unit.
-(define (repl-candidate-import-views specs)
+(define (repl-candidate-import-views declarations)
   (let* ([explicit-base?
-           (any-of? (lambda (s) (equal? (import-spec-library s) (quote (scheme base))))
-                    specs)]
-         [effective (if (and *repl-implicit-base?* (not explicit-base?))
-                        (cons (quote (scheme base)) specs)
-                        specs)]
-         [views (map-lr
-                  (lambda (spec)
-                    (let ([table (assoc (import-spec-library spec) *repl-libs*)])
-                      (unless table
-                        (error 'import
-                               "imported library not loaded"
-                               (import-spec-library spec)))
-                      (if (import-set-spec? spec) (import-set-table spec table) table)))
-                  effective)])
-    (validate-import-tables views)))
+           (any-of? (lambda (declaration)
+                      (any-of? (lambda (s)
+                                 (equal? (import-spec-library s) (quote (scheme base))))
+                               declaration))
+                    declarations)]
+         [resolve
+           (lambda (spec)
+             (let ([table (assoc (import-spec-library spec) *repl-libs*)])
+               (unless table
+                 (error 'import
+                        "imported library not loaded"
+                        (import-spec-library spec)))
+               (if (import-set-spec? spec) (import-set-table spec table) table)))]
+         [initial (if (and *repl-implicit-base?* (not explicit-base?))
+                      (list (resolve (quote (scheme base))))
+                      (quote ()))])
+    (let loop ([remaining declarations] [views initial])
+      (if (null? remaining)
+          views
+          (loop (cdr remaining)
+                (overlay-import-tables (map-lr resolve (car remaining)) views))))))
 
 (define (repl-merge-source-aliases! aliases)
   (set! *repl-source-aliases*
@@ -571,7 +580,7 @@
 ;; always have.
 (define (repl-import! spec)
   (and (assoc (import-spec-library spec) *repl-libs*)
-       (let* ([specs (append *repl-import-specs* (list spec))]
+       (let* ([specs (append *repl-import-specs* (list (list spec)))]
               [views (repl-candidate-import-views specs)])
          (repl-install-import-views! specs views)
          #t)))

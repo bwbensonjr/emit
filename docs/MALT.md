@@ -27,7 +27,17 @@ replace upstream's Greek rho, kappa, nabla, and superscript-one nabla.
 hyphen-rho suffix. All supported exports are enumerated by the facade; there are
 no placeholder exports for upstream's unimplemented extension-gradient stubs.
 
-For an unprefixed import, explicitly exclude overlaps from `(scheme base)`:
+In Emit, a fresh REPL or program can import the learner directly. Its arithmetic
+replaces overlapping implicit base defaults while unrelated defaults remain available:
+
+```scheme
+(import (malt learner))
+(gradient (lambda (x) (* x x)) 3.0)
+;; 6.0
+```
+
+Implicit base imports in programs are an Emit extension. For a portable program with explicit
+base imports, exclude the overlapping names:
 
 ```scheme
 (import (except (scheme base) + - * / abs max expt)
