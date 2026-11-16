@@ -2,7 +2,7 @@
 
 ### Requirement: Overlapping imports resolve deterministically
 
-In programs and library declarations, distinct explicit bindings exposed under one visible name SHALL be an error before local-definition precedence, regardless of order or kind. Within one REPL import declaration the same rule SHALL apply; across successive declarations newer imports SHALL replace earlier imported bindings for subsequent forms. Repeated imports of the same original binding SHALL be legal. Explicit imports SHALL take precedence over implicit base defaults.
+Distinct explicit bindings under one visible name SHALL conflict in programs and libraries, and within one REPL import declaration, before local-definition precedence. Across REPL declarations newer imports SHALL replace earlier imports for subsequent forms. Same-origin imports SHALL be legal. Explicit imports SHALL override implicit base defaults. Every compilation path SHALL diagnose conflicts with the identifier and both contributing libraries, regardless of order or binding kind.
 
 #### Scenario: Two libraries export one name
 

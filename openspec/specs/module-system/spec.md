@@ -674,11 +674,7 @@ surface; belonging to the `(scheme ...)` namespace SHALL NOT publish unrelated b
 
 ### Requirement: Overlapping imports resolve deterministically
 
-After import transforms, exposing different bindings under the same visible identifier SHALL
-be a compile-time error naming the identifier and both contributing libraries/import views,
-independent of import order or binding kind. Repeated imports of the same original binding SHALL
-be legal. Conflicts SHALL be checked before local-definition precedence, including collisions
-created within one import set. Every compilation path SHALL enforce this rule.
+Distinct explicit bindings under one visible name SHALL conflict in programs and libraries, and within one REPL import declaration, before local-definition precedence. Across REPL declarations newer imports SHALL replace earlier imports for subsequent forms. Same-origin imports SHALL be legal. Explicit imports SHALL override implicit base defaults. Every compilation path SHALL diagnose conflicts with the identifier and both contributing libraries, regardless of order or binding kind.
 
 #### Scenario: Two libraries export one name
 
@@ -703,9 +699,36 @@ created within one import set. Every compilation path SHALL enforce this rule.
 
 #### Scenario: A rejected REPL import preserves session state
 
-- **WHEN** an import conflicts with an existing explicit session import
+- **WHEN** a REPL import declaration contains conflicting bindings within its requested import sets
 - **THEN** the REPL rejects the complete import transaction before initializing the requested closure or publishing names
 - **AND** earlier bindings, transformers, call metadata, and initialization state remain usable
+
+#### Scenario: Successive REPL declarations replace imported bindings
+
+- **WHEN** a session imports `(liba)` exporting `f`, defines `(define (old) (f))`, and later imports `(libb)` exporting a different `f`
+- **THEN** subsequent references to `f` resolve to `(libb)` while `old` retains `(liba)`'s binding
+- **AND** unrelated imports and session definitions remain visible
+
+#### Scenario: One REPL declaration is internally conflicting
+
+- **WHEN** one prompt imports `(scheme base)` and a different arithmetic library exporting `*` under that name in the same import declaration
+- **THEN** the entire declaration is rejected without changing the session's binding view
+
+#### Scenario: Replacement respects binding kind and definition context
+
+- **WHEN** a later REPL import replaces a procedure with a macro, or a macro with a procedure, under the same visible name
+- **THEN** subsequent forms use the new kind without stale expansion or call metadata
+- **AND** previously compiled code and imported macro definition contexts retain their original bindings
+
+#### Scenario: Reimport restores a previously replaced binding
+
+- **WHEN** a session imports `(liba)`, imports `(libb)` replacing `f`, and imports `(liba)` again
+- **THEN** subsequent uses of `f` resolve to `(liba)` and neither initializer runs twice
+
+#### Scenario: Explicit session definitions retain precedence
+
+- **WHEN** a session defines its own `f` and later imports a library exporting `f`
+- **THEN** its own definition retains precedence over the imported binding
 
 ### Requirement: An exported macro is usable in an importing unit
 
@@ -2195,8 +2218,7 @@ without adding these extensions to the implicit user environment.
 ### Requirement: Implicit import of (scheme base)
 
 Unless `--no-prelude` is given, the compiler SHALL make the prelude available to a user
-program (and REPL session) without an explicit import, as though it began with `(import
-(scheme base))`: the prelude procedures resolve to `(scheme base)` and the derived-form macro
+program (and REPL session) without an explicit import, as an implicit default binding view: the prelude procedures resolve to `(scheme base)` and the derived-form macro
 set is merged into the compile's `macro-env`. This SHALL hold identically on all three paths -
 the Chez batch driver, the REPL, and the Chez-free embedded runner (`scheme-run` /
 `scheme-compile`): on each, the procedures resolve as imported bindings referencing `scheme.base`
@@ -2209,8 +2231,7 @@ the Stage 0 resolution order).
 When a program's own imports include explicit views of `(scheme base)`, their union SHALL be
 the program's whole view of `(scheme base)`: the implicit import SHALL NOT also make the
 library's other exports visible. `(scheme base)` is still linked or loaded and
-initialized exactly as for the implicit import. A bare `(import (scheme base))` is the same view as
-the implicit one and changes nothing.
+initialized exactly as for the implicit import. A bare explicit `(import (scheme base))` supplies the full explicit base view and participates in explicit conflict validation.
 
 #### Scenario: A program uses prelude procedures with no explicit import
 
@@ -2268,7 +2289,30 @@ the implicit one and changes nothing.
 
 - **WHEN** a session's first explicit base import uses a prefix or selection set
 - **THEN** its complete explicit view replaces the implicit view for subsequent forms while existing compiled procedures retain their resolved bindings
-- **AND** additional explicit imports accumulate subject to conflict validation
+- **AND** subsequent REPL declarations replace overlapping imported names under the interactive replacement rule, while conflicts within one declaration remain errors
+
+#### Scenario: A program selects alternative arithmetic over defaults
+
+- **WHEN** a program imports an alternative `*` without explicitly importing `(scheme base)`
+- **THEN** that explicit binding replaces only the overlapping implicit default on Chez, `emit run`, and standalone compilation paths
+- **AND** unrelated base procedures and syntax remain available
+
+#### Scenario: Import transforms determine which defaults are replaced
+
+- **WHEN** a program imports an alternative `*` using `only`, `except`, `prefix`, or `rename`
+- **THEN** replacement considers final visible names after import transforms
+- **AND** a prefixed `m:*` leaves the implicit `*` available
+
+#### Scenario: Explicit base imports retain strict program conflicts
+
+- **WHEN** a program explicitly imports both `(scheme base)` and a library exporting a distinct `*`
+- **THEN** compilation reports a conflict, even if those imports occur in separate declarations
+- **AND** an explicit exclusion of `*` from base permits the alternative import
+
+#### Scenario: Libraries receive no implicit override privilege
+
+- **WHEN** a library declaration imports base and another library exporting a different binding under the same name
+- **THEN** compilation reports a conflict unless its import sets resolve the overlap explicitly
 
 ### Requirement: (scheme base) links or loads exactly once
 

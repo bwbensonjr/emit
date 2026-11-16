@@ -40,6 +40,24 @@ Upstream's unimplemented extension-gradient stubs, generated setters, provide tr
 - **THEN** ordinary arithmetic and the prefixed differentiable operations coexist
 - **AND** an unprefixed import uses explicit exclusions for overlapping Scheme bindings
 
+#### Scenario: Direct learner import selects differentiable arithmetic
+
+- **WHEN** a fresh REPL imports `(malt learner)` and evaluates `(gradient (lambda (x) (* x x)) 3.0)`
+- **THEN** it returns `6.0` without explicit exclusions or prefixes
+- **AND** unrelated implicit base names remain available
+
+#### Scenario: Learner program uses Emit defaults
+
+- **WHEN** the same import and expression form a program without an explicit base import
+- **THEN** `emit run` and a standalone executable both compute `6.0`
+- **AND** this implicit-default convenience is documented as an Emit extension
+
+#### Scenario: Explicit program imports remain portable
+
+- **WHEN** a program explicitly imports both `(scheme base)` and unprefixed `(malt learner)` without exclusions
+- **THEN** it reports an import conflict
+- **AND** excluding `+ - * / abs max expt` from base makes the learner import valid
+
 ### Requirement: Tensors use nested vectors with checked construction
 
 Scalars SHALL be numbers or scalar duals, and tensors SHALL use nested vectors. `tensor` SHALL reject empty input, nonnumeric leaves, and inconsistent shapes with catchable errors. `list->tensor` SHALL remain shallow. Shape-driven constructors SHALL reject nonpositive dimensions; an empty shape SHALL represent a scalar. Raw vector conversion and `tensor?` SHALL retain upstream's permissive behavior.

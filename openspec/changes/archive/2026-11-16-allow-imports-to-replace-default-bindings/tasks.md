@@ -15,13 +15,13 @@
 ## 3. Malt acceptance and release metadata
 
 - [x] 3.1 Add direct unprefixed learner import fixtures for fresh REPL, `emit run`, and standalone builds, checking `(gradient (lambda (x) (* x x)) 3.0)` yields `6.0`; retain explicit-exclusions and prefixed cases and explicit-conflict failures. Update `docs/MALT.md` and relevant reference/install assertions without altering upstream provenance guards; verify source fixtures now and all native cases after regeneration.
-- [ ] 3.2 Bump VERSION to the next minor version relative to the implementation base and add a matching nonempty CHANGELOG section explaining interactive replacement and implicit program defaults. Verify version/changelog consistency through release preflight.
+- [x] 3.2 Bump VERSION to the next minor version relative to the implementation base and add a matching nonempty CHANGELOG section explaining interactive replacement and implicit program defaults. Verify version/changelog consistency through release preflight.
 
 ## 4. Compiler acceptance
 
 - [x] 4.1 Finish all compiler-source edits, run source units and `make format`, inspect the changed-input validation plan and select the classified targeted reference suite IDs. Verify the final source diff before explicitly running `make regen`; preserve logs and do not edit compiler inputs during regeneration or its validation.
 - [x] 4.2 After successful regeneration, run `bash tools/test.sh full`, `bash tools/test.sh units`, the classified targeted reference suites, and `bash tools/test.sh source`. Verify all reports pass and all declared bootstrap modules match current source; poll long-running suites instead of treating timeouts as success.
-- [ ] 4.3 Verify the documented Malt expressions and interactive replacement sequence on the regenerated binary, and verify the same program expression through run and AOT. Run formatting and release preflight checks; record results for review.
+- [x] 4.3 Verify the documented Malt expressions and interactive replacement sequence on the regenerated binary, and verify the same program expression through run and AOT. Run formatting and release preflight checks; record results for review.
 
 ## Workflow follow-up
 
