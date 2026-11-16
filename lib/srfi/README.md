@@ -20,3 +20,12 @@ nested includes, is retained; this is not a full SRFI 64 conformance claim.
 The source repository retains the pristine package, reproducible patch,
 upstream tests, per-file digests and complete acceptance details in `test/snow/`.
 Installed programs do not depend on that test tree or any compiler artifacts.
+
+SRFI 27 is an Emit adaptation of Sebastian Egner's MRG32k3a reference at commit
+`a547c5508d648c61e73bebed2bcd2283fba5abaa`. It uses bounded exact arithmetic,
+versioned readable state, rejection sampling, and a private host entropy operation
+for explicit randomization. `27-LICENSE.txt` retains its notice. Independent
+known answers, pristine references, digests, and adaptation details live under
+`test/random-sources/`; the public API and replay contract are in
+`docs/RANDOM.md`. Source construction is deterministic and does not consume
+entropy. These sources are optional and are not cryptographic random generators.

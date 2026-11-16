@@ -721,6 +721,18 @@
 #     No function body, initializer, constant, or demo name changes; the program
 #     modules differ only by those same header declarations.
 #
+#   add-malt-learner -- the private entropy primitive adds exactly one
+#     `declare i64 @rt_random_entropy(i64)` line to each emitted module header.
+#     A pristine git archive of HEAD 6ee5c79, built from its committed bootstrap,
+#     reproduced all 82 prior reference hashes. The working-tree capture adds
+#     exactly 250 such lines across those demos' 250 module headers: aggregate
+#     IR 93,952,062 -> 93,961,062 bytes (+9,000). Removing ONLY those exact lines
+#     makes all 82 files byte-identical to their pristine captures, with zero
+#     unexplained drift. The 83rd entry is the new seeded malt-xor demo.
+#     Captures, before/after/normalized manifests, and the mechanical proof are
+#     retained under build/malt-validation/scaffold-{before,after} and
+#     build/malt-validation/scaffold-entropy-proof.json.
+#
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u
 cd "$(dirname "$0")/.."

@@ -14,6 +14,10 @@ for input in VERSION CHANGELOG.md tools/release-source.sh tools/release-check.sh
              tools/channel-identity.sh tools/changelog-section.awk; do
   cp "$input" "$work/repository/$input"
 done
+# Newly shipped libraries and their notices are part of the release closure even
+# before their first developer commit.  Overlay the source tree, not test fixtures.
+rm -rf "$work/repository/lib"
+cp -R lib "$work/repository/lib"
 # Channel recipes live in the repository but never in a source archive: a released archive must
 # not carry a pin to an older release (change: low-cost-distribution-channels, design D2).
 mkdir -p "$work/repository/packaging/homebrew"

@@ -264,6 +264,14 @@ External libraries must use features Emit supports. See the
 [shipped SRFI notes](lib/srfi/README.md) for versions and limitations, including
 the SRFI 64 port.
 
+Seedable random sources are available through `(srfi 27)`; see
+[random sources](docs/RANDOM.md) for independent streams and state replay.
+The optional `(malt learner)` library provides nested-vector tensors, reverse-mode
+differentiation, layers, losses, initialization, and optimizers for small learning
+programs. See the [learner guide](docs/MALT.md) for arithmetic imports,
+hyperparameters, and a seeded XOR example. Both libraries use the same explicit
+imports in `emit run`, `emit repl`, and standalone builds.
+
 ## Compiler transformations
 
 You can view the various front-end compiler transformations using the

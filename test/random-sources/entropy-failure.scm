@@ -1,0 +1,11 @@
+(import (scheme base) (srfi 27))
+(define source (make-random-source))
+(random-source-pseudo-randomize! source 17 3)
+(define saved (random-source-state-ref source))
+(define caught
+  (guard (ex (else (error-object? ex)))
+    (random-source-randomize! source)
+    #f))
+(if (and caught (equal? saved (random-source-state-ref source)))
+    '(srfi-27-entropy-failure-complete)
+    (error 'randomize "failure changed source or was not catchable"))

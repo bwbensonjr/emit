@@ -523,7 +523,8 @@
     (%filesystem-directory-status "rt_filesystem_directory_status")
     (%filesystem-symlink-status "rt_filesystem_symlink_status")
     (%filesystem-replace-file "rt_filesystem_replace_file")
-    (%load-request "rt_load_request") (%load-invoke "rt_load_invoke")))
+    (%random-entropy "rt_random_entropy") (%load-request "rt_load_request")
+    (%load-invoke "rt_load_invoke")))
 
 ;; --- string helpers ---
 (define (comma-join lst)
@@ -1501,6 +1502,7 @@
     "declare i64 @rt_filesystem_directory_status(i64)\n"
     "declare i64 @rt_filesystem_symlink_status(i64)\n"
     "declare i64 @rt_filesystem_replace_file(i64, i64)\n"
+    "declare i64 @rt_random_entropy(i64)\n"
     "declare i64 @rt_escape_frame()\n"
     "declare i64 @rt_escape_to(i64, i64)\n"
     "declare i64 @rt_escape_live_p(i64)\n"
