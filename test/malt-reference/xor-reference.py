@@ -33,6 +33,23 @@ def prepare(i, j):
             "final_random_state": source.snapshot()}
 
 
+def check_fixture(data, expected):
+    # Box-Muller uses platform libm functions, whose final bits can differ.
+    # Keep the stream, sampling schedule, and metadata exact; only the initial
+    # floating-point weights allow rounding differences.
+    def close(actual, reference):
+        if isinstance(reference, list):
+            return (isinstance(actual, list) and len(actual) == len(reference)
+                    and all(close(a, b) for a, b in zip(actual, reference)))
+        return (isinstance(actual, (int, float))
+                and math.isfinite(actual)
+                and math.isclose(actual, reference, rel_tol=1e-14, abs_tol=1e-15))
+
+    assert close(data["initial_theta"], expected["initial_theta"]), "XOR initial weights differ"
+    assert ({k: v for k, v in data.items() if k != "initial_theta"}
+            == {k: v for k, v in expected.items() if k != "initial_theta"}), "XOR source stream fixture differs"
+
+
 def train(data):
     first, bias1, second, bias2 = json.loads(json.dumps(data["initial_theta"]))
     weights2 = second[0]
@@ -75,7 +92,7 @@ def main():
     if args.check:
         data = json.loads(path.read_text())
         expected = prepare(*data["stream"])
-        assert data == expected, "XOR source stream fixture differs"
+        check_fixture(data, expected)
     else:
         for i in [42, 17, 1, 2, 3, 4, 5]:
             data = prepare(i, 0)

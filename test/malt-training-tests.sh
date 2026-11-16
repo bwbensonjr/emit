@@ -24,6 +24,7 @@ cleanup() {
 trap cleanup EXIT
 EMIT="${EMIT:-$ROOT/build/emit}"
 export EMIT_CACHE="$TMP/cache"
+python3 test/malt-reference/xor-reference-tests.py
 python3 test/malt-reference/check.py
 check_output() {
   if ! tail -n 1 "$1" | grep -Fxq '(malt-training 77)'; then
