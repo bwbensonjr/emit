@@ -2089,6 +2089,32 @@ val rt_bytevector_length(val v) {
 }
 val rt_bytevector_p(val v) { return truthy(is_bytevector(v)); }
 
+/* Private entropy edge for (srfi 27).  A bounded binary device read works on
+ * both supported hosts and uses the same libc edges as ordinary file input;
+ * it adds no unused entropy import to a tree-shaken standalone executable.
+ * Tests replace only the host read.  Short/interrupted reads are rejected,
+ * with no partial Scheme result or state mutation. */
+#ifndef EMIT_ENTROPY_READ
+static size_t rt_entropy_read(unsigned char *buffer, size_t count) {
+  FILE *input = fopen("/dev/urandom", "rb");
+  if (!input) return 0;
+  size_t received = fread(buffer, 1, count, input);
+  int closed = fclose(input);
+  return closed == 0 ? received : 0;
+}
+#define EMIT_ENTROPY_READ rt_entropy_read
+#endif
+val rt_random_entropy(val count) {
+  CHECK_FIXNUM("random-entropy", count);
+  intptr_t n = UNFIX(count);
+  if (n < 1 || n > 256) return FALSE_V;
+  unsigned char bytes[256];
+  if (EMIT_ENTROPY_READ(bytes, (size_t)n) != (size_t)n) return FALSE_V;
+  val result = rt_make_bytevector(count, FIX(0));
+  memcpy(bv_bytes(result), bytes, (size_t)n);
+  return result;
+}
+
 /* --- hashing (backs the prelude hash tables) ----------------------------
  * rt_hash maps any value to a NON-NEGATIVE tagged fixnum such that `equal?`
  * values hash equally -- the only property lookup correctness needs, since the

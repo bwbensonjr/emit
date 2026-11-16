@@ -21,7 +21,7 @@ say "install Emit and SRFI sources -> $PREFIX [isolated prefix]"
 if ! make install PREFIX="$PREFIX" >"$TMP/install.out" 2>"$TMP/install.err"; then
   cat "$TMP/install.out" "$TMP/install.err"; exit 1
 fi
-files=(1.sld 1.scm 2.sld 2.scm 8.sld 8.scm 227.sld 227.scm 64.sld 64.scm 64/simple-runner.scm 64/source-info.scm README.md upstream.sha256)
+files=(1.sld 1.scm 2.sld 2.scm 8.sld 8.scm 27.sld 27-LICENSE.txt 227.sld 227.scm 64.sld 64.scm 64/simple-runner.scm 64/source-info.scm README.md upstream.sha256)
 for file in "${files[@]}"; do
   if cmp -s "$ROOT/lib/srfi/$file" "$PREFIX/share/emit/lib/srfi/$file"; then
     ok "installed exact SRFI source/notice $file"

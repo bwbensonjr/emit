@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.7.0
+
+- Add the explicitly imported `(malt learner)` library: nested-vector tensors,
+  reverse-mode automatic differentiation, layers, losses, blocks, initialization,
+  sampling, and naked, velocity, RMS, and Adam gradient descent.
+- Add `(srfi 27)` random sources using MRG32k3a, deterministic indexed streams,
+  readable state snapshots, unbiased bounded integers, open-interval uniform
+  reals, and explicit operating-system entropy randomization.
+- Adapt Malt's teaching API to ASCII identifiers, shared dynamic hyperparameters,
+  synchronous recording callbacks, and explicit tensor printing. Seeded learning
+  programs use the same libraries in run, REPL, and standalone executables.
+- Ship the complete optional library source and license closure. Add independent
+  reference fixtures, gradient checks, replay/failure checks, and seeded XOR
+  acceptance across source-driven compilation and native execution paths.
+
 ## 0.6.0
 
 - Add the explicitly imported `(scheme load)` library with sequential, one-argument file loading in

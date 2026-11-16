@@ -173,6 +173,13 @@ and project providers can override installed copies. Availability uses
 `(cond-expand ((library (srfi 64)) ...) (else ...))`, not new global SRFI features.
 External portable packages can still be supplied with `-L /path/to/packages`.
 
+`(srfi 27)` provides explicit random sources and readable state snapshots; its
+MRG32k3a implementation and supported numeric limits are described in
+[`RANDOM.md`](RANDOM.md). `(malt learner)` composes ordinary internal libraries
+for tensors, automatic differentiation, and training. Its arithmetic is imported
+explicitly, usually with a prefix; see [`MALT.md`](MALT.md). Neither library is
+baked into `(scheme base)` or loaded merely because its source is installed.
+
 | Library | Pinned version | Upstream package assertions |
 |---|---|---|
 | SRFI 1 | 0.1.3 | 147 passes |

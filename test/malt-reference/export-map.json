@@ -1,0 +1,1085 @@
+{
+  "!=-1": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Comparisons",
+    "upstream": "learner/ext-ops/B-comparators.rkt",
+    "upstream_identifier": "!=-1",
+    "upstream_line": 64
+  },
+  "*": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Differentiable operations",
+    "upstream": "learner/ext-ops/A-scalar-ops.rkt",
+    "upstream_identifier": "d*",
+    "upstream_line": 59
+  },
+  "*-0-0": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Base-rank operations",
+    "upstream": "learner/ext-ops/A-scalar-ops.rkt",
+    "upstream_identifier": "*-0-0",
+    "upstream_line": 16
+  },
+  "*-2-1": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Differentiable operations",
+    "upstream": "learner/ext-ops/C-star-2-1.rkt",
+    "upstream_identifier": "d*-2-1",
+    "upstream_line": 11
+  },
+  "*-2-1-primal": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "*-2-1-\u03c1",
+    "upstream_line": 45
+  },
+  "*-primal": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "*-\u03c1",
+    "upstream_line": 20
+  },
+  "+": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Differentiable operations",
+    "upstream": "learner/ext-ops/A-scalar-ops.rkt",
+    "upstream_identifier": "d+",
+    "upstream_line": 60
+  },
+  "+-0-0": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Base-rank operations",
+    "upstream": "learner/ext-ops/A-scalar-ops.rkt",
+    "upstream_identifier": "+-0-0",
+    "upstream_line": 6
+  },
+  "+-primal": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "+-\u03c1",
+    "upstream_line": 21
+  },
+  "-": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Differentiable operations",
+    "upstream": "learner/ext-ops/A-scalar-ops.rkt",
+    "upstream_identifier": "d-",
+    "upstream_line": 61
+  },
+  "--0-0": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Base-rank operations",
+    "upstream": "learner/ext-ops/A-scalar-ops.rkt",
+    "upstream_identifier": "--0-0",
+    "upstream_line": 11
+  },
+  "--primal": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "--\u03c1",
+    "upstream_line": 22
+  },
+  "/": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Differentiable operations",
+    "upstream": "learner/ext-ops/A-scalar-ops.rkt",
+    "upstream_identifier": "d/",
+    "upstream_line": 62
+  },
+  "/-0-0": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Base-rank operations",
+    "upstream": "learner/ext-ops/A-scalar-ops.rkt",
+    "upstream_identifier": "/-0-0",
+    "upstream_line": 21
+  },
+  "/-primal": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "/-\u03c1",
+    "upstream_line": 23
+  },
+  "<-0-0": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Comparisons",
+    "upstream": "learner/ext-ops/B-comparators.rkt",
+    "upstream_identifier": "<-0-0",
+    "upstream_line": 18
+  },
+  "<-1": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Comparisons",
+    "upstream": "learner/ext-ops/B-comparators.rkt",
+    "upstream_identifier": "<-1",
+    "upstream_line": 48
+  },
+  "<=-0-0": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Comparisons",
+    "upstream": "learner/ext-ops/B-comparators.rkt",
+    "upstream_identifier": "<=-0-0",
+    "upstream_line": 21
+  },
+  "<=-1": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Comparisons",
+    "upstream": "learner/ext-ops/B-comparators.rkt",
+    "upstream_identifier": "<=-1",
+    "upstream_line": 54
+  },
+  "=-0-0": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Comparisons",
+    "upstream": "learner/ext-ops/B-comparators.rkt",
+    "upstream_identifier": "=-0-0",
+    "upstream_line": 15
+  },
+  "=-1": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Comparisons",
+    "upstream": "learner/ext-ops/B-comparators.rkt",
+    "upstream_identifier": "=-1",
+    "upstream_line": 45
+  },
+  ">-0-0": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Comparisons",
+    "upstream": "learner/ext-ops/B-comparators.rkt",
+    "upstream_identifier": ">-0-0",
+    "upstream_line": 24
+  },
+  ">-1": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Comparisons",
+    "upstream": "learner/ext-ops/B-comparators.rkt",
+    "upstream_identifier": ">-1",
+    "upstream_line": 51
+  },
+  ">=-0-0": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Comparisons",
+    "upstream": "learner/ext-ops/B-comparators.rkt",
+    "upstream_identifier": ">=-0-0",
+    "upstream_line": 27
+  },
+  ">=-1": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Comparisons",
+    "upstream": "learner/ext-ops/B-comparators.rkt",
+    "upstream_identifier": ">=-1",
+    "upstream_line": 57
+  },
+  "abs": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Differentiable operations",
+    "upstream": "learner/ext-ops/A-scalar-ops.rkt",
+    "upstream_identifier": "d-abs",
+    "upstream_line": 67
+  },
+  "abs-0": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Base-rank operations",
+    "upstream": "learner/ext-ops/A-scalar-ops.rkt",
+    "upstream_identifier": "abs-0",
+    "upstream_line": 43
+  },
+  "abs-primal": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "abs-\u03c1",
+    "upstream_line": 28
+  },
+  "accuracy": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Layers and models",
+    "upstream": "malted/L-accuracy.rkt",
+    "upstream_identifier": "accuracy",
+    "upstream_line": 10
+  },
+  "adam-gradient-descent": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Training",
+    "upstream": "malted/I-adam.rkt",
+    "upstream_identifier": "adam-gradient-descent",
+    "upstream_line": 24
+  },
+  "alpha": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Hyperparameters",
+    "upstream": "malted/D-gradient-descent.rkt",
+    "upstream_identifier": "alpha",
+    "upstream_line": 13
+  },
+  "argmax": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Differentiable operations",
+    "upstream": "learner/ext-ops/E-argmax.rkt",
+    "upstream_identifier": "d-argmax",
+    "upstream_line": 27
+  },
+  "argmax-1": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Base-rank operations",
+    "upstream": "learner/ext-ops/E-argmax.rkt",
+    "upstream_identifier": "argmax-1",
+    "upstream_line": 9
+  },
+  "argmax-primal": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "argmax-\u03c1",
+    "upstream_line": 76
+  },
+  "backprop": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Extension and AD",
+    "upstream": "learner/tensors/0-duals.rkt",
+    "upstream_identifier": "\u03ba",
+    "upstream_line": 25
+  },
+  "batch-size": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Hyperparameters",
+    "upstream": "malted/J-stochastic.rkt",
+    "upstream_identifier": "batch-size",
+    "upstream_line": 5
+  },
+  "beta": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Hyperparameters",
+    "upstream": "malted/E-gd-common.rkt",
+    "upstream_identifier": "beta",
+    "upstream_line": 12
+  },
+  "block": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Losses and blocks",
+    "upstream": "malted/N-blocks.rkt",
+    "upstream_identifier": "block",
+    "upstream_line": 5
+  },
+  "block-fn": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Losses and blocks",
+    "upstream": "malted/N-blocks.rkt",
+    "upstream_identifier": "block-fn",
+    "upstream_line": 9
+  },
+  "block-ls": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Losses and blocks",
+    "upstream": "malted/N-blocks.rkt",
+    "upstream_identifier": "block-ls",
+    "upstream_line": 13
+  },
+  "build-tensor": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Tensors and lists",
+    "upstream": "learner/tensors/B-tensor-basics.rkt",
+    "upstream_identifier": "build-tensor",
+    "upstream_line": 43
+  },
+  "check-dual-equal?": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Diagnostics",
+    "upstream": "learner/autodiff/D-test-helpers.rkt",
+    "upstream_identifier": "check-dual-equal?",
+    "upstream_line": 6
+  },
+  "check-primal-gradient": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Diagnostics",
+    "upstream": "learner/autodiff/D-test-helpers.rkt",
+    "upstream_identifier": "check-\u03c1-\u2207",
+    "upstream_line": 21
+  },
+  "concat": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Differentiable operations",
+    "upstream": "learner/ext-ops/K-concat.rkt",
+    "upstream_identifier": "concat",
+    "upstream_line": 28
+  },
+  "concat-1-1": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Base-rank operations",
+    "upstream": "learner/ext-ops/K-concat.rkt",
+    "upstream_identifier": "concat-1-1",
+    "upstream_line": 26
+  },
+  "concat-n": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Differentiable operations",
+    "upstream": "learner/ext-ops/K-concat.rkt",
+    "upstream_identifier": "concat-n",
+    "upstream_line": 18
+  },
+  "concat-primal": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "concat-\u03c1",
+    "upstream_line": 155
+  },
+  "corr": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Layers and models",
+    "upstream": "malted/M-recu.rkt",
+    "upstream_identifier": "corr",
+    "upstream_line": 5
+  },
+  "correlate": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Differentiable operations",
+    "upstream": "learner/ext-ops/G-correlate.rkt",
+    "upstream_identifier": "d-correlate",
+    "upstream_line": 48
+  },
+  "correlate-primal": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "correlate-\u03c1",
+    "upstream_line": 134
+  },
+  "cross-entropy-loss": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Losses and blocks",
+    "upstream": "malted/C-loss.rkt",
+    "upstream_identifier": "cross-entropy-loss",
+    "upstream_line": 15
+  },
+  "current-random-source": {
+    "adaptation": "Emit addition: explicit dynamic source/handler ownership",
+    "group": "Initialization",
+    "upstream": null,
+    "upstream_identifier": null
+  },
+  "current-record-handler": {
+    "adaptation": "Emit addition: explicit dynamic source/handler ownership",
+    "group": "Diagnostics",
+    "upstream": null,
+    "upstream_identifier": null
+  },
+  "declare-hyper": {
+    "adaptation": "syntax-rules and shared parameter objects; explicit library exports; no synthesized setters",
+    "group": "Hyperparameters",
+    "upstream": "tools/A-hypers.rkt",
+    "upstream_identifier": "declare-hyper",
+    "upstream_line": 6
+  },
+  "declare-hypers": {
+    "adaptation": "syntax-rules and shared parameter objects; explicit library exports; no synthesized setters",
+    "group": "Hyperparameters",
+    "upstream": "tools/A-hypers.rkt",
+    "upstream_identifier": "declare-hypers",
+    "upstream_line": 60
+  },
+  "dot-product": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Layers and models",
+    "upstream": "malted/A-core.rkt",
+    "upstream_identifier": "dot-product",
+    "upstream_line": 5
+  },
+  "dot-product-2-1": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Layers and models",
+    "upstream": "malted/A-core.rkt",
+    "upstream_identifier": "dot-product-2-1",
+    "upstream_line": 10
+  },
+  "dual": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Extension and AD",
+    "upstream": "learner/tensors/0-duals.rkt",
+    "upstream_identifier": "dual",
+    "upstream_line": 11
+  },
+  "dual?": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Extension and AD",
+    "upstream": "learner/tensors/0-duals.rkt",
+    "upstream_identifier": "dual?",
+    "upstream_line": 7
+  },
+  "epsilon": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Training",
+    "upstream": "malted/E-gd-common.rkt",
+    "upstream_identifier": "epsilon",
+    "upstream_line": 13
+  },
+  "exp": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Differentiable operations",
+    "upstream": "learner/ext-ops/A-scalar-ops.rkt",
+    "upstream_identifier": "d-exp",
+    "upstream_line": 65
+  },
+  "exp-0": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Base-rank operations",
+    "upstream": "learner/ext-ops/A-scalar-ops.rkt",
+    "upstream_identifier": "exp-0",
+    "upstream_line": 33
+  },
+  "exp-primal": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "exp-\u03c1",
+    "upstream_line": 26
+  },
+  "expt": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Differentiable operations",
+    "upstream": "learner/ext-ops/A-scalar-ops.rkt",
+    "upstream_identifier": "d-expt",
+    "upstream_line": 63
+  },
+  "expt-0-0": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Base-rank operations",
+    "upstream": "learner/ext-ops/A-scalar-ops.rkt",
+    "upstream_identifier": "expt-0-0",
+    "upstream_line": 27
+  },
+  "expt-primal": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "expt-\u03c1",
+    "upstream_line": 24
+  },
+  "ext1": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Extension and AD",
+    "upstream": "learner/tensors/D-extend.rkt",
+    "upstream_identifier": "ext1",
+    "upstream_line": 10
+  },
+  "ext1-primal": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Extension and AD",
+    "upstream": "learner/tensors/D-extend.rkt",
+    "upstream_identifier": "ext1",
+    "upstream_line": 10
+  },
+  "ext2": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Extension and AD",
+    "upstream": "learner/tensors/D-extend.rkt",
+    "upstream_identifier": "ext2",
+    "upstream_line": 21
+  },
+  "ext2-primal": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Extension and AD",
+    "upstream": "learner/tensors/D-extend.rkt",
+    "upstream_identifier": "ext2",
+    "upstream_line": 21
+  },
+  "flatten": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Differentiable operations",
+    "upstream": "learner/ext-ops/I-flatten.rkt",
+    "upstream_identifier": "flatten",
+    "upstream_line": 16
+  },
+  "flatten-2": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Base-rank operations",
+    "upstream": "learner/ext-ops/I-flatten.rkt",
+    "upstream_identifier": "flatten-2",
+    "upstream_line": 5
+  },
+  "flatten-primal": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "flatten-\u03c1",
+    "upstream_line": 148
+  },
+  "gradient": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Extension and AD",
+    "upstream": "learner/autodiff/A-autodiff.rkt",
+    "upstream_identifier": "\u2207",
+    "upstream_line": 9
+  },
+  "gradient-descent": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Training",
+    "upstream": "malted/D-gradient-descent.rkt",
+    "upstream_identifier": "gradient-descent",
+    "upstream_line": 15
+  },
+  "gradient-of": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Extension and AD",
+    "upstream": "learner/autodiff/A-autodiff.rkt",
+    "upstream_identifier": "\u2207",
+    "upstream_line": 9
+  },
+  "gradient1": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Extension and AD",
+    "upstream": "learner/autodiff/A-autodiff.rkt",
+    "upstream_identifier": "\u2207\u00b9",
+    "upstream_line": 14
+  },
+  "grid-search": {
+    "adaptation": "syntax-rules and shared parameter objects; explicit library exports; no synthesized setters",
+    "group": "Hyperparameters",
+    "upstream": "tools/A-hypers.rkt",
+    "upstream_identifier": "grid-search",
+    "upstream_line": 70
+  },
+  "init-shape": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Initialization",
+    "upstream": "malted/O-init.rkt",
+    "upstream_identifier": "init-shape",
+    "upstream_line": 11
+  },
+  "init-theta": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Initialization",
+    "upstream": "malted/O-init.rkt",
+    "upstream_identifier": "init-theta",
+    "upstream_line": 7
+  },
+  "k-recu": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Layers and models",
+    "upstream": "malted/M-recu.rkt",
+    "upstream_identifier": "k-recu",
+    "upstream_line": 15
+  },
+  "k-relu": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Layers and models",
+    "upstream": "malted/K-dense.rkt",
+    "upstream_identifier": "k-relu",
+    "upstream_line": 12
+  },
+  "kl-loss": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Losses and blocks",
+    "upstream": "malted/C-loss.rkt",
+    "upstream_identifier": "kl-loss",
+    "upstream_line": 25
+  },
+  "l2-loss": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Losses and blocks",
+    "upstream": "malted/C-loss.rkt",
+    "upstream_identifier": "l2-loss",
+    "upstream_line": 6
+  },
+  "len": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Tensors and lists",
+    "upstream": "learner/tensors/B-tensor-basics.rkt",
+    "upstream_identifier": "len",
+    "upstream_line": 9
+  },
+  "line": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Layers and models",
+    "upstream": "malted/B-layer-fns.rkt",
+    "upstream_identifier": "line",
+    "upstream_line": 6
+  },
+  "linear": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Layers and models",
+    "upstream": "malted/B-layer-fns.rkt",
+    "upstream_identifier": "linear",
+    "upstream_line": 26
+  },
+  "linear-1-1": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Layers and models",
+    "upstream": "malted/B-layer-fns.rkt",
+    "upstream_identifier": "linear-1-1",
+    "upstream_line": 21
+  },
+  "list->tensor": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Tensors and lists",
+    "upstream": "learner/tensors/B-tensor-basics.rkt",
+    "upstream_identifier": "list->tensor",
+    "upstream_line": 34
+  },
+  "log": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Differentiable operations",
+    "upstream": "learner/ext-ops/A-scalar-ops.rkt",
+    "upstream_identifier": "d-log",
+    "upstream_line": 66
+  },
+  "log-0": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Base-rank operations",
+    "upstream": "learner/ext-ops/A-scalar-ops.rkt",
+    "upstream_identifier": "log-0",
+    "upstream_line": 38
+  },
+  "log-primal": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "log-\u03c1",
+    "upstream_line": 27
+  },
+  "make-printable": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Diagnostics",
+    "upstream": "learner/autodiff/E-print.rkt",
+    "upstream_identifier": "make-printable",
+    "upstream_line": 44
+  },
+  "map*": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Tensors and lists",
+    "upstream": "learner/autodiff/A-autodiff.rkt",
+    "upstream_identifier": "map*",
+    "upstream_line": 57
+  },
+  "max": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Differentiable operations",
+    "upstream": "learner/ext-ops/F-max.rkt",
+    "upstream_identifier": "d-max",
+    "upstream_line": 27
+  },
+  "max-1": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Base-rank operations",
+    "upstream": "learner/ext-ops/F-max.rkt",
+    "upstream_identifier": "max-1",
+    "upstream_line": 9
+  },
+  "max-primal": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "max-\u03c1",
+    "upstream_line": 83
+  },
+  "max-tensor-print-length": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Diagnostics",
+    "upstream": "learner/autodiff/E-print.rkt",
+    "upstream_identifier": "max-tensor-print-length",
+    "upstream_line": 6
+  },
+  "model": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Layers and models",
+    "upstream": "malted/L-accuracy.rkt",
+    "upstream_identifier": "model",
+    "upstream_line": 5
+  },
+  "mu": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Hyperparameters",
+    "upstream": "malted/E-gd-common.rkt",
+    "upstream_identifier": "mu",
+    "upstream_line": 11
+  },
+  "naked-gradient-descent": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Training",
+    "upstream": "malted/F-naked.rkt",
+    "upstream_identifier": "naked-gradient-descent",
+    "upstream_line": 20
+  },
+  "plane": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Layers and models",
+    "upstream": "malted/B-layer-fns.rkt",
+    "upstream_identifier": "plane",
+    "upstream_line": 31
+  },
+  "prim1": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Extension and AD",
+    "upstream": "learner/autodiff/B-prims.rkt",
+    "upstream_identifier": "prim1",
+    "upstream_line": 5
+  },
+  "prim2": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Extension and AD",
+    "upstream": "learner/autodiff/B-prims.rkt",
+    "upstream_identifier": "prim2",
+    "upstream_line": 14
+  },
+  "primal": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Extension and AD",
+    "upstream": "learner/tensors/0-duals.rkt",
+    "upstream_identifier": "\u03c1",
+    "upstream_line": 19
+  },
+  "quad": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Layers and models",
+    "upstream": "malted/B-layer-fns.rkt",
+    "upstream_identifier": "quad",
+    "upstream_line": 11
+  },
+  "random-normal": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Initialization",
+    "upstream": "tools/B-random.rkt",
+    "upstream_identifier": "random-normal",
+    "upstream_line": 9
+  },
+  "random-standard-normal": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Initialization",
+    "upstream": "tools/B-random.rkt",
+    "upstream_identifier": "random-standard-normal",
+    "upstream_line": 13
+  },
+  "random-tensor": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Initialization",
+    "upstream": "malted/O-init.rkt",
+    "upstream_identifier": "random-tensor",
+    "upstream_line": 22
+  },
+  "rank": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Tensors and lists",
+    "upstream": "learner/tensors/C-tensor-ops.rkt",
+    "upstream_identifier": "rank",
+    "upstream_line": 14
+  },
+  "record": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Diagnostics",
+    "upstream": "tools/C-logging.rkt",
+    "upstream_identifier": "record",
+    "upstream_line": 12
+  },
+  "rectify": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Differentiable operations",
+    "upstream": "learner/ext-ops/H-rectify.rkt",
+    "upstream_identifier": "rectify",
+    "upstream_line": 12
+  },
+  "rectify-0": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Base-rank operations",
+    "upstream": "learner/ext-ops/H-rectify.rkt",
+    "upstream_identifier": "rectify-0",
+    "upstream_line": 6
+  },
+  "rectify-primal": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "rectify-\u03c1",
+    "upstream_line": 141
+  },
+  "recu": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Layers and models",
+    "upstream": "malted/M-recu.rkt",
+    "upstream_identifier": "recu",
+    "upstream_line": 10
+  },
+  "ref": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Tensors and lists",
+    "upstream": "learner/tensors/B-tensor-basics.rkt",
+    "upstream_identifier": "ref",
+    "upstream_line": 11
+  },
+  "refr": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Tensors and lists",
+    "upstream": "learner/tensors/B-tensor-basics.rkt",
+    "upstream_identifier": "refr",
+    "upstream_line": 15
+  },
+  "relu": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Layers and models",
+    "upstream": "malted/K-dense.rkt",
+    "upstream_identifier": "relu",
+    "upstream_line": 7
+  },
+  "reshape": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Tensors and lists",
+    "upstream": "learner/tensors/C-tensor-ops.rkt",
+    "upstream_identifier": "reshape",
+    "upstream_line": 32
+  },
+  "revise": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Training",
+    "upstream": "malted/D-gradient-descent.rkt",
+    "upstream_identifier": "revise",
+    "upstream_line": 6
+  },
+  "revs": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Hyperparameters",
+    "upstream": "malted/D-gradient-descent.rkt",
+    "upstream_identifier": "revs",
+    "upstream_line": 12
+  },
+  "rms-gradient-descent": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Training",
+    "upstream": "malted/H-rms.rkt",
+    "upstream_identifier": "rms-gradient-descent",
+    "upstream_line": 24
+  },
+  "samples": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Training",
+    "upstream": "malted/J-stochastic.rkt",
+    "upstream_identifier": "samples",
+    "upstream_line": 7
+  },
+  "sampling-obj": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Training",
+    "upstream": "malted/J-stochastic.rkt",
+    "upstream_identifier": "sampling-obj",
+    "upstream_line": 19
+  },
+  "scalar?": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Tensors and lists",
+    "upstream": "learner/tensors/0-duals.rkt",
+    "upstream_identifier": "scalar?",
+    "upstream_line": 31
+  },
+  "shape": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Tensors and lists",
+    "upstream": "learner/tensors/C-tensor-ops.rkt",
+    "upstream_identifier": "shape",
+    "upstream_line": 8
+  },
+  "signal-avg": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Layers and models",
+    "upstream": "malted/B-layer-fns.rkt",
+    "upstream_identifier": "signal-avg",
+    "upstream_line": 43
+  },
+  "smooth": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Training",
+    "upstream": "malted/E-gd-common.rkt",
+    "upstream_identifier": "smooth",
+    "upstream_line": 6
+  },
+  "softmax": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Layers and models",
+    "upstream": "malted/B-layer-fns.rkt",
+    "upstream_identifier": "softmax",
+    "upstream_line": 36
+  },
+  "sqr": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Differentiable operations",
+    "upstream": "learner/ext-ops/A-scalar-ops.rkt",
+    "upstream_identifier": "d-sqr",
+    "upstream_line": 71
+  },
+  "sqr-primal": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "sqr-\u03c1",
+    "upstream_line": 34
+  },
+  "sqrt": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Differentiable operations",
+    "upstream": "learner/ext-ops/A-scalar-ops.rkt",
+    "upstream_identifier": "d-sqrt",
+    "upstream_line": 69
+  },
+  "sqrt-0": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Base-rank operations",
+    "upstream": "learner/ext-ops/A-scalar-ops.rkt",
+    "upstream_identifier": "sqrt-0",
+    "upstream_line": 50
+  },
+  "sqrt-primal": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "sqrt-\u03c1",
+    "upstream_line": 30
+  },
+  "stack-blocks": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Losses and blocks",
+    "upstream": "malted/N-blocks.rkt",
+    "upstream_identifier": "stack-blocks",
+    "upstream_line": 31
+  },
+  "sum": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Differentiable operations",
+    "upstream": "learner/ext-ops/D-sum.rkt",
+    "upstream_identifier": "d-sum",
+    "upstream_line": 17
+  },
+  "sum-1": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Base-rank operations",
+    "upstream": "learner/ext-ops/D-sum.rkt",
+    "upstream_identifier": "sum-1",
+    "upstream_line": 6
+  },
+  "sum-cols": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Differentiable operations",
+    "upstream": "learner/ext-ops/D-sum.rkt",
+    "upstream_identifier": "d-sum-cols",
+    "upstream_line": 20
+  },
+  "sum-cols-primal": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "sum-cols-\u03c1",
+    "upstream_line": 69
+  },
+  "sum-primal": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "sum-\u03c1",
+    "upstream_line": 66
+  },
+  "tensor": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Tensors and lists",
+    "upstream": "learner/tensors/C-tensor-ops.rkt",
+    "upstream_identifier": "tensor",
+    "upstream_line": 92
+  },
+  "tensor?": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Tensors and lists",
+    "upstream": "learner/tensors/B-tensor-basics.rkt",
+    "upstream_identifier": "tensor?",
+    "upstream_line": 36
+  },
+  "tlen": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Tensors and lists",
+    "upstream": "learner/tensors/B-tensor-basics.rkt",
+    "upstream_identifier": "tlen",
+    "upstream_line": 30
+  },
+  "tmap": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Tensors and lists",
+    "upstream": "learner/tensors/B-tensor-basics.rkt",
+    "upstream_identifier": "tmap",
+    "upstream_line": 32
+  },
+  "tolerance": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Diagnostics",
+    "upstream": "learner/autodiff/D-test-helpers.rkt",
+    "upstream_identifier": "tolerance",
+    "upstream_line": 26
+  },
+  "trace-print": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Diagnostics",
+    "upstream": "learner/autodiff/A-autodiff.rkt",
+    "upstream_identifier": "trace-print",
+    "upstream_line": 72
+  },
+  "tref": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Tensors and lists",
+    "upstream": "learner/tensors/B-tensor-basics.rkt",
+    "upstream_identifier": "tref",
+    "upstream_line": 26
+  },
+  "trefs": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Tensors and lists",
+    "upstream": "learner/tensors/B-tensor-basics.rkt",
+    "upstream_identifier": "trefs",
+    "upstream_line": 59
+  },
+  "velocity-gradient-descent": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Training",
+    "upstream": "malted/G-velocity.rkt",
+    "upstream_identifier": "velocity-gradient-descent",
+    "upstream_line": 24
+  },
+  "with-hyper": {
+    "adaptation": "syntax-rules and shared parameter objects; explicit library exports; no synthesized setters",
+    "group": "Hyperparameters",
+    "upstream": "tools/A-hypers.rkt",
+    "upstream_identifier": "with-hyper",
+    "upstream_line": 65
+  },
+  "with-hypers": {
+    "adaptation": "syntax-rules and shared parameter objects; explicit library exports; no synthesized setters",
+    "group": "Hyperparameters",
+    "upstream": "tools/A-hypers.rkt",
+    "upstream_identifier": "with-hypers",
+    "upstream_line": 31
+  },
+  "with-recording": {
+    "adaptation": "Explicit dynamically scoped synchronous handler instead of a loss wrapper",
+    "group": "Diagnostics",
+    "upstream": "malted/C-loss.rkt",
+    "upstream_identifier": "with-recording",
+    "upstream_line": 32
+  },
+  "zero-tensor": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Initialization",
+    "upstream": "malted/O-init.rkt",
+    "upstream_identifier": "zero-tensor",
+    "upstream_line": 28
+  },
+  "zeroes": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Initialization",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "zeroes-\u03c1",
+    "upstream_line": 38
+  },
+  "zeroes-primal": {
+    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "zeroes-\u03c1",
+    "upstream_line": 38
+  }
+}

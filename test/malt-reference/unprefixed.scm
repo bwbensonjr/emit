@@ -1,0 +1,7 @@
+(import (except (scheme base) + - * / abs max expt)
+        (scheme write)
+        (malt learner))
+(define derivative (gradient (lambda (x) (* x x)) 3.0))
+(if (not (= derivative 6.0)) (error "unprefixed learner import failed" derivative))
+(write (list 'malt-unprefixed derivative))
+(newline)
