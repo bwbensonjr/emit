@@ -27,9 +27,9 @@ class CoverageTests(unittest.TestCase):
             self.assertEqual(len(labels), count)
             self.assertEqual(hashlib.sha256("\n".join(labels).encode()).hexdigest(), digest)
         # New suites extend profiles without changing the historical label pins.
-        # Source loading extends the existing 58-suite full profile; historical
-        # label ownership above remains unchanged.
-        self.assertEqual(len([s for s in suites if "full" in s["profiles"]]), 59)
+        # Malt and random sources add six native suites to the 59-suite full
+        # profile; historical label ownership above remains unchanged.
+        self.assertEqual(len([s for s in suites if "full" in s["profiles"]]), 65)
         additions = {
             "source-load-interaction-host": {"dev", "full", "reference"},
             "stdlib-precompilation": {"full"},
@@ -38,6 +38,16 @@ class CoverageTests(unittest.TestCase):
             "scheme-base-generator-reference": {"reference"},
             "baked-library-source-chez": {"units", "reference"},
             "bake-libraries-contracts": {"full", "reference"},
+            "random-entropy": {"full"},
+            "srfi-27": {"full"},
+            "srfi-27-source": {"reference"},
+            "malt-core": {"full"},
+            "malt-core-source": {"reference"},
+            "malt-installed": {"full"},
+            "malt-training": {"full"},
+            "malt-training-source": {"reference"},
+            "malt-xor": {"full"},
+            "malt-xor-source": {"reference"},
         }
         by_id = {suite["id"]: suite for suite in suites}
         for name, profiles in additions.items():

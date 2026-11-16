@@ -2530,7 +2530,8 @@
       "chez": false,
       "coverage": [
         "random-entropy"
-      ]
+      ],
+      "legacy": []
     },
     {
       "id": "srfi-27",
