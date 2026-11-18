@@ -43,7 +43,7 @@
     init-shape init-theta (rename train:k-recu k-recu) (rename train:k-relu k-relu)
     (rename train:kl-loss kl-loss) (rename train:l2-loss l2-loss) len
     (rename train:line line) (rename train:linear linear)
-    (rename train:linear-1-1 linear-1-1) list->tensor (rename m:log log)
+    (rename train:linear-1-1 linear-1-1) list->tensor tensor->vector (rename m:log log)
     (rename m:log-0 log-0) (rename m:log-primal log-primal) make-printable map*
     (rename m:max max) (rename m:max-1 max-1) (rename m:max-primal max-primal)
     max-tensor-print-length (rename train:model model) mu

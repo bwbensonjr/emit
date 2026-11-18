@@ -1523,7 +1523,8 @@ static int resolve_program(const std::string &manifest, const std::string &name,
 // 3: a `.sources` record may hold LIBRARY lines, the (library NAME) answers a unit's
 // cond-expand consulted (change: portable-library-surface, design D7).
 // 5: compile-time interfaces carry binding origins and lexical syntax context.
-static const int kCacheVersion = 5;
+// 6: record descriptors carry custom writers and callback bridges.
+static const int kCacheVersion = 6;
 
 // The resolver a cache entry's (library NAME) answers are re-checked against, when the
 // command has one: "1" available, "0" not, "" could not ask.  Set where each command
@@ -2052,7 +2053,7 @@ static bool dependency_generation(const std::string &keys, std::string &snapshot
 static std::string artifact_runtime_abi() {
   // The executable digest also covers the linked runtime implementation. This
   // independent tag states the representation contract, not a source-tree hash.
-  return "emit-tagged-values-v1:" + std::to_string(sizeof(intptr_t) * 8);
+  return "emit-tagged-values-v2:" + std::to_string(sizeof(intptr_t) * 8);
 }
 
 static std::string artifact_target() { return sys::getDefaultTargetTriple(); }
@@ -3005,9 +3006,21 @@ static void run_thunk(const std::string &name) {
     std::cout << (result.lookup_error ? "!lookup error: " : "!trap: ")
               << result.error << "\n" << std::flush;
   } else if (!rt_is_unspec(result.value)) {
-    rt_write(result.value);
-    std::printf("\n");
-    std::fflush(stdout);
+    // A custom writer executes Scheme after evaluation has returned. Keep its
+    // callbacks inside a host trap boundary just like the evaluated thunk.
+    jmp_buf print_trap;
+    jmp_buf *saved_trap = rt_trap;
+    intptr_t checkpoint = rt_guard_checkpoint();
+    rt_trap = &print_trap;
+    if (setjmp(print_trap) == 0) {
+      rt_write(result.value);
+      std::printf("\n");
+      std::fflush(stdout);
+    } else {
+      rt_guard_restore(checkpoint);
+      std::cout << "!trap: " << rt_trap_msg << "\n" << std::flush;
+    }
+    rt_trap = saved_trap;
   }
 }
 

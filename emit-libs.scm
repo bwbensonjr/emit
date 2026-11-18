@@ -39,6 +39,7 @@
 ;;; (emit internal) for the private port/reader machinery.
 ((library (emit internal) (source "lib/emit/internal.sld"))
   (library (emit list) (source "lib/emit/list.sld"))
+  (library (emit write) (source "lib/emit/write.sld"))
   (library (emit filesystem) (source "lib/emit/filesystem.sld"))
   (library (scheme base) (source "lib/scheme/base.sld"))
   (library (scheme inexact) (source "lib/scheme/inexact.sld"))

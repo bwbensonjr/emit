@@ -9,16 +9,16 @@
       (cond
         ((scalar? y) (f y))
         ((list? y) (map (lambda (x) (map* f x)) y))
+        ((tensor-object? y) (tmap (lambda (x) (map* f x)) y))
         ((vector? y) (vector-map (lambda (x) (map* f x)) y))
-        (else (error "map*: expected scalar, list, or vector" y))))
+        (else (error "map*: expected scalar, list, vector, or tensor" y))))
     (define (accumulate y table)
       (cond
         ((scalar? y) ((backprop y) y 1.0 table))
         ((list? y) (for-each (lambda (x) (accumulate x table)) y) table)
-        ((vector? y) (let loop ((i (- (vector-length y) 1)))
-                       (if (< i 0)
-                           table
-                           (begin (accumulate (vector-ref y i) table) (loop (- i 1))))))
+        ((or (tensor-object? y) (vector? y))
+          (let loop ((i (- (tlen y) 1)))
+            (if (< i 0) table (begin (accumulate (tref y i) table) (loop (- i 1))))))
         (else (error "gradient: expected scalar or structured output" y))))
     (define (gradient-once y wrt)
       (let ((table (make-eq-hash-table)))

@@ -141,8 +141,18 @@ The default handler does nothing. Loss procedures emit named `loss` events.
 Install a two-argument handler with `(with-recording handler body ...)`; nested
 handlers restore correctly even when the body or handler raises. This replaces
 Racket's logging thread and higher-order loss-wrapper `with-recording` contract.
-Explicit `make-printable` and `trace-print` render values without changing a
-global printer. `max-tensor-print-length` controls explicit rendering.
+Malt tensor and dual objects print automatically through per-record-type
+custom writers. `(* 2 3)` prints `6`, and `(* (tensor 1 2 3) 3)` prints
+`(tensor 3 6 9)` without exposing procedure fields. Explicit `make-printable`
+and `trace-print` remain available. `max-tensor-print-length` controls both
+forms of rendering, initially five elements per tensor axis; zero is unlimited.
+
+Constructed tensors use distinct vector-backed objects, while Malt operations
+still accept raw vectors as inputs. Use `tref`, `tlen`, and `tmap` to access
+these objects, and `tensor->vector` for a fresh shallow vector copy. Ordinary
+vectors keep their usual printing. Tensor and dual records compare by identity;
+`check-dual-equal?` compares numerical values. Structured gradient results and
+`map*` preserve their input list, vector, and tensor-object container kinds.
 
 ## Numerical behavior and validation
 

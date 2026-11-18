@@ -790,7 +790,7 @@
 ;; Version 2: the sidecar gained the include list (D10).
 ;; Version 3: ...and the (library NAME) answers (change: portable-library-surface, D7).
 ;; Version 4: origin identities and lexical transformer context are required.
-(define compiler-stamp-version 4)
+(define compiler-stamp-version 5)
 
 ;; Exactly the (include ...) block at the top of this file PLUS this file itself,
 ;; in a fixed order -- the sources that turn library source -> IR in this path.

@@ -57,6 +57,8 @@ char rt_trap_msg[128] = "";
  * every host calls after catching an outermost trap).  Getting this wrong makes the
  * SECOND trap of a session fatal, which is a specific, testable failure. */
 static int rt_trap_in_flight = 0;
+static intptr_t rt_print_depth = 0;
+static void rt_print_restore(intptr_t depth);
 
 #define TAG_MASK    7
 #define TAG_FIXNUM  0
@@ -107,6 +109,8 @@ static int rt_trap_in_flight = 0;
                             * the box is atomic (no pointers inside).  All numeric semantics
                             * live in the rt_* arithmetic, so the emitter's inline fixnum fast
                             * path routes any non-fixnum operand here automatically. */
+
+#define HDR_WRITER_CONTEXT 10 /* callback-scoped native printing context */
 
 #define HDR_LOAD_ENTRY 9  /* opaque ccc entry address; executable only through rt_load_invoke */
 
@@ -1559,6 +1563,7 @@ typedef struct {
   char  *buf;    /* non-NULL: accumulate here (the buffer arm), GC_MALLOC_ATOMIC */
   size_t len;    /* bytes accumulated */
   size_t cap;    /* bytes allocated at buf */
+  int closed;    /* reject writes when a callback closes the explicit destination */
 } sink;
 
 /* The buffer arm starts at this capacity and doubles.  Anything from 64 to 256 is
@@ -1593,6 +1598,7 @@ static void sink_grow(sink *s, size_t need) {
  * fwrite's, and an embedded NUL is just another byte -- Scheme strings may hold
  * one and this is the path they take. */
 static void sink_write(sink *s, const void *bytes, size_t n) {
+  if (s->closed) rt_fatal("write: output port is closed");
   if (s->f) { fwrite(bytes, 1, n, s->f); return; }
   if (n == 0) return;
   sink_grow(s, n);
@@ -1601,6 +1607,7 @@ static void sink_write(sink *s, const void *bytes, size_t n) {
 }
 
 static void sink_putc(sink *s, int c) {
+  if (s->closed) rt_fatal("write: output port is closed");
   if (s->f) { fputc(c, s->f); return; }
   sink_grow(s, 1);
   s->buf[s->len++] = (char)c;
@@ -1608,6 +1615,7 @@ static void sink_putc(sink *s, int c) {
 
 /* A NUL-terminated C string: the printer's fixed spellings and #f/#t. */
 static void sink_puts(sink *s, const char *str) {
+  if (s->closed) rt_fatal("write: output port is closed");
   if (s->f) { fputs(str, s->f); return; }
   sink_write(s, str, strlen(str));
 }
@@ -1619,6 +1627,7 @@ static void sink_puts(sink *s, const char *str) {
  * The printer's formats are small and bounded (numbers, labels, `#<...>` forms),
  * so the second pass essentially never runs. */
 static void sink_printf(sink *s, const char *fmt, ...) {
+  if (s->closed) rt_fatal("write: output port is closed");
   va_list ap;
   if (s->f) {
     va_start(ap, fmt);
@@ -1662,7 +1671,7 @@ static sink *sink_stderr(void) {
  * non-string no longer dereferences as a string header and crashes.  Returns an
  * unspecified value (NIL) so it composes inside a `begin`. */
 enum print_policy { PRINT_ORDINARY, PRINT_SIMPLE, PRINT_SHARED };
-static void print_val(sink *out, val v, int display, enum print_policy policy);
+static void print_val(sink *out, val v, int display, enum print_policy policy, val port);
 
 /* WHERE THE PORT-LESS OUTPUT PROCEDURES WRITE (change: scheme-io-library).
  *
@@ -1690,11 +1699,11 @@ static void print_val(sink *out, val v, int display, enum print_policy policy);
  * Scheme runs -- the standard ports need no initialization order.  The REAL stdout
  * stays reachable as handle 0 throughout, so the stdout PORT OBJECT keeps meaning
  * stdout even while the current-output-port parameter points somewhere else. */
-static intptr_t rt_current_out_handle = -1;
+static val rt_current_out_handle = (val)-8;
+static sink *output_handle_sink(val handle);
 static sink *port_sink(intptr_t h);       /* fwd: the handle table, defined below */
 static sink *cur_out(void) {
-  if (rt_current_out_handle < 0) return sink_stdout();
-  sink *s = port_sink(rt_current_out_handle);
+  sink *s = output_handle_sink(rt_current_out_handle);
   return s ? s : sink_stdout();
 }
 
@@ -1704,12 +1713,12 @@ static sink *cur_out(void) {
  * to stdout rather than leaving output going nowhere. */
 val rt_set_current_output(val handle) {
   rt_current_out_handle =
-      (tag_of(handle) == TAG_FIXNUM && port_sink(UNFIX(handle))) ? UNFIX(handle) : -1;
+      output_handle_sink(handle) ? handle : (val)-8;
   return UNSPEC_V;
 }
 
 val rt_display(val v) {
-  print_val(cur_out(), v, /*display=*/1, PRINT_ORDINARY);
+  print_val(cur_out(), v, /*display=*/1, PRINT_ORDINARY, FALSE_V);
   return UNSPEC_V;
 }
 
@@ -1720,17 +1729,17 @@ val rt_display(val v) {
  * from that void entry: a primitive must return a val (the unspecified value)
  * so it composes inside a `begin`, whereas the runner entry returns nothing. */
 val rt_write_val(val v) {
-  print_val(cur_out(), v, /*display=*/0, PRINT_ORDINARY);
+  print_val(cur_out(), v, /*display=*/0, PRINT_ORDINARY, FALSE_V);
   return UNSPEC_V;
 }
 
 val rt_write_simple_val(val v) {
-  print_val(cur_out(), v, /*display=*/0, PRINT_SIMPLE);
+  print_val(cur_out(), v, /*display=*/0, PRINT_SIMPLE, FALSE_V);
   return UNSPEC_V;
 }
 
 val rt_write_shared_val(val v) {
-  print_val(cur_out(), v, /*display=*/0, PRINT_SHARED);
+  print_val(cur_out(), v, /*display=*/0, PRINT_SHARED, FALSE_V);
   return UNSPEC_V;
 }
 
@@ -1746,7 +1755,7 @@ val rt_write_shared_val(val v) {
  * display style for its own headers, indentation, and newlines.  Returns `v`, so
  * a dumper can thread a value through a write without an extra binding. */
 val rt_stderr_write(val v, val display_p) {
-  print_val(sink_stderr(), v, /*display=*/display_p != FALSE_V, PRINT_ORDINARY);
+  print_val(sink_stderr(), v, /*display=*/display_p != FALSE_V, PRINT_ORDINARY, FALSE_V);
   return v;
 }
 
@@ -1810,7 +1819,7 @@ typedef struct {
   int  open;  /* 0 once close-port has run; a closed string port keeps its buffer */
 } port_slot;
 
-static port_slot *port_slots = NULL;
+static port_slot **port_slots = NULL;
 static intptr_t   port_count = 0, port_cap = 0;
 
 #define PORT_STDOUT 0
@@ -1821,13 +1830,14 @@ static intptr_t   port_count = 0, port_cap = 0;
 static intptr_t port_alloc_slot(void) {
   if (port_count == port_cap) {
     intptr_t ncap = port_cap ? port_cap * 2 : 8;
-    port_slot *ns = (port_slot *)GC_MALLOC_UNCOLLECTABLE((size_t)ncap * sizeof(port_slot));
+    port_slot **ns = (port_slot **)GC_MALLOC_UNCOLLECTABLE((size_t)ncap * sizeof(port_slot *));
     for (intptr_t i = 0; i < port_count; i++) ns[i] = port_slots[i];
     if (port_slots) GC_free(port_slots);
     port_slots = ns; port_cap = ncap;
   }
-  port_slots[port_count].out = (sink){ NULL, NULL, 0, 0 };
-  port_slots[port_count].open = 1;
+  port_slots[port_count] = (port_slot *)GC_MALLOC(sizeof(port_slot));
+  port_slots[port_count]->out = (sink){ NULL, NULL, 0, 0, 0 };
+  port_slots[port_count]->open = 1;
   return port_count++ + PORT_FIRST;
 }
 
@@ -1839,7 +1849,7 @@ static sink *port_sink(intptr_t h) {
   if (h == PORT_STDERR) return sink_stderr();
   intptr_t i = h - PORT_FIRST;
   if (i < 0 || i >= port_count) return NULL;
-  return port_slots[i].open ? &port_slots[i].out : NULL;
+  return port_slots[i]->open ? &port_slots[i]->out : NULL;
 }
 
 /* Decode the port a Scheme-level output operation was handed.  The port passed to
@@ -1857,11 +1867,40 @@ static sink *port_sink(intptr_t h) {
  * prove the record is a port, and a non-port record whose field 0 happens to be a
  * live handle would write there.  That is a wrong-type bug, never a fault.
  * Returns NULL when the argument is not a usable port, and the caller traps. */
+typedef val (*rt_apply_writer_t)(val, val, val, val, val);
+typedef struct writer_context writer_context;
+struct writer_context {
+  val header;
+  int active;
+  sink *out;
+  val object;
+  val port;
+  int display;
+  enum print_policy policy;
+  writer_context *previous;
+};
+static writer_context *rt_active_writer = NULL;
+static int is_writer_context(val v) {
+  return tag_of(v) == TAG_EXT && ext_hdr(v) == HDR_WRITER_CONTEXT;
+}
+static writer_context *writer_context_arg(val v) {
+  if (!is_writer_context(v)) rt_fatal("custom writer: invalid context");
+  writer_context *c = (writer_context *)as_ptr(v);
+  if (!c->active) rt_fatal("custom writer: expired context or borrowed port");
+  return c;
+}
+
+static sink *output_handle_sink(val handle) {
+  if (is_writer_context(handle)) return writer_context_arg(handle)->out;
+  return tag_of(handle) == TAG_FIXNUM ? port_sink(UNFIX(handle)) : NULL;
+}
+
 static intptr_t rec_len(val r);                 /* fwd (defined with the records) */
 static sink *port_arg_sink(val p) {
   if (tag_of(p) != TAG_EXT || ext_hdr(p) != HDR_RECORD) return NULL;
   if (rec_len(p) < 1) return NULL;              /* no field 0 to read */
   val h = as_ptr(p)[3];
+  if (is_writer_context(h)) return writer_context_arg(h)->out;
   if (tag_of(h) != TAG_FIXNUM) return NULL;
   return port_sink(UNFIX(h));
 }
@@ -1881,7 +1920,7 @@ val rt_port_open_output_file(val path) {
   FILE *f = fopen(str_bytes(path), "w");
   if (!f) return FALSE_V;
   intptr_t h = port_alloc_slot();
-  port_slots[h - PORT_FIRST].out.f = f;
+  port_slots[h - PORT_FIRST]->out.f = f;
   return FIX(h);
 }
 
@@ -1900,7 +1939,7 @@ val rt_port_open_output_string(void) {
   char *buf = (char *)GC_MALLOC_ATOMIC(SINK_INIT_CAP);
   if (!buf) return FALSE_V;
   intptr_t h = port_alloc_slot();
-  port_slot *s = &port_slots[h - PORT_FIRST];
+  port_slot *s = port_slots[h - PORT_FIRST];
   s->out.f   = NULL;
   s->out.buf = buf;
   s->out.len = 0;
@@ -1923,7 +1962,7 @@ val rt_port_get_output_string(val handle) {
   intptr_t h = UNFIX(handle);
   intptr_t i = h - PORT_FIRST;
   if (tag_of(handle) != TAG_FIXNUM || i < 0 || i >= port_count) return FALSE_V;
-  port_slot *s = &port_slots[i];
+  port_slot *s = port_slots[i];
   if (!s->out.buf) return FALSE_V;              /* a file port: not a string port */
   return rt_make_string(s->out.buf, (intptr_t)s->out.len);
 }
@@ -1936,7 +1975,7 @@ val rt_port_get_output_string(val handle) {
  * R7RS asks only that a flush make buffered output visible to other readers of the
  * destination -- which is vacuously true when there is no buffering in between. */
 val rt_port_flush(val handle) {
-  sink *s = port_sink(UNFIX(handle));
+  sink *s = is_writer_context(handle) ? writer_context_arg(handle)->out : port_sink(UNFIX(handle));
   if (s && s->f) fflush(s->f);
   return UNSPEC_V;
 }
@@ -1954,14 +1993,18 @@ val rt_port_flush(val handle) {
  * being arranged by it (design D3).  Freeing the buffer here is precisely what would
  * make that call impossible. */
 val rt_port_close(val handle) {
+  if (is_writer_context(handle)) {
+    writer_context_arg(handle);
+    rt_fatal("custom writer: cannot close a borrowed port");
+  }
   intptr_t h = UNFIX(handle);
   if (tag_of(handle) != TAG_FIXNUM || h < PORT_FIRST) return UNSPEC_V;
   intptr_t i = h - PORT_FIRST;
   if (i < 0 || i >= port_count) return UNSPEC_V;
-  port_slot *s = &port_slots[i];
+  port_slot *s = port_slots[i];
   if (!s->open) return UNSPEC_V;
   if (s->out.f) { fflush(s->out.f); fclose(s->out.f); s->out.f = NULL; }
-  s->open = 0;
+  s->open = 0; s->out.closed = 1;
   return UNSPEC_V;
 }
 
@@ -1974,22 +2017,22 @@ val rt_port_close(val handle) {
  * port emits byte-identical code. */
 val rt_port_display(val v, val p) {
   print_val(port_arg_or_die(p, "display: not an open output port"), v,
-            /*display=*/1, PRINT_ORDINARY);
+            /*display=*/1, PRINT_ORDINARY, p);
   return UNSPEC_V;
 }
 val rt_port_write(val v, val p) {
   print_val(port_arg_or_die(p, "write: not an open output port"), v,
-            /*display=*/0, PRINT_ORDINARY);
+            /*display=*/0, PRINT_ORDINARY, p);
   return UNSPEC_V;
 }
 val rt_port_write_simple(val v, val p) {
   print_val(port_arg_or_die(p, "write-simple: not an open output port"), v,
-            /*display=*/0, PRINT_SIMPLE);
+            /*display=*/0, PRINT_SIMPLE, p);
   return UNSPEC_V;
 }
 val rt_port_write_shared(val v, val p) {
   print_val(port_arg_or_die(p, "write-shared: not an open output port"), v,
-            /*display=*/0, PRINT_SHARED);
+            /*display=*/0, PRINT_SHARED, p);
   return UNSPEC_V;
 }
 val rt_port_newline(val p) {
@@ -2208,10 +2251,24 @@ val rt_hash_table_p(val ht) { return truthy(is_hashtable(ht)); }
  * (eq?), which makes record types disjoint.  Records are identity types:
  * eqv?/equal? hold only for the same object (no field recursion). */
 val rt_make_record_type(val name) {          /* name: a string value (for printing) */
-  val *p = (val *)GC_MALLOC(2 * sizeof(val));
+  val *p = (val *)GC_MALLOC(5 * sizeof(val));
   p[0] = (val)HDR_RECORD_TYPE; p[1] = name;
+  p[2] = FALSE_V; p[3] = 0; p[4] = FALSE_V;
   return tag_ptr(p, TAG_EXT);
 }
+/* Each registration retains its own module's ccc bridge, because independently
+ * compiled Scheme units can use different closure register budgets. */
+val rt_set_record_type_writer(rt_apply_writer_t fn, val exemplar, val adapter, val port_exemplar) {
+  CHECK_TAG("set-record-type-writer!", exemplar, is_record, "a record");
+  if (adapter != FALSE_V && tag_of(adapter) != TAG_CLOSURE)
+    rt_fatal("set-record-type-writer!: expected a procedure or #f");
+  CHECK_TAG("set-record-type-writer!", port_exemplar, is_record, "a port exemplar");
+  if (rec_len(port_exemplar) < 6) rt_fatal("set-record-type-writer!: invalid port exemplar");
+  val *td = as_ptr(as_ptr(exemplar)[1]);
+  td[2] = adapter; td[3] = (val)(intptr_t)fn; td[4] = port_exemplar;
+  return UNSPEC_V;
+}
+
 /* rt_make_record(td, fields): allocate { HDR_RECORD, td, count, field... } by
  * walking the field list (a proper list of tagged values) into the slots in order.
  * The list is walked twice: once for the count, which is recorded in slot 2 so the
@@ -2601,19 +2658,21 @@ static val      rt_esc_value[RT_GUARD_MAX];   /* held only across an immediate l
 static intptr_t rt_esc_id[RT_GUARD_MAX];
 static intptr_t rt_esc_next_id = 1;           /* monotonic; 0 is never a live id */
 static int      rt_guard_depth = 0;
+static intptr_t rt_esc_print_depth[RT_GUARD_MAX];
 
 /* Reset the frame stack; a host calls this after catching an outermost trap so a
  * longjmp that bypassed rt_run_guarded's pop does not leave stale frames. */
-void rt_guard_reset(void) { rt_guard_depth = 0; rt_trap_in_flight = 0; }
+void rt_guard_reset(void) { rt_print_restore(0); rt_guard_depth = 0; rt_trap_in_flight = 0; }
 
 /* A nested compiler call owns only frames above its entry checkpoint.  Restoring
  * this depth retains the caller's live guard/continuation frames and trap-delivery
  * state, whereas the top-level reset would invalidate them. */
 intptr_t rt_guard_checkpoint(void) {
-  return ((intptr_t)rt_guard_depth << 1) | rt_trap_in_flight;
+  return (rt_print_depth << 16) | ((intptr_t)rt_guard_depth << 1) | rt_trap_in_flight;
 }
 void rt_guard_restore(intptr_t token) {
-  rt_guard_depth = (int)(token >> 1);
+  rt_print_restore(token >> 16);
+  rt_guard_depth = (int)((token & 65535) >> 1);
   rt_trap_in_flight = (int)(token & 1);
 }
 
@@ -2645,6 +2704,7 @@ val rt_escape_to(val id_v, val value) {
   for (int i = rt_guard_depth - 1; i >= 0; i--) {
     if (rt_esc_id[i] == id) {
       rt_esc_value[i] = value;
+      rt_print_restore(rt_esc_print_depth[i]);
       longjmp(rt_esc_env[i], 1);
     }
   }
@@ -2842,6 +2902,7 @@ static void rt_trap_deliver(void) {
 val rt_run_guarded(rt_apply0_t fn, val thunk) {
   if (rt_guard_depth >= RT_GUARD_MAX) rt_fatal("escape/guard nesting too deep");
   int i = rt_guard_depth++;
+  rt_esc_print_depth[i] = rt_print_depth;
   rt_esc_id[i] = rt_esc_next_id++;      /* never reused: see rt_escape_to */
   if (setjmp(rt_esc_env[i]) == 0) {
     val v = fn(thunk);
@@ -2944,19 +3005,9 @@ static int sym_needs_bars(const char *s) {
  * make `write` do `write-shared`'s job.  Labelling back-edge targets alone is sufficient
  * for termination: every cycle contains one, and the second visit prints `#N#`.
  *
- * THE TABLE IS STATIC AND REUSED, with a generation counter instead of a clear:
- *
- *   - no allocation for ordinary data -- 128 slots live in .bss, which covers anything a
- *     REPL echo or a demo prints;
- *   - O(1) lookups, so printing a long list stays linear.  A linear scan would have made
- *     printing an n-element list O(n^2), which is a real regression on the common path and
- *     the reason this is a hash table rather than the small array the design first proposed;
- *   - `pl_gen++` invalidates every entry at once, so a print that is abandoned by a longjmp
- *     (a trap while printing) leaves nothing to clean up -- the next print cannot see stale
- *     entries.  That self-healing is why the generation counter is worth the field.
- *
- * The keys are Scheme pointers but nothing dereferences them after the scan, and the datum
- * being printed is held by the caller, so the table needs no GC visibility of its own.
+ * Each traversal owns its table. Nested writes and custom child rendering cannot
+ * overwrite the outer graph's labels. Contexts and tables are GC scanned so a
+ * callback's allocation can safely trigger collection during rendering.
  *
  * Not addressed here, and pre-existing: `print_val` recurses on cars and vector elements, so
  * a datum nested a million deep can still exhaust the C stack.  The scan mirrors the
@@ -2973,13 +3024,40 @@ typedef struct {
 
 #define PL_STATIC_SLOTS 128u   /* power of two */
 
-static pl_slot  pl_static[PL_STATIC_SLOTS];
-static pl_slot *pl_tab = pl_static;
-static size_t   pl_cap = PL_STATIC_SLOTS;    /* always a power of two */
-static size_t   pl_used = 0;
-static unsigned pl_gen = 0;
-static int      pl_next_label = 0;
-static int      pl_any = 0;                  /* did the scan find any cycle at all? */
+/* Contexts are heap allocated so an outer host checkpoint can safely discard
+ * frames after a trap has already bypassed the C stack that owned them. */
+typedef struct print_context print_context;
+struct print_context {
+  print_context *previous;
+  writer_context *writer_mark;
+  pl_slot *tab;
+  size_t cap, used;
+  unsigned gen;
+  int next_label, any;
+  sink *out;
+  val port;
+  int display;
+  enum print_policy policy;
+};
+static print_context *pl_current = NULL;
+#define pl_tab (pl_current->tab)
+#define pl_cap (pl_current->cap)
+#define pl_used (pl_current->used)
+#define pl_gen (pl_current->gen)
+#define pl_next_label (pl_current->next_label)
+#define pl_any (pl_current->any)
+
+static void rt_print_restore(intptr_t depth) {
+  while (pl_current && rt_print_depth > depth) {
+    while (rt_active_writer != pl_current->writer_mark) {
+      writer_context *w = rt_active_writer;
+      w->active = 0;
+      rt_active_writer = w->previous;
+    }
+    pl_current = pl_current->previous;
+    rt_print_depth--;
+  }
+}
 
 static int pl_labelable(val v) { return tag_of(v) == TAG_PAIR || is_vector(v); }
 
@@ -3010,8 +3088,8 @@ static pl_slot *pl_find(val v, int create) {
   }
 }
 
-/* Double the table and rehash this generation's entries.  The old static array is left
- * alone (it is .bss); a grown table is GC_MALLOCed and simply dropped on the next grow. */
+/* Double this traversal's table and rehash the live entries. The collector
+ * reclaims earlier tables once this traversal no longer references them. */
 static void pl_grow(void) {
   size_t ncap = pl_cap * 2;
   pl_slot *ntab = (pl_slot *)GC_MALLOC(ncap * sizeof(pl_slot));
@@ -3092,21 +3170,81 @@ static void pl_reset_printed(void) {
 
 static void print_node(sink *out, val v, int display);
 
-static void print_val(sink *out, val v, int display, enum print_policy policy) {
+static void print_val(sink *out, val v, int display, enum print_policy policy, val port) {
+  /* Atomic output dominates compiler assembly; keep its allocation-free path. */
+  if (!pl_labelable(v) &&
+      !(is_record(v) && as_ptr(as_ptr(v)[1])[2] != FALSE_V)) {
+    print_node(out, v, display);
+    return;
+  }
+  intptr_t previous_depth = rt_print_depth;
+  print_context *ctx = (print_context *)GC_MALLOC(sizeof(print_context));
+  ctx->previous = pl_current;
+  ctx->writer_mark = rt_active_writer;
+  ctx->out = out; ctx->port = port; ctx->display = display; ctx->policy = policy;
+  ctx->tab = NULL; ctx->cap = PL_STATIC_SLOTS; ctx->gen = 1;
+  pl_current = ctx;
+  rt_print_depth++;
   if (policy != PRINT_SIMPLE && pl_labelable(v)) {
-    pl_gen++; pl_used = 0; pl_next_label = 0; pl_any = 0;
+    ctx->tab = (pl_slot *)GC_MALLOC(ctx->cap * sizeof(pl_slot));
     pl_scan(v, policy);
     if (pl_any) pl_reset_printed();
-  } else {
-    pl_any = 0;                     /* an atom cannot contain a cycle: no scan, no cost */
   }
   print_node(out, v, display);
+  rt_print_restore(previous_depth);
+}
+
+val rt_custom_write_recur(val token, val child) {
+  writer_context *w = writer_context_arg(token);
+  print_val(w->out, child, w->display, w->policy, w->port);
+  return UNSPEC_V;
+}
+
+/* The wrapper for native destinations uses the normal Scheme port descriptor
+ * supplied at registration, but its handle is a checked callback token. */
+static val writer_borrowed_port(val prototype, val token) {
+  intptr_t n = rec_len(prototype);
+  val *copy = (val *)GC_MALLOC((size_t)(n + 3) * sizeof(val));
+  memcpy(copy, as_ptr(prototype), (size_t)(n + 3) * sizeof(val));
+  copy[3] = token;
+  return tag_ptr(copy, TAG_EXT);
+}
+
+static void print_custom_record(sink *out, val object, int display) {
+  val *td = as_ptr(as_ptr(object)[1]);
+  for (writer_context *w = rt_active_writer; w; w = w->previous) {
+    if (w->object == object) {
+      val name = td[1];
+      sink_puts(out, "#<cycle ");
+      sink_write(out, str_bytes(name), (size_t)str_len(name));
+      sink_putc(out, '>');
+      return;
+    }
+  }
+  writer_context *w = (writer_context *)GC_MALLOC(sizeof(writer_context));
+  w->header = HDR_WRITER_CONTEXT;
+  w->active = 1; w->out = out; w->object = object;
+  w->display = display; w->policy = pl_current->policy;
+  w->previous = rt_active_writer;
+  val token = tag_ptr((val *)w, TAG_EXT);
+  val port = pl_current->port;
+  if (port == FALSE_V || is_writer_context(as_ptr(port)[3]))
+    port = writer_borrowed_port(td[4], token);
+  w->port = port;
+  rt_active_writer = w;
+  const char *mode = display ? "display" :
+      w->policy == PRINT_SIMPLE ? "write-simple" :
+      w->policy == PRINT_SHARED ? "write-shared" : "write";
+  rt_apply_writer_t apply = (rt_apply_writer_t)(intptr_t)td[3];
+  apply(td[2], object, port, rt_intern(mode), token);
+  w->active = 0;
+  rt_active_writer = w->previous;
 }
 
 static void print_node(sink *out, val v, int display) {
   /* A labelled node prints `#N=` at its first occurrence and `#N#` at every later one.
    * Gated on pl_any, so a datum with no cycle does not pay a lookup per node. */
-  if (pl_any && pl_labelable(v)) {
+  if (pl_labelable(v) && pl_current && pl_any) {
     pl_slot *s = pl_find(v, 0);
     if (s && s->label >= 0) {
       if (s->printed) { sink_printf(out, "#%d#", s->label); return; }
@@ -3289,6 +3427,10 @@ static void print_node(sink *out, val v, int display) {
           break;
         }
         case HDR_RECORD: {
+          if (as_ptr(as_ptr(v)[1])[2] != FALSE_V) {
+            print_custom_record(out, v, display);
+            break;
+          }
           val td = as_ptr(v)[1], nm = as_ptr(td)[1];  /* descriptor -> name string */
           sink_puts(out, "#<record ");
           sink_write(out, str_bytes(nm), (size_t)str_len(nm));
@@ -3317,7 +3459,7 @@ static void print_node(sink *out, val v, int display) {
 
 /* write-style value printer (quoted strings, `#\`-prefixed chars): the standalone
  * entry uses this to print a program's final value. */
-void rt_write(val v) { print_val(sink_stdout(), v, /*display=*/0, PRINT_ORDINARY); }
+void rt_write(val v) { print_val(sink_stdout(), v, /*display=*/0, PRINT_ORDINARY, FALSE_V); }
 
 /* --- entry: exit code = ran/failed, stdout = value (design R1) ----------
  * The standalone AOT/JIT executables use this main.  The persistent REPL host
@@ -3336,6 +3478,13 @@ extern val scheme_entry(void);
 int main(int argc, char **argv) {
   GC_INIT();
   rt_set_command_line(argc, (const char *const *)argv);
+  jmp_buf jb;
+  rt_trap = &jb;
+  if (setjmp(jb) != 0) {
+    rt_guard_reset();
+    rt_trap = NULL;
+    return 1;
+  }
 #ifdef RT_FILTER_MAIN
   scheme_entry();          /* run for effect; the program handles its own I/O */
 #else
@@ -3353,6 +3502,7 @@ int main(int argc, char **argv) {
     printf("\n");
   }
 #endif
+  rt_trap = NULL;
   return 0;
 }
 #endif

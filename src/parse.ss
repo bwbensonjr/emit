@@ -58,7 +58,7 @@
     ;; reads the pending object from, and the two file operations that
     ;; are not port constructors.
     %make-error-object/kind %error-object-kind %set-trap-raiser! %trap-object
-    %file-exists? %delete-file
+    %set-record-type-writer! %custom-write-recur %file-exists? %delete-file
     ;; change: add-filesystem-access -- the private raw edge behind
     ;; the ordinary non-standard (emit filesystem) library.
     %filesystem-directory-list %filesystem-directory-status %filesystem-symlink-status

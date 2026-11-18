@@ -12,7 +12,7 @@ cleanup () {
 trap cleanup EXIT
 export EMIT_CACHE="$TMP/cache"
 EMIT="$ROOT/build/emit"
-EXPECTED='(malt-core-complete 95)'
+EXPECTED='(malt-core-complete 120)'
 SOURCE="$ROOT/test/malt-core.scm"
 COMMON=(--no-manifest-chain --manifest "$ROOT/emit-libs.scm" -L "$ROOT/lib")
 python3 "$ROOT/test/malt-core-exports.py"
@@ -23,7 +23,7 @@ check_output () {
     say "fail Malt core $label -> expected $EXPECTED"
     return 1
   fi
-  say "verify Malt core $label -> $EXPECTED [95 assertions]"
+  say "verify Malt core $label -> $EXPECTED [120 assertions]"
 }
 if [ "${1:-}" = --reference ]; then
   command -v chez >/dev/null
@@ -36,7 +36,7 @@ if [ "${1:-}" = --reference ]; then
     cat "$TMP/source.err" >&2; exit 1;
   }
   check_output source "$TMP/source.out"
-  echo "Malt core reference: 95 assertions passed"
+  echo "Malt core reference: 120 assertions passed"
   exit 0
 fi
 if [ "$#" != 0 ]; then say "usage: test/malt-core-tests.sh [--reference]"; exit 2; fi
@@ -84,4 +84,4 @@ for unit in tensors autodiff operations diagnostics; do
   grep -Fq "artifact: library malt.learner.$unit: reused from $TMP/artifacts/malt.learner.$unit.ll [explicit full unit]" \
     "$TMP/artifact-run.err" || { cat "$TMP/artifact-run.err" >&2; exit 1; }
 done
-echo "Malt core native: 4 paths, 95 assertions each passed"
+echo "Malt core native: 4 paths, 120 assertions each passed"

@@ -477,12 +477,12 @@
     (%hash "rt_hash") (%eq-hash "rt_eq_hash") (%make-hash-table "rt_make_hash_table")
     (%hash-table? "rt_hash_table_p") (%hash-table-spine "rt_hash_table_spine")
     (%make-record-type "rt_make_record_type") (%make-record "rt_make_record")
-    (%record-ref "rt_record_ref") (%record-set! "rt_record_set")
-    (%record-of-type? "rt_record_of_type_p") (%record? "rt_record_p")
-    (%list->mv "rt_list_to_mv") (%mv? "rt_mv_p") (%mv->list "rt_mv_to_list")
-    (%symbol? "rt_symbol_p") (%string? "rt_string_p") (%char? "rt_char_p")
-    (%boolean? "rt_boolean_p") (%integer? "rt_integer_p") (%exact? "rt_exact_p")
-    (%read-all-stdin "rt_read_all_stdin") (%display "rt_display")
+    (%custom-write-recur "rt_custom_write_recur") (%record-ref "rt_record_ref")
+    (%record-set! "rt_record_set") (%record-of-type? "rt_record_of_type_p")
+    (%record? "rt_record_p") (%list->mv "rt_list_to_mv") (%mv? "rt_mv_p")
+    (%mv->list "rt_mv_to_list") (%symbol? "rt_symbol_p") (%string? "rt_string_p")
+    (%char? "rt_char_p") (%boolean? "rt_boolean_p") (%integer? "rt_integer_p")
+    (%exact? "rt_exact_p") (%read-all-stdin "rt_read_all_stdin") (%display "rt_display")
     (%write "rt_write_val") (%newline "rt_newline")
     (%write-simple "rt_write_simple_val") (%write-shared "rt_write_shared_val")
     ;; change: scheme-io-library -- eof object, file/handle edge prims, and the
@@ -1041,48 +1041,68 @@
                             (if (all-flo-at? selfargs i f) (cons (car ps) acc) acc))))])
             (if (= (length f2) (length f)) f2 (loop f2))))))))
 
+;; Callback registration carries this unit's bridge, since closure calls use
+;; fastcc and the unit's positional register budget.
 (define (emit-primcall op ops)
-  ;; %run-guarded is special: it passes the module's own ccc trampoline @__apply0
-  ;; (a pointer, resolved within this module -- no cross-module symbol) so the C
-  ;; runtime can invoke the guarded thunk (change: r7rs-exceptions-subset).
-  ;; %set-trap-raiser! is special for the SAME reason and in the same shape (change:
-  ;; catchable-errors-with-kinds): the runtime stores that pointer alongside the raiser
-  ;; thunk, because a trap fires from anywhere in the runtime and has no call site to
-  ;; be handed a trampoline by.  The raiser is a THUNK -- the object it raises travels
-  ;; through a cell -- so @__apply0 serves both and no 1-arg trampoline is needed.
-  ;; %unspec is special the other way: it emits NOTHING and lowers to the bare
-  ;; unspecified-value immediate (change: unspecified-value).  Like the immediates in
-  ;; encode-const it is a pure operand -- no call, so it needs no `declare` and no
-  ;; prim-table entry.
-  (if (eq? op '%unspec)
-      (encode-const-unspec)
-      (if
-        (eq? op '%run-guarded)
-        (let ([t (fresh-temp)])
-          (emit! (string-append t
-                                " = call i64 @rt_run_guarded(ptr @__apply0, i64 "
-                                (car ops)
-                                ")"))
-          t)
-        (if
-          (eq? op '%set-trap-raiser!)
-          (let ([t (fresh-temp)])
-            (emit! (string-append t
-                                  " = call i64 @rt_set_trap_raiser(ptr @__apply0, i64 "
-                                  (car ops)
-                                  ")"))
-            t)
-          (let ([inl (assq op inline-arith-table)])
-            (if (and inl
-                     (pair? ops)
-                     (pair? (cdr ops))
-                     (null? (cddr ops))) ; exactly 2 operands
-                (emit-inline-arith inl (car ops) (cadr ops))
-                (let ([entry (assq op prim-table)] [t (fresh-temp)])
-                  (unless entry (error 'emit "unknown prim" op))
-                  (emit!
-                    (string-append t " = call i64 @" (cadr entry) "(" (i64s ops) ")"))
-                  t)))))))
+  (cond
+    [(eq? op '%unspec) (encode-const-unspec)]
+    [(memq op '(%run-guarded %set-trap-raiser! %set-record-type-writer!))
+      (let* ([writer? (eq? op '%set-record-type-writer!)]
+             [target (cond
+                       [writer? "rt_set_record_type_writer"]
+                       [(eq? op '%run-guarded) "rt_run_guarded"]
+                       [else "rt_set_trap_raiser"])]
+             [bridge (if writer? "__apply_writer" "__apply0")]
+             [t (fresh-temp)])
+        (emit!
+          (string-append t " = call i64 @" target "(ptr @" bridge ", " (i64s ops) ")"))
+        t)]
+    [else
+      (let ([inl (assq op inline-arith-table)])
+        (if (and inl (pair? ops) (pair? (cdr ops)) (null? (cddr ops)))
+            (emit-inline-arith inl (car ops) (cadr ops))
+            (let ([entry (assq op prim-table)] [t (fresh-temp)])
+              (unless entry (error 'emit "unknown prim" op))
+              (emit! (string-append t " = call i64 @" (cadr entry) "(" (i64s ops) ")"))
+              t)))]))
+
+;; C calls this bridge with four writer adapter arguments. Keep overflow on this
+;; bridge's stack for the synchronous closure call, including units with K < 4.
+(define (emit-writer-trampoline k)
+  (let* ([args '("%object" "%port" "%mode" "%context")]
+         [slots
+           (if (< k 4) (list-head args k) (append args (make-list (- k 4) "undef")))]
+         [extra (if (< k 4) (list-tail args k) '())]
+         [stores
+           (apply string-append
+                  (map (lambda (i)
+                         (string-append "  %slot"
+                                        (number->string i)
+                                        " = getelementptr i64, ptr %overflow, i64 "
+                                        (number->string i)
+                                        "\n"
+                                        "  store i64 "
+                                        (list-ref extra i)
+                                        ", ptr %slot"
+                                        (number->string i)
+                                        "\n"))
+                       (iota (length extra))))])
+    (string-append
+      "define internal i64 @__apply_writer(i64 %clos, i64 %object, i64 %port, i64 %mode, i64 %context) {\nentry:\n"
+      "  %b = and i64 %clos, -8\n  %bp = inttoptr i64 %b to ptr\n"
+      "  %code = load i64, ptr %bp\n  %fp = inttoptr i64 %code to ptr\n"
+      (if (null? extra)
+          ""
+          (string-append "  %overflow = alloca i64, i64 "
+                         (number->string (length extra))
+                         "\n"))
+      stores
+      "  %r = call fastcc i64 %fp(i64 %clos, i64 4"
+      (apply string-append (map (lambda (arg) (string-append ", i64 " arg)) slots))
+      ", ptr "
+      (if (null? extra) "null" "%overflow")
+      ")\n"
+      "  ret i64 %r\n}\n\n")))
 
 ;; The ccc trampoline @__apply0(closure): load the closure's code pointer and do
 ;; the fastcc 0-arg call (self=closure, argc=0, K positional pads = undef,
@@ -1101,7 +1121,8 @@
                        "  %r = call fastcc i64 %fp(i64 %clos, i64 0"
                        pads
                        ", ptr null)\n"
-                       "  ret i64 %r\n}\n\n"))))
+                       "  ret i64 %r\n}\n\n"
+                       (emit-writer-trampoline k)))))
 
 ;; allocate {code_ptr, cap...}, tag TAG_CLOSURE (4)
 ;;
@@ -1431,6 +1452,8 @@
     "declare i64 @rt_hash_table_p(i64)\n"
     "declare i64 @rt_hash_table_spine(i64)\n"
     "declare i64 @rt_make_record_type(i64)\n"
+    "declare i64 @rt_set_record_type_writer(ptr, i64, i64, i64)\n"
+    "declare i64 @rt_custom_write_recur(i64, i64)\n"
     "declare i64 @rt_make_record(i64, i64)\n"
     "declare i64 @rt_record_ref(i64, i64)\n"
     "declare i64 @rt_record_set(i64, i64, i64)\n"

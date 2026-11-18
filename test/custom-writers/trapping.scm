@@ -1,0 +1,5 @@
+(import (scheme base) (emit write))
+(define-record-type broken (make-broken) broken?)
+(set-record-type-writer! (make-broken)
+  (lambda (object port mode recur) (car 1)))
+(make-broken)

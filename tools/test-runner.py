@@ -218,12 +218,14 @@ def changed_selection(data, profile, names, policy):
     extra = {
         "runtime": {"fixnum-overflow-traps", "indexed-access-bounds", "catchable-errors-kinds",
                     "dynamic-extent-call-cc", "io-ports-eof-object", "printer-cycles-char-names-trap-delivery",
-                    "source-load-interaction-host"},
+                    "source-load-interaction-host", "custom-writers"},
         "host": {"cli-interface-help-final-value", "installation-diagnostics", "llvm-toolchain-discovery",
-                 "native-build-configuration", "installed-layout-libraries-support-files"},
+                 "native-build-configuration", "installed-layout-libraries-support-files", "custom-writers"},
         "library": {"import-sets-and-portable-sources", "runtime-and-macro-library-composition",
-                    "explicit-artifact-format", "explicit-artifact-reuse", "module-vertical-slice-repl"},
-        "compiler": {"binding-contexts-and-local-macros", "reader-datum-parity-vector-consts-rendering"},
+                    "explicit-artifact-format", "explicit-artifact-reuse", "module-vertical-slice-repl",
+                    "custom-writers"},
+        "compiler": {"binding-contexts-and-local-macros", "reader-datum-parity-vector-consts-rendering",
+                     "custom-writers"},
     }
     ids = {suite["id"] for suite in suites}
     ids.update(name for category in categories for name in extra.get(category, set()))

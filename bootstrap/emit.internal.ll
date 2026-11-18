@@ -85,6 +85,8 @@ declare i64 @rt_make_hash_table(i64)
 declare i64 @rt_hash_table_p(i64)
 declare i64 @rt_hash_table_spine(i64)
 declare i64 @rt_make_record_type(i64)
+declare i64 @rt_set_record_type_writer(ptr, i64, i64, i64)
+declare i64 @rt_custom_write_recur(i64, i64)
 declare i64 @rt_make_record(i64, i64)
 declare i64 @rt_record_ref(i64, i64)
 declare i64 @rt_record_set(i64, i64, i64)
@@ -11598,6 +11600,16 @@ entry:
   %code = load i64, ptr %bp
   %fp = inttoptr i64 %code to ptr
   %r = call fastcc i64 %fp(i64 %clos, i64 0, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, i64 undef, ptr null)
+  ret i64 %r
+}
+
+define internal i64 @__apply_writer(i64 %clos, i64 %object, i64 %port, i64 %mode, i64 %context) {
+entry:
+  %b = and i64 %clos, -8
+  %bp = inttoptr i64 %b to ptr
+  %code = load i64, ptr %bp
+  %fp = inttoptr i64 %code to ptr
+  %r = call fastcc i64 %fp(i64 %clos, i64 4, i64 %object, i64 %port, i64 %mode, i64 %context, i64 undef, i64 undef, i64 undef, i64 undef, ptr null)
   ret i64 %r
 }
 
