@@ -6,6 +6,9 @@ import os
 import sys
 
 
+REFERENCE_SUITES = ("self-emission", "dump-parity", "render-datum", "custom-writers-source")
+
+
 def plan(classification, event, force_full=False, rehearsal=False):
     required = {"docs_only", "code", "source", "units", "reference", "archive", "categories", "paths", "reason"}
     valid = isinstance(classification, dict) and required <= classification.keys()
@@ -14,14 +17,13 @@ def plan(classification, event, force_full=False, rehearsal=False):
         valid = valid and isinstance(classification["reference"], list)
     if not valid:
         classification = {"docs_only": False, "code": True, "source": True, "units": True,
-                          "archive": True, "reference": ["self-emission", "dump-parity", "render-datum"]}
+                          "archive": True, "reference": list(REFERENCE_SUITES)}
     comprehensive = force_full or event in {"schedule", "workflow_dispatch", "tag"}
     code = comprehensive or classification["code"] or not classification["docs_only"]
     source = comprehensive or classification["source"]
     units = comprehensive or classification["units"]
     reference = classification["reference"]
-    if not all(item in {"self-emission", "dump-parity", "render-datum", "custom-writers-source"}
-               for item in reference):
+    if not all(item in REFERENCE_SUITES for item in reference):
         raise ValueError("unknown required reference suite")
     archive = rehearsal or event == "tag" or classification["archive"]
     # Channel rehearsal (channels.yml): a missing flag from an older classifier is conservative.

@@ -100,6 +100,7 @@ class PolicyTests(unittest.TestCase):
         for value in [None, {}, {"docs_only": True}, {"code": False}]:
             plan = policy.plan(value, "pull_request")
             self.assertTrue(plan["code"] and plan["source"] and plan["archive"])
+            self.assertIn("custom-writers-source", plan["reference"])
 
     def test_every_required_failure_blocks_publication(self):
         plan = policy.plan(classification(), "tag")
