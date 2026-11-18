@@ -19,7 +19,7 @@ The facade's supported exports are listed below. Names use ASCII: `primal` corre
 
 | Group | Exports |
 |---|---|
-| Tensors and lists | `len ref refr tref tlen tmap list->tensor tensor build-tensor scalar? tensor? rank shape reshape trefs map*` |
+| Tensors and lists | `len ref refr tref tlen tmap list->tensor tensor->vector tensor build-tensor scalar? tensor? rank shape reshape trefs map*` |
 | Extension and AD | `ext1 ext2 ext1-primal ext2-primal prim1 prim2 dual dual? primal backprop gradient gradient1 gradient-of` |
 | Differentiable operations | `+ - * / exp log expt sqrt sqr sum abs *-2-1 argmax max sum-cols correlate rectify flatten concat concat-n` |
 | Primal operations | `+-primal --primal *-primal /-primal exp-primal log-primal expt-primal sqrt-primal sqr-primal zeroes-primal sum-primal abs-primal *-2-1-primal argmax-primal max-primal sum-cols-primal correlate-primal rectify-primal flatten-primal concat-primal` |
@@ -32,7 +32,7 @@ The facade's supported exports are listed below. Names use ASCII: `primal` corre
 | Hyperparameters | `revs alpha batch-size mu beta declare-hyper declare-hypers with-hyper with-hypers grid-search` |
 | Diagnostics | `tolerance trace-print check-dual-equal? check-primal-gradient max-tensor-print-length make-printable record with-recording current-record-handler` |
 
-Upstream's unimplemented extension-gradient stubs, generated setters, provide transformer, threaded logging procedures, and automatic printing controls are excluded. Ordinary Scheme comparisons are retained; the facade does not replace `= < > <= >=`.
+Upstream's unimplemented extension-gradient stubs, generated setters, provide transformer, threaded logging procedures, and upstream-specific automatic printing controls are excluded; Emit automatically prints Malt objects using the general custom-writer facility. Ordinary Scheme comparisons are retained; the facade does not replace `= < > <= >=`.
 
 #### Scenario: Arithmetic namespaces are explicit
 
@@ -60,19 +60,32 @@ Upstream's unimplemented extension-gradient stubs, generated setters, provide tr
 
 ### Requirement: Tensors use nested vectors with checked construction
 
-Scalars SHALL be numbers or scalar duals, and tensors SHALL use nested vectors. `tensor` SHALL reject empty input, nonnumeric leaves, and inconsistent shapes with catchable errors. `list->tensor` SHALL remain shallow. Shape-driven constructors SHALL reject nonpositive dimensions; an empty shape SHALL represent a scalar. Raw vector conversion and `tensor?` SHALL retain upstream's permissive behavior.
+Scalars SHALL be numbers or distinct scalar-dual objects. Constructed nonscalar tensors SHALL be distinct objects backed by nested vector storage; scalar duals and constructed tensors SHALL NOT satisfy `vector?`. Malt operations SHALL continue to accept raw nested vectors as tensor inputs. `tensor` SHALL reject empty input, nonnumeric leaves, and inconsistent shapes with catchable errors. `list->tensor` SHALL remain shallow and return a tensor object. `tensor->vector` SHALL return a fresh shallow vector of a tensor's children, preserving child and dual identities; raw vector input SHALL also yield a shallow copy, and scalar input SHALL raise a catchable error. Shape-driven constructors SHALL reject nonpositive dimensions; an empty shape SHALL represent a scalar. `tensor?` SHALL accept scalars, tensor objects, and raw vectors, retaining permissiveness for raw vectors. Shape-sensitive operations SHALL validate object-backed and raw inputs identically. Nonscalar tensor-producing numerical operations SHALL return tensor objects, except that gradients preserve input container kinds; `map*` and recording SHALL also preserve container kinds; tensor objects SHALL have record identity equality.
 
 #### Scenario: Construction and shallow conversion
 
 - **WHEN** `tensor` constructs two rows of three scalars
 - **THEN** its shape is `(2 3)` and rank is `2`
-- **AND** `list->tensor` on a list of ordinary lists yields a vector of lists, without recursively converting them
+- **AND** `list->tensor` on a list of ordinary lists yields a tensor object containing those same lists, without recursively converting them
 
 #### Scenario: Invalid and scalar shapes
 
 - **WHEN** construction receives mismatched rows or a shape containing zero or a negative dimension
 - **THEN** it raises a catchable error
 - **AND** `build-tensor` with shape `()` invokes its builder once with the empty index list and returns the scalar result
+
+#### Scenario: Tensor storage does not change ordinary vectors
+
+- **WHEN** a tensor is constructed alongside an ordinary vector with the same elements
+- **THEN** only the ordinary vector satisfies `vector?` and it still prints using `#(...)`
+- **AND** `tensor->vector` returns a shallow copy without exposing mutable backing storage
+- **AND** two separately constructed tensors remain distinct under `eqv?` and `equal?`
+
+#### Scenario: Mixed tensor inputs preserve numerical behavior
+
+- **WHEN** extension, reshape, reduction, correlation, differentiation, or training receives tensor objects mixed with valid raw vector inputs
+- **THEN** values, ranks, leaf order, and gradients retain the learner contracts
+- **AND** nonscalar numerical tensor results are tensor objects; gradients, `map*`, and recording preserve input container kinds, including gradients corresponding to tensor-object inputs
 
 ### Requirement: Indexing and reshape preserve tensor ordering
 
@@ -166,12 +179,31 @@ Layers, losses, blocks, models, initialization, sampling, and all four optimizer
 
 ### Requirement: Diagnostics are explicit and synchronous
 
-`make-printable` and `trace-print` SHALL render tensors explicitly without global printer hooks. `(record name value)` SHALL return `value` while synchronously passing its name and primal value to `current-record-handler`; its default handler SHALL do nothing. `with-recording` SHALL install a caller-supplied handler dynamically and restore it on exit. No background logging thread SHALL be required.
+`make-printable` and `trace-print` SHALL remain available as explicit diagnostics. Tensor and dual objects SHALL also install per-type custom writers without replacing global printing behavior. `(record name value)` SHALL return `value` while synchronously passing its name and primal value to `current-record-handler`; its default handler SHALL do nothing. `with-recording` SHALL install a caller-supplied handler dynamically and restore it on exit. No background logging thread SHALL be required.
 
 #### Scenario: Recording observes values without changing training
 
 - **WHEN** `(with-recording handler body ...)` runs a computation containing `record`
 - **THEN** the handler receives names and primal values in call order, body results are preserved, and the previous handler is restored after normal or exceptional exit
+
+#### Scenario: Plain arithmetic prints useful values automatically
+
+- **WHEN** `(import (malt learner))` is followed by `(* 2 3)` and `(* (tensor 1 2 3) 3)`
+- **THEN** automatic result printing produces `6` and `(tensor 3 6 9)` respectively
+- **AND** no procedure, record wrapper, or explicit `make-printable` call appears in the output
+- **AND** the scalar result remains a dual and `((gradient1 *) 2 3)` still yields `(3.0 2.0)`
+
+#### Scenario: Nested objects use the same presentation
+
+- **WHEN** lists or ordinary vectors contain Malt duals and tensors and are written or displayed
+- **THEN** duals render their primal numbers and tensors render recursively as `(tensor ...)`
+- **AND** enclosing ordinary vectors keep their `#(...)` delimiters
+
+#### Scenario: Tensor print limits are shared with explicit diagnostics
+
+- **WHEN** `max-tensor-print-length` is set to a positive bound or zero
+- **THEN** automatic tensor printing and `make-printable` truncate each tensor axis with `...` at that bound or print all elements for zero
+- **AND** the initial bound is five and printing does not alter stored elements or gradients
 
 ### Requirement: Numerical compatibility follows Emit's supported tower
 
@@ -191,3 +223,19 @@ The same library source and settings SHALL produce equivalent results under sour
 - **WHEN** the documented XOR network, seed, initialization, optimizer, and iteration budget are used in run, REPL, and standalone checks
 - **THEN** all four inputs are classified correctly, final loss satisfies the committed threshold, and outputs agree within declared tolerances
 - **AND** fixtures fix those choices and thresholds before the port's training outputs are accepted
+
+### Requirement: Structured utilities preserve tensor abstraction
+
+`map*`, gradient accumulation, diagnostics, and recording SHALL traverse tensor objects alongside scalars, lists, and raw vectors. `map*` SHALL preserve list, raw-vector, and tensor-object container kinds. Gradient results SHALL preserve the container kinds of their differentiation inputs. Recording SHALL deliver primal copies without exposing dual callbacks or mutable tensor backing storage.
+
+#### Scenario: Mapping and recording retain useful structure
+
+- **WHEN** `map* primal` or a recording callback observes a structure containing both a raw vector and a tensor object
+- **THEN** both structures are traversed and keep their respective container kinds
+- **AND** recording observes primal leaves without changing the recorded computation's dual identities
+
+#### Scenario: Gradient results preserve mixed input containers
+
+- **WHEN** differentiation inputs contain a list holding both a raw vector and a tensor object
+- **THEN** the corresponding gradient result is a list holding a raw vector and a tensor object respectively
+- **AND** derivative leaves agree with the same calculation on equivalent numeric inputs
