@@ -81,4 +81,14 @@ capture across artifacts, three optimization profiles, automatic-print failure
 recovery, and borrowed-port lifetime checks. Run
 `bash test/custom-writers-tests.sh --reference` for the same core assertions
 compiled by the current Chez source driver. Both require the exact completion
-marker `(custom-writers-complete 61)`.
+marker `(custom-writers-complete 84)`.
+
+Ordinary outermost printing reuses graph bookkeeping after warm-up, including
+when unrelated record writers are registered. The cache retains at most 4,096
+graph-table slots (96 KiB on a 64-bit target with 24-byte slots); larger tables
+are transient. Idle storage clears references to values and destinations.
+A bounded 8 KiB array tracks occupied outer slots to keep cleanup proportional to
+the latest traversal rather than retained capacity. Nested traversals remain independent, and saved callback renderers or borrowed
+ports never become valid again when internal traversal storage is reused.
+See the [performance investigation](performance/writer-report.md) for allocation,
+timing, size, and retention evidence.

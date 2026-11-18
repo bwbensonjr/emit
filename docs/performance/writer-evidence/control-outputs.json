@@ -1,0 +1,58 @@
+[
+  {
+    "fixture": "adapter",
+    "runtime": "released",
+    "output": "(adapter <(1 2 3 4)> <<42>>)\n",
+    "executable_bytes": 56000,
+    "executable_sha256": "76ad69a3ec42d29d2d19ed3aee5c76c733547f1f7727699dccd66d1b18baeef4"
+  },
+  {
+    "fixture": "adapter",
+    "runtime": "candidate",
+    "output": "(adapter <(1 2 3 4)> <<42>>)\n",
+    "executable_bytes": 56128,
+    "executable_sha256": "739032264a732e31cd19a58a64db2e12c0386dc64f2964e1fd32d8ca6bc68415"
+  },
+  {
+    "fixture": "malt-core",
+    "runtime": "released",
+    "output": "(malt-core-complete 120)\n",
+    "executable_bytes": 228608,
+    "executable_sha256": "5a41355a2607f2d677c47e66f14e70d2dbf45c56bf546e00f103d6995e9cfc12"
+  },
+  {
+    "fixture": "malt-core",
+    "runtime": "candidate",
+    "output": "(malt-core-complete 120)\n",
+    "executable_bytes": 228704,
+    "executable_sha256": "94002596571cfb31eb6f69400555d5367dd75ebf066e0208667df113661e682a"
+  },
+  {
+    "fixture": "malt-xor",
+    "runtime": "released",
+    "output": "(xor (2.220446049250313e-16 0.9999999999999996 0.9999999999999997 2.220446049250313e-16) 4.067564042545842e-31)\n",
+    "executable_bytes": 174704,
+    "executable_sha256": "849c041613f5d7dfcd0ffd1a7309a3ab56c266088cd627b51ca57dde7ade1407"
+  },
+  {
+    "fixture": "malt-xor",
+    "runtime": "candidate",
+    "output": "(xor (2.220446049250313e-16 0.9999999999999996 0.9999999999999997 2.220446049250313e-16) 4.067564042545842e-31)\n",
+    "executable_bytes": 174816,
+    "executable_sha256": "dbe5ee6ee01f6a8615f359fda41d9864a6915ec26d493befff522e31dbee1950"
+  },
+  {
+    "fixture": "plain",
+    "runtime": "released",
+    "output": "plain-size-check",
+    "executable_bytes": 35888,
+    "executable_sha256": "b00cea4697bc48dffbb8e588307be84e19c0db836187a0adde15d8e63e747811"
+  },
+  {
+    "fixture": "plain",
+    "runtime": "candidate",
+    "output": "plain-size-check",
+    "executable_bytes": 36016,
+    "executable_sha256": "2e462d21846f30179b7bede9e38370d5ccec7593e6e45762e09cd54bfdf401c9"
+  }
+]

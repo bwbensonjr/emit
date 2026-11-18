@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.1
+
+- Reuse bounded outermost printer traversal storage, avoiding repeated graph
+  bookkeeping allocations for ordinary values while preserving nested custom
+  writers, expired callback handles, and recovery after failed printing.
+- Add reproducible writer performance fixtures and measurement tools, a shared
+  evaluation process, and an agent skill for comparing generated code and
+  measured alternatives.
+
 ## 0.9.0
 
 - Add `(emit write)` custom record-type writers shared by interactive results,

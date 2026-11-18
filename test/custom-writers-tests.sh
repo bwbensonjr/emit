@@ -16,7 +16,7 @@ unset EMIT_SHARED_CACHE
 EMIT="$ROOT/build/emit"
 SOURCE="$ROOT/test/custom-writers.scm"
 COMMON=(--no-manifest-chain --manifest "$ROOT/emit-libs.scm" -L "$ROOT/lib")
-EXPECTED='(custom-writers-complete 61)'
+EXPECTED='(custom-writers-complete 84)'
 check_last() {
   local label="$1" path="$2" expected="$3"
   if [ "$(awk 'NF{last=$0} END{print last}' "$path")" != "$expected" ]; then
@@ -28,7 +28,7 @@ check_last() {
 }
 if [ "${1:-}" = --reference ]; then
   command -v chez >/dev/null
-  say "compile $SOURCE -> $TMP/source [Chez source driver, 61 assertions]"
+  say "compile $SOURCE -> $TMP/source [Chez source driver, 84 assertions]"
   chez --libdirs src --script src/compile.ss "$SOURCE" "${COMMON[@]}" \
     -o "$TMP/source" > "$TMP/source-compile.out" 2> "$TMP/source-compile.err" || {
     cat "$TMP/source-compile.err" >&2; exit 1;
@@ -44,21 +44,21 @@ if [ "${1:-}" = --reference ]; then
   }
   "$TMP/example" > "$TMP/example.out" 2> "$TMP/example.err"
   check_last example "$TMP/example.out" '((point 2 3) #((point 4 5)))'
-  say "verify custom writers reference -> complete [61 assertions]"
+  say "verify custom writers reference -> complete [84 assertions]"
   exit 0
 fi
 if [ "$#" != 0 ]; then say "usage: test/custom-writers-tests.sh [--reference]"; exit 2; fi
 make emit >/dev/null
 for profile in -O0 -O1 -O2; do
   label="${profile#-}"
-  say "run $SOURCE -> $TMP/$label.out [native, 61 assertions]"
+  say "run $SOURCE -> $TMP/$label.out [native, 84 assertions]"
   "$EMIT" run "$profile" "${COMMON[@]}" "$SOURCE" \
     > "$TMP/$label.out" 2> "$TMP/$label.err" || {
     cat "$TMP/$label.err" >&2; exit 1;
   }
   check_last "$label" "$TMP/$label.out" "$EXPECTED"
 done
-say "compile $SOURCE -> $TMP/standalone [standalone, 61 assertions]"
+say "compile $SOURCE -> $TMP/standalone [standalone, 84 assertions]"
 "$EMIT" build "${COMMON[@]}" "$SOURCE" -o "$TMP/standalone" \
   > "$TMP/build.out" 2> "$TMP/build.err" || { cat "$TMP/build.err" >&2; exit 1; }
 (cd "$TMP" && env -u EMIT_LIBRARY_PATH -u EMIT_MANIFEST PATH=/usr/bin:/bin ./standalone) \
@@ -66,7 +66,7 @@ say "compile $SOURCE -> $TMP/standalone [standalone, 61 assertions]"
   cat "$TMP/standalone.err" >&2; exit 1;
 }
 check_last standalone "$TMP/standalone.out" "$EXPECTED"
-say "evaluate $SOURCE -> $TMP/repl.out [persistent REPL, 61 assertions]"
+say "evaluate $SOURCE -> $TMP/repl.out [persistent REPL, 84 assertions]"
 "$EMIT" repl "${COMMON[@]}" < "$SOURCE" > "$TMP/repl.out" 2> "$TMP/repl.err"
 check_last repl "$TMP/repl.out" "$EXPECTED"
 
@@ -75,7 +75,8 @@ say "evaluate borrowed writer -> $TMP/borrowed.out [automatic result lifetime]"
 "$EMIT" repl "${COMMON[@]}" < "$ROOT/test/custom-writers/borrowed-repl.scm" \
   > "$TMP/borrowed.out" 2> "$TMP/borrowed.err"
 grep -Fq 'borrowed-value' "$TMP/borrowed.out"
-check_last borrowed "$TMP/borrowed.out" '(borrowed-port-lifetime #t #t #t)'
+grep -Fq '(borrowed-port-lifetime #t #t #t)' "$TMP/borrowed.out"
+check_last borrowed "$TMP/borrowed.out" '(borrowed-port-reuse #t)'
 
 # Printing runs after evaluation, so failures must be inside the host boundary too.
 for failure in failing trapping; do
@@ -134,4 +135,4 @@ say "compile $USE -> $TMP/artifact-exe [full artifact, source-free delivery]"
 (cd "$TMP" && env -u EMIT_LIBRARY_PATH -u EMIT_MANIFEST PATH=/usr/bin:/bin ./artifact-exe) \
   > "$TMP/artifact-exe.out" 2> "$TMP/artifact-exe.err"
 check_last artifact-exe "$TMP/artifact-exe.out" "$WANT"
-say "verify custom writers native -> complete [61 assertions across 5 paths, automatic failure/lifetime, 3 artifact profiles]"
+say "verify custom writers native -> complete [84 assertions across 5 paths, automatic failure/lifetime, 3 artifact profiles]"

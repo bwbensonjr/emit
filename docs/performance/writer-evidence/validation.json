@@ -1,0 +1,1336 @@
+{
+  "full-validation": {
+    "status": "passed",
+    "commit": "bcfa57d7c50e09a85c46b02e5a20af2c45e42a41",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "architecture": "arm64",
+    "selected": [
+      "llvm-toolchain-discovery",
+      "native-build-configuration",
+      "demo-values-emit-run",
+      "module-scaffold-byte-identity",
+      "artifact-cache-baked-set",
+      "stdlib-precompilation",
+      "explicit-artifact-format",
+      "explicit-artifact-reuse",
+      "srfi-explicit-artifacts",
+      "installed-srfi-sources",
+      "native-object-cache",
+      "repl-persistent-host",
+      "source-load-interaction-host",
+      "define-record-type-syntax",
+      "inline-arith-self-call-ir",
+      "fixnum-overflow-traps",
+      "indexed-access-bounds",
+      "r7rs-numeric-conformance",
+      "r7rs-small-suite-vendored-sections-only",
+      "cross-unit-direct-calls",
+      "library-top-level-set",
+      "library-body-declarations",
+      "library-include-declarations",
+      "import-sets-and-portable-sources",
+      "runtime-and-macro-library-composition",
+      "snow-fort-packages",
+      "complete-upstream-srfi-suites",
+      "dynamic-extent-call-cc",
+      "pitch-facing-r7rs-prerequisites",
+      "filesystem-access-extension",
+      "catchable-errors-kinds",
+      "io-ports-eof-object",
+      "module-vertical-slice-repl",
+      "module-emit-run-command-emit-run",
+      "hybrid-library-resolution",
+      "emit-build-program-resolver",
+      "unit-pipeline-seeding-caching-shaking",
+      "cli-interface-help-final-value",
+      "release-version-identity",
+      "installation-diagnostics",
+      "jit-optimization-profiles",
+      "scheme-base-declared-surface",
+      "unicode-data-checksums-generated-tables",
+      "flat-top-level-name-hazards",
+      "binding-shadows-a-keyword",
+      "binding-contexts-and-local-macros",
+      "scheme-base-auto-import-repl",
+      "scheme-base-re-home-emit-run-build",
+      "r7rs-library-partition",
+      "dump-stages-all-commands",
+      "installed-layout-libraries-support-files",
+      "reader-datum-parity-vector-consts-rendering",
+      "cyclic-datum-read-compare-write-round-trip",
+      "printer-cycles-char-names-trap-delivery",
+      "every-command-in-a-user-project",
+      "scheme-base-gen-guard-native",
+      "program-toplevel-order-native",
+      "scheme-base-generator-native",
+      "bake-libraries-contracts",
+      "random-entropy",
+      "srfi-27",
+      "malt-core",
+      "malt-installed",
+      "malt-training",
+      "malt-xor",
+      "custom-writers",
+      "performance-measurement-runner",
+      "writer-resource-reuse"
+    ],
+    "results": [
+      {
+        "coverage": [
+          "llvm-toolchain-discovery"
+        ],
+        "exit_code": 0,
+        "id": "llvm-toolchain-discovery",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/llvm-toolchain-discovery.log",
+        "seconds": 5.391,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "native-build-configuration"
+        ],
+        "exit_code": 0,
+        "id": "native-build-configuration",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/native-build-configuration.log",
+        "seconds": 103.414,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "demo-values-emit-run"
+        ],
+        "exit_code": 0,
+        "id": "demo-values-emit-run",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/demo-values-emit-run.log",
+        "seconds": 16.011,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "module-scaffold-byte-identity"
+        ],
+        "exit_code": 0,
+        "id": "module-scaffold-byte-identity",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/module-scaffold-byte-identity.log",
+        "seconds": 15.261,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "artifact-cache-baked-set"
+        ],
+        "exit_code": 0,
+        "id": "artifact-cache-baked-set",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/artifact-cache-baked-set.log",
+        "seconds": 70.258,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "stdlib-precompilation"
+        ],
+        "exit_code": 0,
+        "id": "stdlib-precompilation",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/stdlib-precompilation.log",
+        "seconds": 11.365,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "explicit-artifact-format"
+        ],
+        "exit_code": 0,
+        "id": "explicit-artifact-format",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/explicit-artifact-format.log",
+        "seconds": 2.034,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "explicit-artifact-reuse"
+        ],
+        "exit_code": 0,
+        "id": "explicit-artifact-reuse",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/explicit-artifact-reuse.log",
+        "seconds": 70.024,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "srfi-explicit-artifacts"
+        ],
+        "exit_code": 0,
+        "id": "srfi-explicit-artifacts",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/srfi-explicit-artifacts.log",
+        "seconds": 49.917,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "installed-srfi-sources"
+        ],
+        "exit_code": 0,
+        "id": "installed-srfi-sources",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/installed-srfi-sources.log",
+        "seconds": 88.569,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "native-object-cache"
+        ],
+        "exit_code": 0,
+        "id": "native-object-cache",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/native-object-cache.log",
+        "seconds": 300.05,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "repl-persistent-host"
+        ],
+        "exit_code": 0,
+        "id": "repl-persistent-host",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/repl-persistent-host.log",
+        "seconds": 3.671,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "source-load-interaction-run-repl-escape-error-static"
+        ],
+        "exit_code": 0,
+        "id": "source-load-interaction-host",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/source-load-interaction-host.log",
+        "seconds": 48.174,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "define-record-type-syntax"
+        ],
+        "exit_code": 0,
+        "id": "define-record-type-syntax",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/define-record-type-syntax.log",
+        "seconds": 33.641,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "inline-arith-self-call-ir"
+        ],
+        "exit_code": 0,
+        "id": "inline-arith-self-call-ir",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/inline-arith-self-call-ir.log",
+        "seconds": 5.299,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "fixnum-overflow-traps"
+        ],
+        "exit_code": 0,
+        "id": "fixnum-overflow-traps",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/fixnum-overflow-traps.log",
+        "seconds": 11.127,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "indexed-access-bounds"
+        ],
+        "exit_code": 0,
+        "id": "indexed-access-bounds",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/indexed-access-bounds.log",
+        "seconds": 37.471,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "r7rs-numeric-conformance"
+        ],
+        "exit_code": 0,
+        "id": "r7rs-numeric-conformance",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/r7rs-numeric-conformance.log",
+        "seconds": 58.061,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "r7rs-small-suite-vendored-sections-only"
+        ],
+        "exit_code": 0,
+        "id": "r7rs-small-suite-vendored-sections-only",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/r7rs-small-suite-vendored-sections-only.log",
+        "seconds": 47.926,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "cross-unit-direct-calls"
+        ],
+        "exit_code": 0,
+        "id": "cross-unit-direct-calls",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/cross-unit-direct-calls.log",
+        "seconds": 36.036,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "library-top-level-set"
+        ],
+        "exit_code": 0,
+        "id": "library-top-level-set",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/library-top-level-set.log",
+        "seconds": 7.923,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "library-body-declarations"
+        ],
+        "exit_code": 0,
+        "id": "library-body-declarations",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/library-body-declarations.log",
+        "seconds": 15.796,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "library-include-declarations"
+        ],
+        "exit_code": 0,
+        "id": "library-include-declarations",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/library-include-declarations.log",
+        "seconds": 13.211,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "import-sets-and-portable-sources"
+        ],
+        "exit_code": 0,
+        "id": "import-sets-and-portable-sources",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/import-sets-and-portable-sources.log",
+        "seconds": 121.616,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "runtime-and-macro-library-composition"
+        ],
+        "exit_code": 0,
+        "id": "runtime-and-macro-library-composition",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/runtime-and-macro-library-composition.log",
+        "seconds": 14.713,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "snow-fort-packages"
+        ],
+        "exit_code": 0,
+        "id": "snow-fort-packages",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/snow-fort-packages.log",
+        "seconds": 48.545,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "complete-upstream-srfi-suites"
+        ],
+        "exit_code": 0,
+        "id": "complete-upstream-srfi-suites",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/complete-upstream-srfi-suites.log",
+        "seconds": 239.795,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "dynamic-extent-call-cc"
+        ],
+        "exit_code": 0,
+        "id": "dynamic-extent-call-cc",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/dynamic-extent-call-cc.log",
+        "seconds": 7.883,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "pitch-facing-r7rs-prerequisites"
+        ],
+        "exit_code": 0,
+        "id": "pitch-facing-r7rs-prerequisites",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/pitch-facing-r7rs-prerequisites.log",
+        "seconds": 98.47,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "filesystem-access-extension"
+        ],
+        "exit_code": 0,
+        "id": "filesystem-access-extension",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/filesystem-access-extension.log",
+        "seconds": 33.633,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "catchable-errors-kinds"
+        ],
+        "exit_code": 0,
+        "id": "catchable-errors-kinds",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/catchable-errors-kinds.log",
+        "seconds": 9.251,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "io-ports-eof-object"
+        ],
+        "exit_code": 0,
+        "id": "io-ports-eof-object",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/io-ports-eof-object.log",
+        "seconds": 14.525,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "module-vertical-slice-repl"
+        ],
+        "exit_code": 0,
+        "id": "module-vertical-slice-repl",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/module-vertical-slice-repl.log",
+        "seconds": 12.014,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "module-emit-run-command-emit-run"
+        ],
+        "exit_code": 0,
+        "id": "module-emit-run-command-emit-run",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/module-emit-run-command-emit-run.log",
+        "seconds": 18.713,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "hybrid-library-resolution"
+        ],
+        "exit_code": 0,
+        "id": "hybrid-library-resolution",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/hybrid-library-resolution.log",
+        "seconds": 12.996,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "emit-build-program-resolver"
+        ],
+        "exit_code": 0,
+        "id": "emit-build-program-resolver",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/emit-build-program-resolver.log",
+        "seconds": 10.543,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "unit-pipeline-seeding-caching-shaking"
+        ],
+        "exit_code": 0,
+        "id": "unit-pipeline-seeding-caching-shaking",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/unit-pipeline-seeding-caching-shaking.log",
+        "seconds": 28.373,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "cli-interface-help-final-value"
+        ],
+        "exit_code": 0,
+        "id": "cli-interface-help-final-value",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/cli-interface-help-final-value.log",
+        "seconds": 31.791,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "release-version-identity"
+        ],
+        "exit_code": 0,
+        "id": "release-version-identity",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/release-version-identity.log",
+        "seconds": 82.358,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "installation-diagnostics"
+        ],
+        "exit_code": 0,
+        "id": "installation-diagnostics",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/installation-diagnostics.log",
+        "seconds": 9.643,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "jit-optimization-profiles"
+        ],
+        "exit_code": 0,
+        "id": "jit-optimization-profiles",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/jit-optimization-profiles.log",
+        "seconds": 49.892,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "scheme-base-declared-surface"
+        ],
+        "exit_code": 0,
+        "id": "scheme-base-declared-surface",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/scheme-base-declared-surface.log",
+        "seconds": 2.172,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "unicode-data-checksums-generated-tables"
+        ],
+        "exit_code": 0,
+        "id": "unicode-data-checksums-generated-tables",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/unicode-data-checksums-generated-tables.log",
+        "seconds": 2.236,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "flat-top-level-name-hazards"
+        ],
+        "exit_code": 0,
+        "id": "flat-top-level-name-hazards",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/flat-top-level-name-hazards.log",
+        "seconds": 2.088,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "binding-shadows-a-keyword"
+        ],
+        "exit_code": 0,
+        "id": "binding-shadows-a-keyword",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/binding-shadows-a-keyword.log",
+        "seconds": 31.281,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "binding-contexts-and-local-macros"
+        ],
+        "exit_code": 0,
+        "id": "binding-contexts-and-local-macros",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/binding-contexts-and-local-macros.log",
+        "seconds": 65.061,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "scheme-base-auto-import-repl"
+        ],
+        "exit_code": 0,
+        "id": "scheme-base-auto-import-repl",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/scheme-base-auto-import-repl.log",
+        "seconds": 5.733,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "scheme-base-re-home-emit-run-build"
+        ],
+        "exit_code": 0,
+        "id": "scheme-base-re-home-emit-run-build",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/scheme-base-re-home-emit-run-build.log",
+        "seconds": 10.877,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "r7rs-library-partition"
+        ],
+        "exit_code": 0,
+        "id": "r7rs-library-partition",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/r7rs-library-partition.log",
+        "seconds": 75.199,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "dump-stages-all-commands"
+        ],
+        "exit_code": 0,
+        "id": "dump-stages-all-commands",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/dump-stages-all-commands.log",
+        "seconds": 13.795,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "installed-layout-libraries-support-files"
+        ],
+        "exit_code": 0,
+        "id": "installed-layout-libraries-support-files",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/installed-layout-libraries-support-files.log",
+        "seconds": 208.272,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "reader-datum-parity-vector-consts-rendering"
+        ],
+        "exit_code": 0,
+        "id": "reader-datum-parity-vector-consts-rendering",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/reader-datum-parity-vector-consts-rendering.log",
+        "seconds": 6.801,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "cyclic-datum-read-compare-write-round-trip"
+        ],
+        "exit_code": 0,
+        "id": "cyclic-datum-read-compare-write-round-trip",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/cyclic-datum-read-compare-write-round-trip.log",
+        "seconds": 30.632,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "printer-cycles-char-names-trap-delivery"
+        ],
+        "exit_code": 0,
+        "id": "printer-cycles-char-names-trap-delivery",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/printer-cycles-char-names-trap-delivery.log",
+        "seconds": 26.963,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "every-command-in-a-user-project"
+        ],
+        "exit_code": 0,
+        "id": "every-command-in-a-user-project",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/every-command-in-a-user-project.log",
+        "seconds": 19.49,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "scheme-base-gen-guard-native"
+        ],
+        "exit_code": 0,
+        "id": "scheme-base-gen-guard-native",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/scheme-base-gen-guard-native.log",
+        "seconds": 6.595,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "program-toplevel-order-native"
+        ],
+        "exit_code": 0,
+        "id": "program-toplevel-order-native",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/program-toplevel-order-native.log",
+        "seconds": 74.795,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "scheme-base-generator-native"
+        ],
+        "exit_code": 0,
+        "id": "scheme-base-generator-native",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/scheme-base-generator-native.log",
+        "seconds": 51.476,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "bake-libraries-contracts"
+        ],
+        "exit_code": 0,
+        "id": "bake-libraries-contracts",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/bake-libraries-contracts.log",
+        "seconds": 1.667,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "random-entropy"
+        ],
+        "exit_code": 0,
+        "id": "random-entropy",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/random-entropy.log",
+        "seconds": 26.689,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "srfi-27"
+        ],
+        "exit_code": 0,
+        "id": "srfi-27",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/srfi-27.log",
+        "seconds": 55.511,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "malt-core"
+        ],
+        "exit_code": 0,
+        "id": "malt-core",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/malt-core.log",
+        "seconds": 53.934,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "malt-installed"
+        ],
+        "exit_code": 0,
+        "id": "malt-installed",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/malt-installed.log",
+        "seconds": 70.052,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "malt-training"
+        ],
+        "exit_code": 0,
+        "id": "malt-training",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/malt-training.log",
+        "seconds": 94.805,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "malt-xor"
+        ],
+        "exit_code": 0,
+        "id": "malt-xor",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/malt-xor.log",
+        "seconds": 51.271,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "custom-writers"
+        ],
+        "exit_code": 0,
+        "id": "custom-writers",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/custom-writers.log",
+        "seconds": 45.214,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "performance-measurement-runner"
+        ],
+        "exit_code": 0,
+        "id": "performance-measurement-runner",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/performance-measurement-runner.log",
+        "seconds": 3.846,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "writer-resource-reuse"
+        ],
+        "exit_code": 0,
+        "id": "writer-resource-reuse",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-m7rf975v/writer-resource-reuse.log",
+        "seconds": 5.058,
+        "status": "passed"
+      }
+    ],
+    "seconds": 757.878,
+    "input_digest": "398c19f787e0e0d96020bf249cc9e727b4fb96796915bb39917132205b5fbd99",
+    "proof_inputs_unchanged": false
+  },
+  "units-validation": {
+    "status": "passed",
+    "commit": "bcfa57d7c50e09a85c46b02e5a20af2c45e42a41",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "architecture": "arm64",
+    "selected": [
+      "expander-units-chez",
+      "lowering-visitation-order-chez",
+      "read-all-reader-chez",
+      "render-datum",
+      "import-set-units-chez",
+      "import-binding-identities-chez",
+      "lexical-syntax-contexts-chez",
+      "contextual-lowering-boundaries-chez",
+      "private-macro-binding-views-chez",
+      "import-target-namespace-boundaries-chez",
+      "repl-import-transactions-chez",
+      "mangle-symbol-naming-chez",
+      "simplify-pass-units-chez",
+      "artifact-cache-core-chez",
+      "repl-front-end-units-chez",
+      "baked-library-source-chez"
+    ],
+    "results": [
+      {
+        "coverage": [
+          "expander-units-chez"
+        ],
+        "exit_code": 0,
+        "id": "expander-units-chez",
+        "isolation": "shared-readonly-source",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-tg8e9je8/expander-units-chez.log",
+        "seconds": 0.215,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "lowering-visitation-order-chez"
+        ],
+        "exit_code": 0,
+        "id": "lowering-visitation-order-chez",
+        "isolation": "shared-readonly-source",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-tg8e9je8/lowering-visitation-order-chez.log",
+        "seconds": 0.165,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "read-all-reader-chez"
+        ],
+        "exit_code": 0,
+        "id": "read-all-reader-chez",
+        "isolation": "shared-readonly-source",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-tg8e9je8/read-all-reader-chez.log",
+        "seconds": 0.22,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "render-datum"
+        ],
+        "exit_code": 0,
+        "id": "render-datum",
+        "isolation": "shared-readonly-source",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-tg8e9je8/render-datum.log",
+        "seconds": 0.162,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "import-set-units-chez"
+        ],
+        "exit_code": 0,
+        "id": "import-set-units-chez",
+        "isolation": "shared-readonly-source",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-tg8e9je8/import-set-units-chez.log",
+        "seconds": 0.159,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "import-binding-identities-chez"
+        ],
+        "exit_code": 0,
+        "id": "import-binding-identities-chez",
+        "isolation": "shared-readonly-source",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-tg8e9je8/import-binding-identities-chez.log",
+        "seconds": 0.353,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "lexical-syntax-contexts-chez"
+        ],
+        "exit_code": 0,
+        "id": "lexical-syntax-contexts-chez",
+        "isolation": "shared-readonly-source",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-tg8e9je8/lexical-syntax-contexts-chez.log",
+        "seconds": 0.259,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "contextual-lowering-boundaries-chez"
+        ],
+        "exit_code": 0,
+        "id": "contextual-lowering-boundaries-chez",
+        "isolation": "shared-readonly-source",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-tg8e9je8/contextual-lowering-boundaries-chez.log",
+        "seconds": 0.295,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "private-macro-binding-views-chez"
+        ],
+        "exit_code": 0,
+        "id": "private-macro-binding-views-chez",
+        "isolation": "shared-readonly-source",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-tg8e9je8/private-macro-binding-views-chez.log",
+        "seconds": 0.418,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "import-target-namespace-boundaries-chez"
+        ],
+        "exit_code": 0,
+        "id": "import-target-namespace-boundaries-chez",
+        "isolation": "shared-readonly-source",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-tg8e9je8/import-target-namespace-boundaries-chez.log",
+        "seconds": 0.232,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "repl-import-transactions-chez"
+        ],
+        "exit_code": 0,
+        "id": "repl-import-transactions-chez",
+        "isolation": "shared-readonly-source",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-tg8e9je8/repl-import-transactions-chez.log",
+        "seconds": 3.074,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "mangle-symbol-naming-chez"
+        ],
+        "exit_code": 0,
+        "id": "mangle-symbol-naming-chez",
+        "isolation": "shared-readonly-source",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-tg8e9je8/mangle-symbol-naming-chez.log",
+        "seconds": 0.115,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "simplify-pass-units-chez"
+        ],
+        "exit_code": 0,
+        "id": "simplify-pass-units-chez",
+        "isolation": "shared-readonly-source",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-tg8e9je8/simplify-pass-units-chez.log",
+        "seconds": 0.141,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "artifact-cache-core-chez"
+        ],
+        "exit_code": 0,
+        "id": "artifact-cache-core-chez",
+        "isolation": "shared-readonly-source",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-tg8e9je8/artifact-cache-core-chez.log",
+        "seconds": 0.964,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "repl-front-end-units-chez"
+        ],
+        "exit_code": 0,
+        "id": "repl-front-end-units-chez",
+        "isolation": "shared-readonly-source",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-tg8e9je8/repl-front-end-units-chez.log",
+        "seconds": 0.204,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "baked-library-source-chez"
+        ],
+        "exit_code": 0,
+        "id": "baked-library-source-chez",
+        "isolation": "shared-readonly-source",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-tg8e9je8/baked-library-source-chez.log",
+        "seconds": 1.714,
+        "status": "passed"
+      }
+    ],
+    "seconds": 8.172,
+    "input_digest": "9fa0e8781465da38cd33a0e2a01fbe284c7734e88a5f6d800f46c7be9393df85",
+    "proof_inputs_unchanged": true
+  },
+  "targeted-reference": {
+    "status": "passed",
+    "commit": "bcfa57d7c50e09a85c46b02e5a20af2c45e42a41",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "architecture": "arm64",
+    "selected": [
+      "self-emission",
+      "dump-parity",
+      "render-datum",
+      "custom-writers-source"
+    ],
+    "results": [
+      {
+        "coverage": [
+          "self-emission"
+        ],
+        "exit_code": 0,
+        "id": "self-emission",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-k8blg3pk/self-emission.log",
+        "seconds": 10.971,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "dump-parity"
+        ],
+        "exit_code": 0,
+        "id": "dump-parity",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-k8blg3pk/dump-parity.log",
+        "seconds": 18.488,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "render-datum"
+        ],
+        "exit_code": 0,
+        "id": "render-datum",
+        "isolation": "shared-readonly-source",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-k8blg3pk/render-datum.log",
+        "seconds": 0.14,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "custom-writers-source"
+        ],
+        "exit_code": 0,
+        "id": "custom-writers-source",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-k8blg3pk/custom-writers-source.log",
+        "seconds": 6.391,
+        "status": "passed"
+      }
+    ],
+    "seconds": 29.304,
+    "input_digest": "a5d4f99d5e23ec085accc441dc6fff5fd7bee29ca44bea98012f2a4f0250ee46",
+    "proof_inputs_unchanged": true
+  },
+  "final-runtime-validation": {
+    "status": "passed",
+    "commit": "bcfa57d7c50e09a85c46b02e5a20af2c45e42a41",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "architecture": "arm64",
+    "selected": [
+      "custom-writers",
+      "writer-resource-reuse",
+      "printer-cycles-char-names-trap-delivery",
+      "cyclic-datum-read-compare-write-round-trip",
+      "io-ports-eof-object"
+    ],
+    "results": [
+      {
+        "coverage": [
+          "custom-writers"
+        ],
+        "exit_code": 0,
+        "id": "custom-writers",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-n1qicz8z/custom-writers.log",
+        "seconds": 62.824,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "writer-resource-reuse"
+        ],
+        "exit_code": 0,
+        "id": "writer-resource-reuse",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-n1qicz8z/writer-resource-reuse.log",
+        "seconds": 5.481,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "printer-cycles-char-names-trap-delivery"
+        ],
+        "exit_code": 0,
+        "id": "printer-cycles-char-names-trap-delivery",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-n1qicz8z/printer-cycles-char-names-trap-delivery.log",
+        "seconds": 35.172,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "cyclic-datum-read-compare-write-round-trip"
+        ],
+        "exit_code": 0,
+        "id": "cyclic-datum-read-compare-write-round-trip",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-n1qicz8z/cyclic-datum-read-compare-write-round-trip.log",
+        "seconds": 38.828,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "io-ports-eof-object"
+        ],
+        "exit_code": 0,
+        "id": "io-ports-eof-object",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-n1qicz8z/io-ports-eof-object.log",
+        "seconds": 15.721,
+        "status": "passed"
+      }
+    ],
+    "seconds": 89.52,
+    "input_digest": "a7f7e0c6f3158c8704ce9776c310fdf84e20823a4f85bc0f58eb99d3aad7d286",
+    "proof_inputs_unchanged": true
+  },
+  "final-source-writer": {
+    "status": "passed",
+    "commit": "bcfa57d7c50e09a85c46b02e5a20af2c45e42a41",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "architecture": "arm64",
+    "selected": [
+      "custom-writers-source",
+      "performance-measurement-runner"
+    ],
+    "results": [
+      {
+        "coverage": [
+          "custom-writers-source"
+        ],
+        "exit_code": 0,
+        "id": "custom-writers-source",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-bno4u1a4/custom-writers-source.log",
+        "seconds": 5.279,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "performance-measurement-runner"
+        ],
+        "exit_code": 0,
+        "id": "performance-measurement-runner",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-bno4u1a4/performance-measurement-runner.log",
+        "seconds": 2.986,
+        "status": "passed"
+      }
+    ],
+    "seconds": 13.139,
+    "input_digest": "22630ee9f4b51ad3d6d94d90c60bc13e42b9f41676d8ae502a165c05320d35e0",
+    "proof_inputs_unchanged": true
+  },
+  "final-reference-release": {
+    "status": "passed",
+    "commit": "bcfa57d7c50e09a85c46b02e5a20af2c45e42a41",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "architecture": "arm64",
+    "selected": [
+      "self-emission",
+      "dump-parity",
+      "render-datum",
+      "custom-writers-source",
+      "release-version-identity",
+      "performance-measurement-runner"
+    ],
+    "results": [
+      {
+        "coverage": [
+          "self-emission"
+        ],
+        "exit_code": 0,
+        "id": "self-emission",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-atgtd6d2/self-emission.log",
+        "seconds": 7.486,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "dump-parity"
+        ],
+        "exit_code": 0,
+        "id": "dump-parity",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-atgtd6d2/dump-parity.log",
+        "seconds": 13.586,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "render-datum"
+        ],
+        "exit_code": 0,
+        "id": "render-datum",
+        "isolation": "shared-readonly-source",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-atgtd6d2/render-datum.log",
+        "seconds": 0.16,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "custom-writers-source"
+        ],
+        "exit_code": 0,
+        "id": "custom-writers-source",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-atgtd6d2/custom-writers-source.log",
+        "seconds": 5.572,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "release-version-identity"
+        ],
+        "exit_code": 0,
+        "id": "release-version-identity",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-atgtd6d2/release-version-identity.log",
+        "seconds": 58.904,
+        "status": "passed"
+      },
+      {
+        "coverage": [
+          "performance-measurement-runner"
+        ],
+        "exit_code": 0,
+        "id": "performance-measurement-runner",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-atgtd6d2/performance-measurement-runner.log",
+        "seconds": 2.813,
+        "status": "passed"
+      }
+    ],
+    "seconds": 81.326,
+    "input_digest": "4b00381265910c8400a3811d920aba5a9487b1802a3c8d9b45ad947df9c41ede",
+    "proof_inputs_unchanged": true
+  },
+  "final-source-consistency": {
+    "status": "passed",
+    "commit": "bcfa57d7c50e09a85c46b02e5a20af2c45e42a41",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "architecture": "arm64",
+    "selected": [
+      "source-consistency"
+    ],
+    "results": [
+      {
+        "coverage": [
+          "source-bootstrap-byte-consistency"
+        ],
+        "exit_code": 0,
+        "id": "source-consistency",
+        "isolation": "workspace",
+        "log": "/var/folders/qd/74yn_yds705_ckk9c6pvc2xh0000gn/T/emit-validation-mujk5x7h/source-consistency.log",
+        "proof": {
+          "bootstrap_digest": "40b6c36f62840aff93e81a12e017e801e0c6be3eb484ebc50abbdafbba241094",
+          "bootstrap_modules": [
+            "embed-repl.ll",
+            "embed.ll",
+            "emit.internal.ll",
+            "scheme.base.ll",
+            "schemec.ll"
+          ],
+          "changed_modules": [],
+          "duration_seconds": 450.366,
+          "generated_library_check_exit_code": 0,
+          "proof": "source-consistency",
+          "regen_exit_code": 0,
+          "source_digest": "86bd139346450c9fc6f4f3802d4bd0c6187eb6f69f797e4ad02021ce76325a39",
+          "status": "passed",
+          "toolchain_digest": "9ffb26cf67f6930d984a75aa32a682cc563caa089182a676356a15e4344b2186"
+        },
+        "seconds": 451.751,
+        "status": "passed"
+      }
+    ],
+    "seconds": 456.317,
+    "input_digest": "4b00381265910c8400a3811d920aba5a9487b1802a3c8d9b45ad947df9c41ede",
+    "proof_inputs_unchanged": true
+  },
+  "scope": "Full inventory passed on initial reuse; final affected runtime/reference/release/source checks validate later lazy-init and occupied-slot changes. No compiler assembly inputs changed."
+}
