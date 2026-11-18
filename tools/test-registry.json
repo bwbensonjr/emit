@@ -2762,6 +2762,46 @@
         "custom-writers-source"
       ],
       "legacy": []
+    },
+    {
+      "id": "performance-measurement-runner",
+      "label": "Performance measurement runner contracts",
+      "command": [
+        "python3",
+        "test/performance-runner-tests.py"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "infrastructure"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "performance-measurement-runner"
+      ],
+      "legacy": []
+    },
+    {
+      "id": "writer-resource-reuse",
+      "label": "Writer resource reuse and output contracts",
+      "command": [
+        "bash",
+        "test/performance-writer-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "runtime"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "writer-resource-reuse"
+      ],
+      "legacy": []
     }
   ]
 }

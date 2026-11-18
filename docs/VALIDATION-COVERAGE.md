@@ -37,12 +37,19 @@ New suites use their profile membership and stable coverage IDs, with an empty
 | `scheme-base-generator-reference` | reference | Emit/Chez generation and diagnostic parity |
 | `baked-library-source-chez` | units, reference | Baked membership, imports, and complete IR/interfaces |
 | `bake-libraries-contracts` | full, reference | Wrapped declaration rows and CLI contracts |
+| `performance-measurement-runner` | full | Calibration, paired sample statistics/order, provenance, output oracles, and failure/reporting contracts |
+| `writer-resource-reuse` | full | Independent writer output oracles, bounded traversal allocation/retention, cleanup, and callback lifecycle resource checks |
 
 The existing `scheme-base-gen-guard-native` also joins the full profile now that
 it runs without Chez. It retains its original developer-runner label and reference
-profile. The full profile contains 58 suites and the units profile contains 16.
+profile. The full profile currently contains 68 suites and the units profile contains 16.
 The baker contracts run in a private workspace, preserving the rule that only
 direct Chez source units share read-only source inputs.
+
+The two performance investigation suites check deterministic runner behavior and
+writer resource invariants without timing thresholds. They add coverage to the
+full-native profile; neither the opt-in paired benchmark runs nor their local
+speedup targets become CI timing gates. Both suites run in private workspaces.
 
 ## Isolation
 

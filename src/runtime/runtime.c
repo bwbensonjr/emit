@@ -1880,6 +1880,15 @@ struct writer_context {
   writer_context *previous;
 };
 static writer_context *rt_active_writer = NULL;
+/* Tokens can escape through recur or a borrowed port. Retire their references,
+ * but never reuse their identity for a later invocation. */
+static void writer_context_retire(writer_context *w) {
+  rt_active_writer = w->previous;
+  w->active = 0;
+  w->out = NULL;
+  w->object = w->port = FALSE_V;
+  w->previous = NULL;
+}
 static int is_writer_context(val v) {
   return tag_of(v) == TAG_EXT && ext_hdr(v) == HDR_WRITER_CONTEXT;
 }
@@ -3023,9 +3032,10 @@ typedef struct {
 } pl_slot;
 
 #define PL_STATIC_SLOTS 128u   /* power of two */
+#define PL_RETAIN_SLOTS 4096u  /* bound the idle outermost table */
 
-/* Contexts are heap allocated so an outer host checkpoint can safely discard
- * frames after a trap has already bypassed the C stack that owned them. */
+/* Contexts need stable lifetime across host traps that bypass C stack frames.
+ * Reuse the outermost context; nested traversals have independent GC storage. */
 typedef struct print_context print_context;
 struct print_context {
   print_context *previous;
@@ -3040,6 +3050,14 @@ struct print_context {
   enum print_policy policy;
 };
 static print_context *pl_current = NULL;
+static pl_slot pl_outer_tab[PL_STATIC_SLOTS];
+/* Track occupied outer slots so a small print after a large one clears only
+ * its own keys. Indices contain no Scheme references and need no retirement. */
+_Static_assert(PL_RETAIN_SLOTS <= UINT16_MAX, "printer indices fit in uint16_t");
+static uint16_t pl_outer_used[PL_RETAIN_SLOTS];
+/* Lazy initialization keeps the cache in zero-fill storage rather than adding
+ * an initialized writable-data segment to otherwise small executables. */
+static print_context pl_outer;
 #define pl_tab (pl_current->tab)
 #define pl_cap (pl_current->cap)
 #define pl_used (pl_current->used)
@@ -3049,13 +3067,32 @@ static print_context *pl_current = NULL;
 
 static void rt_print_restore(intptr_t depth) {
   while (pl_current && rt_print_depth > depth) {
+    print_context *ctx = pl_current;
     while (rt_active_writer != pl_current->writer_mark) {
-      writer_context *w = rt_active_writer;
-      w->active = 0;
-      rt_active_writer = w->previous;
+      writer_context_retire(rt_active_writer);
     }
-    pl_current = pl_current->previous;
+    pl_current = ctx->previous;
     rt_print_depth--;
+    if (ctx == &pl_outer) {
+      if (ctx->cap > PL_RETAIN_SLOTS) {
+        ctx->tab = pl_outer_tab;
+        ctx->cap = PL_STATIC_SLOTS;
+      } else if (ctx->used) {
+        /* Generations alone leave stale pointers visible to the collector.
+         * Clear inactive keys as well as labels, including after an unwind. */
+        for (size_t i = 0; i < ctx->used; i++)
+          memset(&ctx->tab[pl_outer_used[i]], 0, sizeof(pl_slot));
+      }
+      ctx->used = 0;
+      ctx->gen = 1;
+      ctx->next_label = ctx->any = 0;
+    } else {
+      ctx->tab = NULL;
+    }
+    ctx->previous = NULL;
+    ctx->writer_mark = NULL;
+    ctx->out = NULL;
+    ctx->port = FALSE_V;
   }
 }
 
@@ -3080,6 +3117,8 @@ static pl_slot *pl_find(val v, int create) {
       if ((pl_used + 1) * 2 >= pl_cap) { pl_grow(); return pl_find(v, 1); }
       s->gen = pl_gen; s->key = v; s->label = -1; s->count = 0;
       s->onpath = 0; s->printed = 0;
+      if (pl_current == &pl_outer && pl_cap <= PL_RETAIN_SLOTS)
+        pl_outer_used[pl_used] = (uint16_t)i;
       pl_used++;
       return s;
     }
@@ -3096,12 +3135,17 @@ static void pl_grow(void) {
   pl_slot *otab = pl_tab; size_t ocap = pl_cap;
   pl_tab = ntab; pl_cap = ncap;
   size_t mask = ncap - 1;
+  size_t occupied = 0;
+  int track_outer = pl_current == &pl_outer && ncap <= PL_RETAIN_SLOTS;
   for (size_t i = 0; i < ocap; i++) {
     if (otab[i].gen != pl_gen) continue;
     size_t j = pl_hash(otab[i].key) & mask;
     while (ntab[j].gen == pl_gen) j = (j + 1) & mask;
     ntab[j] = otab[i];
+    if (track_outer) pl_outer_used[occupied++] = (uint16_t)j;
   }
+  /* The static initial table stays rooted after growing into a heap table. */
+  if (otab == pl_outer_tab) memset(otab, 0, sizeof(pl_outer_tab));
 }
 
 /* Pass 1: find every node that is reachable from itself, and label it. */
@@ -3178,15 +3222,26 @@ static void print_val(sink *out, val v, int display, enum print_policy policy, v
     return;
   }
   intptr_t previous_depth = rt_print_depth;
-  print_context *ctx = (print_context *)GC_MALLOC(sizeof(print_context));
+  print_context *ctx;
+  if (!pl_current) {
+    ctx = &pl_outer;
+    if (!ctx->tab) {
+      ctx->tab = pl_outer_tab;
+      ctx->cap = PL_STATIC_SLOTS;
+      ctx->gen = 1;
+    }
+  } else {
+    ctx = (print_context *)GC_MALLOC(sizeof(print_context));
+    ctx->cap = PL_STATIC_SLOTS;
+    ctx->gen = 1;
+  }
   ctx->previous = pl_current;
   ctx->writer_mark = rt_active_writer;
   ctx->out = out; ctx->port = port; ctx->display = display; ctx->policy = policy;
-  ctx->tab = NULL; ctx->cap = PL_STATIC_SLOTS; ctx->gen = 1;
   pl_current = ctx;
   rt_print_depth++;
   if (policy != PRINT_SIMPLE && pl_labelable(v)) {
-    ctx->tab = (pl_slot *)GC_MALLOC(ctx->cap * sizeof(pl_slot));
+    if (!ctx->tab) ctx->tab = (pl_slot *)GC_MALLOC(ctx->cap * sizeof(pl_slot));
     pl_scan(v, policy);
     if (pl_any) pl_reset_printed();
   }
@@ -3237,8 +3292,7 @@ static void print_custom_record(sink *out, val object, int display) {
       w->policy == PRINT_SHARED ? "write-shared" : "write";
   rt_apply_writer_t apply = (rt_apply_writer_t)(intptr_t)td[3];
   apply(td[2], object, port, rt_intern(mode), token);
-  w->active = 0;
-  rt_active_writer = w->previous;
+  writer_context_retire(w);
 }
 
 static void print_node(sink *out, val v, int display) {

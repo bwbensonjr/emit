@@ -5,3 +5,8 @@
 (set-record-type-writer! (make-borrowed) (lambda (object port mode recur) (set! saved-port port) (set! close-rejected (guard (e (else #t)) (close-port port) #f)) (display "borrowed-value" port)))
 (make-borrowed)
 (list 'borrowed-port-lifetime close-rejected (guard (e (else #t)) (display "expired" saved-port) #f) (guard (e (else #t)) (close-port saved-port) #f))
+(define retired-port saved-port)
+(define retired-rejected #f)
+(set-record-type-writer! (make-borrowed) (lambda (object port mode recur) (set! retired-rejected (guard (e (else #t)) (display "revived" retired-port) #f)) (display "later-borrowed-value" port)))
+(make-borrowed)
+(list 'borrowed-port-reuse retired-rejected)

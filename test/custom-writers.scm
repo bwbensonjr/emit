@@ -219,4 +219,61 @@
  (lambda (obj p mode recur) (close-port p) (recur (item-x obj))))
 (check (fails (lambda () (write child (open-output-string)))) #t)
 
+;; A retired renderer stays expired while a later same-depth callback is live.
+(define retired-recur #f)
+(set-record-type-writer! child
+ (lambda (obj port mode recur) (set! retired-recur recur) (recur 4)))
+(check (render child) "4")
+(set-record-type-writer! child
+ (lambda (obj port mode recur)
+   (check (fails (lambda () (retired-recur 99))) #t)
+   (recur 5)))
+(check (render child) "5")
+
+;; Grow a nested table while outer shared labels remain live, then reuse it.
+(define growth
+  (let loop ((n 300) (result '()))
+    (if (= n 0) result (loop (- n 1) (cons n result)))))
+(set-record-type-writer! parent
+ (lambda (obj port mode recur)
+   (let* ((text (render (list growth growth) write-shared))
+          (copy (read (open-input-string text))))
+     (check (eq? (car copy) (car (cdr copy))) #t)
+     (check (length (car copy)) 300))
+   (recur 7)))
+(check (render (list cycle parent cycle) write-shared)
+       "(#0=(x . #0#) 7 #0#)")
+(check (render '(small after growth)) "(small after growth)")
+
+;; Every supported unwind discards grown nested graph state, not outer labels.
+(for-each
+ (lambda (kind)
+   (set-record-type-writer! parent
+    (lambda (obj port mode recur)
+      (let ((answer
+        (call/cc
+         (lambda (escape)
+           (set-record-type-writer! problem
+            (lambda (obj port mode recur)
+              (set! escaped-recur recur)
+              ;; The enclosing list's scan has already grown its table.
+              (if (eq? kind 'escape) (escape 'escaped)
+                  (if (eq? kind 'trap) (car 1) (error "grown-writer")))))
+           (fails (lambda () (render (cons problem growth))))))))
+        (check answer (if (eq? kind 'escape) 'escaped #t)))
+      (check (fails (lambda () (escaped-recur 88))) #t)
+      (recur 8)))
+   (check (render (list cycle parent cycle) write-shared)
+          "(#0=(x . #0#) 8 #0#)")
+   (check (render '#(after unwind)) "#(after unwind)"))
+ '(raise trap escape))
+
+;; Opaque records and ordinary modes keep working across registration changes.
+(set-record-type-writer! child #f)
+(for-each
+ (lambda (operation)
+   (check (render (list child '#(1 2)) operation)
+          "(#<record item> #(1 2))"))
+ (list write display write-simple write-shared))
+
 (list 'custom-writers-complete checks)

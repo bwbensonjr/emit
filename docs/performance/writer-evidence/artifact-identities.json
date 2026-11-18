@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "scope": "Build/source/test/tool identities captured after final timing; the source-inputs manifest separately preserves ordered compiler inputs and their dirty patch.",
+  "tool_annotation": "tools/performance-measure.py and tools/writer-performance-build.py were unchanged between the final timing runs and evidence packaging.",
+  "files": {
+    "Makefile": {
+      "bytes": 26258,
+      "sha256": "c469f3fa6d51d85d2e1b64390bc9dccfb0ef423382205e9b3ff3519872dbe950"
+    },
+    "build/llvm.mk": {
+      "bytes": 667,
+      "sha256": "f4b636a1ddbb21253bfc527051f9b6b8f0650d29afee03a4d517ff83253732f9"
+    },
+    "src/runtime/runtime.c": {
+      "bytes": 174905,
+      "sha256": "03f7d0e70d1650e44309677dd9929a22cd05138cad3163df57c83bfec1e21ac3"
+    },
+    "test/performance/writer-bench.c": {
+      "bytes": 13763,
+      "sha256": "199d9d55dd83fb097b393b30ddc8ba989828d52bf5b4a4230c7cd5c8ad5cd16c"
+    },
+    "test/performance/writer-adapter.scm": {
+      "bytes": 654,
+      "sha256": "d5cf1c9838c29ffd35e94d96148a0bd6690b4cf8d8d4dd9bad434e5f3ee42d1a"
+    },
+    "test/performance/writer-repeat.scm": {
+      "bytes": 1405,
+      "sha256": "64c9c0f3b1b8a42ef3adf227ab23f3565f91a09eff10497ca3994f3fceccbed8"
+    },
+    "test/performance-writer-tests.sh": {
+      "bytes": 2662,
+      "sha256": "913ed0041f84023b5b3015c0636086844c9180a7d15049e8f8a7209e9ab7e12e"
+    },
+    "test/performance-runner-tests.py": {
+      "bytes": 8540,
+      "sha256": "8d2bb7381d892003a79282314b743f766c1532d1495a4a6c10810ef8e3702ed9"
+    },
+    "test/custom-writers.scm": {
+      "bytes": 10486,
+      "sha256": "c7431ebb7f7e615593ba74f988fad36196518621401f108e4785d97378af9a38"
+    },
+    "test/custom-writers-tests.sh": {
+      "bytes": 6879,
+      "sha256": "535153af50f67f2103169047c11f3b35b714b847af51bc4addbd5c38c7d948be"
+    },
+    "test/malt-core.scm": {
+      "bytes": 8232,
+      "sha256": "e7efbfcf3a8666a207bb90cc4b0035e957e8f1c755042ee6ccca3df62dc03401"
+    },
+    "demos/malt-xor.scm": {
+      "bytes": 1620,
+      "sha256": "094842f9495785eae41c636c8e2cfcc6251c5ea565f9b2afc74d955209b02dae"
+    },
+    "tools/performance-measure.py": {
+      "bytes": 15627,
+      "sha256": "ba50c2728f7b809438500e3d389b7adf3937d6fc4ce617e0d51d47f4175f7844"
+    },
+    "tools/writer-performance-build.py": {
+      "bytes": 10829,
+      "sha256": "a51e3219266a5a2acf1114314c8362cfeb2034f43a27decd51208f898e9e6c8c"
+    },
+    "tools/llvm-env.sh": {
+      "bytes": 13078,
+      "sha256": "3f2d827ef8afc0b19a34ddc0f5062ef530444f71070fd7e01639b02599d8e67d"
+    },
+    "tools/test-registry.json": {
+      "bytes": 60464,
+      "sha256": "8c57bc13c73cdbeea28746b9711327c284e2be9e13ce2ea859767d472740a443"
+    },
+    "tools/test-classify.py": {
+      "bytes": 10246,
+      "sha256": "6b36b51af478f69a0ca48008e8aaab10af32547eef804058e7059958100a17fe"
+    },
+    "test/performance/process-repeat.py": {
+      "bytes": 1987,
+      "sha256": "50fa3de66da659c7633225f7c5952981a200f43ca7549504705764ef66a8fe66"
+    },
+    "test/performance/README.md": {
+      "bytes": 8572,
+      "sha256": "f75a460f486f99f9dfd840c52eafc64aaa983eeb592bade380fadd7a0a40db01"
+    }
+  }
+}

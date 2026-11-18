@@ -39,7 +39,7 @@ speed items in this list.
 | [P22](#p22--a-string-ports-buffer-is-retained-for-the-life-of-the-process) | A string port's buffer is retained for the life of the process | memory | low–med | med | — | ☐ |
 | [P23](#p23--the-repl-materializes-every-manifest-library-at-startup-imported-or-not) | The REPL materializes every manifest library at startup, imported or not | startup speed | **high** | low–med | `defer-manifest-library-init` (fix 1) | ☐ |
 | [P24](#p24--validation-repeats-setup-and-coverage-across-local-and-ci-runs) | Validation repeats setup and coverage across local and CI runs | developer feedback + CI build time | high | med | `streamline-build-and-test` | ☐ |
-| [P25](#p25-malt-object-traversal-and-writer-retention) | Malt object traversal and writer retention | speed + size | low | medium | not scheduled | pending |
+| [P25](#p25-malt-object-traversal-and-writer-retention) | Malt object traversal and writer retention | speed + size | low | medium | `improve-writer-performance` (writer investigation; tensor work deferred) | pending |
 
 Legend — **Value**: benefit if fixed. **Cost**: rough implementation effort/risk. These are
 estimates to aid sequencing, not commitments.
@@ -2483,8 +2483,10 @@ deduplication and ordinary warmed development loop.
 
 ## P25: Malt object traversal and writer retention
 
-**OpenSpec change:** Not scheduled. The measurements come from the custom-writer
-and tensor-object implementation; this entry tracks subsequent optimization.
+**OpenSpec change:** `improve-writer-performance` isolates generic writer costs;
+tensor traversal and renderer-retention optimization remain unscheduled. The
+original measurements below come from the combined custom-writer and tensor-object
+implementation.
 
 The 2026-11-17 comparison in [Malt measurements](MALT-MEASUREMENTS.md) holds the
 original 95-assertion core workload fixed: its executable grows from 210,136 to
@@ -2523,6 +2525,25 @@ available to exploit, and P21's output-port correction is already present.
 P11's runtime compilation cache would improve build time, not the measured
 training CPU, so it is independent. This small optional-library cost does not
 justify blocking general custom writers or adding Malt-specific runtime tags.
+
+The 2026-11-18 [writer investigation](performance/writer-report.md) compares the
+same program/library IR against released and optimized runtime snapshots. Bounded
+outermost traversal reuse removes repeated graph-bookkeeping allocation and cuts
+ordinary small-list renderer CPU by about 49.5% in each of two ten-pair sessions.
+Seeded XOR process CPU changes by +0.03% and +0.72%, with identical predictions
+and loss. This does not recover or attribute the earlier combined training
+slowdown; the tensor traversal and retained-renderer questions above remain.
+
+Generic callback costs also remain distinct from numerical traversal. An
+eight-level native callback fixture still requests 23 objects/1,584 printer bytes
+per render, versus 24/1,664 before; the actual Scheme adapter additionally creates
+its recursive-rendering closure. Mode-symbol caching gave mixed results and was
+rejected. A nesting-depth pool might remove independent traversal-context
+allocations, but would add cache lifetime and retained-memory policy beyond the
+one outermost context. Revisit it for a demonstrated callback-heavy application,
+with the existing depth, allocation, saved-handle, and unwind fixtures; do not
+reuse escaped invocation identities or treat fewer allocations as measured
+latency improvement.
 
 ## Maintaining this file
 
