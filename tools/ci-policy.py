@@ -20,7 +20,8 @@ def plan(classification, event, force_full=False, rehearsal=False):
     source = comprehensive or classification["source"]
     units = comprehensive or classification["units"]
     reference = classification["reference"]
-    if not all(item in {"self-emission", "dump-parity", "render-datum"} for item in reference):
+    if not all(item in {"self-emission", "dump-parity", "render-datum", "custom-writers-source"}
+               for item in reference):
         raise ValueError("unknown required reference suite")
     archive = rehearsal or event == "tag" or classification["archive"]
     # Channel rehearsal (channels.yml): a missing flag from an older classifier is conservative.

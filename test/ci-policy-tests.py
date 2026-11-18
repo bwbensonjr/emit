@@ -64,6 +64,21 @@ class PolicyTests(unittest.TestCase):
             self.assertTrue(plan["source"])
             self.assertFalse(plan["reference_full"])
 
+    def test_classifier_reference_suites_are_accepted(self):
+        classifier = SourceFileLoader("classifier_policy_fixture",
+                                      str(ROOT / "tools/test-classify.py")).load_module()
+        for path in ["src/emit.ss", "lib/emit/write.sld", "tools/test-classify.py"]:
+            with self.subTest(path=path):
+                classified = classifier.classify_paths([path])
+                planned = policy.plan(classified, "pull_request")
+                self.assertEqual(planned["reference"], classified["reference"])
+                self.assertIn("custom-writers-source", planned["reference"])
+                self.assertTrue(planned["verification"])
+
+    def test_unknown_reference_suite_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "unknown required reference suite"):
+            policy.plan(classification(reference=["unknown-suite"]), "pull_request")
+
     def test_release_infrastructure_rehearses_archives(self):
         plan = policy.plan(classification(archive=True), "pull_request")
         self.assertIn("package", plan["required"])
