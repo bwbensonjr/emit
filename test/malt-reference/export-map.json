@@ -238,7 +238,7 @@
     "upstream_line": 76
   },
   "backprop": {
-    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "adaptation": "ASCII spelling and R7RS library adaptation; distinct tensor/dual records and automatic custom writers",
     "group": "Extension and AD",
     "upstream": "learner/tensors/0-duals.rkt",
     "upstream_identifier": "\u03ba",
@@ -397,14 +397,14 @@
     "upstream_line": 10
   },
   "dual": {
-    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "adaptation": "ASCII spelling and R7RS library adaptation; distinct tensor/dual records and automatic custom writers",
     "group": "Extension and AD",
     "upstream": "learner/tensors/0-duals.rkt",
     "upstream_identifier": "dual",
     "upstream_line": 11
   },
   "dual?": {
-    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "adaptation": "ASCII spelling and R7RS library adaptation; distinct tensor/dual records and automatic custom writers",
     "group": "Extension and AD",
     "upstream": "learner/tensors/0-duals.rkt",
     "upstream_identifier": "dual?",
@@ -614,7 +614,7 @@
     "upstream_line": 21
   },
   "list->tensor": {
-    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "adaptation": "ASCII spelling and R7RS library adaptation; distinct tensor/dual records and automatic custom writers",
     "group": "Tensors and lists",
     "upstream": "learner/tensors/B-tensor-basics.rkt",
     "upstream_identifier": "list->tensor",
@@ -642,7 +642,7 @@
     "upstream_line": 27
   },
   "make-printable": {
-    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "adaptation": "ASCII spelling and R7RS library adaptation; distinct tensor/dual records and automatic custom writers",
     "group": "Diagnostics",
     "upstream": "learner/autodiff/E-print.rkt",
     "upstream_identifier": "make-printable",
@@ -677,7 +677,7 @@
     "upstream_line": 83
   },
   "max-tensor-print-length": {
-    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "adaptation": "ASCII spelling and R7RS library adaptation; distinct tensor/dual records and automatic custom writers",
     "group": "Diagnostics",
     "upstream": "learner/autodiff/E-print.rkt",
     "upstream_identifier": "max-tensor-print-length",
@@ -726,7 +726,7 @@
     "upstream_line": 14
   },
   "primal": {
-    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "adaptation": "ASCII spelling and R7RS library adaptation; distinct tensor/dual records and automatic custom writers",
     "group": "Extension and AD",
     "upstream": "learner/tensors/0-duals.rkt",
     "upstream_identifier": "\u03c1",
@@ -978,11 +978,18 @@
     "upstream_line": 66
   },
   "tensor": {
-    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "adaptation": "ASCII spelling and R7RS library adaptation; distinct tensor/dual records and automatic custom writers",
     "group": "Tensors and lists",
     "upstream": "learner/tensors/C-tensor-ops.rkt",
     "upstream_identifier": "tensor",
     "upstream_line": 92
+  },
+  "tensor->vector": {
+    "adaptation": "Emit shallow-copy conversion for distinct tensor objects",
+    "group": "Tensors and lists",
+    "upstream": null,
+    "upstream_identifier": null,
+    "upstream_line": null
   },
   "tensor?": {
     "adaptation": "ASCII spelling and R7RS library adaptation",
@@ -992,14 +999,14 @@
     "upstream_line": 36
   },
   "tlen": {
-    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "adaptation": "ASCII spelling and R7RS library adaptation; distinct tensor/dual records and automatic custom writers",
     "group": "Tensors and lists",
     "upstream": "learner/tensors/B-tensor-basics.rkt",
     "upstream_identifier": "tlen",
     "upstream_line": 30
   },
   "tmap": {
-    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "adaptation": "ASCII spelling and R7RS library adaptation; distinct tensor/dual records and automatic custom writers",
     "group": "Tensors and lists",
     "upstream": "learner/tensors/B-tensor-basics.rkt",
     "upstream_identifier": "tmap",
@@ -1020,7 +1027,7 @@
     "upstream_line": 72
   },
   "tref": {
-    "adaptation": "ASCII spelling and R7RS library adaptation",
+    "adaptation": "ASCII spelling and R7RS library adaptation; distinct tensor/dual records and automatic custom writers",
     "group": "Tensors and lists",
     "upstream": "learner/tensors/B-tensor-basics.rkt",
     "upstream_identifier": "tref",

@@ -733,6 +733,22 @@
 #     retained under build/malt-validation/scaffold-{before,after} and
 #     build/malt-validation/scaffold-entropy-proof.json.
 #
+#   add-custom-writers-and-malt-tensors -- a pristine git archive of HEAD
+#     64b1ef7, linked from its committed bootstrap, reproduces all 83 reference
+#     hashes. For the 82 ordinary demos, the only additions are 500 exact runtime
+#     declarations (rt_set_record_type_writer and rt_custom_write_recur, once
+#     each per module) and 250 identical 10-line __apply_writer bridges. Removing
+#     ONLY those additions makes all 82 captures byte-identical, with no numeric
+#     normalization or unexplained drift: 93,961,062 -> 94,083,812 bytes (+122,750).
+#     The malt-xor demo intentionally changes representation: its two new modules
+#     are emit.write and malt.learner.formatting; normalized non-header drift is
+#     confined to tensors, autodiff, diagnostics, recording, and its program's
+#     explicit tensor conversion/indexing adaptation. Its other ten modules,
+#     including operations, training, and scheme.base, remain byte-identical.
+#     All 83 sorted demo names are retained. Captures, original/new manifests,
+#     and the executable classifier are retained under
+#     build/custom-writer-validation/scaffold-proof (classify.py and proof.json).
+#
 # Needs an LLVM discoverable via llvm-config + libgc (to link build/emit); no Chez.  Run from anywhere.
 set -u
 cd "$(dirname "$0")/.."

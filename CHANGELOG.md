@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.0
+
+- Add `(emit write)` custom record-type writers shared by interactive results,
+  explicit textual output, and standalone executables, with recursive rendering,
+  cycle boundaries, and recovery after callback failures.
+- Give Malt duals and tensors distinct object representations and automatic
+  value printing: scalar multiplication prints `6` and tensor multiplication
+  prints `(tensor 3 6 9)`. Preserve raw-vector inputs and add `tensor->vector`
+  for shallow conversion; constructed tensors now use record identity equality.
+
 ## 0.8.0
 
 - Let explicit program imports replace overlapping implicit base defaults, while

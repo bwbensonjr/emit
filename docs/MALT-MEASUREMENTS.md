@@ -44,3 +44,36 @@ uses a bounded binary OS-device read through existing libc file operations.
 These workloads establish useful costs for the nested-vector learner backend.
 They do not justify changing tensor representation, boxed flonums, or GC as a
 prerequisite to the port. Larger workloads need their own measurements.
+
+## Custom writer and object comparison
+
+Measured 2026-11-17 on the same macOS arm64 / LLVM 23.1.4 toolchain, comparing
+0.8.0 with the 0.9.0 custom-writer implementation. Values below are medians of
+three executions, alternating before and after binaries. CPU and resident
+memory use `os.wait4`; wall time includes process startup. Regeneration was
+running concurrently, so these are observations, not timing thresholds.
+
+| Workload | Version | Executable bytes | Wall seconds | CPU seconds | Peak resident bytes |
+|---|---|---:|---:|---:|---:|
+| Original core, 95 assertions | Before | 210,136 | 0.004108 | 0.003312 | 3,096,576 |
+| Original core, 95 assertions | After | 228,248 | 0.004242 | 0.003240 | 3,096,576 |
+| Seeded XOR, 4,000 updates | Before | 172,432 | 0.847596 | 0.844447 | 2,998,272 |
+| Seeded XOR, 4,000 updates | After | 174,688 | 0.910181 | 0.897120 | 2,998,272 |
+
+The original core fixture is held at 95 assertions for comparison; only its
+numeric-total helper was adapted to traverse tensor objects through `tlen` and
+`tref`. The expanded acceptance fixture now has 120 assertions. Both comparison
+binaries produce the original completion marker, and XOR retains its numerical
+predictions and `4.067564042545842e-31` loss. New binaries were compiled through
+the current Chez source driver with the default AOT `-O2 -flto` profile.
+
+For a minimal no-Malt control, the identical no-prelude IR for
+`(display "plain-size-check")` was linked against the old and new runtimes with
+`-O2 -flto`: 52,280 bytes before and 35,880 after. Both print exactly the same
+bytes; `nm` finds no Malt symbols in the new executable. This control differs
+from the historical default-prelude measurement above and is not a claim about
+all programs' sizes. Malt remains an optional dependency.
+
+The original core grows by 18,112 bytes (8.6%); XOR grows by 2,256 bytes (1.3%)
+and uses about 6.2% more CPU in these samples. Follow-up investigation is recorded
+as P25 in [the performance backlog](PERFORMANCE.md#p25-malt-object-traversal-and-writer-retention).

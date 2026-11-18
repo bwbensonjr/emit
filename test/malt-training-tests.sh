@@ -27,7 +27,7 @@ export EMIT_CACHE="$TMP/cache"
 python3 test/malt-reference/xor-reference-tests.py
 python3 test/malt-reference/check.py
 check_output() {
-  if ! tail -n 1 "$1" | grep -Fxq '(malt-training 77)'; then
+  if ! tail -n 1 "$1" | grep -Fxq '(malt-training 82)'; then
     cat "$1" >&2
     echo "Malt training assertion count/completion mismatch" >&2
     exit 1
@@ -35,7 +35,7 @@ check_output() {
 }
 start=$SECONDS
 if [ "${MALT_SOURCE_DRIVEN:-0}" != 1 ]; then
-say "run test/malt-training.scm -> run, REPL, standalone [77 checks each]"
+say "run test/malt-training.scm -> run, REPL, standalone [82 checks each]"
 "$EMIT" run -L "$ROOT/lib" -L "$ROOT/test" "$ROOT/test/malt-training.scm" > "$TMP/run.out" 2> "$TMP/run.err" || { cat "$TMP/run.err" >&2; exit 1; }
 check_output "$TMP/run.out"
 "$EMIT" repl -L "$ROOT/lib" -L "$ROOT/test" < "$ROOT/test/malt-training.scm" > "$TMP/repl.out" 2> "$TMP/repl.err" || { cat "$TMP/repl.err" >&2; exit 1; }
@@ -93,5 +93,5 @@ else
   fi
 fi
 if ! grep -qi 'conflict' "$TMP/conflict.err"; then cat "$TMP/conflict.err" >&2; exit 1; fi
-say "verify Malt training -> completion [$((SECONDS-start))s, 77 checks per path]"
+say "verify Malt training -> completion [$((SECONDS-start))s, 82 checks per path]"
 printf 'Malt training acceptance passed\n'

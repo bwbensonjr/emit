@@ -7,7 +7,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 EXPECTED = {
     "tensors": """dual dual? dual* primal backprop scalar? end-of-chain len ref refr
-        tref tlen tmap list->tensor tensor build-tensor tensor? rank shape reshape
+        tref tlen tmap list->tensor tensor->vector tensor tensor-object? build-tensor tensor? rank shape reshape
         trefs ext1 ext2 ext1-primal ext2-primal build-vector size-of""",
     "autodiff": """dual dual? primal backprop scalar? gradient gradient1 gradient-of
         map* prim1 prim2""",

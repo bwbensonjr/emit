@@ -60,7 +60,11 @@ And two properties keep it honest as an implementation choice, not just an ergon
   user program, never leak into LLVM IR as a `%`-name, and are never used as a value. Only
   compiler/host internals stay down here permanently (hashing, records, error plumbing, the
   host-flag probes `%no-prelude?` / `%dump-level`, the narration writer `%stderr-write`, the
-  REPL-state ops).
+  REPL-state ops). Custom record printing adds `%set-record-type-writer!` and
+  `%custom-write-recur`: the former passes the registering unit's C-callable bridge
+  alongside its Scheme closure, and the latter checks the callback context before
+  rendering a child. The public API is the optional `(emit write)` library; see
+  [Custom writers](CUSTOM-WRITERS.md).
 - **The integrable floor** is the key idea. Each plain primitive name (`cons`, `+`, …) is an
   *ordinary shadowable binding* defined in terms of its raw `%`-op. It is **compiler-intrinsic**:
   the names are baked into the compiler's set of known bindings, not exported from any library,

@@ -20,8 +20,11 @@ integers and real double numeric tower.
 Normal draws use uncached Box-Muller over `(srfi 27)`, rather than Malt's
 Ziggurat tables or Racket's PRNG. `current-random-source` and
 `current-record-handler` are Emit additions. `(record name value)` is synchronous;
-`with-recording` installs a handler dynamically. Diagnostics render explicitly.
-No Racket global printer or logging thread is ported. RMS retains upstream's
+`with-recording` installs a handler dynamically. Vector-backed tensor axes and scalar duals are distinct record objects. Their
+custom writers print tensor syntax and primal numbers automatically through
+Emit's general `(emit write)` facility. Explicit diagnostics remain available;
+`tensor->vector` is an Emit shallow-copy conversion. Ordinary raw vector inputs
+remain supported. No Racket global printer or logging thread is ported. RMS retains upstream's
 local epsilon `1e-7`; Adam and exported `epsilon` use `1e-8`. The upstream Adam
 formula has no bias correction; this port preserves it.
 

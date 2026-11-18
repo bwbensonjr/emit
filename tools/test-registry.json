@@ -2716,6 +2716,52 @@
         "malt-xor-source"
       ],
       "legacy": []
+    },
+    {
+      "id": "custom-writers",
+      "label": "Custom record writers, graph contexts and host recovery",
+      "command": [
+        "bash",
+        "test/custom-writers-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "runtime",
+        "compiler",
+        "library",
+        "host"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "custom-writers"
+      ],
+      "legacy": []
+    },
+    {
+      "id": "custom-writers-source",
+      "label": "Custom record writer source-driven acceptance",
+      "command": [
+        "bash",
+        "test/custom-writers-tests.sh",
+        "--reference"
+      ],
+      "profiles": [
+        "reference"
+      ],
+      "categories": [
+        "runtime",
+        "compiler",
+        "library"
+      ],
+      "isolation": "workspace",
+      "chez": true,
+      "coverage": [
+        "custom-writers-source"
+      ],
+      "legacy": []
     }
   ]
 }

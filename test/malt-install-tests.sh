@@ -18,7 +18,7 @@ make install PREFIX="$PREFIX" WARM_STDLIB=0 > "$TMP/install.out" 2> "$TMP/instal
   cat "$TMP/install.out" "$TMP/install.err" >&2; exit 1;
 }
 for path in lib/malt/learner.sld lib/malt/LICENSE lib/malt/PROVENANCE.md \
-            lib/malt/learner/*.sld lib/srfi/27.sld lib/srfi/27-LICENSE.txt; do
+            lib/malt/learner/*.sld lib/emit/write.sld lib/srfi/27.sld lib/srfi/27-LICENSE.txt; do
   cmp "$path" "$PREFIX/share/emit/$path"
 done
 find "$PREFIX/share/emit/lib/malt" -type f -exec shasum -a 256 {} + | sort > "$TMP/before"
@@ -28,6 +28,7 @@ cmp "$TMP/before" "$TMP/after"
 make install PREFIX="$PREFIX" DESTDIR="$TMP/staged" WARM_STDLIB=0 \
   > "$TMP/staged.out" 2> "$TMP/staged.err"
 diff -r "$PREFIX/share/emit/lib/malt" "$TMP/staged$PREFIX/share/emit/lib/malt"
+cmp "$PREFIX/share/emit/lib/emit/write.sld" "$TMP/staged$PREFIX/share/emit/lib/emit/write.sld"
 for file in 27.sld 27-LICENSE.txt; do
   cmp "$PREFIX/share/emit/lib/srfi/$file" "$TMP/staged$PREFIX/share/emit/lib/srfi/$file"
 done

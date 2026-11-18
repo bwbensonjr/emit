@@ -1,22 +1,27 @@
 ;; Adapted from Malt, copyright 2021 Anurag Mendhekar and Daniel P. Friedman.
-;; MIT license; see ../LICENSE. Explicit rendering replaces custom writer hooks.
+;; MIT license; see ../LICENSE. Explicit diagnostics share automatic tensor formatting settings.
 (define-library (malt learner diagnostics)
-  (import (scheme base) (scheme inexact) (malt learner tensors) (malt learner autodiff))
+  (import
+    (scheme base)
+    (scheme inexact)
+    (malt learner tensors)
+    (malt learner autodiff)
+    (malt learner formatting))
   (export
     tolerance trace-print check-dual-equal? check-primal-gradient
     max-tensor-print-length make-printable)
   (begin
     (define tolerance (make-parameter 0.0001))
-    (define max-tensor-print-length (make-parameter 5))
     (define (equal-with-tolerance? a b)
       (let ((a (primal a)) (b (primal b)))
         (cond
           ((and (number? a) (number? b)) (or (= a b) (< (abs (- a b)) (tolerance))))
-          ((and (vector? a) (vector? b) (= (vector-length a) (vector-length b)))
+          ((and (or (tensor-object? a) (vector? a))
+                (or (tensor-object? b) (vector? b))
+                (= (tlen a) (tlen b)))
             (let loop ((i 0))
-              (or (= i (vector-length a))
-                  (and (equal-with-tolerance? (vector-ref a i) (vector-ref b i))
-                       (loop (+ i 1))))))
+              (or (= i (tlen a))
+                  (and (equal-with-tolerance? (tref a i) (tref b i)) (loop (+ i 1))))))
           ((and (pair? a) (pair? b)) (and (equal-with-tolerance? (car a) (car b))
                                           (equal-with-tolerance? (cdr a) (cdr b))))
           (else (equal? a b)))))
@@ -38,13 +43,13 @@
         (if (not (and (exact-integer? limit) (>= limit 0)))
             (error "make-printable: expected a nonnegative integer limit" limit)
             (cond
-              ((vector? value)
+              ((or (tensor-object? value) (vector? value))
                 (cons 'tensor
                       (let loop ((i 0))
                         (cond
-                          ((= i (vector-length value)) '())
+                          ((= i (tlen value)) '())
                           ((and (> limit 0) (= i limit)) (list '...))
-                          (else (cons (make-printable (vector-ref value i) limit)
+                          (else (cons (make-printable (tref value i) limit)
                                       (loop (+ i 1))))))))
               ((list? value) (map (lambda (x) (make-printable x limit)) value))
               (else value)))))

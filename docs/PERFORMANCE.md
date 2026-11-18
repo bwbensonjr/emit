@@ -39,6 +39,7 @@ speed items in this list.
 | [P22](#p22--a-string-ports-buffer-is-retained-for-the-life-of-the-process) | A string port's buffer is retained for the life of the process | memory | low–med | med | — | ☐ |
 | [P23](#p23--the-repl-materializes-every-manifest-library-at-startup-imported-or-not) | The REPL materializes every manifest library at startup, imported or not | startup speed | **high** | low–med | `defer-manifest-library-init` (fix 1) | ☐ |
 | [P24](#p24--validation-repeats-setup-and-coverage-across-local-and-ci-runs) | Validation repeats setup and coverage across local and CI runs | developer feedback + CI build time | high | med | `streamline-build-and-test` | ☐ |
+| [P25](#p25-malt-object-traversal-and-writer-retention) | Malt object traversal and writer retention | speed + size | low | medium | not scheduled | pending |
 
 Legend — **Value**: benefit if fixed. **Cost**: rough implementation effort/risk. These are
 estimates to aid sequencing, not commitments.
@@ -2479,6 +2480,49 @@ preparation across workflows, while preserving producer/ref/success validation
 and required-check behavior. Measure first-seed and recipe-update runs before
 changing that sequencing; it is separate from the current within-workflow
 deduplication and ordinary warmed development loop.
+
+## P25: Malt object traversal and writer retention
+
+**OpenSpec change:** Not scheduled. The measurements come from the custom-writer
+and tensor-object implementation; this entry tracks subsequent optimization.
+
+The 2026-11-17 comparison in [Malt measurements](MALT-MEASUREMENTS.md) holds the
+original 95-assertion core workload fixed: its executable grows from 210,136 to
+228,248 bytes, an 18,112-byte (8.6%) increase. The seeded XOR workload grows from
+172,432 to 174,688 bytes (1.3%), with median process CPU increasing from 0.844447
+to 0.897120 seconds (6.2%). Each figure uses three alternating executions,
+AOT `-O2 -flto`, on macOS arm64 with LLVM 23.1.4. Observed resident memory is
+unchanged at roughly 3 MB; that coarse process measurement does not establish
+unchanged allocation volume. The expanded core acceptance tests are excluded
+from this size comparison.
+
+Tensor axes now allocate a record around vector storage in
+`lib/malt/learner/tensors.sld`; `tensor-storage`, `tref`, `tlen`, and the variadic
+`tmap` also mediate access to both object and raw-vector inputs. This adds a
+known allocation and dispatch mechanism to repeated training traversal.
+`map*` and gradient construction in `autodiff.sld` preserve container kinds.
+Per-type writer registration retains the rendering closures and their shared
+formatting parameter; the larger core exercises a much broader library surface
+than XOR. These are plausible sources of the observed costs, not a profile
+establishing which one dominates. The native atomic-print fast path avoids
+allocating printer contexts for ordinary atoms, and a minimal no-Malt control
+does not grow, so optimizing all printing indiscriminately is not justified.
+
+A follow-up should measure allocation counts and retained symbol sizes for
+these exact workloads, then try specialized object/raw-vector traversal and
+known-accessor inlining before changing representation. If renderer reachability
+dominates size, reduce closure dependencies while preserving callbacks for
+values escaping into automatic output. Keep distinct tensor identity, shallow
+conversion, raw-vector interoperability, and identical gradients; removing
+writers or reverting to indistinguishable vectors would discard the behavior
+this change supplies. Re-run seeded XOR and the fixed core fixture with size,
+CPU, and allocation measurements after each candidate.
+
+Sequence this after the tensor API settles. P6's known-call work is already
+available to exploit, and P21's output-port correction is already present.
+P11's runtime compilation cache would improve build time, not the measured
+training CPU, so it is independent. This small optional-library cost does not
+justify blocking general custom writers or adding Malt-specific runtime tags.
 
 ## Maintaining this file
 

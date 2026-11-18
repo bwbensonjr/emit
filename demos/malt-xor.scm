@@ -19,7 +19,7 @@
         (m:init-theta (m:block-ls network))))))
 (define predictor (m:model (m:block-fn network) theta))
 (define predictions
-  (map (lambda (x) (m:primal (vector-ref (predictor x) 0))) (vector->list xs)))
+  (map (lambda (x) (m:primal (m:tref (predictor x) 0))) (vector->list (m:tensor->vector xs))))
 (define targets '(0.0 1.0 1.0 0.0))
 (define squared-error
   (let loop ((actual predictions) (expected targets) (total 0.0))

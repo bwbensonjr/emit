@@ -17,7 +17,7 @@ visible together:
 ;; 7.0
 
 (ml:map* ml:primal (ml:+ 10 (ml:tensor 1 2 3)))
-;; #(11 12 13)
+;; (tensor 11 12 13)
 ```
 
 Run a source file containing this import through `emit run`, load it in
@@ -29,7 +29,7 @@ and `expt`. Do not import two different bindings under one name.
 ## Tensors and shape
 
 A scalar is a number or a scalar differentiation node. Higher-rank tensors are
-nonempty, rectangular nested vectors. `tensor` constructs one vector level and
+nonempty, rectangular objects with vector-backed axes. `tensor` constructs one axis and
 checks all nested leaves and dimensions. `shape` returns a list of dimensions;
 `rank` is its length. Scalars have shape `()` and rank zero.
 
@@ -38,11 +38,11 @@ checks all nested leaves and dimensions. `shape` returns a list of dimensions;
 ;; (2 3)
 
 (ml:reshape '(3 2) '#(#(1 2 3) #(4 5 6)))
-;; #(#(1 2) #(3 4) #(5 6))
+;; (tensor (tensor 1 2) (tensor 3 4) (tensor 5 6))
 
 (ml:build-tensor '(2 2)
   (lambda (indices) (+ (* 10 (car indices)) (car (cdr indices)))))
-;; #(#(0 1) #(10 11))
+;; (tensor (tensor 0 1) (tensor 10 11))
 ```
 
 `build-tensor` calls its builder with the complete index list. With shape `()`
@@ -51,13 +51,22 @@ explicit dimensions must be positive exact integers. This deliberately defines
 scalar construction and rejects empty-vector shapes instead of relying on
 upstream's first-element indexing on those inputs.
 
-`list->tensor` remains a shallow `list->vector`: a list of ordinary lists
-becomes a vector of lists, not a rectangular nested-vector tensor. Likewise,
-`tensor?` recognizes any ordinary vector, as upstream does; it is not a shape
-validator. Shape-sensitive operations reject malformed or ragged tensors.
+`list->tensor` remains shallow: a list of ordinary lists becomes a tensor object
+containing those same lists, without recursively converting them. `tensor?`
+recognizes scalar values, tensor objects, and any ordinary vector; it is not a
+shape validator. Shape-sensitive operations reject malformed or ragged tensors.
+Raw nested vectors remain valid inputs to Malt operations, while nonscalar
+numerical results are tensor objects.
+
+Tensor objects and scalar duals are distinct records, so `vector?` returns `#f`
+for them and `equal?` compares them by identity. Use `check-dual-equal?` for
+numerical comparisons. `tensor->vector` returns a fresh shallow vector copy of
+an axis, retaining child and dual identities without exposing mutable backing
+storage. It also copies raw vector inputs; scalar inputs raise an error. Use
+`tref`, `tlen`, and `tmap` instead of general vector accessors on tensors.
 
 `tref` selects one axis, `trefs` gathers indices from a list (with repetition
-and caller order preserved), and `tmap` maps over immediate vector members.
+and caller order preserved), and `tmap` maps over immediate axis members and returns a tensor object.
 `reshape` preserves row-major leaf order and the identity of differentiation
 nodes, and requires equal element counts.
 
@@ -72,13 +81,13 @@ do not receive a separate broadcasting rule.
 
 ```scheme
 (ml:map* ml:primal (ml:+ 10 '#(1 2 3)))
-;; #(11 12 13)
+;; (tensor 11 12 13)
 
 (ml:map* ml:primal (ml:sum '#(#(1 2) #(3 4))))
-;; #(3.0 7.0)
+;; (tensor 3.0 7.0)
 
 (ml:map* ml:primal (ml:sum-cols '#(#(1 2) #(3 4))))
-;; #(4.0 6.0)
+;; (tensor 4.0 6.0)
 ```
 
 `*-2-1` performs extended elementwise matrix/vector multiplication. Follow it
@@ -98,7 +107,7 @@ this upstream behavior explicitly.
 ## Reverse-mode gradients
 
 `(gradient f theta)` differentiates a one-argument function over a scalar,
-list, vector, or nested combination of them and returns the same input
+list, vector, tensor object, or nested combination of them and returns the same input
 structure filled with gradients. `gradient-of` is an alias. `(gradient1 f)`
 returns a variadic procedure whose result is the list of argument gradients.
 These ASCII names replace upstream's Greek nabla and superscript-one spelling.
@@ -139,18 +148,35 @@ produces flonums, exact overflow retains its existing diagnostic, and invalid
 real domains follow Emit's NaN/infinity behavior. This port does not add
 Racket's rational or complex numbers.
 
-## Explicit diagnostics
+## Automatic printing and explicit diagnostics
+
+Malt registers writers on its own tensor and dual record types through
+`(emit write)`. Arithmetic prints the primal number directly; tensor axes print
+as `(tensor ...)`, including when nested inside ordinary lists or vectors:
+
+```scheme
+(ml:* 2 3)
+;; 6
+(ml:* (ml:tensor 1 2 3) 3)
+;; (tensor 3 6 9)
+```
+
+This presentation applies to REPL results, program final results, `write`, and
+`display`. The values retain their dual bookkeeping and remain differentiable.
+Ordinary vectors keep their `#(...)` output, including when they contain Malt
+objects. `max-tensor-print-length` controls automatic and explicit tensor
+formatting together: initially five elements per axis, with zero unlimited.
 
 `make-printable` strips duals and returns ordinary lists headed by the symbol
-`tensor` for tensor vectors. An optional nonnegative maximum length truncates
+`tensor` for tensor objects or raw tensor vectors. An optional nonnegative maximum length truncates
 each vector with the symbol `...`; zero means unlimited, and omission reads the
 `max-tensor-print-length` parameter (initially five). `trace-print` accepts a
 value and output port and writes that explicit representation plus a newline.
-It installs no global printer hook.
+The automatic writers are attached only to Malt record types; no global predicate hook changes ordinary values.
 
 `check-dual-equal?` compares numeric leaves using the `tolerance` parameter
 (initially `0.0001`) and raises a catchable error on mismatch. Its recursive
-comparison also handles lists and vectors. The syntax
+comparison also handles lists, vectors, and tensor objects. The syntax
 `(check-primal-gradient (function argument ...) expected-value gradients)`
 checks both primal output and the argument-gradient list. Checks succeed with
 `#t`; they do not depend on RackUnit.
@@ -161,9 +187,9 @@ checks both primal output and the argument-gradient list. Checks succeed with
 REPL, and explicit whole-library artifacts. It requires the native build tools
 and no Chez or Racket. `bash test/malt-core-tests.sh --reference` instead invokes
 the source-driven Chez compiler and requires Chez. Each path must finish all
-95 checks and print `(malt-core-complete 95)`; process success alone is
+120 checks and print `(malt-core-complete 120)`; process success alone is
 insufficient. `test/malt-core-exports.py` independently checks the four internal
-library interfaces used by the facade (110 bindings, counting re-exports).
+library interfaces used by the facade (112 bindings, counting re-exports).
 
 Fixtures cover tensor validation, shallow conversion, scalar shapes, reshape
 identity, Malt extension, shared and distinct nodes, structured outputs,

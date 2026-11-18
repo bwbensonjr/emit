@@ -11,7 +11,7 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parent.parent
-REFERENCE = ["self-emission", "dump-parity", "render-datum"]
+REFERENCE = ["self-emission", "dump-parity", "render-datum", "custom-writers-source"]
 DOC_NAMES = {"README.md", "LLVM.md", "LICENSE",
              "CONTRIBUTING.md", "CHANGELOG.md"}
 # Inputs of the distribution channels (change: low-cost-distribution-channels, design D7): a
