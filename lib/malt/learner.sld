@@ -63,4 +63,17 @@
     (rename m:sum-primal sum-primal) tensor tensor? tlen tmap tolerance trace-print tref
     trefs (rename train:velocity-gradient-descent velocity-gradient-descent) with-hyper
     with-hypers with-recording zero-tensor (rename train:zeroes zeroes)
-    (rename m:zeroes-primal zeroes-primal)))
+    (rename m:zeroes-primal zeroes-primal)
+    ;; Preserve canonical declaration order when adding alternate spellings.
+    (rename lambda λ) (rename primal ρ) (rename backprop κ) (rename gradient ∇)
+    (rename gradient1 ∇¹) (rename check-primal-gradient check-ρ-∇)
+    (rename ext1-primal ext1-ρ) (rename ext2-primal ext2-ρ) (rename m:+-primal +-ρ)
+    (rename m:--primal --ρ) (rename m:*-primal *-ρ) (rename m:/-primal /-ρ)
+    (rename m:exp-primal exp-ρ) (rename m:log-primal log-ρ)
+    (rename m:expt-primal expt-ρ) (rename m:sqrt-primal sqrt-ρ)
+    (rename m:sqr-primal sqr-ρ) (rename m:zeroes-primal zeroes-ρ)
+    (rename m:sum-primal sum-ρ) (rename m:abs-primal abs-ρ)
+    (rename m:*-2-1-primal *-2-1-ρ) (rename m:argmax-primal argmax-ρ)
+    (rename m:max-primal max-ρ) (rename m:sum-cols-primal sum-cols-ρ)
+    (rename m:correlate-primal correlate-ρ) (rename m:rectify-primal rectify-ρ)
+    (rename m:flatten-primal flatten-ρ) (rename m:concat-primal concat-ρ)))

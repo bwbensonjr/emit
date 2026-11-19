@@ -36,6 +36,7 @@ if [ "${1:-}" = --reference ]; then
     cat "$TMP/source.err" >&2; exit 1;
   }
   check_output source "$TMP/source.out"
+  bash test/malt-notation-tests.sh --source
   echo "Malt core reference: 120 assertions passed"
   exit 0
 fi
@@ -85,3 +86,5 @@ for unit in tensors autodiff operations diagnostics; do
     "$TMP/artifact-run.err" || { cat "$TMP/artifact-run.err" >&2; exit 1; }
 done
 echo "Malt core native: 4 paths, 120 assertions each passed"
+
+bash test/malt-notation-tests.sh

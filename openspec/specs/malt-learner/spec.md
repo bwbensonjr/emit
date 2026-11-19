@@ -15,7 +15,7 @@ Emit SHALL provide `(malt learner)` with the public surface below and the learne
 - **WHEN** a program imports the learner facade
 - **THEN** the supported export inventory and naming adaptations are the following
 
-The facade's supported exports are listed below. Names use ASCII: `primal` corresponds to upstream's Greek rho, `backprop` to kappa, `gradient` to nabla, and `gradient1` to superscript-one nabla. The ASCII suffix `-primal` replaces upstream's hyphen-rho suffix. These are spelling adaptations, not different tensor algorithms.
+The facade's supported ASCII exports are listed below. They remain available alongside the Unicode aliases specified by the mathematical-notation requirements. `primal` corresponds to upstream's Greek rho, `backprop` to kappa, `gradient` to nabla, and `gradient1` to superscript-one nabla. The ASCII suffix `-primal` corresponds to upstream's hyphen-rho suffix. These are spelling alternatives, not different tensor algorithms.
 
 | Group | Exports |
 |---|---|
@@ -239,3 +239,77 @@ The same library source and settings SHALL produce equivalent results under sour
 - **WHEN** differentiation inputs contain a list holding both a raw vector and a tensor object
 - **THEN** the corresponding gradient result is a list holding a raw vector and a tensor object respectively
 - **AND** derivative leaves agree with the same calculation on equivalent numeric inputs
+
+### Requirement: Mathematical procedure spellings alias existing exports
+
+`(malt learner)` SHALL export the Unicode aliases below as the same bindings as their ASCII counterparts. Existing ASCII names and numerical contracts SHALL remain supported. Unicode names SHALL support ordinary import selection, renaming, prefixing, and re-export.
+
+#### Scenario: Accessors and gradient procedures have book spellings
+
+- **WHEN** a caller imports `(malt learner)`
+- **THEN** `ρ`, `κ`, `∇`, `∇¹`, and `check-ρ-∇` denote `primal`, `backprop`, `gradient`, `gradient1`, and `check-primal-gradient` respectively
+- **AND** `ext1-ρ` and `ext2-ρ` denote `ext1-primal` and `ext2-primal`
+- **AND** `gradient-of` remains supported
+
+#### Scenario: Primal operations have equivalent spellings
+
+- **WHEN** a caller imports any Unicode name in this table
+- **THEN** it denotes the same binding as the corresponding ASCII name
+
+| Unicode | ASCII |
+|---|---|
+| `+-ρ` | `+-primal` |
+| `--ρ` | `--primal` |
+| `*-ρ` | `*-primal` |
+| `/-ρ` | `/-primal` |
+| `exp-ρ` | `exp-primal` |
+| `log-ρ` | `log-primal` |
+| `expt-ρ` | `expt-primal` |
+| `sqrt-ρ` | `sqrt-primal` |
+| `sqr-ρ` | `sqr-primal` |
+| `zeroes-ρ` | `zeroes-primal` |
+| `sum-ρ` | `sum-primal` |
+| `abs-ρ` | `abs-primal` |
+| `*-2-1-ρ` | `*-2-1-primal` |
+| `argmax-ρ` | `argmax-primal` |
+| `max-ρ` | `max-primal` |
+| `sum-cols-ρ` | `sum-cols-primal` |
+| `correlate-ρ` | `correlate-primal` |
+| `rectify-ρ` | `rectify-primal` |
+| `flatten-ρ` | `flatten-primal` |
+| `concat-ρ` | `concat-primal` |
+
+#### Scenario: Unsupported upstream placeholders stay excluded
+
+- **WHEN** a caller requests `ext1-∇` or `ext2-∇` from `(malt learner)`
+- **THEN** the import reports an unavailable export rather than advertising an unimplemented procedure
+
+### Requirement: Learner exports lambda syntax under its book spelling
+
+`(malt learner)` SHALL export `λ` as an alias of Scheme `lambda` syntax. It SHALL preserve lambda's binding identity, lexical scope, supported formal-argument forms, and behavior through prefixed and renamed imports.
+
+#### Scenario: Lambda syntax accepts ordinary and rest arguments
+
+- **WHEN** a caller evaluates `((λ (x) x) 7)`, `((λ args args) 1 2)`, and `((λ (x . xs) xs) 1 2 3)`
+- **THEN** the results are `7`, `(1 2)`, and `(2 3)` respectively
+
+#### Scenario: Prefixed syntax preserves lexical scope
+
+- **WHEN** a caller imports `(prefix (malt learner) m:)` alongside `(scheme base)` and evaluates `((m:λ (x) (let ((y x)) y)) 7)`
+- **THEN** the result is `7`
+- **AND** renaming or re-exporting the syntax preserves its binding identity
+
+### Requirement: Mathematical notation preserves execution fidelity
+
+Programs using the Unicode aliases SHALL produce equivalent results under source-driven compilation, `emit run`, `emit repl`, and standalone execution. Installed libraries SHALL expose the same aliases without requiring the upstream checkout or Racket.
+
+#### Scenario: Book-style differentiation works through every execution path
+
+- **WHEN** `(import (malt learner))` is followed by `(∇ (λ (x) (* x x)) 3.0)`
+- **THEN** each supported execution path produces `6.0`
+- **AND** a standalone executable runs without library sources at runtime
+
+#### Scenario: Notebook source reaches the same library
+
+- **WHEN** little-learning submits UTF-8 source `(∇ (λ (x) (* x x)) 3.0)` through its Emit adapter with requirement `(malt learner)`
+- **THEN** evaluation succeeds and returns `6.0` without source transliteration

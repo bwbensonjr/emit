@@ -48,6 +48,8 @@ cat > "$TMP/work/probe.scm" <<'SCM'
         (= draw ((random-source-make-integers source) 100000))
         (m:alpha) (m:revs)))
 SCM
+cp "$ROOT/test/malt-reference/notation.scm" "$TMP/work/notation.scm"
+cp -R "$ROOT/test/malt-reference/notation" "$TMP/work/notation"
 cd "$TMP/work"
 EMIT="$PREFIX/bin/emit"
 WANT='(6.0 #t 0.1 4)'
@@ -55,15 +57,22 @@ for mode in run repl build; do
   say "test installed learner -> $mode [unrelated directory, isolated cache]"
   export EMIT_CACHE="$TMP/cache-$mode"
   case "$mode" in
-    run) EMIT_VERBOSITY=verbose "$EMIT" run probe.scm > "$TMP/$mode.out" 2> "$TMP/$mode.err" ;;
-    repl) EMIT_VERBOSITY=verbose "$EMIT" repl < probe.scm > "$TMP/$mode.out" 2> "$TMP/$mode.err" ;;
+    run) "$EMIT" run -L . notation.scm > "$TMP/notation-run.out" 2> "$TMP/notation-run.err"
+      EMIT_VERBOSITY=verbose "$EMIT" run probe.scm > "$TMP/$mode.out" 2> "$TMP/$mode.err" ;;
+    repl) "$EMIT" repl -L . < notation.scm > "$TMP/notation-repl.out" 2> "$TMP/notation-repl.err"
+      EMIT_VERBOSITY=verbose "$EMIT" repl < probe.scm > "$TMP/$mode.out" 2> "$TMP/$mode.err" ;;
     build)
       EMIT_VERBOSITY=verbose "$EMIT" build probe.scm -o "$TMP/delivered/probe" > "$TMP/build.compile" 2> "$TMP/build.err"
+      "$EMIT" build -L . notation.scm -o "$TMP/delivered/notation" > "$TMP/notation-build.compile" 2> "$TMP/notation-build.err"
       mv "$PREFIX/share/emit" "$TMP/hidden-share"
       (cd "$TMP/delivered" && env -u EMIT_LIBRARY_PATH -u EMIT_MANIFEST \
         PATH=/usr/bin:/bin ./probe) > "$TMP/build.out"
+      (cd "$TMP/delivered" && env -u EMIT_LIBRARY_PATH -u EMIT_MANIFEST PATH=/usr/bin:/bin ./notation) > "$TMP/notation-build.out"
       mv "$TMP/hidden-share" "$PREFIX/share/emit" ;;
   esac
+  [ "$(awk 'NF {last=$0} END {print last}' "$TMP/notation-$mode.out")" = '(malt-notation 48)' ] || {
+    cat "$TMP/notation-$mode.out" "$TMP/notation-$mode.err" >&2; exit 1;
+  }
   got="$(awk 'NF {last=$0} END {print last}' "$TMP/$mode.out")"
   [ "$got" = "$WANT" ] || {
     cat "$TMP/$mode.out" "$TMP/$mode.err" >&2; exit 1;

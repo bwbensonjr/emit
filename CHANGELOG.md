@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.10.0
+
+- Expose Malt's book notation in `(malt learner)`, including `λ`, Greek AD
+  names, and Unicode primal-operation aliases, while retaining all ASCII names.
+
 ## 0.9.1
 
 - Reuse bounded outermost printer traversal storage, avoiding repeated graph

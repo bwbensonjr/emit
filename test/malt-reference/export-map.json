@@ -34,8 +34,22 @@
     "upstream_identifier": "*-2-1-\u03c1",
     "upstream_line": 45
   },
+  "*-2-1-\u03c1": {
+    "adaptation": "Unicode alias of *-2-1-primal; R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "*-2-1-\u03c1",
+    "upstream_line": 45
+  },
   "*-primal": {
     "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "*-\u03c1",
+    "upstream_line": 20
+  },
+  "*-\u03c1": {
+    "adaptation": "Unicode alias of *-primal; R7RS library adaptation",
     "group": "Primal operations",
     "upstream": "learner/ext-ops/J-nd-ops.rkt",
     "upstream_identifier": "*-\u03c1",
@@ -62,6 +76,13 @@
     "upstream_identifier": "+-\u03c1",
     "upstream_line": 21
   },
+  "+-\u03c1": {
+    "adaptation": "Unicode alias of +-primal; R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "+-\u03c1",
+    "upstream_line": 21
+  },
   "-": {
     "adaptation": "ASCII spelling and R7RS library adaptation",
     "group": "Differentiable operations",
@@ -83,6 +104,13 @@
     "upstream_identifier": "--\u03c1",
     "upstream_line": 22
   },
+  "--\u03c1": {
+    "adaptation": "Unicode alias of --primal; R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "--\u03c1",
+    "upstream_line": 22
+  },
   "/": {
     "adaptation": "ASCII spelling and R7RS library adaptation",
     "group": "Differentiable operations",
@@ -99,6 +127,13 @@
   },
   "/-primal": {
     "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "/-\u03c1",
+    "upstream_line": 23
+  },
+  "/-\u03c1": {
+    "adaptation": "Unicode alias of /-primal; R7RS library adaptation",
     "group": "Primal operations",
     "upstream": "learner/ext-ops/J-nd-ops.rkt",
     "upstream_identifier": "/-\u03c1",
@@ -195,6 +230,13 @@
     "upstream_identifier": "abs-\u03c1",
     "upstream_line": 28
   },
+  "abs-\u03c1": {
+    "adaptation": "Unicode alias of abs-primal; R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "abs-\u03c1",
+    "upstream_line": 28
+  },
   "accuracy": {
     "adaptation": "ASCII spelling and R7RS library adaptation",
     "group": "Layers and models",
@@ -232,6 +274,13 @@
   },
   "argmax-primal": {
     "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "argmax-\u03c1",
+    "upstream_line": 76
+  },
+  "argmax-\u03c1": {
+    "adaptation": "Unicode alias of argmax-primal; R7RS library adaptation",
     "group": "Primal operations",
     "upstream": "learner/ext-ops/J-nd-ops.rkt",
     "upstream_identifier": "argmax-\u03c1",
@@ -300,6 +349,13 @@
     "upstream_identifier": "check-\u03c1-\u2207",
     "upstream_line": 21
   },
+  "check-\u03c1-\u2207": {
+    "adaptation": "Unicode alias of check-primal-gradient; R7RS library adaptation",
+    "group": "Diagnostics",
+    "upstream": "learner/autodiff/D-test-helpers.rkt",
+    "upstream_identifier": "check-\u03c1-\u2207",
+    "upstream_line": 21
+  },
   "concat": {
     "adaptation": "ASCII spelling and R7RS library adaptation",
     "group": "Differentiable operations",
@@ -328,6 +384,13 @@
     "upstream_identifier": "concat-\u03c1",
     "upstream_line": 155
   },
+  "concat-\u03c1": {
+    "adaptation": "Unicode alias of concat-primal; R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "concat-\u03c1",
+    "upstream_line": 155
+  },
   "corr": {
     "adaptation": "ASCII spelling and R7RS library adaptation",
     "group": "Layers and models",
@@ -344,6 +407,13 @@
   },
   "correlate-primal": {
     "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "correlate-\u03c1",
+    "upstream_line": 134
+  },
+  "correlate-\u03c1": {
+    "adaptation": "Unicode alias of correlate-primal; R7RS library adaptation",
     "group": "Primal operations",
     "upstream": "learner/ext-ops/J-nd-ops.rkt",
     "upstream_identifier": "correlate-\u03c1",
@@ -438,6 +508,13 @@
     "upstream_identifier": "exp-\u03c1",
     "upstream_line": 26
   },
+  "exp-\u03c1": {
+    "adaptation": "Unicode alias of exp-primal; R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "exp-\u03c1",
+    "upstream_line": 26
+  },
   "expt": {
     "adaptation": "ASCII spelling and R7RS library adaptation",
     "group": "Differentiable operations",
@@ -459,6 +536,13 @@
     "upstream_identifier": "expt-\u03c1",
     "upstream_line": 24
   },
+  "expt-\u03c1": {
+    "adaptation": "Unicode alias of expt-primal; R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "expt-\u03c1",
+    "upstream_line": 24
+  },
   "ext1": {
     "adaptation": "ASCII spelling and R7RS library adaptation",
     "group": "Extension and AD",
@@ -473,6 +557,13 @@
     "upstream_identifier": "ext1",
     "upstream_line": 10
   },
+  "ext1-\u03c1": {
+    "adaptation": "Unicode export alias of ext1-primal; upstream learner facade also exports ext1-\u03c1",
+    "group": "Extension and AD",
+    "upstream": "learner/tensors/D-extend.rkt",
+    "upstream_identifier": "ext1",
+    "upstream_line": 10
+  },
   "ext2": {
     "adaptation": "ASCII spelling and R7RS library adaptation",
     "group": "Extension and AD",
@@ -482,6 +573,13 @@
   },
   "ext2-primal": {
     "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Extension and AD",
+    "upstream": "learner/tensors/D-extend.rkt",
+    "upstream_identifier": "ext2",
+    "upstream_line": 21
+  },
+  "ext2-\u03c1": {
+    "adaptation": "Unicode export alias of ext2-primal; upstream learner facade also exports ext2-\u03c1",
     "group": "Extension and AD",
     "upstream": "learner/tensors/D-extend.rkt",
     "upstream_identifier": "ext2",
@@ -503,6 +601,13 @@
   },
   "flatten-primal": {
     "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "flatten-\u03c1",
+    "upstream_line": 148
+  },
+  "flatten-\u03c1": {
+    "adaptation": "Unicode alias of flatten-primal; R7RS library adaptation",
     "group": "Primal operations",
     "upstream": "learner/ext-ops/J-nd-ops.rkt",
     "upstream_identifier": "flatten-\u03c1",
@@ -641,6 +746,13 @@
     "upstream_identifier": "log-\u03c1",
     "upstream_line": 27
   },
+  "log-\u03c1": {
+    "adaptation": "Unicode alias of log-primal; R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "log-\u03c1",
+    "upstream_line": 27
+  },
   "make-printable": {
     "adaptation": "ASCII spelling and R7RS library adaptation; distinct tensor/dual records and automatic custom writers",
     "group": "Diagnostics",
@@ -682,6 +794,13 @@
     "upstream": "learner/autodiff/E-print.rkt",
     "upstream_identifier": "max-tensor-print-length",
     "upstream_line": 6
+  },
+  "max-\u03c1": {
+    "adaptation": "Unicode alias of max-primal; R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "max-\u03c1",
+    "upstream_line": 83
   },
   "model": {
     "adaptation": "ASCII spelling and R7RS library adaptation",
@@ -790,6 +909,13 @@
   },
   "rectify-primal": {
     "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "rectify-\u03c1",
+    "upstream_line": 141
+  },
+  "rectify-\u03c1": {
+    "adaptation": "Unicode alias of rectify-primal; R7RS library adaptation",
     "group": "Primal operations",
     "upstream": "learner/ext-ops/J-nd-ops.rkt",
     "upstream_identifier": "rectify-\u03c1",
@@ -914,6 +1040,13 @@
     "upstream_identifier": "sqr-\u03c1",
     "upstream_line": 34
   },
+  "sqr-\u03c1": {
+    "adaptation": "Unicode alias of sqr-primal; R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "sqr-\u03c1",
+    "upstream_line": 34
+  },
   "sqrt": {
     "adaptation": "ASCII spelling and R7RS library adaptation",
     "group": "Differentiable operations",
@@ -930,6 +1063,13 @@
   },
   "sqrt-primal": {
     "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "sqrt-\u03c1",
+    "upstream_line": 30
+  },
+  "sqrt-\u03c1": {
+    "adaptation": "Unicode alias of sqrt-primal; R7RS library adaptation",
     "group": "Primal operations",
     "upstream": "learner/ext-ops/J-nd-ops.rkt",
     "upstream_identifier": "sqrt-\u03c1",
@@ -970,8 +1110,22 @@
     "upstream_identifier": "sum-cols-\u03c1",
     "upstream_line": 69
   },
+  "sum-cols-\u03c1": {
+    "adaptation": "Unicode alias of sum-cols-primal; R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "sum-cols-\u03c1",
+    "upstream_line": 69
+  },
   "sum-primal": {
     "adaptation": "ASCII spelling and R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "sum-\u03c1",
+    "upstream_line": 66
+  },
+  "sum-\u03c1": {
+    "adaptation": "Unicode alias of sum-primal; R7RS library adaptation",
     "group": "Primal operations",
     "upstream": "learner/ext-ops/J-nd-ops.rkt",
     "upstream_identifier": "sum-\u03c1",
@@ -1088,5 +1242,47 @@
     "upstream": "learner/ext-ops/J-nd-ops.rkt",
     "upstream_identifier": "zeroes-\u03c1",
     "upstream_line": 38
+  },
+  "zeroes-\u03c1": {
+    "adaptation": "Unicode alias of zeroes-primal; R7RS library adaptation",
+    "group": "Primal operations",
+    "upstream": "learner/ext-ops/J-nd-ops.rkt",
+    "upstream_identifier": "zeroes-\u03c1",
+    "upstream_line": 38
+  },
+  "\u03ba": {
+    "adaptation": "Unicode alias of backprop; R7RS library adaptation",
+    "group": "Extension and AD",
+    "upstream": "learner/tensors/0-duals.rkt",
+    "upstream_identifier": "\u03ba",
+    "upstream_line": 25
+  },
+  "\u03bb": {
+    "adaptation": "Unicode alias of Racket lambda syntax; R7RS library re-export",
+    "group": "Scheme syntax",
+    "upstream": "Racket base language",
+    "upstream_identifier": "lambda",
+    "upstream_line": null
+  },
+  "\u03c1": {
+    "adaptation": "Unicode alias of primal; R7RS library adaptation",
+    "group": "Extension and AD",
+    "upstream": "learner/tensors/0-duals.rkt",
+    "upstream_identifier": "\u03c1",
+    "upstream_line": 19
+  },
+  "\u2207": {
+    "adaptation": "Unicode alias of gradient; R7RS library adaptation",
+    "group": "Extension and AD",
+    "upstream": "learner/autodiff/A-autodiff.rkt",
+    "upstream_identifier": "\u2207",
+    "upstream_line": 9
+  },
+  "\u2207\u00b9": {
+    "adaptation": "Unicode alias of gradient1; R7RS library adaptation",
+    "group": "Extension and AD",
+    "upstream": "learner/autodiff/A-autodiff.rkt",
+    "upstream_identifier": "\u2207\u00b9",
+    "upstream_line": 14
   }
 }

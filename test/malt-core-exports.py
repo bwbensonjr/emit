@@ -57,6 +57,14 @@ def main():
                   f"unexpected={set(actual) - want}", file=sys.stderr)
             return 1
         total += len(actual)
+    facade = exports((ROOT / "lib/malt/learner.sld").read_text())
+    unicode_names = {name for name in facade if not name.isascii()}
+    expected_unicode = set("""λ ρ κ ∇ ∇¹ check-ρ-∇ ext1-ρ ext2-ρ
+        +-ρ --ρ *-ρ /-ρ exp-ρ log-ρ expt-ρ sqrt-ρ sqr-ρ zeroes-ρ
+        sum-ρ abs-ρ *-2-1-ρ argmax-ρ max-ρ sum-cols-ρ correlate-ρ
+        rectify-ρ flatten-ρ concat-ρ""".split())
+    assert unicode_names == expected_unicode, "Malt Unicode export inventory changed"
+    assert "ext1-∇" not in facade and "ext2-∇" not in facade
     print(f"malt core exports: 4 libraries, {total} bindings verified")
     return 0
 
