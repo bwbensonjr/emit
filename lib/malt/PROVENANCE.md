@@ -11,9 +11,17 @@ algorithms derive from `learner/tensors/`, `learner/autodiff/`, and
 `malted/O-init.rkt`; hyperparameters derive from `tools/A-hypers.rkt`.
 
 Adaptations replace Racket modules/iteration with R7RS libraries/recursion,
-Greek identifiers with ASCII names, immutable gradient tables with calculation-local
-mutable identity tables, and hyperparameter value/setter macros with Scheme
-parameters. Empty shapes represent scalars; public shape-sensitive operations
+and expose the original Greek identifiers alongside the retained ASCII
+spellings. Thus `ρ`, `κ`, `∇`, `∇¹`, and `check-ρ-∇` alias `primal`,
+`backprop`, `gradient`, `gradient1`, and `check-primal-gradient`. The primal
+operation names retain their `-primal` forms and also expose upstream's `-ρ`
+suffix; `ext1-ρ` and `ext2-ρ` alias the existing primal extension procedures,
+and `zeroes-ρ` aliases `zeroes-primal`. `λ` re-exports Scheme `lambda`
+syntax from `(scheme base)`, matching the spelling supplied by Racket's base
+language. These are aliases, preserving binding identity.
+Other adaptations include immutable gradient tables replaced with
+calculation-local mutable identity tables, and hyperparameter value/setter
+macros replaced with Scheme parameters. Empty shapes represent scalars; public shape-sensitive operations
 validate rectangular vectors and positive dimensions. Emit retains its bounded
 integers and real double numeric tower.
 

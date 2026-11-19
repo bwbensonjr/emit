@@ -21,11 +21,25 @@ operations:
 ;; 7.0
 ```
 
-The port uses ASCII names: `primal`, `backprop`, `gradient`, and `gradient1`
-replace upstream's Greek rho, kappa, nabla, and superscript-one nabla.
-`gradient-of` aliases `gradient`. The suffix `-primal` replaces upstream's
-hyphen-rho suffix. All supported exports are enumerated by the facade; there are
-no placeholder exports for upstream's unimplemented extension-gradient stubs.
+The facade keeps the ASCII names `primal`, `backprop`, `gradient`, and
+`gradient1`, and also exports their book spellings `ρ`, `κ`, `∇`, and `∇¹`.
+`gradient-of` remains supported. Primal operations likewise retain `-primal`
+exports and add the corresponding `-ρ` spellings. `ext1-ρ` and `ext2-ρ` alias
+`ext1-primal` and `ext2-primal`; `zeroes-ρ` aliases `zeroes-primal`, while the
+training utility `zeroes` keeps its existing meaning. The facade also exports
+`check-ρ-∇` as an alias of the `check-primal-gradient` diagnostic macro and
+`λ` as an alias of Scheme `lambda` syntax, matching Racket's spelling. These aliases preserve their
+original bindings. All supported exports are enumerated by the facade; there
+are no placeholder exports for upstream's unimplemented extension-gradient
+stubs.
+
+For example, the book notation works directly in Emit:
+
+```scheme
+(import (malt learner))
+(∇ (λ (x) (* x x)) 3.0)
+;; 6.0
+```
 
 In Emit, a fresh REPL or program can import the learner directly. Its arithmetic
 replaces overlapping implicit base defaults while unrelated defaults remain available:
