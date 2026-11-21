@@ -266,11 +266,12 @@ the SRFI 64 port.
 
 Seedable random sources are available through `(srfi 27)`; see
 [random sources](docs/RANDOM.md) for independent streams and state replay.
-The optional `(malt learner)` library provides nested-vector tensors, reverse-mode
-differentiation, layers, losses, initialization, and optimizers for small learning
-programs. See the [learner guide](docs/MALT.md) for arithmetic imports,
-hyperparameters, and a seeded XOR example. Both libraries use the same explicit
-imports in `emit run`, `emit repl`, and standalone builds.
+Libraries that are not part of Emit itself live in the
+[emit-packages](https://github.com/bwbensonjr/emit-packages) collection, installed by adding its `lib/` directory as a
+library root (for example through `EMIT_LIBRARY_PATH`). Its first package is
+`(malt learner)`: nested-vector tensors, reverse-mode differentiation, layers,
+losses, initialization, and optimizers from *The Little Learner*, which shipped
+with Emit from 0.7.0 through 0.10.0.
 
 ## Compiler transformations
 

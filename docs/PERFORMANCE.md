@@ -2488,7 +2488,11 @@ tensor traversal and renderer-retention optimization remain unscheduled. The
 original measurements below come from the combined custom-writer and tensor-object
 implementation.
 
-The 2026-11-17 comparison in [Malt measurements](MALT-MEASUREMENTS.md) holds the
+Malt moved to the [emit-packages](https://github.com/bwbensonjr/emit-packages) collection after these measurements; its
+library paths below are now under that repository's `lib/`, and the measurement
+notes are in its `packages/malt/docs/MALT-MEASUREMENTS.md`.
+
+The 2026-11-17 comparison in Malt's measurement notes holds the
 original 95-assertion core workload fixed: its executable grows from 210,136 to
 228,248 bytes, an 18,112-byte (8.6%) increase. The seeded XOR workload grows from
 172,432 to 174,688 bytes (1.3%), with median process CPU increasing from 0.844447

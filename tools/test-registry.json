@@ -2575,11 +2575,11 @@
       "legacy": []
     },
     {
-      "id": "malt-core",
-      "label": "Malt tensor and automatic differentiation native acceptance",
+      "id": "emit-packages-pinned",
+      "label": "Pinned emit-packages checks: run, REPL, standalone, and published artifacts",
       "command": [
         "bash",
-        "test/malt-core-tests.sh"
+        "test/emit-packages-tests.sh"
       ],
       "profiles": [
         "full"
@@ -2590,17 +2590,19 @@
       "isolation": "workspace",
       "chez": false,
       "coverage": [
-        "malt-core"
+        "malt-core",
+        "malt-training",
+        "malt-xor"
       ],
       "legacy": []
     },
     {
-      "id": "malt-core-source",
-      "label": "Malt core source-driven acceptance",
+      "id": "emit-packages-pinned-source",
+      "label": "Pinned emit-packages checks through the Chez source driver",
       "command": [
         "bash",
-        "test/malt-core-tests.sh",
-        "--reference"
+        "test/emit-packages-tests.sh",
+        "--source"
       ],
       "profiles": [
         "reference"
@@ -2611,16 +2613,18 @@
       "isolation": "workspace",
       "chez": true,
       "coverage": [
-        "malt-core-source"
+        "malt-core-source",
+        "malt-training-source",
+        "malt-xor-source"
       ],
       "legacy": []
     },
     {
-      "id": "malt-installed",
-      "label": "Installed Malt and random source closure",
+      "id": "srfi-27-install",
+      "label": "Installed SRFI 27 source closure",
       "command": [
         "bash",
-        "test/malt-install-tests.sh"
+        "test/srfi-27-install-tests.sh"
       ],
       "profiles": [
         "full"
@@ -2632,88 +2636,6 @@
       "chez": false,
       "coverage": [
         "malt-installed"
-      ],
-      "legacy": []
-    },
-    {
-      "id": "malt-training",
-      "label": "Malt training, parameters and diagnostics",
-      "command": [
-        "bash",
-        "test/malt-training-tests.sh"
-      ],
-      "profiles": [
-        "full"
-      ],
-      "categories": [
-        "library"
-      ],
-      "isolation": "workspace",
-      "chez": false,
-      "coverage": [
-        "malt-training"
-      ],
-      "legacy": []
-    },
-    {
-      "id": "malt-training-source",
-      "label": "Malt training source-driven acceptance",
-      "command": [
-        "bash",
-        "test/malt-training-tests.sh",
-        "--source"
-      ],
-      "profiles": [
-        "reference"
-      ],
-      "categories": [
-        "library"
-      ],
-      "isolation": "workspace",
-      "chez": true,
-      "coverage": [
-        "malt-training-source"
-      ],
-      "legacy": []
-    },
-    {
-      "id": "malt-xor",
-      "label": "Seeded Malt XOR standalone fidelity",
-      "command": [
-        "bash",
-        "test/malt-xor-tests.sh"
-      ],
-      "profiles": [
-        "full"
-      ],
-      "categories": [
-        "library"
-      ],
-      "isolation": "workspace",
-      "chez": false,
-      "coverage": [
-        "malt-xor"
-      ],
-      "legacy": []
-    },
-    {
-      "id": "malt-xor-source",
-      "label": "Seeded Malt XOR source-driven acceptance",
-      "command": [
-        "bash",
-        "test/malt-xor-tests.sh",
-        "--source"
-      ],
-      "profiles": [
-        "reference"
-      ],
-      "categories": [
-        "library"
-      ],
-      "isolation": "workspace",
-      "chez": true,
-      "coverage": [
-        "malt-xor-source"
       ],
       "legacy": []
     },

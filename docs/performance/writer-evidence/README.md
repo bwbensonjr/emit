@@ -6,6 +6,11 @@ and every field in their 930 samples, including calibration, warm-up, stderr,
 output digests, process and in-process metrics, collector counters, and sample
 order. It contains no executable or full generated module.
 
+The evidence predates Malt's move to the
+[emit-packages](https://github.com/bwbensonjr/emit-packages) collection. Paths such
+as `lib/malt/...`, `test/malt-core.scm`, and `demos/malt-xor.scm` in these files
+name the Emit tree at the measured commits; that code now lives in the collection.
+
 ## Decode and verify
 
 From the repository root:

@@ -84,7 +84,7 @@ Nested writes to the same or different ports SHALL NOT corrupt outer graph label
 
 ### Requirement: Custom writers survive separate compilation
 
-Writers SHALL be ordinary Scheme closures able to capture library state. Source-driven compilation, whole-library artifacts, cached native libraries, JIT forms, and standalone linking SHALL retain equivalent registration and callback behavior. Programs that do not import Malt SHALL NOT require Malt code or Malt-specific runtime recognition.
+Writers SHALL be ordinary Scheme closures able to capture library state. Source-driven compilation, whole-library artifacts, cached native libraries, JIT forms, and standalone linking SHALL retain equivalent registration and callback behavior. Programs that do not import a writer-registering library SHALL NOT require that library's code or any library-specific runtime recognition.
 
 #### Scenario: A compiled library owns its writer
 

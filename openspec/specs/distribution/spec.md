@@ -574,22 +574,37 @@ credential can perform every operation it needs before building.
 - **WHEN** both repositories enforce their required checks with no bypass actor and allow automatic merge
 - **THEN** the policy check succeeds and reports each setting it verified
 
-### Requirement: Malt and random library sources ship with their source closure
+### Requirement: Random library sources ship with their source closure
 
-Installation SHALL include `(malt learner)`, its internal libraries and includes, and SRFI 27's complete source and license closure. They SHALL remain optional ordinary libraries with project-provider precedence. Substantial adapted third-party code SHALL retain pinned provenance and attribution. Installation SHALL NOT require the upstream Malt checkout, Racket, network access, tests, or precompiled library artifacts.
+Installation SHALL include SRFI 27's complete source and license closure as an optional ordinary library with project-provider precedence. Its adapted third-party code SHALL retain pinned provenance and attribution. Installation SHALL NOT require network access, tests, or precompiled library artifacts.
 
-#### Scenario: Installed learner works outside its checkout
+#### Scenario: Installed SRFI 27 works outside its checkout
 
 - **WHEN** a staged installation is exercised from an unrelated directory with the source checkout unavailable and an empty private cache
-- **THEN** learner and SRFI 27 imports resolve, run/REPL/build checks pass, and all needed source and license files come from the installation
+- **THEN** SRFI 27 imports resolve, run/REPL/build checks pass, and all needed source and license files come from the installation
 
-#### Scenario: No learner import has no learner payload
+#### Scenario: No SRFI 27 import has no PRNG payload
 
-- **WHEN** a program does not import Malt or SRFI 27 directly or transitively
-- **THEN** those library units are not compiled, initialized, or linked
-- **AND** a no-import executable has no learner/PRNG/entropy symbols retained solely because those sources ship
+- **WHEN** a program does not import SRFI 27 directly or transitively
+- **THEN** its library units are not compiled, initialized, or linked
+- **AND** a no-import executable has no PRNG or entropy symbols retained solely because those sources ship
 
 #### Scenario: Installation is complete and repeatable
 
 - **WHEN** the same payload is staged twice
 - **THEN** its source and notice files are identical, contain no references requiring external checkout paths, and import correctly without test fixtures
+
+### Requirement: The installed payload carries no package-collection libraries
+
+Installation SHALL NOT include `(malt learner)`, its internal libraries, or its license and provenance files. A library provided by the external package collection SHALL resolve from an installed Emit only through a library root the user supplies.
+
+#### Scenario: An installed Emit does not resolve Malt by itself
+
+- **WHEN** a program importing `(malt learner)` is run against a staged installation from an unrelated directory with no manifest, no `-L` root, no `EMIT_LIBRARY_PATH`, and no project `lib/`
+- **THEN** compilation fails with the resolver's unresolved-library diagnostic naming `(malt learner)`
+- **AND** the staged payload contains no file under a `malt/` library directory
+
+#### Scenario: A supplied collection root resolves Malt
+
+- **WHEN** the same program is run against the same installation with the package collection's `lib/` directory in `EMIT_LIBRARY_PATH`
+- **THEN** `(malt learner)` resolves from that root and the program completes
