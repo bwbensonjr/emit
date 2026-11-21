@@ -63,13 +63,20 @@ the checkout that the sandbox hides.
 
 `.github/workflows/release.yml` handles `v*` tags. Classified release/packaging/
 installation infrastructure PRs rehearse source packaging and both offline
-archive builds in the shared compatibility workflow before any tag exists.
-Documentation-only PRs provision no toolchain. A manual release dispatch rehearses the complete gate
-without publishing. For the exact release commit it:
+archive builds in the shared compatibility workflow before any tag exists. A pull
+request that changes `VERSION` is validated as its tag will be: all four full
+cells, complete reference verification, source and units, and both offline
+archives, so a release-only failure blocks the merge rather than the tag.
+Documentation-only PRs provision no toolchain, and neither do PRs that change
+only channel recipes (`packaging/**`, `flake.nix`, `flake.lock`), whose proof is
+the [channel rehearsal](#distribution-channels). A manual release dispatch
+rehearses the complete gate without publishing. For the exact release commit it:
 
 1. Requires full native regression in all four Linux/macOS and LLVM 22/23 cells,
    plus one canonical Chez-free source/bootstrap consistency proof and one
-   complete independent-host reference proof (with direct source units).
+   complete independent-host reference proof (with direct source units). These
+   run for the tag unless its tree was already validated in `full` mode; see
+   [validation reuse](#validation-reuse-by-tree).
 2. Rejects tag/version/changelog mismatches and packages once, comparing a
    second local package for determinism.
 3. Transfers that archive and checksums to Linux and macOS archive validators.
@@ -84,8 +91,9 @@ does not retain credentials. Publication jobs for one tag are serialized.
 
 A failed native, source, reference, identity, archive, or missing-result gate
 leaves no public release. The final required-check aggregate rejects unexpected
-skips and cancellation. Every tag tests its actual committed source even if its
-parent already passed. Shared candidate toolchains are prepared once per tuple
+skips and cancellation. Every tag is validated for its exact tree, by its own
+jobs or by a named earlier run of that identical tree; a passing parent never
+counts. Shared candidate toolchains are prepared once per tuple
 and consumed by native/reference/archive jobs after validation; they are not
 reused correctness results. Trusted default-branch toolchain bundles and exact
 source fallback are documented in [toolchain CI](TOOLCHAIN.md).
@@ -102,6 +110,50 @@ version and changelog section. Before publication, fixes require a fresh
 validated release commit. Record the resulting release URL and checksum in the
 implementation handoff after successful publication; `tools/release-handoff.sh follow`
 reports both ([release lifecycle](RELEASES.md#release-lifecycle)).
+
+## Validation reuse by tree
+
+A push to `main` and a release tag run the compatibility workflow on a tree that a
+pull request usually validated already. The `policy` job records the tree it
+tests (`git rev-parse 'HEAD^{tree}'`) and the commit in `plan.json`, and
+`tools/ci-reuse.py` then looks for an executed run that satisfies the plan
+(change: reuse-validation-by-tree). A candidate is accepted only when all of
+these hold:
+
+- it is a `Source compatibility` run of a same-repository (not fork) pull request
+  associated with the commit, and its `Required validation` job succeeded;
+- its `validation-plan` artifact records the **identical tree**. A pull-request
+  run tests GitHub's merge commit, so this is the tree its jobs actually built;
+- it executed its own jobs: a plan that itself reused another run is never a
+  source;
+- its plan covers the current one: every required gate, every reference suite,
+  and `full` mode when the current plan is `full`, as a tag's always is;
+- neither plan changes an input of trusted dependency preparation (the `toolchain`
+  flag), since such a run may have used a candidate-built toolchain.
+
+A reusing run skips `native` and `verification`. A tag still runs `prepare`,
+`package`, and both offline `archive` builds, and publishes the bytes it packaged
+itself. Any other outcome executes the jobs exactly as before: a different tree
+because `main` moved after the pull request ran, an expired artifact, or an API
+error. The decision is narrated in the policy log, recorded under `reused` in the
+uploaded plan, and repeated by the aggregate check:
+
+```
+ci: required gates satisfied by reuse  [run https://github.com/bwbensonjr/emit/actions/runs/N; sha 1a2b3c4d5e6f; tree 0f9e8d7c6b5a; mode full]
+```
+
+| Event | Plan | Executes |
+| --- | --- | --- |
+| Pull request, documentation only | lightweight | policy checks only |
+| Pull request, channel recipes only | lightweight | policy checks; the channel rehearsal is the proof |
+| Pull request, code | normal | four cells (LLVM 23 `full`, LLVM 22 `compat`), classified proofs |
+| Pull request changing `VERSION` | full | four `full` cells, source, units, complete reference, both archives |
+| Push to `main` | normal | nothing beyond policy when a pull-request run of the same tree covers it; otherwise as a code PR |
+| `v*` tag | full | packaging and both archives; the matrix and verification only when no `full` run of the same tree exists |
+| Weekly, manual dispatch | full | everything; never reused |
+
+`tools/ci-reuse.py --dry-run --event push --sha SHA` shows the decision locally
+with `gh`, using a plan approximated from the commit's first-parent diff.
 
 ## Automatic release tagging
 

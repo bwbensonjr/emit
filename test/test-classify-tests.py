@@ -3,6 +3,7 @@
 
 import importlib.util
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 import unittest
@@ -62,6 +63,12 @@ class ClassifierTests(unittest.TestCase):
             self.assertTrue(result["channels"], path)
             self.assertFalse(result["source"] or result["units"] or result["archive"], path)
             self.assertFalse(result["docs_only"], path)
+            # change: reuse-validation-by-tree, design D7.
+            self.assertFalse(result["code"], path)
+        mixed = policy.classify_paths(["packaging/release.json", "docs/RELEASES.md"])
+        self.assertFalse(mixed["code"] or mixed["docs_only"])
+        for other in ("src/emit.cpp", "tools/channel-promote.sh", "lib/srfi/1.sld", "surprise"):
+            self.assertTrue(policy.classify_paths(["packaging/release.json", other])["code"], other)
         for path in ("tools/channel-accept.sh", "tools/channel-identity.sh", "tools/offline-run.sh",
                      "test/channel-accept/smoke.scm", ".github/workflows/channels.yml"):
             self.assertTrue(policy.classify_paths([path])["channels"], path)
@@ -70,6 +77,20 @@ class ClassifierTests(unittest.TestCase):
             self.assertFalse(policy.classify_paths([path])["channels"], path)
         self.assertTrue(policy.classify_paths(["surprise"])["channels"])
         self.assertTrue(policy.classify_paths([], error="missing history")["channels"])
+
+    def test_toolchain_inputs_match_dependency_preparation(self):
+        # change: reuse-validation-by-tree, design D6.
+        workflow = (ROOT / ".github/workflows/dependency-preparation.yml").read_text()
+        match = re.search(r"^    paths: \[(.*)\]$", workflow, re.M)
+        self.assertIsNotNone(match, "dependency-preparation.yml has no one-line paths list")
+        declared = {item.strip().strip("'\"") for item in match.group(1).split(",")}
+        self.assertEqual(declared, policy.TOOLCHAIN_NAMES)
+        for path in sorted(declared):
+            self.assertTrue(policy.classify_paths([path])["toolchain"], path)
+        for path in ("tools/ci-check.sh", "src/emit.cpp", "packaging/release.json", "VERSION"):
+            self.assertFalse(policy.classify_paths([path])["toolchain"], path)
+        self.assertFalse(policy.classify_paths(["surprise"])["toolchain"])
+        self.assertTrue(policy.classify_paths([], error="missing history")["toolchain"])
 
     def test_allowlist_exceptions_and_missing_history(self):
         for path in ("README.md", "docs/DISTRIBUTION.md", "openspec/specs/a/spec.md",

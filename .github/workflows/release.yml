@@ -6,6 +6,8 @@ on:
 permissions:
   contents: read
   actions: read
+  # Granted to the called validation workflow's reuse lookup (tools/ci-reuse.py).
+  pull-requests: read
 concurrency:
   group: source-release-${{ github.ref }}
   cancel-in-progress: false

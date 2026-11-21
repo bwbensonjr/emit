@@ -17,6 +17,8 @@ on:
 permissions:
   contents: read
   actions: read
+  # Reuse lookup: pull requests associated with a pushed or tagged commit (tools/ci-reuse.py).
+  pull-requests: read
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -32,6 +34,7 @@ jobs:
       archive: ${{ steps.policy.outputs.archive }}
       mode: ${{ steps.policy.outputs.mode }}
       reference_full: ${{ steps.policy.outputs.reference_full }}
+      execute: ${{ steps.policy.outputs.execute }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -44,6 +47,7 @@ jobs:
           EVENT: ${{ github.ref_type == 'tag' && 'tag' || github.event_name }}
           FORCE_FULL: ${{ inputs.full || false }}
           REHEARSAL: ${{ inputs.rehearsal || false }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           arguments=()
           [ "$EVENT" != push ] || arguments+=(--direct)
@@ -51,10 +55,16 @@ jobs:
           options=()
           [ "$FORCE_FULL" != true ] || options+=(--full)
           [ "$REHEARSAL" != true ] || options+=(--rehearsal)
-          plan=$(python3 tools/ci-policy.py plan --classification "$(cat "$RUNNER_TEMP/classification.json")" --event "$EVENT" "${options[@]}")
+          # Record the tree this run tests: every job checks out the same commit, and a later run
+          # of the identical tree may reuse this result (change: reuse-validation-by-tree, D1).
+          plan=$(python3 tools/ci-policy.py plan --classification "$(cat "$RUNNER_TEMP/classification.json")" --event "$EVENT" \
+            --tree "$(git rev-parse 'HEAD^{tree}')" --sha "$(git rev-parse HEAD)" "${options[@]}")
+          # A push to main or a release tag may be satisfied by an executed pull-request run of the
+          # same tree; any other event, or any doubt, leaves the plan to execute (D2).
+          plan=$(tools/ci-reuse.py --event "$EVENT" --sha "$(git rev-parse HEAD)" --plan "$plan")
           printf '%s\n' "$plan" | tee "$RUNNER_TEMP/plan.json"
           printf 'plan=%s\n' "$plan" >> "$GITHUB_OUTPUT"
-          for key in code source units verification archive mode reference_full; do
+          for key in code source units verification archive mode reference_full execute; do
             printf '%s=%s\n' "$key" "$(jq -r ".$key" <<< "$plan")" >> "$GITHUB_OUTPUT"
           done
       # A pull request that changes VERSION must name an untagged version past every release tag
@@ -71,6 +81,7 @@ jobs:
       - name: Lightweight policy and transport regression checks
         run: |
           python3 test/ci-policy-tests.py
+          python3 test/ci-reuse-tests.py
           bash test/release-tag-tests.sh
           bash test/repo-policy-tests.sh
           bash test/channel-merge-tests.sh
@@ -100,11 +111,12 @@ jobs:
 
   prepare:
     needs: policy
-    if: needs.policy.outputs.code == 'true'
+    # A reused result still packages and offline-builds a tag's archive, which needs a toolchain (D5).
+    if: (needs.policy.outputs.code == 'true' && needs.policy.outputs.execute == 'true') || needs.policy.outputs.archive == 'true'
     uses: ./.github/workflows/prepare-toolchains.yml
   native:
     needs: [policy, prepare]
-    if: needs.policy.outputs.code == 'true'
+    if: needs.policy.outputs.code == 'true' && needs.policy.outputs.execute == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 360
     strategy:
@@ -160,7 +172,7 @@ jobs:
 
   verification:
     needs: [policy, prepare]
-    if: needs.policy.outputs.verification == 'true'
+    if: needs.policy.outputs.verification == 'true' && needs.policy.outputs.execute == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     steps:
