@@ -73,7 +73,7 @@ A release tag's matrix, source, and reference gates SHALL be satisfied either by
 
 #### Scenario: A tag reuses its release pull request's validation
 
-- **WHEN** the tagged commit's tree is identical to the head tree of a pull request whose `full`-mode validation succeeded
+- **WHEN** the tagged commit's tree is identical to the tree that a pull request's successful `full`-mode validation tested
 - **THEN** the tag run reuses that matrix, source, and reference result, names it, and still packages the archive and runs both offline archive builds before publishing
 
 #### Scenario: A tag without an eligible result is validated in full

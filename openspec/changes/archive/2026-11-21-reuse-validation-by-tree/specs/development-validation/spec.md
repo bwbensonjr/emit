@@ -36,16 +36,16 @@ Validation SHALL classify documentation, native-host, runtime, compiler-source, 
 
 ### Requirement: An executed result can satisfy an identical tree
 
-A validation run SHALL be satisfied by an earlier run, instead of executing its native, source, unit, and reference jobs, only when the earlier run is a successful same-repository pull-request run that executed those jobs itself, its head tree is identical to the tree being validated, and its recorded plan covers every gate the current plan requires. Otherwise the run SHALL execute its jobs.
+A validation run SHALL be satisfied by an earlier run, instead of executing its native, source, unit, and reference jobs, only when the earlier run is a successful same-repository pull-request run that executed those jobs itself, the tree it tested is identical to the tree being validated, and its recorded plan covers every gate the current plan requires. Otherwise the run SHALL execute its jobs.
 
 #### Scenario: A merge commit with the pull request's tree is not re-tested
 
-- **WHEN** a push to `main` creates a merge commit whose tree is identical to the head tree of its pull request, and that pull request's required validation succeeded
+- **WHEN** a push to `main` creates a merge commit whose tree is identical to the tree its pull request's last run tested, and that run's required validation succeeded
 - **THEN** the push run reuses that result and provisions no toolchain
 
 #### Scenario: A different tree is validated in full
 
-- **WHEN** `main` moved after the pull request's last run, so the merge commit's tree differs from the validated head tree
+- **WHEN** `main` moved after the pull request's last run, so the merge commit's tree differs from the tree that run tested
 - **THEN** the push run executes its required jobs exactly as it would without reuse
 
 #### Scenario: Insufficient coverage is not reused
