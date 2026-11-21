@@ -25,7 +25,7 @@
 
 ## 5. Integration validation
 
-- [ ] 5.1 Open this change's pull request and confirm its `policy` job records `tree` in the uploaded plan and that `Required validation` succeeds. Then run `tools/ci-reuse.py --dry-run --event push --sha <PR merge ref>` locally and confirm it selects that run as eligible.
+- [x] 5.1 Open this change's pull request and confirm its `policy` job records `tree` in the uploaded plan and that `Required validation` succeeds. Then run `tools/ci-reuse.py --dry-run --event push --sha <PR merge ref>` locally and confirm it selects that run as eligible.
 - [x] 5.2 Confirm `bash tools/test.sh --classify` on the change's diff selects no compiler regeneration (no assembled compiler input changes) and that `make format-check` is clean or skipped (no covered Scheme sources change).
 
 ## Workflow follow-up
