@@ -17,6 +17,12 @@ identities and retire their object/destination links.
 
 ## Reproduction and provenance
 
+Malt moved to the [emit-packages](https://github.com/bwbensonjr/emit-packages) collection after this
+evidence was recorded. The builder now takes the Malt core and XOR fixtures from the pinned
+collection (`tools/emit-packages-pin.sh`, fetched into `build/emit-packages/`), so a rebuild records
+different fixture paths and hashes than the archived evidence; the XOR fixture's final output lines
+also changed when it became a collection check.
+
 From a checkout containing this change:
 
 ```sh

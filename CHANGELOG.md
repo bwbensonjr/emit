@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.0
+
+- **Breaking:** `(malt learner)` no longer ships with Emit. It moved to the
+  [emit-packages](https://github.com/bwbensonjr/emit-packages) collection, which
+  carries its history, tests, and documentation. To keep using it, clone the
+  collection and add its `lib/` directory as a library root:
+  `EMIT_LIBRARY_PATH=/path/to/emit-packages/lib`. Imports are unchanged.
+- Validate a pinned commit of the emit-packages collection in the full and
+  reference profiles, through `emit run`, `emit repl`, standalone builds,
+  published artifacts, and the Chez source driver. The pin is in
+  `tools/emit-packages-pin.sh`; see `docs/DEVELOPMENT.md`.
+- Check the installed SRFI 27 source closure in its own suite, including that
+  the installed payload no longer carries Malt.
+
 ## 0.10.0
 
 - Expose Malt's book notation in `(malt learner)`, including `λ`, Greek AD

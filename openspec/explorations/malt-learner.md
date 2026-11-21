@@ -1,6 +1,8 @@
 # Malt learner port to Emit
 
-Status: exploration and handoff for a change proposal.
+Status: implemented in Emit 0.7.0; moved to the
+[emit-packages](https://github.com/bwbensonjr/emit-packages) collection by the
+`move-malt-to-emit-packages` change (see `emit-packages-registry.md`).
 Captured: 2026-11-15. Emit checkout: `6ee5c79`; Malt checkout: `92a3e63`.
 
 Implement an R7RS library named `(malt learner)` supporting the tensor and

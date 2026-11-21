@@ -3,6 +3,7 @@
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -14,6 +15,21 @@ import sys
 import time
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def pinned_collection():
+    """Return the pinned emit-packages checkout, which now holds the Malt fixtures.
+
+    Malt moved out of Emit into bwbensonjr/emit-packages after the 2026-11-17
+    writer evidence was recorded. tools/emit-packages.py owns the pin, the cache,
+    and the fetch, so this reuses it rather than resolving the collection twice.
+    """
+    spec = importlib.util.spec_from_file_location("emit_packages", ROOT / "tools" / "emit-packages.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    commit, origin = module.read_pin()
+    directory, _ = module.obtain_collection(commit, origin)
+    return directory
 
 
 def note(message):
@@ -141,7 +157,14 @@ def main():
     if not args.skip_scheme:
         if not shutil.which("chez"):
             raise RuntimeError("Chez is required to reconstruct emitted program/library IR; use --skip-scheme for harness-only work")
-        for name, fixture_path in [("adapter", "test/performance/writer-adapter.scm"), ("scheme-repeat", "test/performance/writer-repeat.scm"), ("malt-core", "test/malt-core.scm"), ("malt-xor", "demos/malt-xor.scm")]:
+        collection = pinned_collection()
+        malt = collection / "packages" / "malt"
+        package_roots = ["-L", str(collection / "lib"), "-L", str(malt / "tests")]
+        fixtures = [("adapter", "test/performance/writer-adapter.scm", []),
+                    ("scheme-repeat", "test/performance/writer-repeat.scm", []),
+                    ("malt-core", str(malt / "tests" / "core.scm"), package_roots),
+                    ("malt-xor", str(malt / "tests" / "xor.scm"), package_roots)]
+        for name, fixture_path, extra_roots in fixtures:
             stem = out / (name + "-source")
             # Imports can shrink between invocations. Never link stale units
             # retained by a previous compilation under this builder-owned stem.
@@ -149,7 +172,7 @@ def main():
                 note(f"remove prior generated unit -> {stale}")
                 stale.unlink()
             compile_args = ["chez", "--libdirs", "src", "--script", "src/compile.ss", fixture_path,
-                "--no-manifest-chain", "--manifest", "emit-libs.scm", "-L", "lib", "-o", str(stem)]
+                "--no-manifest-chain", "--manifest", "emit-libs.scm", *extra_roots, "-L", "lib", "-o", str(stem)]
             if name == "adapter":
                 compile_args.append("--dump")
             command(compile_args, code / (name + "-compile.log"), env, merge_stderr=True)

@@ -17,7 +17,7 @@ exercise the selected numeric contract and native command behavior.
 
 `reference.py` independently implements the recurrence and full matrix powers
 using Python arbitrary-precision integers, not the bounded 16-bit-limb Scheme
-arithmetic. Its `RandomSource` class is also the oracle for Malt's seeded XOR
+arithmetic. Its `RandomSource` class is also the oracle, vendored by the emit-packages collection, for Malt's seeded XOR
 fixture. Run `python3 test/random-sources/reference.py` to regenerate JSON and
 Scheme known answers; run it with `--check` to verify them. Fixtures cover the
 initial state, independent stream/substream jumps, `(17,3)`, maximum Emit

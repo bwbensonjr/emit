@@ -175,10 +175,10 @@ External portable packages can still be supplied with `-L /path/to/packages`.
 
 `(srfi 27)` provides explicit random sources and readable state snapshots; its
 MRG32k3a implementation and supported numeric limits are described in
-[`RANDOM.md`](RANDOM.md). `(malt learner)` composes ordinary internal libraries
-for tensors, automatic differentiation, and training. Its arithmetic is imported
-explicitly, usually with a prefix; see [`MALT.md`](MALT.md). Neither library is
-baked into `(scheme base)` or loaded merely because its source is installed.
+[`RANDOM.md`](RANDOM.md). It is not baked into `(scheme base)` or loaded merely
+because its source is installed. Libraries outside Emit itself, such as
+`(malt learner)`, live in the [emit-packages](https://github.com/bwbensonjr/emit-packages) collection, whose `lib/` is an
+ordinary library root.
 
 | Library | Pinned version | Upstream package assertions |
 |---|---|---|

@@ -27,9 +27,11 @@ class CoverageTests(unittest.TestCase):
             self.assertEqual(len(labels), count)
             self.assertEqual(hashlib.sha256("\n".join(labels).encode()).hexdigest(), digest)
         # New suites extend profiles without changing the historical label pins.
-        # Malt, random sources, custom writers, and performance resource checks extend the full profile;
-        # historical label ownership above remains unchanged.
-        self.assertEqual(len([s for s in suites if "full" in s["profiles"]]), 68)
+        # Pinned emit-packages, random sources, custom writers, and performance resource checks
+        # extend the full profile; historical label ownership above remains unchanged. The four
+        # full-profile Malt suites became emit-packages-pinned and srfi-27-install when Malt moved
+        # to the emit-packages collection.
+        self.assertEqual(len([s for s in suites if "full" in s["profiles"]]), 66)
         additions = {
             "source-load-interaction-host": {"dev", "full", "reference"},
             "stdlib-precompilation": {"full"},
@@ -41,13 +43,9 @@ class CoverageTests(unittest.TestCase):
             "random-entropy": {"full"},
             "srfi-27": {"full"},
             "srfi-27-source": {"reference"},
-            "malt-core": {"full"},
-            "malt-core-source": {"reference"},
-            "malt-installed": {"full"},
-            "malt-training": {"full"},
-            "malt-training-source": {"reference"},
-            "malt-xor": {"full"},
-            "malt-xor-source": {"reference"},
+            "emit-packages-pinned": {"full"},
+            "emit-packages-pinned-source": {"reference"},
+            "srfi-27-install": {"full"},
             "custom-writers": {"full"},
             "custom-writers-source": {"reference"},
             "performance-measurement-runner": {"full"},

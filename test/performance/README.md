@@ -26,7 +26,8 @@ and final disassembly together, run:
 python3 tools/writer-performance-build.py --output build/writer-performance
 ```
 
-This requires Chez for source-driver IR capture; `--skip-scheme` builds only the
+The Malt fixtures come from the pinned emit-packages collection, which the builder
+fetches on first use. This requires Chez for source-driver IR capture; `--skip-scheme` builds only the
 runtime harness evidence. The builder uses the discovered LLVM clang consistently
 for both runtime versions. It also constructs a separate mode-symbol-cache
 experiment without editing the production runtime. Outputs use `bench-released`,

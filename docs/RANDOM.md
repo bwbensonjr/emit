@@ -41,7 +41,8 @@ The complete API is:
 
 Do not assign another object to `default-random-source`: the two default
 procedures retain the original source. Use explicit source generators for
-isolation, or Malt's `current-random-source` parameter for scoped learning.
+isolation, or a library parameter such as `current-random-source` in the
+[emit-packages](https://github.com/bwbensonjr/emit-packages) `(malt learner)` package for scoped learning.
 
 Bounds cover `1` through `1152921504606846975` (`2^60-1`), the positive exact
 integer range of Emit. Inexact bounds, negative indices, invalid source objects,

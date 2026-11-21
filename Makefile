@@ -317,13 +317,12 @@ install-hooks:
 # Executable bit for the script, 644 for the sources it does not run.
 BINDIR   := $(DESTDIR)$(PREFIX)/bin
 SHAREDIR := $(DESTDIR)$(PREFIX)/share/emit
-LIBDIRS  := lib/scheme lib/emit lib/srfi lib/malt lib/malt/learner
+LIBDIRS  := lib/scheme lib/emit lib/srfi
 SLDS     := $(foreach d,$(LIBDIRS),$(wildcard $(d)/*.sld))
 LIBDATA  := lib/scheme/char-data.scm lib/srfi/1.scm lib/srfi/2.scm \
             lib/srfi/8.scm lib/srfi/227.scm lib/srfi/64.scm \
             lib/srfi/64/simple-runner.scm lib/srfi/64/source-info.scm \
-            lib/srfi/README.md lib/srfi/upstream.sha256 lib/srfi/27-LICENSE.txt \
-            lib/malt/LICENSE lib/malt/PROVENANCE.md
+            lib/srfi/README.md lib/srfi/upstream.sha256 lib/srfi/27-LICENSE.txt
 LIBDATADIRS := $(sort $(foreach f,$(LIBDATA),$(dir $(f))))
 SUPPORT_EXEC := tools/llvm-env.sh tools/log.sh
 SUPPORT_DATA := src/runtime/runtime.c

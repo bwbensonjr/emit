@@ -140,6 +140,48 @@ exclusion sweep. `run-dev-tests.sh` is the deduplicated union of units, source,
 and reference. Missing Chez fails that explicit aggregate instead of skipping it.
 See [retained coverage](VALIDATION-COVERAGE.md) and [CI policy](RELEASE-PIPELINE.md).
 
+## The pinned emit-packages collection
+
+Libraries that are not part of Emit itself, starting with `(malt learner)`, live
+in [bwbensonjr/emit-packages](https://github.com/bwbensonjr/emit-packages). Emit
+keeps their coverage by validating one pinned commit of that collection:
+
+- `emit-packages-pinned` (`full`) runs every package's declared checks through
+  `emit run`, `emit repl`, a standalone `emit build` executable, and `emit run`
+  consuming published artifacts of every library the package declares.
+- `emit-packages-pinned-source` (`reference`) runs the same checks through the
+  Chez source driver.
+
+Both run `tools/emit-packages.py`. The pin is `EMIT_PACKAGES_PIN_COMMIT` in
+`tools/emit-packages-pin.sh`, a full commit hash. The driver uses a cached
+checkout in `build/emit-packages/<commit>/` when its `HEAD` matches the pin, and
+otherwise fetches exactly that commit (a shallow fetch of a few hundred
+kilobytes). A checkout at any other commit fails, naming both commits. The test
+runner gives each suite a fresh workspace, so runner invocations fetch; a direct
+`python3 tools/emit-packages.py` reuses the cache and works offline after one
+networked run.
+
+To move the pin, change the commit in `tools/emit-packages-pin.sh`, then run:
+
+```sh
+bash tools/test.sh --suite emit-packages-pinned
+```
+
+Commit the new pin together with any Emit change it needs. A commit to the
+collection never changes Emit's validation until the pin moves.
+
+To test an unpushed collection change against this checkout, point the driver
+at a local clone:
+
+```sh
+EMIT_PACKAGES_DIR=../emit-packages python3 tools/emit-packages.py
+```
+
+The run is labelled `UNPINNED` with the clone's commit and dirty state, and is
+not evidence for the pin. `EMIT_PACKAGES_ORIGIN` overrides the fetch origin.
+`--report FILE` writes a JSON summary of the collection provenance and every
+check's result.
+
 ## Isolation and resource use
 
 The runner snapshots the current Git input set once, including uncommitted bytes

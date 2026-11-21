@@ -72,9 +72,9 @@ channel; the REPL can evaluate the next form. Supported nonlocal exits also
 restore printer state. Bytes already emitted before a failure remain in the
 destination.
 
-Malt uses this facility for distinct dual and tensor records. Duals show their
-primal numbers, tensors show `(tensor ...)`, and ordinary vectors keep `#(...)`.
-See [Malt core](MALT-CORE.md) for tensor conversion and diagnostic operations.
+The `(malt learner)` package in [emit-packages](https://github.com/bwbensonjr/emit-packages) uses this facility for
+distinct dual and tensor records. Duals show their primal numbers, tensors show
+`(tensor ...)`, and ordinary vectors keep `#(...)`.
 
 Run `bash test/custom-writers-tests.sh` for native acceptance, including closure
 capture across artifacts, three optimization profiles, automatic-print failure
