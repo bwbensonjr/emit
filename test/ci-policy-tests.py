@@ -160,6 +160,10 @@ class PolicyTests(unittest.TestCase):
             self.assertFalse(plan["code"], categories)
             self.assertEqual(plan["required"], ["policy"], categories)
             self.assertTrue(plan["channels"], categories)
+        # issue #187: agent configuration, alone or with the other lightweight categories.
+        for categories in (["agent-config"], ["agent-config", "documentation", "packaging"]):
+            plan = policy.plan(classification(categories=categories, code=False), "pull_request")
+            self.assertEqual(plan["required"], ["policy"], categories)
         mixed = policy.plan(classification(categories=["host", "packaging"], code=True), "pull_request")
         self.assertEqual(mixed["required"], ["policy", "prepare", "native"])
         # An inconsistent record (code false, but a code category) keeps the matrix.

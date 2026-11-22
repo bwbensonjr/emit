@@ -146,6 +146,7 @@ ci: required gates satisfied by reuse  [run https://github.com/bwbensonjr/emit/a
 | --- | --- | --- |
 | Pull request, documentation only | lightweight | policy checks only |
 | Pull request, channel recipes only | lightweight | policy checks; the channel rehearsal is the proof |
+| Pull request, agent configuration only (`.claude/`, `.agents/`) | lightweight | policy checks only |
 | Pull request, code | normal | four cells (LLVM 23 `full`, LLVM 22 `compat`), classified proofs |
 | Pull request changing `VERSION` | full | four `full` cells, source, units, complete reference, both archives |
 | Push to `main` | normal | nothing beyond policy when a pull-request run of the same tree covers it; otherwise as a code PR |

@@ -172,14 +172,14 @@ expect version ok "trivial change (documentation)"
 expect bootstrap ok "no compiler input changed"
 expect validation ok "documentation only"
 pass
-# An agent-skill change is infrastructure, not unknown: no bump and no native suite owed (#183).
+# An agent-skill change is agent configuration, not unknown: no bump and no native suite owed (#183, #187).
 git switch -q -c skillonly main
 git checkout -q feature -- openspec/changes/demo
 mkdir -p .claude/skills/demo
 printf -- '---\nname: demo\n---\nA skill.\n' > .claude/skills/demo/SKILL.md
 commit "chore: add a skill"
 preflight demo --no-fetch || true
-expect version ok "trivial change (documentation,infrastructure)"
+expect version ok "trivial change (agent-config,documentation)"
 expect validation owed "CI Required validation"
 ! line validation | grep -q "tools/test.sh full" || fail "a skill-only change owes the native suite: $(line validation)"
 pass
@@ -382,14 +382,41 @@ status=0; tools/release-handoff.sh status "$number" > "$work/out" 2> "$work/err"
 [ "$status" = 3 ] && grep -qx 'check=pending' "$work/out" || fail "pending check status"
 pass
 checks_for "$head" completed success
+# Without a readable file list the version is unknown, and the advice keeps the release warning.
 status=0; tools/release-handoff.sh status "$number" > "$work/out" 2> "$work/err" || status=$?
-[ "$status" = 0 ] && grep -qx 'check=success' "$work/out" && grep -q '^next=ready to merge' "$work/out" || fail "passing check status"
+[ "$status" = 0 ] && grep -qx 'check=success' "$work/out" && grep -qx 'version=unknown' "$work/out" \
+  && grep -q '^next=ready to merge; if it changes VERSION, merging releases it' "$work/out" || fail "passing check status"
 [ "$(pr_calls merge)" = 0 ] || fail "status or pr requested a merge"
+pass
+# issue #185: the advice names the version a versioned pull request releases ...
+files_key="api repos/fixture/emit/pulls/$number/files?per_page=100"
+version=$(git show "$head:VERSION")
+printf '[{"filename": "VERSION"}, {"filename": "CHANGELOG.md"}]\n' > "$GH_FIXTURES/$(key "$files_key")"
+jq -n --arg content "$(printf '%s\n' "$version" | base64)" '{content: $content}' \
+  > "$GH_FIXTURES/$(key "api repos/fixture/emit/contents/VERSION?ref=$head")"
+tools/release-handoff.sh status "$number" > "$work/out" 2> "$work/err" || fail "versioned status"
+grep -qx "version=$version" "$work/out" \
+  && grep -qx "next=ready to merge; merging releases v$version, so merge only as the deliberate release approval (gh pr merge $number --merge)" "$work/out" \
+  || fail "versioned next action: $(cat "$work/out")"
+pass
+# ... and says plainly that one without a VERSION change releases nothing.
+printf '[{"filename": "docs/README.md"}]\n' > "$GH_FIXTURES/$(key "$files_key")"
+tools/release-handoff.sh status "$number" > "$work/out" 2> "$work/err" || fail "unversioned status"
+grep -qx 'version=none' "$work/out" \
+  && grep -qx "next=ready to merge; no VERSION change, so merging releases nothing (gh pr merge $number --merge)" "$work/out" \
+  || fail "unversioned next action: $(cat "$work/out")"
 pass
 jq '.state = "MERGED" | .mergeCommit = {oid: "abc123"}' "$GH_FIXTURES/$(key "pr-view fixture/emit $number")" > "$work/v" \
   && mv "$work/v" "$GH_FIXTURES/$(key "pr-view fixture/emit $number")"
+tools/release-handoff.sh status "$number" > "$work/out" 2> "$work/err" || fail "merged unversioned status"
+grep -qx 'next=merged; no release (no VERSION change)' "$work/out" || fail "merged unversioned next action: $(cat "$work/out")"
+pass
+printf '[{"filename": "VERSION"}]\n' > "$GH_FIXTURES/$(key "$files_key")"
+jq -n --arg content "$(printf '%s\n' "$version" | base64)" '{content: $content}' \
+  > "$GH_FIXTURES/$(key "api repos/fixture/emit/contents/VERSION?ref=abc123")"
 tools/release-handoff.sh status "$number" > "$work/out" 2> "$work/err" || fail "merged status"
-grep -qx 'next=follow the release: tools/release-handoff.sh follow abc123' "$work/out" || fail "merged next action"
+grep -qx "version=$version" "$work/out" \
+  && grep -qx 'next=follow the release: tools/release-handoff.sh follow abc123' "$work/out" || fail "merged next action"
 pass
 
 # --- follow: a merged release, stage by stage, by exact commit and tag -----------------------

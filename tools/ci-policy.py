@@ -7,6 +7,8 @@ import sys
 
 
 REFERENCE_SUITES = ("self-emission", "dump-parity", "render-datum", "custom-writers-source")
+# Categories the native matrix cannot prove; keep equal to LIGHTWEIGHT in tools/test-classify.py.
+LIGHTWEIGHT = {"documentation", "packaging", "agent-config"}
 
 
 def plan(classification, event, force_full=False, rehearsal=False, tree=None, sha=None):
@@ -24,9 +26,9 @@ def plan(classification, event, force_full=False, rehearsal=False, tree=None, sh
     # surface before merge and the tag can reuse the result (change: reuse-validation-by-tree, D4).
     release_pr = event == "pull_request" and "release" in categories
     comprehensive = force_full or release_pr or event in {"schedule", "workflow_dispatch", "tag"}
-    # Packaging-only diffs are proved by the channel rehearsal, not the native matrix (D7).
-    packaging_only = bool(categories) and categories <= {"documentation", "packaging"}
-    lightweight = classification["docs_only"] or packaging_only
+    # Packaging-only diffs are proved by the channel rehearsal, not the native matrix (D7), and
+    # agent configuration by the policy job's own checks (issue #187).
+    lightweight = classification["docs_only"] or (bool(categories) and categories <= LIGHTWEIGHT)
     code = comprehensive or classification["code"] or not lightweight
     source = comprehensive or classification["source"]
     units = comprehensive or classification["units"]

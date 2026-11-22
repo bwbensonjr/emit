@@ -27,6 +27,15 @@ TOOLCHAIN_NAMES = {"tools/ci-provision.sh", "tools/ci-bundle.py", "tools/ci-reso
                    ".github/workflows/dependency-preparation.yml"}
 
 
+# Agent skills and settings. tools/release-source.sh leaves both directories out of the source
+# archive, and no build, native suite, or channel reads them; the policy job's own checks
+# (test/release-handoff-tests.sh reads the finish-change skill) still run (issues #183, #187).
+AGENT_PREFIXES = (".claude/", ".agents/")
+# Categories that the native matrix cannot prove: documentation, channel recipes (proved by the
+# channel rehearsal), and agent configuration. A diff of only these is not code.
+LIGHTWEIGHT = {"documentation", "packaging", "agent-config"}
+
+
 def channel_input(path):
     return path in CHANNEL_NAMES or path.startswith(CHANNEL_PREFIXES)
 
@@ -81,10 +90,8 @@ def classify_paths(paths, inputs=(), error=None, executable=()):
         elif path in {"run-all-tests.sh", "run-dev-tests.sh", ".gitignore", "CLAUDE.md", "AGENTS.md"}:
             categories.add("infrastructure")
             source = units = True
-        elif path.startswith(".claude/"):
-            # Agent skills and settings: tools/release-source.sh leaves them out of the source
-            # archive, and no build, proof, or channel reads them (issue #183).
-            categories.add("infrastructure")
+        elif path.startswith(AGENT_PREFIXES):
+            categories.add("agent-config")
         else:
             categories.add("unknown")
             source = units = archive = channels = True
@@ -93,9 +100,8 @@ def classify_paths(paths, inputs=(), error=None, executable=()):
         categories.add("unknown")
         source = units = archive = channels = toolchain = True
     docs_only = bool(paths) and categories == {"documentation"} and not error
-    # Channel recipes are proved by the channel rehearsal, not the native matrix
-    # (change: reuse-validation-by-tree, design D7).
-    code = not (bool(paths) and categories <= {"documentation", "packaging"} and not error)
+    # change: reuse-validation-by-tree, design D7; issue #187.
+    code = not (bool(paths) and categories <= LIGHTWEIGHT and not error)
     reference = REFERENCE if source or units else []
     return {"schema": 1, "categories": sorted(categories), "paths": paths,
             "docs_only": docs_only, "source": source, "units": units,

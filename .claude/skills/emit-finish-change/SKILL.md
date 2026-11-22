@@ -98,7 +98,8 @@ Report progress in exactly these stages, and never claim a later one early:
      is committed.
 
 7. **Report status.** Run `tools/release-handoff.sh status`. Relay the pull request URL, the head,
-   the `Required validation` state with its link, and the `next=` action verbatim. At this point
+   the `Required validation` state with its link, the `version=` it releases (`none` when it
+   changes no `VERSION`), and the `next=` action verbatim. At this point
    the change is **ready for review**. Stop here unless the user asks you to merge.
 
 ## Part 2: follow a merged release

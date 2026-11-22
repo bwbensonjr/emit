@@ -2,6 +2,7 @@
 """Policy fixtures run with no LLVM installation or native build."""
 
 import importlib.util
+from importlib.machinery import SourceFileLoader
 from pathlib import Path
 import re
 import subprocess
@@ -38,21 +39,35 @@ class ClassifierTests(unittest.TestCase):
                      "docs/RELEASES.md", "CLAUDE.md"):
             self.assertNotIn("release", policy.classify_paths([path])["categories"], path)
 
-    def test_agent_configuration_is_infrastructure_without_payload_obligations(self):
-        # issue #183: .claude/ is outside the source archive and read by no build, proof, or
-        # channel, so it must not fall through to "unknown" (which forces a VERSION bump and
-        # every gate). It is still code, not documentation-only.
+    def test_agent_configuration_has_no_payload_or_native_obligations(self):
+        # issues #183 and #187: .claude/ and .agents/ are outside the source archive and read by
+        # no build, native suite, or channel, so they must not fall through to "unknown" (which
+        # forces a VERSION bump and every gate), nor select the native matrix. They are still
+        # not documentation-only: the policy job's checks run.
         for path in (".claude/skills/emit-finish-change/SKILL.md", ".claude/settings.json",
-                     ".claude/skills/emit-finish-change/pr-body.md"):
+                     ".claude/skills/emit-finish-change/pr-body.md",
+                     ".agents/skills/emit-finish-change", ".agents/skills/.openspec-target",
+                     ".agents/skills/openspec-propose/SKILL.md"):
             result = policy.classify_paths([path])
-            self.assertEqual(result["categories"], ["infrastructure"], path)
+            self.assertEqual(result["categories"], ["agent-config"], path)
             self.assertFalse(result["source"] or result["units"] or result["archive"] or result["channels"], path)
             self.assertEqual(result["reference"], [], path)
             self.assertFalse(result["docs_only"], path)
-            self.assertTrue(result["code"], path)
-        self.assertIn("unknown", policy.classify_paths([".claudeignore"])["categories"])
+            self.assertFalse(result["code"], path)
+        for path in (".claudeignore", ".agentsrc", "agents/skills/x"):
+            self.assertIn("unknown", policy.classify_paths([path])["categories"], path)
+        # Mixed with documentation or channel recipes, still lightweight; with code, code gates.
+        light = policy.classify_paths([".agents/skills/emit-finish-change", "docs/RELEASES.md",
+                                       "packaging/release.json"])
+        self.assertFalse(light["code"] or light["docs_only"])
         mixed = policy.classify_paths([".claude/settings.json", "src/runtime/runtime.c"])
-        self.assertEqual(mixed["categories"], ["infrastructure", "runtime"])
+        self.assertEqual(mixed["categories"], ["agent-config", "runtime"])
+        self.assertTrue(mixed["code"])
+        for other in ("tools/ci-policy.py", "VERSION", ".github/workflows/compatibility.yml", "lib/srfi/1.sld"):
+            self.assertTrue(policy.classify_paths([".agents/skills/x/SKILL.md", other])["code"], other)
+        # The classifier and the CI policy agree on what is lightweight.
+        ci = SourceFileLoader("ci_policy_lightweight", str(ROOT / "tools/ci-policy.py")).load_module()
+        self.assertEqual(ci.LIGHTWEIGHT, policy.LIGHTWEIGHT)
 
     def test_channel_inputs_rehearse_channels_only(self):
         # change: low-cost-distribution-channels, design D7.

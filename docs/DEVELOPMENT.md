@@ -116,7 +116,10 @@ explicit prose allowlist and do no compiler work; project instructions, vendored
 input Markdown, test fixtures, and CI configuration are not prose exemptions.
 A diff of only channel recipes (`packaging/**`, `flake.nix`, `flake.lock`), alone or
 with documentation, is not code either: CI provisions no toolchain and the channel
-rehearsal proves it. A pull request that changes `VERSION` gets the release plan:
+rehearsal proves it. Agent configuration (`.claude/`, `.agents/`) is lightweight the same
+way: it is outside the source archive and read by no build, so a diff of only agent
+configuration, documentation, and channel recipes runs just the policy job's checks.
+A pull request that changes `VERSION` gets the release plan:
 four `full` cells, source, units, complete reference, and both offline archives.
 A push to `main` or a tag whose tree a pull-request run already validated reuses
 that result instead of running again ([validation reuse](RELEASE-PIPELINE.md#validation-reuse-by-tree)).
