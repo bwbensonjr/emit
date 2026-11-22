@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.12.0
+
+- Add a default user library root, `$XDG_DATA_HOME/emit/lib`, or
+  `~/.local/share/emit/lib` when `XDG_DATA_HOME` is unset or relative. It is consulted after
+  the project's `lib/` and before Emit's installed libraries, by every command and by the Chez
+  source driver, so a package collection placed there (for example a link to
+  `emit-packages/lib`) resolves from any process with no environment setup. A project's own
+  copy still wins, and a library there overrides a non-baked shipped one. Emit never creates
+  the directory. `--no-library-paths` disables it with the other roots, `emit doctor` lists it
+  as a `user` provider, and verb help names it. `EMIT_LIBRARY_PATH` is unchanged and still
+  takes precedence.
+
 ## 0.11.1
 
 - Fix undefined behavior when the C runtime tags a negative exact integer. `FIX` shifted a

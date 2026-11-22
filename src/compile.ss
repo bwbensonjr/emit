@@ -625,14 +625,27 @@
   (let ([dir (dir-of *manifest-path*)])
     (if (string=? dir "") "lib" (string-append dir "/lib"))))
 
+(define (user-library-root)
+  ;; Same rule as the native host (change: user-library-root, design D1): an absolute
+  ;; XDG_DATA_HOME, else HOME/.local/share, else no user root.  Never created here.
+  (let ([xdg (getenv "XDG_DATA_HOME")] [home (getenv "HOME")])
+    (cond
+      [(and xdg (path-absolute? xdg) (> (string-length xdg) 0))
+        (string-append xdg "/emit/lib")]
+      [(and home (> (string-length home) 0))
+        (string-append home "/.local/share/emit/lib")]
+      [else #f])))
+
 (define (configured-library-roots)
   (if (not *library-paths-enabled?*)
       (quote ())
       (let* ([environment (getenv "EMIT_LIBRARY_PATH")]
              [prefix (getenv "EMIT_PREFIX")]
+             [user (user-library-root)]
              [roots (append *library-paths*
                             (if environment (split-path-list environment) (quote ()))
                             (list (project-library-root))
+                            (if user (list user) (quote ()))
                             (if prefix
                                 (list (string-append prefix "/share/emit/lib"))
                                 (quote ())))])
@@ -1211,7 +1224,7 @@
             (unless src
               (error
                 'compile
-                "usage: compile.ss SRC.scm [-o OUT] [--dump] [-q|-v] [--backend aot|jit|bitcode] [--no-prelude] [-L DIR] [--no-library-paths] [--via-schemec]\n   or: compile.ss --repl [--no-prelude]\n   or: compile.ss --emit-ir [--no-prelude] < SRC.scm  (IR text on stdout)\n   (-L/--library-path and EMIT_LIBRARY_PATH add conventional library roots)\n   (-q/-v or env EMIT_VERBOSITY=quiet|verbose control status output; see docs/OUTPUT.md)\n   (--via-schemec / env SCHEMEC=<path>: run forms->IR through the compiled schemec)"))
+                "usage: compile.ss SRC.scm [-o OUT] [--dump] [-q|-v] [--backend aot|jit|bitcode] [--no-prelude] [-L DIR] [--no-library-paths] [--via-schemec]\n   or: compile.ss --repl [--no-prelude]\n   or: compile.ss --emit-ir [--no-prelude] < SRC.scm  (IR text on stdout)\n   (-L/--library-path and EMIT_LIBRARY_PATH add conventional library roots; the user root $XDG_DATA_HOME/emit/lib or ~/.local/share/emit/lib follows project lib/)\n   (-q/-v or env EMIT_VERBOSITY=quiet|verbose control status output; see docs/OUTPUT.md)\n   (--via-schemec / env SCHEMEC=<path>: run forms->IR through the compiled schemec)"))
             (let* ([out (or out (strip-ext src))]
                    [ll (string-append out ".ll")]
                    ;; --dump = full per-pass form trace; -v = concise stage names; else silent

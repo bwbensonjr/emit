@@ -99,6 +99,9 @@ mkdir -p "$TMP/bare"
 cd "$TMP/bare"
 printf '(import (malt learner))\n(display (gradient (lambda (x) (* x x)) 3.0))\n' > malt.scm
 export EMIT_CACHE="$TMP/cache-malt"
+# An empty user library root supplies nothing (change: user-library-root).
+mkdir -p "$TMP/xdg-empty/emit/lib"
+export XDG_DATA_HOME="$TMP/xdg-empty"
 if "$EMIT" run malt.scm > "$TMP/malt-bare.out" 2> "$TMP/malt-bare.err"; then
   printf 'installed Emit resolved (malt learner) with no supplied root\n' >&2; exit 1
 fi
@@ -116,3 +119,11 @@ got="$(EMIT_LIBRARY_PATH="$COLLECTION/lib" "$EMIT" run malt.scm 2> "$TMP/malt-ro
 }
 [ "$got" = '6.0' ] || { printf 'expected 6.0 from the collection root, got %s\n' "$got" >&2; exit 1; }
 say "run malt.scm -> 6.0 [installed payload, EMIT_LIBRARY_PATH=$COLLECTION/lib]"
+# The collection linked as the user library root resolves with no environment root.
+mkdir -p "$TMP/xdg-linked/emit"
+ln -s "$COLLECTION/lib" "$TMP/xdg-linked/emit/lib"
+got="$(XDG_DATA_HOME="$TMP/xdg-linked" "$EMIT" run malt.scm 2> "$TMP/malt-user.err")" || {
+  cat "$TMP/malt-user.err" >&2; exit 1;
+}
+[ "$got" = '6.0' ] || { printf 'expected 6.0 from the user root, got %s\n' "$got" >&2; exit 1; }
+say "run malt.scm -> 6.0 [installed payload, user root linked to $COLLECTION/lib]"

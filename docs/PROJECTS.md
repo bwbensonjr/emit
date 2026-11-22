@@ -183,7 +183,9 @@ emit run main.scm
 
 Add roots explicitly with repeatable `-L DIR` / `--library-path DIR`, or set
 `EMIT_LIBRARY_PATH` to the host's path-separated list. Explicit roots precede the environment,
-which precedes the project `lib/` root. The first matching source wins.
+which precedes the project `lib/` root, which precedes the user library root
+(`~/.local/share/emit/lib`, or `$XDG_DATA_HOME/emit/lib`) and then the installed libraries. The
+first matching source wins, so a project can override a library installed for the user.
 
 ## When to add a manifest
 

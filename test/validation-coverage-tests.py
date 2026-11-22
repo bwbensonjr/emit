@@ -30,8 +30,9 @@ class CoverageTests(unittest.TestCase):
         # Pinned emit-packages, random sources, custom writers, and performance resource checks
         # extend the full profile; historical label ownership above remains unchanged. The four
         # full-profile Malt suites became emit-packages-pinned and srfi-27-install when Malt moved
-        # to the emit-packages collection. fixnum-tagging adds sanitized C runtime arithmetic (#188).
-        self.assertEqual(len([s for s in suites if "full" in s["profiles"]]), 67)
+        # to the emit-packages collection. fixnum-tagging adds sanitized C runtime arithmetic (#188);
+        # user-library-root adds the default user library root.
+        self.assertEqual(len([s for s in suites if "full" in s["profiles"]]), 68)
         additions = {
             "source-load-interaction-host": {"dev", "full", "reference"},
             "stdlib-precompilation": {"full"},
@@ -42,6 +43,8 @@ class CoverageTests(unittest.TestCase):
             "bake-libraries-contracts": {"full", "reference"},
             "random-entropy": {"full"},
             "fixnum-tagging": {"full"},
+            "user-library-root": {"full"},
+            "user-library-root-chez": {"reference"},
             "srfi-27": {"full"},
             "srfi-27-source": {"reference"},
             "emit-packages-pinned": {"full"},
