@@ -29,8 +29,11 @@ independently of resolver opt-outs. This permits diagnosis of an intentionally
 restricted resolver without mistaking its disabled roots for an incomplete install.
 
 Provider rows use the same prepared resolver as compilation. They show the project
-manifest, explicit `-L` roots, `EMIT_LIBRARY_PATH`, project `lib/`, and installed
-manifest/root tiers in order. Manifest providers are readable by construction;
+manifest, explicit `-L` roots, `EMIT_LIBRARY_PATH`, project `lib/`, the user library
+root, and installed manifest/root tiers in order. The user root row is labelled with the
+rule that located it, as in `[user, XDG_DATA_HOME; missing]` or `[user, HOME; available]`;
+when neither variable yields a location, doctor prints `user library root: unavailable`.
+Neither case fails the check. Manifest providers are readable by construction;
 directory rows explicitly report availability. Duplicate physical directory roots
 are suppressed as in compilation. Candidate rows show optional installed manifest
 locations, including absent old prefixes after relocation.

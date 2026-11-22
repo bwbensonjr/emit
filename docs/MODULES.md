@@ -178,7 +178,7 @@ MRG32k3a implementation and supported numeric limits are described in
 [`RANDOM.md`](RANDOM.md). It is not baked into `(scheme base)` or loaded merely
 because its source is installed. Libraries outside Emit itself, such as
 `(malt learner)`, live in the [emit-packages](https://github.com/bwbensonjr/emit-packages) collection, whose `lib/` is an
-ordinary library root.
+ordinary library root, normally placed at the user library root described below.
 
 | Library | Pinned version | Upstream package assertions |
 |---|---|---|
@@ -463,7 +463,17 @@ The resolver constructs provider records in this order:
 3. repeated `-L DIR` / `--library-path DIR` roots;
 4. roots in `EMIT_LIBRARY_PATH`;
 5. `lib` beside the project manifest, or `./lib` without one;
-6. each installed manifest followed by its sibling `lib` root.
+6. the user library root: `$XDG_DATA_HOME/emit/lib` when `XDG_DATA_HOME` is an absolute path,
+   otherwise `~/.local/share/emit/lib`, on every platform;
+7. each installed manifest followed by its sibling `lib` root.
+
+The user root is where a package collection installed for one user goes, so that every process
+that runs `emit` (a GUI editor or a `launchd` job as much as a shell) finds it without
+environment setup. Emit only reads it and never creates it. Its position gives project over
+user over installed: a project's `lib/` overrides it, and it overrides a non-baked shipped
+library, so a stale copy of a shipped library left there shadows a newer installed one.
+Verbose resolution narration and `emit doctor` show which root answered. `--no-library-paths`
+disables it with the other directory roots.
 
 Physical roots and manifests are deduplicated at their first occurrence. A successful answer is
 memoized for the compilation session, so a library cannot change providers midway through its

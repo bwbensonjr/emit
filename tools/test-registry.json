@@ -2009,6 +2009,26 @@
       ]
     },
     {
+      "id": "user-library-root-chez",
+      "label": "user library root: Chez source driver agrees with the native host",
+      "command": [
+        "bash",
+        "test/user-library-root-chez-tests.sh"
+      ],
+      "profiles": [
+        "reference"
+      ],
+      "categories": [
+        "host"
+      ],
+      "isolation": "workspace",
+      "chez": true,
+      "coverage": [
+        "user-library-root-chez"
+      ],
+      "legacy": []
+    },
+    {
       "id": "scheme-base-gen-guard-native",
       "label": "(scheme base) gen guard",
       "command": [
@@ -2550,6 +2570,26 @@
       "chez": false,
       "coverage": [
         "fixnum-tagging"
+      ],
+      "legacy": []
+    },
+    {
+      "id": "user-library-root",
+      "label": "default user library root: location, precedence, opt-out, doctor, help",
+      "command": [
+        "bash",
+        "test/user-library-root-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "host"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "user-library-root"
       ],
       "legacy": []
     },

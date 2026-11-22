@@ -391,13 +391,15 @@ static void usage_shared(std::ostream &os) {
         "  -L DIR, --library-path DIR\n"
         "               add a conventional library root (repeatable)\n"
         "  --no-library-paths\n"
-        "               disable explicit, environment, project, and installed roots\n"
+        "               disable explicit, environment, project, user, and installed roots\n"
         "  --dump       print the IL after each compiler pass to stderr (stdout unchanged)\n"
         "  --dump-all   --dump, plus the stages of (scheme base) and imported libraries\n"
         "  --help, -h   print this usage on stdout and exit\n";
   os << "\n"
         "library lookup: baked libraries, the project manifest, -L roots,\n"
-        "EMIT_LIBRARY_PATH, project lib/, then installed manifest/root pairs.\n"
+        "EMIT_LIBRARY_PATH, project lib/, the user root, then installed\n"
+        "manifest/root pairs.  The user root is $XDG_DATA_HOME/emit/lib, or\n"
+        "~/.local/share/emit/lib when XDG_DATA_HOME is unset or relative.\n"
         "For example, (my stats) is ROOT/my/stats.sld.  Combine --manifest F,\n"
         "--no-manifest-chain, and --no-library-paths for exact single-manifest lookup.\n";
 }
@@ -487,7 +489,9 @@ static void usage_doctor(std::ostream &os) {
         "\n"
         "Reports build identity, cc/clang, libgc, support files and ordered library\n"
         "providers on stdout; narration and errors use stderr. EMIT_LIBRARY_PATH\n"
-        "follows -L roots. Exit 0 means required checks pass; nonzero means failure.\n"
+        "follows -L roots; the user root ($XDG_DATA_HOME/emit/lib, else\n"
+        "~/.local/share/emit/lib) follows project lib/ and precedes installed roots.\n"
+        "Exit 0 means required checks pass; nonzero means failure.\n"
         "Missing optional project roots and unused prefix fallbacks are informational.\n";
 }
 
@@ -1027,6 +1031,25 @@ static std::vector<std::string> installed_manifest_candidates() {
   return out;
 }
 
+// The user library root (change: user-library-root, design D1): $XDG_DATA_HOME/emit/lib when
+// XDG_DATA_HOME is absolute, else $HOME/.local/share/emit/lib, else "" (no user root).  The
+// same on every platform, unlike the cache, because users populate it by hand.  `origin`
+// names the rule that answered.  Resolution only -- Emit never creates or writes it.
+static std::string user_library_root(std::string *origin = nullptr) {
+  const char *xdg = std::getenv("XDG_DATA_HOME");
+  if (xdg && xdg[0] == '/') {
+    if (origin) *origin = "XDG_DATA_HOME";
+    return std::string(xdg) + "/emit/lib";
+  }
+  const char *home = std::getenv("HOME");
+  if (home && *home) {
+    if (origin) *origin = "HOME";
+    return std::string(home) + "/.local/share/emit/lib";
+  }
+  if (origin) *origin = "unavailable";
+  return "";
+}
+
 static bool parse_environment_roots(ResolverOptions &options, const std::string &command) {
   const char *raw = std::getenv("EMIT_LIBRARY_PATH");
   if (!raw) return true;
@@ -1082,6 +1105,10 @@ class LibraryResolver {
                                   : dir_of(project_manifest_);
       add_directory_provider(project_dir.empty() ? "lib" : project_dir + "/lib",
                              "project");
+      // Project over user over installed (change: user-library-root, design D2).
+      std::string origin;
+      std::string user_root = user_library_root(&origin);
+      if (!user_root.empty()) add_directory_provider(user_root, "user, " + origin);
     }
 
     for (const std::string &candidate : installed_manifest_candidates()) {
@@ -4758,6 +4785,8 @@ static int emit_doctor(int argc, char **argv) {
                   << (directory_readable(provider.root) ? "available" : "missing") << "]\n";
     }
     if (index == 0) std::cout << "providers: none (baked libraries only)\n";
+    if (options.library_paths && user_library_root().empty())
+      std::cout << "user library root: unavailable (no absolute XDG_DATA_HOME or HOME)\n";
   }
   for (const auto &candidate : installed_manifest_candidates())
     std::cout << "installed candidate: " << candidate << " ["
