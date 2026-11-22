@@ -93,8 +93,6 @@ def decide(client, repo, event, sha, current):
     """Return (plan, reason): the plan with reuse applied and None, or the unchanged plan and why."""
     if event not in REUSABLE_EVENTS:
         return current, f"{event} runs always execute"
-    if current.get("toolchain", True) is not False:
-        return current, "a toolchain-recipe change is never reused"
     if not current.get("tree"):
         return current, "current run has no recorded tree"
     try:

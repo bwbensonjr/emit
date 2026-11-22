@@ -77,13 +77,19 @@ def covers(candidate, current):
         return f"tree {candidate['tree'][:12]} differs from {current['tree'][:12]}"
     if candidate.get("reused") or candidate.get("execute") is False:
         return "plan itself reused another run"
-    if candidate.get("toolchain", True) is not False or current.get("toolchain", True) is not False:
+    # Only the executed run's own diff says whether it validated on a candidate-built toolchain.
+    # With identical trees, a candidate that changed no recipe ran on the trusted bundles for
+    # exactly these recipe files, so the current run's flag adds nothing -- and a tag's is always
+    # conservatively true, because a new ref has no comparison base.
+    if candidate.get("toolchain", True) is not False:
         return "a toolchain-recipe change is never reused"
     for flag in COVERED_FLAGS:
         if current.get(flag) and not candidate.get(flag):
             return f"plan omits required {flag}"
+    # A run that executed the complete reference profile covers any targeted selection; its
+    # `reference` list records only what its own diff selected.
     missing = set(current.get("reference") or []) - set(candidate.get("reference") or [])
-    if missing:
+    if missing and not candidate.get("reference_full"):
         return "plan omits reference suites " + ", ".join(sorted(missing))
     if current.get("mode") == "full" and candidate.get("mode") != "full":
         return "plan is not full mode"

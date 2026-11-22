@@ -169,9 +169,21 @@ class ReuseTests(unittest.TestCase):
             current, result, reason, client = self.decide(world(executed()), event)
             self.assertEqual((result, client.calls), (current, []))
             self.assertIn("always execute", reason)
-        toolchain = dict(executed("push"), toolchain=True)
-        self.assert_executes(world(executed()), "toolchain", current=toolchain)
+        # A candidate that changed a toolchain recipe is rejected ...
+        self.assert_executes(world(dict(executed(), toolchain=True)), "[a toolchain-recipe change is never reused]")
         self.assert_executes(world(executed()), "no recorded tree", current=dict(executed("push"), tree=None))
+
+    def test_tag_with_unavailable_comparison_reuses_the_release_run(self):
+        # ... but the current run's conservative flag does not block reuse. That flag is always set
+        # for a tag, whose new ref has no comparison base (the v0.11.1 regression).
+        classifier = SourceFileLoader("classifier_reuse_fixture", str(ROOT / "tools/test-classify.py")).load_module()
+        fallback = classifier.classify_paths([], error="comparison unavailable: before is 0000000")
+        tag = policy.plan(fallback, "tag", tree=TREE, sha=MERGE)
+        release = executed(categories=["release"], archive=True)
+        _, result, reason, _ = self.decide(world(release), "tag", current=tag)
+        self.assertIsNone(reason)
+        self.assertEqual(result["required"], ["policy", "prepare", "package", "archive"])
+        self.assertEqual(result["reused"]["mode"], "full")
 
     def test_rejections_are_narrated_with_run_and_pull_request(self):
         self.decide(world(executed(), job="failure"))

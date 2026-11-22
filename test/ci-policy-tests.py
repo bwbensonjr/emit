@@ -192,16 +192,31 @@ class PolicyTests(unittest.TestCase):
         self.assertIn("omits required source", policy.covers(normal, source))
         self.assertIn("reference suites self-emission",
                       policy.covers(dict(normal, source=True, units=True, verification=True), source))
+        # Complete reference verification covers any targeted selection.
+        self.assertIsNone(policy.covers(dict(normal, source=True, units=True, verification=True,
+                                             reference_full=True), source))
         self.assertIn("no recorded tree", policy.covers(dict(full, tree=None), tag))
         self.assertIn("current run has no recorded tree", policy.covers(full, dict(tag, tree=None)))
         self.assertIn("differs", policy.covers(dict(full, tree="c" * 40), tag))
         reused = policy.apply_reuse(full, {"run": "u", "sha": "s", "tree": "a" * 40, "mode": "full"})
         self.assertIn("reused another run", policy.covers(reused, tag))
         self.assertIn("toolchain", policy.covers(dict(full, toolchain=True), tag))
-        self.assertIn("toolchain", policy.covers(full, dict(tag, toolchain=True)))
+        # Only the executed run's flag counts: the current run's is redundant for an identical tree.
+        self.assertIsNone(policy.covers(full, dict(tag, toolchain=True)))
         older = policy.plan(classification(), "pull_request", tree="a" * 40)
         self.assertIn("toolchain", policy.covers(older, push))
         self.assertIn("not an object", policy.covers(None, tag))
+
+    def test_tag_with_unavailable_comparison_reuses_a_full_release_run(self):
+        # The v0.11.1 regression: a tag push's `before` is all zeros, so the classifier falls back
+        # to its conservative classification, toolchain included. That must not block reuse.
+        classifier = SourceFileLoader("classifier_tag_fixture", str(ROOT / "tools/test-classify.py")).load_module()
+        fallback = classifier.classify_paths([], error="comparison unavailable: before is 0000000")
+        self.assertTrue(fallback["toolchain"])
+        tag = policy.plan(fallback, "tag", tree="a" * 40, sha="c" * 40)
+        release_pr = self.reusable(categories=["release"], archive=True)
+        self.assertIsNone(policy.covers(release_pr, tag))
+        self.assertIn("toolchain", policy.covers(dict(release_pr, toolchain=True), tag))
 
     def test_reuse_keeps_the_tag_archive_and_reports_its_source(self):
         # D5 and D8.

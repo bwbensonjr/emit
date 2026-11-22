@@ -128,8 +128,11 @@ these hold:
   source;
 - its plan covers the current one: every required gate, every reference suite,
   and `full` mode when the current plan is `full`, as a tag's always is;
-- neither plan changes an input of trusted dependency preparation (the `toolchain`
-  flag), since such a run may have used a candidate-built toolchain.
+- the earlier run's own diff changes no input of trusted dependency preparation
+  (its `toolchain` flag), since such a run may have used a candidate-built
+  toolchain. With identical trees, that run's diff is what decides this. The current
+  run's diff does not, and for a tag it cannot be computed at all: a new ref has no
+  comparison base, so its classification is the conservative fallback.
 
 A reusing run skips `native` and `verification`. A tag still runs `prepare`,
 `package`, and both offline `archive` builds, and publishes the bytes it packaged
