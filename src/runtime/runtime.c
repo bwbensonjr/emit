@@ -114,7 +114,12 @@ static void rt_print_restore(intptr_t depth);
 
 #define HDR_LOAD_ENTRY 9  /* opaque ccc entry address; executable only through rt_load_invoke */
 
-#define FIX(n)     ((val)(((intptr_t)(n)) << 3))
+/* Tag through the unsigned representation: C leaves a left shift of a negative signed value
+ * undefined, and every negative fixnum needs one (issue #188).  The unsigned shift gives the same
+ * two's-complement word, and converting it back to intptr_t is the modular conversion every
+ * supported compiler defines.  UNFIX's right shift of a negative value is implementation-defined,
+ * not undefined, and arithmetic on every supported compiler, so it restores the sign. */
+#define FIX(n)     ((val)(((uintptr_t)(intptr_t)(n)) << 3))
 #define UNFIX(v)   (((intptr_t)(v)) >> 3)
 #define FALSE_V    ((val)TAG_BOOL)                     /* 1   (subtype BOOL, payload 0) */
 #define TRUE_V     ((val)((1 << 8) | TAG_BOOL))        /* 257 (subtype BOOL, payload 1) */
