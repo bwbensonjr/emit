@@ -2534,6 +2534,26 @@
       "legacy": []
     },
     {
+      "id": "fixnum-tagging",
+      "label": "negative and boundary fixnums in C runtime arithmetic, undefined behavior trapped (#188)",
+      "command": [
+        "bash",
+        "test/fixnum-tagging-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "runtime"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "fixnum-tagging"
+      ],
+      "legacy": []
+    },
+    {
       "id": "srfi-27",
       "label": "SRFI 27 native and explicit artifact acceptance",
       "command": [

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.11.1
+
+- Fix undefined behavior when the C runtime tags a negative exact integer. `FIX` shifted a
+  negative signed value left, which C leaves undefined, so ordinary results such as `(- 0 1)`,
+  `(quotient -7 2)`, or `(exact -8.0)` reached by runtime arithmetic were undefined behavior even
+  though every value is in range. Tagging now shifts the unsigned representation, which produces
+  the same bits. A new `fixnum-tagging` suite runs negative and boundary results through every C
+  arithmetic entry point with undefined behavior trapped (#188).
+
 ## 0.11.0
 
 - **Breaking:** `(malt learner)` no longer ships with Emit. It moved to the

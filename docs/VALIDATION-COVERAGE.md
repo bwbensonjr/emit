@@ -39,10 +39,11 @@ New suites use their profile membership and stable coverage IDs, with an empty
 | `bake-libraries-contracts` | full, reference | Wrapped declaration rows and CLI contracts |
 | `performance-measurement-runner` | full | Calibration, paired sample statistics/order, provenance, output oracles, and failure/reporting contracts |
 | `writer-resource-reuse` | full | Independent writer output oracles, bounded traversal allocation/retention, cleanup, and callback lifecycle resource checks |
+| `fixnum-tagging` | full | Negative and boundary fixnums through every C runtime arithmetic entry point, built with undefined behavior trapped (#188) |
 
 The existing `scheme-base-gen-guard-native` also joins the full profile now that
 it runs without Chez. It retains its original developer-runner label and reference
-profile. The full profile currently contains 68 suites and the units profile contains 16.
+profile. The full profile currently contains 67 suites and the units profile contains 16.
 The baker contracts run in a private workspace, preserving the rule that only
 direct Chez source units share read-only source inputs.
 

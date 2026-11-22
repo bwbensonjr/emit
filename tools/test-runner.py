@@ -216,7 +216,7 @@ def changed_selection(data, profile, names, policy):
         return select(data, "full", [])
     suites = select(data, "dev", [])
     extra = {
-        "runtime": {"fixnum-overflow-traps", "indexed-access-bounds", "catchable-errors-kinds",
+        "runtime": {"fixnum-overflow-traps", "fixnum-tagging", "indexed-access-bounds", "catchable-errors-kinds",
                     "dynamic-extent-call-cc", "io-ports-eof-object", "printer-cycles-char-names-trap-delivery",
                     "source-load-interaction-host", "custom-writers"},
         "host": {"cli-interface-help-final-value", "installation-diagnostics", "llvm-toolchain-discovery",
