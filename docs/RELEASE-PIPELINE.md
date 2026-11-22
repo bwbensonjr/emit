@@ -159,6 +159,23 @@ ci: required gates satisfied by reuse  [run https://github.com/bwbensonjr/emit/a
 `tools/ci-reuse.py --dry-run --event push --sha SHA` shows the decision locally
 with `gh`, using a plan approximated from the commit's first-parent diff.
 
+### Measured release cycles
+
+Runner-minutes are the sum of job durations across every workflow run in a cycle: the
+release pull request, the push to `main`, the tag's release run, the channel
+promotions, and the promotion pull requests and their merges. Elapsed time runs from
+the merge to the last channel naming the release.
+
+| Release | Runner-minutes | Tag release run | Merge to every channel | Notes |
+| --- | --- | --- | --- | --- |
+| 0.11.0 | ~580 | full matrix | ~90 min | before validation reuse |
+| 0.11.1 | ~406 | 186 | ~49 min | `main` push reused; the tag did not, because its fallback classification set `toolchain` (fixed in #205) |
+| 0.12.0 | ~232 | 8 | ~15 min | `main` push and tag both reused the pull request's `full` run |
+
+In 0.12.0, 192 of the 232 runner-minutes were the release pull request's own `full`
+validation; everything after the merge took about 40. Re-measure when the matrix,
+the profiles, or the channel set changes.
+
 ## Automatic release tagging
 
 `.github/workflows/release-tag.yml` turns a merged version bump into a release,
