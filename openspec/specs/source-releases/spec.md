@@ -44,7 +44,7 @@ Every non-trivial change SHALL increment `VERSION` and add a matching nonempty `
 
 ### Requirement: Source compatibility is checked across the supported matrix
 
-CI SHALL build committed bootstrap IR without Chez using LLVM 22 and 23 on Linux and macOS. Code PRs and main builds SHALL run full native regression on LLVM 23 and focused compatibility checks on LLVM 22 on both platforms. Release commits SHALL run full native regression in all four cells. Each required cell SHALL verify its intended tools and installed commands; missing tools or failures SHALL fail the gate. Discovery SHALL retain no upper bound.
+CI SHALL build committed bootstrap IR without Chez using LLVM 22 and 23 on Linux and macOS. Code PRs and main builds SHALL run full native regression on LLVM 23 and focused compatibility checks on LLVM 22 on both platforms. Release commits, and pull requests that change `VERSION`, SHALL run full native regression in all four cells. Each required cell SHALL verify its intended tools and installed commands; missing tools or failures SHALL fail the gate. Discovery SHALL retain no upper bound.
 
 #### Scenario: Every supported combination is exercised
 
@@ -74,6 +74,12 @@ CI SHALL build committed bootstrap IR without Chez using LLVM 22 and 23 on Linux
 - **WHEN** the LLVM 22 PR profile runs
 - **THEN** it checks representative JIT evaluation, persistent REPL state, macro-bearing library import and reuse, AOT execution, primitive/runtime behavior, installation diagnostics, and relocated library lookup
 
+#### Scenario: A version-changing pull request runs release validation
+
+- **WHEN** a pull request changes `VERSION`
+- **THEN** its validation runs full regression in all four cells, source and unit checks, complete independent-host reference verification, and both offline archive rehearsals
+- **AND** a failure in any of them blocks the merge, before any tag exists
+
 ### Requirement: Source archives contain an offline build and install closure
 
 A release SHALL include `emit-<VERSION>.tar.gz` with one `emit-<VERSION>/` root, committed bootstrap IR, and all sources, vendored inputs, support files, tests, documentation, and license notices needed for the documented source build and install. It SHALL exclude Git metadata, local build/cache outputs, and secrets. With documented native dependencies installed, build and installation SHALL require neither network access nor Chez.
@@ -86,7 +92,7 @@ A release SHALL include `emit-<VERSION>.tar.gz` with one `emit-<VERSION>/` root,
 
 ### Requirement: Tagged publication validates and identifies its exact payload
 
-Release automation SHALL reject tag/version/changelog mismatches, require full regression on all four supported platform/LLVM cells, source/bootstrap consistency, one independent-host reference run, and both exact offline archive validations for the tagged commit. It SHALL publish only the validated archive, SHA-256 checksums, and matching changelog notes. Actions SHALL be SHA-pinned; published assets SHALL NOT be silently overwritten with different bytes.
+Release automation SHALL reject tag/version/changelog mismatches, require full regression on all four supported platform/LLVM cells, source/bootstrap consistency, one independent-host reference run, and both exact offline archive validations for the tagged commit's tree. It SHALL publish only the validated archive, SHA-256 checksums, and matching changelog notes. Actions SHALL be SHA-pinned; published assets SHALL NOT be silently overwritten with different bytes.
 
 #### Scenario: Valid tag produces a complete release
 
@@ -145,3 +151,17 @@ When a push to the default branch changes `VERSION` to an untagged version, auto
 - **WHEN** an automatically created tag's source release fails a gate
 - **THEN** no public release or channel promotion occurs for that version
 - **AND** a transient failure can be rerun on the same tag, while a defect is fixed by merging a later version
+
+### Requirement: Tag validation can reuse its release pull request's result
+
+A release tag's matrix, source, and reference gates SHALL be satisfied either by executing them for the tag or by reusing a `full`-mode result for the identical tree, under the development-validation reuse requirements. Packaging and both exact offline archive validations SHALL always run in the tag's own workflow before publication.
+
+#### Scenario: A tag reuses its release pull request's validation
+
+- **WHEN** the tagged commit's tree is identical to the tree that a pull request's successful `full`-mode validation tested
+- **THEN** the tag run reuses that matrix, source, and reference result, names it, and still packages the archive and runs both offline archive builds before publishing
+
+#### Scenario: A tag without an eligible result is validated in full
+
+- **WHEN** no eligible `full`-mode result exists for the tagged tree
+- **THEN** the tag run executes all four full cells, source consistency, and complete reference verification before publication, as it does today

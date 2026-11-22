@@ -138,13 +138,123 @@ class PolicyTests(unittest.TestCase):
             self.assertTrue(policy.plan(classification(channels=False), event)["channels"])
         self.assertTrue(policy.plan(classification(channels=False), "pull_request", rehearsal=True)["channels"])
 
+    # change: reuse-validation-by-tree.
+    def test_version_pull_request_is_validated_like_its_tag(self):
+        # D4: four full cells, complete reference, and archive rehearsal before merge.
+        plan = policy.plan(classification(categories=["release"], archive=True), "pull_request")
+        self.assertEqual(plan["mode"], "full")
+        self.assertTrue(plan["code"] and plan["source"] and plan["units"] and plan["reference_full"])
+        self.assertEqual(plan["required"], ["policy", "prepare", "native", "verification", "package", "archive"])
+        tag = policy.plan(classification(categories=["release"], archive=True), "tag")
+        self.assertIsNone(policy.covers(dict(plan, tree="t", toolchain=False), dict(tag, tree="t", toolchain=False)))
+        ordinary = policy.plan(classification(categories=["host"]), "pull_request")
+        self.assertEqual(ordinary["mode"], "normal")
+        self.assertEqual(ordinary["required"], ["policy", "prepare", "native"])
+        # The release category reaches a push or a tag plan unchanged; only pull requests gain it.
+        self.assertEqual(policy.plan(classification(categories=["release"]), "push")["mode"], "normal")
+
+    def test_packaging_only_rehearses_channels_without_the_matrix(self):
+        # D7: a channel recipe (for example the Nix pin) provisions no toolchain.
+        for categories in (["packaging"], ["documentation", "packaging"]):
+            plan = policy.plan(classification(categories=categories, code=False, channels=True), "pull_request")
+            self.assertFalse(plan["code"], categories)
+            self.assertEqual(plan["required"], ["policy"], categories)
+            self.assertTrue(plan["channels"], categories)
+        mixed = policy.plan(classification(categories=["host", "packaging"], code=True), "pull_request")
+        self.assertEqual(mixed["required"], ["policy", "prepare", "native"])
+        # An inconsistent record (code false, but a code category) keeps the matrix.
+        self.assertTrue(policy.plan(classification(categories=["runtime"], code=False), "pull_request")["code"])
+        for event in ["schedule", "workflow_dispatch", "tag"]:
+            self.assertTrue(policy.plan(classification(categories=["packaging"], code=False), event)["code"])
+
+    def reusable(self, event="pull_request", **overrides):
+        plan = policy.plan(classification(toolchain=False, **overrides), event, tree="a" * 40, sha="b" * 40)
+        self.assertTrue(plan["execute"])
+        return plan
+
+    def test_coverage_is_monotone(self):
+        # D3: equal or stronger executed plans of the same tree cover; anything else names why.
+        normal = self.reusable()
+        full = self.reusable(categories=["release"], archive=True)
+        push = self.reusable("push")
+        tag = self.reusable("tag")
+        self.assertIsNone(policy.covers(normal, push))
+        self.assertIsNone(policy.covers(full, push))
+        self.assertIsNone(policy.covers(full, tag))
+        self.assertIn("full mode", policy.covers(dict(normal, reference_full=True, archive=True, source=True,
+                                                  units=True, verification=True), tag))
+        self.assertIn("omits required", policy.covers(normal, tag))
+        source = self.reusable("push", source=True, units=True, reference=["self-emission"])
+        self.assertIn("omits required source", policy.covers(normal, source))
+        self.assertIn("reference suites self-emission",
+                      policy.covers(dict(normal, source=True, units=True, verification=True), source))
+        self.assertIn("no recorded tree", policy.covers(dict(full, tree=None), tag))
+        self.assertIn("current run has no recorded tree", policy.covers(full, dict(tag, tree=None)))
+        self.assertIn("differs", policy.covers(dict(full, tree="c" * 40), tag))
+        reused = policy.apply_reuse(full, {"run": "u", "sha": "s", "tree": "a" * 40, "mode": "full"})
+        self.assertIn("reused another run", policy.covers(reused, tag))
+        self.assertIn("toolchain", policy.covers(dict(full, toolchain=True), tag))
+        self.assertIn("toolchain", policy.covers(full, dict(tag, toolchain=True)))
+        older = policy.plan(classification(), "pull_request", tree="a" * 40)
+        self.assertIn("toolchain", policy.covers(older, push))
+        self.assertIn("not an object", policy.covers(None, tag))
+
+    def test_reuse_keeps_the_tag_archive_and_reports_its_source(self):
+        # D5 and D8.
+        source = {"run": "https://github.com/o/r/actions/runs/1", "sha": "b" * 40, "tree": "a" * 40, "mode": "full"}
+        tag = policy.apply_reuse(self.reusable("tag"), source)
+        self.assertFalse(tag["execute"])
+        self.assertEqual(tag["required"], ["policy", "prepare", "package", "archive"])
+        push = policy.apply_reuse(self.reusable("push"), source)
+        self.assertEqual(push["required"], ["policy"])
+        for plan in (tag, push):
+            needs = {name: {"result": "success"} for name in plan["required"]}
+            needs.update({"native": {"result": "skipped"}, "verification": {"result": "skipped"}})
+            self.assertEqual(policy.aggregate(plan, needs), [])
+        line = policy.reuse_line(tag)
+        self.assertIn("run https://github.com/o/r/actions/runs/1", line)
+        self.assertIn("tree " + "a" * 12, line)
+        self.assertIn("mode full", line)
+        broken = dict(tag, reused={"run": "u"})
+        self.assertTrue(policy.aggregate(broken, {name: {"result": "success"} for name in tag["required"]}))
+        with self.assertRaises(ValueError):
+            policy.apply_reuse(self.reusable("push"), {"run": "u"})
+        needs = {name: {"result": "success"} for name in tag["required"]}
+        output = subprocess.run([sys.executable, str(ROOT / "tools/ci-policy.py"), "aggregate",
+                                 "--plan", json.dumps(tag), "--needs", json.dumps(needs)],
+                                capture_output=True, text=True, check=True)
+        self.assertIn("satisfied by reuse", output.stderr)
+
+    def test_plan_records_tree_and_sha(self):
+        output = subprocess.check_output([sys.executable, str(ROOT / "tools/ci-policy.py"), "plan",
+                                          "--classification", json.dumps(classification()),
+                                          "--event", "push", "--tree", "t" * 40, "--sha", "s" * 40], text=True)
+        record = json.loads(output)
+        self.assertEqual((record["tree"], record["sha"], record["execute"]), ("t" * 40, "s" * 40, True))
+
     def test_workflow_contract(self):
         workflow = (ROOT / ".github/workflows/compatibility.yml").read_text()
         self.assertIn("llvm: [22, 23]", workflow)
         self.assertIn("profile=compat", workflow)
         self.assertIn("if: always()", workflow)
         self.assertIn("needs: [policy, prepare, native, verification, package, archive]", workflow)
+        # change: reuse-validation-by-tree, D1, D2, and D5.
+        self.assertIn("--tree \"$(git rev-parse 'HEAD^{tree}')\" --sha \"$(git rev-parse HEAD)\"", workflow)
+        self.assertIn('tools/ci-reuse.py --event "$EVENT"', workflow)
+        self.assertLess(workflow.index("tools/ci-reuse.py --event"), workflow.index('tee "$RUNNER_TEMP/plan.json"'))
+        self.assertIn("GH_TOKEN: ${{ github.token }}", workflow.split("\n  prepare:\n", 1)[0])
+        self.assertIn("execute: ${{ steps.policy.outputs.execute }}", workflow)
+        execute = "needs.policy.outputs.execute == 'true'"
+        self.assertIn(f"if: needs.policy.outputs.code == 'true' && {execute}\n", workflow.split("\n  native:\n", 1)[1])
+        self.assertIn(f"if: needs.policy.outputs.verification == 'true' && {execute}\n",
+                      workflow.split("\n  verification:\n", 1)[1])
+        self.assertIn(f"if: (needs.policy.outputs.code == 'true' && {execute}) || needs.policy.outputs.archive == 'true'\n",
+                      workflow.split("\n  prepare:\n", 1)[1])
+        self.assertIn("python3 test/ci-reuse-tests.py", workflow)
         release = (ROOT / ".github/workflows/release.yml").read_text()
+        # A called workflow cannot hold a permission its caller does not grant.
+        for text in (workflow, release):
+            self.assertIn("  pull-requests: read\n", text.split("\njobs:\n", 1)[0])
         self.assertIn("full: true", release)
         self.assertIn("rehearsal: true", release)
         self.assertIn("needs: validation", release)

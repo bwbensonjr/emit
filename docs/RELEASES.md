@@ -83,6 +83,12 @@ tools/release-handoff.sh follow SHA [--wait] # after the merge: tag, release, an
 - **validation**: the checks the diff obliges, and whether `Required validation` passed on the
   pull request.
 
+Because the pull request changes `VERSION`, its `Required validation` is the full release
+validation: all four `full` cells, source, units, complete reference, and both offline archives.
+When the merge leaves the tree unchanged, the push to `main` and the release tag reuse that
+result rather than running the matrix again, and the tag still packages and offline-builds its
+own archive ([validation reuse](RELEASE-PIPELINE.md#validation-reuse-by-tree)).
+
 When only documentation, such as the sync-and-archive commit, follows a passing validation,
 nothing is rerun. `pr` reuses the branch's open pull request and edits it in place, and refuses
 `--ready` until the archive is committed. Nothing in the handoff merges: **merging the reviewed

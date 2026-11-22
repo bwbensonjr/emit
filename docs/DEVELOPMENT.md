@@ -114,6 +114,12 @@ untracked files; CI excludes uncommitted inputs. Both rename paths participate.
 Unknown inputs/history choose full validation. Documentation-only plans use an
 explicit prose allowlist and do no compiler work; project instructions, vendored
 input Markdown, test fixtures, and CI configuration are not prose exemptions.
+A diff of only channel recipes (`packaging/**`, `flake.nix`, `flake.lock`), alone or
+with documentation, is not code either: CI provisions no toolchain and the channel
+rehearsal proves it. A pull request that changes `VERSION` gets the release plan:
+four `full` cells, source, units, complete reference, and both offline archives.
+A push to `main` or a tag whose tree a pull-request run already validated reuses
+that result instead of running again ([validation reuse](RELEASE-PIPELINE.md#validation-reuse-by-tree)).
 
 For known code categories, changed development plans union the small baseline
 with runtime safety/control/I/O checks, host discovery/install checks, library

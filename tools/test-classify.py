@@ -18,6 +18,13 @@ DOC_NAMES = {"README.md", "LLVM.md", "LICENSE",
 # change to any of them rehearses the Homebrew, Nix, and OCI channels.
 CHANNEL_PREFIXES = ("packaging/", "test/channel-accept/", "tools/channel-")
 CHANNEL_NAMES = {"flake.nix", "flake.lock", "tools/offline-run.sh", ".github/workflows/channels.yml"}
+# Inputs of trusted dependency preparation: the paths list of
+# .github/workflows/dependency-preparation.yml, which test-classify-tests.py keeps equal. A change
+# to any of them may have validated on a candidate-built toolchain, so its result is never reused
+# for another run (change: reuse-validation-by-tree, design D6).
+TOOLCHAIN_NAMES = {"tools/ci-provision.sh", "tools/ci-bundle.py", "tools/ci-resolve.py",
+                   "tools/ci-prepare.sh", ".github/workflows/prepare-toolchains.yml",
+                   ".github/workflows/dependency-preparation.yml"}
 
 
 def channel_input(path):
@@ -81,14 +88,18 @@ def classify_paths(paths, inputs=(), error=None, executable=()):
         else:
             categories.add("unknown")
             source = units = archive = channels = True
+    toolchain = any(path in TOOLCHAIN_NAMES for path in paths)
     if error or not paths:
         categories.add("unknown")
-        source = units = archive = channels = True
+        source = units = archive = channels = toolchain = True
     docs_only = bool(paths) and categories == {"documentation"} and not error
+    # Channel recipes are proved by the channel rehearsal, not the native matrix
+    # (change: reuse-validation-by-tree, design D7).
+    code = not (bool(paths) and categories <= {"documentation", "packaging"} and not error)
     reference = REFERENCE if source or units else []
     return {"schema": 1, "categories": sorted(categories), "paths": paths,
             "docs_only": docs_only, "source": source, "units": units,
-            "reference": reference, "archive": archive, "channels": channels, "code": not docs_only,
+            "reference": reference, "archive": archive, "channels": channels, "toolchain": toolchain, "code": code,
             "reason": error or ("allowlisted non-executable documentation only" if docs_only
                                  else "union of changed-input obligations" if paths
                                  else "empty comparison: conservative full validation")}
