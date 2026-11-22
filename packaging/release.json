@@ -1,7 +1,7 @@
 {
-  "version": "0.11.0",
-  "tag": "v0.11.0",
-  "commit": "269b8b93cc3f40b372a2b59d55effb15736fb28e",
-  "archive_url": "https://github.com/bwbensonjr/emit/releases/download/v0.11.0/emit-0.11.0.tar.gz",
-  "sha256": "8b8dbf638112c0223f4c2df523f9c7c3da2fbd649544c74bbf320af1fac74207"
+  "version": "0.11.1",
+  "tag": "v0.11.1",
+  "commit": "76f8377e4ae55214eba89e018641526a7ea64fa5",
+  "archive_url": "https://github.com/bwbensonjr/emit/releases/download/v0.11.1/emit-0.11.1.tar.gz",
+  "sha256": "c2e503e53daf4c36fd20b002e69a5d42e0d9a00ceed4169d001a468bb7cb14bc"
 }
