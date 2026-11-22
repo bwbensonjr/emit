@@ -311,8 +311,20 @@ pull_request() {
   printf 'pr=%s\nnumber=%s\ndraft=%s\naction=%s\n' "$url" "$number" "$draft" "$action"
 }
 
+# The version a pull request releases when it merges: VERSION at REF when the pull request's files
+# include VERSION, "none" when they do not, and "unknown" when either lookup fails, which callers
+# treat as versioned so the release warning is never dropped by mistake (issue #185).
+pr_version() {
+  local number=$1 ref=$2 files
+  files=$(gh api --paginate "repos/$repo/pulls/$number/files?per_page=100" --jq '.[].filename' 2>/dev/null) \
+    || { printf 'unknown\n'; return; }
+  if ! grep -qx VERSION <<< "$files"; then printf 'none\n'; return; fi
+  gh api "repos/$repo/contents/VERSION?ref=$ref" --jq '.content | gsub("\\s"; "") | @base64d' 2>/dev/null \
+    | tr -d '[:space:]' | grep . || printf 'unknown\n'
+}
+
 pr_status() {
-  local number=$1 view url head draft state merge_commit check runs link next code
+  local number=$1 view url head draft state merge_commit check runs link next code version
   if [ -z "$number" ]; then
     number=$(open_pr_number "$(current_branch)") || true
     [ -n "$number" ] || fail "no open pull request for branch $(current_branch); name one"
@@ -322,9 +334,12 @@ pr_status() {
   url=$(jq -r .url <<< "$view") head=$(jq -r .headRefOid <<< "$view")
   draft=$(jq -r .isDraft <<< "$view") state=$(jq -r .state <<< "$view")
   merge_commit=$(jq -r '.mergeCommit.oid // empty' <<< "$view")
-  printf 'pr=%s\nhead=%s\nstate=%s\ndraft=%s\n' "$url" "$head" "$state" "$draft"
+  version=$(pr_version "$number" "${merge_commit:-$head}")
+  printf 'pr=%s\nhead=%s\nstate=%s\ndraft=%s\nversion=%s\n' "$url" "$head" "$state" "$draft" "$version"
   if [ "$state" = MERGED ]; then
-    printf 'merge_commit=%s\nnext=%s\n' "$merge_commit" "follow the release: tools/release-handoff.sh follow $merge_commit"
+    if [ "$version" = none ]; then next="merged; no release (no VERSION change)"
+    else next="follow the release: tools/release-handoff.sh follow $merge_commit"; fi
+    printf 'merge_commit=%s\nnext=%s\n' "$merge_commit" "$next"
     say "status $url -> merged at ${merge_commit:0:12}"
     return 0
   fi
@@ -335,7 +350,9 @@ pr_status() {
     success)
       code=0
       if [ "$draft" = true ]; then next="mark it ready after the archive is committed: tools/release-handoff.sh pr CHANGE --ready --body-file FILE"
-      else next="ready to merge; merging a VERSION change releases it, so merge only as the deliberate release approval (gh pr merge $number --merge)"; fi
+      elif [ "$version" = none ]; then next="ready to merge; no VERSION change, so merging releases nothing (gh pr merge $number --merge)"
+      elif [ "$version" = unknown ]; then next="ready to merge; if it changes VERSION, merging releases it, so merge only as the deliberate release approval (gh pr merge $number --merge)"
+      else next="ready to merge; merging releases v$version, so merge only as the deliberate release approval (gh pr merge $number --merge)"; fi
       ;;
     failure) code=1; next="fix the failing check${link:+: $link}" ;;
     *) code=3; next="wait for $required_check on ${head:0:12}" ;;

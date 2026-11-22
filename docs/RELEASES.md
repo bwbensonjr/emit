@@ -67,7 +67,7 @@ automate-release-handoff):
 ```sh
 tools/release-handoff.sh preflight CHANGE   # stage=<name> status=<ok|owed|fail> lines; writes nothing
 tools/release-handoff.sh pr CHANGE --title "feat: ..." --body-file BODY [--draft | --ready]
-tools/release-handoff.sh status [PR]        # the Required validation check and the next action
+tools/release-handoff.sh status [PR]        # the Required validation check, the version it releases, and the next action
 tools/release-handoff.sh follow SHA [--wait] # after the merge: tag, release, and channels
 ```
 
