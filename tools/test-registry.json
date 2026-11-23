@@ -767,6 +767,46 @@
       ]
     },
     {
+      "id": "process-execution",
+      "label": "process execution extension",
+      "command": [
+        "bash",
+        "test/process-execution-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "runtime"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "process-execution"
+      ],
+      "legacy": []
+    },
+    {
+      "id": "package-manager",
+      "label": "emit pkg: sources, safety, recovery, update, remove",
+      "command": [
+        "bash",
+        "test/package-manager-tests.sh"
+      ],
+      "profiles": [
+        "full"
+      ],
+      "categories": [
+        "host"
+      ],
+      "isolation": "workspace",
+      "chez": false,
+      "coverage": [
+        "package-manager"
+      ],
+      "legacy": []
+    },
+    {
       "id": "catchable-errors-kinds",
       "label": "catchable errors + kinds",
       "command": [

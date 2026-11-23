@@ -523,8 +523,13 @@
     (%filesystem-directory-status "rt_filesystem_directory_status")
     (%filesystem-symlink-status "rt_filesystem_symlink_status")
     (%filesystem-replace-file "rt_filesystem_replace_file")
-    (%random-entropy "rt_random_entropy") (%load-request "rt_load_request")
-    (%load-invoke "rt_load_invoke")))
+    ;; change: emit-pkg -- directory creation/removal for (emit filesystem) and
+    ;; the spawn/read/wait edges behind the ordinary (emit process) library.
+    (%filesystem-create-directory "rt_filesystem_create_directory")
+    (%filesystem-delete-directory "rt_filesystem_delete_directory")
+    (%process-spawn "rt_process_spawn") (%process-read-all "rt_process_read_all")
+    (%process-wait "rt_process_wait") (%random-entropy "rt_random_entropy")
+    (%load-request "rt_load_request") (%load-invoke "rt_load_invoke")))
 
 ;; --- string helpers ---
 (define (comma-join lst)
@@ -1525,6 +1530,11 @@
     "declare i64 @rt_filesystem_directory_status(i64)\n"
     "declare i64 @rt_filesystem_symlink_status(i64)\n"
     "declare i64 @rt_filesystem_replace_file(i64, i64)\n"
+    "declare i64 @rt_filesystem_create_directory(i64)\n"
+    "declare i64 @rt_filesystem_delete_directory(i64, i64)\n"
+    "declare i64 @rt_process_spawn(i64, i64, i64)\n"
+    "declare i64 @rt_process_read_all(i64)\n"
+    "declare i64 @rt_process_wait(i64)\n"
     "declare i64 @rt_random_entropy(i64)\n"
     "declare i64 @rt_escape_frame()\n"
     "declare i64 @rt_escape_to(i64, i64)\n"

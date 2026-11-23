@@ -127,3 +127,18 @@ got="$(XDG_DATA_HOME="$TMP/xdg-linked" "$EMIT" run malt.scm 2> "$TMP/malt-user.e
 }
 [ "$got" = '6.0' ] || { printf 'expected 6.0 from the user root, got %s\n' "$got" >&2; exit 1; }
 say "run malt.scm -> 6.0 [installed payload, user root linked to $COLLECTION/lib]"
+# emit pkg from the installed payload (change: emit-pkg): an empty user root lists
+# nothing, and installing Malt from the collection checkout makes it resolve.
+mkdir -p "$TMP/xdg-pkg"
+listed="$(XDG_DATA_HOME="$TMP/xdg-pkg" "$EMIT" pkg list 2> "$TMP/pkg-list.err")" || {
+  cat "$TMP/pkg-list.err" >&2; exit 1;
+}
+[ -z "$listed" ] || { printf 'emit pkg list on an empty root printed %s\n' "$listed" >&2; exit 1; }
+XDG_DATA_HOME="$TMP/xdg-pkg" "$EMIT" pkg install --from "$COLLECTION" malt 2> "$TMP/pkg-install.err" || {
+  cat "$TMP/pkg-install.err" >&2; exit 1;
+}
+got="$(XDG_DATA_HOME="$TMP/xdg-pkg" "$EMIT" run malt.scm 2> "$TMP/malt-pkg.err")" || {
+  cat "$TMP/malt-pkg.err" >&2; exit 1;
+}
+[ "$got" = '6.0' ] || { printf 'expected 6.0 after emit pkg install, got %s\n' "$got" >&2; exit 1; }
+say "run malt.scm -> 6.0 [installed payload, emit pkg install --from $COLLECTION malt]"

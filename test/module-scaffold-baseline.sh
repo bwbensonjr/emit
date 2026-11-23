@@ -652,6 +652,13 @@
 #     all 80 files byte-identical to the pre-change capture (0 unexpected additions,
 #     removals, codegen changes, or new demos).  The ordinary `(emit filesystem)` unit
 #     appears only when imported and therefore enters no existing demo's closure.
+#   emit-pkg -- five private raw runtime edges (directory creation and removal for
+#     (emit filesystem); spawn, read-all, and wait for (emit process)) add five
+#     declaration lines to every emitted unit's shared header.  An 82-demo before/after
+#     capture (build/emit from origin/main in a detached worktree vs the regenerated
+#     tree) contained 1250 added lines: exactly those five declarations across 250 units.
+#     Removing them from the post-change capture made all 82 files byte-identical to the
+#     pre-change capture.  (emit process) and (emit pkg) appear only when imported.
 #   eq-keyed-hash-tables, primitive bootstrap phase -- `%eq-hash` adds one
 #     `declare i64 @rt_eq_hash(i64)` line to every emitted unit's shared header.  A
 #     preserved post-change capture held all 80 prior demos plus the new `eq-hash`

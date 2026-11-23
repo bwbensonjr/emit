@@ -218,10 +218,10 @@ def changed_selection(data, profile, names, policy):
     extra = {
         "runtime": {"fixnum-overflow-traps", "fixnum-tagging", "indexed-access-bounds", "catchable-errors-kinds",
                     "dynamic-extent-call-cc", "io-ports-eof-object", "printer-cycles-char-names-trap-delivery",
-                    "source-load-interaction-host", "custom-writers"},
+                    "source-load-interaction-host", "custom-writers", "process-execution"},
         "host": {"cli-interface-help-final-value", "installation-diagnostics", "llvm-toolchain-discovery",
                  "native-build-configuration", "installed-layout-libraries-support-files", "custom-writers",
-                 "user-library-root"},
+                 "user-library-root", "package-manager"},
         "library": {"import-sets-and-portable-sources", "runtime-and-macro-library-composition",
                     "explicit-artifact-format", "explicit-artifact-reuse", "module-vertical-slice-repl",
                     "custom-writers"},

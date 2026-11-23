@@ -412,6 +412,7 @@ static void usage(std::ostream &os) {
         "  emit build [NAME|FILE] [--manifest F] [-o OUT] [--no-prelude]   deliver a native exe\n"
         "  emit lib  SRC [-o DIR] [--manifest F]              compile one library -> artifact\n"
         "  emit doctor [options]                             inspect the installation\n"
+        "  emit pkg <subcommand> [args]                      install collection packages\n"
         "  emit --version                                    Emit and build-time LLVM versions\n"
         "  emit help [VERB]                                   this summary, or a verb's usage\n";
   usage_shared(os);
@@ -493,6 +494,29 @@ static void usage_doctor(std::ostream &os) {
         "~/.local/share/emit/lib) follows project lib/ and precedes installed roots.\n"
         "Exit 0 means required checks pass; nonzero means failure.\n"
         "Missing optional project roots and unused prefix fallbacks are informational.\n";
+}
+
+static void usage_pkg(std::ostream &os) {
+  os << "usage: emit pkg <subcommand> [args]   manage packages from emit-packages\n"
+        "\n"
+        "  install NAME...           install packages into the user library root\n"
+        "  list                      installed packages: name, version, source (offline)\n"
+        "  available                 packages in the collection on its main branch\n"
+        "  remove NAME...            delete the packages' files (offline)\n"
+        "  update [NAME...]          move installed packages (all when none named) to\n"
+        "                            the collection's current main commit\n"
+        "\n"
+        "  --from DIR                install, update, available: read an emit-packages\n"
+        "                            checkout at DIR; no network, curl, or tar\n"
+        "  --help, -h                print this usage\n"
+        "\n"
+        "Packages come from the main branch of github.com/bwbensonjr/emit-packages,\n"
+        "resolved to one commit per command and fetched over HTTPS with curl and tar.\n"
+        "Files go to the user root ($XDG_DATA_HOME/emit/lib, else ~/.local/share/emit/lib);\n"
+        "records go to packages/ beside it. emit pkg never writes through a symbolic\n"
+        "link and never replaces a file it does not own. Narration goes to stderr\n"
+        "(EMIT_VERBOSITY); list and available print data on stdout. Exit 0 on success,\n"
+        "1 on failure, 2 on a usage error. See docs/PACKAGES.md.\n";
 }
 
 static long file_bytes(const std::string &p) {
@@ -4737,7 +4761,8 @@ static int emit_doctor(int argc, char **argv) {
             << (regular_readable(gc_static_archive(tc)) ? "available" : "unavailable")
             << " for emit build --static-gc]\n";
 
-  for (const auto &relative : {"tools/llvm-env.sh", "tools/log.sh", "src/runtime/runtime.c"}) {
+  for (const auto &relative : {"tools/llvm-env.sh", "tools/log.sh", "src/runtime/runtime.c",
+                                "tools/pkg.scm"}) {
     std::string path = support_file(relative);
     std::cout << "support " << relative << ": " << (path.empty() ? "missing" : path) << "\n";
     check(!path.empty(), std::string("required support file missing: ") + relative);
@@ -4797,6 +4822,47 @@ static int emit_doctor(int argc, char **argv) {
   return failures ? 1 : 0;
 }
 
+// THE PACKAGE MANAGER (change: emit-pkg, design D1).  `emit pkg` is a Scheme program:
+// the shipped driver tools/pkg.scm imports (emit pkg), which holds all of the logic.  This
+// verb only finds the driver and runs it through the same in-process path as `emit run`,
+// putting two facts ahead of the user's arguments so each has one source: the running
+// version, and the directory holding the user library root as user_library_root()
+// computes it.  The installed manifest is selected explicitly and conventional roots are
+// disabled, so neither a project in the working directory nor the user root itself can
+// shadow the tool's own libraries.
+static int emit_pkg(int argc, char **argv) {
+  for (int i = 1; i < argc; i++) {
+    std::string a(argv[i]);
+    if (a == "--") break;
+    if (is_help_flag(a)) { usage_pkg(std::cout); return 0; }
+  }
+  std::string driver = support_file("tools/pkg.scm");
+  if (driver.empty()) {
+    std::cerr << "emit pkg: cannot find the package manager program tools/pkg.scm "
+                 "beside this executable or under " << EMIT_PREFIX << "/share/emit\n";
+    return 1;
+  }
+  std::string manifest = support_file(kManifestName);
+  if (manifest.empty()) {
+    std::cerr << "emit pkg: cannot find the installed manifest " << kManifestName << "\n";
+    return 1;
+  }
+  std::string root = user_library_root();
+  std::string data = root.empty() ? std::string() : dir_of(root);
+  std::vector<std::string> args = {"run", "--manifest", manifest, "--no-library-paths",
+                                   "--", driver, "--emit-version", EMIT_VERSION};
+  if (!data.empty()) {
+    args.push_back("--data-dir");
+    args.push_back(data);
+  }
+  args.push_back("--");
+  for (int i = 1; i < argc; i++) args.push_back(argv[i]);
+  std::vector<char *> run_argv;
+  for (std::string &a : args) run_argv.push_back(a.data());
+  run_argv.push_back(nullptr);
+  return emit_run((int)args.size(), run_argv.data());
+}
+
 // Print VERB's own usage to OS; false when VERB does not name a command.
 static bool usage_for_verb(const std::string &verb, std::ostream &os) {
   if      (verb == "run")   usage_run(os);
@@ -4804,6 +4870,7 @@ static bool usage_for_verb(const std::string &verb, std::ostream &os) {
   else if (verb == "build") usage_build(os);
   else if (verb == "lib")   usage_lib(os);
   else if (verb == "doctor") usage_doctor(os);
+  else if (verb == "pkg")   usage_pkg(os);
   else return false;
   return true;
 }
@@ -4812,7 +4879,7 @@ int main(int argc, char **argv) {
   g_argv0 = argc > 0 ? argv[0] : "emit";
   init_verbosity();
   if (argc < 2) {
-    std::cerr << "emit: missing verb (known verbs: lib, build, run, repl, doctor)\n";
+    std::cerr << "emit: missing verb (known verbs: lib, build, run, repl, doctor, pkg)\n";
     usage(std::cerr);
     return 1;
   }
@@ -4833,7 +4900,7 @@ int main(int argc, char **argv) {
     std::string topic = (verb == "help" && argc > 2) ? std::string(argv[2]) : std::string();
     if (topic.empty()) { usage(std::cout); return 0; }
     if (usage_for_verb(topic, std::cout)) return 0;
-    std::cerr << "emit help: unknown verb '" << topic << "' (known verbs: lib, build, run, repl, doctor)\n";
+    std::cerr << "emit help: unknown verb '" << topic << "' (known verbs: lib, build, run, repl, doctor, pkg)\n";
     usage(std::cerr);
     return 2;
   }
@@ -4844,7 +4911,8 @@ int main(int argc, char **argv) {
   if (verb == "build") return emit_build(argc - 1, argv + 1);
   if (verb == "lib")   return emit_lib(argc - 1, argv + 1);
   if (verb == "doctor") return emit_doctor(argc - 1, argv + 1);
-  std::cerr << "emit: unknown verb '" << verb << "' (known verbs: lib, build, run, repl, doctor)\n";
+  if (verb == "pkg")   return emit_pkg(argc - 1, argv + 1);
+  std::cerr << "emit: unknown verb '" << verb << "' (known verbs: lib, build, run, repl, doctor, pkg)\n";
   usage(std::cerr);
   return 2;
 }

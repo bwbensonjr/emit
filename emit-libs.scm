@@ -41,6 +41,8 @@
   (library (emit list) (source "lib/emit/list.sld"))
   (library (emit write) (source "lib/emit/write.sld"))
   (library (emit filesystem) (source "lib/emit/filesystem.sld"))
+  (library (emit process) (source "lib/emit/process.sld"))
+  (library (emit pkg) (source "lib/emit/pkg.sld"))
   (library (scheme base) (source "lib/scheme/base.sld"))
   (library (scheme inexact) (source "lib/scheme/inexact.sld"))
   (library (scheme case-lambda) (source "lib/scheme/case-lambda.sld"))

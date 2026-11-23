@@ -136,6 +136,8 @@ echo "installed layout"
 # shipping the script alone installs one that fails on its first line.
 for f in bin/emit share/emit/emit-libs.scm share/emit/lib/scheme/base.sld \
          share/emit/lib/emit/filesystem.sld \
+         share/emit/lib/emit/process.sld share/emit/lib/emit/pkg.sld \
+         share/emit/tools/pkg.scm \
          share/emit/lib/scheme/inexact.sld \
          share/emit/lib/scheme/case-lambda.sld share/emit/lib/scheme/char.sld \
          share/emit/lib/scheme/char-data.scm \
@@ -296,7 +298,8 @@ for probe in \
   "(scheme char)|(import (scheme char)) (list (string-foldcase \"Straße\") (char-general-category #\\x2003))|(\"strasse\" Zs)" \
   "(scheme process-context)|(import (scheme process-context)) (car (command-line))|\"-\"" \
   "(scheme write)|(import (scheme base) (scheme write)) (let ((p (open-output-string))) (write-shared (list 1 2) p) (get-output-string p))|\"(1 2)\"" \
-  "(emit filesystem)|(import (emit filesystem)) (list (file-directory? \".\") (file-symbolic-link? \".\"))|(#t #f)"
+  "(emit filesystem)|(import (emit filesystem)) (list (file-directory? \".\") (file-symbolic-link? \".\"))|(#t #f)" \
+  "(emit process)|(import (emit process)) (run-program \"true\" (quote ()))|0"
 do
   lib="${probe%%|*}"; rest="${probe#*|}"; prog="${rest%%|*}"; pwant="${rest##*|}"
   pgot="$(printf '%s\n' "$prog" | EMIT_VERBOSITY=quiet "$EMIT" run 2>"$TMP/eprobe")"

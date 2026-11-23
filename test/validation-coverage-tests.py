@@ -31,8 +31,9 @@ class CoverageTests(unittest.TestCase):
         # extend the full profile; historical label ownership above remains unchanged. The four
         # full-profile Malt suites became emit-packages-pinned and srfi-27-install when Malt moved
         # to the emit-packages collection. fixnum-tagging adds sanitized C runtime arithmetic (#188);
-        # user-library-root adds the default user library root.
-        self.assertEqual(len([s for s in suites if "full" in s["profiles"]]), 68)
+        # user-library-root adds the default user library root; process-execution and
+        # package-manager add (emit process) and emit pkg.
+        self.assertEqual(len([s for s in suites if "full" in s["profiles"]]), 70)
         additions = {
             "source-load-interaction-host": {"dev", "full", "reference"},
             "stdlib-precompilation": {"full"},
@@ -45,6 +46,8 @@ class CoverageTests(unittest.TestCase):
             "fixnum-tagging": {"full"},
             "user-library-root": {"full"},
             "user-library-root-chez": {"reference"},
+            "process-execution": {"full"},
+            "package-manager": {"full"},
             "srfi-27": {"full"},
             "srfi-27-source": {"reference"},
             "emit-packages-pinned": {"full"},

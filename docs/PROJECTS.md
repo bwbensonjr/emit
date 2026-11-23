@@ -186,6 +186,8 @@ Add roots explicitly with repeatable `-L DIR` / `--library-path DIR`, or set
 which precedes the project `lib/` root, which precedes the user library root
 (`~/.local/share/emit/lib`, or `$XDG_DATA_HOME/emit/lib`) and then the installed libraries. The
 first matching source wins, so a project can override a library installed for the user.
+`emit pkg install NAME` installs a package from the emit-packages collection into the user
+library root; see [packages](PACKAGES.md).
 
 ## When to add a manifest
 

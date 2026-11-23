@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.13.0
+
+- Add `emit pkg`, which installs packages from the
+  [emit-packages](https://github.com/bwbensonjr/emit-packages) collection into the user
+  library root, so `emit pkg install malt` is all it takes to use `(malt learner)`. Its
+  subcommands are `install`, `list`, `available`, `remove`, and `update`. Each network
+  command resolves the collection's `main` branch to one commit, fetches that commit over
+  HTTPS with `curl` and `tar`, and records it beside every package it installs.
+  `--from DIR` installs from a local checkout with no network. An install refuses a package
+  that needs a newer Emit, never writes through a symbolic link, and refuses only when a
+  file it would place belongs to the user or to another package. Every check runs before
+  anything is written. Files are placed by atomic rename under a lock, and an interrupted
+  command is undone by the next one. See `docs/PACKAGES.md`.
+- Add `(emit process)`, exporting `run-program` and `program-output`, which run a host
+  program with an argument list directly (no shell) and return its exit status, or the
+  status and its captured standard output. A program that cannot be started raises a
+  catchable file error.
+- Add `create-directory` and `delete-directory` to `(emit filesystem)`. Directory creation
+  fails when the path exists, and deletion, including recursive deletion, never follows a
+  symbolic link.
+
 ## 0.12.0
 
 - Add a default user library root, `$XDG_DATA_HOME/emit/lib`, or

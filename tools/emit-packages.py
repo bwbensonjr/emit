@@ -5,9 +5,11 @@ The collection (bwbensonjr/emit-packages) holds libraries that used to ship with
 Emit, starting with (malt learner). Each package declares execution-path checks
 in packages/<name>/checks.scm; this driver runs every check through:
 
-  native (default)  emit run, emit repl, a standalone emit build executable, and
+  native (default)  emit run, emit repl, a standalone emit build executable,
                     emit run consuming published artifacts of every library the
-                    package declares in package.scm
+                    package declares in package.scm, and emit run against a user
+                    root that `emit pkg install --from` populated (no -L root for
+                    the collection's lib/)
   --source          the Chez source driver (src/compile.ss)
 
 A path passes when its final non-blank stdout line equals the check's expect
@@ -34,7 +36,7 @@ import time
 ROOT = Path(__file__).resolve().parent.parent
 PIN_FILE = ROOT / "tools" / "emit-packages-pin.sh"
 CACHE = ROOT / "build" / "emit-packages"
-NATIVE_PATHS = ("run", "repl", "build", "artifacts")
+NATIVE_PATHS = ("run", "repl", "build", "artifacts", "pkg")
 
 
 def level():
@@ -230,8 +232,26 @@ def run_path(path, emit, program, roots, work, env, libraries, collection):
                     *roots, "-o", str(exe)], ROOT, env)
         if done.returncode == 0:
             done = run([str(exe)], work, env)
+    elif path == "pkg":
+        return run_installed(emit, program, roots, work, env, collection)
     else:
         return run_artifacts(emit, program, roots, work, env, libraries, collection)
+    return done.returncode, done.stdout, done.stderr
+
+
+def run_installed(emit, program, roots, work, env, collection):
+    """Install the package with emit pkg into a fresh user root, then run the check
+    with only the package's test root, so the collection's libraries resolve from the
+    user root that emit pkg wrote (change: emit-pkg)."""
+    package = Path(roots[-1]).parent.name
+    data = work / "xdg"
+    data.mkdir(exist_ok=True)
+    installed = dict(env, XDG_DATA_HOME=str(data))
+    if not (data / "emit" / "packages" / f"{package}.scm").exists():
+        done = run([emit, "pkg", "install", "--from", str(collection), package], ROOT, installed)
+        if done.returncode != 0:
+            return done.returncode, done.stdout, f"emit pkg install {package} failed\n{done.stderr}"
+    done = run([emit, "run", *roots[2:], str(program)], ROOT, installed)
     return done.returncode, done.stdout, done.stderr
 
 

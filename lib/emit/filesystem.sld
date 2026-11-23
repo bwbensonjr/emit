@@ -1,7 +1,9 @@
 ;;; filesystem.sld -- narrow non-standard host filesystem operations.
 (define-library (emit filesystem)
   (import (scheme base))
-  (export directory-list file-directory? file-symbolic-link? replace-file)
+  (export
+    directory-list file-directory? file-symbolic-link? replace-file create-directory
+    delete-directory)
   (begin
     ;; Match the kinded failures produced by (scheme file), while keeping these
     ;; non-standard wrappers outside the standard library's declared surface.
@@ -38,4 +40,19 @@
           (if #f #f)
           (filesystem-error 'replace-file
                             "cannot replace file"
-                            (list source destination))))))
+                            (list source destination))))
+
+    ;; One directory, no parents, and an error when the path exists: a success
+    ;; proves this caller created it (change: emit-pkg).
+    (define (create-directory path)
+      (if (%filesystem-create-directory path)
+          (if #f #f)
+          (filesystem-error 'create-directory "cannot create directory" (list path))))
+
+    ;; An empty directory, or with RECURSIVE? a whole tree.  A symbolic link is
+    ;; never followed: as PATH it is an error, and inside the tree it is unlinked.
+    (define (delete-directory path . recursive?)
+      (if
+        (%filesystem-delete-directory path (and (pair? recursive?) (car recursive?) #t))
+        (if #f #f)
+        (filesystem-error 'delete-directory "cannot delete directory" (list path))))))

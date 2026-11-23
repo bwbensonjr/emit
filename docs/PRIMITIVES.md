@@ -459,8 +459,11 @@ all go through it, so refilling a buffer would be one accessor's business.
   no current payer. Textual only.
 - **Filesystem operations have separate library homes.** `(scheme file)` supplies
   standard file operations, including `file-exists?` and `delete-file`.
-  Directory listing, path classification, and atomic replacement require the
-  explicit `(emit filesystem)` extension; see [the filesystem library](MODULES.md#emit-filesystem--the-narrow-public-host-edge).
+  Directory listing, path classification, atomic replacement, and directory creation and
+  removal require the explicit `(emit filesystem)` extension; see [the filesystem library](MODULES.md#emit-filesystem--the-narrow-public-host-edge).
+- **Running host programs has its own library home.** `%process-spawn`, `%process-read-all`, and
+  `%process-wait` (`posix_spawnp`, a pipe read to end of file, and `waitpid`) are private edges
+  wrapped by `(emit process)`; see [the process library](MODULES.md#emit-process--running-host-programs).
 - **The input operations require their port argument.** R7RS lets it default to
   `(current-input-port)`; here `(read-char p)` is the only spelling.
 
