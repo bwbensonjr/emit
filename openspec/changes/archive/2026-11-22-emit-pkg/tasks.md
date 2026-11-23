@@ -116,7 +116,7 @@
   - the testing overrides, marked test-only.
 
   Link it from the README, `docs/PROJECTS.md` and `docs/DISTRIBUTION.md`, and note conformance in `docs/OUTPUT.md`. Verify that every documented command runs as written against a fixture.
-- [ ] 3.7 Bump `VERSION` to 0.13.0 and add the `CHANGELOG.md` 0.13.0 section. Verify that `tools/release-handoff.sh preflight emit-pkg` reports `version ok`.
+- [x] 3.7 Bump `VERSION` to 0.13.0 and add the `CHANGELOG.md` 0.13.0 section. Verify that `tools/release-handoff.sh preflight emit-pkg` reports `version ok`.
 - [x] 3.8 Run `bash tools/test.sh dev --changed origin/main` and the `package-manager`, `process-execution`, `filesystem-access-extension`, `srfi-27-install` and `emit-packages-pinned` suites. Verify that all pass and that preflight's validation stage is satisfied or owed only to CI.
 
 ## Workflow follow-up
