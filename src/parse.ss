@@ -62,7 +62,11 @@
     ;; change: add-filesystem-access -- the private raw edge behind
     ;; the ordinary non-standard (emit filesystem) library.
     %filesystem-directory-list %filesystem-directory-status %filesystem-symlink-status
-    %filesystem-replace-file %random-entropy %load-request %load-invoke))
+    %filesystem-replace-file
+    ;; change: emit-pkg -- directory creation/removal and the spawn/read/wait
+    ;; edges behind the ordinary (emit process) library.
+    %filesystem-create-directory %filesystem-delete-directory %process-spawn
+    %process-read-all %process-wait %random-entropy %load-request %load-invoke))
 (define (prim? op) (and (memq op *prims*) #t))
 
 ;; ---- primitives as first-class values ----

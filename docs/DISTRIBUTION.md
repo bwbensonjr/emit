@@ -115,7 +115,9 @@ notarized (paid Apple Developer account).
 - Keep shipped libraries as ordinary sources under `share/emit/lib/`.
 - Emit already resolves Snow (snow-fort.org) R7RS packages from local
   directories via `-L` / `EMIT_LIBRARY_PATH` or the user library root
-  (`~/.local/share/emit/lib`). The remaining gap is an
+  (`~/.local/share/emit/lib`). `emit pkg` (0.13.0, [PACKAGES.md](PACKAGES.md))
+  installs packages from the emit-packages collection into that user root. For Snow
+  packages the remaining gap is an
   explicit fetch step, not network imports: either document installing
   with `snow-chibi` (and propose Emit as a recognized implementation
   upstream), or add an `emit pkg` verb that resolves the Snow index,

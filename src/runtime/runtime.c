@@ -28,6 +28,11 @@
 #include <errno.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <fcntl.h>
+#include <spawn.h>
+#include <unistd.h>
 #include <math.h>
 #include <setjmp.h>
 #include <gc/gc.h>
@@ -1390,6 +1395,162 @@ val rt_filesystem_replace_file(val source, val destination) {
   CHECK_TAG("replace-file", source, is_string, "a string");
   CHECK_TAG("replace-file", destination, is_string, "a string");
   return truthy(rename(str_bytes(source), str_bytes(destination)) == 0);
+}
+
+/* One mkdir and nothing else (change: emit-pkg, design D3).  Failing when the
+ * path already exists is the contract, not an inconvenience: a successful call
+ * proves THIS caller created the directory, which is what the package manager's
+ * lock relies on.  No parents are created. */
+val rt_filesystem_create_directory(val path) {
+  CHECK_TAG("create-directory", path, is_string, "a string");
+  return truthy(mkdir(str_bytes(path), 0777) == 0);
+}
+
+/* Remove PATH and, when it is a real directory, everything beneath it.  lstat
+ * decides each entry, so a symbolic link is unlinked and never traversed.  The
+ * entry names are collected before any is removed, so the walk never depends on
+ * readdir's behavior over a directory that is changing underneath it. */
+static int rt_remove_tree(const char *path) {
+  struct stat info;
+  if (lstat(path, &info) != 0) return -1;
+  if (!S_ISDIR(info.st_mode)) return unlink(path);
+  DIR *dir = opendir(path);
+  if (!dir) return -1;
+  size_t count = 0, cap = 16;
+  char **names = (char **)malloc(cap * sizeof(char *));
+  int rc = names ? 0 : -1;
+  for (;;) {
+    if (rc != 0) break;
+    errno = 0;
+    struct dirent *entry = readdir(dir);
+    if (!entry) {
+      if (errno) rc = -1;
+      break;
+    }
+    if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
+    if (count == cap) {
+      char **grown = (char **)realloc(names, 2 * cap * sizeof(char *));
+      if (!grown) { rc = -1; break; }
+      names = grown;
+      cap *= 2;
+    }
+    size_t need = strlen(path) + strlen(entry->d_name) + 2;
+    names[count] = (char *)malloc(need);
+    if (!names[count]) { rc = -1; break; }
+    snprintf(names[count], need, "%s/%s", path, entry->d_name);
+    count++;
+  }
+  if (closedir(dir) != 0) rc = -1;
+  for (size_t i = 0; i < count; i++) {
+    if (rc == 0 && rt_remove_tree(names[i]) != 0) rc = -1;
+    free(names[i]);
+  }
+  free(names);
+  return rc == 0 ? rmdir(path) : -1;
+}
+
+/* A path that is not a directory under lstat -- a file, a missing path, or a
+ * symbolic link even to a directory -- is a failure, so the public procedure
+ * never deletes through a link.  Without RECURSIVE this is a single rmdir. */
+val rt_filesystem_delete_directory(val path, val recursive) {
+  CHECK_TAG("delete-directory", path, is_string, "a string");
+  struct stat info;
+  if (lstat(str_bytes(path), &info) != 0 || !S_ISDIR(info.st_mode)) return FALSE_V;
+  if (recursive == FALSE_V) return truthy(rmdir(str_bytes(path)) == 0);
+  return truthy(rt_remove_tree(str_bytes(path)) == 0);
+}
+
+/* --- host processes (change: emit-pkg, design D2) ---------------------------
+ * Three edges behind (emit process): spawn, read a captured stdout to EOF, and
+ * wait.  They are split rather than fused into one blocking "run" so a later,
+ * fuller process library can hold a child between them.
+ *
+ * spawn uses posix_spawnp: no shell, a PATH search for a slash-free name, the
+ * inherited environment, working directory, and stdio -- except that CAPTURE
+ * replaces fd 1 with a pipe whose read end comes back to Scheme.  Every stdio
+ * stream is flushed first, so text the program wrote before the spawn precedes
+ * the child's on a shared stream.  The result is (pid . fd-or-#f), or a fixnum
+ * errno when the child could not be started; the library raises on that. */
+val rt_process_spawn(val program, val args, val capture) {
+  CHECK_TAG("run-program", program, is_string, "a string");
+  size_t argc = 1;
+  for (val p = args; p != NIL_V; p = as_ptr(p)[1]) {
+    CHECK_TAG("run-program", p, is_pair, "a list of strings");
+    CHECK_TAG("run-program", as_ptr(p)[0], is_string, "a string argument");
+    argc++;
+  }
+  char **argv = (char **)malloc((argc + 1) * sizeof(char *));
+  if (!argv) return FIX(ENOMEM);
+  argv[0] = (char *)str_bytes(program);
+  size_t i = 1;
+  for (val p = args; p != NIL_V; p = as_ptr(p)[1]) argv[i++] = (char *)str_bytes(as_ptr(p)[0]);
+  argv[argc] = NULL;
+
+  int fds[2] = {-1, -1};
+  posix_spawn_file_actions_t actions;
+  posix_spawn_file_actions_init(&actions);
+  if (capture != FALSE_V) {
+    if (pipe(fds) != 0) {
+      int err = errno;
+      posix_spawn_file_actions_destroy(&actions);
+      free(argv);
+      return FIX(err);
+    }
+    fcntl(fds[0], F_SETFD, FD_CLOEXEC);
+    fcntl(fds[1], F_SETFD, FD_CLOEXEC);
+    posix_spawn_file_actions_adddup2(&actions, fds[1], 1);
+  }
+  fflush(NULL);
+  pid_t pid;
+  int rc = posix_spawnp(&pid, argv[0], &actions, NULL, argv, environ);
+  posix_spawn_file_actions_destroy(&actions);
+  free(argv);
+  if (fds[1] >= 0) close(fds[1]);
+  if (rc != 0) {
+    if (fds[0] >= 0) close(fds[0]);
+    return FIX(rc);
+  }
+  return rt_cons(FIX(pid), fds[0] >= 0 ? FIX(fds[0]) : FALSE_V);
+}
+
+/* Read FD to end of file, close it, and return the bytes as a string built the
+ * way rt_read_file builds a file's contents.  #f on a read error. */
+val rt_process_read_all(val fd_v) {
+  CHECK_TAG("program-output", fd_v, is_fixnum, "a descriptor");
+  int fd = (int)UNFIX(fd_v);
+  size_t cap = 4096, len = 0;
+  char *buf = (char *)GC_MALLOC_ATOMIC(cap);
+  for (;;) {
+    if (len == cap) {
+      char *grown = (char *)GC_MALLOC_ATOMIC(cap * 2);
+      memcpy(grown, buf, len);
+      buf = grown;
+      cap *= 2;
+    }
+    ssize_t n = read(fd, buf + len, cap - len);
+    if (n > 0) { len += (size_t)n; continue; }
+    if (n == 0) break;
+    if (errno == EINTR) continue;
+    close(fd);
+    return FALSE_V;
+  }
+  close(fd);
+  return rt_make_string(buf, (intptr_t)len);
+}
+
+/* Wait for PID: its exit code, or the negated signal number when a signal ended
+ * it.  #f when waitpid itself fails. */
+val rt_process_wait(val pid_v) {
+  CHECK_TAG("run-program", pid_v, is_fixnum, "a process id");
+  int status;
+  pid_t rc;
+  do {
+    rc = waitpid((pid_t)UNFIX(pid_v), &status, 0);
+  } while (rc < 0 && errno == EINTR);
+  if (rc < 0) return FALSE_V;
+  if (WIFEXITED(status)) return FIX(WEXITSTATUS(status));
+  if (WIFSIGNALED(status)) return FIX(-WTERMSIG(status));
+  return FALSE_V;
 }
 
 /* --no-prelude channel for the embedded batch entry (change:

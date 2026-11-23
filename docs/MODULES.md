@@ -504,7 +504,7 @@ overrides, artifact directories, and named program targets:
   entry's `source`/`output`; the *default* artifact dir (`build/lib`) is the driver's own and
   stays relative to the invocation.
 - The compatibility `emit-libs.scm` at the repo root lists the shipped libraries — `(emit internal)`,
-  `(emit filesystem)`, `(scheme base)`, `(scheme cxr)`, `(scheme read)`, `(scheme file)`, `(scheme inexact)`,
+  `(emit filesystem)`, `(emit process)`, `(emit pkg)`, `(scheme base)`, `(scheme cxr)`, `(scheme read)`, `(scheme file)`, `(scheme inexact)`,
   `(scheme case-lambda)`, `(scheme char)`, `(scheme process-context)`, and `(scheme write)`; point
   `--manifest` at your own for additional libraries (as the test
   suites do with `test/modules/emit-libs.scm`). These mappings are not required when the sources
@@ -792,6 +792,8 @@ published fails the default suite, so adding a helper forces a visibility decisi
 | `(emit internal)` | generated from `src/prelude.scm` | explicit import; **not API** | **baked** + manifest |
 | `(emit list)` | generated from `src/prelude.scm` | `(import (emit list))` | installed root / exact manifest |
 | `(emit filesystem)` | hand-written | `(import (emit filesystem))` | installed root / exact manifest |
+| `(emit process)` | hand-written | `(import (emit process))` | installed root / exact manifest |
+| `(emit pkg)` | hand-written | the `emit pkg` command; not API | installed root / exact manifest |
 | `(scheme base)` | generated from `src/prelude.scm` | auto-imported everywhere | **baked** + manifest |
 | `(scheme cxr)` | generated from `src/prelude.scm` | `(import (scheme cxr))` | installed root / exact manifest |
 | `(scheme read)` | generated from `src/prelude.scm` | `(import (scheme read))` | installed root / exact manifest |
@@ -859,8 +861,9 @@ the compiler needs it — the reason the `unstable` tier could be retired (issue
 
 ### `(emit filesystem)` — the narrow public host edge
 
-`(emit filesystem)` is public but deliberately non-standard. It exports exactly four procedures:
-`directory-list`, `file-directory?`, `file-symbolic-link?`, and `replace-file`. A listing returns
+`(emit filesystem)` is public but deliberately non-standard. It exports exactly six procedures:
+`directory-list`, `file-directory?`, `file-symbolic-link?`, `replace-file`, `create-directory`, and
+`delete-directory`. A listing returns
 the immediate bare entry names in unspecified filesystem order and omits `.` and `..`; consumers
 sort when their policy requires deterministic traversal. `file-directory?` follows the final
 symbolic link, while `file-symbolic-link?` inspects that final component, so a link to a directory
@@ -872,9 +875,44 @@ across filesystems nor promises crash durability. Failed enumeration, non-missin
 errors, and failed replacement raise catchable file errors. Missing paths are ordinary `#f`
 answers from the two predicates.
 
-The library contains no recursion, sorting, hidden-directory rules, temporary-name construction,
-or write policy. Those decisions belong to applications such as Pitch. It is an ordinary manifest
-unit and is omitted from programs that do not explicitly import it.
+`(create-directory path)` makes one directory. It creates no parents and raises a file error when
+the path already exists, so a successful call proves this caller made it -- which is what lets
+`emit pkg` use a directory as its lock. `(delete-directory path)` removes an empty directory, and
+`(delete-directory path #t)` removes a whole tree depth-first. Neither form ever follows a symbolic
+link: a link as `path` is a file error, and a link inside the tree is unlinked, never traversed, so
+the link's target is untouched.
+
+```scheme
+(import (scheme base) (emit filesystem))
+(create-directory "scratch")
+(delete-directory "scratch" #t)
+```
+
+The library contains no sorting, hidden-directory rules, temporary-name construction, or write
+policy. Those decisions belong to applications such as Pitch. It is an ordinary manifest unit and
+is omitted from programs that do not explicitly import it.
+
+### `(emit process)` — running host programs
+
+`(emit process)` exports `run-program` and `program-output`. Both take a program name and a list of
+argument strings and run the program directly: no shell sees either, so spaces, `$`, and `*` reach
+the child exactly as written. A name without a slash is searched for on `PATH`. The child inherits
+the environment, the working directory, and the standard streams. Pending output on Emit's ports is
+flushed before the child starts, so text the program wrote first appears first.
+
+```scheme
+(import (scheme base) (scheme write) (emit process))
+(run-program "printf" '("%s\n" "a b"))             ; prints a b, returns 0
+(call-with-values (lambda () (program-output "uname" '()))
+  (lambda (status text) (write (list status text))))  ; (0 "Darwin\n")
+```
+
+`run-program` returns the exit code, or the negated signal number when a signal ended the child.
+`program-output` captures standard output and returns two values, the status and the complete
+output as a string; standard error stays inherited. A program that cannot be started -- absent
+from `PATH`, missing, or not executable -- raises a catchable error for which `file-error?` is
+true, naming the program. The names leave the `process-` prefix free for a later library of
+process objects, and a later optional trailing options argument can extend both procedures.
 
 ### The relocated sixteen
 

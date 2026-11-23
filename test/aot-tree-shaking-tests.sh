@@ -88,6 +88,37 @@ fs_plain_stripped="$(stat -f%z "$TMP/filesystem-plain.stripped" 2>/dev/null || s
 fs_import_stripped="$(stat -f%z "$TMP/filesystem-import.stripped" 2>/dev/null || stat -c%s "$TMP/filesystem-import.stripped")"
 ok "filesystem stripped size measured (plain $fs_plain_stripped B, import $fs_import_stripped B; unstripped $fs_plain_size/$fs_import_size B)"
 
+# (emit process) has the same pay-for-use shape (change: emit-pkg): a program that
+# does not import it keeps none of the spawn/read/wait edges (rt_process_argv, the
+# command-line global of (scheme process-context), is not one of them), while an
+# importing program runs a real child.
+pr_import="$(build process-import '(import (emit process)) (if (= 0 (run-program "true" (quote ()))) (display "filesystem-size-ok") (display "bad"))')"
+pr_import_val="${pr_import%%|*}"; pr_import_size="${pr_import##*|}"
+[ "$pr_import_val" = filesystem-size-ok ] \
+  && ok "process size probe runs a child" \
+  || bad "process size value [$pr_import_val]"
+if command -v nm >/dev/null 2>&1; then
+  pr_runtime_symbols="$(nm "$TMP/filesystem-plain" 2>/dev/null | grep -c 'rt_process_spawn\|rt_process_read_all\|rt_process_wait' || true)"
+  pr_library_symbols="$(nm "$TMP/filesystem-plain" 2>/dev/null | grep -c 'emit\.process:' || true)"
+  [ "$pr_runtime_symbols" -eq 0 ] && [ "$pr_library_symbols" -eq 0 ] \
+    && ok "non-importing AOT binary retains no process library/runtime symbols" \
+    || bad "non-importing binary retained $pr_library_symbols process library / $pr_runtime_symbols runtime symbols"
+else
+  echo "  [SKIP] nm unavailable: process retained-symbol check"
+fi
+# The importing side is checked in the pruned IR, as for filesystem above: on Linux
+# LTO inlines rt_process_spawn into its caller, so nm need not show its name.
+if [ -f "$TMP/process-import.emit.process.pruned.ll" ] \
+   && grep -q 'rt_process_spawn' "$TMP/process-import.emit.process.pruned.ll"; then
+  ok "importing AOT closure contains the process unit and spawn edge"
+else
+  bad "importing AOT closure lacks its process unit/spawn edge"
+fi
+cp "$TMP/process-import" "$TMP/process-import.stripped"
+strip "$TMP/process-import.stripped"
+pr_import_stripped="$(stat -f%z "$TMP/process-import.stripped" 2>/dev/null || stat -c%s "$TMP/process-import.stripped")"
+ok "process stripped size measured (plain $fs_plain_stripped B, import $pr_import_stripped B; unstripped import $pr_import_size B)"
+
 # the narration reports the shake, and car-only reaches 0 exports
 grep -q "shake (scheme base)" "$TMP/caronly.log" && ok "shake narrated" || bad "no shake narration"
 grep -q "0 exports reached"   "$TMP/caronly.log" && ok "car-only: 0 exports reached" || bad "car-only reached exports"

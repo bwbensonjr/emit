@@ -82,6 +82,19 @@ and should get the same review.
 - Replace: `rename` does not overwrite an existing destination on Windows;
   use `MoveFileExW` with `MOVEFILE_REPLACE_EXISTING`. `replace-file` depends
   on the overwrite.
+- Directory creation and removal (`rt_filesystem_create_directory`,
+  `rt_filesystem_delete_directory`, added by `emit-pkg`): `CreateDirectoryW`, and a
+  `FindFirstFileW` walk with `RemoveDirectoryW`/`DeleteFileW` that treats a reparse point
+  as a leaf so the walk still never follows a link.
+
+### 2.2a Process primitives
+
+`rt_process_spawn`, `rt_process_read_all`, and `rt_process_wait` (added by `emit-pkg`)
+use `posix_spawnp`, `pipe`, `read`, and `waitpid`. Windows needs `CreateProcessW` with a
+command line built by the MSVC quoting rules (Windows has no argument vector), an anonymous
+pipe for capture, and `WaitForSingleObject`/`GetExitCodeProcess`. There is no signal number,
+so the negative-status case does not arise. `emit pkg` additionally needs `curl` and `tar`,
+which current Windows ships as `curl.exe` and `tar.exe`.
 
 ### 2.3 Paths and text
 

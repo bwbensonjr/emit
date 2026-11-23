@@ -325,7 +325,7 @@ LIBDATA  := lib/scheme/char-data.scm lib/srfi/1.scm lib/srfi/2.scm \
             lib/srfi/README.md lib/srfi/upstream.sha256 lib/srfi/27-LICENSE.txt
 LIBDATADIRS := $(sort $(foreach f,$(LIBDATA),$(dir $(f))))
 SUPPORT_EXEC := tools/llvm-env.sh tools/log.sh
-SUPPORT_DATA := src/runtime/runtime.c
+SUPPORT_DATA := src/runtime/runtime.c tools/pkg.scm
 SUPPORT      := $(SUPPORT_EXEC) $(SUPPORT_DATA)
 SUPPORTDIRS  := $(sort $(foreach f,$(SUPPORT),$(dir $(f))))
 

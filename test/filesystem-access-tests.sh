@@ -80,6 +80,61 @@ else
   sed 's/^/         /' "$TMP/build.err"
 fi
 
+# Directory creation and removal (change: emit-pkg): the same probe through both
+# execution paths, against identical fresh fixtures, with the exact expected lines.
+setup_directory_tree () {
+  local root="$1"
+  mkdir -p "$root/tree/sub" "$root/outside"
+  : > "$root/tree/a"; : > "$root/tree/sub/b"; : > "$root/outside/keep"
+  ln -s ../outside "$root/tree/link"
+  ln -s outside "$root/linkdir"
+}
+cat > "$TMP/directory.expected" <<'EOF'
+create-new ok
+created-is-directory #t
+create-existing file-error
+create-without-parent file-error
+delete-empty ok
+deleted-is-gone #f
+delete-non-empty file-error
+non-empty-remains #t
+delete-linked-path file-error
+linked-path-remains #t
+delete-tree ok
+tree-is-gone #f
+link-target-kept ("keep")
+delete-missing file-error
+EOF
+setup_directory_tree "$TMP/dir-run"
+EMIT_VERBOSITY=quiet build/emit run test/filesystem-directory-check.scm "$TMP/dir-run" \
+  > "$TMP/dir-run.out" 2> "$TMP/dir-run.err"
+if cmp -s "$TMP/directory.expected" "$TMP/dir-run.out"; then
+  ok "emit run: create-directory and delete-directory, links never followed"
+else
+  bad "emit run directory probe"
+  diff "$TMP/directory.expected" "$TMP/dir-run.out" | sed 's/^/         /'
+  sed 's/^/         /' "$TMP/dir-run.err"
+fi
+cat > "$TMP/dir-manifest.scm" <<EOF
+((library (scheme process-context) (source "$PWD/lib/scheme/process-context.sld"))
+ (library (scheme write) (source "$PWD/lib/scheme/write.sld"))
+ (library (emit filesystem) (source "$PWD/lib/emit/filesystem.sld"))
+ (program directorycheck
+  (source "$PWD/test/filesystem-directory-check.scm")
+  (output "$TMP/directorycheck")))
+EOF
+setup_directory_tree "$TMP/dir-aot"
+if EMIT_VERBOSITY=quiet build/emit build directorycheck \
+     --manifest "$TMP/dir-manifest.scm" >"$TMP/dir-build.out" 2>"$TMP/dir-build.err"; then
+  "$TMP/directorycheck" "$TMP/dir-aot" > "$TMP/dir-aot.out" 2> "$TMP/dir-aot.err"
+  cmp -s "$TMP/directory.expected" "$TMP/dir-aot.out" \
+    && ok "AOT: directory creation and removal match emit run" \
+    || { bad "AOT directory probe"; diff "$TMP/directory.expected" "$TMP/dir-aot.out" | sed 's/^/         /'; }
+else
+  bad "building the directory AOT probe"
+  sed 's/^/         /' "$TMP/dir-build.err"
+fi
+
 # The extension remains explicit: auto-imported base and standard (scheme file)
 # must not make a non-standard name visible.
 cat > "$TMP/unimported.scm" <<'EOF'
@@ -129,17 +184,19 @@ repl_got="$(printf '%s\n' \
   || { bad "REPL filesystem probe => [$repl_got]"; sed 's/^/         /' "$TMP/repl.err"; }
 
 # Compile the unit directly so its interface, not just successful calls through
-# it, proves the public surface has exactly four names.
+# it, proves the public surface has exactly six names.
 if EMIT_VERBOSITY=quiet build/emit lib lib/emit/filesystem.sld -o "$TMP/exports" \
      >"$TMP/lib.out" 2>"$TMP/lib.err"; then
   export_file="$TMP/exports/emit.filesystem.exports"
   export_count="$(grep -o '([a-z?-]* \. "emit.filesystem:' "$export_file" | wc -l | tr -d ' ')"
-  if [ "$export_count" -eq 4 ] \
+  if [ "$export_count" -eq 6 ] \
+     && grep -q '(create-directory \. "emit.filesystem:create-directory")' "$export_file" \
+     && grep -q '(delete-directory \. "emit.filesystem:delete-directory")' "$export_file" \
      && grep -q '(directory-list \. "emit.filesystem:directory-list")' "$export_file" \
      && grep -q '(file-directory? \. "emit.filesystem:file-directory?")' "$export_file" \
      && grep -q '(file-symbolic-link? \. "emit.filesystem:file-symbolic-link?")' "$export_file" \
      && grep -q '(replace-file \. "emit.filesystem:replace-file")' "$export_file"; then
-    ok "the library export interface contains exactly the four public procedures"
+    ok "the library export interface contains exactly the six public procedures"
   else
     bad "filesystem export interface"
     sed 's/^/         /' "$export_file"

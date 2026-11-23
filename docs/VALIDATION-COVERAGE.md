@@ -42,10 +42,12 @@ New suites use their profile membership and stable coverage IDs, with an empty
 | `fixnum-tagging` | full | Negative and boundary fixnums through every C runtime arithmetic entry point, built with undefined behavior trapped (#188) |
 | `user-library-root` | full | Default user library root: location rules, precedence against project, environment, and installed roots, `--no-library-paths`, doctor rows, and help |
 | `user-library-root-chez` | reference | The Chez source driver locates and orders the user root as the native host does |
+| `process-execution` | full | `(emit process)`: verbatim arguments, exit codes and signals, output ordering, capture (including more than a pipe buffer), start failures, inheritance, export surface, and `emit run`/standalone parity |
+| `package-manager` | full | `emit pkg` against fixture collections: usage, `--from` and `file://` sources, compatibility, symbolic-link and collision refusals, all-or-nothing installs, update, remove, recovery, lock, missing tools, and narration levels |
 
 The existing `scheme-base-gen-guard-native` also joins the full profile now that
 it runs without Chez. It retains its original developer-runner label and reference
-profile. The full profile currently contains 68 suites and the units profile contains 16.
+profile. The full profile currently contains 70 suites and the units profile contains 16.
 The baker contracts run in a private workspace, preserving the rule that only
 direct Chez source units share read-only source inputs.
 

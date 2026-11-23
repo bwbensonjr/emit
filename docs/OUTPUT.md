@@ -213,6 +213,11 @@ their header with that form: `;; ==== after convert-closures [define fact] ====`
 - **The Chez driver (`compile.ss`)** — reads `EMIT_VERBOSITY` (and `-q`/`-v`); stage
   announcements are gated to `verbose`, and `--dump` additionally pretty-prints the full
   intermediate form after each pass.
+- **Scheme tools (`emit pkg`)** — `(emit pkg)` reads `EMIT_VERBOSITY` itself and writes
+  narration to the current error port, one `verb input -> output  [metrics]` line per
+  principal action (`install malt 0.1.0 -> ~/.local/share/emit/lib  [10 files, commit
+  5f214cc0e0df]`), per-file lines only at `verbose`, and data (`list`, `available`) only to
+  standard output.
 - **The embedded compiler (the shipped commands)** — narrates through `%stderr-write`, never
   `%display`/`%write` (those are stdout, where the IR payload lives). It reads no
   environment itself: the *entry* builds the dumper from `(%dump-level)` and passes it down
