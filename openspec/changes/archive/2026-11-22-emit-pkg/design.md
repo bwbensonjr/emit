@@ -204,4 +204,4 @@ The pay-for-use check in `test/aot-tree-shaking-tests.sh` was measured through t
 
 The importing program costs about 16.9 KB more. The equivalent `(emit filesystem)` probe in the same run cost 52,216 bytes, a similar delta, so the cost is mostly the shared error and string machinery an extension unit pulls in, not the process edges themselves.
 
-The non-importing binary contains no `rt_process_spawn`, `rt_process_read_all` or `rt_process_wait` symbol, and no `emit.process:` symbol. The importing binary keeps `rt_process_spawn` and `rt_process_wait`, and LTO drops `rt_process_read_all` because `run-program` never captures.
+The non-importing binary contains no `rt_process_spawn`, `rt_process_read_all` or `rt_process_wait` symbol, and no `emit.process:` symbol. On macOS the importing binary keeps `rt_process_spawn` and `rt_process_wait` as symbols, and LTO drops `rt_process_read_all` because `run-program` never captures. On Linux, LTO inlines the spawn into its caller, so the suite checks the importing side in the pruned `emit.process` IR rather than with `nm`, as it already does for `(emit filesystem)`.

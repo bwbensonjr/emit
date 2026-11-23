@@ -103,11 +103,16 @@ if command -v nm >/dev/null 2>&1; then
   [ "$pr_runtime_symbols" -eq 0 ] && [ "$pr_library_symbols" -eq 0 ] \
     && ok "non-importing AOT binary retains no process library/runtime symbols" \
     || bad "non-importing binary retained $pr_library_symbols process library / $pr_runtime_symbols runtime symbols"
-  nm "$TMP/process-import" 2>/dev/null | grep -q 'rt_process_spawn' \
-    && ok "importing AOT binary retains the spawn edge" \
-    || bad "importing AOT binary lacks rt_process_spawn"
 else
   echo "  [SKIP] nm unavailable: process retained-symbol check"
+fi
+# The importing side is checked in the pruned IR, as for filesystem above: on Linux
+# LTO inlines rt_process_spawn into its caller, so nm need not show its name.
+if [ -f "$TMP/process-import.emit.process.pruned.ll" ] \
+   && grep -q 'rt_process_spawn' "$TMP/process-import.emit.process.pruned.ll"; then
+  ok "importing AOT closure contains the process unit and spawn edge"
+else
+  bad "importing AOT closure lacks its process unit/spawn edge"
 fi
 cp "$TMP/process-import" "$TMP/process-import.stripped"
 strip "$TMP/process-import.stripped"
