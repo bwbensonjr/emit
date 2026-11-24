@@ -25,7 +25,11 @@ does three things:
 3. Installs every package it handles from that one commit.
 
 It records the commit beside each package, so `emit pkg list` shows exactly which
-code you have. There are no package tags, checksum files, or index to maintain.
+code you have. This is installed-package provenance. Each network invocation
+resolves current `main` afresh; an unchanged Emit installation can install or
+update to a later collection commit without rebuilding or upgrading Emit. Package
+publication requires no paired Emit pull request or compiler release. There are no
+package tags, checksum files, or index to maintain.
 
 Network commands need `curl` and `tar` on `PATH`. Only `install`, `update`, and
 `available` use the network. `list` and `remove` never do.
@@ -46,9 +50,18 @@ use `--from`.
 
 ### Compatibility
 
+The collection owns keeping published `main` compatible with the latest stable
+released Emit. Its own checks maintain package semantics and compatibility; Emit
+validates the package-manager contract with local fixtures. See the collection's
+[compatibility policy](https://github.com/bwbensonjr/emit-packages/blob/main/docs/COMPATIBILITY.md).
+
 A package can declare `(emit (minimum "X.Y.Z"))` in its `package.scm`. `emit pkg`
 refuses to install or update a package that needs a newer Emit than the one
-running. `available` marks such packages.
+running. `available` marks such packages. If an update needs a newer Emit, the
+installed package stays unchanged. Upgrade Emit, or explicitly select an older
+collection checkout with `--from`; the manager does not search collection history
+for a compatible revision. The declared minimum is separate from the latest stable
+release tested by collection CI.
 
 ## Where files go
 

@@ -176,7 +176,7 @@ Build the isolated harnesses and provenance manifests with the reconstruction
 tool described by that README, then run a representative comparison:
 
 ```sh
-python3 tools/writer-performance-build.py --output build/writer-performance
+EMIT_PACKAGES_DIR=../emit-packages python3 tools/writer-performance-build.py --output build/writer-performance
 build/writer-performance/bench-released --workload small-list --verify
 build/writer-performance/bench-candidate --workload small-list --verify
 python3 tools/performance-measure.py \

@@ -27,13 +27,11 @@ class CoverageTests(unittest.TestCase):
             self.assertEqual(len(labels), count)
             self.assertEqual(hashlib.sha256("\n".join(labels).encode()).hexdigest(), digest)
         # New suites extend profiles without changing the historical label pins.
-        # Pinned emit-packages, random sources, custom writers, and performance resource checks
-        # extend the full profile; historical label ownership above remains unchanged. The four
-        # full-profile Malt suites became emit-packages-pinned and srfi-27-install when Malt moved
-        # to the emit-packages collection. fixnum-tagging adds sanitized C runtime arithmetic (#188);
-        # user-library-root adds the default user library root; process-execution and
-        # package-manager add (emit process) and emit pkg.
-        self.assertEqual(len([s for s in suites if "full" in s["profiles"]]), 70)
+        # Package semantics moved to collection-owned native/reference CI. Emit
+        # retains fixture package contracts and installed SRFI 27 closure/provider
+        # checks; docs/VALIDATION-COVERAGE.md maps the transferred Malt assertions.
+        # Historical runner label ownership above remains unchanged.
+        self.assertEqual(len([s for s in suites if "full" in s["profiles"]]), 69)
         additions = {
             "source-load-interaction-host": {"dev", "full", "reference"},
             "stdlib-precompilation": {"full"},
@@ -50,8 +48,6 @@ class CoverageTests(unittest.TestCase):
             "package-manager": {"full"},
             "srfi-27": {"full"},
             "srfi-27-source": {"reference"},
-            "emit-packages-pinned": {"full"},
-            "emit-packages-pinned-source": {"reference"},
             "srfi-27-install": {"full"},
             "custom-writers": {"full"},
             "custom-writers-source": {"reference"},
@@ -62,6 +58,8 @@ class CoverageTests(unittest.TestCase):
         for name, profiles in additions.items():
             self.assertEqual(set(by_id[name]["profiles"]), profiles)
             self.assertEqual(by_id[name]["legacy"], [])
+        self.assertEqual(set(by_id["srfi-27-install"]["coverage"]),
+                         {"srfi-27-installed", "package-installed-roots"})
         units = {s["id"] for s in suites if "units" in s["profiles"]}
         self.assertEqual(len(units), 16)
         self.assertEqual(units, {s["id"] for s in suites if s["isolation"] == "readonly"})

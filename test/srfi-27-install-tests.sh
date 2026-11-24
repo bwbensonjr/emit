@@ -2,11 +2,11 @@
 # Installed SRFI 27 source closure: complete and repeatable installation, replay
 # through every execution path from an unrelated directory, no PRNG payload in
 # programs that do not import it, and project-provider precedence. Also checks that
-# (malt learner) is absent from the payload and resolves only through a supplied root.
+# the external package collection is absent and generic fixture libraries resolve
+# only through a supplied root.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 . tools/log.sh
-ROOT="$PWD"
 TMP="$(mktemp -d)"
 cleanup() {
   if [ "${EMIT_TEST_KEEP:-0}" = 1 ]; then say "retain installed SRFI 27 diagnostics -> $TMP"
@@ -15,6 +15,9 @@ cleanup() {
 trap cleanup EXIT
 PREFIX="$TMP/prefix"
 export EMIT_CACHE="$TMP/cache"
+export HOME="$TMP/home"
+export XDG_DATA_HOME="$TMP/xdg"
+mkdir -p "$HOME" "$XDG_DATA_HOME"
 unset EMIT_LIBRARY_PATH EMIT_MANIFEST
 say "install random source closure -> $PREFIX [isolated prefix]"
 make install PREFIX="$PREFIX" WARM_STDLIB=0 > "$TMP/install.out" 2> "$TMP/install.err" || {
@@ -90,18 +93,23 @@ printf '%s\n' '(import (prefix (srfi 27) r:)) r:marker' > override.scm
 [ "$("$EMIT" run override.scm 2> "$TMP/override.err")" = '79' ]
 say "test installed SRFI 27 closure -> complete [sources, staging, replay, providers, standalone]"
 
-# (malt learner) left the installed payload for the emit-packages collection: an
-# installed Emit resolves it only through a root the user supplies.
+# The external package collection is not part of the installed payload. An installed
+# Emit resolves a generic fixture library only through a root the user supplies.
 if [ -e "$PREFIX/share/emit/lib/malt" ]; then
   printf 'installed payload still carries a malt library directory\n' >&2; exit 1
 fi
-mkdir -p "$TMP/bare"
+mkdir -p "$TMP/fixture/packages/fixture" "$TMP/fixture/lib/fixture" "$TMP/bare"
+printf '(define-library (fixture value) (export fixture-value) (import (scheme base)) (begin (define fixture-value 79)))\n' \
+  > "$TMP/fixture/lib/fixture/value.sld"
+printf '(package (name fixture) (version "1.0.0") (summary "Emit integration fixture") (license "MIT")\n  (libraries (fixture value)))\n' \
+  > "$TMP/fixture/packages/fixture/package.scm"
 cd "$TMP/bare"
-printf '(import (malt learner))\n(display (gradient (lambda (x) (* x x)) 3.0))\n' > malt.scm
-export EMIT_CACHE="$TMP/cache-malt"
+printf '(import (fixture value))\nfixture-value\n' > fixture.scm
+export EMIT_CACHE="$TMP/cache-fixture"
 # An empty user library root supplies nothing (change: user-library-root).
 mkdir -p "$TMP/xdg-empty/emit/lib"
 export XDG_DATA_HOME="$TMP/xdg-empty"
+printf '(import (malt learner))\n' > malt.scm
 if "$EMIT" run malt.scm > "$TMP/malt-bare.out" 2> "$TMP/malt-bare.err"; then
   printf 'installed Emit resolved (malt learner) with no supplied root\n' >&2; exit 1
 fi
@@ -109,36 +117,38 @@ grep -Fq 'unresolved import' "$TMP/malt-bare.err" && grep -Fq '(malt learner)' "
   cat "$TMP/malt-bare.err" >&2; exit 1;
 }
 say "reject malt.scm -> unresolved (malt learner) [installed payload, no supplied root]"
-COLLECTION="$(cd "$ROOT" && python3 -c '
-import importlib.util
-spec = importlib.util.spec_from_file_location("ep", "tools/emit-packages.py")
-m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
-print(m.obtain_collection(*m.read_pin())[0])')"
-got="$(EMIT_LIBRARY_PATH="$COLLECTION/lib" "$EMIT" run malt.scm 2> "$TMP/malt-root.err")" || {
-  cat "$TMP/malt-root.err" >&2; exit 1;
+if "$EMIT" run fixture.scm > "$TMP/fixture-bare.out" 2> "$TMP/fixture-bare.err"; then
+  printf 'installed Emit resolved (fixture value) with no supplied root\n' >&2; exit 1
+fi
+grep -Fq 'unresolved import' "$TMP/fixture-bare.err" && grep -Fq '(fixture value)' "$TMP/fixture-bare.err" || {
+  cat "$TMP/fixture-bare.err" >&2; exit 1;
 }
-[ "$got" = '6.0' ] || { printf 'expected 6.0 from the collection root, got %s\n' "$got" >&2; exit 1; }
-say "run malt.scm -> 6.0 [installed payload, EMIT_LIBRARY_PATH=$COLLECTION/lib]"
-# The collection linked as the user library root resolves with no environment root.
+say "reject fixture.scm -> unresolved (fixture value) [installed payload, no supplied root]"
+got="$(EMIT_LIBRARY_PATH="$TMP/fixture/lib" "$EMIT" run fixture.scm 2> "$TMP/fixture-root.err")" || {
+  cat "$TMP/fixture-root.err" >&2; exit 1;
+}
+[ "$got" = '79' ] || { printf 'expected 79 from the fixture root, got %s\n' "$got" >&2; exit 1; }
+say "run fixture.scm -> 79 [installed payload, EMIT_LIBRARY_PATH=$TMP/fixture/lib]"
+# The fixture linked as the user library root resolves with no environment root.
 mkdir -p "$TMP/xdg-linked/emit"
-ln -s "$COLLECTION/lib" "$TMP/xdg-linked/emit/lib"
-got="$(XDG_DATA_HOME="$TMP/xdg-linked" "$EMIT" run malt.scm 2> "$TMP/malt-user.err")" || {
-  cat "$TMP/malt-user.err" >&2; exit 1;
+ln -s "$TMP/fixture/lib" "$TMP/xdg-linked/emit/lib"
+got="$(XDG_DATA_HOME="$TMP/xdg-linked" "$EMIT" run fixture.scm 2> "$TMP/fixture-user.err")" || {
+  cat "$TMP/fixture-user.err" >&2; exit 1;
 }
-[ "$got" = '6.0' ] || { printf 'expected 6.0 from the user root, got %s\n' "$got" >&2; exit 1; }
-say "run malt.scm -> 6.0 [installed payload, user root linked to $COLLECTION/lib]"
+[ "$got" = '79' ] || { printf 'expected 79 from the linked user root, got %s\n' "$got" >&2; exit 1; }
+say "run fixture.scm -> 79 [installed payload, linked user library root]"
 # emit pkg from the installed payload (change: emit-pkg): an empty user root lists
-# nothing, and installing Malt from the collection checkout makes it resolve.
+# nothing, and installing the fixture package from an unrelated directory makes it resolve.
 mkdir -p "$TMP/xdg-pkg"
-listed="$(XDG_DATA_HOME="$TMP/xdg-pkg" "$EMIT" pkg list 2> "$TMP/pkg-list.err")" || {
+listed="$(cd "$TMP/bare" && XDG_DATA_HOME="$TMP/xdg-pkg" "$EMIT" pkg list 2> "$TMP/pkg-list.err")" || {
   cat "$TMP/pkg-list.err" >&2; exit 1;
 }
 [ -z "$listed" ] || { printf 'emit pkg list on an empty root printed %s\n' "$listed" >&2; exit 1; }
-XDG_DATA_HOME="$TMP/xdg-pkg" "$EMIT" pkg install --from "$COLLECTION" malt 2> "$TMP/pkg-install.err" || {
+XDG_DATA_HOME="$TMP/xdg-pkg" "$EMIT" pkg install --from "$TMP/fixture" fixture 2> "$TMP/pkg-install.err" || {
   cat "$TMP/pkg-install.err" >&2; exit 1;
 }
-got="$(XDG_DATA_HOME="$TMP/xdg-pkg" "$EMIT" run malt.scm 2> "$TMP/malt-pkg.err")" || {
-  cat "$TMP/malt-pkg.err" >&2; exit 1;
+got="$(cd "$TMP/bare" && XDG_DATA_HOME="$TMP/xdg-pkg" "$EMIT" run fixture.scm 2> "$TMP/fixture-pkg.err")" || {
+  cat "$TMP/fixture-pkg.err" >&2; exit 1;
 }
-[ "$got" = '6.0' ] || { printf 'expected 6.0 after emit pkg install, got %s\n' "$got" >&2; exit 1; }
-say "run malt.scm -> 6.0 [installed payload, emit pkg install --from $COLLECTION malt]"
+[ "$got" = '79' ] || { printf 'expected 79 after emit pkg install, got %s\n' "$got" >&2; exit 1; }
+say "run fixture.scm -> 79 [installed payload, emit pkg install --from fixture]"

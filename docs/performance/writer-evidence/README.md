@@ -75,7 +75,7 @@ cleanup tracking. Runtime-only optimized IR is labelled separately from final
 linked code; code shape does not establish the timing benefit.
 
 Rebuild the full code artifacts and executable inputs with
-`python3 tools/writer-performance-build.py --output build/writer-performance`.
+`EMIT_PACKAGES_DIR=../emit-packages python3 tools/writer-performance-build.py --output build/writer-performance`.
 The [fixture README](../../../test/performance/README.md) and shared
 [evaluation process](../../PERFORMANCE-EVALUATION.md) describe workload, sink,
 instrumentation, metadata, and paired-run commands. Fresh timings will naturally

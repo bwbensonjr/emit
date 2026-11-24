@@ -18,8 +18,9 @@ identities and retire their object/destination links.
 ## Reproduction and provenance
 
 Malt moved to the [emit-packages](https://github.com/bwbensonjr/emit-packages) collection after this
-evidence was recorded. The builder now takes the Malt core and XOR fixtures from the pinned
-collection (`tools/emit-packages-pin.sh`, fetched into `build/emit-packages/`), so a rebuild records
+evidence was recorded. The builder now takes the Malt core and XOR fixtures from an explicit
+local collection checkout selected with `EMIT_PACKAGES_DIR`, without fetching or an Emit-maintained
+collection revision. A rebuild records
 different fixture paths and hashes than the archived evidence; the XOR fixture's final output lines
 also changed when it became a collection check.
 
@@ -27,7 +28,7 @@ From a checkout containing this change:
 
 ```sh
 make emit
-python3 tools/writer-performance-build.py --output build/writer-performance
+EMIT_PACKAGES_DIR=../emit-packages python3 tools/writer-performance-build.py --output build/writer-performance
 bash test/performance-writer-tests.sh
 python3 test/performance-runner-tests.py
 ```

@@ -149,47 +149,36 @@ exclusion sweep. `run-dev-tests.sh` is the deduplicated union of units, source,
 and reference. Missing Chez fails that explicit aggregate instead of skipping it.
 See [retained coverage](VALIDATION-COVERAGE.md) and [CI policy](RELEASE-PIPELINE.md).
 
-## The pinned emit-packages collection
+## External package compatibility
 
-Libraries that are not part of Emit itself, starting with `(malt learner)`, live
-in [bwbensonjr/emit-packages](https://github.com/bwbensonjr/emit-packages). Emit
-keeps their coverage by validating one pinned commit of that collection:
+Libraries outside Emit itself, starting with `(malt learner)`, live in
+[bwbensonjr/emit-packages](https://github.com/bwbensonjr/emit-packages). The collection
+owns keeping its published `main` compatible with the latest stable released Emit.
+Its required macOS/Linux checks resolve and verify the same stable release, and its
+weekly/manual reference job checks the matching sources through Chez. Package
+changes need no paired Emit pull request or compiler release.
 
-- `emit-packages-pinned` (`full`) runs every package's declared checks through
-  `emit run`, `emit repl`, a standalone `emit build` executable, and `emit run`
-  consuming published artifacts of every library the package declares.
-- `emit-packages-pinned-source` (`reference`) runs the same checks through the
-  Chez source driver.
+Emit validates package installation, update, and installed library-root resolution
+with small local fixtures. Its required build, test, and release gates never fetch
+the external collection, and Emit maintains no collection compatibility revision.
+Package semantics, artifact reuse, and package-specific source-driver checks belong
+to the collection; see the [coverage transfer](VALIDATION-COVERAGE.md#external-package-coverage-transfer).
 
-Both run `tools/emit-packages.py`. The pin is `EMIT_PACKAGES_PIN_COMMIT` in
-`tools/emit-packages-pin.sh`, a full commit hash. The driver uses a cached
-checkout in `build/emit-packages/<commit>/` when its `HEAD` matches the pin, and
-otherwise fetches exactly that commit (a shallow fetch of a few hundred
-kilobytes). A checkout at any other commit fails, naming both commits. The test
-runner gives each suite a fresh workspace, so runner invocations fetch; a direct
-`python3 tools/emit-packages.py` reuses the cache and works offline after one
-networked run.
-
-To move the pin, change the commit in `tools/emit-packages-pin.sh`, then run:
+To investigate an unpushed package or compiler change, run the collection's own
+drivers with an explicit compiler binary or source tree:
 
 ```sh
-bash tools/test.sh --suite emit-packages-pinned
+cd ../emit-packages
+python3 tools/run-checks.py ../emit/build/emit --report /tmp/package-paths.json
+python3 tools/install-check.py ../emit/build/emit --report /tmp/package-lifecycle.json
+python3 tools/run-checks.py --source ../emit --report /tmp/package-source.json
 ```
 
-Commit the new pin together with any Emit change it needs. A commit to the
-collection never changes Emit's validation until the pin moves.
-
-To test an unpushed collection change against this checkout, point the driver
-at a local clone:
-
-```sh
-EMIT_PACKAGES_DIR=../emit-packages python3 tools/emit-packages.py
-```
-
-The run is labelled `UNPINNED` with the clone's commit and dirty state, and is
-not evidence for the pin. `EMIT_PACKAGES_ORIGIN` overrides the fetch origin.
-`--report FILE` writes a JSON summary of the collection provenance and every
-check's result.
+The reports name actual inputs and executed paths. Development-build results do
+not establish latest-stable release compatibility. See the collection's
+[compatibility policy](https://github.com/bwbensonjr/emit-packages/blob/main/docs/COMPATIBILITY.md)
+for release-target verification and prerequisites. Optional performance replays
+that need Malt use an explicit `EMIT_PACKAGES_DIR` checkout; they never fetch it.
 
 ## Isolation and resource use
 

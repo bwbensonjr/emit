@@ -3,7 +3,6 @@
 
 import argparse
 import hashlib
-import importlib.util
 import json
 import os
 from pathlib import Path
@@ -17,19 +16,27 @@ import time
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def pinned_collection():
-    """Return the pinned emit-packages checkout, which now holds the Malt fixtures.
-
-    Malt moved out of Emit into bwbensonjr/emit-packages after the 2026-11-17
-    writer evidence was recorded. tools/emit-packages.py owns the pin, the cache,
-    and the fetch, so this reuses it rather than resolving the collection twice.
-    """
-    spec = importlib.util.spec_from_file_location("emit_packages", ROOT / "tools" / "emit-packages.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    commit, origin = module.read_pin()
-    directory, _ = module.obtain_collection(commit, origin)
-    return directory
+def local_collection(env=None):
+    """Select the caller-provided collection and validate the Scheme fixtures."""
+    environment = os.environ if env is None else env
+    value = environment.get("EMIT_PACKAGES_DIR")
+    if not value:
+        raise RuntimeError(
+            "Scheme evidence requires EMIT_PACKAGES_DIR pointing to a local emit-packages checkout"
+        )
+    collection = Path(value).expanduser().resolve()
+    if not collection.is_dir():
+        raise RuntimeError(f"EMIT_PACKAGES_DIR is not a directory: {collection}")
+    required = [(collection / "lib", True)] + [
+        (collection / "packages" / "malt" / "tests" / (name + ".scm"), False)
+        for name in ("core", "xor")
+    ]
+    missing = [path for path, directory in required
+        if not (path.is_dir() if directory else path.is_file())]
+    if missing:
+        paths = ", ".join(str(path) for path in missing)
+        raise RuntimeError(f"EMIT_PACKAGES_DIR is missing required Scheme evidence paths: {paths}")
+    return collection
 
 
 def note(message):
@@ -62,6 +69,7 @@ def main():
     parser.add_argument("--output", type=Path, default=Path("build/writer-performance"))
     parser.add_argument("--skip-scheme", action="store_true", help="build runtime harness evidence only")
     args = parser.parse_args()
+    collection = None if args.skip_scheme else local_collection()
     out = args.output.resolve()
     out.mkdir(parents=True, exist_ok=True)
     code = out / "code"
@@ -157,7 +165,6 @@ def main():
     if not args.skip_scheme:
         if not shutil.which("chez"):
             raise RuntimeError("Chez is required to reconstruct emitted program/library IR; use --skip-scheme for harness-only work")
-        collection = pinned_collection()
         malt = collection / "packages" / "malt"
         package_roots = ["-L", str(collection / "lib"), "-L", str(malt / "tests")]
         fixtures = [("adapter", "test/performance/writer-adapter.scm", []),
