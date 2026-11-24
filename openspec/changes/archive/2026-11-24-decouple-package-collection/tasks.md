@@ -20,7 +20,7 @@
 ## 4. Verify the ownership boundary
 
 - [x] 4.1 Run `python3 test/test-classify-tests.py`, `python3 test/validation-coverage-tests.py`, and the `package-manager` and `srfi-27-install` suites after removal. Inspect the full/reference plans and remaining collection references to establish that required Emit gates cannot fetch or consume emit-packages. Preserve reports, and verify failures from fixture contract regressions still fail their suites.
-- [ ] 4.2 Run `bash tools/test.sh dev --changed BASE` against the implementation comparison base and any additional gates selected by classification/preflight. Confirm the diff changes no compiler assembly inputs or shipped payload/behavior, so regeneration and a version bump are unnecessary; if scope expands, apply the documented validation and version policy for those inputs. Verify `openspec validate decouple-package-collection --strict` succeeds.
+- [x] 4.2 Run `bash tools/test.sh dev --changed BASE` against the implementation comparison base and any additional gates selected by classification/preflight. Confirm the diff changes no compiler assembly inputs or shipped payload/behavior, so regeneration and a version bump are unnecessary; if scope expands, apply the documented validation and version policy for those inputs. Verify `openspec validate decouple-package-collection --strict` succeeds.
 
 ## Workflow follow-up
 
@@ -30,5 +30,11 @@
 ## Handoff evidence
 
 - Collection change `own-emit-compatibility` is implemented, independently checked during implementation, synced and archived in emit-packages. [Collection PR #5](https://github.com/bwbensonjr/emit-packages/pull/5) carries the handoff; review and merge it before merging the Emit change.
-- [Collection native/reference evidence](https://github.com/bwbensonjr/emit-packages/actions/runs/45393655882): both macOS and Linux passed against resolved Emit 0.13.0, with 35 native paths and 37 lifecycle operations per platform; Chez passed all seven checks. Explicit missing-prerequisite and mismatch cases are covered by its tooling tests.
+- Collection native/reference evidence: [passing run](https://github.com/bwbensonjr/emit-packages/actions/runs/45393655882). both macOS and Linux passed against resolved Emit 0.13.0, with 35 native paths and 37 lifecycle operations per platform; Chez passed all seven checks. Explicit missing-prerequisite and mismatch cases are covered by its tooling tests.
 - Emit fixture suites passed before retiring the collection driver: `/private/tmp/emit-decouple-validation/fixtures-before-retirement.json`. The final suite run also covers the restored Malt negative-import assertion and a fresh A-to-incompatible-B refusal case.
+
+## Emit validation evidence
+
+- Classified development run against `main`: all 69 remaining native suites passed in `/private/tmp/emit-decouple-validation/dev-changed.json`. The subsequently strengthened package-manager case passed in `final-package-manager.json` in the same report directory.
+- Post-retirement package-manager, SRFI 27/installed fixture, and performance-tool suites passed (`after-retirement.json`). Both deliberate fixture regressions were rejected (`failure-oracles.json`).
+- Coverage inventory, 19 classifier tests, 16 performance-tool tests, suite plans, strict OpenSpec validation, and whitespace checks passed. Full/reference plans contain no external collection commands. Compiler, runtime, library, bootstrap, Makefile, installed-payload, and VERSION inputs are unchanged.
