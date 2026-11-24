@@ -2675,53 +2675,8 @@
       "legacy": []
     },
     {
-      "id": "emit-packages-pinned",
-      "label": "Pinned emit-packages checks: run, REPL, standalone, and published artifacts",
-      "command": [
-        "bash",
-        "test/emit-packages-tests.sh"
-      ],
-      "profiles": [
-        "full"
-      ],
-      "categories": [
-        "library"
-      ],
-      "isolation": "workspace",
-      "chez": false,
-      "coverage": [
-        "malt-core",
-        "malt-training",
-        "malt-xor"
-      ],
-      "legacy": []
-    },
-    {
-      "id": "emit-packages-pinned-source",
-      "label": "Pinned emit-packages checks through the Chez source driver",
-      "command": [
-        "bash",
-        "test/emit-packages-tests.sh",
-        "--source"
-      ],
-      "profiles": [
-        "reference"
-      ],
-      "categories": [
-        "library"
-      ],
-      "isolation": "workspace",
-      "chez": true,
-      "coverage": [
-        "malt-core-source",
-        "malt-training-source",
-        "malt-xor-source"
-      ],
-      "legacy": []
-    },
-    {
       "id": "srfi-27-install",
-      "label": "Installed SRFI 27 source closure",
+      "label": "Installed SRFI 27 closure and fixture package roots",
       "command": [
         "bash",
         "test/srfi-27-install-tests.sh"
@@ -2735,7 +2690,8 @@
       "isolation": "workspace",
       "chez": false,
       "coverage": [
-        "malt-installed"
+        "srfi-27-installed",
+        "package-installed-roots"
       ],
       "legacy": []
     },

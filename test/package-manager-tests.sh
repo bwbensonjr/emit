@@ -19,6 +19,7 @@ export EMIT_CACHE="$TMP/cache"
 cases=0
 COMMIT_A=1111111111111111111111111111111111111111
 COMMIT_B=2222222222222222222222222222222222222222
+COMMIT_C=3333333333333333333333333333333333333333
 
 fail() { printf 'package manager test: %s\n' "$*" >&2; exit 1; }
 has() { grep -Fq -- "$2" "$1" || { cat "$1" >&2; fail "$1 lacks: $2"; }; }
@@ -76,9 +77,58 @@ archive() {
 
 collection "$TMP/coll-a/emit-packages-aaaa" 1
 collection "$TMP/coll-b/emit-packages-bbbb" 2
+collection "$TMP/coll-incompatible/emit-packages-cccc" 3
+printf '(package (name alpha) (version "1.0.3") (summary "Incompatible") (emit (minimum "99.0.0")) (libraries (alpha core)))\n' \
+  > "$TMP/coll-incompatible/emit-packages-cccc/packages/alpha/package.scm"
 FROM="$TMP/coll-a/emit-packages-aaaa"
 archive "$FROM" "$TMP/a.tar.gz"
 archive "$TMP/coll-b/emit-packages-bbbb" "$TMP/b.tar.gz"
+archive "$TMP/coll-incompatible/emit-packages-cccc" "$TMP/c.tar.gz"
+
+# A deterministic curl for the production branch-resolution path. It accepts only the
+# two expected GitHub URLs, returns the selected synthetic tip, and serves that tip's
+# local archive. The per-command log lets the cases below assert one resolution and
+# one matching download for each invocation without contacting the network.
+mkdir -p "$TMP/fake-bin"
+cat > "$TMP/fake-bin/curl" <<'CURL'
+#!/usr/bin/env bash
+set -eu
+printf '%s\n' "$*" >> "$FAKE_CURL_LOG"
+case "$*" in
+  *"https://api.github.com/repos/bwbensonjr/emit-packages/commits/main")
+    case "$FAKE_TIP" in
+      A) printf '%s\n' "$FAKE_COMMIT_A" ;;
+      B) printf '%s\n' "$FAKE_COMMIT_B" ;;
+      C) printf '%s\n' "$FAKE_COMMIT_C" ;;
+      *) printf 'unexpected fake tip: %s\n' "$FAKE_TIP" >&2; exit 1 ;;
+    esac
+    ;;
+  *"https://codeload.github.com/bwbensonjr/emit-packages/tar.gz/"*)
+    output=""
+    previous=""
+    for arg in "$@"; do
+      if [ "$previous" = -o ]; then output="$arg"; fi
+      previous="$arg"
+    done
+    [ -n "$output" ] || { echo "missing -o output" >&2; exit 1; }
+    case "$*" in
+      *"/tar.gz/$FAKE_COMMIT_A") cp "$FAKE_ARCHIVE_A" "$output" ;;
+      *"/tar.gz/$FAKE_COMMIT_B") cp "$FAKE_ARCHIVE_B" "$output" ;;
+      *"/tar.gz/$FAKE_COMMIT_C") cp "$FAKE_ARCHIVE_C" "$output" ;;
+      *) echo "unexpected archive URL: $*" >&2; exit 1 ;;
+    esac
+    ;;
+  *) echo "unexpected curl URL/arguments: $*" >&2; exit 1 ;;
+esac
+CURL
+chmod +x "$TMP/fake-bin/curl"
+REAL_PATH="$PATH"
+export FAKE_COMMIT_A="$COMMIT_A" FAKE_COMMIT_B="$COMMIT_B" FAKE_COMMIT_C="$COMMIT_C"
+export FAKE_ARCHIVE_A="$TMP/a.tar.gz" FAKE_ARCHIVE_B="$TMP/b.tar.gz" FAKE_ARCHIVE_C="$TMP/c.tar.gz"
+export FAKE_CURL_LOG="$TMP/fake-curl.log"
+PATH="$TMP/fake-bin:$PATH"
+export PATH
+
 mkdir -p "$TMP/work"
 cd "$TMP/work"
 printf '(import (scheme base) (scheme write) (alpha util) (alpha core))\n(display (twice))\n(display greeting)\n' > use-alpha.scm
@@ -110,6 +160,72 @@ fi
 has "$TMP/err" "no user library root"
 [ -z "$(env -u HOME -u XDG_DATA_HOME "$EMIT" pkg list)" ] || fail "list printed without a user root"
 pass "no user root: writers refuse naming HOME and XDG_DATA_HOME"
+
+# The unchanged binary resolves main on every network invocation. Install A, then
+# resolve B for available, a fresh install, and an A-to-B update. Each command must
+# resolve exactly once and download exactly that resolved archive.
+fresh fresh-tip-a
+: > "$FAKE_CURL_LOG"
+FAKE_TIP=A pkg install alpha 2> "$TMP/err"
+has "$TMP/err" "resolve bwbensonjr/emit-packages main -> ${COMMIT_A:0:12}"
+[ "$(pkg list)" = "alpha 1.0.1 $COMMIT_A" ] || fail "tip A install record: $(pkg list)"
+[ "$(erun use-alpha.scm)" = "2λ café" ] || fail "tip A imported behavior"
+[ "$(wc -l < "$FAKE_CURL_LOG" | tr -d ' ')" = 2 ] || fail "tip A install did not make exactly two curl calls"
+has "$FAKE_CURL_LOG" "https://api.github.com/repos/bwbensonjr/emit-packages/commits/main"
+has "$FAKE_CURL_LOG" "https://codeload.github.com/bwbensonjr/emit-packages/tar.gz/$COMMIT_A"
+
+: > "$FAKE_CURL_LOG"
+FAKE_TIP=B pkg available > "$TMP/fresh-avail" 2> "$TMP/err"
+has "$TMP/err" "resolve bwbensonjr/emit-packages main -> ${COMMIT_B:0:12}"
+has "$TMP/fresh-avail" "alpha 1.0.2"
+[ "$(wc -l < "$FAKE_CURL_LOG" | tr -d ' ')" = 2 ] || fail "available did not make exactly two curl calls"
+has "$FAKE_CURL_LOG" "https://api.github.com/repos/bwbensonjr/emit-packages/commits/main"
+has "$FAKE_CURL_LOG" "https://codeload.github.com/bwbensonjr/emit-packages/tar.gz/$COMMIT_B"
+
+fresh fresh-tip-b
+: > "$FAKE_CURL_LOG"
+FAKE_TIP=B pkg install alpha 2> "$TMP/err"
+[ "$(pkg list)" = "alpha 1.0.2 $COMMIT_B" ] || fail "tip B fresh install record: $(pkg list)"
+[ "$(erun use-alpha.scm)" = "4λ café" ] || fail "fresh install did not import tip B behavior"
+[ "$(wc -l < "$FAKE_CURL_LOG" | tr -d ' ')" = 2 ] || fail "tip B install did not make exactly two curl calls"
+has "$FAKE_CURL_LOG" "https://codeload.github.com/bwbensonjr/emit-packages/tar.gz/$COMMIT_B"
+
+fresh fresh-tip-update
+EMIT_CACHE="$TMP/cache-fresh-tip-update"
+export EMIT_CACHE
+: > "$FAKE_CURL_LOG"
+FAKE_TIP=A pkg install alpha 2>/dev/null
+: > "$FAKE_CURL_LOG"
+[ "$(erun use-alpha.scm)" = "2λ café" ] || fail "tip A import before update"
+: > "$FAKE_CURL_LOG"
+FAKE_TIP=B pkg update 2> "$TMP/err"
+has "$TMP/err" "update alpha 1.0.2"
+[ "$(pkg list)" = "alpha 1.0.2 $COMMIT_B" ] || fail "tip B update record: $(pkg list)"
+[ "$(erun use-alpha.scm)" = "4λ café" ] || fail "update did not import tip B behavior"
+[ "$(wc -l < "$FAKE_CURL_LOG" | tr -d ' ')" = 2 ] || fail "tip B update did not make exactly two curl calls"
+has "$FAKE_CURL_LOG" "https://api.github.com/repos/bwbensonjr/emit-packages/commits/main"
+has "$FAKE_CURL_LOG" "https://codeload.github.com/bwbensonjr/emit-packages/tar.gz/$COMMIT_B"
+EMIT_CACHE="$TMP/cache"
+export EMIT_CACHE
+
+# A separate C snapshot that requires a newer Emit must be rejected before installed
+# files or provenance change. Each synthetic commit always maps to one fixture archive.
+fresh fresh-tip-incompatible
+FAKE_TIP=A pkg install alpha 2>/dev/null
+cp "$ROOT/alpha/core.sld" "$TMP/installed-core-before"
+: > "$FAKE_CURL_LOG"
+FAKE_TIP=C refuses 1 pkg update alpha
+cmp -s "$TMP/installed-core-before" "$ROOT/alpha/core.sld" || fail "incompatible update changed installed library"
+[ "$(pkg list)" = "alpha 1.0.1 $COMMIT_A" ] || fail "incompatible update changed installed provenance"
+[ "$(wc -l < "$FAKE_CURL_LOG" | tr -d ' ')" = 2 ] || fail "incompatible update did not make exactly two curl calls"
+has "$TMP/err" "resolve bwbensonjr/emit-packages main -> ${COMMIT_C:0:12}"
+has "$FAKE_CURL_LOG" "https://codeload.github.com/bwbensonjr/emit-packages/tar.gz/$COMMIT_C"
+has "$TMP/err" "needs Emit 99.0.0"
+pass "unchanged binary resolves one fresh collection snapshot per command and refuses incompatible update atomically"
+
+# Later tests intentionally exercise the real curl implementation with file:// overrides.
+PATH="$REAL_PATH"
+export PATH
 
 # Install from a local tree; resolution from an unrelated directory; list; the
 # non-ASCII source round-trips byte for byte.

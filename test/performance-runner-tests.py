@@ -17,6 +17,10 @@ RUNNER = ROOT / "tools/performance-measure.py"
 SPEC = importlib.util.spec_from_file_location("performance_measure", RUNNER)
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
+WRITER_BUILDER = ROOT / "tools/writer-performance-build.py"
+WRITER_SPEC = importlib.util.spec_from_file_location("writer_performance_build", WRITER_BUILDER)
+WRITER_MODULE = importlib.util.module_from_spec(WRITER_SPEC)
+WRITER_SPEC.loader.exec_module(WRITER_MODULE)
 
 
 class StatisticsTests(unittest.TestCase):
@@ -168,6 +172,52 @@ class RunnerTests(unittest.TestCase):
             self.assertIn("write paired samples", result.stderr)
             self.assertEqual(report["fixtures"][0]["sha256"], hashlib.sha256(b"ok\n").hexdigest())
             self.assertEqual(report["provenance"]["before"]["supplied_metadata"]["source_revision"], "example")
+
+
+class WriterCollectionTests(unittest.TestCase):
+    def collection(self, root):
+        (root / "lib").mkdir(parents=True)
+        tests = root / "packages" / "malt" / "tests"
+        tests.mkdir(parents=True)
+        for name in ("core", "xor"):
+            (tests / (name + ".scm")).write_text("(display \"fixture\")\n")
+
+    def run_builder(self, output, env):
+        return subprocess.run(
+            [sys.executable, str(WRITER_BUILDER), "--output", str(output)],
+            env=env, capture_output=True, text=True,
+        )
+
+    def test_local_collection_is_selected_and_validated(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "packages"
+            self.collection(root)
+            self.assertEqual(
+                WRITER_MODULE.local_collection({"EMIT_PACKAGES_DIR": str(root)}), root.resolve()
+            )
+
+    def test_missing_environment_fails_before_output_creation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "evidence"
+            env = dict(os.environ)
+            env.pop("EMIT_PACKAGES_DIR", None)
+            result = self.run_builder(output, env)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("EMIT_PACKAGES_DIR", result.stderr)
+            self.assertFalse(output.exists())
+
+    def test_missing_fixtures_fail_before_output_creation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "packages"
+            (root / "lib").mkdir(parents=True)
+            (root / "packages" / "malt" / "tests").mkdir(parents=True)
+            output = Path(directory) / "evidence"
+            env = dict(os.environ, EMIT_PACKAGES_DIR=str(root))
+            result = self.run_builder(output, env)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("core.scm", result.stderr)
+            self.assertIn("xor.scm", result.stderr)
+            self.assertFalse(output.exists())
 
 
 if __name__ == "__main__":

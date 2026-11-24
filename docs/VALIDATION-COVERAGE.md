@@ -43,11 +43,11 @@ New suites use their profile membership and stable coverage IDs, with an empty
 | `user-library-root` | full | Default user library root: location rules, precedence against project, environment, and installed roots, `--no-library-paths`, doctor rows, and help |
 | `user-library-root-chez` | reference | The Chez source driver locates and orders the user root as the native host does |
 | `process-execution` | full | `(emit process)`: verbatim arguments, exit codes and signals, output ordering, capture (including more than a pipe buffer), start failures, inheritance, export surface, and `emit run`/standalone parity |
-| `package-manager` | full | `emit pkg` against fixture collections: usage, `--from` and `file://` sources, compatibility, symbolic-link and collision refusals, all-or-nothing installs, update, remove, recovery, lock, missing tools, and narration levels |
+| `package-manager` | full | `emit pkg` against fixture collections: usage, `--from` and `file://` sources, fresh `main` resolution and snapshot-consistent updates, compatibility, symbolic-link and collision refusals, all-or-nothing installs, update, remove, recovery, lock, missing tools, and narration levels |
 
 The existing `scheme-base-gen-guard-native` also joins the full profile now that
 it runs without Chez. It retains its original developer-runner label and reference
-profile. The full profile currently contains 70 suites and the units profile contains 16.
+profile. The full profile currently contains 69 suites and the units profile contains 16.
 The baker contracts run in a private workspace, preserving the rule that only
 direct Chez source units share read-only source inputs.
 
@@ -81,3 +81,32 @@ groups; setup failure also fails the suite.
 ## Auditing changes
 
 When a legacy runner changes, update its corresponding registry row and coverage group in the same change. For each removed or merged row, preserve the old label in `legacy` and identify the equivalent retained group; do not infer equivalence from matching final output alone. Optional coverage stays separately named and must not be silently folded into or dropped from the required full inventory.
+
+## External package coverage transfer
+
+The collection owns package semantics and compatibility with the latest stable
+released Emit. Its [collection-owned checks](https://github.com/bwbensonjr/emit-packages/blob/main/docs/COMPATIBILITY.md)
+replace Emit's former collection suites. Emit retains generic contract checks
+against local fixtures; a generic fixture is not Malt semantic coverage.
+
+| Retiring coverage | Executable owner | Host and trigger |
+| --- | --- | --- |
+| `malt-core`, `malt-training`, `malt-xor` | Collection `tools/run-checks.py EMIT`, corresponding `checks.scm` entries through run, REPL, standalone, artifacts, and installed sources | Native macOS/Linux, required collection PR/main checks, weekly/manual |
+| `malt-core-source`, `malt-training-source`, `malt-xor-source` | Collection `tools/run-checks.py --source EMIT_SOURCE`, same checks | Chez plus matching released source tree, collection weekly/manual reference job |
+| Malt semantics within `malt-installed` | Collection installed-source path plus `tools/install-check.py EMIT` | Native macOS/Linux, required collection PR/main checks, weekly/manual |
+| Artifact publication/reuse for loaded package libraries | Collection artifact path of `tools/run-checks.py EMIT` | Required native collection checks |
+| Generic package installation, fresh-tip update, and preflight refusals | Emit `package-manager` suite, `test/package-manager-tests.sh` | Native full profile |
+| `srfi-27-installed`, `package-installed-roots` (generic installed-library providers and SRFI 27 source closure) | Emit `srfi-27-install` suite, `test/srfi-27-install-tests.sh` | Native full profile |
+
+The independent `own-emit-compatibility` collection change supplies this handoff.
+Its [manual run](https://github.com/bwbensonjr/emit-packages/actions/runs/45393655882)
+verified Emit 0.13.0 on both platforms, with 35 native paths and 37 lifecycle
+operations per platform and all seven Chez source checks. This link records
+historical validation evidence; it selects no collection revision for Emit.
+Future package updates remain entirely collection-owned. Generic compiler/module
+artifact and independent-host checks remain in Emit's existing suites.
+
+The distribution spec's positive Malt examples remain functional guarantees.
+Their provider-resolution assertions are checked with generic installed fixtures
+in Emit, while actual Malt package execution is checked by the collection.
+Transferring those assertions changes their test owners, not installed import behavior.

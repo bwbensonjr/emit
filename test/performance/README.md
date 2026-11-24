@@ -23,11 +23,12 @@ harnesses, actual Scheme controls, provenance manifests, optimized runtime LLVM,
 and final disassembly together, run:
 
 ```sh
-python3 tools/writer-performance-build.py --output build/writer-performance
+EMIT_PACKAGES_DIR=../emit-packages python3 tools/writer-performance-build.py --output build/writer-performance
 ```
 
-The Malt fixtures come from the pinned emit-packages collection, which the builder
-fetches on first use. This requires Chez for source-driver IR capture; `--skip-scheme` builds only the
+The Malt fixtures come from the explicit local `EMIT_PACKAGES_DIR` checkout. The
+builder never fetches the collection and refuses full Scheme reconstruction when
+the checkout or required fixtures are unavailable. This requires Chez for source-driver IR capture; `--skip-scheme` builds only the
 runtime harness evidence. The builder uses the discovered LLVM clang consistently
 for both runtime versions. It also constructs a separate mode-symbol-cache
 experiment without editing the production runtime. Outputs use `bench-released`,
